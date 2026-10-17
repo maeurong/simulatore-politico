@@ -131,6 +131,7 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[input-output-tables]]: FIGARO, OECD ICIO e WIOD a confronto: copertura, anni, licenza.
 - [[cepii-baci-e-gravity]]: flussi commerciali bilaterali e variabili gravitazionali, licenza Etalab 2.0, ridistribuibili.
 - [[penn-world-table]]: PWT 11.0, CC BY 4.0, 185 paesi dal 1950 al 2023: capitale e produttività.
+- [[pericolosita-naturale-regioni]]: rischio trimestrale per regione di sisma (DPC, CPTI15), alluvioni e frane (IdroGEO), incendi (EFFIS); costi (Casa Italia, Eurostat, Fondo per le emergenze nazionali) e coefficiente di prevenzione (DM 58, NIBS).
 - [[banca-italia-ibf]]: microdati Banca d'Italia con regione, condizione e reddito, solo per ricerca; seme per ricostruire le quote dei gruppi.
 - [[mef-statistiche-fiscali]]: contribuenti IRPEF per regione × classe × tipo di reddito, CC BY 3.0 IT.
 
