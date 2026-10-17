@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://idrogeo.isprambiente.it/api/pir/regioni/", "sha256": "4ecafd0af8097b0d76a98eafe1f554aaf11b39721531eedf4bd20d94e678ce15", "bytes": 65573}, "tool": "curl + python3 (wrap JSON/CSV in fence)", "tool_version": "n/d", "extracted": "2026-10-17"}

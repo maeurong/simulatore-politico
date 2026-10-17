@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/cli_iad_loss?geo=IT&format=JSON&lang=en", "sha256": "3ee8f473cf56a67d6c5bb359d44fb7a3ab7fd81372d02da7ae94377c9cdcfbe5", "bytes": 5658}, "tool": "curl + python3 (wrap JSON/CSV in fence)", "tool_version": "n/d", "extracted": "2026-10-17"}

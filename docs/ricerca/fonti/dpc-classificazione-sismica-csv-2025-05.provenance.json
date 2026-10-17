@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://rischi.protezionecivile.gov.it/static/4717c6a369cdc298b69730c9d740e39a/classificazione-sismica-aggiornata-maggio-2025.csv", "sha256": "1a88eeb186c4bf609c2c7d01d4c1f8d6ca1a6494eba365d096aed409833d75e3", "bytes": 324620}, "tool": "curl + python3 (wrap JSON/CSV in fence)", "tool_version": "n/d", "extracted": "2026-10-17"}

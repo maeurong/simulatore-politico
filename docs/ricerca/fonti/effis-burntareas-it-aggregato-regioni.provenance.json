@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://api.effis.emergency.copernicus.eu/rest/2/burntareas/current/?country=IT", "sha256": "595834e33717e3f2121724cdc24e800cee92766d491664c0ac91aee63e543697", "bytes": 1259}, "tool": "curl + python3 (aggregato per regione)", "tool_version": "n/d", "extracted": "2026-10-17"}
