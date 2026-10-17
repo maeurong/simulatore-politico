@@ -198,3 +198,4 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[direzioni-artistiche-candidate]]: quattro direzioni artistiche: A sala operativa, B carta stampata, C plastico, D diagramma di sistema. Raccomandazione: B più D, da validare con un prototipo.
 - [[confronto-stack]]: tabella su 9 stack. Raccomandazione: Godot 4.7 con renderer Compatibility e core separato (Rust via gdext, da proporre); Tauri come seconda scelta. Decisione del 17/10: Tauri + core Rust ([[decisioni]]).
 - [[dati-per-tarare-i-gruppi]]: con quali dati e licenze si tarano i 360 gruppi dell'elettorato; manca la tabella incrociata, la si ricostruisce con IPF sui margini ISTAT e MEF.
+- [[stato-del-paese-al-turno-zero]]: livelli di partenza della v1 al 2026T2 (PIL, debito 136,7%, deficit, spread, IPCA, disoccupazione per regione), budget dei dieci dicasteri da COFOG 2024 con salari e acquisti, spesa obbligatoria (pensioni, NASpI, ADI, piramide 2026), FIGARO 2024 e mix A*10 2023, licenze.

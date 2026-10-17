@@ -242,6 +242,7 @@ Grilling sul ticket wayfinder «Partenza della partita» (`.scratch/v1-giocabile
 - **Parlamento** dal voto simulato dal motore con seme fisso; **governo uscente** di centrodestra e destra IA, in interim durante la trattativa; giudizio a zero per tutti.
 - **Taratura:** valence dei sette partiti sulle intenzioni di voto reali di ottobre 2026 sommate per posto (CHES, [[ches]]), corrispondenza offline e fuori dai dati. Lo scenario di partenza ha sempre una coalizione vincibile; l'editor avvisa senza impedire.
 - La fase da outsider resta fuori, ma fondazione e prima campagna entrano, ridotte a una schermata e a un turno.
+- **Dati del turno zero** (ticket 23, [[stato-del-paese-al-turno-zero]]): stato base al 2026T2, l'ultimo trimestre coerente, portato a inizio ottobre con gli indicatori mensili di luglio-settembre trattati come dati osservati. Il calendario di gioco resta ottobre-dicembre 2026.
 
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
