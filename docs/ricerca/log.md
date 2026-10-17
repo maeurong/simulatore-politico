@@ -125,3 +125,6 @@ Grilling sul ticket wayfinder «Legge elettorale come misura» (13), tre giri, t
 
 ## [2026-10-17] query | crisi ed eventi
 Grilling sul ticket wayfinder «Crisi ed eventi» (15), due giri, tutte le raccomandazioni accettate. Registrato in [[decisioni]]: situazioni a soglia con isteresi più eventi puntuali a rischio dallo stato, un evento puntuale nuovo al massimo per turno, niente regista adattivo; cinque famiglie (situazioni dei dicasteri, shock oltre 2σ, crisi del debito, emergenze naturali per regione, scandali); opzioni chiuse con default meno irreversibile; valence solo per scandali e gestione. Nota di superamento in [[crisi-ed-eventi]]. In CONTEXT.md: evento, situazione. Aperto il ticket research «Pericolosità naturale per regione» (19).
+
+## [2026-10-17] query | tabella degli interessi
+Grilling sul ticket wayfinder «Tabella degli interessi» (17), due giri, raccomandazioni accettate con due cambi di Mario (sicurezza anche per dipendenti privati e autonomi; disoccupazione a Lavoro e Welfare). Registrato in [[decisioni]]: denaro solo dal reddito disponibile reale della fascia, indicatori non monetari su 6 righe, giudizio cumulato con memoria e asimmetria indicatore per indicatore, nessuna disposizione diretta, colpa voce per voce. In CONTEXT.md: precisato interessi, nuovo giudizio.

@@ -226,6 +226,14 @@ Grilling sul ticket wayfinder «Crisi ed eventi» (`.scratch/v1-giocabile/issues
 - **Scandali:** il rischio viene dalla corruzione. Colpiscono un ministro o un leader IA, mai il giocatore. Un ministro si difende (default) o gli si chiedono le dimissioni; se lo si difende, l'opposizione può presentare la sfiducia individuale.
 - **Emergenze:** rischio regionale dai dati reali, gravità ridotta dalla prevenzione. Le opzioni sono fondo di riserva (default), decreto a debito o niente; con vittime vale il tono grave.
 
+## 2026-10-17: tabella degli interessi
+Grilling sul ticket wayfinder «Tabella degli interessi» (`.scratch/v1-giocabile/issues/17-tabella-degli-interessi.md`, con la tabella e il dettaglio). Due giri; Mario ha aggiunto la sicurezza agli interessi di dipendenti privati e autonomi e ha dato la disoccupazione a Lavoro e Welfare.
+- **Denaro da una voce sola:** il reddito disponibile reale della fascia, col suo paniere, vale per tutti e contiene salario, pensione, sussidio, imposte e prezzi. Gli altri indicatori sono solo cose che non sono denaro: disoccupazione regionale, indicatori di servizio, occupazione pubblica.
+- **Giudizio:** cumulato con memoria (emivita intorno a 4 turni), asimmetrico indicatore per indicatore come in [[voto-economico-e-retrospettivo]]; contano le variazioni, non i livelli; un partito che entra al governo parte da zero.
+- **Tabella:** 6 righe, una per condizione; la fascia agisce già da reddito, paniere e imposte. Pesi provvisori.
+- **Disposizioni:** mai dirette negli interessi; effetti materiali dagli indicatori, parte simbolica dalla posizione della misura. Il modello economico deve ripartire l'evasione per condizione e portare il salario minimo nel reddito della fascia bassa dei dipendenti privati.
+- **Colpa:** reddito primario e prezzi al solo Presidente del Consiglio; disoccupazione, pensioni, sussidi e reddito minimo a Lavoro e Welfare; imposte, salario e occupazione pubblica a Economia e Finanze; ogni servizio al suo dicastero.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
