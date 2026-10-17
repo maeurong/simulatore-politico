@@ -219,8 +219,12 @@ _Evita_: professione, categoria
 Bassa, media o alta; insieme alla condizione dice come le misure colpiscono un gruppo.
 
 **Interessi**:
-Gli indicatori che toccano da vicino un gruppo (per un pensionato: pensioni e sanità) e che pesano nel suo giudizio sul governo.
+Gli indicatori che toccano da vicino un gruppo e che pesano nel suo giudizio sul governo: il reddito disponibile reale della sua fascia, che vale per tutti e contiene ogni euro (salario, pensione, sussidio, imposte, prezzi), più pochi indicatori che non sono denaro, fissati per condizione (per un pensionato: le liste d'attesa).
 _Evita_: bisogni, issue
+
+**Giudizio**:
+Quanto un gruppo è scontento o soddisfatto di un partito di governo per come sono andati i suoi interessi; si accumula turno dopo turno, pesa più i peggioramenti dei miglioramenti, sbiadisce col tempo e riparte da zero per un partito che entra al governo.
+_Evita_: gradimento, approvazione, consenso (che è l'intenzione di voto)
 
 **Elettore campione**:
 Persona inventata ricavata da un gruppo per mostrare come vota e perché; non ha uno stato suo e cambia quando cambia il gruppo.
