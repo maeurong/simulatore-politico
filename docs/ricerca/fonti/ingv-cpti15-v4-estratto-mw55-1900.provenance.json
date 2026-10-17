@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://emidius.mi.ingv.it/CPTI15-DBMI15/data/CPTI15_v4.0.xlsx", "sha256": "248776733886d106df22b6ffdeebcc26def63204461182b9107a17eedef7391f", "bytes": 3956}, "tool": "curl + python3 openpyxl 3.1.5 (estratto righe)", "tool_version": "n/d", "extracted": "2026-10-17"}

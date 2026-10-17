@@ -129,5 +129,13 @@ Grilling sul ticket wayfinder «Crisi ed eventi» (15), due giri, tutte le racco
 ## [2026-10-17] query | tabella degli interessi
 Grilling sul ticket wayfinder «Tabella degli interessi» (17), due giri, raccomandazioni accettate con due cambi di Mario (sicurezza anche per dipendenti privati e autonomi; disoccupazione a Lavoro e Welfare). Registrato in [[decisioni]]: denaro solo dal reddito disponibile reale della fascia, indicatori non monetari su 6 righe, giudizio cumulato con memoria e asimmetria indicatore per indicatore, nessuna disposizione diretta, colpa voce per voce. In CONTEXT.md: precisato interessi, nuovo giudizio.
 
+## [2026-10-17] ingest | pericolosità naturale per regione
+Ticket wayfinder research «Pericolosità naturale per regione» (19). Nuova pagina [[pericolosita-naturale-regioni]], con una tabella per le 20 regioni:
+- zone sismiche DPC 2025 ed episodi con Mw ≥ 5,5 da CPTI15 (1900-2020);
+- esposti ad alluvioni e frane dall'API IdroGEO;
+- ettari bruciati e trimestri con un incendio ≥ 500 ha da EFFIS (2006-2025).
+
+Costi: circa 4 miliardi l'anno secondo Casa Italia, 5,7 miliardi l'anno nel 2010-2024 secondo Eurostat `cli_iad_loss`; il Fondo per le emergenze nazionali è cresciuto di 100-400 milioni l'anno. Un coefficiente di prevenzione solido c'è solo per il sisma (DM 58/2017, k ≈ 0,85); per alluvioni e incendi ci sono solo i rapporti beneficio/costo statunitensi (NIBS). Non trovate: la frequenza aperta delle emergenze idro e una serie della siccità per regione. 21 fonti catturate.
+
 ## [2026-10-17] query | partenza della partita
 Grilling sul ticket wayfinder «Partenza della partita» (20), due giri, tutte le raccomandazioni accettate. Registrato in [[decisioni]]: fondazione su uno dei sei mezzi punti dell'asse, turno zero a ottobre-dicembre 2026 un turno prima del voto con la 180, bilancio 2027 ereditato, parlamento dal voto simulato, governo uscente di centrodestra e destra IA, valence tarate sui sondaggi reali per posto, luna di miele uguale per ogni posto. Supera in parte la decisione del 16/10 sull'inizio della partita. In CONTEXT.md: turno zero. Graduata la nebbia «Scenario iniziale» nei ticket 20-23; lanciate le ricerche «Valori di partenza delle disposizioni» (22) e «Stato del paese al turno zero» (23).
