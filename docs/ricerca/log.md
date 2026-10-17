@@ -122,3 +122,6 @@ Sezione 5 di [[iter-legislativo-italiano]]: l'[INF] diventa [V], con 18 fonti nu
 
 ## [2026-10-17] query | legge elettorale come misura
 Grilling sul ticket wayfinder «Legge elettorale come misura» (13), tre giri, tutte le raccomandazioni accettate. Registrato in [[decisioni]]: menu a gradini con i paletti della Corte, disposizioni fuori dicastero, linea sui seggi attesi, emendamento al gradino di mezzo o rinvio di un anno, fiducia sugli articoli con voto finale segreto, governo avversario che la cambia quando gli rende. In CONTEXT.md: precisati legge elettorale, disposizione, linea, questione di fiducia. Fuori dalla v1: uninominali, ballottaggio, preferenze, che passano ai punti di aggancio.
+
+## [2026-10-17] query | crisi ed eventi
+Grilling sul ticket wayfinder «Crisi ed eventi» (15), due giri, tutte le raccomandazioni accettate. Registrato in [[decisioni]]: situazioni a soglia con isteresi più eventi puntuali a rischio dallo stato, un evento puntuale nuovo al massimo per turno, niente regista adattivo; cinque famiglie (situazioni dei dicasteri, shock oltre 2σ, crisi del debito, emergenze naturali per regione, scandali); opzioni chiuse con default meno irreversibile; valence solo per scandali e gestione. Nota di superamento in [[crisi-ed-eventi]]. In CONTEXT.md: evento, situazione. Aperto il ticket research «Pericolosità naturale per regione» (19).

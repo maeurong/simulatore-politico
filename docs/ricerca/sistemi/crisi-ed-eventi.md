@@ -1,7 +1,7 @@
 ---
 tipo: sistema
 fonti: [fonti/democracy4-mod-situations.md, fonti/democracy3-modding.md, fonti/hoi4-wiki-event-modding.md, fonti/rimworld-wiki-ai-storytellers.md, fonti/democracy4-faq.md, fonti/wikipedia-plague-inc.md, fonti/wikipedia-papers-please.md]
-aggiornato: 2026-10-16
+aggiornato: 2026-10-17
 ---
 # Crisi ed eventi: scriptati o emergenti
 
@@ -36,6 +36,8 @@ Un evento è credibile quando ha una causa nello stato del mondo. I giochi studi
 - Eventi puntuali (scandali, disastri, attentati, dimissioni) = trigger + tempo mediano alla Paradox, con M funzione dello stato (corruzione alta → M degli scandali più breve).
 - Un regista leggero, alla RimWorld, che allunga M dopo una crisi grave e lo accorcia dopo lunghe calme, con preset per il giocatore.
 - Ogni evento cita la sua causa nel rapporto del consigliere ([[consiglieri-e-informazione-imperfetta]]).
+
+Decisione del 17/10/2026 ([[decisioni]], ticket wayfinder 15): nella v1 entrano i primi due punti; il regista adattivo resta fuori, perché è una causa esterna al modello, e lo sostituisce un tetto di un evento puntuale nuovo per turno.
 
 ## Collegamenti
 - [[democracy-4]]: situazioni e dilemmi.
