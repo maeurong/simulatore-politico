@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://tropico.fandom.com/api.php?action=parse&page=Election&format=json&prop=text&formatversion=2&redirects=1", "sha256": "f447d0005f5f2643db0ce98f82e1cc2d5522a966583c7e39be05e9200e392fb1", "bytes": 5534}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-16"}

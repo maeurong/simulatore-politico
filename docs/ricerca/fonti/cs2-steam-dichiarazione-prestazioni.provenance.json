@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/5229301621571657158", "sha256": "ff70055aaa0130d07f7a24a85f772be8e80b69b037fd4f4deb98812439297aba", "bytes": 4862}, "tool": "python3 urllib (Steam News API)", "tool_version": "3.14", "extracted": "2026-10-16"}

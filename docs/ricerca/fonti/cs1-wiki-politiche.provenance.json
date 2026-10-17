@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://skylines.fandom.com/api.php?action=parse&page=Policy&format=json&prop=text&formatversion=2&redirects=1", "sha256": "c368e47f3be129c6fd940576445b7c6bec9bf2f7b9d75743f51ff291141017bf", "bytes": 27490}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-16"}

@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://store.steampowered.com/appreviews/<appid>", "sha256": "1abc397d63c044c1363f463e5d02087531051fa3b999ce4876cd212eb43a1bfc", "bytes": 29294}, "tool": "python3 urllib (Steam Store API)", "tool_version": "3.14", "extracted": "2026-10-16"}

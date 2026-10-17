@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://dataverse.unimi.it/api/datasets/:persistentId/?persistentId=doi:10.13130/RD_UNIMI/JV77WR", "sha256": "eddeafc2fdd0036d4aa36504bf9c9162198973dcb6d7ef06aff0426574425308", "bytes": 5837}, "tool": "curl+python (API Dataverse JSON)", "tool_version": "n/d", "extracted": "2026-10-17"}

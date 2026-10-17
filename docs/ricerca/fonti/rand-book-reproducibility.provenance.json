@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://rust-random.github.io/book/crate-reprod.html", "sha256": "99bbf43682ce70fcea4332991ec98e980e8d80f6473bd3aff386d7e8679e0510", "bytes": 5055}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-16"}

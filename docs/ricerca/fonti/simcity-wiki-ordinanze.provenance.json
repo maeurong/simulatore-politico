@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://simcity.fandom.com/api.php?action=parse&page=City_ordinance&format=json&prop=text&formatversion=2&redirects=1", "sha256": "d5b2d2ea6672e7d66129bb0a374dddf204f6ea64894d3ee21c37e53dcc1cbddb", "bytes": 5117}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-16"}

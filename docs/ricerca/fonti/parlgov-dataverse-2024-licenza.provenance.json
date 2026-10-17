@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/2VZ5ZC", "sha256": "204c207b35afbde41ef1b9ec6205f4bde7fb63ef3071b278a7f5fb79f3b22242", "bytes": 653}, "tool": "curl", "tool_version": "8.7.1", "extracted": "2026-10-16"}

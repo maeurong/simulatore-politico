@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://dataverse.unimi.it/api/access/datafile/119545", "sha256": "95cb0e57a9c53bb80ff0d319cf9afac1ec114f5bf3915af5c50861cf47b2d7e0", "bytes": 27174}, "tool": "pdftotext (poppler)", "tool_version": "26.08.0", "extracted": "2026-10-17"}

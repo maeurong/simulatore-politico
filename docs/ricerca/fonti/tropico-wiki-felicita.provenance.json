@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://tropico.fandom.com/api.php?action=parse&page=Happiness&format=json&prop=text&formatversion=2&redirects=1", "sha256": "8c2329d89f3bc1ec3f814ca58c4c3de1c993aabc797d7c4a9389bfa412385fcd", "bytes": 1435}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-16"}
