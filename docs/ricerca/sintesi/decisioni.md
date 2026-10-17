@@ -209,6 +209,23 @@ Grilling sul ticket wayfinder «Legge elettorale come misura» (`.scratch/v1-gio
 - **Fiducia:** copre gli articoli, non il voto finale. Alla Camera il voto finale resta segreto, con franchi tiratori raddoppiati; se boccia la legge, cade la legge, non il governo.
 - **Governo avversario:** la cambia nel programma o più tardi, quando la proiezione gli rende abbastanza seggi.
 
+## 2026-10-17: crisi ed eventi
+Grilling sul ticket wayfinder «Crisi ed eventi» (`.scratch/v1-giocabile/issues/15-crisi-ed-eventi.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate. Supera in parte la proposta di [[crisi-ed-eventi]]: il regista adattivo resta fuori.
+- **Origine:** situazioni a soglia con isteresi, più eventi puntuali con un rischio per turno calcolato dallo stato ed estratto col seme fisso. Niente regista adattivo, perché sarebbe una causa fuori dal modello; al massimo un evento puntuale nuovo per turno. Situazioni e crisi del debito sono fuori dal tetto.
+- **Famiglie:**
+  - situazioni dei dicasteri: recessione, criminalità, liste d'attesa, carceri, energia, sbarchi;
+  - shock economici oltre 2σ;
+  - crisi del debito;
+  - emergenze naturali per regione;
+  - scandali.
+
+  Le scadenze a data fissa sono calendario, non eventi. L'epidemia va fra i punti di aggancio.
+- **Forma:** ogni evento cita la causa e ha 2-3 opzioni chiuse. Il default è l'opzione meno irreversibile (MES per il debito). Il decreto tocca solo i dicasteri coinvolti, tranne nella crisi del debito.
+- **Voto:** i danni passano dalle grandezze e quindi dagli interessi. La valence si muove solo per gli scandali e per la gestione delle emergenze. Spinte di posizione piccole, solo per criminalità e sbarchi.
+- **Situazioni:** aprono evento e decreto solo all'accensione, poi restano come stato. Le soglie sono visibili.
+- **Scandali:** il rischio viene dalla corruzione. Colpiscono un ministro o un leader IA, mai il giocatore. Un ministro si difende (default) o gli si chiedono le dimissioni; se lo si difende, l'opposizione può presentare la sfiducia individuale.
+- **Emergenze:** rischio regionale dai dati reali, gravità ridotta dalla prevenzione. Le opzioni sono fondo di riserva (default), decreto a debito o niente; con vittime vale il tono grave.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

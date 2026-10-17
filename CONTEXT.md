@@ -255,6 +255,14 @@ _Evita_: registro grave (registro è già l'elenco del turno)
 Uno dei tre numeri sempre a schermo, uno per ogni modo di perdere il governo: consenso (intenzione di voto della coalizione), maggioranza (seggi oltre la metà in ciascuna Camera), conti (lo spread).
 _Evita_: salute del paese, punteggio
 
+**Evento**:
+Fatto del paese che si mostra in apertura, cita la sua causa nel modello e chiede una scelta fra poche opzioni nello stesso turno; se nessuno sceglie, vale l'opzione di default.
+_Evita_: crisi (che è quella di governo), dilemma, notizia
+
+**Situazione**:
+Stato del paese che si accende quando una grandezza supera una soglia e si spegne solo sotto una soglia più bassa (recessione, ondata di criminalità); finché è accesa pesa a ogni turno.
+_Evita_: crisi, emergenza (che è un evento puntuale)
+
 **Regione**:
 Una delle 20 regioni italiane, la più piccola unità della mappa; non è un attore: ha indicatori, non una giunta.
 _Evita_: provincia, distretto
