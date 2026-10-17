@@ -196,6 +196,19 @@ Grilling sul ticket wayfinder «Stack e linguaggio del core» (`.scratch/v1-gioc
 - **Testo:** minimo 12 px a scala 1×, scala della UI regolabile; niente regola dei 9 px del Deck.
 - Le pagine di `estetica/` che parlano di Godot Compatibility (StyleBoxFlat, Tween, cutout) sono superate come via d'implementazione; le controparti CSS dei prototipi diventano la via diretta. Da correggere al prossimo lint.
 
+## 2026-10-17: legge elettorale come misura
+Grilling sul ticket wayfinder «Legge elettorale come misura» (`.scratch/v1-giocabile/issues/13-legge-elettorale-come-misura.md`, con il dettaglio). Tre giri, tutte le raccomandazioni accettate. Prassi su fiducia e voto segreto verificata in [[iter-legislativo-italiano]] §5.
+- **Menu a gradini** ([[sistemi-elettorali]]):
+  - parametri: soglia di lista 0/3/4/5%; coalizioni sì/no, con soglia 0/10% e ripescaggio; premio nessuno, alla lista o alla coalizione, con soglia 40/42/45% e taglia circa 9 o 18% dei seggi; tetto 55/60% o nessuno; formula Hare o D'Hondt;
+  - vincoli fissi: Senato regionale, premio unico per le due Camere, soglia del premio mai sotto il 40% (Corte cost. 1/2014 e 35/2017, scritti nel menu perché in v1 la Corte non c'è);
+  - niente uninominali, ballottaggio, preferenze.
+  Impostazioni pronte: 180, proporzionale con soglia 3%, proporzionale puro. Premio e tetto in quota dei seggi.
+- **Forma:** disposizioni fuori da ogni dicastero, proposte solo dal Presidente del Consiglio. Si abrogano una alla volta, anche per referendum, e tornano al valore precedente (al turno zero: Rosatellum). Valgono dal voto successivo, senza finestra di blocco.
+- **Linea sui seggi attesi:** ogni partito proietta i seggi sul sondaggio pubblico e vota sì se ci guadagna. Un alleato che perde seggi paga intesa. Nessun costo diretto di consenso. Il giocatore vede prima la tabella dei seggi guadagnati e persi.
+- **Emendamento:** gradino di mezzo sui gradini; sui parametri a scelta, rinvio di un anno (precedente: l'Italicum).
+- **Fiducia:** copre gli articoli, non il voto finale. Alla Camera il voto finale resta segreto, con franchi tiratori raddoppiati; se boccia la legge, cade la legge, non il governo.
+- **Governo avversario:** la cambia nel programma o più tardi, quando la proiezione gli rende abbastanza seggi.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

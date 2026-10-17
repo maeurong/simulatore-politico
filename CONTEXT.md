@@ -79,7 +79,7 @@ Atto del ministro che impegna il margine discrezionale per più turni e rende so
 _Evita_: progetto, opera (da sola)
 
 **Disposizione**:
-Regola del paese fissata per legge, con un valore in vigore (età pensionabile, regime delle pensioni, soglia del forfettario, salario minimo); ogni disposizione appartiene a un dicastero.
+Regola del paese fissata per legge, con un valore in vigore (età pensionabile, regime delle pensioni, soglia del forfettario, salario minimo); ogni disposizione appartiene a un dicastero, tranne quelle della legge elettorale.
 _Evita_: manopola, parametro, policy
 
 **Legge di riforma**:
@@ -98,7 +98,7 @@ Legge annuale con cui il Presidente del Consiglio, insieme al ministro dell'Econ
 _Evita_: manovra (come termine del modello), finanziaria
 
 **Legge elettorale**:
-Legge che trasforma i voti in seggi; si parte da quella reale (180/2026) e il giocatore la può cambiare per il voto successivo.
+Legge che trasforma i voti in seggi, fatta di disposizioni fuori da ogni dicastero: soglie, coalizioni, premio, tetto, formula di riparto. Si parte da quella reale (180/2026); la cambia solo il Presidente del Consiglio, o il governo avversario, e vale dal voto successivo.
 
 **Norma costituzionale**:
 Misura che cambia le regole del gioco istituzionale (durata della legislatura, numero dei parlamentari); passa con due deliberazioni a distanza di almeno un turno e, senza i due terzi, può finire al referendum confermativo.
@@ -112,7 +112,7 @@ Voto popolare che cancella una legge in vigore, chiesto dall'opposizione; vale s
 _Evita_: referendum (da solo)
 
 **Linea**:
-Il voto che un partito dà a una misura, sì o no, deciso dalla distanza fra la sua posizione e quella della misura (per una legge di riforma: se il valore nuovo gli è più vicino di quello in vigore) e, per un alleato, dall'intesa. All'opposizione il giocatore sceglie la linea del suo partito; votare lontano dalla propria posizione costa franchi tiratori.
+Il voto che un partito dà a una misura, sì o no, deciso dalla distanza fra la sua posizione e quella della misura (per una legge di riforma: se il valore nuovo gli è più vicino di quello in vigore; per la legge elettorale: se gli fa guadagnare seggi) e, per un alleato, dall'intesa. All'opposizione il giocatore sceglie la linea del suo partito; votare lontano dalla propria posizione costa franchi tiratori.
 _Evita_: indicazione di voto, disciplina
 
 **Franco tiratore**:
@@ -123,7 +123,7 @@ _Evita_: dissidente, ribelle
 Attenuazione di una legge che un alleato chiede prima del voto; se il giocatore la accoglie, il partito vota compatto, se la respinge paga in intesa.
 
 **Questione di fiducia**:
-Voto in cui il governo lega la propria sopravvivenza a una legge o a una conversione: niente emendamenti né franchi tiratori, voto nel turno stesso; se è respinta, il governo si dimette.
+Voto in cui il governo lega la propria sopravvivenza a una legge o a una conversione: niente emendamenti né franchi tiratori, voto nel turno stesso; se è respinta, il governo si dimette. Sulla legge elettorale copre solo gli articoli: il voto finale alla Camera resta segreto, con i suoi franchi tiratori.
 _Evita_: fiducia (da sola, che è anche quella iniziale del governo)
 
 **Esercizio provvisorio**:

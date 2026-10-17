@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://documenti.camera.it/leg19/resoconti/assemblea/html/sed0689/stenografico.htm", "sha256": "6d8f76c97ff6e3b9d9d6e530aee364f3977442ce58457aac9ff7b59c2cb04c3d", "bytes": 1108}, "tool": "curl+python3 (estrazione tabella INDICE ELENCO)", "tool_version": "python 3.14.7", "extracted": "2026-10-17"}
