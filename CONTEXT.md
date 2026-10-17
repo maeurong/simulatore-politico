@@ -236,6 +236,10 @@ _Evita_: cittadino, agente
 Unità di tempo della partita: un trimestre.
 _Evita_: tick, round
 
+**Turno zero**:
+Il turno con cui comincia la partita, ottobre-dicembre 2026: l'Italia ai dati reali, il partito del giocatore appena fondato e fuori dal parlamento, la coalizione da dichiarare prima del voto che si tiene in chiusura.
+_Evita_: turno iniziale, setup
+
 **Apertura**:
 La prima fase del turno: l'esito del turno precedente, rivelato una voce alla volta, poi gli eventi aperti, l'agenda dei ministri, le proposte in sospeso e il sondaggio del trimestre.
 
