@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: []
-aggiornato: 2026-10-17
+aggiornato: 2026-10-18
 ---
 # Decisioni di Mario
 
@@ -243,6 +243,15 @@ Grilling sul ticket wayfinder «Partenza della partita» (`.scratch/v1-giocabile
 - **Taratura:** valence dei sette partiti sulle intenzioni di voto reali di ottobre 2026 sommate per posto (CHES, [[ches]]), corrispondenza offline e fuori dai dati. Lo scenario di partenza ha sempre una coalizione vincibile; l'editor avvisa senza impedire.
 - La fase da outsider resta fuori, ma fondazione e prima campagna entrano, ridotte a una schermata e a un turno.
 - **Dati del turno zero** (ticket 23, [[stato-del-paese-al-turno-zero]]): stato base al 2026T2, l'ultimo trimestre coerente, portato a inizio ottobre con gli indicatori mensili di luglio-settembre trattati come dati osservati. Il calendario di gioco resta ottobre-dicembre 2026.
+
+## 2026-10-18: editor dello scenario
+Grilling sul ticket wayfinder «Editor dello scenario» (`.scratch/v1-giocabile/issues/21-editor-dello-scenario.md`, con la tabella dei cursori e il dettaglio). Due giri, tutte le raccomandazioni accettate. Precisa la «partenza su misura» del 16/10.
+- **Struttura fissa, stato modificabile.** Lo scenario su misura non cambia data del turno zero, istituzioni, dicasteri, regioni, gruppi, i sette posti dei partiti IA né il governo uscente; cambia stato economico, demografia, elettorato, legge elettorale di partenza e disposizioni.
+- **Solo ingressi.** Lo scenario contiene grandezze indipendenti; interessi, spread, disavanzo, bilancio 2027, sondaggio e parlamento si ricalcolano al caricamento con le formule del gioco, quindi uno stato incoerente non si può scrivere. La valence resta l'ingresso tarato sullo scenario di base; il sondaggio di partenza è derivato.
+- **Sei cursori** (debito, ricchezza con le soglie ferme in euro, disoccupazione insieme a u*, inflazione di partenza, età, orientamento dell'elettorato) più i menu della legge elettorale e delle disposizioni; il resto valore per valore solo nel file di testo, come vuole il modding solo dati.
+- **Limiti e avvisi:** fuori dall'intervallo di taratura il valore è rifiutato; uno scenario senza coalizione vincibile o già in crisi al turno zero è lecito, con un avviso.
+- **Sequenza:** scelta dello scenario prima della fondazione; file di differenze dalla base, seme nella partita; riepilogo dei derivati dal vivo, a cifre esatte.
+- **Disposizioni cambiate** attribuite a una legge del governo uscente del 2026, col valore di base come precedente.
 
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
