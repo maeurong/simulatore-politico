@@ -271,6 +271,17 @@ Grilling sul ticket wayfinder «Informazione imperfetta» (`.scratch/v1-giocabil
 - **Rischio:** vicinanza alla soglia delle situazioni visibile, pericolosità naturale nota, probabilità per turno nascosta.
 - **Cassa del partito**, risorsa nuova: 2 per mille sui voti, donazioni sull'intenzione di voto, dote alla fondazione, mai sotto zero. Compra, una volta per tipo a turno, sondaggio privato, test di una misura, centro studi (stima del trimestre e previsione a 4 turni sul percorso in corso). I partiti IA hanno la stessa cassa ma la spendono solo in campagna. **Supera** in parte «nessuna moneta delle azioni» del giro del turno: la cassa non paga le azioni di governo, solo informazione e campagna.
 
+## 2026-10-18: campagna elettorale
+Grilling sul ticket wayfinder «Campagna elettorale» (`.scratch/v1-giocabile/issues/26-campagna-elettorale.md`, con il dettaglio). Tre giri; una scelta di Mario contro la raccomandazione: la campagna convince anche, cioè sposta le posizioni degli elettori in modo duraturo. Segue la raccomandazione di [[campagna-elettorale]]: voti al margine, il governo resta il fattore principale.
+- **Quando:** solo nel turno prima del voto (scadenza, scioglimento, turno zero), stesse leve al governo e all'opposizione; niente campagna permanente né referendaria.
+- **Ordine:** in apertura si muovono i partiti IA e nasce la protesta; nelle decisioni il giocatore si riposiziona, dichiara la coalizione, promette e spende; in chiusura spendono tutti e si vota. Al turno zero niente mosse IA né protesta.
+- **Riposizionamento** gratuito di mezzo punto; la percepita fa metà strada, anche per i partiti IA.
+- **Bersagli:** fino a 3, ciascuno una condizione o una regione, con una leva: mobilitare e persuadere per quel voto, convincere in modo duraturo con l'ancora di Friedkin-Johnsen (conferma le spinte di campagna del 06).
+- **Scala:** rendimenti decrescenti, 1-3 punti a cassa piena.
+- **Promesse:** fino a 2 disposizioni a un valore; costano intesa agli alleati contrari; al voto dopo mantenute o mancate muovono la valence, se il giocatore ha governato almeno 4 turni.
+- **Partiti IA:** stesse leve, spesa dove un euro rende più voti attesi, promesse dal programma. Protesta con una dote, scissione con la quota di cassa.
+- **Vista:** anteprima a fasce, casse rivali pubbliche, spesa altrui nell'esito.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

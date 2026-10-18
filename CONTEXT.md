@@ -163,7 +163,7 @@ Come un partito IA sposta la sua posizione dichiarata nel turno prima del voto, 
 _Evita_: strategia
 
 **Posizione percepita**:
-La posizione che gli elettori attribuiscono a un partito: parte da quella dichiarata e scivola verso le misure che il partito firma o vota.
+La posizione che gli elettori attribuiscono a un partito: parte da quella dichiarata e scivola verso le misure che il partito firma o vota; quando la dichiarata si sposta, la percepita fa metà strada.
 _Evita_: immagine, reputazione
 
 **Programma**:
@@ -195,6 +195,18 @@ Quanto un partito è pronto a entrare nella coalizione del giocatore prima del v
 **Cassa del partito**:
 Il denaro di un partito, separato dal bilancio dello Stato: entra dal 2 per mille sui voti dell'ultima elezione e dalle donazioni, non va sotto zero, e si spende in campagna e in informazione (sondaggi privati, test di una misura, centro studi).
 _Evita_: fondi, budget (che è quello dei dicasteri), tesoretto
+
+**Campagna elettorale**:
+Ciò che ogni partito fa nel turno prima del voto, e solo in quello: sposta la posizione dichiarata, fa promesse e spende la cassa su pochi bersagli per mobilitare, persuadere o convincere. Sposta voti al margine; il voto lo decide soprattutto il governo.
+_Evita_: propaganda, campagna (per le spinte degli eventi)
+
+**Bersaglio**:
+Una condizione o una regione su cui un partito spende in campagna, con una sola leva: mobilitare (meno astensione fra chi gli è vicino), persuadere (valence per quel voto) o convincere (posizioni degli elettori spostate verso la sua, in modo duraturo).
+_Evita_: target, collegio
+
+**Promessa**:
+Disposizione che un partito si impegna, in campagna, a portare a un valore; al voto dopo, mantenuta o mancata, sposta la sua valence, purché abbia governato almeno un anno.
+_Evita_: impegno, programma (che è quello del governo avversario)
 
 **Rimpasto**:
 Nuova spartizione dei dicasteri quando un alleato esce ma la coalizione ha ancora la maggioranza.
