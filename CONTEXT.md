@@ -237,8 +237,12 @@ Unità di tempo della partita: un trimestre.
 _Evita_: tick, round
 
 **Turno zero**:
-Il turno con cui comincia la partita, ottobre-dicembre 2026: l'Italia ai dati reali, il partito del giocatore appena fondato e fuori dal parlamento, la coalizione da dichiarare prima del voto che si tiene in chiusura.
+Il turno con cui comincia la partita, ottobre-dicembre 2026: l'Italia com'è nello scenario scelto, il partito del giocatore appena fondato e fuori dal parlamento, la coalizione da dichiarare prima del voto che si tiene in chiusura.
 _Evita_: turno iniziale, setup
+
+**Scenario**:
+Il punto di partenza di una partita: lo stato del paese e le regole in vigore al turno zero. Quello di base è l'Italia di oggi ai dati reali; uno scenario su misura ne cambia alcuni valori, mai la struttura (data, istituzioni, dicasteri, regioni, gruppi, partiti).
+_Evita_: livello, mappa, setup, partita (che è il gioco giocato su uno scenario)
 
 **Apertura**:
 La prima fase del turno: l'esito del turno precedente, rivelato una voce alla volta, poi gli eventi aperti, l'agenda dei ministri, le proposte in sospeso e il sondaggio del trimestre.
