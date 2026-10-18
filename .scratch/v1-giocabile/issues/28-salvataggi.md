@@ -14,3 +14,5 @@ Da decidere:
 - cosa contiene il salvataggio: stato completo, oppure scenario + seme + elenco delle scelte da rigiocare;
 - cosa succede a un salvataggio quando cambia la versione del gioco o dei dati (modding solo dati, 11);
 - dove finiscono l'eredità e le partite concluse.
+
+Lo stato della partita comprende anche la cassa del partito e il bias comune dei sondaggi estratto per la legislatura (25): un salvataggio non deve rivelarlo.

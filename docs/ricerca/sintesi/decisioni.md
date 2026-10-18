@@ -262,6 +262,15 @@ Grilling sul ticket wayfinder «Abrogazione e gradini di partenza» (`.scratch/v
 - **Valore in arrivo:** valore già deciso per legge con il turno da cui vale. Nucleare «vietato» con «consentito» in arrivo da ottobre 2027; incentivo agli investimenti 0 / 10 / 20 / 40* in % del costo, con 0 in arrivo da ottobre 2028.
 - **Gradini:** salario minimo «nessuno*» e concorrenza «licenze chiuse*» restano; rinnovabili «ordinarie*» / «accelerate».
 
+## 2026-10-18: informazione imperfetta
+Grilling sul ticket wayfinder «Informazione imperfetta» (`.scratch/v1-giocabile/issues/25-informazione-imperfetta.md`, con il dettaglio). Quattro giri; due scelte di Mario contro la raccomandazione: la cassa del partito e le previsioni del centro studi. Precisa l'«informazione imperfetta» del 16/10 e la proposta a tre livelli di [[consiglieri-e-informazione-imperfetta]], senza il terzo livello.
+- **Due livelli, nessun bias:** prima stima economica rumorosa e riveduta il turno dopo, indicatori di servizio con un turno di ritardo, spread, seggi e voti esatti; nessun ministro piega i numeri, il giornale dell'esito non è manipolabile.
+- **Sondaggio pubblico** a tre strati d'errore ([[sondaggi-ed-errore]]): 3-4 istituti, bias comune per legislatura rivelato dal voto, campionamento. Silenzio elettorale irrilevante a turni trimestrali.
+- **Attori:** propri in cifre, intesa avversaria in tre fasce.
+- **Anteprima:** costo esatto, effetti a fasce con errore che cala con la capacità del ministro proponente; tabella dei seggi = proiezione sul sondaggio pubblico.
+- **Rischio:** vicinanza alla soglia delle situazioni visibile, pericolosità naturale nota, probabilità per turno nascosta.
+- **Cassa del partito**, risorsa nuova: 2 per mille sui voti, donazioni sull'intenzione di voto, dote alla fondazione, mai sotto zero. Compra, una volta per tipo a turno, sondaggio privato, test di una misura, centro studi (stima del trimestre e previsione a 4 turni sul percorso in corso). I partiti IA hanno la stessa cassa ma la spendono solo in campagna. **Supera** in parte «nessuna moneta delle azioni» del giro del turno: la cassa non paga le azioni di governo, solo informazione e campagna.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

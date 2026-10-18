@@ -26,4 +26,5 @@ Valori provvisori raccolti dai ticket risolti:
 - emergenze naturali (19): emergenze idro gravi all'anno (4 di partenza), rischio sismico minimo per le regioni senza episodi, k di prevenzione per idro e incendi, tre livelli di gravità, fondo di riserva (0,2-0,4 miliardi l'anno), siccità come situazione o emergenza puntuale;
 - partenza (20): durata e decadimento della luna di miele del partito del giocatore;
 - editor (21): intervalli di taratura dei sei cursori dello scenario su misura;
+- informazione (25): prezzi di sondaggio privato, test di una misura e centro studi; taglia della dote; peso di 2 per mille e donazioni; numero di istituti; errore della prima stima e della previsione;
 - abrogazione (24): intensità dell'incentivo agli investimenti in % del costo, posizioni dei gradini rinominati.
