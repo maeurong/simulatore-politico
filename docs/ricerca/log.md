@@ -154,3 +154,6 @@ Grilling sul ticket wayfinder «Abrogazione e gradini di partenza» (24), due gi
 
 ## [2026-10-18] query | informazione imperfetta
 Grilling sul ticket wayfinder «Informazione imperfetta» (25), quattro giri; scelte di Mario contro la raccomandazione: cassa del partito e previsioni del centro studi. Registrato in [[decisioni]]: statistica ufficiale a due livelli senza bias, sondaggio pubblico a tre strati d'errore, anteprima a fasce secondo la capacità del ministro, soglie visibili e probabilità nascoste, cassa del partito con tre acquisti di informazione. In CONTEXT.md: cassa del partito, sondaggio, anteprima, prima stima, previsione. Nessuna fonte nuova. Graduata tutta la nebbia della mappa nei ticket 25-30.
+
+## [2026-10-18] query | campagna elettorale
+Grilling sul ticket wayfinder «Campagna elettorale» (26), tre giri; scelta di Mario contro la raccomandazione: la campagna convince anche, con spinte di posizione durature. Registrato in [[decisioni]]: solo nel turno prima del voto, ordine apertura IA → decisioni del giocatore → spesa e voto in chiusura, riposizionamento gratuito con la percepita a metà strada, 3 bersagli con tre leve, 1-3 punti a cassa piena, fino a 2 promesse su disposizioni, partiti IA con le stesse leve, casse rivali pubbliche. In CONTEXT.md: campagna elettorale, bersaglio, promessa; precisata posizione percepita. Nessuna fonte nuova.

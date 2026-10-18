@@ -27,4 +27,5 @@ Valori provvisori raccolti dai ticket risolti:
 - partenza (20): durata e decadimento della luna di miele del partito del giocatore;
 - editor (21): intervalli di taratura dei sei cursori dello scenario su misura;
 - informazione (25): prezzi di sondaggio privato, test di una misura e centro studi; taglia della dote; peso di 2 per mille e donazioni; numero di istituti; errore della prima stima e della previsione;
-- abrogazione (24): intensità dell'incentivo agli investimenti in % del costo, posizioni dei gradini rinominati.
+- abrogazione (24): intensità dell'incentivo agli investimenti in % del costo, posizioni dei gradini rinominati;
+- campagna (26): rendimento di ciascuna leva (mobilitare, persuadere, convincere), scala di 1-3 punti a cassa piena, premio e malus di valence delle promesse, costo d'intesa di una promessa lontana, dote del partito di protesta. Le promesse sono una prima forma di aspettative che crescono.

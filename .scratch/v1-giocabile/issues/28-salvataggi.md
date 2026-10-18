@@ -15,4 +15,4 @@ Da decidere:
 - cosa succede a un salvataggio quando cambia la versione del gioco o dei dati (modding solo dati, 11);
 - dove finiscono l'eredità e le partite concluse.
 
-Lo stato della partita comprende anche la cassa del partito e il bias comune dei sondaggi estratto per la legislatura (25): un salvataggio non deve rivelarlo.
+Lo stato della partita comprende anche la cassa del partito e il bias comune dei sondaggi estratto per la legislatura (25): un salvataggio non deve rivelarlo. Ne fanno parte anche le promesse in sospeso di ogni partito, da verificare al voto successivo, e le spinte di posizione della campagna che l'ancora non ha ancora riassorbito (26).
