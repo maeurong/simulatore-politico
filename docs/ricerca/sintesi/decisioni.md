@@ -253,6 +253,15 @@ Grilling sul ticket wayfinder «Editor dello scenario» (`.scratch/v1-giocabile/
 - **Sequenza:** scelta dello scenario prima della fondazione; file di differenze dalla base, seme nella partita; riepilogo dei derivati dal vivo, a cifre esatte.
 - **Disposizioni cambiate** attribuite a una legge del governo uscente del 2026, col valore di base come precedente.
 
+## 2026-10-18: abrogazione e gradini di partenza
+Grilling sul ticket wayfinder «Abrogazione e gradini di partenza» (`.scratch/v1-giocabile/issues/24-abrogazione-e-gradini-di-partenza.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate. Sostituisce «abrogazione al valore precedente» del catalogo (17/10) e della legge elettorale (17/10), alla luce di [[disposizioni-al-turno-zero]].
+- **Abroga solo il referendum.** Niente abrogazione per legge: il parlamento porta una disposizione a qualunque gradino, compreso quello di prima.
+- **Referendum su una disposizione per quesito**, cioè la legge che ne ha fissato il valore in vigore; cancella anche un valore in arrivo. Esito: il **valore dopo l'abrogazione**, di default il precedente (semplificazione dichiarata per le novelle testuali), fisso solo per il reddito minimo («non istituito»). Al turno zero, precedente al gradino più vicino; se coincide col vigente, nessun quesito.
+- **Non referendabili** le cinque disposizioni fiscali (forfettario, cuneo, detrazione edilizia, accise, incentivo agli investimenti); referendabili 27 su 32, legge elettorale compresa.
+- **Vincolo referendario:** il gradino abrogato è bloccato fino alla legislatura successiva, per tutti.
+- **Valore in arrivo:** valore già deciso per legge con il turno da cui vale. Nucleare «vietato» con «consentito» in arrivo da ottobre 2027; incentivo agli investimenti 0 / 10 / 20 / 40* in % del costo, con 0 in arrivo da ottobre 2028.
+- **Gradini:** salario minimo «nessuno*» e concorrenza «licenze chiuse*» restano; rinnovabili «ordinarie*» / «accelerate».
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
