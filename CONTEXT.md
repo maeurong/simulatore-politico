@@ -101,6 +101,10 @@ _Evita_: decreto-legge, DPCM (nel modello c'è una sola forma)
 **Legge**:
 Misura normativa che passa dal voto del parlamento.
 
+**Anteprima**:
+Ciò che il giocatore vede di una misura prima di confermarla: costo esatto, effetti in fasce stimati dal ministro proponente (più precisi se è capace), ritardo, gruppi colpiti, linee dei partiti.
+_Evita_: previsione (che è quella del centro studi), simulazione
+
 **Legge di bilancio**:
 Legge annuale con cui il Presidente del Consiglio, insieme al ministro dell'Economia, fissa aliquote e budget di ogni dicastero; durante l'anno i fondi si spostano solo per decreto.
 _Evita_: manovra (come termine del modello), finanziaria
@@ -188,6 +192,10 @@ _Evita_: scontento, lealtà
 **Disponibilità**:
 Quanto un partito è pronto a entrare nella coalizione del giocatore prima del voto, letta sui sondaggi e mostrata con la sua causa.
 
+**Cassa del partito**:
+Il denaro di un partito, separato dal bilancio dello Stato: entra dal 2 per mille sui voti dell'ultima elezione e dalle donazioni, non va sotto zero, e si spende in campagna e in informazione (sondaggi privati, test di una misura, centro studi).
+_Evita_: fondi, budget (che è quello dei dicasteri), tesoretto
+
 **Rimpasto**:
 Nuova spartizione dei dicasteri quando un alleato esce ma la coalizione ha ancora la maggioranza.
 
@@ -233,6 +241,10 @@ _Evita_: bisogni, issue
 **Giudizio**:
 Quanto un gruppo è scontento o soddisfatto di un partito di governo per come sono andati i suoi interessi; si accumula turno dopo turno, pesa più i peggioramenti dei miglioramenti, sbiadisce col tempo e riparte da zero per un partito che entra al governo.
 _Evita_: gradimento, approvazione, consenso (che è l'intenzione di voto)
+
+**Sondaggio**:
+Stima delle intenzioni di voto con errore: quello pubblico esce ogni trimestre da più istituti, quello privato si compra con la cassa del partito e sbaglia meno, ma entrambi condividono un errore comune che si rivela solo al voto.
+_Evita_: rilevazione, exit poll
 
 **Elettore campione**:
 Persona inventata ricavata da un gruppo per mostrare come vota e perché; non ha uno stato suo e cambia quando cambia il gruppo.
@@ -295,6 +307,14 @@ _Evita_: settore (da solo), industria
 
 **Spread**:
 Il sovrapprezzo che l'Italia paga sul debito rispetto alla Germania; resta basso finché i conti reggono, poi sale sempre più in fretta.
+
+**Prima stima**:
+Il dato economico che il giocatore riceve a fine trimestre, con un errore come quello delle statistiche vere, corretto il turno dopo; non vede mai lo stato vero dell'economia.
+_Evita_: dato reale, stato vero
+
+**Previsione**:
+La proiezione a quattro turni che il centro studi vende al partito, sul percorso delle misure già decise e con un intervallo che si allarga col tempo.
+_Evita_: anteprima (che è quella di una misura), proiezione (per i seggi)
 
 **PIL potenziale**:
 Quanto il paese può produrre senza surriscaldarsi; cresce piano, e lo spostano infrastrutture, scuola, giustizia, energia e demografia.
