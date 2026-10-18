@@ -83,8 +83,16 @@ Regola del paese fissata per legge, con un valore in vigore (età pensionabile, 
 _Evita_: manopola, parametro, policy
 
 **Legge di riforma**:
-Legge che porta una o più disposizioni a un valore nuovo; abrogarla le riporta al valore di prima.
-_Evita_: riforma (da sola), pacchetto
+Legge che porta una o più disposizioni a un valore nuovo, compreso quello di prima: per tornare indietro il parlamento scrive il valore che vuole, non abroga. Solo il referendum abrogativo abroga.
+_Evita_: riforma (da sola), pacchetto, abrogazione per legge
+
+**Valore in arrivo**:
+Valore già deciso per legge che una disposizione prenderà a un turno fissato (per un emendamento su un regime, o al turno zero per il nucleare e la scadenza dell'incentivo agli investimenti); finché non arriva, una legge di riforma può cambiarlo.
+_Evita_: delega, evento programmato
+
+**Valore dopo l'abrogazione**:
+Gradino che una disposizione prende quando un referendum abrogativo cancella la legge che l'ha fissata: di solito il valore precedente, oppure un gradino fisso quando la legge abrogata aveva istituito qualcosa (reddito minimo → non istituito).
+_Evita_: reviviscenza, ripristino
 
 **Decreto**:
 Misura normativa del governo, ammessa solo con un evento aperto o per spostare fondi durante l'anno: vale subito e decade a fine turno se il parlamento non la converte in legge. Un decreto decaduto non si ripete.
@@ -108,7 +116,7 @@ Voto popolare su una norma costituzionale approvata senza i due terzi, chiesto d
 _Evita_: referendum (da solo), plebiscito
 
 **Referendum abrogativo**:
-Voto popolare che cancella una legge in vigore, chiesto dall'opposizione; vale solo se vota la maggioranza degli aventi diritto. Non si applica a imposte, bilancio e amnistia.
+Voto popolare che cancella la legge che ha fissato il valore in vigore di una disposizione, una disposizione per quesito, chiesto dall'opposizione; vale solo se vota la maggioranza degli aventi diritto. La disposizione passa al suo valore dopo l'abrogazione, e il gradino abrogato non si può riproporre fino alla legislatura successiva. Non si applica alle disposizioni fiscali, al bilancio e all'amnistia.
 _Evita_: referendum (da solo)
 
 **Linea**:

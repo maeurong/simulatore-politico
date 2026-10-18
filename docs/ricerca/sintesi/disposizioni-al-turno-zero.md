@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: [fonti/gu-legge-197-2022-art1-parte1.md, fonti/gu-legge-197-2022-art1-parte4.md, fonti/gu-legge-199-2025-art1-parte1.md, fonti/gu-legge-199-2025-art1-parte2.md, fonti/gu-legge-199-2025-art1-parte5.md, fonti/gu-legge-207-2024-art1-parte1.md, fonti/gu-legge-213-2023-art1-parte1.md, fonti/gu-legge-213-2023-art1-parte2.md, fonti/gu-legge-160-2019-art1-parte5.md, fonti/gu-legge-296-2006-art1-parte7.md, fonti/gu-legge-232-2016-art1-parte3.md, fonti/gu-legge-193-2024-art3.md, fonti/gu-legge-47-2025.md, fonti/normattiva-dlgs231-2007-art49.md, fonti/normattiva-dl19-2024-art38.md, fonti/normattiva-legge-21-1992-art8.md, fonti/normattiva-legge-118-2022-art3.md, fonti/normattiva-dl201-2011-art24.md, fonti/difesa-circolare-requisiti-pensionistici-2027-2028.md, fonti/inps-circolare-153-2025-rinnovo-pensioni-2026.md, fonti/normattiva-dlgs22-2015-art1.md, fonti/normattiva-dl48-2023-art1.md, fonti/normattiva-dl48-2023-art2.md, fonti/normattiva-legge-144-2025-art1.md, fonti/normattiva-dl62-2026-art7.md, fonti/normattiva-dlgs23-2015-art3.md, fonti/eligendo-referendum-2025-06-08-italia.md, fonti/normattiva-legge-537-1993-art8.md, fonti/normattiva-dlgs71-2025-art1.md, fonti/normattiva-dlgs71-2025-art2.md, fonti/normattiva-dl95-2012-art15.md, fonti/normattiva-dlgs36-2023-art50.md, fonti/normattiva-legge-169-2026-art1.md, fonti/normattiva-dlgs190-2024-art1.md, fonti/dpcm-2025-10-02-flussi-2026-2028.md, fonti/lavoro-gov-comunicato-flussi-2023-2025.md, fonti/normattiva-legge-91-1992-art3bis.md, fonti/normattiva-dlgs142-2015-art8.md, fonti/normattiva-cpp-art344bis.md, fonti/normattiva-legge-689-1981-art53.md, fonti/normattiva-cpp-art267.md, fonti/normattiva-dlgs66-2010-art1929.md, fonti/normattiva-legge-185-1990-art1.md, fonti/cortecost-sent-13-2012.md]
-aggiornato: 2026-10-17
+aggiornato: 2026-10-18
 ---
 # Le disposizioni al turno zero
 
@@ -82,8 +82,7 @@ Disposizioni cambiate più volte di recente, con la legge che un referendum colp
 ## Per il nostro gioco
 
 - **Prendiamo:** la tabella come file di dati del turno zero, con le quattro correzioni ai gradini.
-- **Da decidere:** la regola di abrogazione. Due strade [INF]: tenerla come semplificazione dichiarata («il Parlamento ripristina il valore precedente»); oppure dare a ogni disposizione un campo «valore dopo abrogazione» (0, regime generale, non istituito) preso dall'ultima colonna qui sopra. La seconda è più fedele e costa un campo nello schema (catalogo, riga 28).
-- **Da decidere:** la data esatta del turno zero rispetto al 15/10/2026 (nucleare).
+- **Deciso il 18/10/2026** ([[decisioni]], ticket «Abrogazione e gradini di partenza»): ogni disposizione ha un campo «valore dopo l'abrogazione», precedente di default e fisso solo per il reddito minimo («non istituito»); abroga solo il referendum, una disposizione per quesito, escluse le cinque fiscali. Nucleare «vietato» con «consentito» in arrivo da ottobre 2027; incentivo agli investimenti 0 / 10 / 20 / 40* in % del costo, con scadenza in arrivo da ottobre 2028.
 - **Resta aperto:** le voci [NON TROVATO] e le accise effettive di ottobre 2026.
 
 ## Riferimenti
