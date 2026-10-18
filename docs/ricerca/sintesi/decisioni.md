@@ -234,6 +234,16 @@ Grilling sul ticket wayfinder «Tabella degli interessi» (`.scratch/v1-giocabil
 - **Disposizioni:** mai dirette negli interessi; effetti materiali dagli indicatori, parte simbolica dalla posizione della misura. Il modello economico deve ripartire l'evasione per condizione e portare il salario minimo nel reddito della fascia bassa dei dipendenti privati.
 - **Colpa:** reddito primario e prezzi al solo Presidente del Consiglio; disoccupazione, pensioni, sussidi e reddito minimo a Lavoro e Welfare; imposte, salario e occupazione pubblica a Economia e Finanze; ogni servizio al suo dicastero.
 
+## 2026-10-17: partenza della partita
+Grilling sul ticket wayfinder «Partenza della partita» (`.scratch/v1-giocabile/issues/20-partenza-della-partita.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate.
+- **Un turno prima del voto.** Con la 180/2026 la coalizione si dichiara prima del voto ([[sistemi-elettorali]]), quindi la partita comincia lì: il giocatore legge i sondaggi, dichiara la coalizione, il voto si tiene in chiusura. **Supera** l'«appena entrato in parlamento con un buon risultato» del 16/10: al turno zero il partito è fuori dal parlamento e il buon risultato è atteso, non scritto. Perdere il primo voto porta all'opposizione.
+- **Fondazione:** nome e uno dei sei mezzi punti fra due partiti vicini (1,5 … 6,5), con risultato atteso e coalizioni possibili per ogni posto. Il peso viene dalla luna di miele del leader nuovo, la stessa del partito di protesta, tarata perché il posto medio dia circa il 15%.
+- **Calendario:** turno zero a ottobre-dicembre 2026, il primo con la 180; bilancio 2027 già approvato dal governo uscente (2026 indicizzato nel tetto UE); spartizione a gennaio-marzo 2027.
+- **Parlamento** dal voto simulato dal motore con seme fisso; **governo uscente** di centrodestra e destra IA, in interim durante la trattativa; giudizio a zero per tutti.
+- **Taratura:** valence dei sette partiti sulle intenzioni di voto reali di ottobre 2026 sommate per posto (CHES, [[ches]]), corrispondenza offline e fuori dai dati. Lo scenario di partenza ha sempre una coalizione vincibile; l'editor avvisa senza impedire.
+- La fase da outsider resta fuori, ma fondazione e prima campagna entrano, ridotte a una schermata e a un turno.
+- **Dati del turno zero** (ticket 23, [[stato-del-paese-al-turno-zero]]): stato base al 2026T2, l'ultimo trimestre coerente, portato a inizio ottobre con gli indicatori mensili di luglio-settembre trattati come dati osservati. Il calendario di gioco resta ottobre-dicembre 2026.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://elezionistorico.interno.gov.it/index.php?tpel=F&dtel=08/06/2025&tpa=I&tpe=A&lev0=0&levsut0=0&es0=S&ms=S", "sha256": "acc7a6e86593065b5aeb0ffe9de171e8eb2dccf61268ffe10be083dd224a6baa", "bytes": 3103}, "tool": "curl+estrazione-testo", "tool_version": "n/d", "extracted": "2026-10-17"}
