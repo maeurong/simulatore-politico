@@ -157,3 +157,6 @@ Grilling sul ticket wayfinder «Informazione imperfetta» (25), quattro giri; sc
 
 ## [2026-10-18] query | campagna elettorale
 Grilling sul ticket wayfinder «Campagna elettorale» (26), tre giri; scelta di Mario contro la raccomandazione: la campagna convince anche, con spinte di posizione durature. Registrato in [[decisioni]]: solo nel turno prima del voto, ordine apertura IA → decisioni del giocatore → spesa e voto in chiusura, riposizionamento gratuito con la percepita a metà strada, 3 bersagli con tre leve, 1-3 punti a cassa piena, fino a 2 promesse su disposizioni, partiti IA con le stesse leve, casse rivali pubbliche. In CONTEXT.md: campagna elettorale, bersaglio, promessa; precisata posizione percepita. Nessuna fonte nuova.
+
+## [2026-10-20] query | salvataggi
+Grilling sul ticket wayfinder «Salvataggi» (28), due giri, tutte le raccomandazioni accettate. Registrato in [[decisioni]]: snapshot automatico a ogni apertura, riavvolgimento che cancella i turni successivi e riusa lo stesso caso, contato nell'eredità; bozza del turno alla chiusura dell'app, abbandono esplicito; dati copiati nel salvataggio, schema diverso rifiutato senza migrazioni; albo delle partite, più partite in corso. Aggiornata [[architettura-simulazione]] (sezione «Per il nostro gioco»). In CONTEXT.md: partita, salvataggio, riavvolgimento, albo delle partite. Nessuna fonte nuova.
