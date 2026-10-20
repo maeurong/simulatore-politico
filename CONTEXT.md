@@ -79,8 +79,15 @@ Atto del ministro che impegna il margine discrezionale per più turni e rende so
 _Evita_: progetto, opera (da sola)
 
 **Disposizione**:
-Regola del paese fissata per legge, con un valore in vigore (età pensionabile, regime delle pensioni, soglia del forfettario, salario minimo); ogni disposizione appartiene a un dicastero, tranne quelle della legge elettorale.
+Regola del paese fissata per legge, con un valore in vigore (età pensionabile, regime delle pensioni, soglia del forfettario, salario minimo); ogni disposizione appartiene a un dicastero, tranne quelle della legge elettorale e l'autonomia differenziata.
 _Evita_: manopola, parametro, policy
+
+**Disposizione territoriale**:
+Disposizione che vale solo nel suo perimetro (la decontribuzione per il Mezzogiorno, il credito d'imposta della ZES unica, l'autonomia differenziata); tutte le altre valgono per l'intero paese.
+
+**Perimetro**:
+L'insieme di regioni su cui vale una disposizione territoriale, fissato nella sua definizione e mai scelto da una legge.
+_Evita_: zona, area (da sola)
 
 **Legge di riforma**:
 Legge che porta una o più disposizioni a un valore nuovo, compreso quello di prima: per tornare indietro il parlamento scrive il valore che vuole, non abroga. Solo il referendum abrogativo abroga.
@@ -308,8 +315,20 @@ Stato del paese che si accende quando una grandezza supera una soglia e si spegn
 _Evita_: crisi, emergenza (che è un evento puntuale)
 
 **Regione**:
-Una delle 20 regioni italiane, la più piccola unità della mappa; non è un attore: ha indicatori, non una giunta.
+Una delle 20 regioni italiane, la più piccola unità della mappa; non è un attore: ha indicatori, non una giunta. Varia da regione a regione ciò che riguarda economia ed elettorato (reddito, disoccupazione, settori, gruppi, infrastrutture, pericolosità naturale); gli indicatori di servizio sono nazionali.
 _Evita_: provincia, distretto
+
+**Macroarea**:
+Nord, Centro o Mezzogiorno: le tre ripartizioni ISTAT delle regioni, con cui si leggono i dati e il divario.
+_Evita_: ripartizione, circoscrizione
+
+**Regione bersaglio**:
+La regione su cui spende e rende un atto di Infrastrutture e Trasporti o di Sviluppo economico; la sceglie il ministro, per bisogno e per i voti del suo partito, e il Presidente del Consiglio può dirottarla finché l'atto è in agenda. Lì il merito dell'atto va al partito del dicastero.
+_Evita_: bersaglio (da solo, che è quello della campagna), collegio
+
+**Livello**:
+Ciò che la mappa colora, uno alla volta: consenso, disoccupazione, reddito, affluenza, pericolosità naturale, oppure il risultato del voto.
+_Evita_: layer, filtro, vista
 
 ## Economia
 
