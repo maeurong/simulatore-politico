@@ -19,6 +19,7 @@ Sistemi raccolti dai ticket risolti:
 - collegi uninominali (e con loro l'impostazione Rosatellum), ballottaggio, preferenze (13);
 - regista adattivo degli eventi; epidemia con modello SIR (15);
 - campagna per i referendum; salienza mobile dei temi come canale della campagna (26, oltre al 06);
-- uscita dall'euro: il motore separato in blocchi (07).
+- uscita dall'euro: il motore separato in blocchi (07);
+- migrazioni dei salvataggi fra versioni dello schema; rami della stessa partita (28).
 
 Gli altri ticket ancora aperti possono aggiungere voci: per questo arriva per ultimo.

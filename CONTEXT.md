@@ -276,6 +276,22 @@ _Evita_: turno iniziale, setup
 Il punto di partenza di una partita: lo stato del paese e le regole in vigore al turno zero. Quello di base è l'Italia di oggi ai dati reali; uno scenario su misura ne cambia alcuni valori, mai la struttura (data, istituzioni, dicasteri, regioni, gruppi, partiti).
 _Evita_: livello, mappa, setup, partita (che è il gioco giocato su uno scenario)
 
+**Partita**:
+Il gioco giocato su uno scenario, dalla fondazione del partito all'eredità; ne possono essere in corso più d'una.
+_Evita_: sessione, run, campagna (che è quella elettorale)
+
+**Salvataggio**:
+Lo stato di una partita all'inizio dell'apertura di un turno, scritto dal gioco senza che il giocatore lo chieda; ce n'è uno per ogni turno giocato.
+_Evita_: slot, checkpoint
+
+**Riavvolgimento**:
+Il ritorno di una partita all'apertura di un turno passato, che cancella i turni successivi; con le stesse scelte il caso dà lo stesso esito.
+_Evita_: caricamento, ramo
+
+**Albo delle partite**:
+L'elenco delle partite concluse, ciascuna con la sua eredità; resta leggibile anche quando una versione nuova del gioco non apre più i salvataggi.
+_Evita_: classifica, storico, archivio
+
 **Apertura**:
 La prima fase del turno: l'esito del turno precedente, rivelato una voce alla volta, poi gli eventi aperti, l'agenda dei ministri, le proposte in sospeso e il sondaggio del trimestre.
 

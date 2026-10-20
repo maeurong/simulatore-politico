@@ -282,6 +282,14 @@ Grilling sul ticket wayfinder «Campagna elettorale» (`.scratch/v1-giocabile/is
 - **Partiti IA:** stesse leve, spesa dove un euro rende più voti attesi, promesse dal programma. Protesta con una dote, scissione con la quota di cassa.
 - **Vista:** anteprima a fasce, casse rivali pubbliche, spesa altrui nell'esito.
 
+## 2026-10-20: salvataggi
+Grilling sul ticket wayfinder «Salvataggi» (`.scratch/v1-giocabile/issues/28-salvataggi.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate. Precisa «salvataggi come snapshot» del 17/10 secondo [[architettura-simulazione]].
+- **Riavvolgimento:** uno snapshot automatico all'apertura di ogni turno, tenuto per tutta la partita; «torna al turno N» cancella i turni dopo. Niente ironman, niente slot manuali né rami.
+- **Stesso caso:** lo stato del generatore è nello snapshot, quindi riavvolgere compra conoscenza, non fortuna; l'eredità conta i riavvolgimenti, senza penalità.
+- **Chiudere e abbandonare:** chiudere salva la bozza del turno; abbandonare è esplicito e chiude con l'eredità.
+- **Versioni:** il salvataggio copia i dati con cui la partita è cominciata; uno schema diverso si rifiuta, senza migrazioni nella v1.
+- **Albo delle partite:** eredità, serie dei tre indicatori sintetici, risultati delle elezioni, riavvolgimenti; alla fine per seggi l'eredità è una bozza ancora riavvolgibile. Più partite in corso insieme.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
