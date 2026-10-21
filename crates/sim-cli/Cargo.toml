@@ -1,0 +1,11 @@
+[package]
+name = "sim-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sim-core = { path = "../sim-core" }
+serde_json = "=1.0.154"
+
+[dev-dependencies]
+serde_json = "=1.0.154"
