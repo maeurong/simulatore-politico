@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust 1.98 (workspace Cargo), `serde`, `serde_json`, `toml`, `rand_core` + `rand_chacha` (ChaCha8, versione esatta), `ts-rs`; Tauri 2.12; Svelte 5 + TypeScript + Vite (template `svelte-ts` di create-tauri-app), npm.
 
-**Spec:** [`.scratch/v1-giocabile/spec.md`](../../../.scratch/v1-giocabile/spec.md), sezioni «Architettura», «Le quattro cuciture», «Modulo dati», «Turno e partita», «Testing Decisions».
+**Spec:** [`docs/superpowers/specs/2026-10-21-v1-giocabile.md`](../specs/2026-10-21-v1-giocabile.md), sezioni «Architettura», «Le quattro cuciture», «Modulo dati», «Turno e partita», «Testing Decisions».
 
 ## Global Constraints
 
@@ -23,6 +23,7 @@
 - Salvataggio = snapshot JSON con versione dello schema, seme, stato del generatore e copia dei dati (`docs/ricerca/tecnica/architettura-simulazione.md:32-34`); schema diverso rifiutato, nessuna migrazione.
 - Solo macOS; Tauri 2.12; versioni bloccate da `Cargo.lock` e `app/package-lock.json`, entrambi committati.
 - Testo minimo 12 px a scala 1×.
+- Testi del gioco esternalizzati (storia 166): arrivano col piano 11. Qui i messaggi di validazione di `Errore` restano nel codice come diagnostica per l'autore dei dati, e le etichette della schermata provvisoria del Task 5 si buttano col piano 11.
 
 ## Review Focus
 
@@ -48,10 +49,14 @@ Ogni piano produce software che gira e si testa da solo. Si scrive appena chiuso
 | 8 | Partiti IA e campagna | governo avversario, opposizione IA, vita dei partiti, campagna, promesse, cassa del partito | 7 |
 | 9 | Eventi e informazione | situazioni, eventi puntuali, pericolosità naturale, acquisti d'informazione, centro studi | 5, 8 |
 | 10 | Scenario e salvataggi | editor coi cursori e il riepilogo dal vivo, riavvolgimento, bozza, più partite, albo | 3, 7 |
-| 11 | UI «Il Settimanale» | tutte le schermate della spec sopra la vista; mappa SVG | 1-10, a fette man mano che la vista cresce |
+| 11 | UI «Il Settimanale» | tutte le schermate della spec sopra la vista; mappa SVG; testi dell'interfaccia in file esterni; scala della UI regolabile e interruttore del movimento | 1-10, a fette man mano che la vista cresce |
 | 12 | Bilanciamento | tre strategie nel CLI, bersagli del costo del governare, taratura delle manopole | 1-10 |
 
 Il piano 11 può partire a fette dopo il 5, quando la vista ha qualcosa da mostrare; il 12 gira dopo ogni piano dal 7 in poi come controllo.
+
+## Dispatch
+
+Tutto sequenziale, 1 → 2 → 3 → 4 → 5: ogni task tocca `Cargo.toml`/`Cargo.lock` (radice o `sim-core`) e consuma l'API del precedente. Ogni riga **Dispatch** sotto dà subagente, dipendenza e skill-gate; la riga **Ricerca** è il riferimento da copiare nel brief.
 
 ---
 
@@ -66,6 +71,8 @@ Il piano 11 può partire a fette dopo il 5, quando la vista ha qualcosa da mostr
 - Modify: `.gitignore` (aggiungere `target/`, `node_modules/`, `app/dist/`)
 
 **Ricerca:** `docs/ricerca/tecnica/architettura-simulazione.md:19-22` (PRNG nominato e versionato, niente `usize`, un flusso per sottosistema); `docs/ricerca/tecnica/core-rust-e-ui-separata.md:14` (crate senza dipendenze dal motore, test senza finestra).
+
+**Dispatch:** `rust-engineer` · primo, nessuna dipendenza · skill-gate: true.
 
 **Interfaces:**
 - Consumes: niente.
@@ -172,7 +179,9 @@ git commit -m "feat(core): seeded ChaCha8 streams per subsystem"
 - Test: `crates/sim-core/tests/dati.rs`
 - Test: `crates/sim-core/tests/comune/mod.rs`
 
-**Ricerca:** `docs/ricerca/tecnica/modding-e-dati-esterni.md:14-15` (TOML per le entità strutturate, validazione all'avvio con errori leggibili); spec, «Le quattro cuciture», cucitura 4.
+**Ricerca:** `docs/ricerca/tecnica/modding-e-dati-esterni.md:14-15` (TOML per le entità strutturate, validazione all'avvio con errori leggibili); `docs/ricerca/sintesi/decisioni.md:315` (ruoli nei dati, rifiuto se orfano o doppio); spec, «Le quattro cuciture», cucitura 4.
+
+**Dispatch:** `rust-engineer` · dopo Task 1: stessi `lib.rs`, `crates/sim-core/Cargo.toml`, `Cargo.lock` · skill-gate: true.
 
 **Interfaces:**
 - Consumes: niente dal Task 1.
@@ -325,7 +334,9 @@ git commit -m "feat(core): load and validate ministries, roles and knobs"
 - Modify: `crates/sim-core/Cargo.toml` (`serde_json` passa da dev a dipendenza normale)
 - Test: `crates/sim-core/tests/partita.rs`
 
-**Ricerca:** `docs/ricerca/tecnica/architettura-simulazione.md:32-34` (snapshot completo con seme, versione dello schema e dati; replay solo a parità di binario); `docs/ricerca/tecnica/core-rust-e-ui-separata.md:15-16` (interfaccia stretta, nessuna logica nel frontend).
+**Ricerca:** `docs/ricerca/tecnica/architettura-simulazione.md:32-34` (snapshot completo con seme, versione dello schema e dati; replay solo a parità di binario); `docs/ricerca/tecnica/architettura-simulazione.md:40` e `docs/ricerca/sintesi/decisioni.md:297` (decisione del 20/10: JSON, stato del generatore, copia dei dati, schema diverso rifiutato senza migrazioni); `docs/ricerca/tecnica/core-rust-e-ui-separata.md:15-16` (interfaccia stretta, nessuna logica nel frontend).
+
+**Dispatch:** `rust-engineer` · dopo Task 2: consuma `DatiGioco`, `Errore`, `Caso` · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `Caso::nuovo`, `DatiGioco`, `Errore::{SchemaDiverso, SalvataggioIllegibile}`.
@@ -340,7 +351,7 @@ git commit -m "feat(core): load and validate ministries, roles and knobs"
     - `Partita::carica(json: &str) -> Result<Partita, Errore>`
   - `sim_core::Vista { pub turno: u32, pub data: Trimestre, pub dicasteri: Vec<VoceDicastero> }`, `sim_core::vista::VoceDicastero { pub id: String, pub nome: String }`, entrambe `Clone, Debug, PartialEq, Serialize`.
 
-`chiudi_turno` per ora porta il turno avanti di uno e la data al trimestre successivo. I piani seguenti inseriscono i passi della chiusura in quest'ordine fisso, da scrivere come commento di una riga sopra la funzione: atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo. Nessuna funzione vuota per i passi futuri.
+`chiudi_turno` per ora porta il turno avanti di uno e la data al trimestre successivo. I piani seguenti inseriscono i passi della chiusura in quest'ordine fisso, da scrivere come commento di una riga sopra la funzione: atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo; voto delle elezioni dopo il motore. Nessuna funzione vuota per i passi futuri.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
@@ -455,6 +466,8 @@ git commit -m "feat(core): game state with quarterly turns and versioned snapsho
 
 **Ricerca:** `docs/ricerca/tecnica/architettura-simulazione.md:14` (simulazione senza finestra per test e bilanciamento); `docs/ricerca/tecnica/core-rust-e-ui-separata.md:14`.
 
+**Dispatch:** `rust-engineer` · dopo Task 3: consuma `Partita`/`Vista` riesportate alla radice; tocca `Cargo.toml` radice come il Task 5 · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `FileDati`, `DatiGioco::da_testi`, `Partita::{nuova, chiudi_turno, vista}`.
 - Produces: comando `sim-cli --dati <cartella> --seme <u64> --turni <u32>`. Legge `dicasteri.toml` e `manopole.toml` dalla cartella, gioca i turni chiudendoli senza decisioni, stampa su stdout la `Vista` finale in JSON indentato. Con un errore stampa su stderr `errore: <messaggio>` ed esce con codice 1. Argomenti letti con `std::env::args`, senza crate di parsing. Il piano 12 vi aggiunge le strategie.
@@ -542,7 +555,9 @@ git commit -m "feat(cli): headless sim-cli runs quarters from data dir"
 - Create: `app/src/lib/tipi/*.ts` (generati, committati)
 - Modify: `app/package.json` (versioni esatte di `@tauri-apps/cli` e `@tauri-apps/api` della serie 2.12)
 
-**Ricerca:** `docs/ricerca/tecnica/core-rust-e-ui-separata.md:15-16` (comandi verso il core, snapshot verso la UI, niente logica nel frontend); spec, «Architettura» (tipi TypeScript generati dal Rust, il guscio legge i file).
+**Ricerca:** `docs/ricerca/tecnica/core-rust-e-ui-separata.md:15-16` (comandi verso il core, snapshot verso la UI, niente logica nel frontend); `docs/ricerca/sintesi/decisioni.md:193` (Tauri 2.12 + core Rust, UI Svelte 5); `docs/ricerca/tecnica/tauri.md:12` (versioni esatte: `tauri` 2.12.3, `tauri-cli` 2.12.2); spec, «Architettura» (tipi TypeScript generati dal Rust, il guscio legge i file).
+
+**Dispatch:** `rust-engineer`, intero, non spezzato · dopo Task 4: modifica `partita.rs`/`vista.rs` del Task 3 e `Cargo.toml` radice del Task 4 · skill-gate: true. Il lato Svelte sono un'intestazione, un elenco e un pulsante, provvisori fino al piano 11: spezzarlo verso `frontend-engineer` aggiunge un passaggio di consegne sui nomi dei comandi e sui tipi generati, più l'orchestrazione `impeccable` per una schermata da buttare. Lo Step 5 lo guarda Mario: finestra nativa, nessun agente la vede, e fuori da Tauri `invoke` non risponde.
 
 **Interfaces:**
 - Consumes: `FileDati`, `DatiGioco::da_testi`, `Partita::{nuova, chiudi_turno, vista}`, `Vista`, `Trimestre`.

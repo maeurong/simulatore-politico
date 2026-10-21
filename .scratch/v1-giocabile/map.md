@@ -14,7 +14,7 @@ Spec della v1 giocabile, pronta per `/to-spec` → `superpowers:writing-plans`: 
 - Skill per ogni sessione: `grilling` + `domain-modeling` (aggiornare `CONTEXT.md` appena un termine si chiarisce); `research` per i ticket research; `prototype` per i prototipi.
 - Pubblico della v1: solo Mario, sul suo Mac. Le altre piattaforme non sono un requisito, ma lo stack non deve escluderle.
 - Pianificazione, non esecuzione: spike e prototipi solo usa e getta, per sbloccare una decisione.
-- Spec della v1: [spec.md](spec.md) (21/10/2026, `ready-for-agent`); passo successivo `superpowers:writing-plans`.
+- Spec della v1: [spec](../../docs/superpowers/specs/2026-10-21-v1-giocabile.md) (21/10/2026, `ready-for-agent`); passo successivo `superpowers:writing-plans`.
 - Tracker: local-markdown in `.scratch/v1-giocabile/`. La ricerca va in `docs/ricerca/` secondo `docs/ricerca/CLAUDE.md`, non su branch `research/*`.
 
 ## Decisions so far
