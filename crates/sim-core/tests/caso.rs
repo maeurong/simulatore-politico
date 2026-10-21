@@ -41,25 +41,14 @@ fn caso_serializzato_riprende_dallo_stesso_punto() {
 }
 
 #[test]
-fn salvataggio_con_numero_di_flussi_sbagliato_e_errore() {
-    let mut json: serde_json::Value = serde_json::to_value(Caso::nuovo(1)).unwrap();
-    json["flussi"].as_array_mut().unwrap().pop();
-    assert!(serde_json::from_value::<Caso>(json).is_err());
-}
-
-#[test]
-fn ogni_flusso_ha_il_suo_generatore() {
-    let mut c = Caso::nuovo(1);
-    for f in [
-        Flusso::Economia,
-        Flusso::Elettorato,
-        Flusso::Parlamento,
-        Flusso::Eventi,
-        Flusso::Sondaggi,
-        Flusso::PartitiIa,
-    ] {
-        c.prossimo(f);
-    }
+fn flusso_mai_estratto_riparte_dallo_stato_iniziale() {
+    let mut a = Caso::nuovo(9);
+    a.prossimo(Flusso::Economia);
+    let mut b: Caso = serde_json::from_str(&serde_json::to_string(&a).unwrap()).unwrap();
+    assert_eq!(
+        b.prossimo(Flusso::Sondaggi),
+        Caso::nuovo(9).prossimo(Flusso::Sondaggi)
+    );
 }
 
 #[test]

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use rand_chacha::ChaCha8Rng;
 use rand_core::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -13,38 +15,30 @@ pub enum Flusso {
     PartitiIa = 5,
 }
 
-// Il match e' senza `_`: una nuova variante di `Flusso` non compila finche'
-// non viene elencata qui, dove va aggiornato anche il numero.
-const fn numero_flussi(f: Flusso) -> usize {
-    match f {
-        Flusso::Economia
-        | Flusso::Elettorato
-        | Flusso::Parlamento
-        | Flusso::Eventi
-        | Flusso::Sondaggi
-        | Flusso::PartitiIa => 6,
-    }
-}
-
-const NUMERO_FLUSSI: usize = numero_flussi(Flusso::Economia);
-
-/// Un `ChaCha8Rng` per flusso, indicizzato dal discriminante di `Flusso`.
+/// Un `ChaCha8Rng` per flusso, creato alla prima estrazione dal seme.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Caso {
-    flussi: [ChaCha8Rng; NUMERO_FLUSSI],
+    seme: u64,
+    flussi: BTreeMap<Flusso, ChaCha8Rng>,
 }
 
 impl Caso {
     pub fn nuovo(seme: u64) -> Caso {
-        let flussi = std::array::from_fn(|id| {
-            let mut rng = ChaCha8Rng::seed_from_u64(seme);
-            rng.set_stream(id as u64);
-            rng
-        });
-        Caso { flussi }
+        Caso {
+            seme,
+            flussi: BTreeMap::new(),
+        }
     }
 
     pub fn prossimo(&mut self, flusso: Flusso) -> u64 {
-        self.flussi[flusso as usize].next_u64()
+        let seme = self.seme;
+        self.flussi
+            .entry(flusso)
+            .or_insert_with(|| {
+                let mut rng = ChaCha8Rng::seed_from_u64(seme);
+                rng.set_stream(flusso as u64);
+                rng
+            })
+            .next_u64()
     }
 }
