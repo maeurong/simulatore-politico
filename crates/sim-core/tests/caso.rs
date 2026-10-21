@@ -48,6 +48,21 @@ fn salvataggio_con_numero_di_flussi_sbagliato_e_errore() {
 }
 
 #[test]
+fn ogni_flusso_ha_il_suo_generatore() {
+    let mut c = Caso::nuovo(1);
+    for f in [
+        Flusso::Economia,
+        Flusso::Elettorato,
+        Flusso::Parlamento,
+        Flusso::Eventi,
+        Flusso::Sondaggi,
+        Flusso::PartitiIa,
+    ] {
+        c.prossimo(f);
+    }
+}
+
+#[test]
 fn semi_estremi() {
     Caso::nuovo(0).prossimo(Flusso::Economia);
     Caso::nuovo(u64::MAX).prossimo(Flusso::PartitiIa);

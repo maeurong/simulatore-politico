@@ -13,8 +13,20 @@ pub enum Flusso {
     PartitiIa = 5,
 }
 
-// Legato all'ultima variante: una variante in coda allunga l'array da sola.
-const NUMERO_FLUSSI: usize = Flusso::PartitiIa as usize + 1;
+// Il match e' senza `_`: una nuova variante di `Flusso` non compila finche'
+// non viene elencata qui, dove va aggiornato anche il numero.
+const fn numero_flussi(f: Flusso) -> usize {
+    match f {
+        Flusso::Economia
+        | Flusso::Elettorato
+        | Flusso::Parlamento
+        | Flusso::Eventi
+        | Flusso::Sondaggi
+        | Flusso::PartitiIa => 6,
+    }
+}
+
+const NUMERO_FLUSSI: usize = numero_flussi(Flusso::Economia);
 
 /// Un `ChaCha8Rng` per flusso, indicizzato dal discriminante di `Flusso`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
