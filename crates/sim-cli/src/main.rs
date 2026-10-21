@@ -30,7 +30,7 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
                 turni = Some(
                     valore
                         .parse()
-                        .map_err(|_| format!("turni non valido: {valore}"))?,
+                        .map_err(|_| format!("numero di turni non valido: {valore}"))?,
                 );
             }
             _ => return Err(format!("argomento sconosciuto: {nome}")),

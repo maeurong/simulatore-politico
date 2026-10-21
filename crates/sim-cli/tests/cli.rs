@@ -65,7 +65,7 @@ fn seme_non_numerico_esce_con_errore() {
 fn turni_non_numerici_escono_con_errore() {
     rifiuta(
         &["--dati", DATI, "--seme", "1", "--turni", "-3"],
-        "turni non valido: -3",
+        "numero di turni non valido: -3",
     );
 }
 

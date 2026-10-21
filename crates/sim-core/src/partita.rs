@@ -59,7 +59,9 @@ impl Partita {
         }
     }
 
-    // Ordine di chiusura: atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
+    // Per ora avanza solo il calendario. Ordine previsto quando arriva il motore: atti dei
+    // ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo;
+    // voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
@@ -101,11 +103,14 @@ impl Partita {
         }
     }
 
+    /// Ricostruisce una partita da uno snapshot JSON, validandolo.
+    ///
     /// # Errors
-    /// JSON illeggibile, o schema diverso da `VERSIONE_SCHEMA`.
+    /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
+    /// da 1-4, o dati che non passano `DatiGioco::valida`.
     pub fn carica(json: &str) -> Result<Partita, Errore> {
-        let valore: serde_json::Value =
-            serde_json::from_str(json).map_err(|e| Errore::SalvataggioIllegibile(e.to_string()))?;
+        let valore: serde_json::Value = serde_json::from_str(json)
+            .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
         let trovata = valore
             .get("versione_schema")
             .and_then(serde_json::Value::as_u64)
@@ -118,9 +123,9 @@ impl Partita {
             });
         }
         let partita: Partita = serde_json::from_value(valore)
-            .map_err(|e| Errore::SalvataggioIllegibile(e.to_string()))?;
+            .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
         if !(1..=4).contains(&partita.data.trimestre) {
-            return Err(Errore::SalvataggioIllegibile(format!(
+            return Err(Errore::SalvataggioIlleggibile(format!(
                 "trimestre {} fuori da 1-4",
                 partita.data.trimestre
             )));

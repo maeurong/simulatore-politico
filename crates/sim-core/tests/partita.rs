@@ -98,7 +98,7 @@ fn schema_diverso_rifiutato() {
 fn salvataggio_troncato_non_va_in_panico() {
     let s = giocata(1, 2).salva().unwrap();
     let e = Partita::carica(&s[..s.floor_char_boundary(s.len() / 2)]).unwrap_err();
-    assert!(matches!(e, Errore::SalvataggioIllegibile(_)));
+    assert!(matches!(e, Errore::SalvataggioIlleggibile(_)));
 }
 
 fn salvataggio_modificato(f: impl FnOnce(&mut serde_json::Value)) -> String {
@@ -112,7 +112,7 @@ fn salvataggio_modificato(f: impl FnOnce(&mut serde_json::Value)) -> String {
 fn trimestre_fuori_intervallo_rifiutato() {
     let s = salvataggio_modificato(|j| j["data"]["trimestre"] = 255.into());
     let e = Partita::carica(&s).unwrap_err();
-    assert!(matches!(&e, Errore::SalvataggioIllegibile(m) if m.contains("255")));
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("255")));
 }
 
 #[test]
@@ -190,5 +190,5 @@ fn campo_obbligatorio_mancante_rifiutato() {
         j.as_object_mut().unwrap().remove("seme");
     });
     let e = Partita::carica(&s).unwrap_err();
-    assert!(matches!(&e, Errore::SalvataggioIllegibile(m) if m.contains("seme")));
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("seme")));
 }
