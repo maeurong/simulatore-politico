@@ -49,10 +49,11 @@ Spec della v1 giocabile, pronta per `/to-spec` → `superpowers:writing-plans`: 
 - [Mappa delle 20 regioni](issues/27-mappa-delle-20-regioni.md): servizi, situazioni e popolazione restano nazionali o fermi; tutti gli atti di Infrastrutture e Trasporti e di Sviluppo economico hanno una regione bersaglio scelta dal ministro per bisogno e voti (pesati dalla vocazione), dirottabile, col merito al suo partito nella regione; tre disposizioni territoriali (decontribuzione per il Mezzogiorno, credito ZES unica a 10 regioni sullo stanziamento, autonomia differenziata fuori dicastero sulle due intese reali, che agisce sul gettito trattenuto); mappa a un livello alla volta più il risultato del voto, scheda della regione e selettore.
 - [Salvataggi](issues/28-salvataggi.md): snapshot automatico a ogni apertura, riavvolgimento a un turno passato che cancella il futuro (niente rami né slot), stesso caso dopo il riavvolgimento, contato nell'eredità; bozza del turno alla chiusura dell'app, abbandono esplicito; dati copiati nel salvataggio, schema diverso rifiutato senza migrazioni; albo delle partite con l'eredità e le serie, più partite in corso.
 - [Costo del governare](issues/29-costo-del-governare.md): tre bersagli di bilanciamento su partite simulate (media −2,25 punti a legislatura, inerte peggio, riformatrice meglio alla seconda elezione); logoramento senza regola scritta da aspettative sul reddito reale ed erosione nominale di budget e scaglioni; forma a U da luna di miele (solo al primo governo) e campagna; margine vero all'1,6%, allargabile col bilancio; logoramento visibile con la causa; manopole con intervallo, taratura dopo la costruzione.
+- [Punti di aggancio](issues/30-punti-di-aggancio.md): nessun campo né fase riservati, solo quattro cuciture (motore in blocchi, versione dello schema, seggi per regione dalla popolazione censita, dicasteri e loro ruoli nei dati con rifiuto al caricamento se un ruolo resta orfano o doppio); niente per tutti gli altri sistemi esclusi; nella spec una sezione «Fuori dalla v1» con una riga per sistema.
 
 ## Not yet specified
 
-<!-- vuoto dal 18/10/2026: tutta la nebbia è graduata nei ticket 25-30 (informazione imperfetta, campagna elettorale, mappa delle 20 regioni, salvataggi, costo del governare, punti di aggancio) -->
+<!-- vuoto dal 18/10/2026: tutta la nebbia è graduata nei ticket 25-30 (informazione imperfetta, campagna elettorale, mappa delle 20 regioni, salvataggi, costo del governare, punti di aggancio). Dal 21/10/2026 nessun ticket aperto: mappa risolta, passo successivo `/to-spec`. -->
 
 ## Out of scope
 
@@ -63,3 +64,4 @@ Spec della v1 giocabile, pronta per `/to-spec` → `superpowers:writing-plans`: 
 - Pubblicazione: store, marchio, nome del gioco, traduzioni. La v1 è per Mario.
 - Scenari storici.
 - Uscita dall'euro: la crisi del debito si chiude con MES o ristrutturazione; uscire dall'euro è uno sforzo successivo, che deve trovare il motore già separato in blocchi ([Modello economico della v1](issues/07-modello-economico-v1.md)).
+- Gli altri sistemi esclusi dai ticket risolti (giunte, banche, Corte, alleato minore, uninominali, salienza mobile e gli altri): elenco completo, con la cucitura su cui ciascuno si appoggia oppure «niente», in [Punti di aggancio](issues/30-punti-di-aggancio.md).

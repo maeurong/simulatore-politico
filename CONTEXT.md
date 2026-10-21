@@ -12,6 +12,10 @@ _Evita_: presidente, premier, leader (che è il capo di un partito)
 Area di governo con un ministro e un budget proprio (Sanità, Interno, Esteri e Difesa…); accorpa uno o più ministeri reali.
 _Evita_: settore, ministero (per l'area; «ministro» resta la persona)
 
+**Ruolo del dicastero**:
+Compito che una regola del gioco attribuisce a un dicastero, come prendersi la colpa delle imposte o scegliere una regione bersaglio; ogni ruolo spetta a un solo dicastero, e un dicastero può averne più d'uno.
+_Evita_: competenza, delega
+
 **Spesa di funzionamento**:
 Quota del budget di un dicastero che tiene in piedi il servizio; se si taglia, l'indicatore di servizio peggiora con ritardo, senza bisogno di alcun atto.
 
