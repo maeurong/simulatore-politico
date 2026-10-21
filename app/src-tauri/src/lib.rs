@@ -36,7 +36,10 @@ fn seme_da_orologio() -> Result<u64, String> {
 fn avvia(stato: &Stato, dati: DatiGioco, seme: u64) -> Result<Vista, String> {
     let partita = Partita::nuova(dati, seme);
     let vista = partita.vista();
-    *stato.lock().map_err(|_| ERRORE_STATO)? = Some(partita);
+    // Lo stato viene sostituito per intero: un lock avvelenato si recupera.
+    *stato
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(partita);
     Ok(vista)
 }
 

@@ -8,13 +8,17 @@
 
   let vista = $state<Vista | null>(null);
   let errore = $state("");
+  let occupato = $state(false);
 
   async function chiama(comando: "nuova_partita" | "chiudi_turno") {
+    occupato = true;
     try {
       vista = await invoke<Vista>(comando);
       errore = "";
     } catch (e) {
       errore = String(e);
+    } finally {
+      occupato = false;
     }
   }
 
@@ -29,16 +33,21 @@
         <li>{dicastero.nome}</li>
       {/each}
     </ul>
-    <button onclick={() => chiama("chiudi_turno")}>Chiudi turno</button>
+    <button onclick={() => chiama("chiudi_turno")} disabled={occupato}>Chiudi turno</button>
+  {:else if !errore}
+    <p>Caricamento…</p>
   {/if}
   {#if errore}
     <p role="alert">{errore}</p>
+    {#if !vista}
+      <button onclick={() => chiama("nuova_partita")} disabled={occupato}>Riprova</button>
+    {/if}
   {/if}
 </main>
 
 <style>
   main {
-    font: 16px system-ui, sans-serif;
+    font: 1rem system-ui, sans-serif;
     padding: 1rem 2rem;
   }
 </style>
