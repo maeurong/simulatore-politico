@@ -1,7 +1,7 @@
 ---
 tipo: tecnica
 fonti: [fonti/gaffer-fix-your-timestep.md, fonti/gaffer-floating-point-determinism.md, fonti/rand-book-reproducibility.md, fonti/bevy-fixed-timestep-example.md, fonti/democracy4-modding.md, fonti/democracy3-modding.md]
-aggiornato: 2026-10-16
+aggiornato: 2026-10-20
 ---
 # Architettura della simulazione
 
@@ -37,6 +37,7 @@ Come separare la simulazione dalla grafica, renderla riproducibile con un seed e
 
 - Prendiamo: tick fisso disaccoppiato, PRNG nominato e versionato, interi per l'economia, tabelle invece di ECS, snapshot versionati.
 - Evitiamo: logica di simulazione dentro gli script della UI; `StdRng`; float nei conti pubblici.
+- Salvataggi, deciso il 20/10/2026 ([[decisioni]]): uno snapshot per turno in JSON compresso, con lo stato del PRNG e una copia dei dati di gioco; il riavvolgimento a un turno passato riusa lo stesso caso; schema diverso rifiutato, niente migrazioni nella v1.
 - Aperto: granularita' del tick (giorno o settimana) e se gli elettori sono campioni o gruppi aggregati: decisioni di design, non di stack. Deciso il 17/10/2026 ([[decisioni]]): gruppi aggregati, 360 con istogramma della posizione.
 
 ## Collegamenti

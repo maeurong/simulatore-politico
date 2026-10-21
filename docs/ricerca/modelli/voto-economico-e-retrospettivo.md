@@ -1,7 +1,7 @@
 ---
 tipo: modello
 fonti: [fonti/nannestad-paldam-1999-cost-of-ruling.md, fonti/brender-drazen-2004-testo.md, fonti/louwerse-muller-2020-ciclo-elettorale.md]
-aggiornato: 2026-10-16
+aggiornato: 2026-10-21
 ---
 # Voto economico e retrospettivo
 
@@ -46,6 +46,7 @@ Una somma pesata per partito di governo a ogni tick: `O(K)` con K indicatori. Se
 - Implementare il costo del governare come deriva negativa per legislatura (circa 2 punti a fine legislatura, ma concentrati nella prima metà e con recupero parziale, non lungo una retta: fonti/louwerse-muller-2020-ciclo-elettorale.md [V]; forma in [[cicli-politico-economici-e-luna-di-miele]]) più il termine economico con asimmetria: è il fatto empirico più robusto della pagina e dà al giocatore una pressione costante senza scriptarla.
 - Il rumore attorno all'esito (deviazione standard 4,5 punti) va nel risultato elettorale, non nei sondaggi (quello dei sondaggi è in [[sondaggi-ed-errore]]).
 - Gli shock esogeni (catastrofi) possono pesare sul governo ma l'evidenza è contesa: renderli modesti e tarabili.
+- Deciso il 21/10/2026 ([[decisioni]]): niente deriva scritta. Il costo del governare emerge dall'asimmetria, dalle aspettative sul reddito reale (crescita degli ultimi ~8 turni) e dall'erosione nominale di budget e scaglioni; κ = 2,25 e σ = 4,5 diventano bersagli di taratura per una strategia media, non parametri.
 - Aperto: indicatori da usare. Il modulo economico di un altro filone deve esporre crescita, disoccupazione, inflazione per gruppo di elettori.
 
 ## Collegamenti

@@ -161,6 +161,10 @@ Uno dei partiti in gioco: all'inizio sette inventati da estrema sinistra a estre
 Personaggio inventato a capo di un partito, che ne porta la valence; il leader del partito più grande del governo avversario ne è il Presidente del Consiglio. Un partito IA lo cambia dopo una sconfitta; il giocatore resta sempre leader del suo.
 _Evita_: segretario, capo politico
 
+**Luna di miele**:
+Valence in più che il partito del giocatore ha alla fondazione e che si spegne nella prima metà del suo primo governo; non torna più, perché il leader resta lo stesso.
+_Evita_: bonus iniziale, stato di grazia
+
 **Vocazione**:
 Quanto un partito pesa le politiche rispetto alle poltrone: identitaria, mista o governista. Orienta la scelta della coalizione, il voto sulla sfiducia e quanto in fretta cala l'intesa per misure lontane.
 _Evita_: ideologia, carattere
@@ -261,6 +265,14 @@ _Evita_: bisogni, issue
 Quanto un gruppo è scontento o soddisfatto di un partito di governo per come sono andati i suoi interessi; si accumula turno dopo turno, pesa più i peggioramenti dei miglioramenti, sbiadisce col tempo e riparte da zero per un partito che entra al governo.
 _Evita_: gradimento, approvazione, consenso (che è l'intenzione di voto)
 
+**Aspettativa**:
+La crescita del reddito reale che un gruppo si attende, pari a quella degli ultimi anni e alzata dalle promesse; il giudizio misura il reddito contro di essa, quindi un anno piatto dopo anni buoni è un peggioramento.
+_Evita_: fiducia, attesa (per i tempi dell'iter)
+
+**Costo del governare**:
+Il consenso che chi governa perde col tempo senza che una regola lo tolga: nasce dai peggioramenti pesati più dei miglioramenti, dalle aspettative che crescono e da budget e scaglioni che l'inflazione erode finché una legge non li aggiorna.
+_Evita_: logoramento (da solo), usura, malus di governo
+
 **Sondaggio**:
 Stima delle intenzioni di voto con errore: quello pubblico esce ogni trimestre da più istituti, quello privato si compra con la cassa del partito e sbaglia meno, ma entrambi condividono un errore comune che si rivela solo al voto.
 _Evita_: rilevazione, exit poll
@@ -282,6 +294,22 @@ _Evita_: turno iniziale, setup
 **Scenario**:
 Il punto di partenza di una partita: lo stato del paese e le regole in vigore al turno zero. Quello di base è l'Italia di oggi ai dati reali; uno scenario su misura ne cambia alcuni valori, mai la struttura (data, istituzioni, dicasteri, regioni, gruppi, partiti).
 _Evita_: livello, mappa, setup, partita (che è il gioco giocato su uno scenario)
+
+**Partita**:
+Il gioco giocato su uno scenario, dalla fondazione del partito all'eredità; ne possono essere in corso più d'una.
+_Evita_: sessione, run, campagna (che è quella elettorale)
+
+**Salvataggio**:
+Lo stato di una partita all'inizio dell'apertura di un turno, scritto dal gioco senza che il giocatore lo chieda; ce n'è uno per ogni turno giocato.
+_Evita_: slot, checkpoint
+
+**Riavvolgimento**:
+Il ritorno di una partita all'apertura di un turno passato, che cancella i turni successivi; con le stesse scelte il caso dà lo stesso esito.
+_Evita_: caricamento, ramo
+
+**Albo delle partite**:
+L'elenco delle partite concluse, ciascuna con la sua eredità; resta leggibile anche quando una versione nuova del gioco non apre più i salvataggi.
+_Evita_: classifica, storico, archivio
 
 **Apertura**:
 La prima fase del turno: l'esito del turno precedente, rivelato una voce alla volta, poi gli eventi aperti, l'agenda dei ministri, le proposte in sospeso e il sondaggio del trimestre.

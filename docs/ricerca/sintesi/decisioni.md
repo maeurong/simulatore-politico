@@ -289,6 +289,25 @@ Grilling sul ticket wayfinder «Mappa delle 20 regioni» (`.scratch/v1-giocabile
 - **Disposizioni territoriali**, valide nel loro perimetro (macroaree ISTAT Nord, Centro, Mezzogiorno): decontribuzione per il Mezzogiorno sui lavoratori in forza (Lavoro e Welfare, 20% al turno zero, in calo per legge fino al 2029); credito d'imposta ZES unica (Sviluppo economico) su 10 regioni con Marche e Umbria, leva lo stanziamento perché le aliquote sono della Carta UE; autonomia differenziata fuori dicastero, non attuata al turno zero, con i gradini delle due intese reali (prime materie, intese complete) su Liguria, Lombardia, Piemonte e Veneto, che agisce sul gettito trattenuto. Le disposizioni sono 35, le non referendabili sette.
 - **Mappa:** un livello alla volta a cinque classi (consenso, disoccupazione, reddito, affluenza, pericolosità), più il risultato del voto col colore del primo partito; segni per atti regionali ed emergenze; scheda della regione; selettore per le scelte che chiedono una regione.
 
+## 2026-10-20: salvataggi
+Grilling sul ticket wayfinder «Salvataggi» (`.scratch/v1-giocabile/issues/28-salvataggi.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate. Precisa «salvataggi come snapshot» del 17/10 secondo [[architettura-simulazione]].
+- **Riavvolgimento:** uno snapshot automatico all'apertura di ogni turno, tenuto per tutta la partita; «torna al turno N» cancella i turni dopo. Niente ironman, niente slot manuali né rami.
+- **Stesso caso:** lo stato del generatore è nello snapshot, quindi riavvolgere compra conoscenza, non fortuna; l'eredità conta i riavvolgimenti, senza penalità.
+- **Chiudere e abbandonare:** chiudere salva la bozza del turno; abbandonare è esplicito e chiude con l'eredità.
+- **Versioni:** il salvataggio copia i dati con cui la partita è cominciata; uno schema diverso si rifiuta, senza migrazioni nella v1.
+- **Albo delle partite:** eredità, serie dei tre indicatori sintetici, risultati delle elezioni, riavvolgimenti; alla fine per seggi l'eredità è una bozza ancora riavvolgibile. Più partite in corso insieme.
+
+## 2026-10-21: costo del governare
+Grilling sul ticket wayfinder «Costo del governare» (`.scratch/v1-giocabile/issues/29-costo-del-governare.md`, con il dettaglio). Due giri, tutte le raccomandazioni accettate. Precisa la «deriva negativa» di [[voto-economico-e-retrospettivo]]: niente funzione del tempo, il costo emerge dal modello; la forma a U di [[cicli-politico-economici-e-luna-di-miele]] da luna di miele e campagna.
+- **Bersagli di bilanciamento**, test di accettazione su partite simulate: strategia media −2,25 punti a legislatura (σ ≈ 4,5), inerte peggio e rieletta meno, riformatrice meglio dell'inerte alla seconda elezione.
+- **Aspettative:** il reddito reale si giudica contro la crescita media degli ultimi ~8 turni, alzata dalle promesse.
+- **Erosione nominale:** budget, fondo di riserva, scaglioni e soglie, salario e pensione minimi restano nominali finché una legge non li cambia; indicizzate solo le pensioni in essere. Bozza del bilancio sulle cifre dell'anno prima, con «indicizza all'inflazione» e costo in anteprima.
+- **Nessun κ** di calendario; si aggiunge come manopola solo se la taratura manca i bersagli.
+- **Luna di miele** solo al primo governo del giocatore.
+- **Margine discrezionale** vero all'1,6%, allargabile nella legge di bilancio a spese dei servizi o del disavanzo.
+- **Visibilità:** crescita attesa, voce nell'esito, perdita reale di budget e scaglioni, sempre con la causa.
+- **Manopole** nel file dei dati con valore, intervallo e ticket d'origine; taratura dopo la costruzione, senza spike.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
