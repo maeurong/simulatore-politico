@@ -156,3 +156,39 @@ fn dati_incoerenti_nel_salvataggio_rifiutati() {
     let e = Partita::carica(&s).unwrap_err();
     assert!(matches!(e, Errore::RuoloOrfano { .. }));
 }
+
+#[test]
+fn versione_assente_vale_zero() {
+    let s = salvataggio_modificato(|j| {
+        j.as_object_mut().unwrap().remove("versione_schema");
+    });
+    let e = Partita::carica(&s).unwrap_err();
+    assert_eq!(
+        e,
+        Errore::SchemaDiverso {
+            trovata: 0,
+            attesa: VERSIONE_SCHEMA
+        }
+    );
+}
+
+#[test]
+fn versione_non_intera_rifiutata() {
+    for sbagliata in [serde_json::json!("1"), serde_json::json!(1.5)] {
+        let s = salvataggio_modificato(|j| j["versione_schema"] = sbagliata.clone());
+        let e = Partita::carica(&s).unwrap_err();
+        assert!(
+            matches!(e, Errore::SchemaDiverso { trovata: 0, .. }),
+            "{sbagliata}"
+        );
+    }
+}
+
+#[test]
+fn campo_obbligatorio_mancante_rifiutato() {
+    let s = salvataggio_modificato(|j| {
+        j.as_object_mut().unwrap().remove("seme");
+    });
+    let e = Partita::carica(&s).unwrap_err();
+    assert!(matches!(&e, Errore::SalvataggioIllegibile(m) if m.contains("seme")));
+}

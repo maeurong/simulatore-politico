@@ -43,3 +43,44 @@ fn argomento_mancante_esce_con_errore() {
     assert_eq!(out.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&out.stderr).starts_with("errore: "));
 }
+
+fn rifiuta(args: &[&str], frammento: &str) {
+    let out = sim(args);
+    assert_eq!(out.status.code(), Some(1), "{args:?}");
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.starts_with("errore: "), "{err}");
+    assert!(err.contains(frammento), "{err}");
+    assert!(!err.contains("panicked"), "{err}");
+}
+
+#[test]
+fn seme_non_numerico_esce_con_errore() {
+    rifiuta(
+        &["--dati", DATI, "--seme", "abc", "--turni", "1"],
+        "seme non valido: abc",
+    );
+}
+
+#[test]
+fn turni_non_numerici_escono_con_errore() {
+    rifiuta(
+        &["--dati", DATI, "--seme", "1", "--turni", "-3"],
+        "turni non valido: -3",
+    );
+}
+
+#[test]
+fn flag_sconosciuto_esce_con_errore() {
+    rifiuta(
+        &["--dati", DATI, "--seme", "1", "--turni", "1", "--boh", "x"],
+        "argomento sconosciuto: --boh",
+    );
+}
+
+#[test]
+fn flag_senza_valore_esce_con_errore() {
+    rifiuta(
+        &["--dati", DATI, "--seme", "1", "--turni"],
+        "manca il valore per --turni",
+    );
+}

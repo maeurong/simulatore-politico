@@ -149,6 +149,18 @@ fn manopola_non_finita_rifiutata() {
 }
 
 #[test]
+fn manopola_con_massimo_infinito_rifiutata() {
+    // valore dentro l'intervallo: a rifiutarla e' solo is_finite.
+    let manopole = file_base().manopole.replacen("max = 50.0", "max = inf", 1);
+    let e = DatiGioco::da_testi(&FileDati {
+        manopole,
+        ..file_base()
+    })
+    .unwrap_err();
+    assert!(matches!(e, Errore::FuoriIntervallo { ref nome, .. } if nome == "soglia_minaccia"));
+}
+
+#[test]
 fn manopola_con_intervallo_rovesciato_rifiutata() {
     let manopole = file_base().manopole.replacen("min = 30.0", "min = 60.0", 1);
     let e = DatiGioco::da_testi(&FileDati {
