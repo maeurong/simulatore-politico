@@ -13,23 +13,22 @@ pub enum Flusso {
     PartitiIa = 5,
 }
 
-const NUMERO_FLUSSI: usize = 6;
+// Legato all'ultima variante: una variante in coda allunga l'array da sola.
+const NUMERO_FLUSSI: usize = Flusso::PartitiIa as usize + 1;
 
 /// Un `ChaCha8Rng` per flusso, indicizzato dal discriminante di `Flusso`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Caso {
-    flussi: Vec<ChaCha8Rng>,
+    flussi: [ChaCha8Rng; NUMERO_FLUSSI],
 }
 
 impl Caso {
     pub fn nuovo(seme: u64) -> Caso {
-        let flussi = (0..NUMERO_FLUSSI as u64)
-            .map(|id| {
-                let mut rng = ChaCha8Rng::seed_from_u64(seme);
-                rng.set_stream(id);
-                rng
-            })
-            .collect();
+        let flussi = std::array::from_fn(|id| {
+            let mut rng = ChaCha8Rng::seed_from_u64(seme);
+            rng.set_stream(id as u64);
+            rng
+        });
         Caso { flussi }
     }
 

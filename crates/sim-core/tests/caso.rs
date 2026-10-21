@@ -41,6 +41,13 @@ fn caso_serializzato_riprende_dallo_stesso_punto() {
 }
 
 #[test]
+fn salvataggio_con_numero_di_flussi_sbagliato_e_errore() {
+    let mut json: serde_json::Value = serde_json::to_value(Caso::nuovo(1)).unwrap();
+    json["flussi"].as_array_mut().unwrap().pop();
+    assert!(serde_json::from_value::<Caso>(json).is_err());
+}
+
+#[test]
 fn semi_estremi() {
     Caso::nuovo(0).prossimo(Flusso::Economia);
     Caso::nuovo(u64::MAX).prossimo(Flusso::PartitiIa);
