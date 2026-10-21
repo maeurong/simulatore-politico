@@ -1,0 +1,81 @@
+# Dicasteri di base. Pesi di spartizione provvisori (ticket 05).
+
+[[dicastero]]
+id = "economia_finanze"
+nome = "Economia e Finanze"
+indicatore_servizio = "efficienza_riscossione"
+peso_spartizione = 3
+regione_bersaglio = false
+ruoli = ["colpa_imposte_impiego_pubblico", "bilancio_e_credibilita"]
+
+[[dicastero]]
+id = "sviluppo_economico"
+nome = "Sviluppo economico"
+indicatore_servizio = "sostegno_imprese"
+peso_spartizione = 1
+regione_bersaglio = true
+ruoli = []
+
+[[dicastero]]
+id = "lavoro_welfare"
+nome = "Lavoro e Welfare"
+indicatore_servizio = "copertura_welfare"
+peso_spartizione = 1
+regione_bersaglio = false
+ruoli = ["colpa_disoccupazione_trasferimenti"]
+
+[[dicastero]]
+id = "sanita"
+nome = "Sanità"
+indicatore_servizio = "qualita_servizio_sanitario"
+peso_spartizione = 1
+regione_bersaglio = false
+ruoli = []
+
+[[dicastero]]
+id = "istruzione_ricerca"
+nome = "Istruzione e Ricerca"
+indicatore_servizio = "qualita_scuola"
+peso_spartizione = 1
+regione_bersaglio = false
+ruoli = []
+
+[[dicastero]]
+id = "infrastrutture_trasporti"
+nome = "Infrastrutture e Trasporti"
+indicatore_servizio = "qualita_trasporti"
+peso_spartizione = 1
+regione_bersaglio = true
+ruoli = []
+
+[[dicastero]]
+id = "ambiente_energia"
+nome = "Ambiente ed Energia"
+indicatore_servizio = "sicurezza_energetica"
+peso_spartizione = 1
+regione_bersaglio = false
+ruoli = []
+
+[[dicastero]]
+id = "interno"
+nome = "Interno"
+indicatore_servizio = "sicurezza"
+peso_spartizione = 2
+regione_bersaglio = false
+ruoli = []
+
+[[dicastero]]
+id = "giustizia"
+nome = "Giustizia"
+indicatore_servizio = "durata_processi"
+peso_spartizione = 1
+regione_bersaglio = false
+ruoli = []
+
+[[dicastero]]
+id = "esteri_difesa"
+nome = "Esteri e Difesa"
+indicatore_servizio = "prontezza_difesa"
+peso_spartizione = 2
+regione_bersaglio = false
+ruoli = []

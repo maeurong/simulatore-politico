@@ -1,0 +1,19 @@
+# Intervalli provvisori, al bilanciamento.
+
+[soglia_minaccia]
+valore = 40.0
+min = 30.0
+max = 50.0
+ticket = "04"
+
+[soglia_dimissioni]
+valore = 25.0
+min = 15.0
+max = 35.0
+ticket = "04"
+
+[turni_legge_ordinaria]
+valore = 2.0
+min = 2.0
+max = 4.0
+ticket = "08"
