@@ -59,6 +59,43 @@ fn ruolo_doppio_rifiutato_col_nome() {
 }
 
 #[test]
+fn indicatore_servizio_doppio_rifiutato() {
+    let testo = format!(
+        "{}\n[[dicastero]]\nid = \"bis\"\nnome = \"Bis\"\nindicatore_servizio = \"sicurezza\"\npeso_spartizione = 1\nregione_bersaglio = false\nruoli = []\n",
+        file_base().dicasteri
+    );
+    let e = DatiGioco::da_testi(&con_dicasteri(&testo)).unwrap_err();
+    assert!(matches!(
+        &e,
+        Errore::IndicatoreDoppio { indicatore, secondo, .. }
+            if indicatore == "sicurezza" && secondo == "bis"
+    ));
+    assert!(
+        e.to_string()
+            .starts_with("indicatore di servizio assegnato a due dicasteri: sicurezza")
+    );
+}
+
+#[test]
+fn ruoli_tutti_coprono_ogni_variante() {
+    // Il match senza `_` non compila se l'enum cresce: va aggiornato insieme a TUTTI.
+    fn nella_lista(r: Ruolo) -> bool {
+        match r {
+            Ruolo::ColpaDisoccupazioneTrasferimenti
+            | Ruolo::ColpaImposteImpiegoPubblico
+            | Ruolo::BilancioECredibilita => Ruolo::TUTTI.contains(&r),
+        }
+    }
+    for r in [
+        Ruolo::ColpaDisoccupazioneTrasferimenti,
+        Ruolo::ColpaImposteImpiegoPubblico,
+        Ruolo::BilancioECredibilita,
+    ] {
+        assert!(nella_lista(r));
+    }
+}
+
+#[test]
 fn ruolo_sconosciuto_rifiutato_col_nome() {
     let testo = file_base()
         .dicasteri

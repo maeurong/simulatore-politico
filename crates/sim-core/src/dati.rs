@@ -76,8 +76,8 @@ impl DatiGioco {
     /// Parsa e valida i testi dei file di dati.
     ///
     /// # Errors
-    /// TOML malformato, dicasteri ripetuti, ruoli orfani o doppi,
-    /// manopole con valore fuori dall'intervallo.
+    /// TOML malformato, dicasteri ripetuti, indicatori di servizio doppi,
+    /// ruoli orfani o doppi, manopole con valore fuori dall'intervallo.
     pub fn da_testi(file: &FileDati) -> Result<DatiGioco, Errore> {
         let dicasteri = toml::from_str::<FileDicasteri>(&file.dicasteri)
             .map_err(|e| errore_toml("dicasteri.toml", e))?
@@ -96,13 +96,23 @@ impl DatiGioco {
     /// Coerenza dei dati, anche per quelli letti da un salvataggio.
     ///
     /// # Errors
-    /// Dicasteri ripetuti, ruoli orfani o doppi, manopole non finite
+    /// Dicasteri ripetuti, indicatori di servizio doppi, ruoli orfani o doppi, manopole non finite
     /// o con valore fuori dall'intervallo.
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
             if dicasteri[..i].iter().any(|p| p.id == d.id) {
                 return Err(Errore::DicasteroDoppio { id: d.id.clone() });
+            }
+            if let Some(p) = dicasteri[..i]
+                .iter()
+                .find(|p| p.indicatore_servizio == d.indicatore_servizio)
+            {
+                return Err(Errore::IndicatoreDoppio {
+                    indicatore: d.indicatore_servizio.clone(),
+                    primo: p.id.clone(),
+                    secondo: d.id.clone(),
+                });
             }
         }
         for ruolo in Ruolo::TUTTI {

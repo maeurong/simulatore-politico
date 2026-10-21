@@ -127,6 +127,26 @@ fn contatori_al_limite_non_vanno_in_panico() {
 }
 
 #[test]
+fn f64_identici_attraverso_salva_carica() {
+    let mut dati = dati_base();
+    let m = dati.manopole.get_mut("soglia_minaccia").unwrap();
+    m.min = 0.0;
+    m.max = 100.0;
+    m.valore = 94.52706955539223;
+    let p = Partita::nuova(dati, 1);
+    let r = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(r, p);
+}
+
+#[test]
+fn salva_rifiuta_manopola_non_finita() {
+    let mut dati = dati_base();
+    dati.manopole.get_mut("soglia_minaccia").unwrap().valore = f64::NAN;
+    let e = Partita::nuova(dati, 1).salva().unwrap_err();
+    assert!(matches!(e, Errore::SalvataggioNonRiuscito(_)));
+}
+
+#[test]
 fn dati_incoerenti_nel_salvataggio_rifiutati() {
     let s = salvataggio_modificato(|j| {
         for d in j["dati"]["dicasteri"].as_array_mut().unwrap() {

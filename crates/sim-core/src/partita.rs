@@ -3,13 +3,14 @@ use crate::dati::DatiGioco;
 use crate::errore::Errore;
 use crate::vista::{Vista, VoceDicastero};
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
 use ts_rs::TS;
 
 pub const VERSIONE_SCHEMA: u32 = 1;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub struct Trimestre {
     pub anno: u16,
     pub trimestre: u8,
@@ -83,9 +84,21 @@ impl Partita {
     /// Snapshot JSON completo: schema, seme, stato del generatore, dati.
     ///
     /// # Errors
-    /// Serializzazione fallita: chi salva non deve scrivere un file vuoto.
+    /// Serializzazione fallita, o stato che riletto non torna identico
+    /// (per esempio una manopola NaN, scritta come `null`): chi salva non
+    /// deve scrivere un file illeggibile.
     pub fn salva(&self) -> Result<String, Errore> {
-        serde_json::to_string(self).map_err(|e| Errore::SalvataggioNonRiuscito(e.to_string()))
+        let s = serde_json::to_string(self)
+            .map_err(|e| Errore::SalvataggioNonRiuscito(e.to_string()))?;
+        match Partita::carica(&s) {
+            Ok(riletta) if riletta == *self => Ok(s),
+            Ok(_) => Err(Errore::SalvataggioNonRiuscito(
+                "lo stato riletto è diverso da quello salvato".into(),
+            )),
+            Err(e) => Err(Errore::SalvataggioNonRiuscito(format!(
+                "lo stato salvato non si rilegge: {e}"
+            ))),
+        }
     }
 
     /// # Errors

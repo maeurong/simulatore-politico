@@ -15,6 +15,11 @@ pub enum Errore {
     DicasteroDoppio {
         id: String,
     },
+    IndicatoreDoppio {
+        indicatore: String,
+        primo: String,
+        secondo: String,
+    },
     FuoriIntervallo {
         nome: String,
         valore: f64,
@@ -46,6 +51,14 @@ impl fmt::Display for Errore {
                 "ruolo assegnato a due dicasteri: {ruolo} ({primo}, {secondo})"
             ),
             Self::DicasteroDoppio { id } => write!(f, "dicastero ripetuto: {id}"),
+            Self::IndicatoreDoppio {
+                indicatore,
+                primo,
+                secondo,
+            } => write!(
+                f,
+                "indicatore di servizio assegnato a due dicasteri: {indicatore} ({primo}, {secondo})"
+            ),
             Self::FuoriIntervallo {
                 nome,
                 valore,
