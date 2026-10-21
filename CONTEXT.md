@@ -154,6 +154,10 @@ Uno dei partiti in gioco: all'inizio sette inventati da estrema sinistra a estre
 Personaggio inventato a capo di un partito, che ne porta la valence; il leader del partito più grande del governo avversario ne è il Presidente del Consiglio. Un partito IA lo cambia dopo una sconfitta; il giocatore resta sempre leader del suo.
 _Evita_: segretario, capo politico
 
+**Luna di miele**:
+Valence in più che il partito del giocatore ha alla fondazione e che si spegne nella prima metà del suo primo governo; non torna più, perché il leader resta lo stesso.
+_Evita_: bonus iniziale, stato di grazia
+
 **Vocazione**:
 Quanto un partito pesa le politiche rispetto alle poltrone: identitaria, mista o governista. Orienta la scelta della coalizione, il voto sulla sfiducia e quanto in fretta cala l'intesa per misure lontane.
 _Evita_: ideologia, carattere
@@ -253,6 +257,14 @@ _Evita_: bisogni, issue
 **Giudizio**:
 Quanto un gruppo è scontento o soddisfatto di un partito di governo per come sono andati i suoi interessi; si accumula turno dopo turno, pesa più i peggioramenti dei miglioramenti, sbiadisce col tempo e riparte da zero per un partito che entra al governo.
 _Evita_: gradimento, approvazione, consenso (che è l'intenzione di voto)
+
+**Aspettativa**:
+La crescita del reddito reale che un gruppo si attende, pari a quella degli ultimi anni e alzata dalle promesse; il giudizio misura il reddito contro di essa, quindi un anno piatto dopo anni buoni è un peggioramento.
+_Evita_: fiducia, attesa (per i tempi dell'iter)
+
+**Costo del governare**:
+Il consenso che chi governa perde col tempo senza che una regola lo tolga: nasce dai peggioramenti pesati più dei miglioramenti, dalle aspettative che crescono e da budget e scaglioni che l'inflazione erode finché una legge non li aggiorna.
+_Evita_: logoramento (da solo), usura, malus di governo
 
 **Sondaggio**:
 Stima delle intenzioni di voto con errore: quello pubblico esce ogni trimestre da più istituti, quello privato si compra con la cassa del partito e sbaglia meno, ma entrambi condividono un errore comune che si rivela solo al voto.
