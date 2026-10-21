@@ -20,6 +20,7 @@ Sistemi raccolti dai ticket risolti:
 - regista adattivo degli eventi; epidemia con modello SIR (15);
 - campagna per i referendum; salienza mobile dei temi come canale della campagna (26, oltre al 06);
 - uscita dall'euro: il motore separato in blocchi (07);
-- migrazioni dei salvataggi fra versioni dello schema; rami della stessa partita (28).
+- migrazioni dei salvataggi fra versioni dello schema; rami della stessa partita (28);
+- aspettative estese ai servizi; salienza mobile delle aspettative fra gruppi; luna di miele per un leader nuovo del partito, con i congressi (29).
 
 Gli altri ticket ancora aperti possono aggiungere voci: per questo arriva per ultimo.

@@ -1,6 +1,7 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 25, 26
+Assignee: Mario
 Label: wayfinder:grilling
 Map: ../map.md
 
@@ -29,3 +30,32 @@ Valori provvisori raccolti dai ticket risolti:
 - informazione (25): prezzi di sondaggio privato, test di una misura e centro studi; taglia della dote; peso di 2 per mille e donazioni; numero di istituti; errore della prima stima e della previsione;
 - abrogazione (24): intensità dell'incentivo agli investimenti in % del costo, posizioni dei gradini rinominati;
 - campagna (26): rendimento di ciascuna leva (mobilitare, persuadere, convincere), scala di 1-3 punti a cassa piena, premio e malus di valence delle promesse, costo d'intesa di una promessa lontana, dote del partito di protesta. Le promesse sono una prima forma di aspettative che crescono.
+
+## Answer
+
+Grilling con Mario del 20-21/10/2026, due giri, tutte le raccomandazioni accettate, quadro finale confermato. Fatti in `docs/ricerca/modelli/voto-economico-e-retrospettivo.md` (costo del governare ~2,25 punti a legislatura, deviazione standard 4,5, asimmetria del malcontento: `:13`, `:18`) e `docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md` (calo nella prima metà, recupero parziale: `:21`). Termini nuovi in `CONTEXT.md`: costo del governare, aspettativa, luna di miele.
+
+**Il problema.** Con l'asimmetria del giudizio (17) chi perde da una misura pesa circa tre volte chi ci guadagna: ogni redistribuzione costa consenso, e un governo che non fa nulla paga solo gli shock. Senza un prezzo dell'inerzia, l'inerzia vince.
+
+**Bersagli di bilanciamento**, test di accettazione della spec, verificati con partite simulate dal binario CLI (11) su tre strategie automatiche: *inerte* (chiude ogni turno senza clic, bilancio dell'anno prima), *media* (accetta le agende, bilancio in equilibrio), *riformatrice* (due o tre leggi di riforma per legislatura).
+1. La media perde circa 2,25 punti a legislatura, deviazione standard intorno a 4,5.
+2. L'inerte perde più della media ed è rieletta meno spesso, entro due legislature.
+3. La riformatrice paga nella prima metà e alla seconda elezione sta meglio dell'inerte: le riforme costano subito e rendono dopo.
+
+**Logoramento senza regola scritta.** Nessuna deriva κ legata al calendario: sarebbe una causa fuori dal modello, come il regista adattivo escluso in 15. Resta la via d'uscita, una manopola κ da aggiungere solo se la taratura manca i bersagli. Le fonti, oltre a giudizio asimmetrico, situazioni, invecchiamento e debito già decisi:
+- **Aspettative.** Il reddito reale della fascia si giudica contro la sua crescita media degli ultimi ~8 turni, non contro lo zero: dopo anni buoni un anno piatto è un peggioramento. Le promesse (26) alzano l'asticella. Solo sul reddito reale, che contiene già ogni euro (17); i servizi hanno l'erosione.
+- **Erosione nominale.** Restano fermi finché una legge non li cambia: budget dei dicasteri, fondo di riserva, scaglioni e soglie delle imposte (drenaggio fiscale), salario minimo, pensione minima, soglie dei sussidi. Si indicizzano da sole solo le pensioni in essere, col parametro del regime (07). La bozza della legge di bilancio (09) propone le cifre nominali dell'anno prima, con «indicizza all'inflazione» per tutto o per voce e il costo esatto in anteprima. Bilancio fotocopia ed esercizio provvisorio (08) sono quindi tagli reali e tasse più alte, con l'inflazione al 4,2% del turno zero (23).
+
+**Forma a U.** Emerge senza funzione del tempo: la luna di miele che si spegne fa il calo della prima metà, la campagna (26) il recupero. Luna di miele solo al primo governo del giocatore, come nell'evidenza sui leader al primo mandato; niente al ritorno dall'opposizione né dopo un ribaltone, dove il giudizio che riparte da zero (17) premia già.
+
+**Margine discrezionale vero.** 1,6% al turno zero (23). Il giocatore lo allarga nella legge di bilancio togliendo alla spesa di funzionamento (servizi che peggiorano) o facendo disavanzo (tetto UE, spread). Gli atti restano leve mirate sugli indicatori di servizio; le leve grosse sono bilancio e leggi di riforma.
+
+**Visibilità, con la causa (09).** Crescita attesa accanto al reddito reale di ogni fascia; voce nell'esito («reddito +0,3%, atteso +1%: giudizio in calo»); perdita reale dall'ultimo aggiornamento accanto a ogni budget e scaglione («Sanità: −4% reale in un anno»). Resta imperfetta la prima stima del reddito (25).
+
+**Manopole.** Tutti i valori provvisori elencati sopra, più la finestra delle aspettative (~8 turni) e κ (assente di partenza), stanno nel file dei dati con valore di partenza, intervallo e ticket d'origine (modding solo dati, 11). Taratura dopo la costruzione, contro i tre bersagli; nessuno spike adesso, perché nessuna decisione della mappa aspetta un numero.
+
+**Scelta di strumento, dichiarata e non chiesta:** le tre strategie sono comandi scriptati nel binario CLI, sopra lo stesso core.
+
+Effetti sulla mappa:
+- nessun ticket nuovo;
+- Punti di aggancio (30): aspettative estese ai servizi; salienza mobile delle aspettative fra gruppi; luna di miele per un leader nuovo del partito, se arrivano i congressi (12).
