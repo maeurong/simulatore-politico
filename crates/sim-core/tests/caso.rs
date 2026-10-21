@@ -41,6 +41,17 @@ fn caso_serializzato_riprende_dallo_stesso_punto() {
 }
 
 #[test]
+fn caso_passa_da_value_e_riprende_dallo_stesso_punto() {
+    let mut a = Caso::nuovo(7);
+    for _ in 0..5 {
+        a.prossimo(Flusso::Sondaggi);
+    }
+    let v = serde_json::to_value(&a).unwrap();
+    let mut b: Caso = serde_json::from_value(v).unwrap();
+    assert_eq!(a.prossimo(Flusso::Sondaggi), b.prossimo(Flusso::Sondaggi));
+}
+
+#[test]
 fn flusso_mai_estratto_riparte_dallo_stato_iniziale() {
     let mut a = Caso::nuovo(9);
     a.prossimo(Flusso::Economia);

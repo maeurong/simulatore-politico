@@ -22,13 +22,13 @@ impl Trimestre {
     pub fn successivo(self) -> Trimestre {
         if self.trimestre == 4 {
             Trimestre {
-                anno: self.anno + 1,
+                anno: self.anno.saturating_add(1),
                 trimestre: 1,
             }
         } else {
             Trimestre {
                 anno: self.anno,
-                trimestre: self.trimestre + 1,
+                trimestre: self.trimestre.saturating_add(1),
             }
         }
     }
@@ -58,7 +58,7 @@ impl Partita {
 
     // Ordine di chiusura: atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
-        self.turno += 1;
+        self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }
 
@@ -79,9 +79,11 @@ impl Partita {
     }
 
     /// Snapshot JSON completo: schema, seme, stato del generatore, dati.
-    pub fn salva(&self) -> String {
-        // ponytail: struct di soli tipi serializzabili, to_string non può fallire.
-        serde_json::to_string(self).unwrap_or_default()
+    ///
+    /// # Errors
+    /// Serializzazione fallita: chi salva non deve scrivere un file vuoto.
+    pub fn salva(&self) -> Result<String, Errore> {
+        serde_json::to_string(self).map_err(|e| Errore::SalvataggioNonRiuscito(e.to_string()))
     }
 
     /// # Errors
@@ -100,6 +102,15 @@ impl Partita {
                 attesa: VERSIONE_SCHEMA,
             });
         }
-        serde_json::from_value(valore).map_err(|e| Errore::SalvataggioIllegibile(e.to_string()))
+        let partita: Partita = serde_json::from_value(valore)
+            .map_err(|e| Errore::SalvataggioIllegibile(e.to_string()))?;
+        if !(1..=4).contains(&partita.data.trimestre) {
+            return Err(Errore::SalvataggioIllegibile(format!(
+                "trimestre {} fuori da 1-4",
+                partita.data.trimestre
+            )));
+        }
+        partita.dati.valida()?;
+        Ok(partita)
     }
 }

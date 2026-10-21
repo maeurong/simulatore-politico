@@ -30,6 +30,7 @@ pub enum Errore {
         attesa: u32,
     },
     SalvataggioIllegibile(String),
+    SalvataggioNonRiuscito(String),
 }
 
 impl fmt::Display for Errore {
@@ -60,6 +61,7 @@ impl fmt::Display for Errore {
                 "salvataggio di una versione diversa del gioco: schema {trovata}, atteso {attesa}"
             ),
             Self::SalvataggioIllegibile(m) => write!(f, "salvataggio illeggibile: {m}"),
+            Self::SalvataggioNonRiuscito(m) => write!(f, "salvataggio non riuscito: {m}"),
         }
     }
 }

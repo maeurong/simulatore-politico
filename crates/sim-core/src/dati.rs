@@ -85,6 +85,21 @@ impl DatiGioco {
         let manopole = toml::from_str::<BTreeMap<String, Manopola>>(&file.manopole)
             .map_err(|e| errore_toml("manopole.toml", e))?;
 
+        let dati = DatiGioco {
+            dicasteri,
+            manopole,
+        };
+        dati.valida()?;
+        Ok(dati)
+    }
+
+    /// Coerenza dei dati, anche per quelli letti da un salvataggio.
+    ///
+    /// # Errors
+    /// Dicasteri ripetuti, ruoli orfani o doppi, manopole non finite
+    /// o con valore fuori dall'intervallo.
+    pub fn valida(&self) -> Result<(), Errore> {
+        let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
             if dicasteri[..i].iter().any(|p| p.id == d.id) {
                 return Err(Errore::DicasteroDoppio { id: d.id.clone() });
@@ -104,8 +119,9 @@ impl DatiGioco {
                 _ => {}
             }
         }
-        for (nome, m) in &manopole {
-            if !(m.min <= m.valore && m.valore <= m.max) {
+        for (nome, m) in &self.manopole {
+            let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
+            if !(finite && m.min <= m.valore && m.valore <= m.max) {
                 return Err(Errore::FuoriIntervallo {
                     nome: nome.clone(),
                     valore: m.valore,
@@ -114,9 +130,6 @@ impl DatiGioco {
                 });
             }
         }
-        Ok(DatiGioco {
-            dicasteri,
-            manopole,
-        })
+        Ok(())
     }
 }
