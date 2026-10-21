@@ -3,11 +3,13 @@ use crate::dati::DatiGioco;
 use crate::errore::Errore;
 use crate::vista::{Vista, VoceDicastero};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 pub const VERSIONE_SCHEMA: u32 = 1;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Trimestre {
     pub anno: u16,
     pub trimestre: u8,
