@@ -308,6 +308,14 @@ Grilling sul ticket wayfinder «Costo del governare» (`.scratch/v1-giocabile/is
 - **Visibilità:** crescita attesa, voce nell'esito, perdita reale di budget e scaglioni, sempre con la causa.
 - **Manopole** nel file dei dati con valore, intervallo e ticket d'origine; taratura dopo la costruzione, senza spike.
 
+## 2026-10-21: punti di aggancio
+Grilling sul ticket wayfinder «Punti di aggancio» (`.scratch/v1-giocabile/issues/30-punti-di-aggancio.md`, con il dettaglio e l'elenco dei sistemi esclusi). Tre giri; scelta di Mario contro la raccomandazione: anche i ruoli dei dicasteri nei dati. Ultimo ticket della mappa della v1.
+- **Premessa:** salvataggi senza migrazioni, modding solo dati e scenario come file di differenze rendono un campo aggiunto dopo costoso quanto uno aggiunto adesso; un aggancio riservato non protegge nulla.
+- **Solo cuciture:** nessun campo, fase o famiglia di eventi vuoti; una cucitura entra solo se la v1 costruisce comunque quella parte, generalizzarla costa quasi zero e la forma fissa costringerebbe a riscriverla.
+- **Quattro cuciture:** motore in blocchi separati (07); versione dello schema nel salvataggio (28); seggi per regione calcolati dalla popolazione censita, già necessari per la norma sul numero dei parlamentari; dicasteri nei dati con i loro ruoli (colpe della tabella degli interessi, regione bersaglio), ogni ruolo a un solo dicastero e rifiuto al caricamento se un ruolo resta orfano o doppio. I ruoli del Presidente del Consiglio restano nel codice.
+- **Niente** per tutti gli altri sistemi esclusi, compresi il giocatore come alleato minore, la salienza mobile, il rapporto di parte e lo scripting in sandbox.
+- **Nella spec:** sezione «Fuori dalla v1», una riga per sistema con ticket d'origine e cucitura oppure «niente»; le quattro cuciture anche fra i requisiti.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
