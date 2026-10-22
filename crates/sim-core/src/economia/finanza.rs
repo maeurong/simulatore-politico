@@ -187,7 +187,7 @@ pub(crate) fn consuntivo(e: &Economia, data: Trimestre) -> ConsuntivoTrimestre {
         data,
         pil: euro(e.pil_trimestrale * MLD),
         disavanzo: e.disavanzo_trimestre,
-        spesa_primaria: e.conti.totale_spese() - e.conti.spese.interessi,
+        spesa_primaria: e.conti.totale_spese() - e.conti.spese.interessi - e.conti.spese.ammende,
     }
 }
 

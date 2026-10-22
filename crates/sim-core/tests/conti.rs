@@ -283,6 +283,67 @@ fn salva_carica_con_pde_inadempiente() {
 }
 
 #[test]
+fn la_catena_delle_sanzioni_si_attraversa() {
+    use sim_core::scenario::StatoPde::{Inadempiente, Intimata, Sanzionata};
+    // Conto al massimo e nessuna clausola: ogni controllo annuale e' rilevante.
+    let forzata = || {
+        con_ingresso(
+            con_ingresso(senza_shock(), "conto_controllo", 3.0),
+            "clausola_nazionale_margine",
+            0.0,
+        )
+    };
+    let mut p = Partita::nuova(dati(forzata()), 1);
+    let mut riferimento = Partita::nuova(base_senza_shock(), 1);
+    let (mut sequenza, mut ammende_sanzionata) = (vec![p.economia().regole_ue.pde], vec![]);
+    let mut ammenda_ingresso = false;
+    let mut conto_mosso = false;
+    for _ in 0..16 {
+        let prima = p.economia().regole_ue.clone();
+        p.chiudi_turno();
+        riferimento.chiudi_turno();
+        let e = p.economia();
+        let trimestre = p.vista().data.trimestre;
+        assert_eq!(e.residuo_sfc(), 0);
+        assert!(e.conti.entrate.fondi_coesione >= 0);
+        if e.regole_ue.conto_controllo != prima.conto_controllo {
+            conto_mosso = true;
+            assert_eq!(trimestre, 3);
+        }
+        if prima.pde == Inadempiente && prima.turni_in_stato == 0 {
+            ammenda_ingresso = e.conti.spese.ammende > 0;
+        }
+        if prima.pde == Sanzionata {
+            ammende_sanzionata.push(e.conti.spese.ammende > 0);
+        }
+        if prima.pde.e_inadempiente() {
+            assert!(
+                e.conti.entrate.fondi_coesione
+                    < riferimento.economia().conti.entrate.fondi_coesione
+            );
+        }
+        if e.regole_ue.pde != prima.pde {
+            if e.regole_ue.pde == Intimata {
+                assert_eq!(trimestre, 1, "l'intimazione arriva chiudendo un T4");
+            }
+            sequenza.push(e.regole_ue.pde);
+        }
+    }
+    assert_eq!(
+        sequenza[1..],
+        [Inadempiente, Intimata, Sanzionata],
+        "{sequenza:?}"
+    );
+    assert!(ammenda_ingresso, "nessuna ammenda al turno d'ingresso");
+    assert!(ammende_sanzionata.len() >= 4, "{ammende_sanzionata:?}");
+    assert!(
+        ammende_sanzionata.windows(2).all(|w| w[0] != w[1]),
+        "ogni 2 turni: {ammende_sanzionata:?}"
+    );
+    assert!(conto_mosso);
+}
+
+#[test]
 fn scenario_estremo_resta_finito() {
     let f = con_ingresso(
         con_ingresso(

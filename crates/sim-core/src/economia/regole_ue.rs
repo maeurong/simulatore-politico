@@ -44,6 +44,8 @@ impl RegoleUe {
     /// `Inadempiente`, poi quella semestrale ogni 2 turni da `Sanzionata`.
     pub(super) fn ammende(&self, pil_annuo: f64, dati: &DatiGioco) -> i64 {
         let pct = match self.pde {
+            // Uno scenario che parte inadempiente paga anche al turno zero (i conti del turno
+            // zero non toccano il debito) e poi di nuovo al primo passo: accettato.
             StatoPde::Inadempiente if self.turni_in_stato == 0 => dati.manopola("ammenda_pde"),
             StatoPde::Sanzionata if self.turni_in_stato.is_multiple_of(2) => {
                 dati.manopola("ammenda_semestrale")
@@ -83,6 +85,8 @@ impl Economia {
         } else {
             0.0
         };
+        // Con la coesione sospesa `fondi_coesione` scende e la spesa netta sale: quella spesa
+        // non e' piu' coperta dai fondi UE. Effetto voluto.
         s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni
             - self.conti.entrate.fondi_coesione
             - euro(ciclica)
