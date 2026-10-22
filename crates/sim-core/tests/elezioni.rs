@@ -56,8 +56,9 @@ fn soglia_premio_sotto_il_40_rifiutata() {
         "soglia_premio_pb = [4000",
         "soglia_premio_pb = [3900",
     );
-    let Errore::LeggeElettorale(m) = errore(f) else {
-        panic!("atteso LeggeElettorale")
+    let e = errore(f);
+    let Errore::LeggeElettorale(m) = &e else {
+        panic!("atteso LeggeElettorale, trovato {e:?}")
     };
     assert!(m.contains("soglia_premio_pb") && m.contains("3900"), "{m}");
 }
@@ -70,8 +71,9 @@ fn impostazione_fuori_dal_menu_rifiutata_col_nome() {
         "soglia_lista_pb = 300",
         "soglia_lista_pb = 250",
     );
-    let Errore::LeggeElettorale(m) = errore(f) else {
-        panic!("atteso LeggeElettorale")
+    let e = errore(f);
+    let Errore::LeggeElettorale(m) = &e else {
+        panic!("atteso LeggeElettorale, trovato {e:?}")
     };
     assert!(
         m.contains("legge_180") && m.contains("soglia_lista_pb = 250 (2,5%)"),
@@ -114,8 +116,9 @@ fn circoscrizione_con_regione_sconosciuta_rifiutata() {
         "regione = \"piemonte\"",
         "regione = \"piemontese\"",
     );
-    let Errore::DatiElettorali(m) = errore(f) else {
-        panic!("atteso DatiElettorali")
+    let e = errore(f);
+    let Errore::DatiElettorali(m) = &e else {
+        panic!("atteso DatiElettorali, trovato {e:?}")
     };
     assert!(m.contains("piemontese"), "{m}");
 }
@@ -130,8 +133,9 @@ fn popolazioni_discordi_fra_i_rami_rifiutate() {
         elezioni: format!("{testa}{coda}"),
         ..file_base()
     };
-    let Errore::DatiElettorali(m) = errore(f) else {
-        panic!("atteso DatiElettorali")
+    let e = errore(f);
+    let Errore::DatiElettorali(m) = &e else {
+        panic!("atteso DatiElettorali, trovato {e:?}")
     };
     assert!(m.contains("molise"), "{m}");
 }
@@ -144,8 +148,9 @@ fn scenario_con_legge_inesistente_rifiutato() {
         "legge_elettorale = \"legge_180\"",
         "legge_elettorale = \"legge_2030\"",
     );
-    let Errore::LeggeElettorale(m) = errore(f) else {
-        panic!("atteso LeggeElettorale")
+    let e = errore(f);
+    let Errore::LeggeElettorale(m) = &e else {
+        panic!("atteso LeggeElettorale, trovato {e:?}")
     };
     assert!(m.contains("legge_2030"), "{m}");
 }
@@ -189,8 +194,9 @@ fn tetto_del_menu_non_crescente_rifiutato() {
         "{ camera_pb = 6000, senato_pb = 6000 }",
         "{ camera_pb = 5500, senato_pb = 6000 }",
     );
-    let Errore::DatiElettorali(m) = errore(f) else {
-        panic!("atteso DatiElettorali")
+    let e = errore(f);
+    let Errore::DatiElettorali(m) = &e else {
+        panic!("atteso DatiElettorali, trovato {e:?}")
     };
     assert!(m.contains("tetto"), "{m}");
 }
@@ -203,8 +209,9 @@ fn tetto_fuori_dal_menu_rifiutato_col_nome() {
         "tetto = { camera_pb = 5500, senato_pb = 5650 }",
         "tetto = { camera_pb = 5600, senato_pb = 5650 }",
     );
-    let Errore::LeggeElettorale(m) = errore(f) else {
-        panic!("atteso LeggeElettorale")
+    let e = errore(f);
+    let Errore::LeggeElettorale(m) = &e else {
+        panic!("atteso LeggeElettorale, trovato {e:?}")
     };
     assert!(
         m.contains("legge_180") && m.contains("tetto = 5600/5650"),
@@ -906,4 +913,121 @@ fn premio_a_soggetti_diversi_nei_due_rami_non_si_assegna() {
     assert_eq!(e.camera[0].proporzionali, 0);
     assert!(e.senato[0].proporzionali > 0);
     assert_eq!(e.premio, None);
+}
+
+// --- casi dalla revisione finale ---
+
+#[test]
+fn senato_tetto_conserva_seggi_per_regione() {
+    let legge = LeggeElettorale {
+        formula: Formula::Dhondt,
+        tetto: Some(QuoteTetto {
+            camera_pb: 1000,
+            senato_pb: 1000,
+        }),
+        ..legge_180()
+    };
+    let e = riparto_con_tetti(
+        &[(1000, 1000), (5500, 5650), (6000, 6000)],
+        &legge,
+        &voti_g2(),
+    );
+    assert!(e.tetto_senato);
+    let d = dati_base();
+    let senato = &d.elezioni().senato;
+    let mut attesi: BTreeMap<String, u32> = BTreeMap::new();
+    for (c, s) in senato
+        .circoscrizioni
+        .iter()
+        .zip(seggi_per_circoscrizione(senato, premio_totale(&e.senato)))
+    {
+        *attesi.entry(c.regione.clone()).or_insert(0) += s.seggi - s.premio;
+    }
+    for (r, liste) in &e.senato_per_regione {
+        assert_eq!(liste.iter().sum::<u32>(), attesi[r], "{r}");
+    }
+}
+
+#[test]
+fn senato_tetto_basso_hare_come_il_riferimento() {
+    let casi: [(u16, [u32; 11], u32); 2] = [
+        (3000, [19, 1, 0, 0, 54, 13, 7, 27, 10, 10, 13], 60),
+        (5000, [49, 10, 1, 0, 33, 9, 1, 23, 9, 6, 13], 100),
+    ];
+    for (senato_pb, attesi, coalizione) in casi {
+        let legge = LeggeElettorale {
+            tetto: Some(QuoteTetto {
+                camera_pb: 5500,
+                senato_pb,
+            }),
+            ..legge_180()
+        };
+        let e = riparto_con_tetti(&[(5500, senato_pb), (6000, 6000)], &legge, &voti_g2());
+        assert_eq!(prop(&e.senato), attesi, "senato_pb = {senato_pb}");
+        assert_eq!(
+            coalizione_0(&e.senato),
+            coalizione,
+            "senato_pb = {senato_pb}"
+        );
+    }
+}
+
+#[test]
+fn voti_con_totale_fuori_scala_rifiutati() {
+    let mut v = voti_g1();
+    v.per_regione.get_mut("lazio").unwrap()[0] = u64::MAX;
+    let r = riparto(dati_base().elezioni(), &legge_180(), &v);
+    assert!(
+        matches!(&r, Err(Errore::VotiIncoerenti(m)) if m.contains("fuori scala")),
+        "{r:?}"
+    );
+}
+
+#[test]
+fn dati_elettorali_incoerenti_rifiutati() {
+    let casi = [
+        (
+            "soglia_lista_pb = [0, 300, 400, 500]",
+            "soglia_lista_pb = [0, 300, 300, 500]",
+            "soglia_lista_pb",
+        ),
+        (
+            "soglia_coalizione_pb = [0, 1000]",
+            "soglia_coalizione_pb = [0, 10001]",
+            "soglia_coalizione_pb",
+        ),
+        ("id = \"piemonte_2\"", "id = \"piemonte_1\"", "piemonte_1"),
+        ("popolazione = 2208370", "popolazione = 0", "piemonte_1"),
+    ];
+    for (da, a, nome) in casi {
+        let e = errore(sostituisci(file_base(), "elezioni", da, a));
+        assert!(
+            matches!(&e, Errore::DatiElettorali(m) if m.contains(nome)),
+            "{a}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn parita_premio_e_ripescaggio_vanno_all_indice_basso() {
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[250, 250, 250, 250], vec![vec![0, 1], vec![2, 3]]),
+    );
+    assert_eq!(e.premio, Some(Soggetto::Coalizione(0)));
+    assert_eq!(premio_totale(&e.camera), 70);
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[300, 15, 15, 300, 370], vec![vec![0, 1, 2]]),
+    );
+    assert_eq!(prop(&e.camera), [121, 6, 0, 115, 142]);
+}
+
+#[test]
+fn coalizione_di_una_lista_vale_lista_sola() {
+    let millesimi = [420, 0, 300, 160, 120];
+    let con = esito(&legge_180(), &uniformi(&millesimi, vec![vec![0]]));
+    let senza = esito(&legge_180(), &uniformi(&millesimi, vec![]));
+    assert_eq!(con, senza);
+    assert_eq!(con.premio, Some(Soggetto::Lista(0)));
 }

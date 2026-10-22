@@ -731,4 +731,20 @@ mod tests {
         let soggetti: Vec<Soggetto> = gara.iter().map(|g| g.soggetto).collect();
         assert_eq!(soggetti, [Soggetto::Coalizione(1), Soggetto::Lista(2)]);
     }
+
+    fn seggi(formula: Formula, cifre: &[u64], n: u32) -> Vec<u32> {
+        quote(formula, cifre, n).iter().map(|q| q.seggi).collect()
+    }
+
+    #[test]
+    fn dhondt_parita() {
+        assert_eq!(seggi(Formula::Dhondt, &[10, 10], 3), [2, 1]);
+        assert_eq!(seggi(Formula::Dhondt, &[10, 10, 10], 1), [1, 0, 0]);
+    }
+
+    #[test]
+    fn hare_quoziente_naturale_e_parita_di_resto() {
+        assert_eq!(seggi(Formula::Hare, &[3, 2], 3), [2, 1]);
+        assert_eq!(seggi(Formula::Hare, &[1, 1, 1], 2), [1, 1, 0]);
+    }
 }
