@@ -1,0 +1,201 @@
+# Scenario di base: solo ingressi. Intervalli provvisori, al bilanciamento.
+# Fonti: docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md (stato-del-paese), docs/ricerca/modelli/.
+
+regime_pensioni = "contributivo"
+regime_sussidi = "assicurativo"
+pde = "sospesa"
+# regole-fiscali-ue:46; dopo il 2029 vale l'ultimo
+tetti_spesa_netta = { 2026 = 1.6, 2027 = 1.9, 2028 = 1.7, 2029 = 1.5 }
+clausola_nazionale_fino_a = 2028
+
+[pil_trimestrale]
+valore = 576.9
+min = 400.0
+max = 800.0
+fonte = "stato-del-paese:18, PIL 2026T2 destagionalizzato"
+
+[debito_pil]
+valore = 136.7
+min = 60.0
+max = 200.0
+fonte = "stato-del-paese:23"
+
+[costo_medio_debito]
+valore = 2.81
+min = 0.5
+max = 6.0
+fonte = "stato-del-paese:31"
+
+[vita_media_debito]
+valore = 7.8
+min = 4.0
+max = 12.0
+fonte = "stato-del-paese:32"
+
+[tasso_bce]
+valore = 2.5
+min = -0.5
+max = 6.0
+fonte = "stato-del-paese:35"
+
+[inflazione]
+valore = 4.2
+min = -2.0
+max = 12.0
+fonte = "stato-del-paese:36, settembre"
+
+[inflazione_t3]
+valore = 3.4
+min = -2.0
+max = 12.0
+fonte = "stato-del-paese:36, media T3"
+
+[inflazione_t2]
+valore = 3.0
+min = -2.0
+max = 12.0
+fonte = "stato-del-paese:36, media T2"
+
+[output_gap]
+valore = 0.0
+min = -5.0
+max = 5.0
+fonte = "assunzione del piano 3, nessuna stima in docs/ricerca"
+
+[disoccupazione]
+valore = 5.6
+min = 3.0
+max = 15.0
+fonte = "stato-del-paese:37, T2 2026"
+
+[consumi_famiglie_pil]
+valore = 58.76
+min = 40.0
+max = 75.0
+fonte = "stato-del-paese:19, 339,0 / 576,9"
+
+[investimenti_pil]
+valore = 22.62
+min = 10.0
+max = 35.0
+fonte = "stato-del-paese:21"
+
+[esportazioni_pil]
+valore = 32.95
+min = 15.0
+max = 50.0
+fonte = "stato-del-paese:22"
+
+[importazioni_pil]
+valore = 32.19
+min = 15.0
+max = 50.0
+fonte = "stato-del-paese:22"
+
+[irpef_pil]
+valore = 12.06
+min = 6.0
+max = 20.0
+fonte = "stato-del-paese:39, 273,1 / 2.265,0"
+
+[ires_pil]
+valore = 2.68
+min = 1.0
+max = 6.0
+fonte = "stato-del-paese:39"
+
+[iva_pil]
+valore = 6.64
+min = 3.0
+max = 12.0
+fonte = "stato-del-paese:39"
+
+[contributi_pil]
+valore = 13.31
+min = 8.0
+max = 20.0
+fonte = "stato-del-paese:40"
+
+[altre_entrate_pil]
+valore = 12.0
+min = 0.0
+max = 25.0
+fonte = "PROVVISORIO: il residuo di taratura (disavanzo annuo del turno zero 2,9%, stato-del-paese:27) si fissa nel Task 8"
+
+[fondi_coesione_pil]
+valore = 0.26
+min = 0.0
+max = 1.0
+fonte = "assunzione del piano 3, nessuna cifra in docs/ricerca"
+
+[pensionati]
+valore = 16388149.0
+min = 10e6
+max = 25e6
+fonte = "stato-del-paese:119"
+
+[spesa_pensioni]
+valore = 351.8
+min = 200.0
+max = 500.0
+fonte = "stato-del-paese:116, previsione 2026"
+
+[eta_pensione]
+valore = 67.0
+min = 60.0
+max = 72.0
+fonte = "regime vigente; piramide dà gli ingressi"
+
+[indicizzazione_pensioni]
+valore = 1.0
+min = 0.0
+max = 1.0
+fonte = "regime vigente"
+
+[pensione_minima]
+valore = 7800.0
+min = 0.0
+max = 20000.0
+fonte = "assunzione del piano 3, nessuna cifra in docs/ricerca"
+
+[spesa_sussidi]
+valore = 17.93
+min = 5.0
+max = 50.0
+fonte = "stato-del-paese:123, NASpI 2025"
+
+[altre_prestazioni]
+valore = 98.4
+min = 50.0
+max = 200.0
+fonte = "stato-del-paese:117, 116,3 meno la NASpI"
+
+[conto_controllo]
+valore = 0.1
+min = -3.0
+max = 3.0
+fonte = "regole-fiscali-ue:47"
+
+[clausola_nazionale_margine]
+valore = 0.6
+min = 0.0
+max = 1.5
+fonte = "regole-fiscali-ue:49, 0,3 difesa + 0,3 energia"
+
+[premio_sfiducia]
+valore = 0.0
+min = 0.0
+max = 400.0
+fonte = "economia-italiana-parametri:117, nessun evento al turno zero"
+
+[energia]
+valore = 0.0
+min = -50.0
+max = 100.0
+fonte = "nessuno scostamento al turno zero: lo shock in corso sta già nell'inflazione"
+
+[domanda_estera]
+valore = 0.0
+min = -30.0
+max = 30.0
+fonte = "nessuno scostamento al turno zero"

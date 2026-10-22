@@ -1,5 +1,6 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
+use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::vista::{Vista, VoceDicastero};
 use serde::{Deserialize, Serialize};
@@ -44,6 +45,7 @@ pub struct Partita {
     dati: DatiGioco,
     turno: u32,
     data: Trimestre,
+    economia: Economia,
 }
 
 impl Partita {
@@ -51,6 +53,7 @@ impl Partita {
         Partita {
             versione_schema: VERSIONE_SCHEMA,
             caso: Caso::nuovo(seme),
+            economia: Economia::iniziale(&dati),
             dati,
             turno: 0,
             data: Trimestre::TURNO_ZERO,
@@ -63,6 +66,11 @@ impl Partita {
     pub fn chiudi_turno(&mut self) {
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
+    }
+
+    /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
+    pub fn economia(&self) -> &Economia {
+        &self.economia
     }
 
     pub fn vista(&self) -> Vista {

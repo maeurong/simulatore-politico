@@ -48,7 +48,7 @@ fn ruolo_orfano_rifiutato_col_nome() {
 #[test]
 fn ruolo_doppio_rifiutato_col_nome() {
     let testo = format!(
-        "{}\n[[dicastero]]\nid = \"bis\"\nnome = \"Bis\"\nindicatore_servizio = \"x\"\npeso_spartizione = 1\nregione_bersaglio = false\nruoli = [\"bilancio_e_credibilita\"]\n",
+        "{}\n[[dicastero]]\nid = \"bis\"\nnome = \"Bis\"\nindicatore_servizio = \"x\"\npeso_spartizione = 1\nregione_bersaglio = false\nruoli = [\"bilancio_e_credibilita\"]\nspesa_pil = 0.0\nsalari_pil = 0.0\nacquisti_pil = 0.0\n",
         file_base().dicasteri
     );
     let e = DatiGioco::da_testi(&con_dicasteri(&testo)).unwrap_err();
@@ -61,7 +61,7 @@ fn ruolo_doppio_rifiutato_col_nome() {
 #[test]
 fn indicatore_servizio_doppio_rifiutato() {
     let testo = format!(
-        "{}\n[[dicastero]]\nid = \"bis\"\nnome = \"Bis\"\nindicatore_servizio = \"sicurezza\"\npeso_spartizione = 1\nregione_bersaglio = false\nruoli = []\n",
+        "{}\n[[dicastero]]\nid = \"bis\"\nnome = \"Bis\"\nindicatore_servizio = \"sicurezza\"\npeso_spartizione = 1\nregione_bersaglio = false\nruoli = []\nspesa_pil = 0.0\nsalari_pil = 0.0\nacquisti_pil = 0.0\n",
         file_base().dicasteri
     );
     let e = DatiGioco::da_testi(&con_dicasteri(&testo)).unwrap_err();

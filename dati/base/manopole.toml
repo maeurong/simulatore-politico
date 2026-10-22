@@ -17,3 +17,360 @@ valore = 2.0
 min = 2.0
 max = 4.0
 ticket = "08"
+
+# economia-italiana-parametri:75
+[is_gap_1]
+valore = 0.70
+min = 0.5
+max = 0.95
+ticket = "07"
+
+# economia-italiana-parametri:75
+[is_gap_2]
+valore = 0.14
+min = 0.0
+max = 0.3
+ticket = "07"
+
+# economia-italiana-parametri:75
+[is_tasso]
+valore = -0.056
+min = -0.2
+max = 0.0
+ticket = "07"
+
+# economia-italiana-parametri:76
+[phillips_1]
+valore = 1.18
+min = 1.0
+max = 1.4
+ticket = "07"
+
+# economia-italiana-parametri:76
+[phillips_2_4]
+valore = -0.28
+min = -0.5
+max = 0.0
+ticket = "07"
+
+# economia-italiana-parametri:76
+[phillips_5_8]
+valore = 0.10
+min = 0.0
+max = 0.3
+ticket = "07"
+
+# economia-italiana-parametri:76
+[phillips_gap]
+valore = 0.051
+min = 0.0
+max = 0.2
+ticket = "07"
+
+# A (peso fisso dell'obiettivo del 2%, spec riga 293)
+[ancoraggio_aspettative]
+valore = 0.10
+min = 0.0
+max = 0.5
+ticket = "07"
+
+# A
+[tasso_naturale_reale]
+valore = 0.25
+min = -1.0
+max = 2.0
+ticket = "07"
+
+# A (% annuo)
+[crescita_potenziale]
+valore = 0.6
+min = 0.0
+max = 2.0
+ticket = "07"
+
+# A (punti di gap; residui storici [NON TROVATO])
+[sigma_domanda]
+valore = 0.4
+min = 0.0
+max = 2.0
+ticket = "07"
+
+# A (punti di crescita annua)
+[sigma_produttivita]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# A (% del prezzo degli input importati)
+[sigma_energia]
+valore = 3.0
+min = 0.0
+max = 15.0
+ticket = "07"
+
+# A
+[persistenza_energia]
+valore = 0.7
+min = 0.0
+max = 0.95
+ticket = "07"
+
+# A (%)
+[sigma_domanda_estera]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "07"
+
+# A
+[persistenza_domanda_estera]
+valore = 0.7
+min = 0.0
+max = 0.95
+ticket = "07"
+
+# A (punti)
+[sigma_bce]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "07"
+
+# economia-italiana-parametri:110
+[quota_italia_area_euro]
+valore = 0.142
+min = 0.10
+max = 0.18
+ticket = "07"
+
+# banca-centrale-e-inflazione:13
+[taylor_inerzia]
+valore = 0.85
+min = 0.5
+max = 0.95
+ticket = "07"
+
+# banca-centrale-e-inflazione:13
+[taylor_inflazione]
+valore = 0.5
+min = 0.0
+max = 1.5
+ticket = "07"
+
+# banca-centrale-e-inflazione:13
+[taylor_gap]
+valore = 0.5
+min = 0.0
+max = 1.5
+ticket = "07"
+
+# A
+[persistenza_resto_area]
+valore = 0.8
+min = 0.0
+max = 0.95
+ticket = "07"
+
+# economia-italiana-parametri:52
+[okun_nazionale]
+valore = -0.254
+min = -0.5
+max = -0.1
+ticket = "07"
+
+# A (per turno; spec riga 297, nessun numero)
+[isteresi_disoccupazione]
+valore = 0.05
+min = 0.0
+max = 0.2
+ticket = "07"
+
+# A ([NON TROVATO] in docs/ricerca)
+[moltiplicatore_fiscale]
+valore = 0.8
+min = 0.3
+max = 1.5
+ticket = "07"
+
+# economia-italiana-parametri:104
+[elasticita_irpef]
+valore = 1.46
+min = 0.5
+max = 3.0
+ticket = "07"
+
+# economia-italiana-parametri:104
+[elasticita_ires]
+valore = 3.07
+min = 1.0
+max = 5.0
+ticket = "07"
+
+# economia-italiana-parametri:104
+[elasticita_iva]
+valore = 1.10
+min = 0.5
+max = 2.0
+ticket = "07"
+
+# economia-italiana-parametri:104
+[elasticita_contributi]
+valore = 0.58
+min = 0.2
+max = 1.5
+ticket = "07"
+
+# stato-del-paese:104; spec riga 278 (% del budget)
+[quota_margine]
+valore = 1.6
+min = 0.5
+max = 5.0
+ticket = "23"
+
+# A (quota del PIL)
+[quota_redditi_lavoro]
+valore = 0.40
+min = 0.30
+max = 0.55
+ticket = "07"
+
+# A
+[quota_profitti_distribuiti]
+valore = 0.6
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# A (spec riga 294, nessun numero)
+[elasticita_export_prezzi]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "07"
+
+# A
+[sostituzione_retributivo]
+valore = 0.75
+min = 0.4
+max = 1.0
+ticket = "07"
+
+# A
+[sostituzione_contributivo]
+valore = 0.60
+min = 0.3
+max = 0.9
+ticket = "07"
+
+# A (euro annui)
+[quota_base_universale]
+valore = 6000.0
+min = 0.0
+max = 15000.0
+ticket = "07"
+
+# A (quota annua)
+[uscite_pensionati]
+valore = 0.055
+min = 0.03
+max = 0.09
+ticket = "07"
+
+# PROVVISORIO: taratura nel Task 8 (stock dei pensionati stabile nel primo anno)
+[copertura_pensionamento]
+valore = 1.0
+min = 0.5
+max = 3.0
+ticket = "07"
+
+# A (moltiplicatore della spesa)
+[sussidio_universale]
+valore = 1.6
+min = 1.0
+max = 3.0
+ticket = "07"
+
+# taratura: 84 pb al 136,7% (centro di 79-89, stato-del-paese:34)
+[spread_s0]
+valore = -883.0
+min = -1000.0
+max = -700.0
+ticket = "07"
+
+# economia-italiana-parametri:15
+[spread_beta_1]
+valore = -0.0523
+min = -0.1
+max = 0.0
+ticket = "07"
+
+# economia-italiana-parametri:15
+[spread_beta_2]
+valore = 0.0009
+min = 0.0
+max = 0.002
+ticket = "07"
+
+# A (pb; tratto piatto, spec riga 295)
+[spread_minimo]
+valore = 60.0
+min = 0.0
+max = 150.0
+ticket = "07"
+
+# economia-italiana-parametri:21 (pb per punto oltre il 3%)
+[spread_disavanzo]
+valore = 2.4
+min = 0.0
+max = 20.0
+ticket = "07"
+
+# A (turni)
+[emivita_premio_sfiducia]
+valore = 4.0
+min = 1.0
+max = 12.0
+ticket = "07"
+
+# stato-del-paese:33-35: 4,36 - 0,89 - 2,50 (punti)
+[premio_termine_bund]
+valore = 0.97
+min = 0.0
+max = 2.0
+ticket = "07"
+
+# regole-fiscali-ue:20 (% PIL)
+[deviazione_annua_rilevante]
+valore = 0.3
+min = 0.1
+max = 1.0
+ticket = "02"
+
+# regole-fiscali-ue:20 (% PIL)
+[deviazione_cumulata_rilevante]
+valore = 0.6
+min = 0.2
+max = 2.0
+ticket = "02"
+
+# regole-fiscali-ue:35 (% PIL)
+[ammenda_pde]
+valore = 0.2
+min = 0.0
+max = 0.5
+ticket = "02"
+
+# regole-fiscali-ue:37 (% PIL)
+[ammenda_semestrale]
+valore = 0.05
+min = 0.0
+max = 0.2
+ticket = "02"
+
+# regole-fiscali-ue:35 (% PIL)
+[sospensione_coesione]
+valore = 0.25
+min = 0.0
+max = 0.5
+ticket = "02"

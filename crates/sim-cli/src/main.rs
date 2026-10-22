@@ -52,10 +52,7 @@ fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
 fn esegui() -> Result<String, String> {
     let argomenti = leggi_argomenti(std::env::args().skip(1))?;
     let cartella = Path::new(&argomenti.dati);
-    let file = FileDati {
-        dicasteri: leggi(cartella, "dicasteri.toml")?,
-        manopole: leggi(cartella, "manopole.toml")?,
-    };
+    let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
     let mut partita = Partita::nuova(dati, argomenti.seme);
     for _ in 0..argomenti.turni {

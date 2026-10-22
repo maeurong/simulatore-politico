@@ -18,10 +18,7 @@ fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
 }
 
 fn carica_dati(cartella: &Path) -> Result<DatiGioco, String> {
-    let file = FileDati {
-        dicasteri: leggi(cartella, "dicasteri.toml")?,
-        manopole: leggi(cartella, "manopole.toml")?,
-    };
+    let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     DatiGioco::da_testi(&file).map_err(|e| e.to_string())
 }
 
