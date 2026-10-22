@@ -2,9 +2,10 @@
 # Fonti:
 #   Eurostat lfst_r_lfu3rt e lfst_r_lfp2act, 2025, 15-74 anni
 #   ISTAT 93_1227_DF_DCCN_TNA1_1, valore aggiunto ai prezzi correnti 2023, edizione 2025M12
-#   Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze)
+#   Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze); se ne riportano solo i coefficienti, citati
 # Licenze: Eurostat, riuso con citazione e dichiarazione delle modifiche;
 #   ISTAT, CC BY 4.0. Modifiche ai dati: strumenti/taratura/README.md.
+# forze_lavoro in migliaia; disoccupazione_2025 in %; okun in punti di disoccupazione per punto di output gap (negativo); mix = quote del valore aggiunto 2023.
 
 [[regione]]
 id = "piemonte"

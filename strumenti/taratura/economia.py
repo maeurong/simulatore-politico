@@ -104,7 +104,9 @@ def scarica(url, accept=None):
         try:
             with urllib.request.urlopen(richiesta, timeout=300) as risposta:
                 return risposta.read()
-        except (urllib.error.URLError, ConnectionError) as e:
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            if isinstance(e, urllib.error.HTTPError) and e.code < 500:
+                raise
             # ponytail: backoff fisso; il servizio ISTAT chiude la connessione se si interroga troppo spesso
             if tentativo == 3:
                 raise
@@ -122,6 +124,12 @@ def eurostat(dataset, **filtri):
     passi = [1] * len(ids)
     for i in range(len(ids) - 2, -1, -1):
         passi[i] = passi[i + 1] * size[i + 1]
+    attese = 1
+    for z in size:
+        attese *= z
+    # JSON-stat omette le celle senza dato (in FIGARO ~10%): non si può chiedere il conteggio esatto, solo che la risposta non sia troncata
+    print(f"  celle presenti {len(d['value'])} su {attese}")
+    assert len(d["value"]) >= attese / 2, f"{dataset}: {len(d['value'])} celle su {attese} attese, sotto la metà: risposta troncata?"
     for n, v in d["value"].items():
         n = int(n)
         yield {k: c[(n // p) % z] for k, p, z, c in zip(ids, passi, size, cats)}, v
@@ -142,7 +150,7 @@ def settore(codice):
 def quote(valori):
     """Quote che sommano a 1: arrotondate a 6 decimali, l'ultima corretta."""
     tot = sum(valori)
-    assert tot > 0 and all(v >= 0 for v in valori), valori
+    assert tot > 0 and all(v >= 0 for v in valori), f"quote: somma {tot}, minimo {min(valori)} (attesi somma > 0, minimo >= 0)"
     q = [round(v / tot, 6) for v in valori[:-1]]
     return q + [round(1 - sum(q), 6)]
 
@@ -173,14 +181,14 @@ def tavola():
     colonna = {"P3_S14": "consumi", "P3_S15": "consumi", "P51G": "investimenti", "P3_S13": "spesa_pubblica"}
 
     for r, v in eurostat("naio_10_fcp_ip4", c_dest="IT", time=ANNO_TAVOLA):
-        assert r["unit"] == "MIO_EUR" and r["time"] == str(ANNO_TAVOLA), r
+        assert r["unit"] == "MIO_EUR" and r["time"] == str(ANNO_TAVOLA), f"unità {r['unit']} anno {r['time']}, attesi MIO_EUR {ANNO_TAVOLA}: {r}"
         i, j, origine = settore(r["prd_ava"]), settore(r["prd_use"]), r["c_orig"]
         if i is None:
-            assert origine == "DOM", r
+            assert origine == "DOM", f"origine {origine}, atteso DOM: {r}"
             if j and r["prd_ava"] in VALORE_AGGIUNTO_FIGARO:
                 va[j] += v
             elif j:
-                assert v == 0, r  # acquisti diretti di residenti/non residenti: solo domanda finale
+                assert v == 0, f"valore {v}, atteso 0: {r}"  # acquisti diretti di residenti/non residenti: solo domanda finale
         elif j:
             if origine == "IT":
                 z[i, j] += v
@@ -191,7 +199,7 @@ def tavola():
 
     for r, v in eurostat("naio_10_fcp_ip4", c_orig="IT", time=ANNO_TAVOLA):
         i = settore(r["prd_ava"])
-        assert i, r
+        assert i, f"prodotto {r['prd_ava']} senza settore: {r}"
         uscite[i] += v
         if r["c_dest"] != "IT":
             domanda["esportazioni"][i] += v  # P6: impieghi esteri, intermedi e finali, dei prodotti italiani
@@ -200,7 +208,7 @@ def tavola():
     for s in IDS:
         scarto = abs(uscite[s] - produzione[s]) / produzione[s]
         print(f"  {s:4} produzione {produzione[s]:12.1f} mln, impieghi {uscite[s]:12.1f} mln, scarto {scarto:.2e}")
-        assert scarto < 1e-3, s
+        assert scarto < 1e-3, f"{s}: scarto {scarto:.2e} oltre 1e-3"
 
     a = [[round(z[i, j] / produzione[j], 6) for j in IDS] for i in IDS]
     importazioni = [round(imp[j] / produzione[j], 6) for j in IDS]
@@ -215,7 +223,7 @@ def piramide():
     chiavi = [f"Y{e}" for e in range(100)] + ["Y_GE100"]
     valori = [per_eta[k] for k in chiavi]
     print(f"  piramide: {sum(valori)} residenti, totale ISTAT {per_eta['TOTAL']}")
-    assert sum(valori) == per_eta["TOTAL"]
+    assert sum(valori) == per_eta["TOTAL"], f"piramide: somma {sum(valori)}, totale ISTAT {per_eta['TOTAL']}"
     return valori
 
 
@@ -223,7 +231,7 @@ def regioni():
     def per_geo(dataset, **filtri):
         out = {}
         for r, v in eurostat(dataset, time=ANNO_LAVORO, sex="T", age="Y15-74", **filtri):
-            assert r["unit"] in ("PC", "THS_PER"), r
+            assert r["unit"] in ("PC", "THS_PER"), f"unità {r['unit']}, attese PC o THS_PER: {r}"
             out[r["geo"]] = v
         return out
 
@@ -242,7 +250,8 @@ def regioni():
         u = sum(disoccupazione[g] * forze[g] for g in nuts) / fl
         valori = [va[cod, s] for s in IDS]
         totale = va[cod, "_T"]
-        assert abs(sum(valori) - totale) / totale < 1e-3, (rid, sum(valori), totale)
+        scarto = abs(sum(valori) - totale) / totale
+        assert scarto < 1e-3, f"{rid}: somma settori {sum(valori):.1f} contro totale {totale:.1f}, scarto {scarto:.2e} oltre 1e-3"
         out.append((rid, nome, macro, round(fl, 1), round(u, 2), okun, quote(valori)))
     naz = sum(r[3] * r[4] for r in out) / sum(r[3] for r in out)
     print(f"  forze di lavoro: somma regioni {sum(r[3] for r in out):.1f}, Italia {forze['IT']:.1f} migliaia")
@@ -286,24 +295,25 @@ def scrivi_economia(a, importazioni, valore_aggiunto, vettori, eta):
     t += "".join(f"{k} = [{f6(vettori[k])}]\n" for k in ("consumi", "investimenti", "esportazioni", "spesa_pubblica"))
     t += "\n# residenti per età 0..99, poi 100 e oltre\npiramide = [\n"
     t += "".join("  " + ", ".join(str(x) for x in eta[k:k + 10]) + ",\n" for k in range(0, 101, 10)) + "]\n"
-    (BASE / "economia.toml").write_text(t, encoding="utf-8")
+    return t
 
 
 def scrivi_regioni(righe):
     t = intestazione([
         f"Eurostat lfst_r_lfu3rt e lfst_r_lfp2act, {ANNO_LAVORO}, 15-74 anni",
         f"ISTAT 93_1227_DF_DCCN_TNA1_1, valore aggiunto ai prezzi correnti {ANNO_MIX}, edizione {EDIZIONE_CET}",
-        "Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze)",
+        "Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze); se ne riportano solo i coefficienti, citati",
     ])
+    t += "# forze_lavoro in migliaia; disoccupazione_2025 in %; okun in punti di disoccupazione per punto di output gap (negativo); mix = quote del valore aggiunto 2023.\n"
     for rid, nome, macro, fl, u, okun, mix in righe:
         t += f"\n[[regione]]\nid = {stringa(rid)}\nnome = {stringa(nome)}\nmacroarea = {stringa(macro)}\n"
         t += f"forze_lavoro = {fl}\ndisoccupazione_2025 = {u}\nokun = {okun}\n"
         t += "mix = { " + ", ".join(f"{s} = {q:.6f}" for s, q in zip(IDS, mix)) + " }\n"
-    (BASE / "regioni.toml").write_text(t, encoding="utf-8")
+    return t
 
 
 def scrivi_dicasteri(quote_pil, investimenti):
-    """Aggiunge i campi di spesa dopo `ruoli` di ogni dicastero; rieseguibile."""
+    """Testo di dicasteri.toml con i campi di spesa dopo `ruoli` di ogni dicastero; rieseguibile."""
     generati = ("spesa_pil", "salari_pil", "acquisti_pil", "settori")
     righe, visti, corrente = [], [], None
     for riga in (BASE / "dicasteri.toml").read_text(encoding="utf-8").splitlines():
@@ -313,6 +323,7 @@ def scrivi_dicasteri(quote_pil, investimenti):
         if len(righe) == 1:
             righe.append(f"# [taratura] spesa_pil, salari_pil, acquisti_pil e settori: generati da `{COMANDO}`")
             righe.append(f"# [taratura] il {OGGI}, da Eurostat gov_10a_exp {ANNO_COFOG} e nama_10_gdp, in % del PIL.")
+            righe.append("# [taratura] Licenze: Eurostat, riuso con citazione e dichiarazione delle modifiche; ISTAT, CC BY 4.0. Modifiche ai dati: strumenti/taratura/README.md.")
         if riga.startswith("id = "):
             corrente = json.loads(riga.split("=", 1)[1])
         if riga.startswith("ruoli = "):
@@ -321,8 +332,8 @@ def scrivi_dicasteri(quote_pil, investimenti):
             if corrente == "infrastrutture_trasporti":
                 righe.append("settori = { " + ", ".join(f"{s} = {q:.6f}" for s, q in zip(IDS, investimenti)) + " }")
             visti.append(corrente)
-    assert sorted(visti) == sorted(DICASTERI), visti
-    (BASE / "dicasteri.toml").write_text("\n".join(righe) + "\n", encoding="utf-8")
+    assert sorted(visti) == sorted(DICASTERI), f"dicasteri nel file {sorted(visti)}, attesi {sorted(DICASTERI)}"
+    return "\n".join(righe) + "\n"
 
 
 def main():
@@ -336,29 +347,35 @@ def main():
     eta = piramide()
 
     print("Invarianti")
-    assert len(SETTORI) == 10 and len(a) == 10 and all(len(r) == 10 for r in a)
+    assert len(SETTORI) == 10 and len(a) == 10 and all(len(r) == 10 for r in a), f"dimensioni: {len(SETTORI)} settori, {len(a)} righe, attese 10"
     for j in range(10):
         colonna = sum(a[i][j] for i in range(10)) + importazioni[j]
         print(f"  colonna {IDS[j]:4} somma a + importazioni = {colonna:.6f}, valore aggiunto {valore_aggiunto[j]:.6f}")
-        assert colonna < 1 and valore_aggiunto[j] > 0
+        assert colonna < 1 and valore_aggiunto[j] > 0, f"{IDS[j]}: colonna {colonna:.6f} (soglia < 1), valore aggiunto {valore_aggiunto[j]:.6f} (soglia > 0)"
     for k, v in vettori.items():
         print(f"  {k:15} somma {sum(v):.12f}")
-        assert len(v) == 10 and abs(sum(v) - 1) < 1e-9
-    assert len(righe_regioni) == 20
+        assert len(v) == 10 and abs(sum(v) - 1) < 1e-9, f"{k}: {len(v)} voci, somma {sum(v):.12f}, attese 10 e 1 entro 1e-9"
+    assert len(righe_regioni) == 20, f"{len(righe_regioni)} regioni, attese 20"
     for r in righe_regioni:
-        assert abs(sum(r[6]) - 1) < 1e-9, r[0]
+        assert abs(sum(r[6]) - 1) < 1e-9, f"{r[0]}: mix somma {sum(r[6]):.12f}, oltre 1e-9 da 1"
     print(f"  20 regioni, ogni mix somma 1 entro 1e-9 (max scarto {max(abs(sum(r[6]) - 1) for r in righe_regioni):.1e})")
     print(f"  disoccupazione nazionale 2025 pesata: {disoccupazione_naz:.3f}%")
-    assert 6.0 <= disoccupazione_naz <= 6.2
+    assert 6.0 <= disoccupazione_naz <= 6.2, f"disoccupazione nazionale {disoccupazione_naz:.3f}% fuori da 6.0-6.2"
     totale = sum(q[0] for q in quote_pil.values())
     atteso = SPESA_DIECI_DICASTERI / (pil / 1000) * 100
     print(f"  somma spesa_pil {totale:.4f}% del PIL, attesa {atteso:.4f}% (575,6 mld)")
-    assert abs(totale - atteso) <= 0.1
-    assert len(eta) == 101
+    assert abs(totale - atteso) <= 0.1, f"somma spesa_pil {totale:.4f}% contro attesa {atteso:.4f}%, scarto oltre 0.1"
+    assert len(eta) == 101, f"piramide: {len(eta)} età, attese 101"
 
-    scrivi_dicasteri(quote_pil, vettori["investimenti"])  # primo: il suo assert precede ogni scrittura
-    scrivi_economia(a, importazioni, valore_aggiunto, vettori, eta)
-    scrivi_regioni(righe_regioni)
+    testi = {
+        "dicasteri.toml": scrivi_dicasteri(quote_pil, vettori["investimenti"]),
+        "economia.toml": scrivi_economia(a, importazioni, valore_aggiunto, vettori, eta),
+        "regioni.toml": scrivi_regioni(righe_regioni),
+    }
+    for nome, t in testi.items():
+        (BASE / (nome + ".tmp")).write_text(t, encoding="utf-8")
+    for nome in testi:
+        (BASE / (nome + ".tmp")).replace(BASE / nome)
     print("Scritti economia.toml, regioni.toml, dicasteri.toml in", BASE)
 
 

@@ -6,7 +6,7 @@
 python3 -I strumenti/taratura/economia.py
 ```
 
-Solo libreria standard di Python (3.11 o successivo). Lo script controlla le invarianti con `assert` prima di scrivere: se una fallisce, i file restano come sono. Ultima interrogazione: **2026-10-22**.
+Solo libreria standard di Python (3.11 o successivo). Lo script controlla le invarianti con `assert` prima di scrivere: se una fallisce, i file restano come sono.
 
 ## Cosa scrive
 
@@ -23,14 +23,14 @@ In `dicasteri.toml` lo script riscrive solo questi campi e le due righe di comme
 
 | Dataset | Interrogazione | Aggiornamento letto nella risposta | Licenza |
 |---|---|---|---|
-| Eurostat `naio_10_fcp_ip4`, FIGARO, tavola inter-paese prodotto per prodotto ai prezzi base, milioni di euro | `c_dest=IT&time=2024` e `c_orig=IT&time=2024` | 2026-07-20 | Eurostat |
-| Eurostat `gov_10a_exp`, spesa delle AP per funzione (COFOG) | `geo=IT&sector=S13&unit=MIO_EUR&time=2024&na_item=TE,D1,P2,D632,D62` | 2026-10-21 | Eurostat |
-| Eurostat `nama_10_gdp`, PIL ai prezzi correnti | `geo=IT&unit=CP_MEUR&na_item=B1GQ&time=2024` | 2026-10-21 | Eurostat |
-| Eurostat `lfst_r_lfu3rt`, tasso di disoccupazione per regione NUTS 2 | `time=2025&sex=T&age=Y15-74&isced11=TOTAL` | 2026-09-10 | Eurostat |
-| Eurostat `lfst_r_lfp2act`, forze di lavoro per regione NUTS 2, migliaia | `time=2025&sex=T&age=Y15-74` | 2026-09-10 | Eurostat |
-| ISTAT `93_1227_DF_DCCN_TNA1_1`, valore aggiunto per branca e regione ai prezzi correnti | chiave `A.<20 regioni>.B1G_B_W2_S1.<A*10 e totale>...V...2025M12`, anno 2023 | edizione 2025M12 | ISTAT, CC BY 4.0 |
-| ISTAT `22_289_DF_DCIS_POPRES1_1`, popolazione residente per età | chiave `A.IT.JAN.9..99`, anno 2026 (stima) | | ISTAT, CC BY 4.0 |
-| Bonaventura (2020), Okun regionale, tab. 2 | coefficienti `b` copiati da `docs/ricerca/modelli/economia-italiana-parametri.md:56-65` | | pubblicazione, citata |
+| Eurostat `naio_10_fcp_ip4`, FIGARO, tavola inter-paese prodotto per prodotto ai prezzi base, milioni di euro | `c_dest=IT&time=2024` e `c_orig=IT&time=2024` | 2026-07-20 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
+| Eurostat `gov_10a_exp`, spesa delle AP per funzione (COFOG) | `geo=IT&sector=S13&unit=MIO_EUR&time=2024&na_item=TE,D1,P2,D632,D62` | 2026-10-21 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
+| Eurostat `nama_10_gdp`, PIL ai prezzi correnti | `geo=IT&unit=CP_MEUR&na_item=B1GQ&time=2024` | 2026-10-21 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
+| Eurostat `lfst_r_lfu3rt`, tasso di disoccupazione per regione NUTS 2 | `time=2025&sex=T&age=Y15-74&isced11=TOTAL` | 2026-09-10 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
+| Eurostat `lfst_r_lfp2act`, forze di lavoro per regione NUTS 2, migliaia | `time=2025&sex=T&age=Y15-74` | 2026-09-10 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
+| ISTAT `93_1227_DF_DCCN_TNA1_1`, valore aggiunto per branca e regione ai prezzi correnti | chiave `A.<20 regioni>.B1G_B_W2_S1.<settori produttivi (A*10) e totale>...V...2025M12`, anno 2023 | edizione 2025M12 | ISTAT, CC BY 4.0 |
+| ISTAT `22_289_DF_DCIS_POPRES1_1`, popolazione residente per età | chiave `A.IT.JAN.9..99`, anno 2026 (stima) | n/d | ISTAT, CC BY 4.0 |
+| Bonaventura (2020), Okun regionale, tab. 2 | coefficienti `b` copiati da `docs/ricerca/modelli/economia-italiana-parametri.md:56-65` | n/d | solo coefficienti citati |
 
 Endpoint: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>` (JSON-stat) e `https://esploradati.istat.it/SDMXWS/rest/data/IT1,<flusso>,1.0/<chiave>` (SDMX-CSV). Il servizio ISTAT limita le interrogazioni al minuto e a volte risponde con un errore del server: lo script aspetta 15 secondi dopo ogni chiamata e riprova fino a tre volte, un minuto dopo l'errore.
 
@@ -41,7 +41,10 @@ Endpoint: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<
 
 ## Modifiche fatte ai dati
 
-Nessun file contiene i dati originali: tutti i valori sono elaborati come segue.
+Nessun file contiene i dati originali: salvo la piramide, i valori sono elaborati come segue.
+
+**Popolazione.**
+- `piramide` = residenti per età singola da ISTAT, 0..99 più «100 e oltre»; nessuna elaborazione oltre al taglio a intero.
 
 **Tavola input-output (FIGARO 2024).**
 - I 64 prodotti CPA sono aggregati nei 10 settori A*10 per somma, secondo la sezione del codice: A; B-E → BTE; F; G-I → GTI; J; K; L; M-N → MN; O-Q → OTQ; R-U → RTU.
@@ -51,7 +54,8 @@ Nessun file contiene i dati originali: tutti i valori sono elaborati come segue.
 - Coefficienti arrotondati a 6 decimali; ogni vettore di quote è normalizzato a somma 1, arrotondato a 6 decimali e corretto sull'ultima voce.
 
 **Regioni.**
-- Trentino-Alto Adige: forze di lavoro = somma delle province di Bolzano (`ITH1`) e Trento (`ITH2`); disoccupazione = media dei due tassi pesata sulle forze di lavoro, arrotondata a 2 decimali. Il valore aggiunto viene dal codice ISTAT della regione (`ITDA`).
+- Forze di lavoro arrotondate a 1 decimale, disoccupazione a 2. Le regioni diverse dal Trentino-Alto Adige hanno i valori Eurostat invariati.
+- Trentino-Alto Adige da due province: forze di lavoro = somma delle province di Bolzano (`ITH1`) e Trento (`ITH2`); disoccupazione = media dei due tassi pesata sulle forze di lavoro, arrotondata a 2 decimali. Il valore aggiunto viene dal codice ISTAT della regione (`ITDA`).
 - `mix`: valore aggiunto 2023 dei 10 settori A*10 (ISTAT `M_N` = `MN`) diviso per la loro somma, arrotondato come sopra. Lo script controlla che la somma dei 10 settori coincida col totale `_T`.
 
 **Dicasteri.**
