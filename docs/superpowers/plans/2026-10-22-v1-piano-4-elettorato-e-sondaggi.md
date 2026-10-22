@@ -322,7 +322,7 @@ Manopole nuove in `dati/base/manopole.toml`, tutte richieste in `MANOPOLE_RICHIE
 | `ancora_posizioni` | 0.1 | 0.0 | 1.0 | 06 | opinion-dynamics:38 (nessun valore generale) |
 | `rumore_posizioni` | 0.02 | 0.0 | 0.2 | 06 | assunzione |
 | `mobilita_fasce` | 0.5 | 0.0 | 2.0 | 06 | assunzione |
-| `uscita_studenti` | 0.2 | 0.0 | 0.5 | 06 | assunzione (quota annua) |
+| `uscita_studenti` | 0.26 | 0.0 | 0.5 | 06 | assunzione (quota annua), tarata per stazionarietà della quota degli studenti al turno zero (round pre-commit) |
 | `sigma_bias_comune` | 0.015 | 0.0 | 0.04 | 25 | sondaggi-ed-errore:39 |
 | `sigma_istituto` | 0.01 | 0.0 | 0.03 | 25 | sondaggi-ed-errore:41 |
 | `effetto_disegno` | 2.0 | 1.0 | 4.0 | 25 | sondaggi-ed-errore:18, :38 |
