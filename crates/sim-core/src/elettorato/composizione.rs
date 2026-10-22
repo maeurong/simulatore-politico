@@ -1,6 +1,6 @@
 //! Composizione che si muove: lavoro, reddito ed età spostano quota fra i gruppi di una regione.
 
-use super::{Condizione, Elettorato, Fascia, PER_REGIONE, indice_gruppo};
+use super::{Condizione, DatiElettorato, Elettorato, Fascia, PER_REGIONE, indice_gruppo};
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
 use crate::partita::Trimestre;
@@ -52,10 +52,20 @@ impl Elettorato {
         self.gruppi[a].quota += m;
     }
 
+    /// Sposta `massa` da `da` verso `verso`, ripartita in proporzione alle quote del turno zero.
+    fn ripartisci(&mut self, d: &DatiElettorato, da: usize, verso: &[usize], massa: f64) {
+        let tot: f64 = verso.iter().map(|&a| d.gruppi[a].quota).sum();
+        if tot <= 0.0 {
+            return;
+        }
+        for &a in verso {
+            self.sposta(da, a, massa * d.gruppi[a].quota / tot);
+        }
+    }
+
     /// Lavoro, reddito ed età (a gennaio). Alla fine `ultima_disoccupazione` è quella di `e`.
     pub fn composizione(&mut self, dati: &DatiGioco, e: &Economia, data: Trimestre) {
-        let n_regioni = dati.elettorato().regioni.len();
-        self.lavoro(e, n_regioni);
+        self.lavoro(dati.elettorato(), e);
         self.mobilita(dati);
         if data.trimestre == 1 {
             self.eta(dati, e, data);
@@ -63,9 +73,9 @@ impl Elettorato {
         self.ultima_disoccupazione = e.regioni.iter().map(|r| r.disoccupazione).collect();
     }
 
-    fn lavoro(&mut self, e: &Economia, n_regioni: usize) {
+    fn lavoro(&mut self, dati: &DatiElettorato, e: &Economia) {
         use Condizione::{Autonomo, DipendentePrivato as Priv, DisoccupatoInattivo as Dis};
-        for r in 0..n_regioni {
+        for r in 0..dati.regioni.len() {
             let delta = e.regioni[r].disoccupazione - self.ultima_disoccupazione[r];
             for f in Fascia::TUTTE {
                 let (p, a, d) = (
@@ -83,7 +93,7 @@ impl Elettorato {
                     self.sposta(a, d, ma);
                 } else if delta < 0.0 {
                     let occupati = self.gruppi[p].quota + self.gruppi[a].quota;
-                    self.sposta(d, p, -delta / 100.0 * occupati);
+                    self.ripartisci(dati, d, &[p, a], -delta / 100.0 * occupati);
                 }
             }
         }
@@ -175,7 +185,8 @@ impl Elettorato {
                 let stud = indice_gruppo(r, Studente, f);
                 self.rinnova(pens, stud, uscite * self.gruppi[pens].quota);
                 let massa = studenti * self.gruppi[stud].quota;
-                self.sposta(stud, indice_gruppo(r, Priv, f), (1.0 - u) * massa);
+                let occupati = [Priv, Pub, Autonomo].map(|c| indice_gruppo(r, c, f));
+                self.ripartisci(d, stud, &occupati, (1.0 - u) * massa);
                 self.sposta(stud, indice_gruppo(r, Dis, f), u * massa);
             }
         }

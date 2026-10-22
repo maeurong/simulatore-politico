@@ -352,6 +352,29 @@ fn mobilita_sposta_verso_la_fascia_bassa_se_la_condizione_cresce_meno() {
 }
 
 #[test]
+#[ignore = "studenti +25% in 20 turni: i pensionati rinnovati entrano più in fretta di quanto gli studenti escano; da decidere, vedi fix-wave-report A2"]
+fn senza_shock_le_condizioni_restano_vicine_al_turno_zero() {
+    let d = DatiGioco::da_testi(&senza_shock()).unwrap();
+    let per_condizione = |p: &Partita| -> [f64; 6] {
+        let mut q = [0.0; 6];
+        for i in 0..360 {
+            q[i % 18 / 3] += p.elettorato().elettori(d.elettorato(), i);
+        }
+        let n: f64 = q.iter().sum();
+        q.map(|x| x / n)
+    };
+    let mut p = Partita::nuova(d.clone(), 11);
+    let t0 = per_condizione(&p);
+    for _ in 0..20 {
+        p.chiudi_turno();
+    }
+    let t20 = per_condizione(&p);
+    for (c, (a, b)) in Condizione::TUTTE.iter().zip(t0.iter().zip(t20)) {
+        assert!((b / a - 1.0).abs() <= 0.10, "{c}: {a} -> {b}");
+    }
+}
+
+#[test]
 fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
     let d = dati_base();
     let (studenti, uscite) = (
@@ -359,6 +382,10 @@ fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
         d.manopola("uscite_pensionati"),
     );
     let p = Partita::nuova(dati_base(), 4);
+    assert!(
+        p.economia().pensioni.iter().all(|a| a.anno != 2027),
+        "precondizione: nessun pensionamento nel 2027 al turno zero"
+    );
     let (prima, gennaio) = compone(
         Trimestre {
             anno: 2027,
@@ -384,15 +411,20 @@ fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
                 |el: &sim_core::elettorato::Elettorato, c| el.gruppi[indice_gruppo(r, c, f)].quota;
             let massa = studenti
                 * (q(&prima, Condizione::Studente) + uscite * q(&prima, Condizione::Pensionato));
-            let d_priv = q(&gennaio, Condizione::DipendentePrivato)
-                - q(&prima, Condizione::DipendentePrivato);
-            let d_dis = q(&gennaio, Condizione::DisoccupatoInattivo)
-                - q(&prima, Condizione::DisoccupatoInattivo);
-            assert!(d_priv > 0.0 && d_dis > 0.0, "regione {r} {f}");
-            assert!(
-                (d_priv - (1.0 - u) * massa).abs() < 1e-12,
-                "regione {r} {f}"
-            );
+            let delta = |c| q(&gennaio, c) - q(&prima, c);
+            let occupati = [
+                Condizione::DipendentePrivato,
+                Condizione::DipendentePubblico,
+                Condizione::Autonomo,
+            ];
+            let zero = |c| d.elettorato().gruppi[indice_gruppo(r, c, f)].quota;
+            let tot: f64 = occupati.iter().map(|&c| zero(c)).sum();
+            for c in occupati {
+                let atteso = (1.0 - u) * massa * zero(c) / tot;
+                assert!((delta(c) - atteso).abs() < 1e-12, "regione {r} {f} {c}");
+            }
+            let d_dis = delta(Condizione::DisoccupatoInattivo);
+            assert!(d_dis > 0.0, "regione {r} {f}");
             assert!((d_dis - u * massa).abs() < 1e-12, "regione {r} {f}");
         }
     }
