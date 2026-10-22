@@ -2,14 +2,26 @@
 
 pub mod bce;
 pub mod congiuntura;
+mod finanza;
 pub mod lavoro;
 pub mod leontief;
+mod previdenza;
+mod regole_ue;
+mod sfc;
+mod spread;
 
 pub use bce::AreaEuro;
+pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
+pub use previdenza::Annata;
+pub use regole_ue::RegoleUe;
+pub use sfc::{Settori, Sfc};
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
+use crate::dati::Dicastero;
 use crate::partita::Trimestre;
+use crate::struttura::Struttura;
+use finanza::{MLD, euro};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -45,10 +57,36 @@ pub struct Economia {
     /// Punti annualizzati, l'ultima.
     pub inflazione_importata: f64,
     pub area_euro: AreaEuro,
-    /// Punti di PIL potenziale; 0 fino al blocco finanza pubblica.
+    /// Punti di PIL potenziale, del trimestre in corso.
     pub impulso_fiscale: f64,
     /// Tasso reale meno naturale del turno prima di quello in corso.
     pub tasso_reale_precedente: f64,
+    /// Annuo, nominale, dell'anno in corso.
+    pub bilancio: Bilancio,
+    /// Bilancio dell'anno dopo, se approvato.
+    pub bilancio_approvato: Option<Bilancio>,
+    /// Euro.
+    pub debito: i64,
+    /// % annuo.
+    pub tasso_medio_debito: f64,
+    /// Entrate e spese del trimestre appena chiuso.
+    pub conti: ContiTrimestre,
+    /// Spese meno entrate del trimestre appena chiuso, euro.
+    pub disavanzo_trimestre: i64,
+    /// Ultimi 8 trimestri, il più recente in coda.
+    pub storico: Vec<ConsuntivoTrimestre>,
+    /// Pensionati per anno di pensionamento.
+    pub pensioni: Vec<Annata>,
+    /// Euro annui, fermi in nominale.
+    pub sussidio_per_disoccupato: i64,
+    /// Saldi e stock dei quattro settori.
+    pub sfc: Sfc,
+    /// Punti base sul Bund, a fine turno.
+    pub spread: f64,
+    /// Punti base dentro `spread`; il TPI lo azzera.
+    pub premio_sfiducia: f64,
+    /// Spesa netta, conto di controllo, PDE.
+    pub regole_ue: RegoleUe,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -63,7 +101,9 @@ impl Economia {
             (somma + w * r.disoccupazione_2025, pesi + w)
         });
         let spostamento = s.disoccupazione.valore - somma / pesi;
-        Economia {
+        let bilancio = finanza::Bilancio::iniziale(dati);
+        let debito = euro(s.debito_pil.valore / 100.0 * 4.0 * s.pil_trimestrale.valore * MLD);
+        let mut e = Economia {
             pil_trimestrale: s.pil_trimestrale.valore,
             pil_potenziale_reale: s.pil_trimestrale.valore / (1.0 + gap / 100.0),
             livello_prezzi: 1.0,
@@ -105,14 +145,47 @@ impl Economia {
             tasso_reale_precedente: s.tasso_bce.valore
                 - s.inflazione.valore
                 - dati.manopola("tasso_naturale_reale"),
+            bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
+            bilancio,
+            debito,
+            tasso_medio_debito: s.costo_medio_debito.valore,
+            conti: ContiTrimestre::default(),
+            disavanzo_trimestre: 0,
+            storico: Vec::new(),
+            pensioni: Vec::new(),
+            sussidio_per_disoccupato: 0,
+            sfc: Sfc::iniziale(debito, 1.0),
+            spread: 0.0,
+            premio_sfiducia: s.premio_sfiducia.valore,
+            regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
+        };
+        e.avvia_previdenza(dati);
+        e.conti = finanza::conti_del_trimestre(&e, dati);
+        // L'ammenda della PDE la paga il primo passo, non il turno zero.
+        e.conti.spese.ammende = 0;
+        e.disavanzo_trimestre = e.conti.disavanzo();
+        e.avvia_regole_ue(dati);
+        // Quattro trimestri prima del turno zero, tutti uguali al conto di partenza.
+        e.storico = std::iter::successors(Some(Trimestre::TURNO_ZERO.precedente()), |t| {
+            Some(t.precedente())
+        })
+        .take(4)
+        .map(|data| finanza::consuntivo(&e, data))
+        .collect();
+        e.storico.reverse();
+        // Il TPI vale anche al turno zero, come nel passo.
+        if !e.regole_ue.pde.e_inadempiente() {
+            e.premio_sfiducia = 0.0;
         }
+        e.spread = e.spread_dallo_stato(dati);
+        e
     }
 
-    // Ordine dei blocchi del trimestre (spec): misure (piano 5) → finanza pubblica e spesa
-    // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
-    // redditi dei gruppi e panieri (piano 4) → tasso BCE → SFC → spread, regole UE.
-    // `data` è il trimestre che il turno chiude. Qui: dalla domanda finale per settore a Okun e BCE.
-    pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, _data: Trimestre) {
+    // Ordine: finanza pubblica e spesa obbligatoria → domanda finale per settore → Leontief →
+    // IS/Phillips → Okun per regione → tasso BCE → SFC → storico → regole UE → spread.
+    // `data` è il trimestre che il turno chiude.
+    pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, data: Trimestre) {
+        let spesa_netta = self.finanza(dati, data);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
         let shock_domanda = shock("sigma_domanda");
@@ -128,11 +201,20 @@ impl Economia {
         let st = dati.struttura();
         let d0 = domanda_riferimento(dati);
         let x_estera = quote_pil(dati).2 * self.domanda_estera / 100.0;
-        let d: Vec<f64> = d0
+        let mut d: Vec<f64> = d0
             .iter()
             .zip(&st.esportazioni)
             .map(|(d, e)| d + e * x_estera)
             .collect();
+        // Scostamento reale della spesa trimestrale dei dicasteri dal turno zero, in miliardi.
+        let pil_annuo_0 = 4.0 * dati.scenario().pil_trimestrale.valore;
+        for (dic, b) in dati.dicasteri().iter().zip(&self.bilancio.dicasteri) {
+            let spesa_0 = dic.spesa_pil / 100.0 * pil_annuo_0;
+            let scostamento = (b.spesa as f64 / MLD / self.livello_prezzi - spesa_0) / 4.0;
+            for (i, di) in d.iter_mut().enumerate() {
+                *di += quota_dicastero(st, dic, i) * scostamento;
+            }
+        }
         let x = leontief::produzione(&st.a, &d);
         let x0 = produzione_riferimento(dati);
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());
@@ -168,7 +250,15 @@ impl Economia {
 
         self.okun(dati);
         self.bce(dati, shock_bce);
+        self.sfc(dati);
+        self.storico.push(finanza::consuntivo(self, data));
+        if self.storico.len() > finanza::TRIMESTRI_DI_STORIA {
+            self.storico.remove(0);
+        }
+        self.aggiorna_regole_ue(dati, data, spesa_netta);
+        self.aggiorna_spread(dati);
         debug_assert!(self.e_finita(), "stato non finito: {self:?}");
+        debug_assert_eq!(self.residuo_sfc(), 0, "SFC non chiusa: {:?}", self.sfc);
     }
 
     fn e_finita(&self) -> bool {
@@ -181,9 +271,15 @@ impl Economia {
             self.domanda_estera,
             self.inflazione_importata,
             self.impulso_fiscale,
+            self.tasso_medio_debito,
             self.tasso_reale_precedente,
             self.area_euro.inflazione_resto,
             self.area_euro.gap_resto,
+            self.sfc.livello_prezzi_area,
+            self.spread,
+            self.premio_sfiducia,
+            self.regole_ue.conto_controllo,
+            self.regole_ue.ultima_deviazione,
         ];
         scalari
             .iter()
@@ -227,15 +323,19 @@ fn domanda_riferimento(dati: &DatiGioco) -> Vec<f64> {
         .collect();
     for dic in dati.dicasteri() {
         let spesa = dic.spesa_pil / 100.0 * pil;
-        for (i, settore) in st.settori.iter().enumerate() {
-            let quota = match &dic.settori {
-                Some(m) => m.get(&settore.id).copied().unwrap_or(0.0),
-                None => st.spesa_pubblica[i],
-            };
-            d[i] += quota * spesa;
+        for (i, di) in d.iter_mut().enumerate() {
+            *di += quota_dicastero(st, dic, i) * spesa;
         }
     }
     d
+}
+
+/// Quota della spesa del dicastero che va al settore `i`.
+fn quota_dicastero(st: &Struttura, dic: &Dicastero, i: usize) -> f64 {
+    match &dic.settori {
+        Some(m) => m.get(&st.settori[i].id).copied().unwrap_or(0.0),
+        None => st.spesa_pubblica[i],
+    }
 }
 
 /// `p = (I−Aᵀ)⁻¹ (valore aggiunto + importazioni·(1 + energia/100))`.

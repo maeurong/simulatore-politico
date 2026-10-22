@@ -10,6 +10,8 @@ pub struct Vista {
     pub turno: u32,
     pub data: Trimestre,
     pub dicasteri: Vec<VoceDicastero>,
+    /// Spread BTP-Bund in punti base, arrotondato.
+    pub spread_pb: i32,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

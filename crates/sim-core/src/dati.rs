@@ -85,6 +85,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "spread_beta_1",
     "spread_beta_2",
     "spread_minimo",
+    "spread_massimo",
     "spread_disavanzo",
     "emivita_premio_sfiducia",
     "premio_termine_bund",

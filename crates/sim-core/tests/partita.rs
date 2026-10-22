@@ -27,6 +27,7 @@ fn turno_zero_e_ottobre_dicembre_2026() {
         }
     );
     assert_eq!(v.dicasteri.len(), 10);
+    assert!((79..=89).contains(&v.spread_pb), "{}", v.spread_pb);
 }
 
 #[test]
@@ -137,7 +138,7 @@ fn trimestre_fuori_intervallo_rifiutato() {
 fn contatori_al_limite_non_vanno_in_panico() {
     let s = salvataggio_modificato(|j| {
         j["turno"] = u32::MAX.into();
-        j["data"] = serde_json::json!({ "anno": u16::MAX, "trimestre": 4 });
+        j["data"] = serde_json::json!({ "anno": 2200, "trimestre": 4 });
     });
     let mut p = Partita::carica(&s).unwrap();
     p.chiudi_turno();
@@ -240,4 +241,31 @@ fn campo_obbligatorio_mancante_rifiutato() {
     });
     let e = Partita::carica(&s).unwrap_err();
     assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("turno")));
+}
+
+#[test]
+fn carica_rifiuta_stato_incoerente() {
+    use serde_json::{Value, json};
+    type Guasto = fn(&mut Value);
+    let casi: [(&str, Guasto); 6] = [
+        ("storico vuoto", |j| j["economia"]["storico"] = json!([])),
+        ("stock diverso dal debito", |j| {
+            j["economia"]["sfc"]["stock"]["stato"] = 1.into();
+        }),
+        ("bilancio con id diverso", |j| {
+            j["economia"]["bilancio"]["dicasteri"][0]["id"] = "altro".into();
+        }),
+        ("pensioni vuote", |j| j["economia"]["pensioni"] = json!([])),
+        ("anno oltre il 2200", |j| j["data"]["anno"] = 2201.into()),
+        ("disavanzo diverso dai conti", |j| {
+            j["economia"]["disavanzo_trimestre"] = 1.into();
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
 }

@@ -28,6 +28,7 @@
 <main>
   {#if vista}
     <h1>Turno {vista.turno} · {trimestri[vista.data.trimestre - 1]} {vista.data.anno}</h1>
+    <p>Spread {vista.spread_pb} <abbr title="punti base">pb</abbr></p>
     <ul>
       {#each vista.dicasteri as dicastero (dicastero.id)}
         <li>{dicastero.nome}</li>

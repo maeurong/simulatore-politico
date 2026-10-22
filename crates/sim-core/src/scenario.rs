@@ -23,6 +23,13 @@ pub enum StatoPde {
     Sanzionata,
 }
 
+impl StatoPde {
+    /// Dalla 126.8 in poi: niente TPI, coesione sospesa.
+    pub fn e_inadempiente(self) -> bool {
+        matches!(self, Self::Inadempiente | Self::Intimata | Self::Sanzionata)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RegimePensioni {
@@ -95,6 +102,16 @@ scenario!(
 );
 
 impl Scenario {
+    /// Tetto di crescita della spesa netta per `anno`: dopo l'ultimo in tabella vale l'ultimo,
+    /// prima del primo il primo.
+    pub fn tetto_spesa_netta(&self, anno: u16) -> f64 {
+        self.tetti_spesa_netta
+            .range(..=anno)
+            .next_back()
+            .or_else(|| self.tetti_spesa_netta.iter().next())
+            .map_or(0.0, |(_, t)| *t)
+    }
+
     /// Ogni ingresso è finito e nel suo intervallo.
     ///
     /// # Errors

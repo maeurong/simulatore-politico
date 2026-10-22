@@ -22,6 +22,7 @@ fn gioca_otto_turni() {
     assert_eq!(vista["vista"]["turno"], 8);
     assert_eq!(vista["vista"]["data"]["anno"], 2028);
     assert_eq!(vista["vista"]["data"]["trimestre"], 4);
+    assert!(vista["vista"]["spread_pb"].is_i64());
     assert_eq!(vista["economia"]["regioni"].as_array().unwrap().len(), 20);
 }
 
