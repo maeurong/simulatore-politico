@@ -172,7 +172,7 @@ fonte = "stato-del-paese:117, 116,3 meno la NASpI; mld € annui"
 
 [conto_controllo]
 valore = 0.1
-min = -3.0
+min = 0.0
 max = 3.0
 fonte = "regole-fiscali-ue:47; % PIL"
 

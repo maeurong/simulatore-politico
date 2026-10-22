@@ -138,7 +138,7 @@ fn trimestre_fuori_intervallo_rifiutato() {
 fn contatori_al_limite_non_vanno_in_panico() {
     let s = salvataggio_modificato(|j| {
         j["turno"] = u32::MAX.into();
-        j["data"] = serde_json::json!({ "anno": u16::MAX, "trimestre": 4 });
+        j["data"] = serde_json::json!({ "anno": 2200, "trimestre": 4 });
     });
     let mut p = Partita::carica(&s).unwrap();
     p.chiudi_turno();

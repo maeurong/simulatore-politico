@@ -6,8 +6,9 @@ use crate::dati::DatiGioco;
 use crate::partita::Trimestre;
 use serde::{Deserialize, Serialize};
 
-const MLD: f64 = 1e9;
+pub(super) const MLD: f64 = 1e9;
 
+/// Euro annui.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BudgetDicastero {
     pub id: String,
@@ -24,6 +25,7 @@ pub struct Bilancio {
     pub dicasteri: Vec<BudgetDicastero>,
 }
 
+/// Euro del trimestre.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Entrate {
     pub irpef: i64,
@@ -34,6 +36,7 @@ pub struct Entrate {
     pub fondi_coesione: i64,
 }
 
+/// Euro del trimestre.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Spese {
     pub dicasteri: i64,
@@ -72,6 +75,7 @@ impl ContiTrimestre {
     }
 }
 
+/// Euro del trimestre.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ConsuntivoTrimestre {
     pub data: Trimestre,
@@ -82,8 +86,9 @@ pub struct ConsuntivoTrimestre {
 
 pub(crate) const TRIMESTRI_DI_STORIA: usize = 8;
 
-/// Miliardi o euro `f64` → euro interi.
+/// Arrotonda euro `f64` a euro interi (nessuna conversione di unità).
 pub(super) fn euro(x: f64) -> i64 {
+    debug_assert!(x.is_finite(), "euro({x})");
     x.round() as i64
 }
 
@@ -137,7 +142,7 @@ impl Bilancio {
 }
 
 /// Bilancio dell'anno dopo il turno zero, approvato dal governo uscente: crescita nominale
-/// pari all'inflazione, al massimo il tetto di spesa netta di quell'anno.
+/// pari all'inflazione, ma non oltre il tetto di spesa netta di quell'anno.
 pub(crate) fn bilancio_approvato_iniziale(dati: &DatiGioco, base: &Bilancio) -> Bilancio {
     let s = dati.scenario();
     let tetto = s.tetto_spesa_netta(base.anno.saturating_add(1));
@@ -148,9 +153,9 @@ pub(crate) fn bilancio_approvato_iniziale(dati: &DatiGioco, base: &Bilancio) -> 
 pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimestre {
     let s = dati.scenario();
     let pil_potenziale = e.pil_potenziale_reale * e.livello_prezzi * 4.0 * MLD;
-    let gap = 1.0 + e.output_gap[0] / 100.0;
+    // Elasticità lineare sul gap del turno prima (economia-italiana-parametri:109).
     let entrata = |quota: f64, elasticita: f64| {
-        euro(quota / 100.0 * pil_potenziale / 4.0 * gap.powf(elasticita))
+        euro(quota / 100.0 * pil_potenziale / 4.0 * (1.0 + elasticita * e.output_gap[0] / 100.0))
     };
     let el = |n: &str| dati.manopola(n);
     let trimestre = |mld_annui: f64| euro(mld_annui * MLD / 4.0);
@@ -193,7 +198,8 @@ pub(crate) fn consuntivo(e: &Economia, data: Trimestre) -> ConsuntivoTrimestre {
 
 impl Economia {
     /// Blocco finanza pubblica del trimestre `data`: prima della IS, sullo stato del turno prima.
-    pub(super) fn finanza(&mut self, dati: &DatiGioco, data: Trimestre) {
+    /// Rende la spesa netta del trimestre, con la disoccupazione che ha dato i sussidi.
+    pub(super) fn finanza(&mut self, dati: &DatiGioco, data: Trimestre) -> i64 {
         if let Some(b) = self
             .bilancio_approvato
             .take_if(|b| data.trimestre == 1 && b.anno == data.anno)
@@ -211,11 +217,13 @@ impl Economia {
 
         self.conti = conti;
         self.disavanzo_trimestre = self.conti.disavanzo();
+        let spesa_netta = self.spesa_netta_trimestre(dati);
 
         let q = 1.0 / (4.0 * dati.scenario().vita_media_debito.valore);
         let rendimento =
             self.tasso_bce + dati.manopola("premio_termine_bund") + self.spread / 100.0;
         self.tasso_medio_debito = (1.0 - q) * self.tasso_medio_debito + q * rendimento;
         self.debito += self.disavanzo_trimestre;
+        spesa_netta
     }
 }

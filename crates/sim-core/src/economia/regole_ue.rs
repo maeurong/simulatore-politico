@@ -3,7 +3,7 @@
 //! aprile-giugno, sull'anno solare prima.
 
 use super::Economia;
-use super::finanza::euro;
+use super::finanza::{MLD, euro};
 use crate::dati::DatiGioco;
 use crate::partita::Trimestre;
 use crate::scenario::StatoPde;
@@ -44,8 +44,6 @@ impl RegoleUe {
     /// `Inadempiente`, poi quella semestrale ogni 2 turni da `Sanzionata`.
     pub(super) fn ammende(&self, pil_annuo: f64, dati: &DatiGioco) -> i64 {
         let pct = match self.pde {
-            // Uno scenario che parte inadempiente paga anche al turno zero (i conti del turno
-            // zero non toccano il debito) e poi di nuovo al primo passo: accettato.
             StatoPde::Inadempiente if self.turni_in_stato == 0 => dati.manopola("ammenda_pde"),
             StatoPde::Sanzionata if self.turni_in_stato.is_multiple_of(2) => {
                 dati.manopola("ammenda_semestrale")
@@ -66,19 +64,9 @@ impl RegoleUe {
 impl Economia {
     /// Spesa netta del trimestre appena calcolato in `conti`: spesa primaria meno fondi di
     /// coesione meno la parte dei sussidi sopra quella a disoccupazione strutturale.
-    fn spesa_netta_trimestre(&self, dati: &DatiGioco) -> i64 {
-        let (u, u_strutturale, pesi) =
-            self.regioni
-                .iter()
-                .zip(dati.regioni())
-                .fold((0.0, 0.0, 0.0), |(u, us, p), (e, r)| {
-                    (
-                        u + r.forze_lavoro * e.disoccupazione,
-                        us + r.forze_lavoro * e.disoccupazione_strutturale,
-                        p + r.forze_lavoro,
-                    )
-                });
-        let (u, u_strutturale) = (u / pesi, u_strutturale / pesi);
+    pub(super) fn spesa_netta_trimestre(&self, dati: &DatiGioco) -> i64 {
+        let u = self.disoccupazione_nazionale(dati);
+        let u_strutturale = self.media_regionale(dati, |e| e.disoccupazione_strutturale);
         let s = &self.conti.spese;
         let ciclica = if u > 0.0 {
             s.sussidi as f64 * (1.0 - u_strutturale / u).max(0.0)
@@ -86,7 +74,7 @@ impl Economia {
             0.0
         };
         // Con la coesione sospesa `fondi_coesione` scende e la spesa netta sale: quella spesa
-        // non e' piu' coperta dai fondi UE. Effetto voluto.
+        // non è più coperta dai fondi UE. Effetto voluto.
         s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni
             - self.conti.entrate.fondi_coesione
             - euro(ciclica)
@@ -100,22 +88,29 @@ impl Economia {
         let tetto = dati.scenario().tetto_spesa_netta(anno);
         let r = &mut self.regole_ue;
         r.spesa_netta.insert(anno, sn);
-        r.spesa_netta
-            .insert(anno - 1, euro(sn as f64 / (1.0 + tetto / 100.0)));
+        r.spesa_netta.insert(
+            anno.saturating_sub(1),
+            euro(sn as f64 / (1.0 + tetto / 100.0)),
+        );
         r.pil_annuo
-            .insert(anno, 4 * euro(self.pil_trimestrale * 1e9));
+            .insert(anno, 4 * euro(self.pil_trimestrale * MLD));
         r.disavanzo_annuo.insert(anno, 4 * self.disavanzo_trimestre);
     }
 
     /// Fine del turno `data`, dopo lo storico: accumula, controlla (T2), fa avanzare la PDE.
-    pub(super) fn aggiorna_regole_ue(&mut self, dati: &DatiGioco, data: Trimestre) {
+    /// `spesa_netta` è quella del trimestre, calcolata in `finanza` (prima di Okun).
+    pub(super) fn aggiorna_regole_ue(
+        &mut self,
+        dati: &DatiGioco,
+        data: Trimestre,
+        spesa_netta: i64,
+    ) {
         // L'anno del turno zero è già completo.
         if data.anno > Trimestre::TURNO_ZERO.anno {
-            let sn = self.spesa_netta_trimestre(dati);
-            let pil = euro(self.pil_trimestrale * 1e9);
+            let pil = euro(self.pil_trimestrale * MLD);
             let disavanzo = self.disavanzo_trimestre;
             let r = &mut self.regole_ue;
-            *r.spesa_netta.entry(data.anno).or_default() += sn;
+            *r.spesa_netta.entry(data.anno).or_default() += spesa_netta;
             *r.pil_annuo.entry(data.anno).or_default() += pil;
             *r.disavanzo_annuo.entry(data.anno).or_default() += disavanzo;
         }
@@ -125,7 +120,7 @@ impl Economia {
             pde = self.controllo_annuale(dati, data.anno);
         }
         if pde == self.regole_ue.pde {
-            // 126.9 al primo turno Q4 dopo l'inadempienza; 126.11 dopo 2 turni da intimata.
+            // 126.9 al primo T4 dopo l'inadempienza; 126.11 dopo 2 turni da intimata.
             pde = match pde {
                 StatoPde::Inadempiente if data.trimestre == 4 => StatoPde::Intimata,
                 StatoPde::Intimata if self.regole_ue.turni_in_stato >= 2 => StatoPde::Sanzionata,

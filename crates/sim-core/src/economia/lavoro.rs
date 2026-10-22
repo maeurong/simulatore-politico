@@ -1,6 +1,6 @@
 //! Okun per regione con isteresi: dal gap dei settori alla disoccupazione.
 
-use super::Economia;
+use super::{Economia, EconomiaRegione};
 use crate::dati::DatiGioco;
 
 /// Piano 3 (assunzione): la disoccupazione non scende sotto questo livello, in %.
@@ -9,12 +9,21 @@ const DISOCCUPAZIONE_MINIMA: f64 = 0.5;
 impl Economia {
     /// Media della disoccupazione regionale pesata sulle forze di lavoro.
     pub fn disoccupazione_nazionale(&self, dati: &DatiGioco) -> f64 {
+        self.media_regionale(dati, |e| e.disoccupazione)
+    }
+
+    /// Media pesata sulle forze di lavoro di una grandezza regionale.
+    pub(super) fn media_regionale(
+        &self,
+        dati: &DatiGioco,
+        f: impl Fn(&EconomiaRegione) -> f64,
+    ) -> f64 {
         let (somma, pesi) = self
             .regioni
             .iter()
             .zip(dati.regioni())
             .fold((0.0, 0.0), |(s, p), (e, r)| {
-                (s + r.forze_lavoro * e.disoccupazione, p + r.forze_lavoro)
+                (s + r.forze_lavoro * f(e), p + r.forze_lavoro)
             });
         somma / pesi
     }

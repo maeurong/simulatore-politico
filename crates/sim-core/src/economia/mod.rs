@@ -2,13 +2,13 @@
 
 pub mod bce;
 pub mod congiuntura;
-pub mod finanza;
+mod finanza;
 pub mod lavoro;
 pub mod leontief;
-pub mod previdenza;
-pub mod regole_ue;
-pub mod sfc;
-pub mod spread;
+mod previdenza;
+mod regole_ue;
+mod sfc;
+mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
@@ -21,6 +21,7 @@ use crate::dati::DatiGioco;
 use crate::dati::Dicastero;
 use crate::partita::Trimestre;
 use crate::struttura::Struttura;
+use finanza::{MLD, euro};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -68,8 +69,6 @@ pub struct Economia {
     pub debito: i64,
     /// % annuo.
     pub tasso_medio_debito: f64,
-    /// Euro annui, al turno zero.
-    pub pil_potenziale_nominale_iniziale: f64,
     /// Entrate e spese del trimestre appena chiuso.
     pub conti: ContiTrimestre,
     /// Spese meno entrate del trimestre appena chiuso, euro.
@@ -103,6 +102,7 @@ impl Economia {
         });
         let spostamento = s.disoccupazione.valore - somma / pesi;
         let bilancio = finanza::Bilancio::iniziale(dati);
+        let debito = euro(s.debito_pil.valore / 100.0 * 4.0 * s.pil_trimestrale.valore * MLD);
         let mut e = Economia {
             pil_trimestrale: s.pil_trimestrale.valore,
             pil_potenziale_reale: s.pil_trimestrale.valore / (1.0 + gap / 100.0),
@@ -147,50 +147,45 @@ impl Economia {
                 - dati.manopola("tasso_naturale_reale"),
             bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
             bilancio,
-            debito: (s.debito_pil.valore / 100.0 * 4.0 * s.pil_trimestrale.valore * 1e9).round()
-                as i64,
+            debito,
             tasso_medio_debito: s.costo_medio_debito.valore,
-            pil_potenziale_nominale_iniziale: s.pil_trimestrale.valore / (1.0 + gap / 100.0)
-                * 4.0
-                * 1e9,
             conti: ContiTrimestre::default(),
             disavanzo_trimestre: 0,
             storico: Vec::new(),
             pensioni: Vec::new(),
             sussidio_per_disoccupato: 0,
-            sfc: Sfc::default(),
+            sfc: Sfc::iniziale(debito, 1.0),
             spread: 0.0,
             premio_sfiducia: s.premio_sfiducia.valore,
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
-        e.sfc = Sfc::iniziale(e.debito, e.livello_prezzi);
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, dati);
+        // L'ammenda della PDE la paga il primo passo, non il turno zero.
+        e.conti.spese.ammende = 0;
         e.disavanzo_trimestre = e.conti.disavanzo();
         e.avvia_regole_ue(dati);
         // Quattro trimestri prima del turno zero, tutti uguali al conto di partenza.
-        let indice = |t: Trimestre| u32::from(t.anno) * 4 + u32::from(t.trimestre) - 1;
-        e.storico = (1..=4)
-            .map(|k| {
-                let i = indice(Trimestre::TURNO_ZERO).saturating_sub(k);
-                let data = Trimestre {
-                    anno: u16::try_from(i / 4).unwrap_or(u16::MAX),
-                    trimestre: (i % 4) as u8 + 1,
-                };
-                finanza::consuntivo(&e, data)
-            })
-            .rev()
-            .collect();
+        e.storico = std::iter::successors(Some(Trimestre::TURNO_ZERO.precedente()), |t| {
+            Some(t.precedente())
+        })
+        .take(4)
+        .map(|data| finanza::consuntivo(&e, data))
+        .collect();
+        e.storico.reverse();
+        // Il TPI vale anche al turno zero, come nel passo.
+        if !e.regole_ue.pde.e_inadempiente() {
+            e.premio_sfiducia = 0.0;
+        }
         e.spread = e.spread_dallo_stato(dati);
         e
     }
 
-    // Ordine dei blocchi del trimestre (spec): misure (piano 5) → finanza pubblica e spesa
-    // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
-    // redditi dei gruppi e panieri (piano 4) → tasso BCE → SFC → spread, regole UE.
-    // `data` è il trimestre che il turno chiude. Qui: dalla domanda finale per settore a Okun e BCE.
+    // Ordine: finanza pubblica e spesa obbligatoria → domanda finale per settore → Leontief →
+    // IS/Phillips → Okun per regione → tasso BCE → SFC → storico → regole UE → spread.
+    // `data` è il trimestre che il turno chiude.
     pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, data: Trimestre) {
-        self.finanza(dati, data);
+        let spesa_netta = self.finanza(dati, data);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
         let shock_domanda = shock("sigma_domanda");
@@ -215,7 +210,7 @@ impl Economia {
         let pil_annuo_0 = 4.0 * dati.scenario().pil_trimestrale.valore;
         for (dic, b) in dati.dicasteri().iter().zip(&self.bilancio.dicasteri) {
             let spesa_0 = dic.spesa_pil / 100.0 * pil_annuo_0;
-            let scostamento = (b.spesa as f64 / 1e9 / self.livello_prezzi - spesa_0) / 4.0;
+            let scostamento = (b.spesa as f64 / MLD / self.livello_prezzi - spesa_0) / 4.0;
             for (i, di) in d.iter_mut().enumerate() {
                 *di += quota_dicastero(st, dic, i) * scostamento;
             }
@@ -260,7 +255,7 @@ impl Economia {
         if self.storico.len() > finanza::TRIMESTRI_DI_STORIA {
             self.storico.remove(0);
         }
-        self.aggiorna_regole_ue(dati, data);
+        self.aggiorna_regole_ue(dati, data, spesa_netta);
         self.aggiorna_spread(dati);
         debug_assert!(self.e_finita(), "stato non finito: {self:?}");
         debug_assert_eq!(self.residuo_sfc(), 0, "SFC non chiusa: {:?}", self.sfc);
@@ -277,7 +272,6 @@ impl Economia {
             self.inflazione_importata,
             self.impulso_fiscale,
             self.tasso_medio_debito,
-            self.pil_potenziale_nominale_iniziale,
             self.tasso_reale_precedente,
             self.area_euro.inflazione_resto,
             self.area_euro.gap_resto,

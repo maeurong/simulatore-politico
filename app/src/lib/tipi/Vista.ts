@@ -7,6 +7,6 @@ import type { VoceDicastero } from "./VoceDicastero";
  */
 export type Vista = { turno: number, data: Trimestre, dicasteri: Array<VoceDicastero>, 
 /**
- * Punti base sul Bund, arrotondato.
+ * Spread BTP-Bund in punti base, arrotondato.
  */
 spread_pb: number, };

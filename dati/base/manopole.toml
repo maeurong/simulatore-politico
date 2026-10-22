@@ -278,7 +278,7 @@ min = 0.03
 max = 0.09
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (calcolata: gli ingressi del 2027 uguagliano le uscite del 2027 dello stock iniziale; uscite 0,055 · 16.388.149 = 901.348, coorte dei 66 anni nella piramide = 794.674, rapporto 1,1342)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (calcolata: gli ingressi del 2027 uguagliano le uscite del 2027 dello stock iniziale; uscite 0,055 · 16.388.149 = 901.348, coorte dei 66 anni nella piramide = 794.674, rapporto 1,1342; valida per eta_pensione 67 e uscite 0,055)
 [copertura_pensionamento]
 valore = 1.1342
 min = 0.5
@@ -320,7 +320,7 @@ min = 0.0
 max = 150.0
 ticket = "07"
 
-# assunzione del piano 3: segnaposto della soglia «aste deserte» (spec riga 294, eventi col piano 9); massimo storico 550 pb nov 2011, docs/ricerca/modelli/economia-italiana-parametri.md:27
+# assunzione del piano 3, nessuna fonte in docs/ricerca (pb; segnaposto della soglia «aste deserte», spec:294, eventi col piano 9; massimo storico 550 pb = 5,5 punti a nov 2011, economia-italiana-parametri:27)
 [spread_massimo]
 valore = 1000.0
 min = 300.0

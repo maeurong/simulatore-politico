@@ -2,7 +2,7 @@
 //! con segni opposti in due settori, perciò la somma dei saldi fa zero: è il controllo di chiusura.
 
 use super::Economia;
-use super::finanza::euro;
+use super::finanza::{MLD, euro};
 use crate::dati::DatiGioco;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ impl Settori {
 }
 
 /// Euro. `saldi` sono del trimestre, `stock` la posizione netta accumulata.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Sfc {
     pub saldi: Settori,
     pub stock: Settori,
@@ -59,8 +59,7 @@ impl Economia {
     /// Blocco SFC del trimestre, dopo PIL e prezzi aggiornati, sui `conti` già calcolati.
     pub(super) fn sfc(&mut self, dati: &DatiGioco) {
         let s = dati.scenario();
-        self.sfc.livello_prezzi_area *= 1.0 + self.area_euro.inflazione_resto / 400.0;
-        let pil = self.pil_trimestrale * 1e9;
+        let pil = self.pil_trimestrale * MLD;
         let y = euro(pil);
         let c = &self.conti;
 
@@ -72,6 +71,8 @@ impl Economia {
                 * (1.0 + self.domanda_estera / 100.0)
                 * rapporto_prezzi.powf(dati.manopola("elasticita_export_prezzi")),
         );
+        // L'export vede i prezzi dell'area di questo turno, che si aggiornano dopo.
+        self.sfc.livello_prezzi_area *= 1.0 + self.area_euro.inflazione_resto / 400.0;
         let m = euro(s.importazioni_pil.valore / 100.0 * pil);
         let g = euro(
             self.bilancio
@@ -83,6 +84,7 @@ impl Economia {
         );
         // Assunzione del piano 3: la spesa dei dicasteri oltre G va alle imprese.
         let contributi_imprese = c.spese.dicasteri - g;
+        debug_assert!(contributi_imprese >= 0, "G sopra la spesa dei dicasteri");
         let lavoro = euro(dati.manopola("quota_redditi_lavoro") * pil);
         let profitti = y - lavoro - c.entrate.iva;
         let distribuiti = euro(dati.manopola("quota_profitti_distribuiti") * profitti as f64);

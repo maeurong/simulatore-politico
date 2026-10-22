@@ -23,6 +23,20 @@ impl Trimestre {
         trimestre: 4,
     };
 
+    pub fn precedente(self) -> Trimestre {
+        if self.trimestre == 1 {
+            Trimestre {
+                anno: self.anno.saturating_sub(1),
+                trimestre: 4,
+            }
+        } else {
+            Trimestre {
+                anno: self.anno,
+                trimestre: self.trimestre.saturating_sub(1),
+            }
+        }
+    }
+
     pub fn successivo(self) -> Trimestre {
         if self.trimestre == 4 {
             Trimestre {
@@ -172,6 +186,92 @@ impl Partita {
                 )));
             }
         }
+        partita.economia.controlla_coerenza(partita.data)?;
         Ok(partita)
+    }
+}
+
+/// Tetto agli importi in euro di un salvataggio: oltre, le somme in `i64` rischiano di traboccare.
+const LIMITE_EURO: i64 = 1_000_000_000_000_000;
+
+fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
+    if condizione {
+        Ok(())
+    } else {
+        Err(Errore::SalvataggioIlleggibile(messaggio.into()))
+    }
+}
+
+impl Economia {
+    /// Invarianti dei conti che un salvataggio manomesso potrebbe rompere. L'ordine conta:
+    /// i limiti sugli importi vengono prima delle somme che li usano.
+    fn controlla_coerenza(&self, data: Trimestre) -> Result<(), Errore> {
+        let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
+        let bilanci = std::iter::once(&self.bilancio).chain(&self.bilancio_approvato);
+        let (c, st) = (&self.conti, &self.sfc.stock);
+        ok(data.anno <= 2200, "data.anno oltre il 2200")?;
+        ok(
+            (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),
+            "economia.storico: servono da 1 a 8 voci con pil > 0",
+        )?;
+        ok(
+            !self.pensioni.is_empty()
+                && self
+                    .pensioni
+                    .iter()
+                    .all(|a| a.pensionati >= 0 && a.importo >= 0),
+            "economia.pensioni: vuote o con valori negativi",
+        )?;
+        ok(
+            self.sussidio_per_disoccupato >= 0,
+            "economia.sussidio_per_disoccupato negativo",
+        )?;
+        ok(
+            self.tasso_medio_debito.is_finite(),
+            "economia.tasso_medio_debito non finito",
+        )?;
+        ok(
+            self.sfc.livello_prezzi_area.is_finite() && self.sfc.livello_prezzi_area > 0.0,
+            "economia.sfc.livello_prezzi_area non finito o non positivo",
+        )?;
+        let importi = [
+            self.debito,
+            self.sussidio_per_disoccupato,
+            c.entrate.irpef,
+            c.entrate.ires,
+            c.entrate.iva,
+            c.entrate.contributi,
+            c.entrate.altre,
+            c.entrate.fondi_coesione,
+            c.spese.dicasteri,
+            c.spese.pensioni,
+            c.spese.sussidi,
+            c.spese.altre_prestazioni,
+            c.spese.interessi,
+            c.spese.ammende,
+            st.famiglie,
+            st.imprese,
+            st.stato,
+            st.estero,
+        ];
+        let importi_bilancio = bilanci
+            .flat_map(|b| &b.dicasteri)
+            .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine]);
+        ok(
+            importi.into_iter().chain(importi_bilancio).all(in_limite),
+            "economia: un importo supera 1e15 euro",
+        )?;
+        ok(
+            st.stato == -self.debito,
+            "economia.sfc.stock.stato diverso dal debito cambiato di segno",
+        )?;
+        ok(
+            self.residuo_stock() == 0,
+            "economia.sfc.stock non somma a zero",
+        )?;
+        ok(
+            self.disavanzo_trimestre == c.disavanzo(),
+            "economia.disavanzo_trimestre diverso da quello dei conti",
+        )
     }
 }
