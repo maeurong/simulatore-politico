@@ -161,9 +161,13 @@ impl Menu {
                 .tetto
                 .iter()
                 .any(|t| t.camera_pb > 10_000 || t.senato_pb > 10_000)
+            || !self
+                .tetto
+                .windows(2)
+                .all(|w| w[0].camera_pb < w[1].camera_pb && w[0].senato_pb < w[1].senato_pb)
         {
             return Err(incoerente(
-                "menu: tetto deve avere gradini non vuoti e al più 10000".into(),
+                "menu: tetto deve avere gradini crescenti, non vuoti e al più 10000".into(),
             ));
         }
         if let Some(&p) = self.soglia_premio_pb.iter().find(|&&p| p < 4000) {
@@ -207,26 +211,29 @@ impl Ramo {
                 r.id
             )));
         }
-        let fissi: u32 = self
+        let fissi = self
             .circoscrizioni
             .iter()
             .filter_map(|c| c.seggi_fissi)
-            .sum();
-        if self.estero + fissi > self.seggi {
+            .try_fold(u64::from(self.estero), |a, s| a.checked_add(u64::from(s)));
+        if fissi.is_none_or(|t| t > u64::from(self.seggi)) {
             return Err(incoerente(format!(
-                "{nome}: estero ({}) e seggi fissi ({fissi}) superano i seggi ({})",
-                self.estero, self.seggi
+                "{nome}: estero e seggi fissi superano i seggi ({})",
+                self.seggi
             )));
         }
         Ok(())
     }
 
-    fn per_regione(&self) -> BTreeMap<&str, u64> {
+    fn per_regione(&self, nome: &str) -> Result<BTreeMap<&str, u64>, Errore> {
         let mut m = BTreeMap::new();
         for c in &self.circoscrizioni {
-            *m.entry(c.regione.as_str()).or_insert(0) += c.popolazione;
+            let p = m.entry(c.regione.as_str()).or_insert(0u64);
+            *p = p.checked_add(c.popolazione).ok_or_else(|| {
+                incoerente(format!("{nome}: popolazione di {} fuori scala", c.regione))
+            })?;
         }
-        m
+        Ok(m)
     }
 }
 
@@ -247,11 +254,14 @@ impl DatiElezioni {
         }
         self.camera.valida("camera", regioni)?;
         self.senato.valida("senato", regioni)?;
-        let (c, s) = (self.camera.per_regione(), self.senato.per_regione());
-        if let Some((r, pc)) = c.iter().find(|(r, p)| s.get(*r) != Some(p)) {
+        let c = self.camera.per_regione("camera")?;
+        let s = self.senato.per_regione("senato")?;
+        if let Some(r) = c.keys().chain(s.keys()).find(|r| c.get(*r) != s.get(*r)) {
+            let pop = |m: &BTreeMap<&str, u64>| m.get(r).map_or("assente".into(), u64::to_string);
             return Err(incoerente(format!(
-                "regione {r}: popolazione {pc} alla camera, {:?} al senato",
-                s.get(r)
+                "regione {r}: popolazione {} alla camera, {} al senato",
+                pop(&c),
+                pop(&s)
             )));
         }
         Ok(())

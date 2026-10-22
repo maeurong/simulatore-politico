@@ -144,3 +144,42 @@ fn scenario_con_legge_inesistente_rifiutato() {
     };
     assert!(m.contains("legge_2030"), "{m}");
 }
+
+#[test]
+fn seggi_fissi_enormi_rifiutati_senza_panico() {
+    let f = sostituisci(
+        file_base(),
+        "elezioni",
+        "seggi_fissi = 2",
+        "seggi_fissi = 4294967295",
+    );
+    assert!(matches!(errore(f), Errore::DatiElettorali(_)));
+}
+
+#[test]
+fn tetto_del_menu_non_crescente_rifiutato() {
+    let f = sostituisci(
+        file_base(),
+        "elezioni",
+        "{ camera_pb = 6000, senato_pb = 6000 }",
+        "{ camera_pb = 5500, senato_pb = 6000 }",
+    );
+    let Errore::DatiElettorali(m) = errore(f) else {
+        panic!("atteso DatiElettorali")
+    };
+    assert!(m.contains("tetto"), "{m}");
+}
+
+#[test]
+fn tetto_fuori_dal_menu_rifiutato_col_nome() {
+    let f = sostituisci(
+        file_base(),
+        "elezioni",
+        "tetto = { camera_pb = 5500, senato_pb = 5650 }",
+        "tetto = { camera_pb = 5600, senato_pb = 5650 }",
+    );
+    let Errore::LeggeElettorale(m) = errore(f) else {
+        panic!("atteso LeggeElettorale")
+    };
+    assert!(m.contains("legge_180") && m.contains("tetto"), "{m}");
+}
