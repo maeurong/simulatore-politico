@@ -51,7 +51,9 @@ fn il_gap_si_riassorbe_senza_shock() {
 
 #[test]
 fn il_pil_nominale_cresce_con_prezzi_e_potenziale() {
-    assert!(giocata(&senza_shock(), 1, 4).economia().pil_trimestrale > 576.9);
+    let f = senza_shock();
+    let partenza = giocata(&f, 1, 0).economia().pil_trimestrale;
+    assert!(giocata(&f, 1, 4).economia().pil_trimestrale > partenza);
 }
 
 #[test]
