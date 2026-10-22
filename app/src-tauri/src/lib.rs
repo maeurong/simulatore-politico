@@ -47,6 +47,7 @@ fn chiudi(stato: &Stato) -> Result<Vista, String> {
     Ok(partita.vista())
 }
 
+// async: il comando gira fuori dal thread principale della finestra, che resta reattiva mentre il motore chiude il turno.
 #[tauri::command]
 async fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, String> {
     let risorse = app
@@ -57,6 +58,7 @@ async fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista,
     avvia(&stato, dati, seme_da_orologio()?)
 }
 
+// async: il comando gira fuori dal thread principale della finestra, che resta reattiva mentre il motore chiude il turno.
 #[tauri::command]
 async fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
     chiudi(&stato)

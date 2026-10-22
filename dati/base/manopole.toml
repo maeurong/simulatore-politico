@@ -1,4 +1,5 @@
 # Intervalli provvisori, al bilanciamento.
+# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue = docs/ricerca/modelli/<alias>.md; "alias:N" = riga N.
 
 [soglia_minaccia]
 valore = 40.0
@@ -67,7 +68,7 @@ min = 0.0
 max = 0.2
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (peso fisso dell'obiettivo del 2%, spec riga 293)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (peso fisso dell'obiettivo del 2%, spec:293)
 [ancoraggio_aspettative]
 valore = 0.10
 min = 0.0
@@ -179,14 +180,14 @@ min = -0.5
 max = -0.1
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (per turno; spec riga 297, nessun numero)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (per turno; spec:297, nessun numero)
 [isteresi_disoccupazione]
 valore = 0.05
 min = 0.0
 max = 0.2
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca ([NON TROVATO] in docs/ricerca)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (la ricerca non ha il dato: [NON TROVATO])
 [moltiplicatore_fiscale]
 valore = 0.8
 min = 0.3
@@ -221,7 +222,7 @@ min = 0.2
 max = 1.5
 ticket = "07"
 
-# stato-del-paese:104; spec riga 278 (% del budget)
+# stato-del-paese:104; spec:278 (% del budget)
 [quota_margine]
 valore = 1.6
 min = 0.5
@@ -242,7 +243,7 @@ min = 0.0
 max = 1.0
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (spec riga 294, nessun numero)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (spec:294, nessun numero)
 [elasticita_export_prezzi]
 valore = 1.0
 min = 0.0
@@ -277,7 +278,7 @@ min = 0.03
 max = 0.09
 ticket = "07"
 
-# PROVVISORIO: taratura nel Task 8 (stock dei pensionati stabile nel primo anno)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (stock dei pensionati stabile nel primo anno; da tarare col blocco spesa obbligatoria)
 [copertura_pensionamento]
 valore = 1.0
 min = 0.5
@@ -312,7 +313,7 @@ min = 0.0
 max = 0.002
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (pb; tratto piatto, spec riga 295)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (pb; tratto piatto, spec:295)
 [spread_minimo]
 valore = 60.0
 min = 0.0
