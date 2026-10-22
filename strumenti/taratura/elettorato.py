@@ -13,6 +13,7 @@ Il resto (redditi, istogrammi, panieri, interessi) è ancora provvisorio: strume
 import collections
 import csv
 import datetime
+import hashlib
 import importlib.util
 import io
 import json
@@ -26,11 +27,19 @@ import zipfile
 BASE = pathlib.Path(__file__).resolve().parents[2] / "dati" / "base"
 COMANDO = "python3 -I strumenti/taratura/elettorato.py"
 OGGI = datetime.date.today().isoformat()
+if "--cache" in sys.argv and sys.argv.index("--cache") + 1 == len(sys.argv):
+    sys.exit("--cache vuole una cartella: --cache DIR")
 CACHE = pathlib.Path(sys.argv[sys.argv.index("--cache") + 1] if "--cache" in sys.argv else pathlib.Path.home() / ".cache" / "simulatore-politico-taratura")
 
 URL_CAMERA = "https://documenti.camera.it/leg19/risultatiElettorali2022/UGE/VotiListe/ItaliaVotiListeCIRC.csv"
 URL_IBF = "https://www.bancaditalia.it/statistiche/tematiche/indagini-famiglie-imprese/bilanci-famiglie/distribuzione-microdati/documenti/ind22_ascii.zip"
 URL_MEF = "https://www1.finanze.gov.it/finanze/analisi_stat/public/v_4_0_0/contenuti/REG_tipo_reddito_2025.csv"
+# sha256 dei file senza versione (docs/ricerca/dati/risultati-elettorali-italia.md:13, banca-italia-ibf.md:14, mef-statistiche-fiscali.md); ISTAT cambia a ogni edizione
+SHA256 = {
+    "camera/ItaliaVotiListeCIRC.csv": "bbda02a9c9b692c23aceaad38857052df1ad989fe182b231b679a86fb8f77f3f",
+    "ibf/ind22_ascii.zip": "fd31bb4263363b9098de6f0d0640a90484dc30d0d4fd0c5323706d61dc9fb675",
+    "mef/REG_tipo_reddito_2025.csv": "7a31be66b19c0932d26675e8e948cc413ff8ed807e214b80c03fb7c406d50643",
+}
 SDMX = "application/vnd.sdmx.data+csv;version=1.0.0"
 ANNO_LAVORO, ANNO_QUINTI = 2025, 2024
 # assunzione: l'ordine di IREG (codebook dei file annuali non trovato) è quello ISTAT; il gradiente del reddito equivalente per IREG lo conferma
@@ -88,22 +97,28 @@ def quote(valori):
 
 def prova_ipf():
     """Caso sintetico 2 x 2 x 2: i margini di una tabella nota tornano entro 1e-9."""
+    assi3 = ((0, 1), (0, 2), (1, 2))
+
+    def torna(t, margini, dove):
+        for assi, m in margini.items():
+            assert all(abs(x - m[k]) < 1e-9 for k, x in proiezione(t, assi).items()), f"{dove}: margine {assi} non ritrovato"
+
     nota = {(0, 0, 0): 3.0, (0, 0, 1): 1.0, (0, 1, 0): 2.0, (0, 1, 1): 4.0, (1, 0, 0): 5.0, (1, 0, 1): 2.0, (1, 1, 0): 1.0, (1, 1, 1): 2.0}
-    margini = {assi: proiezione(nota, assi) for assi in ((0, 1), (0, 2), (1, 2))}
-    t = ipf(dict.fromkeys(nota, 1.0), margini)
-    for assi, m in margini.items():
-        assert all(abs(x - m[k]) < 1e-9 for k, x in proiezione(t, assi).items()), f"margine {assi} non ritrovato"
+    margini = {assi: proiezione(nota, assi) for assi in assi3}
+    torna(ipf(dict.fromkeys(nota, 1.0), margini), margini, "seme uniforme")
     nota[0, 0, 0] = 0.0
-    margini = {assi: proiezione(nota, assi) for assi in ((0, 1), (0, 2), (1, 2))}
+    margini = {assi: proiezione(nota, assi) for assi in assi3}
     seme = dict.fromkeys(nota, 1.0)
     seme[0, 0, 0] = 0.0
     t = ipf(seme, margini)
-    assert t[0, 0, 0] == 0.0 and all(abs(x - margini[(0, 1)][k]) < 1e-9 for k, x in proiezione(t, (0, 1)).items()), "cella zero consentita dal margine non rimasta zero"
+    assert t[0, 0, 0] == 0.0, "cella zero consentita dal margine non rimasta zero"
+    torna(t, margini, "cella zero")
     vuoto = dict.fromkeys(nota, 1.0)
     vuoto[0, 0, 0] = vuoto[0, 0, 1] = 0.0
     try:
         ipf(vuoto, margini)
-    except AssertionError:
+    except AssertionError as e:
+        assert "vuole massa" in str(e), f"seme vuoto: messaggio {e}"
         return
     raise AssertionError("seme vuoto dove il margine vuole massa: attesa AssertionError")
 
@@ -116,14 +131,20 @@ def economia():
 
 
 def preleva(fonte, nome, url, accept=None):
-    """Byte di una fonte: ogni fonte ha la sua cartella nella cache e un file già scaricato non si riscarica."""
+    """Byte di una fonte: ogni fonte ha la sua cartella nella cache, un file già scaricato non si riscarica
+    e quelli con sha256 noto sono verificati."""
     f = CACHE / fonte / nome
     if not f.exists():
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_bytes(economia().scarica(url, accept))
+        parziale = f.with_name(nome + ".part")
+        parziale.write_bytes(economia().scarica(url, accept))
+        parziale.replace(f)
         if accept:
             time.sleep(15)  # il servizio ISTAT limita le interrogazioni al minuto
-    return f.read_bytes()
+    dati = f.read_bytes()
+    atteso = SHA256.get(f"{fonte}/{nome}")
+    assert atteso is None or hashlib.sha256(dati).hexdigest() == atteso, f"{f}: sha256 {hashlib.sha256(dati).hexdigest()}, atteso {atteso}: file cambiato o corrotto, cancellalo"
+    return dati
 
 
 def istat(nome, flusso, chiave, anno):
@@ -197,6 +218,12 @@ def lavoro(ids):
     return {r: (occ[cod[r], "1"], occ[cod[r], "2"], dis[cod[r]], ina[cod[r]]) for r in ids}
 
 
+def fascia_percentile(prima, peso, totale):
+    """Indice di fascia di chi sta, nell'ordine per reddito, da `prima` per `peso` su `totale`: dal percentile del punto medio."""
+    centro = (prima + peso / 2) / totale
+    return 0 if centro < SOGLIE_FASCE[0] else 1 if centro < SOGLIE_FASCE[1] else 2
+
+
 def mef(ids):
     """Pensionati per regione (persone con reddito da pensione) e quota di contribuenti per fascia, MEF anno d'imposta 2024.
     Le classi di reddito individuale passano a fascia dal percentile nazionale del loro punto medio."""
@@ -212,11 +239,11 @@ def mef(ids):
             ordine.append(k)
         pens[reg] += num(r["Reddito da pensione - Frequenza"])
         classi[reg, k] += num(r["Numero contribuenti"])
+    assert set(pens) == set(ids), f"mef: regioni mancanti {sorted(set(ids) - set(pens))}"
     nazionale = {k: sum(classi[r, k] for r in ids) for k in ordine}
     totale, prima, fascia = sum(nazionale.values()), 0, {}
     for k in ordine:
-        centro = (prima + nazionale[k] / 2) / totale
-        fascia[k] = 0 if centro < SOGLIE_FASCE[0] else 1 if centro < SOGLIE_FASCE[1] else 2
+        fascia[k] = fascia_percentile(prima, nazionale[k], totale)
         prima += nazionale[k]
     quote_f = {}
     for r in ids:
@@ -261,8 +288,7 @@ def ibf():
     rec.sort()
     totale, prima, seme = sum(x[3] for x in rec), 0, collections.defaultdict(float)
     for red, reg, c, w in rec:
-        centro = (prima + w / 2) / totale
-        seme[reg, c, FASCE[0 if centro < SOGLIE_FASCE[0] else 1 if centro < SOGLIE_FASCE[1] else 2]] += w
+        seme[reg, c, FASCE[fascia_percentile(prima, w, totale)]] += w
         prima += w
     return seme
 
@@ -271,13 +297,18 @@ def persone(el, lav, pensionati):
     """Margine (b): persone per regione e condizione. Dipendenti (quota pubblica assunta), indipendenti, disoccupati e inattivi
     da ISTAT; pensionati da MEF; studenti assunti; i disoccupati o inattivi sono gli inattivi meno pensionati e studenti
     più i disoccupati (almeno i disoccupati). Ogni regione è scalata ai suoi elettori."""
-    out = {}
+    out, minimo, oltre = {}, [], 0.0
     for r, (dip, aut, dis, ina) in lav.items():
         p = {"dipendente_pubblico": dip * SHARE_PUBBLICO, "dipendente_privato": dip * (1 - SHARE_PUBBLICO), "autonomo": aut,
              "pensionato": pensionati[r] / 1000, "studente": SHARE_STUDENTI * el[r] / 1000}
         p["disoccupato_inattivo"] = max(dis + ina - p["pensionato"] - p["studente"], dis)
         tot = sum(p.values())
+        if dis + ina - p["pensionato"] - p["studente"] < dis:
+            minimo.append(f"{r} {tot * 1000 - el[r]:+,.0f}")
+        oltre += max(0.0, tot * 1000 - el[r])
         out[r] = {c: el[r] * x / tot for c, x in p.items()}
+    print(f"persone: residuo disoccupati/inattivi al minimo in {len(minimo)} regioni, con scarto somma delle condizioni - elettori ({'; '.join(minimo)}); "
+          f"somma degli scarti positivi in tutte le regioni {oltre:,.0f} persone (poi scalata agli elettori)", file=sys.stderr)
     return out
 
 
@@ -330,10 +361,11 @@ def costruisci():
     el = elettori(ids, leggi("elezioni.toml"), dati_camera)
     lav, (pens, fasce_mef) = lavoro(ids), mef(ids)
     peso_dis = sum(l[2] for l in lav.values()) / sum(l[2] + l[3] for l in lav.values())
-    pers = persone(el, lav, pens)
+    pers, fasce_istat = persone(el, lav, pens), quinti(peso_dis)
     seme = None if "--senza-ibf" in sys.argv else ibf()
     return {
-        "regioni": regioni, "elettori": el, "quote": quote_gruppi(ids, el, pers, fasce_mef, quinti(peso_dis), seme), "istogrammi": istogrammi(),
+        "regioni": regioni, "elettori": el, "quote": quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme), "istogrammi": istogrammi(),
+        "pers": pers, "fasce_istat": fasce_istat,
         "redditi": redditi(regioni, pers, scenario), "panieri": panieri(economia), "astensione": astensione(ids),
         "attesi": dati_camera[1] + el["valle_d_aosta"],
     }
@@ -379,6 +411,15 @@ def controlla(d):
     assert 0.5 < affluenza < 0.8, f"affluenza implicita {affluenza:.3f}, attesa fra 0,5 e 0,8"
     for i, q in d["quote"].items():
         assert len(q) == 18 and min(q) >= 0 and abs(sum(q) - 1) < 1e-9, f"{i}: quote somma {sum(q):.12f}, minimo {min(q)}"
+    for r, q in d["quote"].items():
+        for i, c in enumerate(CONDIZIONI):
+            persone_c = d["elettori"][r] * sum(q[3 * i:3 * i + 3])
+            assert abs(persone_c - d["pers"][r][c]) <= 1e-3 * d["pers"][r][c], f"{r} {c}: quote danno {persone_c:.0f} persone, margine (b) {d['pers'][r][c]:.0f}"
+    for i, c in enumerate(CONDIZIONI):
+        for j, f in enumerate(FASCE):
+            dalle_quote = sum(d["elettori"][r] * d["quote"][r][3 * i + j] for r in d["quote"])
+            bersaglio = sum(d["pers"][r][c] for r in d["quote"]) * d["fasce_istat"][c][j]
+            assert abs(dalle_quote - bersaglio) <= 1e-3 * bersaglio, f"{c} {f}: quote danno {dalle_quote:.0f} persone, margine (d) {bersaglio:.0f}"
     for k, h in d["istogrammi"].items():
         assert len(h) == 7 and min(h) >= 0 and abs(sum(h) - 1) < 1e-9, f"{k}: istogramma somma {sum(h):.12f}"
     for k, (p, t) in d["redditi"].items():
@@ -395,14 +436,17 @@ def controlla(d):
 
 
 def main():
+    if "--selftest" in sys.argv:
+        prova_ipf()
     d = costruisci()
     controlla(d)
     if "--selftest" in sys.argv:
-        prova_ipf()
         # I test Rust leggono il file committato: deve essere l'uscita dello script (intestazione
         # con la data esclusa). Dopo `sim-cli tara` (Task 12) il file cambia: il confronto va ristretto lì.
-        committato = (BASE / "elettorato.toml").read_text(encoding="utf-8").splitlines()[1:]
-        assert scrivi(d).splitlines()[1:] == committato, "elettorato.toml non è l'uscita dello script: rilancialo"
+        # Le righe `astensione = ` di [[regione]] sono di `sim-cli tara` (Task 12): fuori dal confronto.
+        senza = lambda righe: [r for r in righe[1:] if not r.startswith("astensione = ")]
+        committato = (BASE / "elettorato.toml").read_text(encoding="utf-8").splitlines()
+        assert senza(scrivi(d).splitlines()) == senza(committato), "elettorato.toml non è l'uscita dello script: rilancialo"
         print("selftest ok: 20 regioni, 360 gruppi")
         return
     destinazione = BASE / "elettorato.toml"
