@@ -91,6 +91,8 @@ impl Partita {
     pub fn chiudi_turno(&mut self) {
         self.economia.passo(&self.dati, &mut self.caso, self.data);
         self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
+        self.elettorato
+            .composizione(&self.dati, &self.economia, self.data);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }

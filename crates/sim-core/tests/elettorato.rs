@@ -207,3 +207,66 @@ fn pressione_estrema_e_base_nulla_lasciano_redditi_finiti_e_non_negativi() {
         assert!(g.reddito.reale().is_finite() && g.reddito.netto() >= 0.0);
     }
 }
+
+#[test]
+fn quote_di_regione_sommano_a_uno_dopo_40_turni() {
+    let mut p = Partita::nuova(dati_base(), 7);
+    for _ in 0..40 {
+        p.chiudi_turno();
+    }
+    for r in 0..20 {
+        let s: f64 = (0..18)
+            .map(|k| p.elettorato().gruppi[r * 18 + k].quota)
+            .sum();
+        assert!((s - 1.0).abs() < 1e-9, "regione {r}: {s}");
+    }
+}
+
+fn quota_disoccupati(p: &Partita, r: usize) -> f64 {
+    Fascia::TUTTE
+        .iter()
+        .map(|&f| p.elettorato().gruppi[indice_gruppo(r, Condizione::DisoccupatoInattivo, f)].quota)
+        .sum()
+}
+
+#[test]
+fn la_disoccupazione_sposta_dipendenti_fra_i_disoccupati() {
+    let mut p = Partita::nuova(dati_base(), 5);
+    let u0: Vec<f64> = p
+        .economia()
+        .regioni
+        .iter()
+        .map(|r| r.disoccupazione)
+        .collect();
+    let q0: Vec<f64> = (0..20).map(|r| quota_disoccupati(&p, r)).collect();
+    p.chiudi_turno();
+    let mut mossi = 0;
+    for r in 0..20 {
+        let du = p.economia().regioni[r].disoccupazione - u0[r];
+        if du.abs() > 1e-9 {
+            mossi += 1;
+            let dq = quota_disoccupati(&p, r) - q0[r];
+            assert!(dq * du > 0.0, "regione {r}: du {du}, dq {dq}");
+        }
+    }
+    assert!(mossi > 0, "nessuna regione ha cambiato disoccupazione");
+}
+
+#[test]
+fn i_pensionati_cambiano_solo_a_gennaio() {
+    let d = dati_base();
+    let mut p = Partita::nuova(dati_base(), 3);
+    let pensionati = |p: &Partita| -> f64 {
+        (0..360)
+            .filter(|i| i % 18 / 3 == Condizione::Pensionato as usize)
+            .map(|i| {
+                p.elettorato().gruppi[i].quota * d.elettorato().regioni[i / 18].elettori as f64
+            })
+            .sum()
+    };
+    let t0 = pensionati(&p);
+    p.chiudi_turno();
+    assert!((pensionati(&p) - t0).abs() < 1e-6 * t0);
+    p.chiudi_turno();
+    assert!((pensionati(&p) - t0).abs() > 1e-6 * t0);
+}

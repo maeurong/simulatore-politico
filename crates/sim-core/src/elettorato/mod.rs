@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+mod composizione;
 mod redditi;
 pub use redditi::{Indici, Reddito};
 
@@ -322,12 +323,15 @@ pub struct Elettorato {
     pub gruppi: Vec<Gruppo>,
     /// Indici dell'economia al turno zero.
     pub base: Indici,
+    /// Disoccupazione per regione letta al turno prima, in %.
+    pub ultima_disoccupazione: Vec<f64>,
 }
 
 impl Elettorato {
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
         let mut el = Elettorato {
             base: Indici::da(e, dati),
+            ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()
                 .gruppi
@@ -384,6 +388,14 @@ impl Elettorato {
                     "elettorato.gruppi[{i}]: reddito non finito o paniere non positivo"
                 ));
             }
+        }
+        let regioni = dati.elettorato().regioni.len();
+        if self.ultima_disoccupazione.len() != regioni
+            || self.ultima_disoccupazione.iter().any(|x| !x.is_finite())
+        {
+            return ko(format!(
+                "elettorato.ultima_disoccupazione: servono {regioni} valori finiti"
+            ));
         }
         if !self.base.e_finito() {
             return ko("elettorato.base non finita".into());
