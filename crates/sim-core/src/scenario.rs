@@ -1,6 +1,7 @@
 //! Scenario di partenza (`scenario.toml`): solo ingressi, i derivati si ricalcolano al caricamento.
 
 use crate::errore::Errore;
+use crate::partiti::{DatoGoverno, DatoPartito};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -58,11 +59,18 @@ macro_rules! scenario {
             pub clausola_nazionale_fino_a: u16,
             /// Nome di un'impostazione di `elezioni.toml`.
             pub legge_elettorale: String,
+            #[serde(rename = "partito")]
+            pub partiti: Vec<DatoPartito>,
+            pub governo: DatoGoverno,
+            /// Id di partito, per coalizione.
+            pub coalizioni: Vec<Vec<String>>,
         }
 
         impl Scenario {
-            fn ingressi(&self) -> Vec<(&'static str, &Ingresso)> {
-                vec![$((stringify!($campo), &self.$campo)),*]
+            fn ingressi(&self) -> Vec<(String, &Ingresso)> {
+                let mut v = vec![$((stringify!($campo).to_string(), &self.$campo)),*];
+                v.extend(self.partiti.iter().map(|p| (format!("valence di {}", p.id), &p.valence)));
+                v
             }
         }
     };
@@ -123,7 +131,7 @@ impl Scenario {
             let finito = i.valore.is_finite() && i.min.is_finite() && i.max.is_finite();
             if !(finito && i.min <= i.valore && i.valore <= i.max) {
                 return Err(Errore::ScenarioFuoriIntervallo {
-                    nome: nome.into(),
+                    nome,
                     valore: i.valore,
                     min: i.min,
                     max: i.max,

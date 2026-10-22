@@ -1,0 +1,370 @@
+//! Elettorato: i 360 gruppi (regione x condizione x fascia di reddito), i loro dati
+//! (`elettorato.toml`) e il loro stato.
+
+use crate::dati::{DatiGioco, Dicastero};
+use crate::errore::Errore;
+use crate::struttura::Regione;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+
+/// Punti dell'istogramma di posizione.
+pub const PUNTI: usize = 7;
+
+const TOLLERANZA: f64 = 1e-6;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Condizione {
+    DipendentePrivato,
+    DipendentePubblico,
+    Autonomo,
+    Pensionato,
+    DisoccupatoInattivo,
+    Studente,
+}
+
+impl Condizione {
+    pub const TUTTE: [Condizione; 6] = [
+        Condizione::DipendentePrivato,
+        Condizione::DipendentePubblico,
+        Condizione::Autonomo,
+        Condizione::Pensionato,
+        Condizione::DisoccupatoInattivo,
+        Condizione::Studente,
+    ];
+}
+
+impl fmt::Display for Condizione {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Condizione::DipendentePrivato => "dipendente_privato",
+            Condizione::DipendentePubblico => "dipendente_pubblico",
+            Condizione::Autonomo => "autonomo",
+            Condizione::Pensionato => "pensionato",
+            Condizione::DisoccupatoInattivo => "disoccupato_inattivo",
+            Condizione::Studente => "studente",
+        })
+    }
+}
+
+/// Fascia di reddito.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Fascia {
+    Bassa,
+    Media,
+    Alta,
+}
+
+impl Fascia {
+    pub const TUTTE: [Fascia; 3] = [Fascia::Bassa, Fascia::Media, Fascia::Alta];
+}
+
+impl fmt::Display for Fascia {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Fascia::Bassa => "bassa",
+            Fascia::Media => "media",
+            Fascia::Alta => "alta",
+        })
+    }
+}
+
+/// Gruppi per regione: condizioni x fasce.
+const PER_REGIONE: usize = 18;
+
+/// Indice canonico di un gruppo: `regione·18 + condizione·3 + fascia`.
+pub fn indice_gruppo(regione: usize, c: Condizione, f: Fascia) -> usize {
+    regione * PER_REGIONE + c as usize * Fascia::TUTTE.len() + f as usize
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ElettoriRegione {
+    pub id: String,
+    pub elettori: u64,
+    pub astensione: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DatoGruppo {
+    pub regione: String,
+    pub condizione: Condizione,
+    pub fascia: Fascia,
+    /// Quota della regione.
+    pub quota: f64,
+    pub posizione: [f64; PUNTI],
+    pub primario: f64,
+    pub trasferimenti: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Istituto {
+    pub nome: String,
+    pub campione: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DatiElettorato {
+    #[serde(rename = "regione")]
+    pub regioni: Vec<ElettoriRegione>,
+    #[serde(rename = "gruppo")]
+    pub gruppi: Vec<DatoGruppo>,
+    pub interessi: BTreeMap<Condizione, BTreeMap<String, f64>>,
+    pub aliquote: BTreeMap<Fascia, f64>,
+    pub paniere: BTreeMap<Fascia, Vec<f64>>,
+    pub astensione_condizione: BTreeMap<Condizione, f64>,
+    pub astensione_fascia: BTreeMap<Fascia, f64>,
+    #[serde(rename = "istituto")]
+    pub istituti: Vec<Istituto>,
+    pub nomi: Vec<String>,
+    pub cognomi: Vec<String>,
+}
+
+fn ko(m: String) -> Errore {
+    Errore::Elettorato(m)
+}
+
+fn finiti_non_negativi(v: &[f64]) -> bool {
+    v.iter().all(|x| x.is_finite() && *x >= 0.0)
+}
+
+fn somma_uno(v: &[f64]) -> bool {
+    finiti_non_negativi(v) && (v.iter().sum::<f64>() - 1.0).abs() <= TOLLERANZA
+}
+
+impl DatiElettorato {
+    /// Elettori di un gruppo: quota x elettori della sua regione.
+    ///
+    /// Un indice fuori dai gruppi dà 0: i dati validati hanno sempre la regione.
+    pub fn elettori_gruppo(&self, i: usize) -> f64 {
+        match (self.gruppi.get(i), self.regioni.get(i / PER_REGIONE)) {
+            (Some(g), Some(r)) => g.quota * r.elettori as f64,
+            _ => 0.0,
+        }
+    }
+
+    /// Coerenza dei dati con regioni, dicasteri e settori.
+    ///
+    /// # Errors
+    /// `Elettorato` col nome del colpevole.
+    pub fn valida(
+        &self,
+        regioni: &[Regione],
+        dicasteri: &[Dicastero],
+        n_settori: usize,
+    ) -> Result<(), Errore> {
+        let stesse = self
+            .regioni
+            .iter()
+            .map(|r| &r.id)
+            .eq(regioni.iter().map(|r| &r.id));
+        if !stesse {
+            return Err(ko(
+                "le regioni non combaciano con quelle di regioni.toml (stesso elenco, stesso ordine)"
+                    .into(),
+            ));
+        }
+        for r in &self.regioni {
+            if r.elettori == 0 || !r.astensione.is_finite() {
+                return Err(ko(format!(
+                    "regione {}: elettori nulli o astensione non finita",
+                    r.id
+                )));
+            }
+        }
+        self.valida_gruppi()?;
+        self.valida_interessi(dicasteri)?;
+        self.valida_tabelle(n_settori)?;
+        if !(3..=4).contains(&self.istituti.len()) || self.istituti.iter().any(|i| i.campione < 100)
+        {
+            return Err(ko(
+                "servono da 3 a 4 istituti, ciascuno con campione di almeno 100".into(),
+            ));
+        }
+        if self.nomi.is_empty() || self.cognomi.is_empty() {
+            return Err(ko("nomi e cognomi non possono essere vuoti".into()));
+        }
+        Ok(())
+    }
+
+    fn valida_gruppi(&self) -> Result<(), Errore> {
+        if self.gruppi.len() != self.regioni.len() * PER_REGIONE {
+            return Err(ko(format!(
+                "{} gruppi, ne servono {} (18 per regione)",
+                self.gruppi.len(),
+                self.regioni.len() * PER_REGIONE
+            )));
+        }
+        for (i, g) in self.gruppi.iter().enumerate() {
+            let regione = &self.regioni[i / PER_REGIONE].id;
+            let condizione = Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()];
+            let fascia = Fascia::TUTTE[i % Fascia::TUTTE.len()];
+            if (&g.regione, g.condizione, g.fascia) != (regione, condizione, fascia) {
+                return Err(ko(format!(
+                    "gruppo {i} fuori ordine: atteso {regione} {condizione} {fascia}, trovato {} {} {}",
+                    g.regione, g.condizione, g.fascia
+                )));
+            }
+            if !(g.quota.is_finite() && g.quota >= 0.0) {
+                return Err(ko(format!(
+                    "gruppo {regione} {condizione} {fascia}: quota non finita o negativa"
+                )));
+            }
+            if !somma_uno(&g.posizione) {
+                return Err(ko(format!(
+                    "gruppo {regione} {condizione} {fascia}: la posizione non somma a 1"
+                )));
+            }
+            let ok_flussi = finiti_non_negativi(&[g.primario, g.trasferimenti])
+                && g.primario + g.trasferimenti > 0.0;
+            if !ok_flussi {
+                return Err(ko(format!(
+                    "gruppo {regione} {condizione} {fascia}: primario e trasferimenti devono essere finiti, non negativi e con somma positiva"
+                )));
+            }
+        }
+        for (r, reg) in self.regioni.iter().enumerate() {
+            let quote: Vec<f64> = self.gruppi[r * PER_REGIONE..(r + 1) * PER_REGIONE]
+                .iter()
+                .map(|g| g.quota)
+                .collect();
+            if !somma_uno(&quote) {
+                return Err(ko(format!(
+                    "regione {}: le quote dei gruppi non sommano a 1",
+                    reg.id
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    fn valida_interessi(&self, dicasteri: &[Dicastero]) -> Result<(), Errore> {
+        let ammessi: BTreeSet<&str> = ["reddito", "disoccupazione", "occupazione_pubblica"]
+            .into_iter()
+            .chain(dicasteri.iter().map(|d| d.indicatore_servizio.as_str()))
+            .collect();
+        for c in Condizione::TUTTE {
+            let Some(pesi) = self.interessi.get(&c) else {
+                return Err(ko(format!("interessi mancanti per la condizione {c}")));
+            };
+            if let Some(nome) = pesi.keys().find(|k| !ammessi.contains(k.as_str())) {
+                return Err(ko(format!(
+                    "interessi di {c}: indicatore sconosciuto {nome}"
+                )));
+            }
+            let v: Vec<f64> = pesi.values().copied().collect();
+            if !somma_uno(&v) {
+                return Err(ko(format!("interessi di {c}: i pesi non sommano a 1")));
+            }
+        }
+        Ok(())
+    }
+
+    fn valida_tabelle(&self, n_settori: usize) -> Result<(), Errore> {
+        for f in Fascia::TUTTE {
+            let aliquota = self.aliquote.get(&f).copied();
+            if !aliquota.is_some_and(|a| (0.0..=0.9).contains(&a)) {
+                return Err(ko(format!(
+                    "aliquota della fascia {f} mancante o fuori da 0-0,9"
+                )));
+            }
+            match self.paniere.get(&f) {
+                Some(p) if p.len() == n_settori && somma_uno(p) => {}
+                _ => {
+                    return Err(ko(format!(
+                        "paniere della fascia {f}: servono {n_settori} quote che sommano a 1"
+                    )));
+                }
+            }
+            if !self
+                .astensione_fascia
+                .get(&f)
+                .is_some_and(|x| x.is_finite())
+            {
+                return Err(ko(format!(
+                    "astensione della fascia {f} mancante o non finita"
+                )));
+            }
+        }
+        for c in Condizione::TUTTE {
+            if !self
+                .astensione_condizione
+                .get(&c)
+                .is_some_and(|x| x.is_finite())
+            {
+                return Err(ko(format!(
+                    "astensione della condizione {c} mancante o non finita"
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Stato di un gruppo. `giudizio` ha una voce per partito.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Gruppo {
+    pub quota: f64,
+    pub posizione: [f64; PUNTI],
+    pub ancora: [f64; PUNTI],
+    pub giudizio: Vec<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Elettorato {
+    pub gruppi: Vec<Gruppo>,
+}
+
+impl Elettorato {
+    pub fn iniziale(dati: &DatiGioco, n_partiti: usize) -> Elettorato {
+        Elettorato {
+            gruppi: dati
+                .elettorato()
+                .gruppi
+                .iter()
+                .map(|g| Gruppo {
+                    quota: g.quota,
+                    posizione: g.posizione,
+                    ancora: g.posizione,
+                    giudizio: vec![0.0; n_partiti],
+                })
+                .collect(),
+        }
+    }
+
+    /// Lunghezze e finitezza, per uno stato letto da un salvataggio.
+    ///
+    /// # Errors
+    /// `SalvataggioIlleggibile` col campo nel messaggio.
+    pub fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+        let attesi = dati.elettorato().gruppi.len();
+        let ko = |m: String| Err(Errore::SalvataggioIlleggibile(m));
+        if self.gruppi.len() != attesi {
+            return ko(format!(
+                "elettorato.gruppi ha {} voci, i gruppi sono {attesi}",
+                self.gruppi.len()
+            ));
+        }
+        for (i, g) in self.gruppi.iter().enumerate() {
+            if g.giudizio.len() != n_partiti {
+                return ko(format!(
+                    "elettorato.gruppi[{i}].giudizio ha {} voci, i partiti sono {n_partiti}",
+                    g.giudizio.len()
+                ));
+            }
+            let finiti = g.quota.is_finite()
+                && g.posizione.iter().all(|x| x.is_finite())
+                && g.ancora.iter().all(|x| x.is_finite());
+            if !finiti {
+                return ko(format!(
+                    "elettorato.gruppi[{i}]: quota, posizione o ancora non finite"
+                ));
+            }
+            if g.giudizio.iter().any(|x| !x.is_finite()) {
+                return ko(format!("elettorato.gruppi[{i}].giudizio non finito"));
+            }
+        }
+        Ok(())
+    }
+}

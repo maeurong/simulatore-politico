@@ -1,13 +1,15 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
+use crate::elettorato::Elettorato;
 use crate::errore::Errore;
+use crate::partiti::{self, Governo, Partito};
 use crate::vista::{Vista, VoceDicastero};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 3;
+pub const VERSIONE_SCHEMA: u32 = 4;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,14 +62,22 @@ pub struct Partita {
     turno: u32,
     data: Trimestre,
     economia: Economia,
+    partiti: Vec<Partito>,
+    governo: Governo,
+    elettorato: Elettorato,
 }
 
 impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
+        let economia = Economia::iniziale(&dati);
+        let (partiti, governo) = partiti::iniziali(&dati);
         Partita {
             versione_schema: VERSIONE_SCHEMA,
             caso: Caso::nuovo(seme),
-            economia: Economia::iniziale(&dati),
+            economia,
+            elettorato: Elettorato::iniziale(&dati, partiti.len()),
+            partiti,
+            governo,
             dati,
             turno: 0,
             data: Trimestre::TURNO_ZERO,
@@ -86,6 +96,20 @@ impl Partita {
     /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
     pub fn economia(&self) -> &Economia {
         &self.economia
+    }
+
+    /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
+    pub fn partiti(&self) -> &[Partito] {
+        &self.partiti
+    }
+
+    pub fn governo(&self) -> &Governo {
+        &self.governo
+    }
+
+    /// Stato vero dell'elettorato: per il CLI e i test, mai per la `Vista`.
+    pub fn elettorato(&self) -> &Elettorato {
+        &self.elettorato
     }
 
     pub fn vista(&self) -> Vista {
@@ -187,7 +211,33 @@ impl Partita {
             }
         }
         partita.economia.controlla_coerenza(partita.data)?;
+        partita.controlla_partiti()?;
         Ok(partita)
+    }
+}
+
+impl Partita {
+    /// Partiti, governo ed elettorato di un salvataggio contro i dati.
+    fn controlla_partiti(&self) -> Result<(), Errore> {
+        let n = self.partiti.len();
+        let attesi = self.dati.scenario().partiti.len();
+        ok(
+            n == attesi,
+            &format!("partiti ha {n} voci, lo scenario ne ha {attesi}"),
+        )?;
+        let g = &self.governo;
+        ok(g.presidente < n, "governo.presidente fuori dai partiti")?;
+        ok(
+            g.dicasteri.len() == self.dati.dicasteri().len() && g.dicasteri.iter().all(|&p| p < n),
+            "governo.dicasteri non combacia con i dicasteri o con i partiti",
+        )?;
+        ok(
+            self.partiti
+                .iter()
+                .all(|p| p.posizione_percepita.is_finite() && p.valence.is_finite()),
+            "partiti: posizione_percepita o valence non finita",
+        )?;
+        self.elettorato.controlla(&self.dati, n)
     }
 }
 

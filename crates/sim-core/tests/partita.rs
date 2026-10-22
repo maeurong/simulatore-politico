@@ -271,3 +271,37 @@ fn carica_rifiuta_stato_incoerente() {
         );
     }
 }
+
+#[test]
+fn salvataggio_con_un_gruppo_in_meno_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"].as_array_mut().unwrap().pop();
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_giudizio_corto_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"][5]["giudizio"]
+            .as_array_mut()
+            .unwrap()
+            .pop();
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_presidente_fuori_dai_partiti_illeggibile() {
+    let s = salvataggio_modificato(|j| j["governo"]["presidente"] = 99.into());
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}

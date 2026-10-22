@@ -12,6 +12,7 @@ pub fn file_base() -> FileDati {
         regioni: include_str!("../../../../dati/base/regioni.toml").into(),
         scenario: include_str!("../../../../dati/base/scenario.toml").into(),
         elezioni: include_str!("../../../../dati/base/elezioni.toml").into(),
+        elettorato: include_str!("../../../../dati/base/elettorato.toml").into(),
     }
 }
 
@@ -23,7 +24,8 @@ pub fn dati_base() -> DatiGioco {
     DatiGioco::da_testi(&file_base()).expect("i dati di base devono essere validi")
 }
 
-/// Come `file_base()`, con `valore = 0.0` in ogni sezione `sigma_*` delle manopole.
+/// Come `file_base()`, con `valore = 0.0` (e `min = 0.0`, che il valore deve rispettare) in ogni
+/// sezione `sigma_*` delle manopole.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -42,6 +44,8 @@ pub fn senza_shock() -> FileDati {
             if dentro && riga.starts_with("valore = ") {
                 azzerate += 1;
                 "valore = 0.0".to_string()
+            } else if dentro && riga.starts_with("min = ") {
+                "min = 0.0".to_string()
             } else {
                 riga.to_string()
             }
@@ -91,6 +95,7 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
         "regioni" => &mut f.regioni,
         "scenario" => &mut f.scenario,
         "elezioni" => &mut f.elezioni,
+        "elettorato" => &mut f.elettorato,
         _ => panic!("file di dati sconosciuto: {file}"),
     }
 }

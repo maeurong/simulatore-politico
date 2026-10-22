@@ -1,9 +1,11 @@
 pub mod caso;
 pub mod dati;
 pub mod economia;
+pub mod elettorato;
 pub mod elezioni;
 pub mod errore;
 pub mod partita;
+pub mod partiti;
 pub mod scenario;
 pub mod struttura;
 pub mod vista;
