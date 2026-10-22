@@ -1,18 +1,19 @@
-//! Giudizio retrospettivo: ogni gruppo giudica i partiti di governo su lavoro, prezzi,
-//! trasferimenti, imposte e disoccupazione, ciascuna voce col suo responsabile per ruolo.
+//! Giudizio retrospettivo: ogni gruppo giudica i partiti di governo sul reddito reale (lavoro,
+//! prezzi, trasferimenti e imposte, una voce sola) e sulla disoccupazione, col responsabile per ruolo.
 
 use super::{Condizione, Elettorato, Fascia, PER_REGIONE};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
 use crate::partiti::Governo;
 
+/// Coefficiente dell'asimmetria per il segno di `x`: `2ρ/(1+ρ)` se `x > 0`, altrimenti `2/(1+ρ)`.
+fn coefficiente(x: f64, rho: f64) -> f64 {
+    (if x > 0.0 { 2.0 * rho } else { 2.0 }) / (1.0 + rho)
+}
+
 /// Asimmetria del malcontento: il peggioramento pesa `1/ρ` volte il miglioramento.
 pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64 {
-    if x > 0.0 {
-        x * 2.0 * rho / (1.0 + rho)
-    } else {
-        x * 2.0 / (1.0 + rho)
-    }
+    x * coefficiente(x, rho)
 }
 
 impl Elettorato {
@@ -74,33 +75,22 @@ impl Elettorato {
             } else {
                 0.0
             };
-            let du = e.regioni[r].disoccupazione - self.ultima_disoccupazione[r];
-            let voci = [
-                (
-                    punti(ora.primario - prima.primario) / sigma_r,
-                    w_reddito,
-                    responsabile_lavoro,
-                ),
-                ((prezzi - aspettativa) / sigma_r, w_reddito, pres),
-                (
-                    punti(ora.trasferimenti - prima.trasferimenti) / sigma_r,
-                    w_reddito,
-                    lavoro,
-                ),
-                (
-                    -punti(ora.imposte - prima.imposte) / sigma_r,
-                    w_reddito,
-                    imposte,
-                ),
-                (-du / sigma_u, w_disoccupazione, lavoro),
+            // Reddito reale contro l'aspettativa: una voce sola, con l'asimmetria scelta dal
+            // segno del totale; ogni componente porta la colpa al suo responsabile.
+            let componenti = [
+                (punti(ora.primario - prima.primario), responsabile_lavoro),
+                (prezzi - aspettativa, pres),
+                (punti(ora.trasferimenti - prima.trasferimenti), lavoro),
+                (-punti(ora.imposte - prima.imposte), imposte),
             ];
+            let dy = componenti.iter().map(|c| c.0).sum::<f64>() / sigma_r;
+            let fattore = w_reddito * coefficiente(dy, rho) / sigma_r;
+            let du = -(e.regioni[r].disoccupazione - self.ultima_disoccupazione[r]) / sigma_u;
+            let disoccupazione = w_disoccupazione * asimmetrica(du, rho);
             for (p, gp) in g.giudizio.iter_mut().enumerate() {
                 if governo.al_governo(p) {
-                    let nuovo: f64 = voci
-                        .iter()
-                        .map(|&(x, w, resp)| w * asimmetrica(x, rho) * colpa(resp, p))
-                        .sum();
-                    *gp = lambda * *gp + nuovo;
+                    let reddito: f64 = componenti.iter().map(|&(x, resp)| x * colpa(resp, p)).sum();
+                    *gp = lambda * *gp + fattore * reddito + disoccupazione * colpa(lavoro, p);
                 }
             }
         }

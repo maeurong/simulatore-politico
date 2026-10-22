@@ -452,36 +452,99 @@ fn la_colpa_di_trasferimenti_e_disoccupazione_va_al_partito_del_lavoro() {
     assert!(giudizi_del_centrodestra("1.0").iter().all(|x| *x == 0.0));
 }
 
+/// Giudizio di un solo turno sul gruppo `i` (turno zero, disoccupazione ferma) da `prima` a `ora`.
+fn giudizio_a_mano(
+    f: FileDati,
+    i: usize,
+    prima: Reddito,
+    ora: Reddito,
+) -> (DatiGioco, Partita, Vec<f64>) {
+    let d = DatiGioco::da_testi(&f).unwrap();
+    let p = Partita::nuova(d.clone(), 1);
+    let mut el = p.elettorato().clone();
+    el.gruppi[i].reddito_prima = prima;
+    el.gruppi[i].reddito = ora;
+    el.giudizio(&d, p.economia(), p.governo());
+    let g = el.gruppi[i].giudizio.clone();
+    (d, p, g)
+}
+
+const CENTO: Reddito = Reddito {
+    primario: 100.0,
+    trasferimenti: 0.0,
+    imposte: 0.0,
+    paniere: 1.0,
+};
+
 #[test]
 fn lavoro_del_dipendente_pubblico_va_a_economia_e_finanze() {
-    // EF al centrodestra, presidente destra, q = 0,3, rho = 0,333, sigma_reddito = 0,8.
+    // EF al centrodestra, presidente destra. Netto 100, primario -2: una sola componente,
+    // Δ_y = -2/σ_r, α = 2/(1+ρ); al centrodestra (1-q), alla destra q.
     let f = sostituisci(
         file_base(),
         "scenario",
         "economia_finanze = \"destra\"",
         "economia_finanze = \"centrodestra\"",
     );
-    let d = DatiGioco::da_testi(&f).unwrap();
-    let p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-    let mut el = p.elettorato().clone();
     let i = indice_gruppo(0, Condizione::DipendentePubblico, Fascia::Media);
-    // Netto 100, primario -2: lavoro = -2 punti = -2,5 sigma, peso interessi 0,50.
-    el.gruppi[i].reddito_prima = Reddito {
-        primario: 100.0,
-        trasferimenti: 0.0,
-        imposte: 0.0,
+    let ora = Reddito {
+        primario: 98.0,
+        ..CENTO
+    };
+    let (d, p, g) = giudizio_a_mano(f, i, CENTO, ora);
+    let (rho, q, sigma) = (
+        d.manopola("asimmetria_giudizio"),
+        d.manopola("quota_colpa_presidente"),
+        d.manopola("scala_reddito"),
+    );
+    let w = d.elettorato().interessi[&Condizione::DipendentePubblico]["reddito"];
+    let nuovo = w * (-2.0 / sigma) * 2.0 / (1.0 + rho);
+    let j = |id: &str| p.partiti().iter().position(|x| x.id == id).unwrap();
+    assert!((g[j("centrodestra")] - (1.0 - q) * nuovo).abs() < 1e-9);
+    assert!((g[j("destra")] - q * nuovo).abs() < 1e-9);
+    assert!(g[j("destra")] < 0.0);
+}
+
+#[test]
+fn a_reddito_reale_fermo_il_giudizio_resta_zero() {
+    // Primario e paniere +5%: il nominale sale, il reale no.
+    let i = indice_gruppo(4, Condizione::DipendentePrivato, Fascia::Bassa);
+    let ora = Reddito {
+        primario: 105.0,
+        paniere: 1.05,
+        ..CENTO
+    };
+    let (_, _, g) = giudizio_a_mano(file_base(), i, CENTO, ora);
+    assert!(g.iter().all(|x| x.abs() < 1e-9), "{g:?}");
+}
+
+#[test]
+fn il_giudizio_distribuito_somma_all_asimmetrica_del_reddito() {
+    // Componenti di segno opposto: lavoro +3, prezzi -1, trasferimenti +1, imposte -4 punti.
+    // Δ_y = -1/σ_r; la somma sui partiti è w·asimmetrica(Δ_y), non la somma delle asimmetriche.
+    let i = indice_gruppo(7, Condizione::Pensionato, Fascia::Media);
+    let prima = Reddito {
+        primario: 60.0,
+        trasferimenti: 50.0,
+        imposte: 10.0,
         paniere: 1.0,
     };
-    el.gruppi[i].reddito = Reddito {
-        primario: 98.0,
-        ..el.gruppi[i].reddito_prima
+    let ora = Reddito {
+        primario: 63.0,
+        trasferimenti: 51.0,
+        imposte: 14.0,
+        paniere: 1.01,
     };
-    el.giudizio(&d, p.economia(), p.governo());
-    let nuovo = 0.5 * (-2.5 * 2.0 / 1.333);
-    let j = |id: &str| p.partiti().iter().position(|x| x.id == id).unwrap();
-    assert!((el.gruppi[i].giudizio[j("centrodestra")] - 0.7 * nuovo).abs() < 1e-9);
-    assert!((el.gruppi[i].giudizio[j("destra")] - 0.3 * nuovo).abs() < 1e-9);
-    assert!(el.gruppi[i].giudizio[j("destra")] < 0.0);
+    let (d, _, g) = giudizio_a_mano(file_base(), i, prima, ora);
+    let (rho, sigma) = (
+        d.manopola("asimmetria_giudizio"),
+        d.manopola("scala_reddito"),
+    );
+    let w = d.elettorato().interessi[&Condizione::Pensionato]["reddito"];
+    let dy = (3.0 - 1.0 + 1.0 - 4.0) / sigma;
+    let atteso = w * dy * 2.0 / (1.0 + rho);
+    let somma: f64 = g.iter().sum();
+    assert!((somma - atteso).abs() < 1e-9, "{somma} {atteso}");
 }
 
 #[test]
