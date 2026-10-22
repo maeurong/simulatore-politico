@@ -1,6 +1,6 @@
 # Taratura offline dei dati strutturali
 
-`economia.py` scarica tavole e serie da Eurostat e ISTAT e scrive i dati di struttura del motore economico. Gira fuori dal binario del gioco: nel repo stanno solo i risultati aggregati e lo script che li ricava. `elettorato.py` scrive invece l'elettorato provvisorio, senza rete: vedi «Elettorato (provvisorio)» in fondo.
+`economia.py` scarica tavole e serie da Eurostat e ISTAT e scrive i dati di struttura del motore economico. Gira fuori dal binario del gioco: nel repo stanno solo i risultati aggregati e lo script che li ricava. `elettorato.py` scrive l'elettorato: elettori e quote dei gruppi dalle fonti, il resto provvisorio. Vedi «Elettorato» in fondo.
 
 ```
 python3 -I strumenti/taratura/economia.py
@@ -16,7 +16,7 @@ Solo libreria standard di Python (3.11 o successivo). Lo script controlla le inv
 | `dati/base/economia.toml` | `piramide` | ISTAT, residenti al 1° gennaio 2026 |
 | `dati/base/regioni.toml` | 20 regioni con `forze_lavoro`, `disoccupazione_2025`, `okun`, `mix` | Eurostat LFS, ISTAT conti territoriali, Bonaventura (2020) |
 | `dati/base/dicasteri.toml` | `spesa_pil`, `salari_pil`, `acquisti_pil` per dicastero, `settori` per Infrastrutture e Trasporti | Eurostat COFOG e conti nazionali |
-| `dati/base/elettorato.toml` | tutto il file, da `elettorato.py` | valori provvisori, vedi «Elettorato (provvisorio)» |
+| `dati/base/elettorato.toml` | tutto il file, da `elettorato.py` | `elettori` e `quota`: Camera 2022, ISTAT, MEF, IBF (vedi «Elettorato»); il resto provvisorio |
 
 In `dicasteri.toml` lo script riscrive solo questi campi e le due righe di commento `# [taratura]`; il resto del file è a mano.
 
@@ -31,6 +31,13 @@ In `dicasteri.toml` lo script riscrive solo questi campi e le due righe di comme
 | Eurostat `lfst_r_lfp2act`, forze di lavoro per regione NUTS 2, migliaia | `time=2025&sex=T&age=Y15-74` | 2026-09-10 | riuso con citazione, modifiche dichiarate (vedi Licenze) |
 | ISTAT `93_1227_DF_DCCN_TNA1_1`, valore aggiunto per branca e regione ai prezzi correnti | chiave `A.<20 regioni>.B1G_B_W2_S1.<settori produttivi (A*10) e totale>...V...2025M12`, anno 2023 | edizione 2025M12 | ISTAT, CC BY 4.0 |
 | ISTAT `22_289_DF_DCIS_POPRES1_1`, popolazione residente per età | chiave `A.IT.JAN.9..99`, anno 2026 (stima) | n/d | ISTAT, CC BY 4.0 |
+| Camera dei deputati `ItaliaVotiListeCIRC.csv`, elettori iscritti delle politiche 2022 | `https://documenti.camera.it/leg19/risultatiElettorali2022/UGE/VotiListe/ItaliaVotiListeCIRC.csv`, colonna `ELETTORI TOTALI`, circoscrizioni sommate per regione | n/d (sha256 `bbda02a9…` in `docs/ricerca/dati/risultati-elettorali-italia.md:13`) | [NON TROVATO]: usati come fatti |
+| ISTAT `150_938_DF_DCCV_OCCUPATIT1_23`, occupati per posizione professionale | chiave `A.............` (tutte le dimensioni libere), anno 2025; `POSIZ_PROF` 1 dipendenti, 2 indipendenti | n/d | ISTAT, CC BY 4.0 |
+| ISTAT `151_929_DF_DCCV_DISOCCUPT1_6`, disoccupati | tutto il flusso, anno 2025; `SEX=9`, `LABPROF_STATUS_A=99`, 15-74 anni | n/d | ISTAT, CC BY 4.0 |
+| ISTAT `152_928_DF_DCCV_INATTIV1_9`, inattivi | tutto il flusso, anno 2025; `SEX=9`, `AGE=Y15-74`, `LABPROF_STATUS_A=IN` | n/d | ISTAT, CC BY 4.0 |
+| ISTAT `32_38_DF_DCCV_QUINTOREDD_5`, famiglie per quinto di reddito equivalente e condizione del principale percettore | tutto il flusso, anno 2024; `EDU_LEV_MAIN_EARN=99`; 1A indipendente, 1B dipendente, 2A ritirato, 2B in cerca, 2C altra non professionale | n/d | ISTAT, CC BY 4.0 |
+| MEF Finanze `REG_tipo_reddito_2025.csv`, dichiarazioni, anno d'imposta 2024: contribuenti per classe di reddito complessivo, regione e tipo di reddito | `https://www1.finanze.gov.it/finanze/analisi_stat/public/v_4_0_0/contenuti/REG_tipo_reddito_2025.csv`, sha256 `7a31be66…0643` | n/d | CC BY 3.0 IT |
+| Banca d'Italia IBF 2022, `ind22_ascii.zip` (`CSV/carcom22.csv`, `CSV/rfam22.csv`) | `https://www.bancaditalia.it/statistiche/tematiche/indagini-famiglie-imprese/bilanci-famiglie/distribuzione-microdati/documenti/ind22_ascii.zip`, sha256 `fd31bb42…b675` | n/d | microdati solo per ricerca: restano nella cache, nel repo solo l'aggregato |
 | Bonaventura (2020), Okun regionale, tab. 2 | coefficienti `b` copiati da `docs/ricerca/modelli/economia-italiana-parametri.md:56-65` | n/d | solo coefficienti citati |
 
 Endpoint: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/<dataset>` (JSON-stat) e `https://esploradati.istat.it/SDMXWS/rest/data/IT1,<flusso>,1.0/<chiave>` (SDMX-CSV). Il servizio ISTAT limita le interrogazioni al minuto e a volte risponde con un errore del server: lo script aspetta 15 secondi dopo ogni chiamata e riprova fino a tre volte, un minuto dopo l'errore.
@@ -69,20 +76,28 @@ Nessun file contiene i dati originali: salvo la piramide, i valori sono elaborat
 - FIGARO 2024 è filtrabile per paese (`naio_10_fcp_ip4` copre dal 2022): la tavola simmetrica nazionale `naio_10_cp1700` del 2022, prevista come ripiego, non serve. `anno_tavola = 2024`.
 - I valori COFOG sono quelli della risposta, non quelli arrotondati a un decimale della tabella di ricerca: le dieci spese coincidono con la tabella al decimale, la somma vale 26,0394% del PIL contro il 26,0382% di 575,6 miliardi.
 
-## Elettorato (provvisorio)
+## Elettorato
 
 ```
-python3 -I strumenti/taratura/elettorato.py            # scrive dati/base/elettorato.toml
-python3 -I strumenti/taratura/elettorato.py --selftest # solo invarianti, nessuna scrittura
+python3 -I strumenti/taratura/elettorato.py [--senza-ibf] [--cache DIR]   # scrive dati/base/elettorato.toml
+python3 -I strumenti/taratura/elettorato.py --selftest [--cache DIR]      # IPF sintetico, invarianti e confronto col file committato
 ```
 
-Legge solo `regioni.toml`, `elezioni.toml`, `scenario.toml`, `economia.toml` e costanti citate; nessuna rete. Scrive 20 regioni, 360 gruppi (ordine canonico), interessi, panieri, istituti e nomi. Tutti i valori sono provvisori e la PR B sostituisce i corpi delle funzioni con le fonti vere.
+Legge `regioni.toml`, `elezioni.toml`, `scenario.toml`, `economia.toml`, scarica le fonti sopra e scrive 20 regioni, 360 gruppi (ordine canonico), interessi, panieri, istituti e nomi. Ogni fonte ha la sua cartella nella cache (`--cache`, predefinita `~/.cache/simulatore-politico-taratura/`), fuori dal repo; un file già scaricato non si riscarica, quindi la seconda esecuzione e il `--selftest` sono offline. Gli archivi sono dati: i CSV si leggono, lo zip IBF si legge in memoria per nome di file. Il servizio ISTAT va a 15 s fra le chiamate (riuso degli helper di `economia.py`).
 
-- Assunzione: elettori proporzionali alla popolazione censita delle circoscrizioni della Camera, totale 46.350.000 (46.253.014 della Camera 2022 più la Valle d'Aosta).
-- Assunzione: dipendenti pubblici 17% dei dipendenti (RGS non aperto); studenti 6% degli elettori.
-- Assunzione: fasce per condizione dai quinti di reddito e dalle fasce 3-4-3; quota bassa x 1,3 nel Mezzogiorno, x 0,85 al Nord.
-- Assunzione: forze di lavoro oltre gli elettori (stranieri, minorenni occupati). Il residuo dei disoccupati o inattivi è tagliato a 0 e le quote sono persone del gruppo / somma delle persone della regione. Taglio in valle_d_aosta (185), trentino_alto_adige (18.891), emilia_romagna (29.816). La PR B lo sostituisce col proporzionamento iterativo (IPF), che adatta le quote ai margini noti.
-- Assunzione: redditi per elettore (primario per condizione, moltiplicatori di fascia 0,55 / 1 / 1,9 e di macroarea 1,1 / 1 / 0,8); trasferimenti da `spesa_pensioni` e `spesa_sussidi`.
-- Assunzione: astensione = `ln((1-a)/a) + 0,081` con a l'affluenza 2022 per regione; Valle d'Aosta = affluenza nazionale 63,6%. La costante è tarata a mano coi parametri di default, fedeltà inclusa: la fedeltà al voto precedente sposta la stazionaria verso le alternative grandi, astensione compresa, e con lo 0,57 calcolato senza fedeltà l'affluenza del turno zero usciva 0,47 invece di 0,63 (`elettorato.py:51-53`). La PR B (`sim-cli tara`) la sostituisce.
-- Il `--selftest` controlla anche che `dati/base/elettorato.toml` sia l'uscita dello script e che l'affluenza implicita stia fra 0,5 e 0,8. Dopo `tara` il file cambia: la PR B restringe il confronto.
-- Segnaposto: istogrammi uguali per tutti (la PR B li ricava da ESS); tre panieri uguali al vettore `consumi`; quattro istituti; dodici nomi e cognomi; pesi degli interessi del ticket 17 (provvisori).
+**Quote dei gruppi (IPF 20 x 6 x 3).** Margini: (a) elettori per regione; (b) regione x condizione; (c) regione x fascia; (d) condizione x fascia nazionale. Il seme è la tabella IBF 2022 degli adulti pesati con `pesofit2`; le celle vuote (4 su 360) valgono lo 0,1% del prodotto dei margini. Con `--senza-ibf` il seme è l'indipendenza (prodotto dei margini). L'IPF si ferma quando ogni margine torna entro 1e-12 (relativo), ben dentro lo 0,1% chiesto.
+
+- **(a) elettori**: somma di «ELETTORI TOTALI» per regione, 46.253.014 in tutto, 19 regioni. La Valle d'Aosta (collegio uninominale a parte, non nel file) è stimata dalla popolazione di `elezioni.toml`: 96.861 elettori, in proporzione agli elettori delle altre regioni. Il totale è 46.349.875; il selftest lo esige uguale a elettori del CSV + Valle d'Aosta.
+- **(b) condizione**: dipendenti e indipendenti (occupati 2025, 15-74 anni) da ISTAT; **pubblico/privato: 17% dei dipendenti pubblico, assunzione** (RGS non aperto). Pensionati = persone con reddito da pensione, MEF a.i. 2024 (Trentino-Alto Adige = Trento + Bolzano). Studenti = 6% degli elettori, assunzione. Disoccupati o inattivi = disoccupati + inattivi 15-74 − pensionati − studenti, con minimo i disoccupati (11 regioni toccano il minimo: i pensionati MEF includono chi lavora e chi ha più di 74 anni, gli inattivi no). Ogni regione è poi scalata ai suoi elettori: ISTAT conta i residenti non cittadini, le quote valgono per l'elettore.
+- **(c) fascia**: le 34 classi MEF di reddito complessivo individuale diventano bassa, media o alta dal percentile nazionale del loro punto medio (sotto il 30% bassa, sopra il 70% alta: decili 3-4-3, `dati-per-tarare-i-gruppi.md:66`); per regione, quota dei contribuenti per fascia. È reddito individuale imponibile, non familiare equivalente (limite dichiarato nella ricerca). Poi si ricalibra (IPF 20 x 3) su righe = elettori e colonne = totali per fascia di (d), perché (c) e (d) coincidano.
+- **(d) condizione x fascia**: quinti ISTAT 2024 per condizione del principale percettore, tradotti in fasce con metà del secondo e del quarto quinto (bassa = Q1 + Q2/2, media = Q2/2 + Q3 + Q4/2, alta = Q4/2 + Q5) e normalizzati a 1 (le percentuali ISTAT sommano 99,9 o 100,1). Dipendente privato e pubblico: dipendente; pensionato: ritirato dal lavoro; studente: altra condizione non professionale; disoccupato o inattivo: media di «in cerca» e «altra non professionale» col peso dei disoccupati sugli inattivi più disoccupati (7,9%).
+- **Seme**: IBF `carcom22` (adulti, ETA >= 18) con il reddito familiare netto `Y` di `rfam22` diviso per la radice dei componenti; fasce sul percentile nazionale pesato come in (c). Condizione da `QUAL`: 1-3 dipendente (17% pubblico), 4-5 autonomo, 6 pensionato, 7 studente se sotto i 30 anni, altrimenti disoccupato o inattivo. **Il codebook dei file annuali non è stato trovato** (`docs/ricerca/dati/banca-italia-ibf.md:19`): la lettura di `QUAL` (conteggi e età coerenti: ritirati con età media 74) e l'ordine di `IREG` (quello ISTAT, confermato dal gradiente del reddito equivalente) sono assunzioni. Il settore `SETT` non entra.
+
+**Modifiche ai dati.** Margini ISTAT e MEF sommati e riscalati agli elettori della Camera; classi di reddito aggregate in tre fasce; seme IBF aggregato in 360 celle e riscalato; il file contiene solo la quota di ogni gruppo e gli elettori per regione, nessun microdato. Lo script scrive `elettori` e `quota` di ogni gruppo, a 6 decimali con l'ultima voce corretta.
+
+**Ripieghi.** Nessuna fonte ha fallito: tutte rispondono e le dimensioni citate esistono (verificato il 23/10/2026). Se IBF non fosse raggiungibile: `--senza-ibf`. Se mancasse il MEF, i pensionati non avrebbero ripiego (il margine (b) e (c) dipendono dal file).
+
+**Provvisorio.** Redditi per elettore (primario per condizione, moltiplicatori di fascia 0,55 / 1 / 1,9 e di macroarea 1,1 / 1 / 0,8; trasferimenti da `spesa_pensioni` e `spesa_sussidi`); istogrammi uguali per tutti (la PR B li ricava da ESS); tre panieri uguali al vettore `consumi`; quattro istituti; dodici nomi e cognomi; pesi degli interessi del ticket 17.
+
+- Assunzione: astensione = `ln((1-a)/a) + 0,081` con a l'affluenza 2022 per regione; Valle d'Aosta = affluenza nazionale 63,6%. La costante è tarata a mano coi parametri di default, fedeltà inclusa: la fedeltà al voto precedente sposta la stazionaria verso le alternative grandi, astensione compresa, e con lo 0,57 calcolato senza fedeltà l'affluenza del turno zero usciva 0,47 invece di 0,63 (`elettorato.py:58-60`). `sim-cli tara` (Task 12) la sostituisce.
+- Il `--selftest` controlla l'IPF su un caso sintetico 2 x 2 x 2 (margini ritrovati entro 1e-9; una cella a zero resta zero se il margine lo consente; un margine che vuole massa dove il seme è vuoto fallisce), la somma degli elettori (CSV + Valle d'Aosta, esatta), l'affluenza implicita fra 0,5 e 0,8 e che `dati/base/elettorato.toml` sia l'uscita dello script. Dopo `tara` il file cambia: il confronto va ristretto lì.
