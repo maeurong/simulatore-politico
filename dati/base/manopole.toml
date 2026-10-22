@@ -383,16 +383,16 @@ min = 0.0
 max = 0.5
 ticket = "02"
 
-# voto-spaziale:25 e dati-per-tarare-i-gruppi:104
+# ITANES 2022 post, N=3078: beta10 0.091 (ES 0.004), beta7 = beta10/0,36 = 0.25 (ES 0.01); stima_voto.py
 [beta_distanza]
-valore = 1.0
-min = 0.3
+valore = 0.25
+min = 0.1
 max = 3.0
 ticket = "14"
 
-# assunzione del piano 4, nessuna fonte in docs/ricerca
+# ITANES 2022 post, N=3078: phi 1.85 (ES 0.05), tetto: il ricordo del 2018 si sposta verso il 2022; stima_voto.py
 [fedelta]
-valore = 1.5
+valore = 1.85
 min = 0.0
 max = 4.0
 ticket = "14"
