@@ -35,7 +35,7 @@ impl Economia {
         let s = dati.scenario();
         let gap = s.output_gap.valore;
         let (somma, pesi) = dati.regioni().iter().fold((0.0, 0.0), |(somma, pesi), r| {
-            let w = f64::from(r.forze_lavoro);
+            let w = r.forze_lavoro;
             (somma + w * r.disoccupazione_2025, pesi + w)
         });
         let spostamento = s.disoccupazione.valore - somma / pesi;

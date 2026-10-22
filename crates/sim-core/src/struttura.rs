@@ -29,7 +29,7 @@ pub struct Regione {
     pub nome: String,
     pub macroarea: Macroarea,
     /// Migliaia di persone.
-    pub forze_lavoro: f32,
+    pub forze_lavoro: f64,
     pub disoccupazione_2025: f64,
     pub okun: f64,
     /// Quota di ogni settore nel valore aggiunto della regione.
@@ -95,8 +95,12 @@ impl Struttura {
                 return incoerente(&format!("{nome} deve avere 10 voci"));
             }
         }
-        if self.piramide.len() != ETA_PIRAMIDE {
-            return incoerente("la piramide deve avere 101 età");
+        if regioni.is_empty()
+            || regioni
+                .iter()
+                .any(|r| !(r.forze_lavoro.is_finite() && r.forze_lavoro > 0.0))
+        {
+            return incoerente("regioni assenti o con forze di lavoro non positive");
         }
         for (j, settore) in self.settori.iter().enumerate() {
             let costi: f64 = self.a.iter().map(|riga| riga[j]).sum::<f64>() + self.importazioni[j];
@@ -136,5 +140,17 @@ impl Struttura {
             }
         }
         Ok(())
+    }
+
+    /// Ultimo controllo della struttura: una piramide per età 0..=100.
+    ///
+    /// # Errors
+    /// `StrutturaIncoerente` se non ha 101 voci.
+    pub fn valida_piramide(&self) -> Result<(), Errore> {
+        if self.piramide.len() == ETA_PIRAMIDE {
+            Ok(())
+        } else {
+            incoerente("la piramide deve avere 101 età")
+        }
     }
 }

@@ -111,6 +111,13 @@ impl Scenario {
                 });
             }
         }
+        if self.tetti_spesa_netta.is_empty()
+            || self.tetti_spesa_netta.values().any(|t| !t.is_finite())
+        {
+            return Err(Errore::StrutturaIncoerente(
+                "tetti_spesa_netta assenti o non finiti".into(),
+            ));
+        }
         Ok(())
     }
 }

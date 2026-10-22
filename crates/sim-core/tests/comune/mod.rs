@@ -30,6 +30,7 @@ pub fn dati_base() -> DatiGioco {
 pub fn senza_shock() -> FileDati {
     let mut f = file_base();
     let mut dentro = false;
+    let mut azzerate = 0;
     f.manopole = f
         .manopole
         .lines()
@@ -38,13 +39,16 @@ pub fn senza_shock() -> FileDati {
                 dentro = riga.starts_with("[sigma_");
             }
             if dentro && riga.starts_with("valore = ") {
+                azzerate += 1;
                 "valore = 0.0".to_string()
             } else {
                 riga.to_string()
             }
         })
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
+        + "\n";
+    assert!(azzerate > 0, "nessuna manopola sigma_ azzerata");
     f
 }
 

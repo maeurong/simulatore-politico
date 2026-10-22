@@ -288,6 +288,7 @@ impl DatiGioco {
             }
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
-        self.scenario.valida()
+        self.scenario.valida()?;
+        self.struttura.valida_piramide()
     }
 }

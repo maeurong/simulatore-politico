@@ -67,70 +67,70 @@ min = 0.0
 max = 0.2
 ticket = "07"
 
-# A (peso fisso dell'obiettivo del 2%, spec riga 293)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (peso fisso dell'obiettivo del 2%, spec riga 293)
 [ancoraggio_aspettative]
 valore = 0.10
 min = 0.0
 max = 0.5
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [tasso_naturale_reale]
 valore = 0.25
 min = -1.0
 max = 2.0
 ticket = "07"
 
-# A (% annuo)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (% annuo)
 [crescita_potenziale]
 valore = 0.6
 min = 0.0
 max = 2.0
 ticket = "07"
 
-# A (punti di gap; residui storici [NON TROVATO])
+# assunzione del piano 3, nessuna fonte in docs/ricerca (punti di gap; residui storici [NON TROVATO])
 [sigma_domanda]
 valore = 0.4
 min = 0.0
 max = 2.0
 ticket = "07"
 
-# A (punti di crescita annua)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (punti di crescita annua)
 [sigma_produttivita]
 valore = 0.2
 min = 0.0
 max = 1.0
 ticket = "07"
 
-# A (% del prezzo degli input importati)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (% del prezzo degli input importati)
 [sigma_energia]
 valore = 3.0
 min = 0.0
 max = 15.0
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [persistenza_energia]
 valore = 0.7
 min = 0.0
 max = 0.95
 ticket = "07"
 
-# A (%)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (%)
 [sigma_domanda_estera]
 valore = 1.0
 min = 0.0
 max = 5.0
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [persistenza_domanda_estera]
 valore = 0.7
 min = 0.0
 max = 0.95
 ticket = "07"
 
-# A (punti)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (punti)
 [sigma_bce]
 valore = 0.1
 min = 0.0
@@ -165,7 +165,7 @@ min = 0.0
 max = 1.5
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [persistenza_resto_area]
 valore = 0.8
 min = 0.0
@@ -179,14 +179,14 @@ min = -0.5
 max = -0.1
 ticket = "07"
 
-# A (per turno; spec riga 297, nessun numero)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (per turno; spec riga 297, nessun numero)
 [isteresi_disoccupazione]
 valore = 0.05
 min = 0.0
 max = 0.2
 ticket = "07"
 
-# A ([NON TROVATO] in docs/ricerca)
+# assunzione del piano 3, nessuna fonte in docs/ricerca ([NON TROVATO] in docs/ricerca)
 [moltiplicatore_fiscale]
 valore = 0.8
 min = 0.3
@@ -228,49 +228,49 @@ min = 0.5
 max = 5.0
 ticket = "23"
 
-# A (quota del PIL)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (quota del PIL)
 [quota_redditi_lavoro]
 valore = 0.40
 min = 0.30
 max = 0.55
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [quota_profitti_distribuiti]
 valore = 0.6
 min = 0.0
 max = 1.0
 ticket = "07"
 
-# A (spec riga 294, nessun numero)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (spec riga 294, nessun numero)
 [elasticita_export_prezzi]
 valore = 1.0
 min = 0.0
 max = 3.0
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [sostituzione_retributivo]
 valore = 0.75
 min = 0.4
 max = 1.0
 ticket = "07"
 
-# A
+# assunzione del piano 3, nessuna fonte in docs/ricerca
 [sostituzione_contributivo]
 valore = 0.60
 min = 0.3
 max = 0.9
 ticket = "07"
 
-# A (euro annui)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (euro annui)
 [quota_base_universale]
 valore = 6000.0
 min = 0.0
 max = 15000.0
 ticket = "07"
 
-# A (quota annua)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (quota annua)
 [uscite_pensionati]
 valore = 0.055
 min = 0.03
@@ -284,7 +284,7 @@ min = 0.5
 max = 3.0
 ticket = "07"
 
-# A (moltiplicatore della spesa)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (moltiplicatore della spesa)
 [sussidio_universale]
 valore = 1.6
 min = 1.0
@@ -312,7 +312,7 @@ min = 0.0
 max = 0.002
 ticket = "07"
 
-# A (pb; tratto piatto, spec riga 295)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (pb; tratto piatto, spec riga 295)
 [spread_minimo]
 valore = 60.0
 min = 0.0
@@ -326,7 +326,7 @@ min = 0.0
 max = 20.0
 ticket = "07"
 
-# A (turni)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (turni)
 [emivita_premio_sfiducia]
 valore = 4.0
 min = 1.0

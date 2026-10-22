@@ -24,9 +24,9 @@ fn turno_zero_riproduce_i_valori_di_partenza() {
         .regioni
         .iter()
         .zip(d.regioni())
-        .map(|(r, g)| r.disoccupazione * f64::from(g.forze_lavoro))
+        .map(|(r, g)| r.disoccupazione * g.forze_lavoro)
         .sum();
-    let tot: f64 = d.regioni().iter().map(|g| f64::from(g.forze_lavoro)).sum();
+    let tot: f64 = d.regioni().iter().map(|g| g.forze_lavoro).sum();
     assert!((pesata / tot - 5.6).abs() < 1e-9);
 }
 
@@ -98,4 +98,26 @@ fn leggi_chiede_i_cinque_file_per_nome() {
         Ok::<_, ()>(String::new())
     });
     assert_eq!(chiesti, FileDati::NOMI);
+}
+
+#[test]
+fn forze_di_lavoro_non_positive_rifiutate() {
+    let e = errore(sostituisci(
+        file_base(),
+        "regioni",
+        "forze_lavoro = 1975.6",
+        "forze_lavoro = 0.0",
+    ));
+    assert!(matches!(e, Errore::StrutturaIncoerente(_)), "{e}");
+}
+
+#[test]
+fn tetti_di_spesa_netta_vuoti_rifiutati() {
+    let e = errore(sostituisci(
+        file_base(),
+        "scenario",
+        "tetti_spesa_netta = { 2026 = 1.6, 2027 = 1.9, 2028 = 1.7, 2029 = 1.5 }",
+        "tetti_spesa_netta = {}",
+    ));
+    assert!(matches!(e, Errore::StrutturaIncoerente(_)), "{e}");
 }
