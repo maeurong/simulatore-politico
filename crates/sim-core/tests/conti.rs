@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_ingresso, dati_base, senza_shock};
+use comune::{con_ingresso, dati_base, file_base, senza_shock};
 use sim_core::{DatiGioco, Partita};
 
 fn giocata(dati: DatiGioco, turni: u32) -> Partita {
@@ -196,4 +196,107 @@ fn il_saldo_dello_stato_e_meno_il_disavanzo() {
         p.economia().sfc.saldi.stato,
         -p.economia().disavanzo_trimestre
     );
+}
+
+fn dati(f: sim_core::FileDati) -> DatiGioco {
+    DatiGioco::da_testi(&f).unwrap()
+}
+fn inadempiente(f: sim_core::FileDati) -> sim_core::FileDati {
+    comune::sostituisci(f, "scenario", "pde = \"sospesa\"", "pde = \"inadempiente\"")
+}
+
+#[test]
+fn spread_del_turno_zero_fra_79_e_89() {
+    let v = Partita::nuova(dati_base(), 1).vista();
+    assert!((79..=89).contains(&v.spread_pb), "{}", v.spread_pb);
+}
+
+#[test]
+fn spread_piatto_sotto_la_soglia() {
+    let p = Partita::nuova(dati(con_ingresso(senza_shock(), "debito_pil", 110.0)), 1);
+    assert_eq!(p.vista().spread_pb, 60);
+}
+
+#[test]
+fn spread_convesso_sopra_la_soglia() {
+    let s = |b: f64| {
+        Partita::nuova(dati(con_ingresso(senza_shock(), "debito_pil", b)), 1)
+            .economia()
+            .spread
+    };
+    let (a, b, c) = (s(140.0), s(150.0), s(160.0));
+    assert!(c - b > b - a && b > a, "{a} {b} {c}");
+}
+
+#[test]
+fn il_tpi_azzera_il_premio_con_la_pde_sospesa() {
+    let p = giocata(
+        dati(con_ingresso(senza_shock(), "premio_sfiducia", 200.0)),
+        1,
+    );
+    assert_eq!(p.economia().premio_sfiducia, 0.0);
+}
+
+#[test]
+fn senza_tpi_il_premio_decade_con_la_sua_emivita() {
+    let f = inadempiente(con_ingresso(senza_shock(), "premio_sfiducia", 200.0));
+    let premio = giocata(dati(f), 2).economia().premio_sfiducia;
+    assert!(
+        (premio - 200.0 * 0.5_f64.powf(2.0 / 4.0)).abs() < 1e-6,
+        "{premio}"
+    );
+}
+
+#[test]
+fn conto_di_controllo_si_muove_solo_ad_aprile_giugno() {
+    let mut p = Partita::nuova(dati_base(), 3);
+    let mut prima = p.economia().regole_ue.conto_controllo;
+    for _ in 0..12 {
+        p.chiudi_turno();
+        let ora = p.economia().regole_ue.conto_controllo;
+        if ora != prima {
+            assert_eq!(
+                p.vista().data.trimestre,
+                3,
+                "il controllo gira nel turno aprile-giugno appena chiuso"
+            );
+        }
+        prima = ora;
+    }
+}
+
+#[test]
+fn nessuna_inadempienza_spuria_al_primo_controllo() {
+    let p = giocata(base_senza_shock(), 3);
+    assert!(!p.economia().regole_ue.pde.e_inadempiente());
+}
+
+#[test]
+fn salva_carica_con_pde_inadempiente() {
+    let mut diretta = giocata(dati(inadempiente(file_base())), 5);
+    let mut ricaricata = Partita::carica(&diretta.salva().unwrap()).unwrap();
+    for _ in 0..6 {
+        diretta.chiudi_turno();
+        ricaricata.chiudi_turno();
+    }
+    assert_eq!(ricaricata.salva().unwrap(), diretta.salva().unwrap());
+}
+
+#[test]
+fn scenario_estremo_resta_finito() {
+    let f = con_ingresso(
+        con_ingresso(
+            con_ingresso(file_base(), "debito_pil", 200.0),
+            "inflazione",
+            12.0,
+        ),
+        "disoccupazione",
+        15.0,
+    );
+    let mut p = Partita::nuova(dati(f), 9);
+    for _ in 0..200 {
+        p.chiudi_turno();
+        assert_eq!(p.economia().residuo_sfc(), 0);
+    }
+    assert!(p.salva().is_ok());
 }

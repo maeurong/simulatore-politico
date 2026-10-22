@@ -6,9 +6,6 @@ use crate::dati::DatiGioco;
 use crate::partita::Trimestre;
 use serde::{Deserialize, Serialize};
 
-/// Spread sul Bund in punti base, fino al blocco spread (Task 10), che lo toglie.
-pub const SPREAD_PROVVISORIO_PB: f64 = 84.0;
-
 const MLD: f64 = 1e9;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -44,6 +41,8 @@ pub struct Spese {
     pub sussidi: i64,
     pub altre_prestazioni: i64,
     pub interessi: i64,
+    /// Ammende della PDE, versate all'estero.
+    pub ammende: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -60,7 +59,7 @@ impl ContiTrimestre {
 
     pub fn totale_spese(&self) -> i64 {
         let s = &self.spese;
-        s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni + s.interessi
+        s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni + s.interessi + s.ammende
     }
 
     pub fn disavanzo(&self) -> i64 {
@@ -141,14 +140,7 @@ impl Bilancio {
 /// pari all'inflazione, al massimo il tetto di spesa netta di quell'anno.
 pub(crate) fn bilancio_approvato_iniziale(dati: &DatiGioco, base: &Bilancio) -> Bilancio {
     let s = dati.scenario();
-    let anno = base.anno.saturating_add(1);
-    // Dopo l'ultimo anno in tabella vale l'ultimo; prima del primo, il primo.
-    let tetto = s
-        .tetti_spesa_netta
-        .range(..=anno)
-        .next_back()
-        .or_else(|| s.tetti_spesa_netta.iter().next())
-        .map_or(0.0, |(_, t)| *t);
+    let tetto = s.tetto_spesa_netta(base.anno.saturating_add(1));
     base.scalato(1.0 + s.inflazione.valore.min(tetto) / 100.0)
 }
 
@@ -162,6 +154,12 @@ pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimes
     };
     let el = |n: &str| dati.manopola(n);
     let trimestre = |mld_annui: f64| euro(mld_annui * MLD / 4.0);
+    // Coesione sospesa finché la PDE è in uno stato di inadempienza.
+    let sospesa = if e.regole_ue.pde.e_inadempiente() {
+        el("sospensione_coesione")
+    } else {
+        0.0
+    };
     ContiTrimestre {
         entrate: Entrate {
             irpef: entrata(s.irpef_pil.valore, el("elasticita_irpef")),
@@ -169,7 +167,9 @@ pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimes
             iva: entrata(s.iva_pil.valore, el("elasticita_iva")),
             contributi: entrata(s.contributi_pil.valore, el("elasticita_contributi")),
             altre: entrata(s.altre_entrate_pil.valore, 1.0),
-            fondi_coesione: euro(s.fondi_coesione_pil.valore / 100.0 * pil_potenziale / 4.0),
+            fondi_coesione: euro(
+                (s.fondi_coesione_pil.valore - sospesa).max(0.0) / 100.0 * pil_potenziale / 4.0,
+            ),
         },
         spese: Spese {
             dicasteri: euro(e.bilancio.spesa_totale() as f64 / 4.0),
@@ -177,6 +177,7 @@ pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimes
             sussidi: e.spesa_sussidi(dati),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),
             interessi: euro(e.tasso_medio_debito / 100.0 * e.debito as f64 / 4.0),
+            ammende: e.regole_ue.ammende(e.pil_trimestrale * 4.0 * MLD, dati),
         },
     }
 }
@@ -213,7 +214,7 @@ impl Economia {
 
         let q = 1.0 / (4.0 * dati.scenario().vita_media_debito.valore);
         let rendimento =
-            self.tasso_bce + dati.manopola("premio_termine_bund") + SPREAD_PROVVISORIO_PB / 100.0;
+            self.tasso_bce + dati.manopola("premio_termine_bund") + self.spread / 100.0;
         self.tasso_medio_debito = (1.0 - q) * self.tasso_medio_debito + q * rendimento;
         self.debito += self.disavanzo_trimestre;
     }

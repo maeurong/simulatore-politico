@@ -92,7 +92,6 @@ impl Economia {
         let investimenti = consumi_investimenti - consumi;
 
         let (e, sp) = (&c.entrate, &c.spese);
-        // Le ammende arrivano col Task 10: per ora nulle.
         let saldi = Settori {
             famiglie: lavoro
                 + distribuiti
@@ -106,7 +105,7 @@ impl Economia {
                 - consumi,
             imprese: profitti - distribuiti + contributi_imprese - e.ires - investimenti,
             stato: c.totale_entrate() - c.totale_spese(),
-            estero: m - x - e.fondi_coesione,
+            estero: m - x - e.fondi_coesione + sp.ammende,
         };
         self.sfc.stock = Settori {
             famiglie: self.sfc.stock.famiglie + saldi.famiglie,

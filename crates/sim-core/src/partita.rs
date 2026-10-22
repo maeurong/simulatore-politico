@@ -78,6 +78,7 @@ impl Partita {
         Vista {
             turno: self.turno,
             data: self.data,
+            spread_pb: self.economia.spread.round() as i32,
             dicasteri: self
                 .dati
                 .dicasteri()

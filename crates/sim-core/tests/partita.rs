@@ -27,6 +27,7 @@ fn turno_zero_e_ottobre_dicembre_2026() {
         }
     );
     assert_eq!(v.dicasteri.len(), 10);
+    assert!((79..=89).contains(&v.spread_pb), "{}", v.spread_pb);
 }
 
 #[test]

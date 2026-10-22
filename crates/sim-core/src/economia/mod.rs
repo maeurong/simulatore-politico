@@ -6,11 +6,14 @@ pub mod finanza;
 pub mod lavoro;
 pub mod leontief;
 pub mod previdenza;
+pub mod regole_ue;
 pub mod sfc;
+pub mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
 pub use previdenza::Annata;
+pub use regole_ue::RegoleUe;
 pub use sfc::{Settori, Sfc};
 
 use crate::caso::{Caso, Flusso};
@@ -79,6 +82,12 @@ pub struct Economia {
     pub sussidio_per_disoccupato: i64,
     /// Saldi e stock dei quattro settori.
     pub sfc: Sfc,
+    /// Punti base sul Bund, a fine turno.
+    pub spread: f64,
+    /// Punti base dentro `spread`; il TPI lo azzera.
+    pub premio_sfiducia: f64,
+    /// Spesa netta, conto di controllo, PDE.
+    pub regole_ue: RegoleUe,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -150,11 +159,15 @@ impl Economia {
             pensioni: Vec::new(),
             sussidio_per_disoccupato: 0,
             sfc: Sfc::default(),
+            spread: 0.0,
+            premio_sfiducia: s.premio_sfiducia.valore,
+            regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
         e.sfc = Sfc::iniziale(e.debito, e.livello_prezzi);
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, dati);
         e.disavanzo_trimestre = e.conti.disavanzo();
+        e.avvia_regole_ue(dati);
         // Quattro trimestri prima del turno zero, tutti uguali al conto di partenza.
         let indice = |t: Trimestre| u32::from(t.anno) * 4 + u32::from(t.trimestre) - 1;
         e.storico = (1..=4)
@@ -168,6 +181,7 @@ impl Economia {
             })
             .rev()
             .collect();
+        e.spread = e.spread_dallo_stato(dati);
         e
     }
 
@@ -246,6 +260,8 @@ impl Economia {
         if self.storico.len() > finanza::TRIMESTRI_DI_STORIA {
             self.storico.remove(0);
         }
+        self.aggiorna_regole_ue(dati, data);
+        self.aggiorna_spread(dati);
         debug_assert!(self.e_finita(), "stato non finito: {self:?}");
         debug_assert_eq!(self.residuo_sfc(), 0, "SFC non chiusa: {:?}", self.sfc);
     }
@@ -266,6 +282,10 @@ impl Economia {
             self.area_euro.inflazione_resto,
             self.area_euro.gap_resto,
             self.sfc.livello_prezzi_area,
+            self.spread,
+            self.premio_sfiducia,
+            self.regole_ue.conto_controllo,
+            self.regole_ue.ultima_deviazione,
         ];
         scalari
             .iter()

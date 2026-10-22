@@ -320,6 +320,13 @@ min = 0.0
 max = 150.0
 ticket = "07"
 
+# assunzione del piano 3: segnaposto della soglia «aste deserte» (spec riga 294, eventi col piano 9); massimo storico 550 pb nov 2011, docs/ricerca/modelli/economia-italiana-parametri.md:27
+[spread_massimo]
+valore = 1000.0
+min = 300.0
+max = 3000.0
+ticket = "07"
+
 # economia-italiana-parametri:21 (pb per punto oltre il 3%)
 [spread_disavanzo]
 valore = 2.4

@@ -5,4 +5,8 @@ import type { VoceDicastero } from "./VoceDicastero";
 /**
  * Ciò che la UI può leggere della partita.
  */
-export type Vista = { turno: number, data: Trimestre, dicasteri: Array<VoceDicastero>, };
+export type Vista = { turno: number, data: Trimestre, dicasteri: Array<VoceDicastero>, 
+/**
+ * Punti base sul Bund, arrotondato.
+ */
+spread_pb: number, };
