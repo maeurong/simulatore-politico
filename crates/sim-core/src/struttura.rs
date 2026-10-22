@@ -102,6 +102,13 @@ impl Struttura {
         {
             return incoerente("regioni assenti o con forze di lavoro non positive");
         }
+        let okun_medio: f64 = regioni.iter().map(|r| r.forze_lavoro * r.okun).sum();
+        if regioni.iter().any(|r| !r.okun.is_finite())
+            || !okun_medio.is_finite()
+            || okun_medio == 0.0
+        {
+            return incoerente("okun regionali non finiti o con media pesata nulla");
+        }
         for (j, settore) in self.settori.iter().enumerate() {
             let costi: f64 = self.a.iter().map(|riga| riga[j]).sum::<f64>() + self.importazioni[j];
             if !costi.is_finite() || costi >= 1.0 {

@@ -35,7 +35,7 @@ impl Economia {
                 .settori
                 .iter()
                 .zip(&self.gap_settori)
-                .map(|(s, gap)| r.mix[&s.id] * gap)
+                .map(|(s, gap)| r.mix.get(&s.id).copied().unwrap_or(0.0) * gap)
                 .sum();
             let u =
                 (e.disoccupazione_strutturale + r.okun * scala * e.gap).max(DISOCCUPAZIONE_MINIMA);

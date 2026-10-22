@@ -99,6 +99,77 @@ fn il_gap_regionale_e_la_media_dei_settori_pesata_col_mix() {
 }
 
 #[test]
+fn un_settore_omesso_dal_mix_non_manda_in_panico() {
+    let f = comune::sostituisci(
+        comune::file_base(),
+        "regioni",
+        "A = 0.014219, BTE = 0.257791,",
+        "BTE = 0.272010,",
+    );
+    giocata(&f, 1, 2);
+}
+
+fn media_pesata(d: &DatiGioco, v: impl Fn(usize) -> f64) -> f64 {
+    let fl = d.regioni().iter().map(|r| r.forze_lavoro);
+    let tot: f64 = fl.clone().sum();
+    fl.enumerate().map(|(i, w)| w * v(i)).sum::<f64>() / tot
+}
+
+#[test]
+fn i_coefficienti_riscalati_hanno_media_okun_nazionale() {
+    let d = dati_base();
+    let f = con_ingresso(senza_shock(), "output_gap", 2.0);
+    let prima = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let dopo = giocata(&f, 1, 1);
+    let (p, e) = (prima.economia(), dopo.economia());
+    let dif = media_pesata(&d, |i| {
+        e.regioni[i].disoccupazione - p.regioni[i].disoccupazione_strutturale
+    });
+    let gap = media_pesata(&d, |i| e.regioni[i].gap);
+    assert!(
+        (dif - d.manopola("okun_nazionale") * gap).abs() < 1e-9,
+        "{dif} {gap}"
+    );
+}
+
+#[test]
+fn l_isteresi_sposta_la_disoccupazione_strutturale() {
+    let d = dati_base();
+    let f = con_ingresso(senza_shock(), "output_gap", -3.0);
+    let prima = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let dopo = giocata(&f, 1, 1);
+    let h = d.manopola("isteresi_disoccupazione");
+    for (e, p) in dopo
+        .economia()
+        .regioni
+        .iter()
+        .zip(&prima.economia().regioni)
+    {
+        let atteso =
+            p.disoccupazione_strutturale + h * (e.disoccupazione - p.disoccupazione_strutturale);
+        assert!(
+            (e.disoccupazione_strutturale - atteso).abs() < 1e-9,
+            "{}",
+            e.id
+        );
+    }
+}
+
+#[test]
+fn la_disoccupazione_non_scende_sotto_lo_0_5() {
+    let f = comune::sostituisci(
+        con_ingresso(senza_shock(), "output_gap", 5.0),
+        "regioni",
+        "okun = -0.22\n",
+        "okun = -5.0\n",
+    );
+    let p = giocata(&f, 1, 1);
+    let u = p.economia().regioni.iter().map(|r| r.disoccupazione);
+    assert!(u.clone().all(|u| u >= 0.5));
+    assert!(u.clone().any(|u| u == 0.5), "il pavimento non scatta");
+}
+
+#[test]
 fn piu_esportazioni_aiutano_di_piu_le_regioni_industriali() {
     let p = giocata(&con_ingresso(senza_shock(), "domanda_estera", 10.0), 1, 1);
     let gap = |id: &str| {

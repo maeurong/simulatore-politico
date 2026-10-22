@@ -112,6 +112,17 @@ fn forze_di_lavoro_non_positive_rifiutate() {
 }
 
 #[test]
+fn okun_non_finito_rifiutato() {
+    let e = errore(sostituisci(
+        file_base(),
+        "regioni",
+        "okun = -0.239",
+        "okun = nan",
+    ));
+    assert!(matches!(e, Errore::StrutturaIncoerente(_)), "{e}");
+}
+
+#[test]
 fn tetti_di_spesa_netta_vuoti_rifiutati() {
     let e = errore(sostituisci(
         file_base(),
