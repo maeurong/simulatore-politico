@@ -3,7 +3,9 @@
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
-use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE};
+use crate::elettorato::{
+    Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE, condizione_di, fascia_di, media_pesata,
+};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -67,17 +69,6 @@ fn campiona(
     normalizza(q, vero)
 }
 
-/// Media di `righe` pesata con `pesi` (somma positiva).
-fn pesata<'a>(pesi: &[f64], righe: impl Iterator<Item = &'a [f64]>, lung: usize) -> Vec<f64> {
-    let tot: f64 = pesi.iter().sum();
-    let mut m = vec![0.0; lung];
-    for (w, r) in pesi.iter().zip(righe) {
-        m.iter_mut().zip(r).for_each(|(a, x)| *a += w * x);
-    }
-    m.iter_mut().for_each(|a| *a /= tot);
-    m
-}
-
 /// Una rilevazione completa. Ordine delle estrazioni fisso: istituti × alternative; poi
 /// condizioni, fasce, regioni, ciascuno alternative, 7 punti, approvazione.
 pub(super) fn rileva(
@@ -131,8 +122,8 @@ pub(super) fn rileva(
         if pesi.iter().sum::<f64>() <= 0.0 {
             pesi.fill(1.0);
         }
-        let p_s = pesata(&pesi, indici.iter().map(|&i| &vero.per_gruppo[i][..]), alt);
-        let h_s = pesata(
+        let p_s = media_pesata(&pesi, indici.iter().map(|&i| &vero.per_gruppo[i][..]), alt);
+        let h_s = media_pesata(
             &pesi,
             indici.iter().map(|&i| &el.gruppi[i].posizione[..]),
             7,
@@ -157,20 +148,16 @@ pub(super) fn rileva(
     let gruppi = 0..el.gruppi.len();
     let condizioni = Condizione::TUTTE
         .iter()
-        .enumerate()
-        .map(|(c, nome)| {
-            let idx = gruppi
-                .clone()
-                .filter(|i| i % PER_REGIONE / Fascia::TUTTE.len() == c);
-            incrocio(nome.to_string(), idx.collect())
+        .map(|&c| {
+            let idx = gruppi.clone().filter(|&i| condizione_di(i) == c);
+            incrocio(c.to_string(), idx.collect())
         })
         .collect();
     let fasce = Fascia::TUTTE
         .iter()
-        .enumerate()
-        .map(|(f, nome)| {
-            let idx = gruppi.clone().filter(|i| i % Fascia::TUTTE.len() == f);
-            incrocio(nome.to_string(), idx.collect())
+        .map(|&f| {
+            let idx = gruppi.clone().filter(|&i| fascia_di(i) == f);
+            incrocio(f.to_string(), idx.collect())
         })
         .collect();
     let regioni = d

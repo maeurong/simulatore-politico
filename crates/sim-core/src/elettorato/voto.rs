@@ -1,6 +1,6 @@
 //! Posizioni che tornano all'ancora e voto logit con astensione e fedeltà al voto precedente.
 
-use super::{Condizione, Elettorato, Fascia, PER_REGIONE, PUNTI};
+use super::{Elettorato, PER_REGIONE, PUNTI, condizione_di, fascia_di};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::partiti::{Governo, Partito};
@@ -76,8 +76,7 @@ fn utilita(
             -beta * (x - p.posizione_percepita).powi(2) + p.valence + gamma * giudizio
         })
         .collect();
-    let c = Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()];
-    let f = Fascia::TUTTE[i % Fascia::TUTTE.len()];
+    let (c, f) = (condizione_di(i), fascia_di(i));
     u.push(
         d.regioni[i / PER_REGIONE].astensione
             + d.astensione_condizione.get(&c).copied().unwrap_or(0.0)

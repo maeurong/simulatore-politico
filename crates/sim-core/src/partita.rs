@@ -93,9 +93,10 @@ impl Partita {
         }
     }
 
-    // Per ora: economia (primi blocchi) e calendario. Ordine previsto quando arriva il motore:
-    // atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno
-    // dopo; voto delle elezioni dopo il motore.
+    // Per ora: economia, redditi, giudizio (prima di composizione, che aggiorna
+    // ultima_disoccupazione), composizione, posizioni, sondaggio, statistica, calendario.
+    // Ordine previsto a regime: atti dei ministri → aula → motore (economia, poi elettorato) →
+    // soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
@@ -270,7 +271,7 @@ impl Partita {
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia.
+    /// economia, partiti e governo, elettorato, informazione.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -295,7 +296,9 @@ impl Partita {
     /// # Errors
     /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
     /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
-    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata).
+    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
+    /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
+    /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;

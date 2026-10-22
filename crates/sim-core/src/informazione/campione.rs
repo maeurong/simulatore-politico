@@ -3,7 +3,7 @@
 
 use crate::caso::Estrattore;
 use crate::dati::DatiGioco;
-use crate::elettorato::{Condizione, Fascia, PUNTI};
+use crate::elettorato::{Condizione, Fascia, PUNTI, media_pesata};
 use crate::informazione::Sondaggio;
 use crate::vista::VocePartito;
 use serde::Serialize;
@@ -14,6 +14,7 @@ use ts_rs::TS;
 const NUMERO: usize = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub enum Motivo {
     Vicinanza,
@@ -48,17 +49,6 @@ fn stima(c: &[f64], r: &[f64], f: &[f64], n: &[f64]) -> Vec<f64> {
     } else {
         p
     }
-}
-
-/// Media delle righe pesata con `pesi`.
-fn media(righe: &[&[f64]], pesi: &[f64]) -> Vec<f64> {
-    let tot: f64 = pesi.iter().sum();
-    let lung = righe.first().map_or(0, |r| r.len());
-    let mut m = vec![0.0; lung];
-    for (r, w) in righe.iter().zip(pesi) {
-        m.iter_mut().zip(*r).for_each(|(a, x)| *a += w * x / tot);
-    }
-    m
 }
 
 /// Indice scelto con probabilità proporzionale a `pesi`; senza pesi positivi, quello di mezzo.
@@ -96,21 +86,22 @@ pub fn genera(
         &s.fasce[f as usize],
     );
     let uno = vec![1.0; s.istituti.len()];
-    let quote_n = media(
-        &s.istituti.iter().map(|r| &r.quote[..]).collect::<Vec<_>>(),
+    let quote_n = media_pesata(
         &uno,
+        s.istituti.iter().map(|r| &r.quote[..]),
+        ic.quote.len(),
     );
     let mut p = stima(&ic.quote, &ir.quote, &i_f.quote, &quote_n);
     if p.iter().sum::<f64>() <= 0.0 {
         p.clone_from(&ir.quote);
     }
     let elettori: Vec<f64> = d.regioni.iter().map(|r| r.elettori as f64).collect();
-    let regionali: Vec<&[f64]> = s.regioni.iter().map(|i| &i.posizione[..]).collect();
+    let regionali = s.regioni.iter().map(|i| &i.posizione[..]);
     let h = stima(
         &ic.posizione,
         &ir.posizione,
         &i_f.posizione,
-        &media(&regionali, &elettori),
+        &media_pesata(&elettori, regionali, PUNTI),
     );
     let tot: f64 = elettori.iter().sum();
     let appr_n = s

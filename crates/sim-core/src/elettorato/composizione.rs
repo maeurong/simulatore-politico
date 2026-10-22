@@ -1,6 +1,6 @@
 //! Composizione che si muove: lavoro, reddito ed età spostano quota fra i gruppi di una regione.
 
-use super::{Condizione, DatiElettorato, Elettorato, Fascia, PER_REGIONE, indice_gruppo};
+use super::{Condizione, DatiElettorato, Elettorato, Fascia, condizione_di, indice_gruppo};
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
 use crate::partita::Trimestre;
@@ -110,7 +110,7 @@ impl Elettorato {
         let mut per_condizione = [(0.0, 0.0); 6];
         for i in 0..self.gruppi.len() {
             let w = self.elettori(d, i);
-            let c = i % PER_REGIONE / Fascia::TUTTE.len();
+            let c = condizione_di(i) as usize;
             per_condizione[c].0 += w;
             per_condizione[c].1 += w * crescita(i);
         }
@@ -161,7 +161,7 @@ impl Elettorato {
         // Chi può andare in pensione: anche i disoccupati o inattivi, che altrimenti non escono mai.
         let attivi = [Priv, Pub, Autonomo, Dis];
         let in_eta: f64 = (0..self.gruppi.len())
-            .filter(|i| attivi.contains(&Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()]))
+            .filter(|&i| attivi.contains(&condizione_di(i)))
             .map(|i| self.elettori(d, i))
             .sum();
         let tasso = if in_eta > 0.0 {

@@ -1,7 +1,7 @@
 //! Giudizio retrospettivo: ogni gruppo giudica i partiti di governo sul reddito reale (lavoro,
 //! prezzi, trasferimenti e imposte, una voce sola) e sulla disoccupazione, col responsabile per ruolo.
 
-use super::{Condizione, Elettorato, Fascia, PER_REGIONE};
+use super::{Condizione, Elettorato, PER_REGIONE, condizione_di};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
 use crate::partiti::Governo;
@@ -30,15 +30,13 @@ impl Elettorato {
         let lambda = 0.5_f64.powf(1.0 / dati.manopola("emivita_giudizio"));
         let finestra = dati.manopola("finestra_aspettative").round() as usize;
         let pres = governo.presidente;
-        let imposte = governo.partito_del_ruolo(dati, Ruolo::ColpaImposteImpiegoPubblico);
-        let lavoro = governo.partito_del_ruolo(dati, Ruolo::ColpaDisoccupazioneTrasferimenti);
+        let partito_imposte = governo.partito_del_ruolo(dati, Ruolo::ColpaImposteImpiegoPubblico);
+        let partito_lavoro =
+            governo.partito_del_ruolo(dati, Ruolo::ColpaDisoccupazioneTrasferimenti);
         let colpa =
             |resp: usize, p: usize| q * f64::from(p == pres) + (1.0 - q) * f64::from(p == resp);
         for (i, g) in self.gruppi.iter_mut().enumerate() {
-            let (r, c) = (
-                i / PER_REGIONE,
-                Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()],
-            );
+            let (r, c) = (i / PER_REGIONE, condizione_di(i));
             let (ora, prima) = (g.reddito, g.reddito_prima);
             let y0 = prima.netto();
             // Base degenere (netto o paniere non positivi): nessun termine di confronto.
@@ -66,7 +64,7 @@ impl Elettorato {
             };
             let (w_reddito, w_disoccupazione) = (peso("reddito"), peso("disoccupazione"));
             let responsabile_lavoro = if c == Condizione::DipendentePubblico {
-                imposte
+                partito_imposte
             } else {
                 pres
             };
@@ -80,8 +78,11 @@ impl Elettorato {
             let componenti = [
                 (punti(ora.primario - prima.primario), responsabile_lavoro),
                 (prezzi - aspettativa, pres),
-                (punti(ora.trasferimenti - prima.trasferimenti), lavoro),
-                (-punti(ora.imposte - prima.imposte), imposte),
+                (
+                    punti(ora.trasferimenti - prima.trasferimenti),
+                    partito_lavoro,
+                ),
+                (-punti(ora.imposte - prima.imposte), partito_imposte),
             ];
             let dy = componenti.iter().map(|c| c.0).sum::<f64>() / sigma_r;
             let fattore = w_reddito * coefficiente(dy, rho) / sigma_r;
@@ -90,7 +91,9 @@ impl Elettorato {
             for (p, gp) in g.giudizio.iter_mut().enumerate() {
                 if governo.al_governo(p) {
                     let reddito: f64 = componenti.iter().map(|&(x, resp)| x * colpa(resp, p)).sum();
-                    *gp = lambda * *gp + fattore * reddito + disoccupazione * colpa(lavoro, p);
+                    *gp = lambda * *gp
+                        + fattore * reddito
+                        + disoccupazione * colpa(partito_lavoro, p);
                 }
             }
         }

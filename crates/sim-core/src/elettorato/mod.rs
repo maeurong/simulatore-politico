@@ -87,6 +87,31 @@ pub fn indice_gruppo(regione: usize, c: Condizione, f: Fascia) -> usize {
     regione * PER_REGIONE + c as usize * Fascia::TUTTE.len() + f as usize
 }
 
+/// Condizione del gruppo di indice canonico `i`.
+pub fn condizione_di(i: usize) -> Condizione {
+    Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()]
+}
+
+/// Fascia del gruppo di indice canonico `i`.
+pub fn fascia_di(i: usize) -> Fascia {
+    Fascia::TUTTE[i % Fascia::TUTTE.len()]
+}
+
+/// Media di `righe` pesata con `pesi`, lunga `lung`; somma dei pesi positiva.
+pub(crate) fn media_pesata<'a>(
+    pesi: &[f64],
+    righe: impl IntoIterator<Item = &'a [f64]>,
+    lung: usize,
+) -> Vec<f64> {
+    let tot: f64 = pesi.iter().sum();
+    let mut m = vec![0.0; lung];
+    for (w, r) in pesi.iter().zip(righe) {
+        m.iter_mut().zip(r).for_each(|(a, x)| *a += w * x);
+    }
+    m.iter_mut().for_each(|a| *a /= tot);
+    m
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ElettoriRegione {
     pub id: String,
@@ -198,8 +223,7 @@ impl DatiElettorato {
         }
         for (i, g) in self.gruppi.iter().enumerate() {
             let regione = &self.regioni[i / PER_REGIONE].id;
-            let condizione = Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()];
-            let fascia = Fascia::TUTTE[i % Fascia::TUTTE.len()];
+            let (condizione, fascia) = (condizione_di(i), fascia_di(i));
             if (&g.regione, g.condizione, g.fascia) != (regione, condizione, fascia) {
                 return Err(ko(format!(
                     "gruppo {i} fuori ordine: atteso {regione} {condizione} {fascia}, trovato {} {} {}",
@@ -314,7 +338,8 @@ pub struct Gruppo {
     pub posizione: [f64; PUNTI],
     pub ancora: [f64; PUNTI],
     pub giudizio: Vec<f64>,
-    /// Voto del turno prima: una quota per partito, l'ultima è l'astensione.
+    /// Voto dell'ultima elezione (fino al piano 7: la stazionaria del turno zero): una quota
+    /// per partito, l'ultima è l'astensione.
     pub voto_precedente: Vec<f64>,
     pub reddito: Reddito,
     pub reddito_prima: Reddito,
