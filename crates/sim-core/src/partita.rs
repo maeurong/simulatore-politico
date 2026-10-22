@@ -1,12 +1,13 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
+use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::vista::{Vista, VoceDicastero};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 1;
+pub const VERSIONE_SCHEMA: u32 = 2;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,31 +41,37 @@ impl Trimestre {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Partita {
     versione_schema: u32,
-    seme: u64,
     caso: Caso,
     dati: DatiGioco,
     turno: u32,
     data: Trimestre,
+    economia: Economia,
 }
 
 impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         Partita {
             versione_schema: VERSIONE_SCHEMA,
-            seme,
             caso: Caso::nuovo(seme),
+            economia: Economia::iniziale(&dati),
             dati,
             turno: 0,
             data: Trimestre::TURNO_ZERO,
         }
     }
 
-    // Per ora avanza solo il calendario. Ordine previsto quando arriva il motore: atti dei
-    // ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo;
-    // voto delle elezioni dopo il motore.
+    // Per ora: economia (primi blocchi) e calendario. Ordine previsto quando arriva il motore:
+    // atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno
+    // dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
+        self.economia.passo(&self.dati, &mut self.caso, self.data);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
+    }
+
+    /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
+    pub fn economia(&self) -> &Economia {
+        &self.economia
     }
 
     pub fn vista(&self) -> Vista {
@@ -73,7 +80,7 @@ impl Partita {
             data: self.data,
             dicasteri: self
                 .dati
-                .dicasteri
+                .dicasteri()
                 .iter()
                 .map(|d| VoceDicastero {
                     id: d.id.clone(),
@@ -83,7 +90,8 @@ impl Partita {
         }
     }
 
-    /// Snapshot JSON completo: schema, seme, stato del generatore, dati.
+    /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
+    /// economia.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -107,7 +115,8 @@ impl Partita {
     ///
     /// # Errors
     /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
-    /// da 1-4, o dati che non passano `DatiGioco::valida`.
+    /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
+    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -131,6 +140,28 @@ impl Partita {
             )));
         }
         partita.dati.valida()?;
+        let e = &partita.economia;
+        let regioni_uguali = e.regioni.iter().map(|r| &r.id).eq(partita
+            .dati
+            .regioni()
+            .iter()
+            .map(|r| &r.id));
+        if !regioni_uguali {
+            return Err(Errore::SalvataggioIlleggibile(
+                "economia.regioni non combacia con le regioni dei dati".into(),
+            ));
+        }
+        let n_settori = partita.dati.struttura().settori.len();
+        for (campo, n) in [
+            ("prezzi_settori", e.prezzi_settori.len()),
+            ("gap_settori", e.gap_settori.len()),
+        ] {
+            if n != n_settori {
+                return Err(Errore::SalvataggioIlleggibile(format!(
+                    "economia.{campo} ha {n} voci, i settori sono {n_settori}"
+                )));
+            }
+        }
         Ok(partita)
     }
 }

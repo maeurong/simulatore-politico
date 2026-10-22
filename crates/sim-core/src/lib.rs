@@ -1,7 +1,10 @@
 pub mod caso;
 pub mod dati;
+pub mod economia;
 pub mod errore;
 pub mod partita;
+pub mod scenario;
+pub mod struttura;
 pub mod vista;
 
 pub use dati::{DatiGioco, FileDati};

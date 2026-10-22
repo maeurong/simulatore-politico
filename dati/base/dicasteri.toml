@@ -1,4 +1,7 @@
 # Dicasteri di base. Pesi di spartizione provvisori (ticket 05).
+# [taratura] spesa_pil, salari_pil, acquisti_pil e settori: generati da `python3 -I strumenti/taratura/economia.py`
+# [taratura] il 2026-10-22, da Eurostat gov_10a_exp 2024 e nama_10_gdp, in % del PIL.
+# [taratura] Licenze: Eurostat, riuso con citazione e dichiarazione delle modifiche; ISTAT, CC BY 4.0. Modifiche ai dati: strumenti/taratura/README.md.
 
 [[dicastero]]
 id = "economia_finanze"
@@ -7,6 +10,9 @@ indicatore_servizio = "efficienza_riscossione"
 peso_spartizione = 3
 regione_bersaglio = false
 ruoli = ["colpa_imposte_impiego_pubblico", "bilancio_e_credibilita"]
+spesa_pil = 3.0933
+salari_pil = 1.0588
+acquisti_pil = 0.8026
 
 [[dicastero]]
 id = "sviluppo_economico"
@@ -15,6 +21,9 @@ indicatore_servizio = "sostegno_imprese"
 peso_spartizione = 1
 regione_bersaglio = true
 ruoli = []
+spesa_pil = 2.139
+salari_pil = 0.2003
+acquisti_pil = 0.2018
 
 [[dicastero]]
 id = "lavoro_welfare"
@@ -23,6 +32,9 @@ indicatore_servizio = "copertura_welfare"
 peso_spartizione = 1
 regione_bersaglio = false
 ruoli = ["colpa_disoccupazione_trasferimenti"]
+spesa_pil = 1.0131
+salari_pil = 0.2172
+acquisti_pil = 0.5942
 
 [[dicastero]]
 id = "sanita"
@@ -31,6 +43,9 @@ indicatore_servizio = "qualita_servizio_sanitario"
 peso_spartizione = 1
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 6.608
+salari_pil = 2.0153
+acquisti_pil = 4.1095
 
 [[dicastero]]
 id = "istruzione_ricerca"
@@ -39,6 +54,9 @@ indicatore_servizio = "qualita_scuola"
 peso_spartizione = 1
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 5.4605
+salari_pil = 3.1772
+acquisti_pil = 0.8477
 
 [[dicastero]]
 id = "infrastrutture_trasporti"
@@ -47,6 +65,10 @@ indicatore_servizio = "qualita_trasporti"
 peso_spartizione = 1
 regione_bersaglio = true
 ruoli = []
+spesa_pil = 3.1121
+salari_pil = 0.2261
+acquisti_pil = 0.4475
+settori = { A = 0.000834, BTE = 0.174700, F = 0.517627, GTI = 0.103037, J = 0.083348, K = 0.000199, L = 0.034436, MN = 0.084216, OTQ = 0.000000, RTU = 0.001603 }
 
 [[dicastero]]
 id = "ambiente_energia"
@@ -55,6 +77,9 @@ indicatore_servizio = "sicurezza_energetica"
 peso_spartizione = 1
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 1.4973
+salari_pil = 0.1059
+acquisti_pil = 0.5835
 
 [[dicastero]]
 id = "interno"
@@ -63,6 +88,9 @@ indicatore_servizio = "sicurezza"
 peso_spartizione = 2
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 1.2382
+salari_pil = 0.8556
+acquisti_pil = 0.215
 
 [[dicastero]]
 id = "giustizia"
@@ -71,6 +99,9 @@ indicatore_servizio = "durata_processi"
 peso_spartizione = 1
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 0.5303
+salari_pil = 0.3512
+acquisti_pil = 0.1156
 
 [[dicastero]]
 id = "esteri_difesa"
@@ -79,3 +110,6 @@ indicatore_servizio = "prontezza_difesa"
 peso_spartizione = 2
 regione_bersaglio = false
 ruoli = []
+spesa_pil = 1.3476
+salari_pil = 0.7118
+acquisti_pil = 0.1002

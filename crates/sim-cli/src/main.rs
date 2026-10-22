@@ -1,4 +1,4 @@
-//! Gioca una partita senza finestra: chiude i turni senza decisioni e stampa la vista finale.
+//! Gioca una partita senza finestra: chiude i turni senza decisioni e stampa la vista finale e lo stato vero dell'economia.
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -52,16 +52,14 @@ fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
 fn esegui() -> Result<String, String> {
     let argomenti = leggi_argomenti(std::env::args().skip(1))?;
     let cartella = Path::new(&argomenti.dati);
-    let file = FileDati {
-        dicasteri: leggi(cartella, "dicasteri.toml")?,
-        manopole: leggi(cartella, "manopole.toml")?,
-    };
+    let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
     let mut partita = Partita::nuova(dati, argomenti.seme);
     for _ in 0..argomenti.turni {
         partita.chiudi_turno();
     }
-    serde_json::to_string_pretty(&partita.vista()).map_err(|e| e.to_string())
+    let uscita = serde_json::json!({ "vista": partita.vista(), "economia": partita.economia() });
+    serde_json::to_string_pretty(&uscita).map_err(|e| e.to_string())
 }
 
 fn main() -> ExitCode {

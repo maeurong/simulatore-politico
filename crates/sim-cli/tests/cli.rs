@@ -19,9 +19,10 @@ fn gioca_otto_turni() {
     let out = sim(&["--dati", DATI, "--seme", "42", "--turni", "8"]);
     assert!(out.status.success());
     let vista: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(vista["turno"], 8);
-    assert_eq!(vista["data"]["anno"], 2028);
-    assert_eq!(vista["data"]["trimestre"], 4);
+    assert_eq!(vista["vista"]["turno"], 8);
+    assert_eq!(vista["vista"]["data"]["anno"], 2028);
+    assert_eq!(vista["vista"]["data"]["trimestre"], 4);
+    assert_eq!(vista["economia"]["regioni"].as_array().unwrap().len(), 20);
 }
 
 #[test]

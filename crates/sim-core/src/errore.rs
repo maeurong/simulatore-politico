@@ -26,6 +26,26 @@ pub enum Errore {
         min: f64,
         max: f64,
     },
+    ScenarioFuoriIntervallo {
+        nome: String,
+        valore: f64,
+        min: f64,
+        max: f64,
+    },
+    ManopolaMancante {
+        nome: String,
+    },
+    SettoreSconosciuto {
+        id: String,
+        dove: String,
+    },
+    SettoreNonProduttivo {
+        id: String,
+    },
+    QuoteNonUnitarie {
+        dove: String,
+    },
+    StrutturaIncoerente(String),
     Toml {
         file: String,
         messaggio: String,
@@ -68,6 +88,24 @@ impl fmt::Display for Errore {
                 f,
                 "manopola fuori intervallo: {nome} = {valore} (ammesso da {min} a {max})"
             ),
+            Self::ScenarioFuoriIntervallo {
+                nome,
+                valore,
+                min,
+                max,
+            } => write!(
+                f,
+                "valore dello scenario fuori intervallo: {nome} = {valore} (ammesso da {min} a {max})"
+            ),
+            Self::ManopolaMancante { nome } => write!(f, "manopola mancante: {nome}"),
+            Self::SettoreSconosciuto { id, dove } => {
+                write!(f, "settore sconosciuto: {id} (in {dove})")
+            }
+            Self::SettoreNonProduttivo { id } => {
+                write!(f, "settore che consuma più di quanto produce: {id}")
+            }
+            Self::QuoteNonUnitarie { dove } => write!(f, "quote che non sommano a 1: {dove}"),
+            Self::StrutturaIncoerente(m) => write!(f, "struttura economica incoerente: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

@@ -18,10 +18,7 @@ fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
 }
 
 fn carica_dati(cartella: &Path) -> Result<DatiGioco, String> {
-    let file = FileDati {
-        dicasteri: leggi(cartella, "dicasteri.toml")?,
-        manopole: leggi(cartella, "manopole.toml")?,
-    };
+    let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     DatiGioco::da_testi(&file).map_err(|e| e.to_string())
 }
 
@@ -50,8 +47,9 @@ fn chiudi(stato: &Stato) -> Result<Vista, String> {
     Ok(partita.vista())
 }
 
+// async: il comando gira fuori dal thread principale della finestra, che resta reattiva mentre il motore chiude il turno.
 #[tauri::command]
-fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, String> {
+async fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, String> {
     let risorse = app
         .path()
         .resource_dir()
@@ -60,8 +58,9 @@ fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, Strin
     avvia(&stato, dati, seme_da_orologio()?)
 }
 
+// async: il comando gira fuori dal thread principale della finestra, che resta reattiva mentre il motore chiude il turno.
 #[tauri::command]
-fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
+async fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
     chiudi(&stato)
 }
 
