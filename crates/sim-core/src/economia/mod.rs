@@ -6,10 +6,12 @@ pub mod finanza;
 pub mod lavoro;
 pub mod leontief;
 pub mod previdenza;
+pub mod sfc;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
 pub use previdenza::Annata;
+pub use sfc::{Settori, Sfc};
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
@@ -75,6 +77,8 @@ pub struct Economia {
     pub pensioni: Vec<Annata>,
     /// Euro annui, fermi in nominale.
     pub sussidio_per_disoccupato: i64,
+    /// Saldi e stock dei quattro settori.
+    pub sfc: Sfc,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -145,7 +149,9 @@ impl Economia {
             storico: Vec::new(),
             pensioni: Vec::new(),
             sussidio_per_disoccupato: 0,
+            sfc: Sfc::default(),
         };
+        e.sfc = Sfc::iniziale(e.debito, e.livello_prezzi);
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, dati);
         e.disavanzo_trimestre = e.conti.disavanzo();
@@ -235,11 +241,13 @@ impl Economia {
 
         self.okun(dati);
         self.bce(dati, shock_bce);
+        self.sfc(dati);
         self.storico.push(finanza::consuntivo(self, data));
         if self.storico.len() > finanza::TRIMESTRI_DI_STORIA {
             self.storico.remove(0);
         }
         debug_assert!(self.e_finita(), "stato non finito: {self:?}");
+        debug_assert_eq!(self.residuo_sfc(), 0, "SFC non chiusa: {:?}", self.sfc);
     }
 
     fn e_finita(&self) -> bool {
@@ -257,6 +265,7 @@ impl Economia {
             self.tasso_reale_precedente,
             self.area_euro.inflazione_resto,
             self.area_euro.gap_resto,
+            self.sfc.livello_prezzi_area,
         ];
         scalari
             .iter()

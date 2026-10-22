@@ -84,7 +84,7 @@ pub struct ConsuntivoTrimestre {
 pub(crate) const TRIMESTRI_DI_STORIA: usize = 8;
 
 /// Miliardi o euro `f64` → euro interi.
-fn euro(x: f64) -> i64 {
+pub(super) fn euro(x: f64) -> i64 {
     x.round() as i64
 }
 

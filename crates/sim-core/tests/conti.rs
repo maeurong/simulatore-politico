@@ -170,3 +170,30 @@ fn sussidi_del_turno_zero_alla_naspi() {
     let annui = p.economia().conti.spese.sussidi as f64 * 4.0 / 1e9;
     assert!((annui - 17.93).abs() < 0.5, "{annui}");
 }
+
+#[test]
+fn la_somma_dei_saldi_fa_zero_a_ogni_turno() {
+    for seme in 0..20 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        for _ in 0..40 {
+            p.chiudi_turno();
+            assert_eq!(p.economia().residuo_sfc(), 0, "seme {seme}");
+            assert_eq!(p.economia().residuo_stock(), 0, "seme {seme}");
+        }
+    }
+}
+
+#[test]
+fn lo_stock_dello_stato_e_il_debito() {
+    let p = giocata(dati_base(), 12);
+    assert_eq!(p.economia().sfc.stock.stato, -p.economia().debito);
+}
+
+#[test]
+fn il_saldo_dello_stato_e_meno_il_disavanzo() {
+    let p = giocata(dati_base(), 3);
+    assert_eq!(
+        p.economia().sfc.saldi.stato,
+        -p.economia().disavanzo_trimestre
+    );
+}
