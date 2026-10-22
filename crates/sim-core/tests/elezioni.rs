@@ -480,12 +480,14 @@ fn dhondt_favorisce_i_grandi() {
 
 #[test]
 fn senato_per_regione_somma_ai_seggi() {
-    let v = voti_g1();
-    for (nome, legge) in &dati_base().elezioni().impostazioni {
-        let e = esito(legge, &v);
-        for (l, s) in e.senato.iter().enumerate() {
-            let somma: u32 = e.senato_per_regione.values().map(|r| r[l]).sum();
-            assert_eq!(somma, s.proporzionali + s.speciali, "{nome} lista {l}");
+    // G2 fa scattare il tetto del Senato con `legge_180`.
+    for v in [voti_g1(), voti_g2()] {
+        for (nome, legge) in &dati_base().elezioni().impostazioni {
+            let e = esito(legge, &v);
+            for (l, s) in e.senato.iter().enumerate() {
+                let somma: u32 = e.senato_per_regione.values().map(|r| r[l]).sum();
+                assert_eq!(somma, s.proporzionali + s.speciali, "{nome} lista {l}");
+            }
         }
     }
 }
@@ -806,4 +808,36 @@ fn tetto_irraggiungibile_termina() {
         e.camera[..4].iter().map(|s| s.proporzionali).sum::<u32>(),
         0
     );
+}
+
+#[test]
+fn tetto_senza_altri_soggetti_non_si_applica() {
+    let mut millesimi = vec![900];
+    millesimi.extend([10; 10]);
+    let e = esito(&legge_180(), &uniformi(&millesimi, vec![]));
+    assert_eq!(e.premio, Some(Soggetto::Lista(0)));
+    assert!(!e.tetto_camera && !e.tetto_senato);
+    let tot = |s: &[SeggiLista]| s.iter().map(SeggiLista::totale).sum::<u32>();
+    assert_eq!(tot(&e.camera), 400);
+    assert_eq!(tot(&e.senato), 200);
+}
+
+#[test]
+fn premio_a_soggetti_diversi_nei_due_rami_non_si_assegna() {
+    // Liste 0-15 in coalizione al 2,8% ciascuna: alla Camera nessuna passa il 3%, la
+    // coalizione resta fuori e la lista 16 (43%) è prima. Al Senato la lista 0 passa col 25%
+    // in Molise, la coalizione (~45%) entra ed è prima.
+    let mut millesimi = vec![28; 16];
+    millesimi.extend([430, 122]);
+    let mut v = uniformi(&millesimi, vec![(0..16).collect()]);
+    let mut molise = vec![250];
+    molise.extend([28; 15]);
+    molise.extend([230, 100]);
+    let p = popolazioni()["molise"];
+    v.per_regione
+        .insert("molise".into(), molise.iter().map(|&m| p * m).collect());
+    let e = esito(&legge_180(), &v);
+    assert_eq!(e.camera[0].proporzionali, 0);
+    assert!(e.senato[0].proporzionali > 0);
+    assert_eq!(e.premio, None);
 }
