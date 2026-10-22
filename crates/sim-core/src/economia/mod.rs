@@ -2,6 +2,7 @@
 
 pub mod bce;
 pub mod congiuntura;
+pub mod lavoro;
 pub mod leontief;
 
 pub use bce::AreaEuro;
@@ -110,7 +111,7 @@ impl Economia {
     // Ordine dei blocchi del trimestre (spec): misure (piano 5) → finanza pubblica e spesa
     // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
     // redditi dei gruppi e panieri (piano 4) → tasso BCE → SFC → spread, regole UE.
-    // `data` è il trimestre che il turno chiude. Qui: domanda finale per settore e Leontief.
+    // `data` è il trimestre che il turno chiude. Qui: dalla domanda finale per settore a Okun e BCE.
     pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, _data: Trimestre) {
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
@@ -165,7 +166,7 @@ impl Economia {
             .map(|(x, x0)| y + 100.0 * (x / x0 - tot / tot0))
             .collect();
 
-        // Okun per regione (Task 6) verrà prima della BCE.
+        self.okun(dati);
         self.bce(dati, shock_bce);
     }
 }
