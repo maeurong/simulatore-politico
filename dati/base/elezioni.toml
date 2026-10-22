@@ -8,7 +8,9 @@ soglia_regionale_senato_pb = 2000
 
 [camera]
 seggi = 400
+# deputati eletti nella circoscrizione Estero (art. 56 Cost.), fuori dalle circoscrizioni sotto.
 estero = 8
+# alla Camera nessun minimo di seggi per circoscrizione.
 minimo = 0
 
 [[camera.circoscrizione]]
@@ -145,6 +147,7 @@ popolazione = 1587413
 id = "valle_d_aosta"
 regione = "valle_d_aosta"
 popolazione = 123360
+# circoscrizione speciale: seggi uninominali, il resto col metodo della legge (A2 del piano 2).
 uninominali = 1
 
 [[camera.circoscrizione]]
@@ -153,10 +156,10 @@ regione = "trentino_alto_adige"
 popolazione = 1073574
 uninominali = 4
 [senato]
-# art. 57 Cost.: nessuna regione o provincia autonoma ha meno di tre senatori; il Molise ne ha due,
-# la Valle d'Aosta uno.
 seggi = 200
 estero = 4
+# art. 57 Cost.: nessuna regione o provincia autonoma ha meno di tre senatori; il Molise ne ha due,
+# la Valle d'Aosta uno.
 minimo = 3
 
 [[senato.circoscrizione]]
@@ -269,8 +272,11 @@ id = "sardegna"
 regione = "sardegna"
 popolazione = 1587413
 [menu]
-# Gradini ammessi per ogni parametro (A8). Il premio parte dal 40%: sentenze Corte costituzionale
-# 1/2014 e 35/2017.
+# Gradini ammessi per ogni parametro (A8 del piano 2). Il premio parte dal 40%: sentenze Corte
+# costituzionale 1/2014 e 35/2017.
+# taglia = seggi di premio in % dei seggi del ramo.
+# taglia_premio_pb: 17,5% = 70/400 alla Camera e 35/200 al Senato; 8,75% è la metà.
+# tetto: 5500 = 220/400 alla Camera; 5650 = 113/200 al Senato (legge 180).
 soglia_lista_pb = [0, 300, 400, 500]
 soglia_coalizione_pb = [0, 1000]
 soglia_premio_pb = [4000, 4200, 4500]

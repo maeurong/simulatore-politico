@@ -3,7 +3,7 @@ i numeri attesi dei test di `crates/sim-core/tests/elezioni.rs` (piano 2 della v
 
 Seconda lettura, indipendente dal codice Rust: se i due divergono si torna al testo della
 legge (docs/ricerca/modelli/sistemi-elettorali.md:41-63), non a questo file. Le assunzioni
-A1-A11 sono quelle del piano docs/superpowers/plans/2026-10-22-v1-piano-2-riparto-elettorale.md.
+A1-A13 sono quelle del piano docs/superpowers/plans/2026-10-22-v1-piano-2-riparto-elettorale.md.
 Solo libreria standard. Uso: python3 -I strumenti/riparto/riferimento.py
 """
 CAM=[("piemonte_1","piemonte",2208370,0),("piemonte_2","piemonte",2047980,0),("lombardia_1","lombardia",4010096,0),("lombardia_2","lombardia",2099602,0),("lombardia_3","lombardia",2205257,0),("lombardia_4","lombardia",1628049,0),("veneto_1","veneto",1913482,0),("veneto_2","veneto",2934263,0),("friuli_venezia_giulia","friuli_venezia_giulia",1194647,0),("liguria","liguria",1509227,0),("emilia_romagna","emilia_romagna",4425366,0),("toscana","toscana",3663191,0),("umbria","umbria",858812,0),("marche","marche",1487150,0),("lazio_1","lazio",3822459,0),("lazio_2","lazio",1892423,0),("abruzzo","abruzzo",1275950,0),("molise","molise",292150,0),("campania_1","campania",2988376,0),("campania_2","campania",2636044,0),("puglia","puglia",3922941,0),("basilicata","basilicata",541168,0),("calabria","calabria",1855454,0),("sicilia_1","sicilia",2268634,0),("sicilia_2","sicilia",2564695,0),("sardegna","sardegna",1587413,0),("valle_d_aosta","valle_d_aosta",123360,1),("trentino_alto_adige","trentino_alto_adige",1073574,4)]
@@ -34,13 +34,13 @@ def seggi_ramo(units,totale,estero,minimo,premio):
     return [dict(id=u[0],regione=u[1],seggi=seg[u[0]],premio=prd.get(u[0],0),unin=min(u[3],seg[u[0]])) for u in units]
 
 def ripartisci(formula,cifre,S):
-    """-> (seggi, resti or None, da_resto)"""
+    """-> (seggi, resti o None, resto_usato)"""
     n=len(cifre); T=sum(cifre)
     if S==0 or n==0 or T==0: return [0]*n,[None]*n,[False]*n
     if formula=="dhondt":
         s=[0]*n
         for _ in range(S):
-            # max v/(s+1); tie: larger cifra, lower index
+            # massimo v/(s+1); a parità la cifra più alta, poi l'indice più basso
             best=None
             for i in range(n):
                 if best is None or cifre[i]*(s[best]+1) > cifre[best]*(s[i]+1) or (cifre[i]*(s[best]+1)==cifre[best]*(s[i]+1) and cifre[i]>cifre[best]):
@@ -52,13 +52,13 @@ def ripartisci(formula,cifre,S):
         interi=[c//q for c in cifre]; resti=[c%q for c in cifre]
     if q==0 or sum(interi)>S:
         interi=[c*S//T for c in cifre]; resti=[c*S%T for c in cifre]
-    s=interi[:]; da=[False]*n
+    s=interi[:]; resto_usato=[False]*n
     for i in sorted(range(n),key=lambda i:(-resti[i],-cifre[i],i))[:S-sum(interi)]:
-        s[i]+=1; da[i]=True
-    return s,resti,da
+        s[i]+=1; resto_usato[i]=True
+    return s,resti,resto_usato
 
 def riparto(legge,voti,coal_decl,quale):
-    """quale: 'camera' or 'senato'"""
+    """quale: 'camera' o 'senato'"""
     nL=len(next(iter(voti.values())))
     naz=[sum(voti[r][l] for r in REGIONI) for l in range(nL)]; T=sum(naz)
     coal=[c for c in coal_decl if len(c)>=2] if legge["coalizioni"] else []
@@ -114,9 +114,9 @@ def golden(legge, voti, coal_decl):
         key=lambda x:(x[0],x[1])
         win=[i for i,x in enumerate(s) if key(x)==premio]
         w=win[0] if win else None
-        # unin soggetti: coalitions declared (if coalizioni) + singles
+        # soggetti degli uninominali: coalizioni dichiarate (se ammesse) più liste sole
         usogg=[c for c in coal]+[[l] for l in range(nL) if all(l not in c for c in coal)]
-        sp_unin=[0]*len(s)  # seats by soggetto from speciali (count for tetto)
+        sp_unin=[0]*len(s)  # seggi per soggetto nelle speciali (contano per il tetto)
         def give_unin(reg,n):
             v=voti[reg]
             cs,_,_=ripartisci("dhondt",[sum(v[l] for l in c) for c in usogg],n)
@@ -169,7 +169,7 @@ def golden(legge, voti, coal_decl):
         else:
             spec=[u for u in seg if u["unin"]>0]
             for u in spec: give_unin(u["regione"],u["unin"])
-            # regional riparto
+            # riparto regionale
             regs=[u for u in seg if u["unin"]==0]
             alloc={}
             for u in regs:
@@ -202,7 +202,7 @@ def golden(legge, voti, coal_decl):
                         if exc==0: break
                         if cut(r): exc-=1; tagliate.add(r)
                     def pct_key(r):
-                        a=alloc[r]; tr=sum(voti[r]); return (a["cif"][w]/tr if tr else 0, order.index(r))  # ref only (float ok here)
+                        a=alloc[r]; tr=sum(voti[r]); return (a["cif"][w]/tr if tr else 0, order.index(r))  # solo riferimento (qui il float va bene)
                     first=True
                     while exc>0:
                         moved=False
