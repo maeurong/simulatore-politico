@@ -106,7 +106,7 @@ def persone(regioni, el, scenario):
         if residuo < 0:
             TAGLI[r["id"]] = round(-residuo)
         # assunzione del piano 4: le forze di lavoro contano anche chi non vota (stranieri, minorenni occupati);
-        # lo scarto si spalma in proporzione su tutte le condizioni (quota = persone / somma persone). La PR B lo sostituisce con l'IPF.
+        # lo scarto si spalma in proporzione su tutte le condizioni (quota = persone / somma persone). La PR B lo sostituisce col proporzionamento iterativo (IPF).
         p["disoccupato_inattivo"] = fl * u / 100 + max(0.0, residuo)
         out[r["id"]] = p
     return out

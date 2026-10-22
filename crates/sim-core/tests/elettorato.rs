@@ -81,7 +81,7 @@ fn pesi_degli_interessi_che_non_sommano_a_uno_rifiutati() {
         "disoccupazione = 0.35",
     );
     let m = elettorato(f);
-    assert!(m.contains("dipendente_privato"), "{m}");
+    assert!(m.contains("dipendente_privato") && m.contains("1.1"), "{m}");
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn campione_sotto_cento_rifiutato() {
         "campione = ",
         "campione = 99",
     ));
-    assert!(m.contains("campione"), "{m}");
+    assert!(m.contains("campione minimo 99"), "{m}");
 }
 
 #[test]

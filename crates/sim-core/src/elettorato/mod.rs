@@ -176,9 +176,11 @@ impl DatiElettorato {
         self.valida_tabelle(n_settori)?;
         if !(3..=4).contains(&self.istituti.len()) || self.istituti.iter().any(|i| i.campione < 100)
         {
-            return Err(ko(
-                "servono da 3 a 4 istituti, ciascuno con campione di almeno 100".into(),
-            ));
+            return Err(ko(format!(
+                "servono da 3 a 4 istituti, ciascuno con campione di almeno 100: {} istituti, campione minimo {}",
+                self.istituti.len(),
+                self.istituti.iter().map(|i| i.campione).min().unwrap_or(0)
+            )));
         }
         if self.nomi.is_empty() || self.cognomi.is_empty() {
             return Err(ko("nomi e cognomi non possono essere vuoti".into()));
@@ -211,7 +213,8 @@ impl DatiElettorato {
             }
             if !somma_uno(&g.posizione) {
                 return Err(ko(format!(
-                    "gruppo {regione} {condizione} {fascia}: la posizione non somma a 1"
+                    "gruppo {regione} {condizione} {fascia}: la posizione somma a {}, non a 1",
+                    g.posizione.iter().sum::<f64>()
                 )));
             }
             let ok_flussi = finiti_non_negativi(&[g.primario, g.trasferimenti])
@@ -229,8 +232,9 @@ impl DatiElettorato {
                 .collect();
             if !somma_uno(&quote) {
                 return Err(ko(format!(
-                    "regione {}: le quote dei gruppi non sommano a 1",
-                    reg.id
+                    "regione {}: le quote dei gruppi sommano a {}, non a 1",
+                    reg.id,
+                    quote.iter().sum::<f64>()
                 )));
             }
         }
@@ -253,7 +257,10 @@ impl DatiElettorato {
             }
             let v: Vec<f64> = pesi.values().copied().collect();
             if !somma_uno(&v) {
-                return Err(ko(format!("interessi di {c}: i pesi non sommano a 1")));
+                return Err(ko(format!(
+                    "interessi di {c}: i pesi sommano a {}, non a 1",
+                    v.iter().sum::<f64>()
+                )));
             }
         }
         Ok(())

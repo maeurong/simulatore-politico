@@ -1,5 +1,5 @@
 # Intervalli provvisori, al bilanciamento.
-# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue = docs/ricerca/modelli/<alias>.md; "alias:N" = riga N.
+# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue, voto-spaziale, opinion-dynamics, sondaggi-ed-errore, voto-economico-e-retrospettivo = docs/ricerca/modelli/<alias>.md; dati-per-tarare-i-gruppi = docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md; "ticket N" = .scratch/v1-giocabile/issues/N-*.md; "alias:N" = riga N.
 
 [soglia_minaccia]
 valore = 40.0

@@ -31,7 +31,7 @@ pub struct Partito {
     pub valence: f64,
 }
 
-/// Indici nei partiti; `dicasteri` e' allineato a `DatiGioco::dicasteri()`.
+/// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Governo {
     pub presidente: usize,
@@ -45,7 +45,7 @@ impl Governo {
 
     /// Partito che tiene il dicastero col ruolo `r`.
     ///
-    /// Se il dicastero non c'e' (impossibile nei dati validati) risponde il presidente.
+    /// Se il dicastero non c'è (impossibile nei dati validati) risponde il presidente.
     pub fn partito_del_ruolo(&self, dati: &DatiGioco, r: Ruolo) -> usize {
         dati.dicasteri()
             .iter()
@@ -56,7 +56,7 @@ impl Governo {
     }
 }
 
-/// Partiti e governo del turno zero. I dati sono validati: un id sconosciuto non c'e'.
+/// Partiti e governo del turno zero. I dati sono validati: un id sconosciuto non c'è.
 pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
     let s = dati.scenario();
     let indice = |id: &String| s.partiti.iter().position(|p| &p.id == id).unwrap_or(0);
