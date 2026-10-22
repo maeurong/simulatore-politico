@@ -120,6 +120,54 @@ fn partito_sconosciuto_nel_governo_rifiutato_col_nome() {
 }
 
 #[test]
+fn gruppi_fuori_ordine_canonico_rifiutati() {
+    for (da, a) in [
+        ("fascia = \"bassa\"", "fascia = \"media\""),
+        (
+            "condizione = \"dipendente_privato\"",
+            "condizione = \"autonomo\"",
+        ),
+    ] {
+        let m = elettorato(sostituisci(file_base(), "elettorato", da, a));
+        assert!(m.contains("gruppo 0 fuori ordine"), "{a}: {m}");
+    }
+}
+
+#[test]
+fn partito_sconosciuto_in_un_dicastero_rifiutato_col_nome() {
+    let f = sostituisci(
+        file_base(),
+        "scenario",
+        "sanita = \"destra\"",
+        "sanita = \"destrra\"",
+    );
+    let m = partiti(f);
+    assert!(m.contains("destrra"), "{m}");
+}
+
+#[test]
+fn trasferimenti_seguono_pensione_e_sussidio() {
+    let d = dati_base();
+    let p = Partita::nuova(d.clone(), 1);
+    let mut el = p.elettorato().clone();
+    el.base.pensione *= 0.5;
+    el.base.sussidio *= 0.25;
+    el.aggiorna_redditi(&d, p.economia());
+    for (c, k) in [
+        (Condizione::Pensionato, 2.0),
+        (Condizione::DisoccupatoInattivo, 4.0),
+        (Condizione::DipendentePrivato, 1.0),
+    ] {
+        let i = indice_gruppo(5, c, Fascia::Media);
+        let atteso = k * d.elettorato().gruppi[i].trasferimenti;
+        assert!(
+            (el.gruppi[i].reddito.trasferimenti - atteso).abs() < 1e-6 * atteso.max(1.0),
+            "{c}"
+        );
+    }
+}
+
+#[test]
 fn dicastero_senza_partito_rifiutato_col_nome() {
     let f = sostituisci(file_base(), "scenario", "sanita = \"destra\", ", "");
     let m = partiti(f);
@@ -846,6 +894,9 @@ fn affluenza_del_turno_zero_plausibile() {
 
 #[test]
 fn il_rumore_delle_posizioni_non_tocca_l_economia() {
+    // Oggi è vero per costruzione: l'economia non legge l'elettorato e ha il suo flusso. Il test
+    // è una guardia di regressione, scatta se un giorno l'economia legge le posizioni o se il
+    // rumore delle posizioni finisce sul flusso dell'economia.
     let gioca = |rumore: &str| {
         let f = imposta(
             file_base(),

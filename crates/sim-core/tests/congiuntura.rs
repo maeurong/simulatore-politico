@@ -1,6 +1,7 @@
 mod comune;
-use comune::{con_ingresso, dati_base, file_base, senza_shock};
+use comune::{con_ingresso, dati_base, file_base, imposta, senza_shock};
 use sim_core::caso::{Caso, Flusso};
+use sim_core::elettorato::{Condizione, Fascia, PUNTI};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
@@ -54,10 +55,23 @@ fn is_e_phillips_a_valori_noti() {
 }
 
 #[test]
-fn cinque_estrazioni_fisse_per_turno() {
+fn estrazioni_fisse_per_turno() {
+    // Ampiezza zero: senza shock e senza errori di sondaggio e di stima.
+    let mut zero = senza_shock();
+    for n in [
+        "errore_approvazione",
+        "errore_stima_pil",
+        "errore_stima_disoccupazione",
+        "errore_stima_inflazione",
+        "errore_stima_disavanzo",
+        "rumore_posizioni",
+    ] {
+        zero = imposta(zero, "manopole", &format!("[{n}]\nvalore = "), "0.0");
+    }
     for (nome, f) in [
         ("senza shock", senza_shock()),
         ("dati di base", file_base()),
+        ("ampiezza zero", zero),
     ] {
         let turni = 3;
         let p = giocata(&f, 7, turni);
@@ -69,11 +83,12 @@ fn cinque_estrazioni_fisse_per_turno() {
             atteso.normale(Flusso::Elettorato);
         }
         // Nascita: bias e effetti d'istituto; poi a ogni rilevazione istituti × alternative,
-        // 29 incroci (6 + 3 + 20) × (alternative + 7 punti + approvazione), 4 stime.
+        // incroci (condizioni + fasce + regioni) × (alternative + punti + approvazione), 4 stime.
         let d = DatiGioco::da_testi(&f).unwrap();
         let alt = p.partiti().len() + 1;
         let istituti = d.elettorato().istituti.len();
-        let rilevazione = istituti * alt + 29 * (alt + 7 + 1);
+        let incroci = Condizione::TUTTE.len() + Fascia::TUTTE.len() + d.regioni().len();
+        let rilevazione = istituti * alt + incroci * (alt + PUNTI + 1);
         let sondaggi = alt + istituti * alt + rilevazione + turni as usize * (rilevazione + 4);
         for _ in 0..sondaggi {
             atteso.normale(Flusso::Sondaggi);

@@ -5,7 +5,10 @@ use crate::dati::DatiGioco;
 use crate::economia::Economia;
 use serde::{Deserialize, Serialize};
 
-/// Euro annui nominali per elettore. `paniere` è l'indice di prezzo della fascia, 1 al turno zero.
+/// Euro annui nominali per elettore. `paniere` è l'indice di prezzo della fascia:
+/// `livello_prezzi · Σ paniere_f·prezzi / Σ consumi·prezzi`. Al turno zero vale esattamente 1
+/// finché il paniere della fascia è il vettore `consumi` (PR A); con panieri diversi (PR B) vale 1
+/// a meno dello scarto dei prezzi di Leontief iniziali da 1, cioè degli arrotondamenti della tavola.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Reddito {
     pub primario: f64,

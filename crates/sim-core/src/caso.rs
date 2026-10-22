@@ -73,6 +73,9 @@ impl Caso {
     }
 
     /// Estrattore per `chiave` sul flusso `ElettoriCampione`: stessa chiave, stessi numeri.
+    /// La chiave entra nella posizione della parola di ChaCha spostata di 32 bit, che ne ha 68
+    /// utili: chiavi da 2^36 in su si sovrappongono a chiavi minori (con `turno·1024 + gruppo`,
+    /// oltre 67 milioni di turni).
     pub fn estemporaneo(&self, chiave: u64) -> Estrattore {
         let mut rng = ChaCha8Rng::seed_from_u64(self.seme);
         rng.set_stream(Flusso::ElettoriCampione as u64);

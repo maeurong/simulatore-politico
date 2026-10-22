@@ -7,8 +7,8 @@ mod comune;
 use comune::{dati_base, file_base, imposta, riscrivi, senza_shock};
 use sim_core::caso::Caso;
 use sim_core::elettorato::{Condizione, Fascia, PUNTI};
-use sim_core::informazione::{Motivo, genera};
-use sim_core::{DatiGioco, Errore, FileDati, Partita};
+use sim_core::informazione::{ElettoreCampione, Motivo, Sondaggio, genera};
+use sim_core::{DatiGioco, Errore, FileDati, Partita, Vista};
 
 fn con_manopola(f: FileDati, nome: &str, valore: &str) -> FileDati {
     imposta(f, "manopole", &format!("[{nome}]\nvalore = "), valore)
@@ -361,6 +361,121 @@ fn nessun_elettore_vota_un_partito_che_il_sondaggio_da_a_zero() {
         );
         assert!(gente.iter().all(|e| e.voto.as_ref() != Some(&nome)));
     }
+}
+
+/// Ogni vettore di quote del sondaggio (istituti e incroci).
+fn quote_mut(s: &mut Sondaggio) -> impl Iterator<Item = &mut Vec<f64>> {
+    let incroci = (s
+        .condizioni
+        .iter_mut()
+        .chain(&mut s.fasce)
+        .chain(&mut s.regioni))
+    .map(|i| &mut i.quote);
+    s.istituti.iter_mut().map(|r| &mut r.quote).chain(incroci)
+}
+
+fn tre(v: &Vista, c: Condizione) -> Vec<ElettoreCampione> {
+    let mut rng = Caso::nuovo(3).estemporaneo(1);
+    genera(
+        &v.sondaggio,
+        &v.partiti,
+        &dati_base(),
+        0,
+        c,
+        Fascia::Media,
+        &mut rng,
+    )
+}
+
+#[test]
+fn casi_degeneri_del_campione() {
+    let mut v = Partita::nuova(dati_base(), 3).vista();
+    // Stima a somma zero: l'incrocio della condizione è tutto a zero, si ripiega sulla regione.
+    v.sondaggio.condizioni[Condizione::Autonomo as usize]
+        .quote
+        .fill(0.0);
+    let regione = &mut v.sondaggio.regioni[0].quote;
+    regione.fill(0.0);
+    regione[0] = 1.0;
+    let primo = v.partiti[0].id.clone();
+    // Nessun istogramma: la posizione cade sul punto di mezzo.
+    let incroci = (v.sondaggio.condizioni.iter_mut())
+        .chain(&mut v.sondaggio.fasce)
+        .chain(&mut v.sondaggio.regioni);
+    incroci.for_each(|i| i.posizione.fill(0.0));
+    let gente = tre(&v, Condizione::Autonomo);
+    assert_eq!(gente.len(), 3);
+    assert!(gente.iter().all(|e| e.posizione == 4), "{gente:?}");
+    assert!(
+        gente.iter().all(|e| e.voto.as_ref() == Some(&primo)),
+        "{gente:?}"
+    );
+}
+
+/// Vista in cui il sondaggio dà tutto al primo partito e nessuna approvazione.
+fn vista_tutto_al_primo() -> Vista {
+    let mut v = Partita::nuova(dati_base(), 3).vista();
+    for q in quote_mut(&mut v.sondaggio) {
+        let n = q.len();
+        *q = (0..n).map(|j| f64::from(u8::from(j == 0))).collect();
+    }
+    let s = &mut v.sondaggio;
+    for i in s
+        .condizioni
+        .iter_mut()
+        .chain(&mut s.fasce)
+        .chain(&mut s.regioni)
+    {
+        i.approvazione = 0.0;
+        i.posizione = vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0];
+    }
+    for p in &mut v.partiti {
+        (p.posizione_percepita, p.valence, p.al_governo) = (4.0, 0.0, false);
+    }
+    v
+}
+
+#[test]
+fn il_motivo_e_il_termine_che_domina() {
+    let c = Condizione::Pensionato;
+    // Vicinanza: il primo partito sta sul punto dell'elettore, gli altri lontani.
+    let mut v = vista_tutto_al_primo();
+    v.partiti
+        .iter_mut()
+        .skip(1)
+        .for_each(|p| p.posizione_percepita = 7.0);
+    assert!(tre(&v, c).iter().all(|e| e.motivo == Motivo::Vicinanza));
+    // Leader: posizioni uguali, valence alta del primo.
+    let mut v = vista_tutto_al_primo();
+    v.partiti[0].valence = 2.0;
+    assert!(tre(&v, c).iter().all(|e| e.motivo == Motivo::Leader));
+    // Governo: posizioni e valence uguali, il primo governa e l'approvazione è alta ovunque.
+    let mut v = vista_tutto_al_primo();
+    v.partiti[0].al_governo = true;
+    let s = &mut v.sondaggio;
+    for i in s
+        .condizioni
+        .iter_mut()
+        .chain(&mut s.fasce)
+        .chain(&mut s.regioni)
+    {
+        i.approvazione = 1.0;
+    }
+    assert!(tre(&v, c).iter().all(|e| e.motivo == Motivo::Governo));
+}
+
+#[test]
+fn proiezione_assente_se_il_riparto_rifiuta() {
+    let p = Partita::nuova(dati_base(), 1);
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    for inc in j["informazione"]["sondaggio"]["regioni"]
+        .as_array_mut()
+        .unwrap()
+    {
+        inc["quote"][0] = 1e30.into();
+    }
+    let v = Partita::carica(&j.to_string()).unwrap().vista();
+    assert!(v.proiezione.is_none());
 }
 
 #[test]

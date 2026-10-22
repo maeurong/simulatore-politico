@@ -4,7 +4,7 @@
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
-use crate::elettorato::{Elettorato, Intenzioni, PUNTI};
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, PUNTI};
 use crate::errore::Errore;
 use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ impl Informazione {
     }
 
     /// Nuovo sondaggio dalle intenzioni vere.
-    pub fn rileva(
+    pub(crate) fn rileva(
         &mut self,
         dati: &DatiGioco,
         caso: &mut Caso,
@@ -117,8 +117,8 @@ impl Informazione {
             return ko("sondaggio.istituti non combacia con gli istituti dei dati");
         }
         let incroci = [
-            (&s.condizioni, 6, "condizioni"),
-            (&s.fasce, 3, "fasce"),
+            (&s.condizioni, Condizione::TUTTE.len(), "condizioni"),
+            (&s.fasce, Fascia::TUTTE.len(), "fasce"),
             (&s.regioni, d.regioni.len(), "regioni"),
         ];
         for (v, n, nome) in incroci {

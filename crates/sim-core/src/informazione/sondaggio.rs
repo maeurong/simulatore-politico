@@ -4,7 +4,8 @@
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::elettorato::{
-    Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE, condizione_di, fascia_di, media_pesata,
+    Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE, PUNTI, condizione_di, fascia_di,
+    media_pesata,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -126,7 +127,7 @@ pub(super) fn rileva(
         let h_s = media_pesata(
             &pesi,
             indici.iter().map(|&i| &el.gruppi[i].posizione[..]),
-            7,
+            PUNTI,
         );
         let quote = campiona(&p_s, &sposta, n_s, disegno, &mut z);
         let nulli = vec![0.0; h_s.len()];

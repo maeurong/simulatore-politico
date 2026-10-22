@@ -60,11 +60,11 @@ INTERESSI = {
     "disoccupato_inattivo": {"reddito": 0.35, "disoccupazione": 0.40, "copertura_welfare": 0.25},
     "studente": {"reddito": 0.30, "qualita_scuola": 0.35, "disoccupazione": 0.35},
 }
+ALIQUOTE = {"bassa": 0.15, "media": 0.25, "alta": 0.33}  # assunzione: aliquote medie per fascia
+ASTENSIONE_FASCIA = {"bassa": 0.3, "media": 0.0, "alta": -0.2}  # assunzione: la fascia bassa vota meno
+ISTITUTI = (("Istituto A", 1000), ("Istituto B", 800), ("Istituto C", 1200), ("Istituto D", 1500))  # segnaposto
 NOMI = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Andrea", "Sara", "Matteo", "Elena", "Davide", "Anna", "Paolo"]
 COGNOMI = ["Rossi", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca"]
-
-
-TAGLI = {}  # regione -> persone di residuo negativo tagliato a 0
 
 
 def leggi(nome):
@@ -89,8 +89,9 @@ def elettori(regioni, elezioni):
 
 
 def persone(regioni, el, scenario):
-    """Persone per regione e condizione; il residuo va ai disoccupati o inattivi."""
-    out = {}
+    """Persone per regione e condizione, il residuo ai disoccupati o inattivi; e i tagli
+    (regione -> persone di residuo negativo tagliato a 0)."""
+    out, tagli = {}, {}
     for r in regioni:
         fl, u = r["forze_lavoro"] * 1000, r["disoccupazione_2025"]
         occ = fl * (1 - u / 100)
@@ -104,12 +105,12 @@ def persone(regioni, el, scenario):
         }
         residuo = el[r["id"]] - sum(p.values())
         if residuo < 0:
-            TAGLI[r["id"]] = round(-residuo)
+            tagli[r["id"]] = round(-residuo)
         # assunzione del piano 4: le forze di lavoro contano anche chi non vota (stranieri, minorenni occupati);
         # lo scarto si spalma in proporzione su tutte le condizioni (quota = persone / somma persone). La PR B lo sostituisce col proporzionamento iterativo (IPF).
         p["disoccupato_inattivo"] = fl * u / 100 + max(0.0, residuo)
         out[r["id"]] = p
-    return out
+    return out, tagli
 
 
 def quote_gruppi(regioni, el, pers):
@@ -141,7 +142,7 @@ def redditi(regioni, pers, scenario):
 
 
 def panieri(economia):
-    return {f: list(economia["consumi"]) for f in FASCE}  # segnaposto: la PR B li differenzia
+    return {f: quote(economia["consumi"]) for f in FASCE}  # segnaposto: la PR B li differenzia
 
 
 def astensione(regioni):
@@ -153,25 +154,31 @@ def costruisci():
     scenario, economia = leggi("scenario.toml"), leggi("economia.toml")
     ids = [r["id"] for r in regioni]
     el = elettori(ids, leggi("elezioni.toml"))
-    pers = persone(regioni, el, scenario)
+    pers, tagli = persone(regioni, el, scenario)
     return {
         "regioni": regioni, "elettori": el, "quote": quote_gruppi(regioni, el, pers), "istogrammi": istogrammi(),
         "redditi": redditi(regioni, pers, scenario), "panieri": panieri(economia), "astensione": astensione(ids),
+        "tagli": tagli,
     }
+
+
+def tabella(v):
+    """Tabella TOML in linea: `{ k = x, ... }`."""
+    return "{ " + ", ".join(f"{k} = {x}" for k, x in v.items()) + " }"
 
 
 def scrivi(d):
     s = json.dumps
     t = f"# Generato da `{COMANDO}` il {OGGI}. Non modificare a mano.\n"
     t += "# Valori provvisori del piano 4: vedi strumenti/taratura/README.md.\n\n"
-    t += "aliquote = { bassa = 0.15, media = 0.25, alta = 0.33 }\n"
-    t += "astensione_condizione = { " + ", ".join(f"{c} = 0.0" for c in CONDIZIONI) + " }\n"
-    t += "astensione_fascia = { bassa = 0.3, media = 0.0, alta = -0.2 }\n"
+    t += f"aliquote = {tabella(ALIQUOTE)}\n"
+    t += f"astensione_condizione = {tabella(dict.fromkeys(CONDIZIONI, 0.0))}\n"
+    t += f"astensione_fascia = {tabella(ASTENSIONE_FASCIA)}\n"
     t += f"nomi = {s(NOMI, ensure_ascii=False)}\ncognomi = {s(COGNOMI, ensure_ascii=False)}\n\n[paniere]\n"
     t += "".join(f"{f} = [{', '.join(f'{x:.6f}' for x in d['panieri'][f])}]\n" for f in FASCE)
     for c, pesi in INTERESSI.items():
         t += f"\n[interessi.{c}]\n" + "".join(f"{k} = {w:.2f}\n" for k, w in pesi.items())
-    for nome, campione in (("Istituto A", 1000), ("Istituto B", 800), ("Istituto C", 1200), ("Istituto D", 1500)):
+    for nome, campione in ISTITUTI:
         t += f"\n[[istituto]]\nnome = {s(nome)}\ncampione = {campione}\n"
     for r in d["regioni"]:
         i = r["id"]
@@ -201,7 +208,7 @@ def controlla(d):
     for c, pesi in INTERESSI.items():
         assert abs(sum(pesi.values()) - 1) < 1e-9, f"{c}: interessi somma {sum(pesi.values())}"
     for f, p in d["panieri"].items():
-        assert len(p) == 10 and abs(sum(p) - 1) < 1e-6, f"paniere {f}: {len(p)} quote, somma {sum(p):.9f}"
+        assert len(p) == 10 and abs(sum(p) - 1) < 1e-9, f"paniere {f}: {len(p)} quote, somma {sum(p):.12f}"
     letto = tomllib.loads(scrivi(d))
     assert len(letto["regione"]) == 20 and len(letto["gruppo"]) == 360, f"{len(letto['regione'])} regioni, {len(letto['gruppo'])} gruppi, attesi 20 e 360"
     atteso = [(r["id"], c, f) for r in d["regioni"] for c in CONDIZIONI for f in FASCE]
@@ -223,7 +230,7 @@ def main():
     (BASE / "elettorato.toml.tmp").write_text(scrivi(d), encoding="utf-8")
     (BASE / "elettorato.toml.tmp").replace(destinazione)
     print("Scritto elettorato.toml in", BASE)
-    print("Residuo tagliato a 0 (persone):", TAGLI)
+    print("Residuo tagliato a 0 (persone):", d["tagli"])
 
 
 if __name__ == "__main__":

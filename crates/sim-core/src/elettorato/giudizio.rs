@@ -1,7 +1,7 @@
 //! Giudizio retrospettivo: ogni gruppo giudica i partiti di governo sul reddito reale (lavoro,
 //! prezzi, trasferimenti e imposte, una voce sola) e sulla disoccupazione, col responsabile per ruolo.
 
-use super::{Condizione, Elettorato, PER_REGIONE, condizione_di};
+use super::{Condizione, Elettorato, FINESTRA_MASSIMA, PER_REGIONE, condizione_di};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
 use crate::partiti::Governo;
@@ -28,7 +28,8 @@ impl Elettorato {
             dati.manopola("scala_disoccupazione"),
         );
         let lambda = 0.5_f64.powf(1.0 / dati.manopola("emivita_giudizio"));
-        let finestra = dati.manopola("finestra_aspettative").round() as usize;
+        let finestra =
+            (dati.manopola("finestra_aspettative").round() as usize).min(FINESTRA_MASSIMA);
         let pres = governo.presidente;
         let partito_imposte = governo.partito_del_ruolo(dati, Ruolo::ColpaImposteImpiegoPubblico);
         let partito_lavoro =

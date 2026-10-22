@@ -72,7 +72,7 @@ impl Statistica {
 
     /// Quattro estrazioni, anche con errori zero. `reale_prima` = `pil_trimestrale /
     /// livello_prezzi` letto prima del passo dell'economia.
-    pub fn aggiorna(
+    pub(crate) fn aggiorna(
         &mut self,
         dati: &DatiGioco,
         caso: &mut Caso,

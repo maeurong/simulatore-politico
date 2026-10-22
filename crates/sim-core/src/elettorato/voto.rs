@@ -1,6 +1,6 @@
 //! Posizioni che tornano all'ancora e voto logit con astensione e fedeltà al voto precedente.
 
-use super::{Elettorato, PER_REGIONE, PUNTI, condizione_di, fascia_di};
+use super::{Elettorato, PER_REGIONE, condizione_di, fascia_di};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::partiti::{Governo, Partito};
@@ -96,7 +96,7 @@ fn transizione(
     let phi = dati.manopola("fedelta");
     let n = partiti.len() + 1;
     let mut t = vec![vec![0.0; n]; n];
-    for (k, h) in el.gruppi[i].posizione.iter().enumerate().take(PUNTI) {
+    for (k, h) in el.gruppi[i].posizione.iter().enumerate() {
         let u = utilita(dati, el, partiti, governo, i, (k + 1) as f64);
         for (m, riga) in t.iter_mut().enumerate() {
             let mut um = u.clone();

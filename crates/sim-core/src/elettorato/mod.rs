@@ -21,6 +21,9 @@ pub const PUNTI: usize = 7;
 
 const TOLLERANZA: f64 = 1e-6;
 
+/// Crescite ricordate al massimo: il `max` della manopola `finestra_aspettative`.
+pub(crate) const FINESTRA_MASSIMA: usize = 16;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Condizione {
@@ -426,9 +429,9 @@ impl Elettorato {
             if g.giudizio.iter().any(|x| !x.is_finite()) {
                 return ko(format!("elettorato.gruppi[{i}].giudizio non finito"));
             }
-            if g.crescite.len() > 16 || g.crescite.iter().any(|x| !x.is_finite()) {
+            if g.crescite.len() > FINESTRA_MASSIMA || g.crescite.iter().any(|x| !x.is_finite()) {
                 return ko(format!(
-                    "elettorato.gruppi[{i}].crescite: al massimo 16 valori finiti"
+                    "elettorato.gruppi[{i}].crescite: al massimo {FINESTRA_MASSIMA} valori finiti"
                 ));
             }
             if !(g.reddito.e_valido() && g.reddito_prima.e_valido()) {
