@@ -9,8 +9,10 @@ use crate::errore::Errore;
 use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
 
+mod campione;
 mod sondaggio;
 mod statistica;
+pub use campione::{ElettoreCampione, Motivo, genera};
 pub use sondaggio::{Incrocio, Rilevazione, Sondaggio};
 pub use statistica::{Revisione, Statistica, Stima};
 

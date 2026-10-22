@@ -108,3 +108,40 @@ fn normale_valore_fissato() {
 fn il_seme_sta_nel_caso() {
     assert_eq!(Caso::nuovo(7).seme(), 7);
 }
+
+const TUTTI: [Flusso; 7] = [
+    Flusso::Economia,
+    Flusso::Elettorato,
+    Flusso::Parlamento,
+    Flusso::Eventi,
+    Flusso::Sondaggi,
+    Flusso::PartitiIa,
+    Flusso::ElettoriCampione,
+];
+
+#[test]
+fn estemporaneo_non_avanza_i_flussi() {
+    let (mut a, mut b) = (Caso::nuovo(9), Caso::nuovo(9));
+    for f in TUTTI {
+        a.prossimo(f);
+        b.prossimo(f);
+    }
+    let mut e = a.estemporaneo(5);
+    for _ in 0..10 {
+        e.uniforme();
+        e.normale();
+    }
+    assert_eq!(a, b);
+    for f in TUTTI {
+        assert_eq!(a.prossimo(f), b.prossimo(f), "{f:?}");
+    }
+}
+
+#[test]
+fn estemporaneo_dipende_dalla_chiave() {
+    let c = Caso::nuovo(9);
+    let (u1, u2) = (c.estemporaneo(1).uniforme(), c.estemporaneo(2).uniforme());
+    assert_ne!(u1, u2);
+    assert_eq!(u1, c.estemporaneo(1).uniforme());
+    assert!(u1 > 0.0 && u1 <= 1.0);
+}

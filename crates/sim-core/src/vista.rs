@@ -15,7 +15,17 @@ pub struct Vista {
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
     pub sondaggio: Sondaggio,
+    /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
+    pub proiezione: Option<Vec<SeggiPartito>>,
     pub statistica: VistaStatistica,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct SeggiPartito {
+    pub partito: String,
+    pub camera: u32,
+    pub senato: u32,
 }
 
 /// Valence esatta: è un ingresso dello scenario, non stato nascosto.

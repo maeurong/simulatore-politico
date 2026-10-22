@@ -5,8 +5,10 @@
 
 mod comune;
 use comune::{dati_base, file_base, imposta, senza_shock};
-use sim_core::elettorato::PUNTI;
-use sim_core::{DatiGioco, FileDati, Partita};
+use sim_core::caso::Caso;
+use sim_core::elettorato::{Condizione, Fascia, PUNTI};
+use sim_core::informazione::{Motivo, genera};
+use sim_core::{DatiGioco, Errore, FileDati, Partita};
 
 fn con_manopola(f: FileDati, nome: &str, valore: &str) -> FileDati {
     imposta(f, "manopole", &format!("[{nome}]\nvalore = "), valore)
@@ -193,4 +195,88 @@ fn quattro_istituti_e_incroci_completi() {
     for i in s.condizioni.iter().chain(&s.fasce).chain(&s.regioni) {
         assert!(i.quote.len() == n && somma_uno(&i.quote) && somma_uno(&i.posizione));
     }
+}
+
+#[test]
+fn elettori_campione_non_toccano_la_partita() {
+    let mut a = Partita::nuova(dati_base(), 9);
+    let mut b = Partita::nuova(dati_base(), 9);
+    let chiedi = |p: &Partita| {
+        p.elettori_campione("campania", Condizione::Pensionato, Fascia::Bassa)
+            .unwrap()
+    };
+    let primi = chiedi(&a);
+    assert_eq!(primi, chiedi(&a));
+    assert_eq!(primi.len(), 3);
+    a.chiudi_turno();
+    b.chiudi_turno();
+    assert_eq!(a.salva().unwrap(), b.salva().unwrap());
+}
+
+#[test]
+fn nessun_elettore_vota_un_partito_che_il_sondaggio_da_a_zero() {
+    let dati = dati_base();
+    let mut v = Partita::nuova(dati_base(), 3).vista();
+    let centro = v.partiti.iter().position(|x| x.id == "centro").unwrap();
+    let nome = v.partiti[centro].id.clone();
+    let s = &mut v.sondaggio;
+    let quote = s.istituti.iter_mut().map(|r| &mut r.quote);
+    let incroci = s
+        .condizioni
+        .iter_mut()
+        .chain(&mut s.fasce)
+        .chain(&mut s.regioni)
+        .map(|i| &mut i.quote);
+    for q in quote.chain(incroci) {
+        q[centro] = 0.0;
+        let tot: f64 = q.iter().sum();
+        q.iter_mut().for_each(|x| *x /= tot);
+    }
+    let caso = Caso::nuovo(3);
+    for chiave in 0..50 {
+        let mut rng = caso.estemporaneo(chiave);
+        let gente = genera(&v, &dati, 0, Condizione::Autonomo, Fascia::Media, &mut rng);
+        assert!(gente.iter().all(|e| e.voto.as_ref() != Some(&nome)));
+    }
+}
+
+#[test]
+fn chi_si_astiene_ha_motivo_protesta() {
+    let dati = dati_base();
+    let v = Partita::nuova(dati_base(), 3).vista();
+    let caso = Caso::nuovo(3);
+    let (mut astenuti, mut votanti) = (0, 0);
+    for chiave in 0..70 {
+        let mut rng = caso.estemporaneo(chiave);
+        for e in genera(&v, &dati, 2, Condizione::Studente, Fascia::Bassa, &mut rng) {
+            assert_eq!(e.voto.is_none(), e.motivo == Motivo::Protesta, "{e:?}");
+            assert!((1..=7).contains(&e.posizione));
+            assert!((18..=25).contains(&e.eta));
+            if e.voto.is_none() {
+                astenuti += 1;
+            } else {
+                votanti += 1;
+            }
+        }
+    }
+    assert!(astenuti > 0 && votanti > 0, "{astenuti} {votanti}");
+}
+
+#[test]
+fn regione_sconosciuta_rifiutata_col_nome() {
+    let p = Partita::nuova(dati_base(), 1);
+    let Err(Errore::Elettorato(m)) =
+        p.elettori_campione("padania", Condizione::Studente, Fascia::Media)
+    else {
+        panic!("regione sconosciuta accettata")
+    };
+    assert!(m.contains("padania"));
+}
+
+#[test]
+fn la_proiezione_assegna_tutti_i_seggi() {
+    let v = Partita::nuova(dati_base(), 1).vista();
+    let s = v.proiezione.expect("riparto riuscito");
+    assert_eq!(s.iter().map(|x| x.camera).sum::<u32>(), 400);
+    assert_eq!(s.iter().map(|x| x.senato).sum::<u32>(), 200);
 }

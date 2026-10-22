@@ -13,6 +13,32 @@ pub enum Flusso {
     Eventi = 3,
     Sondaggi = 4,
     PartitiIa = 5,
+    ElettoriCampione = 6,
+}
+
+/// 53 bit: esatti in un f64. Uniforme in `(0, 1]`.
+fn uniforme_da(grezzo: u64) -> f64 {
+    ((grezzo >> 11) as f64 + 1.0) / 9_007_199_254_740_992.0
+}
+
+/// Box-Muller su due uniformi in `(0, 1]`.
+fn normale_da(u1: f64, u2: f64) -> f64 {
+    (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+}
+
+/// Generatore estemporaneo: legge solo il seme del `Caso`, non tocca i suoi flussi.
+pub struct Estrattore(ChaCha8Rng);
+
+impl Estrattore {
+    pub fn uniforme(&mut self) -> f64 {
+        uniforme_da(self.0.next_u64())
+    }
+
+    pub fn normale(&mut self) -> f64 {
+        let u1 = self.uniforme();
+        let u2 = self.uniforme();
+        normale_da(u1, u2)
+    }
 }
 
 /// Un `ChaCha8Rng` per flusso, creato alla prima estrazione dal seme.
@@ -46,17 +72,23 @@ impl Caso {
             .next_u64()
     }
 
+    /// Estrattore per `chiave` sul flusso `ElettoriCampione`: stessa chiave, stessi numeri.
+    pub fn estemporaneo(&self, chiave: u64) -> Estrattore {
+        let mut rng = ChaCha8Rng::seed_from_u64(self.seme);
+        rng.set_stream(Flusso::ElettoriCampione as u64);
+        rng.set_word_pos(u128::from(chiave) << 32);
+        Estrattore(rng)
+    }
+
     /// Uniforme in `(0, 1]`: mai zero, cosi' `ln` e' sempre finito.
     pub fn uniforme(&mut self, flusso: Flusso) -> f64 {
-        // 53 bit: esatti in un f64.
-        let alti = self.prossimo(flusso) >> 11;
-        (alti as f64 + 1.0) / 9_007_199_254_740_992.0
+        uniforme_da(self.prossimo(flusso))
     }
 
     /// Normale standard, Box-Muller su due uniformi, senza cache del secondo valore.
     pub fn normale(&mut self, flusso: Flusso) -> f64 {
         let u1 = self.uniforme(flusso);
         let u2 = self.uniforme(flusso);
-        (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+        normale_da(u1, u2)
     }
 }

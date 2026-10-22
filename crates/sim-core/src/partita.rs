@@ -1,11 +1,12 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
-use crate::elettorato::{Elettorato, Intenzioni};
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
+use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
-use crate::informazione::Informazione;
+use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::partiti::{self, Governo, Partito};
-use crate::vista::{Vista, VistaStatistica, VoceDicastero, VocePartito};
+use crate::vista::{SeggiPartito, Vista, VistaStatistica, VoceDicastero, VocePartito};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -152,8 +153,77 @@ impl Partita {
         &self.informazione
     }
 
+    /// Tre elettori del gruppo, estratti dal sondaggio con un estrattore estemporaneo:
+    /// non avanzano nessun flusso del `Caso`.
+    ///
+    /// # Errors
+    /// `Elettorato` se la regione non c'è.
+    pub fn elettori_campione(
+        &self,
+        regione: &str,
+        c: Condizione,
+        f: Fascia,
+    ) -> Result<Vec<ElettoreCampione>, Errore> {
+        let r = self
+            .dati
+            .elettorato()
+            .regioni
+            .iter()
+            .position(|x| x.id == regione)
+            .ok_or_else(|| Errore::Elettorato(format!("regione sconosciuta: {regione}")))?;
+        let chiave = u64::from(self.turno) * 1024 + indice_gruppo(r, c, f) as u64;
+        let mut rng = self.caso.estemporaneo(chiave);
+        Ok(genera(&self.vista(), &self.dati, r, c, f, &mut rng))
+    }
+
+    /// Riparto dei seggi sul sondaggio pubblico: voti regionali dalle quote degli incroci,
+    /// coalizioni dell'ultimo voto, partiti senza coalizione da soli.
+    ///
+    /// # Errors
+    /// Quelli di `elezioni::riparto`.
+    pub fn proiezione_seggi(&self) -> Result<Esito, Errore> {
+        let n = self.partiti.len();
+        let per_regione = self
+            .dati
+            .elettorato()
+            .regioni
+            .iter()
+            .zip(&self.informazione.sondaggio.regioni)
+            .map(|(r, inc)| {
+                let voti = inc.quote.iter().take(n);
+                (
+                    r.id.clone(),
+                    voti.map(|q| (r.elettori as f64 * q).round() as u64)
+                        .collect(),
+                )
+            })
+            .collect();
+        let posizione = |id: &String| self.partiti.iter().position(|p| &p.id == id);
+        let coalizioni = (self.dati.scenario().coalizioni.iter())
+            .map(|c| c.iter().filter_map(posizione).collect())
+            .collect();
+        riparto(
+            self.dati.elezioni(),
+            self.dati.legge_elettorale_iniziale(),
+            &Voti {
+                coalizioni,
+                per_regione,
+            },
+        )
+    }
+
     pub fn vista(&self) -> Vista {
         let s = &self.informazione.statistica;
+        let proiezione = self.proiezione_seggi().ok().map(|e| {
+            let seggi = e.camera.iter().zip(&e.senato);
+            (self.partiti.iter().zip(seggi))
+                .map(|(p, (c, s))| SeggiPartito {
+                    partito: p.id.clone(),
+                    camera: c.totale(),
+                    senato: s.totale(),
+                })
+                .collect()
+        });
         Vista {
             turno: self.turno,
             data: self.data,
@@ -181,6 +251,7 @@ impl Partita {
                 })
                 .collect(),
             sondaggio: self.informazione.sondaggio.clone(),
+            proiezione,
             statistica: VistaStatistica {
                 trimestre: s.trimestre,
                 prima_stima: s.prima_stima.clone(),
