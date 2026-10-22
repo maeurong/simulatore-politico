@@ -1,0 +1,187 @@
+# Generato da `python3 -I strumenti/taratura/economia.py` il 2026-10-22. Non modificare a mano.
+# Fonti:
+#   Eurostat lfst_r_lfu3rt e lfst_r_lfp2act, 2025, 15-74 anni
+#   ISTAT 93_1227_DF_DCCN_TNA1_1, valore aggiunto ai prezzi correnti 2023, edizione 2025M12
+#   Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze)
+# Licenze: Eurostat, riuso con citazione e dichiarazione delle modifiche;
+#   ISTAT, CC BY 4.0. Modifiche ai dati: strumenti/taratura/README.md.
+
+[[regione]]
+id = "piemonte"
+nome = "Piemonte"
+macroarea = "nord"
+forze_lavoro = 1975.6
+disoccupazione_2025 = 6.0
+okun = -0.239
+mix = { A = 0.014219, BTE = 0.257791, F = 0.060530, GTI = 0.177667, J = 0.033766, K = 0.051218, L = 0.132140, MN = 0.105641, OTQ = 0.134115, RTU = 0.032913 }
+
+[[regione]]
+id = "valle_d_aosta"
+nome = "Valle d'Aosta"
+macroarea = "nord"
+forze_lavoro = 59.3
+disoccupazione_2025 = 3.9
+okun = -0.059
+mix = { A = 0.013794, BTE = 0.154341, F = 0.073477, GTI = 0.208096, J = 0.017209, K = 0.047041, L = 0.162705, MN = 0.066954, OTQ = 0.212739, RTU = 0.043644 }
+
+[[regione]]
+id = "liguria"
+nome = "Liguria"
+macroarea = "nord"
+forze_lavoro = 679.8
+disoccupazione_2025 = 4.7
+okun = -0.262
+mix = { A = 0.009887, BTE = 0.159531, F = 0.063369, GTI = 0.247538, J = 0.018541, K = 0.039494, L = 0.161712, MN = 0.093033, OTQ = 0.170352, RTU = 0.036543 }
+
+[[regione]]
+id = "lombardia"
+nome = "Lombardia"
+macroarea = "nord"
+forze_lavoro = 4691.6
+disoccupazione_2025 = 3.0
+okun = -0.22
+mix = { A = 0.010872, BTE = 0.227544, F = 0.054681, GTI = 0.198573, J = 0.049784, K = 0.080303, L = 0.119444, MN = 0.130957, OTQ = 0.097045, RTU = 0.030797 }
+
+[[regione]]
+id = "trentino_alto_adige"
+nome = "Trentino-Alto Adige"
+macroarea = "nord"
+forze_lavoro = 523.7
+disoccupazione_2025 = 2.0
+okun = -0.141
+mix = { A = 0.043972, BTE = 0.168216, F = 0.065309, GTI = 0.242506, J = 0.018116, K = 0.066051, L = 0.103509, MN = 0.089406, OTQ = 0.178512, RTU = 0.024403 }
+
+[[regione]]
+id = "veneto"
+nome = "Veneto"
+macroarea = "nord"
+forze_lavoro = 2274.2
+disoccupazione_2025 = 3.4
+okun = -0.198
+mix = { A = 0.021212, BTE = 0.282873, F = 0.060666, GTI = 0.210273, J = 0.021792, K = 0.043589, L = 0.118438, MN = 0.093909, OTQ = 0.118798, RTU = 0.028450 }
+
+[[regione]]
+id = "friuli_venezia_giulia"
+nome = "Friuli-Venezia Giulia"
+macroarea = "nord"
+forze_lavoro = 550.7
+disoccupazione_2025 = 4.6
+okun = -0.172
+mix = { A = 0.014221, BTE = 0.247320, F = 0.057623, GTI = 0.181264, J = 0.018453, K = 0.055232, L = 0.117676, MN = 0.094765, OTQ = 0.176986, RTU = 0.036460 }
+
+[[regione]]
+id = "emilia_romagna"
+nome = "Emilia-Romagna"
+macroarea = "nord"
+forze_lavoro = 2155.9
+disoccupazione_2025 = 4.1
+okun = -0.222
+mix = { A = 0.019696, BTE = 0.291793, F = 0.055580, GTI = 0.185324, J = 0.023675, K = 0.046075, L = 0.126529, MN = 0.101487, OTQ = 0.118076, RTU = 0.031765 }
+
+[[regione]]
+id = "toscana"
+nome = "Toscana"
+macroarea = "centro"
+forze_lavoro = 1735.3
+disoccupazione_2025 = 4.3
+okun = -0.281
+mix = { A = 0.020144, BTE = 0.216949, F = 0.056301, GTI = 0.216093, J = 0.019876, K = 0.047322, L = 0.132054, MN = 0.108956, OTQ = 0.144911, RTU = 0.037394 }
+
+[[regione]]
+id = "umbria"
+nome = "Umbria"
+macroarea = "centro"
+forze_lavoro = 394.7
+disoccupazione_2025 = 4.6
+okun = -0.345
+mix = { A = 0.025140, BTE = 0.213757, F = 0.067830, GTI = 0.212485, J = 0.017774, K = 0.037805, L = 0.117563, MN = 0.099421, OTQ = 0.168581, RTU = 0.039644 }
+
+[[regione]]
+id = "marche"
+nome = "Marche"
+macroarea = "centro"
+forze_lavoro = 682.7
+disoccupazione_2025 = 5.1
+okun = -0.295
+mix = { A = 0.014260, BTE = 0.264888, F = 0.066103, GTI = 0.193369, J = 0.017809, K = 0.041641, L = 0.119432, MN = 0.093800, OTQ = 0.153538, RTU = 0.035160 }
+
+[[regione]]
+id = "lazio"
+nome = "Lazio"
+macroarea = "centro"
+forze_lavoro = 2565.7
+disoccupazione_2025 = 5.5
+okun = -0.391
+mix = { A = 0.010029, BTE = 0.117161, F = 0.051576, GTI = 0.197936, J = 0.070528, K = 0.060964, L = 0.122455, MN = 0.132421, OTQ = 0.186043, RTU = 0.050887 }
+
+[[regione]]
+id = "abruzzo"
+nome = "Abruzzo"
+macroarea = "mezzogiorno"
+forze_lavoro = 547.0
+disoccupazione_2025 = 6.5
+okun = -0.238
+mix = { A = 0.028561, BTE = 0.209887, F = 0.085007, GTI = 0.180831, J = 0.014782, K = 0.033640, L = 0.126640, MN = 0.101078, OTQ = 0.187616, RTU = 0.031958 }
+
+[[regione]]
+id = "molise"
+nome = "Molise"
+macroarea = "mezzogiorno"
+forze_lavoro = 114.4
+disoccupazione_2025 = 6.2
+okun = -0.305
+mix = { A = 0.059428, BTE = 0.159144, F = 0.077240, GTI = 0.170311, J = 0.021077, K = 0.029431, L = 0.132695, MN = 0.087290, OTQ = 0.236129, RTU = 0.027255 }
+
+[[regione]]
+id = "campania"
+nome = "Campania"
+macroarea = "mezzogiorno"
+forze_lavoro = 2051.0
+disoccupazione_2025 = 13.9
+okun = -0.369
+mix = { A = 0.025802, BTE = 0.139727, F = 0.074384, GTI = 0.243190, J = 0.027535, K = 0.034244, L = 0.115721, MN = 0.097576, OTQ = 0.207057, RTU = 0.034764 }
+
+[[regione]]
+id = "puglia"
+nome = "Puglia"
+macroarea = "mezzogiorno"
+forze_lavoro = 1443.5
+disoccupazione_2025 = 10.0
+okun = -0.403
+mix = { A = 0.034817, BTE = 0.131258, F = 0.073223, GTI = 0.226122, J = 0.019963, K = 0.036754, L = 0.130387, MN = 0.090649, OTQ = 0.222405, RTU = 0.034422 }
+
+[[regione]]
+id = "basilicata"
+nome = "Basilicata"
+macroarea = "mezzogiorno"
+forze_lavoro = 210.9
+disoccupazione_2025 = 5.3
+okun = -0.18
+mix = { A = 0.059168, BTE = 0.247425, F = 0.078638, GTI = 0.174961, J = 0.013700, K = 0.027821, L = 0.085226, MN = 0.088505, OTQ = 0.195152, RTU = 0.029404 }
+
+[[regione]]
+id = "calabria"
+nome = "Calabria"
+macroarea = "mezzogiorno"
+forze_lavoro = 622.1
+disoccupazione_2025 = 9.8
+okun = -0.342
+mix = { A = 0.056920, BTE = 0.075479, F = 0.067967, GTI = 0.241251, J = 0.015692, K = 0.028721, L = 0.138135, MN = 0.080742, OTQ = 0.261577, RTU = 0.033516 }
+
+[[regione]]
+id = "sicilia"
+nome = "Sicilia"
+macroarea = "mezzogiorno"
+forze_lavoro = 1693.9
+disoccupazione_2025 = 12.2
+okun = -0.419
+mix = { A = 0.048320, BTE = 0.091378, F = 0.067702, GTI = 0.226310, J = 0.016604, K = 0.031686, L = 0.146421, MN = 0.080603, OTQ = 0.250865, RTU = 0.040111 }
+
+[[regione]]
+id = "sardegna"
+nome = "Sardegna"
+macroarea = "mezzogiorno"
+forze_lavoro = 657.2
+disoccupazione_2025 = 9.3
+okun = -0.251
+mix = { A = 0.042020, BTE = 0.090828, F = 0.073180, GTI = 0.219387, J = 0.018455, K = 0.033661, L = 0.136968, MN = 0.092749, OTQ = 0.251037, RTU = 0.041715 }
