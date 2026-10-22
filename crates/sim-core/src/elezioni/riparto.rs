@@ -1,8 +1,10 @@
-//! Riparto dei seggi della legge 180/2026, parte proporzionale: soglie, metodo, Camera
-//! nazionale (art. 83 DPR 361) e Senato regione per regione (art. 16-bis d.lgs. 533).
+//! Riparto dei seggi della legge 180/2026: soglie, metodo, premio e tetti, Camera nazionale
+//! (art. 83 DPR 361) e Senato regione per regione (art. 16-bis d.lgs. 533).
 //! Puro: stessi argomenti, stesso esito; le parità si rompono per regola, mai a caso.
 
-use super::{DatiElezioni, Formula, LeggeElettorale, seggi_per_circoscrizione};
+use super::{
+    DatiElezioni, Formula, LeggeElettorale, Premio, seggi_da_quota, seggi_per_circoscrizione,
+};
 use crate::errore::Errore;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -122,13 +124,6 @@ fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
 
 /// Coalizione ammessa o lista sola: tutte le liste fanno la cifra, le ammesse prendono i seggi.
 struct InGara {
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "lo legge il premio del Task 5 per riconoscere il vincitore"
-        )
-    )]
     soggetto: Soggetto,
     liste: Vec<usize>,
     ammesse: Vec<usize>,
@@ -220,6 +215,136 @@ fn cifre_soggetti(gara: &[InGara], cifre: &[u64]) -> Vec<u64> {
     gara.iter()
         .map(|g| g.liste.iter().map(|&l| cifre[l]).sum())
         .collect()
+}
+
+/// Soggetto più votato del ramo sulle cifre nazionali con le speciali, se ha la soglia del premio.
+fn primo(legge: &LeggeElettorale, gara: &[InGara], naz: &[u64]) -> Option<Soggetto> {
+    // assunzione A7 del piano 2: premio alla lista o alla coalizione, stessa regola.
+    if matches!(legge.premio, Premio::Nessuno) {
+        return None;
+    }
+    let cifre = cifre_soggetti(gara, naz);
+    // assunzione A4 del piano 2: a parità il primo in gara, coalizioni prima delle liste.
+    let (i, &cifra) = cifre
+        .iter()
+        .enumerate()
+        .max_by_key(|&(i, &c)| (c, Reverse(i)))?;
+    sopra(cifra, naz.iter().sum(), legge.soglia_premio_pb).then_some(gara[i].soggetto)
+}
+
+fn premio_alle_liste(formula: Formula, g: &InGara, premio: u32, naz: &[u64]) -> Vec<u32> {
+    // assunzione A3 del piano 2: premio alle liste ammesse col metodo, sulle cifre nazionali.
+    let q = Quota {
+        seggi: premio,
+        ..Quota::default()
+    };
+    alle_liste(formula, std::slice::from_ref(g), &[q], naz)
+}
+
+/// Seggi del soggetto nelle circoscrizioni speciali, su tutte le liste dichiarate.
+fn speciali_di(g: &InGara, seggi: &[SeggiLista]) -> u32 {
+    g.liste.iter().map(|&l| seggi[l].speciali).sum()
+}
+
+/// Regione ordinaria del Senato: cifre dei soggetti e loro quote.
+struct Regionale<'a> {
+    nome: &'a str,
+    voti: &'a [u64],
+    cifre: Vec<u64>,
+    quote: Vec<Quota>,
+}
+
+/// Un seggio dal vincitore `w` all'altro soggetto col resto più alto non usato, o in mancanza
+/// con la cifra regionale più alta (art. 16-bis c. 1-ter lett. b). `false` se non si sposta.
+fn sposta(r: &mut Regionale<'_>, w: usize) -> bool {
+    let Some(resta) = r.quote[w].seggi.checked_sub(1) else {
+        return false;
+    };
+    let altri: Vec<usize> = (0..r.quote.len()).filter(|&i| i != w).collect();
+    // assunzione A4 del piano 2: a parità la cifra regionale più alta, poi l'indice.
+    let dal_resto = altri
+        .iter()
+        .filter(|&&i| !r.quote[i].da_resto)
+        .filter_map(|&i| Some((r.quote[i].resto?, r.cifre[i], Reverse(i))))
+        .max()
+        .map(|(_, _, Reverse(i))| i);
+    let Some(j) = dal_resto.or_else(|| {
+        altri
+            .iter()
+            .copied()
+            .max_by_key(|&i| (r.cifre[i], Reverse(i)))
+    }) else {
+        return false;
+    };
+    r.quote[w].seggi = resta;
+    r.quote[j].seggi += 1;
+    // `da_resto` vale anche «resto usato»: ogni resto dà al più un seggio.
+    r.quote[j].da_resto = true;
+    true
+}
+
+/// Art. 16-bis c. 1-ter lett. a: toglie al vincitore `w` fino a `eccesso` seggi regionali.
+fn togli_eccesso(regioni: &mut [Regionale<'_>], w: usize, mut eccesso: u32) {
+    // Prima dove ha preso il seggio col resto, resto crescente su un'unica graduatoria
+    // nazionale, uno per regione; ordinamento stabile: a parità l'ordine dei dati.
+    let mut col_resto: Vec<usize> = (0..regioni.len())
+        .filter(|&r| regioni[r].quote[w].da_resto)
+        .collect();
+    col_resto.sort_by_key(|&r| regioni[r].quote[w].resto);
+    let mut toccate = BTreeSet::new();
+    for r in col_resto {
+        if eccesso == 0 {
+            break;
+        }
+        if sposta(&mut regioni[r], w) {
+            eccesso -= 1;
+            toccate.insert(r);
+        }
+    }
+    // Poi per percentuale regionale crescente del vincitore, a parità l'ordine dei dati.
+    let quota = |r: &Regionale<'_>| {
+        let t: u128 = r.voti.iter().map(|&v| u128::from(v)).sum();
+        if t == 0 {
+            (0, 1)
+        } else {
+            (u128::from(r.cifre[w]), t)
+        }
+    };
+    let mut ordine: Vec<usize> = (0..regioni.len()).collect();
+    ordine.sort_by(|&a, &b| {
+        let ((ca, ta), (cb, tb)) = (quota(&regioni[a]), quota(&regioni[b]));
+        (ca * tb).cmp(&(cb * ta))
+    });
+    // Il primo giro salta le regioni toccate sopra, i successivi no; tutti saltano quelle dove
+    // il vincitore ha un solo seggio. Un giro successivo senza sottrazioni chiude: il tetto
+    // può restare irraggiungibile.
+    let mut primo_giro = true;
+    while eccesso > 0 {
+        let mut tolto = false;
+        for &r in &ordine {
+            if eccesso == 0 {
+                break;
+            }
+            if (primo_giro && toccate.contains(&r)) || regioni[r].quote[w].seggi <= 1 {
+                continue;
+            }
+            if sposta(&mut regioni[r], w) {
+                eccesso -= 1;
+                tolto = true;
+            }
+        }
+        if !tolto && !primo_giro {
+            break;
+        }
+        primo_giro = false;
+    }
+}
+
+fn voti_di<'a>(voti: &'a Voti, regione: &str) -> Result<&'a [u64], Errore> {
+    voti.per_regione
+        .get(regione)
+        .map(Vec::as_slice)
+        .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {regione} senza voti")))
 }
 
 /// Seggi uninominali di una regione: D'Hondt senza soglia fra coalizioni dichiarate e liste
@@ -332,10 +457,22 @@ fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
 /// `VotiIncoerenti` se i voti non combaciano con le regioni, le liste o le coalizioni.
 pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Result<Esito, Errore> {
     let n = valida(dati, voti)?;
-    // Cifre nazionali con le circoscrizioni speciali: decidono le soglie.
+    // Cifre nazionali con le circoscrizioni speciali: decidono soglie e premio.
     let naz = somma(voti.per_regione.values(), n);
+    let soglia_regionale = dati.soglia_regionale_senato_pb;
+    let gara_camera = in_gara(legge, soglia_regionale, voti, &naz, false);
+    let gara_senato = in_gara(legge, soglia_regionale, voti, &naz, true);
+    // assunzione A5 del piano 2: premio solo se lo vince lo stesso soggetto nei due rami.
+    let premio =
+        primo(legge, &gara_camera, &naz).filter(|&s| primo(legge, &gara_senato, &naz) == Some(s));
+    let seggi_premio =
+        |seggi: u32| premio.map_or(0, |_| seggi_da_quota(legge.taglia_premio_pb, seggi));
+    let vincitore =
+        |gara: &[InGara]| premio.and_then(|s| gara.iter().position(|g| g.soggetto == s));
 
     let camera_cs = &dati.camera.circoscrizioni;
+    let premio_camera = seggi_premio(dati.camera.seggi);
+    let sc = seggi_per_circoscrizione(&dati.camera, premio_camera);
     let speciali: BTreeSet<&str> = camera_cs
         .iter()
         .filter(|c| c.uninominali > 0)
@@ -343,7 +480,7 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
         .collect();
     let seggi_camera: u32 = camera_cs
         .iter()
-        .zip(seggi_per_circoscrizione(&dati.camera, 0))
+        .zip(&sc)
         .filter(|(c, _)| c.uninominali == 0)
         .map(|(_, s)| s.seggi.saturating_sub(s.premio))
         .sum();
@@ -354,94 +491,82 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
             .map(|(_, v)| v),
         n,
     );
-    let gara = in_gara(legge, dati.soglia_regionale_senato_pb, voti, &naz, false);
-    let per_soggetto = quote(
-        legge.formula,
-        &cifre_soggetti(&gara, &senza_speciali),
-        seggi_camera,
-    );
-    // assunzione A11 del piano 2: senza soggetti ammessi i seggi restano non assegnati.
-    let mut camera: Vec<SeggiLista> =
-        alle_liste(legge.formula, &gara, &per_soggetto, &senza_speciali)
-            .into_iter()
-            .zip(estero(legge.formula, &gara, &naz, dati.camera.estero))
-            .map(|(proporzionali, estero)| SeggiLista {
-                proporzionali,
-                estero,
-                ..SeggiLista::default()
-            })
-            .collect();
-    for (c, s) in camera_cs
-        .iter()
-        .zip(seggi_per_circoscrizione(&dati.camera, 0))
-        .filter(|(c, _)| c.uninominali > 0)
-    {
-        let v = voti
-            .per_regione
-            .get(&c.regione)
-            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
+    let mut camera: Vec<SeggiLista> = estero(legge.formula, &gara_camera, &naz, dati.camera.estero)
+        .into_iter()
+        .map(|estero| SeggiLista {
+            estero,
+            ..SeggiLista::default()
+        })
+        .collect();
+    for (c, s) in camera_cs.iter().zip(&sc).filter(|(c, _)| c.uninominali > 0) {
+        let v = voti_di(voti, &c.regione)?;
         let unin = uninominali(legge, voti, v, s.uninominali);
         // Parte proporzionale: metodo della legge fra i soggetti ammessi, voti della regione.
         let q = quote(
             legge.formula,
-            &cifre_soggetti(&gara, v),
+            &cifre_soggetti(&gara_camera, v),
             s.seggi.saturating_sub(s.uninominali),
         );
-        let prop = alle_liste(legge.formula, &gara, &q, v);
+        let prop = alle_liste(legge.formula, &gara_camera, &q, v);
         for ((l, u), p) in camera.iter_mut().zip(unin).zip(prop) {
             l.speciali += u + p;
         }
     }
-
-    let gara = in_gara(legge, dati.soglia_regionale_senato_pb, voti, &naz, true);
-    let mut regionali = Vec::new();
-    for (c, s) in dati
-        .senato
-        .circoscrizioni
-        .iter()
-        .zip(seggi_per_circoscrizione(&dati.senato, 0))
-        .filter(|(c, _)| c.uninominali == 0)
-    {
-        let v = voti
-            .per_regione
-            .get(&c.regione)
-            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
-        let q = quote(
-            legge.formula,
-            &cifre_soggetti(&gara, v),
-            s.seggi.saturating_sub(s.premio),
-        );
-        regionali.push((c.regione.as_str(), v, q));
+    let cifre = cifre_soggetti(&gara_camera, &senza_speciali);
+    let mut per_soggetto = quote(legge.formula, &cifre, seggi_camera);
+    let mut tetto_camera = false;
+    let w_camera = vincitore(&gara_camera);
+    if let (Some(w), Some(t)) = (w_camera, legge.tetto) {
+        let tetto = seggi_da_quota(t.camera_pb, dati.camera.seggi);
+        let spec = speciali_di(&gara_camera[w], &camera);
+        if premio_camera
+            .saturating_add(per_soggetto[w].seggi)
+            .saturating_add(spec)
+            > tetto
+        {
+            // Art. 83 c. 1-ter: al vincitore il resto del tetto, agli altri gli altri seggi
+            // sulle loro cifre senza speciali.
+            tetto_camera = true;
+            let al_vincitore = tetto.saturating_sub(premio_camera).saturating_sub(spec);
+            let altri: Vec<usize> = (0..gara_camera.len()).filter(|&i| i != w).collect();
+            let c: Vec<u64> = altri.iter().map(|&i| cifre[i]).collect();
+            let q = quote(legge.formula, &c, seggi_camera.saturating_sub(al_vincitore));
+            for (&i, qi) in altri.iter().zip(q) {
+                per_soggetto[i] = qi;
+            }
+            per_soggetto[w].seggi = al_vincitore;
+        }
     }
-    let mut senato = vec![SeggiLista::default(); n];
+    // assunzione A11 del piano 2: senza soggetti ammessi i seggi restano non assegnati.
+    let prop = alle_liste(legge.formula, &gara_camera, &per_soggetto, &senza_speciali);
+    for (l, p) in camera.iter_mut().zip(prop) {
+        l.proporzionali = p;
+    }
+    if let Some(w) = w_camera {
+        let p = premio_alle_liste(legge.formula, &gara_camera[w], premio_camera, &naz);
+        for (l, p) in camera.iter_mut().zip(p) {
+            l.premio = p;
+        }
+    }
+
+    let senato_cs = &dati.senato.circoscrizioni;
+    let premio_senato = seggi_premio(dati.senato.seggi);
+    let ss = seggi_per_circoscrizione(&dati.senato, premio_senato);
+    let mut senato: Vec<SeggiLista> = estero(legge.formula, &gara_senato, &naz, dati.senato.estero)
+        .into_iter()
+        .map(|estero| SeggiLista {
+            estero,
+            ..SeggiLista::default()
+        })
+        .collect();
     let mut senato_per_regione: BTreeMap<String, Vec<u32>> = voti
         .per_regione
         .keys()
         .map(|r| (r.clone(), vec![0; n]))
         .collect();
-    for (r, v, q) in &regionali {
-        let liste = alle_liste(legge.formula, &gara, q, v);
-        if let Some(pr) = senato_per_regione.get_mut(*r) {
-            pr.iter_mut().zip(&liste).for_each(|(a, b)| *a += b);
-        }
-        senato
-            .iter_mut()
-            .zip(&liste)
-            .for_each(|(a, b)| a.proporzionali += b);
-    }
     // Al Senato le speciali sono solo uninominali.
-    for (c, s) in dati
-        .senato
-        .circoscrizioni
-        .iter()
-        .zip(seggi_per_circoscrizione(&dati.senato, 0))
-        .filter(|(c, _)| c.uninominali > 0)
-    {
-        let v = voti
-            .per_regione
-            .get(&c.regione)
-            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
-        let unin = uninominali(legge, voti, v, s.uninominali);
+    for (c, s) in senato_cs.iter().zip(&ss).filter(|(c, _)| c.uninominali > 0) {
+        let unin = uninominali(legge, voti, voti_di(voti, &c.regione)?, s.uninominali);
         if let Some(pr) = senato_per_regione.get_mut(&c.regione) {
             pr.iter_mut().zip(&unin).for_each(|(a, b)| *a += b);
         }
@@ -450,20 +575,59 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
             .zip(&unin)
             .for_each(|(a, b)| a.speciali += b);
     }
-    for (a, e) in senato
-        .iter_mut()
-        .zip(estero(legge.formula, &gara, &naz, dati.senato.estero))
+    let mut regionali = Vec::new();
+    for (c, s) in senato_cs
+        .iter()
+        .zip(&ss)
+        .filter(|(c, _)| c.uninominali == 0)
     {
-        a.estero = e;
+        let v = voti_di(voti, &c.regione)?;
+        let cifre = cifre_soggetti(&gara_senato, v);
+        let quote = quote(legge.formula, &cifre, s.seggi.saturating_sub(s.premio));
+        regionali.push(Regionale {
+            nome: c.regione.as_str(),
+            voti: v,
+            cifre,
+            quote,
+        });
+    }
+    let mut tetto_senato = false;
+    let w_senato = vincitore(&gara_senato);
+    if let (Some(w), Some(t)) = (w_senato, legge.tetto) {
+        let tetto = seggi_da_quota(t.senato_pb, dati.senato.seggi);
+        let totale = regionali.iter().map(|r| r.quote[w].seggi).fold(
+            premio_senato.saturating_add(speciali_di(&gara_senato[w], &senato)),
+            u32::saturating_add,
+        );
+        if let Some(eccesso) = totale.checked_sub(tetto).filter(|&e| e > 0) {
+            tetto_senato = true;
+            togli_eccesso(&mut regionali, w, eccesso);
+        }
+    }
+    for r in &regionali {
+        let liste = alle_liste(legge.formula, &gara_senato, &r.quote, r.voti);
+        if let Some(pr) = senato_per_regione.get_mut(r.nome) {
+            pr.iter_mut().zip(&liste).for_each(|(a, b)| *a += b);
+        }
+        senato
+            .iter_mut()
+            .zip(&liste)
+            .for_each(|(a, b)| a.proporzionali += b);
+    }
+    if let Some(w) = w_senato {
+        let p = premio_alle_liste(legge.formula, &gara_senato[w], premio_senato, &naz);
+        for (l, p) in senato.iter_mut().zip(p) {
+            l.premio = p;
+        }
     }
 
     Ok(Esito {
         camera,
         senato,
         senato_per_regione,
-        premio: None,
-        tetto_camera: false,
-        tetto_senato: false,
+        premio,
+        tetto_camera,
+        tetto_senato,
     })
 }
 

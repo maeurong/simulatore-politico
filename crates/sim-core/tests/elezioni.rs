@@ -4,7 +4,7 @@ use comune::{dati_base, file_base, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::elezioni::{
     Esito, Formula, LeggeElettorale, Premio, QuoteTetto, Ramo, SeggiCircoscrizione, SeggiLista,
-    Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
+    Soggetto, Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
 };
 use sim_core::errore::Errore;
 use sim_core::struttura::Macroarea;
@@ -622,7 +622,7 @@ fn speciali_ed_estero_come_il_riferimento() {
 #[test]
 fn ogni_ramo_somma_al_suo_totale() {
     for v in [voti_g1(), voti_g2()] {
-        for nome in ["proporzionale_3", "proporzionale_puro"] {
+        for nome in ["proporzionale_3", "proporzionale_puro", "legge_180"] {
             let e = esito(&impostazione(nome), &v);
             let tot = |s: &[SeggiLista]| s.iter().map(SeggiLista::totale).sum::<u32>();
             assert_eq!(tot(&e.camera), 400, "{nome}");
@@ -655,4 +655,155 @@ fn uninominali_senza_soglia() {
     assert_eq!(e.camera[0].proporzionali, 0);
     assert!(e.camera[0].speciali >= 1);
     assert_eq!(e.senato[0].proporzionali, 189);
+}
+
+// --- premio e tetti (Task 5) ---
+
+/// Proporzionali, premio, speciali, estero.
+fn colonne(v: &[SeggiLista]) -> Vec<Vec<u32>> {
+    vec![
+        prop(v),
+        v.iter().map(|s| s.premio).collect(),
+        speciali(v),
+        estero(v),
+    ]
+}
+
+/// Seggi delle liste 0-3 (coalizione 0), estero escluso.
+fn coalizione_0(v: &[SeggiLista]) -> u32 {
+    v[..4].iter().map(|s| s.totale() - s.estero).sum()
+}
+
+fn premio_totale(v: &[SeggiLista]) -> u32 {
+    v.iter().map(|s| s.premio).sum()
+}
+
+#[test]
+fn legge_180_con_premio_come_il_riferimento() {
+    let e = esito(&legge_180(), &voti_g1());
+    assert_eq!(e.premio, Some(Soggetto::Coalizione(0)));
+    assert!(!e.tetto_camera && !e.tetto_senato);
+    assert_eq!(
+        colonne(&e.camera),
+        [
+            [100, 30, 8, 0, 70, 19, 7, 44, 16, 0, 20],
+            [51, 15, 4, 0, 0, 0, 0, 0, 0, 0, 0],
+            [5, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0],
+            [3, 1, 0, 0, 2, 0, 0, 1, 0, 0, 1],
+        ]
+    );
+    assert_eq!(
+        colonne(&e.senato),
+        [
+            [51, 12, 3, 0, 36, 10, 0, 23, 8, 1, 10],
+            [25, 8, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+            [5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+        ]
+    );
+}
+
+#[test]
+fn tetti_220_e_113() {
+    let e = esito(&legge_180(), &voti_g2());
+    assert_eq!(e.premio, Some(Soggetto::Coalizione(0)));
+    assert!(e.tetto_camera && e.tetto_senato);
+    assert_eq!(coalizione_0(&e.camera), 220);
+    assert_eq!(coalizione_0(&e.senato), 113);
+    assert_eq!(
+        colonne(&e.camera),
+        [
+            [111, 26, 7, 0, 62, 18, 7, 42, 18, 0, 23],
+            [54, 13, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+            [6, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0],
+            [3, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1],
+        ]
+    );
+    assert_eq!(
+        colonne(&e.senato),
+        [
+            [61, 10, 2, 0, 30, 8, 1, 20, 9, 2, 11],
+            [27, 6, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+            [5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0],
+            [2, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+        ]
+    );
+}
+
+#[test]
+fn senza_tetto_il_vincitore_supera_220() {
+    let legge = LeggeElettorale {
+        tetto: None,
+        ..legge_180()
+    };
+    let e = esito(&legge, &voti_g2());
+    assert!(!e.tetto_camera && !e.tetto_senato);
+    assert!(coalizione_0(&e.camera) > 220);
+    assert_eq!(prop(&e.camera), [125, 30, 8, 0, 54, 16, 7, 38, 16, 0, 20]);
+    assert_eq!(prop(&e.senato), [66, 12, 2, 0, 29, 8, 1, 16, 9, 1, 10]);
+}
+
+#[test]
+fn tetti_con_dhondt() {
+    let legge = LeggeElettorale {
+        formula: Formula::Dhondt,
+        ..legge_180()
+    };
+    let e = esito(&legge, &voti_g2());
+    assert_eq!(coalizione_0(&e.camera), 220);
+    assert_eq!(coalizione_0(&e.senato), 113);
+    assert_eq!(prop(&e.senato), [63, 10, 0, 0, 53, 9, 0, 13, 1, 1, 4]);
+    assert_eq!(estero(&e.senato), [3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
+}
+
+#[test]
+fn premio_solo_col_42_per_cento() {
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[400, 20, 300, 160, 120], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.premio, Some(Soggetto::Coalizione(0)));
+    assert_eq!(premio_totale(&e.camera), 70);
+    assert_eq!(premio_totale(&e.senato), 35);
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[399, 20, 300, 160, 121], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.premio, None);
+    assert_eq!(premio_totale(&e.camera), 0);
+    assert_eq!(premio_totale(&e.senato), 0);
+}
+
+#[test]
+fn premio_alla_lista_senza_coalizioni() {
+    let legge = LeggeElettorale {
+        coalizioni: false,
+        premio: Premio::Lista,
+        ..legge_180()
+    };
+    let e = esito(
+        &legge,
+        &uniformi(&[420, 0, 300, 160, 120], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.premio, Some(Soggetto::Lista(0)));
+    assert_eq!(e.camera[0].premio, 70);
+}
+
+#[test]
+fn tetto_irraggiungibile_termina() {
+    let legge = LeggeElettorale {
+        tetto: Some(QuoteTetto {
+            camera_pb: 1000,
+            senato_pb: 1000,
+        }),
+        ..legge_180()
+    };
+    let e = riparto(dati_base().elezioni(), &legge, &voti_g2()).unwrap();
+    let tot = |s: &[SeggiLista]| s.iter().map(SeggiLista::totale).sum::<u32>();
+    assert_eq!(tot(&e.camera), 400);
+    assert_eq!(tot(&e.senato), 200);
+    assert_eq!(
+        e.camera[..4].iter().map(|s| s.proporzionali).sum::<u32>(),
+        0
+    );
 }
