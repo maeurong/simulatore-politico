@@ -1,0 +1,315 @@
+# Dati elettorali.
+# Fonti: Costituzione artt. 56-57; legge 9 ottobre 2026, n. 180; popolazione del censimento
+# permanente 2021 (DPR 20 gennaio 2023, GU n. 53 del 3/3/2023), come riportata nel dossier della
+# Camera AC 2822-B, tabelle 1 e 6. Quote in punti base (1 pb = 0,01%).
+# Ricerca: docs/ricerca/modelli/sistemi-elettorali.md:31 (seggi), :33-39 (legge_180), :48 (censimento).
+
+soglia_regionale_senato_pb = 2000
+
+[camera]
+seggi = 400
+# deputati eletti nella circoscrizione Estero (art. 56 Cost.), fuori dalle circoscrizioni sotto.
+estero = 8
+# alla Camera nessun minimo di seggi per circoscrizione.
+minimo = 0
+
+[[camera.circoscrizione]]
+id = "piemonte_1"
+regione = "piemonte"
+popolazione = 2208370
+
+[[camera.circoscrizione]]
+id = "piemonte_2"
+regione = "piemonte"
+popolazione = 2047980
+
+[[camera.circoscrizione]]
+id = "lombardia_1"
+regione = "lombardia"
+popolazione = 4010096
+
+[[camera.circoscrizione]]
+id = "lombardia_2"
+regione = "lombardia"
+popolazione = 2099602
+
+[[camera.circoscrizione]]
+id = "lombardia_3"
+regione = "lombardia"
+popolazione = 2205257
+
+[[camera.circoscrizione]]
+id = "lombardia_4"
+regione = "lombardia"
+popolazione = 1628049
+
+[[camera.circoscrizione]]
+id = "veneto_1"
+regione = "veneto"
+popolazione = 1913482
+
+[[camera.circoscrizione]]
+id = "veneto_2"
+regione = "veneto"
+popolazione = 2934263
+
+[[camera.circoscrizione]]
+id = "friuli_venezia_giulia"
+regione = "friuli_venezia_giulia"
+popolazione = 1194647
+
+[[camera.circoscrizione]]
+id = "liguria"
+regione = "liguria"
+popolazione = 1509227
+
+[[camera.circoscrizione]]
+id = "emilia_romagna"
+regione = "emilia_romagna"
+popolazione = 4425366
+
+[[camera.circoscrizione]]
+id = "toscana"
+regione = "toscana"
+popolazione = 3663191
+
+[[camera.circoscrizione]]
+id = "umbria"
+regione = "umbria"
+popolazione = 858812
+
+[[camera.circoscrizione]]
+id = "marche"
+regione = "marche"
+popolazione = 1487150
+
+[[camera.circoscrizione]]
+id = "lazio_1"
+regione = "lazio"
+popolazione = 3822459
+
+[[camera.circoscrizione]]
+id = "lazio_2"
+regione = "lazio"
+popolazione = 1892423
+
+[[camera.circoscrizione]]
+id = "abruzzo"
+regione = "abruzzo"
+popolazione = 1275950
+
+[[camera.circoscrizione]]
+id = "molise"
+regione = "molise"
+popolazione = 292150
+
+[[camera.circoscrizione]]
+id = "campania_1"
+regione = "campania"
+popolazione = 2988376
+
+[[camera.circoscrizione]]
+id = "campania_2"
+regione = "campania"
+popolazione = 2636044
+
+[[camera.circoscrizione]]
+id = "puglia"
+regione = "puglia"
+popolazione = 3922941
+
+[[camera.circoscrizione]]
+id = "basilicata"
+regione = "basilicata"
+popolazione = 541168
+
+[[camera.circoscrizione]]
+id = "calabria"
+regione = "calabria"
+popolazione = 1855454
+
+[[camera.circoscrizione]]
+id = "sicilia_1"
+regione = "sicilia"
+popolazione = 2268634
+
+[[camera.circoscrizione]]
+id = "sicilia_2"
+regione = "sicilia"
+popolazione = 2564695
+
+[[camera.circoscrizione]]
+id = "sardegna"
+regione = "sardegna"
+popolazione = 1587413
+
+[[camera.circoscrizione]]
+id = "valle_d_aosta"
+regione = "valle_d_aosta"
+popolazione = 123360
+# circoscrizione speciale: seggi uninominali, il resto col metodo della legge (A2 del piano 2).
+uninominali = 1
+
+[[camera.circoscrizione]]
+id = "trentino_alto_adige"
+regione = "trentino_alto_adige"
+popolazione = 1073574
+uninominali = 4
+[senato]
+seggi = 200
+estero = 4
+# art. 57 Cost.: nessuna regione o provincia autonoma ha meno di tre senatori; il Molise ne ha due,
+# la Valle d'Aosta uno.
+minimo = 3
+
+[[senato.circoscrizione]]
+id = "piemonte"
+regione = "piemonte"
+popolazione = 4256350
+
+[[senato.circoscrizione]]
+id = "valle_d_aosta"
+regione = "valle_d_aosta"
+popolazione = 123360
+uninominali = 1
+seggi_fissi = 1
+
+[[senato.circoscrizione]]
+id = "lombardia"
+regione = "lombardia"
+popolazione = 9943004
+
+[[senato.circoscrizione]]
+id = "bolzano"
+regione = "trentino_alto_adige"
+popolazione = 532616
+uninominali = 3
+
+[[senato.circoscrizione]]
+id = "trento"
+regione = "trentino_alto_adige"
+popolazione = 540958
+uninominali = 3
+
+[[senato.circoscrizione]]
+id = "veneto"
+regione = "veneto"
+popolazione = 4847745
+
+[[senato.circoscrizione]]
+id = "friuli_venezia_giulia"
+regione = "friuli_venezia_giulia"
+popolazione = 1194647
+
+[[senato.circoscrizione]]
+id = "liguria"
+regione = "liguria"
+popolazione = 1509227
+
+[[senato.circoscrizione]]
+id = "emilia_romagna"
+regione = "emilia_romagna"
+popolazione = 4425366
+
+[[senato.circoscrizione]]
+id = "toscana"
+regione = "toscana"
+popolazione = 3663191
+
+[[senato.circoscrizione]]
+id = "umbria"
+regione = "umbria"
+popolazione = 858812
+
+[[senato.circoscrizione]]
+id = "marche"
+regione = "marche"
+popolazione = 1487150
+
+[[senato.circoscrizione]]
+id = "lazio"
+regione = "lazio"
+popolazione = 5714882
+
+[[senato.circoscrizione]]
+id = "abruzzo"
+regione = "abruzzo"
+popolazione = 1275950
+
+[[senato.circoscrizione]]
+id = "molise"
+regione = "molise"
+popolazione = 292150
+seggi_fissi = 2
+
+[[senato.circoscrizione]]
+id = "campania"
+regione = "campania"
+popolazione = 5624420
+
+[[senato.circoscrizione]]
+id = "puglia"
+regione = "puglia"
+popolazione = 3922941
+
+[[senato.circoscrizione]]
+id = "basilicata"
+regione = "basilicata"
+popolazione = 541168
+
+[[senato.circoscrizione]]
+id = "calabria"
+regione = "calabria"
+popolazione = 1855454
+
+[[senato.circoscrizione]]
+id = "sicilia"
+regione = "sicilia"
+popolazione = 4833329
+
+[[senato.circoscrizione]]
+id = "sardegna"
+regione = "sardegna"
+popolazione = 1587413
+[menu]
+# Gradini ammessi per ogni parametro (A8 del piano 2). Il premio parte dal 40%: sentenze Corte
+# costituzionale 1/2014 e 35/2017.
+# taglia = seggi di premio in % dei seggi del ramo.
+# taglia_premio_pb: 17,5% = 70/400 alla Camera e 35/200 al Senato; 8,75% è la metà.
+# tetto: 5500 = 220/400 alla Camera; 5650 = 113/200 al Senato (legge 180).
+soglia_lista_pb = [0, 300, 400, 500]
+soglia_coalizione_pb = [0, 1000]
+soglia_premio_pb = [4000, 4200, 4500]
+taglia_premio_pb = [875, 1750]
+tetto = [{ camera_pb = 5500, senato_pb = 5650 }, { camera_pb = 6000, senato_pb = 6000 }]
+
+[impostazioni.legge_180]
+soglia_lista_pb = 300
+coalizioni = true
+soglia_coalizione_pb = 1000
+ripescaggio = true
+premio = "coalizione"
+soglia_premio_pb = 4200
+taglia_premio_pb = 1750
+tetto = { camera_pb = 5500, senato_pb = 5650 }
+formula = "hare"
+
+[impostazioni.proporzionale_3]
+soglia_lista_pb = 300
+coalizioni = false
+soglia_coalizione_pb = 0
+ripescaggio = false
+premio = "nessuno"
+soglia_premio_pb = 4000
+taglia_premio_pb = 875
+formula = "hare"
+
+[impostazioni.proporzionale_puro]
+soglia_lista_pb = 0
+coalizioni = false
+soglia_coalizione_pb = 0
+ripescaggio = false
+premio = "nessuno"
+soglia_premio_pb = 4000
+taglia_premio_pb = 875
+formula = "hare"

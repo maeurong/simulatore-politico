@@ -108,7 +108,7 @@ fn manopola_mancante_rifiutata_col_nome() {
 }
 
 #[test]
-fn leggi_chiede_i_cinque_file_per_nome() {
+fn leggi_chiede_i_sei_file_per_nome() {
     let mut chiesti = Vec::new();
     let _ = FileDati::leggi(|nome| {
         chiesti.push(nome.to_string());

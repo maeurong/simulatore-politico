@@ -11,6 +11,7 @@ pub fn file_base() -> FileDati {
         economia: include_str!("../../../../dati/base/economia.toml").into(),
         regioni: include_str!("../../../../dati/base/regioni.toml").into(),
         scenario: include_str!("../../../../dati/base/scenario.toml").into(),
+        elezioni: include_str!("../../../../dati/base/elezioni.toml").into(),
     }
 }
 
@@ -89,6 +90,7 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
         "economia" => &mut f.economia,
         "regioni" => &mut f.regioni,
         "scenario" => &mut f.scenario,
+        "elezioni" => &mut f.elezioni,
         _ => panic!("file di dati sconosciuto: {file}"),
     }
 }
