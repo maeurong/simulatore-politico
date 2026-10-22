@@ -406,6 +406,15 @@ impl Elettorato {
             }
         }
         let regioni = dati.elettorato().regioni.len();
+        for (r, gruppi) in self.gruppi.chunks(PER_REGIONE).enumerate() {
+            let quote: Vec<f64> = gruppi.iter().map(|g| g.quota).collect();
+            if !somma_uno(&quote) {
+                return ko(format!(
+                    "elettorato.gruppi: le quote della regione {r} sommano a {}, non a 1",
+                    quote.iter().sum::<f64>()
+                ));
+            }
+        }
         if self.ultima_disoccupazione.len() != regioni
             || self.ultima_disoccupazione.iter().any(|x| !x.is_finite())
         {

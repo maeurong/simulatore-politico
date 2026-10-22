@@ -235,7 +235,15 @@ fn nessun_elettore_vota_un_partito_che_il_sondaggio_da_a_zero() {
     let caso = Caso::nuovo(3);
     for chiave in 0..50 {
         let mut rng = caso.estemporaneo(chiave);
-        let gente = genera(&v, &dati, 0, Condizione::Autonomo, Fascia::Media, &mut rng);
+        let gente = genera(
+            &v.sondaggio,
+            &v.partiti,
+            &dati,
+            0,
+            Condizione::Autonomo,
+            Fascia::Media,
+            &mut rng,
+        );
         assert!(gente.iter().all(|e| e.voto.as_ref() != Some(&nome)));
     }
 }
@@ -248,7 +256,15 @@ fn chi_si_astiene_ha_motivo_protesta() {
     let (mut astenuti, mut votanti) = (0, 0);
     for chiave in 0..70 {
         let mut rng = caso.estemporaneo(chiave);
-        for e in genera(&v, &dati, 2, Condizione::Studente, Fascia::Bassa, &mut rng) {
+        for e in genera(
+            &v.sondaggio,
+            &v.partiti,
+            &dati,
+            2,
+            Condizione::Studente,
+            Fascia::Bassa,
+            &mut rng,
+        ) {
             assert_eq!(e.voto.is_none(), e.motivo == Motivo::Protesta, "{e:?}");
             assert!((1..=7).contains(&e.posizione));
             assert!((18..=25).contains(&e.eta));

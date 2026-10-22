@@ -273,6 +273,23 @@ fn carica_rifiuta_stato_incoerente() {
 }
 
 #[test]
+fn pensionati_enormi_non_vanno_in_panico() {
+    // Due annate da i64::MAX/2+1: la loro somma trabocca. Carica rifiuta, o il gennaio regge.
+    let s = salvataggio_modificato(|j| {
+        let pensioni = j["economia"]["pensioni"].as_array_mut().unwrap();
+        let mut annata = pensioni[0].clone();
+        annata["anno"] = 2027.into();
+        annata["pensionati"] = (i64::MAX / 2 + 1).into();
+        pensioni.push(annata.clone());
+        pensioni.push(annata);
+    });
+    match Partita::carica(&s) {
+        Err(e) => assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e:?}"),
+        Ok(mut p) => p.chiudi_turno(),
+    }
+}
+
+#[test]
 fn salvataggio_con_un_gruppo_in_meno_illeggibile() {
     let s = salvataggio_modificato(|j| {
         j["elettorato"]["gruppi"].as_array_mut().unwrap().pop();
@@ -335,6 +352,61 @@ fn salvataggio_con_voto_precedente_o_posizione_guasti_illeggibile() {
         }),
         ("posizione che non somma a 1", |j| {
             j["elettorato"]["gruppi"][2]["posizione"] = serde_json::json!(vec![0.0; 7]);
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn salvataggio_con_ultima_disoccupazione_corta_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["ultima_disoccupazione"]
+            .as_array_mut()
+            .unwrap()
+            .pop();
+    });
+    let e = Partita::carica(&s).unwrap_err();
+    assert!(
+        matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("ultima_disoccupazione")),
+        "{e:?}"
+    );
+}
+
+#[test]
+fn salvataggio_con_elettorato_manomesso_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 7] = [
+        ("quota negativa", |j| {
+            j["elettorato"]["gruppi"][2]["quota"] = (-0.1).into();
+        }),
+        ("quote di una regione tutte a zero", |j| {
+            for g in &mut j["elettorato"]["gruppi"].as_array_mut().unwrap()[..18] {
+                g["quota"] = 0.0.into();
+            }
+        }),
+        ("quota enorme", |j| {
+            j["elettorato"]["gruppi"][0]["quota"] = 1e6.into();
+        }),
+        ("ancora tutta a zero", |j| {
+            j["elettorato"]["gruppi"][2]["ancora"] = serde_json::json!(vec![0.0; 7]);
+        }),
+        ("voto_precedente più lungo", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"]
+                .as_array_mut()
+                .unwrap()
+                .push(0.0.into());
+        }),
+        ("reddito con paniere nullo", |j| {
+            j["elettorato"]["gruppi"][2]["reddito"]["paniere"] = 0.0.into();
+        }),
+        ("giudizio null", |j| {
+            j["elettorato"]["gruppi"][2]["giudizio"][0] = serde_json::Value::Null;
         }),
     ];
     for (nome, guasto) in casi {

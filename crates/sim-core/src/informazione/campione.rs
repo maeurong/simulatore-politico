@@ -1,10 +1,11 @@
 //! Elettori campione: persone di un gruppo, estratte dalla stima del sondaggio. Leggono solo
-//! la `Vista` e i dati, mai lo stato vero.
+//! ciò che sta nella `Vista` (sondaggio e partiti) e i dati, mai lo stato vero.
 
 use crate::caso::Estrattore;
 use crate::dati::DatiGioco;
 use crate::elettorato::{Condizione, Fascia, PUNTI};
-use crate::vista::Vista;
+use crate::informazione::Sondaggio;
+use crate::vista::VocePartito;
 use serde::Serialize;
 #[cfg(test)]
 use ts_rs::TS;
@@ -80,14 +81,15 @@ fn indice(u: f64, lung: usize) -> usize {
 /// Tre elettori del gruppo (`regione`, `c`, `f`) estratti dalla stima del sondaggio.
 /// Stima: quote `∝ q_c·q_r·q_f / q_n²`, istogramma e approvazione allo stesso modo.
 pub fn genera(
-    vista: &Vista,
+    s: &Sondaggio,
+    partiti: &[VocePartito],
     dati: &DatiGioco,
     regione: usize,
     c: Condizione,
     f: Fascia,
     rng: &mut Estrattore,
 ) -> Vec<ElettoreCampione> {
-    let (s, d) = (&vista.sondaggio, dati.elettorato());
+    let d = dati.elettorato();
     let (ic, ir, i_f) = (
         &s.condizioni[c as usize],
         &s.regioni[regione],
@@ -120,7 +122,6 @@ pub fn genera(
     let appr = ic.approvazione + ir.approvazione + i_f.approvazione - 2.0 * appr_n;
 
     let beta = dati.manopola("beta_distanza");
-    let partiti = &vista.partiti;
     let n_p = partiti.len() as f64;
     let (eta_da, eta_a) = match c {
         Condizione::Studente => (18, 25),

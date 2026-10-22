@@ -1,6 +1,6 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::economia::Economia;
+use crate::economia::{Annata, Economia};
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
@@ -173,7 +173,15 @@ impl Partita {
             .ok_or_else(|| Errore::Elettorato(format!("regione sconosciuta: {regione}")))?;
         let chiave = u64::from(self.turno) * 1024 + indice_gruppo(r, c, f) as u64;
         let mut rng = self.caso.estemporaneo(chiave);
-        Ok(genera(&self.vista(), &self.dati, r, c, f, &mut rng))
+        Ok(genera(
+            &self.informazione.sondaggio,
+            &self.voci_partiti(),
+            &self.dati,
+            r,
+            c,
+            f,
+            &mut rng,
+        ))
     }
 
     /// Riparto dei seggi sul sondaggio pubblico: voti regionali dalle quote degli incroci,
@@ -212,6 +220,19 @@ impl Partita {
         )
     }
 
+    fn voci_partiti(&self) -> Vec<VocePartito> {
+        (self.partiti.iter().enumerate())
+            .map(|(j, p)| VocePartito {
+                id: p.id.clone(),
+                nome: p.nome.clone(),
+                posizione_dichiarata: p.posizione_dichiarata,
+                posizione_percepita: p.posizione_percepita,
+                valence: p.valence,
+                al_governo: self.governo.al_governo(j),
+            })
+            .collect()
+    }
+
     pub fn vista(&self) -> Vista {
         let s = &self.informazione.statistica;
         let proiezione = self.proiezione_seggi().ok().map(|e| {
@@ -237,19 +258,7 @@ impl Partita {
                     nome: d.nome.clone(),
                 })
                 .collect(),
-            partiti: self
-                .partiti
-                .iter()
-                .enumerate()
-                .map(|(j, p)| VocePartito {
-                    id: p.id.clone(),
-                    nome: p.nome.clone(),
-                    posizione_dichiarata: p.posizione_dichiarata,
-                    posizione_percepita: p.posizione_percepita,
-                    valence: p.valence,
-                    al_governo: self.governo.al_governo(j),
-                })
-                .collect(),
+            partiti: self.voci_partiti(),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {
@@ -396,13 +405,17 @@ impl Economia {
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),
             "economia.storico: servono da 1 a 8 voci con pil > 0",
         )?;
+        let somma = |f: fn(&Annata) -> f64| self.pensioni.iter().map(f).sum::<f64>();
+        let limite = LIMITE_EURO as f64;
         ok(
             !self.pensioni.is_empty()
                 && self
                     .pensioni
                     .iter()
-                    .all(|a| a.pensionati >= 0 && a.importo >= 0),
-            "economia.pensioni: vuote o con valori negativi",
+                    .all(|a| a.pensionati >= 0 && a.importo >= 0)
+                && somma(|a| a.pensionati as f64) <= limite
+                && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
+            "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
         ok(
             self.sussidio_per_disoccupato >= 0,
