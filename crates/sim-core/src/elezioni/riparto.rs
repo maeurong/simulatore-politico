@@ -61,8 +61,13 @@ struct Quota {
 fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
     let totale: u128 = cifre.iter().map(|&c| u128::from(c)).sum();
     let mut q = vec![Quota::default(); cifre.len()];
-    if seggi == 0 || totale == 0 {
+    if seggi == 0 || cifre.is_empty() {
         return q;
+    }
+    if totale == 0 {
+        // assunzione A4 del piano 2: tutte le cifre a 0 valgono come pari, i seggi si
+        // conservano in parti uguali e l'avanzo va agli indici più bassi.
+        return quote(formula, &vec![1; cifre.len()], seggi);
     }
     let s = u128::from(seggi);
     let c = |i: usize| u128::from(cifre[i]);
@@ -117,6 +122,14 @@ fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
 
 /// Coalizione ammessa o lista sola: tutte le liste fanno la cifra, le ammesse prendono i seggi.
 struct InGara {
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "lo legge il premio del Task 5 per riconoscere il vincitore"
+        )
+    )]
+    soggetto: Soggetto,
     liste: Vec<usize>,
     ammesse: Vec<usize>,
 }
@@ -127,8 +140,8 @@ fn sopra(voti: u64, totale: u64, soglia_pb: u16) -> bool {
 
 /// Soggetti in gara nel ramo, coalizioni prima e liste poi: l'ordine rompe le parità (A4).
 fn in_gara(
-    dati: &DatiElezioni,
     legge: &LeggeElettorale,
+    soglia_regionale_pb: u16,
     voti: &Voti,
     naz: &[u64],
     senato: bool,
@@ -139,18 +152,23 @@ fn in_gara(
             || senato
                 && voti.per_regione.values().any(|v| {
                     let t: u64 = v.iter().sum();
-                    t > 0 && sopra(v[l], t, dati.soglia_regionale_senato_pb)
+                    t > 0 && sopra(v[l], t, soglia_regionale_pb)
                 })
     };
-    let coalizioni: Vec<&Vec<usize>> = if legge.coalizioni {
+    // `enumerate` prima del filtro: `Soggetto::Coalizione(i)` è l'indice dichiarato.
+    let coalizioni: Vec<(usize, &Vec<usize>)> = if legge.coalizioni {
         // assunzione A9 del piano 2: coalizione di una lista sola = lista non coalizzata.
-        voti.coalizioni.iter().filter(|c| c.len() >= 2).collect()
+        voti.coalizioni
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.len() >= 2)
+            .collect()
     } else {
         Vec::new()
     };
     let mut gara = Vec::new();
     let mut coperte = BTreeSet::new();
-    for c in coalizioni {
+    for (i, c) in coalizioni {
         let cifra: u64 = c.iter().map(|&l| naz[l]).sum();
         let (mut ammesse, altre): (Vec<usize>, Vec<usize>) =
             c.iter().partition(|&&l| sopra_soglia(l));
@@ -166,12 +184,14 @@ fn in_gara(
         ammesse.sort_unstable();
         coperte.extend(c.iter().copied());
         gara.push(InGara {
+            soggetto: Soggetto::Coalizione(i),
             liste: c.clone(),
             ammesse,
         });
     }
     for l in (0..naz.len()).filter(|l| !coperte.contains(l) && sopra_soglia(*l)) {
         gara.push(InGara {
+            soggetto: Soggetto::Lista(l),
             liste: vec![l],
             ammesse: vec![l],
         });
@@ -210,10 +230,6 @@ fn somma<'a>(regioni: impl Iterator<Item = &'a Vec<u64>>, n: usize) -> Vec<u64> 
     })
 }
 
-fn incoerenti(m: String) -> Errore {
-    Errore::VotiIncoerenti(m)
-}
-
 /// Numero di liste, o l'incoerenza dei voti con i dati.
 fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
     let regioni: BTreeSet<&str> = dati
@@ -225,16 +241,16 @@ fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
         .collect();
     let chiavi: BTreeSet<&str> = voti.per_regione.keys().map(String::as_str).collect();
     if chiavi != regioni {
-        return Err(incoerenti(format!(
+        return Err(Errore::VotiIncoerenti(format!(
             "regioni dei voti {chiavi:?} diverse da quelle delle circoscrizioni {regioni:?}"
         )));
     }
     let n = voti.per_regione.values().next().map_or(0, Vec::len);
     if n == 0 {
-        return Err(incoerenti("nessuna lista".into()));
+        return Err(Errore::VotiIncoerenti("nessuna lista".into()));
     }
     if let Some((r, v)) = voti.per_regione.iter().find(|(_, v)| v.len() != n) {
-        return Err(incoerenti(format!(
+        return Err(Errore::VotiIncoerenti(format!(
             "regione {r}: {} liste invece di {n}",
             v.len()
         )));
@@ -242,20 +258,22 @@ fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
     let mut viste = BTreeSet::new();
     for l in voti.coalizioni.iter().flatten() {
         if *l >= n {
-            return Err(incoerenti(format!(
+            return Err(Errore::VotiIncoerenti(format!(
                 "coalizione con la lista {l}, ultima {}",
                 n - 1
             )));
         }
         if !viste.insert(*l) {
-            return Err(incoerenti(format!("lista {l} in due coalizioni")));
+            return Err(Errore::VotiIncoerenti(format!(
+                "lista {l} in due coalizioni"
+            )));
         }
     }
     voti.per_regione
         .values()
         .flatten()
         .try_fold(0u64, |a, &v| a.checked_add(v))
-        .ok_or_else(|| incoerenti("totale dei voti fuori scala".into()))?;
+        .ok_or_else(|| Errore::VotiIncoerenti("totale dei voti fuori scala".into()))?;
     Ok(n)
 }
 
@@ -287,7 +305,7 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
             .map(|(_, v)| v),
         n,
     );
-    let gara = in_gara(dati, legge, voti, &naz, false);
+    let gara = in_gara(legge, dati.soglia_regionale_senato_pb, voti, &naz, false);
     let per_soggetto = quote(
         legge.formula,
         &cifre_soggetti(&gara, &senza_speciali),
@@ -302,7 +320,7 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
         })
         .collect();
 
-    let gara = in_gara(dati, legge, voti, &naz, true);
+    let gara = in_gara(legge, dati.soglia_regionale_senato_pb, voti, &naz, true);
     let mut regionali = Vec::new();
     for (c, s) in dati
         .senato
@@ -314,7 +332,7 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
         let v = voti
             .per_regione
             .get(&c.regione)
-            .ok_or_else(|| incoerenti(format!("regione {} senza voti", c.regione)))?;
+            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
         let q = quote(
             legge.formula,
             &cifre_soggetti(&gara, v),
@@ -347,4 +365,32 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
         tetto_camera: false,
         tetto_senato: false,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::elezioni::Premio;
+
+    #[test]
+    fn coalizione_tiene_l_indice_dichiarato() {
+        let legge = LeggeElettorale {
+            soglia_lista_pb: 300,
+            coalizioni: true,
+            soglia_coalizione_pb: 1000,
+            ripescaggio: true,
+            premio: Premio::Nessuno,
+            soglia_premio_pb: 4200,
+            taglia_premio_pb: 1750,
+            tetto: None,
+            formula: Formula::Hare,
+        };
+        let voti = Voti {
+            coalizioni: vec![vec![2], vec![0, 1]],
+            per_regione: BTreeMap::from([("r".into(), vec![400, 300, 300])]),
+        };
+        let gara = in_gara(&legge, 2000, &voti, &[400, 300, 300], false);
+        let soggetti: Vec<Soggetto> = gara.iter().map(|g| g.soggetto).collect();
+        assert_eq!(soggetti, [Soggetto::Coalizione(1), Soggetto::Lista(2)]);
+    }
 }

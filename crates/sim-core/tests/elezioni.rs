@@ -557,3 +557,40 @@ fn parita_risolta_per_ordine() {
     assert!(a >= b && a - b <= 1, "{a} {b}");
     assert_eq!(e.camera.iter().map(|s| s.proporzionali).sum::<u32>(), 384);
 }
+
+#[test]
+fn legge_180_senza_premio_come_il_riferimento() {
+    let legge = LeggeElettorale {
+        premio: Premio::Nessuno,
+        ..legge_180()
+    };
+    let e = esito(&legge, &voti_g1());
+    assert_eq!(prop(&e.camera), [122, 36, 10, 0, 86, 23, 8, 54, 20, 0, 25]);
+    assert_eq!(prop(&e.senato), [61, 17, 2, 0, 48, 10, 1, 29, 9, 2, 10]);
+}
+
+#[test]
+fn seggi_della_coalizione_conservati_senza_voti_alle_ammesse() {
+    // Nel Lazio la coalizione [0, 1, 2] ha solo i voti della lista 2: sotto il 3% nazionale,
+    // sotto il 20% regionale, non ripescata. Le ammesse 0 e 1 lì hanno cifra 0.
+    let legge = LeggeElettorale {
+        premio: Premio::Nessuno,
+        ripescaggio: false,
+        ..legge_180()
+    };
+    let mut v = uniformi(&[300, 200, 0, 500], vec![vec![0, 1, 2]]);
+    let lazio_pop = popolazioni()["lazio"];
+    v.per_regione.insert(
+        "lazio".into(),
+        [0, 0, 190, 810].iter().map(|&m| lazio_pop * m).collect(),
+    );
+    let e = esito(&legge, &v);
+    let lazio = &e.senato_per_regione["lazio"];
+    let seggi_lazio = seggi_per_circoscrizione(&dati_base().elezioni().senato, 0)
+        .into_iter()
+        .find(|s| s.id == "lazio")
+        .unwrap()
+        .seggi;
+    assert!(lazio[0] + lazio[1] > 0, "{lazio:?}");
+    assert_eq!(lazio.iter().sum::<u32>(), seggi_lazio, "{lazio:?}");
+}
