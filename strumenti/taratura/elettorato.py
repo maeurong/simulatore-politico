@@ -1,13 +1,14 @@
 """Elettorato: 20 regioni x 6 condizioni x 3 fasce di reddito.
 
-Uso: python3 -I strumenti/taratura/elettorato.py [--senza-ibf] [--cache DIR]
+Uso: python3 -I strumenti/taratura/elettorato.py [--senza-ibf] [--cache DIR] [--ess FILE]
      python3 -I strumenti/taratura/elettorato.py --selftest
 
 Le quote dei gruppi vengono da un IPF sui margini reali: elettori della Camera 2022, ISTAT (occupati,
 disoccupati, inattivi, quinti di reddito), MEF (pensionati, classi di reddito), seme IBF 2022
 (--senza-ibf: seme d'indipendenza). Scarica nella cache (fuori dal repo) e scrive dati/base/elettorato.toml.
 Le risposte e gli archivi scaricati sono dati: si leggono, non si eseguono. I microdati IBF restano nella cache.
-Il resto (redditi, istogrammi, panieri, interessi) è ancora provvisorio: strumenti/taratura/README.md.
+Le posizioni vengono da un IPF a 4 dimensioni sui margini ESS round 11 (--ess FILE, CSV del Data Portal; senza, provvisorie),
+i redditi da lavoro dai margini MEF. Il resto (panieri, interessi) è ancora provvisorio: strumenti/taratura/README.md.
 """
 
 import collections
@@ -19,6 +20,7 @@ import io
 import json
 import math
 import pathlib
+import random
 import sys
 import time
 import tomllib
@@ -29,6 +31,9 @@ COMANDO = "python3 -I strumenti/taratura/elettorato.py"
 OGGI = datetime.date.today().isoformat()
 if "--cache" in sys.argv and sys.argv.index("--cache") + 1 == len(sys.argv):
     sys.exit("--cache vuole una cartella: --cache DIR")
+if "--ess" in sys.argv and sys.argv.index("--ess") + 1 == len(sys.argv):
+    sys.exit("--ess vuole un file: --ess FILE")
+ESS = pathlib.Path(sys.argv[sys.argv.index("--ess") + 1]) if "--ess" in sys.argv else None
 CACHE = pathlib.Path(sys.argv[sys.argv.index("--cache") + 1] if "--cache" in sys.argv else pathlib.Path.home() / ".cache" / "simulatore-politico-taratura")
 
 URL_CAMERA = "https://documenti.camera.it/leg19/risultatiElettorali2022/UGE/VotiListe/ItaliaVotiListeCIRC.csv"
@@ -45,15 +50,20 @@ ANNO_LAVORO, ANNO_QUINTI = 2025, 2024
 # assunzione: l'ordine di IREG (codebook dei file annuali non trovato) è quello ISTAT; il gradiente del reddito equivalente per IREG lo conferma
 IBF_IREG = ["piemonte", "valle_d_aosta", "lombardia", "trentino_alto_adige", "veneto", "friuli_venezia_giulia", "liguria", "emilia_romagna",
             "toscana", "umbria", "marche", "lazio", "abruzzo", "molise", "campania", "puglia", "basilicata", "calabria", "sicilia", "sardegna"]
+TIPI_MEF = {"dipendente": ["Reddito da lavoro dipendente e assimilati"],
+            "autonomo": ["Reddito da lavoro autonomo", "Reddito di spettanza dell'imprenditore in contabilita' ordinaria",
+                         "Reddito di spettanza dell'imprenditore in contabilita' semplificata"]}
 SOGLIE_FASCE = (0.3, 0.7)  # decili 1-3 bassa, 4-7 media, 8-10 alta (dati-per-tarare-i-gruppi.md:66)
 VUOTE_IBF = 1e-3  # celle senza osservazioni: questa frazione del prodotto dei margini
 CONDIZIONI = ["dipendente_privato", "dipendente_pubblico", "autonomo", "pensionato", "disoccupato_inattivo", "studente"]
 FASCE = ["bassa", "media", "alta"]
 SHARE_PUBBLICO = 0.17  # assunzione: RGS non aperto
 SHARE_STUDENTI = 0.06  # assunzione
-ISTOGRAMMA = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]  # segnaposto: la PR B lo ricava da ESS
-PRIMARIO = {"dipendente_privato": 24000.0, "dipendente_pubblico": 30000.0, "autonomo": 28000.0,
-            "pensionato": 0.0, "disoccupato_inattivo": 4000.0, "studente": 3000.0}
+ISTOGRAMMA = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]  # segnaposto senza --ess
+TAGLIO = (0, 0, 1, 1, 2, 3, 4, 5, 5, 6, 6)  # autocollocazione 0-10 -> 7 punti (dati-per-tarare-i-gruppi.md:80-95)
+MIN_CASI_REGIONE = 100  # sotto, la regione prende la distribuzione della macroarea
+LISCIA = 5.0  # assunzione: pseudo-casi con la distribuzione nazionale, perché nessuna cella ESS resti vuota
+PRIMARIO = {"disoccupato_inattivo": 4000.0, "studente": 3000.0}  # provvisorio: nessun tipo MEF; pensionato = 0, dipendenti e autonomi dal MEF
 MOLT_FASCIA = (0.55, 1.0, 1.9)
 MOLT_MACROAREA = {"nord": 1.1, "centro": 1.0, "mezzogiorno": 0.8}
 # affluenza 2022, risultati-elettorali-italia.md:16-27; Valle d'Aosta = nazionale 63,6%
@@ -121,6 +131,21 @@ def prova_ipf():
         assert "vuole massa" in str(e), f"seme vuoto: messaggio {e}"
         return
     raise AssertionError("seme vuoto dove il margine vuole massa: attesa AssertionError")
+
+
+def prova_posizioni():
+    """Taglio 0-10 -> 7 su tutti gli 11 valori; IPF a 4 dimensioni su ESS sintetico: tutti i margini ritrovati entro 1e-9."""
+    assert [TAGLIO[v] for v in range(11)] == [0, 0, 1, 1, 2, 3, 4, 5, 5, 6, 6], "taglio 0-10 -> 7 punti"
+    rng = random.Random(1)
+    macro = {"a": "nord", "b": "nord", "c": "sud", "d": "sud"}
+    N = {(r, c, f): rng.uniform(1, 100) for r in macro for c in CONDIZIONI for f in FASCE}
+    # la regione d ha 20 casi (accorpata al sud), le altre 150; alcuni senza fascia
+    righe = [(rng.choice(CONDIZIONI), rng.choice(FASCE + [None]), rng.randrange(7), r, 1.0) for r in macro for _ in range(20 if r == "d" else 150)]
+    t, margini = posizioni(N, macro, righe)
+    assert set(margini) == {(0, 1, 2), (1, 2, 3), (0, 3)}, f"posizioni: margini {sorted(margini)}"
+    assert [len(m) for m in margini.values()] == [72, 126, 28], "posizioni: chiavi dei margini attese 72, 126, 28"
+    for assi, m in margini.items():
+        assert all(abs(x - m[k]) <= 1e-9 * max(1, m[k]) for k, x in proiezione(t, assi).items()), f"posizioni: margine {assi} non ritrovato"
 
 
 def economia():
@@ -230,6 +255,7 @@ def mef(ids):
     testo = preleva("mef", "REG_tipo_reddito_2025.csv", URL_MEF).decode("utf-8-sig")
     num = lambda s: int(s.replace(".", "") or 0)
     pens, classi, ordine = collections.Counter(), collections.defaultdict(int), []
+    lav = collections.defaultdict(lambda: [0, 0])  # (regione, classe, tipo) -> [frequenza, ammontare]
     for r in csv.DictReader(io.StringIO(testo), delimiter=";"):
         reg = r["Regione"].split("(")[0].strip().lower().replace(" ", "_").replace("'", "_")
         if reg not in ids:
@@ -239,6 +265,10 @@ def mef(ids):
             ordine.append(k)
         pens[reg] += num(r["Reddito da pensione - Frequenza"])
         classi[reg, k] += num(r["Numero contribuenti"])
+        for tipo, voci in TIPI_MEF.items():
+            for v in voci:
+                lav[reg, k, tipo][0] += num(r[v + " - Frequenza"])
+                lav[reg, k, tipo][1] += num(r[v + " - Ammontare in euro"])
     assert set(pens) == set(ids), f"mef: regioni mancanti {sorted(set(ids) - set(pens))}"
     nazionale = {k: sum(classi[r, k] for r in ids) for k in ordine}
     totale, prima, fascia = sum(nazionale.values()), 0, {}
@@ -249,7 +279,12 @@ def mef(ids):
     for r in ids:
         v = [sum(classi[r, k] for k in ordine if fascia[k] == f) for f in range(3)]
         quote_f[r] = [x / sum(v) for x in v]
-    return dict(pens), quote_f
+    def medio(regioni_, tipo, f):
+        freq, amm = (sum(lav[r, k, tipo][i] for r in regioni_ for k in ordine if fascia[k] == f) for i in (0, 1))
+        return amm / freq
+    # reddito medio per percettore: nella regione, nella fascia; dove nessuno percepisce quel tipo, la media nazionale della fascia
+    redd = {(r, t, f): medio([r], t, f) if sum(lav[r, k, t][0] for k in ordine if fascia[k] == f) else medio(ids, t, f) for r in ids for t in TIPI_MEF for f in range(3)}
+    return dict(pens), quote_f, redd
 
 
 def quinti(peso_disoccupati):
@@ -330,17 +365,79 @@ def quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme_ibf):
     return {r: quote([t[r, c, f] for c in CONDIZIONI for f in FASCE]) for r in ids}
 
 
-def istogrammi():
-    return {(c, f): list(ISTOGRAMMA) for c in CONDIZIONI for f in FASCE}
+def ess(percorso):
+    """Righe (condizione, fascia o None, posizione 0-6, regione o None, peso) degli italiani con autocollocazione 0-10.
+    CSV del Data Portal ESS round 11: cntry, lrscale, mainact, emplrel, tporgwk, hinctnta (10 categorie), region (NUTS 2), anweight.
+    Chi non si colloca (77, 88, 99) è escluso da tutto; chi non ha condizione o reddito, dai margini che li usano."""
+    nuts = {g: r[0] for r in economia().REGIONI for g in r[3]}
+    out = []
+    with open(percorso, encoding="utf-8-sig", newline="") as f:
+        righe = csv.DictReader(f)
+        assert righe.fieldnames and {"cntry", "lrscale", "mainact"} <= set(righe.fieldnames), f"{percorso}: colonne {righe.fieldnames}, attese almeno cntry, lrscale, mainact"
+        for r in righe:
+            lr, att, rel = r["lrscale"], r["mainact"], r.get("emplrel", "")
+            if r["cntry"] != "IT" or lr not in map(str, range(11)):
+                continue
+            c = ("studente" if att == "2" else "pensionato" if att == "6" else "disoccupato_inattivo" if att in ("3", "4", "5", "7", "8", "9")
+                 else None if att != "1" else "autonomo" if rel in ("2", "3") else None if rel != "1"
+                 else "dipendente_pubblico" if r.get("tporgwk") in ("1", "2") else "dipendente_privato")
+            d = r.get("hinctnta", "")
+            fascia = None if d not in map(str, range(1, 11)) else FASCE[0 if int(d) <= 3 else 1 if int(d) <= 7 else 2]
+            if c:
+                out.append((c, fascia, TAGLIO[int(lr)], nuts.get(r.get("region", "")), float(r.get("anweight") or 1)))
+    assert len(out) >= 500, f"{percorso}: {len(out)} italiani utilizzabili, attesi almeno 500: colonne o codici diversi dal Data Portal?"
+    return out
 
 
-def redditi(regioni, pers, scenario):
+def posizioni(N, macro, righe_ess):
+    """IPF a 4 dimensioni (regione, condizione, fascia, posizione) su N={(r, c, f): elettori}. Margini: (r, c, f) = N;
+    (c, f, p) = elettori di (c, f) x distribuzione ESS per posizione di (c, f); (r, p) = distribuzione ESS della regione
+    (accorpata alla macroarea sotto MIN_CASI_REGIONE casi), ricalibrata sui totali per posizione di (c, f, p).
+    Le distribuzioni sono lisciate verso la nazionale con LISCIA pseudo-casi. Restituisce tabella e margini."""
+    ids = sorted({k[0] for k in N})
+    peso = lambda righe: [sum(w for p, w in righe if p == k) for k in range(7)]
+    globale = quote(peso([(p, w) for _, _, p, _, w in righe_ess]))
+    distribuzione = lambda righe: quote([x + LISCIA * b for x, b in zip(peso(righe), globale)])
+    tot_cf = {(c, f): sum(N[r, c, f] for r in ids) for c in CONDIZIONI for f in FASCE}
+    cfp = {(c, f, p): tot_cf[c, f] * q for c, f in tot_cf
+           for p, q in enumerate(distribuzione([(p, w) for c2, f2, p, _, w in righe_ess if (c2, f2) == (c, f)]))}
+    el = {r: sum(N[r, c, f] for c in CONDIZIONI for f in FASCE) for r in ids}
+    rp = {}
+    for r in ids:
+        gruppo = {r} if sum(1 for x in righe_ess if x[3] == r) >= MIN_CASI_REGIONE else {x for x in ids if macro[x] == macro[r]}
+        rp.update({(r, p): el[r] * q for p, q in enumerate(distribuzione([(x[2], x[4]) for x in righe_ess if x[3] in gruppo]))})
+    tot_p = {(p,): sum(cfp[c, f, p] for c, f in tot_cf) for p in range(7)}
+    rp = ipf(rp, {(0,): {(r,): el[r] for r in ids}, (1,): tot_p})
+    seme = {(r, c, f, p): N[r, c, f] * cfp[c, f, p] / tot_cf[c, f] for r in ids for c, f in tot_cf for p in range(7)}
+    margini = {(0, 1, 2): N, (1, 2, 3): cfp, (0, 3): rp}
+    return ipf(seme, margini), margini
+
+
+def istogrammi(ids, macro, el, quote_, righe_ess):
+    """Istogramma a 7 punti per gruppo (r, c, f). Senza ESS: il segnaposto."""
+    if righe_ess is None:
+        return {(r, c, f): list(ISTOGRAMMA) for r in ids for c in CONDIZIONI for f in FASCE}
+    N = {(r, c, f): el[r] * quote_[r][3 * i + j] for r in ids for i, c in enumerate(CONDIZIONI) for j, f in enumerate(FASCE)}
+    t, _ = posizioni(N, macro, righe_ess)
+    return {(r, c, f): quote([t[r, c, f, p] for p in range(7)]) for r in ids for c, f in ((c, f) for c in CONDIZIONI for f in FASCE)}
+
+
+def redditi(regioni, pers, scenario, mef_redditi):
+    """Primario di dipendenti (pubblici e privati insieme: il MEF non li distingue) e autonomi = reddito medio MEF per percettore
+    della regione e della fascia; disoccupati e studenti provvisori; pensionati solo trasferimenti."""
+    def primario(r, c, i):
+        if c == "pensionato":
+            return 0.0
+        if c in PRIMARIO:
+            return PRIMARIO[c] * MOLT_FASCIA[i] * MOLT_MACROAREA[r["macroarea"]]
+        return mef_redditi[r["id"], "autonomo" if c == "autonomo" else "dipendente", i]
+
     nazionale = {c: sum(pers[r["id"]][c] for r in regioni) for c in CONDIZIONI}
     trasf = {c: 0.0 for c in CONDIZIONI}
     trasf["pensionato"] = scenario["spesa_pensioni"]["valore"] * 1e9 / scenario["pensionati"]["valore"]
     trasf["disoccupato_inattivo"] = scenario["spesa_sussidi"]["valore"] * 1e9 / nazionale["disoccupato_inattivo"]
     return {
-        (r["id"], c, f): (round(PRIMARIO[c] * MOLT_FASCIA[i] * MOLT_MACROAREA[r["macroarea"]], 2), round(trasf[c] * MOLT_FASCIA[i], 2))
+        (r["id"], c, f): (round(primario(r, c, i), 2), round(trasf[c] * MOLT_FASCIA[i], 2))
         for r in regioni for c in CONDIZIONI for i, f in enumerate(FASCE)
     }
 
@@ -359,14 +456,15 @@ def costruisci():
     ids = [r["id"] for r in regioni]
     dati_camera = camera()
     el = elettori(ids, leggi("elezioni.toml"), dati_camera)
-    lav, (pens, fasce_mef) = lavoro(ids), mef(ids)
+    lav, (pens, fasce_mef, redd_mef) = lavoro(ids), mef(ids)
     peso_dis = sum(l[2] for l in lav.values()) / sum(l[2] + l[3] for l in lav.values())
     pers, fasce_istat = persone(el, lav, pens), quinti(peso_dis)
     seme = None if "--senza-ibf" in sys.argv else ibf()
+    quote_ = quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme)
     return {
-        "regioni": regioni, "elettori": el, "quote": quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme), "istogrammi": istogrammi(),
-        "pers": pers, "fasce_istat": fasce_istat,
-        "redditi": redditi(regioni, pers, scenario), "panieri": panieri(economia), "astensione": astensione(ids),
+        "regioni": regioni, "elettori": el, "quote": quote_, "istogrammi": istogrammi(ids, {r["id"]: r["macroarea"] for r in regioni}, el, quote_, ess(ESS) if ESS else None),
+        "pers": pers, "fasce_istat": fasce_istat, "con_ess": ESS is not None,
+        "redditi": redditi(regioni, pers, scenario, redd_mef), "panieri": panieri(economia), "astensione": astensione(ids),
         "attesi": dati_camera[1] + el["valle_d_aosta"],
     }
 
@@ -379,7 +477,9 @@ def tabella(v):
 def scrivi(d):
     s = json.dumps
     t = f"# Generato da `{COMANDO}` il {OGGI}. Non modificare a mano.\n"
-    t += "# Quote dei gruppi da IPF sui margini reali, il resto provvisorio: vedi strumenti/taratura/README.md.\n\n"
+    t += "# Quote dei gruppi da IPF sui margini reali, redditi da lavoro dal MEF, il resto provvisorio: vedi strumenti/taratura/README.md.\n"
+    t += ("# Posizioni: elaborazione da European Social Survey round 11 (ESS ERIC, https://www.europeansocialsurvey.org), CC BY-NC-SA 4.0, adattato.\n\n"
+          if d["con_ess"] else "# Posizioni: segnaposto, uguali per tutti i gruppi (senza --ess).\n\n")
     t += f"aliquote = {tabella(ALIQUOTE)}\n"
     t += f"astensione_condizione = {tabella(dict.fromkeys(CONDIZIONI, 0.0))}\n"
     t += f"astensione_fascia = {tabella(ASTENSIONE_FASCIA)}\n"
@@ -397,7 +497,7 @@ def scrivi(d):
         for k, (c, f) in enumerate((c, f) for c in CONDIZIONI for f in FASCE):
             primario, trasf = d["redditi"][i, c, f]
             t += (f"\n[[gruppo]]\nregione = {s(i)}\ncondizione = {s(c)}\nfascia = {s(f)}\nquota = {d['quote'][i][k]:.6f}\n"
-                  f"posizione = [{', '.join(f'{x:.2f}' for x in d['istogrammi'][c, f])}]\nprimario = {primario}\ntrasferimenti = {trasf}\n")
+                  f"posizione = [{', '.join(f'{x:.6f}' for x in d['istogrammi'][i, c, f])}]\nprimario = {primario}\ntrasferimenti = {trasf}\n")
     return t
 
 
@@ -420,6 +520,7 @@ def controlla(d):
             dalle_quote = sum(d["elettori"][r] * d["quote"][r][3 * i + j] for r in d["quote"])
             bersaglio = sum(d["pers"][r][c] for r in d["quote"]) * d["fasce_istat"][c][j]
             assert abs(dalle_quote - bersaglio) <= 1e-3 * bersaglio, f"{c} {f}: quote danno {dalle_quote:.0f} persone, margine (d) {bersaglio:.0f}"
+    assert len(d["istogrammi"]) == 360, f"{len(d['istogrammi'])} istogrammi, attesi 360"
     for k, h in d["istogrammi"].items():
         assert len(h) == 7 and min(h) >= 0 and abs(sum(h) - 1) < 1e-9, f"{k}: istogramma somma {sum(h):.12f}"
     for k, (p, t) in d["redditi"].items():
@@ -438,6 +539,7 @@ def controlla(d):
 def main():
     if "--selftest" in sys.argv:
         prova_ipf()
+        prova_posizioni()
     d = costruisci()
     controlla(d)
     if "--selftest" in sys.argv:
