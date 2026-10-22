@@ -45,6 +45,10 @@ Valgono tutti i vincoli del piano 1 (`2026-10-21-v1-piano-1-fondamenta.md:13-26`
 4. **Scadenze annuali al cambio d'anno** (bilancio 2027 applicato una volta sola al turno gennaio-marzo, indicizzazione delle pensioni a gennaio, controllo UE solo ad aprile-giugno): niente doppie applicazioni né salti. Test `bilancio_2027_applicato_una_volta` nel Task 7 e `conto_di_controllo_si_muove_solo_ad_aprile_giugno` nel Task 10.
 5. **Salvataggio a metà di una procedura** (PDE inadempiente, annate di pensionati diverse): ricaricato, prosegue identico. Test `salva_carica_con_pde_inadempiente` nel Task 10.
 
+## Dispatch
+
+PR A: Task 1 e Task 2 in parallelo (file disgiunti, il 2 non consuma nulla dal 1), poi 3 → 4 → 5 → 6 in sequenza: toccano tutti `crates/sim-core/src/economia/mod.rs` (dal 3, che lo crea) o `dati.rs`/`partita.rs`, e ognuno consuma i campi di `Economia` del precedente. PR B: 7 → 8 → 9 → 10 in sequenza, su `economia/mod.rs`, `finanza.rs` e `tests/conti.rs` condivisi. Nessuna dipendenza nuova, quindi `Cargo.lock` non cambia; `manopole.toml` lo scrivono il Task 3 e il Task 8, già in sequenza. Ogni riga **Dispatch** sotto dà subagente, dipendenza e skill-gate; la riga **Ricerca** è il riferimento da copiare nel brief.
+
 ---
 
 ## PR A · Economia reale (Task 1-6)
@@ -61,6 +65,8 @@ Chiude i rimandi della PR #15 che questo piano tocca: dati costruibili solo vali
 - Modify: `app/src-tauri/src/lib.rs` (comandi `async`)
 
 **Ricerca:** `docs/ricerca/tecnica/architettura-simulazione.md:19-22` (PRNG nominato, niente `usize`, un flusso per sottosistema); spec, «Architettura», riga 251 (ogni estrazione passa dal caso, lo stato del generatore sta nello snapshot).
+
+**Dispatch:** `rust-engineer`, intero · primo della PR A, in parallelo col Task 2: file disgiunti (`crates/`, `app/src-tauri/src/lib.rs` contro `strumenti/`, `dati/base/`) · skill-gate: true. Le due righe `async` del guscio sono Rust e stanno accanto ad `avvia`/`chiudi`, che il task non cambia ma i cui test rilancia: spezzarle verso un altro ruolo aggiunge un passaggio di consegne per due parole.
 
 **Interfaces:**
 - Consumes: `Caso`, `DatiGioco`, `Partita` del piano 1.
@@ -161,6 +167,8 @@ Script offline che scarica le tavole e scrive i file di dati del motore. È la �
 
 **Ricerca:** `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:134-141` (FIGARO 2024 per la matrice A, tavola nazionale 2022 di controllo, mix A*10 2023); `docs/ricerca/modelli/economia-italiana-parametri.md:87-93` (flussi SDMX ISTAT `93_1227_DF_DCCN_TNA1_1`, codici A*10, A*10 regionale fino al 2023) e `:54-67` (Okun regionale, tab. 2); `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:45-59` (disoccupazione regionale 2025, `lfst_r_lfu3rt`; Trentino-Alto Adige da due province, media pesata sulle forze di lavoro) e `:86-102` (COFOG 2024 per dicastero, `gov_10a_exp`, salari D1, acquisti P2 + D632) e `:130` (piramide ISTAT `22_289_DF_DCIS_POPRES1_1`, chiave `A.IT.JAN.9..99`); `docs/ricerca/dati/input-output-tables.md:24` (nel repo solo la tavola aggregata e lo script); `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:171-179` (licenze: ISTAT CC BY 4.0, Eurostat riuso con citazione e dichiarazione delle modifiche).
 
+**Dispatch:** `coder` · in parallelo col Task 1 (nessuna interfaccia consumata, file disgiunti); se i due girano nello stesso worktree, lo Step 3 (`cargo test --workspace`) e il commit vanno dopo il commit del Task 1: la suite vedrebbe il Task 1 a metà, e due commit concorrenti si contendono `index.lock` · skill-gate: true. Script Python offline, nessun `.rs`: non è `rust-engineer`; è una pipeline che scarica e trasforma, non un'analisi che decide se un numero regge, quindi non `data-scientist`. Le risposte delle API sono dati non fidati: si leggono, non si eseguono.
+
 **Interfaces:**
 - Consumes: niente dal Task 1.
 - Produces (file che il Task 3 legge; nomi dei campi vincolanti):
@@ -217,6 +225,8 @@ git commit -m "feat(data): offline calibration pipeline for I-O, regions, budget
 - Test: `crates/sim-core/tests/scenario.rs`
 
 **Ricerca:** spec, «Modulo scenario» (righe 274-285: solo ingressi, derivati ricalcolati, valori di partenza); `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:14-41` (livelli del turno zero) e `:167` (stato base al 2026T2 portato a ottobre); `docs/ricerca/sintesi/decisioni.md:250` (solo ingressi); `docs/ricerca/modelli/regole-fiscali-ue.md:46-49` (tetti, PDE sospesa, conto, clausola); `docs/ricerca/modelli/economia-italiana-parametri.md:117-121` (forme per il gioco); `docs/ricerca/tecnica/modding-e-dati-esterni.md:14-15`.
+
+**Dispatch:** `rust-engineer` · dopo Task 1 e Task 2: consuma `DatiGioco` coi campi privati (Task 1) e i file generati (Task 2); tocca `dati.rs`, `partita.rs`, `app/src-tauri/src/lib.rs` già toccati dal Task 1 · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `DatiGioco` coi campi privati (Task 1); i file del Task 2.
@@ -456,7 +466,9 @@ git commit -m "feat(core): load economic structure, base scenario and initial st
 - Modify: `crates/sim-core/src/partita.rs` (`chiudi_turno` chiama `passo`)
 - Test: `crates/sim-core/tests/leontief.rs`, `crates/sim-core/tests/economia.rs`
 
-**Ricerca:** `docs/ricerca/modelli/input-output-leontief.md:12-15` (quantità `x = (I−A)⁻¹ d`, prezzi `p = (I−Aᵀ)⁻¹ v`, Hawkins-Simon) e `:39-42` (A fissa, nessun razionamento); oracolo dell'esempio a due settori carbone-acciaio della fonte `fonti/wikipedia-input-output-model.md` (A = [[0,5, 0,2], [0,4, 0,1]], d = (7, 4), (I−A)⁻¹ = (1/0,37)·[[0,9, 0,2], [0,4, 0,5]]); spec riga 291.
+**Ricerca:** `docs/ricerca/modelli/input-output-leontief.md:12-15` (quantità `x = (I−A)⁻¹ d`, prezzi `p = (I−Aᵀ)⁻¹ v`, Hawkins-Simon) e `:39-42` (A fissa, nessun razionamento); oracolo dell'esempio a due settori carbone-acciaio della fonte `docs/ricerca/fonti/wikipedia-input-output-model.md:41-74` (gitignorata: c'è solo nel checkout principale, non nel worktree; i numeri che servono sono già qui) (A = [[0,5, 0,2], [0,4, 0,1]], d = (7, 4), (I−A)⁻¹ = (1/0,37)·[[0,9, 0,2], [0,4, 0,5]]); spec riga 291.
+
+**Dispatch:** `rust-engineer` · dopo Task 3: `economia/mod.rs` e `partita.rs` del Task 3, manopole `sigma_` scritte dal Task 3 · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `Struttura` (Task 3), `Caso::normale` (Task 1).
@@ -563,6 +575,8 @@ git commit -m "feat(core): Leontief production and price blocks"
 
 **Ricerca:** `docs/ricerca/modelli/economia-italiana-parametri.md:73-79` (IS e Phillips di Garnier-Wilhelmsen per l'area euro, forma e coefficienti) e `:121` (primo default per l'Italia); `docs/ricerca/modelli/macro-neokeynesiano-piccolo.md:17-22` (RS, verticalità della Phillips, Taylor); `docs/ricerca/modelli/banca-centrale-e-inflazione.md:13` (Taylor della Fed con inerzia 0,85) e `:39` (BCE sull'area euro, Italia pesata per quota di PIL); `docs/ricerca/modelli/economia-italiana-parametri.md:110-113` (14,2%, quota di PIL e non chiave di capitale); spec righe 292-293.
 
+**Dispatch:** `rust-engineer` · dopo Task 4: `economia/mod.rs`, `tests/economia.rs`, shock estratti nel Task 4 · skill-gate: true.
+
 **Interfaces:**
 - Consumes: shock `domanda`, `produttivita`, `bce` estratti nel Task 4; `inflazione_importata`, `domanda_estera` del Task 4.
 - Produces: campi nuovi di `Economia`: `area_euro: AreaEuro { pub inflazione_resto: f64, pub gap_resto: f64 }` (iniziali: inflazione del turno zero, gap 0 [assunzione del piano 3]); `impulso_fiscale: f64` (punti di PIL potenziale, 0 fino al Task 7). Equazioni, con `y` = output gap, `π` = inflazione annualizzata, `i` = tasso BCE, `r̃_t = i_t − π_t − tasso_naturale_reale`:
@@ -655,6 +669,8 @@ git commit -m "feat(core): IS-Phillips cycle, potential output and ECB Taylor ru
 
 **Ricerca:** `docs/ricerca/modelli/economia-italiana-parametri.md:52` (Okun nazionale in gap, −0,254), `:54-69` (coefficienti regionali in differenze, non intercambiabili col nazionale) e `:120` (ricalibrare la media sul nazionale, u* regionale con isteresi); `docs/ricerca/modelli/mercato-del-lavoro-e-disuguaglianza.md:12` e `:23`; spec righe 291 (gap della regione = media dei gap di settore pesata col mix) e 297.
 
+**Dispatch:** `rust-engineer` · dopo Task 5: `economia/mod.rs`, `tests/economia.rs`, `gap_settori` ricalcolato nel Task 5; chiude la PR A, poi il round di review · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `gap_settori` (Task 4-5), `Regione::{mix, okun, forze_lavoro}`.
 - Produces:
@@ -741,6 +757,8 @@ Branch `feat/v1-conti-pubblici` creato dalla punta di `feat/v1-motore-economico`
 - Test: `crates/sim-core/tests/conti.rs`
 
 **Ricerca:** `docs/ricerca/modelli/finanza-pubblica.md:12-13` (dinamica del debito); `docs/ricerca/modelli/economia-italiana-parametri.md:104-106` (elasticità per imposta, gettito sopra la base strutturale); `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:86-106` (budget da COFOG, funzionamento = salari + acquisti, margine 1,6%) e `:27-32` (disavanzo, interessi, costo medio, vita media); spec righe 289, 299-300 (erosione nominale), 276 (bilancio 2027 ricondotto al tetto UE); ticket 20 (bilancio 2026 indicizzato e ricondotto al tetto del 2027: `.scratch/v1-giocabile/issues/20-partenza-della-partita.md`, sezione «Calendario»).
+
+**Dispatch:** `rust-engineer` · dopo Task 6, sul branch `feat/v1-conti-pubblici` creato dalla punta della PR A: `economia/mod.rs`, `congiuntura.rs`, `leontief.rs` dei Task 4-5; fissa `altre_entrate_pil` in `dati/base/scenario.toml` del Task 3 · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `pil_trimestrale`, `output_gap`, `livello_prezzi`, `tasso_bce` (Task 3-5); `Dicastero::{spesa_pil, salari_pil, acquisti_pil}`.
@@ -869,6 +887,8 @@ git commit -m "feat(core): public finance block, debt dynamics and fiscal impuls
 
 **Ricerca:** `docs/ricerca/modelli/finanza-pubblica.md:34` (indicizzazione delle pensioni) e `:44` (la formula di calcolo cambia la pensione media solo per le coorti future); `docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md:116-130` (spesa, pensionati, nuove pensioni, NASpI, piramide); spec righe 301 (regimi, coorti future pro rata, indicizzazione unica leva retroattiva) e 300 (pensione minima e soglie ferme in nominale); `CONTEXT.md:28-34` (spesa obbligatoria, regime).
 
+**Dispatch:** `rust-engineer` · dopo Task 7: `finanza.rs`, `tests/conti.rs`, `manopole.toml` (`copertura_pensionamento`) del Task 3 · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `Scenario::{pensionati, spesa_pensioni, eta_pensione, indicizzazione_pensioni, pensione_minima, regime_pensioni, spesa_sussidi, regime_sussidi}`; `Struttura::piramide`; `pil_trimestrale`, `inflazione`, disoccupazione nazionale e forze di lavoro (Task 6).
 - Produces: campi nuovi di `Economia`: `pensioni: Vec<Annata>` con `Annata { pub anno: u16, pub regime: RegimePensioni, pub pensionati: i64, pub importo: i64 }` (importo annuo medio in euro); `sussidio_per_disoccupato: i64` (euro annui, derivato al turno zero = `spesa_sussidi / disoccupati`). `RegimePensioni` e `RegimeSussidi` stanno in `scenario.rs` (Task 3). Il regime in vigore resta quello dello scenario finché il piano 6 non porta le leggi.
@@ -962,6 +982,8 @@ git commit -m "feat(core): pensions by vintage with regimes, unemployment benefi
 
 **Ricerca:** `docs/ricerca/modelli/macro-stock-flow-consistent.md:35` (la somma dei saldi fa zero, controllo gratuito) e `:52` (ogni azione passa da una riga della matrice); `docs/ricerca/sintesi/motore-economico-raccomandato.md:35` (4 settori, senza banche); spec riga 294 (estero come domanda esogena con elasticità ai prezzi relativi; fondi di coesione come entrata esogena).
 
+**Dispatch:** `rust-engineer` · dopo Task 8: `economia/mod.rs`, `tests/conti.rs`, conti dei Task 7-8 · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `conti`, `pil_trimestrale`, `domanda_estera`, `livello_prezzi`, `area_euro.inflazione_resto` (Task 5-8).
 - Produces: campi nuovi di `Economia`: `sfc: Sfc { pub saldi: Settori, pub stock: Settori, pub livello_prezzi_area: f64 }`, `Settori { pub famiglie: i64, pub imprese: i64, pub stato: i64, pub estero: i64 }`; `Economia::residuo_sfc(&self) -> i64` = somma dei quattro saldi del turno; `Economia::residuo_stock(&self) -> i64` = somma dei quattro stock.
@@ -1034,6 +1056,8 @@ git commit -m "feat(core): four-sector SFC accounts with closing check"
 - Test: `crates/sim-core/tests/conti.rs`, `crates/sim-core/tests/partita.rs`
 
 **Ricerca:** `docs/ricerca/modelli/economia-italiana-parametri.md:12-17` (quadratica di De Grauwe-Ji, coefficienti), `:21` (2,4 pb per punto di disavanzo), `:37-44` (criteri del TPI, il primo alternativo: PDE con azione efficace li rispetta) e `:117-118` (forma per il gioco e tetto del TPI sul solo premio di sfiducia); `docs/ricerca/modelli/regole-fiscali-ue.md:14` (spesa netta), `:20` (conto di controllo e soglie), `:33-38` (PDE passo per passo), `:63-78` (forma minima per il gioco); spec righe 295-296; `CONTEXT.md:338` (lo spread è l'indicatore sintetico dei conti, sempre a schermo); `docs/ricerca/sintesi/decisioni.md:267` (spread esatto nella vista).
+
+**Dispatch:** `rust-engineer`, intero, non spezzato · dopo Task 9: `finanza.rs`, `sfc.rs`, `partita.rs`, `tests/conti.rs` · skill-gate: true. Il lato Svelte è una riga `<p>` provvisoria fino al piano 11 più i tipi rigenerati da `cargo test`: stessa scelta del Task 5 del piano 1 (`2026-10-21-v1-piano-1-fondamenta.md:560`). Lo Step 5 lo guarda Mario: finestra nativa, nessun agente la vede.
 
 **Interfaces:**
 - Consumes: `debito`, `storico`, `conti` (Task 7-9); `Scenario::{pde, conto_controllo, tetti_spesa_netta, clausola_nazionale_margine, clausola_nazionale_fino_a, premio_sfiducia}`.
