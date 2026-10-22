@@ -60,10 +60,11 @@ impl Partita {
         }
     }
 
-    // Per ora avanza solo il calendario. Ordine previsto quando arriva il motore: atti dei
-    // ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno dopo;
-    // voto delle elezioni dopo il motore.
+    // Per ora: economia (primi blocchi) e calendario. Ordine previsto quando arriva il motore:
+    // atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno
+    // dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
+        self.economia.passo(&self.dati, &mut self.caso, self.data);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }
