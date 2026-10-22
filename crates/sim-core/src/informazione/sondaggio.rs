@@ -1,0 +1,195 @@
+//! Sondaggio pubblico: intenzioni vere + bias comune + effetto istituto + campionamento con
+//! effetto del disegno, per quattro istituti e per incroci (condizione, fascia, regione).
+
+use crate::caso::{Caso, Flusso};
+use crate::dati::DatiGioco;
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE};
+use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use ts_rs::TS;
+
+/// Quote: partiti nell'ordine dello scenario, poi l'astensione.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Rilevazione {
+    pub istituto: String,
+    pub campione: u32,
+    pub quote: Vec<f64>,
+}
+
+/// `posizione`: autocollocazione stimata sui 7 punti. `approvazione`: giudizio stimato del
+/// sottocampione sul partito del presidente del consiglio, in unità d'utilità.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Incrocio {
+    pub id: String,
+    pub campione: u32,
+    pub quote: Vec<f64>,
+    pub posizione: Vec<f64>,
+    pub approvazione: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Sondaggio {
+    pub istituti: Vec<Rilevazione>,
+    pub condizioni: Vec<Incrocio>,
+    pub fasce: Vec<Incrocio>,
+    pub regioni: Vec<Incrocio>,
+}
+
+/// Rinormalizza a somma 1, o `ripiego` se tutto è zero.
+fn normalizza(v: Vec<f64>, ripiego: &[f64]) -> Vec<f64> {
+    let somma: f64 = v.iter().sum();
+    if somma > 0.0 {
+        v.into_iter().map(|x| x / somma).collect()
+    } else {
+        ripiego.to_vec()
+    }
+}
+
+/// `max(0, v_j + spostamento_j + √(d·v_j(1 − v_j)/n)·z)`, rinormalizzato.
+fn campiona(
+    vero: &[f64],
+    spostamento: &[f64],
+    n: f64,
+    disegno: f64,
+    z: &mut impl FnMut() -> f64,
+) -> Vec<f64> {
+    let q = vero
+        .iter()
+        .zip(spostamento)
+        .map(|(p, s)| {
+            let sd = (disegno * p * (1.0 - p) / n).max(0.0).sqrt();
+            (p + s + sd * z()).max(0.0)
+        })
+        .collect();
+    normalizza(q, vero)
+}
+
+/// Media di `righe` pesata con `pesi` (somma positiva).
+fn pesata<'a>(pesi: &[f64], righe: impl Iterator<Item = &'a [f64]>, lung: usize) -> Vec<f64> {
+    let tot: f64 = pesi.iter().sum();
+    let mut m = vec![0.0; lung];
+    for (w, r) in pesi.iter().zip(righe) {
+        m.iter_mut().zip(r).for_each(|(a, x)| *a += w * x);
+    }
+    m.iter_mut().for_each(|a| *a /= tot);
+    m
+}
+
+/// Una rilevazione completa. Ordine delle estrazioni fisso: istituti × alternative; poi
+/// condizioni, fasce, regioni, ciascuno alternative, 7 punti, approvazione.
+pub(super) fn rileva(
+    dati: &DatiGioco,
+    caso: &mut Caso,
+    el: &Elettorato,
+    vero: &Intenzioni,
+    presidente: usize,
+    bias: &[f64],
+    effetti: &[Vec<f64>],
+) -> Sondaggio {
+    let d = dati.elettorato();
+    let (disegno, gamma, err_appr) = (
+        dati.manopola("effetto_disegno"),
+        dati.manopola("peso_giudizio"),
+        dati.manopola("errore_approvazione"),
+    );
+    let alt = bias.len();
+    let mut z = || caso.normale(Flusso::Sondaggi);
+
+    let istituti: Vec<Rilevazione> = d
+        .istituti
+        .iter()
+        .zip(effetti)
+        .map(|(ist, h)| {
+            let sposta: Vec<f64> = bias.iter().zip(h).map(|(b, x)| b + x).collect();
+            Rilevazione {
+                istituto: ist.nome.clone(),
+                campione: ist.campione,
+                quote: campiona(
+                    &vero.nazionali,
+                    &sposta,
+                    f64::from(ist.campione),
+                    disegno,
+                    &mut z,
+                ),
+            }
+        })
+        .collect();
+
+    let n_tot: u32 = d.istituti.iter().map(|i| i.campione).sum();
+    let elettori: Vec<f64> = (0..el.gruppi.len()).map(|i| el.elettori(d, i)).collect();
+    let totale: f64 = elettori.iter().sum();
+    // Effetto medio degli istituti, più il bias comune.
+    let sposta: Vec<f64> = (0..alt)
+        .map(|j| bias[j] + effetti.iter().map(|h| h[j]).sum::<f64>() / effetti.len() as f64)
+        .collect();
+    let mut incrocio = |id: String, indici: Vec<usize>| {
+        let mut pesi: Vec<f64> = indici.iter().map(|&i| elettori[i]).collect();
+        let n_s = (f64::from(n_tot) * pesi.iter().sum::<f64>() / totale)
+            .round()
+            .max(1.0);
+        if pesi.iter().sum::<f64>() <= 0.0 {
+            pesi.fill(1.0);
+        }
+        let p_s = pesata(&pesi, indici.iter().map(|&i| &vero.per_gruppo[i][..]), alt);
+        let h_s = pesata(
+            &pesi,
+            indici.iter().map(|&i| &el.gruppi[i].posizione[..]),
+            7,
+        );
+        let quote = campiona(&p_s, &sposta, n_s, disegno, &mut z);
+        let nulli = vec![0.0; h_s.len()];
+        let posizione = campiona(&h_s, &nulli, n_s, disegno, &mut z);
+        let giudizio = indici
+            .iter()
+            .zip(&pesi)
+            .map(|(&i, w)| w * el.gruppi[i].giudizio[presidente])
+            .sum::<f64>()
+            / pesi.iter().sum::<f64>();
+        Incrocio {
+            id,
+            campione: n_s as u32,
+            quote,
+            posizione,
+            approvazione: gamma * giudizio + err_appr / n_s.sqrt() * z(),
+        }
+    };
+    let gruppi = 0..el.gruppi.len();
+    let condizioni = Condizione::TUTTE
+        .iter()
+        .enumerate()
+        .map(|(c, nome)| {
+            let idx = gruppi
+                .clone()
+                .filter(|i| i % PER_REGIONE / Fascia::TUTTE.len() == c);
+            incrocio(nome.to_string(), idx.collect())
+        })
+        .collect();
+    let fasce = Fascia::TUTTE
+        .iter()
+        .enumerate()
+        .map(|(f, nome)| {
+            let idx = gruppi.clone().filter(|i| i % Fascia::TUTTE.len() == f);
+            incrocio(nome.to_string(), idx.collect())
+        })
+        .collect();
+    let regioni = d
+        .regioni
+        .iter()
+        .enumerate()
+        .map(|(r, reg)| {
+            incrocio(
+                reg.id.clone(),
+                (r * PER_REGIONE..(r + 1) * PER_REGIONE).collect(),
+            )
+        })
+        .collect();
+    Sondaggio {
+        istituti,
+        condizioni,
+        fasce,
+        regioni,
+    }
+}

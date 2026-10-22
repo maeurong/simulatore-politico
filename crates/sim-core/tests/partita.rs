@@ -345,3 +345,53 @@ fn salvataggio_con_voto_precedente_o_posizione_guasti_illeggibile() {
         );
     }
 }
+
+#[test]
+fn salvataggio_con_informazione_guasta_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 7] = [
+        ("bias corto", |j| {
+            j["informazione"]["bias"].as_array_mut().unwrap().pop();
+        }),
+        ("effetti_istituto corti", |j| {
+            j["informazione"]["effetti_istituto"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("riga di effetti_istituto corta", |j| {
+            j["informazione"]["effetti_istituto"][1]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("quote di un istituto corte", |j| {
+            j["informazione"]["sondaggio"]["istituti"][0]["quote"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("regioni del sondaggio in meno", |j| {
+            j["informazione"]["sondaggio"]["regioni"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("posizione di un incrocio corta", |j| {
+            j["informazione"]["sondaggio"]["fasce"][2]["posizione"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("trimestre della statistica fuori da 1-4", |j| {
+            j["informazione"]["statistica"]["trimestre"]["trimestre"] = 9.into();
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}

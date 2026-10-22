@@ -14,6 +14,33 @@ pub struct Intenzioni {
     pub nazionali: Vec<f64>,
 }
 
+impl Intenzioni {
+    /// Intenzioni vere per gruppo e nazionali.
+    pub fn calcola(
+        dati: &DatiGioco,
+        el: &Elettorato,
+        partiti: &[Partito],
+        governo: &Governo,
+    ) -> Intenzioni {
+        let per_gruppo = intenzioni(dati, el, partiti, governo);
+        let d = dati.elettorato();
+        let mut nazionali = vec![0.0; partiti.len() + 1];
+        let mut totale = 0.0;
+        for (i, v) in per_gruppo.iter().enumerate() {
+            let w = el.elettori(d, i);
+            totale += w;
+            for (n, x) in nazionali.iter_mut().zip(v) {
+                *n += w * x;
+            }
+        }
+        nazionali.iter_mut().for_each(|n| *n /= totale);
+        Intenzioni {
+            per_gruppo,
+            nazionali,
+        }
+    }
+}
+
 /// Softmax con lo shift del massimo.
 fn softmax(u: &[f64]) -> Vec<f64> {
     let max = u.iter().copied().fold(f64::NEG_INFINITY, f64::max);

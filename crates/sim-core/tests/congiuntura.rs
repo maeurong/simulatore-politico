@@ -68,6 +68,16 @@ fn cinque_estrazioni_fisse_per_turno() {
         for _ in 0..360 * 7 * turni {
             atteso.normale(Flusso::Elettorato);
         }
+        // Nascita: bias e effetti d'istituto; poi a ogni rilevazione istituti × alternative,
+        // 29 incroci (6 + 3 + 20) × (alternative + 7 punti + approvazione), 4 stime.
+        let d = DatiGioco::da_testi(&f).unwrap();
+        let alt = p.partiti().len() + 1;
+        let istituti = d.elettorato().istituti.len();
+        let rilevazione = istituti * alt + 29 * (alt + 7 + 1);
+        let sondaggi = alt + istituti * alt + rilevazione + turni as usize * (rilevazione + 4);
+        for _ in 0..sondaggi {
+            atteso.normale(Flusso::Sondaggi);
+        }
         let salvato: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
         assert_eq!(
             salvato["caso"],

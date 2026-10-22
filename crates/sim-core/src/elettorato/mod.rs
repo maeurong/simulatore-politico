@@ -80,7 +80,7 @@ impl fmt::Display for Fascia {
 }
 
 /// Gruppi per regione: condizioni x fasce.
-const PER_REGIONE: usize = 18;
+pub(crate) const PER_REGIONE: usize = 18;
 
 /// Indice canonico di un gruppo: `regione·18 + condizione·3 + fascia`.
 pub fn indice_gruppo(regione: usize, c: Condizione, f: Fascia) -> usize {

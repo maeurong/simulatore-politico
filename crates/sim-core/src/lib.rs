@@ -4,6 +4,7 @@ pub mod economia;
 pub mod elettorato;
 pub mod elezioni;
 pub mod errore;
+pub mod informazione;
 pub mod partita;
 pub mod partiti;
 pub mod scenario;

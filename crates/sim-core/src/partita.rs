@@ -1,10 +1,11 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
-use crate::elettorato::{Elettorato, Intenzioni, intenzioni};
+use crate::elettorato::{Elettorato, Intenzioni};
 use crate::errore::Errore;
+use crate::informazione::Informazione;
 use crate::partiti::{self, Governo, Partito};
-use crate::vista::{Vista, VoceDicastero};
+use crate::vista::{Vista, VistaStatistica, VoceDicastero, VocePartito};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -65,6 +66,7 @@ pub struct Partita {
     partiti: Vec<Partito>,
     governo: Governo,
     elettorato: Elettorato,
+    informazione: Informazione,
 }
 
 impl Partita {
@@ -73,9 +75,13 @@ impl Partita {
         let (partiti, governo) = partiti::iniziali(&dati);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
+        let mut caso = Caso::nuovo(seme);
+        let informazione =
+            Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
         Partita {
             versione_schema: VERSIONE_SCHEMA,
-            caso: Caso::nuovo(seme),
+            caso,
+            informazione,
             economia,
             elettorato,
             partiti,
@@ -90,6 +96,7 @@ impl Partita {
     // atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno
     // dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
+        let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
         self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
         self.elettorato
@@ -97,6 +104,21 @@ impl Partita {
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
+        let vero = self.intenzioni_vere();
+        self.informazione.rileva(
+            &self.dati,
+            &mut self.caso,
+            &self.elettorato,
+            &vero,
+            &self.governo,
+        );
+        self.informazione.statistica.aggiorna(
+            &self.dati,
+            &mut self.caso,
+            &self.economia,
+            reale_prima,
+            self.data,
+        );
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }
@@ -122,25 +144,16 @@ impl Partita {
 
     /// Intenzioni di voto vere per gruppo e nazionali: per il CLI e i test, mai per la `Vista`.
     pub fn intenzioni_vere(&self) -> Intenzioni {
-        let per_gruppo = intenzioni(&self.dati, &self.elettorato, &self.partiti, &self.governo);
-        let d = self.dati.elettorato();
-        let mut nazionali = vec![0.0; self.partiti.len() + 1];
-        let mut totale = 0.0;
-        for (i, v) in per_gruppo.iter().enumerate() {
-            let w = self.elettorato.elettori(d, i);
-            totale += w;
-            for (n, x) in nazionali.iter_mut().zip(v) {
-                *n += w * x;
-            }
-        }
-        nazionali.iter_mut().for_each(|n| *n /= totale);
-        Intenzioni {
-            per_gruppo,
-            nazionali,
-        }
+        Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
+    }
+
+    /// Stato vero dell'informazione: per il CLI e i test, mai per la `Vista`.
+    pub fn informazione(&self) -> &Informazione {
+        &self.informazione
     }
 
     pub fn vista(&self) -> Vista {
+        let s = &self.informazione.statistica;
         Vista {
             turno: self.turno,
             data: self.data,
@@ -154,6 +167,25 @@ impl Partita {
                     nome: d.nome.clone(),
                 })
                 .collect(),
+            partiti: self
+                .partiti
+                .iter()
+                .enumerate()
+                .map(|(j, p)| VocePartito {
+                    id: p.id.clone(),
+                    nome: p.nome.clone(),
+                    posizione_dichiarata: p.posizione_dichiarata,
+                    posizione_percepita: p.posizione_percepita,
+                    valence: p.valence,
+                    al_governo: self.governo.al_governo(j),
+                })
+                .collect(),
+            sondaggio: self.informazione.sondaggio.clone(),
+            statistica: VistaStatistica {
+                trimestre: s.trimestre,
+                prima_stima: s.prima_stima.clone(),
+                revisione: s.revisione.clone(),
+            },
         }
     }
 
@@ -265,7 +297,8 @@ impl Partita {
                 .all(|p| p.posizione_percepita.is_finite() && p.valence.is_finite()),
             "partiti: posizione_percepita o valence non finita",
         )?;
-        self.elettorato.controlla(&self.dati, n)
+        self.elettorato.controlla(&self.dati, n)?;
+        self.informazione.controlla(&self.dati, n)
     }
 }
 
