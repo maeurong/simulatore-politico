@@ -51,6 +51,14 @@ Valgono tutti i vincoli del piano 1 (`2026-10-21-v1-piano-1-fondamenta.md:13-26`
 4. **Elettori campione chiesti più volte** (il giocatore clicca avanti e indietro): stessi tre elettori, e la partita giocata dopo resta identica a quella senza richieste. Test `elettori_campione_non_toccano_la_partita` nel Task 8.
 5. **Refuso in un id dei dati** (regione, condizione, partito o indicatore che non esiste): rifiuto al caricamento col nome sbagliato nel messaggio. Test `gruppo_di_regione_sconosciuta_rifiutato_col_nome`, `interessi_con_indicatore_sconosciuto_rifiutati_col_nome`, `partito_sconosciuto_nel_governo_rifiutato_col_nome` nel Task 2.
 
+## Dispatch
+
+PR A: tutto in sequenza, 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Il Task 2 non parte prima del commit del Task 1, perché i test comuni includono `dati/base/elettorato.toml` con `include_str!`. Dal 2 all'8 ogni task tocca `crates/sim-core/src/partita.rs` (`nuova`, `chiudi_turno`, `carica` o `vista`). I task 2-6 toccano anche `elettorato/mod.rs` (campi di `Gruppo`, `controlla`) e `tests/elettorato.rs`, il 7 e l'8 `vista.rs` e `tests/sondaggi.rs`. Ognuno consuma i campi del precedente, nell'ordine reddito → composizione → giudizio → voto → sondaggio → elettori campione. L'unica parte disgiunta è l'estrattore estemporaneo del Task 8 (`caso.rs`, `tests/caso.rs`): resta nel Task 8, perché spezzarlo costerebbe un passaggio di consegne per una sola funzione.
+
+PR B: dopo la review della PR A, sul branch impilato. 9 → 10 in sequenza, perché toccano lo stesso `elettorato.py` e rigenerano lo stesso `elettorato.toml`. Il Task 11 va in parallelo col 9 → 10: crea `stima_voto.py` e scrive solo due manopole, e con loro condivide soltanto `strumenti/taratura/README.md`. Se girano nello stesso worktree, sezione del README, `cargo test --workspace` e commit si fanno dopo il commit in corso dell'altro, perché due commit concorrenti si contendono `index.lock`. Il passo 1 del Task 12 (`researcher`, che scrive solo in `docs/ricerca/`) parte insieme al Task 9. I passi 2-5 vengono dopo 9, 10 e 11: `tara` aggiusta le costanti sopra quote, istogrammi, β e fedeltà definitivi.
+
+Nessuna dipendenza nuova, quindi `Cargo.lock` non cambia. `manopole.toml` lo scrivono il Task 2 (manopole nuove) e il Task 11 (due valori), `scenario.toml` il Task 2 e il Task 12, sempre in PR diverse. Ogni brief nomina `skill-gate`, `caveman` e, per chi scrive codice (`rust-engineer`, `coder`, `data-scientist`), `ponytail`; copia la riga **Ricerca** del task come riferimento. Ogni riga **Dispatch** sotto dà subagente, dipendenza e skill-gate. Il round pre-commit di fine PR aggiunge `rust-reviewer` (ci sono diff `.rs` in entrambe le PR) e `spec-reviewer` (il piano esiste).
+
 ---
 
 ## PR A · Motore dell'elettorato e sondaggi (Task 1-8)
@@ -64,7 +72,9 @@ Scrive `dati/base/elettorato.toml` con uno script deterministico che legge solo 
 - Create: `dati/base/elettorato.toml` (generato)
 - Modify: `strumenti/taratura/README.md` (sezione «Elettorato (provvisorio)»)
 
-**Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:44-45` (occupati dipendenti e indipendenti, quinti per condizione), `:66` (fasce 3-4-3 sui decili), `:91` (taglio della scala 0-10 sui 7 punti); `docs/ricerca/dati/risultati-elettorali-italia.md:13-29` (elettori 2022 e affluenza per regione).
+**Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:44-45` (occupati dipendenti e indipendenti, quinti per condizione), `:66` (fasce 3-4-3 sui decili), `:91` (taglio della scala 0-10 sui 7 punti); `docs/ricerca/dati/risultati-elettorali-italia.md:13-27` (elettori 2022 e affluenza per regione).
+
+**Dispatch:** `coder` · primo della PR A, nessuna dipendenza · skill-gate: true. Script Python offline che legge i TOML del repo e scrive un file, nessun `.rs`: è una pipeline, non un'analisi che decide se un numero regge, quindi non `data-scientist`.
 
 **Interfaces:**
 - Consumes: `dati/base/regioni.toml` (`id`, `macroarea`, `forze_lavoro`, `disoccupazione_2025`), `dati/base/elezioni.toml` (`popolazione` e `regione` delle circoscrizioni della Camera), `dati/base/scenario.toml` (`pensionati`, `spesa_pensioni`, `spesa_sussidi`), `dati/base/economia.toml` (`consumi`, `settori`). Lettura con `tomllib`.
@@ -127,12 +137,12 @@ Expected: FAIL (funzioni non ancora scritte).
 
 Condizioni, fasce e chiavi come in `Condizione`/`Fascia` del Task 2 (`dipendente_privato`, `dipendente_pubblico`, `autonomo`, `pensionato`, `disoccupato_inattivo`, `studente`; `bassa`, `media`, `alta`).
 
-- `elettori()`: `E_r = round(46_350_000 · pop_r / Σ pop)`, `pop_r` = somma della `popolazione` delle circoscrizioni della Camera con quella `regione`; correzione dell'arrotondamento sull'ultima regione [assunzione: elettori proporzionali alla popolazione censita; 46,35 milioni ≈ 46.253.014 della Camera 2022 (`risultati-elettorali-italia.md:14`) più la Valle d'Aosta].
+- `elettori()`: `E_r = round(46_350_000 · pop_r / Σ pop)`, `pop_r` = somma della `popolazione` delle circoscrizioni della Camera con quella `regione`; correzione dell'arrotondamento sull'ultima regione [assunzione: elettori proporzionali alla popolazione censita; 46,35 milioni ≈ 46.253.014 della Camera 2022 (`risultati-elettorali-italia.md:13`) più la Valle d'Aosta].
 - `quote()`, persone per regione: `occ = FL·1000·(1 − u/100)`; dipendenti `occ·18,93/24,11`, autonomi `occ·5,18/24,11` (`dati-per-tarare-i-gruppi.md:45`); dipendenti pubblici `0,17` dei dipendenti [assunzione: RGS non aperto, `:51`], privati il resto; disoccupati `FL·1000·u/100`; pensionati `E_r · pensionati / 46_350_000` (scenario); studenti `0,06·E_r` [assunzione]; `disoccupato_inattivo` = disoccupati + il residuo `E_r − tutti gli altri` (`assert` residuo ≥ 0). Fasce per condizione, (bassa, media, alta) [assunzione dai quinti di `:44` e dalle fasce 3-4-3 di `:66`]: dipendente privato (0,25, 0,45, 0,30); pubblico (0,15, 0,45, 0,40); autonomo (0,30, 0,35, 0,35); pensionato (0,30, 0,42, 0,28); disoccupato o inattivo (0,60, 0,32, 0,08); studente (0,40, 0,40, 0,20); la quota bassa × 1,3 nel Mezzogiorno e × 0,85 al Nord, poi rinormalizzate. Quota del gruppo = persone del gruppo / `E_r`.
 - `istogrammi()`: lo stesso istogramma per tutti, `[0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]` [segnaposto: la PR B lo ricava da ESS].
 - `redditi()`, euro annui per elettore, fascia media e Centro: `primario` dipendente privato 24.000, pubblico 30.000, autonomo 28.000, pensionato 0, disoccupato o inattivo 4.000, studente 3.000; `trasferimenti` del pensionato = `spesa_pensioni·1e9 / pensionati`, del disoccupato o inattivo = `spesa_sussidi·1e9 /` persone di quella condizione in Italia, 0 altrove. Moltiplicatori di fascia 0,55 / 1 / 1,9 su entrambi; di macroarea Nord 1,1, Centro 1, Mezzogiorno 0,8 sul solo `primario` [assunzione, tutto].
 - `panieri()`: i tre panieri uguali al vettore `consumi` di `economia.toml` [segnaposto: la PR B li differenzia].
-- `astensione()`: `ln((1 − a_r)/a_r) + 0,57`, con `a_r` l'affluenza 2022 della tabella `risultati-elettorali-italia.md:16-29` scritta come costante, Valle d'Aosta = 0,636 nazionale; 0,57 = `ln Σ_j e^{−(4−j)²}` per un elettore al centro con β = 1 [assunzione: la PR B la tara col logit vero].
+- `astensione()`: `ln((1 − a_r)/a_r) + 0,57`, con `a_r` l'affluenza 2022 della tabella `risultati-elettorali-italia.md:16-27` scritta come costante, Valle d'Aosta = 0,636 nazionale; 0,57 = `ln Σ_j e^{−(4−j)²}` per un elettore al centro con β = 1 [assunzione: la PR B la tara col logit vero].
 - `aliquote`, `astensione_condizione`, `astensione_fascia` come nel formato sopra; quattro istituti `Istituto A`-`D` con campioni 1000, 800, 1200, 1500 [segnaposto]; dodici nomi e dodici cognomi italiani comuni [segnaposto]; interessi = tabella del ticket 17 (`17-tabella-degli-interessi.md:28-35`) con le chiavi `reddito`, `disoccupazione`, `occupazione_pubblica` e gli `indicatore_servizio` di `dicasteri.toml` (trasporti → `qualita_trasporti`, sanità e liste d'attesa → `qualita_servizio_sanitario`, scuola → `qualita_scuola`, sicurezza → `sicurezza`, durata dei processi → `durata_processi`, sostegno alle imprese → `sostegno_imprese`, copertura del welfare → `copertura_welfare`).
 
 - [ ] **Step 4: Esegui selftest e generazione**
@@ -164,6 +174,8 @@ git commit -m "feat(dati): dati provvisori dei 360 gruppi"
 - Test: `crates/sim-core/tests/elettorato.rs` (nuovo), `crates/sim-core/tests/partita.rs`
 
 **Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:12-14` (gruppi e dati); `docs/ricerca/modelli/voto-spaziale.md:25` (ordine di grandezza di β), `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:104` (β su 7 punti = β₁₀/0,36); `docs/ricerca/modelli/voto-economico-e-retrospettivo.md:13` (ρ ≈ 1/3); `docs/ricerca/modelli/sondaggi-ed-errore.md:38-41` (errori dei sondaggi).
+
+**Dispatch:** `rust-engineer` · dopo il Task 1: i test comuni includono `elettorato.toml` · skill-gate: true. Tocca `dati.rs`, `scenario.rs`, `errore.rs`, `partita.rs`, `lib.rs`, i test comuni, `scenario.toml` e `manopole.toml`; crea `elettorato/mod.rs` e `partiti.rs`, che i task 3-8 riaprono.
 
 **Interfaces:**
 - Consumes: `dati/base/elettorato.toml` (Task 1); `DatiGioco`, `Errore`, `Ingresso` esistenti.
@@ -356,7 +368,9 @@ git commit -m "feat(core): gruppi, partiti e governo uscente"
 - Modify: `crates/sim-core/src/partita.rs:65-84`
 - Test: `crates/sim-core/tests/elettorato.rs`
 
-**Ricerca:** spec riga 298 (reddito disponibile, panieri, Gini); `docs/ricerca/modelli/voto-economico-e-retrospettivo.md:40` (economia egotropica per gruppi se il motore produce redditi per gruppo); ticket 29 (`29-costo-del-governare.md:48`, erosione nominale).
+**Ricerca:** spec riga 298 (reddito disponibile, panieri, Gini); `docs/ricerca/modelli/voto-economico-e-retrospettivo.md:40` (economia egotropica per gruppi se il motore produce redditi per gruppo); `docs/ricerca/modelli/mercato-del-lavoro-e-disuguaglianza.md:19` (Gini da gruppi discreti) e `:44` (Gini derivato, non uno stato); ticket 29 (`29-costo-del-governare.md:48`, erosione nominale).
+
+**Dispatch:** `rust-engineer` · dopo il Task 2: `Gruppo`, `Elettorato`, `partita.rs` e `tests/elettorato.rs` del 2 · skill-gate: true. Tocca anche `economia/previdenza.rs` e `economia/mod.rs` (solo il commento d'ordine), che nessun altro task del piano riapre.
 
 **Interfaces:**
 - Consumes: `Economia` (`pil_trimestrale`, `livello_prezzi`, `prezzi_settori`, `bilancio`, `conti`, `pensioni`, `sussidio_per_disoccupato`), `DatiElettorato` (Task 2).
@@ -446,6 +460,8 @@ git commit -m "feat(elettorato): redditi dei gruppi, panieri e Gini"
 
 **Ricerca:** spec riga 307 (quote che si muovono con lavoro, reddito ed età; chi cambia gruppo porta con sé la sua distribuzione); ticket 06 (`06-elettorato.md:37`).
 
+**Dispatch:** `rust-engineer` · dopo il Task 3: la crescita reale `γ_i` viene da `reddito`/`reddito_prima` del 3; `elettorato/mod.rs`, `partita.rs`, `tests/elettorato.rs` · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `Gruppo` (Task 2-3), `Economia::regioni[].disoccupazione`, `Economia::pensioni` (annata dell'anno), manopole `mobilita_fasce`, `uscita_studenti`, `uscite_pensionati`.
 - Produces:
@@ -523,6 +539,8 @@ git commit -m "feat(elettorato): composizione mobile dei gruppi"
 
 **Ricerca:** `docs/ricerca/modelli/voto-economico-e-retrospettivo.md:13` (asimmetria del malcontento, `α_i = 2αρ/(1+ρ)`, `α_d = 2α/(1+ρ)`), `:18` e `:49` (costo del governare come bersaglio, niente deriva scritta); ticket 17 (`17-tabella-degli-interessi.md:20-24` e `:44-48`, misura in deviazioni standard, giudizio cumulato, chi paga); ticket 29 (`29-costo-del-governare.md:47`, aspettative).
 
+**Dispatch:** `rust-engineer` · dopo il Task 4: legge `ultima_disoccupazione` del 4 e s'inserisce in `chiudi_turno` fra `aggiorna_redditi` e `composizione`; `elettorato/mod.rs`, `partita.rs`, `tests/elettorato.rs` · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `Reddito`/`reddito_prima` (Task 3), `ultima_disoccupazione` (Task 4) letta prima che `composizione` la aggiorni: per questo `chiudi_turno` chiama `giudizio` prima di `composizione`; `Governo::al_governo`, `Governo::partito_del_ruolo` (Task 2).
 - Produces:
@@ -598,6 +616,8 @@ git commit -m "feat(elettorato): giudizio retrospettivo con aspettative e colpa"
 - Test: `crates/sim-core/tests/elettorato.rs`, `crates/sim-cli/tests/cli.rs`
 
 **Ricerca:** `docs/ricerca/modelli/voto-spaziale.md:14` (logit con valence), `:41` (probabilità lisce); `docs/ricerca/modelli/opinion-dynamics.md:13` (Friedkin-Johnsen), `:27` e `:57` (niente attrazione fra gruppi, rumore); `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:117` (astensione per regione, condizione e fascia).
+
+**Dispatch:** `rust-engineer` · dopo il Task 5: utilità col giudizio del 5, `sposta` di `composizione.rs` (Task 4) esteso a `voto_precedente`; `elettorato/mod.rs`, `partita.rs`, `tests/elettorato.rs`, più `crates/sim-cli` (`main.rs`, `tests/cli.rs`) · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `Gruppo` (Task 2-5), `Partito`, `Governo`, `DatiElettorato` (astensione), manopole `beta_distanza`, `fedelta`, `peso_giudizio`, `ancora_posizioni`, `rumore_posizioni`; `Caso::normale(Flusso::Elettorato)`.
@@ -690,7 +710,9 @@ git commit -m "feat(elettorato): posizioni e voto logit con astensione"
 - Modify: `crates/sim-core/src/vista.rs`, `crates/sim-core/src/partita.rs` (campo `informazione`, `nuova`, `chiudi_turno`, `vista`, `carica`), `crates/sim-core/src/lib.rs`
 - Test: `crates/sim-core/tests/sondaggi.rs` (nuovo), `crates/sim-core/tests/partita.rs`
 
-**Ricerca:** `docs/ricerca/modelli/sondaggi-ed-errore.md:14-19` (modello generativo a tre strati), `:23` e `:38-41` (valori), `:55` (la media degli istituti non toglie il bias comune); ticket 25 (`25-informazione-imperfetta.md:33-38`).
+**Ricerca:** `docs/ricerca/modelli/sondaggi-ed-errore.md:14-19` (modello generativo a tre strati), `:23` e `:38-41` (valori), `:55` (la media degli istituti non toglie il bias comune); `docs/ricerca/sistemi/consiglieri-e-informazione-imperfetta.md:10` (revisione media della prima stima del PIL, poco più di 1 punto annuo); ticket 25 (`25-informazione-imperfetta.md:33-38`).
+
+**Dispatch:** `rust-engineer` · dopo il Task 6: `intenzioni` e `voto_precedente` del 6; `partita.rs`, `vista.rs`, `lib.rs`; rigenera e committa i tipi in `app/src/lib/tipi` · skill-gate: true.
 
 **Interfaces:**
 - Consumes: `intenzioni` (Task 6), `DatiElettorato::istituti` ed `elettori_gruppo`, `Economia`, manopole del sondaggio e delle stime (Task 2), `Caso::normale(Flusso::Sondaggi)`.
@@ -800,6 +822,8 @@ git commit -m "feat(informazione): sondaggio pubblico e prime stime"
 
 **Ricerca:** ticket 06 (`06-elettorato.md:18`, elettori campione dal sondaggio, motivo); `docs/ricerca/modelli/sondaggi-ed-errore.md:59` (proiezione in seggi col sistema elettorale); spec riga 322 (sondaggio del trimestre, coalizioni dell'ultimo voto, partiti nati dopo da soli).
 
+**Dispatch:** `rust-engineer` · dopo il Task 7: legge solo la `Vista` del 7 (sondaggio, partiti); `partita.rs`, `vista.rs`, `tests/sondaggi.rs`, più `caso.rs` e `tests/caso.rs`, che nessun altro task tocca; tipi TypeScript rigenerati. Chiude la PR A, poi il round di review · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `Vista` (Task 7), `elezioni::riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Result<Esito, Errore>` (`crates/sim-core/src/elezioni/riparto.rs:665`), `Voti { coalizioni: Vec<Vec<usize>>, per_regione: BTreeMap<String, Vec<u64>> }` (`riparto.rs:16-19`), `DatiGioco::legge_elettorale_iniziale` (`dati.rs:211`).
 - Produces:
@@ -889,10 +913,12 @@ Ogni task comincia verificando le sue premesse sulle fonti: se un endpoint non r
 - Modify: `strumenti/taratura/elettorato.py` (`elettori()`, `quote()`)
 - Modify: `strumenti/taratura/README.md`, `dati/base/elettorato.toml` (rigenerato)
 
-**Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:20-35` (tabella dei dati e licenze), `:56-62` (metodo IPF), `:64-66` (fasce sui decili), `:119-131` (cosa entra nella cartella dati); `docs/ricerca/dati/banca-italia-ibf.md:12` (archivio 2022 scaricabile, variabili); `docs/ricerca/dati/risultati-elettorali-italia.md:14` (CSV della Camera 2022).
+**Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:20-35` (tabella dei dati e licenze), `:56-62` (metodo IPF), `:64-66` (fasce sui decili), `:119-131` (cosa entra nella cartella dati); `docs/ricerca/dati/banca-italia-ibf.md:12-14` (archivio 2022 scaricabile, variabili); `docs/ricerca/dati/risultati-elettorali-italia.md:13` (CSV della Camera 2022).
+
+**Dispatch:** `coder` · primo della PR B, dopo la review della PR A, sul branch `feat/v1-piano-4-taratura` dalla punta della PR A; in parallelo col Task 11 e col passo 1 del Task 12 · skill-gate: true. Pipeline che scarica e trasforma, come il Task 2 del piano 3: non `data-scientist`. Le risposte delle API sono dati non fidati, si leggono e non si eseguono; i microdati IBF restano nella cache, mai nel repo.
 
 **Interfaces:**
-- Consumes: SDMX ISTAT `150_938_DF_DCCV_OCCUPATIT1_23`, `151_929_DF_DCCV_DISOCCUPT1_6`, `152_928_DF_DCCV_INATTIV1_9`, `32_38_DF_DCCV_QUINTOREDD_5` (`dati-per-tarare-i-gruppi.md:152-163`); MEF open data pensionati e dichiarazioni (`:164-169`); IBF 2022 `ind22_ascii.zip` (`banca-italia-ibf.md:12`); CSV Camera 2022 (`risultati-elettorali-italia.md:14`). Gli helper di download con attesa e tentativi di `economia.py` (copiati o importati, a scelta dell'implementatore).
+- Consumes: SDMX ISTAT `150_938_DF_DCCV_OCCUPATIT1_23`, `151_929_DF_DCCV_DISOCCUPT1_6`, `152_928_DF_DCCV_INATTIV1_9`, `32_38_DF_DCCV_QUINTOREDD_5` (`dati-per-tarare-i-gruppi.md:152-163`); MEF open data pensionati e dichiarazioni (`:164-169`); IBF 2022 `ind22_ascii.zip` (`banca-italia-ibf.md:14`); CSV Camera 2022 (`risultati-elettorali-italia.md:13`). Gli helper di download con attesa e tentativi di `economia.py` (copiati o importati, a scelta dell'implementatore).
 - Produces: `elettori()` dal CSV della Camera per regione (Valle d'Aosta dal suo collegio, se presente nel file; altrimenti dalla popolazione, dichiarato); `quote()` = IPF 20 × 6 × 3 con seme IBF pesato `pesofit2` (celle vuote al prodotto dei margini), margini (a) elettori per regione, (b) regione × condizione da ISTAT e MEF con la quota pubblica dei dipendenti come assunzione dichiarata, (c) regione × fascia dalle classi MEF tradotte in fasce, (d) condizione × fascia nazionale dai quinti ISTAT; convergenza entro lo 0,1% di ogni margine. `--senza-ibf` usa il seme d'indipendenza.
 
 - [ ] **Step 1: Premesse** — verifica che ogni fonte risponda e che le colonne/dimensioni citate esistano; annota nel report cosa non risponde.
@@ -907,6 +933,8 @@ Ogni task comincia verificando le sue premesse sulle fonti: se un endpoint non r
 - Modify: `strumenti/taratura/elettorato.py` (`istogrammi()`, `redditi()`, `panieri()`), `strumenti/taratura/README.md`, `dati/base/elettorato.toml`
 
 **Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:80-95` (IPF con la posizione come quarta dimensione, taglio 0-10 → 7 punti, ESS per la cartella dati e ITANES solo offline); `docs/ricerca/dati/ess.md:21` (condizioni d'uso ESS).
+
+**Dispatch:** `coder` · dopo il Task 9: stesso `elettorato.py` ed `elettorato.toml`, IPF del 9 estesa a quattro dimensioni sui margini dei gruppi del 9 · skill-gate: true. Se il Data Portal ESS chiede un accesso che la sessione non ha, il file lo passa Mario con `--ess`; fino ad allora resta l'istogramma provvisorio, dichiarato.
 
 **Interfaces:**
 - Consumes: file ESS round 11 per l'Italia da `--ess <file>` (CSV del Data Portal: autocollocazione, attività principale, dipendente/autonomo, tipo di organizzazione, reddito in 10 categorie, regione); margini dei redditi MEF per tipo e regione; spesa delle famiglie per quinto ISTAT per i panieri (interrogazione da individuare al passo 1).
@@ -924,6 +952,8 @@ Ogni task comincia verificando le sue premesse sulle fonti: se un endpoint non r
 - Modify: `strumenti/taratura/README.md`, `dati/base/manopole.toml` (solo `valore` e commento di `beta_distanza` e `fedelta`)
 
 **Ricerca:** `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:99-111` (logit condizionale su ITANES post 2022, cambio di scala β₇ = β₁₀/0,36, matrice 2018 → 2022, fedeltà come tetto); `docs/ricerca/dati/itanes.md:20-31` (termini: solo parametri nel repo, mai i microdati).
+
+**Dispatch:** `data-scientist` · in parallelo col 9 → 10: file disgiunti salvo `strumenti/taratura/README.md` (sezione e commit dopo il commit in corso dell'altro) · skill-gate: true. È una stima per massima verosimiglianza con errore standard, cambio di scala e fedeltà da leggere come tetto: la domanda è se il numero regge, quindi `data-scientist` e non `coder`. Il passo 1 si ferma se i termini ITANES vanno accettati da Mario; i microdati stanno in una cartella locale fuori dal repo.
 
 **Interfaces:**
 - Consumes: ITANES 2022 pre e post da `--itanes <cartella>` (Dataverse UNIMI, `doi:10.13130/RD_UNIMI/JV77WR`); pacchetto `nopp` (dati CSES Italia 2006) da `--nopp <file>` come banco di prova del codice.
@@ -943,7 +973,9 @@ Ogni task comincia verificando le sue premesse sulle fonti: se un endpoint non r
 - Modify: `dati/base/scenario.toml` (`valore` delle valence), `dati/base/elettorato.toml` (`astensione` delle regioni), `strumenti/taratura/README.md`
 - Test: `crates/sim-cli/tests/cli.rs`
 
-**Ricerca:** spec righe 284-285 (valence tarata sulle intenzioni reali di ottobre 2026 sommate per posto, corrispondenza offline con le collocazioni CHES; vincibilità), `docs/ricerca/dati/ches.md:23-31` (CHES come fonte delle posizioni, licenza da chiarire: si usa solo offline); `docs/ricerca/dati/risultati-elettorali-italia.md:16-29` (affluenza 2022); `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:117` (costante per regione sull'affluenza ufficiale).
+**Ricerca:** spec righe 284-285 (valence tarata sulle intenzioni reali di ottobre 2026 sommate per posto, corrispondenza offline con le collocazioni CHES; vincibilità), `docs/ricerca/dati/ches.md:18-29` (CHES come fonte delle posizioni, licenza da chiarire: si usa solo offline); `docs/ricerca/dati/risultati-elettorali-italia.md:16-27` (affluenza 2022); `docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md:117` (costante per regione sull'affluenza ufficiale).
+
+**Dispatch:** passo 1 a `researcher`, che scrive solo `docs/ricerca/dati/sondaggi-ottobre-2026.md` e la sua riga in `docs/ricerca/index.md`, in parallelo col Task 9. Passi 2-5 a `rust-engineer`, dopo 9, 10, 11 e il passo 1. Scrive anche `strumenti/taratura/bersagli.toml` dai numeri del researcher, perché il researcher scrive solo in `docs/ricerca/`; tocca `crates/sim-cli` (`tara.rs`, `main.rs`, `tests/cli.rs`) e riscrive righe di `scenario.toml` ed `elettorato.toml`. Chiude la PR B · skill-gate: true per entrambi.
 
 **Interfaces:**
 - Consumes: `Partita::nuova`, `Partita::intenzioni_vere` (Task 6), `FileDati`, `DatiGioco::da_testi`.
