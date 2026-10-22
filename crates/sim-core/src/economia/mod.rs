@@ -1,6 +1,10 @@
 //! Stato dell'economia: parte dall'ingresso dello scenario, i blocchi del motore lo fanno avanzare.
 
+pub mod bce;
+pub mod congiuntura;
 pub mod leontief;
+
+pub use bce::AreaEuro;
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
@@ -39,6 +43,11 @@ pub struct Economia {
     pub gap_settori: Vec<f64>,
     /// Punti annualizzati, l'ultima.
     pub inflazione_importata: f64,
+    pub area_euro: AreaEuro,
+    /// Punti di PIL potenziale; 0 fino al Task 7.
+    pub impulso_fiscale: f64,
+    /// Tasso reale meno naturale del turno prima di quello in corso.
+    pub tasso_reale_precedente: f64,
 }
 
 /// Obiettivo di inflazione della BCE: i trimestri prima del T2 2026 ci stanno sopra.
@@ -87,6 +96,14 @@ impl Economia {
             prezzi_settori: prezzi_settori(dati, 0.0),
             gap_settori: vec![gap; dati.struttura().settori.len()],
             inflazione_importata: 0.0,
+            area_euro: AreaEuro {
+                inflazione_resto: s.inflazione.valore,
+                gap_resto: 0.0,
+            },
+            impulso_fiscale: 0.0,
+            tasso_reale_precedente: s.tasso_bce.valore
+                - s.inflazione.valore
+                - dati.manopola("tasso_naturale_reale"),
         }
     }
 
@@ -95,13 +112,14 @@ impl Economia {
     // redditi dei gruppi e panieri (piano 4) → tasso BCE → SFC → spread, regole UE.
     // `data` è il trimestre che il turno chiude. Qui: domanda finale per settore e Leontief.
     pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, _data: Trimestre) {
-        // Cinque estrazioni fisse ogni turno, anche con sigma 0; il Task 5 usa le altre tre.
+        // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
-        let _shock_domanda = shock("sigma_domanda");
-        let _shock_produttivita = shock("sigma_produttivita");
+        let shock_domanda = shock("sigma_domanda");
+        let shock_produttivita = shock("sigma_produttivita");
         let shock_energia = shock("sigma_energia");
         let shock_domanda_estera = shock("sigma_domanda_estera");
-        let _shock_bce = shock("sigma_bce");
+        let shock_bce = shock("sigma_bce");
+        let domanda_estera_prima = self.domanda_estera;
         self.energia = dati.manopola("persistenza_energia") * self.energia + shock_energia;
         self.domanda_estera = dati.manopola("persistenza_domanda_estera") * self.domanda_estera
             + shock_domanda_estera;
@@ -117,16 +135,38 @@ impl Economia {
         let x = leontief::produzione(&st.a, &d);
         let x0 = leontief::produzione(&st.a, &d0);
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());
-        self.gap_settori = x
-            .iter()
-            .zip(&x0)
-            .map(|(x, x0)| self.output_gap[0] + 100.0 * (x / x0 - tot / tot0))
-            .collect();
 
         let prima = prezzo_consumi(dati, &self.prezzi_settori);
         self.prezzi_settori = prezzi_settori(dati, self.energia);
         self.inflazione_importata =
             400.0 * (prezzo_consumi(dati, &self.prezzi_settori) / prima - 1.0);
+
+        let r_1 = self.tasso_bce - self.inflazione[0] - dati.manopola("tasso_naturale_reale");
+        let y = self.is(
+            dati,
+            (r_1, self.tasso_reale_precedente),
+            self.domanda_estera - domanda_estera_prima,
+            shock_domanda,
+        );
+        let pi = self.phillips(dati);
+        self.tasso_reale_precedente = r_1;
+        self.output_gap = [y, self.output_gap[0]];
+        self.inflazione.rotate_right(1);
+        self.inflazione[0] = pi;
+
+        let crescita = dati.manopola("crescita_potenziale") + shock_produttivita;
+        self.pil_potenziale_reale *= 1.0 + crescita / 400.0;
+        self.livello_prezzi *= 1.0 + pi / 400.0;
+        self.pil_trimestrale = self.pil_potenziale_reale * (1.0 + y / 100.0) * self.livello_prezzi;
+
+        self.gap_settori = x
+            .iter()
+            .zip(&x0)
+            .map(|(x, x0)| y + 100.0 * (x / x0 - tot / tot0))
+            .collect();
+
+        // Okun per regione (Task 6) verrà prima della BCE.
+        self.bce(dati, shock_bce);
     }
 }
 

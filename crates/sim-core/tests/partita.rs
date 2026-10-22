@@ -69,6 +69,24 @@ fn salvare_e_ricaricare_non_cambia_il_seguito() {
     assert_eq!(ricaricata.salva().unwrap(), diretta.salva().unwrap());
 }
 
+// Primo test che estrae dal Caso prima e dopo salva/carica (rimando della PR #15).
+#[test]
+fn estrazioni_identiche_dopo_salva_carica() {
+    let mut diretta = giocata(42, 3);
+    let mut ricaricata = Partita::carica(&diretta.salva().unwrap()).unwrap();
+    for _ in 0..5 {
+        diretta.chiudi_turno();
+        ricaricata.chiudi_turno();
+    }
+    assert_eq!(ricaricata.economia(), diretta.economia());
+    assert_eq!(ricaricata.salva().unwrap(), diretta.salva().unwrap());
+    assert_ne!(
+        giocata(42, 8).economia(),
+        giocata(43, 8).economia(),
+        "il caso deve essere stato estratto"
+    );
+}
+
 #[test]
 fn i_dati_viaggiano_nel_salvataggio() {
     let p = Partita::carica(&giocata(3, 1).salva().unwrap()).unwrap();
