@@ -55,6 +55,8 @@ Valgono tutti i vincoli del piano 1 (`2026-10-21-v1-piano-1-fondamenta.md:13-26`
 
 Tutto sequenziale, 1 → 2 → 3 → 4 → 5: ogni task tocca `crates/sim-core/src/elezioni/` e `crates/sim-core/tests/elezioni.rs`, e consuma i tipi o le funzioni del precedente. Una PR sola, `feat/v1-riparto-elettorale` da `main`.
 
+Tutti i task a `rust-engineer`: solo Rust e il TOML che il Rust valida. Le copie integrali delle fonti citate come `docs/ricerca/fonti/*.md` sono ignorate da git (`.gitignore:3`) e non esistono nel worktree: si leggono in sola lettura dal checkout principale, `/Users/mario/GitHub/simulatore-politico/docs/ricerca/fonti/`. Le pagine wiki (`docs/ricerca/modelli/…`) ci sono.
+
 ---
 
 ### Task 1: Dati elettorali, legge elettorale e menu
@@ -69,6 +71,10 @@ Tutto sequenziale, 1 → 2 → 3 → 4 → 5: ogni task tocca `crates/sim-core/s
 - Modify: `crates/sim-core/src/partita.rs:10` (`VERSIONE_SCHEMA = 3`)
 - Modify: `crates/sim-core/tests/comune/mod.rs` (file `elezioni` in `file_base` e `testo_di`), `crates/sim-core/tests/scenario.rs:111` (test rinominato `leggi_chiede_i_sei_file_per_nome`)
 - Test: `crates/sim-core/tests/elezioni.rs`
+
+**Ricerca:** `docs/ricerca/modelli/sistemi-elettorali.md:31` (400/200, Estero 8/4, VdA 1, TAA 7 e 6), `:48` (seggi dal censimento, premio escluse VdA/TAA), `:33-39` (valori di `legge_180`: soglie 3% e 10%, ripescaggio, 42%, 70/35); spec righe 110-112 (storie 70-72: nove parametri, tre impostazioni, premio almeno al 40%), 260 (cucitura 3), 319 (menu); gradini da `.scratch/v1-giocabile/issues/13-legge-elettorale-come-misura.md:33`.
+
+**Dispatch:** `rust-engineer` · primo, nessuna dipendenza · skill-gate: true. Tocca `dati.rs`, `partita.rs`, `scenario.rs`, `errore.rs` e i test comuni, che nessun altro task riapre.
 
 **Interfaces:**
 - Consumes: `DatiGioco::da_testi`/`valida` (`crates/sim-core/src/dati.rs:213-307`), `Regione` (`crates/sim-core/src/struttura.rs:27`), `FileDati::NOMI` (`dati.rs:20`).
@@ -147,6 +153,10 @@ git commit -m "feat(core): electoral data, law menu and presets"
 - Modify: `crates/sim-core/src/elezioni/mod.rs` (`mod seggi; pub use seggi::…`)
 - Test: `crates/sim-core/tests/elezioni.rs`
 
+**Ricerca:** `docs/ricerca/modelli/sistemi-elettorali.md:48-61` (seggi e premio per circoscrizione sul censimento 2021: l'oracolo dei test); spec riga 260 (cucitura 3: seggi dalla popolazione, premio e tetto in quota).
+
+**Dispatch:** `rust-engineer` · dopo il Task 1: legge `Ramo` e `dati_base().elezioni()` · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `Ramo`, `Circoscrizione` (Task 1).
 - Produces:
@@ -188,6 +198,10 @@ Valori del dossier, nell'ordine dei dati:
 - Create: `crates/sim-core/src/elezioni/riparto.rs`
 - Modify: `crates/sim-core/src/elezioni/mod.rs`
 - Test: `crates/sim-core/tests/elezioni.rs`
+
+**Ricerca:** `docs/ricerca/modelli/sistemi-elettorali.md:33-37` (soglie, 20% regionale al Senato, ripescaggio, fine della regola dell'1%), `:42` (riparto nazionale della Camera senza VdA/TAA), `:46` (riparto regionale del Senato), `:12-13` (D'Hondt, Hare); spec righe 316-317 (riparto puro, 180 come impostazione), 418 (seam 2).
+
+**Dispatch:** `rust-engineer` · dopo il Task 2: chiama `seggi_per_circoscrizione` · skill-gate: true. Il task più denso del piano (regole 1-6, tredici test): il controller verifica i numeri attesi contro `python3 -I strumenti/riparto/riferimento.py` prima di accettare una divergenza.
 
 **Interfaces:**
 - Consumes: `DatiElezioni`, `LeggeElettorale` (Task 1); `seggi_per_circoscrizione`, `seggi_da_quota` (Task 2); `Errore::VotiIncoerenti` (Task 1).
@@ -247,6 +261,10 @@ Numeri attesi da `strumenti/riparto/riferimento.py` (seconda lettura della legge
 - Modify: `crates/sim-core/src/elezioni/riparto.rs`
 - Test: `crates/sim-core/tests/elezioni.rs`
 
+**Ricerca:** `docs/ricerca/modelli/sistemi-elettorali.md:63` (VdA e TAA: uninominali, 3 proporzionali TAA alla Camera, voti che contano per soglie e 42%), `:65` (Estero, esclusi dai tetti); spec riga 488 (Estero come punto aperto, chiuso da A1).
+
+**Dispatch:** `rust-engineer` · dopo il Task 3: stesso `riparto.rs`, riusa metodo e soggetti · skill-gate: true.
+
 **Interfaces:**
 - Consumes: `riparto`, metodo e soggetti del Task 3.
 - Produces: `SeggiLista.speciali` ed `estero` popolati; `senato_per_regione` con gli speciali. Dopo questo task, senza premio, ogni ramo somma al suo totale (400 e 200) quando c'è almeno un soggetto ammesso.
@@ -277,6 +295,10 @@ Regole (`docs/ricerca/modelli/sistemi-elettorali.md:63-65`):
 **Files:**
 - Modify: `crates/sim-core/src/elezioni/riparto.rs`
 - Test: `crates/sim-core/tests/elezioni.rs`
+
+**Ricerca:** `docs/ricerca/modelli/sistemi-elettorali.md:39` (premio col 42% nelle due Camere allo stesso soggetto, 70/35), `:43` (tetto 220: `150 − seggi VdA/TAA`), `:46` (tetto 113 e sottrazione dei seggi); spec righe 317 e 426 (premio solo col 42% in entrambe, tetti).
+
+**Dispatch:** `rust-engineer` · dopo il Task 4: il tetto conta gli `speciali` del vincitore · skill-gate: true.
 
 **Interfaces:**
 - Consumes: Task 2-4.
