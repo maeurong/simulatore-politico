@@ -67,3 +67,20 @@ Nessun file contiene i dati originali: salvo la piramide, i valori sono elaborat
 
 - FIGARO 2024 è filtrabile per paese (`naio_10_fcp_ip4` copre dal 2022): la tavola simmetrica nazionale `naio_10_cp1700` del 2022, prevista come ripiego, non serve. `anno_tavola = 2024`.
 - I valori COFOG sono quelli della risposta, non quelli arrotondati a un decimale della tabella di ricerca: le dieci spese coincidono con la tabella al decimale, la somma vale 26,0394% del PIL contro il 26,0382% di 575,6 miliardi.
+
+## Elettorato (provvisorio)
+
+```
+python3 -I strumenti/taratura/elettorato.py            # scrive dati/base/elettorato.toml
+python3 -I strumenti/taratura/elettorato.py --selftest # solo invarianti, nessuna scrittura
+```
+
+Legge solo `regioni.toml`, `elezioni.toml`, `scenario.toml`, `economia.toml` e costanti citate; nessuna rete. Scrive 20 regioni, 360 gruppi (ordine canonico), interessi, panieri, istituti e nomi. Tutti i valori sono provvisori e la PR B sostituisce i corpi delle funzioni con le fonti vere.
+
+- Assunzione: elettori proporzionali alla popolazione censita delle circoscrizioni della Camera, totale 46.350.000 (46.253.014 della Camera 2022 più la Valle d'Aosta).
+- Assunzione: dipendenti pubblici 17% dei dipendenti (RGS non aperto); studenti 6% degli elettori.
+- Assunzione: fasce per condizione dai quinti di reddito e dalle fasce 3-4-3; quota bassa x 1,3 nel Mezzogiorno, x 0,85 al Nord.
+- Assunzione: forze di lavoro oltre gli elettori (stranieri, minorenni occupati). Il residuo dei disoccupati o inattivi è tagliato a 0 e le quote sono persone del gruppo / somma delle persone della regione. Taglio in valle_d_aosta (185), trentino_alto_adige (18.891), emilia_romagna (29.816). La PR B lo sostituisce con l'IPF.
+- Assunzione: redditi per elettore (primario per condizione, moltiplicatori di fascia 0,55 / 1 / 1,9 e di macroarea 1,1 / 1 / 0,8); trasferimenti da `spesa_pensioni` e `spesa_sussidi`.
+- Assunzione: astensione = `ln((1-a)/a) + 0,57` con a l'affluenza 2022 per regione; Valle d'Aosta = affluenza nazionale 63,6%.
+- Segnaposto: istogrammi uguali per tutti (la PR B li ricava da ESS); tre panieri uguali al vettore `consumi`; quattro istituti; dodici nomi e cognomi; pesi degli interessi del ticket 17 (provvisori).

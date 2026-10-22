@@ -1,0 +1,3403 @@
+# Generato da `python3 -I strumenti/taratura/elettorato.py` il 2026-10-22. Non modificare a mano.
+# Valori provvisori del piano 4: vedi strumenti/taratura/README.md.
+
+aliquote = { bassa = 0.15, media = 0.25, alta = 0.33 }
+astensione_condizione = { dipendente_privato = 0.0, dipendente_pubblico = 0.0, autonomo = 0.0, pensionato = 0.0, disoccupato_inattivo = 0.0, studente = 0.0 }
+astensione_fascia = { bassa = 0.3, media = 0.0, alta = -0.2 }
+nomi = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Andrea", "Sara", "Matteo", "Elena", "Davide", "Anna", "Paolo"]
+cognomi = ["Rossi", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca"]
+
+[paniere]
+bassa = [0.020829, 0.165226, 0.012306, 0.379461, 0.017174, 0.043024, 0.216184, 0.022975, 0.050560, 0.072261]
+media = [0.020829, 0.165226, 0.012306, 0.379461, 0.017174, 0.043024, 0.216184, 0.022975, 0.050560, 0.072261]
+alta = [0.020829, 0.165226, 0.012306, 0.379461, 0.017174, 0.043024, 0.216184, 0.022975, 0.050560, 0.072261]
+
+[interessi.dipendente_privato]
+reddito = 0.45
+disoccupazione = 0.25
+qualita_trasporti = 0.10
+qualita_servizio_sanitario = 0.10
+sicurezza = 0.10
+
+[interessi.dipendente_pubblico]
+reddito = 0.50
+occupazione_pubblica = 0.20
+qualita_servizio_sanitario = 0.15
+qualita_scuola = 0.15
+
+[interessi.autonomo]
+reddito = 0.55
+durata_processi = 0.15
+sostegno_imprese = 0.15
+sicurezza = 0.15
+
+[interessi.pensionato]
+reddito = 0.50
+qualita_servizio_sanitario = 0.35
+sicurezza = 0.15
+
+[interessi.disoccupato_inattivo]
+reddito = 0.35
+disoccupazione = 0.40
+copertura_welfare = 0.25
+
+[interessi.studente]
+reddito = 0.30
+qualita_scuola = 0.35
+disoccupazione = 0.35
+
+[[istituto]]
+nome = "Istituto A"
+campione = 1000
+
+[[istituto]]
+nome = "Istituto B"
+campione = 800
+
+[[istituto]]
+nome = "Istituto C"
+campione = 1200
+
+[[istituto]]
+nome = "Istituto D"
+campione = 1500
+
+[[regione]]
+id = "piemonte"
+elettori = 3342053
+astensione = -0.095285
+
+[[regione]]
+id = "valle_d_aosta"
+elettori = 96861
+astensione = 0.014424
+
+[[regione]]
+id = "liguria"
+elettori = 1185033
+astensione = 0.001442
+
+[[regione]]
+id = "lombardia"
+elettori = 7807169
+astensione = -0.265324
+
+[[regione]]
+id = "trentino_alto_adige"
+elettori = 842962
+astensione = -0.077485
+
+[[regione]]
+id = "veneto"
+elettori = 3806412
+astensione = -0.27483
+
+[[regione]]
+id = "friuli_venezia_giulia"
+elettori = 938028
+astensione = -0.090826
+
+[[regione]]
+id = "emilia_romagna"
+elettori = 3474763
+astensione = -0.352238
+
+[[regione]]
+id = "toscana"
+elettori = 2876309
+astensione = -0.246419
+
+[[regione]]
+id = "umbria"
+elettori = 674332
+astensione = -0.204378
+
+[[regione]]
+id = "marche"
+elettori = 1167699
+astensione = -0.19051
+
+[[regione]]
+id = "lazio"
+elettori = 4487281
+astensione = 0.023053
+
+[[regione]]
+id = "abruzzo"
+elettori = 1001866
+astensione = 0.010101
+
+[[regione]]
+id = "molise"
+elettori = 229394
+astensione = 0.315056
+
+[[regione]]
+id = "campania"
+elettori = 4416251
+astensione = 0.444293
+
+[[regione]]
+id = "puglia"
+elettori = 3080263
+astensione = 0.310989
+
+[[regione]]
+id = "basilicata"
+elettori = 424921
+astensione = 0.225014
+
+[[regione]]
+id = "calabria"
+elettori = 1456888
+astensione = 0.548467
+
+[[regione]]
+id = "sicilia"
+elettori = 3795092
+astensione = 0.294696
+
+[[regione]]
+id = "sardegna"
+elettori = 1246423
+astensione = 0.452324
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.077209
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.163501
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.109001
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009343
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.032974
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.029310
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.030785
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.042255
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.042255
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.091176
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.150172
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.100115
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.035846
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.022491
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.005623
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.020959
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "studente"
+fascia = "media"
+quota = 0.024657
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "piemonte"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012328
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.082520
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.174748
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.116499
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009985
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.035243
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.031327
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.032903
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.045161
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.045161
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.092036
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.151589
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.101059
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.013045
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.008185
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.002046
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.021156
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "studente"
+fascia = "media"
+quota = 0.024890
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "valle_d_aosta"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012447
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.076591
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.162193
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.108129
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009268
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.032711
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.029076
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.030539
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.041917
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.041917
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.091931
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "liguria"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.151416
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "liguria"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.100944
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "liguria"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.036397
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "liguria"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.022837
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "liguria"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.005709
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "liguria"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.021132
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "studente"
+fascia = "media"
+quota = 0.024862
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "liguria"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012431
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.082381
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.174455
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.116303
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009969
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.035183
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.031274
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.032848
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.045085
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.045085
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.092738
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.152745
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.101830
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.011862
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.007443
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.001861
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.021318
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "studente"
+fascia = "media"
+quota = 0.025080
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lombardia"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012540
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.084648
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.179256
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.119504
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010243
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.036152
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.032135
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.033752
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.046326
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.046326
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.091232
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.150264
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.100176
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.006729
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.004222
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.001056
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.020972
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "studente"
+fascia = "media"
+quota = 0.024672
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "trentino_alto_adige"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012335
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.081385
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.172345
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.114897
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009848
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.034758
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.030896
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.032451
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.044540
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.044540
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.092530
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "veneto"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.152403
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "veneto"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.101602
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "veneto"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.016252
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "veneto"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.010198
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "veneto"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.002549
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "veneto"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.021270
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "studente"
+fascia = "media"
+quota = 0.025024
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "veneto"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012512
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.078463
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.166157
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.110771
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009494
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.033510
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.029787
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.031286
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.042941
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.042941
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.091927
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.151410
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.100940
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.029116
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.018269
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.004567
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.021131
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "studente"
+fascia = "media"
+quota = 0.024861
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "friuli_venezia_giulia"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012429
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.082791
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 14520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.175322
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 26400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.116881
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 50160.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010018
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 18150.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.035358
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 33000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.031430
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 62700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.033011
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16940.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.045310
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30800.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.045310
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 58520.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.091304
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.150383
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.100255
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.013788
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2420.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.008651
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4400.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.002163
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 8360.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.020988
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1815.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "studente"
+fascia = "media"
+quota = 0.024692
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3300.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "emilia_romagna"
+condizione = "studente"
+fascia = "alta"
+quota = 0.012345
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6270.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.091685
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.165033
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.110022
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.011267
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16500.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.033802
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.030046
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 57000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.036273
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 15400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.042318
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 28000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.042318
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 53200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.103390
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "toscana"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.144746
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "toscana"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.096497
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "toscana"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.020471
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2200.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "toscana"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.010918
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4000.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "toscana"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.002729
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 7600.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "toscana"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.023393
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1650.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "studente"
+fascia = "media"
+quota = 0.023393
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "toscana"
+condizione = "studente"
+fascia = "alta"
+quota = 0.011699
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 5700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.088588
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.159458
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.106306
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010887
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16500.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.032660
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.029031
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 57000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.035047
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 15400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.040889
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 28000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.040889
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 53200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.103291
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "umbria"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.144608
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "umbria"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.096405
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "umbria"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.032109
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2200.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "umbria"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.017125
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4000.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "umbria"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.004281
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 7600.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "umbria"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.023371
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1650.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "studente"
+fascia = "media"
+quota = 0.023371
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "umbria"
+condizione = "studente"
+fascia = "alta"
+quota = 0.011684
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 5700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.087776
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.157997
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.105331
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010787
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16500.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.032361
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.028765
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 57000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.034726
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 15400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.040514
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 28000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.040514
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 53200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.103001
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "marche"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.144201
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "marche"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.096134
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "marche"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.035777
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2200.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "marche"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.019081
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4000.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "marche"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.004770
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 7600.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "marche"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.023305
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1650.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "studente"
+fascia = "media"
+quota = 0.023305
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "marche"
+condizione = "studente"
+fascia = "alta"
+quota = 0.011655
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 5700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.085345
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.153621
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.102414
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010488
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 16500.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.031465
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 30000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.027969
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 57000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.033765
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 15400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.039392
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 28000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.039392
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 53200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.102838
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "lazio"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.143973
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "lazio"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.095982
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "lazio"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.045111
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2200.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "lazio"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.024059
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4000.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "lazio"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.006015
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 7600.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "lazio"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.023268
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1650.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "studente"
+fascia = "media"
+quota = 0.023268
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "lazio"
+condizione = "studente"
+fascia = "alta"
+quota = 0.011635
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 5700.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.097129
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.134487
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.089658
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.012279
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.028336
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.025188
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.037898
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.034011
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.034011
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.122172
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.131570
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.087713
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.071128
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.029181
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.007295
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026902
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "studente"
+fascia = "media"
+quota = 0.020694
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "abruzzo"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010348
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.089398
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.123782
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.082521
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.011302
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.026081
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.023183
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.034881
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.031304
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.031304
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.122714
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "molise"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.132153
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "molise"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.088102
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "molise"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.095897
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "molise"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.039342
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "molise"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.009836
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "molise"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.027022
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "studente"
+fascia = "media"
+quota = 0.020786
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "molise"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010392
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.074004
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.102467
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.068311
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009356
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.021590
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.019191
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.028875
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.025913
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.025913
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.118837
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "campania"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.127978
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "campania"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.085319
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "campania"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.155925
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "campania"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.063969
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "campania"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.015992
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "campania"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026168
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "studente"
+fascia = "media"
+quota = 0.020129
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "campania"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010063
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.079376
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.109905
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.073270
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.010035
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.023157
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.020584
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.030971
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.027794
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.027794
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.120845
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "puglia"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.130141
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "puglia"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.086760
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "puglia"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.133561
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "puglia"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.054794
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "puglia"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.013699
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "puglia"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026610
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "studente"
+fascia = "media"
+quota = 0.020469
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "puglia"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010235
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.090229
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.124933
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.083289
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.011407
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.026323
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.023398
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.035206
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.031595
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.031595
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.123266
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.132748
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.088498
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.091915
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.037709
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.009427
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.027143
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "studente"
+fascia = "media"
+quota = 0.020879
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "basilicata"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010440
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.072836
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.100849
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.067233
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009208
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.021249
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.018888
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.028419
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.025504
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.025504
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.121427
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "calabria"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.130767
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "calabria"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.087178
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "calabria"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.154247
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "calabria"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.063281
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "calabria"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.015820
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "calabria"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026738
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "studente"
+fascia = "media"
+quota = 0.020568
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "calabria"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010284
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.073222
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.101384
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.067589
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.009257
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.021361
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.018988
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.028570
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.025639
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.025639
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.119975
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.129204
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.086136
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.156089
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.064037
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.016009
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026419
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "studente"
+fascia = "media"
+quota = 0.020322
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sicilia"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010160
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_privato"
+fascia = "bassa"
+quota = 0.089816
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 10560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_privato"
+fascia = "media"
+quota = 0.124361
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 19200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_privato"
+fascia = "alta"
+quota = 0.082907
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 36480.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_pubblico"
+fascia = "bassa"
+quota = 0.011355
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 13200.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_pubblico"
+fascia = "media"
+quota = 0.026203
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 24000.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "dipendente_pubblico"
+fascia = "alta"
+quota = 0.023291
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 45600.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "autonomo"
+fascia = "bassa"
+quota = 0.035044
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 12320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "autonomo"
+fascia = "media"
+quota = 0.031450
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 22400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "autonomo"
+fascia = "alta"
+quota = 0.031450
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 42560.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "pensionato"
+fascia = "bassa"
+quota = 0.120595
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 11806.7
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "pensionato"
+fascia = "media"
+quota = 0.129871
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 21466.73
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "pensionato"
+fascia = "alta"
+quota = 0.086581
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 0.0
+trasferimenti = 40786.79
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "disoccupato_inattivo"
+fascia = "bassa"
+quota = 0.099073
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1760.0
+trasferimenti = 2075.19
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "disoccupato_inattivo"
+fascia = "media"
+quota = 0.040645
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 3200.0
+trasferimenti = 3773.07
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "disoccupato_inattivo"
+fascia = "alta"
+quota = 0.010161
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 6080.0
+trasferimenti = 7168.83
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "studente"
+fascia = "bassa"
+quota = 0.026555
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 1320.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "studente"
+fascia = "media"
+quota = 0.020427
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 2400.0
+trasferimenti = 0.0
+
+[[gruppo]]
+regione = "sardegna"
+condizione = "studente"
+fascia = "alta"
+quota = 0.010215
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
+primario = 4560.0
+trasferimenti = 0.0
