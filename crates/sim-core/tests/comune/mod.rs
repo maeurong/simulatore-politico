@@ -24,8 +24,7 @@ pub fn dati_base() -> DatiGioco {
     DatiGioco::da_testi(&file_base()).expect("i dati di base devono essere validi")
 }
 
-/// Come `file_base()`, con `valore = 0.0` (e `min = 0.0`, che il valore deve rispettare) in ogni
-/// sezione `sigma_*` delle manopole.
+/// Come `file_base()`, con `valore = 0.0` in ogni sezione `sigma_*` delle manopole.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -44,8 +43,6 @@ pub fn senza_shock() -> FileDati {
             if dentro && riga.starts_with("valore = ") {
                 azzerate += 1;
                 "valore = 0.0".to_string()
-            } else if dentro && riga.starts_with("min = ") {
-                "min = 0.0".to_string()
             } else {
                 riga.to_string()
             }
