@@ -168,7 +168,7 @@ regione = "piemonte"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.087699
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5464.38
 trasferimenti = 0.0
 
@@ -177,7 +177,7 @@ regione = "piemonte"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.172833
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20704.86
 trasferimenti = 0.0
 
@@ -186,7 +186,7 @@ regione = "piemonte"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.096363
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42902.34
 trasferimenti = 0.0
 
@@ -195,7 +195,7 @@ regione = "piemonte"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.017962
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5464.38
 trasferimenti = 0.0
 
@@ -204,7 +204,7 @@ regione = "piemonte"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.035400
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20704.86
 trasferimenti = 0.0
 
@@ -213,7 +213,7 @@ regione = "piemonte"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.019737
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42902.34
 trasferimenti = 0.0
 
@@ -222,7 +222,7 @@ regione = "piemonte"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.032753
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3694.73
 trasferimenti = 0.0
 
@@ -231,7 +231,7 @@ regione = "piemonte"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.050477
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15930.13
 trasferimenti = 0.0
 
@@ -240,7 +240,7 @@ regione = "piemonte"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.037813
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 65319.78
 trasferimenti = 0.0
 
@@ -249,7 +249,7 @@ regione = "piemonte"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.059727
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -258,7 +258,7 @@ regione = "piemonte"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.125570
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -267,7 +267,7 @@ regione = "piemonte"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.169243
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -276,7 +276,7 @@ regione = "piemonte"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.019396
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -285,7 +285,7 @@ regione = "piemonte"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.013053
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -294,7 +294,7 @@ regione = "piemonte"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.002813
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -303,7 +303,7 @@ regione = "piemonte"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.033572
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -312,7 +312,7 @@ regione = "piemonte"
 condizione = "studente"
 fascia = "media"
 quota = 0.021591
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -321,7 +321,7 @@ regione = "piemonte"
 condizione = "studente"
 fascia = "alta"
 quota = 0.003998
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -330,7 +330,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.094296
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5138.73
 trasferimenti = 0.0
 
@@ -339,7 +339,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.169566
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 18355.3
 trasferimenti = 0.0
 
@@ -348,7 +348,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.134478
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 40690.8
 trasferimenti = 0.0
 
@@ -357,7 +357,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.019314
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5138.73
 trasferimenti = 0.0
 
@@ -366,7 +366,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.034730
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 18355.3
 trasferimenti = 0.0
 
@@ -375,7 +375,7 @@ regione = "valle_d_aosta"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.027544
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 40690.8
 trasferimenti = 0.0
 
@@ -384,7 +384,7 @@ regione = "valle_d_aosta"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.093892
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3372.26
 trasferimenti = 0.0
 
@@ -393,7 +393,7 @@ regione = "valle_d_aosta"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.022940
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14552.08
 trasferimenti = 0.0
 
@@ -402,7 +402,7 @@ regione = "valle_d_aosta"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.021060
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58246.0
 trasferimenti = 0.0
 
@@ -411,7 +411,7 @@ regione = "valle_d_aosta"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.026463
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -420,7 +420,7 @@ regione = "valle_d_aosta"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.172139
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -429,7 +429,7 @@ regione = "valle_d_aosta"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.095735
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -438,7 +438,7 @@ regione = "valle_d_aosta"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.013840
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -447,7 +447,7 @@ regione = "valle_d_aosta"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.004828
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -456,7 +456,7 @@ regione = "valle_d_aosta"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.006301
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -465,7 +465,7 @@ regione = "valle_d_aosta"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.000240
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -474,7 +474,7 @@ regione = "valle_d_aosta"
 condizione = "studente"
 fascia = "media"
 quota = 0.000073
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -483,7 +483,7 @@ regione = "valle_d_aosta"
 condizione = "studente"
 fascia = "alta"
 quota = 0.062561
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -492,7 +492,7 @@ regione = "liguria"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.095413
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5670.05
 trasferimenti = 0.0
 
@@ -501,7 +501,7 @@ regione = "liguria"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.139153
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19871.94
 trasferimenti = 0.0
 
@@ -510,7 +510,7 @@ regione = "liguria"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.115206
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42651.43
 trasferimenti = 0.0
 
@@ -519,7 +519,7 @@ regione = "liguria"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.019542
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5670.05
 trasferimenti = 0.0
 
@@ -528,7 +528,7 @@ regione = "liguria"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.028501
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19871.94
 trasferimenti = 0.0
 
@@ -537,7 +537,7 @@ regione = "liguria"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.023596
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42651.43
 trasferimenti = 0.0
 
@@ -546,7 +546,7 @@ regione = "liguria"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.072829
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3732.18
 trasferimenti = 0.0
 
@@ -555,7 +555,7 @@ regione = "liguria"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.023933
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 16059.75
 trasferimenti = 0.0
 
@@ -564,7 +564,7 @@ regione = "liguria"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.028433
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 65333.24
 trasferimenti = 0.0
 
@@ -573,7 +573,7 @@ regione = "liguria"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.039526
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -582,7 +582,7 @@ regione = "liguria"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.181331
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -591,7 +591,7 @@ regione = "liguria"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.145419
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -600,7 +600,7 @@ regione = "liguria"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.014080
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -609,7 +609,7 @@ regione = "liguria"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.005095
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -618,7 +618,7 @@ regione = "liguria"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.007439
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -627,7 +627,7 @@ regione = "liguria"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.048206
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -636,7 +636,7 @@ regione = "liguria"
 condizione = "studente"
 fascia = "media"
 quota = 0.009353
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -645,7 +645,7 @@ regione = "liguria"
 condizione = "studente"
 fascia = "alta"
 quota = 0.002945
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -654,7 +654,7 @@ regione = "lombardia"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.096475
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5616.66
 trasferimenti = 0.0
 
@@ -663,7 +663,7 @@ regione = "lombardia"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.155274
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20737.33
 trasferimenti = 0.0
 
@@ -672,7 +672,7 @@ regione = "lombardia"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.144273
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 48205.79
 trasferimenti = 0.0
 
@@ -681,7 +681,7 @@ regione = "lombardia"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.019760
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5616.66
 trasferimenti = 0.0
 
@@ -690,7 +690,7 @@ regione = "lombardia"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.031803
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20737.33
 trasferimenti = 0.0
 
@@ -699,7 +699,7 @@ regione = "lombardia"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.029550
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 48205.79
 trasferimenti = 0.0
 
@@ -708,7 +708,7 @@ regione = "lombardia"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.005428
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3737.99
 trasferimenti = 0.0
 
@@ -717,7 +717,7 @@ regione = "lombardia"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.045995
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 16212.72
 trasferimenti = 0.0
 
@@ -726,7 +726,7 @@ regione = "lombardia"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.066090
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 73244.89
 trasferimenti = 0.0
 
@@ -735,7 +735,7 @@ regione = "lombardia"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.070555
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -744,7 +744,7 @@ regione = "lombardia"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.146984
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -753,7 +753,7 @@ regione = "lombardia"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.110878
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -762,7 +762,7 @@ regione = "lombardia"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.011360
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -771,7 +771,7 @@ regione = "lombardia"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.005242
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -780,7 +780,7 @@ regione = "lombardia"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.001465
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -789,7 +789,7 @@ regione = "lombardia"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.039602
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -798,7 +798,7 @@ regione = "lombardia"
 condizione = "studente"
 fascia = "media"
 quota = 0.013119
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -807,7 +807,7 @@ regione = "lombardia"
 condizione = "studente"
 fascia = "alta"
 quota = 0.006147
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -816,7 +816,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.064917
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4659.16
 trasferimenti = 0.0
 
@@ -825,7 +825,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.182520
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20321.38
 trasferimenti = 0.0
 
@@ -834,7 +834,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.166264
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39803.05
 trasferimenti = 0.0
 
@@ -843,7 +843,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.013296
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4659.16
 trasferimenti = 0.0
 
@@ -852,7 +852,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.037384
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20321.38
 trasferimenti = 0.0
 
@@ -861,7 +861,7 @@ regione = "trentino_alto_adige"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.034054
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39803.05
 trasferimenti = 0.0
 
@@ -870,7 +870,7 @@ regione = "trentino_alto_adige"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.036652
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3335.27
 trasferimenti = 0.0
 
@@ -879,7 +879,7 @@ regione = "trentino_alto_adige"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.022077
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14789.74
 trasferimenti = 0.0
 
@@ -888,7 +888,7 @@ regione = "trentino_alto_adige"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.045033
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 65353.58
 trasferimenti = 0.0
 
@@ -897,7 +897,7 @@ regione = "trentino_alto_adige"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.106030
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -906,7 +906,7 @@ regione = "trentino_alto_adige"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.109069
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -915,7 +915,7 @@ regione = "trentino_alto_adige"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.113236
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -924,7 +924,7 @@ regione = "trentino_alto_adige"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.004303
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -933,7 +933,7 @@ regione = "trentino_alto_adige"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.007181
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -942,7 +942,7 @@ regione = "trentino_alto_adige"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.000810
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -951,7 +951,7 @@ regione = "trentino_alto_adige"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.031951
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -960,7 +960,7 @@ regione = "trentino_alto_adige"
 condizione = "studente"
 fascia = "media"
 quota = 0.017113
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -969,7 +969,7 @@ regione = "trentino_alto_adige"
 condizione = "studente"
 fascia = "alta"
 quota = 0.008110
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -978,7 +978,7 @@ regione = "veneto"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.088499
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5356.08
 trasferimenti = 0.0
 
@@ -987,7 +987,7 @@ regione = "veneto"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.185203
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20777.93
 trasferimenti = 0.0
 
@@ -996,7 +996,7 @@ regione = "veneto"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.113794
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 41738.24
 trasferimenti = 0.0
 
@@ -1005,7 +1005,7 @@ regione = "veneto"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.018126
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5356.08
 trasferimenti = 0.0
 
@@ -1014,7 +1014,7 @@ regione = "veneto"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.037933
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20777.93
 trasferimenti = 0.0
 
@@ -1023,7 +1023,7 @@ regione = "veneto"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.023307
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 41738.24
 trasferimenti = 0.0
 
@@ -1032,7 +1032,7 @@ regione = "veneto"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.015634
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3611.56
 trasferimenti = 0.0
 
@@ -1041,7 +1041,7 @@ regione = "veneto"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.020821
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15703.63
 trasferimenti = 0.0
 
@@ -1050,7 +1050,7 @@ regione = "veneto"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.078325
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 66159.58
 trasferimenti = 0.0
 
@@ -1059,7 +1059,7 @@ regione = "veneto"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.079542
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1068,7 +1068,7 @@ regione = "veneto"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.164799
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1077,7 +1077,7 @@ regione = "veneto"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.094183
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1086,7 +1086,7 @@ regione = "veneto"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.010174
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -1095,7 +1095,7 @@ regione = "veneto"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.007919
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -1104,7 +1104,7 @@ regione = "veneto"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.002459
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -1113,7 +1113,7 @@ regione = "veneto"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.039783
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -1122,7 +1122,7 @@ regione = "veneto"
 condizione = "studente"
 fascia = "media"
 quota = 0.012680
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -1131,7 +1131,7 @@ regione = "veneto"
 condizione = "studente"
 fascia = "alta"
 quota = 0.006819
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -1140,7 +1140,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.108738
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5397.09
 trasferimenti = 0.0
 
@@ -1149,7 +1149,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.143772
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20585.45
 trasferimenti = 0.0
 
@@ -1158,7 +1158,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.117960
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39402.89
 trasferimenti = 0.0
 
@@ -1167,7 +1167,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.022272
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5397.09
 trasferimenti = 0.0
 
@@ -1176,7 +1176,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.029447
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20585.45
 trasferimenti = 0.0
 
@@ -1185,7 +1185,7 @@ regione = "friuli_venezia_giulia"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.024160
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39402.89
 trasferimenti = 0.0
 
@@ -1194,7 +1194,7 @@ regione = "friuli_venezia_giulia"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.000153
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3659.54
 trasferimenti = 0.0
 
@@ -1203,7 +1203,7 @@ regione = "friuli_venezia_giulia"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.037105
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15370.7
 trasferimenti = 0.0
 
@@ -1212,7 +1212,7 @@ regione = "friuli_venezia_giulia"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.063821
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 65621.12
 trasferimenti = 0.0
 
@@ -1221,7 +1221,7 @@ regione = "friuli_venezia_giulia"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.108724
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1230,7 +1230,7 @@ regione = "friuli_venezia_giulia"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.138622
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1239,7 +1239,7 @@ regione = "friuli_venezia_giulia"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.120406
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1248,7 +1248,7 @@ regione = "friuli_venezia_giulia"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.006685
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -1257,7 +1257,7 @@ regione = "friuli_venezia_giulia"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.017218
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -1266,7 +1266,7 @@ regione = "friuli_venezia_giulia"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.002404
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -1275,7 +1275,7 @@ regione = "friuli_venezia_giulia"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.000046
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -1284,7 +1284,7 @@ regione = "friuli_venezia_giulia"
 condizione = "studente"
 fascia = "media"
 quota = 0.051344
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -1293,7 +1293,7 @@ regione = "friuli_venezia_giulia"
 condizione = "studente"
 fascia = "alta"
 quota = 0.007123
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -1302,7 +1302,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.079030
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5402.97
 trasferimenti = 0.0
 
@@ -1311,7 +1311,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.174878
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20607.52
 trasferimenti = 0.0
 
@@ -1320,7 +1320,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.124620
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42746.56
 trasferimenti = 0.0
 
@@ -1329,7 +1329,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.016187
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5402.97
 trasferimenti = 0.0
 
@@ -1338,7 +1338,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.035818
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20607.52
 trasferimenti = 0.0
 
@@ -1347,7 +1347,7 @@ regione = "emilia_romagna"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.025525
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 42746.56
 trasferimenti = 0.0
 
@@ -1356,7 +1356,7 @@ regione = "emilia_romagna"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.055214
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3472.43
 trasferimenti = 0.0
 
@@ -1365,7 +1365,7 @@ regione = "emilia_romagna"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.017506
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15431.84
 trasferimenti = 0.0
 
@@ -1374,7 +1374,7 @@ regione = "emilia_romagna"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.051650
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 67476.5
 trasferimenti = 0.0
 
@@ -1383,7 +1383,7 @@ regione = "emilia_romagna"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.057070
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1392,7 +1392,7 @@ regione = "emilia_romagna"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.151120
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1401,7 +1401,7 @@ regione = "emilia_romagna"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.130408
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1410,7 +1410,7 @@ regione = "emilia_romagna"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.015162
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2420.0
 trasferimenti = 2267.73
 
@@ -1419,7 +1419,7 @@ regione = "emilia_romagna"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.007424
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4400.0
 trasferimenti = 4123.15
 
@@ -1428,7 +1428,7 @@ regione = "emilia_romagna"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.002203
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 8360.0
 trasferimenti = 7833.98
 
@@ -1437,7 +1437,7 @@ regione = "emilia_romagna"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.016144
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1815.0
 trasferimenti = 0.0
 
@@ -1446,7 +1446,7 @@ regione = "emilia_romagna"
 condizione = "studente"
 fascia = "media"
 quota = 0.032036
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3300.0
 trasferimenti = 0.0
 
@@ -1455,7 +1455,7 @@ regione = "emilia_romagna"
 condizione = "studente"
 fascia = "alta"
 quota = 0.008005
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6270.0
 trasferimenti = 0.0
 
@@ -1464,7 +1464,7 @@ regione = "toscana"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.074675
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5723.25
 trasferimenti = 0.0
 
@@ -1473,7 +1473,7 @@ regione = "toscana"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.168095
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20294.49
 trasferimenti = 0.0
 
@@ -1482,7 +1482,7 @@ regione = "toscana"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.132176
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 41210.85
 trasferimenti = 0.0
 
@@ -1491,7 +1491,7 @@ regione = "toscana"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.015295
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5723.25
 trasferimenti = 0.0
 
@@ -1500,7 +1500,7 @@ regione = "toscana"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.034429
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20294.49
 trasferimenti = 0.0
 
@@ -1509,7 +1509,7 @@ regione = "toscana"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.027072
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 41210.85
 trasferimenti = 0.0
 
@@ -1518,7 +1518,7 @@ regione = "toscana"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.071727
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3302.8
 trasferimenti = 0.0
 
@@ -1527,7 +1527,7 @@ regione = "toscana"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.025652
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15481.09
 trasferimenti = 0.0
 
@@ -1536,7 +1536,7 @@ regione = "toscana"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.027107
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 62188.14
 trasferimenti = 0.0
 
@@ -1545,7 +1545,7 @@ regione = "toscana"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.062031
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1554,7 +1554,7 @@ regione = "toscana"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.169549
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1563,7 +1563,7 @@ regione = "toscana"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.107846
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1572,7 +1572,7 @@ regione = "toscana"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.014827
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2200.0
 trasferimenti = 2267.73
 
@@ -1581,7 +1581,7 @@ regione = "toscana"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.010153
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4000.0
 trasferimenti = 4123.15
 
@@ -1590,7 +1590,7 @@ regione = "toscana"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.000799
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 7600.0
 trasferimenti = 7833.98
 
@@ -1599,7 +1599,7 @@ regione = "toscana"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.028801
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1650.0
 trasferimenti = 0.0
 
@@ -1608,7 +1608,7 @@ regione = "toscana"
 condizione = "studente"
 fascia = "media"
 quota = 0.021402
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3000.0
 trasferimenti = 0.0
 
@@ -1617,7 +1617,7 @@ regione = "toscana"
 condizione = "studente"
 fascia = "alta"
 quota = 0.008364
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5700.0
 trasferimenti = 0.0
 
@@ -1626,7 +1626,7 @@ regione = "umbria"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.087770
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5346.28
 trasferimenti = 0.0
 
@@ -1635,7 +1635,7 @@ regione = "umbria"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.179878
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20417.86
 trasferimenti = 0.0
 
@@ -1644,7 +1644,7 @@ regione = "umbria"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.086651
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39213.18
 trasferimenti = 0.0
 
@@ -1653,7 +1653,7 @@ regione = "umbria"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.017977
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5346.28
 trasferimenti = 0.0
 
@@ -1662,7 +1662,7 @@ regione = "umbria"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.036842
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20417.86
 trasferimenti = 0.0
 
@@ -1671,7 +1671,7 @@ regione = "umbria"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.017748
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39213.18
 trasferimenti = 0.0
 
@@ -1680,7 +1680,7 @@ regione = "umbria"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.026746
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3626.77
 trasferimenti = 0.0
 
@@ -1689,7 +1689,7 @@ regione = "umbria"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.051204
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14562.53
 trasferimenti = 0.0
 
@@ -1698,7 +1698,7 @@ regione = "umbria"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.053238
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58832.61
 trasferimenti = 0.0
 
@@ -1707,7 +1707,7 @@ regione = "umbria"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.088966
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1716,7 +1716,7 @@ regione = "umbria"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.149981
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1725,7 +1725,7 @@ regione = "umbria"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.117443
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1734,7 +1734,7 @@ regione = "umbria"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.014463
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2200.0
 trasferimenti = 2267.73
 
@@ -1743,7 +1743,7 @@ regione = "umbria"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.008579
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4000.0
 trasferimenti = 4123.15
 
@@ -1752,7 +1752,7 @@ regione = "umbria"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.003508
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 7600.0
 trasferimenti = 7833.98
 
@@ -1761,7 +1761,7 @@ regione = "umbria"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.041482
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1650.0
 trasferimenti = 0.0
 
@@ -1770,7 +1770,7 @@ regione = "umbria"
 condizione = "studente"
 fascia = "media"
 quota = 0.015191
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3000.0
 trasferimenti = 0.0
 
@@ -1779,7 +1779,7 @@ regione = "umbria"
 condizione = "studente"
 fascia = "alta"
 quota = 0.002333
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5700.0
 trasferimenti = 0.0
 
@@ -1788,7 +1788,7 @@ regione = "marche"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.069341
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5410.97
 trasferimenti = 0.0
 
@@ -1797,7 +1797,7 @@ regione = "marche"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.173232
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20431.38
 trasferimenti = 0.0
 
@@ -1806,7 +1806,7 @@ regione = "marche"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.114343
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39196.79
 trasferimenti = 0.0
 
@@ -1815,7 +1815,7 @@ regione = "marche"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.014202
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5410.97
 trasferimenti = 0.0
 
@@ -1824,7 +1824,7 @@ regione = "marche"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.035481
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20431.38
 trasferimenti = 0.0
 
@@ -1833,7 +1833,7 @@ regione = "marche"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.023420
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39196.79
 trasferimenti = 0.0
 
@@ -1842,7 +1842,7 @@ regione = "marche"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.045753
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3515.23
 trasferimenti = 0.0
 
@@ -1851,7 +1851,7 @@ regione = "marche"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.039251
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14582.19
 trasferimenti = 0.0
 
@@ -1860,7 +1860,7 @@ regione = "marche"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.039857
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 61645.86
 trasferimenti = 0.0
 
@@ -1869,7 +1869,7 @@ regione = "marche"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.099559
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -1878,7 +1878,7 @@ regione = "marche"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.171211
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -1887,7 +1887,7 @@ regione = "marche"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.085028
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -1896,7 +1896,7 @@ regione = "marche"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.014820
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2200.0
 trasferimenti = 2267.73
 
@@ -1905,7 +1905,7 @@ regione = "marche"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.012841
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4000.0
 trasferimenti = 4123.15
 
@@ -1914,7 +1914,7 @@ regione = "marche"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.001871
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 7600.0
 trasferimenti = 7833.98
 
@@ -1923,7 +1923,7 @@ regione = "marche"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.034542
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1650.0
 trasferimenti = 0.0
 
@@ -1932,7 +1932,7 @@ regione = "marche"
 condizione = "studente"
 fascia = "media"
 quota = 0.021296
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3000.0
 trasferimenti = 0.0
 
@@ -1941,7 +1941,7 @@ regione = "marche"
 condizione = "studente"
 fascia = "alta"
 quota = 0.003952
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5700.0
 trasferimenti = 0.0
 
@@ -1950,7 +1950,7 @@ regione = "lazio"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.079429
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5733.14
 trasferimenti = 0.0
 
@@ -1959,7 +1959,7 @@ regione = "lazio"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.156582
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19851.73
 trasferimenti = 0.0
 
@@ -1968,7 +1968,7 @@ regione = "lazio"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.136728
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 45783.54
 trasferimenti = 0.0
 
@@ -1977,7 +1977,7 @@ regione = "lazio"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.016269
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5733.14
 trasferimenti = 0.0
 
@@ -1986,7 +1986,7 @@ regione = "lazio"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.032071
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19851.73
 trasferimenti = 0.0
 
@@ -1995,7 +1995,7 @@ regione = "lazio"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.028004
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 45783.54
 trasferimenti = 0.0
 
@@ -2004,7 +2004,7 @@ regione = "lazio"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.036364
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3858.1
 trasferimenti = 0.0
 
@@ -2013,7 +2013,7 @@ regione = "lazio"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.033800
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15721.23
 trasferimenti = 0.0
 
@@ -2022,7 +2022,7 @@ regione = "lazio"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.045911
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 68724.51
 trasferimenti = 0.0
 
@@ -2031,7 +2031,7 @@ regione = "lazio"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.083646
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2040,7 +2040,7 @@ regione = "lazio"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.101106
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2049,7 +2049,7 @@ regione = "lazio"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.109257
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2058,7 +2058,7 @@ regione = "lazio"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.060618
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2200.0
 trasferimenti = 2267.73
 
@@ -2067,7 +2067,7 @@ regione = "lazio"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.015697
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4000.0
 trasferimenti = 4123.15
 
@@ -2076,7 +2076,7 @@ regione = "lazio"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.002943
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 7600.0
 trasferimenti = 7833.98
 
@@ -2085,7 +2085,7 @@ regione = "lazio"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.038108
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1650.0
 trasferimenti = 0.0
 
@@ -2094,7 +2094,7 @@ regione = "lazio"
 condizione = "studente"
 fascia = "media"
 quota = 0.016521
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3000.0
 trasferimenti = 0.0
 
@@ -2103,7 +2103,7 @@ regione = "lazio"
 condizione = "studente"
 fascia = "alta"
 quota = 0.006946
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5700.0
 trasferimenti = 0.0
 
@@ -2112,7 +2112,7 @@ regione = "abruzzo"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.060891
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5469.82
 trasferimenti = 0.0
 
@@ -2121,7 +2121,7 @@ regione = "abruzzo"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.203286
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20226.38
 trasferimenti = 0.0
 
@@ -2130,7 +2130,7 @@ regione = "abruzzo"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.074689
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39350.8
 trasferimenti = 0.0
 
@@ -2139,7 +2139,7 @@ regione = "abruzzo"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.012472
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5469.82
 trasferimenti = 0.0
 
@@ -2148,7 +2148,7 @@ regione = "abruzzo"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.041637
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20226.38
 trasferimenti = 0.0
 
@@ -2157,7 +2157,7 @@ regione = "abruzzo"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.015298
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39350.8
 trasferimenti = 0.0
 
@@ -2166,7 +2166,7 @@ regione = "abruzzo"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.029101
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3682.64
 trasferimenti = 0.0
 
@@ -2175,7 +2175,7 @@ regione = "abruzzo"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.049399
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14724.83
 trasferimenti = 0.0
 
@@ -2184,7 +2184,7 @@ regione = "abruzzo"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.051377
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58615.11
 trasferimenti = 0.0
 
@@ -2193,7 +2193,7 @@ regione = "abruzzo"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.173114
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2202,7 +2202,7 @@ regione = "abruzzo"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.075844
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2211,7 +2211,7 @@ regione = "abruzzo"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.096672
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2220,7 +2220,7 @@ regione = "abruzzo"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.024437
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -2229,7 +2229,7 @@ regione = "abruzzo"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.017840
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -2238,7 +2238,7 @@ regione = "abruzzo"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.008909
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -2247,7 +2247,7 @@ regione = "abruzzo"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.036237
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -2256,7 +2256,7 @@ regione = "abruzzo"
 condizione = "studente"
 fascia = "media"
 quota = 0.026149
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -2265,7 +2265,7 @@ regione = "abruzzo"
 condizione = "studente"
 fascia = "alta"
 quota = 0.002648
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -2274,7 +2274,7 @@ regione = "molise"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.067734
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5547.27
 trasferimenti = 0.0
 
@@ -2283,7 +2283,7 @@ regione = "molise"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.156939
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20106.36
 trasferimenti = 0.0
 
@@ -2292,7 +2292,7 @@ regione = "molise"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.077807
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 36118.3
 trasferimenti = 0.0
 
@@ -2301,7 +2301,7 @@ regione = "molise"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.013873
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5547.27
 trasferimenti = 0.0
 
@@ -2310,7 +2310,7 @@ regione = "molise"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.032144
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 20106.36
 trasferimenti = 0.0
 
@@ -2319,7 +2319,7 @@ regione = "molise"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.015936
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 36118.3
 trasferimenti = 0.0
 
@@ -2328,7 +2328,7 @@ regione = "molise"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.060211
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3503.74
 trasferimenti = 0.0
 
@@ -2337,7 +2337,7 @@ regione = "molise"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.027109
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14433.78
 trasferimenti = 0.0
 
@@ -2346,7 +2346,7 @@ regione = "molise"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.042752
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 55771.56
 trasferimenti = 0.0
 
@@ -2355,7 +2355,7 @@ regione = "molise"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.165625
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2364,7 +2364,7 @@ regione = "molise"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.137363
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2373,7 +2373,7 @@ regione = "molise"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.075762
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2382,7 +2382,7 @@ regione = "molise"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.034384
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -2391,7 +2391,7 @@ regione = "molise"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.023007
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -2400,7 +2400,7 @@ regione = "molise"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.001734
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -2409,7 +2409,7 @@ regione = "molise"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.046285
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -2418,7 +2418,7 @@ regione = "molise"
 condizione = "studente"
 fascia = "media"
 quota = 0.014407
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -2427,7 +2427,7 @@ regione = "molise"
 condizione = "studente"
 fascia = "alta"
 quota = 0.006928
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -2436,7 +2436,7 @@ regione = "campania"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.060103
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5564.06
 trasferimenti = 0.0
 
@@ -2445,7 +2445,7 @@ regione = "campania"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.121503
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19715.14
 trasferimenti = 0.0
 
@@ -2454,7 +2454,7 @@ regione = "campania"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.081976
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39624.16
 trasferimenti = 0.0
 
@@ -2463,7 +2463,7 @@ regione = "campania"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.012310
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5564.06
 trasferimenti = 0.0
 
@@ -2472,7 +2472,7 @@ regione = "campania"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.024886
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19715.14
 trasferimenti = 0.0
 
@@ -2481,7 +2481,7 @@ regione = "campania"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.016790
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39624.16
 trasferimenti = 0.0
 
@@ -2490,7 +2490,7 @@ regione = "campania"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.035344
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3650.66
 trasferimenti = 0.0
 
@@ -2499,7 +2499,7 @@ regione = "campania"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.031972
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15524.01
 trasferimenti = 0.0
 
@@ -2508,7 +2508,7 @@ regione = "campania"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.029132
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58908.7
 trasferimenti = 0.0
 
@@ -2517,7 +2517,7 @@ regione = "campania"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.062063
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2526,7 +2526,7 @@ regione = "campania"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.105478
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2535,7 +2535,7 @@ regione = "campania"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.075228
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2544,7 +2544,7 @@ regione = "campania"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.180610
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -2553,7 +2553,7 @@ regione = "campania"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.073946
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -2562,7 +2562,7 @@ regione = "campania"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.025104
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -2571,7 +2571,7 @@ regione = "campania"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.047583
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -2580,7 +2580,7 @@ regione = "campania"
 condizione = "studente"
 fascia = "media"
 quota = 0.012974
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -2589,7 +2589,7 @@ regione = "campania"
 condizione = "studente"
 fascia = "alta"
 quota = 0.002998
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -2598,7 +2598,7 @@ regione = "puglia"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.059223
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5496.98
 trasferimenti = 0.0
 
@@ -2607,7 +2607,7 @@ regione = "puglia"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.125781
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19417.5
 trasferimenti = 0.0
 
@@ -2616,7 +2616,7 @@ regione = "puglia"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.092102
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 38590.87
 trasferimenti = 0.0
 
@@ -2625,7 +2625,7 @@ regione = "puglia"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.012130
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5496.98
 trasferimenti = 0.0
 
@@ -2634,7 +2634,7 @@ regione = "puglia"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.025762
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19417.5
 trasferimenti = 0.0
 
@@ -2643,7 +2643,7 @@ regione = "puglia"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.018864
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 38590.87
 trasferimenti = 0.0
 
@@ -2652,7 +2652,7 @@ regione = "puglia"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.046778
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3677.98
 trasferimenti = 0.0
 
@@ -2661,7 +2661,7 @@ regione = "puglia"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.036145
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15345.39
 trasferimenti = 0.0
 
@@ -2670,7 +2670,7 @@ regione = "puglia"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.026876
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 57399.8
 trasferimenti = 0.0
 
@@ -2679,7 +2679,7 @@ regione = "puglia"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.108495
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2688,7 +2688,7 @@ regione = "puglia"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.144329
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2697,7 +2697,7 @@ regione = "puglia"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.055531
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2706,7 +2706,7 @@ regione = "puglia"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.117919
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -2715,7 +2715,7 @@ regione = "puglia"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.046486
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -2724,7 +2724,7 @@ regione = "puglia"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.017592
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -2733,7 +2733,7 @@ regione = "puglia"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.047062
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -2742,7 +2742,7 @@ regione = "puglia"
 condizione = "studente"
 fascia = "media"
 quota = 0.014429
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -2751,7 +2751,7 @@ regione = "puglia"
 condizione = "studente"
 fascia = "alta"
 quota = 0.004496
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -2760,7 +2760,7 @@ regione = "basilicata"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.082156
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5707.92
 trasferimenti = 0.0
 
@@ -2769,7 +2769,7 @@ regione = "basilicata"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.134669
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19818.36
 trasferimenti = 0.0
 
@@ -2778,7 +2778,7 @@ regione = "basilicata"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.100515
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 37315.11
 trasferimenti = 0.0
 
@@ -2787,7 +2787,7 @@ regione = "basilicata"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.016827
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5707.92
 trasferimenti = 0.0
 
@@ -2796,7 +2796,7 @@ regione = "basilicata"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.027583
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19818.36
 trasferimenti = 0.0
 
@@ -2805,7 +2805,7 @@ regione = "basilicata"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.020587
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 37315.11
 trasferimenti = 0.0
 
@@ -2814,7 +2814,7 @@ regione = "basilicata"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.028767
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3558.87
 trasferimenti = 0.0
 
@@ -2823,7 +2823,7 @@ regione = "basilicata"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.073694
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14830.39
 trasferimenti = 0.0
 
@@ -2832,7 +2832,7 @@ regione = "basilicata"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.009865
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 54341.71
 trasferimenti = 0.0
 
@@ -2841,7 +2841,7 @@ regione = "basilicata"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.113875
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -2850,7 +2850,7 @@ regione = "basilicata"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.145889
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -2859,7 +2859,7 @@ regione = "basilicata"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.078200
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -2868,7 +2868,7 @@ regione = "basilicata"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.065029
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -2877,7 +2877,7 @@ regione = "basilicata"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.029441
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -2886,7 +2886,7 @@ regione = "basilicata"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.006384
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -2895,7 +2895,7 @@ regione = "basilicata"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.064187
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -2904,7 +2904,7 @@ regione = "basilicata"
 condizione = "studente"
 fascia = "media"
 quota = 0.000769
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -2913,7 +2913,7 @@ regione = "basilicata"
 condizione = "studente"
 fascia = "alta"
 quota = 0.001563
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -2922,7 +2922,7 @@ regione = "calabria"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.103348
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5925.31
 trasferimenti = 0.0
 
@@ -2931,7 +2931,7 @@ regione = "calabria"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.112343
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19426.48
 trasferimenti = 0.0
 
@@ -2940,7 +2940,7 @@ regione = "calabria"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.035604
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 37863.86
 trasferimenti = 0.0
 
@@ -2949,7 +2949,7 @@ regione = "calabria"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.021168
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5925.31
 trasferimenti = 0.0
 
@@ -2958,7 +2958,7 @@ regione = "calabria"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.023010
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19426.48
 trasferimenti = 0.0
 
@@ -2967,7 +2967,7 @@ regione = "calabria"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.007292
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 37863.86
 trasferimenti = 0.0
 
@@ -2976,7 +2976,7 @@ regione = "calabria"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.034055
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3480.87
 trasferimenti = 0.0
 
@@ -2985,7 +2985,7 @@ regione = "calabria"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.034713
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 14697.06
 trasferimenti = 0.0
 
@@ -2994,7 +2994,7 @@ regione = "calabria"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.034399
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 54995.16
 trasferimenti = 0.0
 
@@ -3003,7 +3003,7 @@ regione = "calabria"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.099576
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -3012,7 +3012,7 @@ regione = "calabria"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.112239
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -3021,7 +3021,7 @@ regione = "calabria"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.106137
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -3030,7 +3030,7 @@ regione = "calabria"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.145849
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -3039,7 +3039,7 @@ regione = "calabria"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.059327
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -3048,7 +3048,7 @@ regione = "calabria"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.005833
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -3057,7 +3057,7 @@ regione = "calabria"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.038110
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -3066,7 +3066,7 @@ regione = "calabria"
 condizione = "studente"
 fascia = "media"
 quota = 0.025437
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -3075,7 +3075,7 @@ regione = "calabria"
 condizione = "studente"
 fascia = "alta"
 quota = 0.001560
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -3084,7 +3084,7 @@ regione = "sicilia"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.071303
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5860.24
 trasferimenti = 0.0
 
@@ -3093,7 +3093,7 @@ regione = "sicilia"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.119408
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19351.5
 trasferimenti = 0.0
 
@@ -3102,7 +3102,7 @@ regione = "sicilia"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.076538
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39161.18
 trasferimenti = 0.0
 
@@ -3111,7 +3111,7 @@ regione = "sicilia"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.014604
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5860.24
 trasferimenti = 0.0
 
@@ -3120,7 +3120,7 @@ regione = "sicilia"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.024457
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19351.5
 trasferimenti = 0.0
 
@@ -3129,7 +3129,7 @@ regione = "sicilia"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.015676
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 39161.18
 trasferimenti = 0.0
 
@@ -3138,7 +3138,7 @@ regione = "sicilia"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.036966
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3619.77
 trasferimenti = 0.0
 
@@ -3147,7 +3147,7 @@ regione = "sicilia"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.033658
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15452.83
 trasferimenti = 0.0
 
@@ -3156,7 +3156,7 @@ regione = "sicilia"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.020792
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58457.85
 trasferimenti = 0.0
 
@@ -3165,7 +3165,7 @@ regione = "sicilia"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.084610
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -3174,7 +3174,7 @@ regione = "sicilia"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.118821
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -3183,7 +3183,7 @@ regione = "sicilia"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.072056
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -3192,7 +3192,7 @@ regione = "sicilia"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.144135
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -3201,7 +3201,7 @@ regione = "sicilia"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.073692
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -3210,7 +3210,7 @@ regione = "sicilia"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.027427
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -3219,7 +3219,7 @@ regione = "sicilia"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.051521
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -3228,7 +3228,7 @@ regione = "sicilia"
 condizione = "studente"
 fascia = "media"
 quota = 0.010617
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -3237,7 +3237,7 @@ regione = "sicilia"
 condizione = "studente"
 fascia = "alta"
 quota = 0.003719
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
 
@@ -3246,7 +3246,7 @@ regione = "sardegna"
 condizione = "dipendente_privato"
 fascia = "bassa"
 quota = 0.092792
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5562.55
 trasferimenti = 0.0
 
@@ -3255,7 +3255,7 @@ regione = "sardegna"
 condizione = "dipendente_privato"
 fascia = "media"
 quota = 0.117477
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19937.97
 trasferimenti = 0.0
 
@@ -3264,7 +3264,7 @@ regione = "sardegna"
 condizione = "dipendente_privato"
 fascia = "alta"
 quota = 0.101607
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 38928.41
 trasferimenti = 0.0
 
@@ -3273,7 +3273,7 @@ regione = "sardegna"
 condizione = "dipendente_pubblico"
 fascia = "bassa"
 quota = 0.019006
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 5562.55
 trasferimenti = 0.0
 
@@ -3282,7 +3282,7 @@ regione = "sardegna"
 condizione = "dipendente_pubblico"
 fascia = "media"
 quota = 0.024061
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 19937.97
 trasferimenti = 0.0
 
@@ -3291,7 +3291,7 @@ regione = "sardegna"
 condizione = "dipendente_pubblico"
 fascia = "alta"
 quota = 0.020811
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 38928.41
 trasferimenti = 0.0
 
@@ -3300,7 +3300,7 @@ regione = "sardegna"
 condizione = "autonomo"
 fascia = "bassa"
 quota = 0.053163
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3833.15
 trasferimenti = 0.0
 
@@ -3309,7 +3309,7 @@ regione = "sardegna"
 condizione = "autonomo"
 fascia = "media"
 quota = 0.036718
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 15527.83
 trasferimenti = 0.0
 
@@ -3318,7 +3318,7 @@ regione = "sardegna"
 condizione = "autonomo"
 fascia = "alta"
 quota = 0.034137
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 58563.53
 trasferimenti = 0.0
 
@@ -3327,7 +3327,7 @@ regione = "sardegna"
 condizione = "pensionato"
 fascia = "bassa"
 quota = 0.084125
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 11806.7
 
@@ -3336,7 +3336,7 @@ regione = "sardegna"
 condizione = "pensionato"
 fascia = "media"
 quota = 0.174815
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 21466.73
 
@@ -3345,7 +3345,7 @@ regione = "sardegna"
 condizione = "pensionato"
 fascia = "alta"
 quota = 0.068709
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 0.0
 trasferimenti = 40786.79
 
@@ -3354,7 +3354,7 @@ regione = "sardegna"
 condizione = "disoccupato_inattivo"
 fascia = "bassa"
 quota = 0.060805
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1760.0
 trasferimenti = 2267.73
 
@@ -3363,7 +3363,7 @@ regione = "sardegna"
 condizione = "disoccupato_inattivo"
 fascia = "media"
 quota = 0.036959
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 3200.0
 trasferimenti = 4123.15
 
@@ -3372,7 +3372,7 @@ regione = "sardegna"
 condizione = "disoccupato_inattivo"
 fascia = "alta"
 quota = 0.007188
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 6080.0
 trasferimenti = 7833.98
 
@@ -3381,7 +3381,7 @@ regione = "sardegna"
 condizione = "studente"
 fascia = "bassa"
 quota = 0.039014
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 1320.0
 trasferimenti = 0.0
 
@@ -3390,7 +3390,7 @@ regione = "sardegna"
 condizione = "studente"
 fascia = "media"
 quota = 0.025135
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 2400.0
 trasferimenti = 0.0
 
@@ -3399,6 +3399,6 @@ regione = "sardegna"
 condizione = "studente"
 fascia = "alta"
 quota = 0.003478
-posizione = [0.050000, 0.120000, 0.170000, 0.250000, 0.160000, 0.170000, 0.080000]
+posizione = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]
 primario = 4560.0
 trasferimenti = 0.0
