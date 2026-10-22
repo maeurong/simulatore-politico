@@ -188,7 +188,10 @@ def scrivi(d):
 def controlla(d):
     assert len(d["regioni"]) == 20 and all(d["elettori"][r["id"]] > 0 for r in d["regioni"]), "attese 20 regioni con elettori > 0"
     tot = sum(d["elettori"].values())
-    assert abs(tot - ELETTORI_ITALIA) <= 20, f"elettori {tot}, attesi {ELETTORI_ITALIA} +- 20"
+    # Affluenza del solo termine regionale (senza partiti né fedeltà): stesso intervallo del test Rust
+    # affluenza_del_turno_zero_plausibile, coglie un segno o una costante sbagliati.
+    affluenza = sum(d["elettori"][r] / (1 + math.exp(a)) for r, a in d["astensione"].items()) / tot
+    assert 0.5 < affluenza < 0.8, f"affluenza implicita {affluenza:.3f}, attesa fra 0,5 e 0,8"
     for i, q in d["quote"].items():
         assert len(q) == 18 and min(q) >= 0 and abs(sum(q) - 1) < 1e-9, f"{i}: quote somma {sum(q):.12f}, minimo {min(q)}"
     for k, h in d["istogrammi"].items():
@@ -210,6 +213,10 @@ def main():
     d = costruisci()
     controlla(d)
     if "--selftest" in sys.argv:
+        # I test Rust leggono il file committato: deve essere l'uscita dello script (intestazione
+        # con la data esclusa). Dopo `sim-cli tara` (PR B) il file cambia: il confronto va ristretto lì.
+        committato = (BASE / "elettorato.toml").read_text(encoding="utf-8").splitlines()[1:]
+        assert scrivi(d).splitlines()[1:] == committato, "elettorato.toml non è l'uscita dello script: rilancialo"
         print("selftest ok: 20 regioni, 360 gruppi")
         return
     destinazione = BASE / "elettorato.toml"

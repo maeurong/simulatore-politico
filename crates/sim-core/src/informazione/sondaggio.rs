@@ -118,7 +118,7 @@ pub(super) fn rileva(
         })
         .collect();
 
-    let n_tot: u32 = d.istituti.iter().map(|i| i.campione).sum();
+    let n_tot: f64 = d.istituti.iter().map(|i| f64::from(i.campione)).sum();
     let elettori: Vec<f64> = (0..el.gruppi.len()).map(|i| el.elettori(d, i)).collect();
     let totale: f64 = elettori.iter().sum();
     // Effetto medio degli istituti, più il bias comune.
@@ -127,9 +127,7 @@ pub(super) fn rileva(
         .collect();
     let mut incrocio = |id: String, indici: Vec<usize>| {
         let mut pesi: Vec<f64> = indici.iter().map(|&i| elettori[i]).collect();
-        let n_s = (f64::from(n_tot) * pesi.iter().sum::<f64>() / totale)
-            .round()
-            .max(1.0);
+        let n_s = (n_tot * pesi.iter().sum::<f64>() / totale).round().max(1.0);
         if pesi.iter().sum::<f64>() <= 0.0 {
             pesi.fill(1.0);
         }

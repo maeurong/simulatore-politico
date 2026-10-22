@@ -6,7 +6,7 @@
 mod comune;
 use comune::{dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci};
 use sim_core::caso::{Caso, Flusso};
-use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo};
+use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo, intenzioni};
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
 
 /// Messaggio dell'errore, dopo aver verificato che la variante e' quella attesa.
@@ -82,6 +82,29 @@ fn pesi_degli_interessi_che_non_sommano_a_uno_rifiutati() {
     );
     let m = elettorato(f);
     assert!(m.contains("dipendente_privato"), "{m}");
+}
+
+#[test]
+fn campione_sotto_cento_rifiutato() {
+    let m = elettorato(riscrivi(
+        file_base(),
+        "elettorato",
+        "campione = ",
+        "campione = 99",
+    ));
+    assert!(m.contains("campione"), "{m}");
+}
+
+#[test]
+fn nomi_vuoti_rifiutati() {
+    let m = elettorato(riscrivi(file_base(), "elettorato", "nomi = ", "nomi = []"));
+    assert!(m.contains("nomi"), "{m}");
+}
+
+#[test]
+fn regione_senza_elettori_rifiutata_col_nome() {
+    let m = elettorato(imposta(file_base(), "elettorato", "elettori = ", "0"));
+    assert!(m.contains("piemonte"), "{m}");
 }
 
 #[test]
@@ -673,6 +696,102 @@ fn al_turno_zero_l_intenzione_e_il_voto_precedente() {
     }
 }
 
+fn con_manopola(f: FileDati, nome: &str, valore: &str) -> FileDati {
+    imposta(f, "manopole", &format!("[{nome}]\nvalore = "), valore)
+}
+
+/// Intenzioni del gruppo `i` dopo aver ritoccato l'elettorato del turno zero.
+fn intenzione(f: &FileDati, i: usize, ritocca: impl Fn(&mut Gr)) -> Vec<f64> {
+    let d = DatiGioco::da_testi(f).unwrap();
+    let p = Partita::nuova(d.clone(), 1);
+    let mut el = p.elettorato().clone();
+    ritocca(&mut el.gruppi[i]);
+    intenzioni(&d, &el, p.partiti(), p.governo()).swap_remove(i)
+}
+
+fn uno_in(n: usize, k: usize) -> Vec<f64> {
+    (0..n).map(|j| f64::from(u8::from(j == k))).collect()
+}
+
+#[test]
+fn fedelta_trattiene_il_voto_precedente() {
+    let voto = |f: &FileDati, k: usize| intenzione(f, 0, |g| g.voto_precedente = uno_in(8, k))[0];
+    let base = file_base();
+    assert!(voto(&base, 0) > voto(&base, 1) + 1e-3);
+    let senza = con_manopola(file_base(), "fedelta", "0.0");
+    assert!((voto(&senza, 0) - voto(&senza, 1)).abs() < 1e-12);
+}
+
+#[test]
+fn giudizio_negativo_toglie_voti_al_governo() {
+    let p = Partita::nuova(dati_base(), 1);
+    let pres = p.governo().presidente;
+    let fuori = (0..p.partiti().len())
+        .find(|j| !p.governo().al_governo(*j))
+        .unwrap();
+    let f = file_base();
+    let zero = intenzione(&f, 0, |_| {});
+    let punito = intenzione(&f, 0, |g| g.giudizio[pres] = -5.0);
+    assert!(punito[pres] < zero[pres] - 1e-3);
+    assert_eq!(intenzione(&f, 0, |g| g.giudizio[fuori] = -5.0), zero);
+}
+
+#[test]
+fn la_distanza_avvicina_il_voto_al_partito_vicino() {
+    let p = Partita::nuova(dati_base(), 1);
+    let posizioni: Vec<f64> = p.partiti().iter().map(|x| x.posizione_percepita).collect();
+    let estremo = |piu: bool| {
+        let pos = posizioni.iter().copied().enumerate();
+        let scegli = |a: &(usize, f64), b: &(usize, f64)| a.1.total_cmp(&b.1);
+        if piu {
+            pos.max_by(scegli)
+        } else {
+            pos.min_by(scegli)
+        }
+        .unwrap()
+        .0
+    };
+    let (sinistra, destra) = (estremo(false), estremo(true));
+    let a_sinistra = intenzione(&file_base(), 0, |g| {
+        g.posizione = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        g.voto_precedente = vec![1.0 / 8.0; 8];
+    });
+    assert!(a_sinistra[sinistra] > a_sinistra[destra]);
+    let piatta = con_manopola(file_base(), "beta_distanza", "0.3");
+    let poco = intenzione(&piatta, 0, |g| {
+        g.posizione = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        g.voto_precedente = vec![1.0 / 8.0; 8];
+    });
+    assert!(
+        a_sinistra[sinistra] - a_sinistra[destra] > poco[sinistra] - poco[destra],
+        "beta più alto, distanza che pesa di più"
+    );
+}
+
+#[test]
+fn l_astensione_segue_fascia_e_condizione() {
+    // Studenti con un termine d'astensione proprio; posizioni e voto precedente uguali.
+    let f = sostituisci(
+        file_base(),
+        "elettorato",
+        "studente = 0.0 }",
+        "studente = 1.0 }",
+    );
+    let d = DatiGioco::da_testi(&f).unwrap();
+    let p = Partita::nuova(d.clone(), 1);
+    let mut el = p.elettorato().clone();
+    for g in &mut el.gruppi {
+        g.posizione = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0];
+        g.voto_precedente = vec![1.0 / 8.0; 8];
+    }
+    let i = intenzioni(&d, &el, p.partiti(), p.governo());
+    let ast = |c, fa| i[indice_gruppo(0, c, fa)][7];
+    use Condizione::{DipendentePrivato as Priv, Studente};
+    assert!(ast(Priv, Fascia::Bassa) > ast(Priv, Fascia::Media));
+    assert!(ast(Priv, Fascia::Media) > ast(Priv, Fascia::Alta));
+    assert!(ast(Studente, Fascia::Media) > ast(Priv, Fascia::Media));
+}
+
 #[test]
 fn piu_valence_piu_voti() {
     let nazionali = |valence: &str| {
@@ -808,14 +927,26 @@ fn elettorato_resta_valido_dopo_200_turni() {
         assert!((s - 1.0).abs() < 1e-9, "regione {r}: {s}");
     }
     for g in gruppi {
+        assert!(g.quota.is_finite() && g.quota >= 0.0);
         assert!(g.posizione.iter().all(|x| x.is_finite() && *x >= 0.0));
         assert!(somma_uno(&g.posizione));
         assert!(g.reddito.reale().is_finite() && g.reddito.reale() > 0.0);
+        assert!(g.giudizio.iter().chain(&g.crescite).all(|x| x.is_finite()));
     }
     let i = p.intenzioni_vere();
     assert_eq!(i.per_gruppo.len(), 360);
     assert!(i.per_gruppo.iter().all(|v| somma_uno(v)));
     assert!(somma_uno(&i.nazionali));
+    let v = p.vista();
+    let s = &v.sondaggio;
+    let quote = s.istituti.iter().map(|r| &r.quote);
+    let incroci = s.condizioni.iter().chain(&s.fasce).chain(&s.regioni);
+    for q in quote.chain(incroci.clone().map(|i| &i.quote)) {
+        assert!(somma_uno(q) && q.iter().all(|x| x.is_finite() && *x >= 0.0));
+    }
+    assert!(incroci.clone().all(|i| somma_uno(&i.posizione)));
+    assert!(incroci.into_iter().all(|i| i.approvazione.is_finite()));
+    assert!(v.proiezione.is_some());
     let salvato = p.salva().expect("il salvataggio riesce");
     assert!(Partita::carica(&salvato).unwrap() == p);
 }

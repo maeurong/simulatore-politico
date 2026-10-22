@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta, senza_shock};
+use comune::{dati_base, file_base, imposta, riscrivi, senza_shock};
 use sim_core::caso::Caso;
 use sim_core::elettorato::{Condizione, Fascia, PUNTI};
 use sim_core::informazione::{Motivo, genera};
@@ -173,6 +173,121 @@ fn incrocio_della_regione_piu_piccola_valido() {
     assert!(somma_uno(&vda.quote));
     assert!(somma_uno(&vda.posizione) && vda.posizione.len() == PUNTI);
     assert!(vda.approvazione.is_finite());
+}
+
+#[test]
+fn incrocio_con_sottocampione_nullo_valido() {
+    // Campione 100 per istituto e una Valle d'Aosta da 1000 elettori: 400 · quota < 0,5,
+    // il sottocampione arrotondato sarebbe zero e scatta il minimo di 1.
+    let f = riscrivi(file_base(), "elettorato", "campione = ", "campione = 100");
+    let f = imposta(
+        f,
+        "elettorato",
+        "id = \"valle_d_aosta\"\nelettori = ",
+        "1000",
+    );
+    let mut p = giocata(&f, 4);
+    for _ in 0..5 {
+        let v = p.vista();
+        let vda = v.sondaggio.regioni.iter().find(|i| i.id == "valle_d_aosta");
+        let vda = vda.unwrap();
+        assert_eq!(vda.campione, 1);
+        for i in v.sondaggio.condizioni.iter().chain(&v.sondaggio.fasce) {
+            assert!(i.campione >= 1);
+        }
+        for i in v.sondaggio.regioni.iter().chain(&v.sondaggio.condizioni) {
+            assert!(somma_uno(&i.quote), "{}", i.id);
+            assert!(somma_uno(&i.posizione) && i.posizione.len() == PUNTI);
+            assert!(i.approvazione.is_finite());
+        }
+        p.chiudi_turno();
+    }
+}
+
+#[test]
+fn quote_dell_istituto_sono_vero_piu_bias_piu_effetto() {
+    // Campioni da un miliardo: l'errore di campionamento scende sotto 1e-4 e restano
+    // bias comune ed effetto d'istituto.
+    let f = riscrivi(
+        file_base(),
+        "elettorato",
+        "campione = ",
+        "campione = 1000000000",
+    );
+    let f = con_manopola(f, "sigma_istituto", "0.02");
+    let f = con_manopola(f, "sigma_bias_comune", "0.02");
+    let mut p = giocata(&f, 4);
+    p.chiudi_turno();
+    let vero = p.intenzioni_vere().nazionali;
+    let inf = p.informazione();
+    let h = &inf.effetti_istituto;
+    assert!((h[0][0] - h[1][0]).abs() > 1e-3, "effetti uguali");
+    for (k, r) in inf.sondaggio.istituti.iter().enumerate() {
+        let grezzo: Vec<f64> = (0..vero.len())
+            .map(|j| (vero[j] + inf.bias[j] + h[k][j]).max(0.0))
+            .collect();
+        let tot: f64 = grezzo.iter().sum();
+        for (q, g) in r.quote.iter().zip(&grezzo) {
+            assert!((q - g / tot).abs() < 5e-4, "istituto {k}: {q} {}", g / tot);
+        }
+    }
+}
+
+#[test]
+fn campioni_al_massimo_non_vanno_in_panico() {
+    // I dati viaggiano nel salvataggio: quattro campioni da u32::MAX non devono traboccare.
+    let f = riscrivi(
+        file_base(),
+        "elettorato",
+        "campione = ",
+        "campione = 4294967295",
+    );
+    let mut p = giocata(&f, 4);
+    p.chiudi_turno();
+    assert!(
+        p.vista()
+            .sondaggio
+            .regioni
+            .iter()
+            .all(|i| somma_uno(&i.quote))
+    );
+}
+
+#[test]
+fn proiezione_segue_il_sondaggio() {
+    let p = Partita::nuova(dati_base(), 1);
+    let n = p.partiti().len();
+    let k = p.partiti().iter().position(|x| x.id == "centro").unwrap();
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    for inc in j["informazione"]["sondaggio"]["regioni"]
+        .as_array_mut()
+        .unwrap()
+    {
+        let q = inc["quote"].as_array_mut().unwrap();
+        q[k] = 0.0.into();
+        let tot: f64 = q.iter().map(|x| x.as_f64().unwrap()).sum();
+        for x in q.iter_mut() {
+            *x = (x.as_f64().unwrap() / tot).into();
+        }
+    }
+    let p = Partita::carica(&j.to_string()).unwrap();
+    let v = p.vista();
+    let seggi = v.proiezione.unwrap();
+    assert_eq!((seggi[k].camera, seggi[k].senato), (0, 0));
+    let d = dati_base();
+    let voti = |i: usize| -> f64 {
+        (v.sondaggio.regioni.iter().zip(&d.elettorato().regioni))
+            .map(|(r, e)| r.quote[i] * e.elettori as f64)
+            .sum()
+    };
+    let altri = || (0..n).filter(|&i| i != k);
+    let piu = altri()
+        .max_by(|a, b| voti(*a).total_cmp(&voti(*b)))
+        .unwrap();
+    let meno = altri()
+        .min_by(|a, b| voti(*a).total_cmp(&voti(*b)))
+        .unwrap();
+    assert!(seggi[piu].camera > seggi[meno].camera);
 }
 
 #[test]
