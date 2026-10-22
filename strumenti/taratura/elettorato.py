@@ -31,9 +31,9 @@ COMANDO = "python3 -I strumenti/taratura/elettorato.py"
 OGGI = datetime.date.today().isoformat()
 if "--cache" in sys.argv and sys.argv.index("--cache") + 1 == len(sys.argv):
     sys.exit("--cache vuole una cartella: --cache DIR")
-if "--ess" in sys.argv and sys.argv.index("--ess") + 1 == len(sys.argv):
-    sys.exit("--ess vuole un file: --ess FILE")
-ESS = pathlib.Path(sys.argv[sys.argv.index("--ess") + 1]) if "--ess" in sys.argv else None
+ESS = pathlib.Path(sys.argv[sys.argv.index("--ess") + 1]) if "--ess" in sys.argv[:-1] else None
+if "--ess" in sys.argv and (ESS is None or ESS.name.startswith("--") or not ESS.is_file()):
+    sys.exit(f"--ess vuole un file esistente: --ess FILE (dato: {ESS})")
 CACHE = pathlib.Path(sys.argv[sys.argv.index("--cache") + 1] if "--cache" in sys.argv else pathlib.Path.home() / ".cache" / "simulatore-politico-taratura")
 
 URL_CAMERA = "https://documenti.camera.it/leg19/risultatiElettorali2022/UGE/VotiListe/ItaliaVotiListeCIRC.csv"
@@ -146,6 +146,59 @@ def prova_posizioni():
     assert [len(m) for m in margini.values()] == [72, 126, 28], "posizioni: chiavi dei margini attese 72, 126, 28"
     for assi, m in margini.items():
         assert all(abs(x - m[k]) <= 1e-9 * max(1, m[k]) for k, x in proiezione(t, assi).items()), f"posizioni: margine {assi} non ritrovato"
+
+
+def prova_ess():
+    """ESS sintetico in memoria passato da ess_righe: righe 77/88/99, round 10 e altri paesi scartati, un peso 2 che sposta il margine (c, f, p),
+    margini ricalcolati qui in modo indipendente, regioni sotto i 100 casi identiche alla macroarea, fallimenti chiari."""
+    rng = random.Random(7)
+    inverso = {"dipendente_privato": ("1", "1", "4"), "dipendente_pubblico": ("1", "1", "1"), "autonomo": ("1", "2", ""),
+               "pensionato": ("6", "", ""), "disoccupato_inattivo": ("3", "", ""), "studente": ("2", "", "")}
+    decile = {"bassa": "2", "media": "5", "alta": "9"}
+    codici = {"piemonte": ("ITC1", 405), "lombardia": ("ITC4", 30), "veneto": ("ITH3", 40), "sicilia": ("ITG1", 20), "calabria": ("ITF6", 10)}
+    macro = {"piemonte": "nord", "lombardia": "nord", "veneto": "nord", "sicilia": "mezzogiorno", "calabria": "mezzogiorno"}
+    spec = []  # (condizione, fascia, lrscale, codice region, peso grezzo)
+    for r, (cod, n) in codici.items():
+        spec += [(rng.choice(CONDIZIONI), rng.choice(FASCE), rng.randrange(11), cod, 1.0) for _ in range(n)]
+    spec = [s if i % 40 else ("pensionato", "bassa", 0, s[3], 2.0) for i, s in enumerate(spec)]  # un caso su 40 pesa 2
+    spec += [(rng.choice(CONDIZIONI), rng.choice(FASCE), 5, "ITZZ", 1.0) for _ in range(5)]  # region non riconosciuto: contato, non fatale
+
+    def riga(c, f, lr, cod, w, ronda="11", paese="IT"):
+        att, rel, org = inverso[c]
+        return {"essround": ronda, "cntry": paese, "lrscale": str(lr), "mainact": att, "emplrel": rel, "tporgwk": org,
+                "hinctnta": decile[f], "region": cod, "anweight": str(w)}
+
+    righe = [riga(*s) for s in spec]
+    righe += [riga("autonomo", "alta", v, "ITC1", 1.0) for v in (77, 88, 99)] + [riga("autonomo", "alta", 3, "ITC1", 1.0, ronda="10")] + [riga("autonomo", "alta", 3, "ITC1", 1.0, paese="DE")]
+    out = ess_righe(righe)
+    assert len(out) == len(spec) and abs(sum(x[4] for x in out) - len(out)) < 1e-9, f"ess: {len(out)} righe attese {len(spec)}, pesi sommano {sum(x[4] for x in out)}"
+
+    taglio = [0, 0, 1, 1, 2, 3, 4, 5, 5, 6, 6]
+    norma = len(spec) / sum(s[4] for s in spec)
+    N = {(r, c, f): 1.0 for r in codici for c in CONDIZIONI for f in FASCE}
+    t, margini = posizioni(N, macro, out)
+    for assi, m in margini.items():
+        assert all(abs(x - m[k]) <= 1e-9 * max(1, m[k]) for k, x in proiezione(t, assi).items()), f"ess: margine {assi} non ritrovato"
+    globale = [sum(s[4] * norma for s in spec if taglio[s[2]] == p) / len(spec) for p in range(7)]
+    for c in CONDIZIONI:
+        for f in FASCE:
+            pesi = [sum(s[4] * norma for s in spec if (s[0], s[1]) == (c, f) and taglio[s[2]] == p) for p in range(7)]
+            for p in range(7):
+                atteso = 5 * (pesi[p] + LISCIA * globale[p]) / (sum(pesi) + LISCIA)
+                assert abs(margini[1, 2, 3][c, f, p] - atteso) < 1e-5, f"ess: margine (c, f, p) {c} {f} {p}: {margini[1, 2, 3][c, f, p]:.6f}, atteso {atteso:.6f}"
+    quota = lambda r, p: margini[0, 3][r, p] / 18
+    for a, b in (("lombardia", "veneto"), ("sicilia", "calabria")):
+        assert all(abs(quota(a, p) - quota(b, p)) < 1e-9 for p in range(7)), f"ess: {a} e {b} (sotto {MIN_CASI_REGIONE} casi) non uguali alla macroarea"
+    assert any(abs(quota("piemonte", p) - quota("lombardia", p)) > 1e-3 for p in range(7)), "ess: piemonte (oltre 100 casi) dovrebbe avere la sua distribuzione"
+    for guasto, msg in ((lambda: ess_righe([riga(*s[:3], "ITZZ", s[4]) for s in spec]), "regione"),
+                        (lambda: ess_righe([riga(*s, ronda="10") for s in spec]), "essround = 11"),
+                        (lambda: ess_righe([riga(*s[:4], "1,5") for s in spec]), "anweight")):
+        try:
+            guasto()
+        except AssertionError as e:
+            assert msg in str(e), f"ess: messaggio {e}, atteso {msg!r}"
+        else:
+            raise AssertionError(f"ess: CSV guasto ({msg}) accettato")
 
 
 def economia():
@@ -365,28 +418,57 @@ def quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme_ibf):
     return {r: quote([t[r, c, f] for c in CONDIZIONI for f in FASCE]) for r in ids}
 
 
-def ess(percorso):
-    """Righe (condizione, fascia o None, posizione 0-6, regione o None, peso) degli italiani con autocollocazione 0-10.
-    CSV del Data Portal ESS round 11: cntry, lrscale, mainact, emplrel, tporgwk, hinctnta (10 categorie), region (NUTS 2), anweight.
-    Chi non si colloca (77, 88, 99) è escluso da tutto; chi non ha condizione o reddito, dai margini che li usano."""
+COLONNE_ESS = ["essround", "cntry", "lrscale", "mainact", "emplrel", "tporgwk", "hinctnta", "region", "anweight"]
+SOGLIA_COMPLETI = 0.9  # quota minima di casi con regione mappata, fascia e condizione
+
+
+def ess_righe(righe, nome="ESS"):
+    """Righe (condizione o None, fascia o None, posizione 0-6, regione o None, peso) degli italiani del round 11 con autocollocazione 0-10.
+    Il peso `anweight` è normalizzato a somma = numero di righe. Chi non si colloca (77, 88, 99) è escluso da tutto; chi non ha condizione
+    (tporgwk o emplrel mancante compresi) resta solo nei margini della posizione; fallisce se meno del 90% ha regione, fascia o condizione."""
     nuts = {g: r[0] for r in economia().REGIONI for g in r[3]}
-    out = []
+    out, ignote, round11, tporgwk_mancante = [], collections.Counter(), 0, 0
+    for r in righe:
+        if r["essround"] != "11":
+            continue
+        round11 += 1
+        lr, att, rel, org = r["lrscale"], r["mainact"], r["emplrel"], r["tporgwk"]
+        if r["cntry"] != "IT" or lr not in map(str, range(11)):
+            continue
+        c = ("studente" if att == "2" else "pensionato" if att == "6" else "disoccupato_inattivo" if att in ("3", "4", "5", "7", "8", "9")
+             else None if att != "1" else "autonomo" if rel in ("2", "3") else None if rel != "1"
+             else "dipendente_pubblico" if org in ("1", "2") else "dipendente_privato" if org in ("3", "4", "5") else None)
+        tporgwk_mancante += att == "1" and rel == "1" and org not in ("1", "2", "3", "4", "5")
+        d = r["hinctnta"]
+        fascia = None if d not in map(str, range(1, 11)) else FASCE[0 if int(d) <= 3 else 1 if int(d) <= 7 else 2]
+        try:
+            peso = float(r["anweight"])
+        except ValueError:
+            raise AssertionError(f"{nome}: anweight {r['anweight']!r} non è un numero (virgola o vuoto?)") from None
+        assert peso > 0, f"{nome}: anweight {peso}, atteso > 0"
+        reg = nuts.get(r["region"])
+        if reg is None:
+            ignote[r["region"]] += 1
+        out.append((c, fascia, TAGLIO[int(lr)], reg, peso))
+    assert round11, f"{nome}: nessuna riga con essround = 11"
+    assert len(out) >= 500, f"{nome}: {len(out)} italiani del round 11 con lrscale valido, attesi almeno 500: colonne o codici diversi dal Data Portal?"
+    completi = {"regione": sum(x[3] is not None for x in out), "fascia": sum(x[1] is not None for x in out), "condizione": sum(x[0] is not None for x in out)}
+    for k, n in completi.items():
+        assert n >= SOGLIA_COMPLETI * len(out), (f"{nome}: {k} valorizzata in {n} casi su {len(out)} (minimo {SOGLIA_COMPLETI:.0%}); "
+                                                 f"region non riconosciuti {dict(ignote)}, dipendenti senza tporgwk valido {tporgwk_mancante}")
+    if ignote or tporgwk_mancante:
+        print(f"ess: region non riconosciuti {dict(ignote)}; dipendenti senza tporgwk valido {tporgwk_mancante} (senza condizione)", file=sys.stderr)
+    scala = len(out) / sum(x[4] for x in out)
+    return [x[:4] + (x[4] * scala,) for x in out]
+
+
+def ess(percorso):
+    """Righe di `ess_righe` dal CSV del Data Portal ESS round 11 (colonne COLONNE_ESS, tutte obbligatorie)."""
     with open(percorso, encoding="utf-8-sig", newline="") as f:
         righe = csv.DictReader(f)
-        assert righe.fieldnames and {"cntry", "lrscale", "mainact"} <= set(righe.fieldnames), f"{percorso}: colonne {righe.fieldnames}, attese almeno cntry, lrscale, mainact"
-        for r in righe:
-            lr, att, rel = r["lrscale"], r["mainact"], r.get("emplrel", "")
-            if r["cntry"] != "IT" or lr not in map(str, range(11)):
-                continue
-            c = ("studente" if att == "2" else "pensionato" if att == "6" else "disoccupato_inattivo" if att in ("3", "4", "5", "7", "8", "9")
-                 else None if att != "1" else "autonomo" if rel in ("2", "3") else None if rel != "1"
-                 else "dipendente_pubblico" if r.get("tporgwk") in ("1", "2") else "dipendente_privato")
-            d = r.get("hinctnta", "")
-            fascia = None if d not in map(str, range(1, 11)) else FASCE[0 if int(d) <= 3 else 1 if int(d) <= 7 else 2]
-            if c:
-                out.append((c, fascia, TAGLIO[int(lr)], nuts.get(r.get("region", "")), float(r.get("anweight") or 1)))
-    assert len(out) >= 500, f"{percorso}: {len(out)} italiani utilizzabili, attesi almeno 500: colonne o codici diversi dal Data Portal?"
-    return out
+        mancano = [c for c in COLONNE_ESS if c not in (righe.fieldnames or [])]
+        assert not mancano, f"{percorso}: colonne mancanti {mancano}; il CSV del Data Portal deve avere {COLONNE_ESS}"
+        return ess_righe(righe, str(percorso))
 
 
 def posizioni(N, macro, righe_ess):
@@ -419,7 +501,7 @@ def istogrammi(ids, macro, el, quote_, righe_ess):
         return {(r, c, f): list(ISTOGRAMMA) for r in ids for c in CONDIZIONI for f in FASCE}
     N = {(r, c, f): el[r] * quote_[r][3 * i + j] for r in ids for i, c in enumerate(CONDIZIONI) for j, f in enumerate(FASCE)}
     t, _ = posizioni(N, macro, righe_ess)
-    return {(r, c, f): quote([t[r, c, f, p] for p in range(7)]) for r in ids for c, f in ((c, f) for c in CONDIZIONI for f in FASCE)}
+    return {(r, c, f): quote([t[r, c, f, p] for p in range(7)]) for r in ids for c in CONDIZIONI for f in FASCE}
 
 
 def redditi(regioni, pers, scenario, mef_redditi):
@@ -492,12 +574,13 @@ def scrivi(d):
     for r in d["regioni"]:
         i = r["id"]
         t += f"\n[[regione]]\nid = {s(i)}\nelettori = {d['elettori'][i]}\nastensione = {d['astensione'][i]}\n"
+    fmt = ".6f" if d["con_ess"] else ".2f"
     for r in d["regioni"]:
         i = r["id"]
         for k, (c, f) in enumerate((c, f) for c in CONDIZIONI for f in FASCE):
             primario, trasf = d["redditi"][i, c, f]
             t += (f"\n[[gruppo]]\nregione = {s(i)}\ncondizione = {s(c)}\nfascia = {s(f)}\nquota = {d['quote'][i][k]:.6f}\n"
-                  f"posizione = [{', '.join(f'{x:.6f}' for x in d['istogrammi'][i, c, f])}]\nprimario = {primario}\ntrasferimenti = {trasf}\n")
+                  f"posizione = [{', '.join(f'{x:{fmt}}' for x in d['istogrammi'][i, c, f])}]\nprimario = {primario}\ntrasferimenti = {trasf}\n")
     return t
 
 
@@ -540,6 +623,7 @@ def main():
     if "--selftest" in sys.argv:
         prova_ipf()
         prova_posizioni()
+        prova_ess()
     d = costruisci()
     controlla(d)
     if "--selftest" in sys.argv:
