@@ -190,6 +190,7 @@ mod test {
             giudizio: vec![0.5],
             reddito: Reddito::default(),
             reddito_prima: Reddito::default(),
+            crescite: vec![],
         }
     }
 

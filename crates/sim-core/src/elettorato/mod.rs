@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 mod composizione;
+mod giudizio;
 mod redditi;
 pub use redditi::{Indici, Reddito};
 
@@ -306,6 +307,8 @@ pub struct Gruppo {
     pub giudizio: Vec<f64>,
     pub reddito: Reddito,
     pub reddito_prima: Reddito,
+    /// Ultime crescite reali trimestrali in punti, la più recente in coda.
+    pub crescite: Vec<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -338,6 +341,7 @@ impl Elettorato {
                     giudizio: vec![0.0; n_partiti],
                     reddito: Reddito::default(),
                     reddito_prima: Reddito::default(),
+                    crescite: Vec::new(),
                 })
                 .collect(),
         };
@@ -377,6 +381,11 @@ impl Elettorato {
             }
             if g.giudizio.iter().any(|x| !x.is_finite()) {
                 return ko(format!("elettorato.gruppi[{i}].giudizio non finito"));
+            }
+            if g.crescite.len() > 16 || g.crescite.iter().any(|x| !x.is_finite()) {
+                return ko(format!(
+                    "elettorato.gruppi[{i}].crescite: al massimo 16 valori finiti"
+                ));
             }
             if !(g.reddito.e_valido() && g.reddito_prima.e_valido()) {
                 return ko(format!(

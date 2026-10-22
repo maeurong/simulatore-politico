@@ -396,3 +396,67 @@ fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
         }
     }
 }
+
+#[test]
+fn solo_i_partiti_di_governo_hanno_un_giudizio() {
+    let mut p = Partita::nuova(dati_base(), 5);
+    for _ in 0..8 {
+        p.chiudi_turno();
+    }
+    let gov = p.governo().clone();
+    for j in (0..p.partiti().len()).filter(|j| !gov.al_governo(*j)) {
+        assert!(p.elettorato().gruppi.iter().all(|g| g.giudizio[j] == 0.0));
+    }
+    assert!(
+        p.elettorato()
+            .gruppi
+            .iter()
+            .any(|g| g.giudizio[gov.presidente] != 0.0)
+    );
+}
+
+/// Giudizi sul centrodestra dopo 6 turni con shock, con il lavoro affidato al centrodestra.
+fn giudizi_del_centrodestra(quota_presidente: &str) -> Vec<f64> {
+    let f = sostituisci(
+        file_base(),
+        "scenario",
+        "lavoro_welfare = \"destra\"",
+        "lavoro_welfare = \"centrodestra\"",
+    );
+    let f = imposta(
+        f,
+        "manopole",
+        "[quota_colpa_presidente]\nvalore = ",
+        quota_presidente,
+    );
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 3);
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    let j = p
+        .partiti()
+        .iter()
+        .position(|x| x.id == "centrodestra")
+        .unwrap();
+    p.elettorato()
+        .gruppi
+        .iter()
+        .map(|g| g.giudizio[j])
+        .collect()
+}
+
+#[test]
+fn la_colpa_della_disoccupazione_va_al_partito_del_lavoro() {
+    assert!(giudizi_del_centrodestra("0.3").iter().any(|x| *x != 0.0));
+    assert!(giudizi_del_centrodestra("1.0").iter().all(|x| *x == 0.0));
+}
+
+#[test]
+fn le_aspettative_ricordano_al_massimo_la_finestra() {
+    let mut p = Partita::nuova(dati_base(), 2);
+    assert!(p.elettorato().gruppi.iter().all(|g| g.crescite.is_empty()));
+    for _ in 0..20 {
+        p.chiudi_turno();
+    }
+    assert!(p.elettorato().gruppi.iter().all(|g| g.crescite.len() == 8));
+}
