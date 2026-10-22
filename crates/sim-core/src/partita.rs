@@ -90,7 +90,8 @@ impl Partita {
         }
     }
 
-    /// Snapshot JSON completo: schema, seme, stato del generatore, dati.
+    /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
+    /// economia.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -114,7 +115,8 @@ impl Partita {
     ///
     /// # Errors
     /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
-    /// da 1-4, o dati che non passano `DatiGioco::valida`.
+    /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
+    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -138,6 +140,28 @@ impl Partita {
             )));
         }
         partita.dati.valida()?;
+        let e = &partita.economia;
+        let regioni_uguali = e.regioni.iter().map(|r| &r.id).eq(partita
+            .dati
+            .regioni()
+            .iter()
+            .map(|r| &r.id));
+        if !regioni_uguali {
+            return Err(Errore::SalvataggioIlleggibile(
+                "economia.regioni non combacia con le regioni dei dati".into(),
+            ));
+        }
+        let n_settori = partita.dati.struttura().settori.len();
+        for (campo, n) in [
+            ("prezzi_settori", e.prezzi_settori.len()),
+            ("gap_settori", e.gap_settori.len()),
+        ] {
+            if n != n_settori {
+                return Err(Errore::SalvataggioIlleggibile(format!(
+                    "economia.{campo} ha {n} voci, i settori sono {n_settori}"
+                )));
+            }
+        }
         Ok(partita)
     }
 }

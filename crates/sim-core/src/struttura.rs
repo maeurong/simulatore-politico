@@ -69,12 +69,26 @@ fn incoerente<T>(m: &str) -> Result<T, Errore> {
     Err(Errore::StrutturaIncoerente(m.into()))
 }
 
+/// `x` finito e ammesso da `ok`; altrimenti `StrutturaIncoerente` col nome del campo.
+fn controlla(x: f64, ok: bool, regola: &str, nome: impl FnOnce() -> String) -> Result<(), Errore> {
+    if x.is_finite() && ok {
+        Ok(())
+    } else {
+        incoerente(&format!("{} = {x}: deve essere {regola}", nome()))
+    }
+}
+
+fn non_negativo(x: f64, nome: impl FnOnce() -> String) -> Result<(), Errore> {
+    controlla(x, x >= 0.0, "finito e non negativo", nome)
+}
+
 impl Struttura {
     /// Forma, produttività, quote e id di settore di struttura, regioni e dicasteri.
     ///
     /// # Errors
-    /// Vedi `Errore`: `StrutturaIncoerente`, `SettoreNonProduttivo`, `QuoteNonUnitarie`,
-    /// `SettoreSconosciuto`.
+    /// Vedi `Errore`: `StrutturaIncoerente` (anche per numeri non finiti, negativi dove non
+    /// ammesso, `disoccupazione_2025` fuori da [0, 100], `okun` non negativo),
+    /// `SettoreNonProduttivo`, `QuoteNonUnitarie`, `SettoreSconosciuto`.
     pub fn valida(&self, regioni: &[Regione], dicasteri: &[Dicastero]) -> Result<(), Errore> {
         if self.settori.len() != N_SETTORI {
             return incoerente("i settori devono essere 10");
@@ -102,16 +116,47 @@ impl Struttura {
         {
             return incoerente("regioni assenti o con forze di lavoro non positive");
         }
-        let okun_medio: f64 = regioni.iter().map(|r| r.forze_lavoro * r.okun).sum();
-        if regioni.iter().any(|r| !r.okun.is_finite())
-            || !okun_medio.is_finite()
-            || okun_medio == 0.0
-        {
-            return incoerente("okun regionali non finiti o con media pesata nulla");
+        let id = |i: usize| self.settori[i].id.as_str();
+        for (i, riga) in self.a.iter().enumerate() {
+            for (j, &x) in riga.iter().enumerate() {
+                non_negativo(x, || format!("a[{}][{}]", id(i), id(j)))?;
+            }
+        }
+        for (nome, v) in &vettori {
+            for (j, &x) in v.iter().enumerate() {
+                non_negativo(x, || format!("{nome} del settore {}", id(j)))?;
+            }
+        }
+        for r in regioni {
+            let u = r.disoccupazione_2025;
+            controlla(u, (0.0..=100.0).contains(&u), "finito in [0, 100]", || {
+                format!("disoccupazione_2025 di {}", r.id)
+            })?;
+            controlla(r.okun, r.okun < 0.0, "finito e negativo", || {
+                format!("okun di {}", r.id)
+            })?;
+            for (s, &q) in &r.mix {
+                non_negativo(q, || format!("mix di {} per il settore {s}", r.id))?;
+            }
+        }
+        for d in dicasteri {
+            let spese = [
+                ("spesa_pil", d.spesa_pil),
+                ("salari_pil", d.salari_pil),
+                ("acquisti_pil", d.acquisti_pil),
+            ];
+            for (nome, x) in spese {
+                non_negativo(x, || format!("{nome} del dicastero {}", d.id))?;
+            }
+            for (s, &q) in d.settori.iter().flatten() {
+                non_negativo(q, || {
+                    format!("quota del dicastero {} per il settore {s}", d.id)
+                })?;
+            }
         }
         for (j, settore) in self.settori.iter().enumerate() {
             let costi: f64 = self.a.iter().map(|riga| riga[j]).sum::<f64>() + self.importazioni[j];
-            if !costi.is_finite() || costi >= 1.0 {
+            if costi >= 1.0 {
                 return Err(Errore::SettoreNonProduttivo {
                     id: settore.id.clone(),
                 });

@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_ingresso, dati_base, file_base, sostituisci};
+use comune::{con_ingresso, dati_base, file_base, imposta, riscrivi, sostituisci};
 use sim_core::{DatiGioco, Errore, FileDati, Partita};
 
 fn errore(f: FileDati) -> Errore {
@@ -15,11 +15,28 @@ fn dati_base_hanno_dieci_settori_e_venti_regioni() {
 
 #[test]
 fn turno_zero_riproduce_i_valori_di_partenza() {
-    let d = dati_base();
+    let gap = 2.0;
+    let d = DatiGioco::da_testi(&con_ingresso(file_base(), "output_gap", gap)).unwrap();
+    let s = d.scenario();
     let p = Partita::nuova(d.clone(), 1);
     let e = p.economia();
     assert_eq!(e.inflazione[0], 4.2);
     assert_eq!(e.tasso_bce, 2.5);
+    assert_eq!(
+        e.pil_potenziale_reale,
+        s.pil_trimestrale.valore / (1.0 + gap / 100.0)
+    );
+    assert_eq!(e.output_gap, [gap, gap]);
+    assert_eq!(e.livello_prezzi, 1.0);
+    assert_eq!(e.inflazione[1], s.inflazione_t3.valore);
+    assert_eq!(e.inflazione[2], s.inflazione_t2.valore);
+    assert!(
+        e.inflazione[3..].iter().all(|&x| x == 2.0),
+        "{:?}",
+        e.inflazione
+    );
+    assert!(e.prezzi_settori.iter().all(|p| (p - 1.0).abs() < 1e-9));
+    assert_eq!(e.area_euro.inflazione_resto, e.inflazione[0]);
     let pesata: f64 = e
         .regioni
         .iter()
@@ -120,6 +137,104 @@ fn okun_non_finito_rifiutato() {
         "okun = nan",
     ));
     assert!(matches!(e, Errore::StrutturaIncoerente(_)), "{e}");
+}
+
+/// Il file modificato è rifiutato con `StrutturaIncoerente` che nomina `campo`.
+fn incoerente_su(f: FileDati, campo: &str) {
+    match errore(f) {
+        Errore::StrutturaIncoerente(m) => assert!(m.contains(campo), "{m:?} senza {campo:?}"),
+        e => panic!("atteso StrutturaIncoerente su {campo}, trovato {e}"),
+    }
+}
+
+#[test]
+fn numeri_della_struttura_non_finiti_o_negativi_rifiutati() {
+    let b = file_base;
+    incoerente_su(
+        imposta(b(), "economia", "valore_aggiunto = [", "nan"),
+        "valore_aggiunto del settore A",
+    );
+    incoerente_su(
+        imposta(b(), "economia", "importazioni = [", "inf"),
+        "importazioni del settore A",
+    );
+    incoerente_su(imposta(b(), "economia", "a = [\n  [", "-0.01"), "a[A][A]");
+    incoerente_su(
+        imposta(b(), "economia", "consumi = [", "nan"),
+        "consumi del settore A",
+    );
+}
+
+#[test]
+fn numeri_delle_regioni_non_finiti_o_fuori_intervallo_rifiutati() {
+    let b = file_base;
+    incoerente_su(
+        imposta(b(), "regioni", "disoccupazione_2025 = ", "nan"),
+        "disoccupazione_2025 di piemonte",
+    );
+    incoerente_su(
+        imposta(b(), "regioni", "disoccupazione_2025 = ", "101.0"),
+        "disoccupazione_2025 di piemonte",
+    );
+    incoerente_su(
+        imposta(b(), "regioni", "mix = { A = ", "nan"),
+        "mix di piemonte per il settore A",
+    );
+}
+
+#[test]
+fn okun_positivo_o_nullo_rifiutato() {
+    for v in ["0.1", "0.0"] {
+        incoerente_su(
+            imposta(file_base(), "regioni", "okun = ", v),
+            "okun di piemonte",
+        );
+    }
+}
+
+#[test]
+fn numeri_dei_dicasteri_non_finiti_o_negativi_rifiutati() {
+    let b = file_base;
+    incoerente_su(
+        imposta(b(), "dicasteri", "spesa_pil = ", "nan"),
+        "spesa_pil del dicastero economia_finanze",
+    );
+    incoerente_su(
+        imposta(b(), "dicasteri", "salari_pil = ", "inf"),
+        "salari_pil del dicastero economia_finanze",
+    );
+    incoerente_su(
+        imposta(b(), "dicasteri", "acquisti_pil = ", "-1.0"),
+        "acquisti_pil del dicastero economia_finanze",
+    );
+    incoerente_su(
+        imposta(b(), "dicasteri", "settori = { A = ", "nan"),
+        "quota del dicastero",
+    );
+}
+
+#[test]
+fn settore_senza_domanda_ne_legami_rifiutato() {
+    let uno = "[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]";
+    let mut f = riscrivi(
+        file_base(),
+        "economia",
+        "  [",
+        "  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],",
+    );
+    for campo in ["consumi", "investimenti", "esportazioni", "spesa_pubblica"] {
+        f = riscrivi(
+            f,
+            "economia",
+            &format!("{campo} = ["),
+            &format!("{campo} = {uno}"),
+        );
+    }
+    let f = riscrivi(f, "dicasteri", "settori = ", "settori = { A = 1.0 }");
+    incoerente_su(
+        f,
+        "il settore BTE non ha produzione di riferimento positiva",
+    );
 }
 
 #[test]

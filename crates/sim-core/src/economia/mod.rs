@@ -45,13 +45,13 @@ pub struct Economia {
     /// Punti annualizzati, l'ultima.
     pub inflazione_importata: f64,
     pub area_euro: AreaEuro,
-    /// Punti di PIL potenziale; 0 fino al Task 7.
+    /// Punti di PIL potenziale; 0 fino al blocco finanza pubblica.
     pub impulso_fiscale: f64,
     /// Tasso reale meno naturale del turno prima di quello in corso.
     pub tasso_reale_precedente: f64,
 }
 
-/// Obiettivo di inflazione della BCE: i trimestri prima del T2 2026 ci stanno sopra.
+/// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
 const OBIETTIVO_INFLAZIONE: f64 = 2.0;
 
 impl Economia {
@@ -134,7 +134,7 @@ impl Economia {
             .map(|(d, e)| d + e * x_estera)
             .collect();
         let x = leontief::produzione(&st.a, &d);
-        let x0 = leontief::produzione(&st.a, &d0);
+        let x0 = produzione_riferimento(dati);
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());
 
         let prima = prezzo_consumi(dati, &self.prezzi_settori);
@@ -168,7 +168,41 @@ impl Economia {
 
         self.okun(dati);
         self.bce(dati, shock_bce);
+        debug_assert!(self.e_finita(), "stato non finito: {self:?}");
     }
+
+    fn e_finita(&self) -> bool {
+        let scalari = [
+            self.pil_trimestrale,
+            self.pil_potenziale_reale,
+            self.livello_prezzi,
+            self.tasso_bce,
+            self.energia,
+            self.domanda_estera,
+            self.inflazione_importata,
+            self.impulso_fiscale,
+            self.tasso_reale_precedente,
+            self.area_euro.inflazione_resto,
+            self.area_euro.gap_resto,
+        ];
+        scalari
+            .iter()
+            .chain(&self.output_gap)
+            .chain(&self.inflazione)
+            .chain(&self.prezzi_settori)
+            .chain(&self.gap_settori)
+            .chain(
+                self.regioni
+                    .iter()
+                    .flat_map(|r| [&r.disoccupazione, &r.disoccupazione_strutturale, &r.gap]),
+            )
+            .all(|x| x.is_finite())
+    }
+}
+
+/// Produzione di riferimento `x0 = (I−A)⁻¹ d0`, a esportazioni e prezzi del turno zero.
+pub(crate) fn produzione_riferimento(dati: &DatiGioco) -> Vec<f64> {
+    leontief::produzione(&dati.struttura().a, &domanda_riferimento(dati))
 }
 
 /// (C0, I0, X0): miliardi per trimestre a prezzi del turno zero.

@@ -1,3 +1,4 @@
+use crate::economia::produzione_riferimento;
 use crate::errore::Errore;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
@@ -128,11 +129,13 @@ pub struct Dicastero {
     pub peso_spartizione: u8,
     pub regione_bersaglio: bool,
     pub ruoli: Vec<Ruolo>,
-    /// Percentuali del PIL.
+    /// % del PIL.
     pub spesa_pil: f64,
+    /// % del PIL.
     pub salari_pil: f64,
+    /// % del PIL.
     pub acquisti_pil: f64,
-    /// Quota della spesa per settore; assente = spesa non assegnata a settori.
+    /// Quota della spesa per settore; assente = si usa il vettore nazionale spesa_pubblica.
     #[serde(default)]
     pub settori: Option<BTreeMap<String, f64>>,
 }
@@ -205,8 +208,7 @@ impl DatiGioco {
     /// Parsa e valida i testi dei file di dati.
     ///
     /// # Errors
-    /// TOML malformato, dicasteri ripetuti, indicatori di servizio doppi,
-    /// ruoli orfani o doppi, manopole con valore fuori dall'intervallo.
+    /// `Toml` se un file è malformato, poi tutti gli errori di [`DatiGioco::valida`].
     pub fn da_testi(file: &FileDati) -> Result<DatiGioco, Errore> {
         let dicasteri = toml::from_str::<FileDicasteri>(&file.dicasteri)
             .map_err(|e| errore_toml("dicasteri.toml", e))?
@@ -236,8 +238,11 @@ impl DatiGioco {
     /// Coerenza dei dati, anche per quelli letti da un salvataggio.
     ///
     /// # Errors
-    /// Dicasteri ripetuti, indicatori di servizio doppi, ruoli orfani o doppi, manopole non finite
-    /// o con valore fuori dall'intervallo.
+    /// `DicasteroDoppio`, `IndicatoreDoppio`, `RuoloOrfano`, `RuoloDoppio`; `FuoriIntervallo`
+    /// (manopola non finita o fuori intervallo); `ManopolaMancante`; `ScenarioFuoriIntervallo`;
+    /// `StrutturaIncoerente` (forma, numeri non finiti o di segno sbagliato, produzione di
+    /// riferimento non positiva, piramide); `SettoreNonProduttivo`; `QuoteNonUnitarie`;
+    /// `SettoreSconosciuto`.
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -289,6 +294,14 @@ impl DatiGioco {
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
         self.scenario.valida()?;
-        self.struttura.valida_piramide()
+        self.struttura.valida_piramide()?;
+        let x0 = produzione_riferimento(self);
+        match x0.iter().position(|&x| x.is_nan() || x <= 0.0) {
+            Some(i) => Err(Errore::StrutturaIncoerente(format!(
+                "il settore {} non ha produzione di riferimento positiva",
+                self.struttura.settori[i].id
+            ))),
+            None => Ok(()),
+        }
     }
 }

@@ -212,6 +212,28 @@ fn versione_non_intera_rifiutata() {
 }
 
 #[test]
+fn economia_che_non_combacia_coi_dati_rifiutata() {
+    let rifiutata = |campo: &str, f: fn(&mut Vec<serde_json::Value>)| {
+        let s = salvataggio_modificato(|j| f(j["economia"][campo].as_array_mut().unwrap()));
+        Partita::carica(&s).unwrap_err()
+    };
+    let e = rifiutata("regioni", |v| {
+        v.pop();
+    });
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("economia.regioni")));
+    let e = rifiutata("regioni", |v| v.swap(0, 1));
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("economia.regioni")));
+    let e = rifiutata("gap_settori", |v| {
+        v.pop();
+    });
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("gap_settori")));
+    let e = rifiutata("prezzi_settori", |v| {
+        v.pop();
+    });
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("prezzi_settori")));
+}
+
+#[test]
 fn campo_obbligatorio_mancante_rifiutato() {
     let s = salvataggio_modificato(|j| {
         j.as_object_mut().unwrap().remove("turno");

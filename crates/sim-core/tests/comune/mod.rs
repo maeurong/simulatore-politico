@@ -76,15 +76,55 @@ pub fn con_ingresso(mut f: FileDati, nome: &str, valore: f64) -> FileDati {
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn sostituisci(mut f: FileDati, file: &str, da: &str, a: &str) -> FileDati {
-    let testo = match file {
+    let testo = testo_di(&mut f, file);
+    assert!(testo.contains(da), "{da:?} assente in {file}");
+    *testo = testo.replacen(da, a, 1);
+    f
+}
+
+fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
+    match file {
         "dicasteri" => &mut f.dicasteri,
         "manopole" => &mut f.manopole,
         "economia" => &mut f.economia,
         "regioni" => &mut f.regioni,
         "scenario" => &mut f.scenario,
         _ => panic!("file di dati sconosciuto: {file}"),
-    };
-    assert!(testo.contains(da), "{da:?} assente in {file}");
-    *testo = testo.replacen(da, a, 1);
+    }
+}
+
+/// Nel file `file`, il primo valore dopo `prefisso` (fino a `,` `]` `}` spazio o fine riga)
+/// diventa `nuovo`. Non dipende dai numeri dei dati, solo dalla forma del file.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn imposta(mut f: FileDati, file: &str, prefisso: &str, nuovo: &str) -> FileDati {
+    let testo = testo_di(&mut f, file);
+    let inizio = testo
+        .find(prefisso)
+        .unwrap_or_else(|| panic!("{prefisso:?} assente in {file}"))
+        + prefisso.len();
+    let fine = inizio
+        + testo[inizio..]
+            .find([',', ']', '}', ' ', '\n'])
+            .expect("fine del valore");
+    testo.replace_range(inizio..fine, nuovo);
+    f
+}
+
+/// Ogni riga di `file` che inizia con `prefisso` diventa `nuova`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> FileDati {
+    let testo = testo_di(&mut f, file);
+    *testo = testo
+        .lines()
+        .map(|r| if r.starts_with(prefisso) { nuova } else { r })
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
     f
 }
