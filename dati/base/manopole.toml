@@ -278,9 +278,9 @@ min = 0.03
 max = 0.09
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (stock dei pensionati stabile nel primo anno; da tarare col blocco spesa obbligatoria)
+# assunzione del piano 3, nessuna fonte in docs/ricerca (calcolata: gli ingressi del 2027 uguagliano le uscite del 2027 dello stock iniziale; uscite 0,055 · 16.388.149 = 901.348, coorte dei 66 anni nella piramide = 794.674, rapporto 1,1342)
 [copertura_pensionamento]
-valore = 1.0
+valore = 1.1342
 min = 0.5
 max = 3.0
 ticket = "07"

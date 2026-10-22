@@ -173,8 +173,8 @@ pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimes
         },
         spese: Spese {
             dicasteri: euro(e.bilancio.spesa_totale() as f64 / 4.0),
-            pensioni: trimestre(s.spesa_pensioni.valore),
-            sussidi: trimestre(s.spesa_sussidi.valore),
+            pensioni: e.spesa_pensioni(),
+            sussidi: e.spesa_sussidi(dati),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),
             interessi: euro(e.tasso_medio_debito / 100.0 * e.debito as f64 / 4.0),
         },
@@ -199,6 +199,7 @@ impl Economia {
         {
             self.bilancio = b;
         }
+        self.previdenza(dati, data);
         let conti = conti_del_trimestre(self, dati);
 
         // Impulso: la spesa discrezionale oltre quella del turno prima rivalutata all'inflazione.

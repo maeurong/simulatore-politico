@@ -5,9 +5,11 @@ pub mod congiuntura;
 pub mod finanza;
 pub mod lavoro;
 pub mod leontief;
+pub mod previdenza;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
+pub use previdenza::Annata;
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
@@ -69,6 +71,10 @@ pub struct Economia {
     pub disavanzo_trimestre: i64,
     /// Ultimi 8 trimestri, il più recente in coda.
     pub storico: Vec<ConsuntivoTrimestre>,
+    /// Pensionati per anno di pensionamento.
+    pub pensioni: Vec<Annata>,
+    /// Euro annui, fermi in nominale.
+    pub sussidio_per_disoccupato: i64,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -137,7 +143,10 @@ impl Economia {
             conti: ContiTrimestre::default(),
             disavanzo_trimestre: 0,
             storico: Vec::new(),
+            pensioni: Vec::new(),
+            sussidio_per_disoccupato: 0,
         };
+        e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, dati);
         e.disavanzo_trimestre = e.conti.disavanzo();
         // Quattro trimestri prima del turno zero, tutti uguali al conto di partenza.

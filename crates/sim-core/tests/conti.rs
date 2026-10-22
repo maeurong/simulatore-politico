@@ -1,5 +1,5 @@
 mod comune;
-use comune::{dati_base, senza_shock};
+use comune::{con_ingresso, dati_base, senza_shock};
 use sim_core::{DatiGioco, Partita};
 
 fn giocata(dati: DatiGioco, turni: u32) -> Partita {
@@ -108,4 +108,65 @@ fn storico_di_otto_trimestri_col_piu_recente_in_coda() {
         (iniziale[3].data.anno, iniziale[3].data.trimestre),
         (2026, 3)
     );
+}
+
+fn con_regime_pensioni(regime: &str) -> DatiGioco {
+    let mut f = senza_shock();
+    f.scenario = f.scenario.replacen(
+        "regime_pensioni = \"contributivo\"",
+        &format!("regime_pensioni = \"{regime}\""),
+        1,
+    );
+    DatiGioco::da_testi(&f).unwrap()
+}
+
+#[test]
+fn spesa_pensioni_del_turno_zero_e_quella_dello_scenario() {
+    let p = giocata(base_senza_shock(), 1);
+    let annua = p.economia().conti.spese.pensioni as f64 * 4.0 / 1e9;
+    assert!((annua - 351.8).abs() < 0.5, "{annua}");
+}
+
+#[test]
+fn il_regime_tocca_solo_le_annate_nuove() {
+    let (r, c) = (
+        con_regime_pensioni("retributivo"),
+        con_regime_pensioni("contributivo"),
+    );
+    assert_eq!(
+        giocata(r.clone(), 1).economia().conti.spese.pensioni,
+        giocata(c.clone(), 1).economia().conti.spese.pensioni
+    );
+    let (pr, pc) = (giocata(r, 9), giocata(c, 9));
+    assert!(pr.economia().conti.spese.pensioni > pc.economia().conti.spese.pensioni);
+    assert_eq!(
+        pr.economia().pensioni[0].importo,
+        pc.economia().pensioni[0].importo,
+        "l'annata del 2026 non cambia col regime"
+    );
+}
+
+#[test]
+fn le_pensioni_in_essere_seguono_l_inflazione() {
+    let p = giocata(base_senza_shock(), 2);
+    let a = &p.economia().pensioni[0];
+    let iniziale = (351.8e9_f64 / 16_388_149.0).round() as i64;
+    assert!(a.importo > iniziale);
+}
+
+#[test]
+fn i_sussidi_salgono_in_recessione() {
+    let crisi = giocata(
+        DatiGioco::da_testi(&con_ingresso(senza_shock(), "output_gap", -4.0)).unwrap(),
+        2,
+    );
+    let normale = giocata(base_senza_shock(), 2);
+    assert!(crisi.economia().conti.spese.sussidi > normale.economia().conti.spese.sussidi);
+}
+
+#[test]
+fn sussidi_del_turno_zero_alla_naspi() {
+    let p = giocata(base_senza_shock(), 1);
+    let annui = p.economia().conti.spese.sussidi as f64 * 4.0 / 1e9;
+    assert!((annui - 17.93).abs() < 0.5, "{annui}");
 }
