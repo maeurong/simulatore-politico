@@ -1,0 +1,15 @@
+[package]
+name = "app"
+version = "0.1.0"
+description = "Simulatore politico"
+edition = "2024"
+
+[lib]
+name = "app_lib"
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+sim-core = { path = "../../crates/sim-core" }
+tauri = "=2.12.3"

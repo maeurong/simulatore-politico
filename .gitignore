@@ -1,3 +1,6 @@
 .DS_Store
 # copie integrali di pagine di terzi: solo in locale, online restano i .provenance.json
 docs/ricerca/fonti/*.md
+target/
+node_modules/
+app/dist/
