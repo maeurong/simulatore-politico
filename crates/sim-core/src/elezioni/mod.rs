@@ -1,5 +1,9 @@
 //! Dati elettorali (`elezioni.toml`): circoscrizioni, menu delle leggi e impostazioni predefinite.
 
+mod seggi;
+
+pub use seggi::{SeggiCircoscrizione, seggi_da_quota, seggi_per_circoscrizione};
+
 use crate::errore::Errore;
 use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
