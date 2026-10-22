@@ -222,6 +222,55 @@ fn cifre_soggetti(gara: &[InGara], cifre: &[u64]) -> Vec<u64> {
         .collect()
 }
 
+/// Seggi uninominali di una regione: D'Hondt senza soglia fra coalizioni dichiarate e liste
+/// sole, poi dentro la coalizione fra tutte le sue liste, ammesse o no.
+fn uninominali(legge: &LeggeElettorale, voti: &Voti, v: &[u64], seggi: u32) -> Vec<u32> {
+    // assunzione A2 del piano 2: D'Hondt qualunque sia la formula, nessuna soglia.
+    let mut gara = Vec::new();
+    let mut coperte = BTreeSet::new();
+    if legge.coalizioni {
+        // assunzione A9 del piano 2: coalizione di una lista sola = lista non coalizzata.
+        for (i, c) in voti
+            .coalizioni
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.len() >= 2)
+        {
+            coperte.extend(c.iter().copied());
+            gara.push(InGara {
+                soggetto: Soggetto::Coalizione(i),
+                liste: c.clone(),
+                ammesse: c.clone(),
+            });
+        }
+    }
+    for l in (0..v.len()).filter(|l| !coperte.contains(l)) {
+        gara.push(InGara {
+            soggetto: Soggetto::Lista(l),
+            liste: vec![l],
+            ammesse: vec![l],
+        });
+    }
+    let q = quote(Formula::Dhondt, &cifre_soggetti(&gara, v), seggi);
+    alle_liste(Formula::Dhondt, &gara, &q, v)
+}
+
+/// Estero: liste ammesse del ramo in ordine crescente, sulle cifre nazionali.
+fn estero(formula: Formula, gara: &[InGara], naz: &[u64], seggi: u32) -> Vec<u32> {
+    // assunzione A1 del piano 2: estero col metodo della legge fra le liste ammesse.
+    let mut ammesse: Vec<usize> = gara
+        .iter()
+        .flat_map(|g| g.ammesse.iter().copied())
+        .collect();
+    ammesse.sort_unstable();
+    let cifre: Vec<u64> = ammesse.iter().map(|&l| naz[l]).collect();
+    let mut out = vec![0; naz.len()];
+    for (&l, q) in ammesse.iter().zip(quote(formula, &cifre, seggi)) {
+        out[l] = q.seggi;
+    }
+    out
+}
+
 /// Voti per lista sommati sulle regioni; il totale è già controllato da `valida`.
 fn somma<'a>(regioni: impl Iterator<Item = &'a Vec<u64>>, n: usize) -> Vec<u64> {
     regioni.fold(vec![0; n], |mut a, v| {
@@ -312,13 +361,37 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
         seggi_camera,
     );
     // assunzione A11 del piano 2: senza soggetti ammessi i seggi restano non assegnati.
-    let camera = alle_liste(legge.formula, &gara, &per_soggetto, &senza_speciali)
-        .into_iter()
-        .map(|proporzionali| SeggiLista {
-            proporzionali,
-            ..SeggiLista::default()
-        })
-        .collect();
+    let mut camera: Vec<SeggiLista> =
+        alle_liste(legge.formula, &gara, &per_soggetto, &senza_speciali)
+            .into_iter()
+            .zip(estero(legge.formula, &gara, &naz, dati.camera.estero))
+            .map(|(proporzionali, estero)| SeggiLista {
+                proporzionali,
+                estero,
+                ..SeggiLista::default()
+            })
+            .collect();
+    for (c, s) in camera_cs
+        .iter()
+        .zip(seggi_per_circoscrizione(&dati.camera, 0))
+        .filter(|(c, _)| c.uninominali > 0)
+    {
+        let v = voti
+            .per_regione
+            .get(&c.regione)
+            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
+        let unin = uninominali(legge, voti, v, s.uninominali);
+        // Parte proporzionale: metodo della legge fra i soggetti ammessi, voti della regione.
+        let q = quote(
+            legge.formula,
+            &cifre_soggetti(&gara, v),
+            s.seggi.saturating_sub(s.uninominali),
+        );
+        let prop = alle_liste(legge.formula, &gara, &q, v);
+        for ((l, u), p) in camera.iter_mut().zip(unin).zip(prop) {
+            l.speciali += u + p;
+        }
+    }
 
     let gara = in_gara(legge, dati.soglia_regionale_senato_pb, voti, &naz, true);
     let mut regionali = Vec::new();
@@ -355,6 +428,33 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
             .iter_mut()
             .zip(&liste)
             .for_each(|(a, b)| a.proporzionali += b);
+    }
+    // Al Senato le speciali sono solo uninominali.
+    for (c, s) in dati
+        .senato
+        .circoscrizioni
+        .iter()
+        .zip(seggi_per_circoscrizione(&dati.senato, 0))
+        .filter(|(c, _)| c.uninominali > 0)
+    {
+        let v = voti
+            .per_regione
+            .get(&c.regione)
+            .ok_or_else(|| Errore::VotiIncoerenti(format!("regione {} senza voti", c.regione)))?;
+        let unin = uninominali(legge, voti, v, s.uninominali);
+        if let Some(pr) = senato_per_regione.get_mut(&c.regione) {
+            pr.iter_mut().zip(&unin).for_each(|(a, b)| *a += b);
+        }
+        senato
+            .iter_mut()
+            .zip(&unin)
+            .for_each(|(a, b)| a.speciali += b);
+    }
+    for (a, e) in senato
+        .iter_mut()
+        .zip(estero(legge.formula, &gara, &naz, dati.senato.estero))
+    {
+        a.estero = e;
     }
 
     Ok(Esito {

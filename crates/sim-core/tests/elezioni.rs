@@ -370,7 +370,6 @@ fn voti_g1() -> Voti {
     ])
 }
 
-#[expect(dead_code, reason = "G2 serve ai test di premio e tetto del Task 5")]
 fn voti_g2() -> Voti {
     voti_per_macroarea([
         [400, 90, 25, 10, 150, 50, 20, 120, 50, 20, 65],
@@ -593,4 +592,67 @@ fn seggi_della_coalizione_conservati_senza_voti_alle_ammesse() {
         .seggi;
     assert!(lazio[0] + lazio[1] > 0, "{lazio:?}");
     assert_eq!(lazio.iter().sum::<u32>(), seggi_lazio, "{lazio:?}");
+}
+
+// --- speciali ed estero (Task 4) ---
+
+fn speciali(v: &[SeggiLista]) -> Vec<u32> {
+    v.iter().map(|s| s.speciali).collect()
+}
+
+fn estero(v: &[SeggiLista]) -> Vec<u32> {
+    v.iter().map(|s| s.estero).collect()
+}
+
+#[test]
+fn speciali_ed_estero_come_il_riferimento() {
+    let v = voti_g1();
+    let e = esito(&impostazione("proporzionale_3"), &v);
+    assert_eq!(speciali(&e.camera), [4, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0]);
+    assert_eq!(estero(&e.camera), [3, 1, 0, 0, 2, 0, 0, 1, 0, 0, 1]);
+    assert_eq!(speciali(&e.senato), [5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(estero(&e.senato), [1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]);
+    let e = esito(&impostazione("proporzionale_puro"), &v);
+    assert_eq!(speciali(&e.camera), [4, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0]);
+    assert_eq!(estero(&e.camera), [2, 1, 0, 0, 2, 1, 0, 1, 0, 0, 1]);
+    assert_eq!(speciali(&e.senato), [5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(estero(&e.senato), [1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]);
+}
+
+#[test]
+fn ogni_ramo_somma_al_suo_totale() {
+    for v in [voti_g1(), voti_g2()] {
+        for nome in ["proporzionale_3", "proporzionale_puro"] {
+            let e = esito(&impostazione(nome), &v);
+            let tot = |s: &[SeggiLista]| s.iter().map(SeggiLista::totale).sum::<u32>();
+            assert_eq!(tot(&e.camera), 400, "{nome}");
+            assert_eq!(tot(&e.senato), 200, "{nome}");
+        }
+    }
+}
+
+#[test]
+fn valle_d_aosta_al_piu_votato() {
+    let mut v = uniformi(&[], vec![]);
+    for x in v.per_regione.values_mut() {
+        *x = vec![100, 600, 300];
+    }
+    let e = esito(&impostazione("proporzionale_puro"), &v);
+    assert_eq!(e.senato_per_regione["valle_d_aosta"], [0, 1, 0]);
+}
+
+#[test]
+fn uninominali_senza_soglia() {
+    let mut v = uniformi(&[25; 40], vec![]);
+    let vda = popolazioni()["valle_d_aosta"];
+    let mut riga = vec![10; 40];
+    riga[0] = 600;
+    v.per_regione.insert(
+        "valle_d_aosta".into(),
+        riga.iter().map(|m| vda * m).collect(),
+    );
+    let e = esito(&legge_180(), &v);
+    assert_eq!(e.camera[0].proporzionali, 0);
+    assert!(e.camera[0].speciali >= 1);
+    assert_eq!(e.senato[0].proporzionali, 189);
 }
