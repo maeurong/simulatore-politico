@@ -3,7 +3,8 @@
 //! Puro: stessi argomenti, stesso esito; le parità si rompono per regola, mai a caso.
 
 use super::{
-    DatiElezioni, Formula, LeggeElettorale, Premio, seggi_da_quota, seggi_per_circoscrizione,
+    DatiElezioni, Formula, LeggeElettorale, Premio, SeggiCircoscrizione, seggi_da_quota,
+    seggi_per_circoscrizione,
 };
 use crate::errore::Errore;
 use serde::{Deserialize, Serialize};
@@ -398,6 +399,25 @@ fn uninominali(legge: &LeggeElettorale, voti: &Voti, v: &[u64], seggi: u32) -> V
     alle_liste(Formula::Dhondt, &gara, &q, v)
 }
 
+/// Seggi per lista di una circoscrizione speciale: gli uninominali, poi la parte proporzionale
+/// col metodo della legge fra i soggetti ammessi del ramo, sui voti della regione.
+fn speciale(
+    legge: &LeggeElettorale,
+    voti: &Voti,
+    gara: &[InGara],
+    v: &[u64],
+    s: &SeggiCircoscrizione,
+) -> Vec<u32> {
+    let unin = uninominali(legge, voti, v, s.uninominali);
+    let q = quote(
+        legge.formula,
+        &cifre_soggetti(gara, v),
+        s.seggi.saturating_sub(s.uninominali),
+    );
+    let prop = alle_liste(legge.formula, gara, &q, v);
+    unin.iter().zip(prop).map(|(u, p)| u + p).collect()
+}
+
 /// Seggi del ramo per lista con solo l'estero: liste ammesse in ordine crescente, sulle cifre
 /// nazionali.
 fn estero(formula: Formula, gara: &[InGara], naz: &[u64], seggi: u32) -> Vec<SeggiLista> {
@@ -503,17 +523,9 @@ fn camera(
     );
     let mut seggi = estero(legge.formula, gara, naz, dati.camera.estero);
     for (c, s) in cs.iter().zip(&sc).filter(|(c, _)| c.uninominali > 0) {
-        let v = voti_di(voti, &c.regione)?;
-        let unin = uninominali(legge, voti, v, s.uninominali);
-        // Parte proporzionale: metodo della legge fra i soggetti ammessi, voti della regione.
-        let q = quote(
-            legge.formula,
-            &cifre_soggetti(gara, v),
-            s.seggi.saturating_sub(s.uninominali),
-        );
-        let prop = alle_liste(legge.formula, gara, &q, v);
-        for ((l, u), p) in seggi.iter_mut().zip(unin).zip(prop) {
-            l.speciali += u + p;
+        let liste = speciale(legge, voti, gara, voti_di(voti, &c.regione)?, s);
+        for (l, n) in seggi.iter_mut().zip(liste) {
+            l.speciali += n;
         }
     }
     let cifre = cifre_soggetti(gara, &senza_speciali);
@@ -577,15 +589,14 @@ fn senato(
         .keys()
         .map(|r| (r.clone(), vec![0; naz.len()]))
         .collect();
-    // Al Senato le speciali sono solo uninominali.
     for (c, s) in cs.iter().zip(&sc).filter(|(c, _)| c.uninominali > 0) {
-        let unin = uninominali(legge, voti, voti_di(voti, &c.regione)?, s.uninominali);
+        let liste = speciale(legge, voti, gara, voti_di(voti, &c.regione)?, s);
         if let Some(pr) = per_regione.get_mut(&c.regione) {
-            pr.iter_mut().zip(&unin).for_each(|(a, b)| *a += b);
+            pr.iter_mut().zip(&liste).for_each(|(a, b)| *a += b);
         }
         seggi
             .iter_mut()
-            .zip(&unin)
+            .zip(&liste)
             .for_each(|(a, b)| a.speciali += b);
     }
     let mut regionali = Vec::new();

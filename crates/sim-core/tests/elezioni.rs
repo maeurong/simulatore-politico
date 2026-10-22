@@ -679,6 +679,18 @@ fn uninominali_senza_soglia() {
     assert_eq!(e.senato[0].proporzionali, 189);
 }
 
+#[test]
+fn speciale_del_senato_oltre_gli_uninominali_assegna_tutto() {
+    let mut d = dati_base().elezioni().clone();
+    d.senato.seggi = 400;
+    let piu_degli_uninominali = seggi_per_circoscrizione(&d.senato, 0)
+        .iter()
+        .any(|s| s.uninominali > 0 && s.seggi > s.uninominali);
+    assert!(piu_degli_uninominali);
+    let e = riparto(&d, &legge_180(), &voti_g1()).unwrap();
+    assert_eq!(e.senato.iter().map(SeggiLista::totale).sum::<u32>(), 400);
+}
+
 // --- premio e tetti (Task 5) ---
 
 /// Proporzionali, premio, speciali, estero.
