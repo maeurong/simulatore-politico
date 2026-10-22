@@ -21,6 +21,14 @@ fn forze_lavoro(dati: &DatiGioco) -> f64 {
     dati.regioni().iter().map(|r| r.forze_lavoro).sum::<f64>() * 1e3
 }
 
+/// Coefficiente del regime sui sussidi.
+fn coefficiente_sussidi(dati: &DatiGioco) -> f64 {
+    match dati.scenario().regime_sussidi {
+        RegimeSussidi::Assicurativo => 1.0,
+        RegimeSussidi::Universale => dati.manopola("sussidio_universale"),
+    }
+}
+
 impl Economia {
     fn disoccupati(&self, dati: &DatiGioco) -> f64 {
         forze_lavoro(dati) * self.disoccupazione_nazionale(dati) / 100.0
@@ -97,11 +105,7 @@ impl Economia {
 
     /// Euro annui per disoccupato, col coefficiente del regime.
     pub(crate) fn sussidio_effettivo(&self, dati: &DatiGioco) -> f64 {
-        let k = match dati.scenario().regime_sussidi {
-            RegimeSussidi::Assicurativo => 1.0,
-            RegimeSussidi::Universale => dati.manopola("sussidio_universale"),
-        };
-        self.sussidio_per_disoccupato as f64 * k
+        self.sussidio_per_disoccupato as f64 * coefficiente_sussidi(dati)
     }
 
     /// Spesa pensionistica del trimestre, euro.
@@ -116,6 +120,7 @@ impl Economia {
 
     /// Spesa per i sussidi del trimestre, euro.
     pub(super) fn spesa_sussidi(&self, dati: &DatiGioco) -> i64 {
-        euro(self.disoccupati(dati) * self.sussidio_effettivo(dati) / 4.0)
+        let k = coefficiente_sussidi(dati);
+        euro(self.disoccupati(dati) * self.sussidio_per_disoccupato as f64 * k / 4.0)
     }
 }

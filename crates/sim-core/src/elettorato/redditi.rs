@@ -79,26 +79,32 @@ impl Elettorato {
         let media =
             |w: &[f64]| -> f64 { w.iter().zip(&e.prezzi_settori).map(|(w, p)| w * p).sum() };
         let costo_base = media(consumi);
+        // ponytail: base nulla (per esempio tutti i salari_pil a 0) = nessun termine di
+        // confronto, il reddito resta quello dei dati invece di diventare NaN.
+        let rapporto = |oggi: f64, base: f64| if base > 0.0 { oggi / base } else { 1.0 };
         for (g, dato) in self.gruppi.iter_mut().zip(&d.gruppi) {
             g.reddito_prima = g.reddito;
             let primario = dato.primario
                 * match dato.condizione {
-                    Condizione::DipendentePubblico => i.salari_pubblici / b.salari_pubblici,
-                    Condizione::Autonomo => i.pil / b.pil,
-                    _ => i.salario / b.salario,
+                    Condizione::DipendentePubblico => {
+                        rapporto(i.salari_pubblici, b.salari_pubblici)
+                    }
+                    Condizione::Autonomo => rapporto(i.pil, b.pil),
+                    _ => rapporto(i.salario, b.salario),
                 };
             let trasferimenti = dato.trasferimenti
                 * match dato.condizione {
-                    Condizione::Pensionato => i.pensione / b.pensione,
-                    Condizione::DisoccupatoInattivo => i.sussidio / b.sussidio,
+                    Condizione::Pensionato => rapporto(i.pensione, b.pensione),
+                    Condizione::DisoccupatoInattivo => rapporto(i.sussidio, b.sussidio),
                     _ => 1.0,
                 };
+            let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();
             let paniere = d.paniere.get(&dato.fascia).map_or(0.0, |w| media(w));
             g.reddito = Reddito {
                 primario,
                 trasferimenti,
-                imposte: aliquota * (primario + trasferimenti) * i.pressione / b.pressione,
+                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione)).min(lordo),
                 paniere: e.livello_prezzi * paniere / costo_base,
             };
         }

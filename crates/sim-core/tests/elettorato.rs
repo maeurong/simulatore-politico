@@ -193,3 +193,17 @@ fn gini_nullo_con_redditi_uguali() {
     let g = Partita::nuova(base.clone(), 1).elettorato().gini(&base);
     assert!(g > 0.1 && g < 0.6, "{g}");
 }
+
+#[test]
+fn pressione_estrema_e_base_nulla_lasciano_redditi_finiti_e_non_negativi() {
+    let d = dati_base();
+    let p = Partita::nuova(d.clone(), 1);
+    let mut el = p.elettorato().clone();
+    el.base.pressione *= 1e-6;
+    el.base.salari_pubblici = 0.0;
+    el.base.pensione = 0.0;
+    el.aggiorna_redditi(&d, p.economia());
+    for g in &el.gruppi {
+        assert!(g.reddito.reale().is_finite() && g.reddito.netto() >= 0.0);
+    }
+}
