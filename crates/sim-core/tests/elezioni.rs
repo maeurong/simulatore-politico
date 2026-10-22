@@ -3,10 +3,12 @@ mod comune;
 use comune::{dati_base, file_base, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::elezioni::{
-    Formula, LeggeElettorale, Premio, QuoteTetto, Ramo, SeggiCircoscrizione, seggi_da_quota,
-    seggi_per_circoscrizione,
+    Esito, Formula, LeggeElettorale, Premio, QuoteTetto, Ramo, SeggiCircoscrizione, SeggiLista,
+    Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
 };
 use sim_core::errore::Errore;
+use sim_core::struttura::Macroarea;
+use std::collections::BTreeMap;
 
 fn errore(f: FileDati) -> Errore {
     DatiGioco::da_testi(&f).unwrap_err()
@@ -319,4 +321,239 @@ fn ingressi_degeneri_senza_panico() {
     );
     r.circoscrizioni.clear();
     assert!(seggi_per_circoscrizione(&r, 70).is_empty());
+}
+
+// --- riparto (Task 3): numeri attesi da strumenti/riparto/riferimento.py ---
+
+fn impostazione(nome: &str) -> LeggeElettorale {
+    dati_base().elezioni().impostazioni[nome].clone()
+}
+
+/// Popolazione di ogni regione: somma delle circoscrizioni della Camera.
+fn popolazioni() -> BTreeMap<String, u64> {
+    let mut m = BTreeMap::new();
+    for c in &dati_base().elezioni().camera.circoscrizioni {
+        *m.entry(c.regione.clone()).or_insert(0) += c.popolazione;
+    }
+    m
+}
+
+const SARDEGNA: [u64; 11] = [280, 90, 25, 10, 240, 60, 20, 0, 50, 225, 0];
+
+/// Voti `(p_r / 2) * millesimi / 1000`, righe per macroarea (nord, centro, mezzogiorno).
+fn voti_per_macroarea(righe: [[u64; 11]; 3]) -> Voti {
+    let d = dati_base();
+    let per_regione = popolazioni()
+        .into_iter()
+        .map(|(r, p)| {
+            let area = d.regioni().iter().find(|x| x.id == r).unwrap().macroarea;
+            let riga = match (r.as_str(), area) {
+                ("sardegna", _) => SARDEGNA,
+                (_, Macroarea::Nord) => righe[0],
+                (_, Macroarea::Centro) => righe[1],
+                (_, Macroarea::Mezzogiorno) => righe[2],
+            };
+            (r, riga.iter().map(|&m| (p / 2) * m / 1000).collect())
+        })
+        .collect();
+    Voti {
+        coalizioni: vec![vec![0, 1, 2, 3], vec![4, 5, 6]],
+        per_regione,
+    }
+}
+
+fn voti_g1() -> Voti {
+    voti_per_macroarea([
+        [320, 90, 25, 10, 200, 60, 20, 140, 50, 20, 65],
+        [300, 90, 25, 10, 220, 60, 20, 140, 50, 20, 65],
+        [280, 90, 25, 10, 240, 60, 20, 140, 50, 20, 65],
+    ])
+}
+
+#[expect(dead_code, reason = "G2 serve ai test di premio e tetto del Task 5")]
+fn voti_g2() -> Voti {
+    voti_per_macroarea([
+        [400, 90, 25, 10, 150, 50, 20, 120, 50, 20, 65],
+        [380, 90, 25, 10, 170, 50, 20, 120, 50, 20, 65],
+        [360, 90, 25, 10, 190, 50, 20, 120, 50, 20, 65],
+    ])
+}
+
+/// Voti `p_r * millesimi[l]`: stesse quote in ogni regione.
+fn uniformi(millesimi: &[u64], coalizioni: Vec<Vec<usize>>) -> Voti {
+    Voti {
+        coalizioni,
+        per_regione: popolazioni()
+            .into_iter()
+            .map(|(r, p)| (r, millesimi.iter().map(|&m| p * m).collect()))
+            .collect(),
+    }
+}
+
+fn esito(legge: &LeggeElettorale, voti: &Voti) -> Esito {
+    riparto(dati_base().elezioni(), legge, voti).unwrap()
+}
+
+fn prop(v: &[SeggiLista]) -> Vec<u32> {
+    v.iter().map(|s| s.proporzionali).collect()
+}
+
+#[test]
+fn proporzionale_3_come_il_riferimento() {
+    let e = esito(&impostazione("proporzionale_3"), &voti_g1());
+    assert_eq!(prop(&e.camera), [126, 38, 0, 0, 91, 25, 0, 57, 21, 0, 26]);
+    assert_eq!(prop(&e.senato), [64, 20, 0, 0, 45, 10, 0, 30, 9, 1, 10]);
+}
+
+#[test]
+fn proporzionale_puro_come_il_riferimento() {
+    let e = esito(&impostazione("proporzionale_puro"), &voti_g1());
+    assert_eq!(prop(&e.camera), [116, 34, 10, 4, 84, 23, 8, 52, 19, 10, 24]);
+    assert_eq!(prop(&e.senato), [60, 20, 5, 0, 43, 10, 1, 29, 9, 2, 10]);
+}
+
+#[test]
+fn senato_ammette_il_20_per_cento_regionale() {
+    let e = esito(&impostazione("proporzionale_3"), &voti_g1());
+    assert_eq!(e.camera[9].proporzionali, 0);
+    assert!(e.senato[9].proporzionali >= 1);
+}
+
+#[test]
+fn soglia_di_lista_esatta() {
+    let e = esito(
+        &impostazione("proporzionale_3"),
+        &uniformi(&[30, 29, 941], vec![]),
+    );
+    for ramo in [&e.camera, &e.senato] {
+        assert!(ramo[0].proporzionali > 0);
+        assert_eq!(ramo[1].proporzionali, 0);
+    }
+}
+
+#[test]
+fn coalizione_sotto_il_10_lascia_le_liste_sole() {
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[50, 25, 300, 300, 325], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.camera[0].proporzionali, 20);
+    assert_eq!(e.camera[1].proporzionali, 0);
+}
+
+#[test]
+fn tutti_i_voti_della_coalizione_contano() {
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[95, 6, 300, 300, 299], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.camera[1].proporzionali, 2);
+    let e = esito(
+        &legge_180(),
+        &uniformi(&[93, 6, 300, 300, 301], vec![vec![0, 1]]),
+    );
+    assert_eq!(e.camera[1].proporzionali, 0);
+}
+
+#[test]
+fn ripescaggio_della_piu_votata_sotto_soglia() {
+    let voti = uniformi(&[300, 25, 15, 300, 360], vec![vec![0, 1, 2]]);
+    let e = esito(&legge_180(), &voti);
+    assert_eq!(e.camera[1].proporzionali, 10);
+    assert_eq!(e.camera[2].proporzionali, 0);
+    let senza = LeggeElettorale {
+        ripescaggio: false,
+        ..legge_180()
+    };
+    assert_eq!(esito(&senza, &voti).camera[1].proporzionali, 0);
+}
+
+#[test]
+fn dhondt_favorisce_i_grandi() {
+    let hare = impostazione("proporzionale_3");
+    let dhondt = LeggeElettorale {
+        formula: Formula::Dhondt,
+        ..hare.clone()
+    };
+    let v = voti_g1();
+    assert!(esito(&dhondt, &v).camera[0].proporzionali >= esito(&hare, &v).camera[0].proporzionali);
+}
+
+#[test]
+fn senato_per_regione_somma_ai_seggi() {
+    let v = voti_g1();
+    for (nome, legge) in &dati_base().elezioni().impostazioni {
+        let e = esito(legge, &v);
+        for (l, s) in e.senato.iter().enumerate() {
+            let somma: u32 = e.senato_per_regione.values().map(|r| r[l]).sum();
+            assert_eq!(somma, s.proporzionali + s.speciali, "{nome} lista {l}");
+        }
+    }
+}
+
+#[test]
+fn voti_incoerenti_rifiutati() {
+    let base = voti_g1();
+    let mut casi = Vec::new();
+    let mut v = base.clone();
+    v.per_regione.remove("molise");
+    casi.push(v);
+    let mut v = base.clone();
+    v.per_regione.insert("atlantide".into(), vec![1; 11]);
+    casi.push(v);
+    let mut v = base.clone();
+    v.per_regione.get_mut("lazio").unwrap().pop();
+    casi.push(v);
+    let mut v = base.clone();
+    v.coalizioni.push(vec![10, 11]);
+    casi.push(v);
+    let mut v = base.clone();
+    v.coalizioni[1].push(0);
+    casi.push(v);
+    let mut v = base;
+    for x in v.per_regione.values_mut() {
+        x.clear();
+    }
+    v.coalizioni.clear();
+    casi.push(v);
+    for (i, v) in casi.iter().enumerate() {
+        let r = riparto(dati_base().elezioni(), &legge_180(), v);
+        assert!(
+            matches!(r, Err(Errore::VotiIncoerenti(_))),
+            "caso {i}: {r:?}"
+        );
+    }
+}
+
+#[test]
+fn nessun_soggetto_ammesso_non_va_in_panico() {
+    let e = esito(&legge_180(), &uniformi(&[25; 40], vec![]));
+    assert!(
+        e.camera
+            .iter()
+            .chain(&e.senato)
+            .all(|s| s.proporzionali == 0)
+    );
+}
+
+#[test]
+fn pochi_voti_conservano_i_seggi() {
+    let mut v = uniformi(&[], vec![]);
+    for x in v.per_regione.values_mut() {
+        *x = vec![1, 1, 1];
+    }
+    let e = esito(&impostazione("proporzionale_puro"), &v);
+    assert_eq!(e.camera.iter().map(|s| s.proporzionali).sum::<u32>(), 384);
+    assert_eq!(e.senato.iter().map(|s| s.proporzionali).sum::<u32>(), 189);
+}
+
+#[test]
+fn parita_risolta_per_ordine() {
+    let legge = impostazione("proporzionale_3");
+    let v = uniformi(&[400, 400, 200], vec![]);
+    let e = esito(&legge, &v);
+    assert_eq!(e, esito(&legge, &v));
+    let (a, b) = (e.camera[0].proporzionali, e.camera[1].proporzionali);
+    assert!(a >= b && a - b <= 1, "{a} {b}");
+    assert_eq!(e.camera.iter().map(|s| s.proporzionali).sum::<u32>(), 384);
 }

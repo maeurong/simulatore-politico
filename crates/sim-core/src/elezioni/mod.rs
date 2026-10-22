@@ -1,7 +1,9 @@
 //! Dati elettorali (`elezioni.toml`): circoscrizioni, menu delle leggi e impostazioni predefinite.
 
+mod riparto;
 mod seggi;
 
+pub use riparto::{Esito, SeggiLista, Soggetto, Voti, riparto};
 pub use seggi::{SeggiCircoscrizione, seggi_da_quota, seggi_per_circoscrizione};
 
 use crate::errore::Errore;
