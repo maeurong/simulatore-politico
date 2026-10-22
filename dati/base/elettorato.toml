@@ -65,102 +65,102 @@ campione = 1500
 [[regione]]
 id = "piemonte"
 elettori = 3342053
-astensione = -0.095285
+astensione = -0.586754
 
 [[regione]]
 id = "valle_d_aosta"
 elettori = 96861
-astensione = 0.014424
+astensione = -0.477045
 
 [[regione]]
 id = "liguria"
 elettori = 1185033
-astensione = 0.001442
+astensione = -0.490026
 
 [[regione]]
 id = "lombardia"
 elettori = 7807169
-astensione = -0.265324
+astensione = -0.756792
 
 [[regione]]
 id = "trentino_alto_adige"
 elettori = 842962
-astensione = -0.077485
+astensione = -0.568954
 
 [[regione]]
 id = "veneto"
 elettori = 3806412
-astensione = -0.27483
+astensione = -0.766298
 
 [[regione]]
 id = "friuli_venezia_giulia"
 elettori = 938028
-astensione = -0.090826
+astensione = -0.582294
 
 [[regione]]
 id = "emilia_romagna"
 elettori = 3474763
-astensione = -0.352238
+astensione = -0.843706
 
 [[regione]]
 id = "toscana"
 elettori = 2876309
-astensione = -0.246419
+astensione = -0.737887
 
 [[regione]]
 id = "umbria"
 elettori = 674332
-astensione = -0.204378
+astensione = -0.695846
 
 [[regione]]
 id = "marche"
 elettori = 1167699
-astensione = -0.19051
+astensione = -0.681978
 
 [[regione]]
 id = "lazio"
 elettori = 4487281
-astensione = 0.023053
+astensione = -0.468416
 
 [[regione]]
 id = "abruzzo"
 elettori = 1001866
-astensione = 0.010101
+astensione = -0.481367
 
 [[regione]]
 id = "molise"
 elettori = 229394
-astensione = 0.315056
+astensione = -0.176412
 
 [[regione]]
 id = "campania"
 elettori = 4416251
-astensione = 0.444293
+astensione = -0.047175
 
 [[regione]]
 id = "puglia"
 elettori = 3080263
-astensione = 0.310989
+astensione = -0.18048
 
 [[regione]]
 id = "basilicata"
 elettori = 424921
-astensione = 0.225014
+astensione = -0.266454
 
 [[regione]]
 id = "calabria"
 elettori = 1456888
-astensione = 0.548467
+astensione = 0.056999
 
 [[regione]]
 id = "sicilia"
 elettori = 3795092
-astensione = 0.294696
+astensione = -0.196772
 
 [[regione]]
 id = "sardegna"
 elettori = 1246423
-astensione = 0.452324
+astensione = -0.039144
 
 [[gruppo]]
 regione = "piemonte"

@@ -566,12 +566,7 @@ fn piu_astensione_in_una_regione_meno_affluenza() {
             .map(|k| p.elettorato().gruppi[k].quota * (1.0 - i.per_gruppo[k][7]))
             .sum::<f64>()
     };
-    let f = sostituisci(
-        file_base(),
-        "elettorato",
-        "astensione = -0.095285",
-        "astensione = 0.904715",
-    );
+    let f = imposta(file_base(), "elettorato", "\nastensione = ", "5.0");
     let base = Partita::nuova(dati_base(), 1);
     let alta = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     assert!(affluenza(&alta, 0) < affluenza(&base, 0) - 1e-3);
@@ -581,7 +576,6 @@ fn piu_astensione_in_una_regione_meno_affluenza() {
 }
 
 #[test]
-#[ignore = "affluenza 0,47: l'astensione dei dati è tarata senza fedeltà (pipeline, Task 12)"]
 fn affluenza_del_turno_zero_plausibile() {
     let n = Partita::nuova(dati_base(), 1).intenzioni_vere().nazionali;
     let affluenza = 1.0 - n[n.len() - 1];

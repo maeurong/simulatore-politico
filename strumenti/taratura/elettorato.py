@@ -48,8 +48,9 @@ AFFLUENZA = {
     "umbria": 0.685, "toscana": 0.694, "lombardia": 0.698, "veneto": 0.700, "emilia_romagna": 0.716,
     "valle_d_aosta": 0.636,
 }
-# 0,57 = ln sum_j e^{-(4-j)^2} per un elettore al centro con beta = 1
-COSTANTE_ASTENSIONE = math.log(sum(math.exp(-((4 - j) ** 2)) for j in range(1, 8)))
+# assunzione del piano 4: tarata a mano sull'affluenza 2022 coi parametri di default, fedeltà inclusa; la PR B (tara) la sostituisce
+# (0,57 = ln sum_j e^{-(4-j)^2} per un elettore al centro con beta = 1, senza fedeltà; Δ = -0,492)
+COSTANTE_ASTENSIONE = 0.081
 # ticket 17, 17-tabella-degli-interessi.md:28-35
 INTERESSI = {
     "dipendente_privato": {"reddito": 0.45, "disoccupazione": 0.25, "qualita_trasporti": 0.10, "qualita_servizio_sanitario": 0.10, "sicurezza": 0.10},
