@@ -46,6 +46,9 @@ pub enum Errore {
         dove: String,
     },
     StrutturaIncoerente(String),
+    LeggeElettorale(String),
+    DatiElettorali(String),
+    VotiIncoerenti(String),
     Toml {
         file: String,
         messaggio: String,
@@ -106,6 +109,9 @@ impl fmt::Display for Errore {
             }
             Self::QuoteNonUnitarie { dove } => write!(f, "quote che non sommano a 1: {dove}"),
             Self::StrutturaIncoerente(m) => write!(f, "struttura economica incoerente: {m}"),
+            Self::LeggeElettorale(m) => write!(f, "legge elettorale non ammessa: {m}"),
+            Self::DatiElettorali(m) => write!(f, "dati elettorali incoerenti: {m}"),
+            Self::VotiIncoerenti(m) => write!(f, "voti incoerenti: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

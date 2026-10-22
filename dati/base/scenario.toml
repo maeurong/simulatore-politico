@@ -7,6 +7,7 @@ pde = "sospesa"
 # regole-fiscali-ue:46; dopo il 2029 vale l'ultimo
 tetti_spesa_netta = { 2026 = 1.6, 2027 = 1.9, 2028 = 1.7, 2029 = 1.5 }
 clausola_nazionale_fino_a = 2028
+legge_elettorale = "legge_180"
 
 [pil_trimestrale]
 valore = 576.9

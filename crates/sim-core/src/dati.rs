@@ -1,4 +1,5 @@
 use crate::economia::produzione_riferimento;
+use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
@@ -14,18 +15,20 @@ pub struct FileDati {
     pub economia: String,
     pub regioni: String,
     pub scenario: String,
+    pub elezioni: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 5] = [
+    pub const NOMI: [&str; 6] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
         "regioni.toml",
         "scenario.toml",
+        "elezioni.toml",
     ];
 
-    /// Legge i cinque file per nome con la lettura di chi fa I/O.
+    /// Legge i sei file per nome con la lettura di chi fa I/O.
     ///
     /// # Errors
     /// Il primo errore della lettura.
@@ -36,6 +39,7 @@ impl FileDati {
             economia: leggi(Self::NOMI[2])?,
             regioni: leggi(Self::NOMI[3])?,
             scenario: leggi(Self::NOMI[4])?,
+            elezioni: leggi(Self::NOMI[5])?,
         })
     }
 }
@@ -156,6 +160,7 @@ pub struct DatiGioco {
     struttura: Struttura,
     regioni: Vec<Regione>,
     scenario: Scenario,
+    elezioni: DatiElezioni,
 }
 
 #[derive(Deserialize)]
@@ -191,6 +196,25 @@ impl DatiGioco {
         &self.scenario
     }
 
+    pub fn elezioni(&self) -> &DatiElezioni {
+        &self.elezioni
+    }
+
+    /// Impostazione elettorale scelta dallo scenario.
+    ///
+    /// # Panics
+    /// Se l'impostazione non esiste: la presenza e' un invariante dei dati validati.
+    #[expect(
+        clippy::expect_used,
+        reason = "la presenza e' garantita da valida (LeggeElettorale)"
+    )]
+    pub fn legge_elettorale_iniziale(&self) -> &LeggeElettorale {
+        self.elezioni
+            .impostazioni
+            .get(&self.scenario.legge_elettorale)
+            .expect("impostazione validata al caricamento")
+    }
+
     /// Valore di una manopola.
     ///
     /// # Panics
@@ -224,6 +248,8 @@ impl DatiGioco {
             .regione;
         let scenario = toml::from_str::<Scenario>(&file.scenario)
             .map_err(|e| errore_toml("scenario.toml", e))?;
+        let elezioni = toml::from_str::<DatiElezioni>(&file.elezioni)
+            .map_err(|e| errore_toml("elezioni.toml", e))?;
 
         let dati = DatiGioco {
             dicasteri,
@@ -231,6 +257,7 @@ impl DatiGioco {
             struttura,
             regioni,
             scenario,
+            elezioni,
         };
         dati.valida()?;
         Ok(dati)
@@ -243,7 +270,8 @@ impl DatiGioco {
     /// (manopola non finita o fuori intervallo); `ManopolaMancante`; `ScenarioFuoriIntervallo`;
     /// `StrutturaIncoerente` (forma, numeri non finiti o di segno sbagliato, produzione di
     /// riferimento non positiva, piramide); `SettoreNonProduttivo`; `QuoteNonUnitarie`;
-    /// `SettoreSconosciuto`.
+    /// `SettoreSconosciuto`; `LeggeElettorale` e `DatiElettorali` (vedi
+    /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente.
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -295,6 +323,17 @@ impl DatiGioco {
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
         self.scenario.valida()?;
+        self.elezioni.valida(&self.regioni)?;
+        if !self
+            .elezioni
+            .impostazioni
+            .contains_key(&self.scenario.legge_elettorale)
+        {
+            return Err(Errore::LeggeElettorale(format!(
+                "lo scenario sceglie un'impostazione inesistente: {}",
+                self.scenario.legge_elettorale
+            )));
+        }
         self.struttura.valida_piramide()?;
         let x0 = produzione_riferimento(self);
         match x0.iter().position(|&x| x.is_nan() || x <= 0.0) {

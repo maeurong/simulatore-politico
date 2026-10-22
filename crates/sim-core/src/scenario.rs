@@ -56,6 +56,8 @@ macro_rules! scenario {
             /// Tetto di crescita della spesa netta per anno; dopo l'ultimo vale l'ultimo.
             pub tetti_spesa_netta: BTreeMap<u16, f64>,
             pub clausola_nazionale_fino_a: u16,
+            /// Nome di un'impostazione di `elezioni.toml`.
+            pub legge_elettorale: String,
         }
 
         impl Scenario {

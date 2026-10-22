@@ -109,7 +109,7 @@ fn schema_diverso_rifiutato() {
     );
     assert_eq!(
         e.to_string(),
-        "salvataggio di una versione diversa del gioco: schema 99, atteso 2"
+        "salvataggio di una versione diversa del gioco: schema 99, atteso 3"
     );
 }
 
