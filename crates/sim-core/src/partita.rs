@@ -151,6 +151,15 @@ impl Partita {
                 "economia.regioni non combacia con le regioni dei dati".into(),
             ));
         }
+        let id_dicasteri = || partita.dati.dicasteri().iter().map(|d| &d.id);
+        let bilanci = std::iter::once(&e.bilancio).chain(&e.bilancio_approvato);
+        for b in bilanci {
+            if !b.dicasteri.iter().map(|d| &d.id).eq(id_dicasteri()) {
+                return Err(Errore::SalvataggioIlleggibile(
+                    "economia.bilancio non combacia con i dicasteri dei dati".into(),
+                ));
+            }
+        }
         let n_settori = partita.dati.struttura().settori.len();
         for (campo, n) in [
             ("prezzi_settori", e.prezzi_settori.len()),

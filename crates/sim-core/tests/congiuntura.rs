@@ -23,7 +23,15 @@ fn is_e_phillips_a_valori_noti() {
 
     let (gap, pi, t3, t2) = (1.0, 4.2, 3.4, 3.0);
     let r = s.tasso_bce.valore - pi - m("tasso_naturale_reale");
-    let y = (m("is_gap_1") + m("is_gap_2")) * gap + m("is_tasso") * 2.0 * r;
+    // Bilancio fermo in nominale: l'impulso del primo turno è l'erosione reale della spesa
+    // discrezionale (dicasteri + altre prestazioni), in punti di PIL potenziale nominale.
+    let pil = s.pil_trimestrale.valore;
+    let gp = d.dicasteri().iter().map(|x| x.spesa_pil).sum::<f64>() / 100.0 * pil
+        + s.altre_prestazioni.valore / 4.0;
+    let impulso = -100.0 * (pi / 400.0) * gp / (pil / (1.0 + gap / 100.0));
+    let y = (m("is_gap_1") + m("is_gap_2")) * gap
+        + m("is_tasso") * 2.0 * r
+        + m("moltiplicatore_fiscale") * impulso;
     let a = m("ancoraggio_aspettative");
     let attesa_pi = (1.0 - a)
         * (m("phillips_1") * pi

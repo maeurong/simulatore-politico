@@ -117,10 +117,10 @@ max = 20.0
 fonte = "stato-del-paese:40; %"
 
 [altre_entrate_pil]
-valore = 12.0
+valore = 12.28
 min = 0.0
 max = 25.0
-fonte = "PROVVISORIO: il residuo di taratura (disavanzo annuo del turno zero 2,9%, stato-del-paese:27) si fissa nel blocco finanza pubblica; %"
+fonte = "residuo di taratura: fissato perché il disavanzo del primo trimestre simulato (senza shock, seme 1) sia 2,9% del PIL (stato-del-paese:27); %"
 
 [fondi_coesione_pil]
 valore = 0.26

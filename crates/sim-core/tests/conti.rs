@@ -1,0 +1,111 @@
+mod comune;
+use comune::{dati_base, senza_shock};
+use sim_core::{DatiGioco, Partita};
+
+fn giocata(dati: DatiGioco, turni: u32) -> Partita {
+    let mut p = Partita::nuova(dati, 1);
+    for _ in 0..turni {
+        p.chiudi_turno();
+    }
+    p
+}
+fn base_senza_shock() -> DatiGioco {
+    DatiGioco::da_testi(&senza_shock()).unwrap()
+}
+
+#[test]
+fn disavanzo_del_turno_zero_e_intorno_al_2_9_per_cento() {
+    let p = giocata(base_senza_shock(), 1);
+    let e = p.economia();
+    let quota = e.disavanzo_trimestre as f64 / (e.pil_trimestrale * 1e9) * 100.0;
+    assert!((2.5..=3.3).contains(&quota), "{quota}");
+}
+
+#[test]
+fn il_debito_cresce_esattamente_del_disavanzo() {
+    let mut p = Partita::nuova(base_senza_shock(), 1);
+    for _ in 0..8 {
+        let prima = p.economia().debito;
+        p.chiudi_turno();
+        assert_eq!(
+            p.economia().debito,
+            prima + p.economia().disavanzo_trimestre
+        );
+    }
+}
+
+#[test]
+fn bilancio_2027_applicato_una_volta() {
+    let sanita = |p: &Partita| {
+        p.economia()
+            .bilancio
+            .dicasteri
+            .iter()
+            .find(|d| d.id == "sanita")
+            .unwrap()
+            .spesa
+    };
+    let s26 = sanita(&Partita::nuova(base_senza_shock(), 1));
+    let dopo_ottobre = giocata(base_senza_shock(), 1);
+    assert_eq!(dopo_ottobre.economia().bilancio.anno, 2026);
+    let dopo_gennaio = giocata(base_senza_shock(), 2);
+    assert_eq!(dopo_gennaio.economia().bilancio.anno, 2027);
+    assert!((sanita(&dopo_gennaio) - (s26 as f64 * 1.019).round() as i64).abs() <= 1);
+    let gennaio_2028 = giocata(base_senza_shock(), 6);
+    assert_eq!(
+        gennaio_2028.economia().bilancio.anno,
+        2027,
+        "senza legge di bilancio resta il 2027"
+    );
+    assert_eq!(sanita(&gennaio_2028), sanita(&dopo_gennaio));
+}
+
+#[test]
+fn il_disavanzo_si_deriva_al_caricamento() {
+    let e = Partita::nuova(base_senza_shock(), 1);
+    assert!(e.economia().disavanzo_trimestre > 0);
+}
+
+#[test]
+fn margine_al_1_6_per_cento() {
+    let p = Partita::nuova(dati_base(), 1);
+    let b = &p.economia().bilancio;
+    let (m, s): (i64, i64) = b
+        .dicasteri
+        .iter()
+        .fold((0, 0), |(m, s), d| (m + d.margine, s + d.spesa));
+    assert!(((m as f64 / s as f64) * 100.0 - 1.6).abs() < 0.01);
+}
+
+#[test]
+fn bilancio_fermo_in_nominale_e_un_impulso_negativo() {
+    let p = giocata(base_senza_shock(), 6);
+    assert!(p.economia().impulso_fiscale < 0.0);
+}
+
+#[test]
+fn interessi_del_turno_zero_al_costo_medio() {
+    let p = giocata(base_senza_shock(), 1);
+    let e = p.economia();
+    let annui = e.conti.spese.interessi as f64 * 4.0 / 1e9;
+    assert!(
+        (annui - 0.0281 * 1.367 * 4.0 * 576.9).abs() < 1.0,
+        "{annui}"
+    );
+}
+
+#[test]
+fn storico_di_otto_trimestri_col_piu_recente_in_coda() {
+    let p = giocata(base_senza_shock(), 10);
+    let s = &p.economia().storico;
+    assert_eq!(s.len(), 8);
+    assert_eq!(s[7].data.anno, 2029);
+    assert_eq!(s[7].data.trimestre, 1);
+    let zero = Partita::nuova(base_senza_shock(), 1);
+    let iniziale = &zero.economia().storico;
+    assert_eq!(iniziale.len(), 4);
+    assert_eq!(
+        (iniziale[3].data.anno, iniziale[3].data.trimestre),
+        (2026, 3)
+    );
+}
