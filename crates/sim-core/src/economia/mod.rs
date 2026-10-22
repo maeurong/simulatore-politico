@@ -183,6 +183,8 @@ impl Economia {
 
     // Ordine: finanza pubblica e spesa obbligatoria → domanda finale per settore → Leontief →
     // IS/Phillips → Okun per regione → tasso BCE → SFC → storico → regole UE → spread.
+    // `Elettorato::aggiorna_redditi` è chiamato da `Partita` subito dopo il passo: legge solo
+    // grandezze che BCE, SFC e spread non toccano.
     // `data` è il trimestre che il turno chiude.
     pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, data: Trimestre) {
         let spesa_netta = self.finanza(dati, data);

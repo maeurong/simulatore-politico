@@ -49,6 +49,8 @@ pub enum Errore {
     LeggeElettorale(String),
     DatiElettorali(String),
     VotiIncoerenti(String),
+    Elettorato(String),
+    Partiti(String),
     Toml {
         file: String,
         messaggio: String,
@@ -112,6 +114,8 @@ impl fmt::Display for Errore {
             Self::LeggeElettorale(m) => write!(f, "legge elettorale non ammessa: {m}"),
             Self::DatiElettorali(m) => write!(f, "dati elettorali incoerenti: {m}"),
             Self::VotiIncoerenti(m) => write!(f, "voti incoerenti: {m}"),
+            Self::Elettorato(m) => write!(f, "dati dell'elettorato non validi: {m}"),
+            Self::Partiti(m) => write!(f, "partiti dello scenario non validi: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

@@ -1,6 +1,6 @@
 # Taratura offline dei dati strutturali
 
-`economia.py` scarica tavole e serie da Eurostat e ISTAT e scrive i dati di struttura del motore economico. Gira fuori dal binario del gioco: nel repo stanno solo i risultati aggregati e lo script che li ricava.
+`economia.py` scarica tavole e serie da Eurostat e ISTAT e scrive i dati di struttura del motore economico. Gira fuori dal binario del gioco: nel repo stanno solo i risultati aggregati e lo script che li ricava. `elettorato.py` scrive invece l'elettorato provvisorio, senza rete: vedi «Elettorato (provvisorio)» in fondo.
 
 ```
 python3 -I strumenti/taratura/economia.py
@@ -16,6 +16,7 @@ Solo libreria standard di Python (3.11 o successivo). Lo script controlla le inv
 | `dati/base/economia.toml` | `piramide` | ISTAT, residenti al 1° gennaio 2026 |
 | `dati/base/regioni.toml` | 20 regioni con `forze_lavoro`, `disoccupazione_2025`, `okun`, `mix` | Eurostat LFS, ISTAT conti territoriali, Bonaventura (2020) |
 | `dati/base/dicasteri.toml` | `spesa_pil`, `salari_pil`, `acquisti_pil` per dicastero, `settori` per Infrastrutture e Trasporti | Eurostat COFOG e conti nazionali |
+| `dati/base/elettorato.toml` | tutto il file, da `elettorato.py` | valori provvisori, vedi «Elettorato (provvisorio)» |
 
 In `dicasteri.toml` lo script riscrive solo questi campi e le due righe di commento `# [taratura]`; il resto del file è a mano.
 
@@ -67,3 +68,21 @@ Nessun file contiene i dati originali: salvo la piramide, i valori sono elaborat
 
 - FIGARO 2024 è filtrabile per paese (`naio_10_fcp_ip4` copre dal 2022): la tavola simmetrica nazionale `naio_10_cp1700` del 2022, prevista come ripiego, non serve. `anno_tavola = 2024`.
 - I valori COFOG sono quelli della risposta, non quelli arrotondati a un decimale della tabella di ricerca: le dieci spese coincidono con la tabella al decimale, la somma vale 26,0394% del PIL contro il 26,0382% di 575,6 miliardi.
+
+## Elettorato (provvisorio)
+
+```
+python3 -I strumenti/taratura/elettorato.py            # scrive dati/base/elettorato.toml
+python3 -I strumenti/taratura/elettorato.py --selftest # solo invarianti, nessuna scrittura
+```
+
+Legge solo `regioni.toml`, `elezioni.toml`, `scenario.toml`, `economia.toml` e costanti citate; nessuna rete. Scrive 20 regioni, 360 gruppi (ordine canonico), interessi, panieri, istituti e nomi. Tutti i valori sono provvisori e la PR B sostituisce i corpi delle funzioni con le fonti vere.
+
+- Assunzione: elettori proporzionali alla popolazione censita delle circoscrizioni della Camera, totale 46.350.000 (46.253.014 della Camera 2022 più la Valle d'Aosta).
+- Assunzione: dipendenti pubblici 17% dei dipendenti (RGS non aperto); studenti 6% degli elettori.
+- Assunzione: fasce per condizione dai quinti di reddito e dalle fasce 3-4-3; quota bassa x 1,3 nel Mezzogiorno, x 0,85 al Nord.
+- Assunzione: forze di lavoro oltre gli elettori (stranieri, minorenni occupati). Il residuo dei disoccupati o inattivi è tagliato a 0 e le quote sono persone del gruppo / somma delle persone della regione. Taglio in valle_d_aosta (185), trentino_alto_adige (18.891), emilia_romagna (29.816). La PR B lo sostituisce col proporzionamento iterativo (IPF), che adatta le quote ai margini noti.
+- Assunzione: redditi per elettore (primario per condizione, moltiplicatori di fascia 0,55 / 1 / 1,9 e di macroarea 1,1 / 1 / 0,8); trasferimenti da `spesa_pensioni` e `spesa_sussidi`.
+- Assunzione: astensione = `ln((1-a)/a) + 0,081` con a l'affluenza 2022 per regione; Valle d'Aosta = affluenza nazionale 63,6%. La costante è tarata a mano coi parametri di default, fedeltà inclusa: la fedeltà al voto precedente sposta la stazionaria verso le alternative grandi, astensione compresa, e con lo 0,57 calcolato senza fedeltà l'affluenza del turno zero usciva 0,47 invece di 0,63 (`elettorato.py:51-53`). La PR B (`sim-cli tara`) la sostituisce.
+- Il `--selftest` controlla anche che `dati/base/elettorato.toml` sia l'uscita dello script e che l'affluenza implicita stia fra 0,5 e 0,8. Dopo `tara` il file cambia: la PR B restringe il confronto.
+- Segnaposto: istogrammi uguali per tutti (la PR B li ricava da ESS); tre panieri uguali al vettore `consumi`; quattro istituti; dodici nomi e cognomi; pesi degli interessi del ticket 17 (provvisori).

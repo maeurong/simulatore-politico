@@ -1,4 +1,4 @@
-//! Gioca una partita senza finestra: chiude i turni senza decisioni e stampa la vista finale e lo stato vero dell'economia.
+//! Gioca una partita senza finestra: chiude i turni senza decisioni e stampa la vista finale e lo stato vero di economia ed elettorato.
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -58,7 +58,12 @@ fn esegui() -> Result<String, String> {
     for _ in 0..argomenti.turni {
         partita.chiudi_turno();
     }
-    let uscita = serde_json::json!({ "vista": partita.vista(), "economia": partita.economia() });
+    let ids: Vec<&str> = partita.partiti().iter().map(|p| p.id.as_str()).collect();
+    let uscita = serde_json::json!({
+        "vista": partita.vista(),
+        "economia": partita.economia(),
+        "elettorato": { "partiti": ids, "nazionali": partita.intenzioni_vere().nazionali },
+    });
     serde_json::to_string_pretty(&uscita).map_err(|e| e.to_string())
 }
 

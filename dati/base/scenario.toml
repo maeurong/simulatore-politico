@@ -8,6 +8,13 @@ pde = "sospesa"
 tetti_spesa_netta = { 2026 = 1.6, 2027 = 1.9, 2028 = 1.7, 2029 = 1.5 }
 clausola_nazionale_fino_a = 2028
 legge_elettorale = "legge_180"
+# Coalizioni del 2022 ricondotte ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
+coalizioni = [["sinistra", "centrosinistra"], ["centrodestra", "destra"]]
+
+# Governo uscente di centrodestra e destra (spec riga 277); partito per dicastero dai ministri del 2026 ricondotti ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
+[governo]
+presidente = "destra"
+dicasteri = { economia_finanze = "destra", sviluppo_economico = "destra", lavoro_welfare = "destra", sanita = "destra", istruzione_ricerca = "destra", infrastrutture_trasporti = "destra", ambiente_energia = "centrodestra", interno = "destra", giustizia = "destra", esteri_difesa = "centrodestra" }
 
 [pil_trimestrale]
 valore = 576.9
@@ -200,3 +207,80 @@ valore = 0.0
 min = -30.0
 max = 30.0
 fonte = "nessuno scostamento al turno zero; scostamento %"
+
+[[partito]]
+id = "estrema_sinistra"
+nome = "Estrema sinistra"
+posizione = 1.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "sinistra"
+nome = "Sinistra"
+posizione = 2.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "centrosinistra"
+nome = "Centrosinistra"
+posizione = 3.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "centro"
+nome = "Centro"
+posizione = 4.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "centrodestra"
+nome = "Centrodestra"
+posizione = 5.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "destra"
+nome = "Destra"
+posizione = 6.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+
+[[partito]]
+id = "estrema_destra"
+nome = "Estrema destra"
+posizione = 7.0
+
+[partito.valence]
+valore = 0.0
+min = -3.0
+max = 3.0
+fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"

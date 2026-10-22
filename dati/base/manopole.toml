@@ -1,5 +1,5 @@
 # Intervalli provvisori, al bilanciamento.
-# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue = docs/ricerca/modelli/<alias>.md; "alias:N" = riga N.
+# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue, voto-spaziale, opinion-dynamics, sondaggi-ed-errore, voto-economico-e-retrospettivo = docs/ricerca/modelli/<alias>.md; dati-per-tarare-i-gruppi = docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md; "ticket N" = .scratch/v1-giocabile/issues/N-*.md; "alias:N" = riga N.
 
 [soglia_minaccia]
 valore = 40.0
@@ -382,3 +382,150 @@ valore = 0.25
 min = 0.0
 max = 0.5
 ticket = "02"
+
+# voto-spaziale:25 e dati-per-tarare-i-gruppi:104
+[beta_distanza]
+valore = 1.0
+min = 0.3
+max = 3.0
+ticket = "14"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[fedelta]
+valore = 1.5
+min = 0.0
+max = 4.0
+ticket = "14"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[peso_giudizio]
+valore = 0.3
+min = 0.0
+max = 2.0
+ticket = "29"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[quota_colpa_presidente]
+valore = 0.3
+min = 0.0
+max = 1.0
+ticket = "17"
+
+# voto-economico-e-retrospettivo:13
+[asimmetria_giudizio]
+valore = 0.333
+min = 0.1
+max = 1.0
+ticket = "17"
+
+# ticket 17
+[emivita_giudizio]
+valore = 4.0
+min = 1.0
+max = 12.0
+ticket = "17"
+
+# ticket 29
+[finestra_aspettative]
+valore = 8.0
+min = 4.0
+max = 16.0
+ticket = "29"
+
+# assunzione (punti di crescita reale trimestrale)
+[scala_reddito]
+valore = 0.8
+min = 0.2
+max = 3.0
+ticket = "17"
+
+# assunzione (punti di disoccupazione al trimestre)
+[scala_disoccupazione]
+valore = 0.3
+min = 0.1
+max = 1.0
+ticket = "17"
+
+# opinion-dynamics:38 (nessun valore generale)
+[ancora_posizioni]
+valore = 0.1
+min = 0.0
+max = 1.0
+ticket = "06"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[rumore_posizioni]
+valore = 0.02
+min = 0.0
+max = 0.2
+ticket = "06"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[mobilita_fasce]
+valore = 0.5
+min = 0.0
+max = 2.0
+ticket = "06"
+
+# assunzione del piano 4: tarata per stazionarietà della quota degli studenti al turno zero (round pre-commit)
+[uscita_studenti]
+valore = 0.26
+min = 0.0
+max = 0.5
+ticket = "06"
+
+# sondaggi-ed-errore:39
+[sigma_bias_comune]
+valore = 0.015
+min = 0.0
+max = 0.04
+ticket = "25"
+
+# sondaggi-ed-errore:41
+[sigma_istituto]
+valore = 0.01
+min = 0.0
+max = 0.03
+ticket = "25"
+
+# sondaggi-ed-errore:18, :38
+[effetto_disegno]
+valore = 2.0
+min = 1.0
+max = 4.0
+ticket = "25"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[errore_approvazione]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "25"
+
+# ticket 25:33 (circa 1 punto annuo)
+[errore_stima_pil]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "25"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[errore_stima_disoccupazione]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[errore_stima_inflazione]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 4, nessuna fonte in docs/ricerca
+[errore_stima_disavanzo]
+valore = 0.3
+min = 0.0
+max = 1.0
+ticket = "25"

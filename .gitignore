@@ -4,3 +4,4 @@ docs/ricerca/fonti/*.md
 target/
 node_modules/
 app/dist/
+__pycache__/
