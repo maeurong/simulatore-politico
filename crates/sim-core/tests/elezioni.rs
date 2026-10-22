@@ -812,6 +812,29 @@ fn premio_alla_lista_senza_coalizioni() {
 }
 
 #[test]
+fn legge_fuori_dal_menu_rifiutata_dal_riparto() {
+    let legge = LeggeElettorale {
+        taglia_premio_pb: 10_000,
+        ..legge_180()
+    };
+    let r = riparto(dati_base().elezioni(), &legge, &voti_g1());
+    assert!(matches!(r, Err(Errore::LeggeElettorale(_))), "{r:?}");
+}
+
+/// `riparto` con un menu dei tetti diverso da quello dei dati (gradini crescenti).
+fn riparto_con_tetti(tetti: &[(u16, u16)], legge: &LeggeElettorale, voti: &Voti) -> Esito {
+    let mut d = dati_base().elezioni().clone();
+    d.menu.tetto = tetti
+        .iter()
+        .map(|&(camera_pb, senato_pb)| QuoteTetto {
+            camera_pb,
+            senato_pb,
+        })
+        .collect();
+    riparto(&d, legge, voti).unwrap()
+}
+
+#[test]
 fn tetto_irraggiungibile_termina() {
     let legge = LeggeElettorale {
         tetto: Some(QuoteTetto {
@@ -820,7 +843,11 @@ fn tetto_irraggiungibile_termina() {
         }),
         ..legge_180()
     };
-    let e = riparto(dati_base().elezioni(), &legge, &voti_g2()).unwrap();
+    let e = riparto_con_tetti(
+        &[(1000, 1000), (5500, 5650), (6000, 6000)],
+        &legge,
+        &voti_g2(),
+    );
     let tot = |s: &[SeggiLista]| s.iter().map(SeggiLista::totale).sum::<u32>();
     assert_eq!(tot(&e.camera), 400);
     assert_eq!(tot(&e.senato), 200);

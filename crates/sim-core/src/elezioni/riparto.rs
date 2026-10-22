@@ -632,9 +632,11 @@ fn senato(
 /// Seggi di Camera e Senato per lista.
 ///
 /// # Errors
-/// `VotiIncoerenti` se i voti non combaciano con le regioni, le liste o le coalizioni.
+/// `VotiIncoerenti` se i voti non combaciano con le regioni, le liste o le coalizioni;
+/// `LeggeElettorale` se la legge esce dal menu dei dati o il premio contraddice le coalizioni.
 pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Result<Esito, Errore> {
     let n = valida(dati, voti)?;
+    legge.valida(&dati.menu)?;
     // Cifre nazionali con le circoscrizioni speciali: decidono soglie e premio.
     let naz = somma(voti.per_regione.values(), n);
     let soglia_regionale = dati.soglia_regionale_senato_pb;
