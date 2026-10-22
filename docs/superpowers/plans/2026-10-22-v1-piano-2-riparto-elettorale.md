@@ -28,6 +28,7 @@ Punti che la legge non decide per un elettorato a 20 regioni, o che la spec lasc
 - **A8 · Gradini di taglia e tetto.** Ticket 13 dà «circa 9 · 18%» e «55 · 60% · nessuno». In quota dei seggi la 180 esatta è 17,5% (70/400, 35/200) e il tetto vale 55% alla Camera (220/400) e 56,5% al Senato (113/200): taglia 8,75 · 17,5%; tetto «come la 180» (55% / 56,5%), 60%, nessuno.
 - **A9 · Coalizione di una lista sola** = lista non coalizzata.
 - **A10 · Quoziente intero con pochi voti.** Il metodo della legge usa il quoziente troncato (`totale / seggi` intero). Se i voti sono così pochi che il quoziente è 0 o le parti intere superano i seggi (servono meno di `seggi × (seggi + 1)` voti: mai in una partita, solo nei test), si usa il quoziente naturale esatto.
+- **A12 · Tetto senza altri soggetti.** Se il vincitore del premio è l'unico soggetto ammesso, il tetto non si applica (`tetto_camera` e `tetto_senato` falsi): i seggi tolti non avrebbero a chi andare. La legge tace (art. 83 c. 1-ter); il Senato già salta la regione senza altri soggetti (art. 16-bis c. 1-ter b).
 - **A11 · Nessun soggetto ammesso.** I seggi proporzionali che non trovano un soggetto ammesso restano non assegnati: la somma del ramo scende sotto il totale, nessun panic.
 
 ## Global Constraints
