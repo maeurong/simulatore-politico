@@ -56,7 +56,7 @@ pub struct Esito {
 #[derive(Clone, Copy, Default)]
 struct Quota {
     seggi: u32,
-    /// Solo con Hare.
+    /// Resto della divisione per il quoziente; `None` con D'Hondt.
     resto: Option<u128>,
     /// Il resto ha già dato un seggio.
     resto_usato: bool,
@@ -69,7 +69,7 @@ fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
         return q;
     }
     if totale == 0 {
-        // assunzione A4 del piano 2: tutte le cifre a 0 valgono come pari, i seggi si
+        // assunzione A13 del piano 2: tutte le cifre a 0 valgono come pari, i seggi si
         // conservano in parti uguali e l'avanzo va agli indici più bassi.
         return quote(formula, &vec![1; cifre.len()], seggi);
     }
@@ -85,6 +85,7 @@ fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
                     let ((ca, da), (cb, db)) = (quoz(a), quoz(b));
                     (ca * db).cmp(&(cb * da)).then(ca.cmp(&cb)).then(b.cmp(&a))
                 }) else {
+                    // Irraggiungibile: cifre non vuota, controllato sopra.
                     return q;
                 };
                 q[i].seggi += 1;
@@ -107,6 +108,7 @@ fn quote(formula: Formula, cifre: &[u64], seggi: u32) -> Vec<Quota> {
                         .collect()
                 });
             for (qi, &(intera, resto)) in q.iter_mut().zip(&parti) {
+                // ≤ seggi per costruzione: il filtro sopra o il quoziente naturale.
                 qi.seggi = u32::try_from(intera).unwrap_or(u32::MAX);
                 qi.resto = Some(resto);
             }
@@ -309,6 +311,9 @@ fn togli_eccesso(regioni: &mut [Regionale<'_>], w: usize, mut eccesso: u32) {
     let mut col_resto: Vec<usize> = (0..regioni.len())
         .filter(|&r| regioni[r].quote[w].resto_usato)
         .collect();
+    // ponytail: col ripiego A10 il resto è in voti × seggi, non in voti, e la graduatoria fra
+    // regioni si distorce; succede solo con una manciata di voti per regione. Se servisse:
+    // resto in un'unità comune.
     col_resto.sort_by_key(|&r| regioni[r].quote[w].resto);
     let mut toccate = BTreeSet::new();
     for r in col_resto {
@@ -649,11 +654,13 @@ pub fn riparto(dati: &DatiElezioni, legge: &LeggeElettorale, voti: &Voti) -> Res
     let n = valida(dati, voti)?;
     legge.valida(&dati.menu)?;
     // Cifre nazionali con le circoscrizioni speciali: decidono soglie e premio.
+    // assunzione A5 del piano 2: stessi `Voti` per Camera e Senato.
     let naz = somma(voti.per_regione.values(), n);
     let soglia_regionale = dati.soglia_regionale_senato_pb;
     let gara_camera = in_gara(legge, soglia_regionale, voti, &naz, false);
     let gara_senato = in_gara(legge, soglia_regionale, voti, &naz, true);
-    // assunzione A5 del piano 2: premio solo se lo vince lo stesso soggetto nei due rami.
+    // art. 83 c. 1 e art. 16-bis (ricerca sistemi-elettorali.md:39): premio solo se lo vince
+    // lo stesso soggetto nei due rami.
     let premio =
         primo(legge, &gara_camera, &naz).filter(|&s| primo(legge, &gara_senato, &naz) == Some(s));
     let vincitore = |gara: &[InGara], seggi: u32| -> Vincitore {

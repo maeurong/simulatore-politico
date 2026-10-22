@@ -15,6 +15,7 @@ pub struct SeggiCircoscrizione {
 #[must_use]
 pub fn seggi_da_quota(quota_pb: u16, seggi: u32) -> u32 {
     let n = (u64::from(quota_pb) * u64::from(seggi) + 5_000) / 10_000;
+    // ≤ seggi per costruzione con `quota_pb` ≤ 10000, come vuole il menu.
     u32::try_from(n).unwrap_or(u32::MAX)
 }
 
@@ -28,6 +29,7 @@ fn hare(pop: &[u64], seggi: u32) -> Vec<u32> {
     let s = u128::from(seggi);
     let mut parti: Vec<u32> = pop
         .iter()
+        // ≤ seggi per costruzione: `p ≤ tot`.
         .map(|&p| u32::try_from(u128::from(p) * s / tot).unwrap_or(u32::MAX))
         .collect();
     let mut ordine: Vec<usize> = (0..pop.len()).collect();

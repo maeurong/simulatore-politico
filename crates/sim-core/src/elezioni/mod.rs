@@ -144,6 +144,8 @@ impl LeggeElettorale {
                 "tetto = {t:?} non è un gradino del menu"
             )));
         }
+        // assunzione A7 del piano 2: premio alla coalizione solo con le coalizioni, alla lista
+        // solo senza.
         match (self.premio, self.coalizioni) {
             (Premio::Coalizione, false) => Err(Errore::LeggeElettorale(
                 "premio alla coalizione senza coalizioni".into(),
