@@ -92,10 +92,22 @@ fn incoerente(m: String) -> Errore {
     Errore::DatiElettorali(m)
 }
 
+/// Punti base con la percentuale accanto, virgola decimale: `250 (2,5%)`.
+fn pb(x: u16) -> String {
+    let decimali = format!("{:02}", x % 100);
+    let decimali = decimali.trim_end_matches('0');
+    if decimali.is_empty() {
+        format!("{x} ({}%)", x / 100)
+    } else {
+        format!("{x} ({},{decimali}%)", x / 100)
+    }
+}
+
 fn gradini(nome: &str, v: &[u16]) -> Result<(), Errore> {
     if v.is_empty() || !v.windows(2).all(|w| w[0] < w[1]) || v.iter().any(|&x| x > 10_000) {
         return Err(incoerente(format!(
-            "menu: {nome} deve avere gradini crescenti, non vuoti e al più 10000: {v:?}"
+            "menu: {nome} deve avere gradini crescenti, non vuoti e al più 10000 (100%): [{}]",
+            v.iter().map(|&x| pb(x)).collect::<Vec<_>>().join(", ")
         )));
     }
     Ok(())
@@ -106,7 +118,9 @@ fn nel_menu(nome: &str, valore: u16, g: &[u16]) -> Result<(), Errore> {
         Ok(())
     } else {
         Err(Errore::LeggeElettorale(format!(
-            "{nome} = {valore} non è un gradino del menu {g:?}"
+            "{nome} = {} non è un gradino del menu [{}]",
+            pb(valore),
+            g.iter().map(|&x| pb(x)).collect::<Vec<_>>().join(", ")
         )))
     }
 }
@@ -140,8 +154,12 @@ impl LeggeElettorale {
         if let Some(t) = self.tetto
             && !menu.tetto.contains(&t)
         {
+            let tetto = |t: &QuoteTetto| format!("{}/{}", t.camera_pb, t.senato_pb);
+            let gradini: Vec<String> = menu.tetto.iter().map(tetto).collect();
             return Err(Errore::LeggeElettorale(format!(
-                "tetto = {t:?} non è un gradino del menu"
+                "tetto = {} non è un gradino del menu [{}]",
+                tetto(&t),
+                gradini.join(", ")
             )));
         }
         // assunzione A7 del piano 2: premio alla coalizione solo con le coalizioni, alla lista

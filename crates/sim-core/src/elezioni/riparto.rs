@@ -459,9 +459,21 @@ fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
         .collect();
     let chiavi: BTreeSet<&str> = voti.per_regione.keys().map(String::as_str).collect();
     if chiavi != regioni {
-        return Err(Errore::VotiIncoerenti(format!(
-            "regioni dei voti {chiavi:?} diverse da quelle delle circoscrizioni {regioni:?}"
-        )));
+        let meno = |a: &BTreeSet<&str>, b: &BTreeSet<&str>| {
+            a.difference(b).copied().collect::<Vec<_>>().join(", ")
+        };
+        let parti: Vec<String> = [
+            (
+                "regioni dei voti senza circoscrizione",
+                meno(&chiavi, &regioni),
+            ),
+            ("circoscrizioni senza voti", meno(&regioni, &chiavi)),
+        ]
+        .into_iter()
+        .filter(|(_, d)| !d.is_empty())
+        .map(|(cosa, d)| format!("{cosa}: {d}"))
+        .collect();
+        return Err(Errore::VotiIncoerenti(parti.join("; ")));
     }
     let n = voti.per_regione.values().next().map_or(0, Vec::len);
     if n == 0 {
@@ -477,7 +489,7 @@ fn valida(dati: &DatiElezioni, voti: &Voti) -> Result<usize, Errore> {
     for l in voti.coalizioni.iter().flatten() {
         if *l >= n {
             return Err(Errore::VotiIncoerenti(format!(
-                "coalizione con la lista {l}, ultima {}",
+                "coalizione cita la lista {l}, ma le liste vanno da 0 a {}",
                 n - 1
             )));
         }

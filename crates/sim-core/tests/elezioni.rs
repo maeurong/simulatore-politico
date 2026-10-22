@@ -74,7 +74,7 @@ fn impostazione_fuori_dal_menu_rifiutata_col_nome() {
         panic!("atteso LeggeElettorale")
     };
     assert!(
-        m.contains("legge_180") && m.contains("soglia_lista_pb"),
+        m.contains("legge_180") && m.contains("soglia_lista_pb = 250 (2,5%)"),
         "{m}"
     );
 }
@@ -206,7 +206,10 @@ fn tetto_fuori_dal_menu_rifiutato_col_nome() {
     let Errore::LeggeElettorale(m) = errore(f) else {
         panic!("atteso LeggeElettorale")
     };
-    assert!(m.contains("legge_180") && m.contains("tetto"), "{m}");
+    assert!(
+        m.contains("legge_180") && m.contains("tetto = 5600/5650"),
+        "{m}"
+    );
 }
 
 fn seggi(v: &[SeggiCircoscrizione]) -> Vec<u32> {
@@ -537,10 +540,14 @@ fn voti_incoerenti_rifiutati() {
     }
     v.coalizioni.clear();
     casi.push(v);
+    let attesi = [
+        "circoscrizioni senza voti: molise",
+        "regioni dei voti senza circoscrizione: atlantide",
+    ];
     for (i, v) in casi.iter().enumerate() {
         let r = riparto(dati_base().elezioni(), &legge_180(), v);
         assert!(
-            matches!(r, Err(Errore::VotiIncoerenti(_))),
+            matches!(&r, Err(Errore::VotiIncoerenti(m)) if attesi.get(i).is_none_or(|a| m == a)),
             "caso {i}: {r:?}"
         );
     }
