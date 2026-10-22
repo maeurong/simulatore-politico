@@ -284,6 +284,17 @@ fn salvataggio_con_un_gruppo_in_meno_illeggibile() {
 }
 
 #[test]
+fn salvataggio_con_crescite_oltre_16_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"][3]["crescite"] = serde_json::Value::Array(vec![0.0.into(); 17]);
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
 fn salvataggio_con_giudizio_corto_illeggibile() {
     let s = salvataggio_modificato(|j| {
         j["elettorato"]["gruppi"][5]["giudizio"]

@@ -5,7 +5,7 @@
 
 mod comune;
 use comune::{dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci};
-use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
+use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo};
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
 
 /// Messaggio dell'errore, dopo aver verificato che la variante e' quella attesa.
@@ -446,9 +446,52 @@ fn giudizi_del_centrodestra(quota_presidente: &str) -> Vec<f64> {
 }
 
 #[test]
-fn la_colpa_della_disoccupazione_va_al_partito_del_lavoro() {
+fn la_colpa_di_trasferimenti_e_disoccupazione_va_al_partito_del_lavoro() {
     assert!(giudizi_del_centrodestra("0.3").iter().any(|x| *x != 0.0));
     assert!(giudizi_del_centrodestra("1.0").iter().all(|x| *x == 0.0));
+}
+
+#[test]
+fn lavoro_del_dipendente_pubblico_va_a_economia_e_finanze() {
+    // EF al centrodestra, presidente destra, q = 0,3, rho = 0,333, sigma_reddito = 0,8.
+    let f = sostituisci(
+        file_base(),
+        "scenario",
+        "economia_finanze = \"destra\"",
+        "economia_finanze = \"centrodestra\"",
+    );
+    let d = DatiGioco::da_testi(&f).unwrap();
+    let p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let mut el = p.elettorato().clone();
+    let i = indice_gruppo(0, Condizione::DipendentePubblico, Fascia::Media);
+    // Netto 100, primario -2: lavoro = -2 punti = -2,5 sigma, peso interessi 0,50.
+    el.gruppi[i].reddito_prima = Reddito {
+        primario: 100.0,
+        trasferimenti: 0.0,
+        imposte: 0.0,
+        paniere: 1.0,
+    };
+    el.gruppi[i].reddito = Reddito {
+        primario: 98.0,
+        ..el.gruppi[i].reddito_prima
+    };
+    el.giudizio(&d, p.economia(), p.governo());
+    let nuovo = 0.5 * (-2.5 * 2.0 / 1.333);
+    let j = |id: &str| p.partiti().iter().position(|x| x.id == id).unwrap();
+    assert!((el.gruppi[i].giudizio[j("centrodestra")] - 0.7 * nuovo).abs() < 1e-9);
+    assert!((el.gruppi[i].giudizio[j("destra")] - 0.3 * nuovo).abs() < 1e-9);
+    assert!(el.gruppi[i].giudizio[j("destra")] < 0.0);
+}
+
+#[test]
+fn base_degenere_lascia_giudizio_e_crescite_finiti() {
+    let d = dati_base();
+    let p = Partita::nuova(dati_base(), 1);
+    let mut el = p.elettorato().clone();
+    el.gruppi[0].reddito_prima = Reddito::default();
+    el.giudizio(&d, p.economia(), p.governo());
+    assert_eq!(el.gruppi[0].crescite, vec![0.0]);
+    assert!(el.gruppi[0].giudizio.iter().all(|x| x.is_finite()));
 }
 
 #[test]

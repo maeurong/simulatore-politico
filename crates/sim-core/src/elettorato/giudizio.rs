@@ -4,7 +4,7 @@
 use super::{Condizione, Elettorato, Fascia, PER_REGIONE};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
-use crate::partiti::{Governo, Partito};
+use crate::partiti::Governo;
 
 /// Asimmetria del malcontento: il peggioramento pesa `1/ρ` volte il miglioramento.
 pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64 {
@@ -18,13 +18,7 @@ pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64 {
 impl Elettorato {
     /// Aggiorna il giudizio sui partiti di governo dalla variazione `reddito_prima → reddito` e
     /// dalla disoccupazione contro `ultima_disoccupazione`, poi accoda la crescita alle aspettative.
-    pub fn giudizio(
-        &mut self,
-        dati: &DatiGioco,
-        e: &Economia,
-        partiti: &[Partito],
-        governo: &Governo,
-    ) {
+    pub fn giudizio(&mut self, dati: &DatiGioco, e: &Economia, governo: &Governo) {
         let d = dati.elettorato();
         let rho = dati.manopola("asimmetria_giudizio");
         let q = dati.manopola("quota_colpa_presidente");
@@ -46,15 +40,20 @@ impl Elettorato {
             );
             let (ora, prima) = (g.reddito, g.reddito_prima);
             let y0 = prima.netto();
-            let punti = |x: f64| if y0 > 0.0 { 100.0 * x / y0 } else { 0.0 };
+            // Base degenere (netto o paniere non positivi): nessun termine di confronto.
+            let sensato = y0 > 0.0 && prima.paniere > 0.0;
+            let punti = |x: f64| if sensato { 100.0 * x / y0 } else { 0.0 };
             let aspettativa = if g.crescite.is_empty() {
                 0.0
             } else {
                 g.crescite.iter().sum::<f64>() / g.crescite.len() as f64
             };
             let crescita = 100.0 * (ora.reale() / prima.reale() - 1.0);
-            g.crescite
-                .push(if crescita.is_finite() { crescita } else { 0.0 });
+            g.crescite.push(if sensato && crescita.is_finite() {
+                crescita
+            } else {
+                0.0
+            });
             g.crescite
                 .drain(..g.crescite.len().saturating_sub(finestra));
             let peso = |voce: &str| {
@@ -70,7 +69,11 @@ impl Elettorato {
             } else {
                 pres
             };
-            let prezzi = -100.0 * (ora.paniere / prima.paniere - 1.0);
+            let prezzi = if sensato {
+                -100.0 * (ora.paniere / prima.paniere - 1.0)
+            } else {
+                0.0
+            };
             let du = e.regioni[r].disoccupazione - self.ultima_disoccupazione[r];
             let voci = [
                 (
@@ -91,7 +94,7 @@ impl Elettorato {
                 ),
                 (-du / sigma_u, w_disoccupazione, lavoro),
             ];
-            for (p, gp) in g.giudizio.iter_mut().enumerate().take(partiti.len()) {
+            for (p, gp) in g.giudizio.iter_mut().enumerate() {
                 if governo.al_governo(p) {
                     let nuovo: f64 = voci
                         .iter()
