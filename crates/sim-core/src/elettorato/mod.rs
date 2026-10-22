@@ -2,11 +2,15 @@
 //! (`elettorato.toml`) e il loro stato.
 
 use crate::dati::{DatiGioco, Dicastero};
+use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+
+mod redditi;
+pub use redditi::{Indici, Reddito};
 
 /// Punti dell'istogramma di posizione.
 pub const PUNTI: usize = 7;
@@ -309,16 +313,21 @@ pub struct Gruppo {
     pub posizione: [f64; PUNTI],
     pub ancora: [f64; PUNTI],
     pub giudizio: Vec<f64>,
+    pub reddito: Reddito,
+    pub reddito_prima: Reddito,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Elettorato {
     pub gruppi: Vec<Gruppo>,
+    /// Indici dell'economia al turno zero.
+    pub base: Indici,
 }
 
 impl Elettorato {
-    pub fn iniziale(dati: &DatiGioco, n_partiti: usize) -> Elettorato {
-        Elettorato {
+    pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
+        let mut el = Elettorato {
+            base: Indici::da(e, dati),
             gruppi: dati
                 .elettorato()
                 .gruppi
@@ -328,9 +337,15 @@ impl Elettorato {
                     posizione: g.posizione,
                     ancora: g.posizione,
                     giudizio: vec![0.0; n_partiti],
+                    reddito: Reddito::default(),
+                    reddito_prima: Reddito::default(),
                 })
                 .collect(),
-        }
+        };
+        // Due volte, così `reddito_prima == reddito` al turno zero.
+        el.aggiorna_redditi(dati, e);
+        el.aggiorna_redditi(dati, e);
+        el
     }
 
     /// Lunghezze e finitezza, per uno stato letto da un salvataggio.
@@ -364,6 +379,14 @@ impl Elettorato {
             if g.giudizio.iter().any(|x| !x.is_finite()) {
                 return ko(format!("elettorato.gruppi[{i}].giudizio non finito"));
             }
+            if !(g.reddito.e_valido() && g.reddito_prima.e_valido()) {
+                return ko(format!(
+                    "elettorato.gruppi[{i}]: reddito non finito o paniere non positivo"
+                ));
+            }
+        }
+        if !self.base.e_finito() {
+            return ko("elettorato.base non finita".into());
         }
         Ok(())
     }

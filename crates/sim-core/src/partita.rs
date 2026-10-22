@@ -71,11 +71,12 @@ impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         let economia = Economia::iniziale(&dati);
         let (partiti, governo) = partiti::iniziali(&dati);
+        let elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         Partita {
             versione_schema: VERSIONE_SCHEMA,
             caso: Caso::nuovo(seme),
             economia,
-            elettorato: Elettorato::iniziale(&dati, partiti.len()),
+            elettorato,
             partiti,
             governo,
             dati,
@@ -89,6 +90,7 @@ impl Partita {
     // dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
         self.economia.passo(&self.dati, &mut self.caso, self.data);
+        self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }

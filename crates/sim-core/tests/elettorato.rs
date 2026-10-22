@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta, sostituisci};
+use comune::{dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci};
 use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
 use sim_core::{DatiGioco, Errore, FileDati, Partita};
 
@@ -141,4 +141,55 @@ fn partita_nuova_ha_il_governo_uscente() {
             .iter()
             .all(|g| g.giudizio.iter().all(|&x| x == 0.0))
     );
+}
+
+#[test]
+fn redditi_al_turno_zero_dai_dati() {
+    let d = dati_base();
+    let p = Partita::nuova(d.clone(), 1);
+    let i = indice_gruppo(3, Condizione::Autonomo, Fascia::Alta);
+    let g = &d.elettorato().gruppi[i];
+    let lordo = g.primario + g.trasferimenti;
+    let atteso = lordo - d.elettorato().aliquote[&Fascia::Alta] * lordo;
+    assert!((p.elettorato().gruppi[i].reddito.reale() - atteso).abs() < 1e-6);
+}
+
+#[test]
+fn bilancio_fermo_erode_il_reddito_dei_dipendenti_pubblici() {
+    // 4 turni senza shock: salari pubblici fermi in nominale fino al bilancio di gennaio,
+    // salari privati che seguono il PIL nominale.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let pubblico = indice_gruppo(11, Condizione::DipendentePubblico, Fascia::Media);
+    let privato = indice_gruppo(11, Condizione::DipendentePrivato, Fascia::Media);
+    let reale = |p: &Partita, i: usize| p.elettorato().gruppi[i].reddito.reale();
+    let (pu0, pr0) = (reale(&p, pubblico), reale(&p, privato));
+    for _ in 0..4 {
+        p.chiudi_turno();
+    }
+    assert!(reale(&p, pubblico) / pu0 < reale(&p, privato) / pr0);
+}
+
+#[test]
+fn gini_nullo_con_redditi_uguali() {
+    let f = riscrivi(
+        riscrivi(
+            riscrivi(
+                file_base(),
+                "elettorato",
+                "primario = ",
+                "primario = 1000.0",
+            ),
+            "elettorato",
+            "trasferimenti = ",
+            "trasferimenti = 0.0",
+        ),
+        "elettorato",
+        "aliquote = ",
+        "aliquote = { bassa = 0.2, media = 0.2, alta = 0.2 }",
+    );
+    let d = DatiGioco::da_testi(&f).unwrap();
+    assert!(Partita::nuova(d.clone(), 1).elettorato().gini(&d).abs() < 1e-12);
+    let base = dati_base();
+    let g = Partita::nuova(base.clone(), 1).elettorato().gini(&base);
+    assert!(g > 0.1 && g < 0.6, "{g}");
 }

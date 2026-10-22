@@ -60,9 +60,7 @@ impl Economia {
             data.anno.saturating_sub(Trimestre::TURNO_ZERO.anno),
         ));
         let coorte = f64::from(dati.struttura().piramide[indice.min(100)]);
-        let occupati = forze_lavoro(dati) * (1.0 - self.disoccupazione_nazionale(dati) / 100.0);
-        let salario =
-            dati.manopola("quota_redditi_lavoro") * 4.0 * self.pil_trimestrale * MLD / occupati;
+        let salario = self.salario_medio(dati);
         let minima = s.pensione_minima.valore;
         let sost = |m: &str| dati.manopola(m) * salario;
         let importo = match s.regime_pensioni {
@@ -80,6 +78,32 @@ impl Economia {
         });
     }
 
+    /// Euro annui per occupato: quota dei redditi da lavoro sul PIL annuo.
+    pub(crate) fn salario_medio(&self, dati: &DatiGioco) -> f64 {
+        let occupati = forze_lavoro(dati) * (1.0 - self.disoccupazione_nazionale(dati) / 100.0);
+        dati.manopola("quota_redditi_lavoro") * 4.0 * self.pil_trimestrale * MLD / occupati
+    }
+
+    /// Euro annui per pensionato.
+    pub(crate) fn pensione_media(&self) -> f64 {
+        let pensionati: f64 = self.pensioni.iter().map(|a| a.pensionati as f64).sum();
+        let spesa: f64 = self
+            .pensioni
+            .iter()
+            .map(|a| a.pensionati as f64 * a.importo as f64)
+            .sum();
+        spesa / pensionati.max(1.0)
+    }
+
+    /// Euro annui per disoccupato, col coefficiente del regime.
+    pub(crate) fn sussidio_effettivo(&self, dati: &DatiGioco) -> f64 {
+        let k = match dati.scenario().regime_sussidi {
+            RegimeSussidi::Assicurativo => 1.0,
+            RegimeSussidi::Universale => dati.manopola("sussidio_universale"),
+        };
+        self.sussidio_per_disoccupato as f64 * k
+    }
+
     /// Spesa pensionistica del trimestre, euro.
     pub(super) fn spesa_pensioni(&self) -> i64 {
         let annua: f64 = self
@@ -92,10 +116,6 @@ impl Economia {
 
     /// Spesa per i sussidi del trimestre, euro.
     pub(super) fn spesa_sussidi(&self, dati: &DatiGioco) -> i64 {
-        let k = match dati.scenario().regime_sussidi {
-            RegimeSussidi::Assicurativo => 1.0,
-            RegimeSussidi::Universale => dati.manopola("sussidio_universale"),
-        };
-        euro(self.disoccupati(dati) * self.sussidio_per_disoccupato as f64 * k / 4.0)
+        euro(self.disoccupati(dati) * self.sussidio_effettivo(dati) / 4.0)
     }
 }
