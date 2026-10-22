@@ -317,8 +317,8 @@ Manopole nuove in `dati/base/manopole.toml`, tutte richieste in `MANOPOLE_RICHIE
 | `asimmetria_giudizio` | 0.333 | 0.1 | 1.0 | 17 | voto-economico-e-retrospettivo:13 |
 | `emivita_giudizio` | 4.0 | 1.0 | 12.0 | 17 | ticket 17 |
 | `finestra_aspettative` | 8.0 | 4.0 | 16.0 | 29 | ticket 29 |
-| `sigma_reddito` | 0.8 | 0.2 | 3.0 | 17 | assunzione (punti di crescita reale trimestrale) |
-| `sigma_disoccupazione` | 0.3 | 0.1 | 1.0 | 17 | assunzione (punti di disoccupazione al trimestre) |
+| `scala_reddito` | 0.8 | 0.2 | 3.0 | 17 | assunzione (punti di crescita reale trimestrale) |
+| `scala_disoccupazione` | 0.3 | 0.1 | 1.0 | 17 | assunzione (punti di disoccupazione al trimestre) |
 | `ancora_posizioni` | 0.1 | 0.0 | 1.0 | 06 | opinion-dynamics:38 (nessun valore generale) |
 | `rumore_posizioni` | 0.02 | 0.0 | 0.2 | 06 | assunzione |
 | `mobilita_fasce` | 0.5 | 0.0 | 2.0 | 06 | assunzione |
@@ -548,7 +548,7 @@ git commit -m "feat(elettorato): composizione mobile dei gruppi"
   - `pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64` = `x · 2ρ/(1+ρ)` se `x > 0`, `x · 2/(1+ρ)` altrimenti.
   - `Elettorato::giudizio(&mut self, dati: &DatiGioco, e: &Economia, partiti: &[Partito], governo: &Governo)`.
 
-Regole per il gruppo `i` (regione `r`, condizione `c`), `σ_r = sigma_reddito`, `σ_u = sigma_disoccupazione`, `Y₀ = reddito_prima.netto()`:
+Regole per il gruppo `i` (regione `r`, condizione `c`), `σ_r = scala_reddito`, `σ_u = scala_disoccupazione`, `Y₀ = reddito_prima.netto()`:
 - componenti in punti: `lav = 100·Δprimario/Y₀`, `tra = 100·Δtrasferimenti/Y₀`, `imp = −100·Δimposte/Y₀`, `prez = −100·(paniere/paniere_prima − 1)`; aspettativa `a` = media di `crescite` (0 se vuota); poi entra in coda `100·(reale/reale_prima − 1)`.
 - voci, ciascuna `(Δ in σ, peso, responsabile)`: lavoro `(lav/σ_r, w_reddito, Economia e Finanze se c è dipendente pubblico, altrimenti Presidente)`; prezzi `((prez − a)/σ_r, w_reddito, Presidente)`; trasferimenti `(tra/σ_r, w_reddito, ruolo colpa_disoccupazione_trasferimenti)`; imposte `(imp/σ_r, w_reddito, ruolo colpa_imposte_impiego_pubblico)`; disoccupazione `(−(u_r − ultima_disoccupazione_r)/σ_u, w_disoccupazione, ruolo colpa_disoccupazione_trasferimenti)` (spec riga 312). Indicatori di servizio e occupazione pubblica non hanno voce finché il piano 5 non li porta: il loro peso resta nei dati e non si rinormalizza.
 - per ogni partito `p` al governo: `g ← λ·g + Σ_voci peso · asimmetrica(Δ, ρ) · colpa(resp, p)`, `λ = 0,5^(1/emivita_giudizio)`, `colpa(resp, p) = q·[p = presidente] + (1 − q)·[p = resp]`, `q = quota_colpa_presidente`. Gli altri partiti restano a zero.
