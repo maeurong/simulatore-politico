@@ -352,7 +352,55 @@ fn mobilita_sposta_verso_la_fascia_bassa_se_la_condizione_cresce_meno() {
 }
 
 #[test]
-#[ignore = "studenti +25% in 20 turni: i pensionati rinnovati entrano più in fretta di quanto gli studenti escano; da decidere, vedi fix-wave-report A2"]
+fn il_pensionamento_svuota_anche_i_disoccupati() {
+    // Uscita degli studenti a zero, disoccupazione e redditi fermi: a gennaio si muove solo
+    // il pensionamento, `t · quota` da ciascuna delle quattro condizioni.
+    let f = imposta(
+        file_base(),
+        "manopole",
+        "[uscita_studenti]\nvalore = ",
+        "0.0",
+    );
+    let d = DatiGioco::da_testi(&f).unwrap();
+    let p = Partita::nuova(d.clone(), 4);
+    let mut e = p.economia().clone();
+    let mut annata = e.pensioni[0].clone();
+    (annata.anno, annata.pensionati) = (2027, 1_000_000);
+    e.pensioni.push(annata);
+    let prima = p.elettorato().clone();
+    let mut dopo = prima.clone();
+    let data = Trimestre {
+        anno: 2027,
+        trimestre: 1,
+    };
+    dopo.composizione(&d, &e, data);
+    use Condizione::{Autonomo, DipendentePrivato, DipendentePubblico, DisoccupatoInattivo};
+    let quattro = [
+        DipendentePrivato,
+        DipendentePubblico,
+        Autonomo,
+        DisoccupatoInattivo,
+    ];
+    let attivi: f64 = (0..360)
+        .filter(|i| quattro.contains(&Condizione::TUTTE[i % 18 / 3]))
+        .map(|i| prima.elettori(d.elettorato(), i))
+        .sum();
+    let t = 1e6 / attivi;
+    for r in 0..20 {
+        for f in Fascia::TUTTE {
+            for c in quattro {
+                let i = indice_gruppo(r, c, f);
+                let atteso = prima.gruppi[i].quota * (1.0 - t);
+                assert!(
+                    (dopo.gruppi[i].quota - atteso).abs() < 1e-12,
+                    "regione {r} {c} {f}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn senza_shock_le_condizioni_restano_vicine_al_turno_zero() {
     let d = DatiGioco::da_testi(&senza_shock()).unwrap();
     let per_condizione = |p: &Partita| -> [f64; 6] {

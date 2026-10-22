@@ -158,17 +158,14 @@ impl Elettorato {
             .filter(|a| a.anno == data.anno)
             .map(|a| a.pensionati)
             .sum();
-        let lavoratori: f64 = (0..self.gruppi.len())
-            .filter(|i| {
-                matches!(
-                    Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()],
-                    Priv | Pub | Autonomo
-                )
-            })
+        // Chi può andare in pensione: anche i disoccupati o inattivi, che altrimenti non escono mai.
+        let attivi = [Priv, Pub, Autonomo, Dis];
+        let in_eta: f64 = (0..self.gruppi.len())
+            .filter(|i| attivi.contains(&Condizione::TUTTE[i % PER_REGIONE / Fascia::TUTTE.len()]))
             .map(|i| self.elettori(d, i))
             .sum();
-        let tasso = if lavoratori > 0.0 {
-            (nuovi as f64 / lavoratori).clamp(0.0, 1.0)
+        let tasso = if in_eta > 0.0 {
+            (nuovi as f64 / in_eta).clamp(0.0, 1.0)
         } else {
             0.0
         };
@@ -178,7 +175,7 @@ impl Elettorato {
             let u = (e.regioni[r].disoccupazione / 100.0).clamp(0.0, 1.0);
             for f in Fascia::TUTTE {
                 let pens = indice_gruppo(r, Pensionato, f);
-                for c in [Priv, Pub, Autonomo] {
+                for c in attivi {
                     let da = indice_gruppo(r, c, f);
                     self.sposta(da, pens, tasso * self.gruppi[da].quota);
                 }

@@ -467,9 +467,9 @@ min = 0.0
 max = 2.0
 ticket = "06"
 
-# assunzione (quota annua)
+# assunzione del piano 4: tarata per stazionarietà della quota degli studenti al turno zero (round pre-commit)
 [uscita_studenti]
-valore = 0.2
+valore = 0.26
 min = 0.0
 max = 0.5
 ticket = "06"
