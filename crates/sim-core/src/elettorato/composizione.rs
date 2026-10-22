@@ -12,7 +12,7 @@ fn mescola(a: f64, qa: f64, b: f64, m: f64) -> f64 {
 
 impl Elettorato {
     /// Sposta `massa` di quota (fermata a `quota[da]`) da `da` a `a`: il destinatario diventa la
-    /// media pesata per massa di posizione, ancora e giudizio.
+    /// media pesata per massa di posizione, ancora, giudizio e voto precedente.
     pub fn sposta(&mut self, da: usize, a: usize, massa: f64) {
         let m = if massa > 0.0 {
             massa.min(self.gruppi[da].quota)
@@ -29,6 +29,13 @@ impl Elettorato {
             dest.ancora[k] = mescola(dest.ancora[k], qa, mittente.ancora[k], m);
         }
         for (x, y) in dest.giudizio.iter_mut().zip(&mittente.giudizio) {
+            *x = mescola(*x, qa, *y, m);
+        }
+        for (x, y) in dest
+            .voto_precedente
+            .iter_mut()
+            .zip(&mittente.voto_precedente)
+        {
             *x = mescola(*x, qa, *y, m);
         }
         self.rinnova(da, a, m);
@@ -188,6 +195,7 @@ mod test {
             posizione,
             ancora: posizione,
             giudizio: vec![0.5],
+            voto_precedente: vec![0.5, 0.5],
             reddito: Reddito::default(),
             reddito_prima: Reddito::default(),
             crescite: vec![],

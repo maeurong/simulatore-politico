@@ -65,6 +65,9 @@ fn cinque_estrazioni_fisse_per_turno() {
         for _ in 0..5 * turni {
             atteso.normale(Flusso::Economia);
         }
+        for _ in 0..360 * 7 * turni {
+            atteso.normale(Flusso::Elettorato);
+        }
         let salvato: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
         assert_eq!(
             salvato["caso"],

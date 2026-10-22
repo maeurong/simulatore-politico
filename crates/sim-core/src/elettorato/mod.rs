@@ -12,7 +12,9 @@ use std::fmt;
 mod composizione;
 mod giudizio;
 mod redditi;
+mod voto;
 pub use redditi::{Indici, Reddito};
+pub use voto::{Intenzioni, intenzioni};
 
 /// Punti dell'istogramma di posizione.
 pub const PUNTI: usize = 7;
@@ -305,6 +307,8 @@ pub struct Gruppo {
     pub posizione: [f64; PUNTI],
     pub ancora: [f64; PUNTI],
     pub giudizio: Vec<f64>,
+    /// Voto del turno prima: una quota per partito, l'ultima è l'astensione.
+    pub voto_precedente: Vec<f64>,
     pub reddito: Reddito,
     pub reddito_prima: Reddito,
     /// Ultime crescite reali trimestrali in punti, la più recente in coda.
@@ -339,6 +343,7 @@ impl Elettorato {
                     posizione: g.posizione,
                     ancora: g.posizione,
                     giudizio: vec![0.0; n_partiti],
+                    voto_precedente: vec![0.0; n_partiti + 1],
                     reddito: Reddito::default(),
                     reddito_prima: Reddito::default(),
                     crescite: Vec::new(),
@@ -371,12 +376,19 @@ impl Elettorato {
                     g.giudizio.len()
                 ));
             }
-            let finiti = g.quota.is_finite()
-                && g.posizione.iter().all(|x| x.is_finite())
-                && g.ancora.iter().all(|x| x.is_finite());
-            if !finiti {
+            if g.voto_precedente.len() != n_partiti + 1 || !somma_uno(&g.voto_precedente) {
                 return ko(format!(
-                    "elettorato.gruppi[{i}]: quota, posizione o ancora non finite"
+                    "elettorato.gruppi[{i}].voto_precedente: servono {} quote che sommano a 1",
+                    n_partiti + 1
+                ));
+            }
+            let ok = g.quota.is_finite()
+                && g.quota >= 0.0
+                && somma_uno(&g.posizione)
+                && somma_uno(&g.ancora);
+            if !ok {
+                return ko(format!(
+                    "elettorato.gruppi[{i}]: quota negativa, posizione o ancora che non sommano a 1"
                 ));
             }
             if g.giudizio.iter().any(|x| !x.is_finite()) {

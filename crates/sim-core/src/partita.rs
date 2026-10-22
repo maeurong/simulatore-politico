@@ -1,7 +1,7 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
-use crate::elettorato::Elettorato;
+use crate::elettorato::{Elettorato, Intenzioni, intenzioni};
 use crate::errore::Errore;
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{Vista, VoceDicastero};
@@ -71,7 +71,8 @@ impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         let economia = Economia::iniziale(&dati);
         let (partiti, governo) = partiti::iniziali(&dati);
-        let elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
+        let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
+        elettorato.avvia_voto(&dati, &partiti, &governo);
         Partita {
             versione_schema: VERSIONE_SCHEMA,
             caso: Caso::nuovo(seme),
@@ -95,6 +96,7 @@ impl Partita {
             .giudizio(&self.dati, &self.economia, &self.governo);
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
+        self.elettorato.posizioni(&self.dati, &mut self.caso);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }
@@ -116,6 +118,26 @@ impl Partita {
     /// Stato vero dell'elettorato: per il CLI e i test, mai per la `Vista`.
     pub fn elettorato(&self) -> &Elettorato {
         &self.elettorato
+    }
+
+    /// Intenzioni di voto vere per gruppo e nazionali: per il CLI e i test, mai per la `Vista`.
+    pub fn intenzioni_vere(&self) -> Intenzioni {
+        let per_gruppo = intenzioni(&self.dati, &self.elettorato, &self.partiti, &self.governo);
+        let d = self.dati.elettorato();
+        let mut nazionali = vec![0.0; self.partiti.len() + 1];
+        let mut totale = 0.0;
+        for (i, v) in per_gruppo.iter().enumerate() {
+            let w = self.elettorato.elettori(d, i);
+            totale += w;
+            for (n, x) in nazionali.iter_mut().zip(v) {
+                *n += w * x;
+            }
+        }
+        nazionali.iter_mut().for_each(|n| *n /= totale);
+        Intenzioni {
+            per_gruppo,
+            nazionali,
+        }
     }
 
     pub fn vista(&self) -> Vista {

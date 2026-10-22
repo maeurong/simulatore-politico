@@ -316,3 +316,32 @@ fn salvataggio_con_presidente_fuori_dai_partiti_illeggibile() {
         Err(Errore::SalvataggioIlleggibile(_))
     ));
 }
+
+#[test]
+fn salvataggio_con_voto_precedente_o_posizione_guasti_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 4] = [
+        ("voto_precedente corto", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("voto_precedente che non somma a 1", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"][0] = 5.0.into();
+        }),
+        ("posizione negativa", |j| {
+            j["elettorato"]["gruppi"][2]["posizione"][0] = (-0.5).into();
+        }),
+        ("posizione che non somma a 1", |j| {
+            j["elettorato"]["gruppi"][2]["posizione"] = serde_json::json!(vec![0.0; 7]);
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}
