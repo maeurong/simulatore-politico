@@ -92,7 +92,7 @@ impl Elettorato {
         // Per condizione: (elettori, crescita pesata) in tutta Italia.
         let mut per_condizione = [(0.0, 0.0); 6];
         for i in 0..self.gruppi.len() {
-            let w = self.gruppi[i].quota * d.regioni[i / PER_REGIONE].elettori as f64;
+            let w = self.elettori(d, i);
             let c = i % PER_REGIONE / Fascia::TUTTE.len();
             per_condizione[c].0 += w;
             per_condizione[c].1 += w * crescita(i);
@@ -148,7 +148,7 @@ impl Elettorato {
                     Priv | Pub | Autonomo
                 )
             })
-            .map(|i| self.gruppi[i].quota * d.regioni[i / PER_REGIONE].elettori as f64)
+            .map(|i| self.elettori(d, i))
             .sum();
         let tasso = if lavoratori > 0.0 {
             (nuovi as f64 / lavoratori).clamp(0.0, 1.0)
@@ -158,7 +158,7 @@ impl Elettorato {
         let uscite = dati.manopola("uscite_pensionati");
         let studenti = dati.manopola("uscita_studenti");
         for r in 0..d.regioni.len() {
-            let u = e.regioni[r].disoccupazione / 100.0;
+            let u = (e.regioni[r].disoccupazione / 100.0).clamp(0.0, 1.0);
             for f in Fascia::TUTTE {
                 let pens = indice_gruppo(r, Pensionato, f);
                 for c in [Priv, Pub, Autonomo] {

@@ -139,16 +139,6 @@ fn somma_uno(v: &[f64]) -> bool {
 }
 
 impl DatiElettorato {
-    /// Elettori di un gruppo: quota x elettori della sua regione.
-    ///
-    /// Un indice fuori dai gruppi dà 0: i dati validati hanno sempre la regione.
-    pub fn elettori_gruppo(&self, i: usize) -> f64 {
-        match (self.gruppi.get(i), self.regioni.get(i / PER_REGIONE)) {
-            (Some(g), Some(r)) => g.quota * r.elettori as f64,
-            _ => 0.0,
-        }
-    }
-
     /// Coerenza dei dati con regioni, dicasteri e settori.
     ///
     /// # Errors
@@ -328,6 +318,11 @@ pub struct Elettorato {
 }
 
 impl Elettorato {
+    /// Elettori di un gruppo: la sua quota viva x gli elettori della sua regione.
+    pub fn elettori(&self, d: &DatiElettorato, i: usize) -> f64 {
+        self.gruppi[i].quota * d.regioni[i / PER_REGIONE].elettori as f64
+    }
+
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
         let mut el = Elettorato {
             base: Indici::da(e, dati),

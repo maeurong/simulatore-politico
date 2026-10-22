@@ -6,7 +6,7 @@
 mod comune;
 use comune::{dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci};
 use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
-use sim_core::{DatiGioco, Errore, FileDati, Partita};
+use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
 
 /// Messaggio dell'errore, dopo aver verificato che la variante e' quella attesa.
 fn rifiuto(f: FileDati, variante: fn(&Errore) -> bool) -> String {
@@ -269,4 +269,130 @@ fn i_pensionati_cambiano_solo_a_gennaio() {
     assert!((pensionati(&p) - t0).abs() < 1e-6 * t0);
     p.chiudi_turno();
     assert!((pensionati(&p) - t0).abs() > 1e-6 * t0);
+}
+
+#[test]
+fn elettori_e_gini_seguono_la_quota_viva() {
+    let d = dati_base();
+    let mut el = Partita::nuova(dati_base(), 2).elettorato().clone();
+    let (prima, g0) = (el.elettori(d.elettorato(), 0), el.gini(&d));
+    let a = indice_gruppo(0, Condizione::Pensionato, Fascia::Alta);
+    el.sposta(0, a, el.gruppi[0].quota / 2.0);
+    assert!((el.elettori(d.elettorato(), 0) - prima / 2.0).abs() < 1e-6 * prima);
+    assert!(
+        (el.gini(&d) - g0).abs() > 1e-12,
+        "gini fermo alle quote del turno zero"
+    );
+}
+
+type Gr = sim_core::elettorato::Gruppo;
+
+/// Elettorato del turno zero con `ritocca` sui gruppi, prima e dopo `composizione`.
+fn compone(
+    data: Trimestre,
+    ritocca: impl Fn(usize, &mut Gr),
+) -> (
+    sim_core::elettorato::Elettorato,
+    sim_core::elettorato::Elettorato,
+) {
+    let p = Partita::nuova(dati_base(), 4);
+    let mut prima = p.elettorato().clone();
+    for (i, g) in prima.gruppi.iter_mut().enumerate() {
+        ritocca(i, g);
+    }
+    let mut dopo = prima.clone();
+    dopo.composizione(&dati_base(), p.economia(), data);
+    (prima, dopo)
+}
+
+#[test]
+fn mobilita_sposta_verso_la_fascia_bassa_se_la_condizione_cresce_meno() {
+    let d = dati_base();
+    let aut = Condizione::Autonomo as usize;
+    let (prima, dopo) = compone(
+        Trimestre {
+            anno: 2027,
+            trimestre: 2,
+        },
+        |i, g| {
+            if i % 18 / 3 == aut {
+                g.reddito_prima.primario *= 1.1;
+                g.reddito_prima.trasferimenti *= 1.1;
+            }
+        },
+    );
+    let (mut n, mut w_aut, mut g_aut, mut g_tot) = (0.0, 0.0, 0.0, 0.0);
+    for (i, g) in prima.gruppi.iter().enumerate() {
+        let w = prima.elettori(d.elettorato(), i);
+        let gamma = g.reddito.reale() / g.reddito_prima.reale() - 1.0;
+        n += w;
+        g_tot += w * gamma;
+        if i % 18 / 3 == aut {
+            w_aut += w;
+            g_aut += w * gamma;
+        }
+    }
+    let scarto = g_aut / w_aut - g_tot / n;
+    assert!(scarto < 0.0, "scarto {scarto}");
+    let f = d.manopola("mobilita_fasce") * scarto.abs();
+    for r in 0..20 {
+        let [b, m, a] = Fascia::TUTTE.map(|f| indice_gruppo(r, Condizione::Autonomo, f));
+        let guadagno_bassa = dopo.gruppi[b].quota - prima.gruppi[b].quota;
+        let perdita_alta = prima.gruppi[a].quota - dopo.gruppi[a].quota;
+        assert!(
+            (guadagno_bassa - f * prima.gruppi[m].quota).abs() < 1e-12,
+            "regione {r}"
+        );
+        assert!(
+            (perdita_alta - f * prima.gruppi[a].quota).abs() < 1e-12,
+            "regione {r}"
+        );
+    }
+}
+
+#[test]
+fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
+    let d = dati_base();
+    let (studenti, uscite) = (
+        d.manopola("uscita_studenti"),
+        d.manopola("uscite_pensionati"),
+    );
+    let p = Partita::nuova(dati_base(), 4);
+    let (prima, gennaio) = compone(
+        Trimestre {
+            anno: 2027,
+            trimestre: 1,
+        },
+        |_, _| {},
+    );
+    let (_, aprile) = compone(
+        Trimestre {
+            anno: 2027,
+            trimestre: 2,
+        },
+        |_, _| {},
+    );
+    assert_eq!(
+        aprile.gruppi, prima.gruppi,
+        "fuori da gennaio nulla si muove"
+    );
+    for r in 0..20 {
+        let u = p.economia().regioni[r].disoccupazione / 100.0;
+        for f in Fascia::TUTTE {
+            let q =
+                |el: &sim_core::elettorato::Elettorato, c| el.gruppi[indice_gruppo(r, c, f)].quota;
+            let massa = studenti
+                * (q(&prima, Condizione::Studente) + uscite * q(&prima, Condizione::Pensionato));
+            let d_priv = q(&gennaio, Condizione::DipendentePrivato)
+                - q(&prima, Condizione::DipendentePrivato);
+            let d_dis = q(&gennaio, Condizione::DisoccupatoInattivo)
+                - q(&prima, Condizione::DisoccupatoInattivo);
+            assert!(d_priv > 0.0 && d_dis > 0.0, "regione {r} {f}");
+            assert!(
+                (d_priv - (1.0 - u) * massa).abs() < 1e-12,
+                "regione {r} {f}"
+            );
+            assert!((d_dis - u * massa).abs() < 1e-12, "regione {r} {f}");
+        }
+    }
 }

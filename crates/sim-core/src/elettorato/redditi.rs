@@ -117,7 +117,7 @@ impl Elettorato {
             .gruppi
             .iter()
             .enumerate()
-            .map(|(k, g)| (d.elettori_gruppo(k), g.reddito.reale()))
+            .map(|(k, g)| (self.elettori(d, k), g.reddito.reale()))
             .collect();
         let n: f64 = punti.iter().map(|p| p.0).sum();
         let media = punti.iter().map(|p| p.0 * p.1).sum::<f64>() / n;
