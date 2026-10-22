@@ -30,6 +30,10 @@ impl Caso {
         }
     }
 
+    pub fn seme(&self) -> u64 {
+        self.seme
+    }
+
     pub fn prossimo(&mut self, flusso: Flusso) -> u64 {
         let seme = self.seme;
         self.flussi
@@ -40,5 +44,19 @@ impl Caso {
                 rng
             })
             .next_u64()
+    }
+
+    /// Uniforme in `(0, 1]`: mai zero, cosi' `ln` e' sempre finito.
+    pub fn uniforme(&mut self, flusso: Flusso) -> f64 {
+        // 53 bit: esatti in un f64.
+        let alti = self.prossimo(flusso) >> 11;
+        (alti as f64 + 1.0) / 9_007_199_254_740_992.0
+    }
+
+    /// Normale standard, Box-Muller su due uniformi, senza cache del secondo valore.
+    pub fn normale(&mut self, flusso: Flusso) -> f64 {
+        let u1 = self.uniforme(flusso);
+        let u2 = self.uniforme(flusso);
+        (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
     }
 }

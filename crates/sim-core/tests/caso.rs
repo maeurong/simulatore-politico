@@ -6,6 +6,7 @@
 use sim_core::caso::{Caso, Flusso};
 
 const VALORE_FISSATO: u64 = 12578764544318200737;
+const NORMALE_FISSATA: u64 = 4605675623877093340;
 
 #[test]
 fn stesso_seme_stessa_sequenza() {
@@ -73,4 +74,37 @@ fn semi_estremi() {
 #[test]
 fn valore_fissato_dell_algoritmo() {
     assert_eq!(Caso::nuovo(42).prossimo(Flusso::Economia), VALORE_FISSATO);
+}
+
+#[test]
+fn normale_ha_media_zero_e_varianza_uno() {
+    let mut c = Caso::nuovo(42);
+    let n = 20_000;
+    let xs: Vec<f64> = (0..n).map(|_| c.normale(Flusso::Economia)).collect();
+    let media = xs.iter().sum::<f64>() / f64::from(n);
+    let varianza = xs.iter().map(|x| (x - media).powi(2)).sum::<f64>() / f64::from(n);
+    assert!(media.abs() < 0.03, "{media}");
+    assert!((varianza - 1.0).abs() < 0.05, "{varianza}");
+}
+
+#[test]
+fn uniforme_mai_zero_e_mai_sopra_uno() {
+    let mut c = Caso::nuovo(0);
+    for _ in 0..10_000 {
+        let u = c.uniforme(Flusso::Economia);
+        assert!(u > 0.0 && u <= 1.0);
+    }
+}
+
+#[test]
+fn normale_valore_fissato() {
+    assert_eq!(
+        Caso::nuovo(42).normale(Flusso::Economia).to_bits(),
+        NORMALE_FISSATA
+    );
+}
+
+#[test]
+fn il_seme_sta_nel_caso() {
+    assert_eq!(Caso::nuovo(7).seme(), 7);
 }

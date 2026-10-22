@@ -18,13 +18,13 @@ fn con_dicasteri(testo: &str) -> FileDati {
 #[test]
 fn dati_base_si_caricano() {
     let d = DatiGioco::da_testi(&file_base()).unwrap();
-    assert_eq!(d.dicasteri.len(), 10);
-    assert!(d.dicasteri.iter().any(|x| x.nome == "Sanità"));
+    assert_eq!(d.dicasteri().len(), 10);
+    assert!(d.dicasteri().iter().any(|x| x.nome == "Sanità"));
     assert_eq!(
-        d.dicasteri.iter().filter(|x| x.regione_bersaglio).count(),
+        d.dicasteri().iter().filter(|x| x.regione_bersaglio).count(),
         2
     );
-    assert_eq!(d.manopole["soglia_minaccia"].valore, 40.0);
+    assert_eq!(d.manopole()["soglia_minaccia"].valore, 40.0);
 }
 
 #[test]

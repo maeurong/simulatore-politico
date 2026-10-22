@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 1;
+pub const VERSIONE_SCHEMA: u32 = 2;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +40,6 @@ impl Trimestre {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Partita {
     versione_schema: u32,
-    seme: u64,
     caso: Caso,
     dati: DatiGioco,
     turno: u32,
@@ -51,7 +50,6 @@ impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         Partita {
             versione_schema: VERSIONE_SCHEMA,
-            seme,
             caso: Caso::nuovo(seme),
             dati,
             turno: 0,
@@ -73,7 +71,7 @@ impl Partita {
             data: self.data,
             dicasteri: self
                 .dati
-                .dicasteri
+                .dicasteri()
                 .iter()
                 .map(|d| VoceDicastero {
                     id: d.id.clone(),

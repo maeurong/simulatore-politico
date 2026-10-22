@@ -51,7 +51,7 @@ fn chiudi(stato: &Stato) -> Result<Vista, String> {
 }
 
 #[tauri::command]
-fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, String> {
+async fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, String> {
     let risorse = app
         .path()
         .resource_dir()
@@ -61,7 +61,7 @@ fn nuova_partita(app: AppHandle, stato: State<'_, Stato>) -> Result<Vista, Strin
 }
 
 #[tauri::command]
-fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
+async fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
     chiudi(&stato)
 }
 

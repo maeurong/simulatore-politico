@@ -4,8 +4,8 @@
 )]
 
 mod comune;
-use comune::dati_base;
-use sim_core::{Errore, Partita, Trimestre, VERSIONE_SCHEMA};
+use comune::{dati_base, file_base};
+use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre, VERSIONE_SCHEMA};
 
 fn giocata(seme: u64, turni: u32) -> Partita {
     let mut p = Partita::nuova(dati_base(), seme);
@@ -90,7 +90,7 @@ fn schema_diverso_rifiutato() {
     );
     assert_eq!(
         e.to_string(),
-        "salvataggio di una versione diversa del gioco: schema 99, atteso 1"
+        "salvataggio di una versione diversa del gioco: schema 99, atteso 2"
     );
 }
 
@@ -128,22 +128,31 @@ fn contatori_al_limite_non_vanno_in_panico() {
 
 #[test]
 fn f64_identici_attraverso_salva_carica() {
-    let mut dati = dati_base();
-    let m = dati.manopole.get_mut("soglia_minaccia").unwrap();
-    m.min = 0.0;
-    m.max = 100.0;
-    m.valore = 94.52706955539223;
+    let file = file_base();
+    let manopole = file
+        .manopole
+        .replacen("valore = 40.0", "valore = 94.52706955539223", 1)
+        .replacen("min = 30.0", "min = 0.0", 1)
+        .replacen("max = 50.0", "max = 100.0", 1);
+    let dati = DatiGioco::da_testi(&FileDati { manopole, ..file }).unwrap();
     let p = Partita::nuova(dati, 1);
     let r = Partita::carica(&p.salva().unwrap()).unwrap();
     assert_eq!(r, p);
 }
 
 #[test]
-fn salva_rifiuta_manopola_non_finita() {
-    let mut dati = dati_base();
-    dati.manopole.get_mut("soglia_minaccia").unwrap().valore = f64::NAN;
-    let e = Partita::nuova(dati, 1).salva().unwrap_err();
-    assert!(matches!(e, Errore::SalvataggioNonRiuscito(_)));
+fn manopola_nan_rifiutata_al_caricamento() {
+    let file = file_base();
+    let manopole = file.manopole.replacen("valore = 40.0", "valore = nan", 1);
+    let e = DatiGioco::da_testi(&FileDati { manopole, ..file }).unwrap_err();
+    assert!(matches!(e, Errore::FuoriIntervallo { ref nome, .. } if nome == "soglia_minaccia"));
+}
+
+#[test]
+fn il_salvataggio_non_ripete_il_seme() {
+    let json: serde_json::Value = serde_json::from_str(&giocata(5, 1).salva().unwrap()).unwrap();
+    assert!(json.get("seme").is_none());
+    assert_eq!(json["caso"]["seme"], 5);
 }
 
 #[test]
@@ -187,8 +196,8 @@ fn versione_non_intera_rifiutata() {
 #[test]
 fn campo_obbligatorio_mancante_rifiutato() {
     let s = salvataggio_modificato(|j| {
-        j.as_object_mut().unwrap().remove("seme");
+        j.as_object_mut().unwrap().remove("turno");
     });
     let e = Partita::carica(&s).unwrap_err();
-    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("seme")));
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("turno")));
 }

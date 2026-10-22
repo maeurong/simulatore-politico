@@ -56,8 +56,8 @@ pub struct Manopola {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DatiGioco {
-    pub dicasteri: Vec<Dicastero>,
-    pub manopole: BTreeMap<String, Manopola>,
+    dicasteri: Vec<Dicastero>,
+    manopole: BTreeMap<String, Manopola>,
 }
 
 #[derive(Deserialize)]
@@ -73,6 +73,29 @@ fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
 }
 
 impl DatiGioco {
+    pub fn dicasteri(&self) -> &[Dicastero] {
+        &self.dicasteri
+    }
+
+    pub fn manopole(&self) -> &BTreeMap<String, Manopola> {
+        &self.manopole
+    }
+
+    /// Valore di una manopola.
+    ///
+    /// # Panics
+    /// Se la manopola non esiste: la presenza e' un invariante dei dati validati.
+    #[expect(
+        clippy::expect_used,
+        reason = "la presenza e' garantita da valida (ManopolaMancante, Task 3)"
+    )]
+    pub fn manopola(&self, nome: &str) -> f64 {
+        self.manopole
+            .get(nome)
+            .expect("manopola validata al caricamento")
+            .valore
+    }
+
     /// Parsa e valida i testi dei file di dati.
     ///
     /// # Errors
