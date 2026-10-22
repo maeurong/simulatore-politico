@@ -217,14 +217,20 @@ impl Ramo {
                 r.id
             )));
         }
-        let fissi = self
+        if self.seggi > 10_000 {
+            return Err(incoerente(format!(
+                "{nome}: seggi = {} oltre il limite di 10000",
+                self.seggi
+            )));
+        }
+        let impegnati = self
             .circoscrizioni
             .iter()
-            .filter_map(|c| c.seggi_fissi)
+            .map(|c| c.seggi_fissi.unwrap_or(self.minimo))
             .try_fold(u64::from(self.estero), |a, s| a.checked_add(u64::from(s)));
-        if fissi.is_none_or(|t| t > u64::from(self.seggi)) {
+        if impegnati.is_none_or(|t| t > u64::from(self.seggi)) {
             return Err(incoerente(format!(
-                "{nome}: estero e seggi fissi superano i seggi ({})",
+                "{nome}: estero, seggi fissi e minimi superano i seggi ({})",
                 self.seggi
             )));
         }

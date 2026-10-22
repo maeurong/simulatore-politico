@@ -162,6 +162,26 @@ fn seggi_fissi_enormi_rifiutati_senza_panico() {
 }
 
 #[test]
+fn minimo_enorme_rifiutato_senza_panico() {
+    let f = sostituisci(file_base(), "elezioni", "minimo = 3", "minimo = 4294967295");
+    let e = errore(f);
+    assert!(
+        matches!(&e, Errore::DatiElettorali(m) if m.contains("senato")),
+        "{e:?}"
+    );
+}
+
+#[test]
+fn seggi_oltre_il_limite_rifiutati() {
+    let f = sostituisci(file_base(), "elezioni", "seggi = 400", "seggi = 10001");
+    let e = errore(f);
+    assert!(
+        matches!(&e, Errore::DatiElettorali(m) if m.contains("camera") && m.contains("10000")),
+        "{e:?}"
+    );
+}
+
+#[test]
 fn tetto_del_menu_non_crescente_rifiutato() {
     let f = sostituisci(
         file_base(),
