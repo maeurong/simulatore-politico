@@ -383,7 +383,7 @@ min = 0.0
 max = 0.5
 ticket = "02"
 
-# ITANES 2022 post (Vezzoni et al. 2023, release 01), N=3078: β 0.186 (ES 0.008) sui 7 punti del gioco (TAGLIO di elettorato.py); dati-per-tarare-i-gruppi:99-111; stima_voto.py
+# ITANES 2022 post (Vezzoni et al. 2023, release 01), N=3078: β 0.186 (ES 0.008) sui 7 punti del gioco (TAGLIO di elettorato.py); min allargato da 0,3 a 0,1 perché la stima cade sotto 0,3; dati-per-tarare-i-gruppi:99-111; stima_voto.py
 [beta_distanza]
 valore = 0.186
 min = 0.1
