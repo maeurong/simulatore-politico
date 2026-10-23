@@ -113,23 +113,18 @@ fn copia_dati(nome: &str) -> std::path::PathBuf {
     cartella
 }
 
-#[test]
-fn tara_porta_il_turno_zero_sui_bersagli() {
-    let cartella = copia_dati("ok");
-    let out = sim(&[
+fn tara_in(cartella: &std::path::Path, bersagli: &str) -> std::process::Output {
+    sim(&[
         "tara",
         "--dati",
         cartella.to_str().unwrap(),
         "--bersagli",
-        BERSAGLI,
-    ]);
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
+        bersagli,
+    ])
+}
 
-    // Oracolo indipendente: ricarica i file riscritti e rifà i conti dalle intenzioni per gruppo.
+/// Oracolo indipendente: ricarica i file riscritti e rifa' i conti dalle intenzioni per gruppo.
+fn controlla_bersagli(cartella: &std::path::Path) {
     let file = sim_core::FileDati::leggi(|n| std::fs::read_to_string(cartella.join(n))).unwrap();
     let dati = sim_core::DatiGioco::da_testi(&file).unwrap();
     let ids: Vec<String> = dati
@@ -169,6 +164,133 @@ fn tara_porta_il_turno_zero_sui_bersagli() {
             j + 1
         );
     }
+}
+
+fn leggi(cartella: &std::path::Path, file: &str) -> String {
+    std::fs::read_to_string(cartella.join(file)).unwrap()
+}
+
+/// Parte fuori dal punto fisso: valence a 0 e astensione a 0 in ogni regione.
+fn scosta(cartella: &std::path::Path) {
+    let mut dentro = false;
+    let scenario: String = leggi(cartella, "scenario.toml")
+        .split_inclusive('\n')
+        .map(|r| {
+            if r.starts_with('[') {
+                dentro = r.trim_end() == "[partito.valence]";
+            }
+            if dentro && r.starts_with("valore = ") {
+                "valore = 0.0\n".to_string()
+            } else {
+                r.to_string()
+            }
+        })
+        .collect();
+    std::fs::write(cartella.join("scenario.toml"), scenario).unwrap();
+    let elettorato: String = leggi(cartella, "elettorato.toml")
+        .split_inclusive('\n')
+        .map(|r| {
+            if r.starts_with("astensione = ") {
+                "astensione = 0.0\n".to_string()
+            } else {
+                r.to_string()
+            }
+        })
+        .collect();
+    std::fs::write(cartella.join("elettorato.toml"), elettorato).unwrap();
+}
+
+#[test]
+fn dati_committati_sono_gia_tarati() {
+    let cartella = copia_dati("ok");
+    let out = tara_in(&cartella, BERSAGLI);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["giri"], 0, "rilancia `sim-cli tara` su dati/base");
+    assert!(v["scarto"].as_f64().unwrap() < 1e-4);
+    controlla_bersagli(&cartella);
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_converge_da_dati_scostati_e_tocca_solo_valence_e_astensione() {
+    let cartella = copia_dati("scostati");
+    scosta(&cartella);
+    let prima = [
+        leggi(&cartella, "scenario.toml"),
+        leggi(&cartella, "elettorato.toml"),
+    ];
+    let out = tara_in(&cartella, BERSAGLI);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    controlla_bersagli(&cartella);
+
+    // Solo le righe `valore =` (7) e `astensione =` (20) cambiano; nessun .tmp resta.
+    for (file, prefisso, massimo, i) in [
+        ("scenario.toml", "valore = ", 7, 0),
+        ("elettorato.toml", "astensione = ", 20, 1),
+    ] {
+        let dopo = leggi(&cartella, file);
+        assert_eq!(dopo.lines().count(), prima[i].lines().count(), "{file}");
+        let diverse: Vec<_> = prima[i]
+            .lines()
+            .zip(dopo.lines())
+            .filter(|(a, b)| a != b)
+            .collect();
+        assert!(!diverse.is_empty() && diverse.len() <= massimo, "{file}");
+        assert!(
+            diverse
+                .iter()
+                .all(|(a, b)| a.starts_with(prefisso) && b.starts_with(prefisso)),
+            "{diverse:?}"
+        );
+    }
+    assert!(
+        std::fs::read_dir(&cartella).unwrap().all(|e| !e
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .ends_with(".tmp"))
+    );
+
+    // Uscita JSON.
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(v["giri"].as_u64().unwrap() > 0);
+    let quote: Vec<f64> = v["quote"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|q| q.as_f64().unwrap())
+        .collect();
+    assert_eq!(quote.len(), 7);
+    assert!((quote.iter().sum::<f64>() - 1.0).abs() < 1e-9);
+    let valence = v["valence"].as_array().unwrap();
+    let ids: Vec<&str> = valence.iter().map(|x| x[0].as_str().unwrap()).collect();
+    assert!(
+        valence
+            .iter()
+            .all(|x| (-3.0..=3.0).contains(&x[1].as_f64().unwrap()))
+    );
+    let coalizioni = v["coalizioni"].as_array().unwrap();
+    assert_eq!(coalizioni.len(), 2);
+    for c in coalizioni {
+        let attesa: f64 = c["partiti"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|id| quote[ids.iter().position(|i| *i == id.as_str().unwrap()).unwrap()])
+            .sum();
+        assert!((c["quota"].as_f64().unwrap() - attesa).abs() < 1e-12);
+    }
+    let affluenza = v["affluenza_nazionale"].as_f64().unwrap();
+    assert!((0.5..0.8).contains(&affluenza), "{affluenza}");
     std::fs::remove_dir_all(cartella).unwrap();
 }
 
@@ -194,8 +316,8 @@ fn tara_con(nome: &str, da: &str, a: &str) -> (std::path::PathBuf, std::process:
 fn tara_con_valence_fuori_intervallo_esce_senza_scrivere() {
     let (cartella, out) = tara_con(
         "fuori",
-        "posti = [3.165, 36.015, 7.12, 2.51, 2.51, 35.71, 12.97]",
-        "posti = [0.0001, 36.0, 7.12, 2.51, 2.51, 35.71, 16.1499]",
+        "posti = [3.165, 36.015, 7.12, 5.02, 8.42, 33.0, 7.26]",
+        "posti = [0.0001, 36.0, 7.12, 5.02, 8.42, 33.0, 10.4399]",
     );
     assert_eq!(out.status.code(), Some(1));
     let err = String::from_utf8_lossy(&out.stderr);
@@ -226,7 +348,82 @@ fn tara_rifiuta_un_bersaglio_impossibile() {
             "--bersagli",
             bersagli.to_str().unwrap(),
         ],
-        "bersaglio",
+        "posto 1 = -3.165, serve una quota positiva",
+    );
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_rifiuta_un_flag_sconosciuto_con_la_riga_d_uso() {
+    rifiuta(
+        &["tara", "--boh", "x"],
+        "argomento sconosciuto: --boh (uso: sim-cli tara --dati <cartella> --bersagli <file>)",
+    );
+}
+
+#[test]
+fn tara_accetta_un_intero_come_affluenza() {
+    let cartella = copia_dati("intero");
+    let bersagli = cartella.join("bersagli.toml");
+    std::fs::write(
+        &bersagli,
+        std::fs::read_to_string(BERSAGLI)
+            .unwrap()
+            .replace("piemonte = 66.1", "piemonte = 66"),
+    )
+    .unwrap();
+    let out = tara_in(&cartella, bersagli.to_str().unwrap());
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_rifiuta_una_coalizione_con_un_partito_sconosciuto() {
+    let cartella = copia_dati("coalizione");
+    let scenario = leggi(&cartella, "scenario.toml").replace(
+        r#"["centrodestra", "destra"]]"#,
+        r#"["centrodestra", "boh"]]"#,
+    );
+    std::fs::write(cartella.join("scenario.toml"), scenario).unwrap();
+    rifiuta(
+        &[
+            "tara",
+            "--dati",
+            cartella.to_str().unwrap(),
+            "--bersagli",
+            BERSAGLI,
+        ],
+        "boh",
+    );
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_conta_le_righe_astensione_scritte_senza_spazi() {
+    let cartella = copia_dati("senza-spazi");
+    let elettorato = leggi(&cartella, "elettorato.toml");
+    let riga = elettorato
+        .lines()
+        .find(|r| r.starts_with("astensione = "))
+        .unwrap();
+    std::fs::write(
+        cartella.join("elettorato.toml"),
+        elettorato.replacen(riga, "astensione=0.3", 1),
+    )
+    .unwrap();
+    rifiuta(
+        &[
+            "tara",
+            "--dati",
+            cartella.to_str().unwrap(),
+            "--bersagli",
+            BERSAGLI,
+        ],
+        "righe",
     );
     std::fs::remove_dir_all(cartella).unwrap();
 }

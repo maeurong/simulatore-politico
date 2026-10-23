@@ -4,19 +4,25 @@
 //! e `â` quella del turno zero, `valence_j += ln(s_j/ŝ_j)` con `s`, `ŝ` quote fra i votanti.
 //! Le intenzioni sono quelle vere: il sondaggio ha media vera + bias, e il bias comune ha media zero.
 
-use std::path::Path;
+use std::path::PathBuf;
 
 use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 const TOLLERANZA: f64 = 1e-4;
 const GIRI: u32 = 200;
+const USO: &str = "uso: sim-cli tara --dati <cartella> --bersagli <file>";
 
 struct Bersagli {
     /// Quote fra i votanti per posto, somma 1.
     quote: Vec<f64>,
     /// Affluenza per regione, nell'ordine di `elettorato.toml`.
     affluenza: Vec<f64>,
+}
+
+/// Un numero TOML, scritto con o senza la virgola.
+fn numero(v: &toml::Value) -> Option<f64> {
+    v.as_float().or_else(|| v.as_integer().map(|i| i as f64))
 }
 
 fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Bersagli, String> {
@@ -29,10 +35,7 @@ fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Ber
         .ok_or("bersagli: manca `posti`")?;
     let posti: Vec<f64> = posti
         .iter()
-        .map(|p| {
-            p.as_float()
-                .ok_or("bersagli: `posti` vuole numeri decimali")
-        })
+        .map(|p| numero(p).ok_or("bersagli: `posti` vuole numeri"))
         .collect::<Result<_, _>>()?;
     if posti.len() != n_posti {
         return Err(format!(
@@ -62,7 +65,7 @@ fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Ber
         .map(|id| {
             let a = tabella
                 .get(id)
-                .and_then(toml::Value::as_float)
+                .and_then(numero)
                 .ok_or_else(|| format!("bersaglio: manca l'affluenza di {id}"))?;
             if a > 0.0 && a < 100.0 {
                 Ok(a / 100.0)
@@ -137,11 +140,11 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
         match nome.as_str() {
             "--dati" => dati = Some(valore),
             "--bersagli" => bersagli = Some(valore),
-            _ => return Err(format!("argomento sconosciuto: {nome}")),
+            _ => return Err(format!("argomento sconosciuto: {nome} ({USO})")),
         }
     }
-    let cartella = Path::new(&dati.ok_or("manca --dati <cartella>")?).to_path_buf();
-    let percorso = bersagli.ok_or("manca --bersagli <file>")?;
+    let cartella = PathBuf::from(dati.ok_or_else(|| format!("manca --dati ({USO})"))?);
+    let percorso = bersagli.ok_or_else(|| format!("manca --bersagli ({USO})"))?;
     let testo = std::fs::read_to_string(&percorso)
         .map_err(|e| format!("impossibile leggere {percorso}: {e}"))?;
 
@@ -153,7 +156,7 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
         .iter()
         .map(|p| (p.valence.min, p.valence.max))
         .collect();
-    let coalizioni = iniziali.scenario().coalizioni.clone();
+    let coalizioni = &iniziali.scenario().coalizioni;
     let regioni = &iniziali.elettorato().regioni;
     let ids_regioni: Vec<String> = regioni.iter().map(|r| r.id.clone()).collect();
     let mut astensione: Vec<f64> = regioni.iter().map(|r| r.astensione).collect();
@@ -200,7 +203,8 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
         }
     }
 
-    for giro in 0..=GIRI {
+    let mut giro = 0;
+    loop {
         let partita = Partita::nuova(DatiGioco::da_testi(&file).map_err(|e| e.to_string())?, 0);
         let int = partita.intenzioni_vere();
         let votanti = 1.0 - int.nazionali[valence.len()];
@@ -230,24 +234,43 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
             return Err("la taratura diverge: scarto non finito".into());
         }
         if scarto < TOLLERANZA {
-            for (nome, testo) in [(4, &file.scenario), (6, &file.elettorato)] {
-                let p = cartella.join(FileDati::NOMI[nome]);
+            let coalizioni = coalizioni
+                .iter()
+                .map(|c| {
+                    let quota = c
+                        .iter()
+                        .map(|id| {
+                            let j = ids_partiti.iter().position(|p| p == id);
+                            j.map(|j| quote[j]).ok_or_else(|| {
+                                format!("coalizione con un partito sconosciuto: {id}")
+                            })
+                        })
+                        .sum::<Result<f64, String>>()?;
+                    Ok(serde_json::json!({"partiti": c, "quota": quota}))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            // Prima si scrivono entrambi i .tmp, poi si rinominano: un errore a meta' non lascia dati incoerenti.
+            let nuovi = [
+                ("scenario.toml", &file.scenario),
+                ("elettorato.toml", &file.elettorato),
+            ];
+            for (nome, testo) in nuovi {
+                let p = cartella.join(format!("{nome}.tmp"));
                 std::fs::write(&p, testo)
                     .map_err(|e| format!("impossibile scrivere {}: {e}", p.display()))?;
             }
-            let quota_di = |c: &Vec<String>| -> f64 {
-                c.iter()
-                    .filter_map(|id| ids_partiti.iter().position(|p| p == id))
-                    .map(|j| quote[j])
-                    .sum()
-            };
+            for (nome, _) in nuovi {
+                let (da, a) = (cartella.join(format!("{nome}.tmp")), cartella.join(nome));
+                std::fs::rename(&da, &a)
+                    .map_err(|e| format!("impossibile scrivere {}: {e}", a.display()))?;
+            }
             let uscita = serde_json::json!({
                 "giri": giro,
                 "scarto": scarto,
                 "affluenza_nazionale": 1.0 - int.nazionali[valence.len()],
                 "valence": ids_partiti.iter().zip(&valence).collect::<Vec<_>>(),
                 "quote": quote,
-                "coalizioni": coalizioni.iter().map(|c| serde_json::json!({"partiti": c, "quota": quota_di(c)})).collect::<Vec<_>>(),
+                "coalizioni": coalizioni,
             });
             return serde_json::to_string_pretty(&uscita).map_err(|e| e.to_string());
         }
@@ -275,6 +298,6 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
         }
         file.scenario = riscrivi_valence(&file.scenario, &valence).0;
         file.elettorato = riscrivi_astensione(&file.elettorato, &ids_regioni, &astensione).0;
+        giro += 1;
     }
-    Err("giri esauriti".into())
 }
