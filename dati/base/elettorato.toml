@@ -66,102 +66,102 @@ campione = 1500
 [[regione]]
 id = "piemonte"
 elettori = 3332792
-astensione = 0.303167
+astensione = 0.311794
 
 [[regione]]
 id = "valle_d_aosta"
 elettori = 96861
-astensione = 0.381673
+astensione = 0.390626
 
 [[regione]]
 id = "liguria"
 elettori = 1201321
-astensione = 0.354874
+astensione = 0.363773
 
 [[regione]]
 id = "lombardia"
 elettori = 7534738
-astensione = 0.195844
+astensione = 0.203945
 
 [[regione]]
 id = "trentino_alto_adige"
 elettori = 814793
-astensione = 0.320417
+astensione = 0.329090
 
 [[regione]]
 id = "veneto"
 elettori = 3739747
-astensione = 0.179159
+astensione = 0.187228
 
 [[regione]]
 id = "friuli_venezia_giulia"
 elettori = 939884
-astensione = 0.308761
+astensione = 0.317403
 
 [[regione]]
 id = "emilia_romagna"
 elettori = 3343901
-astensione = 0.135146
+astensione = 0.142972
 
 [[regione]]
 id = "toscana"
 elettori = 2826314
-astensione = 0.190465
+astensione = 0.198622
 
 [[regione]]
 id = "umbria"
 elettori = 665746
-astensione = 0.211558
+astensione = 0.219845
 
 [[regione]]
 id = "marche"
 elettori = 1169446
-astensione = 0.218386
+astensione = 0.226717
 
 [[regione]]
 id = "lazio"
 elettori = 4412993
-astensione = 0.362844
+astensione = 0.371794
 
 [[regione]]
 id = "abruzzo"
 elettori = 1031801
-astensione = 0.332006
+astensione = 0.340923
 
 [[regione]]
 id = "molise"
 elettori = 244764
-astensione = 0.515848
+astensione = 0.525595
 
 [[regione]]
 id = "campania"
 elettori = 4519928
-astensione = 0.601763
+astensione = 0.611839
 
 [[regione]]
 id = "puglia"
 elettori = 3223284
-astensione = 0.510976
+astensione = 0.520712
 
 [[regione]]
 id = "basilicata"
 elettori = 447885
-astensione = 0.459882
+astensione = 0.469396
 
 [[regione]]
 id = "calabria"
 elettori = 1501434
-astensione = 0.650331
+astensione = 0.660661
 
 [[regione]]
 id = "sicilia"
 elettori = 3954552
-astensione = 0.496589
+astensione = 0.506279
 
 [[regione]]
 id = "sardegna"
 elettori = 1347691
-astensione = 0.623157
+astensione = 0.633274
 
 [[gruppo]]
 regione = "piemonte"

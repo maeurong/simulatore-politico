@@ -8,10 +8,10 @@ pde = "sospesa"
 tetti_spesa_netta = { 2026 = 1.6, 2027 = 1.9, 2028 = 1.7, 2029 = 1.5 }
 clausola_nazionale_fino_a = 2028
 legge_elettorale = "legge_180"
-# Coalizioni del 2022 ricondotte ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
+# Coalizioni del 2022 ricondotte ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]. Regola: la collocazione CHES 2024 (`lrgen`) si tronca, classi [k, k+1), poi il TAGLIO dei 7 punti; ne escono sinistra e centrosinistra (posti 2-3), centrodestra e destra (posti 5-6).
 coalizioni = [["sinistra", "centrosinistra"], ["centrodestra", "destra"]]
 
-# Governo uscente di centrodestra e destra (spec riga 277); partito per dicastero dai ministri del 2026 ricondotti ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
+# Governo uscente di centrodestra e destra, posti 5 e 6 per lo stesso troncamento (spec riga 277); partito per dicastero dai ministri del 2026 ricondotti ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
 [governo]
 presidente = "destra"
 dicasteri = { economia_finanze = "destra", sviluppo_economico = "destra", lavoro_welfare = "destra", sanita = "destra", istruzione_ricerca = "destra", infrastrutture_trasporti = "destra", ambiente_energia = "centrodestra", interno = "destra", giustizia = "destra", esteri_difesa = "centrodestra" }
@@ -214,10 +214,10 @@ nome = "Estrema sinistra"
 posizione = 1.0
 
 [partito.valence]
-valore = -0.541693
+valore = -0.492738
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "sinistra"
@@ -225,10 +225,10 @@ nome = "Sinistra"
 posizione = 2.0
 
 [partito.valence]
-valore = 0.980664
+valore = 1.024422
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "centrosinistra"
@@ -236,10 +236,10 @@ nome = "Centrosinistra"
 posizione = 3.0
 
 [partito.valence]
-valore = -0.570536
+valore = -0.534720
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "centro"
@@ -247,10 +247,10 @@ nome = "Centro"
 posizione = 4.0
 
 [partito.valence]
-valore = -1.561987
+valore = -0.942664
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "centrodestra"
@@ -258,10 +258,10 @@ nome = "Centrodestra"
 posizione = 5.0
 
 [partito.valence]
-valore = -1.505371
+valore = -0.484438
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "destra"
@@ -269,10 +269,10 @@ nome = "Destra"
 posizione = 6.0
 
 [partito.valence]
-valore = 0.850493
+valore = 0.772037
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
 
 [[partito]]
 id = "estrema_destra"
@@ -280,7 +280,7 @@ nome = "Estrema destra"
 posizione = 7.0
 
 [partito.valence]
-valore = 0.516127
+valore = -0.021233
 min = -3.0
 max = 3.0
-fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
+fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura/bersagli.toml)"
