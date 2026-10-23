@@ -805,7 +805,7 @@ fn la_distanza_avvicina_il_voto_al_partito_vicino() {
         g.voto_precedente = vec![1.0 / 8.0; 8];
     });
     assert!(a_sinistra[sinistra] > a_sinistra[destra]);
-    let piatta = con_manopola(file_base(), "beta_distanza", "0.3");
+    let piatta = con_manopola(file_base(), "beta_distanza", "0.1");
     let poco = intenzione(&piatta, 0, |g| {
         g.posizione = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         g.voto_precedente = vec![1.0 / 8.0; 8];
