@@ -1,13 +1,16 @@
 # Bersagli di `sim-cli tara`: affluenza 2022 per regione e intenzioni di voto di ottobre 2026 per posto.
 
 # Quote fra i votanti in %, nell'ordine dei posti 1-7 (somma 100). Fonte: docs/ricerca/dati/sondaggi-ottobre-2026.md
-# (medie semplici sugli 11 istituti, prima della rinormalizzazione; corrispondenza partito -> posto dalla collocazione CHES 2024).
-# Derivazione, in punti sulle medie grezze:
-# - AVS (6,33) divisa a meta' fra i posti 1 e 2 (SI e' al posto 1, EV al 2; ruling del controller): 3,165 + 3,165.
-# - gli «altri» (100 - 94,98 = 5,02) divisi a meta' fra i posti 4 e 5: 2,51 + 2,51. Nessun posto a zero, il logit non puo' dare quota 0.
-# - posto 6 = FdI 27,29 + FI 7,27 + NM 1,15 = 35,71; posto 7 = Lega 5,71 + FN 7,26 = 12,97.
-# - posto 2 = PD 20,33 + M5S 12,52 + meta' AVS 3,165 = 36,015; posto 3 = Azione 3,16 + IV 2,43 + +E 1,53 = 7,12.
-posti = [3.165, 36.015, 7.12, 2.51, 2.51, 35.71, 12.97]
+# (medie semplici sugli 11 istituti, prima della rinormalizzazione).
+# Corrispondenza partito -> posto: scelta di progetto, coerente col governo uscente dello scenario (centrodestra e destra,
+# posti 5 e 6; spec riga 277). La collocazione CHES 2024 (`lrgen`) si tronca invece di arrotondarsi (classi [k, k+1)),
+# poi si applica il TAGLIO dei 7 punti. Derivazione, in punti sulle medie grezze:
+# - posto 1 = meta' AVS: 3,165 (SI al posto 1, EV al 2).
+# - posto 2 = PD 20,33 + M5S 12,52 + meta' AVS 3,165 = 36,015.
+# - posto 3 = Azione 3,16 + IV 2,43 + +E 1,53 = 7,12.
+# - posto 4 = «altri» (100 - 94,98 = 5,02), unico posto vuoto.
+# - posto 5 = FI 7,27 + NM 1,15 = 8,42; posto 6 = FdI 27,29 + Lega 5,71 = 33,00; posto 7 = Futuro Nazionale 7,26.
+posti = [3.165, 36.015, 7.12, 5.02, 8.42, 33.0, 7.26]
 
 # Affluenza 2022 per regione in %, Camera dei deputati, ItaliaVotiListeCIRC.csv (docs/ricerca/dati/risultati-elettorali-italia.md:16-27).
 # La Valle d'Aosta non e' nel file: affluenza nazionale 63,6% [INF] (risultati-elettorali-italia.md:13).
