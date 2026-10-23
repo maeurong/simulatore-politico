@@ -145,7 +145,7 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[eurobarometro]]: volumi della Commissione in CC BY 4.0; microdati GESIS da verificare.
 - [[itanes]]: studio elettorale italiano 2022 con posizione, voto 2018, regione e le sei condizioni; solo senza fini di lucro, microdati non ridistribuibili.
 - [[risultati-elettorali-italia]]: affluenza ufficiale 2022 per regione (CSV della Camera) e volatilità CISE; licenze non trovate.
-- [[sondaggi-ottobre-2026]]: media dei 19 sondaggi nazionali di ottobre 2026 (11 istituti, fino al 20/10) sommata sui 7 posti con CHES 2024: 0 / 41,2 / 7,5 / 0 / 0 / 37,6 / 13,7; posti 1, 4, 5 vuoti; astensione non trovata (2026-10-23).
+- [[sondaggi-ottobre-2026]]: media di 19 sondaggi di ottobre 2026 (11 istituti, fino al 20/10) ricondotta ai 7 posti con CHES 2024 per troncamento; i bersagli di `sim-cli tara`; astensione non trovata (2026-10-23).
 
 ### ministeri e società
 - [[who-gho]]: oltre 1.000 indicatori sanitari, CC BY-NC-SA 3.0 IGO: utili per calibrare, non ridistribuibili.
