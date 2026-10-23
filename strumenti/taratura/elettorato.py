@@ -29,12 +29,23 @@ import zipfile
 BASE = pathlib.Path(__file__).resolve().parents[2] / "dati" / "base"
 COMANDO = "python3 -I strumenti/taratura/elettorato.py"
 OGGI = datetime.date.today().isoformat()
-if "--cache" in sys.argv and sys.argv.index("--cache") + 1 == len(sys.argv):
-    sys.exit("--cache vuole una cartella: --cache DIR")
-ESS = pathlib.Path(sys.argv[sys.argv.index("--ess") + 1]) if "--ess" in sys.argv[:-1] else None
-if "--ess" in sys.argv and (ESS is None or ESS.name.startswith("--") or not ESS.is_file()):
+
+
+def opzione(argv, nome, atteso):
+    """Valore che segue `nome` in argv, None se assente; un flag al suo posto, o niente, esce con l'uso."""
+    if nome not in argv:
+        return None
+    i = argv.index(nome) + 1
+    if i == len(argv) or argv[i].startswith("--"):
+        sys.exit(f"{nome} vuole {atteso}: {nome} <valore>")
+    return argv[i]
+
+
+ESS = opzione(sys.argv, "--ess", "un file esistente")
+ESS = pathlib.Path(ESS) if ESS else None
+if ESS and not ESS.is_file():
     sys.exit(f"--ess vuole un file esistente: --ess FILE (dato: {ESS})")
-CACHE = pathlib.Path(sys.argv[sys.argv.index("--cache") + 1] if "--cache" in sys.argv else pathlib.Path.home() / ".cache" / "simulatore-politico-taratura")
+CACHE = pathlib.Path(opzione(sys.argv, "--cache", "una cartella") or pathlib.Path.home() / ".cache" / "simulatore-politico-taratura")
 
 URL_CAMERA = "https://documenti.camera.it/leg19/risultatiElettorali2022/UGE/VotiListe/ItaliaVotiListeCIRC.csv"
 URL_IBF = "https://www.bancaditalia.it/statistiche/tematiche/indagini-famiglie-imprese/bilanci-famiglie/distribuzione-microdati/documenti/ind22_ascii.zip"
@@ -66,16 +77,11 @@ LISCIA = 5.0  # assunzione: pseudo-casi con la distribuzione nazionale, perché 
 PRIMARIO = {"disoccupato_inattivo": 4000.0, "studente": 3000.0}  # provvisorio: nessun tipo MEF; pensionato = 0, dipendenti e autonomi dal MEF
 MOLT_FASCIA = (0.55, 1.0, 1.9)
 MOLT_MACROAREA = {"nord": 1.1, "centro": 1.0, "mezzogiorno": 0.8}
-# affluenza 2022, risultati-elettorali-italia.md:16-27; Valle d'Aosta = nazionale 63,6%
-AFFLUENZA = {
-    "calabria": 0.506, "sardegna": 0.530, "campania": 0.532, "molise": 0.564, "puglia": 0.565,
-    "sicilia": 0.569, "basilicata": 0.586, "lazio": 0.634, "abruzzo": 0.637, "liguria": 0.639,
-    "trentino_alto_adige": 0.657, "friuli_venezia_giulia": 0.660, "piemonte": 0.661, "marche": 0.682,
-    "umbria": 0.685, "toscana": 0.694, "lombardia": 0.698, "veneto": 0.700, "emilia_romagna": 0.716,
-    "valle_d_aosta": 0.636,
-}
-# assunzione del piano 4: tarata a mano sull'affluenza 2022 coi parametri di default, fedeltà inclusa; la PR B (tara) la sostituisce
-# (0,57 = ln sum_j e^{-(4-j)^2} per un elettore al centro con beta = 1, senza fedeltà; Δ = -0,492)
+# affluenza 2022 per regione: una sola fonte, bersagli.toml (in %); qui in frazione
+AFFLUENZA = {r: round(a / 100, 4) for r, a in tomllib.loads(pathlib.Path(__file__).with_name("bersagli.toml").read_text(encoding="utf-8"))["affluenza"].items()}
+# costante di partenza dell'astensione, tarata a mano sull'affluenza 2022 coi parametri di default, fedeltà inclusa; `sim-cli tara` la riscrive.
+# Senza fedeltà la costante sarebbe 0,57 = ln sum_j e^{-(4-j)^2} (elettore al centro, beta = 1): la fedeltà sposta la stazionaria
+# verso le alternative grandi, astensione compresa, e con 0,57 l'affluenza del turno zero usciva 0,47 invece di 0,63.
 COSTANTE_ASTENSIONE = 0.081
 # ticket 17, 17-tabella-degli-interessi.md:28-35
 INTERESSI = {
@@ -192,13 +198,60 @@ def prova_ess():
     assert any(abs(quota("piemonte", p) - quota("lombardia", p)) > 1e-3 for p in range(7)), "ess: piemonte (oltre 100 casi) dovrebbe avere la sua distribuzione"
     for guasto, msg in ((lambda: ess_righe([riga(*s[:3], "ITZZ", s[4]) for s in spec]), "regione"),
                         (lambda: ess_righe([riga(*s, ronda="10") for s in spec]), "essround = 11"),
-                        (lambda: ess_righe([riga(*s[:4], "1,5") for s in spec]), "anweight")):
+                        (lambda: ess_righe([riga(*s[:4], "1,5") for s in spec]), "anweight"),
+                        (lambda: ess_righe([riga(*s[:4], "inf") for s in spec]), "anweight"),
+                        (lambda: ess_righe([{**riga(*s), "anweight": None} for s in spec]), "anweight"),  # riga corta del CSV
+                        (lambda: ess_righe([{**riga(*s), "hinctnta": "" if i % 2 else riga(*s)["hinctnta"]} for i, s in enumerate(spec)]), "fascia")):
         try:
             guasto()
         except AssertionError as e:
             assert msg in str(e), f"ess: messaggio {e}, atteso {msg!r}"
         else:
             raise AssertionError(f"ess: CSV guasto ({msg}) accettato")
+    # il reddito non dichiarato (25% dei casi) è normale: sotto la soglia della fascia (70%) non fallisce
+    ess_righe([{**riga(*s), "hinctnta": "" if i % 4 == 0 else riga(*s)["hinctnta"]} for i, s in enumerate(spec)])
+    assert [fascia_ess(d) for d in ("3", "4", "7", "8", "1", "10", "77", "")] == ["bassa", "media", "media", "alta", "bassa", "alta", None, None], "ess: confini dei decili"
+
+
+def prova_fasce():
+    """Percentile del punto medio: soglie 0,3 e 0,7 incluse nella fascia sopra."""
+    assert [fascia_percentile(*a, 100) for a in ((0, 10), (24, 10), (25, 10), (64, 10), (65, 10), (95, 10))] == [0, 0, 1, 1, 2, 2], "fascia_percentile: confini 0,3 e 0,7"
+
+
+def prova_istogrammi():
+    """istogrammi() con ESS sintetico: la massa di (pensionato, alta) sta alla posizione 7 e solo lì."""
+    ids, macro = ["a", "b"], {"a": "nord", "b": "nord"}
+    el = {"a": 1000.0, "b": 2000.0}
+    quote_ = {r: [0.1 / 17] * 18 for r in ids}
+    quote_["a"][11] = quote_["b"][11] = 0.9  # indice 3 * 3 + 2 = (pensionato, alta)
+    righe = [(c, f, 6 if (c, f) == ("pensionato", "alta") else 0, r, 1.0) for r in ids for c in CONDIZIONI for f in FASCE for _ in range(30)]
+    h = istogrammi(ids, macro, el, quote_, righe)
+    assert h["a", "pensionato", "alta"][6] > 0.7 and h["b", "studente", "bassa"][0] > 0.7, f"istogrammi: {h['a', 'pensionato', 'alta']}, {h['b', 'studente', 'bassa']}"
+    assert all(len(x) == 7 and abs(sum(x) - 1) < 1e-9 for x in h.values()), "istogrammi: sette punti a somma 1"
+
+
+def prova_argomenti():
+    """Un flag al posto del valore, o niente, esce con l'uso; il valore giusto passa."""
+    assert opzione(["--cache", "x"], "--cache", "una cartella") == "x" and opzione([], "--cache", "una cartella") is None, "opzione: valore o assente"
+    for argv in (["--cache"], ["--cache", "--ess", "f"]):
+        try:
+            opzione(argv, "--cache", "una cartella")
+        except SystemExit as e:
+            assert "--cache vuole una cartella" in str(e), f"opzione: messaggio {e}"
+        else:
+            raise AssertionError(f"opzione: {argv} accettato")
+
+
+def prova_unico():
+    """Una chiave ISTAT ripetuta (dimensione in più) è un errore, non l'ultima riga."""
+    riga = lambda k, v: {"REF_AREA": k, "OBS_VALUE": v}
+    assert unico([riga("A", "1"), riga("B", "2")], lambda r: r["REF_AREA"], "x") == {"A": 1.0, "B": 2.0}, "unico: chiavi distinte"
+    try:
+        unico([riga("A", "1"), riga("A", "2")], lambda r: r["REF_AREA"], "x")
+    except AssertionError as e:
+        assert "due volte" in str(e), f"unico: messaggio {e}"
+    else:
+        raise AssertionError("unico: chiave doppia accettata")
 
 
 def economia():
@@ -212,16 +265,21 @@ def preleva(fonte, nome, url, accept=None):
     """Byte di una fonte: ogni fonte ha la sua cartella nella cache, un file già scaricato non si riscarica
     e quelli con sha256 noto sono verificati."""
     f = CACHE / fonte / nome
+    atteso = SHA256.get(f"{fonte}/{nome}")
+
+    def verifica(dati, dove):
+        assert atteso is None or hashlib.sha256(dati).hexdigest() == atteso, f"{dove}: sha256 {hashlib.sha256(dati).hexdigest()}, atteso {atteso}: file cambiato o corrotto, cancellalo"
+
     if not f.exists():
         f.parent.mkdir(parents=True, exist_ok=True)
         parziale = f.with_name(nome + ".part")
         parziale.write_bytes(economia().scarica(url, accept))
+        verifica(parziale.read_bytes(), parziale)
         parziale.replace(f)
         if accept:
             time.sleep(15)  # il servizio ISTAT limita le interrogazioni al minuto
     dati = f.read_bytes()
-    atteso = SHA256.get(f"{fonte}/{nome}")
-    assert atteso is None or hashlib.sha256(dati).hexdigest() == atteso, f"{f}: sha256 {hashlib.sha256(dati).hexdigest()}, atteso {atteso}: file cambiato o corrotto, cancellalo"
+    verifica(dati, f)
     return dati
 
 
@@ -286,13 +344,24 @@ def elettori(ids, elezioni, dati_camera):
     return {r: e[r] for r in ids}
 
 
+def unico(righe, chiave, nome):
+    """{chiave: OBS_VALUE}: una chiave che compare due volte è un errore, non l'ultima riga che vince."""
+    out = {}
+    for r in righe:
+        k = chiave(r)
+        assert k not in out, f"{nome}: chiave {k} due volte: l'edizione ISTAT ha una dimensione in più, filtrala"
+        out[k] = float(r["OBS_VALUE"])
+    return out
+
+
 def lavoro(ids):
-    """Per regione (migliaia, 15-74 anni, 2025): dipendenti, indipendenti, disoccupati, inattivi. ISTAT RCFL."""
+    """Per regione (migliaia, 2025): dipendenti e indipendenti (occupati 15-89 anni), disoccupati e inattivi (15-74 anni). ISTAT RCFL."""
     cod = {r[0]: r[4] for r in economia().REGIONI}
-    occ = {(r["REF_AREA"], r["POSIZ_PROF"]): float(r["OBS_VALUE"]) for r in istat("occ.csv", "150_938_DF_DCCV_OCCUPATIT1_23", "A" + "." * 13, ANNO_LAVORO)}
-    dis = {r["REF_AREA"]: float(r["OBS_VALUE"]) for r in istat("dis.csv", "151_929_DF_DCCV_DISOCCUPT1_6", "", ANNO_LAVORO) if r["SEX"] == "9" and r["LABPROF_STATUS_A"] == "99"}
-    ina = {r["REF_AREA"]: float(r["OBS_VALUE"]) for r in istat("ina.csv", "152_928_DF_DCCV_INATTIV1_9", "", ANNO_LAVORO)
-           if r["SEX"] == "9" and r["AGE"] == "Y15-74" and r["LABPROF_STATUS_A"] == "IN"}
+    occ = unico(istat("occ.csv", "150_938_DF_DCCV_OCCUPATIT1_23", "A" + "." * 13, ANNO_LAVORO), lambda r: (r["REF_AREA"], r["POSIZ_PROF"]), "occupati")
+    dis = unico([r for r in istat("dis.csv", "151_929_DF_DCCV_DISOCCUPT1_6", "", ANNO_LAVORO) if r["SEX"] == "9" and r["LABPROF_STATUS_A"] == "99"],
+                lambda r: r["REF_AREA"], "disoccupati")
+    ina = unico([r for r in istat("ina.csv", "152_928_DF_DCCV_INATTIV1_9", "", ANNO_LAVORO)
+                 if r["SEX"] == "9" and r["AGE"] == "Y15-74" and r["LABPROF_STATUS_A"] == "IN"], lambda r: r["REF_AREA"], "inattivi")
     return {r: (occ[cod[r], "1"], occ[cod[r], "2"], dis[cod[r]], ina[cod[r]]) for r in ids}
 
 
@@ -419,13 +488,19 @@ def quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme_ibf):
 
 
 COLONNE_ESS = ["essround", "cntry", "lrscale", "mainact", "emplrel", "tporgwk", "hinctnta", "region", "anweight"]
-SOGLIA_COMPLETI = 0.9  # quota minima di casi con regione mappata, fascia e condizione
+SOGLIA_COMPLETI = 0.9  # quota minima di casi con regione mappata e condizione
+SOGLIA_FASCIA = 0.7  # più bassa: chi non risponde al reddito (hinctnta) è una quota normale, non un CSV sbagliato
+
+
+def fascia_ess(d):
+    """Fascia di `hinctnta` (decile nazionale 1-10): 1-3 bassa, 4-7 media, 8-10 alta; altro (77, 88, 99, vuoto) None."""
+    return None if d not in map(str, range(1, 11)) else FASCE[0 if int(d) <= 3 else 1 if int(d) <= 7 else 2]
 
 
 def ess_righe(righe, nome="ESS"):
     """Righe (condizione o None, fascia o None, posizione 0-6, regione o None, peso) degli italiani del round 11 con autocollocazione 0-10.
     Il peso `anweight` è normalizzato a somma = numero di righe. Chi non si colloca (77, 88, 99) è escluso da tutto; chi non ha condizione
-    (tporgwk o emplrel mancante compresi) resta solo nei margini della posizione; fallisce se meno del 90% ha regione, fascia o condizione."""
+    (tporgwk o emplrel mancante compresi) resta solo nei margini della posizione; fallisce se meno del 90% ha regione o condizione, o meno del 70% la fascia (il tasso si stampa)."""
     nuts = {g: r[0] for r in economia().REGIONI for g in r[3]}
     out, ignote, round11, tporgwk_mancante = [], collections.Counter(), 0, 0
     for r in righe:
@@ -439,13 +514,12 @@ def ess_righe(righe, nome="ESS"):
              else None if att != "1" else "autonomo" if rel in ("2", "3") else None if rel != "1"
              else "dipendente_pubblico" if org in ("1", "2") else "dipendente_privato" if org in ("3", "4", "5") else None)
         tporgwk_mancante += att == "1" and rel == "1" and org not in ("1", "2", "3", "4", "5")
-        d = r["hinctnta"]
-        fascia = None if d not in map(str, range(1, 11)) else FASCE[0 if int(d) <= 3 else 1 if int(d) <= 7 else 2]
+        fascia = fascia_ess(r["hinctnta"])
         try:
             peso = float(r["anweight"])
-        except ValueError:
-            raise AssertionError(f"{nome}: anweight {r['anweight']!r} non è un numero (virgola o vuoto?)") from None
-        assert peso > 0, f"{nome}: anweight {peso}, atteso > 0"
+        except (ValueError, TypeError):
+            raise AssertionError(f"{nome}: anweight {r['anweight']!r} non è un numero (virgola, vuoto o riga corta?)") from None
+        assert 0 < peso < math.inf, f"{nome}: anweight {peso}, atteso finito e > 0"
         reg = nuts.get(r["region"])
         if reg is None:
             ignote[r["region"]] += 1
@@ -453,9 +527,11 @@ def ess_righe(righe, nome="ESS"):
     assert round11, f"{nome}: nessuna riga con essround = 11"
     assert len(out) >= 500, f"{nome}: {len(out)} italiani del round 11 con lrscale valido, attesi almeno 500: colonne o codici diversi dal Data Portal?"
     completi = {"regione": sum(x[3] is not None for x in out), "fascia": sum(x[1] is not None for x in out), "condizione": sum(x[0] is not None for x in out)}
+    print(f"ess: {len(out)} casi italiani; " + ", ".join(f"{k} valorizzata {n / len(out):.1%}" for k, n in completi.items()), file=sys.stderr)
     for k, n in completi.items():
-        assert n >= SOGLIA_COMPLETI * len(out), (f"{nome}: {k} valorizzata in {n} casi su {len(out)} (minimo {SOGLIA_COMPLETI:.0%}); "
-                                                 f"region non riconosciuti {dict(ignote)}, dipendenti senza tporgwk valido {tporgwk_mancante}")
+        minimo = SOGLIA_FASCIA if k == "fascia" else SOGLIA_COMPLETI
+        assert n >= minimo * len(out), (f"{nome}: {k} valorizzata in {n} casi su {len(out)} (minimo {minimo:.0%}); "
+                                        f"region non riconosciuti {dict(ignote)}, dipendenti senza tporgwk valido {tporgwk_mancante}")
     if ignote or tporgwk_mancante:
         print(f"ess: region non riconosciuti {dict(ignote)}; dipendenti senza tporgwk valido {tporgwk_mancante} (senza condizione)", file=sys.stderr)
     scala = len(out) / sum(x[4] for x in out)
@@ -525,7 +601,8 @@ def redditi(regioni, pers, scenario, mef_redditi):
 
 
 def panieri(economia):
-    return {f: quote(economia["consumi"]) for f in FASCE}  # segnaposto: la PR B li differenzia
+    """Segnaposto: tre panieri uguali al vettore `consumi`, nessuna differenza per fascia (README, «Panieri»)."""
+    return {f: quote(economia["consumi"]) for f in FASCE}
 
 
 def astensione(regioni):
@@ -624,12 +701,15 @@ def main():
         prova_ipf()
         prova_posizioni()
         prova_ess()
+        prova_fasce()
+        prova_istogrammi()
+        prova_argomenti()
+        prova_unico()
     d = costruisci()
     controlla(d)
     if "--selftest" in sys.argv:
-        # I test Rust leggono il file committato: deve essere l'uscita dello script (intestazione
-        # con la data esclusa). Dopo `sim-cli tara` (Task 12) il file cambia: il confronto va ristretto lì.
-        # Le righe `astensione = ` di [[regione]] sono di `sim-cli tara` (Task 12): fuori dal confronto.
+        # I test Rust leggono il file committato: deve essere l'uscita dello script (intestazione con la data esclusa).
+        # Le righe `astensione = ` di [[regione]] sono di `sim-cli tara`: fuori dal confronto.
         senza = lambda righe: [r for r in righe[1:] if not r.startswith("astensione = ")]
         committato = (BASE / "elettorato.toml").read_text(encoding="utf-8").splitlines()
         assert senza(scrivi(d).splitlines()) == senza(committato), "elettorato.toml non è l'uscita dello script: rilancialo"

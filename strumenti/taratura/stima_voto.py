@@ -132,7 +132,7 @@ def da_righe(righe, fedele_nr=False, proprie=False, solo_votanti=False, centro_n
     def num(r, c):
         try:
             return float(r[c])
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, TypeError):  # TypeError: riga corta, DictReader dà None
             return None
     def pos(v):  # codici 1..11 = 0..10 -> 7 punti 1..7; 96-99 = non collocato
         return TAGLIO[int(v) - 1] + 1 if v is not None and 1 <= v <= 11 else None
@@ -176,7 +176,7 @@ def da_righe(righe, fedele_nr=False, proprie=False, solo_votanti=False, centro_n
 def leggi(cartella, **kw):
     fs = glob.glob(os.path.join(cartella, "*POST*weighted.tab"))
     if len(fs) != 1:
-        sys.exit(f"cerco un solo *POST*weighted.tab in {cartella}, trovati {len(fs)}: vedi README, sezione Stima di beta e fedelta'")
+        sys.exit(f"cerco un solo *POST*weighted.tab in {cartella}, trovati {len(fs)}: scarica il post ITANES 2022 in {CACHE} o passa --itanes CARTELLA (README, sezione Stima di beta e fedeltà)")
     with open(fs[0], encoding="utf-8", newline="") as f:
         return da_righe(list(csv.DictReader(f, delimiter="\t")), **kw)
 
@@ -186,7 +186,7 @@ def scrivi(path, b7, se_b7, phi, se_phi, phi_min, phi_max, n):
     t = open(path, encoding="utf-8").read()
     cit = "ITANES 2022 post (Vezzoni et al. 2023, release 01), N=%d" % n
     for sez, v, com in (
-        ("beta_distanza", b7, f"{cit}: β {b7:.3f} (ES {se_b7:.3f}) sui 7 punti del gioco (TAGLIO di elettorato.py); dati-per-tarare-i-gruppi:99-111; stima_voto.py"),
+        ("beta_distanza", b7, f"{cit}: β {b7:.3f} (ES {se_b7:.3f}) sui 7 punti del gioco (TAGLIO di elettorato.py); min allargato da 0,3 a 0,1 perché la stima cade sotto 0,3; dati-per-tarare-i-gruppi:99-111; stima_voto.py"),
         ("fedelta", phi, f"{cit}: φ {phi:.2f} (ES {se_phi:.2f}; fra specificazioni {phi_min:.2f}-{phi_max:.2f}), tetto: il ricordo del 2018 si sposta verso il 2022; dati-per-tarare-i-gruppi:99-111; stima_voto.py"),
     ):
         lim = re.search(r"\[" + sez + r"\]\nvalore = [^\n]*\nmin = (-?[\d.]+)\nmax = (-?[\d.]+)", t)
@@ -235,6 +235,36 @@ def selftest():
     verifica(zz == [1.0] * 8, f"z (Q18 = 1 -> punto 1): {zz}")
     # x = 4, 7, 1, 3 sui 7 punti (Q19 tagliato) e z = 1: d2 = 3^2, 6^2, 0, 2^2
     verifica([o["d2"][0] for o in oss] == [9.0, 36.0, 0.0, 4.0], f"d2: {[o['d2'][0] for o in oss]}")
+    # allineamento: lettera Q18 k <-> PARTITI[k] <-> VOTO22; codici 1..8 danno z = punti 1, 1, 2, 2, 3, 4, 5, 6; una riga con Q18f = 96 non conta in z
+    verifica(PARTITI[5] == "PD" and VOTO22[6] == 5, "VOTO22[6] (PD) deve puntare a PARTITI[5]")
+
+    def distinta(q18f=None):
+        r = riga("6", "6", "1", "1", "3")
+        r.update({f"Q18{c}": str(i + 1) for i, c in enumerate("abcdefgh")})
+        if q18f:
+            r["Q18f"] = q18f
+        return r
+    oss, zz, sc = da_righe([distinta(), distinta(), distinta("96")])
+    verifica(zz == [1.0, 1.0, 2.0, 2.0, 3.0, 4.0, 5.0, 6.0], f"z per lettera: {zz}")
+    verifica([o["y"] for o in oss] == [5, 5, 5] and oss[0]["d2"][5] == 0.0 and oss[0]["d2"][0] == 9.0 and oss[0]["d2"][7] == 4.0, f"d2 per lettera: {oss[0]['d2']}")
+    # le quattro varianti, una o due righe ciascuna, numeri fatti a mano
+    astenuto = riga("5", "1", "1", "2", "94")  # FdI nel 2022, astensione nel 2018
+    oss, _, sc = da_righe([riga("6", "94", "2", "2", "94"), astenuto], solo_votanti=True)
+    verifica(len(oss) == 1 and oss[0]["m"] is None and len(oss[0]["d2"]) == 8 and sc["voto_22_fuori_scelta"] == 1, f"solo_votanti: {oss} {sc}")
+    oss, _, _ = da_righe([riga("96", "1", "1", "1", "3")], centro_nc=True)
+    verifica(len(oss) == 1 and oss[0]["d2"][0] == 9.0, f"centro_nc: x = 4, z = 1: {oss}")
+    oss, _, _ = da_righe([riga("5", "1", "1", "5", "94")], fedele_nr=True)
+    verifica(len(oss) == 1 and oss[0]["m"] is None, f"fedele_nr: {oss}")
+    a, b = riga("1", "1", "1", "1", "3"), riga("1", "1", "1", "1", "3")
+    a["Q18a"] = "11"  # punto 7 per questa riga, z[0] = (7 + 1) / 2 = 4
+    verifica([o["d2"][0] for o in da_righe([a, b])[0]] == [9.0, 9.0] and [o["d2"][0] for o in da_righe([a, b], proprie=True)[0]] == [36.0, 0.0], "proprie")
+    # solo_votanti toglie il riferimento: la stima a 8 alternative gira (P = 9)
+    senza = [{"d2": o["d2"][:8], "m": None if o["m"] == 8 else o["m"], "y": o["y"]} for o in sintetici(3000, vero, z, 5) if o["y"] != 8]
+    verifica(len(stima(senza)[0]) == 9, "stima a 8 alternative")
+    # riga corta (DictReader mette None): scartata, non TypeError
+    corta = riga("6", "1", "1", "1", "3")
+    corta["Q19"] = None
+    verifica(da_righe([corta])[0] == [], "riga corta")
     # scrivi: cambia solo le due voci, accetta un min negativo, fuori intervallo non scrive
     orig = ("# vecchio\n[beta_distanza]\nvalore = 1.0\nmin = 0.1\nmax = 3.0\nticket = \"14\"\n\n"
             "# vecchio\n[fedelta]\nvalore = 1.5\nmin = -1.0\nmax = 4.0\nticket = \"14\"\n")
@@ -251,6 +281,11 @@ def selftest():
             raise AssertionError("valore fuori intervallo accettato")
         except SystemExit:
             verifica(open(p).read() == orig, "scritto nonostante il valore fuori intervallo")
+        try:
+            scrivi(p, 0.2, 0.01, 9.0, 0.1, 1.0, 1.2, 100)
+            raise AssertionError("phi fuori intervallo accettato")
+        except SystemExit:
+            verifica(open(p).read() == orig, "scritto beta nonostante phi fuori intervallo")
     # cartella senza dati: errore chiaro
     with tempfile.TemporaryDirectory() as d:
         try:
@@ -286,8 +321,8 @@ def main():
         oss, z, sc = leggi(a.itanes, **kw)
         th, se, ll = stima(oss)
         ris[nome] = (th, se, len(oss))
-        print(f"[{nome}] N={len(oss)} scarti={sc} loglik={ll:.1f}")
-        print(f"  beta7 = {th[0]:.4f} (ES {se[0]:.4f})  phi = {th[1]:.3f} (ES {se[1]:.3f})")
+        print(f"[{nome}] N={len(oss)} righe scartate={sc} log-verosimiglianza={ll:.1f}")
+        print(f"  beta (scala a 7 punti) = {th[0]:.4f} (ES {se[0]:.4f})  phi = {th[1]:.3f} (ES {se[1]:.3f})")
         if nome == "base":
             print("  z partiti:", {p: round(v, 2) for p, v in zip(PARTITI, z)})
             print("  lambda:", {p: f"{v:.2f}±{s:.2f}" for p, v, s in zip(PARTITI, th[2:], se[2:])})
