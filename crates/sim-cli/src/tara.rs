@@ -6,6 +6,7 @@
 
 use std::path::Path;
 
+use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 const TOLLERANZA: f64 = 1e-4;
@@ -79,17 +80,23 @@ fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Ber
 }
 
 /// Riscrive riga per riga: `nuova` vede ogni riga e può sostituirla, il resto resta com'è.
-fn riscrivi(testo: &str, mut nuova: impl FnMut(&str) -> Option<String>) -> String {
-    testo
+/// Restituisce anche quante righe ha sostituito.
+fn riscrivi(testo: &str, mut nuova: impl FnMut(&str) -> Option<String>) -> (String, usize) {
+    let mut sostituite = 0;
+    let nuovo = testo
         .split_inclusive('\n')
         .map(|riga| match nuova(riga.trim_end()) {
-            Some(r) => format!("{r}\n"),
+            Some(r) => {
+                sostituite += 1;
+                format!("{r}\n")
+            }
             None => riga.to_string(),
         })
-        .collect()
+        .collect();
+    (nuovo, sostituite)
 }
 
-fn riscrivi_valence(testo: &str, valence: &[f64]) -> String {
+fn riscrivi_valence(testo: &str, valence: &[f64]) -> (String, usize) {
     let (mut dentro, mut k) = (false, 0);
     riscrivi(testo, |riga| {
         if riga.starts_with('[') {
@@ -102,7 +109,7 @@ fn riscrivi_valence(testo: &str, valence: &[f64]) -> String {
     })
 }
 
-fn riscrivi_astensione(testo: &str, ids: &[String], astensione: &[f64]) -> String {
+fn riscrivi_astensione(testo: &str, ids: &[String], astensione: &[f64]) -> (String, usize) {
     let (mut dentro, mut i) = (false, None);
     riscrivi(testo, |riga| {
         if riga.starts_with('[') {
@@ -153,6 +160,46 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
     let mut valence: Vec<f64> = partiti.iter().map(|p| p.valence.valore).collect();
     let bersagli = leggi_bersagli(&testo, partiti.len(), &ids_regioni)?;
 
+    let (_, n) = riscrivi_valence(&file.scenario, &valence);
+    if n != valence.len() {
+        return Err(format!(
+            "scenario.toml: {n} righe `valore =` in [partito.valence], attese {}",
+            valence.len()
+        ));
+    }
+    let (_, n) = riscrivi_astensione(&file.elettorato, &ids_regioni, &astensione);
+    if n != ids_regioni.len() {
+        return Err(format!(
+            "elettorato.toml: {n} righe `astensione =` in [[regione]] riconosciute per id, attese {}",
+            ids_regioni.len()
+        ));
+    }
+    // Gruppi di ogni regione dalla mappa canonica del motore, controllata sul campo `regione`.
+    let gruppi_dati = &iniziali.elettorato().gruppi;
+    if gruppi_dati.len() != ids_regioni.len() * Condizione::TUTTE.len() * Fascia::TUTTE.len() {
+        return Err(format!(
+            "elettorato.toml: {} gruppi, attesi {} per regione",
+            gruppi_dati.len(),
+            Condizione::TUTTE.len() * Fascia::TUTTE.len()
+        ));
+    }
+    let mut gruppi_di: Vec<Vec<usize>> = vec![Vec::new(); ids_regioni.len()];
+    for (r, id) in ids_regioni.iter().enumerate() {
+        for c in Condizione::TUTTE {
+            for f in Fascia::TUTTE {
+                let i = indice_gruppo(r, c, f);
+                let g = &gruppi_dati[i];
+                if g.regione != *id || g.condizione != c || g.fascia != f {
+                    return Err(format!(
+                        "elettorato.toml: il gruppo {i} e' ({}, {}, {}), la mappa canonica vuole ({id}, {c}, {f})",
+                        g.regione, g.condizione, g.fascia
+                    ));
+                }
+                gruppi_di[r].push(i);
+            }
+        }
+    }
+
     for giro in 0..=GIRI {
         let partita = Partita::nuova(DatiGioco::da_testi(&file).map_err(|e| e.to_string())?, 0);
         let int = partita.intenzioni_vere();
@@ -161,12 +208,11 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
             .iter()
             .map(|n| n / votanti)
             .collect();
-        let per_regione = int.per_gruppo.len() / ids_regioni.len();
-        let affluenza: Vec<f64> = (0..ids_regioni.len())
-            .map(|r| {
-                let gruppi = r * per_regione..(r + 1) * per_regione;
+        let affluenza: Vec<f64> = gruppi_di
+            .iter()
+            .map(|gruppi| {
                 let (mut peso, mut astenuti) = (0.0, 0.0);
-                for g in gruppi {
+                for &g in gruppi {
                     let q = partita.elettorato().gruppi[g].quota;
                     peso += q;
                     astenuti += q * int.per_gruppo[g][valence.len()];
@@ -227,8 +273,8 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
                 ));
             }
         }
-        file.scenario = riscrivi_valence(&file.scenario, &valence);
-        file.elettorato = riscrivi_astensione(&file.elettorato, &ids_regioni, &astensione);
+        file.scenario = riscrivi_valence(&file.scenario, &valence).0;
+        file.elettorato = riscrivi_astensione(&file.elettorato, &ids_regioni, &astensione).0;
     }
     Err("giri esauriti".into())
 }

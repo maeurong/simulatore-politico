@@ -142,14 +142,21 @@ fn tara_porta_il_turno_zero_sui_bersagli() {
     let int = partita.intenzioni_vere();
     let bersagli: toml::Table = std::fs::read_to_string(BERSAGLI).unwrap().parse().unwrap();
     let affluenza = bersagli["affluenza"].as_table().unwrap();
-    let per_regione = int.per_gruppo.len() / ids.len();
-    for (r, id) in ids.iter().enumerate() {
-        let (mut peso, mut astenuti) = (0.0, 0.0);
-        for g in r * per_regione..(r + 1) * per_regione {
-            let q = partita.elettorato().gruppi[g].quota;
-            peso += q;
-            astenuti += q * int.per_gruppo[g].last().unwrap();
-        }
+    // Raggruppa per il campo `regione` del toml, non per posizione.
+    let elettorato: toml::Table = std::fs::read_to_string(cartella.join("elettorato.toml"))
+        .unwrap()
+        .parse()
+        .unwrap();
+    let mut per_regione: std::collections::BTreeMap<&str, (f64, f64)> = Default::default();
+    for (g, riga) in elettorato["gruppo"].as_array().unwrap().iter().enumerate() {
+        let id = riga["regione"].as_str().unwrap();
+        let q = partita.elettorato().gruppi[g].quota;
+        let e = per_regione.entry(id).or_default();
+        e.0 += q;
+        e.1 += q * int.per_gruppo[g].last().unwrap();
+    }
+    assert_eq!(per_regione.len(), ids.len());
+    for (id, (peso, astenuti)) in per_regione {
         let atteso = affluenza[id].as_float().unwrap() / 100.0;
         assert!((1.0 - astenuti / peso - atteso).abs() < 1e-3, "{id}");
     }
@@ -161,6 +168,44 @@ fn tara_porta_il_turno_zero_sui_bersagli() {
             "posto {}",
             j + 1
         );
+    }
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+fn tara_con(nome: &str, da: &str, a: &str) -> (std::path::PathBuf, std::process::Output) {
+    let cartella = copia_dati(nome);
+    let bersagli = cartella.join("bersagli.toml");
+    std::fs::write(
+        &bersagli,
+        std::fs::read_to_string(BERSAGLI).unwrap().replace(da, a),
+    )
+    .unwrap();
+    let out = sim(&[
+        "tara",
+        "--dati",
+        cartella.to_str().unwrap(),
+        "--bersagli",
+        bersagli.to_str().unwrap(),
+    ]);
+    (cartella, out)
+}
+
+#[test]
+fn tara_con_valence_fuori_intervallo_esce_senza_scrivere() {
+    let (cartella, out) = tara_con(
+        "fuori",
+        "posti = [3.165, 36.015, 7.12, 2.51, 2.51, 35.71, 12.97]",
+        "posti = [0.0001, 36.0, 7.12, 2.51, 2.51, 35.71, 16.1499]",
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("valence di estrema_sinistra fuori da [-3, 3]"),
+        "{err}"
+    );
+    for file in ["scenario.toml", "elettorato.toml"] {
+        let prima = std::fs::read(format!("{DATI}/{file}")).unwrap();
+        assert_eq!(std::fs::read(cartella.join(file)).unwrap(), prima, "{file}");
     }
     std::fs::remove_dir_all(cartella).unwrap();
 }
