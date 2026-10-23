@@ -249,7 +249,9 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
                     Ok(serde_json::json!({"partiti": c, "quota": quota}))
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            // Prima si scrivono entrambi i .tmp, poi si rinominano: un errore a meta' non lascia dati incoerenti.
+            // Prima si scrivono entrambi i .tmp, poi si rinominano: un errore di scrittura lascia gli originali intatti
+            // (al più un .tmp orfano). ponytail: se fallisce il secondo rename lo scenario resta tarato e l'elettorato
+            // no; si rilancia `tara`, che riparte dai file su disco.
             let nuovi = [
                 ("scenario.toml", &file.scenario),
                 ("elettorato.toml", &file.elettorato),

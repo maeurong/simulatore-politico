@@ -104,7 +104,7 @@ I numeri per sondaggio non si copiano qui: sono nella pagina Wikipedia citata, a
 - Gli istituti pubblicano quote già riportate a 100 sui rispondenti con preferenza; gli indecisi e gli astenuti non compaiono nelle tabelle lette [M].
 - Gli 11 partiti sommano il 94,98%. Il restante 5,02% è «altri»: Sud chiama Nord (entrato nel centrodestra il 10 ottobre), Partito Liberal Democratico, Ora!, Avanti-PSI, Progetto Civico Italia, Più Uno e le liste minori [M].
 - Esito: nei bersagli gli «altri» restano nel conto (medie grezze) e vanno tutti al posto 4, vedi «Bersagli adottati». La rinormalizzazione sugli 11 partiti (divisione per 94,98), equivalente a distribuire gli «altri» in proporzione ai grandi, è documentata sopra ma non è quella adottata.
-- Astensione e indecisi: **[NON TROVATO]** nelle tabelle consultate; una ricerca sulla quota SWG di ottobre 2026 non l'ha restituita. Il gioco ha una propria costante d'astensione (`strumenti/taratura/elettorato.py:79`, 0,081, tarata a mano sull'affluenza 2022) [V], e `sim-cli tara` riscrive le astensioni per regione; la taratura confronta quindi le quote fra votanti, non fra elettori.
+- Astensione e indecisi: **[NON TROVATO]** nelle tabelle consultate; una ricerca sulla quota SWG di ottobre 2026 non l'ha restituita. Il gioco ha una propria costante d'astensione (`COSTANTE_ASTENSIONE` in `strumenti/taratura/elettorato.py`, 0,081, tarata a mano sull'affluenza 2022) [V], e `sim-cli tara` riscrive le astensioni per regione; la taratura confronta quindi le quote fra votanti, non fra elettori.
 
 ## Corrispondenza partito -> posto
 
