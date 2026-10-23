@@ -214,7 +214,7 @@ nome = "Estrema sinistra"
 posizione = 1.0
 
 [partito.valence]
-valore = 0.0
+valore = -0.541693
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -225,7 +225,7 @@ nome = "Sinistra"
 posizione = 2.0
 
 [partito.valence]
-valore = 0.0
+valore = 0.980664
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -236,7 +236,7 @@ nome = "Centrosinistra"
 posizione = 3.0
 
 [partito.valence]
-valore = 0.0
+valore = -0.570536
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -247,7 +247,7 @@ nome = "Centro"
 posizione = 4.0
 
 [partito.valence]
-valore = 0.0
+valore = -1.561987
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -258,7 +258,7 @@ nome = "Centrodestra"
 posizione = 5.0
 
 [partito.valence]
-valore = 0.0
+valore = -1.505371
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -269,7 +269,7 @@ nome = "Destra"
 posizione = 6.0
 
 [partito.valence]
-valore = 0.0
+valore = 0.850493
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"
@@ -280,7 +280,7 @@ nome = "Estrema destra"
 posizione = 7.0
 
 [partito.valence]
-valore = 0.0
+valore = 0.516127
 min = -3.0
 max = 3.0
 fonte = "assunzione del piano 4: tarata nella PR B (Task 12)"

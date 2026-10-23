@@ -66,102 +66,102 @@ campione = 1500
 [[regione]]
 id = "piemonte"
 elettori = 3332792
-astensione = -0.586754
+astensione = 0.303167
 
 [[regione]]
 id = "valle_d_aosta"
 elettori = 96861
-astensione = -0.477045
+astensione = 0.381673
 
 [[regione]]
 id = "liguria"
 elettori = 1201321
-astensione = -0.490026
+astensione = 0.354874
 
 [[regione]]
 id = "lombardia"
 elettori = 7534738
-astensione = -0.756792
+astensione = 0.195844
 
 [[regione]]
 id = "trentino_alto_adige"
 elettori = 814793
-astensione = -0.568954
+astensione = 0.320417
 
 [[regione]]
 id = "veneto"
 elettori = 3739747
-astensione = -0.766298
+astensione = 0.179159
 
 [[regione]]
 id = "friuli_venezia_giulia"
 elettori = 939884
-astensione = -0.582294
+astensione = 0.308761
 
 [[regione]]
 id = "emilia_romagna"
 elettori = 3343901
-astensione = -0.843706
+astensione = 0.135146
 
 [[regione]]
 id = "toscana"
 elettori = 2826314
-astensione = -0.737887
+astensione = 0.190465
 
 [[regione]]
 id = "umbria"
 elettori = 665746
-astensione = -0.695846
+astensione = 0.211558
 
 [[regione]]
 id = "marche"
 elettori = 1169446
-astensione = -0.681978
+astensione = 0.218386
 
 [[regione]]
 id = "lazio"
 elettori = 4412993
-astensione = -0.468416
+astensione = 0.362844
 
 [[regione]]
 id = "abruzzo"
 elettori = 1031801
-astensione = -0.481367
+astensione = 0.332006
 
 [[regione]]
 id = "molise"
 elettori = 244764
-astensione = -0.176412
+astensione = 0.515848
 
 [[regione]]
 id = "campania"
 elettori = 4519928
-astensione = -0.047175
+astensione = 0.601763
 
 [[regione]]
 id = "puglia"
 elettori = 3223284
-astensione = -0.18048
+astensione = 0.510976
 
 [[regione]]
 id = "basilicata"
 elettori = 447885
-astensione = -0.266454
+astensione = 0.459882
 
 [[regione]]
 id = "calabria"
 elettori = 1501434
-astensione = 0.056999
+astensione = 0.650331
 
 [[regione]]
 id = "sicilia"
 elettori = 3954552
-astensione = -0.196772
+astensione = 0.496589
 
 [[regione]]
 id = "sardegna"
 elettori = 1347691
-astensione = -0.039144
+astensione = 0.623157
 
 [[gruppo]]
 regione = "piemonte"

@@ -1,0 +1,34 @@
+# Bersagli di `sim-cli tara`: affluenza 2022 per regione e intenzioni di voto di ottobre 2026 per posto.
+
+# Quote fra i votanti in %, nell'ordine dei posti 1-7 (somma 100). Fonte: docs/ricerca/dati/sondaggi-ottobre-2026.md
+# (medie semplici sugli 11 istituti, prima della rinormalizzazione; corrispondenza partito -> posto dalla collocazione CHES 2024).
+# Derivazione, in punti sulle medie grezze:
+# - AVS (6,33) divisa a meta' fra i posti 1 e 2 (SI e' al posto 1, EV al 2; ruling del controller): 3,165 + 3,165.
+# - gli «altri» (100 - 94,98 = 5,02) divisi a meta' fra i posti 4 e 5: 2,51 + 2,51. Nessun posto a zero, il logit non puo' dare quota 0.
+# - posto 6 = FdI 27,29 + FI 7,27 + NM 1,15 = 35,71; posto 7 = Lega 5,71 + FN 7,26 = 12,97.
+# - posto 2 = PD 20,33 + M5S 12,52 + meta' AVS 3,165 = 36,015; posto 3 = Azione 3,16 + IV 2,43 + +E 1,53 = 7,12.
+posti = [3.165, 36.015, 7.12, 2.51, 2.51, 35.71, 12.97]
+
+# Affluenza 2022 per regione in %, Camera dei deputati, ItaliaVotiListeCIRC.csv (docs/ricerca/dati/risultati-elettorali-italia.md:16-27).
+# La Valle d'Aosta non e' nel file: affluenza nazionale 63,6% [INF] (risultati-elettorali-italia.md:13).
+[affluenza]
+piemonte = 66.1
+valle_d_aosta = 63.6
+liguria = 63.9
+lombardia = 69.8
+trentino_alto_adige = 65.7
+veneto = 70.0
+friuli_venezia_giulia = 66.0
+emilia_romagna = 71.6
+toscana = 69.4
+umbria = 68.5
+marche = 68.2
+lazio = 63.4
+abruzzo = 63.7
+molise = 56.4
+campania = 53.2
+puglia = 56.5
+basilicata = 58.6
+calabria = 50.6
+sicilia = 56.9
+sardegna = 53.0
