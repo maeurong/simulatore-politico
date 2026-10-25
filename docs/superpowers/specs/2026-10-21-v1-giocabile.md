@@ -402,7 +402,7 @@ Blocchi separati, aggiornati in quest'ordine dentro il passo «motore» della ch
 
 ### Pipeline di taratura, offline
 
-Fuori dal binario del gioco; produce file di dati con la loro licenza in una cartella separata (decisione del 16/10).
+Fuori dal binario del gioco; produce file di dati con la loro licenza in una cartella separata (decisione del 16/10; letta il 25/10 come `dati/`, separata dal codice: i derivati ESS stanno in `dati/base/elettorato.toml`, in CC BY-NC-SA 4.0, vedi `docs/ricerca/sintesi/decisioni.md`).
 - **Quote dei 360 gruppi**: IPF sui margini ISTAT (regione × condizione) e MEF (regione × classe × tipo di reddito), seme dai microdati IBF 2022 della Banca d'Italia; fasce sul reddito equivalente (proposta: bassa decili 1-3, media 4-7, alta 8-10), da confermare col motore economico.
 - **Istogrammi della posizione** da ESS con la posizione come quarta dimensione dell'IPF; ITANES solo per stime offline (non ridistribuibile).
 - **β e fedeltà** stimati offline su ITANES (logit condizionale; matrice di voto 2018 → 2022); un β su scala 0-10 si divide per 0,36 sulla scala a 7 punti. Affluenza 2022 per regione dal CSV della Camera.

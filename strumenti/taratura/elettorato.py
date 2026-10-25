@@ -1,7 +1,7 @@
 """Elettorato: 20 regioni x 6 condizioni x 3 fasce di reddito.
 
 Uso: python3 -I strumenti/taratura/elettorato.py [--senza-ibf] [--cache DIR] [--ess FILE]
-     python3 -I strumenti/taratura/elettorato.py --selftest
+     python3 -I strumenti/taratura/elettorato.py --selftest [--ess FILE]
 
 Le quote dei gruppi vengono da un IPF sui margini reali: elettori della Camera 2022, ISTAT (occupati,
 disoccupati, inattivi, quinti di reddito), MEF (pensionati, classi di reddito), seme IBF 2022
@@ -72,7 +72,7 @@ SHARE_PUBBLICO = 0.17  # assunzione: RGS non aperto
 SHARE_STUDENTI = 0.06  # assunzione
 ISTOGRAMMA = [0.05, 0.12, 0.17, 0.25, 0.16, 0.17, 0.08]  # segnaposto senza --ess
 TAGLIO = (0, 0, 1, 1, 2, 3, 4, 5, 5, 6, 6)  # autocollocazione 0-10 -> 7 punti (dati-per-tarare-i-gruppi.md:80-95)
-MIN_CASI_REGIONE = 100  # sotto, la regione prende la distribuzione della macroarea
+MIN_CASI_REGIONE = 100  # sotto, la regione prende la distribuzione della sua area NUTS 1
 LISCIA = 5.0  # assunzione: pseudo-casi con la distribuzione nazionale, perché nessuna cella ESS resti vuota
 PRIMARIO = {"disoccupato_inattivo": 4000.0, "studente": 3000.0}  # provvisorio: nessun tipo MEF; pensionato = 0, dipendenti e autonomi dal MEF
 MOLT_FASCIA = (0.55, 1.0, 1.9)
@@ -156,13 +156,13 @@ def prova_posizioni():
 
 def prova_ess():
     """ESS sintetico in memoria passato da ess_righe: righe 77/88/99, round 10 e altri paesi scartati, un peso 2 che sposta il margine (c, f, p),
-    margini ricalcolati qui in modo indipendente, regioni sotto i 100 casi identiche alla macroarea, fallimenti chiari."""
+    margini ricalcolati qui in modo indipendente, regioni sotto i 100 casi identiche all'area NUTS 1, righe codificate solo NUTS 1, fallimenti chiari."""
     rng = random.Random(7)
     inverso = {"dipendente_privato": ("1", "1", "4"), "dipendente_pubblico": ("1", "1", "1"), "autonomo": ("1", "2", ""),
                "pensionato": ("6", "", ""), "disoccupato_inattivo": ("3", "", ""), "studente": ("2", "", "")}
     decile = {"bassa": "2", "media": "5", "alta": "9"}
-    codici = {"piemonte": ("ITC1", 405), "lombardia": ("ITC4", 30), "veneto": ("ITH3", 40), "sicilia": ("ITG1", 20), "calabria": ("ITF6", 10)}
-    macro = {"piemonte": "nord", "lombardia": "nord", "veneto": "nord", "sicilia": "mezzogiorno", "calabria": "mezzogiorno"}
+    codici = {"piemonte": ("ITC1", 405), "lombardia": ("ITC4", 30), "veneto": ("ITH3", 40), "sicilia": ("ITG1", 20), "sardegna": ("ITG2", 10)}
+    area = {r: cod[:3] for r, (cod, _) in codici.items()}
     spec = []  # (condizione, fascia, lrscale, codice region, peso grezzo)
     for r, (cod, n) in codici.items():
         spec += [(rng.choice(CONDIZIONI), rng.choice(FASCE), rng.randrange(11), cod, 1.0) for _ in range(n)]
@@ -171,7 +171,7 @@ def prova_ess():
 
     def riga(c, f, lr, cod, w, ronda="11", paese="IT"):
         att, rel, org = inverso[c]
-        return {"essround": ronda, "cntry": paese, "lrscale": str(lr), "mainact": att, "emplrel": rel, "tporgwk": org,
+        return {"essround": ronda, "cntry": paese, "lrscale": str(lr), "mnactic": att, "emplrel": rel, "tporgwk": org,
                 "hinctnta": decile[f], "region": cod, "anweight": str(w)}
 
     righe = [riga(*s) for s in spec]
@@ -182,7 +182,7 @@ def prova_ess():
     taglio = [0, 0, 1, 1, 2, 3, 4, 5, 5, 6, 6]
     norma = len(spec) / sum(s[4] for s in spec)
     N = {(r, c, f): 1.0 for r in codici for c in CONDIZIONI for f in FASCE}
-    t, margini = posizioni(N, macro, out)
+    t, margini = posizioni(N, area, out)
     for assi, m in margini.items():
         assert all(abs(x - m[k]) <= 1e-9 * max(1, m[k]) for k, x in proiezione(t, assi).items()), f"ess: margine {assi} non ritrovato"
     globale = [sum(s[4] * norma for s in spec if taglio[s[2]] == p) / len(spec) for p in range(7)]
@@ -193,9 +193,9 @@ def prova_ess():
                 atteso = 5 * (pesi[p] + LISCIA * globale[p]) / (sum(pesi) + LISCIA)
                 assert abs(margini[1, 2, 3][c, f, p] - atteso) < 1e-5, f"ess: margine (c, f, p) {c} {f} {p}: {margini[1, 2, 3][c, f, p]:.6f}, atteso {atteso:.6f}"
     quota = lambda r, p: margini[0, 3][r, p] / 18
-    for a, b in (("lombardia", "veneto"), ("sicilia", "calabria")):
-        assert all(abs(quota(a, p) - quota(b, p)) < 1e-9 for p in range(7)), f"ess: {a} e {b} (sotto {MIN_CASI_REGIONE} casi) non uguali alla macroarea"
+    assert all(abs(quota("sicilia", p) - quota("sardegna", p)) < 1e-9 for p in range(7)), f"ess: sicilia e sardegna (sotto {MIN_CASI_REGIONE} casi) non uguali all'area ITG"
     assert any(abs(quota("piemonte", p) - quota("lombardia", p)) > 1e-3 for p in range(7)), "ess: piemonte (oltre 100 casi) dovrebbe avere la sua distribuzione"
+    assert any(abs(quota("lombardia", p) - quota("veneto", p)) > 1e-3 for p in range(7)), "ess: lombardia (sotto soglia) deve pescare da piemonte nell'area ITC"
     for guasto, msg in ((lambda: ess_righe([riga(*s[:3], "ITZZ", s[4]) for s in spec]), "regione"),
                         (lambda: ess_righe([riga(*s, ronda="10") for s in spec]), "essround = 11"),
                         (lambda: ess_righe([riga(*s[:4], "1,5") for s in spec]), "anweight"),
@@ -210,7 +210,16 @@ def prova_ess():
             raise AssertionError(f"ess: CSV guasto ({msg}) accettato")
     # il reddito non dichiarato (25% dei casi) è normale: sotto la soglia della fascia (70%) non fallisce
     ess_righe([{**riga(*s), "hinctnta": "" if i % 4 == 0 else riga(*s)["hinctnta"]} for i, s in enumerate(spec)])
+    assert ess_righe([{**riga(*s), "mnactic": "99"} if i == 0 else riga(*s) for i, s in enumerate(spec)])[0][0] is None, "ess: mnactic 99 deve restare senza condizione"
     assert [fascia_ess(d) for d in ("3", "4", "7", "8", "1", "10", "77", "")] == ["bassa", "media", "media", "alta", "bassa", "alta", None, None], "ess: confini dei decili"
+    # ESS11 per l'Italia ha solo NUTS 1 (region ITC, ITH, ITI, ITF, ITG): righe valorizzate, ogni regione con la distribuzione della sua area
+    area = {r[0]: r[3][0][:3] for r in economia().REGIONI}
+    out = ess_righe([riga(rng.choice(CONDIZIONI), rng.choice(FASCE), rng.randrange(11), a, 1.0) for a in sorted(set(area.values())) for _ in range(120)])
+    _, margini = posizioni({(r, c, f): 1.0 for r in area for c in CONDIZIONI for f in FASCE}, area, out)
+    for a in area:
+        for b in area:
+            uguali = all(abs(margini[0, 3][a, p] - margini[0, 3][b, p]) < 1e-9 for p in range(7))
+            assert uguali == (area[a] == area[b]), f"ess NUTS 1: {a} ({area[a]}) e {b} ({area[b]}) {'uguali' if uguali else 'diversi'}"
 
 
 def prova_fasce():
@@ -487,7 +496,8 @@ def quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme_ibf):
     return {r: quote([t[r, c, f] for c in CONDIZIONI for f in FASCE]) for r in ids}
 
 
-COLONNE_ESS = ["essround", "cntry", "lrscale", "mainact", "emplrel", "tporgwk", "hinctnta", "region", "anweight"]
+COLONNE_ESS = ["essround", "cntry", "lrscale", "mnactic", "emplrel", "tporgwk", "hinctnta", "region", "anweight"]
+EDIZIONE_ESS = "4.2"  # edizione attesa nella colonna `edition`; va nell'intestazione di elettorato.toml, come chiede ESS a chi ripubblica (docs/ricerca/dati/ess.md:22)
 SOGLIA_COMPLETI = 0.9  # quota minima di casi con regione mappata e condizione
 SOGLIA_FASCIA = 0.7  # più bassa: chi non risponde al reddito (hinctnta) è una quota normale, non un CSV sbagliato
 
@@ -498,16 +508,18 @@ def fascia_ess(d):
 
 
 def ess_righe(righe, nome="ESS"):
-    """Righe (condizione o None, fascia o None, posizione 0-6, regione o None, peso) degli italiani del round 11 con autocollocazione 0-10.
+    """Righe (condizione o None, fascia o None, posizione 0-6, regione o area NUTS 1 o None, peso) degli italiani del round 11 con autocollocazione 0-10.
+    `region` NUTS 2 dà la regione; NUTS 1 (ESS11 per l'Italia: ITC, ITH, ITI, ITF, ITG) dà l'area, che conta come regione valorizzata.
     Il peso `anweight` è normalizzato a somma = numero di righe. Chi non si colloca (77, 88, 99) è escluso da tutto; chi non ha condizione
     (tporgwk o emplrel mancante compresi) resta solo nei margini della posizione; fallisce se meno del 90% ha regione o condizione, o meno del 70% la fascia (il tasso si stampa)."""
     nuts = {g: r[0] for r in economia().REGIONI for g in r[3]}
+    nuts |= {g[:3]: g[:3] for g in list(nuts)}
     out, ignote, round11, tporgwk_mancante = [], collections.Counter(), 0, 0
     for r in righe:
         if r["essround"] != "11":
             continue
         round11 += 1
-        lr, att, rel, org = r["lrscale"], r["mainact"], r["emplrel"], r["tporgwk"]
+        lr, att, rel, org = r["lrscale"], r["mnactic"], r["emplrel"], r["tporgwk"]
         if r["cntry"] != "IT" or lr not in map(str, range(11)):
             continue
         c = ("studente" if att == "2" else "pensionato" if att == "6" else "disoccupato_inattivo" if att in ("3", "4", "5", "7", "8", "9")
@@ -539,18 +551,28 @@ def ess_righe(righe, nome="ESS"):
 
 
 def ess(percorso):
-    """Righe di `ess_righe` dal CSV del Data Portal ESS round 11 (colonne COLONNE_ESS, tutte obbligatorie)."""
+    """Righe di `ess_righe` dal CSV del Data Portal ESS round 11 (colonne COLONNE_ESS più `edition`, tutte obbligatorie).
+    L'edizione si controlla riga per riga prima di ogni altro controllo, senza caricare il file in memoria."""
     with open(percorso, encoding="utf-8-sig", newline="") as f:
         righe = csv.DictReader(f)
-        mancano = [c for c in COLONNE_ESS if c not in (righe.fieldnames or [])]
-        assert not mancano, f"{percorso}: colonne mancanti {mancano}; il CSV del Data Portal deve avere {COLONNE_ESS}"
-        return ess_righe(righe, str(percorso))
+        mancano = [c for c in COLONNE_ESS + ["edition"] if c not in (righe.fieldnames or [])]
+        assert not mancano, f"{percorso}: colonne mancanti {mancano}; il CSV del Data Portal deve avere {COLONNE_ESS + ['edition']}"
+
+        def controllate():
+            for r in righe:
+                valore = r["edition"]
+                assert valore == EDIZIONE_ESS, (f"{percorso}: edizione {valore!r}, lo script è verificato sulla {EDIZIONE_ESS}: controlla sul codebook i codici "
+                                                f"di mnactic e il livello di region, poi aggiorna EDIZIONE_ESS (finisce nell'intestazione e nel DOI di elettorato.toml)")
+                yield r
+
+        return ess_righe(controllate(), str(percorso))
 
 
-def posizioni(N, macro, righe_ess):
+def posizioni(N, area, righe_ess):
     """IPF a 4 dimensioni (regione, condizione, fascia, posizione) su N={(r, c, f): elettori}. Margini: (r, c, f) = N;
     (c, f, p) = elettori di (c, f) x distribuzione ESS per posizione di (c, f); (r, p) = distribuzione ESS della regione
-    (accorpata alla macroarea sotto MIN_CASI_REGIONE casi), ricalibrata sui totali per posizione di (c, f, p).
+    (`area` = {regione: area NUTS 1}; sotto MIN_CASI_REGIONE casi propri, quella dell'area, righe NUTS 1 comprese), ricalibrata sui totali per posizione di (c, f, p).
+    Sopra soglia, le righe NUTS 1 dell'area non entrano.
     Le distribuzioni sono lisciate verso la nazionale con LISCIA pseudo-casi. Restituisce tabella e margini."""
     ids = sorted({k[0] for k in N})
     peso = lambda righe: [sum(w for p, w in righe if p == k) for k in range(7)]
@@ -562,7 +584,7 @@ def posizioni(N, macro, righe_ess):
     el = {r: sum(N[r, c, f] for c in CONDIZIONI for f in FASCE) for r in ids}
     rp = {}
     for r in ids:
-        gruppo = {r} if sum(1 for x in righe_ess if x[3] == r) >= MIN_CASI_REGIONE else {x for x in ids if macro[x] == macro[r]}
+        gruppo = {r} if sum(1 for x in righe_ess if x[3] == r) >= MIN_CASI_REGIONE else {x for x in ids if area[x] == area[r]} | {area[r]}
         rp.update({(r, p): el[r] * q for p, q in enumerate(distribuzione([(x[2], x[4]) for x in righe_ess if x[3] in gruppo]))})
     tot_p = {(p,): sum(cfp[c, f, p] for c, f in tot_cf) for p in range(7)}
     rp = ipf(rp, {(0,): {(r,): el[r] for r in ids}, (1,): tot_p})
@@ -571,12 +593,12 @@ def posizioni(N, macro, righe_ess):
     return ipf(seme, margini), margini
 
 
-def istogrammi(ids, macro, el, quote_, righe_ess):
+def istogrammi(ids, area, el, quote_, righe_ess):
     """Istogramma a 7 punti per gruppo (r, c, f). Senza ESS: il segnaposto."""
     if righe_ess is None:
         return {(r, c, f): list(ISTOGRAMMA) for r in ids for c in CONDIZIONI for f in FASCE}
     N = {(r, c, f): el[r] * quote_[r][3 * i + j] for r in ids for i, c in enumerate(CONDIZIONI) for j, f in enumerate(FASCE)}
-    t, _ = posizioni(N, macro, righe_ess)
+    t, _ = posizioni(N, area, righe_ess)
     return {(r, c, f): quote([t[r, c, f, p] for p in range(7)]) for r in ids for c in CONDIZIONI for f in FASCE}
 
 
@@ -611,7 +633,7 @@ def astensione(regioni):
 
 def costruisci():
     regioni = leggi("regioni.toml")["regione"]
-    scenario, economia = leggi("scenario.toml"), leggi("economia.toml")
+    scenario, tavola = leggi("scenario.toml"), leggi("economia.toml")
     ids = [r["id"] for r in regioni]
     dati_camera = camera()
     el = elettori(ids, leggi("elezioni.toml"), dati_camera)
@@ -621,9 +643,9 @@ def costruisci():
     seme = None if "--senza-ibf" in sys.argv else ibf()
     quote_ = quote_gruppi(ids, el, pers, fasce_mef, fasce_istat, seme)
     return {
-        "regioni": regioni, "elettori": el, "quote": quote_, "istogrammi": istogrammi(ids, {r["id"]: r["macroarea"] for r in regioni}, el, quote_, ess(ESS) if ESS else None),
+        "regioni": regioni, "elettori": el, "quote": quote_, "istogrammi": istogrammi(ids, {r[0]: r[3][0][:3] for r in economia().REGIONI}, el, quote_, ess(ESS) if ESS else None),
         "pers": pers, "fasce_istat": fasce_istat, "con_ess": ESS is not None,
-        "redditi": redditi(regioni, pers, scenario, redd_mef), "panieri": panieri(economia), "astensione": astensione(ids),
+        "redditi": redditi(regioni, pers, scenario, redd_mef), "panieri": panieri(tavola), "astensione": astensione(ids),
         "attesi": dati_camera[1] + el["valle_d_aosta"],
     }
 
@@ -635,9 +657,14 @@ def tabella(v):
 
 def scrivi(d):
     s = json.dumps
-    t = f"# Generato da `{COMANDO}` il {OGGI}. Non modificare a mano.\n"
+    comando = COMANDO + (" --ess ~/.cache/simulatore-politico-taratura/ess/ESS11.csv" if d["con_ess"] else "")
+    t = f"# Generato da `{comando}` il {OGGI}. Non modificare a mano.\n"
     t += "# Quote dei gruppi da IPF sui margini reali, redditi da lavoro dal MEF, il resto provvisorio: vedi strumenti/taratura/README.md.\n"
-    t += ("# Posizioni: elaborazione da European Social Survey round 11 (ESS ERIC, https://www.europeansocialsurvey.org), CC BY-NC-SA 4.0, adattato.\n\n"
+    t += ("# Licenza di questo file: CC BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/ (contiene derivati ESS; vedi la sezione Licenze del README.md alla radice del repo).\n"
+          f"# Posizioni: Adapted from ESS Round 11, edizione {EDIZIONE_ESS}.\n"
+          f"# Citazione: European Social Survey European Research Infrastructure (ESS ERIC), ESS11 - integrated file, edition {EDIZIONE_ESS} [Data set]. "
+          f"Sikt - Norwegian Agency for Shared Services in Education and Research. https://doi.org/10.21338/ess11e{'%02d_%d' % tuple(map(int, EDIZIONE_ESS.split('.')))}\n"
+          "# I dati ESS si scaricano gratis dal Data Portal: https://ess.sikt.no\n\n"
           if d["con_ess"] else "# Posizioni: segnaposto, uguali per tutti i gruppi (senza --ess).\n\n")
     t += f"aliquote = {tabella(ALIQUOTE)}\n"
     t += f"astensione_condizione = {tabella(dict.fromkeys(CONDIZIONI, 0.0))}\n"
@@ -712,7 +739,11 @@ def main():
         # Le righe `astensione = ` di [[regione]] sono di `sim-cli tara`: fuori dal confronto.
         senza = lambda righe: [r for r in righe[1:] if not r.startswith("astensione = ")]
         committato = (BASE / "elettorato.toml").read_text(encoding="utf-8").splitlines()
-        assert senza(scrivi(d).splitlines()) == senza(committato), "elettorato.toml non è l'uscita dello script: rilancialo"
+        if ESS is None and any("Adapted from ESS" in r for r in committato):
+            msg = "elettorato.toml committato ha le posizioni ESS: rilancia con --ess FILE (senza --ess lo script scrive il segnaposto e le posizioni ESS si perdono)"
+        else:
+            msg = "elettorato.toml non è l'uscita dello script: rilancialo"
+        assert senza(scrivi(d).splitlines()) == senza(committato), msg
         print("selftest ok: 20 regioni, 360 gruppi")
         return
     destinazione = BASE / "elettorato.toml"
