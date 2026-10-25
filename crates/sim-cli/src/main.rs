@@ -5,6 +5,8 @@ use std::process::ExitCode;
 
 use sim_core::{DatiGioco, FileDati, Partita};
 
+mod tara;
+
 struct Argomenti {
     dati: String,
     seme: u64,
@@ -43,14 +45,18 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
     })
 }
 
-fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
+pub(crate) fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
     let percorso = cartella.join(nome);
     std::fs::read_to_string(&percorso)
         .map_err(|e| format!("impossibile leggere {}: {e}", percorso.display()))
 }
 
 fn esegui() -> Result<String, String> {
-    let argomenti = leggi_argomenti(std::env::args().skip(1))?;
+    let mut args = std::env::args().skip(1).peekable();
+    if args.next_if(|a| a == "tara").is_some() {
+        return tara::esegui(args);
+    }
+    let argomenti = leggi_argomenti(args)?;
     let cartella = Path::new(&argomenti.dati);
     let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;

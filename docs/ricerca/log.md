@@ -172,3 +172,9 @@ Grilling sul ticket wayfinder «Costo del governare» (29), due giri, tutte le r
 
 ## [2026-10-21] query | punti di aggancio
 Grilling sul ticket wayfinder «Punti di aggancio» (30), tre giri; scelta di Mario contro la raccomandazione: anche i ruoli dei dicasteri nei dati. Registrato in [[decisioni]]: nessun aggancio riservato, solo quattro cuciture (motore in blocchi, versione dello schema, seggi per regione dalla popolazione censita, dicasteri e ruoli nei dati con rifiuto al caricamento di un ruolo orfano o doppio), niente per gli altri sistemi esclusi, sezione «Fuori dalla v1» nella spec. In CONTEXT.md: ruolo del dicastero. Nessuna fonte nuova. Mappa della v1 risolta.
+
+## [2026-10-23] ingest | sondaggi di ottobre 2026 per posto
+Ricerca per la taratura della valence (piano 4, Task 12): media di 19 sondaggi nazionali di 11 istituti fino al 20/10, controllata con la Supermedia YouTrend/Agi del 22/10, e partiti ricondotti ai sette posti con CHES 2024 (`lrgen`, taglio 0-10 → 7). Nuova pagina [[sondaggi-ottobre-2026]]. Nessuna cattura in `fonti/`: tabelle Wikipedia escluse dal repo, CSV CHES solo offline (licenza da chiarire). Astensione nei sondaggi [NON TROVATO].
+
+## [2026-10-23] lint | sondaggi-ottobre-2026: bersagli adottati e mappa per troncamento
+Corretta la pagina dopo la revisione della PR B. Aggiunta la sezione «Bersagli adottati» (3,165 / 36,015 / 7,12 / 5,02 / 8,42 / 33,00 / 7,26), con la regola del troncamento di `lrgen` dettata dalla spec riga 277 e da `scenario.toml:12`. Coalizioni rifatte sui posti 2-3 e 5-6: la prima stesura assumeva 1-2 e 6-7 senza leggere lo scenario. Esiti scritti per AVS (metà ai posti 1 e 2) e «altri» (posto 4). Aggiunte «Per il nostro gioco», «Licenza», «Collegamenti». Calcolo delle medie rifatto: dà gli stessi numeri e l'ingresso si riscarica da `oldid=1381481066` con lo stesso sha256; lo script non è conservato nel repo. Refusi e scarti numerici corretti (37,9; 0,7).
