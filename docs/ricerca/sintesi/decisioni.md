@@ -316,6 +316,9 @@ Grilling sul ticket wayfinder «Punti di aggancio» (`.scratch/v1-giocabile/issu
 - **Niente** per tutti gli altri sistemi esclusi, compresi il giocatore come alleato minore, la salienza mobile, il rapporto di parte e lo scripting in sandbox.
 - **Nella spec:** sezione «Fuori dalla v1», una riga per sistema con ticket d'origine e cucitura oppure «niente»; le quattro cuciture anche fra i requisiti.
 
+## 2026-10-25: derivati ESS in dati/base
+Mario ha scelto di leggere la «cartella separata» della decisione del 2026-10-16 (spec riga 405) come `dati/`, separata dal codice: niente cartella nuova, gli istogrammi delle posizioni derivati da ESS round 11 restano in `dati/base/elettorato.toml`. Il file passa in CC BY-NC-SA 4.0, perché lo share-alike lo prende tutto. La licenza è dichiarata in tre posti: nell'intestazione del file, con URI della licenza, edizione, DOI e Data Portal; nel `README.md` del repo, che toglie il file dal perimetro MIT; nella sezione Licenze di `strumenti/taratura/README.md`. Gli altri file di `dati/base` restano MIT. Se un giorno servisse un file di dati solo MIT, le posizioni andrebbero spostate in un file a parte.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
