@@ -1,13 +1,17 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::economia::Economia;
+use crate::economia::{Annata, Economia};
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
+use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
-use crate::vista::{Vista, VoceDicastero};
+use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::partiti::{self, Governo, Partito};
+use crate::vista::{SeggiPartito, Vista, VistaStatistica, VoceDicastero, VocePartito};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 3;
+pub const VERSIONE_SCHEMA: u32 = 4;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,25 +64,63 @@ pub struct Partita {
     turno: u32,
     data: Trimestre,
     economia: Economia,
+    partiti: Vec<Partito>,
+    governo: Governo,
+    elettorato: Elettorato,
+    informazione: Informazione,
 }
 
 impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
+        let economia = Economia::iniziale(&dati);
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
+        elettorato.avvia_voto(&dati, &partiti, &governo);
+        let mut caso = Caso::nuovo(seme);
+        let informazione =
+            Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
         Partita {
             versione_schema: VERSIONE_SCHEMA,
-            caso: Caso::nuovo(seme),
-            economia: Economia::iniziale(&dati),
+            caso,
+            informazione,
+            economia,
+            elettorato,
+            partiti,
+            governo,
             dati,
             turno: 0,
             data: Trimestre::TURNO_ZERO,
         }
     }
 
-    // Per ora: economia (primi blocchi) e calendario. Ordine previsto quando arriva il motore:
-    // atti dei ministri → aula → motore (economia, poi elettorato) → soglie → eventi del turno
-    // dopo; voto delle elezioni dopo il motore.
+    // Per ora: economia, redditi, giudizio (prima di composizione, che aggiorna
+    // ultima_disoccupazione), composizione, posizioni, sondaggio, statistica, calendario.
+    // Ordine previsto a regime: atti dei ministri → aula → motore (economia, poi elettorato) →
+    // soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
+        let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
+        self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
+        self.elettorato
+            .giudizio(&self.dati, &self.economia, &self.governo);
+        self.elettorato
+            .composizione(&self.dati, &self.economia, self.data);
+        self.elettorato.posizioni(&self.dati, &mut self.caso);
+        let vero = self.intenzioni_vere();
+        self.informazione.rileva(
+            &self.dati,
+            &mut self.caso,
+            &self.elettorato,
+            &vero,
+            &self.governo,
+        );
+        self.informazione.statistica.aggiorna(
+            &self.dati,
+            &mut self.caso,
+            &self.economia,
+            reale_prima,
+            self.data,
+        );
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
     }
@@ -88,7 +130,122 @@ impl Partita {
         &self.economia
     }
 
+    /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
+    pub fn partiti(&self) -> &[Partito] {
+        &self.partiti
+    }
+
+    pub fn governo(&self) -> &Governo {
+        &self.governo
+    }
+
+    /// Stato vero dell'elettorato: per il CLI e i test, mai per la `Vista`.
+    pub fn elettorato(&self) -> &Elettorato {
+        &self.elettorato
+    }
+
+    /// Intenzioni di voto vere per gruppo e nazionali: per il CLI e i test, mai per la `Vista`.
+    pub fn intenzioni_vere(&self) -> Intenzioni {
+        Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
+    }
+
+    /// Stato vero dell'informazione: per il CLI e i test, mai per la `Vista`.
+    pub fn informazione(&self) -> &Informazione {
+        &self.informazione
+    }
+
+    /// Tre elettori del gruppo, estratti dal sondaggio con un estrattore estemporaneo:
+    /// non avanzano nessun flusso del `Caso`.
+    ///
+    /// # Errors
+    /// `Elettorato` se la regione non c'è.
+    pub fn elettori_campione(
+        &self,
+        regione: &str,
+        c: Condizione,
+        f: Fascia,
+    ) -> Result<Vec<ElettoreCampione>, Errore> {
+        let r = self
+            .dati
+            .elettorato()
+            .regioni
+            .iter()
+            .position(|x| x.id == regione)
+            .ok_or_else(|| Errore::Elettorato(format!("regione sconosciuta: {regione}")))?;
+        let chiave = u64::from(self.turno) * 1024 + indice_gruppo(r, c, f) as u64;
+        let mut rng = self.caso.estemporaneo(chiave);
+        Ok(genera(
+            &self.informazione.sondaggio,
+            &self.voci_partiti(),
+            &self.dati,
+            r,
+            c,
+            f,
+            &mut rng,
+        ))
+    }
+
+    /// Riparto dei seggi sul sondaggio pubblico: voti regionali dalle quote degli incroci,
+    /// coalizioni dell'ultimo voto, partiti senza coalizione da soli.
+    ///
+    /// # Errors
+    /// Quelli di `elezioni::riparto`.
+    pub fn proiezione_seggi(&self) -> Result<Esito, Errore> {
+        let n = self.partiti.len();
+        let per_regione = self
+            .dati
+            .elettorato()
+            .regioni
+            .iter()
+            .zip(&self.informazione.sondaggio.regioni)
+            .map(|(r, inc)| {
+                let voti = inc.quote.iter().take(n);
+                (
+                    r.id.clone(),
+                    voti.map(|q| (r.elettori as f64 * q).round() as u64)
+                        .collect(),
+                )
+            })
+            .collect();
+        let posizione = |id: &String| self.partiti.iter().position(|p| &p.id == id);
+        let coalizioni = (self.dati.scenario().coalizioni.iter())
+            .map(|c| c.iter().filter_map(posizione).collect())
+            .collect();
+        riparto(
+            self.dati.elezioni(),
+            self.dati.legge_elettorale_iniziale(),
+            &Voti {
+                coalizioni,
+                per_regione,
+            },
+        )
+    }
+
+    fn voci_partiti(&self) -> Vec<VocePartito> {
+        (self.partiti.iter().enumerate())
+            .map(|(j, p)| VocePartito {
+                id: p.id.clone(),
+                nome: p.nome.clone(),
+                posizione_dichiarata: p.posizione_dichiarata,
+                posizione_percepita: p.posizione_percepita,
+                valence: p.valence,
+                al_governo: self.governo.al_governo(j),
+            })
+            .collect()
+    }
+
     pub fn vista(&self) -> Vista {
+        let s = &self.informazione.statistica;
+        let proiezione = self.proiezione_seggi().ok().map(|e| {
+            let seggi = e.camera.iter().zip(&e.senato);
+            (self.partiti.iter().zip(seggi))
+                .map(|(p, (c, s))| SeggiPartito {
+                    partito: p.id.clone(),
+                    camera: c.totale(),
+                    senato: s.totale(),
+                })
+                .collect()
+        });
         Vista {
             turno: self.turno,
             data: self.data,
@@ -102,11 +259,19 @@ impl Partita {
                     nome: d.nome.clone(),
                 })
                 .collect(),
+            partiti: self.voci_partiti(),
+            sondaggio: self.informazione.sondaggio.clone(),
+            proiezione,
+            statistica: VistaStatistica {
+                trimestre: s.trimestre,
+                prima_stima: s.prima_stima.clone(),
+                revisione: s.revisione.clone(),
+            },
         }
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia.
+    /// economia, partiti e governo, elettorato, informazione.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -131,7 +296,9 @@ impl Partita {
     /// # Errors
     /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
     /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
-    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata).
+    /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
+    /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
+    /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -187,7 +354,34 @@ impl Partita {
             }
         }
         partita.economia.controlla_coerenza(partita.data)?;
+        partita.controlla_partiti()?;
         Ok(partita)
+    }
+}
+
+impl Partita {
+    /// Partiti, governo ed elettorato di un salvataggio contro i dati.
+    fn controlla_partiti(&self) -> Result<(), Errore> {
+        let n = self.partiti.len();
+        let attesi = self.dati.scenario().partiti.len();
+        ok(
+            n == attesi,
+            &format!("partiti ha {n} voci, lo scenario ne ha {attesi}"),
+        )?;
+        let g = &self.governo;
+        ok(g.presidente < n, "governo.presidente fuori dai partiti")?;
+        ok(
+            g.dicasteri.len() == self.dati.dicasteri().len() && g.dicasteri.iter().all(|&p| p < n),
+            "governo.dicasteri non combacia con i dicasteri o con i partiti",
+        )?;
+        ok(
+            self.partiti
+                .iter()
+                .all(|p| p.posizione_percepita.is_finite() && p.valence.is_finite()),
+            "partiti: posizione_percepita o valence non finita",
+        )?;
+        self.elettorato.controlla(&self.dati, n)?;
+        self.informazione.controlla(&self.dati, n)
     }
 }
 
@@ -214,13 +408,17 @@ impl Economia {
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),
             "economia.storico: servono da 1 a 8 voci con pil > 0",
         )?;
+        let somma = |f: fn(&Annata) -> f64| self.pensioni.iter().map(f).sum::<f64>();
+        let limite = LIMITE_EURO as f64;
         ok(
             !self.pensioni.is_empty()
                 && self
                     .pensioni
                     .iter()
-                    .all(|a| a.pensionati >= 0 && a.importo >= 0),
-            "economia.pensioni: vuote o con valori negativi",
+                    .all(|a| a.pensionati >= 0 && a.importo >= 0)
+                && somma(|a| a.pensionati as f64) <= limite
+                && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
+            "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
         ok(
             self.sussidio_per_disoccupato >= 0,

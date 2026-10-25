@@ -1,6 +1,8 @@
 use crate::economia::produzione_riferimento;
+use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
+use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
 use serde::{Deserialize, Serialize};
@@ -16,19 +18,21 @@ pub struct FileDati {
     pub regioni: String,
     pub scenario: String,
     pub elezioni: String,
+    pub elettorato: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 6] = [
+    pub const NOMI: [&str; 7] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
         "regioni.toml",
         "scenario.toml",
         "elezioni.toml",
+        "elettorato.toml",
     ];
 
-    /// Legge i sei file per nome con la lettura di chi fa I/O.
+    /// Legge i file per nome con la lettura di chi fa I/O.
     ///
     /// # Errors
     /// Il primo errore della lettura.
@@ -40,6 +44,7 @@ impl FileDati {
             regioni: leggi(Self::NOMI[3])?,
             scenario: leggi(Self::NOMI[4])?,
             elezioni: leggi(Self::NOMI[5])?,
+            elettorato: leggi(Self::NOMI[6])?,
         })
     }
 }
@@ -98,6 +103,27 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "ammenda_pde",
     "ammenda_semestrale",
     "sospensione_coesione",
+    "beta_distanza",
+    "fedelta",
+    "peso_giudizio",
+    "quota_colpa_presidente",
+    "asimmetria_giudizio",
+    "emivita_giudizio",
+    "finestra_aspettative",
+    "scala_reddito",
+    "scala_disoccupazione",
+    "ancora_posizioni",
+    "rumore_posizioni",
+    "mobilita_fasce",
+    "uscita_studenti",
+    "sigma_bias_comune",
+    "sigma_istituto",
+    "effetto_disegno",
+    "errore_approvazione",
+    "errore_stima_pil",
+    "errore_stima_disoccupazione",
+    "errore_stima_inflazione",
+    "errore_stima_disavanzo",
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,6 +187,7 @@ pub struct DatiGioco {
     regioni: Vec<Regione>,
     scenario: Scenario,
     elezioni: DatiElezioni,
+    elettorato: DatiElettorato,
 }
 
 #[derive(Deserialize)]
@@ -198,6 +225,10 @@ impl DatiGioco {
 
     pub fn elezioni(&self) -> &DatiElezioni {
         &self.elezioni
+    }
+
+    pub fn elettorato(&self) -> &DatiElettorato {
+        &self.elettorato
     }
 
     /// Impostazione elettorale scelta dallo scenario.
@@ -250,6 +281,8 @@ impl DatiGioco {
             .map_err(|e| errore_toml("scenario.toml", e))?;
         let elezioni = toml::from_str::<DatiElezioni>(&file.elezioni)
             .map_err(|e| errore_toml("elezioni.toml", e))?;
+        let elettorato = toml::from_str::<DatiElettorato>(&file.elettorato)
+            .map_err(|e| errore_toml("elettorato.toml", e))?;
 
         let dati = DatiGioco {
             dicasteri,
@@ -258,6 +291,7 @@ impl DatiGioco {
             regioni,
             scenario,
             elezioni,
+            elettorato,
         };
         dati.valida()?;
         Ok(dati)
@@ -270,7 +304,8 @@ impl DatiGioco {
     /// (manopola non finita o fuori intervallo); `ManopolaMancante`; `ScenarioFuoriIntervallo`;
     /// `StrutturaIncoerente` (forma, numeri non finiti o di segno sbagliato, produzione di
     /// riferimento non positiva, piramide); `SettoreNonProduttivo`; `QuoteNonUnitarie`;
-    /// `SettoreSconosciuto`; `LeggeElettorale` e `DatiElettorali` (vedi
+    /// `SettoreSconosciuto`; `Elettorato` e `Partiti` (vedi [`DatiElettorato`] e
+    /// [`partiti::valida`]); `LeggeElettorale` e `DatiElettorali` (vedi
     /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente.
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
@@ -322,7 +357,10 @@ impl DatiGioco {
             }
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
+        self.elettorato
+            .valida(&self.regioni, &self.dicasteri, self.struttura.settori.len())?;
         self.scenario.valida()?;
+        partiti::valida(&self.scenario, &self.dicasteri)?;
         self.elezioni.valida(&self.regioni)?;
         if !self
             .elezioni

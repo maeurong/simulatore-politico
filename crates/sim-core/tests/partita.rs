@@ -271,3 +271,199 @@ fn carica_rifiuta_stato_incoerente() {
         );
     }
 }
+
+#[test]
+fn pensionati_enormi_non_vanno_in_panico() {
+    // Due annate da i64::MAX/2+1: la loro somma trabocca. Carica rifiuta, o il gennaio regge.
+    let s = salvataggio_modificato(|j| {
+        let pensioni = j["economia"]["pensioni"].as_array_mut().unwrap();
+        let mut annata = pensioni[0].clone();
+        annata["anno"] = 2027.into();
+        annata["pensionati"] = (i64::MAX / 2 + 1).into();
+        pensioni.push(annata.clone());
+        pensioni.push(annata);
+    });
+    match Partita::carica(&s) {
+        Err(e) => assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e:?}"),
+        Ok(mut p) => p.chiudi_turno(),
+    }
+}
+
+#[test]
+fn salvataggio_con_un_gruppo_in_meno_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"].as_array_mut().unwrap().pop();
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_crescite_oltre_16_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"][3]["crescite"] = serde_json::Value::Array(vec![0.0.into(); 17]);
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_giudizio_corto_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["gruppi"][5]["giudizio"]
+            .as_array_mut()
+            .unwrap()
+            .pop();
+    });
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_presidente_fuori_dai_partiti_illeggibile() {
+    let s = salvataggio_modificato(|j| j["governo"]["presidente"] = 99.into());
+    assert!(matches!(
+        Partita::carica(&s),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn salvataggio_con_voto_precedente_o_posizione_guasti_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 4] = [
+        ("voto_precedente corto", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("voto_precedente che non somma a 1", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"][0] = 5.0.into();
+        }),
+        ("posizione negativa", |j| {
+            j["elettorato"]["gruppi"][2]["posizione"][0] = (-0.5).into();
+        }),
+        ("posizione che non somma a 1", |j| {
+            j["elettorato"]["gruppi"][2]["posizione"] = serde_json::json!(vec![0.0; 7]);
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn salvataggio_con_ultima_disoccupazione_corta_illeggibile() {
+    let s = salvataggio_modificato(|j| {
+        j["elettorato"]["ultima_disoccupazione"]
+            .as_array_mut()
+            .unwrap()
+            .pop();
+    });
+    let e = Partita::carica(&s).unwrap_err();
+    assert!(
+        matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("ultima_disoccupazione")),
+        "{e:?}"
+    );
+}
+
+#[test]
+fn salvataggio_con_elettorato_manomesso_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 7] = [
+        ("quota negativa", |j| {
+            j["elettorato"]["gruppi"][2]["quota"] = (-0.1).into();
+        }),
+        ("quote di una regione tutte a zero", |j| {
+            for g in &mut j["elettorato"]["gruppi"].as_array_mut().unwrap()[..18] {
+                g["quota"] = 0.0.into();
+            }
+        }),
+        ("quota enorme", |j| {
+            j["elettorato"]["gruppi"][0]["quota"] = 1e6.into();
+        }),
+        ("ancora tutta a zero", |j| {
+            j["elettorato"]["gruppi"][2]["ancora"] = serde_json::json!(vec![0.0; 7]);
+        }),
+        ("voto_precedente più lungo", |j| {
+            j["elettorato"]["gruppi"][2]["voto_precedente"]
+                .as_array_mut()
+                .unwrap()
+                .push(0.0.into());
+        }),
+        ("reddito con paniere nullo", |j| {
+            j["elettorato"]["gruppi"][2]["reddito"]["paniere"] = 0.0.into();
+        }),
+        ("giudizio null", |j| {
+            j["elettorato"]["gruppi"][2]["giudizio"][0] = serde_json::Value::Null;
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn salvataggio_con_informazione_guasta_illeggibile() {
+    type Guasto = fn(&mut serde_json::Value);
+    let casi: [(&str, Guasto); 7] = [
+        ("bias corto", |j| {
+            j["informazione"]["bias"].as_array_mut().unwrap().pop();
+        }),
+        ("effetti_istituto corti", |j| {
+            j["informazione"]["effetti_istituto"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("riga di effetti_istituto corta", |j| {
+            j["informazione"]["effetti_istituto"][1]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("quote di un istituto corte", |j| {
+            j["informazione"]["sondaggio"]["istituti"][0]["quote"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("regioni del sondaggio in meno", |j| {
+            j["informazione"]["sondaggio"]["regioni"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("posizione di un incrocio corta", |j| {
+            j["informazione"]["sondaggio"]["fasce"][2]["posizione"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("trimestre della statistica fuori da 1-4", |j| {
+            j["informazione"]["statistica"]["trimestre"]["trimestre"] = 9.into();
+        }),
+    ];
+    for (nome, guasto) in casi {
+        let e = Partita::carica(&salvataggio_modificato(guasto)).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e:?}"
+        );
+    }
+}

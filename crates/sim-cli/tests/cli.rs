@@ -86,3 +86,15 @@ fn flag_senza_valore_esce_con_errore() {
         "manca il valore per --turni",
     );
 }
+
+#[test]
+fn l_uscita_contiene_le_intenzioni_vere() {
+    let out = sim(&["--dati", DATI, "--seme", "42", "--turni", "2"]);
+    assert!(out.status.success());
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["elettorato"]["partiti"].as_array().unwrap().len(), 7);
+    let n = v["elettorato"]["nazionali"].as_array().unwrap();
+    assert_eq!(n.len(), 8);
+    let somma: f64 = n.iter().map(|x| x.as_f64().unwrap()).sum();
+    assert!((somma - 1.0).abs() < 1e-9, "{somma}");
+}
