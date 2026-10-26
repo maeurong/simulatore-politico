@@ -1,5 +1,5 @@
 mod comune;
-use comune::{dati_base, file_base, presenta, sostituisci};
+use comune::{dati_base, edita, file_base, presenta, sostituisci};
 use sim_core::ministri::Causa;
 use sim_core::parlamento::FormaMisura;
 use sim_core::vista::SeggiPartito;
@@ -150,4 +150,41 @@ fn alleati_con_l_intesa_nella_vista() {
         (a.partito.as_str(), a.intesa, a.ultimatum),
         ("centrodestra", 60.0, false)
     );
+}
+
+#[test]
+fn legge_presentata_sopravvive_al_salvataggio() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(
+        (q.vista(), q.salva().unwrap()),
+        (p.vista(), p.salva().unwrap())
+    );
+    p.chiudi_turno();
+    q.chiudi_turno();
+    assert_eq!(
+        (q.vista(), q.salva().unwrap()),
+        (p.vista(), p.salva().unwrap())
+    );
+}
+
+#[test]
+fn parlamento_e_intesa_manomessi_rifiutati() {
+    let p = Partita::nuova(dati_base(), 1);
+    let piu_uno = p.parlamento().seggi_camera[0] + 1;
+    for (punto, valore, nome) in [
+        (
+            "/parlamento/seggi_camera/0",
+            serde_json::json!(piu_uno),
+            "parlamento: seggi",
+        ),
+        ("/intesa/valori/0", serde_json::json!(150.0), "intesa:"),
+    ] {
+        let e = edita(&p, |j| *j.pointer_mut(punto).unwrap() = valore).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)) && e.to_string().contains(nome),
+            "{e}"
+        );
+    }
 }
