@@ -141,6 +141,10 @@ fn contatori_al_limite_non_vanno_in_panico() {
     let s = salvataggio_modificato(|j| {
         j["turno"] = u32::MAX.into();
         j["data"] = serde_json::json!({ "anno": 2200, "trimestre": 4 });
+        // A quel turno ogni valore in arrivo dei dati sarebbe già scaduto.
+        for v in j["disposizioni"]["voci"].as_array_mut().unwrap() {
+            v["in_arrivo"] = serde_json::json!([]);
+        }
     });
     let mut p = Partita::carica(&s).unwrap();
     p.chiudi_turno();

@@ -393,6 +393,79 @@ impl Parlamento {
         (self.respinte.iter()).find_map(|&(x, da)| (x == d && da > turno).then_some(da))
     }
 
+    /// Il referendum abrogativo che `promotore` chiede su `disposizione` al turno `turno`
+    /// (iter-legislativo-italiano:131-137): firme in chiusura del turno, voto ad aprile-giugno
+    /// dell'anno dopo; `valori` = la disposizione e il suo valore dopo l'abrogazione. Non tocca
+    /// nulla.
+    ///
+    /// # Errors
+    /// `Comando`, nell'ordine: promotore sconosciuto o al governo, disposizione sconosciuta, non
+    /// referendabile, niente da abrogare, legge elettorale non valida dopo l'abrogazione, un
+    /// referendum già in corso, fuori finestra.
+    pub(crate) fn abrogativo(
+        &self,
+        aula: &StatoAula,
+        turno: u32,
+        promotore: &str,
+        disposizione: &str,
+    ) -> Result<Referendum, Errore> {
+        let (dati, partiti) = (aula.dati, aula.partiti);
+        let Some(j) = partiti.iter().position(|p| p.id == promotore) else {
+            return ko(format!("partito sconosciuto: {promotore}"));
+        };
+        if aula.governo.al_governo(j) {
+            return ko(format!("il promotore è al governo: {}", partiti[j].nome));
+        }
+        let Some(d) = dati.disposizione(disposizione) else {
+            return ko(format!("disposizione sconosciuta: {disposizione}"));
+        };
+        let (x, s) = (&dati.disposizioni()[d], &aula.disposizioni.voci[d]);
+        if !x.referendabile {
+            return ko(format!("{} non è referendabile", x.nome));
+        }
+        let dopo = (x.dopo_abrogazione.as_deref())
+            .and_then(|g| x.gradino(g))
+            .unwrap_or(s.precedente);
+        if s.legge.is_empty() || (dopo == s.in_vigore && s.in_arrivo.is_empty()) {
+            return ko(format!("niente da abrogare: {}", x.nome));
+        }
+        if let Some(m) = legge_non_valida(dati, aula.disposizioni, &[(d, dopo)]) {
+            return ko(format!("quesito inammissibile: {m}"));
+        }
+        if self.referendum.is_some() {
+            return ko("un referendum è già in corso".into());
+        }
+        let trimestre = u32::from(data_di(turno).trimestre);
+        if trimestre > 3 {
+            return ko("fuori finestra: si chiede entro luglio-settembre".into());
+        }
+        Ok(Referendum {
+            tipo: TipoReferendum::Abrogativo,
+            misura: None,
+            valori: vec![(d, dopo)],
+            promotore: Some(j),
+            // Dal trimestre `trimestre` ad aprile-giugno dell'anno dopo.
+            voto: turno.saturating_add(6 - trimestre),
+            firme: false,
+            invito_astensione: false,
+        })
+    }
+
+    /// `InvitaAstensione`: il governo invita a disertare l'abrogativo indetto, una volta.
+    ///
+    /// # Errors
+    /// `Comando` senza un abrogativo con le firme raccolte, o con l'invito già fatto.
+    pub(crate) fn invita_astensione(&mut self) -> Result<(), Errore> {
+        let Some(r) = self.referendum.as_mut().filter(|r| r.firme) else {
+            return ko("nessun referendum da disertare".into());
+        };
+        if r.invito_astensione {
+            return ko("astensione già chiesta".into());
+        }
+        r.invito_astensione = true;
+        Ok(())
+    }
+
     /// `PresentaLegge`: controlla, mette la misura in calendario e fa pagare al ministro
     /// proponente la firma contro la sua posizione (non con `ministri = None`: la legge l'ha
     /// proposta lui). Un rifiuto non tocca nulla.

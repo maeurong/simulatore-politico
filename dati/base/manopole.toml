@@ -964,6 +964,27 @@ min = -5.0
 max = 5.0
 ticket = "12"
 
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio quando un referendum abrogativo passa)
+[valence_referendum_perso]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal promotore di un referendum abrogativo senza quorum)
+[valence_referendum_fallito]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (utilità dell'astensione in più, per quota di governo nelle intenzioni, quando il governo invita a disertare il referendum)
+[invito_astensione]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "12"
+
 # assunzione del piano 6, nessuna fonte in docs/ricerca (probabilità che un ministro di capacità 1 sposti di una la fascia di un effetto nell'anteprima; a capacità 5 mai)
 [errore_fascia]
 valore = 0.4

@@ -245,9 +245,10 @@ impl Disposizioni {
     ///
     /// # Errors
     /// `SalvataggioIlleggibile` se le voci non sono quante le disposizioni, un gradino (in
-    /// vigore, precedente, in arrivo, bloccato) è fuori dai gradini, gli arrivi non sono in
-    /// ordine di turno o la legge elettorale in vigore non è valida.
-    pub fn controlla(&self, dati: &DatiGioco) -> Result<(), Errore> {
+    /// vigore, precedente, in arrivo, bloccato) è fuori dai gradini, un bloccato è ripetuto, gli
+    /// arrivi non sono in ordine di turno o uno è già scaduto al turno `turno` (l'apertura li
+    /// applica tutti), o la legge elettorale in vigore non è valida.
+    pub fn controlla(&self, dati: &DatiGioco, turno: u32) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::SalvataggioIlleggibile(format!("disposizioni: {m}")));
         let catalogo = dati.disposizioni();
         if self.voci.len() != catalogo.len() {
@@ -268,8 +269,14 @@ impl Disposizioni {
                     return ko(format!("{}: gradino {g} fuori dai {n}", d.id));
                 }
             }
+            if (v.bloccati.iter().enumerate()).any(|(k, g)| v.bloccati[..k].contains(g)) {
+                return ko(format!("{}: gradino bloccato ripetuto", d.id));
+            }
             if !v.in_arrivo.windows(2).all(|w| w[0].turno < w[1].turno) {
                 return ko(format!("{}: valori in arrivo non in ordine di turno", d.id));
+            }
+            if v.in_arrivo.first().is_some_and(|a| a.turno <= turno) {
+                return ko(format!("{}: valore in arrivo già scaduto", d.id));
             }
         }
         (self.legge_elettorale(dati))

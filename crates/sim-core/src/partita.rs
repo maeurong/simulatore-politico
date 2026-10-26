@@ -305,6 +305,11 @@ impl Partita {
         self.vota_forma(FormaMisura::Bilancio);
         self.vota_leggi();
         self.vota_confermativi();
+        self.vota_abrogativo();
+        // Le firme dell'abrogativo chiesto nel turno sono raccolte.
+        if let Some(r) = &mut self.parlamento.referendum {
+            r.firme = true;
+        }
     }
 
     /// In calendario c'è un bilancio presentato in questo turno, col voto a fine turno.
@@ -429,7 +434,7 @@ impl Partita {
                     valori: m.valori.clone(),
                     promotore: None,
                     voto,
-                    firme: false,
+                    firme: true,
                     invito_astensione: false,
                 });
             } else {
@@ -597,6 +602,77 @@ impl Partita {
         }
     }
 
+    /// L'abrogativo del turno (art. 75): sì al valore dopo l'abrogazione, no al vigente, nessun
+    /// peso del giudizio sul governo (scelta 9), `invito_astensione` se il governo l'ha chiesto.
+    /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
+    /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
+    /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
+    fn vota_abrogativo(&mut self) {
+        let turno = self.turno;
+        let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
+            return;
+        };
+        let Some(&(d, dopo)) = r.valori.first() else {
+            return;
+        };
+        let vigente = self.disposizioni.voci[d].in_vigore;
+        let x = &self.dati.disposizioni()[d];
+        let invito = if r.invito_astensione {
+            self.dati.manopola("invito_astensione")
+        } else {
+            0.0
+        };
+        let quesito = Quesito {
+            pos_si: x.posizione(dopo),
+            pos_no: x.posizione(vigente),
+            peso_governo: 0.0,
+            invito,
+        };
+        let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
+        let (si, no) = (a.si.round() as u64, a.no.round() as u64);
+        let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
+        let quorum = (si + no) * 2 > aventi_diritto;
+        let approvato = quorum && si > no;
+        if approvato {
+            let legge = format!("referendum del {}", self.data.anno);
+            (self.disposizioni).cambia(
+                &self.dati,
+                d,
+                dopo,
+                turno,
+                &legge,
+                &mut self.grandezze.effetti,
+            );
+            let bloccati = &mut self.disposizioni.voci[d].bloccati;
+            if vigente != dopo && !bloccati.contains(&vigente) {
+                bloccati.push(vigente);
+            }
+        }
+        let (chi, manopola) = if approvato {
+            (Some(self.governo.presidente), "valence_referendum_perso")
+        } else {
+            (
+                r.promotore.filter(|_| !quorum),
+                "valence_referendum_fallito",
+            )
+        };
+        if let Some(p) = chi.and_then(|j| self.partiti.get_mut(j)) {
+            p.valence -= self.dati.manopola(manopola);
+        }
+        let esito = EsitoReferendum {
+            tipo: r.tipo,
+            nome: parlamento::nome(&self.dati, &r.valori),
+            data: self.data,
+            si,
+            no,
+            votanti: si + no,
+            aventi_diritto,
+            quorum,
+            approvato,
+        };
+        self.parlamento.esiti_referendum.insert(0, esito);
+    }
+
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
     /// perde intesa.
     fn norma_lontana(&mut self, nuova: f64) {
@@ -733,6 +809,33 @@ impl Partita {
             self.turno,
             valori,
         )
+    }
+
+    /// Il partito `promotore`, all'opposizione, chiede il referendum abrogativo su
+    /// `disposizione`: firme a fine turno, voto ad aprile-giugno dell'anno dopo.
+    ///
+    /// # Errors
+    /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
+    /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
+    /// referendum già in corso, fuori finestra (dopo luglio-settembre).
+    pub fn promuovi_referendum(
+        &mut self,
+        promotore: &str,
+        disposizione: &str,
+    ) -> Result<(), Errore> {
+        let r = (self.parlamento).abrogativo(
+            &self.stato_aula(),
+            self.turno,
+            promotore,
+            disposizione,
+        )?;
+        self.parlamento.referendum = Some(r);
+        Ok(())
+    }
+
+    /// `InvitaAstensione`.
+    pub(crate) fn invita_astensione(&mut self) -> Result<(), Errore> {
+        self.parlamento.invita_astensione()
     }
 
     /// L'anteprima della legge `valori` (spec riga 371): le regole di `PresentaLegge` tranne il
@@ -1137,6 +1240,7 @@ impl Partita {
                     promotore: (r.promotore)
                         .and_then(|j| self.partiti.get(j))
                         .map(|p| p.id.clone()),
+                    firme: r.firme,
                     invito_astensione: r.invito_astensione,
                 })
                 .collect(),
@@ -1259,7 +1363,9 @@ impl Partita {
         partita.economia.controlla_coerenza(partita.data)?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
-        partita.disposizioni.controlla(&partita.dati)?;
+        partita
+            .disposizioni
+            .controlla(&partita.dati, partita.turno)?;
         let n = partita.partiti.len();
         partita.parlamento.controlla(&partita.dati, n)?;
         partita.intesa.controlla(n)?;

@@ -39,7 +39,7 @@ pub struct RichiestaEmendamento {
 }
 
 /// Per disposizione: una disposizione a gradini che salta almeno due gradini torna alla metà, arrotondata verso
-/// il vigente; un regime o un salto di un gradino si rinvia.
+/// il vigente; un regime, un salto di un gradino o una metà bloccata dal referendum si rinvia.
 fn proposta(
     dati: &DatiGioco,
     disposizioni: &Disposizioni,
@@ -47,14 +47,16 @@ fn proposta(
 ) -> Vec<(usize, Attenuazione)> {
     (valori.iter())
         .filter_map(|&(d, b)| {
-            let a = disposizioni.voci.get(d)?.in_vigore;
+            let s = disposizioni.voci.get(d)?;
+            let a = s.in_vigore;
             let parametro = dati.disposizioni().get(d)?.tipo == TipoDisposizione::Parametro;
-            let x = if parametro && a.abs_diff(b) >= 2 {
-                Attenuazione::Gradino(if a > b {
-                    (a + b).div_ceil(2)
-                } else {
-                    (a + b) / 2
-                })
+            let meta = if a > b {
+                (a + b).div_ceil(2)
+            } else {
+                (a + b) / 2
+            };
+            let x = if parametro && a.abs_diff(b) >= 2 && !s.bloccati.contains(&meta) {
+                Attenuazione::Gradino(meta)
             } else {
                 Attenuazione::Rinvio
             };
@@ -264,4 +266,32 @@ pub(crate) fn rinviata(emendamenti: &[RichiestaEmendamento], d: usize) -> bool {
     (emendamenti.iter())
         .filter(|e| e.stato == StatoEmendamento::Accolto)
         .any(|e| e.proposta.contains(&(d, Attenuazione::Rinvio)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    #[test]
+    fn gradino_a_meta_bloccato_diventa_rinvio() {
+        let dati = dati_base();
+        let d = dati.disposizione("salario_minimo").expect("nei dati base");
+        let g = |id: &str| {
+            dati.disposizioni()[d]
+                .gradino(id)
+                .expect("gradino nei dati base")
+        };
+        let mut disposizioni = Disposizioni::iniziali(&dati);
+        let valori = [(d, g("11"))];
+        assert_eq!(
+            proposta(&dati, &disposizioni, &valori),
+            vec![(d, Attenuazione::Gradino(g("7")))]
+        );
+        disposizioni.voci[d].bloccati.push(g("7"));
+        assert_eq!(
+            proposta(&dati, &disposizioni, &valori),
+            vec![(d, Attenuazione::Rinvio)]
+        );
+    }
 }

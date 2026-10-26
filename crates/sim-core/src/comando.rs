@@ -65,6 +65,8 @@ pub enum Comando {
     EmanaDecreto {
         decreto: Decreto,
     },
+    /// Invita a disertare il referendum abrogativo indetto, una volta.
+    InvitaAstensione,
 }
 
 impl Partita {
@@ -84,6 +86,7 @@ impl Partita {
             } => return self.emendamento(misura, &partito, accogli),
             Comando::PoniFiducia { misura } => return self.poni_fiducia(misura),
             Comando::EmanaDecreto { decreto } => return self.emana_decreto(&decreto),
+            Comando::InvitaAstensione => return self.invita_astensione(),
             Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }

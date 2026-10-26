@@ -44,7 +44,8 @@ pub struct Vista {
     pub esiti_referendum: Vec<EsitoReferendum>,
 }
 
-/// Un referendum in attesa del voto; `promotore` è l'id di un partito.
+/// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`
+/// = abrogativo con le firme in raccolta; il confermativo sempre `true`).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaReferendum {
@@ -52,6 +53,7 @@ pub struct VistaReferendum {
     pub nome: String,
     pub voto: Trimestre,
     pub promotore: Option<String>,
+    pub firme: bool,
     pub invito_astensione: bool,
 }
 

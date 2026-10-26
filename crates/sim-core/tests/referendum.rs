@@ -1,0 +1,212 @@
+mod comune;
+use comune::{con_arrivo, imposta, presenta, senza_shock, sostituisci};
+use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::parlamento::TipoReferendum;
+use sim_core::{Comando, Errore, Partita};
+
+fn con(f: FileDati, nome: &str, valore: &str) -> FileDati {
+    imposta(f, "manopole", &format!("[{nome}]\nvalore = "), valore)
+}
+
+/// Le tutele crescenti all'estremo destro e il reintegro al centro: chi sta sotto 5,5 preferisce
+/// l'abrogazione, cioè quasi tutto l'elettorato.
+fn abrogazione_che_vince(astensione: &str) -> FileDati {
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "nome = \"tutele crescenti\", posizione = 4.0",
+        "nome = \"tutele crescenti\", posizione = 7.0",
+    );
+    let f = sostituisci(
+        f,
+        "disposizioni",
+        "nome = \"reintegro\", posizione = 2.0",
+        "nome = \"reintegro\", posizione = 4.0",
+    );
+    con(f, "astensione_referendum", astensione)
+}
+
+fn al_voto(f: FileDati) -> Partita {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+    // Turno 1 (gennaio-marzo 2027): firme in chiusura, voto ad aprile-giugno 2028 (turno 6).
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    p
+}
+
+#[test]
+fn abrogazione_riporta_al_valore_dopo_l_abrogazione_e_blocca_il_gradino() {
+    let mut p = al_voto(abrogazione_che_vince("-5.0"));
+    let r = &p.vista().esiti_referendum[0];
+    assert_eq!(r.tipo, TipoReferendum::Abrogativo);
+    assert!(r.quorum && r.approvato);
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    let v = p.vista();
+    let l = v
+        .disposizioni
+        .iter()
+        .find(|d| d.id == "licenziamento")
+        .unwrap();
+    assert_eq!(l.legge, "referendum del 2028");
+    assert!(
+        l.gradini
+            .iter()
+            .any(|g| g.id == "tutele_crescenti" && g.bloccato)
+    );
+    let e = presenta(&mut p, &[("licenziamento", "tutele_crescenti")]).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("Licenziamento: il gradino «tutele crescenti» è bloccato dal referendum"),
+        "{e}"
+    );
+}
+
+#[test]
+fn senza_quorum_paga_il_promotore() {
+    let valence = |p: &Partita| {
+        p.partiti()
+            .iter()
+            .find(|x| x.id == "sinistra")
+            .unwrap()
+            .valence
+    };
+    let base = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let p = al_voto(abrogazione_che_vince("5.0"));
+    assert!(!p.vista().esiti_referendum[0].quorum);
+    assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
+    assert!(valence(&p) < valence(&base));
+}
+
+#[test]
+fn invito_all_astensione_abbassa_l_affluenza() {
+    let votanti = |invito: bool| {
+        let mut p = Partita::nuova(
+            DatiGioco::da_testi(&abrogazione_che_vince("0.0")).unwrap(),
+            1,
+        );
+        p.chiudi_turno();
+        p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+        for t in 0..6 {
+            if invito && t == 5 {
+                p.comanda(Comando::InvitaAstensione).unwrap();
+            }
+            p.chiudi_turno();
+        }
+        p.vista().esiti_referendum[0].votanti
+    };
+    assert!(votanti(true) < votanti(false));
+}
+
+#[test]
+fn firme_in_chiusura_e_invito_una_volta() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+    let r = &p.vista().referendum[0];
+    assert_eq!((r.tipo, r.firme), (TipoReferendum::Abrogativo, false));
+    assert_eq!((r.voto.anno, r.voto.trimestre), (2028, 2));
+    let prima = p.salva().unwrap();
+    for (e, atteso) in [
+        (
+            p.comanda(Comando::InvitaAstensione),
+            "nessun referendum da disertare",
+        ),
+        (
+            p.promuovi_referendum("centrosinistra", "nucleare"),
+            "un referendum è già in corso",
+        ),
+    ] {
+        let e = e.unwrap_err();
+        assert!(e.to_string().contains(atteso), "{e}");
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+    p.chiudi_turno();
+    assert!(p.vista().referendum[0].firme);
+    p.comanda(Comando::InvitaAstensione).unwrap();
+    assert!(p.vista().referendum[0].invito_astensione);
+    let e = p.comanda(Comando::InvitaAstensione).unwrap_err();
+    assert!(e.to_string().contains("astensione già chiesta"), "{e}");
+}
+
+#[test]
+fn reddito_minimo_abrogato_diventa_non_istituito() {
+    // Categoriale all'estremo destro: il «non istituito» (5,5) è più vicino a chi sta sotto 6,25.
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "nome = \"categoriale\", posizione = 4.0",
+        "nome = \"categoriale\", posizione = 7.0",
+    );
+    let mut p = Partita::nuova(
+        DatiGioco::da_testi(&con(f, "astensione_referendum", "-5.0")).unwrap(),
+        1,
+    );
+    p.chiudi_turno();
+    p.promuovi_referendum("estrema_destra", "reddito_minimo")
+        .unwrap();
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    assert!(p.vista().esiti_referendum[0].approvato);
+    assert_eq!(p.in_vigore("reddito_minimo"), Some("non_istituito"));
+}
+
+#[test]
+fn abrogazione_cancella_il_valore_in_arrivo() {
+    let f = con_arrivo(
+        abrogazione_che_vince("-5.0"),
+        "licenziamento",
+        "solo_indennizzo",
+        2029,
+        1,
+    );
+    let mut p = al_voto(f);
+    assert!(p.vista().esiti_referendum[0].approvato);
+    // Dal turno 7 al 10: l'arrivo di gennaio-marzo 2029 (turno 9) non c'è più.
+    for _ in 0..3 {
+        p.chiudi_turno();
+    }
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+}
+
+#[test]
+fn arrivo_in_corso_rende_ammesso_il_quesito() {
+    // Nucleare: vigente e precedente «vietato», ma «consentito» in arrivo a ottobre 2027.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", "nucleare").unwrap();
+}
+
+#[test]
+fn promozioni_non_ammesse_rifiutate_col_nome() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let prima = p.salva().unwrap();
+    for ((promotore, disposizione), nome) in [
+        (("ignoto", "licenziamento"), "partito sconosciuto: ignoto"),
+        (
+            ("destra", "licenziamento"),
+            "il promotore è al governo: Destra",
+        ),
+        (("sinistra", "ignota"), "disposizione sconosciuta: ignota"),
+        (
+            ("sinistra", "accise"),
+            "Accise sui carburanti non è referendabile",
+        ),
+        (
+            ("sinistra", "eta_pensionabile"),
+            "niente da abrogare: Età pensionabile",
+        ),
+        (("sinistra", "licenziamento"), "fuori finestra"),
+    ] {
+        let e = p.promuovi_referendum(promotore, disposizione).unwrap_err();
+        assert!(
+            matches!(e, Errore::Comando(_)) && e.to_string().contains(nome),
+            "{e}"
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+    assert!(p.comanda(Comando::InvitaAstensione).is_err());
+}
