@@ -137,19 +137,22 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni (proposte, emendamenti aperti respinti) → atti dei ministri → aula
-    // (conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
+    // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi
+    // che slittano) → atti dei ministri → aula (leggi slittate nel turno del bilancio →
+    // conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
     // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
     // calendario → apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose,
     // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
-        let respinti = self.parlamento.respingi_aperti();
+        // Prima del voto del bilancio: approvato, esce dal calendario.
+        let occupato = self.turno_del_bilancio();
+        let respinti = self.parlamento.respingi_aperti(self.turno, occupato);
         self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
-        self.aula();
+        self.aula(occupato);
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
@@ -286,17 +289,27 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    fn aula(&mut self) {
-        self.vota_conversioni();
-        self.approva_bilancio();
+    /// `occupato`: il turno del bilancio, letto prima di ogni voto.
+    fn aula(&mut self, occupato: bool) {
+        if occupato {
+            self.parlamento.slitta_leggi(self.turno);
+        }
+        self.vota_forma(FormaMisura::Conversione);
+        self.vota_forma(FormaMisura::Bilancio);
         self.vota_leggi();
         self.vota_confermativi();
     }
 
-    /// Le conversioni dei decreti del turno, primo voto dell'aula (scelta 2), in ordine di id.
-    fn vota_conversioni(&mut self) {
+    /// In calendario c'è un bilancio presentato in questo turno, col voto a fine turno.
+    pub fn turno_del_bilancio(&self) -> bool {
+        self.parlamento.turno_del_bilancio(self.turno)
+    }
+
+    /// Le misure di forma `forma`, in ordine di id: prima le conversioni dei decreti del turno
+    /// (scelta 2), poi il bilancio.
+    fn vota_forma(&mut self, forma: FormaMisura) {
         let ids: Vec<u32> = (self.parlamento.misure.iter())
-            .filter(|m| m.forma == FormaMisura::Conversione)
+            .filter(|m| m.forma == forma)
             .map(|m| m.id)
             .collect();
         for id in ids {
@@ -328,6 +341,7 @@ impl Partita {
     /// la seconda; approvata la seconda senza i due terzi e con un quinto contro in un ramo, il
     /// valore aspetta il referendum confermativo. Conversione respinta: il decreto decade
     /// (`decreto_decaduto`), col costo e la valence del decreto invece di quelli della legge.
+    /// Bilancio approvato: `approva_bilancio`; respinto: il bilancio presentato cade.
     fn vota(&mut self, id: u32) {
         let Some(k) = self.parlamento.misure.iter().position(|m| m.id == id) else {
             return;
@@ -369,6 +383,13 @@ impl Partita {
         }
         // Tutti votano: `sì > no` è anche la maggioranza assoluta della seconda deliberazione.
         let approvata = passa(&camera) && passa(&senato);
+        if m.forma == FormaMisura::Bilancio {
+            if approvata {
+                self.approva_bilancio();
+            } else {
+                self.economia.bilancio_presentato = None;
+            }
+        }
         let turno = self.turno;
         let nuova = p.posizioni.map(|(_, n)| n);
         let prima = m.forma == FormaMisura::Costituzionale && m.deliberazione == 1;
@@ -634,7 +655,7 @@ impl Partita {
         }
     }
 
-    /// Il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    /// Il bilancio presentato è approvato dall'aula. Se l'anno è in esercizio
     /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
     /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
     /// approvazione costa ai ministri la perdita reale delle loro voci.
@@ -687,10 +708,12 @@ impl Partita {
         .map_err(Errore::Bilancio)
     }
 
-    /// `PresentaBilancio`: sostituisce quello già presentato; l'aula lo approva in chiusura.
+    /// `PresentaBilancio`: sostituisce quello già presentato, nella stessa misura; l'aula lo vota
+    /// in chiusura.
     pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
         let (_, b) = self.bilancio_ammesso(b)?;
         self.economia.bilancio_presentato = Some(b);
+        self.parlamento.apri_bilancio(self.turno);
         Ok(())
     }
 
@@ -1194,6 +1217,14 @@ impl Partita {
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
         partita.controlla_decreti()?;
+        let in_aula = (partita.parlamento.misure.iter())
+            .filter(|m| m.forma == FormaMisura::Bilancio)
+            .count();
+        ok(
+            in_aula == usize::from(partita.economia.bilancio_presentato.is_some())
+                && (in_aula == 0 || partita.turno_del_bilancio()),
+            "bilancio presentato senza la sua misura in calendario per il turno, o viceversa",
+        )?;
         Ok(partita)
     }
 }

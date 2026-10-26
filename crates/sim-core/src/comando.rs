@@ -42,7 +42,7 @@ pub enum Comando {
         dicastero: String,
     },
     /// Presenta la legge di bilancio del turno, sostituendo quella già presentata; l'aula la
-    /// approva in chiusura. La `spesa` di ogni voce è il totale voluto: chi cambia salari,
+    /// vota in chiusura. La `spesa` di ogni voce è il totale voluto: chi cambia salari,
     /// acquisti o margine la ricalcola, altrimenti la differenza finisce nel resto.
     PresentaBilancio {
         bilancio: Bilancio,

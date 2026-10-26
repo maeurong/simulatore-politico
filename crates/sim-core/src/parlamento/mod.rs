@@ -194,8 +194,20 @@ pub(crate) fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
 
 /// Il nome della misura: dei fondi per una conversione, dei valori altrimenti.
 pub(crate) fn nome_misura(dati: &DatiGioco, m: &Misura) -> String {
+    if m.forma == FormaMisura::Bilancio {
+        return "Legge di bilancio".into();
+    }
     m.fondi
         .map_or_else(|| nome(dati, &m.valori), |f| f.nome(dati))
+}
+
+/// La legge col voto nel turno, che nel turno del bilancio slitta al turno dopo.
+fn slitta(m: &Misura, turno: u32) -> bool {
+    let legge = matches!(
+        m.forma,
+        FormaMisura::Riforma | FormaMisura::Elettorale | FormaMisura::Costituzionale
+    );
+    legge && m.voto == turno
 }
 
 /// Posizione media in vigore e media nuova di `valori`, sulle sole disposizioni in cui hanno
@@ -247,8 +259,8 @@ impl StatoAula<'_> {
     /// moltiplicati per `1 + ft_emendamento_respinto`, entro `ft_max`. Sull'elettorale il
     /// guadagno della linea è `Δseggi / seggi_per_punto_linea` e alla Camera i franchi tiratori
     /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
-    /// la maggioranza vota sì e l'opposizione no; senza posizione, i franchi tiratori vengono
-    /// dalla sola intesa.
+    /// e sul bilancio la maggioranza vota sì e l'opposizione no; senza posizione, i franchi
+    /// tiratori vengono dalla sola intesa.
     pub(crate) fn previsione(&self, m: &Misura) -> Previsione {
         let posizioni = posizioni(self.dati, self.disposizioni, &m.valori);
         let (dati, partiti, governo, intesa) = (self.dati, self.partiti, self.governo, self.intesa);
@@ -293,8 +305,8 @@ impl StatoAula<'_> {
         } else {
             voto::guadagni(partiti, posizioni)
         };
-        // Conversione (scelta 4): maggioranza sì, opposizione no.
-        let mut linea = if m.forma == FormaMisura::Conversione {
+        // Conversione e bilancio (scelta 4): maggioranza sì, opposizione no.
+        let mut linea = if matches!(m.forma, FormaMisura::Conversione | FormaMisura::Bilancio) {
             (0..partiti.len()).map(|j| governo.al_governo(j)).collect()
         } else {
             voto::linea(dati, governo, intesa, &guadagno)
@@ -513,6 +525,42 @@ impl Parlamento {
             fondi: Some(fondi),
         });
         self.prossima = self.prossima.saturating_add(1);
+    }
+
+    /// La legge di bilancio presentata nel turno, votata a fine turno, fuori dal calendario
+    /// ordinario; ripresentata, resta la stessa misura.
+    pub(crate) fn apri_bilancio(&mut self, turno: u32) {
+        if self.turno_del_bilancio(turno) {
+            return;
+        }
+        self.misure.push(Misura {
+            id: self.prossima,
+            forma: FormaMisura::Bilancio,
+            valori: Vec::new(),
+            proponente: None,
+            presentata: turno,
+            voto: turno,
+            deliberazione: 0,
+            fiducia: false,
+            emendamenti: Vec::new(),
+            emendamenti_aperti: false,
+            fondi: None,
+        });
+        self.prossima = self.prossima.saturating_add(1);
+    }
+
+    /// In calendario c'è la legge di bilancio col voto nel turno.
+    pub(crate) fn turno_del_bilancio(&self, turno: u32) -> bool {
+        (self.misure.iter()).any(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
+    }
+
+    /// Nel turno del bilancio le leggi col voto nel turno passano al turno dopo e perdono la
+    /// questione di fiducia, senza costo; i loro emendamenti aperti restano aperti.
+    pub(crate) fn slitta_leggi(&mut self, turno: u32) {
+        for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {
+            m.voto = turno.saturating_add(1);
+            m.fiducia = false;
+        }
     }
 
     /// La conversione del decreto dei fondi accolti per `dicastero`, se c'è, esce dal calendario.

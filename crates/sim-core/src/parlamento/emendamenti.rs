@@ -1,7 +1,7 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, voto};
+use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, slitta, voto};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -145,9 +145,11 @@ impl Parlamento {
         }
     }
 
-    /// Chiusura: ogni emendamento ancora aperto è respinto; rende gli alleati che pagano.
-    pub(crate) fn respingi_aperti(&mut self) -> Vec<usize> {
+    /// Chiusura: ogni emendamento ancora aperto è respinto, tranne quelli delle leggi che
+    /// slittano nel turno del bilancio (`occupato`); rende gli alleati che pagano.
+    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<usize> {
         let aperti = (self.misure.iter_mut())
+            .filter(|m| !(occupato && slitta(m, turno)))
             .flat_map(|m| m.emendamenti.iter_mut())
             .filter(|e| e.stato == StatoEmendamento::Aperto);
         (aperti)
@@ -200,13 +202,15 @@ impl Parlamento {
     /// `PoniFiducia`: la misura si vota nel turno e gli emendamenti aperti cadono senza costo.
     ///
     /// # Errors
-    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta.
+    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta,
+    /// legge nel turno del bilancio.
     pub(crate) fn poni_fiducia(
         &mut self,
         dati: &DatiGioco,
         misura: u32,
         turno: u32,
     ) -> Result<&Misura, Errore> {
+        let occupato = self.turno_del_bilancio(turno);
         let Some(m) = self.misure.iter_mut().find(|m| m.id == misura) else {
             return ko(format!("misura sconosciuta: {misura}"));
         };
@@ -220,6 +224,13 @@ impl Parlamento {
         if m.fiducia {
             return ko(format!(
                 "questione di fiducia già posta su «{}»",
+                nome_misura(dati, m)
+            ));
+        }
+        if occupato && matches!(m.forma, FormaMisura::Riforma | FormaMisura::Elettorale) {
+            return ko(format!(
+                "il bilancio occupa il calendario: niente questione di fiducia su «{}» in questo \
+                 turno",
                 nome_misura(dati, m)
             ));
         }

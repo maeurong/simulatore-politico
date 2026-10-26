@@ -170,7 +170,7 @@ pub struct VistaBilancio {
     pub fondo_riserva: i64,
     /// C'è una bozza: si può presentare la legge di bilancio.
     pub presentabile: bool,
-    /// Una legge di bilancio è già presentata nel turno: l'aula la approva in chiusura.
+    /// Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.
     pub presentato: bool,
     /// Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
     pub esercizio_provvisorio: bool,
