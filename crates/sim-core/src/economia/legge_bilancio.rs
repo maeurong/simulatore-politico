@@ -2,7 +2,7 @@
 //! finanza-pubblica:19-21), bozza, indicizzazione, presentazione e riepilogo.
 
 use super::Economia;
-use super::finanza::{Bilancio, BudgetDicastero, ContiTrimestre, conti_del_trimestre, euro};
+use super::finanza::{Bilancio, BudgetDicastero, ContiTrimestre, conti_del_trimestre};
 use crate::dati::DatiGioco;
 use crate::elettorato::Elettorato;
 use crate::informazione::Statistica;
@@ -377,21 +377,23 @@ pub(crate) fn riepilogo(
     // La stessa grandezza del controllo UE: la spesa netta dell'anno prima di quello del
     // bilancio, annualizzata sui trimestri già chiusi (tre in ottobre-dicembre).
     let rif = b.anno.saturating_sub(1);
-    let chiusi = e.storico.iter().filter(|t| t.data.anno == rif).count() as i64;
+    // In `f64`: la spesa netta per anno di un salvataggio non ha tetto, i prodotti in `i64`
+    // potrebbero traboccare.
+    let chiusi = e.storico.iter().filter(|t| t.data.anno == rif).count() as f64;
     let attuale = match e.regole_ue.spesa_netta.get(&rif) {
-        Some(&sn) if chiusi > 0 => sn * 4 / chiusi,
-        _ => 0,
+        Some(&sn) if chiusi > 0.0 => sn as f64 * 4.0 / chiusi,
+        _ => 0.0,
     };
-    if attuale <= 0 {
+    if attuale <= 0.0 {
         return Err("peso sul tetto UE non calcolabile: spesa netta di riferimento nulla".into());
     }
     // Spesa dei dicasteri di `b` al posto di quella dell'anno; il resto cresce con l'inflazione
     // pubblicata, meno le entrate discrezionali di `b` rispetto a quelle in vigore (le stesse
     // aliquote della bozza). Il fondo di riserva non è spesa finché nessuno lo spende.
     let resto =
-        (attuale - e.bilancio.spesa_totale()) as f64 * (1.0 + stat.prima_stima.inflazione / 100.0);
-    let proposta = b.spesa_totale() + euro(resto)
-        - 4 * (con_b.entrate_discrezionali - con_bozza.entrate_discrezionali);
+        (attuale - e.bilancio.spesa_totale() as f64) * (1.0 + stat.prima_stima.inflazione / 100.0);
+    let proposta = b.spesa_totale() as f64 + resto
+        - 4.0 * (con_b.entrate_discrezionali - con_bozza.entrate_discrezionali) as f64;
     let indice = stat.indice_prezzi;
     let perdite = (b.dicasteri.iter())
         .map(|d| PerditaReale {
@@ -410,7 +412,7 @@ pub(crate) fn riepilogo(
     Ok(RiepilogoBilancio {
         costo_spesa: annuo(b) - annuo(bozza),
         costo_entrate: 4 * (imposte(&con_bozza) - imposte(&con_b)),
-        crescita_spesa_netta: 100.0 * (proposta as f64 / attuale as f64 - 1.0),
+        crescita_spesa_netta: 100.0 * (proposta / attuale - 1.0),
         tetto: dati.scenario().tetto_spesa_netta(b.anno),
         perdita_reale: perdite,
     })
