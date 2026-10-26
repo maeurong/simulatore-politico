@@ -31,32 +31,34 @@ pub fn linea_fiducia(
         .collect()
 }
 
-/// La linea di ogni partito, nell'ordine dei partiti. `posizioni` = media in vigore e media
-/// nuova della misura, `None` se non ha posizione. Il partito del Presidente del Consiglio vota
-/// sì; gli altri se `s > 0`, con `s` = guadagno di distanza, più l'intesa per gli alleati, meno
+/// Guadagno di distanza di ogni partito: quanto la media nuova `posizioni.1` gli è più vicina
+/// della media in vigore `posizioni.0`; zero se la misura non ha posizione.
+pub fn guadagni(partiti: &[Partito], posizioni: Option<(f64, f64)>) -> Vec<f64> {
+    (partiti.iter())
+        .map(|p| {
+            let x = p.posizione_dichiarata;
+            posizioni.map_or(0.0, |(vigore, nuova)| {
+                (x - vigore).abs() - (x - nuova).abs()
+            })
+        })
+        .collect()
+}
+
+/// La linea di ogni partito, nell'ordine dei partiti. Il partito del Presidente del Consiglio
+/// vota sì; gli altri se `s > 0`, con `s` = `guadagno`, più l'intesa per gli alleati, meno
 /// `malus_opposizione` per chi è fuori dal governo.
-pub fn linea(
-    dati: &DatiGioco,
-    partiti: &[Partito],
-    governo: &Governo,
-    intesa: &[f64],
-    posizioni: Option<(f64, f64)>,
-) -> Vec<bool> {
+pub fn linea(dati: &DatiGioco, governo: &Governo, intesa: &[f64], guadagno: &[f64]) -> Vec<bool> {
     let peso = dati.manopola("peso_intesa_linea");
     let malus = dati.manopola("malus_opposizione");
-    (partiti.iter().zip(intesa).enumerate())
-        .map(|(j, (p, &i))| {
+    (intesa.iter().zip(guadagno).enumerate())
+        .map(|(j, (&i, &g))| {
             if j == governo.presidente {
                 return true;
             }
-            let x = p.posizione_dichiarata;
-            let guadagno = posizioni.map_or(0.0, |(vigore, nuova)| {
-                (x - vigore).abs() - (x - nuova).abs()
-            });
             let s = if governo.al_governo(j) {
-                guadagno + peso * (i - 50.0) / 50.0
+                g + peso * (i - 50.0) / 50.0
             } else {
-                guadagno - malus
+                g - malus
             };
             s > 0.0
         })
@@ -191,6 +193,12 @@ mod tests {
         let aula = StatoAula {
             dati: &dati,
             disposizioni: &disposizioni,
+            sondaggio: &crate::informazione::Sondaggio {
+                istituti: Vec::new(),
+                condizioni: Vec::new(),
+                fasce: Vec::new(),
+                regioni: Vec::new(),
+            },
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,

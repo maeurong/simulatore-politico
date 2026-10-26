@@ -3,6 +3,7 @@ import type { Forbice } from "./Forbice";
 import type { FormaMisura } from "./FormaMisura";
 import type { Trimestre } from "./Trimestre";
 import type { ValoreProposto } from "./ValoreProposto";
+import type { VariazioneSeggi } from "./VariazioneSeggi";
 import type { VoceEmendamento } from "./VoceEmendamento";
 import type { VoceLinea } from "./VoceLinea";
 
@@ -14,4 +15,8 @@ export type VoceMisura = { id: number, nome: string, forma: FormaMisura, propone
  * Gli alleati che con la fiducia voterebbero no (id): sullo stato attuale, più il costo
  * della fiducia se non è ancora posta.
  */
-alleati_contro_fiducia: Array<string>, };
+alleati_contro_fiducia: Array<string>, 
+/**
+ * Solo per le leggi elettorali: una voce per partito.
+ */
+seggi: Array<VariazioneSeggi>, };

@@ -99,7 +99,8 @@ pub(crate) fn voci(
 impl Parlamento {
     /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia
     /// e senza emendamenti già aperti, chiede un emendamento ogni alleato distante almeno
-    /// `distanza_alleato` dalla misura o che tiene il dicastero proponente.
+    /// `distanza_alleato` dalla misura, che tiene il dicastero proponente o che con la legge
+    /// elettorale perde seggi attesi.
     pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
@@ -110,6 +111,11 @@ impl Parlamento {
             }
             let nuova = posizioni(dati, aula.disposizioni, &m.valori).map(|(_, n)| n);
             let testo = proposta(dati, aula.disposizioni, &m.valori);
+            let seggi = if m.forma == FormaMisura::Elettorale {
+                aula.seggi_attesi(&m.valori)
+            } else {
+                Vec::new()
+            };
             for (j, p) in aula.partiti.iter().enumerate() {
                 if !voto::alleato(governo, j) {
                     continue;
@@ -118,9 +124,11 @@ impl Parlamento {
                 let dicastero = (m.proponente)
                     .filter(|&k| governo.dicasteri.get(k) == Some(&j))
                     .and_then(|k| dati.dicasteri().get(k));
-                let motivo = match (distanza, dicastero) {
-                    (Some(d), _) if d >= soglia => format!("distante {d:.1} punti"),
-                    (_, Some(c)) => format!("tocca il suo dicastero {}", c.nome),
+                let perde = (seggi.get(j)).map(|&(c, s)| c + s).filter(|&x| x < 0);
+                let motivo = match (distanza, dicastero, perde) {
+                    (Some(d), _, _) if d >= soglia => format!("distante {d:.1} punti"),
+                    (_, Some(c), _) => format!("tocca il suo dicastero {}", c.nome),
+                    (_, _, Some(x)) => format!("perde {} seggi", -x),
                     _ => continue,
                 };
                 m.emendamenti.push(RichiestaEmendamento {

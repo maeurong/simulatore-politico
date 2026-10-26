@@ -42,7 +42,7 @@ impl Intenzioni {
 }
 
 /// Softmax con lo shift del massimo.
-fn softmax(u: &[f64]) -> Vec<f64> {
+pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
     let max = u.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let e: Vec<f64> = u.iter().map(|x| (x - max).exp()).collect();
     let somma: f64 = e.iter().sum();
@@ -58,7 +58,6 @@ fn utilita(
     i: usize,
     x: f64,
 ) -> Vec<f64> {
-    let d = dati.elettorato();
     let (beta, gamma) = (
         dati.manopola("beta_distanza"),
         dati.manopola("peso_giudizio"),
@@ -76,13 +75,17 @@ fn utilita(
             -beta * (x - p.posizione_percepita).powi(2) + p.valence + gamma * giudizio
         })
         .collect();
-    let (c, f) = (condizione_di(i), fascia_di(i));
-    u.push(
-        d.regioni[i / PER_REGIONE].astensione
-            + d.astensione_condizione.get(&c).copied().unwrap_or(0.0)
-            + d.astensione_fascia.get(&f).copied().unwrap_or(0.0),
-    );
+    u.push(astensione(dati, i));
     u
+}
+
+/// Utilità dell'astensione del gruppo `i`: regione, condizione e fascia.
+pub(super) fn astensione(dati: &DatiGioco, i: usize) -> f64 {
+    let d = dati.elettorato();
+    let (c, f) = (condizione_di(i), fascia_di(i));
+    d.regioni[i / PER_REGIONE].astensione
+        + d.astensione_condizione.get(&c).copied().unwrap_or(0.0)
+        + d.astensione_fascia.get(&f).copied().unwrap_or(0.0)
 }
 
 /// `Σ_x h_x T_x`, con `T_x[m][k] = softmax_k(U_x + φ·[k = m])`: da chi votava `m` a chi vota `k`.

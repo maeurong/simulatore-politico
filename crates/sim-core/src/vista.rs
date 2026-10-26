@@ -4,8 +4,8 @@ use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
-    CausaIntesa, EsitoVoto, FormaMisura, StatoEmendamento, ValoreProposto, VariazioneIntesa,
-    VoceLinea,
+    CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
+    ValoreProposto, VariazioneIntesa, VoceLinea,
 };
 use crate::partita::Trimestre;
 use serde::Serialize;
@@ -38,6 +38,29 @@ pub struct Vista {
     pub alleati: Vec<VoceAlleato>,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
+    /// I referendum in attesa del voto.
+    pub referendum: Vec<VistaReferendum>,
+    pub esiti_referendum: Vec<EsitoReferendum>,
+}
+
+/// Un referendum in attesa del voto; `promotore` è l'id di un partito.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaReferendum {
+    pub tipo: TipoReferendum,
+    pub nome: String,
+    pub voto: Trimestre,
+    pub promotore: Option<String>,
+    pub invito_astensione: bool,
+}
+
+/// Seggi attesi in più (o in meno) di un partito con la legge elettorale; `partito` è un id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VariazioneSeggi {
+    pub partito: String,
+    pub camera: i32,
+    pub senato: i32,
 }
 
 /// L'intesa di un alleato in cifre: il giocatore governa con lui.
@@ -70,6 +93,8 @@ pub struct VoceMisura {
     /// Gli alleati che con la fiducia voterebbero no (id): sullo stato attuale, più il costo
     /// della fiducia se non è ancora posta.
     pub alleati_contro_fiducia: Vec<String>,
+    /// Solo per le leggi elettorali: una voce per partito.
+    pub seggi: Vec<VariazioneSeggi>,
 }
 
 /// L'emendamento di un alleato; `partito` è un id.

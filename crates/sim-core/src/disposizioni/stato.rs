@@ -149,27 +149,54 @@ impl Disposizioni {
     }
 
     /// Apertura del turno `turno`: ogni arrivo dovuto entra in vigore, in ordine, con la sua
-    /// legge, ed esce dalla lista; gli effetti vanno in `effetti`.
+    /// legge, ed esce dalla lista; gli effetti vanno in `effetti`. Gli arrivi elettorali del turno
+    /// si scartano tutti se la legge elettorale che ne risulta non è valida.
     pub fn arrivi(&mut self, dati: &DatiGioco, turno: u32, effetti: &mut Vec<EffettoAttivo>) {
-        for d in 0..self.voci.len() {
-            let dovuti = (self.voci[d].in_arrivo.iter())
+        let mut arrivati: Vec<(usize, InArrivo)> = Vec::new();
+        for (d, v) in self.voci.iter_mut().enumerate() {
+            let dovuti = (v.in_arrivo.iter())
                 .take_while(|a| a.turno <= turno)
                 .count();
-            let arrivati: Vec<InArrivo> = self.voci[d].in_arrivo.drain(..dovuti).collect();
-            for a in arrivati {
-                self.applica(dati, d, a.gradino, turno, &a.legge, effetti);
-            }
+            arrivati.extend(v.in_arrivo.drain(..dovuti).map(|a| (d, a)));
+        }
+        let valori: Vec<(usize, usize)> = arrivati.iter().map(|(d, a)| (*d, a.gradino)).collect();
+        let menu = &dati.elezioni().menu;
+        if self.legge_con(dati, &valori).valida(menu).is_err() {
+            let prima = self.voci.len().saturating_sub(ELETTORALI);
+            arrivati.retain(|(d, _)| *d < prima);
+        }
+        for (d, a) in arrivati {
+            self.applica(dati, d, a.gradino, turno, &a.legge, effetti);
         }
     }
 
     /// La legge elettorale dei gradini in vigore delle nove disposizioni elettorali.
     pub fn legge_elettorale(&self, dati: &DatiGioco) -> LeggeElettorale {
+        self.legge_con(dati, &[])
+    }
+
+    /// La legge elettorale dei gradini in vigore con `valori` (disposizione, gradino) applicati
+    /// in ordine; le disposizioni non elettorali si ignorano.
+    pub(crate) fn legge_con(&self, dati: &DatiGioco, valori: &[(usize, usize)]) -> LeggeElettorale {
+        let prima = self.voci.len().saturating_sub(ELETTORALI);
         let mut g = [0; ELETTORALI];
-        let coda = &self.voci[self.voci.len().saturating_sub(ELETTORALI)..];
-        for (x, v) in g.iter_mut().zip(coda) {
+        for (x, v) in g.iter_mut().zip(&self.voci[prima..]) {
             *x = v.in_vigore;
         }
+        for &(d, gradino) in valori {
+            if let Some(x) = d.checked_sub(prima).and_then(|k| g.get_mut(k)) {
+                *x = gradino;
+            }
+        }
         legge_da_gradini(&dati.elezioni().menu, g)
+    }
+
+    /// I valori in arrivo delle disposizioni elettorali, in ordine di disposizione e di turno.
+    pub(crate) fn arrivi_elettorali(&self) -> Vec<(usize, usize)> {
+        let prima = self.voci.len().saturating_sub(ELETTORALI);
+        (self.voci.iter().enumerate().skip(prima))
+            .flat_map(|(d, v)| v.in_arrivo.iter().map(move |a| (d, a.gradino)))
+            .collect()
     }
 
     /// Posizione sull'asse 1-7 del gradino in vigore della disposizione `d`.
@@ -248,5 +275,39 @@ impl Disposizioni {
         (self.legge_elettorale(dati))
             .valida(&dati.elezioni().menu)
             .or_else(|e| ko(format!("legge elettorale in vigore: {e}")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    #[test]
+    fn arrivo_che_rompe_la_legge_elettorale_si_scarta() {
+        let dati = dati_base();
+        let k = |id: &str| dati.disposizione(id).unwrap_or_default();
+        let g = |id: &str, gradino: &str| dati.disposizioni()[k(id)].gradino(gradino).unwrap_or(9);
+        let arrivo = |gradino| InArrivo {
+            gradino,
+            turno: 1,
+            legge: "L. 1/2027".into(),
+        };
+        let mut d = Disposizioni::iniziali(&dati);
+        d.voci[k("coalizioni")].in_arrivo = vec![arrivo(g("coalizioni", "no"))];
+        let mut prova = d.clone();
+        prova.arrivi(&dati, 1, &mut Vec::new());
+        assert_eq!(prova.voci[k("coalizioni")].in_vigore, g("coalizioni", "si"));
+        assert!(prova.voci[k("coalizioni")].in_arrivo.is_empty());
+        assert!(
+            prova
+                .legge_elettorale(&dati)
+                .valida(&dati.elezioni().menu)
+                .is_ok()
+        );
+        d.voci[k("premio")].in_arrivo = vec![arrivo(g("premio", "nessuno"))];
+        d.arrivi(&dati, 1, &mut Vec::new());
+        assert_eq!(d.voci[k("coalizioni")].in_vigore, g("coalizioni", "no"));
+        assert_eq!(d.voci[k("premio")].in_vigore, g("premio", "nessuno"));
     }
 }

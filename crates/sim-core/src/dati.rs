@@ -195,6 +195,9 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "costo_fiducia",
     "costo_fiducia_distanza",
     "turni_rinvio_regime",
+    "seggi_per_punto_linea",
+    "costo_seggio_perso",
+    "astensione_referendum",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

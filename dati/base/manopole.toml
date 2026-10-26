@@ -928,3 +928,24 @@ valore = 4.0
 min = 1.0
 max = 8.0
 ticket = "13"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (seggi attesi in più che valgono un punto di linea sulla legge elettorale)
+[seggi_per_punto_linea]
+valore = 10.0
+min = 1.0
+max = 50.0
+ticket = "13"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa persa da un alleato per ogni seggio atteso perso con la legge elettorale)
+[costo_seggio_perso]
+valore = 0.5
+min = 0.0
+max = 5.0
+ticket = "13"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (utilità dell'astensione in più in un referendum)
+[astensione_referendum]
+valore = 1.0
+min = -5.0
+max = 5.0
+ticket = "12"
