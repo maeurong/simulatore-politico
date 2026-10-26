@@ -3,7 +3,7 @@
 [[atto]]
 id = "economia_finanze_incroci"
 nome = "Incrocio delle banche dati fiscali"
-motto = "Il fisco scopre che lei ha due case e una barca."
+motto = "Due case e una barca: il fisco li ha messi in fila."
 dicastero = "economia_finanze"
 velocita = "rapido"
 lato = "sinistra"
@@ -17,7 +17,7 @@ effetti = [
 [[atto]]
 id = "economia_finanze_condono"
 nome = "Condono per chi paga subito"
-motto = "Pagare tardi, ma con la ricevuta."
+motto = "Incassa oggi, domani si vedrà."
 dicastero = "economia_finanze"
 velocita = "rapido"
 lato = "destra"
@@ -145,7 +145,7 @@ effetti = [
 [[atto]]
 id = "lavoro_welfare_centri_impiego"
 nome = "Centri per l'impiego rinnovati"
-motto = "Lo sportello che, stavolta, trova davvero lavoro."
+motto = "Lo sportello che il lavoro lo trova."
 dicastero = "lavoro_welfare"
 velocita = "lento"
 lato = "sinistra"
@@ -174,7 +174,7 @@ effetti = [
 [[atto]]
 id = "sanita_liste_straordinario"
 nome = "Piano straordinario sulle liste d'attesa"
-motto = "Il numero d'attesa, finalmente, scende."
+motto = "Il numero sul biglietto scende."
 dicastero = "sanita"
 velocita = "rapido"
 lato = "sinistra"
@@ -230,7 +230,7 @@ effetti = [
 [[atto]]
 id = "istruzione_ricerca_supplenti"
 nome = "Assunzione straordinaria di supplenti"
-motto = "Una cattedra per ogni classe, finalmente."
+motto = "Una cattedra per ogni classe, anche a settembre."
 dicastero = "istruzione_ricerca"
 velocita = "rapido"
 lato = "sinistra"
@@ -287,7 +287,7 @@ effetti = [
 [[atto]]
 id = "infrastrutture_trasporti_manutenzione"
 nome = "Manutenzione straordinaria delle strade locali"
-motto = "Le buche si chiudono, i cantieri arancioni restano."
+motto = "Le buche si chiudono, i coni arancioni restano."
 dicastero = "infrastrutture_trasporti"
 velocita = "rapido"
 lato = "sinistra"
@@ -300,8 +300,8 @@ effetti = [
 ]
 
 [[atto]]
-id = "infrastrutture_trasporti_sblocca"
-nome = "Sblocco dei cantieri con commissari"
+id = "infrastrutture_trasporti_commissari"
+nome = "Commissari per le opere ferme"
 motto = "Un commissario, una firma, una gru."
 dicastero = "infrastrutture_trasporti"
 velocita = "rapido"
@@ -330,7 +330,7 @@ effetti = [
 
 [[atto]]
 id = "infrastrutture_trasporti_grandi_opere"
-nome = "Grandi opere in finanza di progetto"
+nome = "Grandi opere pagate dal pedaggio"
 motto = "Il ponte lo paga chi lo attraversa."
 dicastero = "infrastrutture_trasporti"
 velocita = "lento"
@@ -417,7 +417,7 @@ effetti = [
 [[atto]]
 id = "interno_controlli"
 nome = "Controlli straordinari alle frontiere"
-motto = "Posti di blocco ovunque, anche dove non servono."
+motto = "Alla frontiera il documento lo chiedono anche al gatto."
 dicastero = "interno"
 velocita = "rapido"
 lato = "destra"
@@ -489,7 +489,7 @@ effetti = [
 [[atto]]
 id = "giustizia_anticorruzione"
 nome = "Autorità anticorruzione con più poteri"
-motto = "Il guardiano con le chiavi in tasca."
+motto = "Chi controlla ora può aprire anche i cassetti."
 dicastero = "giustizia"
 velocita = "lento"
 lato = "sinistra"
@@ -517,7 +517,7 @@ effetti = [
 [[atto]]
 id = "esteri_difesa_missioni"
 nome = "Missioni di pace sotto mandato internazionale"
-motto = "Il casco blu, il caffè e un mandato."
+motto = "Un casco blu, un mandato e tanta pazienza."
 dicastero = "esteri_difesa"
 velocita = "rapido"
 lato = "sinistra"
