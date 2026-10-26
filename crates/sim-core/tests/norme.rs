@@ -35,7 +35,7 @@ fn legge_elettorale_non_valida_rifiutata_col_motivo() {
     let e = presenta(&mut p, &[("coalizioni", "no")]).unwrap_err();
     assert!(
         e.to_string()
-            .contains("legge elettorale non valida: premio alla coalizione senza coalizioni"),
+            .contains("Legge elettorale non applicabile: premio alla coalizione senza coalizioni"),
         "{e}"
     );
 }
@@ -208,7 +208,10 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
     assert_eq!(e.senato, Conteggio { si: 0, no: 0 });
     assert_eq!(
         e.decaduta.as_deref(),
-        Some("premio alla lista con le coalizioni attive")
+        Some(
+            "Decaduta senza voto: con le leggi già approvate non sarebbe più applicabile \
+             (premio alla lista con le coalizioni attive)"
+        )
     );
     let flusso = |p: &Partita| {
         let json: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();

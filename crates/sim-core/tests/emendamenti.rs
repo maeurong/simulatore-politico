@@ -38,7 +38,11 @@ fn alleato_lontano_chiede_un_emendamento_a_meta_strada() {
             StatoEmendamento::Aperto
         )
     );
-    assert!(e[0].motivo.starts_with("distante"));
+    assert!(
+        e[0].motivo.ends_with("punti dalla sua posizione"),
+        "{}",
+        e[0].motivo
+    );
 }
 
 #[test]
@@ -176,7 +180,7 @@ fn niente_fiducia_su_una_norma_costituzionale() {
     let e = p.comanda(Comando::PoniFiducia { misura: id }).unwrap_err();
     assert!(
         e.to_string()
-            .contains("niente fiducia su una norma costituzionale"),
+            .contains("niente questione di fiducia su «Numero dei parlamentari: 630 deputati"),
         "{e}"
     );
 }
@@ -214,7 +218,7 @@ fn comandi_dell_aula_non_ammessi_rifiutati_col_nome() {
                 partito: "sinistra".into(),
                 accogli: true,
             },
-            "nessun emendamento di sinistra",
+            "nessun emendamento di Sinistra su «Età pensionabile: 62 anni»",
         ),
         (
             Comando::PoniFiducia { misura: 99 },
@@ -233,7 +237,7 @@ fn comandi_dell_aula_non_ammessi_rifiutati_col_nome() {
         accogli(&mut p, false)
             .unwrap_err()
             .to_string()
-            .contains("emendamento già deciso: centrodestra")
+            .contains("emendamento già deciso: Centrodestra su «Età pensionabile: 65 anni»")
     );
 }
 
@@ -263,6 +267,10 @@ fn comandi_rifiutati_dopo_la_decisione_lasciano_la_partita_identica() {
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     let dopo_fiducia = p.salva().unwrap();
     let e = p.comanda(Comando::PoniFiducia { misura: id }).unwrap_err();
-    assert!(e.to_string().contains("fiducia già posta"), "{e}");
+    assert!(
+        e.to_string()
+            .contains("questione di fiducia già posta su «Età pensionabile: 65 anni»"),
+        "{e}"
+    );
     assert_eq!(p.salva().unwrap(), dopo_fiducia);
 }

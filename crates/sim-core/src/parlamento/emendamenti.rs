@@ -1,7 +1,7 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, posizioni, voto};
+use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome, posizioni, voto};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -38,7 +38,7 @@ pub struct RichiestaEmendamento {
     pub motivo: String,
 }
 
-/// Per disposizione: un parametro che salta almeno due gradini torna alla metà, arrotondata verso
+/// Per disposizione: una disposizione a gradini che salta almeno due gradini torna alla metà, arrotondata verso
 /// il vigente; un regime o un salto di un gradino si rinvia.
 fn proposta(
     dati: &DatiGioco,
@@ -126,9 +126,12 @@ impl Parlamento {
                     .and_then(|k| dati.dicasteri().get(k));
                 let perde = (seggi.get(j)).map(|&(c, s)| c + s).filter(|&x| x < 0);
                 let motivo = match (distanza, dicastero, perde) {
-                    (Some(d), _, _) if d >= soglia => format!("distante {d:.1} punti"),
+                    (Some(d), _, _) if d >= soglia => {
+                        let d = format!("{d:.1}").replace('.', ",");
+                        format!("a {d} punti dalla sua posizione")
+                    }
                     (_, Some(c), _) => format!("tocca il suo dicastero {}", c.nome),
-                    (_, _, Some(x)) => format!("perde {} seggi", -x),
+                    (_, _, Some(x)) => format!("perde {} seggi con la legge elettorale", -x),
                     _ => continue,
                 };
                 m.emendamenti.push(RichiestaEmendamento {
@@ -162,6 +165,7 @@ impl Parlamento {
     /// `Comando`: misura sconosciuta, nessun emendamento del partito, emendamento già deciso.
     pub(crate) fn decidi_emendamento(
         &mut self,
+        dati: &DatiGioco,
         partiti: &[Partito],
         misura: u32,
         partito: &str,
@@ -171,13 +175,13 @@ impl Parlamento {
             return ko(format!("misura sconosciuta: {misura}"));
         };
         let j = partiti.iter().position(|p| p.id == partito);
+        let chi = j.map_or(partito, |j| partiti[j].nome.as_str());
+        let legge = nome(dati, &m.valori);
         let Some(e) = m.emendamenti.iter_mut().find(|e| Some(e.partito) == j) else {
-            return ko(format!(
-                "nessun emendamento di {partito} sulla misura {misura}"
-            ));
+            return ko(format!("nessun emendamento di {chi} su «{legge}»"));
         };
         if e.stato != StatoEmendamento::Aperto {
-            return ko(format!("emendamento già deciso: {partito}"));
+            return ko(format!("emendamento già deciso: {chi} su «{legge}»"));
         }
         if !accogli {
             e.stato = StatoEmendamento::Respinto;
@@ -196,18 +200,28 @@ impl Parlamento {
     /// `PoniFiducia`: la misura si vota nel turno e gli emendamenti aperti cadono senza costo.
     ///
     /// # Errors
-    /// `Comando`: misura sconosciuta, norma costituzionale, fiducia già posta.
-    pub(crate) fn poni_fiducia(&mut self, misura: u32, turno: u32) -> Result<&Misura, Errore> {
+    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta.
+    pub(crate) fn poni_fiducia(
+        &mut self,
+        dati: &DatiGioco,
+        misura: u32,
+        turno: u32,
+    ) -> Result<&Misura, Errore> {
         let Some(m) = self.misure.iter_mut().find(|m| m.id == misura) else {
             return ko(format!("misura sconosciuta: {misura}"));
         };
         if m.forma == FormaMisura::Costituzionale {
             return ko(format!(
-                "niente fiducia su una norma costituzionale: {misura}"
+                "La norma costituzionale passa da due deliberazioni e dal referendum: niente \
+                 questione di fiducia su «{}»",
+                nome(dati, &m.valori)
             ));
         }
         if m.fiducia {
-            return ko(format!("fiducia già posta: {misura}"));
+            return ko(format!(
+                "questione di fiducia già posta su «{}»",
+                nome(dati, &m.valori)
+            ));
         }
         m.fiducia = true;
         m.voto = turno;

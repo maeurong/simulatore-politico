@@ -116,7 +116,7 @@ fn legge_respinta_si_ripresenta_dopo_due_turni() {
     let e = presenta(&mut p, &[("eta_pensionabile", "69")]).unwrap_err();
     assert!(
         e.to_string()
-            .contains("eta_pensionabile respinta: si ripresenta da"),
+            .contains("Età pensionabile: legge respinta, si ripresenta da "),
         "{e}"
     );
     p.chiudi_turno();

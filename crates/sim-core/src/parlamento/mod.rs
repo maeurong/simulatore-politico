@@ -87,7 +87,7 @@ pub struct EsitoVoto {
     pub fiducia: bool,
     pub fiducia_respinta: bool,
     pub linee: Vec<VoceLinea>,
-    /// La legge elettorale decaduta senza voto: il motivo per cui non sarebbe valida.
+    /// La legge elettorale decaduta senza voto: il motivo leggibile, per il giocatore.
     pub decaduta: Option<String>,
 }
 
@@ -166,13 +166,13 @@ fn ko<T>(m: String) -> Result<T, Errore> {
     Err(Errore::Comando(m))
 }
 
-/// `gennaio-marzo 2027`.
-fn mesi(t: Trimestre) -> String {
+/// `gennaio 2027`: il primo mese del trimestre.
+fn mese(t: Trimestre) -> String {
     let m = match t.trimestre {
-        1 => "gennaio-marzo",
-        2 => "aprile-giugno",
-        3 => "luglio-settembre",
-        _ => "ottobre-dicembre",
+        1 => "gennaio",
+        2 => "aprile",
+        3 => "luglio",
+        _ => "ottobre",
     };
     format!("{m} {}", t.anno)
 }
@@ -363,7 +363,7 @@ impl Parlamento {
                 return ko(format!("disposizione sconosciuta: {}", v.disposizione));
             };
             if indici.contains(&d) {
-                return ko(format!("disposizione ripetuta: {}", v.disposizione));
+                return ko(format!("disposizione ripetuta: {}", catalogo[d].nome));
             }
             indici.push(d);
         }
@@ -371,8 +371,8 @@ impl Parlamento {
         for (v, &d) in valori.iter().zip(&indici) {
             let Some(g) = catalogo[d].gradino(&v.gradino) else {
                 return ko(format!(
-                    "gradino sconosciuto: {} {}",
-                    v.disposizione, v.gradino
+                    "{}: gradino sconosciuto «{}»",
+                    catalogo[d].nome, v.gradino
                 ));
             };
             scelti.push((d, g));
@@ -392,29 +392,31 @@ impl Parlamento {
             .find(|&&d| &catalogo[d].dicastero != dicastero)
         {
             return ko(format!(
-                "disposizioni di dicasteri diversi: {}",
-                catalogo[d].id
+                "le disposizioni di una legge devono stare nello stesso dicastero: «{}» sta altrove",
+                catalogo[d].nome
             ));
         }
         for &(d, g) in &scelti {
-            let (id, stato) = (&catalogo[d].id, &disposizioni.voci[d]);
+            let (nome, stato) = (&catalogo[d].nome, &disposizioni.voci[d]);
+            let gradino = &catalogo[d].gradini[g].nome;
             if stato.in_vigore == g {
-                return ko(format!("{id} è già a {}", catalogo[d].gradini[g].nome));
+                return ko(format!("{nome} è già a {gradino}"));
             }
             if stato.bloccati.contains(&g) {
-                let g = &catalogo[d].gradini[g].id;
-                return ko(format!("gradino bloccato dal referendum: {id} {g}"));
+                return ko(format!(
+                    "{nome}: il gradino «{gradino}» è bloccato dal referendum"
+                ));
             }
             let in_misura = (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d));
             let in_referendum =
                 (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d));
             if in_misura || in_referendum {
-                return ko(format!("{id} è già in esame"));
+                return ko(format!("{nome} è già in esame"));
             }
             if let Some(&(_, da)) = (self.respinte.iter()).find(|&&(x, da)| x == d && da > turno) {
                 return ko(format!(
-                    "{id} respinta: si ripresenta da {}",
-                    mesi(data_di(da))
+                    "{nome}: legge respinta, si ripresenta da {}",
+                    mese(data_di(da))
                 ));
             }
         }
@@ -423,7 +425,7 @@ impl Parlamento {
             let con_arrivi = [disposizioni.arrivi_elettorali(), scelti.clone()].concat();
             for v in [&scelti, &con_arrivi] {
                 if let Some(m) = legge_non_valida(dati, disposizioni, v) {
-                    return ko(format!("legge elettorale non valida: {m}"));
+                    return ko(format!("Legge elettorale non applicabile: {m}"));
                 }
             }
         }

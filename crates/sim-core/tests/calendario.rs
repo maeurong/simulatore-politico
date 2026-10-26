@@ -82,11 +82,11 @@ fn leggi_non_ammesse_rifiutate_col_nome() {
     for (valori, nome) in [
         (
             vec![("eta_pensionabile", "67")],
-            "eta_pensionabile è già a 67 anni",
+            "Età pensionabile è già a 67 anni",
         ),
         (
             vec![("eta_pensionabile", "71")],
-            "gradino sconosciuto: eta_pensionabile 71",
+            "Età pensionabile: gradino sconosciuto «71»",
         ),
         (
             vec![("eta_pension", "68")],
@@ -94,11 +94,11 @@ fn leggi_non_ammesse_rifiutate_col_nome() {
         ),
         (
             vec![("eta_pensionabile", "68"), ("ticket", "alto")],
-            "disposizioni di dicasteri diversi: ticket",
+            "le disposizioni di una legge devono stare nello stesso dicastero: «Ticket sanitario» sta altrove",
         ),
         (
             vec![("eta_pensionabile", "68"), ("eta_pensionabile", "69")],
-            "disposizione ripetuta: eta_pensionabile",
+            "disposizione ripetuta: Età pensionabile",
         ),
         (
             vec![("eta_pensionabile", "68"), ("soglia_lista", "0")],
@@ -116,7 +116,7 @@ fn leggi_non_ammesse_rifiutate_col_nome() {
     presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
     let e = presenta(&mut p, &[("eta_pensionabile", "69")]).unwrap_err();
     assert!(
-        e.to_string().contains("eta_pensionabile è già in esame"),
+        e.to_string().contains("Età pensionabile è già in esame"),
         "{e}"
     );
 }

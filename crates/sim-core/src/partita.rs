@@ -453,7 +453,10 @@ impl Partita {
             fiducia: m.fiducia,
             fiducia_respinta: false,
             linee: Vec::new(),
-            decaduta: Some(motivo),
+            decaduta: Some(format!(
+                "Decaduta senza voto: con le leggi già approvate non sarebbe più applicabile \
+                 ({motivo})"
+            )),
         };
         self.parlamento.esiti.insert(0, esito);
         true
@@ -566,8 +569,13 @@ impl Partita {
         partito: &str,
         accogli: bool,
     ) -> Result<(), Errore> {
-        let respinto =
-            (self.parlamento).decidi_emendamento(&self.partiti, misura, partito, accogli)?;
+        let respinto = (self.parlamento).decidi_emendamento(
+            &self.dati,
+            &self.partiti,
+            misura,
+            partito,
+            accogli,
+        )?;
         self.emendamenti_respinti(respinto);
         Ok(())
     }
@@ -582,7 +590,7 @@ impl Partita {
 
     /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`.
     pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
-        let m = self.parlamento.poni_fiducia(misura, self.turno)?;
+        let m = (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
         let forma = m.forma;
         for j in self.alleati() {
