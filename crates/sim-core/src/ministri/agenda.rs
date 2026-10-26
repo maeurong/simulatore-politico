@@ -49,27 +49,27 @@ pub struct Cantiere {
 }
 
 /// Margine annuo di ogni dicastero nel bilancio del turno zero.
-fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
+pub(super) fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
     let b = Bilancio::iniziale(dati);
     b.dicasteri.iter().map(|d| d.margine).collect()
 }
 
 /// Euro per turno di lavori: `round(costo · margine_rif/4 · livello_prezzi)`.
-fn costo(a: &Atto, rif: i64, prezzi: f64) -> i64 {
+pub(super) fn costo(a: &Atto, rif: i64, prezzi: f64) -> i64 {
     (a.costo * rif as f64 / 4.0 * prezzi).round() as i64
 }
 
 /// Posizione di un atto (indice di catalogo) fra i 4 del dicastero.
-fn posizione(dati: &DatiGioco, d: usize, atto: usize) -> Option<usize> {
+pub(super) fn posizione(dati: &DatiGioco, d: usize, atto: usize) -> Option<usize> {
     dati.atti_del_dicastero(d).position(|(k, _)| k == atto)
 }
 
-fn disponibile(st: &StatoDicastero) -> i64 {
+pub(super) fn disponibile(st: &StatoDicastero) -> i64 {
     st.margine_residuo - st.cantieri.iter().map(|c| c.rata).sum::<i64>()
 }
 
 /// `(peso_obiettivo · o, peso_posizione · v)` di un atto per il ministro del dicastero `i`.
-fn parti(cx: &Contesto, i: usize, m: &Ministro, a: &Atto) -> (f64, f64) {
+pub(super) fn parti(cx: &Contesto, i: usize, m: &Ministro, a: &Atto) -> (f64, f64) {
     let dati = cx.dati;
     let v = 1.0 - (a.posizione - m.posizione).abs() / 6.0;
     let o = indicatore(cx, i).map_or(0.0, |k| {
@@ -168,7 +168,7 @@ fn effetti_di(
 }
 
 /// Applica una variazione di soddisfazione al ministro, se c'è e se non è nulla.
-fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno: u32) {
+pub(super) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno: u32) {
     if delta == 0.0 {
         return;
     }
@@ -201,6 +201,7 @@ impl Ministri {
             let agenda = self.scegli(cx, i, &rumore, rif.get(i).copied().unwrap_or(0));
             self.dicasteri[i].agenda = agenda;
         }
+        self.proponi(cx);
     }
 
     /// L'atto pagabile col punteggio più alto (a parità il primo), e la regione bersaglio.
@@ -224,6 +225,20 @@ impl Ministri {
             }
         }
         let (p, _) = scelta?;
+        Some(Self::agenda_di(cx, i, m, &atti, &parti, attaccamenti, p))
+    }
+
+    /// L'agenda sull'atto in posizione `p` fra i 4 del dicastero, con la regione bersaglio.
+    pub(super) fn agenda_di(
+        cx: &Contesto,
+        i: usize,
+        m: &Ministro,
+        atti: &[(usize, &Atto)],
+        parti: &[(f64, f64)],
+        attaccamenti: Vec<f64>,
+        p: usize,
+    ) -> Agenda {
+        let dati = cx.dati;
         let nome = indicatore(cx, i).map_or("", |k| dati.grandezze()[k].nome.as_str());
         let (peso_o, peso_v) = parti[p];
         let mut motivo = if peso_o >= peso_v {
@@ -252,14 +267,14 @@ impl Ministri {
                 motivo.push_str(&format!("; {}: {perche}", dati.regioni()[r].nome));
             }
         }
-        Some(Agenda {
+        Agenda {
             atto: atti[p].0,
             regione,
             stato: StatoAgenda::Annunciata,
             motivo,
             attaccamenti,
             bersaglio,
-        })
+        }
     }
 
     /// Primo passo della chiusura: per ogni dicastero con ministro prima i cantieri in corso,

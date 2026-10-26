@@ -17,9 +17,11 @@ use std::fmt;
 use ts_rs::TS;
 
 mod agenda;
+mod proposte;
 mod soddisfazione;
 
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
+pub use proposte::Proposta;
 
 /// Perché la soddisfazione di un ministro è cambiata.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,6 +34,7 @@ pub enum Causa {
     AttoFermato,
     AttoDirottato,
     CantiereFermato,
+    PropostaRespinta,
 }
 
 impl fmt::Display for Causa {
@@ -43,6 +46,7 @@ impl fmt::Display for Causa {
             Self::AttoFermato => "atto fermato dal Presidente del Consiglio",
             Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
+            Self::PropostaRespinta => "proposta di fondi respinta",
         })
     }
 }
@@ -94,6 +98,8 @@ pub struct StatoDicastero {
     pub cantieri: Vec<Cantiere>,
     /// Euro ancora spendibili nell'anno, prima delle rate dei cantieri.
     pub margine_residuo: i64,
+    /// La richiesta di fondi in attesa di una decisione; `None` in interim.
+    pub proposta: Option<Proposta>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -190,6 +196,9 @@ impl Ministri {
                 )
             });
             soddisfazione::passo(st, cx.dati, servizio, cx.turno);
+            if st.ministro.is_none() {
+                st.proposta = None;
+            }
         }
     }
 
@@ -264,22 +273,35 @@ impl Ministri {
                 }
             }
         }
-        self.controlla_agende(dati).or_else(ko)
+        (self.controlla_agende(dati))
+            .and_then(|()| self.controlla_proposte(dati))
+            .or_else(ko)
     }
 
-    /// Esegue un comando del giocatore; un rifiuto non tocca nulla.
-    pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<(), Errore> {
+    /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende
+    /// `(dicastero, importo)`: il bilancio lo aggiorna chi possiede l'economia.
+    pub(crate) fn comanda(
+        &mut self,
+        cx: &Contesto,
+        c: Comando,
+    ) -> Result<Option<(usize, i64)>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
         | Comando::Ferma { dicastero }
         | Comando::Dirotta { dicastero, .. }
-        | Comando::FermaCantiere { dicastero, .. }) = &c;
+        | Comando::FermaCantiere { dicastero, .. }
+        | Comando::Accogli { dicastero }
+        | Comando::Rinvia { dicastero }
+        | Comando::Respingi { dicastero }) = &c;
         let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
         let st = &mut self.dicasteri[i];
         match c {
+            Comando::Accogli { .. } => return self.accogli(cx, i).map(|e| Some((i, e))),
+            Comando::Rinvia { .. } => self.rinvia(cx, i)?,
+            Comando::Respingi { .. } => self.respingi(cx, i)?,
             Comando::Ferma { .. } => self.ferma(cx, i)?,
             Comando::Dirotta { atto, regione, .. } => {
                 self.dirotta(cx, i, atto.as_deref(), regione.as_deref())?;
@@ -306,7 +328,7 @@ impl Ministri {
                 st.scelta = Some(indice);
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     /// Le voci per la `Vista`, nell'ordine dei dicasteri.
@@ -339,6 +361,7 @@ impl Ministri {
                     atti: g.atti,
                     cantieri: g.cantieri,
                     margine_residuo: st.margine_residuo,
+                    proposta: self.voce_proposta(cx, i),
                 }
             })
             .collect()

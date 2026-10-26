@@ -4,6 +4,7 @@ import type { VoceAgenda } from "./VoceAgenda";
 import type { VoceAtto } from "./VoceAtto";
 import type { VoceCantiere } from "./VoceCantiere";
 import type { VoceMinistro } from "./VoceMinistro";
+import type { VoceProposta } from "./VoceProposta";
 
 /**
  * Il ministro (o l'interim con la sua rosa) di un dicastero.
@@ -32,4 +33,8 @@ atti: Array<VoceAtto>, cantieri: Array<VoceCantiere>,
 /**
  * Euro, prima delle rate dei cantieri.
  */
-margine_residuo: bigint, };
+margine_residuo: bigint, 
+/**
+ * La richiesta di fondi in attesa di Accogli, Rinvia o Respingi.
+ */
+proposta: VoceProposta | null, };

@@ -150,6 +150,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "peso_bisogno_bersaglio",
     "peso_voti_bersaglio",
     "costo_dirottare_regione",
+    "costo_respingere",
     "distanza_evidenza",
     "elasticita_riscossione",
     "spread_capacita",

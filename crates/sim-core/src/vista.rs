@@ -91,6 +91,19 @@ pub struct VoceMinistero {
     pub cantieri: Vec<VoceCantiere>,
     /// Euro, prima delle rate dei cantieri.
     pub margine_residuo: i64,
+    /// La richiesta di fondi in attesa di Accogli, Rinvia o Respingi.
+    pub proposta: Option<VoceProposta>,
+}
+
+/// `atto` è un id; `importo` sono gli euro che mancano al margine.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceProposta {
+    pub atto: String,
+    pub nome: String,
+    pub importo: i64,
+    pub motivo: String,
+    pub rinviata: bool,
 }
 
 /// `atto` e `regione` sono id.

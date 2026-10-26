@@ -657,6 +657,13 @@ max = 10.0
 ticket = "27"
 
 # assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_respingere]
+valore = 8.0
+min = 0.0
+max = 30.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
 [distanza_evidenza]
 valore = 2.0
 min = 1.0

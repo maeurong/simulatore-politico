@@ -29,6 +29,15 @@ pub enum Comando {
         dicastero: String,
         atto: String,
     },
+    Accogli {
+        dicastero: String,
+    },
+    Rinvia {
+        dicastero: String,
+    },
+    Respingi {
+        dicastero: String,
+    },
 }
 
 impl Partita {
@@ -37,6 +46,10 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del dicastero in causa; la partita resta identica.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
-        self.con_contesto(|ministri, cx| ministri.comanda(cx, c))
+        let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;
+        if let Some((i, importo)) = accolta {
+            self.aggiungi_fondi(i, importo);
+        }
+        Ok(())
     }
 }
