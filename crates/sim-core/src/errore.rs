@@ -52,6 +52,7 @@ pub enum Errore {
     Elettorato(String),
     Partiti(String),
     Grandezze(String),
+    Atti(String),
     Toml {
         file: String,
         messaggio: String,
@@ -118,6 +119,7 @@ impl fmt::Display for Errore {
             Self::Elettorato(m) => write!(f, "dati dell'elettorato non validi: {m}"),
             Self::Partiti(m) => write!(f, "partiti dello scenario non validi: {m}"),
             Self::Grandezze(m) => write!(f, "grandezze dei dicasteri non valide: {m}"),
+            Self::Atti(m) => write!(f, "catalogo degli atti non valido: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

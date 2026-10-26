@@ -1,3 +1,4 @@
+use crate::atti::Atto;
 use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
@@ -21,10 +22,11 @@ pub struct FileDati {
     pub elezioni: String,
     pub elettorato: String,
     pub grandezze: String,
+    pub atti: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 8] = [
+    pub const NOMI: [&str; 9] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -33,6 +35,7 @@ impl FileDati {
         "elezioni.toml",
         "elettorato.toml",
         "grandezze.toml",
+        "atti.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -49,6 +52,7 @@ impl FileDati {
             elezioni: leggi(Self::NOMI[5])?,
             elettorato: leggi(Self::NOMI[6])?,
             grandezze: leggi(Self::NOMI[7])?,
+            atti: leggi(Self::NOMI[8])?,
         })
     }
 }
@@ -208,6 +212,12 @@ pub struct DatiGioco {
     elezioni: DatiElezioni,
     elettorato: DatiElettorato,
     grandezze: Vec<DatoGrandezza>,
+    atti: Vec<Atto>,
+}
+
+#[derive(Deserialize)]
+struct FileAtti {
+    atto: Vec<Atto>,
 }
 
 #[derive(Deserialize)]
@@ -234,6 +244,19 @@ impl DatiGioco {
 
     pub fn grandezze(&self) -> &[DatoGrandezza] {
         &self.grandezze
+    }
+
+    pub fn atti(&self) -> &[Atto] {
+        &self.atti
+    }
+
+    /// Gli atti di un dicastero (per indice) con il loro indice nel catalogo, nell'ordine del file.
+    pub fn atti_del_dicastero(&self, d: usize) -> impl Iterator<Item = (usize, &Atto)> {
+        let id = self.dicasteri.get(d).map(|d| d.id.as_str());
+        self.atti
+            .iter()
+            .enumerate()
+            .filter(move |(_, a)| Some(a.dicastero.as_str()) == id)
     }
 
     /// Posizione di una grandezza per id.
@@ -320,6 +343,9 @@ impl DatiGioco {
         let grandezze = toml::from_str::<FileGrandezze>(&file.grandezze)
             .map_err(|e| errore_toml("grandezze.toml", e))?
             .grandezza;
+        let atti = toml::from_str::<FileAtti>(&file.atti)
+            .map_err(|e| errore_toml("atti.toml", e))?
+            .atto;
 
         let dati = DatiGioco {
             dicasteri,
@@ -330,6 +356,7 @@ impl DatiGioco {
             elezioni,
             elettorato,
             grandezze,
+            atti,
         };
         dati.valida()?;
         Ok(dati)
@@ -390,7 +417,8 @@ impl DatiGioco {
     /// `SettoreSconosciuto`; `Elettorato` e `Partiti` (vedi [`DatiElettorato`] e
     /// [`partiti::valida`]); `LeggeElettorale` e `DatiElettorali` (vedi
     /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente;
-    /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste).
+    /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste);
+    /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze).
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -423,6 +451,7 @@ impl DatiGioco {
             }
         }
         self.valida_grandezze()?;
+        crate::atti::valida(self)?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
             if !(finite && m.min <= m.valore && m.valore <= m.max) {

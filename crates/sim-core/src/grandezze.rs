@@ -210,6 +210,7 @@ mod test {
             elezioni: include_str!("../../../dati/base/elezioni.toml").into(),
             elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
             grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
+            atti: include_str!("../../../dati/base/atti.toml").into(),
         };
         let dati = DatiGioco::da_testi(&file).unwrap();
         let mut e = Economia::iniziale(&dati);
