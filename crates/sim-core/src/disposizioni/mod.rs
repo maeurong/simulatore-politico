@@ -5,6 +5,7 @@ use crate::elettorato::Condizione;
 use crate::elezioni::{Formula, LeggeElettorale, Menu, Premio};
 use crate::errore::Errore;
 use crate::grandezze::DatoGrandezza;
+use crate::partita::Trimestre;
 use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -19,26 +20,27 @@ pub(crate) use effetti::effetti_del_cambio;
 pub use stato::{Disposizioni, InArrivo, StatoDisposizione};
 
 /// Le leve che il motore legge, una per disposizione: ogni leva sta in una sola disposizione.
-pub const LEVE: [&str; 15] = [
-    "forfettario",
-    "cuneo",
-    "accise",
-    "decontribuzione",
-    "regime_pensioni",
-    "eta_pensione",
-    "indicizzazione_pensioni",
-    "pensione_minima",
-    "sussidi",
-    "reddito_minimo",
-    "salario_minimo",
-    "autonomia",
-    "seggi_camera",
-    "seggi_senato",
-    "durata_legislatura",
+/// Con l'intervallo ammesso, largo ma finito, nelle unità della leva.
+pub const LEVE: [(&str, f64, f64); 15] = [
+    ("forfettario", 0.0, 3.0),
+    ("cuneo", 0.0, 20.0),
+    ("accise", -20.0, 20.0),
+    ("decontribuzione", 0.0, 2.0),
+    ("regime_pensioni", 0.0, 2.0),
+    ("eta_pensione", 55.0, 75.0),
+    ("indicizzazione_pensioni", 0.0, 1.5),
+    ("pensione_minima", 0.0, 3.0),
+    ("sussidi", 0.0, 3.0),
+    ("reddito_minimo", 0.0, 20000.0),
+    ("salario_minimo", 0.0, 30.0),
+    ("autonomia", 0.0, 1.0),
+    ("seggi_camera", 100.0, 1000.0),
+    ("seggi_senato", 50.0, 500.0),
+    ("durata_legislatura", 3.0, 7.0),
 ];
 
-/// Ultimo turno prima dei valori in arrivo: ottobre-dicembre 2026.
-const TURNO_ZERO: (u16, u8) = (2026, 4);
+/// Leva che vale un regime per indice: un valore fra due interi non è nessun regime.
+const LEVA_INTERA: &str = "regime_pensioni";
 
 const LEGGE_ELETTORALE: &str = "L. 180/2026";
 
@@ -117,7 +119,7 @@ pub struct DatoDisposizione {
 }
 
 impl DatoDisposizione {
-    /// Posizione di un gradino per id.
+    /// Indice di un gradino per id.
     pub fn gradino(&self, id: &str) -> Option<usize> {
         self.gradini.iter().position(|g| g.id == id)
     }
@@ -148,12 +150,12 @@ fn id_tetto(t: Option<crate::elezioni::QuoteTetto>) -> String {
 
 /// Gli id dei gradini di `l`, nell'ordine delle nove disposizioni elettorali.
 fn id_valori(l: &LeggeElettorale) -> [String; 9] {
-    let si_no = |b: bool| if b { "si" } else { "no" }.to_string();
+    let id_si_no = |b: bool| if b { "si" } else { "no" }.to_string();
     [
         l.soglia_lista_pb.to_string(),
-        si_no(l.coalizioni),
+        id_si_no(l.coalizioni),
         l.soglia_coalizione_pb.to_string(),
-        si_no(l.ripescaggio),
+        id_si_no(l.ripescaggio),
         match l.premio {
             Premio::Nessuno => "nessuno",
             Premio::Lista => "lista",
@@ -198,8 +200,8 @@ pub(crate) fn elettorali(
         })
         .collect();
     tetto.push(("nessuno".into(), "nessuno".into()));
-    let si_no = [("no", "non ammesse"), ("si", "ammesse")];
-    let si_no_ripescaggio = [("no", "no"), ("si", "sì")];
+    let nomi_coalizioni = [("no", "non ammesse"), ("si", "ammesse")];
+    let nomi_ripescaggio = [("no", "non previsto"), ("si", "previsto")];
     let schede = [
         (
             "soglia_lista",
@@ -211,7 +213,7 @@ pub(crate) fn elettorali(
             "coalizioni",
             "Coalizioni",
             TipoDisposizione::Regime,
-            fisso(&si_no),
+            fisso(&nomi_coalizioni),
         ),
         (
             "soglia_coalizione",
@@ -223,7 +225,7 @@ pub(crate) fn elettorali(
             "ripescaggio",
             "Ripescaggio",
             TipoDisposizione::Regime,
-            fisso(&si_no_ripescaggio),
+            fisso(&nomi_ripescaggio),
         ),
         (
             "premio",
@@ -358,13 +360,16 @@ pub(crate) fn valida(
         if !(2..=10).contains(&d.gradini.len()) || !distinti {
             return ko(format!("{id}: servono da 2 a 10 gradini distinti"));
         }
-        let citati = [&d.partenza, &d.precedente]
+        if d.legge.trim().is_empty() {
+            return ko(format!("{id}: legge mancante"));
+        }
+        let citati = [("partenza", &d.partenza), ("precedente", &d.precedente)]
             .into_iter()
-            .chain(d.dopo_abrogazione.as_ref())
-            .chain(d.in_arrivo.iter().map(|a| &a.gradino));
-        for g in citati {
+            .chain(d.dopo_abrogazione.iter().map(|g| ("dopo_abrogazione", g)))
+            .chain(d.in_arrivo.iter().map(|a| ("in_arrivo", &a.gradino)));
+        for (campo, g) in citati {
             if d.gradino(g).is_none() {
-                return ko(format!("{id}: gradino sconosciuto {g}"));
+                return ko(format!("{id}: gradino sconosciuto {g} in {campo}"));
             }
         }
         for g in &d.gradini {
@@ -375,30 +380,40 @@ pub(crate) fn valida(
                 return ko(format!("{id}: posizione di {gid} fuori da 1-7"));
             }
             if !(g.saldo.is_finite() && (-2.0..=2.0).contains(&g.saldo)) {
-                return ko(format!("{id}: saldo di {gid} fuori intervallo"));
+                return ko(format!("{id}: saldo di {gid} fuori da -2…2"));
             }
             for (leva, v) in &g.leve {
-                if !LEVE.contains(&leva.as_str()) {
+                let Some(&(_, min, max)) = LEVE.iter().find(|(n, _, _)| n == leva) else {
                     return ko(format!("{id}: leva sconosciuta {leva}"));
+                };
+                if !(min..=max).contains(v) {
+                    return ko(format!("{id}: leva {leva} di {gid} fuori da {min}-{max}"));
                 }
-                if !v.is_finite() {
-                    return ko(format!("{id}: leva {leva} non finita"));
+                if leva == LEVA_INTERA && v.fract() != 0.0 {
+                    return ko(format!("{id}: leva {leva} di {gid} non intera"));
                 }
             }
             for e in &g.effetti {
                 let Some(gr) = grandezze.iter().find(|x| x.id == e.grandezza) else {
                     return ko(format!("{id}: grandezza sconosciuta {}", e.grandezza));
                 };
+                let gr_id = &gr.id;
                 // Metà intervallo: il Δ fra due gradini resta nel tetto del salvataggio.
                 let tetto = (gr.max - gr.min) / 2.0;
-                if !(e.intensita.is_finite()
-                    && e.intensita.abs() <= tetto
-                    && (1..=40).contains(&e.ritardo))
-                {
-                    return ko(format!("{id}: effetto su {} fuori intervallo", gr.id));
+                if !(e.intensita.is_finite() && e.intensita.abs() <= tetto) {
+                    return ko(format!(
+                        "{id}: intensità dell'effetto su {gr_id} oltre ±{tetto}"
+                    ));
+                }
+                if !(1..=40).contains(&e.ritardo) {
+                    return ko(format!(
+                        "{id}: ritardo dell'effetto su {gr_id} fuori da 1-40"
+                    ));
                 }
                 if !d.perimetro.is_empty() && !gr.regionale {
-                    return ko(format!("{id}: perimetro su {} nazionale", gr.id));
+                    return ko(format!(
+                        "{id}: ha un perimetro ma l'effetto tocca {gr_id}, che è nazionale"
+                    ));
                 }
                 // Le regionali non hanno limite di dicastero.
                 if let Some(c) = &d.dicastero
@@ -406,8 +421,7 @@ pub(crate) fn valida(
                     && !gr.dicasteri.contains(c)
                 {
                     return ko(format!(
-                        "{id}: {} non è nella riga del dicastero {c}",
-                        gr.id
+                        "{id}: la grandezza {gr_id} non appartiene al dicastero {c}"
                     ));
                 }
             }
@@ -418,6 +432,8 @@ pub(crate) fn valida(
                 return ko(format!("{id}: leva {leva} non è in tutti i gradini"));
             }
         }
+        // L'autonomia sposta domanda per regione intera: un peso parziale non entra nel conto.
+        let autonomia = d.gradini.iter().any(|g| g.leve.contains_key("autonomia"));
         for (r, p) in &d.perimetro {
             if !regioni.iter().any(|x| x.id == *r) {
                 return ko(format!("{id}: regione sconosciuta {r}"));
@@ -425,22 +441,30 @@ pub(crate) fn valida(
             if !(p.is_finite() && *p > 0.0 && *p <= 1.0) {
                 return ko(format!("{id}: peso di {r} fuori da (0, 1]"));
             }
+            if autonomia && *p != 1.0 {
+                return ko(format!("{id}: peso di {r} deve essere 1"));
+            }
         }
-        let mut ultimo = TURNO_ZERO;
+        let zero = Trimestre::TURNO_ZERO;
+        let mut ultimo = (zero.anno, zero.trimestre);
         for a in &d.in_arrivo {
-            let quando = (a.anno, a.trimestre);
-            if !(1..=4).contains(&a.trimestre) || quando <= ultimo {
-                return ko(format!("{id}: arrivi fuori ordine"));
+            let t = a.trimestre;
+            if !(1..=4).contains(&t) {
+                return ko(format!("{id}: trimestre {t} fuori da 1-4"));
+            }
+            let quando = (a.anno, t);
+            if quando <= ultimo {
+                return ko(format!("{id}: valori in arrivo non in ordine di turno"));
             }
             ultimo = quando;
         }
         if d.norma == Norma::Costituzionale && (d.referendabile || d.dicastero.is_some()) {
             return ko(format!(
-                "{id}: norma costituzionale referendabile o con dicastero"
+                "{id}: una norma costituzionale non è referendabile e non ha dicastero"
             ));
         }
     }
-    for leva in LEVE {
+    for (leva, _, _) in LEVE {
         let dove = catalogo
             .iter()
             .filter(|d| d.gradini.iter().any(|g| g.leve.contains_key(leva)))
@@ -482,6 +506,99 @@ mod tests {
         assert_eq!(
             rifiuto(&catalogo),
             "disposizioni non valide: leva in due disposizioni: cuneo"
+        );
+    }
+
+    fn indice(catalogo: &[DatoDisposizione], id: &str) -> usize {
+        catalogo
+            .iter()
+            .position(|d| d.id == id)
+            .unwrap_or(usize::MAX)
+    }
+
+    #[test]
+    fn leva_fuori_dal_suo_intervallo_rifiutata() {
+        let base = dati_base().disposizioni().to_vec();
+        let k = indice(&base, "regime_pensioni");
+        for (v, atteso) in [
+            (
+                3.0,
+                "regime_pensioni: leva regime_pensioni di contributivo fuori da 0-2",
+            ),
+            (
+                0.5,
+                "regime_pensioni: leva regime_pensioni di contributivo non intera",
+            ),
+            (
+                f64::NAN,
+                "regime_pensioni: leva regime_pensioni di contributivo fuori da 0-2",
+            ),
+        ] {
+            let mut catalogo = base.clone();
+            catalogo[k].gradini[1]
+                .leve
+                .insert("regime_pensioni".into(), v);
+            assert_eq!(
+                rifiuto(&catalogo),
+                format!("disposizioni non valide: {atteso}")
+            );
+        }
+        let mut catalogo = base.clone();
+        let a = indice(&catalogo, "accise");
+        catalogo[a].gradini[0].leve.insert("accise".into(), -21.0);
+        assert_eq!(
+            rifiuto(&catalogo),
+            "disposizioni non valide: accise: leva accise di basse fuori da -20-20"
+        );
+    }
+
+    #[test]
+    fn autonomia_vuole_pesi_pieni() {
+        let mut catalogo = dati_base().disposizioni().to_vec();
+        let k = indice(&catalogo, "autonomia_differenziata");
+        catalogo[k].perimetro.insert("lombardia".into(), 0.5);
+        assert_eq!(
+            rifiuto(&catalogo),
+            "disposizioni non valide: autonomia_differenziata: peso di lombardia deve essere 1"
+        );
+    }
+
+    #[test]
+    fn ritardo_e_arrivi_rifiutati_ciascuno_col_suo_messaggio() {
+        let base = dati_base().disposizioni().to_vec();
+        let k = indice(&base, "privato_accreditato");
+        let mut catalogo = base.clone();
+        for g in &mut catalogo[k].gradini {
+            for e in &mut g.effetti {
+                e.ritardo = 41;
+            }
+        }
+        assert!(
+            rifiuto(&catalogo).ends_with(
+                "privato_accreditato: ritardo dell'effetto su qualita_servizio_sanitario fuori da 1-40"
+            ),
+            "{}",
+            rifiuto(&catalogo)
+        );
+        let z = indice(&base, "credito_zes");
+        let mut catalogo = base.clone();
+        catalogo[z].in_arrivo[0].trimestre = 5;
+        assert!(rifiuto(&catalogo).ends_with("credito_zes: trimestre 5 fuori da 1-4"));
+        let mut catalogo = base.clone();
+        catalogo[z].in_arrivo.swap(0, 1);
+        assert!(
+            rifiuto(&catalogo).ends_with("credito_zes: valori in arrivo non in ordine di turno")
+        );
+    }
+
+    #[test]
+    fn legge_vuota_rifiutata() {
+        let mut catalogo = dati_base().disposizioni().to_vec();
+        let k = indice(&catalogo, "cuneo_fiscale");
+        catalogo[k].legge.clear();
+        assert_eq!(
+            rifiuto(&catalogo),
+            "disposizioni non valide: cuneo_fiscale: legge mancante"
         );
     }
 

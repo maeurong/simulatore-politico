@@ -219,7 +219,7 @@ impl Disposizioni {
                 }
             }
             if !v.in_arrivo.windows(2).all(|w| w[0].turno < w[1].turno) {
-                return ko(format!("{}: arrivi fuori ordine", d.id));
+                return ko(format!("{}: valori in arrivo non in ordine di turno", d.id));
             }
         }
         (self.legge_elettorale(dati))

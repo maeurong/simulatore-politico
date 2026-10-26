@@ -177,12 +177,13 @@ fn annata(p: &Partita, anno: u16) -> f64 {
 
 #[test]
 fn pensione_minima_alta_tocca_solo_l_annata_nuova() {
-    // 50 volte la pensione minima: sopra la sostituzione, la leva morde sull'annata nuova.
+    // 3 volte la pensione minima, il massimo ammesso: sopra la sostituzione, la leva morde
+    // sull'annata nuova.
     let f = imposta(
         senza_shock(),
         "disposizioni",
         "{ id = \"piu_50\", nome = \"più 50%\", posizione = 2.0, saldo = 0.0, leve = { pensione_minima = ",
-        "50.0",
+        "3.0",
     );
     let m = gioca(con_arrivo(f, "pensione_minima", "piu_50", 2027, 1), 5);
     let b = gioca(senza_shock(), 5);

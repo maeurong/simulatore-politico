@@ -85,7 +85,7 @@ fn disposizioni_elettorali_dal_menu_e_dallo_scenario() {
 fn gradino_sconosciuto_rifiutato_col_nome() {
     let m = rifiuto("disposizioni", "partenza = \"67\"", "partenza = \"66,5\"");
     assert!(
-        m.contains("eta_pensionabile: gradino sconosciuto 66,5"),
+        m.contains("eta_pensionabile: gradino sconosciuto 66,5 in partenza"),
         "{m}"
     );
 }
@@ -111,7 +111,9 @@ fn effetto_fuori_dalla_riga_del_dicastero_rifiutato() {
         "nome = \"reintegro\", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = \"qualita_scuola\"",
     );
     assert!(
-        m.contains("licenziamento: qualita_scuola non è nella riga del dicastero lavoro_welfare"),
+        m.contains(
+            "licenziamento: la grandezza qualita_scuola non appartiene al dicastero lavoro_welfare"
+        ),
         "{m}"
     );
 }
@@ -124,7 +126,9 @@ fn perimetro_su_grandezza_nazionale_rifiutato() {
         "nome = \"nessuno stanziamento\", posizione = 5.0, saldo = -0.1, effetti = [{ grandezza = \"sostegno_imprese\"",
     );
     assert!(
-        m.contains("credito_zes: perimetro su sostegno_imprese nazionale"),
+        m.contains(
+            "credito_zes: ha un perimetro ma l'effetto tocca sostegno_imprese, che è nazionale"
+        ),
         "{m}"
     );
 }
@@ -138,7 +142,7 @@ fn effetto_oltre_meta_intervallo_rifiutato() {
         "nome = \"reintegro\", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = \"regole_lavoro\", intensita = -5.1",
     );
     assert!(
-        m.contains("licenziamento: effetto su regole_lavoro fuori intervallo"),
+        m.contains("licenziamento: intensità dell'effetto su regole_lavoro oltre ±5"),
         "{m}"
     );
 }
