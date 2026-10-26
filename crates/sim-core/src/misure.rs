@@ -48,8 +48,6 @@ pub struct Misure {
     pub eti_irpef: f64,
     /// Le leve dei gradini in vigore.
     pub leve: Leve,
-    /// Le leve dei gradini di partenza.
-    pub leve_partenza: Leve,
     /// `Σ (saldo in vigore − saldo di partenza)` delle disposizioni, % del PIL potenziale annuo.
     pub saldo_disposizioni: f64,
 }
@@ -72,7 +70,6 @@ impl Misure {
     /// di partenza.
     pub fn neutre(dati: &DatiGioco) -> Misure {
         let n = dati.regioni().len();
-        let leve = Leve::partenza(dati);
         Misure {
             riscossione: 1.0,
             prezzo_energia: 0.0,
@@ -84,8 +81,7 @@ impl Misure {
             fattore_irpef: 1.0,
             irpef_discrezionale: 0.0,
             eti_irpef: 1.0,
-            leve_partenza: leve.clone(),
-            leve,
+            leve: Leve::partenza(dati),
             saldo_disposizioni: 0.0,
         }
     }
@@ -148,7 +144,8 @@ impl Misure {
             &mut domanda_regionale,
         );
 
-        let prezzo_energia = nazionale("prezzo_energia", 0.0) + leve.accise - leve_partenza.accise;
+        let prezzo_energia =
+            nazionale("prezzo_energia", 0.0) + (leve.accise - leve_partenza.accise);
         // Prima del 2027 la demografia non sposta il potenziale dalla base calibrata.
         let anno = data.anno.max(ANNO_BASE);
         let piramide = &dati.struttura().piramide;
@@ -183,7 +180,6 @@ impl Misure {
             eti_irpef: 1.0,
             saldo_disposizioni: disposizioni.saldo(dati),
             leve,
-            leve_partenza,
         }
         // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
         .con_scaglioni(dati, el, &e.bilancio_in_vigore(data).aliquote.irpef)
@@ -241,7 +237,7 @@ impl Misure {
         let (perimetro, _) = Self::perimetro(dati, "autonomia");
         let quota_p: f64 = perimetro.iter().map(|&(r, _)| elettori[r] / tot_e).sum();
         // Base degenere o perimetro che copre tutto il Paese: nessuno da cui spostare domanda.
-        if q == 0.0 || tot_e <= 0.0 || tot_r <= 0.0 || quota_p >= 1.0 {
+        if q == 0.0 || tot_e <= 0.0 || tot_r <= 0.0 || 1.0 - quota_p <= 1e-9 {
             return;
         }
         let e = dati.manopola("elasticita_autonomia");

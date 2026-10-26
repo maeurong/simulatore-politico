@@ -62,6 +62,8 @@ pub struct EffettoAttivo {
     pub regione: Option<usize>,
     /// `None` per le disposizioni fuori dicastero.
     pub dicastero: Option<usize>,
+    /// La disposizione che l'ha prodotto; `None` per gli atti.
+    pub disposizione: Option<usize>,
     pub intensita: f64,
     pub inizio: u32,
     pub forma: Forma,
@@ -258,6 +260,7 @@ mod test {
             grandezza: 0,
             regione: None,
             dicastero: Some(0),
+            disposizione: None,
             intensita,
             inizio,
             forma,

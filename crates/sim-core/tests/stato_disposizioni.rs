@@ -77,12 +77,17 @@ fn arrivo_programmato_sostituisce_gli_altri_e_porta_la_sua_legge() {
     let k = d.disposizione("credito_zes").unwrap();
     let g = |id: &str| d.disposizioni()[k].gradino(id).unwrap();
     let mut s = Disposizioni::iniziali(&d);
-    s.programma(k, g("0"), 3, "L. 7/2027");
+    let n = d.disposizioni()[k].gradini.len();
+    assert_eq!(
+        s.programma(&d, k, n, 3, "L. 7/2027"),
+        Err(Errore::Comando(format!("credito_zes: gradino {n} assente")))
+    );
+    s.programma(&d, k, g("0"), 3, "L. 7/2027").unwrap();
     assert_eq!(s.voci[k].in_arrivo.len(), 1);
     s.controlla(&d).unwrap();
-    s.arrivi(&d, 2);
+    s.arrivi(&d, 2, &mut Vec::new());
     assert_eq!(s.voci[k].in_vigore, g("2_3"));
-    s.arrivi(&d, 3);
+    s.arrivi(&d, 3, &mut Vec::new());
     assert_eq!(
         (s.voci[k].in_vigore, s.voci[k].legge.as_str()),
         (g("0"), "L. 7/2027")
@@ -97,12 +102,12 @@ fn un_arrivo_non_cancella_quelli_dopo() {
     let k = d.disposizione("decontribuzione").unwrap();
     let g = |id: &str| d.disposizioni()[k].gradino(id).unwrap();
     let mut s = Disposizioni::iniziali(&d);
-    s.arrivi(&d, 9);
+    s.arrivi(&d, 9, &mut Vec::new());
     assert_eq!(
         (s.voci[k].in_vigore, s.voci[k].in_arrivo.len()),
         (g("15"), 1)
     );
-    s.arrivi(&d, 13);
+    s.arrivi(&d, 13, &mut Vec::new());
     assert_eq!(
         (s.voci[k].in_vigore, s.voci[k].precedente),
         (g("0"), g("15"))

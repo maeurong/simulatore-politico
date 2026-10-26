@@ -76,7 +76,7 @@ impl Elettorato {
     /// delle misure pesa anche sulle imposte degli autonomi; le leve delle disposizioni, rispetto
     /// a quelle di partenza, muovono salario minimo, reddito minimo, cuneo e forfettario.
     pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
-        let (l, l0) = (&misure.leve, &misure.leve_partenza);
+        let (l, l0) = (&misure.leve, &Leve::partenza(dati));
         let (i, b) = (Indici::da(e, dati, l), self.base);
         let (ore, copertura) = (
             dati.manopola("ore_salario_minimo"),
@@ -113,7 +113,7 @@ impl Elettorato {
                 primario += copertura * (l.salario_minimo * ore - primario).max(0.0);
             }
             if c == Condizione::DisoccupatoInattivo && bassa {
-                trasferimenti = (trasferimenti + l.reddito_minimo - l0.reddito_minimo).max(0.0);
+                trasferimenti = (trasferimenti + (l.reddito_minimo - l0.reddito_minimo)).max(0.0);
             }
             let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();

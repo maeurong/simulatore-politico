@@ -121,8 +121,11 @@ pub fn con_arrivo(mut f: FileDati, id: &str, gradino: &str, anno: u16, trimestre
     let riga = inizio
         + f.disposizioni[inizio..]
             .find("in_arrivo = ")
-            .expect("in_arrivo");
-    let fine = riga + f.disposizioni[riga..].find('\n').expect("fine riga");
+            .unwrap_or_else(|| panic!("{id}: riga in_arrivo assente"));
+    let fine = riga
+        + f.disposizioni[riga..]
+            .find('\n')
+            .unwrap_or_else(|| panic!("{id}: fine della riga in_arrivo assente"));
     f.disposizioni.replace_range(
         riga..fine,
         &format!(

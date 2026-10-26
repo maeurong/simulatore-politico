@@ -81,7 +81,11 @@ impl Disposizioni {
     }
 
     /// Il gradino `g` entra in vigore nella disposizione `d` al turno `turno` con la legge
-    /// `legge`; gli arrivi restano. Con `g` già in vigore cambia solo la legge.
+    /// `legge`, coi suoi effetti aggiunti a `effetti`; gli arrivi restano. Con `g` già in vigore
+    /// cambia solo la legge.
+    ///
+    /// # Panics
+    /// Se `d` non è l'indice di una voce.
     fn applica(
         &mut self,
         dati: &DatiGioco,
@@ -89,54 +93,80 @@ impl Disposizioni {
         g: usize,
         turno: u32,
         legge: &str,
-    ) -> Vec<EffettoAttivo> {
+        effetti: &mut Vec<EffettoAttivo>,
+    ) {
         let v = &mut self.voci[d];
         v.legge = legge.into();
         if g == v.in_vigore {
-            return Vec::new();
+            return;
         }
         v.precedente = v.in_vigore;
         v.in_vigore = g;
-        effetti_del_cambio(dati, d, v.precedente, g, turno)
+        effetti_del_cambio(dati, d, v.precedente, g, turno, effetti);
     }
 
     /// Una legge porta la disposizione `d` al gradino `g` e cancella i valori in arrivo.
-    pub fn cambia(
+    ///
+    /// # Panics
+    /// Se `d` non è l'indice di una voce.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "la chiamera' l'aula quando una legge passa, nella PR B"
+        )
+    )]
+    pub(crate) fn cambia(
         &mut self,
         dati: &DatiGioco,
         d: usize,
         g: usize,
         turno: u32,
         legge: &str,
-    ) -> Vec<EffettoAttivo> {
-        let effetti = self.applica(dati, d, g, turno, legge);
+        effetti: &mut Vec<EffettoAttivo>,
+    ) {
+        self.applica(dati, d, g, turno, legge, effetti);
         self.voci[d].in_arrivo.clear();
-        effetti
     }
 
     /// Gli arrivi di `d` diventano uno solo: `g` all'apertura del turno `turno`, con `legge`.
-    pub fn programma(&mut self, d: usize, g: usize, turno: u32, legge: &str) {
-        self.voci[d].in_arrivo = vec![InArrivo {
+    ///
+    /// # Errors
+    /// `Comando` se `d` non è una disposizione dei dati o `g` non è un suo gradino.
+    pub fn programma(
+        &mut self,
+        dati: &DatiGioco,
+        d: usize,
+        g: usize,
+        turno: u32,
+        legge: &str,
+    ) -> Result<(), Errore> {
+        let (Some(disp), Some(v)) = (dati.disposizioni().get(d), self.voci.get_mut(d)) else {
+            return Err(Errore::Comando(format!("disposizione {d} assente")));
+        };
+        if g >= disp.gradini.len() {
+            return Err(Errore::Comando(format!("{}: gradino {g} assente", disp.id)));
+        }
+        v.in_arrivo = vec![InArrivo {
             gradino: g,
             turno,
             legge: legge.into(),
         }];
+        Ok(())
     }
 
     /// Apertura del turno `turno`: ogni arrivo dovuto entra in vigore, in ordine, con la sua
-    /// legge, ed esce dalla lista.
-    pub fn arrivi(&mut self, dati: &DatiGioco, turno: u32) -> Vec<EffettoAttivo> {
-        let mut effetti = Vec::new();
+    /// legge, ed esce dalla lista; gli effetti vanno in `effetti`.
+    pub fn arrivi(&mut self, dati: &DatiGioco, turno: u32, effetti: &mut Vec<EffettoAttivo>) {
         for d in 0..self.voci.len() {
             let dovuti = (self.voci[d].in_arrivo.iter())
                 .take_while(|a| a.turno <= turno)
                 .count();
             let arrivati: Vec<InArrivo> = self.voci[d].in_arrivo.drain(..dovuti).collect();
             for a in arrivati {
-                effetti.extend(self.applica(dati, d, a.gradino, turno, &a.legge));
+                self.applica(dati, d, a.gradino, turno, &a.legge, effetti);
             }
         }
-        effetti
     }
 
     /// La legge elettorale dei gradini in vigore delle nove disposizioni elettorali.

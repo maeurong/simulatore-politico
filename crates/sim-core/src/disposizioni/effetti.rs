@@ -82,8 +82,10 @@ impl Disposizioni {
 }
 
 /// Gli effetti di livello del passaggio della disposizione `d` dal gradino `da` al gradino `a`
-/// al turno `turno`: per ogni grandezza toccata, `Δ = I_a − I_da` dal ritardo di `a` (di `da` se
-/// `a` non la tocca), uno per regione del perimetro con `Δ · peso`, uno solo senza perimetro.
+/// al turno `turno`, aggiunti a `effetti`: per ogni grandezza toccata, `Δ = I_a − I_da` dal
+/// ritardo di `a` (di `da` se `a` non la tocca), uno per regione del perimetro con `Δ · peso`,
+/// uno solo senza perimetro. Il Δ non parte prima di un Δ della stessa disposizione, grandezza e
+/// regione ancora in attesa in `effetti`: così il livello passa solo per i gradini.
 /// Nessun fattore di capacità: le disposizioni non le esegue un ministro.
 pub(crate) fn effetti_del_cambio(
     dati: &DatiGioco,
@@ -91,12 +93,13 @@ pub(crate) fn effetti_del_cambio(
     da: usize,
     a: usize,
     turno: u32,
-) -> Vec<EffettoAttivo> {
+    effetti: &mut Vec<EffettoAttivo>,
+) {
     let Some(disp) = dati.disposizioni().get(d) else {
-        return Vec::new();
+        return;
     };
     let (Some(prima), Some(dopo)) = (disp.gradini.get(da), disp.gradini.get(a)) else {
-        return Vec::new();
+        return;
     };
     let dicastero =
         (disp.dicastero.as_ref()).and_then(|c| dati.dicasteri().iter().position(|x| &x.id == c));
@@ -113,7 +116,6 @@ pub(crate) fn effetti_del_cambio(
             toccate.push(&e.grandezza);
         }
     }
-    let mut effetti = Vec::new();
     for id in toccate {
         let ea = prima.effetti.iter().find(|e| e.grandezza == id);
         let eb = dopo.effetti.iter().find(|e| e.grandezza == id);
@@ -124,17 +126,29 @@ pub(crate) fn effetti_del_cambio(
         if delta == 0.0 {
             continue;
         }
-        effetti.extend(regioni.iter().map(|&(regione, peso)| EffettoAttivo {
-            grandezza: k,
-            regione,
-            dicastero,
-            intensita: delta * peso,
-            inizio: turno.saturating_add(e.ritardo),
-            forma: Forma::Livello,
-            durata: 0.0,
-        }));
+        for &(regione, peso) in &regioni {
+            let inizio = (effetti.iter())
+                .filter(|x| {
+                    x.disposizione == Some(d)
+                        && x.grandezza == k
+                        && x.regione == regione
+                        && x.forma == Forma::Livello
+                        && x.inizio > turno
+                })
+                .map(|x| x.inizio)
+                .fold(turno.saturating_add(e.ritardo), u32::max);
+            effetti.push(EffettoAttivo {
+                grandezza: k,
+                regione,
+                dicastero,
+                disposizione: Some(d),
+                intensita: delta * peso,
+                inizio,
+                forma: Forma::Livello,
+                durata: 0.0,
+            });
+        }
     }
-    effetti
 }
 
 #[cfg(test)]
@@ -145,13 +159,15 @@ pub(crate) fn effetti_del_cambio(
 mod test {
     use super::*;
     use crate::dati::dati_base;
+    use crate::grandezze::contributo;
 
     #[test]
     fn cambio_rende_la_differenza_dei_livelli() {
         let dati = dati_base();
         let d = dati.disposizione("privato_accreditato").unwrap();
         let g = |id: &str| dati.disposizioni()[d].gradino(id).unwrap();
-        let e = effetti_del_cambio(&dati, d, g("ridotto"), g("ampio"), 3);
+        let mut e = Vec::new();
+        effetti_del_cambio(&dati, d, g("ridotto"), g("ampio"), 3, &mut e);
         assert_eq!(e.len(), 1);
         let sanita = dati.dicasteri().iter().position(|x| x.id == "sanita");
         assert_eq!(
@@ -165,13 +181,36 @@ mod test {
         );
     }
 
+    /// Tasse universitarie: `gratuite` (+2, ritardo 12) al turno 1, `alte` (−2, ritardo 8) al
+    /// turno 2. Il secondo Δ (−4) non può partire prima del primo, o il livello scende a −4.
+    #[test]
+    fn due_cambi_di_fila_restano_fra_i_gradini() {
+        let dati = dati_base();
+        let d = dati.disposizione("tasse_universitarie").unwrap();
+        let g = |id: &str| dati.disposizioni()[d].gradino(id).unwrap();
+        let mut s = Disposizioni::iniziali(&dati);
+        let mut effetti = Vec::new();
+        s.cambia(&dati, d, g("gratuite"), 1, "L. 1/2027", &mut effetti);
+        s.cambia(&dati, d, g("alte"), 2, "L. 2/2027", &mut effetti);
+        let livello = |t| effetti.iter().map(|e| contributo(e, t)).sum::<f64>();
+        for t in 0..40 {
+            assert!(
+                (-2.0..=2.0).contains(&livello(t)),
+                "turno {t}: {}",
+                livello(t)
+            );
+        }
+        assert_eq!(livello(40), -2.0);
+    }
+
     #[test]
     fn perimetro_divide_per_regione_col_peso() {
         let dati = dati_base();
         let d = dati.disposizione("credito_zes").unwrap();
         let disp = &dati.disposizioni()[d];
         let g = |id: &str| disp.gradino(id).unwrap();
-        let e = effetti_del_cambio(&dati, d, g("2_3"), g("1"), 1);
+        let mut e = Vec::new();
+        effetti_del_cambio(&dati, d, g("2_3"), g("1"), 1, &mut e);
         assert_eq!(e.len(), disp.perimetro.len());
         for (r, peso) in &disp.perimetro {
             let k = dati.regioni().iter().position(|x| &x.id == r);

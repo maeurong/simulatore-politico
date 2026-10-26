@@ -186,8 +186,7 @@ impl Partita {
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
-        let effetti = self.disposizioni.arrivi(&self.dati, self.turno);
-        self.grandezze.effetti.extend(effetti);
+        (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
