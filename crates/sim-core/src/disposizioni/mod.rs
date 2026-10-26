@@ -11,8 +11,11 @@ use std::collections::{BTreeMap, BTreeSet};
 #[cfg(test)]
 use ts_rs::TS;
 
+mod effetti;
 mod stato;
 
+pub use effetti::Leve;
+pub(crate) use effetti::effetti_del_cambio;
 pub use stato::{Disposizioni, InArrivo, StatoDisposizione};
 
 /// Le leve che il motore legge, una per disposizione: ogni leva sta in una sola disposizione.

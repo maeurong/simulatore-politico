@@ -113,11 +113,11 @@ fn storico_di_otto_trimestri_col_piu_recente_in_coda() {
 }
 
 fn con_regime_pensioni(regime: &str) -> DatiGioco {
-    let mut f = senza_shock();
-    f.scenario = f.scenario.replacen(
-        "regime_pensioni = \"contributivo\"",
-        &format!("regime_pensioni = \"{regime}\""),
-        1,
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "partenza = \"contributivo\"",
+        &format!("partenza = \"{regime}\""),
     );
     DatiGioco::da_testi(&f).unwrap()
 }
@@ -643,9 +643,9 @@ fn annata_2027(p: &Partita) -> sim_core::economia::Annata {
 fn regime_quota_base_universale_somma_la_quota() {
     let d = dati(sostituisci(
         senza_shock(),
-        "scenario",
-        "regime_pensioni = \"contributivo\"",
-        "regime_pensioni = \"quota_base_universale\"",
+        "disposizioni",
+        "partenza = \"contributivo\"",
+        "partenza = \"quota_base_universale\"",
     ));
     let mut p = Partita::nuova(d.clone(), 1);
     p.chiudi_turno();
@@ -666,9 +666,9 @@ fn sussidi_universali_valgono_1_6_volte() {
     let sussidi = |regime: &str| {
         let f = sostituisci(
             senza_shock(),
-            "scenario",
-            "regime_sussidi = \"assicurativo\"",
-            &format!("regime_sussidi = \"{regime}\""),
+            "disposizioni",
+            "partenza = \"assicurativo\"",
+            &format!("partenza = \"{regime}\""),
         );
         giocata(dati(f), 1).economia().conti.spese.sussidi as f64
     };

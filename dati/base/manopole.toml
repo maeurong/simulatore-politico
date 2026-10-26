@@ -285,13 +285,6 @@ min = 0.5
 max = 3.0
 ticket = "07"
 
-# assunzione del piano 3, nessuna fonte in docs/ricerca (moltiplicatore della spesa)
-[sussidio_universale]
-valore = 1.6
-min = 1.0
-max = 3.0
-ticket = "07"
-
 # taratura: 84 pb al 136,7% (centro di 79-89, stato-del-paese:34)
 [spread_s0]
 valore = -883.0
@@ -767,3 +760,17 @@ valore = 0.3
 min = 0.0
 max = 2.0
 ticket = "19"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (ore annue pagate al salario minimo)
+[ore_salario_minimo]
+valore = 1600.0
+min = 1000.0
+max = 2200.0
+ticket = "17"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (quota del divario dal salario minimo che il primario recupera)
+[copertura_salario_minimo]
+valore = 0.3
+min = 0.0
+max = 1.0
+ticket = "17"

@@ -62,8 +62,9 @@ impl RegoleUe {
 }
 
 impl Economia {
-    /// Spesa netta del trimestre appena calcolato in `conti`: spesa primaria meno fondi di
-    /// coesione meno la parte dei sussidi sopra quella a disoccupazione strutturale.
+    /// Spesa netta del trimestre appena calcolato in `conti`: spesa primaria (col saldo delle
+    /// disposizioni) meno fondi di coesione meno la parte dei sussidi sopra quella a
+    /// disoccupazione strutturale.
     pub(crate) fn spesa_netta_trimestre(&self, dati: &DatiGioco) -> i64 {
         let u = self.disoccupazione_nazionale(dati);
         let u_strutturale = self.media_regionale(dati, |e| e.disoccupazione_strutturale);
@@ -75,7 +76,7 @@ impl Economia {
         };
         // Con la coesione sospesa `fondi_coesione` scende e la spesa netta sale: quella spesa
         // non è più coperta dai fondi UE. Effetto voluto.
-        s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni
+        s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni + s.disposizioni
             - self.conti.entrate.fondi_coesione
             // Le entrate dovute ad aliquote cambiate sono misure discrezionali: abbassano la
             // spesa netta.

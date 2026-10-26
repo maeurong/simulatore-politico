@@ -57,6 +57,8 @@ pub struct Spese {
     pub interessi: i64,
     /// Ammende della PDE, versate all'estero.
     pub ammende: i64,
+    /// Saldo delle disposizioni rispetto alla partenza, con segno: sotto zero è gettito.
+    pub disposizioni: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -75,7 +77,13 @@ impl ContiTrimestre {
 
     pub fn totale_spese(&self) -> i64 {
         let s = &self.spese;
-        s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni + s.interessi + s.ammende
+        s.dicasteri
+            + s.pensioni
+            + s.sussidi
+            + s.altre_prestazioni
+            + s.interessi
+            + s.ammende
+            + s.disposizioni
     }
 
     pub fn disavanzo(&self) -> i64 {
@@ -233,10 +241,14 @@ pub(crate) fn conti_del_trimestre(
         spese: Spese {
             dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0) + e.decreti,
             pensioni: e.spesa_pensioni(),
-            sussidi: e.spesa_sussidi(dati),
+            sussidi: e.spesa_sussidi(dati, &misure.leve),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),
             interessi: euro(e.tasso_medio_debito / 100.0 * e.debito as f64 / 4.0),
             ammende: e.regole_ue.ammende(e.pil_trimestrale * 4.0 * MLD, dati),
+            // Il saldo è in % del PIL potenziale annuo, quello del modello è trimestrale.
+            disposizioni: euro(
+                misure.saldo_disposizioni / 100.0 * e.pil_potenziale_reale * e.livello_prezzi * MLD,
+            ),
         },
         entrate_discrezionali: euro(discrezionali),
     }
@@ -274,7 +286,7 @@ impl Economia {
         {
             self.bilancio = b;
         }
-        self.previdenza(dati, data);
+        self.previdenza(dati, data, &misure.leve);
         let conti = conti_del_trimestre(self, &self.bilancio, dati, misure);
         self.decreti = 0;
 

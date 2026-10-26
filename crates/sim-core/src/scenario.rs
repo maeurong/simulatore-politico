@@ -41,11 +41,18 @@ pub enum RegimePensioni {
     QuotaBaseUniversale,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RegimeSussidi {
-    Assicurativo,
-    Universale,
+impl RegimePensioni {
+    /// Dalla leva `regime_pensioni`: 0, 1, 2 arrotondati; fuori, `Contributivo`.
+    pub fn da_leva(x: f64) -> RegimePensioni {
+        let x = x.round();
+        if x == 0.0 {
+            RegimePensioni::Retributivo
+        } else if x == 2.0 {
+            RegimePensioni::QuotaBaseUniversale
+        } else {
+            RegimePensioni::Contributivo
+        }
+    }
 }
 
 macro_rules! scenario {
@@ -53,8 +60,6 @@ macro_rules! scenario {
         #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
         pub struct Scenario {
             $(pub $campo: Ingresso,)*
-            pub regime_pensioni: RegimePensioni,
-            pub regime_sussidi: RegimeSussidi,
             pub pde: StatoPde,
             /// Tetto di crescita della spesa netta per anno; dopo l'ultimo vale l'ultimo.
             pub tetti_spesa_netta: BTreeMap<u16, f64>,
@@ -105,8 +110,6 @@ scenario!(
     fondi_coesione_pil,
     pensionati,
     spesa_pensioni,
-    eta_pensione,
-    indicizzazione_pensioni,
     pensione_minima,
     spesa_sussidi,
     altre_prestazioni,

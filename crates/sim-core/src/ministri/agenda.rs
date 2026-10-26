@@ -184,7 +184,7 @@ fn effetti_di(
                 } else {
                     None
                 },
-                dicastero,
+                dicastero: Some(dicastero),
                 intensita: e.intensita * c / 3.0,
                 inizio: turno.saturating_add(ritardo),
                 forma: e.forma,

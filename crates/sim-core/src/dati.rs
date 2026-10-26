@@ -101,7 +101,6 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "quota_base_universale",
     "uscite_pensionati",
     "copertura_pensionamento",
-    "sussidio_universale",
     "spread_s0",
     "spread_beta_1",
     "spread_beta_2",
@@ -172,6 +171,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "crescita_demografia",
     "costo_taglio_budget",
     "fondo_riserva",
+    "ore_salario_minimo",
+    "copertura_salario_minimo",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -185,6 +186,7 @@ const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
     ("capitale_umano", false),
     ("efficienza_riscossione", false),
     ("durata_processi", false),
+    ("regole_lavoro", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

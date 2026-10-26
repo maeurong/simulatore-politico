@@ -1,7 +1,8 @@
 //! Redditi dei gruppi, panieri e Gini: derivati dall'economia, mai stato indipendente.
 
-use super::{Condizione, Elettorato};
+use super::{Condizione, Elettorato, Fascia};
 use crate::dati::DatiGioco;
+use crate::disposizioni::Leve;
 use crate::economia::{Economia, Scaglione, irpef};
 use crate::misure::Misure;
 use serde::{Deserialize, Serialize};
@@ -47,13 +48,13 @@ pub struct Indici {
 }
 
 impl Indici {
-    pub fn da(e: &Economia, dati: &DatiGioco) -> Indici {
+    pub fn da(e: &Economia, dati: &DatiGioco, leve: &Leve) -> Indici {
         Indici {
             salario: e.salario_medio(dati),
             salari_pubblici: e.bilancio.dicasteri.iter().map(|d| d.salari as f64).sum(),
             pil: e.pil_trimestrale,
             pensione: e.pensione_media(),
-            sussidio: e.sussidio_effettivo(dati),
+            sussidio: e.sussidio_effettivo(leve),
         }
     }
 
@@ -72,9 +73,15 @@ impl Indici {
 
 impl Elettorato {
     /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
-    /// delle misure pesa anche sulle imposte degli autonomi.
+    /// delle misure pesa anche sulle imposte degli autonomi; le leve delle disposizioni, rispetto
+    /// a quelle di partenza, muovono salario minimo, reddito minimo, cuneo e forfettario.
     pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
-        let (i, b) = (Indici::da(e, dati), self.base);
+        let (l, l0) = (&misure.leve, &misure.leve_partenza);
+        let (i, b) = (Indici::da(e, dati, l), self.base);
+        let (ore, copertura) = (
+            dati.manopola("ore_salario_minimo"),
+            dati.manopola("copertura_salario_minimo"),
+        );
         let d = dati.elettorato();
         let consumi = &dati.struttura().consumi;
         let media =
@@ -86,7 +93,8 @@ impl Elettorato {
         let rapporto = |oggi: f64, base: f64| if base > 0.0 { oggi / base } else { 1.0 };
         for (g, dato) in self.gruppi.iter_mut().zip(&d.gruppi) {
             g.reddito_prima = g.reddito;
-            let primario = dato.primario
+            let (c, bassa) = (dato.condizione, dato.fascia == Fascia::Bassa);
+            let mut primario = dato.primario
                 * match dato.condizione {
                     Condizione::DipendentePubblico => {
                         rapporto(i.salari_pubblici, b.salari_pubblici)
@@ -94,12 +102,18 @@ impl Elettorato {
                     Condizione::Autonomo => rapporto(i.pil, b.pil),
                     _ => rapporto(i.salario, b.salario),
                 };
-            let trasferimenti = dato.trasferimenti
+            if c == Condizione::DipendentePrivato && bassa {
+                primario += copertura * (l.salario_minimo * ore - primario).max(0.0);
+            }
+            let mut trasferimenti = dato.trasferimenti
                 * match dato.condizione {
                     Condizione::Pensionato => rapporto(i.pensione, b.pensione),
                     Condizione::DisoccupatoInattivo => rapporto(i.sussidio, b.sussidio),
                     _ => 1.0,
                 };
+            if c == Condizione::DisoccupatoInattivo && bassa {
+                trasferimenti = (trasferimenti + l.reddito_minimo - l0.reddito_minimo).max(0.0);
+            }
             let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();
             let paniere = d.paniere.get(&dato.fascia).map_or(0.0, |w| media(w));
@@ -128,10 +142,20 @@ impl Elettorato {
             } else {
                 1.0
             };
+            let mut imposte = aliquota * lordo * r * evasione;
+            match c {
+                Condizione::DipendentePrivato | Condizione::DipendentePubblico
+                    if dato.fascia != Fascia::Alta =>
+                {
+                    imposte -= (l.cuneo - l0.cuneo) / 100.0 * primario;
+                }
+                Condizione::Autonomo => imposte *= rapporto(l.forfettario, l0.forfettario),
+                _ => {}
+            }
             g.reddito = Reddito {
                 primario,
                 trasferimenti,
-                imposte: (aliquota * lordo * r * evasione).min(lordo),
+                imposte: imposte.min(lordo).max(0.0),
                 paniere: e.livello_prezzi * paniere / costo_base,
             };
         }

@@ -372,8 +372,9 @@ impl Elettorato {
     }
 
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
+        let neutre = Misure::neutre(dati);
         let mut el = Elettorato {
-            base: Indici::da(e, dati),
+            base: Indici::da(e, dati, &neutre.leve),
             aliquota_irpef_0: 0.0,
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
@@ -393,7 +394,6 @@ impl Elettorato {
                 .collect(),
         };
         // Due volte, così `reddito_prima == reddito` al turno zero.
-        let neutre = Misure::neutre(dati);
         el.aggiorna_redditi(dati, e, &neutre);
         el.aggiorna_redditi(dati, e, &neutre);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);

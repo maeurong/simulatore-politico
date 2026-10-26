@@ -53,23 +53,24 @@ pub struct DatoGrandezza {
     pub dicasteri: Vec<String>,
 }
 
-/// Effetto di un atto già registrato: `intensita` è quella corretta per la capacità del
-/// ministro, `inizio` il turno da cui conta.
+/// Effetto di un atto o di una disposizione già registrato: `intensita` è quella corretta per
+/// la capacità del ministro, `inizio` il turno da cui conta.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EffettoAttivo {
     pub grandezza: usize,
     /// `None` = vale ovunque.
     pub regione: Option<usize>,
-    pub dicastero: usize,
+    /// `None` per le disposizioni fuori dicastero.
+    pub dicastero: Option<usize>,
     pub intensita: f64,
     pub inizio: u32,
     pub forma: Forma,
-    /// Emivita (impulso) o vita utile (stock), in turni.
+    /// Emivita (impulso) o vita utile (stock), in turni; il livello non ne ha (0).
     pub durata: f64,
 }
 
 /// Contributo al turno `turno`: 0 prima di `inizio`; impulso `I · 0.5^(età/durata)`,
-/// stock `I · max(0, 1 − età/durata)`.
+/// stock `I · max(0, 1 − età/durata)`, livello `I`.
 pub(crate) fn contributo(e: &EffettoAttivo, turno: u32) -> f64 {
     let Some(eta) = turno.checked_sub(e.inizio) else {
         return 0.0;
@@ -78,10 +79,11 @@ pub(crate) fn contributo(e: &EffettoAttivo, turno: u32) -> f64 {
     match e.forma {
         Forma::Impulso => e.intensita * 0.5_f64.powf(x),
         Forma::Stock => e.intensita * (1.0 - x).max(0.0),
+        Forma::Livello => e.intensita,
     }
 }
 
-/// Uno stock esce a fine vita utile, un impulso oltre dieci emivite.
+/// Uno stock esce a fine vita utile, un impulso oltre dieci emivite, un livello mai.
 fn esaurito(e: &EffettoAttivo, turno: u32) -> bool {
     let Some(eta) = turno.checked_sub(e.inizio) else {
         return false;
@@ -90,6 +92,7 @@ fn esaurito(e: &EffettoAttivo, turno: u32) -> bool {
     match e.forma {
         Forma::Stock => eta >= e.durata,
         Forma::Impulso => eta > 10.0 * e.durata,
+        Forma::Livello => false,
     }
 }
 
@@ -207,10 +210,10 @@ impl Grandezze {
             dati.grandezze()
                 .get(e.grandezza)
                 .is_some_and(|g| regione_giusta(g.regionale) && e.intensita.abs() <= g.max - g.min)
-                && e.dicastero < dati.dicasteri().len()
+                && e.dicastero.is_none_or(|d| d < dati.dicasteri().len())
                 && e.intensita.is_finite()
                 && e.durata.is_finite()
-                && e.durata > 0.0
+                && (e.forma == Forma::Livello || e.durata > 0.0)
         });
         if !buoni {
             return Err(Errore::SalvataggioIlleggibile(
@@ -254,7 +257,7 @@ mod test {
         EffettoAttivo {
             grandezza: 0,
             regione: None,
-            dicastero: 0,
+            dicastero: Some(0),
             intensita,
             inizio,
             forma,
@@ -287,6 +290,16 @@ mod test {
             assert_eq!(contributo(&e, 3), 0.0);
             assert!(!esaurito(&e, 3));
             assert!(contributo(&e, 4) > 0.0);
+        }
+    }
+
+    #[test]
+    fn livello_resta_dopo_l_inizio() {
+        let e = effetto(Forma::Livello, 0.3, 5, 0.0);
+        assert_eq!(contributo(&e, 4), 0.0);
+        for eta in [0, 10, 1000] {
+            assert_eq!(contributo(&e, 5 + eta), 0.3);
+            assert!(!esaurito(&e, 5 + eta));
         }
     }
 

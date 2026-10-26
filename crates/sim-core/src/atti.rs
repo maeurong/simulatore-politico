@@ -23,6 +23,8 @@ pub enum Lato {
 pub enum Forma {
     Impulso,
     Stock,
+    /// Vale da `inizio` in poi, per sempre: solo per le disposizioni.
+    Livello,
 }
 
 impl fmt::Display for Velocita {
@@ -48,6 +50,7 @@ impl fmt::Display for Forma {
         f.write_str(match self {
             Self::Impulso => "impulso",
             Self::Stock => "stock",
+            Self::Livello => "livello",
         })
     }
 }
@@ -178,6 +181,9 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                 && e.intensita.abs() <= tetto.min(1e3))
             {
                 return ko(format!("{}: intensita fuori intervallo", a.id));
+            }
+            if e.forma == Forma::Livello {
+                return ko(format!("{}: forma livello solo per le disposizioni", a.id));
             }
             if e.ritardo > 40 {
                 return ko(format!("{}: ritardo fuori intervallo", a.id));

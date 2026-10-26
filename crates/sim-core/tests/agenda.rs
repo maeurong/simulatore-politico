@@ -642,7 +642,7 @@ fn cantiere_solo() -> Partita {
 fn effetti_di(p: &Partita, dicastero: &str) -> Vec<sim_core::grandezze::EffettoAttivo> {
     let i = indice(dicastero);
     (p.grandezze().effetti.iter())
-        .filter(|e| e.dicastero == i)
+        .filter(|e| e.dicastero == Some(i))
         .cloned()
         .collect()
 }

@@ -1,6 +1,6 @@
 //! Le disposizioni nella partita: gradino in vigore, legge, precedente e valori in arrivo.
 
-use super::{DatoDisposizione, legge_da_gradini};
+use super::{DatoDisposizione, effetti_del_cambio, legge_da_gradini};
 use crate::dati::DatiGioco;
 use crate::elezioni::LeggeElettorale;
 use crate::errore::Errore;
@@ -80,29 +80,36 @@ impl Disposizioni {
         Disposizioni { voci }
     }
 
-    /// Il gradino `g` entra in vigore nella disposizione `d` con la legge `legge`; gli arrivi
-    /// restano. Con `g` già in vigore cambia solo la legge.
-    fn applica(&mut self, d: usize, g: usize, legge: &str) -> Vec<EffettoAttivo> {
+    /// Il gradino `g` entra in vigore nella disposizione `d` al turno `turno` con la legge
+    /// `legge`; gli arrivi restano. Con `g` già in vigore cambia solo la legge.
+    fn applica(
+        &mut self,
+        dati: &DatiGioco,
+        d: usize,
+        g: usize,
+        turno: u32,
+        legge: &str,
+    ) -> Vec<EffettoAttivo> {
         let v = &mut self.voci[d];
         v.legge = legge.into();
-        if g != v.in_vigore {
-            v.precedente = v.in_vigore;
-            v.in_vigore = g;
+        if g == v.in_vigore {
+            return Vec::new();
         }
-        // Gli effetti del cambio li aggiunge il Task 4.
-        Vec::new()
+        v.precedente = v.in_vigore;
+        v.in_vigore = g;
+        effetti_del_cambio(dati, d, v.precedente, g, turno)
     }
 
     /// Una legge porta la disposizione `d` al gradino `g` e cancella i valori in arrivo.
     pub fn cambia(
         &mut self,
-        _dati: &DatiGioco,
+        dati: &DatiGioco,
         d: usize,
         g: usize,
-        _turno: u32,
+        turno: u32,
         legge: &str,
     ) -> Vec<EffettoAttivo> {
-        let effetti = self.applica(d, g, legge);
+        let effetti = self.applica(dati, d, g, turno, legge);
         self.voci[d].in_arrivo.clear();
         effetti
     }
@@ -118,7 +125,7 @@ impl Disposizioni {
 
     /// Apertura del turno `turno`: ogni arrivo dovuto entra in vigore, in ordine, con la sua
     /// legge, ed esce dalla lista.
-    pub fn arrivi(&mut self, _dati: &DatiGioco, turno: u32) -> Vec<EffettoAttivo> {
+    pub fn arrivi(&mut self, dati: &DatiGioco, turno: u32) -> Vec<EffettoAttivo> {
         let mut effetti = Vec::new();
         for d in 0..self.voci.len() {
             let dovuti = (self.voci[d].in_arrivo.iter())
@@ -126,7 +133,7 @@ impl Disposizioni {
                 .count();
             let arrivati: Vec<InArrivo> = self.voci[d].in_arrivo.drain(..dovuti).collect();
             for a in arrivati {
-                effetti.extend(self.applica(d, a.gradino, &a.legge));
+                effetti.extend(self.applica(dati, d, a.gradino, turno, &a.legge));
             }
         }
         effetti

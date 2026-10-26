@@ -101,6 +101,10 @@ impl Economia {
                 + sp.sussidi
                 + sp.altre_prestazioni
                 + sp.interessi
+                // ponytail: tutto il saldo delle disposizioni alle famiglie, anche quello che
+                // tocca le imprese (credito ZES, incentivi); un settore per disposizione se
+                // gli stock SFC diventano un ingresso del motore.
+                + sp.disposizioni
                 - e.irpef
                 - e.contributi
                 - e.altre

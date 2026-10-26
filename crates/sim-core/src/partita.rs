@@ -148,6 +148,7 @@ impl Partita {
             &self.elettorato,
             self.turno,
             self.data,
+            &self.disposizioni,
         );
         let prima = std::mem::replace(&mut self.misure, nuove);
         self.economia
@@ -763,6 +764,7 @@ impl Economia {
             c.spese.altre_prestazioni,
             c.spese.interessi,
             c.spese.ammende,
+            c.spese.disposizioni,
             st.famiglie,
             st.imprese,
             st.stato,

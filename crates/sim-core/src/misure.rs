@@ -1,7 +1,9 @@
-//! Misure: ciò che gli atti dei ministri e gli stock fanno arrivare al motore economico.
-//! Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura del turno.
+//! Misure: ciò che gli atti dei ministri, gli stock e le disposizioni fanno arrivare al motore
+//! economico. Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura
+//! del turno.
 
 use crate::dati::{DatiGioco, Ruolo};
+use crate::disposizioni::{Disposizioni, Leve};
 use crate::economia::{Economia, Scaglione, eti, fattore};
 use crate::elettorato::Elettorato;
 use crate::errore::Errore;
@@ -44,6 +46,12 @@ pub struct Misure {
     pub irpef_discrezionale: f64,
     /// Elasticità della base imponibile all'aliquota media IRPEF, `eti(t, t₀)`.
     pub eti_irpef: f64,
+    /// Le leve dei gradini in vigore.
+    pub leve: Leve,
+    /// Le leve dei gradini di partenza.
+    pub leve_partenza: Leve,
+    /// `Σ (saldo in vigore − saldo di partenza)` delle disposizioni, % del PIL potenziale annuo.
+    pub saldo_disposizioni: f64,
 }
 
 /// `g(y) = 100 · (L(y)/L(y−1) − 1)`, con `L(y)` le persone di 15-66 anni nell'anno `y`: la
@@ -60,9 +68,11 @@ fn crescita_forza_lavoro(piramide: &[u32], anno: u16) -> f64 {
 }
 
 impl Misure {
-    /// Le misure che non cambiano nulla: riscossione 1, il resto a zero, capacità 3.
+    /// Le misure che non cambiano nulla: riscossione 1, il resto a zero, capacità 3, le leve
+    /// di partenza.
     pub fn neutre(dati: &DatiGioco) -> Misure {
         let n = dati.regioni().len();
+        let leve = Leve::partenza(dati);
         Misure {
             riscossione: 1.0,
             prezzo_energia: 0.0,
@@ -74,11 +84,18 @@ impl Misure {
             fattore_irpef: 1.0,
             irpef_discrezionale: 0.0,
             eti_irpef: 1.0,
+            leve_partenza: leve.clone(),
+            leve,
+            saldo_disposizioni: 0.0,
         }
     }
 
-    /// Le misure del turno `turno` (trimestre `data`), dalle grandezze, dai ministri e
-    /// dall'economia.
+    /// Le misure del turno `turno` (trimestre `data`), dalle grandezze, dai ministri,
+    /// dall'economia e dalle disposizioni in vigore.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "ogni ingresso è uno stato diverso della partita, letto e non scritto"
+    )]
     pub fn da(
         dati: &DatiGioco,
         g: &Grandezze,
@@ -87,8 +104,10 @@ impl Misure {
         el: &Elettorato,
         turno: u32,
         data: Trimestre,
+        disposizioni: &Disposizioni,
     ) -> Misure {
         let n = dati.regioni().len();
+        let (leve, leve_partenza) = (disposizioni.leve(dati), Leve::partenza(dati));
         let manopola = |id: &str| dati.manopola(id);
         let nazionale =
             |id: &str, vuoto: f64| dati.grandezza(id).map_or(vuoto, |k| g.nazionale(dati, k));
@@ -104,14 +123,14 @@ impl Misure {
         let infrastrutture = regionale("stock_infrastrutture", 100.0);
         let investimenti = regionale("investimenti_privati", 100.0);
         let stock = manopola("stock_disoccupazione");
-        let politiche_attive = nazionale("politiche_attive", 0.0);
+        let punti_tolti = nazionale("politiche_attive", 0.0) + nazionale("regole_lavoro", 0.0);
         let disoccupazione_strutturale = infrastrutture
             .iter()
             .zip(&investimenti)
-            .map(|(i, v)| -stock * ((i - 100.0) + (v - 100.0)) / 10.0 - politiche_attive)
+            .map(|(i, v)| -stock * ((i - 100.0) + (v - 100.0)) / 10.0 - punti_tolti)
             .collect();
 
-        let prezzo_energia = nazionale("prezzo_energia", 0.0);
+        let prezzo_energia = nazionale("prezzo_energia", 0.0) + leve.accise - leve_partenza.accise;
         // Prima del 2027 la demografia non sposta il potenziale dalla base calibrata.
         let anno = data.anno.max(ANNO_BASE);
         let piramide = &dati.struttura().piramide;
@@ -144,6 +163,9 @@ impl Misure {
             fattore_irpef: 1.0,
             irpef_discrezionale: 0.0,
             eti_irpef: 1.0,
+            saldo_disposizioni: disposizioni.saldo(dati),
+            leve,
+            leve_partenza,
         }
         // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
         .con_scaglioni(dati, el, &e.bilancio_in_vigore(data).aliquote.irpef)
@@ -188,7 +210,9 @@ impl Misure {
             return merito;
         };
         for ef in &g.effetti {
-            let Some(r) = ef.regione else { continue };
+            let (Some(r), Some(dicastero)) = (ef.regione, ef.dicastero) else {
+                continue;
+            };
             let c = contributo(ef, visto);
             let k = Some(ef.grandezza);
             let punti = if k == domanda {
@@ -198,7 +222,7 @@ impl Misure {
             } else {
                 0.0
             };
-            merito[r][ef.dicastero] += punti;
+            merito[r][dicastero] += punti;
         }
         merito
     }
@@ -233,6 +257,7 @@ impl Misure {
             ("fattore_irpef", self.fattore_irpef),
             ("irpef_discrezionale", self.irpef_discrezionale),
             ("eti_irpef", self.eti_irpef),
+            ("saldo_disposizioni", self.saldo_disposizioni),
         ];
         if let Some((campo, _)) = scalari.iter().find(|(_, x)| !x.is_finite()) {
             return ko(format!("{campo} non finito"));
@@ -278,6 +303,7 @@ mod test {
             p.elettorato(),
             0,
             data,
+            p.disposizioni(),
         )
     }
 
