@@ -1,7 +1,7 @@
 mod comune;
 use comune::{imposta, presenta, senza_shock, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
-use sim_core::parlamento::{CausaIntesa, TipoReferendum};
+use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum};
 use sim_core::vista::SeggiPartito;
 use sim_core::{Comando, Partita};
 
@@ -175,21 +175,96 @@ fn senza_i_due_terzi_si_vota_il_referendum_confermativo() {
 /// coalizioni attive.
 #[test]
 fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
-    let f = sostituisci(
-        senza_shock(),
-        "scenario",
-        "legge_elettorale = \"legge_180\"",
-        "legge_elettorale = \"proporzionale_3\"",
-    );
-    let mut p = partita(f);
-    presenta(&mut p, &[("coalizioni", "si")]).unwrap();
-    presenta(&mut p, &[("premio", "lista")]).unwrap();
-    let id = p.vista().calendario[0].id;
-    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
-    p.chiudi_turno();
-    assert_eq!(p.in_vigore("coalizioni"), Some("si"));
-    p.chiudi_turno();
+    let gioca = |seconda: bool| {
+        let f = sostituisci(
+            senza_shock(),
+            "scenario",
+            "legge_elettorale = \"legge_180\"",
+            "legge_elettorale = \"proporzionale_3\"",
+        );
+        let mut p = partita(f);
+        presenta(&mut p, &[("coalizioni", "si")]).unwrap();
+        if seconda {
+            presenta(&mut p, &[("premio", "lista")]).unwrap();
+        }
+        let id = p.vista().calendario[0].id;
+        p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+        p.chiudi_turno();
+        assert_eq!(p.in_vigore("coalizioni"), Some("si"));
+        p.chiudi_turno();
+        p
+    };
+    let mut p = gioca(true);
     assert_eq!(p.in_vigore("premio"), Some("nessuno"));
     assert!(p.vista().calendario.is_empty());
-    assert!(p.salva().is_ok());
+    let e = &p.vista().esiti[0];
+    assert!(!e.approvata && !e.fiducia_respinta);
+    assert_eq!(e.camera, Conteggio { si: 0, no: 0 });
+    assert_eq!(e.senato, Conteggio { si: 0, no: 0 });
+    assert_eq!(
+        e.decaduta.as_deref(),
+        Some("premio alla lista con le coalizioni attive")
+    );
+    let flusso = |p: &Partita| {
+        let json: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        json["caso"]["flussi"]["Parlamento"].clone()
+    };
+    assert_eq!(flusso(&p), flusso(&gioca(false)));
+    presenta(&mut p, &[("premio", "coalizione")]).unwrap();
+}
+
+/// Durata della legislatura e numero dei parlamentari in una legge sola, coi gradini nuovi in
+/// `posizione`: solo la maggioranza vota sì, senza i due terzi. Nel confermativo il sì prende
+/// anche `peso_giudizio` per il giudizio sul governo.
+fn costituzionale_doppia(posizione: &str, peso_giudizio: &str) -> Partita {
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "nome = \"6 anni\", posizione = 4.5",
+        &format!("nome = \"6 anni\", posizione = {posizione}"),
+    );
+    let f = sostituisci(
+        f,
+        "disposizioni",
+        "nome = \"300 deputati e 150 senatori\", posizione = 5.5",
+        &format!("nome = \"300 deputati e 150 senatori\", posizione = {posizione}"),
+    );
+    let f = con(con(f, "ft_base", "0.0"), "ft_distanza", "0.0");
+    let f = con(f, "peso_giudizio", peso_giudizio);
+    let mut p = partita(con(
+        con(f, "malus_opposizione", "5.0"),
+        "peso_intesa_linea",
+        "2.0",
+    ));
+    presenta(
+        &mut p,
+        &[
+            ("durata_legislatura", "6"),
+            ("numero_parlamentari", "300_150"),
+        ],
+    )
+    .unwrap();
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let v = p.vista();
+    assert_eq!(v.referendum.len(), 1);
+    assert_eq!(v.referendum[0].tipo, TipoReferendum::Confermativo);
+    p.chiudi_turno();
+    p
+}
+
+#[test]
+fn confermativo_approvato_porta_tutti_i_valori() {
+    let p = costituzionale_doppia("5.0", "0.3");
+    assert!(p.vista().esiti_referendum[0].approvato);
+    assert_eq!(p.in_vigore("durata_legislatura"), Some("6"));
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
+}
+
+#[test]
+fn confermativo_respinto_non_porta_nessun_valore() {
+    let p = costituzionale_doppia("6.0", "0.0");
+    assert!(!p.vista().esiti_referendum[0].approvato);
+    assert_eq!(p.in_vigore("durata_legislatura"), Some("5"));
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
 }

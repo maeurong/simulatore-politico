@@ -3,7 +3,7 @@
 
 use super::{Conteggio, StatoAula};
 use crate::dati::DatiGioco;
-use crate::disposizioni::Leve;
+use crate::disposizioni::{Disposizioni, Leve};
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Voti, riparto};
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
@@ -21,14 +21,13 @@ pub enum TipoReferendum {
     Abrogativo,
 }
 
-/// Un referendum in attesa del voto, su un valore: `disposizione` e `gradino` sono indici,
-/// `promotore` un partito, `voto` il turno nella cui chiusura si vota.
+/// Un referendum in attesa del voto, su una legge intera: `valori` = disposizione e gradino
+/// (indici), `promotore` un partito, `voto` il turno nella cui chiusura si vota.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Referendum {
     pub tipo: TipoReferendum,
     pub misura: Option<u32>,
-    pub disposizione: usize,
-    pub gradino: usize,
+    pub valori: Vec<(usize, usize)>,
     pub promotore: Option<usize>,
     pub voto: u32,
     pub firme: bool,
@@ -93,9 +92,25 @@ pub(crate) fn proietta(
     )
 }
 
-/// Almeno due terzi di sì nel ramo: `sì · 3 ≥ seggi · 2`.
-pub(crate) fn due_terzi(c: &Conteggio) -> bool {
-    c.si * 3 >= (c.si + c.no) * 2
+/// Perché la legge elettorale in vigore con `valori` non sarebbe valida: la stringa dentro
+/// `Errore::LeggeElettorale`; `None` se è valida.
+pub(crate) fn legge_non_valida(
+    dati: &DatiGioco,
+    disposizioni: &Disposizioni,
+    valori: &[(usize, usize)],
+) -> Option<String> {
+    let e = (disposizioni.legge_con(dati, valori))
+        .valida(&dati.elezioni().menu)
+        .err()?;
+    Some(match e {
+        Errore::LeggeElettorale(m) => m,
+        altro => altro.to_string(),
+    })
+}
+
+/// Almeno due terzi dei `seggi` del ramo votano sì: `sì · 3 ≥ seggi · 2`.
+pub(crate) fn due_terzi(c: &Conteggio, seggi: &[u32]) -> bool {
+    c.si * 3 >= seggi.iter().sum::<u32>() * 2
 }
 
 /// I partiti fuori dal governo con linea no hanno almeno un quinto dei `seggi` del ramo.

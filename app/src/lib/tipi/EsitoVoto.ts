@@ -4,4 +4,8 @@ import type { FormaMisura } from "./FormaMisura";
 import type { Trimestre } from "./Trimestre";
 import type { VoceLinea } from "./VoceLinea";
 
-export type EsitoVoto = { misura: number, nome: string, forma: FormaMisura, data: Trimestre, deliberazione: number, camera: Conteggio, senato: Conteggio, approvata: boolean, fiducia: boolean, fiducia_respinta: boolean, linee: Array<VoceLinea>, };
+export type EsitoVoto = { misura: number, nome: string, forma: FormaMisura, data: Trimestre, deliberazione: number, camera: Conteggio, senato: Conteggio, approvata: boolean, fiducia: boolean, fiducia_respinta: boolean, linee: Array<VoceLinea>, 
+/**
+ * La legge elettorale decaduta senza voto: il motivo per cui non sarebbe valida.
+ */
+decaduta: string | null, };

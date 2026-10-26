@@ -22,7 +22,7 @@ pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
-pub(crate) use regole::{due_terzi, proietta, quinto_contro};
+pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro};
 
 /// Posti del calendario per riforme ed elettorali.
 pub const POSTI_ORDINARI: usize = 3;
@@ -87,6 +87,8 @@ pub struct EsitoVoto {
     pub fiducia: bool,
     pub fiducia_respinta: bool,
     pub linee: Vec<VoceLinea>,
+    /// La legge elettorale decaduta senza voto: il motivo per cui non sarebbe valida.
+    pub decaduta: Option<String>,
 }
 
 /// Un valore di una legge presentata: id della disposizione e del gradino.
@@ -399,7 +401,9 @@ impl Parlamento {
                 return ko(format!("gradino bloccato dal referendum: {id} {g}"));
             }
             let in_misura = (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d));
-            if in_misura || self.confermativi.iter().any(|r| r.disposizione == d) {
+            let in_referendum =
+                (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d));
+            if in_misura || in_referendum {
                 return ko(format!("{id} è già in esame"));
             }
             if let Some(&(_, da)) = (self.respinte.iter()).find(|&&(x, da)| x == d && da > turno) {
@@ -413,14 +417,7 @@ impl Parlamento {
             // Dopo il voto e dopo gli arrivi elettorali in corso.
             let con_arrivi = [disposizioni.arrivi_elettorali(), scelti.clone()].concat();
             for v in [&scelti, &con_arrivi] {
-                if let Err(e) = disposizioni
-                    .legge_con(dati, v)
-                    .valida(&dati.elezioni().menu)
-                {
-                    let m = match e {
-                        Errore::LeggeElettorale(m) => m,
-                        altro => altro.to_string(),
-                    };
+                if let Some(m) = legge_non_valida(dati, disposizioni, v) {
                     return ko(format!("legge elettorale non valida: {m}"));
                 }
             }
@@ -574,9 +571,8 @@ impl Parlamento {
                 && m.proponente.is_none_or(|i| i < dati.dicasteri().len())
                 && m.emendamenti.iter().all(emendamento_ok)
         });
-        let referendum_ok = (self.referendum.iter().chain(&self.confermativi)).all(|r| {
-            valore_ok(&(r.disposizione, r.gradino)) && r.promotore.is_none_or(|j| j < n_partiti)
-        });
+        let referendum_ok = (self.referendum.iter().chain(&self.confermativi))
+            .all(|r| r.valori.iter().all(valore_ok) && r.promotore.is_none_or(|j| j < n_partiti));
         if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {
             return ko("una misura o una respinta fuori dalle disposizioni o dai dicasteri");
         }

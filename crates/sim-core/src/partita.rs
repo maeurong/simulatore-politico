@@ -315,10 +315,27 @@ impl Partita {
         };
         let mut m = self.parlamento.misure.remove(k);
         let elettorale = m.forma == FormaMisura::Elettorale;
-        let legge_nuova = self.disposizioni.legge_con(&self.dati, &m.valori);
-        // ponytail: un'elettorale che, dopo i voti e gli arrivi del turno, darebbe una legge non
-        // valida cade senza voto; la presentazione la rifiuta già sullo stato di allora.
-        if elettorale && legge_nuova.valida(&self.dati.elezioni().menu).is_err() {
+        // Un'elettorale che, dopo i voti e gli arrivi venuti dalla presentazione, darebbe una legge
+        // non valida decade senza voto: nessuna estrazione, nessun blocco, nessun costo.
+        if elettorale
+            && let Some(motivo) =
+                parlamento::legge_non_valida(&self.dati, &self.disposizioni, &m.valori)
+        {
+            let esito = EsitoVoto {
+                misura: id,
+                nome: parlamento::nome(&self.dati, &m.valori),
+                forma: m.forma,
+                data: self.data,
+                deliberazione: m.deliberazione,
+                camera: Conteggio { si: 0, no: 0 },
+                senato: Conteggio { si: 0, no: 0 },
+                approvata: false,
+                fiducia: m.fiducia,
+                fiducia_respinta: false,
+                linee: Vec::new(),
+                decaduta: Some(motivo),
+            };
+            self.parlamento.esiti.insert(0, esito);
             return;
         }
         let aula = self.stato_aula();
@@ -362,25 +379,26 @@ impl Partita {
             linee,
             camera,
             senato,
+            decaduta: None,
         };
         if approvata && !prima {
             let (c, s) = (&esito.camera, &esito.senato);
             let pl = &self.parlamento;
             let quinto = parlamento::quinto_contro(&self.governo, &pl.seggi_camera, &p.linea)
                 || parlamento::quinto_contro(&self.governo, &pl.seggi_senato, &p.linea);
-            let due_terzi = parlamento::due_terzi(c) && parlamento::due_terzi(s);
+            let due_terzi = parlamento::due_terzi(c, &pl.seggi_camera)
+                && parlamento::due_terzi(s, &pl.seggi_senato);
             if m.forma == FormaMisura::Costituzionale && !due_terzi && quinto {
                 let voto = turno.saturating_add(1);
-                (self.parlamento.confermativi).extend(m.valori.iter().map(|&(d, g)| Referendum {
+                self.parlamento.confermativi.push(Referendum {
                     tipo: TipoReferendum::Confermativo,
                     misura: Some(id),
-                    disposizione: d,
-                    gradino: g,
+                    valori: m.valori.clone(),
                     promotore: None,
                     voto,
                     firme: false,
                     invito_astensione: false,
-                }));
+                });
             } else {
                 self.entra_in_vigore(&m);
             }
@@ -455,8 +473,8 @@ impl Partita {
         }
     }
 
-    /// I referendum confermativi del turno (art. 138, nessun quorum): approvato con `sì > no`,
-    /// il valore entra in vigore.
+    /// I referendum confermativi del turno (art. 138, nessun quorum), uno per legge sulla
+    /// posizione media dei suoi valori: approvato con `sì > no`, entrano in vigore tutti.
     fn vota_confermativi(&mut self) {
         let turno = self.turno;
         let (dovuti, restano): (Vec<Referendum>, Vec<Referendum>) =
@@ -465,9 +483,8 @@ impl Partita {
                 .partition(|r| r.voto == turno);
         self.parlamento.confermativi = restano;
         for r in dovuti {
-            let (d, g) = (r.disposizione, r.gradino);
-            let pos_si = self.dati.disposizioni().get(d).and_then(|x| x.posizione(g));
-            let pos_no = self.disposizioni.posizione(&self.dati, d);
+            let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
+            let (pos_no, pos_si) = (posizioni.map(|p| p.0), posizioni.map(|p| p.1));
             let a = (self.elettorato).referendum(
                 &self.dati,
                 &self.partiti,
@@ -482,18 +499,20 @@ impl Partita {
             let approvato = si > no;
             if approvato {
                 let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
-                (self.disposizioni).cambia(
-                    &self.dati,
-                    d,
-                    g,
-                    turno,
-                    &legge,
-                    &mut self.grandezze.effetti,
-                );
+                for &(d, g) in &r.valori {
+                    (self.disposizioni).cambia(
+                        &self.dati,
+                        d,
+                        g,
+                        turno,
+                        &legge,
+                        &mut self.grandezze.effetti,
+                    );
+                }
             }
             let esito = EsitoReferendum {
                 tipo: r.tipo,
-                nome: parlamento::nome(&self.dati, &[(d, g)]),
+                nome: parlamento::nome(&self.dati, &r.valori),
                 data: self.data,
                 si,
                 no,
@@ -871,7 +890,7 @@ impl Partita {
                 .chain(&self.parlamento.confermativi)
                 .map(|r| VistaReferendum {
                     tipo: r.tipo,
-                    nome: parlamento::nome(&self.dati, &[(r.disposizione, r.gradino)]),
+                    nome: parlamento::nome(&self.dati, &r.valori),
                     voto: data_di(r.voto),
                     promotore: (r.promotore)
                         .and_then(|j| self.partiti.get(j))
