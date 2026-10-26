@@ -92,6 +92,7 @@ impl Partita {
         }
         match self.con_contesto(|ministri, cx| ministri.comanda(cx, c))? {
             EffettoComando::Nessuno => {}
+            EffettoComando::Dirottata { dicastero } => self.conversione_su_agenda(dicastero),
             EffettoComando::Decreto { dicastero, importo } => {
                 self.aggiungi_decreto(dicastero, importo);
             }

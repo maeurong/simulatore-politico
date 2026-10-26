@@ -163,18 +163,28 @@ impl Ministri {
     ///
     /// Una proposta di fondi già in corso si ricalcola sul suo atto: con un'agenda, o se l'atto
     /// è ormai pagabile, decade senza costo; altrimenti l'`importo` si aggiorna (`rinviata` e
-    /// `turni_in_sospeso` restano). Un atto col prerequisito mancante non si propone, e la sua
-    /// proposta decade. Una proposta di riforma già in corso resta finché [`tiene`], poi decade
+    /// `turni_in_sospeso` restano). Un atto col prerequisito mancante, o col decreto decaduto del
+    /// dicastero, non si propone, e la sua proposta decade. Una proposta di riforma già in corso resta finché [`tiene`], poi decade
     /// senza costo.
     pub(super) fn proponi(&mut self, cx: &Contesto) {
         let (dati, rif) = (cx.dati, margini_rif(cx.dati));
-        let ammesso = |k: usize| {
+        let ammesso = |i: usize, k: usize| {
+            let firma = parlamento::FondiDecreto::Accolti {
+                dicastero: i,
+                atto: k,
+                importo: 0,
+            };
             dati.atti()[k]
                 .prerequisito_mancante(dati, cx.disposizioni)
                 .is_none()
+                && !cx
+                    .parlamento
+                    .decaduti
+                    .iter()
+                    .any(|f| f.stessa_firma(&firma))
         };
-        let fondi = |atto: usize, importo: i64| {
-            ((1..=LIMITE_EURO).contains(&importo) && ammesso(atto))
+        let fondi = |i: usize, atto: usize, importo: i64| {
+            ((1..=LIMITE_EURO).contains(&importo) && ammesso(i, atto))
                 .then_some(TipoProposta::Fondi { atto, importo })
         };
         for i in 0..self.dicasteri.len() {
@@ -186,15 +196,15 @@ impl Ministri {
             let nuova = match st.proposta {
                 Some(p) => match p.tipo {
                     TipoProposta::Fondi { atto, .. } => senza_agenda
-                        .then(|| fondi(atto, mancano(cx, &rif, i, st, atto)))
+                        .then(|| fondi(i, atto, mancano(cx, &rif, i, st, atto)))
                         .flatten(),
                     TipoProposta::Riforma { .. } => tiene(cx, m, p.tipo).then_some(p.tipo),
                 }
                 .map(|tipo| Proposta { tipo, ..p }),
                 None => senza_agenda
-                    .then(|| piu_sentito(cx, i, m, st, ammesso))
+                    .then(|| piu_sentito(cx, i, m, st, |k| ammesso(i, k)))
                     .flatten()
-                    .and_then(|k| fondi(k, mancano(cx, &rif, i, st, k)))
+                    .and_then(|k| fondi(i, k, mancano(cx, &rif, i, st, k)))
                     .or_else(|| sblocco(cx, i, m, st))
                     .or_else(|| distanza(cx, i, m))
                     .map(|tipo| Proposta {

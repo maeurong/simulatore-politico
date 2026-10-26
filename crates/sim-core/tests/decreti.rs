@@ -1,7 +1,7 @@
 mod comune;
 use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta};
 use sim_core::dati::{DatiGioco, FileDati};
-use sim_core::ministri::Causa;
+use sim_core::ministri::{Causa, TipoProposta};
 use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Errore, Partita};
 
@@ -9,14 +9,50 @@ fn sanita_cara() -> FileDati {
     comune::sanita_cara(file_base())
 }
 
+fn accogli() -> Comando {
+    Comando::Accogli {
+        dicastero: "sanita".into(),
+    }
+}
+
 fn accolta(f: FileDati) -> (Partita, i64) {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     let importo = p.vista().ministeri[3].proposta.as_ref().unwrap().importo;
-    p.comanda(Comando::Accogli {
-        dicastero: "sanita".into(),
-    })
-    .unwrap();
+    p.comanda(accogli()).unwrap();
     (p, importo)
+}
+
+/// Franchi tiratori al 90%: la conversione cade.
+fn respinte(f: FileDati) -> FileDati {
+    imposta(
+        imposta(f, "manopole", "[ft_base]\nvalore = ", "0.9"),
+        "manopole",
+        "[ft_max]\nvalore = ",
+        "1.0",
+    )
+}
+
+/// L'atto della proposta di fondi della Sanità, se ce n'è una.
+fn atto_proposto(p: &Partita) -> Option<usize> {
+    match p.ministri().dicasteri[3].proposta?.tipo {
+        TipoProposta::Fondi { atto, .. } => Some(atto),
+        TipoProposta::Riforma { .. } => None,
+    }
+}
+
+/// La Sanità senza agenda e con la proposta di fondi forzata sull'atto `atto`, da salvataggio.
+fn proposta_forzata(p: &Partita, atto: usize) -> Partita {
+    edita(p, |j| {
+        let s = &mut j["ministri"]["dicasteri"][3];
+        s["agenda"] = serde_json::Value::Null;
+        s["proposta"] = serde_json::json!({"tipo": {"fondi": {"atto": atto, "importo": 1}},
+            "turni_in_sospeso": 0, "rinviata": false});
+    })
+    .unwrap()
+}
+
+fn conversione_respinta(p: &Partita) -> bool {
+    (p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Conversione && !e.approvata)
 }
 
 fn sposta(da: &str, a: &str, importo: i64) -> Comando {
@@ -92,9 +128,12 @@ fn dimissioni_dopo_accogli_ritirano_il_decreto() {
     );
 }
 
+/// Dirotta tiene il decreto e la conversione segue l'agenda: respinta, decade l'atto pagato
+/// davvero, che non si ripete; il vecchio resta proponibile.
 #[test]
 fn dirotta_dopo_accogli_tiene_il_decreto() {
-    let (mut p, importo) = accolta(sanita_cara());
+    let (mut p, importo) = accolta(respinte(sanita_cara()));
+    let vecchio = p.ministri().dicasteri[3].agenda.as_ref().unwrap().atto;
     let v = p.vista();
     let m = &v.ministeri[3];
     // I quattro atti costano tutti 9 quote: il margine accolto per uno paga anche gli altri.
@@ -110,12 +149,26 @@ fn dirotta_dopo_accogli_tiene_il_decreto() {
     })
     .unwrap();
     assert_eq!(p.economia().decreti[3], importo);
+    let w = p.vista();
+    let conversione = (w.calendario.iter())
+        .find(|m| m.forma == FormaMisura::Conversione)
+        .unwrap();
     assert!(
-        p.vista()
-            .calendario
-            .iter()
-            .any(|m| m.forma == FormaMisura::Conversione)
+        conversione.nome.ends_with(&format!("per {}", altro.nome)),
+        "{}",
+        conversione.nome
     );
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+    p.chiudi_turno();
+    assert!(conversione_respinta(&p));
+    let nuovo = (dati_base().atti().iter())
+        .position(|a| a.id == altro.id)
+        .unwrap();
+    for (atto, ripetuto) in [(vecchio, false), (nuovo, true)] {
+        let e = proposta_forzata(&p, atto).comanda(accogli()).err();
+        let decaduto = e.is_some_and(|e| e.to_string().contains("decreto decaduto non si ripete"));
+        assert_eq!(decaduto, ripetuto, "atto {atto}");
+    }
 }
 
 #[test]
@@ -212,41 +265,43 @@ fn decreti_non_ammessi_rifiutati_col_nome() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
+/// La conversione respinta costa al ministro; la stessa firma, forzata da salvataggio, resta
+/// rifiutata; il ministro non ripropone l'atto e non paga proposte rifiutate a ripetizione.
 #[test]
 fn conversione_respinta_costa_e_non_si_ripete() {
-    let f = imposta(
-        imposta(sanita_cara(), "manopole", "[ft_base]\nvalore = ", "0.9"),
-        "manopole",
-        "[ft_max]\nvalore = ",
-        "1.0",
-    );
-    let (mut p, _) = accolta(f);
-    // Il bilancio del 2027 è già approvato al turno 0: il turno 1 non è in esercizio provvisorio,
-    // dove ogni Accogli è rifiutato.
+    let (mut p, _) = accolta(respinte(sanita_cara()));
+    let decaduto = p.ministri().dicasteri[3].agenda.as_ref().unwrap().atto;
+    // Il bilancio del 2027 è già approvato al turno 0: i turni 1-3 non sono in esercizio
+    // provvisorio, dove ogni Accogli è rifiutato.
     assert!(p.bozza_bilancio().is_none());
     p.chiudi_turno();
+    assert!(conversione_respinta(&p));
+    let sanita = p.vista().ministeri[3].ministro.clone().unwrap();
     assert!(
-        p.vista()
-            .esiti
-            .iter()
-            .any(|e| e.forma == FormaMisura::Conversione && !e.approvata)
+        (sanita.variazioni.iter()).any(|v| v.causa == Causa::DecretoDecaduto),
+        "{:?}",
+        sanita.variazioni
     );
-    // Gli atti restano impagabili anche col margine di un anno: la proposta rinasce sullo stesso atto.
-    let atto = p.vista().ministeri[3]
-        .proposta
-        .as_ref()
-        .unwrap()
-        .nome
-        .clone();
-    let e = p
-        .comanda(Comando::Accogli {
-            dicastero: "sanita".into(),
-        })
+    let nome = dati_base().atti()[decaduto].nome.clone();
+    let e = proposta_forzata(&p, decaduto)
+        .comanda(accogli())
         .unwrap_err();
     assert!(
         e.to_string()
-            .contains(&format!("decreto decaduto non si ripete: {atto}")),
+            .contains(&format!("decreto decaduto non si ripete: {nome}")),
         "{e}"
+    );
+    for _ in 0..3 {
+        assert_ne!(atto_proposto(&p), Some(decaduto));
+        let _ = p.comanda(accogli());
+        p.chiudi_turno();
+    }
+    assert_ne!(atto_proposto(&p), Some(decaduto));
+    let sanita = p.vista().ministeri[3].ministro.clone().unwrap();
+    assert!(
+        (sanita.variazioni.iter()).all(|v| v.causa != Causa::PropostaRespinta),
+        "{:?}",
+        sanita.variazioni
     );
 }
 
@@ -393,6 +448,16 @@ fn decreto_incoerente_al_caricamento_rifiutato() {
                 for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
                     if let Some(f) = m["fondi"].get_mut("accolti") {
                         f["importo"] = (f["importo"].as_i64().unwrap() - 1).into();
+                    }
+                }
+            }),
+        ),
+        (
+            "conversione d'altro atto",
+            Box::new(|j| {
+                for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
+                    if let Some(f) = m["fondi"].get_mut("accolti") {
+                        f["atto"] = (f["atto"].as_u64().unwrap() + 1).into();
                     }
                 }
             }),

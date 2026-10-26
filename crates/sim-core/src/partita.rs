@@ -947,6 +947,17 @@ impl Partita {
         }
     }
 
+    /// Dopo `Dirotta` la conversione del decreto accolto segue l'atto dell'agenda: decade, se
+    /// respinta, l'atto pagato davvero.
+    pub(crate) fn conversione_su_agenda(&mut self, dicastero: usize) {
+        let atto = (self.ministri.dicasteri.get(dicastero))
+            .and_then(|st| st.agenda.as_ref())
+            .map(|ag| ag.atto);
+        if let Some(atto) = atto {
+            self.parlamento.sposta_conversione(dicastero, atto);
+        }
+    }
+
     /// Gli alleati riavranno il costo d'intesa della questione di fiducia posta su `m`.
     fn rimborsa_fiducia(&mut self, m: &Misura) {
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
@@ -1395,14 +1406,21 @@ impl Partita {
 
 impl Partita {
     /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
-    /// conversione in calendario porta il suo importo; senza decreto, nessuna conversione.
+    /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
+    /// conversione.
     fn controlla_decreti(&self) -> Result<(), Errore> {
         let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
         for (i, (st, &x)) in dicasteri.enumerate() {
             let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+            let attesa =
+                (st.agenda.as_ref().filter(|ag| ag.decreto > 0)).map(|ag| FondiDecreto::Accolti {
+                    dicastero: i,
+                    atto: ag.atto,
+                    importo: ag.decreto,
+                });
             let buono = decreto == x
                 && decreto <= st.margine_residuo
-                && self.parlamento.in_conversione(i) == (decreto > 0).then_some(decreto);
+                && self.parlamento.in_conversione(i) == attesa;
             ok(
                 buono,
                 "decreto in agenda diverso da economia.decreti o dalla conversione, o oltre il \

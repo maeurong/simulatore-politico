@@ -711,16 +711,28 @@ impl Parlamento {
         Some(self.misure.remove(k))
     }
 
-    /// L'importo della conversione dei fondi accolti per `dicastero` in calendario, se c'è.
-    pub(crate) fn in_conversione(&self, dicastero: usize) -> Option<i64> {
-        (self.misure.iter()).find_map(|m| match m.fondi {
-            Some(FondiDecreto::Accolti {
-                dicastero: d,
-                importo,
-                ..
-            }) if d == dicastero => Some(importo),
-            _ => None,
+    /// I fondi della conversione accolta per `dicastero` in calendario, se c'è.
+    pub(crate) fn in_conversione(&self, dicastero: usize) -> Option<FondiDecreto> {
+        (self.misure.iter()).find_map(|m| {
+            m.fondi.filter(
+                |f| matches!(f, FondiDecreto::Accolti { dicastero: d, .. } if *d == dicastero),
+            )
         })
+    }
+
+    /// La conversione accolta per `dicastero` passa all'atto `atto`.
+    pub(crate) fn sposta_conversione(&mut self, dicastero: usize, atto: usize) {
+        for m in &mut self.misure {
+            if let Some(FondiDecreto::Accolti {
+                dicastero: d,
+                atto: a,
+                ..
+            }) = &mut m.fondi
+                && *d == dicastero
+            {
+                *a = atto;
+            }
+        }
     }
 
     /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.

@@ -28,10 +28,14 @@ pub use proposte::{Proposta, TipoProposta};
 
 /// Ciò che un comando sui ministri lascia da fare a chi possiede economia e calendario: un
 /// decreto accolto da spendere e convertire, o ritirato; una proposta di riforma accolta da
-/// presentare (la proposta resta finché la presentazione non passa).
+/// presentare (la proposta resta finché la presentazione non passa); un'agenda dirottata, la
+/// cui conversione segue il nuovo atto.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum EffettoComando {
     Nessuno,
+    Dirottata {
+        dicastero: usize,
+    },
     Decreto {
         dicastero: usize,
         importo: i64,
@@ -384,6 +388,7 @@ impl Ministri {
             }
             Comando::Dirotta { atto, regione, .. } => {
                 self.dirotta(cx, i, atto.as_deref(), regione.as_deref())?;
+                return Ok(EffettoComando::Dirottata { dicastero: i });
             }
             Comando::FermaCantiere { atto, .. } => self.ferma_cantiere(cx, i, &atto)?,
             Comando::ChiediDimissioni { dicastero } => {
