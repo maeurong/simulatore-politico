@@ -531,7 +531,8 @@ fn oltre_il_3_di_disavanzo_lo_spread_sale_di_2_4_pb_per_punto() {
     let b = e.debito as f64 / pil * 100.0;
     let fondamentali =
         m("spread_s0") + 100.0 * (m("spread_beta_1") * b + m("spread_beta_2") * b * b);
-    let atteso = fondamentali.max(m("spread_minimo")) + 2.4 * (disavanzo - 3.0);
+    let capacita = m("spread_capacita") * (3.0 - p.misure().capacita_economia);
+    let atteso = fondamentali.max(m("spread_minimo")) + 2.4 * (disavanzo - 3.0) + capacita;
     assert!((e.spread - atteso).abs() < 0.05, "{} {atteso}", e.spread);
 }
 

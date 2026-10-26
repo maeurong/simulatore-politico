@@ -4,6 +4,8 @@ import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceDicastero } from "./VoceDicastero";
+import type { VoceGrandezza } from "./VoceGrandezza";
+import type { VoceMinistero } from "./VoceMinistero";
 import type { VocePartito } from "./VocePartito";
 
 /**
@@ -11,9 +13,17 @@ import type { VocePartito } from "./VocePartito";
  */
 export type Vista = { turno: number, data: Trimestre, dicasteri: Array<VoceDicastero>, 
 /**
+ * Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
+ */
+grandezze: Array<VoceGrandezza>, 
+/**
  * Spread BTP-Bund in punti base, arrotondato.
  */
-spread_pb: number, partiti: Array<VocePartito>, sondaggio: Sondaggio, 
+spread_pb: number, partiti: Array<VocePartito>, 
+/**
+ * Una voce per dicastero, nell'ordine dei dicasteri.
+ */
+ministeri: Array<VoceMinistero>, sondaggio: Sondaggio, 
 /**
  * Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
  */

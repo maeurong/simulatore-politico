@@ -1,7 +1,9 @@
+use crate::atti::Atto;
 use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
+use crate::grandezze::{DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
@@ -19,10 +21,12 @@ pub struct FileDati {
     pub scenario: String,
     pub elezioni: String,
     pub elettorato: String,
+    pub grandezze: String,
+    pub atti: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 7] = [
+    pub const NOMI: [&str; 9] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -30,6 +34,8 @@ impl FileDati {
         "scenario.toml",
         "elezioni.toml",
         "elettorato.toml",
+        "grandezze.toml",
+        "atti.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -45,6 +51,8 @@ impl FileDati {
             scenario: leggi(Self::NOMI[4])?,
             elezioni: leggi(Self::NOMI[5])?,
             elettorato: leggi(Self::NOMI[6])?,
+            grandezze: leggi(Self::NOMI[7])?,
+            atti: leggi(Self::NOMI[8])?,
         })
     }
 }
@@ -124,6 +132,49 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "errore_stima_disoccupazione",
     "errore_stima_inflazione",
     "errore_stima_disavanzo",
+    "scala_servizio",
+    "elasticita_servizio",
+    "velocita_servizio",
+    "velocita_turnover",
+    "soddisfazione_base",
+    "ritorno_soddisfazione",
+    "soglia_dimissioni",
+    "soglia_minaccia",
+    "costo_calo_servizio",
+    "premio_obiettivo",
+    "passo_obiettivo",
+    "riduzione_rodaggio",
+    "scarto_ministri",
+    "peso_obiettivo",
+    "peso_posizione",
+    "rumore_agenda",
+    "costo_fermare",
+    "peso_bisogno_bersaglio",
+    "peso_voti_bersaglio",
+    "costo_dirottare_regione",
+    "costo_respingere",
+    "distanza_evidenza",
+    "elasticita_riscossione",
+    "spread_capacita",
+    "stock_disoccupazione",
+    "crescita_infrastrutture",
+    "crescita_capitale_umano",
+    "crescita_giustizia",
+    "crescita_energia",
+    "crescita_demografia",
+];
+
+/// Grandezze che il motore legge per nome, con il `regionale` atteso.
+const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
+    ("occupazione_pubblica", false),
+    ("stock_infrastrutture", true),
+    ("investimenti_privati", true),
+    ("domanda_regionale", true),
+    ("prezzo_energia", false),
+    ("politiche_attive", false),
+    ("capitale_umano", false),
+    ("efficienza_riscossione", false),
+    ("durata_processi", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,11 +239,44 @@ pub struct DatiGioco {
     scenario: Scenario,
     elezioni: DatiElezioni,
     elettorato: DatiElettorato,
+    grandezze: Vec<DatoGrandezza>,
+    atti: Vec<Atto>,
+}
+
+#[derive(Deserialize)]
+struct FileAtti {
+    atto: Vec<Atto>,
 }
 
 #[derive(Deserialize)]
 struct FileDicasteri {
     dicastero: Vec<Dicastero>,
+}
+
+#[derive(Deserialize)]
+struct FileGrandezze {
+    grandezza: Vec<DatoGrandezza>,
+}
+
+/// I dati di base, per i test d'unità.
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+pub(crate) fn dati_base() -> DatiGioco {
+    let file = FileDati {
+        dicasteri: include_str!("../../../dati/base/dicasteri.toml").into(),
+        manopole: include_str!("../../../dati/base/manopole.toml").into(),
+        economia: include_str!("../../../dati/base/economia.toml").into(),
+        regioni: include_str!("../../../dati/base/regioni.toml").into(),
+        scenario: include_str!("../../../dati/base/scenario.toml").into(),
+        elezioni: include_str!("../../../dati/base/elezioni.toml").into(),
+        elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
+        grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
+        atti: include_str!("../../../dati/base/atti.toml").into(),
+    };
+    DatiGioco::da_testi(&file).unwrap()
 }
 
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
@@ -205,6 +289,28 @@ fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
 impl DatiGioco {
     pub fn dicasteri(&self) -> &[Dicastero] {
         &self.dicasteri
+    }
+
+    pub fn grandezze(&self) -> &[DatoGrandezza] {
+        &self.grandezze
+    }
+
+    pub fn atti(&self) -> &[Atto] {
+        &self.atti
+    }
+
+    /// Gli atti di un dicastero (per indice) con il loro indice nel catalogo, nell'ordine del file.
+    pub fn atti_del_dicastero(&self, d: usize) -> impl Iterator<Item = (usize, &Atto)> {
+        let id = self.dicasteri.get(d).map(|d| d.id.as_str());
+        self.atti
+            .iter()
+            .enumerate()
+            .filter(move |(_, a)| Some(a.dicastero.as_str()) == id)
+    }
+
+    /// Posizione di una grandezza per id.
+    pub fn grandezza(&self, id: &str) -> Option<usize> {
+        self.grandezze.iter().position(|g| g.id == id)
     }
 
     pub fn manopole(&self) -> &BTreeMap<String, Manopola> {
@@ -283,6 +389,12 @@ impl DatiGioco {
             .map_err(|e| errore_toml("elezioni.toml", e))?;
         let elettorato = toml::from_str::<DatiElettorato>(&file.elettorato)
             .map_err(|e| errore_toml("elettorato.toml", e))?;
+        let grandezze = toml::from_str::<FileGrandezze>(&file.grandezze)
+            .map_err(|e| errore_toml("grandezze.toml", e))?
+            .grandezza;
+        let atti = toml::from_str::<FileAtti>(&file.atti)
+            .map_err(|e| errore_toml("atti.toml", e))?
+            .atto;
 
         let dati = DatiGioco {
             dicasteri,
@@ -292,9 +404,63 @@ impl DatiGioco {
             scenario,
             elezioni,
             elettorato,
+            grandezze,
+            atti,
         };
         dati.valida()?;
         Ok(dati)
+    }
+
+    fn valida_grandezze(&self) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Grandezze(m));
+        let grandezze = &self.grandezze;
+        for (i, g) in grandezze.iter().enumerate() {
+            if grandezze[..i].iter().any(|p| p.id == g.id) {
+                return ko(format!("grandezza ripetuta: {}", g.id));
+            }
+            let finite = g.iniziale.is_finite() && g.min.is_finite() && g.max.is_finite();
+            if !(finite && g.min <= g.iniziale && g.iniziale <= g.max) {
+                return ko(format!("{}: iniziale fuori da min-max", g.id));
+            }
+            for id in &g.dicasteri {
+                let Some(d) = self.dicasteri.iter().find(|d| &d.id == id) else {
+                    return ko(format!("{}: dicastero sconosciuto {id}", g.id));
+                };
+                if g.regionale && !d.regione_bersaglio {
+                    return ko(format!(
+                        "{}: regionale, ma {id} non ha regione bersaglio",
+                        g.id
+                    ));
+                }
+            }
+        }
+        for d in &self.dicasteri {
+            let ind = &d.indicatore_servizio;
+            let giusta = grandezze
+                .iter()
+                .any(|g| &g.id == ind && g.dinamica == Dinamica::Servizio && !g.regionale);
+            if !giusta {
+                return ko(format!("indicatore di servizio senza grandezza: {ind}"));
+            }
+            // Valori negativi o non finiti li rifiuta la struttura, con il loro nome.
+            if d.salari_pil == 0.0 && d.acquisti_pil == 0.0 {
+                return ko(format!(
+                    "{}: indicatore di servizio {ind} senza spesa di funzionamento",
+                    d.id
+                ));
+            }
+        }
+        for (id, regionale) in GRANDEZZE_RICHIESTE {
+            if !grandezze
+                .iter()
+                .any(|g| g.id == *id && g.regionale == *regionale)
+            {
+                return ko(format!(
+                    "grandezza richiesta mancante o di forma sbagliata: {id}"
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Coerenza dei dati, anche per quelli letti da un salvataggio.
@@ -306,7 +472,9 @@ impl DatiGioco {
     /// riferimento non positiva, piramide); `SettoreNonProduttivo`; `QuoteNonUnitarie`;
     /// `SettoreSconosciuto`; `Elettorato` e `Partiti` (vedi [`DatiElettorato`] e
     /// [`partiti::valida`]); `LeggeElettorale` e `DatiElettorali` (vedi
-    /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente.
+    /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente;
+    /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste);
+    /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze).
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -338,6 +506,8 @@ impl DatiGioco {
                 _ => {}
             }
         }
+        self.valida_grandezze()?;
+        crate::atti::valida(self)?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
             if !(finite && m.min <= m.valore && m.valore <= m.max) {
@@ -355,6 +525,12 @@ impl DatiGioco {
                     nome: (*nome).into(),
                 });
             }
+        }
+        let scala = self.manopola("scala_servizio");
+        if scala <= 0.0 {
+            return Err(Errore::Grandezze(format!(
+                "manopola scala_servizio non positiva: {scala}"
+            )));
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
         self.elettorato

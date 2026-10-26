@@ -529,3 +529,199 @@ valore = 0.3
 min = 0.0
 max = 1.0
 ticket = "25"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[scala_servizio]
+valore = 1.0
+min = 0.2
+max = 5.0
+ticket = "17"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[elasticita_servizio]
+valore = 1.0
+min = 0.2
+max = 2.0
+ticket = "03"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[velocita_servizio]
+valore = 0.25
+min = 0.0
+max = 1.0
+ticket = "03"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[velocita_turnover]
+valore = 0.1
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[soddisfazione_base]
+valore = 60.0
+min = 30.0
+max = 80.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[ritorno_soddisfazione]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_calo_servizio]
+valore = 3.0
+min = 0.0
+max = 10.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[premio_obiettivo]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[passo_obiettivo]
+valore = 5.0
+min = 1.0
+max = 20.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[riduzione_rodaggio]
+valore = 1.0
+min = 0.0
+max = 2.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[scarto_ministri]
+valore = 0.5
+min = 0.0
+max = 1.5
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_obiettivo]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_posizione]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[rumore_agenda]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_fermare]
+valore = 15.0
+min = 0.0
+max = 40.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_bisogno_bersaglio]
+valore = 0.5
+min = 0.0
+max = 3.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_voti_bersaglio]
+valore = 0.5
+min = 0.0
+max = 3.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_dirottare_regione]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_respingere]
+valore = 8.0
+min = 0.0
+max = 30.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[distanza_evidenza]
+valore = 2.0
+min = 1.0
+max = 4.0
+ticket = "09"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[elasticita_riscossione]
+valore = 0.3
+min = 0.0
+max = 1.0
+ticket = "03"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[spread_capacita]
+valore = 10.0
+min = 0.0
+max = 50.0
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[stock_disoccupazione]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[crescita_infrastrutture]
+valore = 0.05
+min = 0.0
+max = 0.3
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[crescita_capitale_umano]
+valore = 0.05
+min = 0.0
+max = 0.3
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[crescita_giustizia]
+valore = 0.02
+min = 0.0
+max = 0.2
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[crescita_energia]
+valore = 0.02
+min = 0.0
+max = 0.2
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[crescita_demografia]
+valore = 1.0
+min = 0.0
+max = 2.0
+ticket = "07"

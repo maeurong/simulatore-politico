@@ -1,16 +1,22 @@
+pub mod atti;
 pub mod caso;
+pub mod comando;
 pub mod dati;
 pub mod economia;
 pub mod elettorato;
 pub mod elezioni;
 pub mod errore;
+pub mod grandezze;
 pub mod informazione;
+pub mod ministri;
+pub mod misure;
 pub mod partita;
 pub mod partiti;
 pub mod scenario;
 pub mod struttura;
 pub mod vista;
 
+pub use comando::Comando;
 pub use dati::{DatiGioco, FileDati};
 pub use errore::Errore;
 pub use partita::{Partita, Trimestre, VERSIONE_SCHEMA};

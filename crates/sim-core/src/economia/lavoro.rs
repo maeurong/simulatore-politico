@@ -2,6 +2,7 @@
 
 use super::{Economia, EconomiaRegione};
 use crate::dati::DatiGioco;
+use crate::misure::Misure;
 
 /// Piano 3 (assunzione): la disoccupazione non scende sotto questo livello, in %.
 const DISOCCUPAZIONE_MINIMA: f64 = 0.5;
@@ -28,28 +29,36 @@ impl Economia {
         somma / pesi
     }
 
-    /// `gap = Σ mix·gap_settori`; `u = u* + β·gap`; `u* += isteresi·(u − u*)`.
-    /// I `β` regionali sono riscalati perché la loro media pesata valga `okun_nazionale`
+    /// I `β` regionali, riscalati perché la loro media pesata valga `okun_nazionale`
     /// (economia-italiana-parametri:54-69, :120).
-    pub(super) fn okun(&mut self, dati: &DatiGioco) {
+    pub(crate) fn beta_okun(&self, dati: &DatiGioco) -> Vec<f64> {
         let regioni = dati.regioni();
         let (somma, pesi) = regioni.iter().fold((0.0, 0.0), |(s, p), r| {
             (s + r.forze_lavoro * r.okun, p + r.forze_lavoro)
         });
         let scala = dati.manopola("okun_nazionale") / (somma / pesi);
+        regioni.iter().map(|r| r.okun * scala).collect()
+    }
+
+    /// `gap = Σ mix·gap_settori + domanda_regionale`; `u = max(minimo, u* + ds + β·gap)`;
+    /// `u* += isteresi·(u − ds − u*)`, con `ds` la disoccupazione strutturale delle misure.
+    pub(super) fn okun(&mut self, dati: &DatiGioco, misure: &Misure) {
+        let beta = self.beta_okun(dati);
         let isteresi = dati.manopola("isteresi_disoccupazione");
-        for (e, r) in self.regioni.iter_mut().zip(regioni) {
+        for (i, (e, r)) in self.regioni.iter_mut().zip(dati.regioni()).enumerate() {
             e.gap = dati
                 .struttura()
                 .settori
                 .iter()
                 .zip(&self.gap_settori)
                 .map(|(s, gap)| r.mix.get(&s.id).copied().unwrap_or(0.0) * gap)
-                .sum();
+                .sum::<f64>()
+                + misure.domanda_regionale[i];
+            let ds = misure.disoccupazione_strutturale[i];
             let u =
-                (e.disoccupazione_strutturale + r.okun * scala * e.gap).max(DISOCCUPAZIONE_MINIMA);
+                (e.disoccupazione_strutturale + ds + beta[i] * e.gap).max(DISOCCUPAZIONE_MINIMA);
             e.disoccupazione = u;
-            e.disoccupazione_strutturale += isteresi * (u - e.disoccupazione_strutturale);
+            e.disoccupazione_strutturale += isteresi * (u - ds - e.disoccupazione_strutturale);
         }
     }
 }

@@ -4,14 +4,19 @@ use crate::economia::{Annata, Economia};
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
+use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::ministri::{Contesto, Ministri};
+use crate::misure::Misure;
 use crate::partiti::{self, Governo, Partito};
-use crate::vista::{SeggiPartito, Vista, VistaStatistica, VoceDicastero, VocePartito};
+use crate::vista::{
+    SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
+};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 4;
+pub const VERSIONE_SCHEMA: u32 = 5;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -68,23 +73,43 @@ pub struct Partita {
     governo: Governo,
     elettorato: Elettorato,
     informazione: Informazione,
+    grandezze: Grandezze,
+    ministri: Ministri,
+    misure: Misure,
 }
 
 impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         let economia = Economia::iniziale(&dati);
+        let grandezze = Grandezze::iniziali(&dati);
         let (partiti, governo) = partiti::iniziali(&dati);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
+        let ministri = Ministri::iniziali(
+            &Contesto {
+                dati: &dati,
+                governo: &governo,
+                partiti: &partiti,
+                grandezze: &grandezze,
+                economia: &economia,
+                sondaggio: &informazione.sondaggio,
+                turno: 0,
+                data: Trimestre::TURNO_ZERO,
+            },
+            &mut caso,
+        );
         Partita {
+            misure: Misure::neutre(&dati),
             versione_schema: VERSIONE_SCHEMA,
             caso,
             informazione,
             economia,
             elettorato,
+            grandezze,
+            ministri,
             partiti,
             governo,
             dati,
@@ -93,16 +118,39 @@ impl Partita {
         }
     }
 
-    // Per ora: economia, redditi, giudizio (prima di composizione, che aggiorna
-    // ultima_disoccupazione), composizione, posizioni, sondaggio, statistica, calendario.
-    // Ordine previsto a regime: atti dei ministri → aula → motore (economia, poi elettorato) →
-    // soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
+    // Ordine della chiusura:
+    // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
+    // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
+    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
+    // nuovo, rose, agende, proposte).
     pub fn chiudi_turno(&mut self) {
+        self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
+        let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
+        self.grandezze.effetti.extend(effetti);
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
-        self.economia.passo(&self.dati, &mut self.caso, self.data);
-        self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
+        let nuove = Misure::da(
+            &self.dati,
+            &self.grandezze,
+            &self.ministri,
+            &self.economia,
+            self.turno,
+            self.data,
+        );
+        let prima = std::mem::replace(&mut self.misure, nuove);
+        self.economia
+            .passo(&self.dati, &mut self.caso, self.data, &self.misure);
+        self.grandezze
+            .avanza(&self.dati, &self.economia, self.turno);
         self.elettorato
-            .giudizio(&self.dati, &self.economia, &self.governo);
+            .aggiorna_redditi(&self.dati, &self.economia, &self.misure);
+        self.elettorato.giudizio(
+            &self.dati,
+            &self.economia,
+            &self.governo,
+            &self.grandezze,
+            &prima,
+            &self.misure,
+        );
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
@@ -121,35 +169,101 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        let cx = Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        };
+        self.ministri.soglie(&cx);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
+        let cx = Contesto {
+            turno: self.turno,
+            data: self.data,
+            ..cx
+        };
+        self.ministri.apri(&cx, &mut self.caso);
     }
 
-    /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
+    fn contesto(&self) -> Contesto<'_> {
+        Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        }
+    }
+
+    /// Esegue `f` sui ministri (in scrittura) con ciò che leggono del resto della partita.
+    pub(crate) fn con_contesto<R>(&mut self, f: impl FnOnce(&mut Ministri, &Contesto) -> R) -> R {
+        let cx = Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        };
+        f(&mut self.ministri, &cx)
+    }
+
+    /// `Accogli`: l'importo è un decreto, speso per intero nel trimestre che si chiude.
+    pub(crate) fn aggiungi_decreto(&mut self, importo: i64) {
+        self.economia.decreti += importo;
+    }
+
+    // Da qui a `informazione`: stato vero, per il CLI e i test, mai per la `Vista`.
     pub fn economia(&self) -> &Economia {
         &self.economia
     }
 
-    /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
+    pub fn grandezze(&self) -> &Grandezze {
+        &self.grandezze
+    }
+
+    /// Valore nazionale vero di una grandezza.
+    pub fn grandezza(&self, id: &str) -> Option<f64> {
+        let g = self.dati.grandezza(id)?;
+        Some(self.grandezze.nazionale(&self.dati, g))
+    }
+
+    /// Misure dell'ultima chiusura.
+    pub fn misure(&self) -> &Misure {
+        &self.misure
+    }
+
     pub fn partiti(&self) -> &[Partito] {
         &self.partiti
+    }
+
+    pub fn ministri(&self) -> &Ministri {
+        &self.ministri
     }
 
     pub fn governo(&self) -> &Governo {
         &self.governo
     }
 
-    /// Stato vero dell'elettorato: per il CLI e i test, mai per la `Vista`.
     pub fn elettorato(&self) -> &Elettorato {
         &self.elettorato
     }
 
-    /// Intenzioni di voto vere per gruppo e nazionali: per il CLI e i test, mai per la `Vista`.
+    /// Intenzioni di voto vere per gruppo e nazionali.
     pub fn intenzioni_vere(&self) -> Intenzioni {
         Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
     }
 
-    /// Stato vero dell'informazione: per il CLI e i test, mai per la `Vista`.
     pub fn informazione(&self) -> &Informazione {
         &self.informazione
     }
@@ -259,7 +373,16 @@ impl Partita {
                     nome: d.nome.clone(),
                 })
                 .collect(),
+            grandezze: (self.dati.grandezze().iter().zip(&self.grandezze.prima))
+                .map(|(g, valori)| VoceGrandezza {
+                    id: g.id.clone(),
+                    nome: g.nome.clone(),
+                    verso: g.verso,
+                    valori: valori.clone(),
+                })
+                .collect(),
             partiti: self.voci_partiti(),
+            ministeri: self.ministri.voci(&self.contesto()),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {
@@ -271,7 +394,7 @@ impl Partita {
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia, partiti e governo, elettorato, informazione.
+    /// economia, grandezze, partiti e governo, elettorato, informazione.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -354,7 +477,12 @@ impl Partita {
             }
         }
         partita.economia.controlla_coerenza(partita.data)?;
+        partita.grandezze.controlla(&partita.dati)?;
+        partita.misure.controlla(&partita.dati)?;
         partita.controlla_partiti()?;
+        partita
+            .ministri
+            .controlla(&partita.dati, partita.partiti.len())?;
         Ok(partita)
     }
 }
@@ -386,7 +514,7 @@ impl Partita {
 }
 
 /// Tetto agli importi in euro di un salvataggio: oltre, le somme in `i64` rischiano di traboccare.
-const LIMITE_EURO: i64 = 1_000_000_000_000_000;
+pub(crate) const LIMITE_EURO: i64 = 1_000_000_000_000_000;
 
 fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
     if condizione {
@@ -421,8 +549,18 @@ impl Economia {
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
         ok(
+            (0..=LIMITE_EURO).contains(&self.decreti),
+            "economia.decreti fuori da 0-1e15",
+        )?;
+        ok(
             self.sussidio_per_disoccupato >= 0,
             "economia.sussidio_per_disoccupato negativo",
+        )?;
+        ok(
+            self.livello_prezzi.is_finite()
+                && self.livello_prezzi > 0.0
+                && self.livello_prezzi <= 1e6,
+            "economia.livello_prezzi non finito o fuori da (0, 1e6]",
         )?;
         ok(
             self.tasso_medio_debito.is_finite(),

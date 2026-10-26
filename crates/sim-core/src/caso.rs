@@ -14,6 +14,7 @@ pub enum Flusso {
     Sondaggi = 4,
     PartitiIa = 5,
     ElettoriCampione = 6,
+    Governo = 7,
 }
 
 /// 53 bit: esatti in un f64. Uniforme in `(0, 1]`.

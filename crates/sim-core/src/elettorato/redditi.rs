@@ -3,6 +3,7 @@
 use super::{Condizione, Elettorato};
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
+use crate::misure::Misure;
 use serde::{Deserialize, Serialize};
 
 /// Euro annui nominali per elettore. `paniere` è l'indice di prezzo della fascia:
@@ -47,7 +48,9 @@ pub struct Indici {
 }
 
 impl Indici {
-    pub fn da(e: &Economia, dati: &DatiGioco) -> Indici {
+    /// `riscossione` è quella con cui `e.conti` ha incassato l'IRPEF: la pressione la toglie,
+    /// perché pesa solo sugli autonomi (`aggiorna_redditi`), non su tutti i gruppi.
+    pub fn da(e: &Economia, dati: &DatiGioco, riscossione: f64) -> Indici {
         let entrate = &e.conti.entrate;
         Indici {
             salario: e.salario_medio(dati),
@@ -55,7 +58,9 @@ impl Indici {
             pil: e.pil_trimestrale,
             pensione: e.pensione_media(),
             sussidio: e.sussidio_effettivo(dati),
-            pressione: (entrate.irpef + entrate.contributi) as f64 / (e.pil_trimestrale * 1e9),
+            pressione: (entrate.irpef as f64 / riscossione.max(f64::MIN_POSITIVE)
+                + entrate.contributi as f64)
+                / (e.pil_trimestrale * 1e9),
         }
     }
 
@@ -74,9 +79,10 @@ impl Indici {
 }
 
 impl Elettorato {
-    /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia.
-    pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia) {
-        let (i, b) = (Indici::da(e, dati), self.base);
+    /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
+    /// delle misure pesa anche sulle imposte degli autonomi.
+    pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
+        let (i, b) = (Indici::da(e, dati, misure.riscossione), self.base);
         let d = dati.elettorato();
         let consumi = &dati.struttura().consumi;
         let media =
@@ -104,10 +110,16 @@ impl Elettorato {
             let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();
             let paniere = d.paniere.get(&dato.fascia).map_or(0.0, |w| media(w));
+            let evasione = if dato.condizione == Condizione::Autonomo {
+                misure.riscossione
+            } else {
+                1.0
+            };
             g.reddito = Reddito {
                 primario,
                 trasferimenti,
-                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione)).min(lordo),
+                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione) * evasione)
+                    .min(lordo),
                 paniere: e.livello_prezzi * paniere / costo_base,
             };
         }
