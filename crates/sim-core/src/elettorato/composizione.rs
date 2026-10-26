@@ -219,9 +219,9 @@ mod test {
                 pil: 1.0,
                 pensione: 1.0,
                 sussidio: 1.0,
-                pressione: 1.0,
             },
             ultima_disoccupazione: vec![],
+            aliquota_irpef_0: 0.2,
         }
     }
 

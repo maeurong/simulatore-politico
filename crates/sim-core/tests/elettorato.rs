@@ -267,11 +267,10 @@ fn gini_nullo_con_redditi_uguali() {
 }
 
 #[test]
-fn pressione_estrema_e_base_nulla_lasciano_redditi_finiti_e_non_negativi() {
+fn base_nulla_lascia_redditi_finiti_e_non_negativi() {
     let d = dati_base();
     let p = Partita::nuova(d.clone(), 1);
     let mut el = p.elettorato().clone();
-    el.base.pressione *= 1e-6;
     el.base.salari_pubblici = 0.0;
     el.base.pensione = 0.0;
     el.aggiorna_redditi(&d, p.economia(), p.misure());

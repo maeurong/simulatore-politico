@@ -133,6 +133,7 @@ impl Partita {
             &self.grandezze,
             &self.ministri,
             &self.economia,
+            &self.elettorato,
             self.turno,
             self.data,
         );
@@ -548,6 +549,14 @@ impl Economia {
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
+        for b in bilanci.clone() {
+            ok(
+                b.aliquote.valida().is_ok()
+                    && b.livello_prezzi_scaglioni.is_finite()
+                    && b.livello_prezzi_scaglioni > 0.0,
+                "economia.bilancio: aliquote incoerenti o livello_prezzi_scaglioni non positivo",
+            )?;
+        }
         ok(
             (0..=LIMITE_EURO).contains(&self.decreti),
             "economia.decreti fuori da 0-1e15",

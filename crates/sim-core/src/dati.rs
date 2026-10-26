@@ -155,6 +155,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "costo_respingere",
     "distanza_evidenza",
     "elasticita_riscossione",
+    "elasticita_imponibile",
     "spread_capacita",
     "stock_disoccupazione",
     "crescita_infrastrutture",

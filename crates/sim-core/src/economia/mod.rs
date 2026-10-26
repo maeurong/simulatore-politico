@@ -4,6 +4,7 @@ pub mod bce;
 pub mod congiuntura;
 mod finanza;
 pub mod lavoro;
+mod legge_bilancio;
 pub mod leontief;
 mod previdenza;
 mod regole_ue;
@@ -12,6 +13,8 @@ mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
+pub(crate) use legge_bilancio::eti;
+pub use legge_bilancio::{Aliquote, Scaglione, irpef};
 pub use previdenza::Annata;
 pub use regole_ue::RegoleUe;
 pub use sfc::{Settori, Sfc};
@@ -166,7 +169,7 @@ impl Economia {
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
         e.avvia_previdenza(dati);
-        e.conti = finanza::conti_del_trimestre(&e, dati, 1.0);
+        e.conti = finanza::conti_del_trimestre(&e, dati, &Misure::neutre(dati));
         // L'ammenda della PDE la paga il primo passo, non il turno zero.
         e.conti.spese.ammende = 0;
         e.disavanzo_trimestre = e.conti.disavanzo();
@@ -200,7 +203,7 @@ impl Economia {
         data: Trimestre,
         misure: &Misure,
     ) {
-        let spesa_netta = self.finanza(dati, data, misure.riscossione);
+        let spesa_netta = self.finanza(dati, data, misure);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
         let shock_domanda = shock("sigma_domanda");

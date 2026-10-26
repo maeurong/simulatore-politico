@@ -1,5 +1,6 @@
 //! Scenario di partenza (`scenario.toml`): solo ingressi, i derivati si ricalcolano al caricamento.
 
+use crate::economia::Aliquote;
 use crate::errore::Errore;
 use crate::partiti::{DatoGoverno, DatoPartito};
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,8 @@ macro_rules! scenario {
             /// Tetto di crescita della spesa netta per anno; dopo l'ultimo vale l'ultimo.
             pub tetti_spesa_netta: BTreeMap<u16, f64>,
             pub clausola_nazionale_fino_a: u16,
+            /// Aliquote e scaglioni IRPEF del turno zero.
+            pub aliquote: Aliquote,
             /// Nome di un'impostazione di `elezioni.toml`.
             pub legge_elettorale: String,
             #[serde(rename = "partito")]
@@ -145,6 +148,6 @@ impl Scenario {
                 "tetti_spesa_netta assenti o non finiti".into(),
             ));
         }
-        Ok(())
+        self.aliquote.valida().map_err(Errore::StrutturaIncoerente)
     }
 }

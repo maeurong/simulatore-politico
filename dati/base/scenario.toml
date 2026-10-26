@@ -16,6 +16,13 @@ coalizioni = [["sinistra", "centrosinistra"], ["centrodestra", "destra"]]
 presidente = "destra"
 dicasteri = { economia_finanze = "destra", sviluppo_economico = "destra", lavoro_welfare = "destra", sanita = "destra", istruzione_ricerca = "destra", infrastrutture_trasporti = "destra", ambiente_energia = "centrodestra", interno = "destra", giustizia = "destra", esteri_difesa = "centrodestra" }
 
+# economia-italiana-parametri:98-102; contributi 33%: assunzione del piano 5, nessuna fonte in docs/ricerca
+[aliquote]
+iva = 0.22
+ires = 0.24
+contributi = 0.33
+irpef = [{ fino_a = 28000, aliquota = 0.23 }, { fino_a = 50000, aliquota = 0.33 }, { aliquota = 0.43 }]
+
 [pil_trimestrale]
 valore = 576.9
 min = 400.0

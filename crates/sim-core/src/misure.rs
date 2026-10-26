@@ -2,7 +2,8 @@
 //! Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura del turno.
 
 use crate::dati::{DatiGioco, Ruolo};
-use crate::economia::Economia;
+use crate::economia::{Economia, eti};
+use crate::elettorato::Elettorato;
 use crate::errore::Errore;
 use crate::grandezze::{Grandezze, contributo};
 use crate::ministri::Ministri;
@@ -34,6 +35,13 @@ pub struct Misure {
     pub capacita_economia: f64,
     /// Punti di disoccupazione dovuti agli effetti regionali attivi: regione × dicastero.
     pub merito: Vec<Vec<f64>>,
+    /// `t(S, redditi correnti)/t₀`: l'aliquota media IRPEF di oggi su quella del turno zero.
+    pub fattore_irpef: f64,
+    /// La parte del gettito IRPEF dovuta agli scaglioni cambiati, senza il drenaggio:
+    /// `1 − t(S₀, redditi correnti)/t(S, redditi correnti)`.
+    pub irpef_discrezionale: f64,
+    /// Elasticità della base imponibile all'aliquota media IRPEF, `eti(t, t₀)`.
+    pub eti_irpef: f64,
 }
 
 /// `g(y) = 100 · (L(y)/L(y−1) − 1)`, con `L(y)` le persone di 15-66 anni nell'anno `y`: la
@@ -61,6 +69,9 @@ impl Misure {
             crescita_potenziale: 0.0,
             capacita_economia: CAPACITA_NEUTRA,
             merito: vec![vec![0.0; dati.dicasteri().len()]; n],
+            fattore_irpef: 1.0,
+            irpef_discrezionale: 0.0,
+            eti_irpef: 1.0,
         }
     }
 
@@ -71,6 +82,7 @@ impl Misure {
         g: &Grandezze,
         m: &Ministri,
         e: &Economia,
+        el: &Elettorato,
         turno: u32,
         data: Trimestre,
     ) -> Misure {
@@ -119,8 +131,22 @@ impl Misure {
             .and_then(|i| m.dicasteri.get(i)?.ministro.as_ref())
             .map_or(1.0, |x| x.capacita_effettiva(dati));
 
+        // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
+        let scenario = dati.scenario();
+        let t = el.aliquota_media_irpef(dati, &e.bilancio_in_vigore(data).aliquote.irpef);
+        let t_scenario = el.aliquota_media_irpef(dati, &scenario.aliquote.irpef);
+        let t0 = el.aliquota_irpef_0;
+        let (fattore_irpef, irpef_discrezionale) = if t > 0.0 && t0 > 0.0 {
+            (t / t0, 1.0 - t_scenario / t)
+        } else {
+            (1.0, 0.0)
+        };
+
         Misure {
             riscossione,
+            fattore_irpef,
+            irpef_discrezionale,
+            eti_irpef: eti(t, t0, manopola("elasticita_imponibile")),
             prezzo_energia,
             domanda_regionale: regionale("domanda_regionale", 0.0),
             disoccupazione_strutturale,
@@ -192,12 +218,18 @@ impl Misure {
             ("prezzo_energia", self.prezzo_energia),
             ("crescita_potenziale", self.crescita_potenziale),
             ("capacita_economia", self.capacita_economia),
+            ("fattore_irpef", self.fattore_irpef),
+            ("irpef_discrezionale", self.irpef_discrezionale),
+            ("eti_irpef", self.eti_irpef),
         ];
         if let Some((campo, _)) = scalari.iter().find(|(_, x)| !x.is_finite()) {
             return ko(format!("{campo} non finito"));
         }
         if self.riscossione <= 0.0 {
             return ko("riscossione non positiva".into());
+        }
+        if self.fattore_irpef <= 0.0 || self.eti_irpef <= 0.0 {
+            return ko("fattore_irpef o eti_irpef non positivo".into());
         }
         let vettori = [
             ("domanda_regionale", &self.domanda_regionale),
@@ -226,7 +258,15 @@ mod test {
     use crate::partita::Partita;
 
     fn misure_di(d: &DatiGioco, p: &Partita, grandezze: &Grandezze, data: Trimestre) -> Misure {
-        Misure::da(d, grandezze, p.ministri(), p.economia(), 0, data)
+        Misure::da(
+            d,
+            grandezze,
+            p.ministri(),
+            p.economia(),
+            p.elettorato(),
+            0,
+            data,
+        )
     }
 
     #[test]
