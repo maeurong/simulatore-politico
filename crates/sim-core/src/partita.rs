@@ -292,7 +292,9 @@ impl Partita {
     /// `occupato`: il turno del bilancio, letto prima di ogni voto.
     fn aula(&mut self, occupato: bool) {
         if occupato {
-            self.parlamento.slitta_leggi(self.turno);
+            for m in self.parlamento.slitta_leggi(self.turno) {
+                self.rimborsa_fiducia(&m);
+            }
         }
         self.vota_forma(FormaMisura::Conversione);
         self.vota_forma(FormaMisura::Bilancio);
@@ -787,9 +789,13 @@ impl Partita {
         if let Some(x) = self.economia.decreti.get_mut(dicastero) {
             *x -= importo;
         }
-        let Some(m) = self.parlamento.ritira(dicastero).filter(|m| m.fiducia) else {
-            return;
-        };
+        if let Some(m) = self.parlamento.ritira(dicastero).filter(|m| m.fiducia) {
+            self.rimborsa_fiducia(&m);
+        }
+    }
+
+    /// Gli alleati riavranno il costo d'intesa della questione di fiducia posta su `m`.
+    fn rimborsa_fiducia(&mut self, m: &Misura) {
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
         for j in self.alleati() {
             let x = self.partiti[j].posizione_dichiarata;

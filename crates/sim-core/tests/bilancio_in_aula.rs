@@ -203,3 +203,95 @@ fn bilancio_presentato_senza_misura_rifiutato_al_caricamento() {
     let r = edita(&p, |j| j["parlamento"]["misure"] = serde_json::json!([]));
     assert!(matches!(r, Err(Errore::SalvataggioIlleggibile(_))), "{r:?}");
 }
+
+/// La riforma in scadenza al turno 4, con o senza la questione di fiducia, col bilancio presentato
+/// dopo; chiuso il turno del bilancio.
+fn slittata(fiducia: bool) -> Partita {
+    let mut p = al_turno(senza_shock(), 3);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    if fiducia {
+        let id = p.vista().calendario[0].id;
+        p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    }
+    presenta_bozza(&mut p);
+    p.chiudi_turno();
+    p
+}
+
+#[test]
+fn fiducia_persa_nello_slittamento_si_rimborsa() {
+    let (con, senza) = (slittata(true), slittata(false));
+    for j in con.alleati() {
+        let fiducia: Vec<f64> = (con.intesa().variazioni.iter())
+            .filter(|v| v.partito == j && v.causa == CausaIntesa::Fiducia && v.turno == 4)
+            .map(|v| v.delta)
+            .collect();
+        assert_eq!(fiducia.len(), 2, "{fiducia:?}");
+        assert!(fiducia.iter().sum::<f64>().abs() < 1e-9, "{fiducia:?}");
+        let (a, b) = (con.intesa().valori[j], senza.intesa().valori[j]);
+        assert!((a - b).abs() < 1e-9, "{a} contro {b}");
+    }
+}
+
+#[test]
+fn ripresentare_il_bilancio_tiene_id_e_fiducia() {
+    let mut p = al_turno(senza_shock(), 4);
+    presenta_bozza(&mut p);
+    let bilanci = |p: &Partita| -> Vec<(u32, bool)> {
+        (p.vista().calendario.iter())
+            .filter(|m| m.forma == FormaMisura::Bilancio)
+            .map(|m| (m.id, m.fiducia))
+            .collect()
+    };
+    let id = bilanci(&p)[0].0;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    presenta_bozza(&mut p);
+    presenta_bozza(&mut p);
+    assert_eq!(bilanci(&p), [(id, true)]);
+}
+
+#[test]
+fn niente_fiducia_su_una_legge_elettorale_nel_turno_del_bilancio() {
+    let mut p = al_turno(senza_shock(), 4);
+    presenta(&mut p, &[("soglia_lista", "0")]).unwrap();
+    presenta_bozza(&mut p);
+    let id = (p.vista().calendario.iter())
+        .find(|m| m.forma == FormaMisura::Elettorale)
+        .unwrap()
+        .id;
+    let prima = p.salva().unwrap();
+    let e = p.comanda(Comando::PoniFiducia { misura: id }).unwrap_err();
+    assert!(
+        e.to_string().contains("il bilancio occupa il calendario"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn norma_costituzionale_slitta_nel_turno_del_bilancio() {
+    let mut p = al_turno(senza_shock(), 4);
+    presenta(&mut p, &[("numero_parlamentari", "630_315")]).unwrap();
+    presenta_bozza(&mut p);
+    p.chiudi_turno();
+    let v = p.vista();
+    assert!(
+        v.esiti
+            .iter()
+            .all(|e| e.forma != FormaMisura::Costituzionale)
+    );
+    let m = (v.calendario.iter())
+        .find(|m| m.forma == FormaMisura::Costituzionale)
+        .unwrap();
+    assert_eq!(
+        (m.voto, m.deliberazione),
+        (
+            Trimestre {
+                anno: 2028,
+                trimestre: 1
+            },
+            1
+        )
+    );
+}

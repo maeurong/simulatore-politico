@@ -555,12 +555,18 @@ impl Parlamento {
     }
 
     /// Nel turno del bilancio le leggi col voto nel turno passano al turno dopo e perdono la
-    /// questione di fiducia, senza costo; i loro emendamenti aperti restano aperti.
-    pub(crate) fn slitta_leggi(&mut self, turno: u32) {
+    /// questione di fiducia; i loro emendamenti aperti restano aperti. Rende le slittate che
+    /// avevano la questione di fiducia, il cui costo si rimborsa.
+    pub(crate) fn slitta_leggi(&mut self, turno: u32) -> Vec<Misura> {
+        let mut con_fiducia = Vec::new();
         for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {
+            if m.fiducia {
+                con_fiducia.push(m.clone());
+            }
             m.voto = turno.saturating_add(1);
             m.fiducia = false;
         }
+        con_fiducia
     }
 
     /// La conversione del decreto dei fondi accolti per `dicastero`, se c'è, esce dal calendario.
