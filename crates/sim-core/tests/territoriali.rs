@@ -152,3 +152,27 @@ fn perimetro_nella_vista() {
         .unwrap();
     assert_eq!(a.perimetro, ["liguria", "lombardia", "piemonte", "veneto"]);
 }
+
+#[test]
+fn autonomia_non_si_muove_col_salario_minimo() {
+    // Senza mobilità fra fasce il salario minimo non sposta le quote dei gruppi: resta solo il
+    // canale del reddito, che non deve arrivare all'autonomia.
+    let f = imposta(
+        senza_shock(),
+        "manopole",
+        "[mobilita_fasce]\nvalore = ",
+        "0.0",
+    );
+    let f = con_arrivo(f, "autonomia_differenziata", "intese_complete", 2027, 1);
+    let domanda = |f: &FileDati| {
+        let mut p = Partita::nuova(DatiGioco::da_testi(f).unwrap(), 1);
+        for _ in 0..4 {
+            ferma_tutti(&mut p);
+            p.chiudi_turno();
+        }
+        let m = p.misure().domanda_regionale.clone();
+        ["liguria", "lombardia", "piemonte", "veneto"].map(|x| m[r(x)])
+    };
+    let con_salario = con_arrivo(f.clone(), "salario_minimo", "11", 2027, 1);
+    assert_eq!(domanda(&f), domanda(&con_salario));
+}

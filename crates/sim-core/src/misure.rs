@@ -224,7 +224,8 @@ impl Misure {
     }
 
     /// L'autonomia con quota trattenuta `q`: con `g_r` la quota del reddito lordo dei gruppi
-    /// della regione sul totale e `p_r` quella degli elettori, `+e·q·(g_r/p_r − 1)` nel
+    /// della regione sul totale, senza le leve di reddito (`lordo_irpef`), e `p_r` quella
+    /// degli elettori, `+e·q·(g_r/p_r − 1)` nel
     /// perimetro e `−e·q·Σ_perimetro (g_s − p_s) / (1 − Σ_perimetro p_s)` fuori, così la somma
     /// pesata per elettori resta zero. Nessun merito: è fuori dicastero.
     fn autonomia(dati: &DatiGioco, el: &Elettorato, q: f64, domanda: &mut [f64]) {
@@ -233,7 +234,7 @@ impl Misure {
         let mut reddito = vec![0.0; elettori.len()];
         for (k, gr) in el.gruppi.iter().enumerate() {
             if let Some(x) = reddito.get_mut(k / PER_REGIONE) {
-                *x += el.elettori(d, k) * (gr.reddito.primario + gr.reddito.trasferimenti);
+                *x += el.elettori(d, k) * gr.lordo_irpef;
             }
         }
         let (tot_e, tot_r) = (elettori.iter().sum::<f64>(), reddito.iter().sum::<f64>());
