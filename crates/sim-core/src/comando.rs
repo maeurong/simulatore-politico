@@ -95,6 +95,11 @@ impl Partita {
             EffettoComando::Ritiro { dicastero, importo } => {
                 self.ritira_decreto(dicastero, importo);
             }
+            EffettoComando::Riforma {
+                dicastero,
+                disposizione,
+                gradino,
+            } => self.accogli_riforma(dicastero, disposizione, gradino)?,
         }
         Ok(())
     }

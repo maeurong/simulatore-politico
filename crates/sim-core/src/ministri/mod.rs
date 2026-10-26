@@ -9,6 +9,7 @@ use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{Sondaggio, indice};
+use crate::parlamento::Parlamento;
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use crate::vista::{VoceMinistero, VoceMinistro};
@@ -23,15 +24,27 @@ mod soddisfazione;
 
 pub(crate) use agenda::penalizza;
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
-pub use proposte::Proposta;
+pub use proposte::{Proposta, TipoProposta};
 
 /// Ciò che un comando sui ministri lascia da fare a chi possiede economia e calendario: un
-/// decreto accolto da spendere e convertire, o ritirato.
+/// decreto accolto da spendere e convertire, o ritirato; una proposta di riforma accolta da
+/// presentare (la proposta resta finché la presentazione non passa).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum EffettoComando {
     Nessuno,
-    Decreto { dicastero: usize, importo: i64 },
-    Ritiro { dicastero: usize, importo: i64 },
+    Decreto {
+        dicastero: usize,
+        importo: i64,
+    },
+    Ritiro {
+        dicastero: usize,
+        importo: i64,
+    },
+    Riforma {
+        dicastero: usize,
+        disposizione: usize,
+        gradino: usize,
+    },
 }
 
 /// Perché la soddisfazione di un ministro è cambiata.
@@ -137,6 +150,8 @@ pub(crate) struct Contesto<'a> {
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
     pub disposizioni: &'a Disposizioni,
+    /// Per le disposizioni già in esame.
+    pub parlamento: &'a Parlamento,
     /// L'indice dei prezzi pubblicato, non il livello vero.
     pub indice_prezzi: f64,
     pub turno: u32,
@@ -306,7 +321,8 @@ impl Ministri {
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende il decreto:
-    /// lo spende e lo converte chi possiede economia e calendario. `Ferma` sull'agenda col
+    /// lo spende e lo converte chi possiede economia e calendario; su una proposta di riforma
+    /// rende la legge da presentare. `Ferma` sull'agenda col
     /// decreto, o `ChiediDimissioni` sul suo dicastero, lo ritira (scelta 1): il margine torna a
     /// prima. Invariante: `PresentaBilancio`, `PresentaLegge`, `Emendamento`, `PoniFiducia` ed
     /// `EmanaDecreto` non arrivano mai qui (`Partita::comanda` li intercetta), quindi «comando
@@ -342,6 +358,18 @@ impl Ministri {
         }
         match c {
             Comando::Accogli { .. } => {
+                if let Some(TipoProposta::Riforma {
+                    disposizione,
+                    gradino,
+                    ..
+                }) = st.proposta.map(|p| p.tipo)
+                {
+                    return Ok(EffettoComando::Riforma {
+                        dicastero: i,
+                        disposizione,
+                        gradino,
+                    });
+                }
                 let importo = self.accogli(cx, i)?;
                 return Ok(EffettoComando::Decreto {
                     dicastero: i,

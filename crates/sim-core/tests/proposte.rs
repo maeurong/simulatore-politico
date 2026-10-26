@@ -7,9 +7,17 @@ mod comune;
 use comune::{edita, file_base, indice, sostituisci};
 use serde_json::{Value, json};
 use sim_core::dati::{DatiGioco, FileDati};
-use sim_core::ministri::Causa;
+use sim_core::ministri::{Causa, Proposta, TipoProposta};
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
+
+/// Atto e importo di una proposta di fondi.
+fn fondi(p: Proposta) -> (usize, i64) {
+    match p.tipo {
+        TipoProposta::Fondi { atto, importo } => (atto, importo),
+        t => panic!("non di fondi: {t:?}"),
+    }
+}
 
 fn ministero<'a>(v: &'a Vista, id: &str) -> &'a VoceMinistero {
     v.ministeri.iter().find(|m| m.dicastero == id).unwrap()
@@ -269,7 +277,8 @@ fn rinvia_tiene_la_proposta_un_turno_poi_vale_respinta() {
     p.chiudi_turno();
     let dopo = proposta(&p).unwrap();
     assert_ne!(
-        dopo.importo, nata.importo,
+        fondi(dopo).1,
+        fondi(nata).1,
         "il margine annuo cambia l'importo"
     );
     assert_eq!((dopo.turni_in_sospeso, dopo.rinviata), (1, true));
@@ -314,25 +323,25 @@ type Modifica = Box<dyn Fn(&mut Value)>;
 fn salvataggi_con_proposte_corrotte_rifiutati() {
     let p = con_proposta(1);
     let s = indice("sanita");
-    let atto = p.ministri().dicasteri[s].proposta.unwrap().atto;
+    let atto = fondi(p.ministri().dicasteri[s].proposta.unwrap()).0;
     assert!(edita(&p, |_| ()).is_ok());
     let righe: Vec<(&str, Modifica)> = vec![
         (
             "importo nullo",
             Box::new(move |j| {
-                j["ministri"]["dicasteri"][s]["proposta"]["importo"] = json!(0);
+                j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["importo"] = json!(0);
             }),
         ),
         (
             "importo negativo",
             Box::new(move |j| {
-                j["ministri"]["dicasteri"][s]["proposta"]["importo"] = json!(-5);
+                j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["importo"] = json!(-5);
             }),
         ),
         (
             "importo oltre il tetto",
             Box::new(move |j| {
-                j["ministri"]["dicasteri"][s]["proposta"]["importo"] =
+                j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["importo"] =
                     json!(1_000_000_000_000_001_i64);
             }),
         ),
@@ -345,7 +354,7 @@ fn salvataggi_con_proposte_corrotte_rifiutati() {
         (
             "atto di un altro dicastero",
             Box::new(move |j| {
-                j["ministri"]["dicasteri"][s]["proposta"]["atto"] = json!(0);
+                j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["atto"] = json!(0);
             }),
         ),
         (
@@ -406,18 +415,18 @@ fn accogli_ricalcola_quanto_manca() {
         &format!("fondi già sufficienti per {id}"),
     );
     let mut falsa = edita(&p, |j| {
-        j["ministri"]["dicasteri"][s]["proposta"]["importo"] = json!(1);
+        j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["importo"] = json!(1);
     })
     .unwrap();
     falsa.comanda(accogli()).unwrap();
-    assert_eq!(falsa.economia().decreti[s], vera.importo);
+    assert_eq!(falsa.economia().decreti[s], fondi(vera).1);
 }
 
 #[test]
 fn accogli_rifiuta_un_atto_gia_in_cantiere() {
     let p = con_proposta(1);
     let s = indice("sanita");
-    let atto = p.ministri().dicasteri[s].proposta.unwrap().atto;
+    let atto = fondi(p.ministri().dicasteri[s].proposta.unwrap()).0;
     let id = ministero(&p.vista(), "sanita")
         .proposta
         .as_ref()

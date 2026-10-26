@@ -10,7 +10,7 @@ use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
+use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::Misure;
 use crate::parlamento::{
     self, CausaIntesa, Conteggio, Decreto, EsitoReferendum, EsitoVoto, FondiDecreto, FormaMisura,
@@ -101,6 +101,7 @@ impl Partita {
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
         let disposizioni = Disposizioni::iniziali(&dati);
+        let parlamento = Parlamento::uscente(&dati, &partiti);
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -110,6 +111,7 @@ impl Partita {
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
                 disposizioni: &disposizioni,
+                parlamento: &parlamento,
                 indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
                 data: Trimestre::TURNO_ZERO,
@@ -117,7 +119,7 @@ impl Partita {
             &mut caso,
         );
         Partita {
-            parlamento: Parlamento::uscente(&dati, &partiti),
+            parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
             misure: Misure::neutre(&dati),
             disposizioni,
@@ -226,6 +228,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -266,6 +269,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -282,6 +286,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -724,10 +729,30 @@ impl Partita {
         (self.parlamento).presenta(
             &self.dati,
             &self.disposizioni,
-            &mut self.ministri,
+            Some(&mut self.ministri),
             self.turno,
             valori,
         )
+    }
+
+    /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, senza
+    /// costo di firma (la vuole il ministro), e la proposta esce solo se la presentazione passa.
+    pub(crate) fn accogli_riforma(
+        &mut self,
+        dicastero: usize,
+        disposizione: usize,
+        gradino: usize,
+    ) -> Result<(), Errore> {
+        let x = &self.dati.disposizioni()[disposizione];
+        let valori = [ValoreProposto {
+            disposizione: x.id.clone(),
+            gradino: x.gradini[gradino].id.clone(),
+        }];
+        (self.parlamento).presenta(&self.dati, &self.disposizioni, None, self.turno, &valori)?;
+        if let Some(st) = self.ministri.dicasteri.get_mut(dicastero) {
+            st.proposta = None;
+        }
+        Ok(())
     }
 
     /// La bozza e `b` come lo approverebbe l'aula.
@@ -811,13 +836,13 @@ impl Partita {
     /// `Comando` con l'id dell'atto.
     pub(crate) fn accogli_ripetuto(&self, dicastero: &str) -> Result<(), Errore> {
         let proposta = (self.dati.dicasteri().iter().position(|d| d.id == dicastero))
-            .and_then(|i| Some((i, self.ministri.dicasteri.get(i)?.proposta?)));
-        let Some((i, p)) = proposta else {
+            .and_then(|i| Some((i, self.ministri.dicasteri.get(i)?.proposta?.tipo)));
+        let Some((i, TipoProposta::Fondi { atto, .. })) = proposta else {
             return Ok(());
         };
         let firma = FondiDecreto::Accolti {
             dicastero: i,
-            atto: p.atto,
+            atto,
             importo: 0,
         };
         if self
@@ -826,7 +851,7 @@ impl Partita {
             .iter()
             .any(|f| f.stessa_firma(&firma))
         {
-            let atto = self.dati.atti().get(p.atto).map_or("", |a| a.id.as_str());
+            let atto = self.dati.atti().get(atto).map_or("", |a| a.id.as_str());
             return Err(Errore::Comando(format!(
                 "decreto decaduto non si ripete: {atto}"
             )));

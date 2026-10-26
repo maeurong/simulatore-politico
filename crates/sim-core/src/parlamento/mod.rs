@@ -368,8 +368,15 @@ impl Parlamento {
         }
     }
 
+    /// La disposizione `d` è in una misura in calendario o in un referendum confermativo.
+    pub(crate) fn in_esame(&self, d: usize) -> bool {
+        let in_misura = (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d));
+        in_misura || (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d))
+    }
+
     /// `PresentaLegge`: controlla, mette la misura in calendario e fa pagare al ministro
-    /// proponente la firma contro la sua posizione. Un rifiuto non tocca nulla.
+    /// proponente la firma contro la sua posizione (non con `ministri = None`: la legge l'ha
+    /// proposta lui). Un rifiuto non tocca nulla.
     ///
     /// # Errors
     /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
@@ -380,7 +387,7 @@ impl Parlamento {
         &mut self,
         dati: &DatiGioco,
         disposizioni: &Disposizioni,
-        ministri: &mut Ministri,
+        ministri: Option<&mut Ministri>,
         turno: u32,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
@@ -438,10 +445,7 @@ impl Parlamento {
                     "{nome}: il gradino «{gradino}» è bloccato dal referendum"
                 ));
             }
-            let in_misura = (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d));
-            let in_referendum =
-                (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d));
-            if in_misura || in_referendum {
+            if self.in_esame(d) {
                 return ko(format!("{nome} è già in esame"));
             }
             if let Some(&(_, da)) = (self.respinte.iter()).find(|&&(x, da)| x == d && da > turno) {
@@ -480,7 +484,10 @@ impl Parlamento {
         }
         let proponente =
             (dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|x| &x.id == id));
-        if let Some(st) = proponente.and_then(|i| ministri.dicasteri.get_mut(i)) {
+        let firma = proponente
+            .zip(ministri)
+            .and_then(|(i, m)| m.dicasteri.get_mut(i));
+        if let Some(st) = firma {
             let m = st.ministro.as_ref().map(|m| m.posizione);
             if let (Some(m), Some((vigore, nuova))) = (m, posizioni(dati, disposizioni, &scelti)) {
                 let lontananza = ((nuova - m).abs() - (vigore - m).abs()).max(0.0);
