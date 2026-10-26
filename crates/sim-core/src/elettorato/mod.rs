@@ -368,7 +368,7 @@ impl Elettorato {
 
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
         let mut el = Elettorato {
-            base: Indici::da(e, dati),
+            base: Indici::da(e, dati, 1.0),
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()

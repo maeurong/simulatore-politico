@@ -48,7 +48,9 @@ pub struct Indici {
 }
 
 impl Indici {
-    pub fn da(e: &Economia, dati: &DatiGioco) -> Indici {
+    /// `riscossione` è quella con cui `e.conti` ha incassato l'IRPEF: la pressione la toglie,
+    /// perché pesa solo sugli autonomi (`aggiorna_redditi`), non su tutti i gruppi.
+    pub fn da(e: &Economia, dati: &DatiGioco, riscossione: f64) -> Indici {
         let entrate = &e.conti.entrate;
         Indici {
             salario: e.salario_medio(dati),
@@ -56,7 +58,9 @@ impl Indici {
             pil: e.pil_trimestrale,
             pensione: e.pensione_media(),
             sussidio: e.sussidio_effettivo(dati),
-            pressione: (entrate.irpef + entrate.contributi) as f64 / (e.pil_trimestrale * 1e9),
+            pressione: (entrate.irpef as f64 / riscossione.max(f64::MIN_POSITIVE)
+                + entrate.contributi as f64)
+                / (e.pil_trimestrale * 1e9),
         }
     }
 
@@ -78,7 +82,7 @@ impl Elettorato {
     /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
     /// delle misure pesa anche sulle imposte degli autonomi.
     pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
-        let (i, b) = (Indici::da(e, dati), self.base);
+        let (i, b) = (Indici::da(e, dati, misure.riscossione), self.base);
         let d = dati.elettorato();
         let consumi = &dati.struttura().consumi;
         let media =

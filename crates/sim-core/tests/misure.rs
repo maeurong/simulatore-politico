@@ -1,10 +1,16 @@
 mod comune;
 use comune::{dati_base, ferma_tranne, ferma_tutti, imposta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::elettorato::Condizione;
 use sim_core::{Comando, Partita};
 
 /// 6 condizioni × 3 fasce: i gruppi di una regione sono contigui (`indice_gruppo`).
 const PER_REGIONE: usize = 18;
+
+/// Rapporto minimo fra il picco di `centrodestra` e quello di `destra` nel test del merito.
+/// Misurato (seme 3): 0.0341 contro 0.0081, rapporto 4.2; il resto di `destra` è l'isteresi,
+/// che il merito non conta. Un doppio credito porterebbe il rapporto verso 1.
+const SOGLIA: f64 = 2.0;
 
 /// Due partite uguali al turno 1: nella prima `sviluppo_economico` fa un atto rapido sulla
 /// domanda della Calabria, nella seconda nessun atto; tutte le altre agende fermate in entrambe.
@@ -82,29 +88,108 @@ fn merito_dell_atto_al_partito_del_dicastero() {
     );
     let f = imposta(f, "manopole", "[quota_colpa_presidente]\nvalore = ", "0.0");
     let (mut a, mut b) = prepara(f);
-    let j = a
-        .partiti()
-        .iter()
-        .position(|x| x.id == "centrodestra")
-        .unwrap();
+    let indice = |id: &str| a.partiti().iter().position(|x| x.id == id).unwrap();
+    let (centrodestra, destra) = (indice("centrodestra"), indice("destra"));
     let regioni = dati_base();
     let r = |id: &str| regioni.regioni().iter().position(|x| x.id == id).unwrap();
-    let media = |p: &Partita, reg: usize| {
+    let media = |p: &Partita, reg: usize, j: usize| {
         let g = &p.elettorato().gruppi[reg * PER_REGIONE..(reg + 1) * PER_REGIONE];
         g.iter().map(|x| x.giudizio[j]).sum::<f64>() / g.len() as f64
     };
     // Si guarda il massimo e non la fine: il giudizio pesa le perdite più dei guadagni, e un
     // impulso che svanisce chiude in negativo. L'effetto nazionale si cancella nella differenza.
-    let mut picco = f64::NEG_INFINITY;
+    let (mut picco, mut picco_destra) = (f64::NEG_INFINITY, 0.0_f64);
     for _ in 0..6 {
         a.chiudi_turno();
         b.chiudi_turno();
-        let d = |reg: usize| media(&a, reg) - media(&b, reg);
-        picco = picco.max(d(r("calabria")) - d(r("lombardia")));
+        let d = |reg: usize, j: usize| media(&a, reg, j) - media(&b, reg, j);
+        let calabria_meno_lombardia = |j: usize| d(r("calabria"), j) - d(r("lombardia"), j);
+        picco = picco.max(calabria_meno_lombardia(centrodestra));
+        // `destra` ha il lavoro: la disoccupazione dovuta all'atto non è sua colpa.
+        picco_destra = picco_destra.max(calabria_meno_lombardia(destra).abs());
         ferma_tutti(&mut a);
         ferma_tutti(&mut b);
     }
     assert!(picco > 0.0, "{picco}");
+    // Un doppio credito (anche a `destra`) porterebbe `picco_destra` vicino a `picco`.
+    assert!(picco_destra < picco / SOGLIA, "{picco_destra} {picco}");
+}
+
+/// Un atto con ritardo 0 eseguito alla chiusura del turno 0 non ha ancora mosso la disoccupazione:
+/// il merito di quel turno è nullo.
+#[test]
+fn merito_nullo_al_turno_zero_con_atto_senza_ritardo() {
+    let d = DatiGioco::da_testi(&senza_shock()).unwrap();
+    let mut p = Partita::nuova(d, 3);
+    let v = p.vista();
+    let ag = v
+        .ministeri
+        .iter()
+        .find(|m| m.dicastero == "sviluppo_economico")
+        .and_then(|m| m.agenda.clone())
+        .unwrap();
+    let atto = (ag.atto != "sviluppo_economico_sgravi").then(|| "sviluppo_economico_sgravi".into());
+    let regione = (ag.regione.as_deref() != Some("calabria")).then(|| "calabria".to_string());
+    if atto.is_some() || regione.is_some() {
+        p.comanda(Comando::Dirotta {
+            dicastero: "sviluppo_economico".into(),
+            atto,
+            regione,
+        })
+        .unwrap();
+    }
+    ferma_tranne(&mut p, "sviluppo_economico");
+    p.chiudi_turno();
+    let dati = dati_base();
+    let k = dati.grandezza("domanda_regionale").unwrap();
+    let registrato = p
+        .grandezze()
+        .effetti
+        .iter()
+        .any(|e| e.grandezza == k && e.inizio == 0);
+    assert!(
+        registrato,
+        "l'atto senza ritardo non ha registrato l'effetto"
+    );
+    assert!(p.misure().merito.iter().flatten().all(|x| *x == 0.0));
+}
+
+/// La riscossione pesa sulle imposte dei soli autonomi: dipendenti e pensionati pagano come
+/// con riscossione 1 (`elasticita_riscossione = 0`), a parità del resto.
+#[test]
+fn riscossione_pesa_solo_sulle_imposte_degli_autonomi() {
+    let neutra = imposta(
+        senza_shock(),
+        "manopole",
+        "[elasticita_riscossione]\nvalore = ",
+        "0.0",
+    );
+    let finale = |f: FileDati| {
+        let d = DatiGioco::da_testi(&f).unwrap();
+        let mut p = Partita::nuova(d.clone(), 1);
+        for _ in 0..10 {
+            ferma_tutti(&mut p);
+            p.chiudi_turno();
+        }
+        (d, p)
+    };
+    let (d, a) = finale(senza_shock());
+    let (_, b) = finale(neutra);
+    assert!(a.misure().riscossione < 1.0);
+    assert_eq!(b.misure().riscossione, 1.0);
+    let (mut autonomi, mut altri) = (0, 0);
+    let gruppi = a.elettorato().gruppi.iter().zip(&b.elettorato().gruppi);
+    for ((ga, gb), dato) in gruppi.zip(&d.elettorato().gruppi) {
+        let (ia, ib) = (ga.reddito.imposte, gb.reddito.imposte);
+        if dato.condizione == Condizione::Autonomo {
+            assert!(ia < ib, "{ia} {ib}");
+            autonomi += 1;
+        } else {
+            assert!((ia - ib).abs() <= 1e-6 * ib.abs().max(1.0), "{ia} {ib}");
+            altri += 1;
+        }
+    }
+    assert!(autonomi > 0 && altri > 0);
 }
 
 #[test]

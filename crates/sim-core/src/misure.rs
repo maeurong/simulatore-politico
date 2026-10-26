@@ -145,7 +145,10 @@ impl Misure {
             dati.grandezza("stock_infrastrutture"),
             dati.grandezza("investimenti_privati"),
         );
-        let visto = turno.saturating_sub(1);
+        // Al turno 0 nessuna grandezza è ancora passata da `avanza`: niente da attribuire.
+        let Some(visto) = turno.checked_sub(1) else {
+            return merito;
+        };
         for ef in &g.effetti {
             let Some(r) = ef.regione else { continue };
             let c = contributo(ef, visto);
@@ -168,28 +171,48 @@ impl Misure {
     /// `SalvataggioIlleggibile` se una lunghezza non combacia coi dati o un valore non è finito.
     pub fn controlla(&self, dati: &DatiGioco) -> Result<(), Errore> {
         let (n, nd) = (dati.regioni().len(), dati.dicasteri().len());
-        let giuste = self.domanda_regionale.len() == n
-            && self.disoccupazione_strutturale.len() == n
-            && self.merito.len() == n
-            && self.merito.iter().all(|r| r.len() == nd);
-        let finite = [
-            self.riscossione,
-            self.prezzo_energia,
-            self.crescita_potenziale,
-            self.capacita_economia,
-        ]
-        .iter()
-        .chain(&self.domanda_regionale)
-        .chain(&self.disoccupazione_strutturale)
-        .chain(self.merito.iter().flatten())
-        .all(|x| x.is_finite());
-        if giuste && finite {
-            Ok(())
-        } else {
-            Err(Errore::SalvataggioIlleggibile(
-                "misure non combacia con i dati".into(),
-            ))
+        let ko = |m: String| Err(Errore::SalvataggioIlleggibile(format!("misure: {m}")));
+        for (campo, len) in [
+            ("domanda_regionale", self.domanda_regionale.len()),
+            (
+                "disoccupazione_strutturale",
+                self.disoccupazione_strutturale.len(),
+            ),
+            ("merito", self.merito.len()),
+        ] {
+            if len != n {
+                return ko(format!("{campo} ha {len} voci, le regioni sono {n}"));
+            }
         }
+        if self.merito.iter().any(|r| r.len() != nd) {
+            return ko(format!("merito: una regione non ha {nd} dicasteri"));
+        }
+        let scalari = [
+            ("riscossione", self.riscossione),
+            ("prezzo_energia", self.prezzo_energia),
+            ("crescita_potenziale", self.crescita_potenziale),
+            ("capacita_economia", self.capacita_economia),
+        ];
+        if let Some((campo, _)) = scalari.iter().find(|(_, x)| !x.is_finite()) {
+            return ko(format!("{campo} non finito"));
+        }
+        let vettori = [
+            ("domanda_regionale", &self.domanda_regionale),
+            (
+                "disoccupazione_strutturale",
+                &self.disoccupazione_strutturale,
+            ),
+        ];
+        if let Some((campo, _)) = vettori
+            .iter()
+            .find(|(_, v)| v.iter().any(|x| !x.is_finite()))
+        {
+            return ko(format!("{campo} ha un valore non finito"));
+        }
+        if self.merito.iter().flatten().any(|x| !x.is_finite()) {
+            return ko("merito ha un valore non finito".into());
+        }
+        Ok(())
     }
 }
 

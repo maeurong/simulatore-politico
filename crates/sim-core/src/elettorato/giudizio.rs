@@ -65,6 +65,14 @@ impl Elettorato {
                 Some((gr.id.as_str(), delta, resp))
             })
             .collect();
+        // Per regione e dicastero: punti di disoccupazione dovuti al merito, scalati.
+        let meriti: Vec<Vec<f64>> = (misure.merito.iter().zip(&misure_prima.merito))
+            .map(|(ora, prima)| {
+                (ora.iter().zip(prima))
+                    .map(|(o, p)| -(o - p) / sigma_u)
+                    .collect()
+            })
+            .collect();
         for (i, g) in self.gruppi.iter_mut().enumerate() {
             let (r, c) = (i / PER_REGIONE, condizione_di(i));
             let (ora, prima) = (g.reddito, g.reddito_prima);
@@ -117,11 +125,7 @@ impl Elettorato {
             let dy = componenti.iter().map(|c| c.0).sum::<f64>() / sigma_r;
             let fattore = w_reddito * coefficiente(dy, rho) / sigma_r;
             let du = -(e.regioni[r].disoccupazione - self.ultima_disoccupazione[r]) / sigma_u;
-            let meriti: Vec<f64> = (misure.merito[r].iter())
-                .zip(&misure_prima.merito[r])
-                .map(|(ora, prima)| -(ora - prima) / sigma_u)
-                .collect();
-            let resto = du - meriti.iter().sum::<f64>();
+            let resto = du - meriti[r].iter().sum::<f64>();
             let disoccupazione = w_disoccupazione * asimmetrica(resto, rho);
             for (p, gp) in g.giudizio.iter_mut().enumerate() {
                 if governo.al_governo(p) {
@@ -129,7 +133,7 @@ impl Elettorato {
                     let servizio: f64 = (servizi.iter())
                         .map(|&(voce, dx, resp)| peso(voce) * asimmetrica(dx, rho) * colpa(resp, p))
                         .sum();
-                    let merito: f64 = (governo.dicasteri.iter().zip(&meriti))
+                    let merito: f64 = (governo.dicasteri.iter().zip(&meriti[r]))
                         .filter(|&(&partito, _)| partito == p)
                         .map(|(_, &dx)| asimmetrica(dx, rho))
                         .sum();
