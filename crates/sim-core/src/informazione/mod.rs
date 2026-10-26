@@ -146,6 +146,10 @@ impl Informazione {
         if !trimestri_ok || !stime.into_iter().all(Stima::e_finita) {
             return ko("statistica: trimestre fuori da 1-4 o stima non finita");
         }
+        let p = t.indice_prezzi;
+        if !(p.is_finite() && p > 0.0 && p <= 1e6) {
+            return ko("statistica.indice_prezzi non finito o fuori da (0, 1e6]");
+        }
         Ok(())
     }
 }

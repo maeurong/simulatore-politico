@@ -287,7 +287,6 @@ impl Ministri {
     /// del decreto: lo spende chi possiede l'economia.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
-        let senza_dicastero = || ko("comando senza dicastero".into());
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
         | Comando::Ferma { dicastero }
@@ -297,13 +296,15 @@ impl Ministri {
         | Comando::Rinvia { dicastero }
         | Comando::Respingi { dicastero }) = &c
         else {
-            return senza_dicastero();
+            return ko("comando senza dicastero".into());
         };
         let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
         if matches!(c, Comando::Accogli { .. }) && cx.economia.esercizio_provvisorio(cx.data) {
-            return ko("esercizio provvisorio: nessuna misura che costi denaro".into());
+            return ko(format!(
+                "esercizio provvisorio: nessuna misura che costi denaro: {dicastero}"
+            ));
         }
         let st = &mut self.dicasteri[i];
         let sul_ministro = matches!(
@@ -342,7 +343,8 @@ impl Ministri {
                 }
                 st.scelta = Some(indice);
             }
-            Comando::PresentaBilancio { .. } => return senza_dicastero(),
+            // Escluso dal `let ... else` in testa; lo intercetta `Partita::comanda`.
+            Comando::PresentaBilancio { .. } => {}
         }
         Ok(None)
     }

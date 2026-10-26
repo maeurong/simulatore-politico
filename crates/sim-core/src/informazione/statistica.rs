@@ -56,6 +56,9 @@ pub struct Statistica {
     pub prima_stima: Stima,
     pub vera: Stima,
     pub revisione: Option<Revisione>,
+    /// Indice dei prezzi pubblicato, 1 al turno zero: cresce con le prime stime
+    /// dell'inflazione. La legge di bilancio legge questo, non il livello vero.
+    pub indice_prezzi: f64,
 }
 
 impl Statistica {
@@ -67,6 +70,7 @@ impl Statistica {
             prima_stima: vera.clone(),
             vera,
             revisione: None,
+            indice_prezzi: 1.0,
         }
     }
 
@@ -90,6 +94,8 @@ impl Statistica {
             inflazione: errore("errore_stima_inflazione", vera.inflazione),
             disavanzo: errore("errore_stima_disavanzo", vera.disavanzo),
         };
+        // Inflazione annualizzata: un trimestre ne vale la radice quarta.
+        let indice_prezzi = self.indice_prezzi * (1.0 + prima_stima.inflazione / 100.0).powf(0.25);
         let vecchia = std::mem::replace(
             self,
             Statistica {
@@ -97,6 +103,7 @@ impl Statistica {
                 prima_stima,
                 vera,
                 revisione: None,
+                indice_prezzi,
             },
         );
         self.revisione = Some(Revisione {

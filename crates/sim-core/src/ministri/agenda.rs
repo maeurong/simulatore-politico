@@ -206,7 +206,7 @@ pub(super) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno
 
 impl Ministri {
     /// Apertura dei lavori: il margine (turno zero: un trimestre del bilancio iniziale; ogni
-    /// gennaio-marzo: l'anno intero del bilancio che vale, e il costo del taglio reale), le 40
+    /// gennaio-marzo: l'anno intero del bilancio che vale), le 40
     /// estrazioni di rumore nell'ordine del catalogo (sempre, anche per interim e margine
     /// esaurito), poi le agende. Nell'esercizio provvisorio né agende né proposte.
     pub(super) fn apri_agende(&mut self, cx: &Contesto, caso: &mut Caso) {
@@ -221,7 +221,6 @@ impl Ministri {
                 self.dicasteri[i].margine_residuo = euro(rif[i] as f64 / 4.0);
             } else if cx.data.trimestre == 1 {
                 self.dicasteri[i].margine_residuo = annuo.dicasteri[i].margine;
-                self.taglio_reale(cx, i);
             }
             let agenda = if provvisorio {
                 None
@@ -238,23 +237,12 @@ impl Ministri {
         }
     }
 
-    /// Anno nuovo: `taglio = 1 − spesa nuova / (spesa vecchia · (1 + inflazione media delle
-    /// ultime 4)/100)`; se positivo costa `costo_taglio_budget · 100 · taglio`. La spesa nuova è
-    /// quella del bilancio che vale nell'anno, anche le cifre vecchie dell'esercizio provvisorio.
-    fn taglio_reale(&mut self, cx: &Contesto, i: usize) {
-        let e = cx.economia;
-        let inflazione = e.inflazione[..4].iter().sum::<f64>() / 4.0;
-        let nuova = e.bilancio_in_vigore(cx.data).dicasteri[i].spesa as f64;
-        let vecchia = e.bilancio.dicasteri[i].spesa as f64 * (1.0 + inflazione / 100.0);
-        if vecchia > 0.0 {
-            let taglio = 1.0 - nuova / vecchia;
-            let delta = -cx.dati.manopola("costo_taglio_budget") * 100.0 * taglio.max(0.0);
-            penalizza(
-                &mut self.dicasteri[i],
-                Causa::BudgetTagliato,
-                delta,
-                cx.turno,
-            );
+    /// `BudgetTagliato`: `−costo · perdita` per ogni dicastero con ministro, con `perdite` le
+    /// perdite reali in % delle voci, nell'ordine dei dicasteri; nulla dove la perdita non è
+    /// positiva.
+    pub(crate) fn costo_taglio(&mut self, perdite: &[f64], costo: f64, turno: u32) {
+        for (st, p) in self.dicasteri.iter_mut().zip(perdite) {
+            penalizza(st, Causa::BudgetTagliato, -costo * p.max(0.0), turno);
         }
     }
 

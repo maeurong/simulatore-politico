@@ -124,8 +124,8 @@ impl Partita {
     // Ordine della chiusura:
     // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
-    // nuovo, rose, agende, proposte).
+    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (rose,
+    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
@@ -193,6 +193,26 @@ impl Partita {
             ..cx
         };
         self.ministri.apri(&cx, &mut self.caso);
+        // Anno nuovo in esercizio provvisorio: costa la perdita reale del bilancio che continua.
+        if self.economia.esercizio_provvisorio(self.data) {
+            self.costo_taglio(&self.economia.bilancio_in_vigore(self.data).clone());
+        }
+    }
+
+    /// `BudgetTagliato`: `−costo_taglio_budget · perdita reale` della voce per ogni dicastero con
+    /// ministro.
+    fn costo_taglio(&mut self, b: &Bilancio) {
+        let indice = self.indice_prezzi();
+        let perdite: Vec<f64> = (b.dicasteri.iter())
+            .map(|d| perdita_reale(d.livello_prezzi, indice))
+            .collect();
+        let costo = self.dati.manopola("costo_taglio_budget");
+        self.ministri.costo_taglio(&perdite, costo, self.turno);
+    }
+
+    /// L'indice dei prezzi pubblicato: la legge di bilancio non legge il livello vero.
+    fn indice_prezzi(&self) -> f64 {
+        self.informazione.statistica.indice_prezzi
     }
 
     fn contesto(&self) -> Contesto<'_> {
@@ -225,7 +245,8 @@ impl Partita {
 
     /// Aula: il bilancio presentato è approvato, senza voto finché il piano 6 non lo porta.
     /// Nell'esercizio provvisorio è dell'anno in corso: il passo di gennaio-marzo che segue lo
-    /// mette in vigore, e il margine residuo diventa i 3/4 di quello nuovo.
+    /// mette in vigore, e il margine residuo diventa i 3/4 di quello nuovo. Ogni approvazione
+    /// costa ai ministri la perdita reale delle loro voci.
     fn aula(&mut self) {
         let Some(b) = self.economia.bilancio_presentato.take() else {
             return;
@@ -235,6 +256,7 @@ impl Partita {
                 st.margine_residuo = d.margine / 4 * 3;
             }
         }
+        self.costo_taglio(&b);
         self.economia.bilancio_approvato = Some(b);
     }
 
@@ -245,29 +267,32 @@ impl Partita {
         economia::bozza(&self.economia, self.data)
     }
 
-    /// Le voci scelte di `b` rivalutate al livello dei prezzi di oggi.
+    /// Le voci scelte di `b` rivalutate all'indice dei prezzi pubblicato.
     ///
     /// # Errors
     /// `Bilancio` se il dicastero non c'è o una voce rivalutata esce da 0-1e15.
     pub fn indicizza(&self, b: &Bilancio, voce: &Voce) -> Result<Bilancio, Errore> {
-        economia::indicizza(b, voce, self.economia.livello_prezzi).map_err(Errore::Bilancio)
+        economia::indicizza(b, voce, self.indice_prezzi()).map_err(Errore::Bilancio)
     }
 
     /// Costo, peso sul tetto UE e perdita reale di `b` rispetto alla bozza, come lo approverebbe
     /// l'aula.
     ///
     /// # Errors
-    /// `Bilancio` fuori stagione o con le stesse regole della presentazione.
+    /// `Bilancio` fuori stagione, con le stesse regole della presentazione, o con la spesa netta
+    /// di riferimento nulla.
     pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
         let (bozza, b) = self.bilancio_ammesso(b)?;
-        Ok(economia::riepilogo(
+        economia::riepilogo(
             &self.economia,
             &self.dati,
             &self.elettorato,
             &self.misure,
             &b,
             &bozza,
-        ))
+            self.indice_prezzi(),
+        )
+        .map_err(Errore::Bilancio)
     }
 
     /// `PresentaBilancio`: sostituisce quello già presentato; l'aula lo approva in chiusura.
@@ -281,14 +306,14 @@ impl Partita {
     fn bilancio_ammesso(&self, b: &Bilancio) -> Result<(Bilancio, Bilancio), Errore> {
         let bozza =
             (self.bozza_bilancio()).ok_or_else(|| Errore::Bilancio(FUORI_STAGIONE.into()))?;
-        let b = economia::normalizza(b, &bozza, self.economia.livello_prezzi)
-            .map_err(Errore::Bilancio)?;
+        let b = economia::normalizza(b, &bozza, self.indice_prezzi()).map_err(Errore::Bilancio)?;
         Ok((bozza, b))
     }
 
     fn vista_bilancio(&self) -> VistaBilancio {
         let e = &self.economia;
         let b = e.bilancio_in_vigore(self.data);
+        let indice = self.indice_prezzi();
         VistaBilancio {
             anno: b.anno,
             dicasteri: (b.dicasteri.iter())
@@ -298,11 +323,11 @@ impl Partita {
                     salari: d.salari,
                     acquisti: d.acquisti,
                     margine: d.margine,
-                    perdita_reale: perdita_reale(d.livello_prezzi, e.livello_prezzi),
+                    perdita_reale: perdita_reale(d.livello_prezzi, indice),
                 })
                 .collect(),
             aliquote: b.aliquote.clone(),
-            perdita_reale_scaglioni: perdita_reale(b.livello_prezzi_scaglioni, e.livello_prezzi),
+            perdita_reale_scaglioni: perdita_reale(b.livello_prezzi_scaglioni, indice),
             fondo_riserva: b.fondo_riserva,
             presentabile: self.bozza_bilancio().is_some(),
             presentato: e.bilancio_presentato.is_some(),

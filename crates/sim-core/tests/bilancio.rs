@@ -4,11 +4,28 @@
 )]
 
 mod comune;
-use comune::{dati_base, senza_shock};
+use comune::{dati_base, edita, senza_shock};
+use serde_json::json;
 use sim_core::dati::DatiGioco;
-use sim_core::economia::{Bilancio, Voce};
+use sim_core::economia::{Bilancio, RiepilogoBilancio, Voce};
 use sim_core::elettorato::{Fascia, fascia_di};
+use sim_core::ministri::Causa;
 use sim_core::{Comando, Errore, Partita};
+
+fn perdita(r: &RiepilogoBilancio, voce: &str) -> f64 {
+    r.perdita_reale
+        .iter()
+        .find(|x| x.voce == voce)
+        .unwrap()
+        .perdita
+}
+
+/// Nessun ministro ha una variazione `BudgetTagliato` nella vista.
+fn nessun_taglio(p: &Partita) -> bool {
+    (p.vista().ministeri.iter())
+        .flat_map(|m| m.ministro.iter().flat_map(|x| &x.variazioni))
+        .all(|v| v.causa != Causa::BudgetTagliato)
+}
 
 /// Al turno 4 (ottobre-dicembre 2027) la bozza del 2028 è aperta.
 fn al_bilancio_2028(seme: u64) -> Partita {
@@ -204,4 +221,126 @@ fn bilancio_malformato_rifiutato_col_nome() {
     let e = presenta(&mut fuori, bozza).unwrap_err();
     assert!(e.to_string().contains("fuori stagione"), "{e}");
     assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn taglio_nominale_alza_la_perdita_e_l_aumento_oltre_l_indice_la_azzera() {
+    let p = al_bilancio_2028(1);
+    let bozza = p.bozza_bilancio().unwrap();
+    let fotocopia = perdita(&p.riepilogo_bilancio(&bozza).unwrap(), "sanita");
+    let mut b = bozza.clone();
+    b.dicasteri[3].salari = b.dicasteri[3].salari * 9 / 10;
+    let tagliata = perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita");
+    assert!(
+        tagliata > fotocopia && fotocopia > 0.0,
+        "{tagliata} {fotocopia}"
+    );
+    let sanita = Voce::Dicastero {
+        id: "sanita".into(),
+    };
+    let mut b = p.indicizza(&bozza, &sanita).unwrap();
+    b.dicasteri[3].salari += 1_000_000_000;
+    assert_eq!(perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita"), 0.0);
+}
+
+#[test]
+fn indicizzare_un_dicastero_o_gli_scaglioni_tocca_solo_quelli() {
+    let p = al_bilancio_2028(1);
+    let indice = p.informazione().statistica.indice_prezzi;
+    let bozza = p.bozza_bilancio().unwrap();
+    let sanita = Voce::Dicastero {
+        id: "sanita".into(),
+    };
+    let b = p.indicizza(&bozza, &sanita).unwrap();
+    for (i, (d, z)) in b.dicasteri.iter().zip(&bozza.dicasteri).enumerate() {
+        assert_eq!(i == 3, d != z, "{}", d.id);
+    }
+    assert!(b.dicasteri[3].salari > bozza.dicasteri[3].salari);
+    assert_eq!(b.dicasteri[3].livello_prezzi, indice);
+    assert_eq!(b.aliquote, bozza.aliquote);
+    let b = p.indicizza(&bozza, &Voce::Scaglioni).unwrap();
+    assert_eq!(b.dicasteri, bozza.dicasteri);
+    assert_eq!(b.livello_prezzi_scaglioni, indice);
+    let soglie = |x: &Bilancio| {
+        x.aliquote
+            .irpef
+            .iter()
+            .map(|s| s.fino_a)
+            .collect::<Vec<_>>()
+    };
+    assert!(
+        soglie(&b)
+            .iter()
+            .zip(soglie(&bozza))
+            .all(|(n, v)| n.unwrap_or(0) >= v.unwrap_or(0))
+    );
+    assert_ne!(soglie(&b), soglie(&bozza));
+    let e = p
+        .indicizza(
+            &bozza,
+            &Voce::Dicastero {
+                id: "nessuno".into(),
+            },
+        )
+        .unwrap_err();
+    assert!(e.to_string().contains("nessuno"), "{e}");
+}
+
+#[test]
+fn il_bilancio_del_governo_uscente_non_costa_soddisfazione() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.chiudi_turno();
+    assert!(nessun_taglio(&p));
+}
+
+#[test]
+fn bilancio_indicizzato_non_costa_soddisfazione() {
+    let mut p = al_bilancio_2028(4);
+    let b = p
+        .indicizza(&p.bozza_bilancio().unwrap(), &Voce::Tutto)
+        .unwrap();
+    presenta(&mut p, b).unwrap();
+    p.chiudi_turno();
+    assert!(nessun_taglio(&p));
+}
+
+#[test]
+fn ripresentare_sostituisce() {
+    let mut p = al_bilancio_2028(2);
+    let bozza = p.bozza_bilancio().unwrap();
+    let mut b = bozza.clone();
+    b.dicasteri[3].margine *= 2;
+    presenta(&mut p, b).unwrap();
+    presenta(&mut p, bozza.clone()).unwrap();
+    assert!(p.vista().bilancio.presentato);
+    p.chiudi_turno();
+    assert_eq!(
+        p.vista().ministeri[3].margine_residuo,
+        bozza.dicasteri[3].margine
+    );
+}
+
+#[test]
+fn bilancio_presentato_guasto_rifiutato_al_caricamento() {
+    let zero = Partita::nuova(dati_base(), 1);
+    let fuori = edita(&zero, |j| {
+        let e = &mut j["economia"];
+        e["bilancio_presentato"] = e["bilancio"].clone();
+    });
+    assert!(
+        matches!(fuori, Err(Errore::SalvataggioIlleggibile(_))),
+        "{fuori:?}"
+    );
+    let mut p = al_bilancio_2028(9);
+    let bozza = p.bozza_bilancio().unwrap();
+    presenta(&mut p, bozza).unwrap();
+    assert!(edita(&p, |_| {}).is_ok());
+    let guasti: [fn(&mut serde_json::Value); 2] = [
+        |b| b["dicasteri"][0]["livello_prezzi"] = json!(0.0),
+        |b| b["fondo_riserva"] = json!(-1),
+    ];
+    for guasta in guasti {
+        let r = edita(&p, |j| guasta(&mut j["economia"]["bilancio_presentato"]));
+        assert!(matches!(r, Err(Errore::SalvataggioIlleggibile(_))), "{r:?}");
+    }
 }

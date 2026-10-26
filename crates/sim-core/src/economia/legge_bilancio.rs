@@ -2,7 +2,7 @@
 //! finanza-pubblica:19-21), bozza, indicizzazione, presentazione e riepilogo.
 
 use super::Economia;
-use super::finanza::{Bilancio, BudgetDicastero, ContiTrimestre, conti_del_trimestre};
+use super::finanza::{Bilancio, BudgetDicastero, ContiTrimestre, conti_del_trimestre, euro};
 use crate::dati::DatiGioco;
 use crate::elettorato::Elettorato;
 use crate::misure::Misure;
@@ -202,23 +202,20 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
     }
     let ammesso = |x: i64| (0..=LIMITE_EURO).contains(&x);
     let cifre = |d: &BudgetDicastero| [d.salari, d.acquisti, d.margine];
+    let cifra = |d: &BudgetDicastero| cifre(d).iter().sum::<i64>();
     let mut dicasteri = Vec::with_capacity(b.dicasteri.len());
     for (d, z) in b.dicasteri.iter().zip(&bozza.dicasteri) {
         if !cifre(d).into_iter().all(ammesso) {
             return Err(format!("voce negativa o enorme: {}", d.id));
         }
         // Voci della bozza e presentate entro 1e15: la somma non trabocca.
-        let spesa = z.spesa - cifre(z).iter().sum::<i64>() + cifre(d).iter().sum::<i64>();
+        let spesa = z.spesa - cifra(z) + cifra(d);
         if !ammesso(spesa) {
             return Err(format!("voce negativa o enorme: {}", d.id));
         }
         dicasteri.push(BudgetDicastero {
             spesa,
-            livello_prezzi: if cifre(d) == cifre(z) {
-                z.livello_prezzi
-            } else {
-                attuale
-            },
+            livello_prezzi: livello_pesato(z.livello_prezzi, cifra(z), cifra(d), attuale),
             ..d.clone()
         });
     }
@@ -226,22 +223,36 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
         return Err("voce negativa o enorme: fondo_riserva".into());
     }
     b.aliquote.valida()?;
-    let soglie = |x: &Bilancio| {
-        x.aliquote
-            .irpef
-            .iter()
-            .map(|s| s.fino_a)
-            .collect::<Vec<_>>()
-    };
+    // La cifra degli scaglioni è la soglia più alta.
+    let soglia = |x: &Bilancio| x.aliquote.irpef.iter().rev().find_map(|s| s.fino_a);
     Ok(Bilancio {
         dicasteri,
-        livello_prezzi_scaglioni: if soglie(b) == soglie(bozza) {
-            bozza.livello_prezzi_scaglioni
-        } else {
-            attuale
-        },
+        livello_prezzi_scaglioni: livello_pesato(
+            bozza.livello_prezzi_scaglioni,
+            soglia(bozza).unwrap_or(0),
+            soglia(b).unwrap_or(0),
+            attuale,
+        ),
         ..b.clone()
     })
+}
+
+/// Livello dei prezzi di una voce la cui cifra passa da `prima` (nella bozza, al `livello`) a
+/// `dopo`: `min(attuale, livello · dopo/prima)`, così un taglio nominale alza la perdita reale e
+/// un aumento oltre l'indicizzazione la porta a 0, mai sotto; `prima ≤ 0` → `attuale`.
+fn livello_pesato(livello: f64, prima: i64, dopo: i64, attuale: f64) -> f64 {
+    if dopo == prima {
+        livello
+    } else if prima <= 0 {
+        attuale
+    } else if dopo as f64 + 1.5 >= prima as f64 * attuale / livello {
+        // Indicizzata: `indicizza` arrotonda all'euro le tre cifre, al più 1,5 € in meno.
+        attuale
+    } else {
+        // ponytail: pavimento a un milionesimo dell'indice, perché una voce azzerata con
+        // livello 0 non sarebbe più salvabile né indicizzabile.
+        (livello * dopo as f64 / prima as f64).clamp(attuale * 1e-6, attuale)
+    }
 }
 
 /// I conti dell'ultimo trimestre chiuso rifatti con le aliquote e gli scaglioni di `b`.
@@ -259,7 +270,8 @@ fn conti_con(
     conti_del_trimestre(&e, dati, &misure)
 }
 
-/// Il riepilogo di `b`, già passato da `normalizza`, contro la `bozza`.
+/// Il riepilogo di `b`, già passato da `normalizza`, contro la `bozza`; `indice` è l'indice
+/// dei prezzi pubblicato.
 pub(crate) fn riepilogo(
     e: &Economia,
     dati: &DatiGioco,
@@ -267,7 +279,8 @@ pub(crate) fn riepilogo(
     misure: &Misure,
     b: &Bilancio,
     bozza: &Bilancio,
-) -> RiepilogoBilancio {
+    indice: f64,
+) -> Result<RiepilogoBilancio, String> {
     let annuo = |x: &Bilancio| x.spesa_totale() + x.fondo_riserva;
     let imposte = |c: &ContiTrimestre| {
         let x = &c.entrate;
@@ -277,11 +290,18 @@ pub(crate) fn riepilogo(
         conti_con(e, dati, el, misure, b),
         conti_con(e, dati, el, misure, bozza),
     );
-    let attuale = 4 * e.spesa_netta_trimestre(dati);
-    let proposta = attuale - 4 * e.conti.spese.dicasteri
-        + annuo(b)
-        + 4 * (e.conti.entrate_discrezionali - con_b.entrate_discrezionali);
-    let lp = e.livello_prezzi;
+    // Base annua senza i decreti (una tantum) del trimestre: la spesa dei dicasteri meno la
+    // quota del bilancio è ciò che i decreti hanno aggiunto.
+    let ordinaria = euro(e.bilancio.spesa_totale() as f64 / 4.0);
+    let decreti = e.conti.spese.dicasteri - ordinaria;
+    let attuale = 4 * (e.spesa_netta_trimestre(dati) - decreti);
+    if attuale <= 0 {
+        return Err("spesa netta di riferimento nulla".into());
+    }
+    // Le entrate discrezionali di `b` contro quelle della bozza, rifatte sullo stesso stato.
+    let proposta = attuale - 4 * ordinaria + annuo(b)
+        - 4 * (con_b.entrate_discrezionali - con_bozza.entrate_discrezionali);
+    let lp = indice;
     let perdita_reale = (b.dicasteri.iter())
         .map(|d| PerditaReale {
             voce: d.id.clone(),
@@ -292,13 +312,13 @@ pub(crate) fn riepilogo(
             perdita: perdita_reale(b.livello_prezzi_scaglioni, lp),
         }))
         .collect();
-    RiepilogoBilancio {
+    Ok(RiepilogoBilancio {
         costo_spesa: annuo(b) - annuo(bozza),
         costo_entrate: 4 * (imposte(&con_bozza) - imposte(&con_b)),
         crescita_spesa_netta: 100.0 * (proposta as f64 / attuale as f64 - 1.0),
         tetto: dati.scenario().tetto_spesa_netta(b.anno),
         perdita_reale,
-    }
+    })
 }
 
 #[cfg(test)]
