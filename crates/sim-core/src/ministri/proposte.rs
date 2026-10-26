@@ -21,42 +21,49 @@ pub struct Proposta {
 }
 
 impl Ministri {
-    /// Apertura, dopo le agende: chi è in carica, non ha proposta né agenda (nessun atto
-    /// pagabile) e ha il suo atto più sentito (`o > 0`, a parità il primo) non pagabile, chiede
-    /// la differenza.
+    /// Apertura, dopo le agende. Chi è in carica, senza agenda (nessun atto pagabile), e ha il
+    /// suo atto più sentito (`o > 0`, a parità il primo) non pagabile, chiede la differenza.
+    /// Una proposta già in corso si ricalcola sul suo atto: con un'agenda, o se l'atto è ormai
+    /// pagabile, decade senza costo; altrimenti l'`importo` si aggiorna (`rinviata` e
+    /// `turni_in_sospeso` restano).
     pub(super) fn proponi(&mut self, cx: &Contesto) {
         let (dati, rif) = (cx.dati, margini_rif(cx.dati));
         for i in 0..self.dicasteri.len() {
             let st = &self.dicasteri[i];
-            let Some(m) = st
-                .ministro
-                .as_ref()
-                .filter(|_| st.proposta.is_none() && st.agenda.is_none())
-            else {
+            let Some(m) = st.ministro.as_ref() else {
                 continue;
             };
-            let mut migliore: Option<(usize, f64)> = None;
-            for (k, a) in dati.atti_del_dicastero(i) {
-                let o = parti(cx, i, m, a).0;
-                if o > 0.0 && migliore.is_none_or(|(_, b)| o > b) {
-                    migliore = Some((k, o));
+            let mancano = |k: usize| {
+                let spesa = costo(
+                    &dati.atti()[k],
+                    rif.get(i).copied().unwrap_or(0),
+                    cx.economia.livello_prezzi,
+                );
+                spesa - disponibile(st)
+            };
+            let nuova = if st.agenda.is_some() {
+                None
+            } else if let Some(p) = &st.proposta {
+                Some(Proposta {
+                    importo: mancano(p.atto),
+                    ..p.clone()
+                })
+            } else {
+                let mut migliore: Option<(usize, f64)> = None;
+                for (k, a) in dati.atti_del_dicastero(i) {
+                    let o = parti(cx, i, m, a).0;
+                    if o > 0.0 && migliore.is_none_or(|(_, b)| o > b) {
+                        migliore = Some((k, o));
+                    }
                 }
-            }
-            let Some((k, _)) = migliore else { continue };
-            let spesa = costo(
-                &dati.atti()[k],
-                rif.get(i).copied().unwrap_or(0),
-                cx.economia.livello_prezzi,
-            );
-            let importo = spesa - disponibile(st);
-            if importo > 0 {
-                self.dicasteri[i].proposta = Some(Proposta {
+                migliore.map(|(k, _)| Proposta {
                     atto: k,
-                    importo,
+                    importo: mancano(k),
                     turni_in_sospeso: 0,
                     rinviata: false,
-                });
-            }
+                })
+            };
+            self.dicasteri[i].proposta = nuova.filter(|p| p.importo > 0);
         }
     }
 

@@ -11,6 +11,11 @@ fn ministero<'a>(v: &'a Vista, id: &str) -> &'a VoceMinistero {
 
 /// La Sanità con i quattro atti a 9 quote: nessuno è pagabile, il ministro chiede fondi.
 fn sanita_cara() -> FileDati {
+    sanita_a("9.0")
+}
+
+/// La Sanità con i quattro atti al costo `nuovo`, in quote del margine annuo.
+fn sanita_a(nuovo: &str) -> FileDati {
     let effetto = "effetti = [\n  { grandezza = \"qualita_servizio_sanitario\", intensita = ";
     let mut f = file_base();
     for coda in [
@@ -25,7 +30,12 @@ fn sanita_cara() -> FileDati {
             "costo = 1.0\n"
         };
         let da = format!("{costo}{effetto}{coda}");
-        f = sostituisci(f, "atti", &da, &da.replacen(costo, "costo = 9.0\n", 1));
+        f = sostituisci(
+            f,
+            "atti",
+            &da,
+            &da.replacen(costo, &format!("costo = {nuovo}\n"), 1),
+        );
     }
     f
 }
@@ -184,5 +194,62 @@ fn comandi_delle_proposte_non_ammessi_rifiutati_col_nome() {
     assert!(
         matches!(e, Errore::Comando(_)) && e.to_string().contains("giustizia"),
         "{e}"
+    );
+}
+
+#[test]
+fn accogliere_fa_crescere_il_margine_residuo_dell_importo() {
+    let mut p = con_proposta(1);
+    let v = p.vista();
+    let (importo, residuo) = (
+        ministero(&v, "sanita").proposta.as_ref().unwrap().importo,
+        ministero(&v, "sanita").margine_residuo,
+    );
+    p.comanda(Comando::Accogli {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    let v = p.vista();
+    assert_eq!(ministero(&v, "sanita").margine_residuo, residuo + importo);
+}
+
+#[test]
+fn respingere_toglie_la_proposta_e_costa_soddisfazione() {
+    let costo = DatiGioco::da_testi(&sanita_cara())
+        .unwrap()
+        .manopola("costo_respingere");
+    let mut p = con_proposta(1);
+    let s = |p: &Partita| {
+        let v = p.vista();
+        ministero(&v, "sanita")
+            .ministro
+            .as_ref()
+            .unwrap()
+            .soddisfazione
+    };
+    let prima = s(&p);
+    p.comanda(Comando::Respingi {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    assert!(ministero(&p.vista(), "sanita").proposta.is_none());
+    assert!((prima - s(&p) - costo).abs() < 1e-9, "{prima} -> {}", s(&p));
+}
+
+/// Costo 2 quote: impagabile al turno 0 (un trimestre di margine), pagabile al turno 1
+/// (margine annuo), quindi la proposta del turno 0 decade all'apertura del turno 1.
+#[test]
+fn la_proposta_decade_quando_l_atto_diventa_pagabile() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&sanita_a("2.0")).unwrap(), 1);
+    assert!(ministero(&p.vista(), "sanita").proposta.is_some());
+    p.chiudi_turno();
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    assert!(m.proposta.is_none() && m.agenda.is_some());
+    let x = m.ministro.as_ref().unwrap();
+    assert!(
+        x.variazioni
+            .iter()
+            .all(|v| v.causa != Causa::PropostaRespinta)
     );
 }
