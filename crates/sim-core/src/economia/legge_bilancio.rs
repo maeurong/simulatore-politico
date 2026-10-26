@@ -46,6 +46,9 @@ pub struct Aliquote {
 /// Aliquota massima ammessa.
 const MASSIMA: f64 = 0.9;
 
+/// Scaglioni IRPEF ammessi.
+const MAX_SCAGLIONI: usize = 12;
+
 impl Aliquote {
     /// # Errors
     /// Un messaggio che nomina la voce colpevole: `scaglioni`, `irpef`, `iva`, `ires` o `contributi`.
@@ -53,7 +56,8 @@ impl Aliquote {
         let s = &self.irpef;
         let tetti_ok = s.split_last().is_some_and(|(ultimo, prima)| {
             ultimo.fino_a.is_none()
-                && prima.iter().all(|x| x.fino_a.is_some_and(|t| t > 0))
+                && prima.len() < MAX_SCAGLIONI
+                && (prima.iter()).all(|x| x.fino_a.is_some_and(|t| (1..=LIMITE_EURO).contains(&t)))
                 && prima.windows(2).all(|w| w[0].fino_a < w[1].fino_a)
         });
         if !tetti_ok {
@@ -434,7 +438,27 @@ mod test {
         a.irpef[2].fino_a = Some(90_000);
         assert!(a.valida().err().unwrap_or_default().contains("scaglioni"));
         let mut a = con(scaglioni());
+        a.irpef[1].fino_a = Some(LIMITE_EURO + 1);
+        assert!(a.valida().err().unwrap_or_default().contains("scaglioni"));
+        let tredici = (1..=13)
+            .map(|k| Scaglione {
+                fino_a: (k < 13).then_some(k * 10_000),
+                aliquota: 0.2,
+                livello_prezzi: 1.0,
+            })
+            .collect();
+        assert!(
+            con(tredici)
+                .valida()
+                .err()
+                .unwrap_or_default()
+                .contains("scaglioni")
+        );
+        let mut a = con(scaglioni());
         a.irpef[0].aliquota = 0.95;
+        assert!(a.valida().err().unwrap_or_default().contains("irpef"));
+        let mut a = con(scaglioni());
+        a.irpef[0].livello_prezzi = 1e7;
         assert!(a.valida().err().unwrap_or_default().contains("irpef"));
         for (nome, ritocco) in [
             (

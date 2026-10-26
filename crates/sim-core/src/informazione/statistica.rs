@@ -95,7 +95,9 @@ impl Statistica {
             disavanzo: errore("errore_stima_disavanzo", vera.disavanzo),
         };
         // Inflazione annualizzata: un trimestre ne vale la radice quarta.
-        let indice_prezzi = self.indice_prezzi * (1.0 + prima_stima.inflazione / 100.0).powf(0.25);
+        // Pavimento a −99%: sotto −100% la radice non esiste e l'indice diventerebbe NaN.
+        let indice_prezzi =
+            self.indice_prezzi * (1.0 + (prima_stima.inflazione / 100.0).max(-0.99)).powf(0.25);
         let vecchia = std::mem::replace(
             self,
             Statistica {

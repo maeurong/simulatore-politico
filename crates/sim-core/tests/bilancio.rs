@@ -359,9 +359,12 @@ fn bilancio_presentato_guasto_rifiutato_al_caricamento() {
     let bozza = p.bozza_bilancio().unwrap();
     presenta(&mut p, bozza).unwrap();
     assert!(edita(&p, |_| {}).is_ok());
-    let guasti: [fn(&mut serde_json::Value); 2] = [
+    let guasti: [fn(&mut serde_json::Value); 5] = [
         |b| b["dicasteri"][0]["livello_prezzi"] = json!(0.0),
         |b| b["fondo_riserva"] = json!(-1),
+        |b| b["dicasteri"][0]["livello_prezzi"] = json!(1e7),
+        |b| b["dicasteri"][0]["margine"] = json!(-1),
+        |b| b["aliquote"]["irpef"][1]["fino_a"] = json!(2_000_000_000_000_000_i64),
     ];
     for guasta in guasti {
         let r = edita(&p, |j| guasta(&mut j["economia"]["bilancio_presentato"]));

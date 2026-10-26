@@ -648,7 +648,7 @@ fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
 
 impl Economia {
     /// Il bilancio corrente, l'approvato e il presentato.
-    fn bilanci(&self) -> impl Iterator<Item = &Bilancio> + Clone {
+    fn bilanci(&self) -> impl Iterator<Item = &Bilancio> {
         std::iter::once(&self.bilancio)
             .chain(&self.bilancio_approvato)
             .chain(&self.bilancio_presentato)
@@ -658,7 +658,6 @@ impl Economia {
     /// i limiti sugli importi vengono prima delle somme che li usano.
     fn controlla_coerenza(&self, data: Trimestre) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
-        let bilanci = self.bilanci();
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
         ok(
@@ -677,24 +676,24 @@ impl Economia {
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
-        for b in bilanci.clone() {
+        for b in self.bilanci() {
             ok(
                 b.aliquote.valida().is_ok()
                     && b.dicasteri.iter().all(|d| livello_ok(d.livello_prezzi)),
                 "economia.bilancio: aliquote incoerenti o un livello_prezzi fuori da (0, 1e6]",
             )?;
             ok(
-                (0..=LIMITE_EURO).contains(&b.fondo_riserva),
-                "economia.bilancio: fondo_riserva fuori da 0-1e15",
+                (b.dicasteri.iter())
+                    .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine])
+                    .chain([b.fondo_riserva])
+                    .all(|x| (0..=LIMITE_EURO).contains(&x)),
+                "economia.bilancio: una voce o il fondo_riserva fuori da 0-1e15",
             )?;
         }
         if let Some(b) = &self.bilancio_presentato {
             ok(
-                economia::bozza(self, data).is_some_and(|z| z.anno == b.anno)
-                    && (b.dicasteri.iter())
-                        .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine])
-                        .all(|x| (0..=LIMITE_EURO).contains(&x)),
-                "economia.bilancio_presentato fuori stagione, d'altro anno o con voci negative",
+                economia::bozza(self, data).is_some_and(|z| z.anno == b.anno),
+                "economia.bilancio_presentato fuori stagione o d'altro anno",
             )?;
         }
         ok(
@@ -739,11 +738,8 @@ impl Economia {
             st.stato,
             st.estero,
         ];
-        let importi_bilancio = bilanci
-            .flat_map(|b| &b.dicasteri)
-            .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine]);
         ok(
-            importi.into_iter().chain(importi_bilancio).all(in_limite),
+            importi.into_iter().all(in_limite),
             "economia: un importo supera 1e15 euro",
         )?;
         ok(
