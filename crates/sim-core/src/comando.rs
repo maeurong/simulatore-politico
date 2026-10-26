@@ -47,8 +47,8 @@ impl Partita {
     /// `Comando` col nome del dicastero in causa; la partita resta identica.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;
-        if let Some((i, importo)) = accolta {
-            self.aggiungi_fondi(i, importo);
+        if let Some(importo) = accolta {
+            self.aggiungi_decreto(importo);
         }
         Ok(())
     }

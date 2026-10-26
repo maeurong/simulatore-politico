@@ -278,13 +278,9 @@ impl Ministri {
             .or_else(ko)
     }
 
-    /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende
-    /// `(dicastero, importo)`: il bilancio lo aggiorna chi possiede l'economia.
-    pub(crate) fn comanda(
-        &mut self,
-        cx: &Contesto,
-        c: Comando,
-    ) -> Result<Option<(usize, i64)>, Errore> {
+    /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
+    /// del decreto: lo spende chi possiede l'economia.
+    pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
@@ -299,7 +295,7 @@ impl Ministri {
         };
         let st = &mut self.dicasteri[i];
         match c {
-            Comando::Accogli { .. } => return self.accogli(cx, i).map(|e| Some((i, e))),
+            Comando::Accogli { .. } => return self.accogli(cx, i).map(Some),
             Comando::Rinvia { .. } => self.rinvia(cx, i)?,
             Comando::Respingi { .. } => self.respingi(cx, i)?,
             Comando::Ferma { .. } => self.ferma(cx, i)?,

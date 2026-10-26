@@ -84,7 +84,7 @@ impl Ministri {
         }
     }
 
-    /// `Accogli`: rende l'importo da aggiungere a margine e spesa del bilancio in vigore.
+    /// `Accogli`: rende l'importo del decreto, che entra anche nel margine residuo.
     pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
         let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
         let st = &self.dicasteri[i];

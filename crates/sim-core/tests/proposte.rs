@@ -53,16 +53,17 @@ fn fondi_che_non_bastano_portano_una_proposta() {
     assert!(p.importo > 0 && p.motivo.starts_with("fondi che non bastano"));
 }
 
+/// Accogli è un decreto una tantum: l'importo si spende nel trimestre che si chiude, il bilancio
+/// annuo resta quello della gemella che non accoglie.
 #[test]
-fn accogliere_alza_margine_e_spesa_e_mette_l_atto_in_agenda() {
-    let mut p = con_proposta(1);
+fn accogliere_spende_l_importo_nel_trimestre_e_mette_l_atto_in_agenda() {
+    let (mut p, mut gemella) = (con_proposta(1), con_proposta(1));
     let v = p.vista();
     let m = ministero(&v, "sanita");
     let (importo, atto) = (
         m.proposta.as_ref().unwrap().importo,
         m.proposta.as_ref().unwrap().atto.clone(),
     );
-    let spesa = p.economia().bilancio.dicasteri[3].spesa;
     p.comanda(Comando::Accogli {
         dicastero: "sanita".into(),
     })
@@ -71,7 +72,14 @@ fn accogliere_alza_margine_e_spesa_e_mette_l_atto_in_agenda() {
     let m = ministero(&v, "sanita");
     assert_eq!(m.agenda.as_ref().unwrap().atto, atto);
     assert!(m.proposta.is_none());
-    assert_eq!(p.economia().bilancio.dicasteri[3].spesa, spesa + importo);
+    assert_eq!(p.economia().decreti, importo);
+    assert_eq!(p.economia().bilancio, gemella.economia().bilancio);
+    p.chiudi_turno();
+    gemella.chiudi_turno();
+    let (e, g) = (p.economia(), gemella.economia());
+    assert_eq!(e.decreti, 0);
+    assert_eq!(e.conti.spese.dicasteri, g.conti.spese.dicasteri + importo);
+    assert_eq!(e.bilancio, g.bilancio);
 }
 
 #[test]

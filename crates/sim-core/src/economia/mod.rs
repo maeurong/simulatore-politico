@@ -66,6 +66,9 @@ pub struct Economia {
     pub bilancio: Bilancio,
     /// Bilancio dell'anno dopo, se approvato.
     pub bilancio_approvato: Option<Bilancio>,
+    /// Euro dei decreti (fondi accolti) del turno: spesi per intero nel trimestre che si chiude,
+    /// fuori dal bilancio annuo.
+    pub decreti: i64,
     /// Euro.
     pub debito: i64,
     /// % annuo.
@@ -148,6 +151,7 @@ impl Economia {
                 - dati.manopola("tasso_naturale_reale"),
             bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
             bilancio,
+            decreti: 0,
             debito,
             tasso_medio_debito: s.costo_medio_debito.valore,
             conti: ContiTrimestre::default(),

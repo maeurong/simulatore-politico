@@ -218,18 +218,9 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    /// Margine e spesa del dicastero `i` crescono di `importo` nel bilancio che vale per il
-    /// turno: l'approvato dell'anno, se già in attesa. Il denaro va in disavanzo.
-    pub(crate) fn aggiungi_fondi(&mut self, i: usize, importo: i64) {
-        let e = &mut self.economia;
-        let b = match &mut e.bilancio_approvato {
-            Some(b) if b.anno == self.data.anno => b,
-            _ => &mut e.bilancio,
-        };
-        if let Some(d) = b.dicasteri.get_mut(i) {
-            d.spesa += importo;
-            d.margine += importo;
-        }
+    /// `Accogli`: l'importo è un decreto, speso per intero nel trimestre che si chiude.
+    pub(crate) fn aggiungi_decreto(&mut self, importo: i64) {
+        self.economia.decreti += importo;
     }
 
     /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
@@ -561,6 +552,10 @@ impl Economia {
                 && somma(|a| a.pensionati as f64) <= limite
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
+        )?;
+        ok(
+            (0..=LIMITE_EURO).contains(&self.decreti),
+            "economia.decreti fuori da 0-1e15",
         )?;
         ok(
             self.sussidio_per_disoccupato >= 0,
