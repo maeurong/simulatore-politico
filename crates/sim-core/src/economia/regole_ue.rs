@@ -73,11 +73,12 @@ impl Economia {
         } else {
             0.0
         };
-        // Le entrate dovute ad aliquote cambiate sono misure discrezionali: abbassano la spesa netta.
         // Con la coesione sospesa `fondi_coesione` scende e la spesa netta sale: quella spesa
         // non è più coperta dai fondi UE. Effetto voluto.
         s.dicasteri + s.pensioni + s.sussidi + s.altre_prestazioni
             - self.conti.entrate.fondi_coesione
+            // Le entrate dovute ad aliquote cambiate sono misure discrezionali: abbassano la
+            // spesa netta.
             - self.conti.entrate_discrezionali
             - euro(ciclica)
     }

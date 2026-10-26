@@ -207,9 +207,9 @@ pub(super) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno
 
 impl Ministri {
     /// Apertura dei lavori: il margine (turno zero: un trimestre del bilancio iniziale; ogni
-    /// gennaio-marzo: l'anno intero del bilancio che vale), le 40
-    /// estrazioni di rumore nell'ordine del catalogo (sempre, anche per interim e margine
-    /// esaurito), poi le agende. Nell'esercizio provvisorio né agende né proposte.
+    /// gennaio-marzo: l'anno intero del bilancio che vale), le 40 estrazioni di rumore nell'ordine
+    /// del catalogo (sempre, anche per interim e margine esaurito), poi le agende.
+    /// Nell'esercizio provvisorio né agende né proposte.
     pub(super) fn apri_agende(&mut self, cx: &Contesto, caso: &mut Caso) {
         let rumore: Vec<f64> = (0..cx.dati.atti().len())
             .map(|_| caso.normale(Flusso::Governo))

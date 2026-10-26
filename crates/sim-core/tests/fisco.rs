@@ -86,7 +86,11 @@ fn scaglioni_non_crescenti_nello_scenario_rifiutati_col_nome() {
         "{ fino_a = 20000, aliquota = 0.33 }",
     );
     let e = DatiGioco::da_testi(&f).unwrap_err();
-    assert!(e.to_string().contains("scaglioni"), "{e}");
+    let e = e.to_string();
+    assert!(
+        e.contains("scenario.toml [aliquote]: scaglioni: il tetto di irpef[1] (20000)"),
+        "{e}"
+    );
 }
 
 #[test]

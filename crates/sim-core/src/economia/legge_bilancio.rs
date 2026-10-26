@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-/// Scaglione IRPEF: `aliquota` marginale sul reddito fino a `fino_a` euro annui; l'ultimo
-/// scaglione non ha tetto.
+/// Scaglione IRPEF: `aliquota` marginale (frazione 0-1, 0,22 = 22%) sul reddito fino a
+/// `fino_a` euro annui; l'ultimo scaglione non ha tetto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Scaglione {
@@ -33,7 +33,7 @@ pub(crate) fn livello_ok(x: f64) -> bool {
     x.is_finite() && x > 0.0 && x <= 1e6
 }
 
-/// Le aliquote che il giocatore può cambiare.
+/// Le aliquote che il giocatore può cambiare, in frazione 0-1 (0,22 = 22%).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Aliquote {
@@ -43,35 +43,61 @@ pub struct Aliquote {
     pub contributi: f64,
 }
 
-/// Aliquota massima ammessa.
+/// Aliquota massima ammessa, e come la dice un messaggio.
 const MASSIMA: f64 = 0.9;
+const FUORI: &str = "aliquota fuori da 0-0,9 (frazione, 0,22 = 22%)";
 
 /// Scaglioni IRPEF ammessi.
 const MAX_SCAGLIONI: usize = 12;
 
 impl Aliquote {
     /// # Errors
-    /// Un messaggio che nomina la voce colpevole: `scaglioni`, `irpef`, `iva`, `ires` o `contributi`.
+    /// Un messaggio che nomina la voce colpevole: `scaglioni`, `irpef[i]`, `iva`, `ires` o
+    /// `contributi`.
     pub fn valida(&self) -> Result<(), String> {
         let s = &self.irpef;
-        let tetti_ok = s.split_last().is_some_and(|(ultimo, prima)| {
-            ultimo.fino_a.is_none()
-                && prima.len() < MAX_SCAGLIONI
-                && (prima.iter()).all(|x| x.fino_a.is_some_and(|t| (1..=LIMITE_EURO).contains(&t)))
-                && prima.windows(2).all(|w| w[0].fino_a < w[1].fino_a)
-        });
-        if !tetti_ok {
-            return Err(
-                "scaglioni: servono tetti positivi e crescenti, e l'ultimo scaglione senza tetto"
-                    .into(),
-            );
+        let Some((ultimo, prima)) = s.split_last() else {
+            return Err("scaglioni: ne serve almeno uno".into());
+        };
+        if s.len() > MAX_SCAGLIONI {
+            return Err(format!(
+                "scaglioni: al più {MAX_SCAGLIONI}, sono {}",
+                s.len()
+            ));
+        }
+        if ultimo.fino_a.is_some() {
+            return Err(format!(
+                "scaglioni: l'ultimo, irpef[{}], non deve avere tetto",
+                prima.len()
+            ));
+        }
+        let mut sotto = 0;
+        for (i, x) in prima.iter().enumerate() {
+            let Some(t) = x.fino_a else {
+                return Err(format!(
+                    "scaglioni: irpef[{i}] senza tetto, ma non è l'ultimo"
+                ));
+            };
+            if t <= sotto {
+                return Err(format!(
+                    "scaglioni: il tetto di irpef[{i}] ({t}) deve superare {sotto}"
+                ));
+            }
+            if t > LIMITE_EURO {
+                return Err(format!(
+                    "scaglioni: il tetto di irpef[{i}] supera 1e15 euro"
+                ));
+            }
+            sotto = t;
         }
         let in_range = |a: f64| (0.0..=MASSIMA).contains(&a);
-        if !s.iter().all(|x| in_range(x.aliquota)) {
-            return Err(format!("irpef: aliquota fuori da 0-{MASSIMA}"));
-        }
-        if !s.iter().all(|x| livello_ok(x.livello_prezzi)) {
-            return Err("irpef: livello_prezzi fuori da (0, 1e6]".into());
+        for (i, x) in s.iter().enumerate() {
+            if !in_range(x.aliquota) {
+                return Err(format!("irpef[{i}]: {FUORI}"));
+            }
+            if !livello_ok(x.livello_prezzi) {
+                return Err(format!("irpef[{i}]: livello_prezzi fuori da (0, 1e6]"));
+            }
         }
         for (nome, a) in [
             ("iva", self.iva),
@@ -79,7 +105,7 @@ impl Aliquote {
             ("contributi", self.contributi),
         ] {
             if !in_range(a) {
-                return Err(format!("{nome}: aliquota fuori da 0-{MASSIMA}"));
+                return Err(format!("{nome}: {FUORI}"));
             }
         }
         Ok(())
@@ -131,9 +157,11 @@ pub struct PerditaReale {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct RiepilogoBilancio {
-    /// Euro annui di spesa dei dicasteri e fondo in più della bozza.
+    /// Euro annui di spesa dei dicasteri e fondo in più della bozza; negativo se la legge spende
+    /// meno della bozza.
     pub costo_spesa: i64,
-    /// Euro annui di gettito persi rispetto alla bozza.
+    /// Euro annui di gettito persi rispetto alla bozza; negativo se la legge incassa più della
+    /// bozza.
     pub costo_entrate: i64,
     /// Crescita % della spesa netta sull'anno prima di quello del bilancio, come la misura il
     /// controllo UE.
@@ -453,7 +481,11 @@ mod test {
         );
         let mut a = con(scaglioni());
         a.irpef[0].aliquota = 0.95;
-        assert!(a.valida().err().unwrap_or_default().contains("irpef"));
+        let e = a.valida().err().unwrap_or_default();
+        assert!(
+            e.starts_with("irpef[0]: ") && e.contains("0-0,9 (frazione, 0,22 = 22%)"),
+            "{e}"
+        );
         let mut a = con(scaglioni());
         a.irpef[0].livello_prezzi = 1e7;
         assert!(a.valida().err().unwrap_or_default().contains("irpef"));

@@ -32,7 +32,7 @@ pub struct Bilancio {
     pub anno: u16,
     pub dicasteri: Vec<BudgetDicastero>,
     pub aliquote: Aliquote,
-    /// Euro annui stanziati per le emergenze; nessuno li spende fino al piano 9.
+    /// Euro annui stanziati per le emergenze; non ancora spesi da alcun evento.
     pub fondo_riserva: i64,
 }
 

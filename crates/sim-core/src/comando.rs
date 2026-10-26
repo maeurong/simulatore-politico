@@ -39,7 +39,8 @@ pub enum Comando {
     Respingi {
         dicastero: String,
     },
-    /// Sostituisce la legge di bilancio già presentata nel turno.
+    /// Presenta la legge di bilancio del turno, sostituendo quella già presentata; l'aula la
+    /// approva in chiusura.
     PresentaBilancio {
         bilancio: Bilancio,
     },

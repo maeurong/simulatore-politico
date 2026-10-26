@@ -6,11 +6,13 @@ import type { PerditaReale } from "./PerditaReale";
  */
 export type RiepilogoBilancio = { 
 /**
- * Euro annui di spesa dei dicasteri e fondo in più della bozza.
+ * Euro annui di spesa dei dicasteri e fondo in più della bozza; negativo se la legge spende
+ * meno della bozza.
  */
 costo_spesa: bigint, 
 /**
- * Euro annui di gettito persi rispetto alla bozza.
+ * Euro annui di gettito persi rispetto alla bozza; negativo se la legge incassa più della
+ * bozza.
  */
 costo_entrate: bigint, 
 /**

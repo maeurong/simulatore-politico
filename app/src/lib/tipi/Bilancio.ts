@@ -7,6 +7,6 @@ import type { BudgetDicastero } from "./BudgetDicastero";
  */
 export type Bilancio = { anno: number, dicasteri: Array<BudgetDicastero>, aliquote: Aliquote, 
 /**
- * Euro annui stanziati per le emergenze; nessuno li spende fino al piano 9.
+ * Euro annui stanziati per le emergenze; non ancora spesi da alcun evento.
  */
 fondo_riserva: bigint, };

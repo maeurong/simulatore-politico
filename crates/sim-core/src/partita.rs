@@ -252,10 +252,10 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    /// Aula: il bilancio presentato è approvato, senza voto finché il piano 6 non lo porta.
-    /// Nell'esercizio provvisorio è dell'anno in corso: il passo di gennaio-marzo che segue lo
-    /// mette in vigore, e il margine residuo diventa i 3/4 di quello nuovo. Ogni approvazione
-    /// costa ai ministri la perdita reale delle loro voci.
+    /// Aula: il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
+    /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
+    /// approvazione costa ai ministri la perdita reale delle loro voci.
     fn aula(&mut self) {
         let Some(b) = self.economia.bilancio_presentato.take() else {
             return;

@@ -2,6 +2,6 @@
 import type { Scaglione } from "./Scaglione";
 
 /**
- * Le aliquote che il giocatore può cambiare.
+ * Le aliquote che il giocatore può cambiare, in frazione 0-1 (0,22 = 22%).
  */
 export type Aliquote = { irpef: Array<Scaglione>, iva: number, ires: number, contributi: number, };

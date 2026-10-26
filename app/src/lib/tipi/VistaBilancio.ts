@@ -6,7 +6,11 @@ import type { VoceBudget } from "./VoceBudget";
  * Il bilancio in vigore nel trimestre: l'approvato se è dell'anno in corso, altrimenti il
  * corrente.
  */
-export type VistaBilancio = { anno: number, dicasteri: Array<VoceBudget>, aliquote: Aliquote, 
+export type VistaBilancio = { 
+/**
+ * Anno del bilancio in vigore.
+ */
+anno: number, dicasteri: Array<VoceBudget>, aliquote: Aliquote, 
 /**
  * %, come `VoceBudget.perdita_reale`: una per scaglione con soglia, in ordine.
  */
@@ -18,4 +22,12 @@ fondo_riserva: bigint,
 /**
  * C'è una bozza: si può presentare la legge di bilancio.
  */
-presentabile: boolean, presentato: boolean, esercizio_provvisorio: boolean, };
+presentabile: boolean, 
+/**
+ * Una legge di bilancio è già presentata nel turno: l'aula la approva in chiusura.
+ */
+presentato: boolean, 
+/**
+ * Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
+ */
+esercizio_provvisorio: boolean, };
