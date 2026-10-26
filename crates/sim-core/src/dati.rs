@@ -136,6 +136,13 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "elasticita_servizio",
     "velocita_servizio",
     "velocita_turnover",
+    "soddisfazione_base",
+    "ritorno_soddisfazione",
+    "costo_calo_servizio",
+    "premio_obiettivo",
+    "passo_obiettivo",
+    "riduzione_rodaggio",
+    "scarto_ministri",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

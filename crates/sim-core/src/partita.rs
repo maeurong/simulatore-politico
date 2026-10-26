@@ -6,6 +6,7 @@ use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::ministri::{Contesto, Ministri};
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
     SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
@@ -63,7 +64,7 @@ impl Trimestre {
 pub struct Partita {
     versione_schema: u32,
     caso: Caso,
-    dati: DatiGioco,
+    pub(crate) dati: DatiGioco,
     turno: u32,
     data: Trimestre,
     economia: Economia,
@@ -72,6 +73,7 @@ pub struct Partita {
     elettorato: Elettorato,
     informazione: Informazione,
     grandezze: Grandezze,
+    pub(crate) ministri: Ministri,
 }
 
 impl Partita {
@@ -84,6 +86,19 @@ impl Partita {
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
+        let ministri = Ministri::iniziali(
+            &Contesto {
+                dati: &dati,
+                governo: &governo,
+                partiti: &partiti,
+                grandezze: &grandezze,
+                economia: &economia,
+                sondaggio: &informazione.sondaggio,
+                turno: 0,
+                data: Trimestre::TURNO_ZERO,
+            },
+            &mut caso,
+        );
         Partita {
             versione_schema: VERSIONE_SCHEMA,
             caso,
@@ -91,6 +106,7 @@ impl Partita {
             economia,
             elettorato,
             grandezze,
+            ministri,
             partiti,
             governo,
             dati,
@@ -99,10 +115,11 @@ impl Partita {
         }
     }
 
-    // Per ora: economia, grandezze, redditi, giudizio (prima di composizione, che aggiorna
-    // ultima_disoccupazione), composizione, posizioni, sondaggio, statistica, calendario.
-    // Ordine previsto a regime: atti dei ministri → aula → motore (economia, poi elettorato) →
-    // soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
+    // Ordine della chiusura (i task del piano 5 riempiono i passi che mancano):
+    // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
+    // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
+    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
+    // nuovo, rose, agende, proposte).
     pub fn chiudi_turno(&mut self) {
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
@@ -129,8 +146,25 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        let cx = Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        };
+        self.ministri.soglie(&cx);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
+        let cx = Contesto {
+            turno: self.turno,
+            data: self.data,
+            ..cx
+        };
+        self.ministri.apri(&cx, &mut self.caso);
     }
 
     /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
@@ -152,6 +186,11 @@ impl Partita {
     /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
     pub fn partiti(&self) -> &[Partito] {
         &self.partiti
+    }
+
+    /// Stato vero dei ministri: per il CLI e i test, mai per la `Vista`.
+    pub fn ministri(&self) -> &Ministri {
+        &self.ministri
     }
 
     pub fn governo(&self) -> &Governo {
@@ -287,6 +326,7 @@ impl Partita {
                 })
                 .collect(),
             partiti: self.voci_partiti(),
+            ministeri: self.ministri.voci(&self.dati, &self.partiti),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {
@@ -383,6 +423,9 @@ impl Partita {
         partita.economia.controlla_coerenza(partita.data)?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.controlla_partiti()?;
+        partita
+            .ministri
+            .controlla(&partita.dati, partita.partiti.len())?;
         Ok(partita)
     }
 }

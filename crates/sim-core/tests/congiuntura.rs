@@ -93,7 +93,12 @@ fn estrazioni_fisse_per_turno() {
         for _ in 0..sondaggi {
             atteso.normale(Flusso::Sondaggi);
         }
-        let salvato: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        let mut salvato: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        // I ministri estraggono dal loro flusso, che questo test non conta.
+        salvato["caso"]["flussi"]
+            .as_object_mut()
+            .unwrap()
+            .remove("Governo");
         assert_eq!(
             salvato["caso"],
             serde_json::to_value(&atteso).unwrap(),

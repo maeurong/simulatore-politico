@@ -1,5 +1,6 @@
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
+use crate::ministri::{Causa, Variazione};
 use crate::partita::Trimestre;
 use serde::Serialize;
 #[cfg(test)]
@@ -17,6 +18,8 @@ pub struct Vista {
     /// Spread BTP-Bund in punti base, arrotondato.
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
+    /// Un ministero per dicastero, nell'ordine dei dicasteri.
+    pub ministeri: Vec<VoceMinistero>,
     pub sondaggio: Sondaggio,
     /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
     pub proiezione: Option<Vec<SeggiPartito>>,
@@ -67,4 +70,32 @@ pub struct VoceGrandezza {
     pub verso: Verso,
     /// Una voce, o una per regione.
     pub valori: Vec<f64>,
+}
+
+/// Il ministro (o l'interim con la sua rosa) di un dicastero.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceMinistero {
+    pub dicastero: String,
+    /// `None` = interim.
+    pub ministro: Option<VoceMinistro>,
+    pub rosa: Vec<VoceMinistro>,
+}
+
+/// Il ministro com'è visibile al giocatore: soddisfazione, agende e capacità, non lo stato nascosto.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceMinistro {
+    pub nome: String,
+    /// Id del partito.
+    pub partito: String,
+    pub capacita: u8,
+    pub posizione: f64,
+    pub obiettivo: f64,
+    pub soddisfazione: f64,
+    pub rodaggio: bool,
+    pub minaccia: bool,
+    pub causa_principale: Option<Causa>,
+    /// Variazioni di soddisfazione degli ultimi due turni, con la loro causa.
+    pub variazioni: Vec<Variazione>,
 }
