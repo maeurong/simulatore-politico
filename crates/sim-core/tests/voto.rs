@@ -195,3 +195,38 @@ fn ricaricare_dopo_un_voto_respinto_non_cambia_il_seguito() {
     let f = con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0");
     ricaricata_resta_identica(f, false);
 }
+
+#[test]
+fn legge_respinta_col_proponente_in_interim_non_pesa_sul_successore() {
+    let mut p = partita(
+        con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0"),
+        1,
+    );
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "lavoro_welfare".into(),
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let ministro = |p: &Partita| {
+        let v = p.vista();
+        let lw = v
+            .ministeri
+            .into_iter()
+            .find(|m| m.dicastero == "lavoro_welfare");
+        lw.unwrap().ministro
+    };
+    assert!(ministro(&p).is_none());
+    p.chiudi_turno();
+    assert!(!p.vista().esiti[0].approvata);
+    for _ in 0..3 {
+        let successore = ministro(&p).expect("successore insediato");
+        assert!(
+            successore
+                .variazioni
+                .iter()
+                .all(|x| x.causa != Causa::LeggeRespinta)
+        );
+        p.chiudi_turno();
+    }
+}

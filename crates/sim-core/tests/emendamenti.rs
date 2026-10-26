@@ -231,3 +231,33 @@ fn comandi_dell_aula_non_ammessi_rifiutati_col_nome() {
             .contains("emendamento già deciso: centrodestra")
     );
 }
+
+#[test]
+fn alleato_vicino_ma_proponente_chiede_l_emendamento_per_il_suo_dicastero() {
+    // Accise a 5.5: a mezzo punto dal centrodestra (5.0), che regge ambiente_energia.
+    let p = al_voto(("accise", "basse"));
+    let v = p.vista();
+    let e = &v.calendario[0].emendamenti;
+    assert_eq!(e.len(), 1);
+    assert_eq!(e[0].partito, "centrodestra");
+    assert!(
+        e[0].motivo.starts_with("tocca il suo dicastero"),
+        "{}",
+        e[0].motivo
+    );
+}
+
+#[test]
+fn comandi_rifiutati_dopo_la_decisione_lasciano_la_partita_identica() {
+    let mut p = al_voto(("eta_pensionabile", "62"));
+    let id = p.vista().calendario[0].id;
+    accogli(&mut p, true).unwrap();
+    let dopo_emendamento = p.salva().unwrap();
+    assert!(accogli(&mut p, true).is_err());
+    assert_eq!(p.salva().unwrap(), dopo_emendamento);
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    let dopo_fiducia = p.salva().unwrap();
+    let e = p.comanda(Comando::PoniFiducia { misura: id }).unwrap_err();
+    assert!(e.to_string().contains("fiducia già posta"), "{e}");
+    assert_eq!(p.salva().unwrap(), dopo_fiducia);
+}

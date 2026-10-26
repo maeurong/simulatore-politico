@@ -58,7 +58,12 @@ fn alleato_che_perde_seggi_paga_intesa_anche_se_vota_si() {
     })
     .unwrap();
     p.chiudi_turno();
-    assert!(p.vista().esiti[0].approvata);
+    let v = p.vista();
+    assert!(v.esiti[0].approvata);
+    assert!(
+        (v.esiti[0].linee.iter()).any(|l| l.partito == "centrodestra" && l.si),
+        "il centrodestra deve votare sì"
+    );
     assert!(
         p.vista().alleati[0]
             .variazioni

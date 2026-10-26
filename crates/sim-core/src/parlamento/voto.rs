@@ -137,6 +137,7 @@ pub(crate) fn conta(caso: &mut Caso, seggi: &[u32], linea: &[bool], q: &[f64]) -
 mod tests {
     use super::*;
     use crate::dati::dati_base;
+    use crate::parlamento::StatoEmendamento;
     use crate::partiti;
 
     fn centrodestra(dati: &DatiGioco, intesa: f64, nuova: f64) -> f64 {
@@ -223,6 +224,98 @@ mod tests {
             dopo_il_voto(&seggi, &p.linea, &p.franchi)
         };
         assert_eq!(dopo(true), dopo(false));
+    }
+
+    #[test]
+    fn posizioni_mediano_solo_le_coppie_con_entrambe_le_posizioni() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::posizioni;
+        let dati = dati_base();
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let g = |id: &str| (dati.disposizione(id).unwrap_or_default(), 0);
+        // Età 62 (2.0) contro 67 (4.5); regime retributivo (2.0) contro contributivo (5.0);
+        // la soglia di lista, elettorale, non ha posizioni.
+        let (eta, regime, soglia) = (
+            g("eta_pensionabile"),
+            g("regime_pensioni"),
+            g("soglia_lista"),
+        );
+        let p = |v: &[(usize, usize)]| posizioni(&dati, &disposizioni, v);
+        assert_eq!(p(&[eta]), Some((4.5, 2.0)));
+        assert_eq!(p(&[eta, regime, soglia]), Some((4.75, 2.0)));
+        assert_eq!(p(&[soglia]), None);
+    }
+
+    #[test]
+    fn la_fiducia_sull_elettorale_costa_il_doppio() {
+        use crate::parlamento::{FormaMisura, costo_fiducia};
+        let dati = dati_base();
+        let attesa = dati.manopola("costo_fiducia") + dati.manopola("costo_fiducia_distanza") * 0.5;
+        let costo = |forma| costo_fiducia(&dati, forma, 5.0, Some(2.0));
+        assert!((costo(FormaMisura::Riforma) - attesa).abs() < 1e-12);
+        assert!((costo(FormaMisura::Elettorale) - 2.0 * attesa).abs() < 1e-12);
+    }
+
+    /// I franchi tiratori del centrodestra su una riforma a 62 anni, con l'emendamento nello
+    /// `stato` dato (`None` = nessun emendamento).
+    fn franco_con_emendamento(dati: &DatiGioco, stato: Option<StatoEmendamento>) -> f64 {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, RichiestaEmendamento, StatoAula};
+        let (partiti, governo) = partiti::iniziali(dati);
+        let disposizioni = Disposizioni::iniziali(dati);
+        let intesa = vec![30.0; partiti.len()];
+        let aula = StatoAula {
+            dati,
+            disposizioni: &disposizioni,
+            sondaggio: &crate::informazione::Sondaggio {
+                istituti: Vec::new(),
+                condizioni: Vec::new(),
+                fasce: Vec::new(),
+                regioni: Vec::new(),
+            },
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+        };
+        let j = (partiti.iter())
+            .position(|p| p.id == "centrodestra")
+            .unwrap_or_default();
+        let eta = dati.disposizione("eta_pensionabile").unwrap_or_default();
+        let misura = Misura {
+            id: 0,
+            forma: FormaMisura::Riforma,
+            valori: vec![(eta, 0)],
+            proponente: None,
+            presentata: 0,
+            voto: 0,
+            deliberazione: 0,
+            fiducia: false,
+            emendamenti: (stato.into_iter())
+                .map(|stato| RichiestaEmendamento {
+                    partito: j,
+                    proposta: Vec::new(),
+                    stato,
+                    motivo: String::new(),
+                })
+                .collect(),
+            emendamenti_aperti: true,
+        };
+        aula.previsione(&misura).franchi[j]
+    }
+
+    #[test]
+    fn emendamento_accolto_da_ft_base_respinto_li_moltiplica_entro_ft_max() {
+        use StatoEmendamento::{Accolto, Respinto};
+        let mut dati = dati_base();
+        dati.imposta_manopola("ft_emendamento_respinto", 3.0);
+        let q = franco_con_emendamento(&dati, None);
+        assert!(q > 0.0 && q * 4.0 < dati.manopola("ft_max"), "{q}");
+        assert!(
+            (franco_con_emendamento(&dati, Some(Accolto)) - dati.manopola("ft_base")).abs() < 1e-12
+        );
+        assert!((franco_con_emendamento(&dati, Some(Respinto)) - 4.0 * q).abs() < 1e-12);
+        dati.imposta_manopola("ft_max", 2.0 * q);
+        assert!((franco_con_emendamento(&dati, Some(Respinto)) - 2.0 * q).abs() < 1e-12);
     }
 
     #[test]
