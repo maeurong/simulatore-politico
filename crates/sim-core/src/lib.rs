@@ -9,6 +9,7 @@ pub mod errore;
 pub mod grandezze;
 pub mod informazione;
 pub mod ministri;
+pub mod misure;
 pub mod partita;
 pub mod partiti;
 pub mod scenario;

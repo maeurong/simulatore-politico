@@ -150,12 +150,21 @@ pub(crate) fn bilancio_approvato_iniziale(dati: &DatiGioco, base: &Bilancio) -> 
 }
 
 /// L'unica formula di entrate e spese del trimestre, sullo stato `e` com'è ora.
-pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimestre {
+/// `riscossione` moltiplica IRPEF, IRES e IVA.
+pub(crate) fn conti_del_trimestre(
+    e: &Economia,
+    dati: &DatiGioco,
+    riscossione: f64,
+) -> ContiTrimestre {
     let s = dati.scenario();
     let pil_potenziale = e.pil_potenziale_reale * e.livello_prezzi * 4.0 * MLD;
     // Elasticità lineare sul gap del turno prima (economia-italiana-parametri:109).
-    let entrata = |quota: f64, elasticita: f64| {
-        euro(quota / 100.0 * pil_potenziale / 4.0 * (1.0 + elasticita * e.output_gap[0] / 100.0))
+    let entrata = |quota: f64, elasticita: f64, riscossione: f64| {
+        euro(
+            quota / 100.0 * pil_potenziale / 4.0
+                * (1.0 + elasticita * e.output_gap[0] / 100.0)
+                * riscossione,
+        )
     };
     let el = |n: &str| dati.manopola(n);
     let trimestre = |mld_annui: f64| euro(mld_annui * MLD / 4.0);
@@ -167,11 +176,11 @@ pub(crate) fn conti_del_trimestre(e: &Economia, dati: &DatiGioco) -> ContiTrimes
     };
     ContiTrimestre {
         entrate: Entrate {
-            irpef: entrata(s.irpef_pil.valore, el("elasticita_irpef")),
-            ires: entrata(s.ires_pil.valore, el("elasticita_ires")),
-            iva: entrata(s.iva_pil.valore, el("elasticita_iva")),
-            contributi: entrata(s.contributi_pil.valore, el("elasticita_contributi")),
-            altre: entrata(s.altre_entrate_pil.valore, 1.0),
+            irpef: entrata(s.irpef_pil.valore, el("elasticita_irpef"), riscossione),
+            ires: entrata(s.ires_pil.valore, el("elasticita_ires"), riscossione),
+            iva: entrata(s.iva_pil.valore, el("elasticita_iva"), riscossione),
+            contributi: entrata(s.contributi_pil.valore, el("elasticita_contributi"), 1.0),
+            altre: entrata(s.altre_entrate_pil.valore, 1.0, 1.0),
             fondi_coesione: euro(
                 (s.fondi_coesione_pil.valore - sospesa).max(0.0) / 100.0 * pil_potenziale / 4.0,
             ),
@@ -199,7 +208,7 @@ pub(crate) fn consuntivo(e: &Economia, data: Trimestre) -> ConsuntivoTrimestre {
 impl Economia {
     /// Blocco finanza pubblica del trimestre `data`: prima della IS, sullo stato del turno prima.
     /// Rende la spesa netta del trimestre, con la disoccupazione che ha dato i sussidi.
-    pub(super) fn finanza(&mut self, dati: &DatiGioco, data: Trimestre) -> i64 {
+    pub(super) fn finanza(&mut self, dati: &DatiGioco, data: Trimestre, riscossione: f64) -> i64 {
         if let Some(b) = self
             .bilancio_approvato
             .take_if(|b| data.trimestre == 1 && b.anno == data.anno)
@@ -207,7 +216,7 @@ impl Economia {
             self.bilancio = b;
         }
         self.previdenza(dati, data);
-        let conti = conti_del_trimestre(self, dati);
+        let conti = conti_del_trimestre(self, dati, riscossione);
 
         // Impulso: la spesa discrezionale oltre quella del turno prima rivalutata all'inflazione.
         let prima = self.conti.spesa_discrezionale() as f64 * (1.0 + self.inflazione[0] / 400.0);

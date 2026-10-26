@@ -19,6 +19,7 @@ pub use sfc::{Settori, Sfc};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::dati::Dicastero;
+use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::partita::Trimestre;
 use crate::struttura::Struttura;
 use finanza::{MLD, euro};
@@ -160,7 +161,7 @@ impl Economia {
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
         e.avvia_previdenza(dati);
-        e.conti = finanza::conti_del_trimestre(&e, dati);
+        e.conti = finanza::conti_del_trimestre(&e, dati, 1.0);
         // L'ammenda della PDE la paga il primo passo, non il turno zero.
         e.conti.spese.ammende = 0;
         e.disavanzo_trimestre = e.conti.disavanzo();
@@ -177,17 +178,24 @@ impl Economia {
         if !e.regole_ue.pde.e_inadempiente() {
             e.premio_sfiducia = 0.0;
         }
-        e.spread = e.spread_dallo_stato(dati);
+        e.spread = e.spread_dallo_stato(dati, CAPACITA_NEUTRA);
         e
     }
 
-    // Ordine: finanza pubblica e spesa obbligatoria → domanda finale per settore → Leontief →
-    // IS/Phillips → Okun per regione → tasso BCE → SFC → storico → regole UE → spread.
+    // Ordine: misure (lette da `Misure`, costruita da `Partita`) → finanza pubblica e spesa
+    // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
+    // tasso BCE → SFC → storico → regole UE → spread.
     // `Elettorato::aggiorna_redditi` è chiamato da `Partita` subito dopo il passo: legge solo
     // grandezze che BCE, SFC e spread non toccano.
     // `data` è il trimestre che il turno chiude.
-    pub(crate) fn passo(&mut self, dati: &DatiGioco, caso: &mut Caso, data: Trimestre) {
-        let spesa_netta = self.finanza(dati, data);
+    pub(crate) fn passo(
+        &mut self,
+        dati: &DatiGioco,
+        caso: &mut Caso,
+        data: Trimestre,
+        misure: &Misure,
+    ) {
+        let spesa_netta = self.finanza(dati, data, misure.riscossione);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
         let shock_domanda = shock("sigma_domanda");
@@ -222,7 +230,7 @@ impl Economia {
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());
 
         let prima = prezzo_consumi(dati, &self.prezzi_settori);
-        self.prezzi_settori = prezzi_settori(dati, self.energia);
+        self.prezzi_settori = prezzi_settori(dati, self.energia + misure.prezzo_energia);
         self.inflazione_importata =
             400.0 * (prezzo_consumi(dati, &self.prezzi_settori) / prima - 1.0);
 
@@ -239,7 +247,8 @@ impl Economia {
         self.inflazione.rotate_right(1);
         self.inflazione[0] = pi;
 
-        let crescita = dati.manopola("crescita_potenziale") + shock_produttivita;
+        let crescita =
+            dati.manopola("crescita_potenziale") + misure.crescita_potenziale + shock_produttivita;
         self.pil_potenziale_reale *= 1.0 + crescita / 400.0;
         self.livello_prezzi *= 1.0 + pi / 400.0;
         self.pil_trimestrale = self.pil_potenziale_reale * (1.0 + y / 100.0) * self.livello_prezzi;
@@ -250,7 +259,7 @@ impl Economia {
             .map(|(x, x0)| y + 100.0 * (x / x0 - tot / tot0))
             .collect();
 
-        self.okun(dati);
+        self.okun(dati, misure);
         self.bce(dati, shock_bce);
         self.sfc(dati);
         self.storico.push(finanza::consuntivo(self, data));
@@ -258,7 +267,7 @@ impl Economia {
             self.storico.remove(0);
         }
         self.aggiorna_regole_ue(dati, data, spesa_netta);
-        self.aggiorna_spread(dati);
+        self.aggiorna_spread(dati, misure.capacita_economia);
         debug_assert!(self.e_finita(), "stato non finito: {self:?}");
         debug_assert_eq!(self.residuo_sfc(), 0, "SFC non chiusa: {:?}", self.sfc);
     }

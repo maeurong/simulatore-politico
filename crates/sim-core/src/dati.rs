@@ -151,6 +151,14 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "peso_voti_bersaglio",
     "costo_dirottare_regione",
     "distanza_evidenza",
+    "elasticita_riscossione",
+    "spread_capacita",
+    "stock_disoccupazione",
+    "crescita_infrastrutture",
+    "crescita_capitale_umano",
+    "crescita_giustizia",
+    "crescita_energia",
+    "crescita_demografia",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -162,6 +170,8 @@ const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
     ("prezzo_energia", false),
     ("politiche_attive", false),
     ("capitale_umano", false),
+    ("efficienza_riscossione", false),
+    ("durata_processi", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -7,6 +7,7 @@ use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::ministri::{Contesto, Ministri};
+use crate::misure::Misure;
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
     SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
@@ -74,6 +75,7 @@ pub struct Partita {
     informazione: Informazione,
     grandezze: Grandezze,
     pub(crate) ministri: Ministri,
+    misure: Misure,
 }
 
 impl Partita {
@@ -100,6 +102,7 @@ impl Partita {
             &mut caso,
         );
         Partita {
+            misure: Misure::neutre(&dati),
             versione_schema: VERSIONE_SCHEMA,
             caso,
             informazione,
@@ -124,12 +127,29 @@ impl Partita {
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
-        self.economia.passo(&self.dati, &mut self.caso, self.data);
+        let nuove = Misure::da(
+            &self.dati,
+            &self.grandezze,
+            &self.ministri,
+            &self.economia,
+            self.turno,
+            self.data,
+        );
+        let prima = std::mem::replace(&mut self.misure, nuove);
+        self.economia
+            .passo(&self.dati, &mut self.caso, self.data, &self.misure);
         self.grandezze
             .avanza(&self.dati, &self.economia, self.turno);
-        self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
         self.elettorato
-            .giudizio(&self.dati, &self.economia, &self.governo, &self.grandezze);
+            .aggiorna_redditi(&self.dati, &self.economia, &self.misure);
+        self.elettorato.giudizio(
+            &self.dati,
+            &self.economia,
+            &self.governo,
+            &self.grandezze,
+            &prima,
+            &self.misure,
+        );
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
@@ -211,6 +231,11 @@ impl Partita {
     pub fn grandezza(&self, id: &str) -> Option<f64> {
         let g = self.dati.grandezza(id)?;
         Some(self.grandezze.nazionale(&self.dati, g))
+    }
+
+    /// Misure dell'ultima chiusura: per il CLI e i test, mai per la `Vista`.
+    pub fn misure(&self) -> &Misure {
+        &self.misure
     }
 
     /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
@@ -452,6 +477,7 @@ impl Partita {
         }
         partita.economia.controlla_coerenza(partita.data)?;
         partita.grandezze.controlla(&partita.dati)?;
+        partita.misure.controlla(&partita.dati)?;
         partita.controlla_partiti()?;
         partita
             .ministri

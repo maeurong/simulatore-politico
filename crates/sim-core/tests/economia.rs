@@ -90,14 +90,15 @@ fn il_gap_regionale_e_la_media_dei_settori_pesata_col_mix() {
     let d = dati_base();
     let p = giocata(&comune::file_base(), 5, 3);
     let e = p.economia();
-    for (r, g) in e.regioni.iter().zip(d.regioni()) {
+    for (i, (r, g)) in e.regioni.iter().zip(d.regioni()).enumerate() {
         let atteso: f64 = d
             .struttura()
             .settori
             .iter()
             .zip(&e.gap_settori)
             .map(|(s, gap)| g.mix[&s.id] * gap)
-            .sum();
+            .sum::<f64>()
+            + p.misure().domanda_regionale[i];
         assert!((r.gap - atteso).abs() < 1e-9, "{}", r.id);
     }
 }

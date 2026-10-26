@@ -3,6 +3,7 @@
 use super::{Condizione, Elettorato};
 use crate::dati::DatiGioco;
 use crate::economia::Economia;
+use crate::misure::Misure;
 use serde::{Deserialize, Serialize};
 
 /// Euro annui nominali per elettore. `paniere` è l'indice di prezzo della fascia:
@@ -74,8 +75,9 @@ impl Indici {
 }
 
 impl Elettorato {
-    /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia.
-    pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia) {
+    /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
+    /// delle misure pesa anche sulle imposte degli autonomi.
+    pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
         let (i, b) = (Indici::da(e, dati), self.base);
         let d = dati.elettorato();
         let consumi = &dati.struttura().consumi;
@@ -104,10 +106,16 @@ impl Elettorato {
             let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();
             let paniere = d.paniere.get(&dato.fascia).map_or(0.0, |w| media(w));
+            let evasione = if dato.condizione == Condizione::Autonomo {
+                misure.riscossione
+            } else {
+                1.0
+            };
             g.reddito = Reddito {
                 primario,
                 trasferimenti,
-                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione)).min(lordo),
+                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione) * evasione)
+                    .min(lordo),
                 paniere: e.livello_prezzi * paniere / costo_base,
             };
         }

@@ -4,6 +4,7 @@
 use crate::dati::{DatiGioco, Dicastero};
 use crate::economia::Economia;
 use crate::errore::Errore;
+use crate::misure::Misure;
 use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -386,8 +387,9 @@ impl Elettorato {
                 .collect(),
         };
         // Due volte, così `reddito_prima == reddito` al turno zero.
-        el.aggiorna_redditi(dati, e);
-        el.aggiorna_redditi(dati, e);
+        let neutre = Misure::neutre(dati);
+        el.aggiorna_redditi(dati, e, &neutre);
+        el.aggiorna_redditi(dati, e, &neutre);
         el
     }
 

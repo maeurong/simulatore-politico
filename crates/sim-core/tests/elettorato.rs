@@ -152,7 +152,7 @@ fn trasferimenti_seguono_pensione_e_sussidio() {
     let mut el = p.elettorato().clone();
     el.base.pensione *= 0.5;
     el.base.sussidio *= 0.25;
-    el.aggiorna_redditi(&d, p.economia());
+    el.aggiorna_redditi(&d, p.economia(), p.misure());
     for (c, k) in [
         (Condizione::Pensionato, 2.0),
         (Condizione::DisoccupatoInattivo, 4.0),
@@ -274,7 +274,7 @@ fn pressione_estrema_e_base_nulla_lasciano_redditi_finiti_e_non_negativi() {
     el.base.pressione *= 1e-6;
     el.base.salari_pubblici = 0.0;
     el.base.pensione = 0.0;
-    el.aggiorna_redditi(&d, p.economia());
+    el.aggiorna_redditi(&d, p.economia(), p.misure());
     for g in &el.gruppi {
         assert!(g.reddito.reale().is_finite() && g.reddito.netto() >= 0.0);
     }
@@ -615,7 +615,14 @@ fn giudizio_a_mano(
     let mut el = p.elettorato().clone();
     el.gruppi[i].reddito_prima = prima;
     el.gruppi[i].reddito = ora;
-    el.giudizio(&d, p.economia(), p.governo(), p.grandezze());
+    el.giudizio(
+        &d,
+        p.economia(),
+        p.governo(),
+        p.grandezze(),
+        p.misure(),
+        p.misure(),
+    );
     let g = el.gruppi[i].giudizio.clone();
     (d, p, g)
 }
@@ -704,7 +711,14 @@ fn base_degenere_lascia_giudizio_e_crescite_finiti() {
     let p = Partita::nuova(dati_base(), 1);
     let mut el = p.elettorato().clone();
     el.gruppi[0].reddito_prima = Reddito::default();
-    el.giudizio(&d, p.economia(), p.governo(), p.grandezze());
+    el.giudizio(
+        &d,
+        p.economia(),
+        p.governo(),
+        p.grandezze(),
+        p.misure(),
+        p.misure(),
+    );
     assert_eq!(el.gruppi[0].crescite, vec![0.0]);
     assert!(el.gruppi[0].giudizio.iter().all(|x| x.is_finite()));
 }

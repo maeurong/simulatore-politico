@@ -3,6 +3,7 @@
 
 use super::Economia;
 use crate::dati::DatiGioco;
+use crate::misure::CAPACITA_NEUTRA;
 
 /// Trimestri dell'anno mobile su cui si misurano debito e disavanzo.
 const ANNO_MOBILE: usize = 4;
@@ -17,8 +18,10 @@ impl Economia {
         (self.debito as f64 / pil * 100.0, disavanzo / pil * 100.0)
     }
 
-    /// La formula dello spread sullo stato com'è ora, premio compreso.
-    pub(super) fn spread_dallo_stato(&self, dati: &DatiGioco) -> f64 {
+    /// La formula dello spread sullo stato com'è ora, premio compreso. `capacita` è quella del
+    /// ministro dell'Economia: `spread_capacita` pb per punto sotto `CAPACITA_NEUTRA`, dopo il
+    /// tetto minimo dei fondamentali e fuori dal premio di sfiducia, che il TPI non azzera.
+    pub(super) fn spread_dallo_stato(&self, dati: &DatiGioco, capacita: f64) -> f64 {
         let m = |n: &str| dati.manopola(n);
         let (debito, disavanzo) = self.debito_e_disavanzo_pil();
         let b = debito.max(0.0);
@@ -26,6 +29,7 @@ impl Economia {
             m("spread_s0") + 100.0 * (m("spread_beta_1") * b + m("spread_beta_2") * b * b);
         (fondamentali.max(m("spread_minimo"))
             + m("spread_disavanzo") * (disavanzo - 3.0).max(0.0)
+            + m("spread_capacita") * (CAPACITA_NEUTRA - capacita)
             + self.premio_sfiducia)
             .min(m("spread_massimo"))
     }
@@ -33,12 +37,12 @@ impl Economia {
     /// Fine turno, dopo le regole UE: il TPI vale con la PDE `Nessuna`, `Aperta` o `Sospesa`
     /// e azzera il premio; altrimenti il premio decade con la sua emivita. Solo il criterio 1
     /// del TPI è modellato [assunzione del piano 3: gli altri non hanno grandezze nella v1].
-    pub(super) fn aggiorna_spread(&mut self, dati: &DatiGioco) {
+    pub(super) fn aggiorna_spread(&mut self, dati: &DatiGioco, capacita: f64) {
         self.premio_sfiducia = if self.regole_ue.pde.e_inadempiente() {
             self.premio_sfiducia * 0.5_f64.powf(1.0 / dati.manopola("emivita_premio_sfiducia"))
         } else {
             0.0
         };
-        self.spread = self.spread_dallo_stato(dati);
+        self.spread = self.spread_dallo_stato(dati, capacita);
     }
 }
