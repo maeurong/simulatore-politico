@@ -1,11 +1,12 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
+use crate::disposizioni::Disposizioni;
 use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
-use crate::elezioni::{Esito, Voti, riparto};
+use crate::elezioni::{Esito, LeggeElettorale, Voti, riparto};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 5;
+pub const VERSIONE_SCHEMA: u32 = 6;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +81,7 @@ pub struct Partita {
     grandezze: Grandezze,
     ministri: Ministri,
     misure: Misure,
+    disposizioni: Disposizioni,
 }
 
 impl Partita {
@@ -92,6 +94,7 @@ impl Partita {
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
+        let disposizioni = Disposizioni::iniziali(&dati);
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -100,6 +103,7 @@ impl Partita {
                 grandezze: &grandezze,
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
+                disposizioni: &disposizioni,
                 indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
                 data: Trimestre::TURNO_ZERO,
@@ -108,6 +112,7 @@ impl Partita {
         );
         Partita {
             misure: Misure::neutre(&dati),
+            disposizioni,
             versione_schema: VERSIONE_SCHEMA,
             caso,
             informazione,
@@ -126,8 +131,9 @@ impl Partita {
     // Ordine della chiusura:
     // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (rose,
-    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
+    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (valori in
+    // arrivo, rose, agende, proposte; il costo del taglio se l'anno entra in esercizio
+    // provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
@@ -176,6 +182,11 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        self.con_contesto(|ministri, cx| ministri.soglie(cx));
+        self.turno = self.turno.saturating_add(1);
+        self.data = self.data.successivo();
+        let effetti = self.disposizioni.arrivi(&self.dati, self.turno);
+        self.grandezze.effetti.extend(effetti);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -183,17 +194,10 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            disposizioni: &self.disposizioni,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
-        };
-        self.ministri.soglie(&cx);
-        self.turno = self.turno.saturating_add(1);
-        self.data = self.data.successivo();
-        let cx = Contesto {
-            turno: self.turno,
-            data: self.data,
-            ..cx
         };
         self.ministri.apri(&cx, &mut self.caso);
         // Anno nuovo in esercizio provvisorio: costa la perdita reale del bilancio che continua.
@@ -230,6 +234,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            disposizioni: &self.disposizioni,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -245,6 +250,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            disposizioni: &self.disposizioni,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -426,6 +432,22 @@ impl Partita {
         ))
     }
 
+    pub fn disposizioni(&self) -> &Disposizioni {
+        &self.disposizioni
+    }
+
+    /// L'id del gradino in vigore della disposizione `id`.
+    pub fn in_vigore(&self, id: &str) -> Option<&str> {
+        let k = self.dati.disposizione(id)?;
+        let g = self.disposizioni.voci.get(k)?.in_vigore;
+        Some(self.dati.disposizioni()[k].gradini.get(g)?.id.as_str())
+    }
+
+    /// La legge elettorale delle nove disposizioni elettorali in vigore.
+    pub fn legge_elettorale(&self) -> LeggeElettorale {
+        self.disposizioni.legge_elettorale(&self.dati)
+    }
+
     /// Riparto dei seggi sul sondaggio pubblico: voti regionali dalle quote degli incroci,
     /// coalizioni dell'ultimo voto, partiti senza coalizione da soli.
     ///
@@ -454,7 +476,7 @@ impl Partita {
             .collect();
         riparto(
             self.dati.elezioni(),
-            self.dati.legge_elettorale_iniziale(),
+            &self.legge_elettorale(),
             &Voti {
                 coalizioni,
                 per_regione,
@@ -518,11 +540,12 @@ impl Partita {
                 revisione: s.revisione.clone(),
             },
             bilancio: self.vista_bilancio(),
+            disposizioni: self.disposizioni.voci_vista(&self.dati),
         }
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia, grandezze, partiti e governo, elettorato, informazione.
+    /// economia, grandezze, partiti e governo, elettorato, informazione, disposizioni.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -549,7 +572,8 @@ impl Partita {
     /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
     /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
     /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
-    /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`).
+    /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`),
+    /// o disposizioni che non combaciano coi dati (`Disposizioni::controlla`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -606,6 +630,7 @@ impl Partita {
         partita.economia.controlla_coerenza(partita.data)?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
+        partita.disposizioni.controlla(&partita.dati)?;
         partita.controlla_partiti()?;
         partita
             .ministri

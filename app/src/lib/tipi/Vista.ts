@@ -5,6 +5,7 @@ import type { Trimestre } from "./Trimestre";
 import type { VistaBilancio } from "./VistaBilancio";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceDicastero } from "./VoceDicastero";
+import type { VoceDisposizione } from "./VoceDisposizione";
 import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VocePartito } from "./VocePartito";
@@ -28,4 +29,8 @@ ministeri: Array<VoceMinistero>, sondaggio: Sondaggio,
 /**
  * Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
  */
-proiezione: Array<SeggiPartito> | null, statistica: VistaStatistica, bilancio: VistaBilancio, };
+proiezione: Array<SeggiPartito> | null, statistica: VistaStatistica, bilancio: VistaBilancio, 
+/**
+ * Nell'ordine dei dati.
+ */
+disposizioni: Array<VoceDisposizione>, };

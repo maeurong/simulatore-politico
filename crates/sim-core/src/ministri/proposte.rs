@@ -32,9 +32,15 @@ impl Ministri {
     /// chiede la differenza.
     /// Una proposta già in corso si ricalcola sul suo atto: con un'agenda, o se l'atto è ormai
     /// pagabile, decade senza costo; altrimenti l'`importo` si aggiorna (`rinviata` e
-    /// `turni_in_sospeso` restano).
+    /// `turni_in_sospeso` restano). Un atto col prerequisito mancante non si propone, e la sua
+    /// proposta decade.
     pub(super) fn proponi(&mut self, cx: &Contesto) {
         let (dati, rif) = (cx.dati, margini_rif(cx.dati));
+        let ammesso = |k: usize| {
+            dati.atti()[k]
+                .prerequisito_mancante(dati, cx.disposizioni)
+                .is_none()
+        };
         for i in 0..self.dicasteri.len() {
             let st = &self.dicasteri[i];
             let Some(m) = st.ministro.as_ref() else {
@@ -51,7 +57,7 @@ impl Ministri {
                 let mut migliore: Option<(usize, f64)> = None;
                 for (k, a) in dati
                     .atti_del_dicastero(i)
-                    .filter(|(k, _)| !in_cantiere(st, *k))
+                    .filter(|(k, _)| !in_cantiere(st, *k) && ammesso(*k))
                 {
                     let o = parti(cx, i, m, a).0;
                     if o > 0.0 && migliore.is_none_or(|(_, b)| o > b) {
@@ -65,7 +71,8 @@ impl Ministri {
                     rinviata: false,
                 })
             };
-            self.dicasteri[i].proposta = nuova.filter(|p| (1..=LIMITE_EURO).contains(&p.importo));
+            self.dicasteri[i].proposta =
+                nuova.filter(|p| (1..=LIMITE_EURO).contains(&p.importo) && ammesso(p.atto));
         }
     }
 

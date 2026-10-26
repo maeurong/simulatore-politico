@@ -11,6 +11,10 @@ use std::collections::{BTreeMap, BTreeSet};
 #[cfg(test)]
 use ts_rs::TS;
 
+mod stato;
+
+pub use stato::{Disposizioni, InArrivo, StatoDisposizione};
+
 /// Le leve che il motore legge, una per disposizione: ogni leva sta in una sola disposizione.
 pub const LEVE: [&str; 15] = [
     "forfettario",
@@ -286,6 +290,43 @@ pub(crate) fn elettorali(
             },
         )
         .collect()
+}
+
+/// La legge elettorale dai gradini (per indice) delle nove disposizioni elettorali, con i
+/// gradini nell'ordine in cui li genera [`elettorali`].
+fn legge_da_gradini(menu: &Menu, g: [usize; 9]) -> LeggeElettorale {
+    let [
+        lista,
+        coalizioni,
+        coalizione,
+        ripescaggio,
+        premio,
+        soglia_premio,
+        taglia,
+        tetto,
+        formula,
+    ] = g;
+    let pb = |v: &[u16], k: usize| v.get(k).copied().unwrap_or_default();
+    LeggeElettorale {
+        soglia_lista_pb: pb(&menu.soglia_lista_pb, lista),
+        coalizioni: coalizioni == 1,
+        soglia_coalizione_pb: pb(&menu.soglia_coalizione_pb, coalizione),
+        ripescaggio: ripescaggio == 1,
+        premio: match premio {
+            0 => Premio::Nessuno,
+            1 => Premio::Lista,
+            _ => Premio::Coalizione,
+        },
+        soglia_premio_pb: pb(&menu.soglia_premio_pb, soglia_premio),
+        taglia_premio_pb: pb(&menu.taglia_premio_pb, taglia),
+        // L'ultimo gradino, oltre il menu, è «nessuno».
+        tetto: menu.tetto.get(tetto).copied(),
+        formula: if formula == 0 {
+            Formula::Hare
+        } else {
+            Formula::Dhondt
+        },
+    }
 }
 
 /// Coerenza del catalogo con i dicasteri, le grandezze e le regioni.

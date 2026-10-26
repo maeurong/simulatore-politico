@@ -123,3 +123,25 @@ fn intensita_oltre_il_tetto_del_salvataggio_rifiutata() {
     let ok = "grandezza = \"qualita_servizio_sanitario\", intensita = 120.0";
     DatiGioco::da_testi(&sostituisci(file_base(), "atti", da, ok)).unwrap();
 }
+
+#[test]
+fn prerequisito_sconosciuto_rifiutato_col_nome() {
+    let m = rifiuto(
+        "atti",
+        "disposizione = \"privato_accreditato\"",
+        "disposizione = \"privato\"",
+    );
+    assert!(
+        m.contains("sanita_convenzioni_privato: prerequisito su disposizione sconosciuta privato"),
+        "{m}"
+    );
+    let m = rifiuto(
+        "atti",
+        "gradini = [\"attuale\", \"ampio\"]",
+        "gradini = [\"attuale\", \"largo\"]",
+    );
+    assert!(
+        m.contains("sanita_convenzioni_privato: prerequisito su gradino sconosciuto largo"),
+        "{m}"
+    );
+}

@@ -4,6 +4,7 @@
 use crate::caso::{Caso, Flusso};
 use crate::comando::Comando;
 use crate::dati::DatiGioco;
+use crate::disposizioni::Disposizioni;
 use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
@@ -117,6 +118,7 @@ pub(crate) struct Contesto<'a> {
     pub grandezze: &'a Grandezze,
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
+    pub disposizioni: &'a Disposizioni,
     /// L'indice dei prezzi pubblicato, non il livello vero.
     pub indice_prezzi: f64,
     pub turno: u32,

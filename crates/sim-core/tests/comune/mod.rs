@@ -105,6 +105,33 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
     }
 }
 
+/// Nella disposizione `id`, la riga `in_arrivo = ...` diventa un solo arrivo `gradino` dal
+/// trimestre dato: cambia una disposizione a un turno noto senza passare dall'aula.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn con_arrivo(mut f: FileDati, id: &str, gradino: &str, anno: u16, trimestre: u8) -> FileDati {
+    let testa = format!("id = \"{id}\"\n");
+    let inizio = f
+        .disposizioni
+        .find(&testa)
+        .unwrap_or_else(|| panic!("{id} assente"))
+        + testa.len();
+    let riga = inizio
+        + f.disposizioni[inizio..]
+            .find("in_arrivo = ")
+            .expect("in_arrivo");
+    let fine = riga + f.disposizioni[riga..].find('\n').expect("fine riga");
+    f.disposizioni.replace_range(
+        riga..fine,
+        &format!(
+            "in_arrivo = [{{ gradino = \"{gradino}\", anno = {anno}, trimestre = {trimestre} }}]"
+        ),
+    );
+    f
+}
+
 /// Nel file `file`, il primo valore dopo `prefisso` (fino a `,` `]` `}` spazio o fine riga)
 /// diventa `nuovo`. Non dipende dai numeri dei dati, solo dalla forma del file.
 #[allow(
