@@ -311,11 +311,11 @@ pub struct VoceMinistero {
 }
 
 /// Proposta di fondi: `atto` è un id, `importo` gli euro che mancano al margine. Proposta di
-/// riforma: `disposizione` e `gradino` sono id, `atto` è vuoto e `importo` 0.
+/// riforma: `disposizione` e `gradino` sono id, nessun `atto` e `importo` 0.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceProposta {
-    pub atto: String,
+    pub atto: Option<String>,
     pub nome: String,
     pub importo: i64,
     pub motivo: String,

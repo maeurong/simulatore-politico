@@ -234,6 +234,60 @@ fn fiducia_persa_nello_slittamento_si_rimborsa() {
     }
 }
 
+/// La questione di fiducia persa nello slittamento non cancella gli emendamenti: si riaprono nel
+/// turno del voto e, respinti, costano come senza la fiducia.
+#[test]
+fn fiducia_persa_nello_slittamento_riapre_gli_emendamenti() {
+    let gioca = |fiducia: bool| {
+        let mut p = al_turno(senza_shock(), 3);
+        presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+        p.chiudi_turno();
+        if fiducia {
+            let id = p.vista().calendario[0].id;
+            p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+        }
+        presenta_bozza(&mut p);
+        p.chiudi_turno();
+        p.chiudi_turno();
+        p
+    };
+    let (con, senza) = (gioca(true), gioca(false));
+    let respinti = |p: &Partita| {
+        (p.intesa().variazioni.iter())
+            .filter(|x| x.causa == CausaIntesa::EmendamentoRespinto)
+            .count()
+    };
+    assert!(respinti(&senza) > 0);
+    assert_eq!(respinti(&con), respinti(&senza));
+    let (c, s) = (&con.intesa().valori, &senza.intesa().valori);
+    assert!(
+        c.iter().zip(s).all(|(x, y)| (x - y).abs() < 1e-9),
+        "{c:?} {s:?}"
+    );
+}
+
+/// L'emendamento già deciso non si chiede di nuovo quando gli emendamenti si riaprono.
+#[test]
+fn emendamento_deciso_non_si_richiede_dopo_lo_slittamento() {
+    let mut p = al_turno(senza_shock(), 3);
+    presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+    p.chiudi_turno();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::Emendamento {
+        misura: id,
+        partito: "centrodestra".into(),
+        accogli: false,
+    })
+    .unwrap();
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    presenta_bozza(&mut p);
+    p.chiudi_turno();
+    let v = p.vista();
+    let m = v.calendario.iter().find(|m| m.id == id).unwrap();
+    let stati: Vec<StatoEmendamento> = m.emendamenti.iter().map(|e| e.stato).collect();
+    assert_eq!(stati, [StatoEmendamento::Respinto]);
+}
+
 #[test]
 fn ripresentare_il_bilancio_tiene_id_e_fiducia() {
     let mut p = al_turno(senza_shock(), 4);

@@ -57,15 +57,16 @@ impl EsitoReferendum {
     pub(crate) fn da(tipo: TipoReferendum, nome: String, data: Trimestre, a: &Affluenza) -> Self {
         let (si, no) = (a.si.round() as u64, a.no.round() as u64);
         let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
+        let votanti = si.saturating_add(no);
         EsitoReferendum {
             tipo,
             nome,
             data,
             si,
             no,
-            votanti: si + no,
+            votanti,
             aventi_diritto,
-            quorum: (si + no) * 2 > aventi_diritto,
+            quorum: votanti.saturating_mul(2) > aventi_diritto,
             approvato: si > no,
             decaduto: None,
         }
@@ -167,5 +168,27 @@ impl StatoAula<'_> {
                 )
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Un elettorato manomesso oltre `u64::MAX / 2` non fa traboccare votanti e quorum.
+    #[test]
+    fn esito_con_elettorato_enorme_non_trabocca() {
+        let a = Affluenza {
+            si: 1e19,
+            no: 1e19,
+            astenuti: 1e19,
+        };
+        let e = EsitoReferendum::da(
+            TipoReferendum::Abrogativo,
+            String::new(),
+            Trimestre::TURNO_ZERO,
+            &a,
+        );
+        assert_eq!(e.votanti, u64::MAX);
     }
 }

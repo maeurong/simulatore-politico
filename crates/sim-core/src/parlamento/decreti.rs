@@ -136,14 +136,15 @@ pub(crate) fn ammetti(
             .ok_or_else(|| Errore::Comando(format!("dicastero sconosciuto: {id}")))
     };
     let (i, j) = (indice(da)?, indice(a)?);
+    let nome = |k: usize| &dati.dicasteri()[k].nome;
     if i == j {
-        return ko(format!("stesso dicastero: {da}"));
+        return ko(format!("stesso dicastero: {}", nome(i)));
     }
     if importo <= 0 {
         return ko(format!("importo non ammesso: {importo}"));
     }
     if spostabili.get(i).is_none_or(|&m| importo > m) {
-        return ko(format!("margine insufficiente in {da}"));
+        return ko(format!("margine insufficiente in {}", nome(i)));
     }
     let fondi = FondiDecreto::Spostati {
         da: i,
@@ -151,7 +152,11 @@ pub(crate) fn ammetti(
         importo,
     };
     if decaduti.iter().any(|x| x.stessa_firma(&fondi)) {
-        return ko(format!("decreto decaduto non si ripete: {da} → {a}"));
+        return ko(format!(
+            "decreto decaduto non si ripete: {} → {}",
+            nome(i),
+            nome(j)
+        ));
     }
     Ok((i, j, importo))
 }

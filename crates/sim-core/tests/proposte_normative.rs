@@ -71,7 +71,7 @@ fn ministro_lontano_da_una_disposizione_propone_una_riforma() {
                 "{}",
                 p.motivo
             );
-            assert_eq!(p.importo, 0);
+            assert_eq!((p.atto.as_deref(), p.importo), (None, 0));
             trovata = true;
         }
     }
@@ -219,9 +219,9 @@ fn proposta_superata_dalla_legge_del_giocatore_decade_senza_costo() {
 }
 
 /// Accogli di uno sblocco col ministro all'estremo opposto: la legge lo allontana dalla sua
-/// posizione, ma la vuole lui e non paga la firma.
+/// posizione e paga la firma come con `PresentaLegge` (spec, storia 32).
 #[test]
-fn accogliere_uno_sblocco_non_costa_la_firma() {
+fn accogliere_uno_sblocco_lontano_costa_la_firma() {
     let f = sostituisci(
         file_base(),
         "disposizioni",
@@ -246,7 +246,7 @@ fn accogliere_uno_sblocco_non_costa_la_firma() {
             q.vista().calendario[0].valori[0].disposizione,
             "privato_accreditato"
         );
-        assert_eq!(variazioni(&q, "sanita", Causa::NormaControPosizione), 0);
+        assert_eq!(variazioni(&q, "sanita", Causa::NormaControPosizione), 1);
         trovata = true;
     }
     assert!(trovata);
@@ -296,4 +296,23 @@ fn riforma_senza_piu_innesco_decade_senza_costo() {
         trovata = true;
     }
     assert!(trovata);
+}
+
+/// Il quesito abrogativo in corso mette la disposizione in esame: la riforma del ministro decade
+/// senza costo e non rinasce.
+#[test]
+fn abrogativo_in_corso_ferma_la_proposta_di_riforma() {
+    let k = comune::dati_base().disposizione("licenziamento").unwrap();
+    let p = Partita::nuova(DatiGioco::da_testi(&reintegro()).unwrap(), 1);
+    assert_eq!(riforma(&p).map(|r| r.0).as_deref(), Some("licenziamento"));
+    let mut q = edita(&p, |j| {
+        j["parlamento"]["referendum"] = json!({"tipo": "abrogativo", "misura": null,
+            "valori": [[k, 0]], "promotore": null, "voto": 5, "firme": true,
+            "invito_astensione": false});
+    })
+    .unwrap();
+    q.chiudi_turno();
+    assert!(ministero(&q, LAVORO).ministro.is_some());
+    assert_ne!(riforma(&q).map(|r| r.0).as_deref(), Some("licenziamento"));
+    assert_eq!(variazioni(&q, LAVORO, Causa::PropostaRespinta), 0);
 }

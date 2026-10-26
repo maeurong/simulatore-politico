@@ -185,7 +185,7 @@ fn decreti_non_ammessi_rifiutati_col_nome() {
             }],
         },
     };
-    // Le disposizioni col nome del catalogo, come i rifiuti dell'aula (PR B); i dicasteri con l'id.
+    // Disposizioni e dicasteri col nome del catalogo, come i rifiuti dell'aula.
     for (c, nome) in [
         (
             disp("soglia_lista", "0"),
@@ -196,7 +196,7 @@ fn decreti_non_ammessi_rifiutati_col_nome() {
             "materia esclusa dal decreto: Numero dei parlamentari",
         ),
         (disp("eta_pensionabile", "68"), "decreto senza innesco"),
-        (sposta("sanita", "sanita", 1), "stesso dicastero: sanita"),
+        (sposta("sanita", "sanita", 1), "stesso dicastero: Sanità"),
         (sposta("sanita", "giustizia", 0), "importo non ammesso: 0"),
         (
             sposta("sanità", "giustizia", 1),
@@ -232,14 +232,20 @@ fn conversione_respinta_costa_e_non_si_ripete() {
             .any(|e| e.forma == FormaMisura::Conversione && !e.approvata)
     );
     // Gli atti restano impagabili anche col margine di un anno: la proposta rinasce sullo stesso atto.
-    assert!(p.vista().ministeri[3].proposta.is_some());
+    let atto = p.vista().ministeri[3]
+        .proposta
+        .as_ref()
+        .unwrap()
+        .nome
+        .clone();
     let e = p
         .comanda(Comando::Accogli {
             dicastero: "sanita".into(),
         })
         .unwrap_err();
     assert!(
-        e.to_string().contains("decreto decaduto non si ripete"),
+        e.to_string()
+            .contains(&format!("decreto decaduto non si ripete: {atto}")),
         "{e}"
     );
 }
@@ -278,7 +284,7 @@ fn spostamento_decaduto_torna_indietro_e_non_si_ripete() {
         .unwrap_err();
     assert!(
         e.to_string()
-            .contains("decreto decaduto non si ripete: giustizia → sanita"),
+            .contains("decreto decaduto non si ripete: Giustizia → Sanità"),
         "{e}"
     );
 }
@@ -297,7 +303,7 @@ fn spostare_il_margine_del_decreto_accolto_e_rifiutato() {
             .comanda(sposta("sanita", "giustizia", importo))
             .unwrap_err();
         assert!(
-            e.to_string().contains("margine insufficiente in sanita"),
+            e.to_string().contains("margine insufficiente in Sanità"),
             "{e}"
         );
     }
@@ -342,7 +348,6 @@ fn ritiro_dopo_la_fiducia_rimborsa_l_intesa() {
 
 /// Conversione in calendario ma decreto 0 in agenda ed economia: nessun decreto da convertire.
 #[test]
-#[ignore = "bug: controlla_decreti (partita.rs:1390) non rifiuta una conversione Accolti con decreto 0"]
 fn conversione_orfana_al_caricamento_rifiutata() {
     let (p, _) = accolta(sanita_cara());
     let e = edita(&p, |j| {
@@ -380,6 +385,16 @@ fn decreto_incoerente_al_caricamento_rifiutato() {
             Box::new(move |j| {
                 j["ministri"]["dicasteri"][3]["agenda"]["decreto"] = (residuo + 1).into();
                 j["economia"]["decreti"][3] = (residuo + 1).into();
+            }),
+        ),
+        (
+            "conversione d'altro importo",
+            Box::new(|j| {
+                for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
+                    if let Some(f) = m["fondi"].get_mut("accolti") {
+                        f["importo"] = (f["importo"].as_i64().unwrap() - 1).into();
+                    }
+                }
             }),
         ),
         (

@@ -76,7 +76,7 @@ fn accogliere_spende_l_importo_nel_trimestre_e_mette_l_atto_in_agenda() {
     let m = ministero(&v, "sanita");
     let (importo, atto) = (
         m.proposta.as_ref().unwrap().importo,
-        m.proposta.as_ref().unwrap().atto.clone(),
+        m.proposta.as_ref().unwrap().atto.clone().unwrap(),
     );
     p.comanda(Comando::Accogli {
         dicastero: "sanita".into(),
@@ -420,11 +420,11 @@ fn accogli_ricalcola_quanto_manca() {
     let p = con_proposta(1);
     let s = indice("sanita");
     let vera = p.ministri().dicasteri[s].proposta.unwrap();
-    let id = ministero(&p.vista(), "sanita")
+    let nome = ministero(&p.vista(), "sanita")
         .proposta
         .as_ref()
         .unwrap()
-        .atto
+        .nome
         .clone();
     let mut ricco = edita(&p, |j| {
         j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(1_000_000_000_000_000_i64);
@@ -433,7 +433,7 @@ fn accogli_ricalcola_quanto_manca() {
     rifiuta(
         &mut ricco,
         accogli(),
-        &format!("fondi già sufficienti per {id}"),
+        &format!("fondi già sufficienti per {nome}"),
     );
     let mut falsa = edita(&p, |j| {
         j["ministri"]["dicasteri"][s]["proposta"]["tipo"]["fondi"]["importo"] = json!(1);
@@ -448,11 +448,11 @@ fn accogli_rifiuta_un_atto_gia_in_cantiere() {
     let p = con_proposta(1);
     let s = indice("sanita");
     let atto = fondi(p.ministri().dicasteri[s].proposta.unwrap()).0;
-    let id = ministero(&p.vista(), "sanita")
+    let nome = ministero(&p.vista(), "sanita")
         .proposta
         .as_ref()
         .unwrap()
-        .atto
+        .nome
         .clone();
     let mut q = edita(&p, |j| {
         let c = json!({"atto": atto, "regione": null, "turni_mancanti": 2, "rata": 0,
@@ -460,7 +460,7 @@ fn accogli_rifiuta_un_atto_gia_in_cantiere() {
         j["ministri"]["dicasteri"][s]["cantieri"] = json!([c]);
     })
     .unwrap();
-    rifiuta(&mut q, accogli(), &format!("cantiere già in corso: {id}"));
+    rifiuta(&mut q, accogli(), &format!("cantiere già in corso: {nome}"));
 }
 
 /// Il prerequisito dell'atto proposto viene a mancare (arrivo di "ridotto" all'apertura del
@@ -483,7 +483,7 @@ fn la_proposta_decade_quando_il_prerequisito_viene_a_mancare() {
     );
     let su_convenzioni = |seme: &u64| {
         let v = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), *seme).vista();
-        let atto = (ministero(&v, "sanita").proposta.as_ref()).map(|x| x.atto.clone());
+        let atto = (ministero(&v, "sanita").proposta.as_ref()).and_then(|x| x.atto.clone());
         atto.as_deref() == Some("sanita_convenzioni_privato")
     };
     let seme = (1..=40)

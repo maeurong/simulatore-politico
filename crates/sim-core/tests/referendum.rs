@@ -42,6 +42,8 @@ fn abrogazione_riporta_al_valore_dopo_l_abrogazione_e_blocca_il_gradino() {
     let mut p = al_voto(abrogazione_che_vince("-5.0"));
     let r = &p.vista().esiti_referendum[0];
     assert_eq!(r.tipo, TipoReferendum::Abrogativo);
+    // Il titolo è il bersaglio, il gradino abrogato.
+    assert_eq!(r.nome, "Licenziamento: tutele crescenti");
     assert!(r.quorum && r.approvato);
     assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
     let v = p.vista();
@@ -221,7 +223,10 @@ fn gradino_abrogato_non_torna_con_un_secondo_referendum() {
         .promuovi_referendum("sinistra", "licenziamento")
         .unwrap_err();
     assert!(
-        e.to_string().contains("niente da abrogare: Licenziamento"),
+        e.to_string().contains(
+            "Licenziamento: il gradino che tornerebbe in vigore è già stato abrogato da un \
+             referendum"
+        ),
         "{e}"
     );
 }
@@ -273,6 +278,10 @@ fn elettorale_resa_non_valida_prima_del_voto_decade() {
     }
     let r = &p.vista().esiti_referendum[0];
     assert!(!r.approvato && r.votanti == 0, "{r:?}");
+    let d = DatiGioco::da_testi(&coalizioni_abrogabili()).unwrap();
+    let x = &d.disposizioni()[d.disposizione("coalizioni").unwrap()];
+    let vigente = &x.gradini[x.gradino("si").unwrap()].nome;
+    assert_eq!(r.nome, format!("{}: {vigente}", x.nome));
     let motivo = r.decaduto.as_deref().unwrap_or_default();
     assert!(motivo.starts_with("Decaduto senza voto"), "{motivo}");
     assert_eq!(p.in_vigore("coalizioni"), Some("si"));
@@ -310,4 +319,40 @@ fn salva_e_carica_con_l_abrogativo_in_corso_non_cambiano_l_esito() {
         ricaricata.vista().esiti_referendum
     );
     assert_eq!(sempre.salva().unwrap(), ricaricata.salva().unwrap());
+}
+
+/// La disposizione col quesito in corso è in esame: nessuna legge la tocca prima del voto.
+#[test]
+fn abrogativo_in_corso_mette_la_disposizione_in_esame() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+    let prima = p.salva().unwrap();
+    let e = presenta(&mut p, &[("licenziamento", "reintegro")]).unwrap_err();
+    assert!(
+        matches!(e, Errore::Comando(_)) && e.to_string().contains("Licenziamento è già in esame"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+/// Un abrogativo col voto oltre l'anno e mezzo, o senza firme e col voto che non è quello del
+/// turno, è un salvataggio manomesso.
+#[test]
+fn abrogativo_manomesso_al_caricamento_rifiutato() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+    for (voto, firme) in [(1000, true), (7, false)] {
+        let e = edita(&p, |j| {
+            j["parlamento"]["referendum"]["voto"] = voto.into();
+            j["parlamento"]["referendum"]["firme"] = firme.into();
+        })
+        .err();
+        assert!(
+            matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
+            "{voto} {firme}: {e:?}"
+        );
+    }
 }

@@ -47,7 +47,7 @@ fn libera(cx: &Contesto, d: usize) -> bool {
     !cx.parlamento.in_esame(d) && cx.parlamento.respinta_da_poco(d, cx.turno).is_none()
 }
 
-/// Accogli non la rifiuterebbe sempre: la disposizione è [`libera`] e il gradino non è né in
+/// Accogli non la rifiuterebbe: la disposizione è [`libera`] e il gradino non è né in
 /// vigore né bloccato dal referendum.
 fn aperta(cx: &Contesto, d: usize, g: usize) -> bool {
     let s = &cx.disposizioni.voci[d];
@@ -239,7 +239,7 @@ impl Ministri {
         else {
             return Err(nessuna());
         };
-        let atto = &dati.atti()[k].id;
+        let atto = &dati.atti()[k].nome;
         if in_cantiere(st, k) {
             return Err(Errore::Comando(format!("cantiere già in corso: {atto}")));
         }
@@ -328,7 +328,7 @@ impl Ministri {
             TipoProposta::Fondi { atto, importo } => {
                 let a = &dati.atti()[atto];
                 VoceProposta {
-                    atto: a.id.clone(),
+                    atto: Some(a.id.clone()),
                     nome: a.nome.clone(),
                     importo,
                     motivo: format!("fondi che non bastano per {}", a.nome),
@@ -344,7 +344,7 @@ impl Ministri {
             } => {
                 let x = &dati.disposizioni()[disposizione];
                 VoceProposta {
-                    atto: String::new(),
+                    atto: None,
                     nome: parlamento::nome(dati, &[(disposizione, gradino)]),
                     importo: 0,
                     motivo: sblocca.map_or_else(

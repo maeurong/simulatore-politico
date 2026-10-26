@@ -597,8 +597,9 @@ impl Partita {
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
     /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
-    /// Sull'elettorale che con le leggi e gli arrivi venuti dalla promozione darebbe una legge
-    /// non valida decade senza voto: esito con `decaduto`, nessun blocco, nessuna valence.
+    /// Se l'abrogazione renderebbe non valida la legge elettorale, con le leggi e gli arrivi venuti
+    /// dopo la promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco,
+    /// nessuna valence. Il titolo dell'esito è il gradino vigente che il quesito abroga.
     fn vota_abrogativo(&mut self) {
         let turno = self.turno;
         let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
@@ -607,7 +608,8 @@ impl Partita {
         let Some(&(d, dopo)) = r.valori.first() else {
             return;
         };
-        let nome = parlamento::nome(&self.dati, &r.valori);
+        let vigente = self.disposizioni.voci[d].in_vigore;
+        let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
         if let Some(m) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)])
         {
             let nessuno = Affluenza {
@@ -625,7 +627,6 @@ impl Partita {
             self.parlamento.esiti_referendum.insert(0, esito);
             return;
         }
-        let vigente = self.disposizioni.voci[d].in_vigore;
         let x = &self.dati.disposizioni()[d];
         let invito = if r.invito_astensione {
             self.dati.manopola("invito_astensione")
@@ -836,7 +837,7 @@ impl Partita {
         self.parlamento.invita_astensione()
     }
 
-    /// L'anteprima della legge `valori` (spec riga 371): le regole di `PresentaLegge` tranne il
+    /// L'anteprima della legge `valori`: le regole di `PresentaLegge` tranne il
     /// posto in calendario; la partita non cambia.
     ///
     /// # Errors
@@ -856,8 +857,8 @@ impl Partita {
         ))
     }
 
-    /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, senza
-    /// costo di firma (la vuole il ministro), e la proposta esce solo se la presentazione passa.
+    /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, firma
+    /// del ministro compresa (spec, storia 32), e la proposta esce solo se la presentazione passa.
     pub(crate) fn accogli_riforma(
         &mut self,
         dicastero: usize,
@@ -869,7 +870,13 @@ impl Partita {
             disposizione: x.id.clone(),
             gradino: x.gradini[gradino].id.clone(),
         }];
-        (self.parlamento).presenta(&self.dati, &self.disposizioni, None, self.turno, &valori)?;
+        (self.parlamento).presenta(
+            &self.dati,
+            &self.disposizioni,
+            Some(&mut self.ministri),
+            self.turno,
+            &valori,
+        )?;
         if let Some(st) = self.ministri.dicasteri.get_mut(dicastero) {
             st.proposta = None;
         }
@@ -954,7 +961,7 @@ impl Partita {
     /// (iter-legislativo-italiano:20-23, 67).
     ///
     /// # Errors
-    /// `Comando` con l'id dell'atto.
+    /// `Comando` col nome dell'atto.
     pub(crate) fn accogli_ripetuto(&self, dicastero: &str) -> Result<(), Errore> {
         let proposta = (self.dati.dicasteri().iter().position(|d| d.id == dicastero))
             .and_then(|i| Some((i, self.ministri.dicasteri.get(i)?.proposta?.tipo)));
@@ -972,7 +979,7 @@ impl Partita {
             .iter()
             .any(|f| f.stessa_firma(&firma))
         {
-            let atto = self.dati.atti().get(atto).map_or("", |a| a.id.as_str());
+            let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
             return Err(Errore::Comando(format!(
                 "decreto decaduto non si ripete: {atto}"
             )));
@@ -1365,7 +1372,9 @@ impl Partita {
             .disposizioni
             .controlla(&partita.dati, partita.turno)?;
         let n = partita.partiti.len();
-        partita.parlamento.controlla(&partita.dati, n)?;
+        partita
+            .parlamento
+            .controlla(&partita.dati, n, partita.turno)?;
         partita.intesa.controlla(n)?;
         partita.controlla_partiti()?;
         partita
@@ -1385,18 +1394,19 @@ impl Partita {
 }
 
 impl Partita {
-    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo e con
-    /// la sua conversione in calendario.
+    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
+    /// conversione in calendario porta il suo importo; senza decreto, nessuna conversione.
     fn controlla_decreti(&self) -> Result<(), Errore> {
         let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
         for (i, (st, &x)) in dicasteri.enumerate() {
             let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
             let buono = decreto == x
-                && (decreto == 0
-                    || (decreto <= st.margine_residuo && self.parlamento.in_conversione(i)));
+                && decreto <= st.margine_residuo
+                && self.parlamento.in_conversione(i) == (decreto > 0).then_some(decreto);
             ok(
                 buono,
-                "decreto in agenda diverso da economia.decreti, oltre il margine o senza conversione",
+                "decreto in agenda diverso da economia.decreti o dalla conversione, o oltre il \
+                 margine",
             )?;
         }
         Ok(())

@@ -143,7 +143,7 @@ pub(crate) fn valida_uscente(
 ) -> Result<(), Errore> {
     let ko = |m: String| Err(Errore::Partiti(format!("parlamento_uscente.{m}")));
     let Some((camera, senato)) = seggi_partenza(disposizioni) else {
-        return ko("numero_parlamentari: manca coi seggi_camera e seggi_senato di partenza".into());
+        return ko("numero_parlamentari: mancano seggi_camera e seggi_senato di partenza".into());
     };
     let u = &scenario.parlamento_uscente;
     for (ramo, seggi, attesi) in [("camera", &u.camera, camera), ("senato", &u.senato, senato)] {
@@ -201,6 +201,13 @@ pub(crate) fn nome_misura(dati: &DatiGioco, m: &Misura) -> String {
     }
     m.fondi
         .map_or_else(|| nome(dati, &m.valori), |f| f.nome(dati))
+}
+
+/// Il voto dell'abrogativo chiesto nel `turno`, ad aprile-giugno dell'anno dopo; `None` dopo
+/// luglio-settembre, fuori finestra.
+fn voto_abrogativo(turno: u32) -> Option<u32> {
+    let trimestre = u32::from(data_di(turno).trimestre);
+    (trimestre <= 3).then(|| turno.saturating_add(6 - trimestre))
 }
 
 /// La legge col voto nel turno, che nel turno del bilancio slitta al turno dopo.
@@ -381,10 +388,12 @@ impl Parlamento {
         }
     }
 
-    /// La disposizione `d` è in una misura in calendario o in un referendum confermativo.
+    /// La disposizione `d` è in una misura in calendario o in un referendum in corso, abrogativo
+    /// o confermativo.
     pub(crate) fn in_esame(&self, d: usize) -> bool {
         let in_misura = (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d));
-        in_misura || (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d))
+        let mut referendum = self.referendum.iter().chain(&self.confermativi);
+        in_misura || referendum.any(|r| r.valori.iter().any(|v| v.0 == d))
     }
 
     /// Il turno da cui la disposizione `d`, in una legge respinta, si ripresenta, se è dopo
@@ -400,8 +409,8 @@ impl Parlamento {
     ///
     /// # Errors
     /// `Comando`, nell'ordine: promotore sconosciuto o al governo, disposizione sconosciuta, non
-    /// referendabile, niente da abrogare (anche col valore dopo l'abrogazione bloccato da un
-    /// referendum), legge elettorale non valida dopo l'abrogazione, un
+    /// referendabile, niente da abrogare, valore dopo l'abrogazione già abrogato da un
+    /// referendum, legge elettorale non valida dopo l'abrogazione, un
     /// referendum già in corso, fuori finestra.
     pub(crate) fn abrogativo(
         &self,
@@ -429,8 +438,14 @@ impl Parlamento {
             .unwrap_or(s.precedente);
         // Un gradino abrogato non torna: niente reviviscenza (disposizioni-al-turno-zero:64).
         let nulla = dopo == s.in_vigore && s.in_arrivo.is_empty();
-        if s.legge.is_empty() || nulla || s.bloccati.contains(&dopo) {
+        if s.legge.is_empty() || nulla {
             return ko(format!("niente da abrogare: {}", x.nome));
+        }
+        if s.bloccati.contains(&dopo) {
+            return ko(format!(
+                "{}: il gradino che tornerebbe in vigore è già stato abrogato da un referendum",
+                x.nome
+            ));
         }
         if let Some(m) = legge_non_valida(dati, aula.disposizioni, &[(d, dopo)]) {
             return ko(format!("quesito inammissibile su {}: {m}", x.nome));
@@ -438,17 +453,15 @@ impl Parlamento {
         if self.referendum.is_some() {
             return ko("un referendum è già in corso".into());
         }
-        let trimestre = u32::from(data_di(turno).trimestre);
-        if trimestre > 3 {
+        let Some(voto) = voto_abrogativo(turno) else {
             return ko("fuori finestra: si chiede entro luglio-settembre".into());
-        }
+        };
         Ok(Referendum {
             tipo: TipoReferendum::Abrogativo,
             misura: None,
             valori: vec![(d, dopo)],
             promotore: Some(j),
-            // Dal trimestre `trimestre` ad aprile-giugno dell'anno dopo.
-            voto: turno.saturating_add(6 - trimestre),
+            voto,
             firme: false,
             invito_astensione: false,
         })
@@ -470,8 +483,8 @@ impl Parlamento {
     }
 
     /// `PresentaLegge`: controlla, mette la misura in calendario e fa pagare al ministro
-    /// proponente la firma contro la sua posizione (non con `ministri = None`: la legge l'ha
-    /// proposta lui). Un rifiuto non tocca nulla.
+    /// proponente la firma contro la sua posizione, anche sulla riforma che ha proposto lui; con
+    /// `ministri = None` nessuna firma. Un rifiuto non tocca nulla.
     ///
     /// # Errors
     /// Quelli di `bozza`, poi `Comando` col calendario pieno.
@@ -524,7 +537,7 @@ impl Parlamento {
     /// # Errors
     /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
     /// sconosciuto, norme di forma diversa, dicasteri diversi, gradino già in vigore, bloccato
-    /// dal referendum, disposizione già in esame (anche in un referendum confermativo), respinta
+    /// dal referendum, disposizione già in esame (anche in un referendum in corso), respinta
     /// da poco, legge elettorale non valida.
     pub(crate) fn bozza(
         &self,
@@ -602,7 +615,7 @@ impl Parlamento {
             let con_arrivi = [disposizioni.arrivi_elettorali(), scelti.clone()].concat();
             for v in [&scelti, &con_arrivi] {
                 if let Some(m) = legge_non_valida(dati, disposizioni, v) {
-                    return ko(format!("Legge elettorale non applicabile: {m}"));
+                    return ko(format!("legge elettorale non applicabile: {m}"));
                 }
             }
         }
@@ -674,13 +687,15 @@ impl Parlamento {
     }
 
     /// Nel turno del bilancio le leggi col voto nel turno passano al turno dopo e perdono la
-    /// questione di fiducia; i loro emendamenti aperti restano aperti. Rende le slittate che
-    /// avevano la questione di fiducia, il cui costo si rimborsa.
+    /// questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti con la
+    /// fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui costo
+    /// si rimborsa.
     pub(crate) fn slitta_leggi(&mut self, turno: u32) -> Vec<Misura> {
         let mut con_fiducia = Vec::new();
         for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {
             if m.fiducia {
                 con_fiducia.push(m.clone());
+                m.emendamenti_aperti = false;
             }
             m.voto = turno.saturating_add(1);
             m.fiducia = false;
@@ -696,10 +711,15 @@ impl Parlamento {
         Some(self.misure.remove(k))
     }
 
-    /// C'è in calendario la conversione dei fondi accolti per `dicastero`.
-    pub(crate) fn in_conversione(&self, dicastero: usize) -> bool {
-        (self.misure.iter()).any(|m| {
-            matches!(m.fondi, Some(FondiDecreto::Accolti { dicastero: d, .. }) if d == dicastero)
+    /// L'importo della conversione dei fondi accolti per `dicastero` in calendario, se c'è.
+    pub(crate) fn in_conversione(&self, dicastero: usize) -> Option<i64> {
+        (self.misure.iter()).find_map(|m| match m.fondi {
+            Some(FondiDecreto::Accolti {
+                dicastero: d,
+                importo,
+                ..
+            }) if d == dicastero => Some(importo),
+            _ => None,
         })
     }
 
@@ -783,8 +803,14 @@ impl Parlamento {
     /// `SalvataggioIlleggibile` se i seggi non sono uno per partito, uno supera o non sommano ai
     /// seggi del ramo, o una misura, un suo emendamento o una respinta esce dalle disposizioni, dai gradini,
     /// dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
-    /// partiti.
-    pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+    /// partiti, o ha il voto oltre `turno + 6`, o l'abrogativo senza firme ha un voto diverso da
+    /// quello chiesto nel `turno`.
+    pub(crate) fn controlla(
+        &self,
+        dati: &DatiGioco,
+        n_partiti: usize,
+        turno: u32,
+    ) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("parlamento: {m}")));
         let (camera, senato) = seggi_partenza(dati.disposizioni()).unwrap_or_default();
         for (seggi, totale) in [(&self.seggi_camera, camera), (&self.seggi_senato, senato)] {
@@ -816,8 +842,15 @@ impl Parlamento {
         if !self.decaduti.iter().all(|f| f.valido(dati)) {
             return ko("un decreto decaduto fuori dai dicasteri, dagli atti o da 0-1e15");
         }
-        let referendum_ok = (self.referendum.iter().chain(&self.confermativi))
-            .all(|r| r.valori.iter().all(valore_ok) && r.promotore.is_none_or(|j| j < n_partiti));
+        // Senza firme, l'abrogativo è chiesto nel turno.
+        let firme_ok =
+            (self.referendum.iter()).all(|r| r.firme || Some(r.voto) == voto_abrogativo(turno));
+        let referendum_ok = firme_ok
+            && (self.referendum.iter().chain(&self.confermativi)).all(|r| {
+                r.valori.iter().all(valore_ok)
+                    && r.promotore.is_none_or(|j| j < n_partiti)
+                    && r.voto <= turno.saturating_add(6)
+            });
         if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {
             return ko("una misura o una respinta fuori dalle disposizioni o dai dicasteri");
         }

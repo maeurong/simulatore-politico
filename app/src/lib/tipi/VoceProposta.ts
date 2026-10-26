@@ -2,6 +2,6 @@
 
 /**
  * Proposta di fondi: `atto` è un id, `importo` gli euro che mancano al margine. Proposta di
- * riforma: `disposizione` e `gradino` sono id, `atto` è vuoto e `importo` 0.
+ * riforma: `disposizione` e `gradino` sono id, nessun `atto` e `importo` 0.
  */
-export type VoceProposta = { atto: string, nome: string, importo: bigint, motivo: string, rinviata: boolean, disposizione: string | null, gradino: string | null, };
+export type VoceProposta = { atto: string | null, nome: string, importo: bigint, motivo: string, rinviata: boolean, disposizione: string | null, gradino: string | null, };

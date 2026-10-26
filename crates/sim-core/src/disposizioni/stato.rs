@@ -253,7 +253,7 @@ impl Disposizioni {
         let catalogo = dati.disposizioni();
         if self.voci.len() != catalogo.len() {
             return ko(format!(
-                "{} voci, le disposizioni sono {}",
+                "lo stato ha {} voci, le disposizioni sono {}",
                 self.voci.len(),
                 catalogo.len()
             ));

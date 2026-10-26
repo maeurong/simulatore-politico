@@ -102,7 +102,7 @@ impl Parlamento {
     /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia
     /// e senza emendamenti già aperti, chiede un emendamento ogni alleato distante almeno
     /// `distanza_alleato` dalla misura, che tiene il dicastero proponente o che con la legge
-    /// elettorale perde seggi attesi.
+    /// elettorale perde seggi attesi; non chi ha già un emendamento deciso sulla misura.
     pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
@@ -119,7 +119,7 @@ impl Parlamento {
                 Vec::new()
             };
             for (j, p) in aula.partiti.iter().enumerate() {
-                if !voto::alleato(governo, j) {
+                if !voto::alleato(governo, j) || m.emendamenti.iter().any(|e| e.partito == j) {
                     continue;
                 }
                 let distanza = nuova.map(|n| (p.posizione_dichiarata - n).abs());
@@ -133,7 +133,7 @@ impl Parlamento {
                         format!("a {d} punti dalla sua posizione")
                     }
                     (_, Some(c), _) => format!("tocca il suo dicastero {}", c.nome),
-                    (_, _, Some(x)) => format!("perde {} seggi con la legge elettorale", -x),
+                    (_, _, Some(x)) => seggi_persi(-x),
                     _ => continue,
                 };
                 m.emendamenti.push(RichiestaEmendamento {
@@ -218,8 +218,8 @@ impl Parlamento {
         };
         if m.forma == FormaMisura::Costituzionale {
             return ko(format!(
-                "La norma costituzionale passa da due deliberazioni e dal referendum: niente \
-                 questione di fiducia su «{}»",
+                "niente questione di fiducia su «{}»: la norma costituzionale passa da due \
+                 deliberazioni e dal referendum",
                 nome_misura(dati, m)
             ));
         }
@@ -261,6 +261,12 @@ pub(crate) fn costo_fiducia(
     doppio * (dati.manopola("costo_fiducia") + dati.manopola("costo_fiducia_distanza") * d / 6.0)
 }
 
+/// Il motivo dell'alleato che perde `n` seggi attesi.
+fn seggi_persi(n: i32) -> String {
+    let seggi = if n == 1 { "seggio" } else { "seggi" };
+    format!("perde {n} {seggi} con la legge elettorale")
+}
+
 /// Un emendamento accolto rinvia la disposizione `d`.
 pub(crate) fn rinviata(emendamenti: &[RichiestaEmendamento], d: usize) -> bool {
     (emendamenti.iter())
@@ -272,6 +278,12 @@ pub(crate) fn rinviata(emendamenti: &[RichiestaEmendamento], d: usize) -> bool {
 mod tests {
     use super::*;
     use crate::dati::dati_base;
+
+    #[test]
+    fn un_seggio_perso_al_singolare() {
+        assert_eq!(seggi_persi(1), "perde 1 seggio con la legge elettorale");
+        assert_eq!(seggi_persi(3), "perde 3 seggi con la legge elettorale");
+    }
 
     #[test]
     fn gradino_a_meta_bloccato_diventa_rinvio() {

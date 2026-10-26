@@ -35,7 +35,7 @@ fn legge_elettorale_non_valida_rifiutata_col_motivo() {
     let e = presenta(&mut p, &[("coalizioni", "no")]).unwrap_err();
     assert!(
         e.to_string()
-            .contains("Legge elettorale non applicabile: premio alla coalizione senza coalizioni"),
+            .contains("legge elettorale non applicabile: premio alla coalizione senza coalizioni"),
         "{e}"
     );
 }
