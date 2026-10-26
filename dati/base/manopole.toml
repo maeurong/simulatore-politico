@@ -873,6 +873,20 @@ min = 0.0
 max = 0.5
 ticket = "08"
 
+# assunzione del piano 6, nessuna fonte in docs/ricerca (soddisfazione persa dal ministro proponente di un decreto non convertito)
+[costo_decreto_decaduto]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio per un decreto non convertito)
+[valence_decreto_decaduto]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "08"
+
 # spec riga 100, alleato «distante almeno 2 punti dalla misura» (da qui perde intesa per una norma approvata)
 [distanza_alleato]
 valore = 2.0

@@ -82,12 +82,12 @@ fn accogliere_spende_l_importo_nel_trimestre_e_mette_l_atto_in_agenda() {
         "fondi accolti dal Presidente del Consiglio"
     );
     assert!(m.proposta.is_none());
-    assert_eq!(p.economia().decreti, importo);
+    assert_eq!(p.economia().decreti[indice("sanita")], importo);
     assert_eq!(p.economia().bilancio, gemella.economia().bilancio);
     p.chiudi_turno();
     gemella.chiudi_turno();
     let (e, g) = (p.economia(), gemella.economia());
-    assert_eq!(e.decreti, 0);
+    assert!(e.decreti.iter().all(|&x| x == 0));
     assert_eq!(e.conti.spese.dicasteri, g.conti.spese.dicasteri + importo);
     assert_eq!(e.bilancio, g.bilancio);
 }
@@ -410,7 +410,7 @@ fn accogli_ricalcola_quanto_manca() {
     })
     .unwrap();
     falsa.comanda(accogli()).unwrap();
-    assert_eq!(falsa.economia().decreti, vera.importo);
+    assert_eq!(falsa.economia().decreti[s], vera.importo);
 }
 
 #[test]

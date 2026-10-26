@@ -13,11 +13,14 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+mod decreti;
 mod emendamenti;
 mod intesa;
 mod regole;
 pub mod voto;
 
+pub(crate) use decreti::ammetti;
+pub use decreti::{Decreto, FondiDecreto};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
@@ -43,7 +46,7 @@ pub enum FormaMisura {
 
 /// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;
 /// `voto` = turno nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali,
-/// 0 altrimenti.
+/// 0 altrimenti. `fondi` solo sulle conversioni.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Misura {
     pub id: u32,
@@ -56,6 +59,7 @@ pub struct Misura {
     pub fiducia: bool,
     pub emendamenti: Vec<RichiestaEmendamento>,
     pub emendamenti_aperti: bool,
+    pub fondi: Option<FondiDecreto>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -101,7 +105,8 @@ pub struct ValoreProposto {
 
 /// Seggi per partito nell'ordine dello scenario. `respinte` = disposizione e turno da cui si
 /// ripresenta; `prossima` = id della prossima misura; `referendum` = l'abrogativo in corso,
-/// uno alla volta; `confermativi` = i referendum confermativi in attesa del voto.
+/// uno alla volta; `confermativi` = i referendum confermativi in attesa del voto; `decaduti` =
+/// le firme dei decreti decaduti, che non si ripetono.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Parlamento {
     pub seggi_camera: Vec<u32>,
@@ -113,6 +118,7 @@ pub struct Parlamento {
     pub referendum: Option<Referendum>,
     pub confermativi: Vec<Referendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
+    pub decaduti: Vec<FondiDecreto>,
 }
 
 /// Seggi di Camera e Senato al gradino di partenza di `numero_parlamentari`.
@@ -186,6 +192,12 @@ pub(crate) fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
         .join("; ")
 }
 
+/// Il nome della misura: dei fondi per una conversione, dei valori altrimenti.
+pub(crate) fn nome_misura(dati: &DatiGioco, m: &Misura) -> String {
+    m.fondi
+        .map_or_else(|| nome(dati, &m.valori), |f| f.nome(dati))
+}
+
 /// Posizione media in vigore e media nuova di `valori`, sulle sole disposizioni in cui hanno
 /// posizione sia il gradino in vigore sia il nuovo; `None` se nessuna.
 pub(crate) fn posizioni(
@@ -234,7 +246,9 @@ impl StatoAula<'_> {
     /// l'emendamento accolto vota sì con `ft_base`, quello col respinto ha i franchi tiratori
     /// moltiplicati per `1 + ft_emendamento_respinto`, entro `ft_max`. Sull'elettorale il
     /// guadagno della linea è `Δseggi / seggi_per_punto_linea` e alla Camera i franchi tiratori
-    /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia.
+    /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
+    /// la maggioranza vota sì e l'opposizione no; senza posizione, i franchi tiratori vengono
+    /// dalla sola intesa.
     pub(crate) fn previsione(&self, m: &Misura) -> Previsione {
         let posizioni = posizioni(self.dati, self.disposizioni, &m.valori);
         let (dati, partiti, governo, intesa) = (self.dati, self.partiti, self.governo, self.intesa);
@@ -279,7 +293,12 @@ impl StatoAula<'_> {
         } else {
             voto::guadagni(partiti, posizioni)
         };
-        let mut linea = voto::linea(dati, governo, intesa, &guadagno);
+        // Conversione (scelta 4): maggioranza sì, opposizione no.
+        let mut linea = if m.forma == FormaMisura::Conversione {
+            (0..partiti.len()).map(|j| governo.al_governo(j)).collect()
+        } else {
+            voto::linea(dati, governo, intesa, &guadagno)
+        };
         let accolti = (m.emendamenti.iter()).filter(|e| e.stato == StatoEmendamento::Accolto);
         for e in accolti {
             if let Some(si) = linea.get_mut(e.partito) {
@@ -472,9 +491,35 @@ impl Parlamento {
             fiducia: false,
             emendamenti: Vec::new(),
             emendamenti_aperti: false,
+            fondi: None,
         });
         self.prossima = self.prossima.saturating_add(1);
         Ok(())
+    }
+
+    /// La conversione del decreto `fondi`, votata a fine turno.
+    pub(crate) fn apri_conversione(&mut self, turno: u32, fondi: FondiDecreto) {
+        self.misure.push(Misura {
+            id: self.prossima,
+            forma: FormaMisura::Conversione,
+            valori: Vec::new(),
+            proponente: Some(fondi.proponente()),
+            presentata: turno,
+            voto: turno,
+            deliberazione: 0,
+            fiducia: false,
+            emendamenti: Vec::new(),
+            emendamenti_aperti: false,
+            fondi: Some(fondi),
+        });
+        self.prossima = self.prossima.saturating_add(1);
+    }
+
+    /// Il decreto dei fondi accolti per `dicastero` esce dal calendario.
+    pub(crate) fn ritira(&mut self, dicastero: usize) {
+        (self.misure).retain(|m| {
+            !matches!(m.fondi, Some(FondiDecreto::Accolti { dicastero: d, .. }) if d == dicastero)
+        });
     }
 
     /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.
@@ -503,7 +548,7 @@ impl Parlamento {
                 let senato = voto::forbice(&self.seggi_senato, &p.linea, &p.franchi);
                 VoceMisura {
                     id: m.id,
-                    nome: nome(dati, &m.valori),
+                    nome: nome_misura(dati, m),
                     forma: m.forma,
                     proponente: (m.proponente)
                         .and_then(|i| dati.dicasteri().get(i))
@@ -586,7 +631,11 @@ impl Parlamento {
             m.valori.iter().all(valore_ok)
                 && m.proponente.is_none_or(|i| i < dati.dicasteri().len())
                 && m.emendamenti.iter().all(emendamento_ok)
+                && m.fondi.is_none_or(|f| f.valido(dati))
         });
+        if !self.decaduti.iter().all(|f| f.valido(dati)) {
+            return ko("un decreto decaduto fuori dai dicasteri, dagli atti o da 0-1e15");
+        }
         let referendum_ok = (self.referendum.iter().chain(&self.confermativi))
             .all(|r| r.valori.iter().all(valore_ok) && r.promotore.is_none_or(|j| j < n_partiti));
         if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {

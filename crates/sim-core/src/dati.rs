@@ -187,6 +187,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "ft_max",
     "costo_legge_respinta",
     "valence_legge_respinta",
+    "costo_decreto_decaduto",
+    "valence_decreto_decaduto",
     "distanza_alleato",
     "costo_norma_lontana",
     "scivolamento_percepita",

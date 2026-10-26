@@ -1,7 +1,7 @@
 mod comune;
 use comune::{imposta, presenta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
-use sim_core::parlamento::{CausaIntesa, StatoEmendamento};
+use sim_core::parlamento::{CausaIntesa, Decreto, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita};
 
 fn con(f: FileDati, nome: &str, valore: &str) -> FileDati {
@@ -192,6 +192,14 @@ fn salvare_a_meta_turno_conserva_l_aula() {
     presenta(&mut p, &[("ticket", "alto")]).unwrap();
     let id = p.vista().calendario[1].id;
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.comanda(Comando::EmanaDecreto {
+        decreto: Decreto::Fondi {
+            da: "giustizia".into(),
+            a: "sanita".into(),
+            importo: 1_000_000,
+        },
+    })
+    .unwrap();
     let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
     p.chiudi_turno();
     q.chiudi_turno();

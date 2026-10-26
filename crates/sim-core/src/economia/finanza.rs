@@ -239,7 +239,7 @@ pub(crate) fn conti_del_trimestre(
             ),
         },
         spese: Spese {
-            dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0) + e.decreti,
+            dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0) + e.decreti.iter().sum::<i64>(),
             pensioni: e.spesa_pensioni(),
             sussidi: e.spesa_sussidi(dati, &misure.leve),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),
@@ -272,6 +272,13 @@ impl Economia {
         }
     }
 
+    pub(crate) fn bilancio_in_vigore_mut(&mut self, data: Trimestre) -> &mut Bilancio {
+        match &mut self.bilancio_approvato {
+            Some(b) if b.anno == data.anno => b,
+            _ => &mut self.bilancio,
+        }
+    }
+
     /// Gennaio-marzo senza un bilancio approvato per l'anno.
     pub(crate) fn esercizio_provvisorio(&self, data: Trimestre) -> bool {
         data.trimestre == 1 && self.bilancio_in_vigore(data).anno != data.anno
@@ -288,7 +295,6 @@ impl Economia {
         }
         self.previdenza(dati, data, &misure.leve);
         let conti = conti_del_trimestre(self, &self.bilancio, dati, misure);
-        self.decreti = 0;
 
         // Impulso: la spesa discrezionale oltre quella del turno prima rivalutata all'inflazione.
         let prima = self.conti.spesa_discrezionale() as f64 * (1.0 + self.inflazione[0] / 400.0);

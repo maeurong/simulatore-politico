@@ -2,7 +2,8 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
-use crate::parlamento::ValoreProposto;
+use crate::ministri::EffettoComando;
+use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -60,6 +61,10 @@ pub enum Comando {
     PoniFiducia {
         misura: u32,
     },
+    /// Emana un decreto: vale subito, a fine turno è convertito o decade.
+    EmanaDecreto {
+        decreto: Decreto,
+    },
 }
 
 impl Partita {
@@ -78,11 +83,18 @@ impl Partita {
                 accogli,
             } => return self.emendamento(misura, &partito, accogli),
             Comando::PoniFiducia { misura } => return self.poni_fiducia(misura),
+            Comando::EmanaDecreto { decreto } => return self.emana_decreto(&decreto),
+            Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }
-        let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;
-        if let Some(importo) = accolta {
-            self.aggiungi_decreto(importo);
+        match self.con_contesto(|ministri, cx| ministri.comanda(cx, c))? {
+            EffettoComando::Nessuno => {}
+            EffettoComando::Decreto { dicastero, importo } => {
+                self.aggiungi_decreto(dicastero, importo);
+            }
+            EffettoComando::Ritiro { dicastero, importo } => {
+                self.ritira_decreto(dicastero, importo);
+            }
         }
         Ok(())
     }

@@ -94,7 +94,7 @@ impl Ministri {
     }
 
     /// `Accogli`: ricalcola quanto manca e rende l'importo del decreto, che entra anche nel
-    /// margine residuo. Una proposta esiste solo senza agenda (la decade `proponi`, la rifiuta il
+    /// margine residuo e resta segnato nell'agenda per il ritiro. Una proposta esiste solo senza agenda (la decade `proponi`, la rifiuta il
     /// salvataggio).
     pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
         let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
@@ -112,7 +112,7 @@ impl Ministri {
             return Err(Errore::Comando(format!("fondi già sufficienti per {atto}")));
         }
         let sotto = |x: i64| x.checked_add(importo).is_some_and(|s| s <= LIMITE_EURO);
-        if !(sotto(st.margine_residuo) && sotto(cx.economia.decreti)) {
+        if !(sotto(st.margine_residuo) && sotto(cx.economia.decreti.iter().sum())) {
             return Err(Errore::Comando(format!("importo troppo alto per {atto}")));
         }
         let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
@@ -121,6 +121,7 @@ impl Ministri {
         let mut agenda = Self::agenda_di(cx, i, m, &atti, &parti, pos);
         let coda = &agenda.motivo[senza_regione(&agenda.motivo).len()..];
         agenda.motivo = format!("fondi accolti dal Presidente del Consiglio{coda}");
+        agenda.decreto = importo;
         let st = &mut self.dicasteri[i];
         st.margine_residuo += importo;
         st.agenda = Some(agenda);

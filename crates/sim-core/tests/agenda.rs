@@ -494,11 +494,11 @@ fn salvataggi_corrotti_rifiutati_senza_panico() {
         ),
         (
             "decreti negativi",
-            Box::new(|j| j["economia"]["decreti"] = json!(-1)),
+            Box::new(|j| j["economia"]["decreti"][0] = json!(-1)),
         ),
         (
             "decreti oltre il tetto",
-            Box::new(|j| j["economia"]["decreti"] = json!(LIMITE + 1)),
+            Box::new(|j| j["economia"]["decreti"][0] = json!(LIMITE + 1)),
         ),
         (
             "livello dei prezzi nullo",

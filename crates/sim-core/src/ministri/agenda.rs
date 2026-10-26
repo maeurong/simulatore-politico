@@ -36,6 +36,8 @@ pub struct Agenda {
     pub attaccamenti: Vec<f64>,
     /// Punteggio di ogni regione; vuoto se il dicastero non ha regione bersaglio.
     pub bersaglio: Vec<f64>,
+    /// L'importo del decreto di `Accogli` che l'ha messa in agenda; 0 altrimenti.
+    pub decreto: i64,
 }
 
 /// Un atto a più turni in corso. `rata` è il costo per turno fissato all'avvio.
@@ -314,6 +316,7 @@ impl Ministri {
             motivo,
             attaccamenti: parti.iter().map(|(o, v)| o + v).collect(),
             bersaglio,
+            decreto: 0,
         }
     }
 
@@ -512,6 +515,7 @@ impl Ministri {
             if let Some(ag) = &st.agenda {
                 let n_bersaglio = if d.regione_bersaglio { n_regioni } else { 0 };
                 let buona = st.ministro.is_some()
+                    && in_limite(ag.decreto)
                     && suo(ag.atto)
                     && regione_giusta(ag.regione)
                     && ag.attaccamenti.len() == dati.atti_del_dicastero(i).count()
