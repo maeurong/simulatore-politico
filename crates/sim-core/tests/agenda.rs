@@ -924,3 +924,24 @@ fn successore_in_rodaggio_esegue_con_capacita_ridotta() {
         assert_eq!(e.inizio, turno + ritardo);
     }
 }
+
+#[test]
+fn il_costo_degli_atti_segue_l_indice_pubblicato_non_il_livello_vero() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.chiudi_turno();
+    let costo = |p: &Partita| {
+        ministero(&p.vista(), "sanita")
+            .agenda
+            .as_ref()
+            .unwrap()
+            .costo
+    };
+    let q = edita(&p, |j| {
+        let s = &mut j["informazione"]["statistica"]["indice_prezzi"];
+        *s = json!(s.as_f64().unwrap() * 1.1);
+    })
+    .unwrap();
+    assert_eq!(q.economia().livello_prezzi, p.economia().livello_prezzi);
+    let rapporto = costo(&q) as f64 / costo(&p) as f64;
+    assert!((rapporto - 1.1).abs() < 1e-6, "{rapporto}");
+}

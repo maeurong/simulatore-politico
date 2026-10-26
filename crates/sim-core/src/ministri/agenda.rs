@@ -58,9 +58,10 @@ pub(super) fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
 }
 
 /// Euro per turno di lavori dell'atto nel dicastero `i`:
-/// `round(costo · margine_rif/4 · livello_prezzi)`, con `rif` i `margini_rif`.
+/// `round(costo · margine_rif/4 · indice_prezzi)`, con `rif` i `margini_rif` e l'indice
+/// pubblicato, così la `Vista` non rivela il livello vero.
 pub(super) fn costo_atto(cx: &Contesto, rif: &[i64], i: usize, a: &Atto) -> i64 {
-    euro(a.costo * rif[i] as f64 / 4.0 * cx.economia.livello_prezzi)
+    euro(a.costo * rif[i] as f64 / 4.0 * cx.indice_prezzi)
 }
 
 /// Posizione di un atto (indice di catalogo) fra i 4 del dicastero.

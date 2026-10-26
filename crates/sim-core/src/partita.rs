@@ -99,6 +99,7 @@ impl Partita {
                 grandezze: &grandezze,
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
+                indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
                 data: Trimestre::TURNO_ZERO,
             },
@@ -181,6 +182,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         };
@@ -223,6 +225,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         }
@@ -237,6 +240,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         };

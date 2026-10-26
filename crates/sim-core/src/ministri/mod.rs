@@ -117,6 +117,8 @@ pub(crate) struct Contesto<'a> {
     pub grandezze: &'a Grandezze,
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
+    /// L'indice dei prezzi pubblicato, non il livello vero.
+    pub indice_prezzi: f64,
     pub turno: u32,
     pub data: Trimestre,
 }
