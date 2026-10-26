@@ -127,8 +127,8 @@ fn seggi_partenza(disposizioni: &[DatoDisposizione]) -> Option<(f64, f64)> {
 /// Il parlamento uscente dello scenario contro partiti e `numero_parlamentari`.
 ///
 /// # Errors
-/// `Partiti` col nome del ramo e del partito sconosciuto o coi seggi negativi, o con la somma
-/// diversa dai seggi di partenza.
+/// `Partiti` col nome del ramo e del partito sconosciuto, coi seggi negativi o oltre i seggi di
+/// partenza del ramo, o con la somma diversa dai seggi di partenza.
 pub(crate) fn valida_uscente(
     scenario: &Scenario,
     disposizioni: &[DatoDisposizione],
@@ -145,6 +145,11 @@ pub(crate) fn valida_uscente(
             }
             if n < 0 {
                 return ko(format!("{ramo}: seggi negativi a {id}"));
+            }
+            if n as f64 > attesi {
+                return ko(format!(
+                    "{ramo}: {n} seggi a {id}, più dei {attesi} del ramo"
+                ));
             }
         }
         let somma: i64 = seggi.values().sum();
@@ -544,15 +549,20 @@ impl Parlamento {
     }
 
     /// # Errors
-    /// `SalvataggioIlleggibile` se i seggi non sono uno per partito o non sommano ai seggi dei
-    /// rami, o una misura, un suo emendamento o una respinta esce dalle disposizioni, dai gradini,
+    /// `SalvataggioIlleggibile` se i seggi non sono uno per partito, uno supera o non sommano ai
+    /// seggi del ramo, o una misura, un suo emendamento o una respinta esce dalle disposizioni, dai gradini,
     /// dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
     /// partiti.
     pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("parlamento: {m}")));
         let (camera, senato) = seggi_partenza(dati.disposizioni()).unwrap_or_default();
         for (seggi, totale) in [(&self.seggi_camera, camera), (&self.seggi_senato, senato)] {
-            if seggi.len() != n_partiti || f64::from(seggi.iter().sum::<u32>()) != totale {
+            // Ogni seggio entro il ramo e somma in u64: i `sum::<u32>()` a valle non traboccano.
+            let somma: u64 = seggi.iter().map(|&n| u64::from(n)).sum();
+            if seggi.len() != n_partiti
+                || seggi.iter().any(|&n| f64::from(n) > totale)
+                || somma as f64 != totale
+            {
                 return ko("seggi non uno per partito o diversi dai seggi del ramo");
             }
         }

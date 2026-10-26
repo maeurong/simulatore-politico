@@ -5,7 +5,7 @@ use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
-use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo};
 use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
@@ -485,15 +485,13 @@ impl Partita {
         for r in dovuti {
             let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
             let (pos_no, pos_si) = (posizioni.map(|p| p.0), posizioni.map(|p| p.1));
-            let a = (self.elettorato).referendum(
-                &self.dati,
-                &self.partiti,
-                &self.governo,
+            let quesito = Quesito {
                 pos_si,
                 pos_no,
-                1.0,
-                0.0,
-            );
+                peso_governo: 1.0,
+                invito: 0.0,
+            };
+            let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
             let (si, no) = (a.si.round() as u64, a.no.round() as u64);
             let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
             let approvato = si > no;

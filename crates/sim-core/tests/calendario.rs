@@ -34,6 +34,11 @@ fn parlamento_uscente_incoerente_rifiutato_col_nome() {
             "senato: seggi negativi a centro",
         ),
         ("destra = 189,", "destra = 190,", "camera: 401 seggi"),
+        (
+            "destra = 189,",
+            "destra = 9223372036854775807,",
+            "camera: 9223372036854775807 seggi a destra, più dei 400 del ramo",
+        ),
     ] {
         let f = sostituisci(file_base(), "scenario", da, a);
         let e = DatiGioco::da_testi(&f).unwrap_err();
@@ -180,6 +185,12 @@ fn parlamento_e_intesa_manomessi_rifiutati() {
             "parlamento: seggi",
         ),
         ("/intesa/valori/0", serde_json::json!(150.0), "intesa:"),
+        // In u32 la somma trabocca e torna 400.
+        (
+            "/parlamento/seggi_camera",
+            serde_json::json!([u32::MAX, 1, 400, 0, 0, 0, 0]),
+            "parlamento: seggi",
+        ),
     ] {
         let e = edita(&p, |j| *j.pointer_mut(punto).unwrap() = valore).unwrap_err();
         assert!(

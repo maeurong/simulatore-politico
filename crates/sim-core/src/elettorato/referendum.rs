@@ -13,25 +13,34 @@ pub struct Affluenza {
     pub astenuti: f64,
 }
 
+/// Il quesito: posizione del sì e del no (`None` = nessuna posizione), peso del giudizio sul
+/// governo nel sì, invito all'astensione.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Quesito {
+    pub pos_si: Option<f64>,
+    pub pos_no: Option<f64>,
+    pub peso_governo: f64,
+    pub invito: f64,
+}
+
 impl Elettorato {
     /// Per gruppo e punto `x`: `u_si = −β(x − pos_si)² + peso_governo·γ·g`, `u_no = −β(x −
     /// pos_no)²` (senza posizione, distanza zero), `u_ast` = astensione del gruppo +
     /// `astensione_referendum` + `invito`·quota di governo nelle sue intenzioni; `g` = giudizio
     /// sul partito del Presidente del Consiglio. Quote col softmax, pesate per `h_x` e elettori.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "i partiti servono alla quota di governo del gruppo, dalle sue intenzioni"
-    )]
     pub fn referendum(
         &self,
         dati: &DatiGioco,
         partiti: &[Partito],
         governo: &Governo,
-        pos_si: Option<f64>,
-        pos_no: Option<f64>,
-        peso_governo: f64,
-        invito: f64,
+        quesito: Quesito,
     ) -> Affluenza {
+        let Quesito {
+            pos_si,
+            pos_no,
+            peso_governo,
+            invito,
+        } = quesito;
         let (beta, gamma) = (
             dati.manopola("beta_distanza"),
             dati.manopola("peso_giudizio"),
@@ -81,10 +90,12 @@ mod tests {
             dati,
             &partiti,
             &governo,
-            Some(pos.0),
-            Some(pos.1),
-            peso,
-            invito,
+            Quesito {
+                pos_si: Some(pos.0),
+                pos_no: Some(pos.1),
+                peso_governo: peso,
+                invito,
+            },
         )
     }
 

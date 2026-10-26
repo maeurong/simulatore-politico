@@ -144,7 +144,7 @@ mod tests {
         let (partiti, governo) = partiti::iniziali(dati);
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
-            .unwrap_or_default();
+            .expect("centrodestra nei dati base");
         let mut valori = vec![60.0; partiti.len()];
         valori[j] = intesa;
         let linea = vec![true; partiti.len()];
@@ -204,7 +204,9 @@ mod tests {
             governo: &governo,
             intesa: &intesa,
         };
-        let eta = dati.disposizione("eta_pensionabile").unwrap_or_default();
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
         let misura = |fiducia| Misura {
             id: 0,
             forma: FormaMisura::Riforma,
@@ -232,7 +234,12 @@ mod tests {
         use crate::parlamento::posizioni;
         let dati = dati_base();
         let disposizioni = Disposizioni::iniziali(&dati);
-        let g = |id: &str| (dati.disposizione(id).unwrap_or_default(), 0);
+        let g = |id: &str| {
+            (
+                dati.disposizione(id).expect("disposizione nei dati base"),
+                0,
+            )
+        };
         // Età 62 (2.0) contro 67 (4.5); regime retributivo (2.0) contro contributivo (5.0);
         // la soglia di lista, elettorale, non ha posizioni.
         let (eta, regime, soglia) = (
@@ -279,8 +286,10 @@ mod tests {
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
-            .unwrap_or_default();
-        let eta = dati.disposizione("eta_pensionabile").unwrap_or_default();
+            .expect("centrodestra nei dati base");
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
         let misura = Misura {
             id: 0,
             forma: FormaMisura::Riforma,

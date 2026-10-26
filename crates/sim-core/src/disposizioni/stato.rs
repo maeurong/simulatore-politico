@@ -286,8 +286,12 @@ mod tests {
     #[test]
     fn arrivo_che_rompe_la_legge_elettorale_si_scarta() {
         let dati = dati_base();
-        let k = |id: &str| dati.disposizione(id).unwrap_or_default();
-        let g = |id: &str, gradino: &str| dati.disposizioni()[k(id)].gradino(gradino).unwrap_or(9);
+        let k = |id: &str| dati.disposizione(id).expect("disposizione nei dati base");
+        let g = |id: &str, gradino: &str| {
+            dati.disposizioni()[k(id)]
+                .gradino(gradino)
+                .expect("gradino nei dati base")
+        };
         let arrivo = |gradino| InArrivo {
             gradino,
             turno: 1,
