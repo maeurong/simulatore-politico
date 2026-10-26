@@ -53,6 +53,7 @@ pub enum Errore {
     Partiti(String),
     Grandezze(String),
     Atti(String),
+    Disposizioni(String),
     Comando(String),
     Bilancio(String),
     Toml {
@@ -122,6 +123,7 @@ impl fmt::Display for Errore {
             Self::Partiti(m) => write!(f, "partiti dello scenario non validi: {m}"),
             Self::Grandezze(m) => write!(f, "grandezze dei dicasteri non valide: {m}"),
             Self::Atti(m) => write!(f, "catalogo degli atti non valido: {m}"),
+            Self::Disposizioni(m) => write!(f, "disposizioni non valide: {m}"),
             Self::Comando(m) => write!(f, "comando non ammesso: {m}"),
             Self::Bilancio(m) => write!(f, "legge di bilancio non ammessa: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),

@@ -1,6 +1,7 @@
 //! Scenario di partenza (`scenario.toml`): solo ingressi, i derivati si ricalcolano al caricamento.
 
 use crate::economia::Aliquote;
+use crate::elezioni::LeggeElettorale;
 use crate::errore::Errore;
 use crate::partiti::{DatoGoverno, DatoPartito};
 use serde::{Deserialize, Serialize};
@@ -62,6 +63,8 @@ macro_rules! scenario {
             pub aliquote: Aliquote,
             /// Nome di un'impostazione di `elezioni.toml`.
             pub legge_elettorale: String,
+            /// Valori precedenti al turno zero, per i gradini «precedente» delle elettorali.
+            pub legge_elettorale_precedente: LeggeElettorale,
             #[serde(rename = "partito")]
             pub partiti: Vec<DatoPartito>,
             pub governo: DatoGoverno,

@@ -9,6 +9,8 @@ use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+#[cfg(test)]
+use ts_rs::TS;
 
 mod composizione;
 mod giudizio;
@@ -27,6 +29,7 @@ pub(crate) const FINESTRA_MASSIMA: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub enum Condizione {
     DipendentePrivato,
     DipendentePubblico,

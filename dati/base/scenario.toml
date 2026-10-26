@@ -11,6 +11,17 @@ legge_elettorale = "legge_180"
 # Coalizioni del 2022 ricondotte ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]. Regola: la collocazione CHES 2024 (`lrgen`) si tronca, classi [k, k+1), poi il TAGLIO dei 7 punti; ne escono sinistra e centrosinistra (posti 2-3), centrodestra e destra (posti 5-6).
 coalizioni = [["sinistra", "centrosinistra"], ["centrodestra", "destra"]]
 
+# Valori precedenti al turno zero: Rosatellum (L. 165/2017) senza collegi, ticket 13:41
+[legge_elettorale_precedente]
+soglia_lista_pb = 300
+coalizioni = true
+soglia_coalizione_pb = 1000
+ripescaggio = false
+premio = "nessuno"
+soglia_premio_pb = 4200
+taglia_premio_pb = 1750
+formula = "hare"
+
 # Governo uscente di centrodestra e destra, posti 5 e 6 per lo stesso troncamento (spec riga 277); partito per dicastero dai ministri del 2026 ricondotti ai posti [assunzione del piano 4; la corrispondenza fra partiti veri e posti resta fuori dai dati, spec riga 284]
 [governo]
 presidente = "destra"

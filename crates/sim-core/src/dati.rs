@@ -1,4 +1,5 @@
 use crate::atti::Atto;
+use crate::disposizioni::{self, DatoDisposizione, Norma};
 use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
@@ -23,10 +24,11 @@ pub struct FileDati {
     pub elettorato: String,
     pub grandezze: String,
     pub atti: String,
+    pub disposizioni: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 9] = [
+    pub const NOMI: [&str; 10] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -36,6 +38,7 @@ impl FileDati {
         "elettorato.toml",
         "grandezze.toml",
         "atti.toml",
+        "disposizioni.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -53,6 +56,7 @@ impl FileDati {
             elettorato: leggi(Self::NOMI[6])?,
             grandezze: leggi(Self::NOMI[7])?,
             atti: leggi(Self::NOMI[8])?,
+            disposizioni: leggi(Self::NOMI[9])?,
         })
     }
 }
@@ -247,6 +251,12 @@ pub struct DatiGioco {
     elettorato: DatiElettorato,
     grandezze: Vec<DatoGrandezza>,
     atti: Vec<Atto>,
+    disposizioni: Vec<DatoDisposizione>,
+}
+
+#[derive(Deserialize)]
+struct FileDisposizioni {
+    disposizione: Vec<DatoDisposizione>,
 }
 
 #[derive(Deserialize)]
@@ -281,6 +291,7 @@ pub(crate) fn dati_base() -> DatiGioco {
         elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
         grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
         atti: include_str!("../../../dati/base/atti.toml").into(),
+        disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
     };
     DatiGioco::da_testi(&file).unwrap()
 }
@@ -290,6 +301,27 @@ fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
         file: file.into(),
         messaggio: e.to_string(),
     }
+}
+
+/// Le leggi elettorali dello scenario, iniziale e precedente, entrambe nel menu.
+fn leggi_elettorali<'a>(
+    scenario: &'a Scenario,
+    elezioni: &'a DatiElezioni,
+) -> Result<(&'a LeggeElettorale, &'a LeggeElettorale), Errore> {
+    let Some(iniziale) = elezioni.impostazioni.get(&scenario.legge_elettorale) else {
+        return Err(Errore::LeggeElettorale(format!(
+            "lo scenario sceglie un'impostazione inesistente: {}",
+            scenario.legge_elettorale
+        )));
+    };
+    let precedente = &scenario.legge_elettorale_precedente;
+    precedente.valida(&elezioni.menu).map_err(|e| match e {
+        Errore::LeggeElettorale(m) => {
+            Errore::LeggeElettorale(format!("legge elettorale precedente: {m}"))
+        }
+        altro => altro,
+    })?;
+    Ok((iniziale, precedente))
 }
 
 impl DatiGioco {
@@ -303,6 +335,16 @@ impl DatiGioco {
 
     pub fn atti(&self) -> &[Atto] {
         &self.atti
+    }
+
+    /// Le disposizioni del file nel loro ordine, poi le nove elettorali.
+    pub fn disposizioni(&self) -> &[DatoDisposizione] {
+        &self.disposizioni
+    }
+
+    /// Posizione di una disposizione per id.
+    pub fn disposizione(&self, id: &str) -> Option<usize> {
+        self.disposizioni.iter().position(|d| d.id == id)
     }
 
     /// Gli atti di un dicastero (per indice) con il loro indice nel catalogo, nell'ordine del file.
@@ -401,6 +443,22 @@ impl DatiGioco {
         let atti = toml::from_str::<FileAtti>(&file.atti)
             .map_err(|e| errore_toml("atti.toml", e))?
             .atto;
+        let mut disposizioni = toml::from_str::<FileDisposizioni>(&file.disposizioni)
+            .map_err(|e| errore_toml("disposizioni.toml", e))?
+            .disposizione;
+        if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
+            return Err(Errore::Disposizioni(format!(
+                "{}: norma elettorale solo dal menu",
+                d.id
+            )));
+        }
+        elezioni.valida(&regioni)?;
+        let (iniziale, precedente) = leggi_elettorali(&scenario, &elezioni)?;
+        disposizioni.extend(disposizioni::elettorali(
+            &elezioni.menu,
+            iniziale,
+            precedente,
+        ));
 
         let dati = DatiGioco {
             dicasteri,
@@ -412,6 +470,7 @@ impl DatiGioco {
             elettorato,
             grandezze,
             atti,
+            disposizioni,
         };
         dati.valida()?;
         Ok(dati)
@@ -480,7 +539,9 @@ impl DatiGioco {
     /// [`partiti::valida`]); `LeggeElettorale` e `DatiElettorali` (vedi
     /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente;
     /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste);
-    /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze).
+    /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze); `Disposizioni`
+    /// (catalogo: id, gradini, leve, effetti, perimetro, arrivi); `LeggeElettorale` anche per la
+    /// legge elettorale precedente dello scenario.
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -513,6 +574,14 @@ impl DatiGioco {
             }
         }
         self.valida_grandezze()?;
+        self.elezioni.valida(&self.regioni)?;
+        leggi_elettorali(&self.scenario, &self.elezioni)?;
+        disposizioni::valida(
+            &self.disposizioni,
+            &self.dicasteri,
+            &self.grandezze,
+            &self.regioni,
+        )?;
         crate::atti::valida(self)?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
@@ -543,17 +612,6 @@ impl DatiGioco {
             .valida(&self.regioni, &self.dicasteri, self.struttura.settori.len())?;
         self.scenario.valida()?;
         partiti::valida(&self.scenario, &self.dicasteri)?;
-        self.elezioni.valida(&self.regioni)?;
-        if !self
-            .elezioni
-            .impostazioni
-            .contains_key(&self.scenario.legge_elettorale)
-        {
-            return Err(Errore::LeggeElettorale(format!(
-                "lo scenario sceglie un'impostazione inesistente: {}",
-                self.scenario.legge_elettorale
-            )));
-        }
         self.struttura.valida_piramide()?;
         let x0 = produzione_riferimento(self);
         match x0.iter().position(|&x| x.is_nan() || x <= 0.0) {

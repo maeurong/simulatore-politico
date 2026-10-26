@@ -2,6 +2,7 @@ pub mod atti;
 pub mod caso;
 pub mod comando;
 pub mod dati;
+pub mod disposizioni;
 pub mod economia;
 pub mod elettorato;
 pub mod elezioni;
