@@ -291,6 +291,13 @@ mod test {
     }
 
     #[test]
+    fn impulso_esce_dopo_dieci_emivite() {
+        let e = effetto(Forma::Impulso, 8.0, 2, 3.0);
+        assert!(!esaurito(&e, 32));
+        assert!(esaurito(&e, 33));
+    }
+
+    #[test]
     fn segno_del_verso() {
         assert_eq!(Verso::Sale.segno(), 1.0);
         assert_eq!(Verso::Scende.segno(), -1.0);

@@ -4,7 +4,9 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, ferma_tranne, ferma_tutti, indice, senza_shock};
+use comune::{
+    dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice, senza_shock,
+};
 use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
 use sim_core::vista::{Vista, VoceMinistero};
@@ -606,4 +608,319 @@ fn ferma_cantiere_costa_l_attaccamento_del_ministro_in_carica() {
         "{prima} {atteso} {}",
         dopo.soddisfazione
     );
+}
+
+const CASE: &str = "sanita_case_comunita";
+
+/// Ferma senza costo di soddisfazione: le agende si fermano a ogni turno senza che i ministri si
+/// dimettano.
+fn fermare_gratis() -> DatiGioco {
+    let f = imposta(file_base(), "manopole", "[costo_fermare]\nvalore = ", "0.0");
+    DatiGioco::da_testi(&f).unwrap()
+}
+
+/// Turno 1 col seme 7, agende ferme dal turno zero: la Sanità avvia le case di comunità, le altre
+/// agende sono ferme. Rende la partita al turno 2.
+fn cantiere_solo() -> Partita {
+    let mut p = Partita::nuova(fermare_gratis(), 7);
+    ferma_tutti(&mut p);
+    p.chiudi_turno();
+    if ministero(&p.vista(), "sanita")
+        .agenda
+        .as_ref()
+        .unwrap()
+        .atto
+        != CASE
+    {
+        p.comanda(dirotta("sanita", Some(CASE), None)).unwrap();
+    }
+    ferma_tranne(&mut p, "sanita");
+    p.chiudi_turno();
+    p
+}
+
+fn effetti_di(p: &Partita, dicastero: &str) -> Vec<sim_core::grandezze::EffettoAttivo> {
+    let i = indice(dicastero);
+    (p.grandezze().effetti.iter())
+        .filter(|e| e.dicastero == i)
+        .cloned()
+        .collect()
+}
+
+fn cantiere(p: &Partita, dicastero: &str) -> Option<sim_core::vista::VoceCantiere> {
+    ministero(&p.vista(), dicastero).cantieri.first().cloned()
+}
+
+fn residuo(p: &Partita, dicastero: &str) -> i64 {
+    ministero(&p.vista(), dicastero).margine_residuo
+}
+
+#[test]
+fn cantiere_finito_registra_effetti_una_volta_e_sparisce() {
+    let d = dati_base();
+    let atto = d.atti().iter().find(|a| a.id == CASE).unwrap();
+    let mut p = cantiere_solo();
+    assert_eq!(cantiere(&p, "sanita").unwrap().turni_mancanti, 3);
+    let c = f64::from(
+        ministero(&p.vista(), "sanita")
+            .ministro
+            .as_ref()
+            .unwrap()
+            .capacita,
+    );
+    while cantiere(&p, "sanita").is_some() {
+        assert!(effetti_di(&p, "sanita").is_empty());
+        assert!(ministero(&p.vista(), "sanita").ministro.is_some());
+        assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+        ferma_tutti(&mut p);
+        p.chiudi_turno();
+    }
+    // Con i prezzi sopra 1 la rata supera un quarto del margine annuo: l'ultima aspetta gennaio.
+    let fine = p.vista().turno - 1;
+    let effetti = effetti_di(&p, "sanita");
+    assert_eq!(effetti.len(), atto.effetti.len());
+    for (e, scritto) in effetti.iter().zip(&atto.effetti) {
+        let ritardo = (f64::from(scritto.ritardo) * 3.0 / c).round() as u32;
+        assert_eq!(e.inizio, fine + ritardo);
+    }
+    ferma_tutti(&mut p);
+    p.chiudi_turno();
+    assert_eq!(effetti_di(&p, "sanita").len(), atto.effetti.len());
+}
+
+#[test]
+fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
+    let s = indice("sanita");
+    let mut p = Partita::nuova(fermare_gratis(), 7);
+    ferma_tutti(&mut p);
+    p.chiudi_turno();
+    if ministero(&p.vista(), "sanita")
+        .agenda
+        .as_ref()
+        .unwrap()
+        .atto
+        != CASE
+    {
+        p.comanda(dirotta("sanita", Some(CASE), None)).unwrap();
+    }
+    ferma_tranne(&mut p, "sanita");
+    let prima = residuo(&p, "sanita");
+    p.chiudi_turno();
+    let f = cantiere(&p, "sanita").unwrap();
+    assert_eq!((f.speso, f.turni_mancanti), (f.rata, 3));
+    assert_eq!(residuo(&p, "sanita"), prima - f.rata);
+    // Margine pari alla rata, agenda annunciata: paga la rata, l'agenda non si esegue.
+    let mut q = edita(&p, |j| {
+        j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(f.rata);
+    })
+    .unwrap();
+    assert!(ministero(&q.vista(), "sanita").agenda.is_some());
+    ferma_tranne(&mut q, "sanita");
+    q.chiudi_turno();
+    let v = q.vista();
+    let m = ministero(&v, "sanita");
+    assert_eq!((m.margine_residuo, m.cantieri.len()), (0, 1));
+    assert_eq!(m.cantieri[0].turni_mancanti, 2);
+    assert!(effetti_di(&q, "sanita").is_empty());
+}
+
+/// Il cantiere del turno 2 con il margine residuo editato a `margine`, agende ferme; chiude il turno.
+fn con_residuo(margine: i64) -> (Partita, sim_core::vista::VoceCantiere) {
+    let s = indice("sanita");
+    let p = cantiere_solo();
+    let f = cantiere(&p, "sanita").unwrap();
+    let mut q = edita(&p, |j| {
+        j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(margine + f.rata);
+    })
+    .unwrap();
+    ferma_tutti(&mut q);
+    q.chiudi_turno();
+    (q, f)
+}
+
+#[test]
+fn cantiere_senza_fondi_resta_fermo_senza_perdere_quanto_speso() {
+    let (q, prima) = con_residuo(-1);
+    let dopo = cantiere(&q, "sanita").unwrap();
+    assert_eq!(dopo, prima);
+    assert_eq!(residuo(&q, "sanita"), prima.rata - 1);
+}
+
+#[test]
+fn cantiere_con_residuo_pari_alla_rata_avanza() {
+    let (q, prima) = con_residuo(0);
+    let dopo = cantiere(&q, "sanita").unwrap();
+    assert_eq!(dopo.turni_mancanti, prima.turni_mancanti - 1);
+    assert_eq!(dopo.speso, prima.speso + prima.rata);
+    assert_eq!(residuo(&q, "sanita"), 0);
+}
+
+#[test]
+fn margine_si_azzera_solo_a_gennaio_e_non_si_accumula() {
+    let mut p = Partita::nuova(fermare_gratis(), 1);
+    let mut r = Vec::new();
+    for turno in 0..=9 {
+        r.push(residuo(&p, "sanita"));
+        if turno == 2 {
+            ferma_tranne(&mut p, "sanita");
+        } else {
+            ferma_tutti(&mut p);
+        }
+        p.chiudi_turno();
+    }
+    let spesa = r[2] - r[3];
+    assert!(spesa > 0, "{r:?}");
+    assert!(r[1] > r[0], "{r:?}");
+    assert_eq!((r[2], r[4]), (r[1], r[3]), "{r:?}");
+    assert_eq!(r[5], r[1], "{r:?}");
+    assert!(r[5..9].iter().all(|x| *x == r[1]), "{r:?}");
+    assert_eq!(r[9], r[1], "{r:?}");
+}
+
+#[test]
+fn salva_e_carica_a_ogni_turno_per_12_turni() {
+    let mut p = Partita::nuova(dati_base(), 13);
+    for _ in 0..12 {
+        let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+        p.chiudi_turno();
+        q.chiudi_turno();
+        assert_eq!(p.salva().unwrap(), q.salva().unwrap());
+    }
+}
+
+#[test]
+fn effetto_regionale_muove_solo_la_regione_bersaglio() {
+    const IT: &str = "infrastrutture_trasporti";
+    const ATTO: &str = "infrastrutture_trasporti_commissari";
+    let d = dati_base();
+    let calabria = d.regioni().iter().position(|r| r.id == "calabria").unwrap();
+    let k = d.grandezza("domanda_regionale").unwrap();
+    let (mut a, mut b) = coppia(3);
+    for p in [&mut a, &mut b] {
+        ferma_tutti(p);
+        p.chiudi_turno();
+    }
+    let ag = ministero(&a.vista(), IT).agenda.clone().unwrap();
+    let atto = (ag.atto != ATTO).then_some(ATTO);
+    let regione = (ag.regione.as_deref() != Some("calabria")).then_some("calabria");
+    if atto.is_some() || regione.is_some() {
+        a.comanda(dirotta(IT, atto, regione)).unwrap();
+    }
+    ferma_tranne(&mut a, IT);
+    ferma_tutti(&mut b);
+    let mut mosso = false;
+    for _ in 0..4 {
+        a.chiudi_turno();
+        b.chiudi_turno();
+        let (va, vb) = (&a.grandezze().valori[k], &b.grandezze().valori[k]);
+        for (r, (x, y)) in va.iter().zip(vb).enumerate() {
+            if r == calabria {
+                mosso |= x != y;
+            } else {
+                assert_eq!(x, y, "regione {r}");
+            }
+        }
+        ferma_tutti(&mut a);
+        ferma_tutti(&mut b);
+    }
+    assert!(mosso);
+}
+
+#[test]
+fn ferma_e_dirotta_costano_in_proporzione_alla_perdita_di_attaccamento() {
+    const IT: &str = "infrastrutture_trasporti";
+    let d = dati_base();
+    let (s, it) = (indice("sanita"), indice(IT));
+    let (fermare, regione) = (
+        d.manopola("costo_fermare"),
+        d.manopola("costo_dirottare_regione"),
+    );
+    let mut p = Partita::nuova(dati_base(), 5);
+    p.chiudi_turno();
+    let attaccamenti = [1.0, 0.5, 0.2, -0.5];
+    let ag = p.ministri().dicasteri[it].agenda.clone().unwrap();
+    let (scelta, altra) = (
+        ag.regione.unwrap(),
+        (ag.regione.unwrap() + 1) % d.regioni().len(),
+    );
+    let p = edita(&p, |j| {
+        j["ministri"]["dicasteri"][s]["agenda"]["attaccamenti"] = json!(attaccamenti);
+        let mut bersaglio = vec![0.0; d.regioni().len()];
+        bersaglio[scelta] = 3.0;
+        bersaglio[altra] = 1.0;
+        j["ministri"]["dicasteri"][it]["agenda"]["bersaglio"] = json!(bersaglio);
+    })
+    .unwrap();
+    let soddisfazione = |p: &Partita, id: &str| {
+        ministero(&p.vista(), id)
+            .ministro
+            .as_ref()
+            .unwrap()
+            .soddisfazione
+    };
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    let annunciato = m.agenda.as_ref().unwrap().atto.clone();
+    let pos = |id: &str| {
+        d.atti_del_dicastero(s)
+            .position(|(_, a)| a.id == id)
+            .unwrap()
+    };
+    let a_ann = attaccamenti[pos(&annunciato)];
+    let prima = soddisfazione(&p, "sanita");
+    let mut fermata = Partita::carica(&p.salva().unwrap()).unwrap();
+    fermata.comanda(ferma("sanita")).unwrap();
+    let atteso = (prima - fermare * a_ann).clamp(0.0, 100.0);
+    assert!((soddisfazione(&fermata, "sanita") - atteso).abs() < 1e-9);
+    for x in m.atti.iter().filter(|x| x.id != annunciato && x.pagabile) {
+        let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+        q.comanda(dirotta("sanita", Some(&x.id), None)).unwrap();
+        let perdita = (a_ann - attaccamenti[pos(&x.id)]).max(0.0);
+        let atteso = (prima - fermare * perdita).clamp(0.0, 100.0);
+        assert!(
+            (soddisfazione(&q, "sanita") - atteso).abs() < 1e-9,
+            "{}",
+            x.id
+        );
+    }
+    let prima = soddisfazione(&p, IT);
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    let altra_id = d.regioni()[altra].id.clone();
+    q.comanda(dirotta(IT, None, Some(&altra_id))).unwrap();
+    let atteso = (prima - regione * 2.0).clamp(0.0, 100.0);
+    assert!((soddisfazione(&q, IT) - atteso).abs() < 1e-9);
+}
+
+#[test]
+fn successore_in_rodaggio_esegue_con_capacita_ridotta() {
+    const LISTE: &str = "sanita_liste_straordinario";
+    let d = dati_base();
+    let atto = d.atti().iter().find(|a| a.id == LISTE).unwrap();
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    ferma_tutti(&mut p);
+    p.chiudi_turno();
+    ferma_tutti(&mut p);
+    p.chiudi_turno();
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    let x = m.ministro.as_ref().unwrap();
+    assert!(x.rodaggio && x.capacita > 1, "{x:?}");
+    if m.agenda.as_ref().unwrap().atto != LISTE {
+        p.comanda(dirotta("sanita", Some(LISTE), None)).unwrap();
+    }
+    ferma_tranne(&mut p, "sanita");
+    let turno = v.turno;
+    let c = (f64::from(x.capacita) - d.manopola("riduzione_rodaggio")).max(1.0);
+    p.chiudi_turno();
+    let effetti = effetti_di(&p, "sanita");
+    assert_eq!(effetti.len(), atto.effetti.len());
+    for (e, scritto) in effetti.iter().zip(&atto.effetti) {
+        assert!((e.intensita - scritto.intensita * c / 3.0).abs() < 1e-12);
+        let ritardo = (f64::from(scritto.ritardo) * 3.0 / c).round() as u32;
+        assert_eq!(e.inizio, turno + ritardo);
+    }
 }

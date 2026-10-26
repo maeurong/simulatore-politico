@@ -623,6 +623,38 @@ mod test {
         assert_eq!(cinque[0].inizio, 13);
     }
 
+    #[test]
+    fn effetti_di_scarta_la_regione_sulle_grandezze_nazionali() {
+        let d = dati();
+        let effetto = |grandezza: &str| EffettoAtto {
+            grandezza: grandezza.into(),
+            intensita: 2.0,
+            ritardo: 0,
+            forma: Forma::Stock,
+            durata: 10.0,
+        };
+        let atto = Atto {
+            id: "prova".into(),
+            nome: "Prova".into(),
+            motto: String::new(),
+            dicastero: "infrastrutture_trasporti".into(),
+            velocita: Velocita::Lento,
+            lato: Lato::Sinistra,
+            posizione: 3.0,
+            turni: 1,
+            costo: 1.0,
+            effetti: vec![
+                effetto("stock_infrastrutture"),
+                effetto("qualita_trasporti"),
+            ],
+        };
+        let e = effetti_di(&d, &atto, 5, Some(3), 3.0, 0);
+        assert_eq!(
+            e.iter().map(|x| x.regione).collect::<Vec<_>>(),
+            [Some(3), None]
+        );
+    }
+
     /// Un atto che peggiora molto l'indicatore non va sotto `o = −1`.
     #[test]
     #[expect(

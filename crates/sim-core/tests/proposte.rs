@@ -188,12 +188,13 @@ fn dimissioni_annullano_agenda_e_proposta() {
         ministero(&v, "sanita").ministro.is_none() && ministero(&v, "sanita").proposta.is_none()
     );
     assert_eq!(ministero(&v, IT).margine_residuo, residuo - rate);
-    let mancanti = |v: &Vista| -> Vec<u32> {
+    let mancanti = |v: &Vista| -> Vec<(u32, i64)> {
         (ministero(v, IT).cantieri.iter())
-            .map(|c| c.turni_mancanti)
+            .map(|c| (c.turni_mancanti, c.speso))
             .collect()
     };
     let prima = mancanti(&v);
+    assert!(rate > 0 && !prima.is_empty(), "{rate} {prima:?}");
     p.chiudi_turno();
     // Turno 4: nell'interim i cantieri sono rimasti fermi, senza perdere quanto speso.
     let v = p.vista();
