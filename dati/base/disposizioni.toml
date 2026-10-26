@@ -617,7 +617,7 @@ precedente = "2_3"
 in_arrivo = [{ gradino = "1", anno = 2027, trimestre = 1 }, { gradino = "0_75", anno = 2028, trimestre = 1 }]
 gradini = [
   { id = "0", nome = "nessuno stanziamento", posizione = 5.0, saldo = -0.1, effetti = [{ grandezza = "investimenti_privati", intensita = -8.0, ritardo = 2 }] },
-  { id = "0_75", nome = "0,75 miliardi", posizione = 4.5, saldo = -0.07, effetti = [{ grandezza = "investimenti_privati", intensita = -4.0, ritardo = 2 }] },
+  { id = "0_75", nome = "0,75 miliardi", posizione = 4.5, saldo = -0.07, effetti = [{ grandezza = "investimenti_privati", intensita = -6.0, ritardo = 2 }] },
   { id = "1", nome = "1 miliardo", posizione = 4.0, saldo = -0.06, effetti = [{ grandezza = "investimenti_privati", intensita = -4.0, ritardo = 2 }] },
   { id = "2_3", nome = "2,3 miliardi", posizione = 3.5, saldo = 0.0 },
 ]
