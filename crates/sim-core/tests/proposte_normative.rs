@@ -184,6 +184,12 @@ fn legge_respinta_da_poco_non_si_ripropone() {
             continue;
         }
         assert_ne!(riforma(&p).map(|r| r.0), Some(d));
+        // Controllo: il None non è un ministro muto, entro quattro turni propone altro.
+        let altra = (0..4).find_map(|_| {
+            p.chiudi_turno();
+            riforma(&p)
+        });
+        assert!(altra.is_some(), "il ministro non propone più nulla");
         trovata = true;
     }
     assert!(trovata);

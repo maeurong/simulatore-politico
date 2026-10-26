@@ -340,6 +340,22 @@ fn ritiro_dopo_la_fiducia_rimborsa_l_intesa() {
     );
 }
 
+/// Conversione in calendario ma decreto 0 in agenda ed economia: nessun decreto da convertire.
+#[test]
+#[ignore = "bug: controlla_decreti (partita.rs:1390) non rifiuta una conversione Accolti con decreto 0"]
+fn conversione_orfana_al_caricamento_rifiutata() {
+    let (p, _) = accolta(sanita_cara());
+    let e = edita(&p, |j| {
+        j["ministri"]["dicasteri"][3]["agenda"]["decreto"] = 0.into();
+        j["economia"]["decreti"][3] = 0.into();
+    })
+    .err();
+    assert!(
+        matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
+        "{e:?}"
+    );
+}
+
 type Modifica = Box<dyn Fn(&mut serde_json::Value)>;
 
 /// Un salvataggio col decreto in agenda incoerente con economia, margine o calendario è illeggibile.
