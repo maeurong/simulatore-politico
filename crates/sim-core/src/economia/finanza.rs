@@ -7,27 +7,35 @@ use crate::dati::DatiGioco;
 use crate::misure::Misure;
 use crate::partita::Trimestre;
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use ts_rs::TS;
 
 pub(super) const MLD: f64 = 1e9;
 
 /// Euro annui.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub struct BudgetDicastero {
     pub id: String,
     pub spesa: i64,
     pub salari: i64,
     pub acquisti: i64,
     pub margine: i64,
+    /// Il livello dei prezzi a cui la voce ha preso la sua cifra nominale.
+    pub livello_prezzi: f64,
 }
 
 /// Cifre annue nominali, in euro.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub struct Bilancio {
     pub anno: u16,
     pub dicasteri: Vec<BudgetDicastero>,
     pub aliquote: Aliquote,
-    /// 1 al turno zero; l'indicizzazione degli scaglioni lo muoverà.
+    /// Il livello dei prezzi a cui gli scaglioni hanno preso le soglie: 1 al turno zero.
     pub livello_prezzi_scaglioni: f64,
+    /// Euro annui stanziati per le emergenze; nessuno li spende fino al piano 9.
+    pub fondo_riserva: i64,
 }
 
 /// Euro del trimestre.
@@ -118,15 +126,18 @@ impl Bilancio {
                         salari: quota(d.salari_pil),
                         acquisti: quota(d.acquisti_pil),
                         margine: euro(margine * spesa as f64),
+                        livello_prezzi: 1.0,
                     }
                 })
                 .collect(),
             aliquote: dati.scenario().aliquote.clone(),
             livello_prezzi_scaglioni: 1.0,
+            fondo_riserva: euro(dati.manopola("fondo_riserva") * MLD),
         }
     }
 
-    /// Il bilancio dell'anno dopo: ogni voce × `k`.
+    /// Il bilancio dell'anno dopo: ogni voce dei dicasteri, col suo livello dei prezzi, e il
+    /// fondo × `k`.
     pub(crate) fn scalato(&self, k: f64) -> Bilancio {
         let s = |x: i64| euro(x as f64 * k);
         Bilancio {
@@ -140,10 +151,12 @@ impl Bilancio {
                     salari: s(d.salari),
                     acquisti: s(d.acquisti),
                     margine: s(d.margine),
+                    livello_prezzi: d.livello_prezzi * k,
                 })
                 .collect(),
             aliquote: self.aliquote.clone(),
             livello_prezzi_scaglioni: self.livello_prezzi_scaglioni,
+            fondo_riserva: s(self.fondo_riserva),
         }
     }
 
@@ -247,6 +260,11 @@ impl Economia {
             Some(b) if b.anno == data.anno => b,
             _ => &self.bilancio,
         }
+    }
+
+    /// Gennaio-marzo senza un bilancio approvato per l'anno.
+    pub(crate) fn esercizio_provvisorio(&self, data: Trimestre) -> bool {
+        data.trimestre == 1 && self.bilancio_in_vigore(data).anno != data.anno
     }
 
     /// Blocco finanza pubblica del trimestre `data`: prima della IS, sullo stato del turno prima.

@@ -2,7 +2,7 @@
 //! Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura del turno.
 
 use crate::dati::{DatiGioco, Ruolo};
-use crate::economia::{Economia, eti, fattore};
+use crate::economia::{Economia, Scaglione, eti, fattore};
 use crate::elettorato::Elettorato;
 use crate::errore::Errore;
 use crate::grandezze::{Grandezze, contributo};
@@ -133,26 +133,38 @@ impl Misure {
             .and_then(|i| m.dicasteri.get(i)?.ministro.as_ref())
             .map_or(1.0, |x| x.capacita_effettiva(dati));
 
-        // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
-        let scenario = dati.scenario();
-        let t = el.aliquota_media_irpef(dati, &e.bilancio_in_vigore(data).aliquote.irpef);
-        let t_scenario = el.aliquota_media_irpef(dati, &scenario.aliquote.irpef);
-        let t0 = el.aliquota_irpef_0;
-        let fattore_irpef = if t0 > 0.0 { t / t0 } else { 1.0 };
-        let imponibile = manopola("elasticita_imponibile");
-        let irpef_discrezionale = fattore(t, t0, imponibile) - fattore(t_scenario, t0, imponibile);
-
         Misure {
             riscossione,
-            fattore_irpef,
-            irpef_discrezionale,
-            eti_irpef: eti(t, t0, imponibile),
             prezzo_energia,
             domanda_regionale: regionale("domanda_regionale", 0.0),
             disoccupazione_strutturale,
             crescita_potenziale,
             capacita_economia,
             merito: Self::merito(dati, g, e, turno),
+            fattore_irpef: 1.0,
+            irpef_discrezionale: 0.0,
+            eti_irpef: 1.0,
+        }
+        // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
+        .con_scaglioni(dati, el, &e.bilancio_in_vigore(data).aliquote.irpef)
+    }
+
+    /// Le stesse misure con i termini IRPEF degli scaglioni `scaglioni`, ai redditi correnti.
+    pub(crate) fn con_scaglioni(
+        &self,
+        dati: &DatiGioco,
+        el: &Elettorato,
+        scaglioni: &[Scaglione],
+    ) -> Misure {
+        let t = el.aliquota_media_irpef(dati, scaglioni);
+        let t_scenario = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
+        let t0 = el.aliquota_irpef_0;
+        let imponibile = dati.manopola("elasticita_imponibile");
+        Misure {
+            fattore_irpef: if t0 > 0.0 { t / t0 } else { 1.0 },
+            irpef_discrezionale: fattore(t, t0, imponibile) - fattore(t_scenario, t0, imponibile),
+            eti_irpef: eti(t, t0, imponibile),
+            ..self.clone()
         }
     }
 

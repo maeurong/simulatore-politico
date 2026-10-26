@@ -13,8 +13,10 @@ mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
-pub use legge_bilancio::{Aliquote, Scaglione, irpef};
-pub(crate) use legge_bilancio::{eti, fattore};
+pub use legge_bilancio::{Aliquote, PerditaReale, RiepilogoBilancio, Scaglione, Voce, irpef};
+pub(crate) use legge_bilancio::{
+    FUORI_STAGIONE, bozza, eti, fattore, indicizza, normalizza, perdita_reale, riepilogo,
+};
 pub use previdenza::Annata;
 pub use regole_ue::RegoleUe;
 pub use sfc::{Settori, Sfc};
@@ -70,6 +72,8 @@ pub struct Economia {
     pub bilancio: Bilancio,
     /// Bilancio dell'anno dopo, se approvato.
     pub bilancio_approvato: Option<Bilancio>,
+    /// Legge di bilancio presentata nel turno, in attesa dell'aula.
+    pub bilancio_presentato: Option<Bilancio>,
     /// Euro dei decreti (fondi accolti) del turno: spesi per intero nel trimestre che si chiude,
     /// fuori dal bilancio annuo.
     pub decreti: i64,
@@ -155,6 +159,7 @@ impl Economia {
                 - dati.manopola("tasso_naturale_reale"),
             bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
             bilancio,
+            bilancio_presentato: None,
             decreti: 0,
             debito,
             tasso_medio_debito: s.costo_medio_debito.valore,

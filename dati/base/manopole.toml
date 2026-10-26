@@ -732,3 +732,17 @@ valore = 0.25
 min = 0.0
 max = 0.6
 ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_taglio_budget]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "04"
+
+# pericolosita-naturale-regioni:134 (0,2-0,4 l'anno); stato-del-paese:110
+[fondo_riserva]
+valore = 0.3
+min = 0.0
+max = 2.0
+ticket = "19"

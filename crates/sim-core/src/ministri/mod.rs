@@ -35,6 +35,7 @@ pub enum Causa {
     AttoDirottato,
     CantiereFermato,
     PropostaRespinta,
+    BudgetTagliato,
 }
 
 impl fmt::Display for Causa {
@@ -47,6 +48,7 @@ impl fmt::Display for Causa {
             Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
             Self::PropostaRespinta => "proposta di fondi respinta",
+            Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
         })
     }
 }
@@ -285,6 +287,7 @@ impl Ministri {
     /// del decreto: lo spende chi possiede l'economia.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
+        let senza_dicastero = || ko("comando senza dicastero".into());
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
         | Comando::Ferma { dicastero }
@@ -292,10 +295,16 @@ impl Ministri {
         | Comando::FermaCantiere { dicastero, .. }
         | Comando::Accogli { dicastero }
         | Comando::Rinvia { dicastero }
-        | Comando::Respingi { dicastero }) = &c;
+        | Comando::Respingi { dicastero }) = &c
+        else {
+            return senza_dicastero();
+        };
         let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
+        if matches!(c, Comando::Accogli { .. }) && cx.economia.esercizio_provvisorio(cx.data) {
+            return ko("esercizio provvisorio: nessuna misura che costi denaro".into());
+        }
         let st = &mut self.dicasteri[i];
         let sul_ministro = matches!(
             c,
@@ -333,6 +342,7 @@ impl Ministri {
                 }
                 st.scelta = Some(indice);
             }
+            Comando::PresentaBilancio { .. } => return senza_dicastero(),
         }
         Ok(None)
     }

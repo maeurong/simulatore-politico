@@ -1,5 +1,6 @@
 //! Comandi del giocatore alla partita.
 
+use crate::economia::Bilancio;
 use crate::errore::Errore;
 use crate::partita::Partita;
 use serde::{Deserialize, Serialize};
@@ -38,14 +39,22 @@ pub enum Comando {
     Respingi {
         dicastero: String,
     },
+    /// Sostituisce la legge di bilancio già presentata nel turno.
+    PresentaBilancio {
+        bilancio: Bilancio,
+    },
 }
 
 impl Partita {
     /// Applica un comando del giocatore.
     ///
     /// # Errors
-    /// `Comando` col nome del dicastero in causa; la partita resta identica.
+    /// `Comando` col nome del dicastero in causa, `Bilancio` col guasto della legge di
+    /// bilancio; la partita resta identica.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
+        if let Comando::PresentaBilancio { bilancio } = c {
+            return self.presenta_bilancio(&bilancio);
+        }
         let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;
         if let Some(importo) = accolta {
             self.aggiungi_decreto(importo);

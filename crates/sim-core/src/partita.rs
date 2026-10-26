@@ -1,6 +1,8 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::economia::{Annata, Economia};
+use crate::economia::{
+    self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, perdita_reale,
+};
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
@@ -10,7 +12,8 @@ use crate::ministri::{Contesto, Ministri};
 use crate::misure::Misure;
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
+    SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceBudget, VoceDicastero, VoceGrandezza,
+    VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -127,6 +130,7 @@ impl Partita {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
+        self.aula();
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
@@ -217,6 +221,93 @@ impl Partita {
             data: self.data,
         };
         f(&mut self.ministri, &cx)
+    }
+
+    /// Aula: il bilancio presentato è approvato, senza voto finché il piano 6 non lo porta.
+    /// Nell'esercizio provvisorio è dell'anno in corso: il passo di gennaio-marzo che segue lo
+    /// mette in vigore, e il margine residuo diventa i 3/4 di quello nuovo.
+    fn aula(&mut self) {
+        let Some(b) = self.economia.bilancio_presentato.take() else {
+            return;
+        };
+        if self.economia.esercizio_provvisorio(self.data) {
+            for (st, d) in self.ministri.dicasteri.iter_mut().zip(&b.dicasteri) {
+                st.margine_residuo = d.margine / 4 * 3;
+            }
+        }
+        self.economia.bilancio_approvato = Some(b);
+    }
+
+    /// La bozza della legge di bilancio: in ottobre-dicembre senza bilancio approvato, la copia
+    /// nominale del bilancio in vigore con l'anno dopo; nell'esercizio provvisorio, la stessa con
+    /// l'anno in corso; altrimenti `None`.
+    pub fn bozza_bilancio(&self) -> Option<Bilancio> {
+        economia::bozza(&self.economia, self.data)
+    }
+
+    /// Le voci scelte di `b` rivalutate al livello dei prezzi di oggi.
+    ///
+    /// # Errors
+    /// `Bilancio` se il dicastero non c'è o una voce rivalutata esce da 0-1e15.
+    pub fn indicizza(&self, b: &Bilancio, voce: &Voce) -> Result<Bilancio, Errore> {
+        economia::indicizza(b, voce, self.economia.livello_prezzi).map_err(Errore::Bilancio)
+    }
+
+    /// Costo, peso sul tetto UE e perdita reale di `b` rispetto alla bozza, come lo approverebbe
+    /// l'aula.
+    ///
+    /// # Errors
+    /// `Bilancio` fuori stagione o con le stesse regole della presentazione.
+    pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
+        let (bozza, b) = self.bilancio_ammesso(b)?;
+        Ok(economia::riepilogo(
+            &self.economia,
+            &self.dati,
+            &self.elettorato,
+            &self.misure,
+            &b,
+            &bozza,
+        ))
+    }
+
+    /// `PresentaBilancio`: sostituisce quello già presentato; l'aula lo approva in chiusura.
+    pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
+        let (_, b) = self.bilancio_ammesso(b)?;
+        self.economia.bilancio_presentato = Some(b);
+        Ok(())
+    }
+
+    /// La bozza e `b` come lo approverebbe l'aula.
+    fn bilancio_ammesso(&self, b: &Bilancio) -> Result<(Bilancio, Bilancio), Errore> {
+        let bozza =
+            (self.bozza_bilancio()).ok_or_else(|| Errore::Bilancio(FUORI_STAGIONE.into()))?;
+        let b = economia::normalizza(b, &bozza, self.economia.livello_prezzi)
+            .map_err(Errore::Bilancio)?;
+        Ok((bozza, b))
+    }
+
+    fn vista_bilancio(&self) -> VistaBilancio {
+        let e = &self.economia;
+        let b = e.bilancio_in_vigore(self.data);
+        VistaBilancio {
+            anno: b.anno,
+            dicasteri: (b.dicasteri.iter())
+                .map(|d| VoceBudget {
+                    id: d.id.clone(),
+                    spesa: d.spesa,
+                    salari: d.salari,
+                    acquisti: d.acquisti,
+                    margine: d.margine,
+                    perdita_reale: perdita_reale(d.livello_prezzi, e.livello_prezzi),
+                })
+                .collect(),
+            aliquote: b.aliquote.clone(),
+            perdita_reale_scaglioni: perdita_reale(b.livello_prezzi_scaglioni, e.livello_prezzi),
+            fondo_riserva: b.fondo_riserva,
+            presentabile: self.bozza_bilancio().is_some(),
+            presentato: e.bilancio_presentato.is_some(),
+            esercizio_provvisorio: e.esercizio_provvisorio(self.data),
+        }
     }
 
     /// `Accogli`: l'importo è un decreto, speso per intero nel trimestre che si chiude.
@@ -391,6 +482,7 @@ impl Partita {
                 prima_stima: s.prima_stima.clone(),
                 revisione: s.revisione.clone(),
             },
+            bilancio: self.vista_bilancio(),
         }
     }
 
@@ -458,8 +550,7 @@ impl Partita {
             ));
         }
         let id_dicasteri = || partita.dati.dicasteri().iter().map(|d| &d.id);
-        let bilanci = std::iter::once(&e.bilancio).chain(&e.bilancio_approvato);
-        for b in bilanci {
+        for b in e.bilanci() {
             if !b.dicasteri.iter().map(|d| &d.id).eq(id_dicasteri()) {
                 return Err(Errore::SalvataggioIlleggibile(
                     "economia.bilancio non combacia con i dicasteri dei dati".into(),
@@ -526,11 +617,18 @@ fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
 }
 
 impl Economia {
+    /// Il bilancio corrente, l'approvato e il presentato.
+    fn bilanci(&self) -> impl Iterator<Item = &Bilancio> + Clone {
+        std::iter::once(&self.bilancio)
+            .chain(&self.bilancio_approvato)
+            .chain(&self.bilancio_presentato)
+    }
+
     /// Invarianti dei conti che un salvataggio manomesso potrebbe rompere. L'ordine conta:
     /// i limiti sugli importi vengono prima delle somme che li usano.
     fn controlla_coerenza(&self, data: Trimestre) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
-        let bilanci = std::iter::once(&self.bilancio).chain(&self.bilancio_approvato);
+        let bilanci = self.bilanci();
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
         ok(
@@ -549,12 +647,26 @@ impl Economia {
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
+        let livello_ok = |x: f64| x.is_finite() && x > 0.0;
         for b in bilanci.clone() {
             ok(
                 b.aliquote.valida().is_ok()
-                    && b.livello_prezzi_scaglioni.is_finite()
-                    && b.livello_prezzi_scaglioni > 0.0,
-                "economia.bilancio: aliquote incoerenti o livello_prezzi_scaglioni non positivo",
+                    && livello_ok(b.livello_prezzi_scaglioni)
+                    && b.dicasteri.iter().all(|d| livello_ok(d.livello_prezzi)),
+                "economia.bilancio: aliquote incoerenti o un livello_prezzi non positivo",
+            )?;
+            ok(
+                (0..=LIMITE_EURO).contains(&b.fondo_riserva),
+                "economia.bilancio: fondo_riserva fuori da 0-1e15",
+            )?;
+        }
+        if let Some(b) = &self.bilancio_presentato {
+            ok(
+                economia::bozza(self, data).is_some_and(|z| z.anno == b.anno)
+                    && (b.dicasteri.iter())
+                        .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine])
+                        .all(|x| (0..=LIMITE_EURO).contains(&x)),
+                "economia.bilancio_presentato fuori stagione, d'altro anno o con voci negative",
             )?;
         }
         ok(

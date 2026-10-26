@@ -31,7 +31,7 @@ causa_dimissioni: Causa | null,
  */
 agenda: VoceAgenda | null, 
 /**
- * Perché manca l'agenda: `interim` o `margine esaurito`.
+ * Perché manca l'agenda: `esercizio provvisorio`, `interim` o `margine esaurito`.
  */
 motivo_senza_agenda: string | null, 
 /**

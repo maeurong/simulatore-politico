@@ -163,6 +163,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "crescita_giustizia",
     "crescita_energia",
     "crescita_demografia",
+    "costo_taglio_budget",
+    "fondo_riserva",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

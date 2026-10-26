@@ -206,24 +206,56 @@ pub(super) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno
 
 impl Ministri {
     /// Apertura dei lavori: il margine (turno zero: un trimestre del bilancio iniziale; ogni
-    /// gennaio-marzo: l'anno intero del bilancio che vale), le 40 estrazioni di rumore nell'ordine
-    /// del catalogo (sempre, anche per interim e margine esaurito), poi le agende.
+    /// gennaio-marzo: l'anno intero del bilancio che vale, e il costo del taglio reale), le 40
+    /// estrazioni di rumore nell'ordine del catalogo (sempre, anche per interim e margine
+    /// esaurito), poi le agende. Nell'esercizio provvisorio né agende né proposte.
     pub(super) fn apri_agende(&mut self, cx: &Contesto, caso: &mut Caso) {
         let rumore: Vec<f64> = (0..cx.dati.atti().len())
             .map(|_| caso.normale(Flusso::Governo))
             .collect();
         let rif = margini_rif(cx.dati);
         let annuo = cx.economia.bilancio_in_vigore(cx.data);
+        let provvisorio = cx.economia.esercizio_provvisorio(cx.data);
         for i in 0..self.dicasteri.len() {
             if cx.turno == 0 {
                 self.dicasteri[i].margine_residuo = euro(rif[i] as f64 / 4.0);
             } else if cx.data.trimestre == 1 {
                 self.dicasteri[i].margine_residuo = annuo.dicasteri[i].margine;
+                self.taglio_reale(cx, i);
             }
-            let agenda = self.scegli(cx, i, &rumore, &rif);
+            let agenda = if provvisorio {
+                None
+            } else {
+                self.scegli(cx, i, &rumore, &rif)
+            };
             self.dicasteri[i].agenda = agenda;
         }
-        self.proponi(cx);
+        if provvisorio {
+            // Senza agende ogni ministro chiederebbe fondi che nessuno può accogliere.
+            self.dicasteri.iter_mut().for_each(|st| st.proposta = None);
+        } else {
+            self.proponi(cx);
+        }
+    }
+
+    /// Anno nuovo: `taglio = 1 − spesa nuova / (spesa vecchia · (1 + inflazione media delle
+    /// ultime 4)/100)`; se positivo costa `costo_taglio_budget · 100 · taglio`. La spesa nuova è
+    /// quella del bilancio che vale nell'anno, anche le cifre vecchie dell'esercizio provvisorio.
+    fn taglio_reale(&mut self, cx: &Contesto, i: usize) {
+        let e = cx.economia;
+        let inflazione = e.inflazione[..4].iter().sum::<f64>() / 4.0;
+        let nuova = e.bilancio_in_vigore(cx.data).dicasteri[i].spesa as f64;
+        let vecchia = e.bilancio.dicasteri[i].spesa as f64 * (1.0 + inflazione / 100.0);
+        if vecchia > 0.0 {
+            let taglio = 1.0 - nuova / vecchia;
+            let delta = -cx.dati.manopola("costo_taglio_budget") * 100.0 * taglio.max(0.0);
+            penalizza(
+                &mut self.dicasteri[i],
+                Causa::BudgetTagliato,
+                delta,
+                cx.turno,
+            );
+        }
     }
 
     /// L'atto pagabile e senza cantiere in corso col punteggio più alto (a parità il primo), e la
@@ -534,8 +566,10 @@ impl Ministri {
                     || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza"),
             }
         });
+        let provvisorio = cx.economia.esercizio_provvisorio(cx.data);
         let motivo_senza_agenda = match (&agenda, &st.ministro) {
             (Some(_), _) => None,
+            (None, _) if provvisorio => Some("esercizio provvisorio".to_string()),
             (None, None) => Some("interim".to_string()),
             (None, Some(_)) => Some("margine esaurito".to_string()),
         };

@@ -64,7 +64,7 @@ impl RegoleUe {
 impl Economia {
     /// Spesa netta del trimestre appena calcolato in `conti`: spesa primaria meno fondi di
     /// coesione meno la parte dei sussidi sopra quella a disoccupazione strutturale.
-    pub(super) fn spesa_netta_trimestre(&self, dati: &DatiGioco) -> i64 {
+    pub(crate) fn spesa_netta_trimestre(&self, dati: &DatiGioco) -> i64 {
         let u = self.disoccupazione_nazionale(dati);
         let u_strutturale = self.media_regionale(dati, |e| e.disoccupazione_strutturale);
         let s = &self.conti.spese;
