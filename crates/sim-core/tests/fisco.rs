@@ -206,6 +206,25 @@ fn ultimo_scaglione_piu_basso_da_discrezionale_negativo() {
 }
 
 #[test]
+fn il_controfattuale_irpef_e_tutta_la_differenza_di_gettito() {
+    let mut a = con_bilancio(0, |_| ()).unwrap();
+    let mut b = con_bilancio(0, |e| {
+        e["bilancio"]["aliquote"]["irpef"][1]["aliquota"] = json!(0.28)
+    })
+    .unwrap();
+    a.chiudi_turno();
+    b.chiudi_turno();
+    let (ca, cb) = (&a.economia().conti, &b.economia().conti);
+    let d = cb.entrate.irpef - ca.entrate.irpef;
+    assert!(d < -1_000_000_000, "{d}");
+    assert!(
+        (cb.entrate_discrezionali - ca.entrate_discrezionali - d).abs() <= 1,
+        "{} {d}",
+        cb.entrate_discrezionali - ca.entrate_discrezionali
+    );
+}
+
+#[test]
 fn scaglioni_a_zero_azzerano_l_irpef_e_il_discrezionale_e_negativo() {
     let mut p = con_bilancio(0, |e| {
         for s in e["bilancio"]["aliquote"]["irpef"].as_array_mut().unwrap() {

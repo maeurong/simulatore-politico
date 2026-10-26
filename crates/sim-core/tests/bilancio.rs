@@ -7,8 +7,8 @@ mod comune;
 use comune::{dati_base, edita, senza_shock};
 use serde_json::json;
 use sim_core::dati::DatiGioco;
-use sim_core::economia::{Bilancio, RiepilogoBilancio, Voce};
-use sim_core::elettorato::{Fascia, fascia_di};
+use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Voce, irpef};
+use sim_core::elettorato::{Condizione, Fascia, fascia_di};
 use sim_core::ministri::Causa;
 use sim_core::{Comando, Errore, Partita};
 
@@ -271,6 +271,7 @@ fn alzare_la_prima_soglia_tocca_la_perdita_del_primo_scaglione_e_non_del_secondo
 fn indicizzare_un_dicastero_o_gli_scaglioni_tocca_solo_quelli() {
     let p = al_bilancio_2028(1);
     let indice = p.informazione().statistica.indice_prezzi;
+    assert_ne!(indice, p.economia().livello_prezzi);
     let bozza = p.bozza_bilancio().unwrap();
     let sanita = Voce::Dicastero {
         id: "sanita".into(),
@@ -420,4 +421,293 @@ fn indicizza_tutto_indicizza_la_spesa_intera_e_il_resto_oltre_il_tetto_si_limita
     oltre.dicasteri[3].spesa += 1_000_000_000_000;
     presenta(&mut p, oltre).unwrap();
     assert_eq!(spese(presentato(&p)), indicizzate);
+}
+
+fn senza_shock_dati() -> DatiGioco {
+    DatiGioco::da_testi(&senza_shock()).unwrap()
+}
+
+/// Due partite gemelle in ottobre-dicembre 2027: `a` presenta la bozza, `b` la bozza ritoccata.
+fn coppia_presentata(seme: u64, ritocco: impl Fn(&mut Bilancio)) -> (Partita, Partita) {
+    let mut a = al_bilancio_2028(seme);
+    let mut b = edita(&a, |_| {}).unwrap();
+    let bozza = a.bozza_bilancio().unwrap();
+    let mut x = bozza.clone();
+    ritocco(&mut x);
+    presenta(&mut a, bozza).unwrap();
+    presenta(&mut b, x).unwrap();
+    (a, b)
+}
+
+/// Le variazioni `BudgetTagliato` della sanità registrate al turno `turno`.
+fn tagli_sanita(p: &Partita, turno: u32) -> Vec<f64> {
+    (p.ministri().dicasteri[3].variazioni.iter())
+        .filter(|v| v.causa == Causa::BudgetTagliato && v.turno == turno)
+        .map(|v| v.delta)
+        .collect()
+}
+
+#[test]
+fn iva_presentata_in_dicembre_da_gettito_esatto_a_gennaio() {
+    let e = senza_shock_dati().manopola("elasticita_imponibile_iva");
+    let (mut a, mut b) = coppia_presentata(1, |x| x.aliquote.iva = 0.20);
+    for _ in 0..2 {
+        a.chiudi_turno();
+        b.chiudi_turno();
+    }
+    let (ca, cb) = (&a.economia().conti, &b.economia().conti);
+    let atteso = 0.20 / 0.22 * (0.80_f64 / 0.78).powf(e);
+    let rapporto = cb.entrate.iva as f64 / ca.entrate.iva as f64;
+    assert!((rapporto - atteso).abs() < 1e-6, "{rapporto} {atteso}");
+    assert_eq!(
+        (cb.entrate.ires, cb.entrate.contributi),
+        (ca.entrate.ires, ca.entrate.contributi)
+    );
+    assert!((cb.entrate_discrezionali - (cb.entrate.iva - ca.entrate.iva)).abs() <= 1);
+    assert_eq!(ca.entrate_discrezionali, 0);
+}
+
+#[test]
+fn il_gettito_nuovo_non_anticipa_a_dicembre() {
+    let (mut a, mut b) = coppia_presentata(1, |x| x.aliquote.iva = 0.20);
+    a.chiudi_turno();
+    b.chiudi_turno();
+    assert_eq!(a.economia().conti, b.economia().conti);
+    assert_eq!(a.misure(), b.misure());
+}
+
+#[test]
+fn irpef_presentata_da_imposte_di_gruppo_esatte() {
+    let d = senza_shock_dati();
+    let (_, mut b) = coppia_presentata(1, |x| x.aliquote.irpef[2].aliquota = 0.60);
+    b.chiudi_turno();
+    b.chiudi_turno();
+    let s = &b.economia().bilancio.aliquote;
+    assert_eq!(s.irpef[2].aliquota, 0.60);
+    let tasso = |a: &Aliquote, l: f64| irpef(&a.irpef, l) / l + a.contributi;
+    let de = d.elettorato();
+    let lordo = |k: usize| {
+        let r = &b.elettorato().gruppi[k].reddito;
+        r.primario + r.trasferimenti
+    };
+    let k = (0..de.gruppi.len())
+        .find(|&k| de.gruppi[k].condizione != Condizione::Autonomo && lordo(k) > 50_000.0)
+        .unwrap();
+    let dato = &de.gruppi[k];
+    let r = tasso(s, lordo(k)) / tasso(&d.scenario().aliquote, dato.primario + dato.trasferimenti);
+    let atteso = (de.aliquote[&dato.fascia] * lordo(k) * r).min(lordo(k));
+    let imposte = b.elettorato().gruppi[k].reddito.imposte;
+    assert!(
+        (imposte - atteso).abs() <= 1e-9 * atteso,
+        "{imposte} {atteso}"
+    );
+}
+
+#[test]
+fn salva_carica_fra_presentazione_e_aula_non_cambia_il_futuro() {
+    let mut p = al_bilancio_2028(1);
+    let mut b = p.bozza_bilancio().unwrap();
+    b.dicasteri[3].margine *= 2;
+    b.aliquote.iva = 0.20;
+    presenta(&mut p, b).unwrap();
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert!(q.vista().bilancio.presentato);
+    for _ in 0..3 {
+        p.chiudi_turno();
+        q.chiudi_turno();
+        assert_eq!(p.salva().unwrap(), q.salva().unwrap());
+    }
+    assert_eq!(q.economia().bilancio.aliquote.iva, 0.20);
+}
+
+#[test]
+fn provvisorio_poi_secondo_anno_poi_terzo() {
+    let mut p = al_bilancio_2028(3);
+    p.chiudi_turno();
+    assert!(p.vista().bilancio.esercizio_provvisorio);
+    let mut b = p.bozza_bilancio().unwrap();
+    b.aliquote.iva = 0.20;
+    b.dicasteri[3].margine *= 2;
+    let margine = b.dicasteri[3].margine;
+    presenta(&mut p, b).unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    assert_eq!(
+        (v.bilancio.anno, v.ministeri[3].margine_residuo),
+        (2028, margine / 4 * 3)
+    );
+    assert!(!v.bilancio.presentabile);
+    p.chiudi_turno();
+    assert!(!p.vista().bilancio.presentabile);
+    p.chiudi_turno();
+    let bozza = p.bozza_bilancio().unwrap();
+    assert_eq!((bozza.anno, bozza.aliquote.iva), (2029, 0.20));
+    presenta(&mut p, bozza).unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    assert!(!v.bilancio.esercizio_provvisorio);
+    assert_eq!(v.bilancio.anno, 2029);
+    p.chiudi_turno();
+    assert_eq!(p.economia().bilancio.aliquote.iva, 0.20);
+    assert_eq!(p.economia().bilancio.anno, 2029);
+}
+
+#[test]
+fn due_gennai_provvisori_di_fila_senza_presentare() {
+    let mut p = al_bilancio_2028(5);
+    p.chiudi_turno();
+    assert!(p.vista().bilancio.esercizio_provvisorio);
+    for _ in 0..4 {
+        p.chiudi_turno();
+    }
+    let v = p.vista();
+    assert_eq!((v.data.anno, v.data.trimestre), (2029, 1));
+    assert!(v.bilancio.esercizio_provvisorio);
+    let b = p.bozza_bilancio().unwrap();
+    assert_eq!(b.anno, 2029);
+    presenta(&mut p, b).unwrap();
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+    p.chiudi_turno();
+    assert!(!p.vista().bilancio.esercizio_provvisorio);
+}
+
+#[test]
+fn taglio_budget_costa_meno_costo_per_perdita_reale() {
+    let costo = senza_shock_dati().manopola("costo_taglio_budget");
+    let mut p = al_bilancio_2028(4);
+    let mut b = p.bozza_bilancio().unwrap();
+    b.dicasteri[3].salari = b.dicasteri[3].salari * 9 / 10;
+    let attesa = perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita");
+    presenta(&mut p, b).unwrap();
+    let turno = p.vista().turno;
+    p.chiudi_turno();
+    let tagli = tagli_sanita(&p, turno);
+    assert_eq!(tagli.len(), 1, "{tagli:?}");
+    assert!(
+        (tagli[0] + costo * attesa).abs() < 1e-9,
+        "{tagli:?} {attesa}"
+    );
+}
+
+#[test]
+fn ingresso_in_provvisorio_costa_la_perdita_del_bilancio_che_continua() {
+    let costo = senza_shock_dati().manopola("costo_taglio_budget");
+    let mut p = al_bilancio_2028(4);
+    p.chiudi_turno();
+    let v = p.vista();
+    let continua = v.bilancio.dicasteri[3].perdita_reale;
+    assert!(continua > 0.0);
+    let tagli = tagli_sanita(&p, v.turno);
+    assert_eq!(tagli.len(), 1, "{tagli:?}");
+    assert!((tagli[0] + costo * continua).abs() < 1e-9);
+    // Approvare nello stesso gennaio costa di nuovo, sulla perdita del bilancio nuovo (Ruling).
+    let b = p.bozza_bilancio().unwrap();
+    let nuova = perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita");
+    presenta(&mut p, b).unwrap();
+    p.chiudi_turno();
+    let tagli = tagli_sanita(&p, v.turno);
+    assert_eq!(tagli.len(), 2, "{tagli:?}");
+    assert!((tagli[1] + costo * nuova).abs() < 1e-9);
+}
+
+#[test]
+fn indice_pubblicato_non_livello_vero() {
+    let p = al_bilancio_2028(1);
+    let q = edita(&p, |j| {
+        let s = &mut j["informazione"]["statistica"]["indice_prezzi"];
+        *s = json!(s.as_f64().unwrap() * 1.1);
+    })
+    .unwrap();
+    assert_eq!(q.economia().livello_prezzi, p.economia().livello_prezzi);
+    let bozza = q.bozza_bilancio().unwrap();
+    let salari = |x: &Partita| x.indicizza(&bozza, &Voce::Tutto).unwrap().dicasteri[3].salari;
+    let rapporto = (salari(&q) - bozza.dicasteri[3].salari) as f64
+        / (salari(&p) - bozza.dicasteri[3].salari) as f64;
+    let indice = |x: &Partita| x.informazione().statistica.indice_prezzi;
+    let l = bozza.dicasteri[3].livello_prezzi;
+    let atteso = (1.1 * indice(&p) - l) / (indice(&p) - l);
+    assert!((rapporto - atteso).abs() < 1e-6, "{rapporto} {atteso}");
+    let fotocopia = perdita(&q.riepilogo_bilancio(&bozza).unwrap(), "sanita");
+    assert!((fotocopia - 100.0 * (1.0 - l / indice(&q))).abs() < 1e-9);
+}
+
+#[test]
+fn riepilogo_costo_entrate_coincide_coi_conti_del_trimestre_dopo() {
+    let mut a = al_bilancio_2028(1);
+    a.chiudi_turno();
+    assert!(a.vista().bilancio.esercizio_provvisorio);
+    let mut b = edita(&a, |_| {}).unwrap();
+    let bozza = a.bozza_bilancio().unwrap();
+    let mut x = bozza.clone();
+    x.aliquote.iva = 0.20;
+    let costo = b.riepilogo_bilancio(&x).unwrap().costo_entrate as f64;
+    presenta(&mut a, bozza).unwrap();
+    presenta(&mut b, x).unwrap();
+    a.chiudi_turno();
+    b.chiudi_turno();
+    let imposte = |p: &Partita| {
+        let e = &p.economia().conti.entrate;
+        (e.irpef + e.ires + e.iva + e.contributi) as f64
+    };
+    let realizzato = 4.0 * (imposte(&a) - imposte(&b));
+    // Il riepilogo legge l'ultimo trimestre chiuso; il trimestre dopo è cresciuto in nominale.
+    assert!(
+        (costo / realizzato - 1.0).abs() < 0.06,
+        "{costo} {realizzato}"
+    );
+}
+
+#[test]
+fn rifiuti_aggiuntivi_lasciano_la_partita_identica() {
+    let zero = Partita::nuova(dati_base(), 1);
+    let e = (zero.riepilogo_bilancio(&zero.economia().bilancio)).unwrap_err();
+    assert!(e.to_string().contains("fuori stagione"), "{e}");
+    let mut p = al_bilancio_2028(1);
+    p.chiudi_turno();
+    let prima = p.salva().unwrap();
+    let bozza = p.bozza_bilancio().unwrap();
+    let guasti: Vec<(Guasto, &str)> = vec![
+        (Box::new(|b| b.anno = 2027), "anno 2027, atteso 2028"),
+        (Box::new(|b| b.fondo_riserva = -1), "fondo_riserva"),
+        (Box::new(|b| b.aliquote.ires = 0.95), "ires"),
+        (Box::new(|b| b.aliquote.contributi = f64::NAN), "contributi"),
+    ];
+    for (guasta, nome) in guasti {
+        let mut b = bozza.clone();
+        guasta(&mut b);
+        let e = presenta(&mut p, b).unwrap_err();
+        assert!(
+            matches!(e, Errore::Bilancio(_)) && e.to_string().contains(nome),
+            "{e}"
+        );
+    }
+    let mut enorme = bozza.clone();
+    enorme.dicasteri[0].salari = 1_000_000_000_000_000;
+    let e = p.indicizza(&enorme, &Voce::Tutto).unwrap_err();
+    assert!(e.to_string().contains("voce negativa o enorme"), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn presentare_in_aprile_giugno_e_fuori_stagione() {
+    let mut p = Partita::nuova(senza_shock_dati(), 1);
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert_eq!(p.vista().data.trimestre, 2);
+    let prima = p.salva().unwrap();
+    let b = p.economia().bilancio.clone();
+    let e = presenta(&mut p, b).unwrap_err();
+    assert!(e.to_string().contains("fuori stagione"), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn indice_prezzi_non_positivo_o_non_numerico_nel_salvataggio_rifiutato() {
+    let p = Partita::nuova(dati_base(), 1);
+    for guasto in [json!(0.0), json!(-1.0), json!(null)] {
+        let r = edita(&p, |j| {
+            j["informazione"]["statistica"]["indice_prezzi"] = guasto
+        });
+        assert!(matches!(r, Err(Errore::SalvataggioIlleggibile(_))), "{r:?}");
+    }
 }
