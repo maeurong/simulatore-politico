@@ -151,7 +151,7 @@ impl Misure {
 
     /// Le stesse misure con i termini IRPEF degli scaglioni `scaglioni`, ai redditi correnti.
     pub(crate) fn con_scaglioni(
-        &self,
+        self,
         dati: &DatiGioco,
         el: &Elettorato,
         scaglioni: &[Scaglione],
@@ -164,7 +164,7 @@ impl Misure {
             fattore_irpef: if t0 > 0.0 { t / t0 } else { 1.0 },
             irpef_discrezionale: fattore(t, t0, imponibile) - fattore(t_scenario, t0, imponibile),
             eti_irpef: eti(t, t0, imponibile),
-            ..self.clone()
+            ..self
         }
     }
 

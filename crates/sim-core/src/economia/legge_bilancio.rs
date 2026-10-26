@@ -322,11 +322,8 @@ fn conti_con(
     misure: &Misure,
     b: &Bilancio,
 ) -> ContiTrimestre {
-    // ponytail: copia intera dell'economia per una chiamata della UI; basta finché non pesa.
-    let mut e = e.clone();
-    e.bilancio = b.clone();
-    let misure = misure.con_scaglioni(dati, el, &b.aliquote.irpef);
-    conti_del_trimestre(&e, dati, &misure)
+    let misure = misure.clone().con_scaglioni(dati, el, &b.aliquote.irpef);
+    conti_del_trimestre(e, b, dati, &misure)
 }
 
 /// Il riepilogo di `b`, già passato da `normalizza`, contro la `bozza`, con l'indice dei prezzi

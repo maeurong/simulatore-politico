@@ -398,7 +398,7 @@ impl Elettorato {
     }
 
     /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti, con gli scaglioni `s`.
-    pub fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
+    pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
         let d = dati.elettorato();
         let (mut imposta, mut lordo) = (0.0, 0.0);
         for (k, g) in self.gruppi.iter().enumerate() {

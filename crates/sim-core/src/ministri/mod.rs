@@ -286,7 +286,9 @@ impl Ministri {
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
-    /// del decreto: lo spende chi possiede l'economia.
+    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio` non arriva
+    /// mai qui (`Partita::comanda` lo intercetta), quindi «comando senza dicastero» non si
+    /// raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
         let (Comando::ChiediDimissioni { dicastero }

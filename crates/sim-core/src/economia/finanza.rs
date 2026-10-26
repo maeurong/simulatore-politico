@@ -169,11 +169,12 @@ pub(crate) fn bilancio_approvato_iniziale(dati: &DatiGioco, base: &Bilancio) -> 
     base.scalato(1.0 + s.inflazione.valore.min(tetto) / 100.0)
 }
 
-/// L'unica formula di entrate e spese del trimestre, sullo stato `e` com'è ora.
-/// `misure.riscossione` moltiplica IRPEF, IRES e IVA; gli scaglioni e le aliquote del
-/// bilancio in corso, rispetto a quelli dello scenario, muovono il gettito.
+/// L'unica formula di entrate e spese del trimestre, sullo stato `e` com'è ora e col
+/// `bilancio` dato (di solito `e.bilancio`). `misure.riscossione` moltiplica IRPEF, IRES e IVA;
+/// gli scaglioni e le aliquote del bilancio, rispetto a quelli dello scenario, muovono il gettito.
 pub(crate) fn conti_del_trimestre(
     e: &Economia,
+    bilancio: &Bilancio,
     dati: &DatiGioco,
     misure: &Misure,
 ) -> ContiTrimestre {
@@ -181,13 +182,11 @@ pub(crate) fn conti_del_trimestre(
     let riscossione = misure.riscossione;
     let pil_potenziale = e.pil_potenziale_reale * e.livello_prezzi * 4.0 * MLD;
     // Elasticità lineare sul gap del turno prima (economia-italiana-parametri:109).
-    let base = |quota: f64, elasticita: f64, riscossione: f64| {
-        quota / 100.0 * pil_potenziale / 4.0
-            * (1.0 + elasticita * e.output_gap[0] / 100.0)
-            * riscossione
+    let base = |quota: f64, elasticita: f64, risc: f64| {
+        quota / 100.0 * pil_potenziale / 4.0 * (1.0 + elasticita * e.output_gap[0] / 100.0) * risc
     };
     let el = |n: &str| dati.manopola(n);
-    let (a, a0) = (&e.bilancio.aliquote, &s.aliquote);
+    let (a, a0) = (&bilancio.aliquote, &s.aliquote);
     let irpef_base = base(s.irpef_pil.valore, el("elasticita_irpef"), riscossione);
     let irpef = irpef_base * misure.fattore_irpef * misure.eti_irpef;
     // (entrata con `τ = τ₀`, fattore delle aliquote): l'entrata vera è il prodotto.
@@ -232,7 +231,7 @@ pub(crate) fn conti_del_trimestre(
             ),
         },
         spese: Spese {
-            dicasteri: euro(e.bilancio.spesa_totale() as f64 / 4.0) + e.decreti,
+            dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0) + e.decreti,
             pensioni: e.spesa_pensioni(),
             sussidi: e.spesa_sussidi(dati),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),
@@ -276,7 +275,7 @@ impl Economia {
             self.bilancio = b;
         }
         self.previdenza(dati, data);
-        let conti = conti_del_trimestre(self, dati, misure);
+        let conti = conti_del_trimestre(self, &self.bilancio, dati, misure);
         self.decreti = 0;
 
         // Impulso: la spesa discrezionale oltre quella del turno prima rivalutata all'inflazione.

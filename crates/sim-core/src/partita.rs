@@ -198,19 +198,23 @@ impl Partita {
         self.ministri.apri(&cx, &mut self.caso);
         // Anno nuovo in esercizio provvisorio: costa la perdita reale del bilancio che continua.
         if self.economia.esercizio_provvisorio(self.data) {
-            self.costo_taglio(&self.economia.bilancio_in_vigore(self.data).clone());
+            let perdite = self.perdite(self.economia.bilancio_in_vigore(self.data));
+            self.costo_taglio(&perdite);
         }
     }
 
-    /// `BudgetTagliato`: `−costo_taglio_budget · perdita reale` della voce per ogni dicastero con
-    /// ministro.
-    fn costo_taglio(&mut self, b: &Bilancio) {
+    /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
+    fn perdite(&self, b: &Bilancio) -> Vec<f64> {
         let indice = self.indice_prezzi();
-        let perdite: Vec<f64> = (b.dicasteri.iter())
+        (b.dicasteri.iter())
             .map(|d| perdita_reale(d.livello_prezzi, indice))
-            .collect();
+            .collect()
+    }
+
+    /// `BudgetTagliato`: `−costo_taglio_budget · perdita` per ogni dicastero con ministro.
+    fn costo_taglio(&mut self, perdite: &[f64]) {
         let costo = self.dati.manopola("costo_taglio_budget");
-        self.ministri.costo_taglio(&perdite, costo, self.turno);
+        self.ministri.costo_taglio(perdite, costo, self.turno);
     }
 
     /// L'indice dei prezzi pubblicato: la legge di bilancio non legge il livello vero.
@@ -261,7 +265,8 @@ impl Partita {
                 st.margine_residuo = d.margine / 4 * 3;
             }
         }
-        self.costo_taglio(&b);
+        let perdite = self.perdite(&b);
+        self.costo_taglio(&perdite);
         self.economia.bilancio_approvato = Some(b);
     }
 

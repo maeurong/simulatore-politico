@@ -175,7 +175,7 @@ impl Economia {
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
         e.avvia_previdenza(dati);
-        e.conti = finanza::conti_del_trimestre(&e, dati, &Misure::neutre(dati));
+        e.conti = finanza::conti_del_trimestre(&e, &e.bilancio, dati, &Misure::neutre(dati));
         // L'ammenda della PDE la paga il primo passo, non il turno zero.
         e.conti.spese.ammende = 0;
         e.disavanzo_trimestre = e.conti.disavanzo();
