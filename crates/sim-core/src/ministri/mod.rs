@@ -75,7 +75,7 @@ impl fmt::Display for Causa {
             Self::AttoFermato => "atto fermato dal Presidente del Consiglio",
             Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
-            Self::PropostaRespinta => "proposta di fondi respinta",
+            Self::PropostaRespinta => "proposta del ministro respinta",
             Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
             Self::NormaControPosizione => "norma firmata contro la sua posizione",
             Self::LeggeRespinta => "legge respinta in aula",

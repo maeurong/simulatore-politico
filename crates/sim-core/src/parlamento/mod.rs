@@ -374,6 +374,12 @@ impl Parlamento {
         in_misura || (self.confermativi.iter()).any(|r| r.valori.iter().any(|v| v.0 == d))
     }
 
+    /// Il turno da cui la disposizione `d`, in una legge respinta, si ripresenta, se è dopo
+    /// `turno`.
+    pub(crate) fn respinta_da_poco(&self, d: usize, turno: u32) -> Option<u32> {
+        (self.respinte.iter()).find_map(|&(x, da)| (x == d && da > turno).then_some(da))
+    }
+
     /// `PresentaLegge`: controlla, mette la misura in calendario e fa pagare al ministro
     /// proponente la firma contro la sua posizione (non con `ministri = None`: la legge l'ha
     /// proposta lui). Un rifiuto non tocca nulla.
@@ -448,7 +454,7 @@ impl Parlamento {
             if self.in_esame(d) {
                 return ko(format!("{nome} è già in esame"));
             }
-            if let Some(&(_, da)) = (self.respinte.iter()).find(|&&(x, da)| x == d && da > turno) {
+            if let Some(da) = self.respinta_da_poco(d, turno) {
                 return ko(format!(
                     "{nome}: legge respinta, si ripresenta da {}",
                     mese(data_di(da))

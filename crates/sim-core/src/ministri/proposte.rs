@@ -42,11 +42,36 @@ fn mancano(cx: &Contesto, rif: &[i64], i: usize, st: &StatoDicastero, k: usize) 
     costo_atto(cx, rif, i, &cx.dati.atti()[k]).saturating_sub(disponibile(st))
 }
 
-/// La riforma ha ancora senso: la disposizione non è in esame e il gradino non è né in vigore
-/// né bloccato dal referendum.
+/// La disposizione si può presentare: non è in esame né in una legge respinta da poco.
+fn libera(cx: &Contesto, d: usize) -> bool {
+    !cx.parlamento.in_esame(d) && cx.parlamento.respinta_da_poco(d, cx.turno).is_none()
+}
+
+/// Accogli non la rifiuterebbe sempre: la disposizione è [`libera`] e il gradino non è né in
+/// vigore né bloccato dal referendum.
 fn aperta(cx: &Contesto, d: usize, g: usize) -> bool {
     let s = &cx.disposizioni.voci[d];
-    !cx.parlamento.in_esame(d) && s.in_vigore != g && !s.bloccati.contains(&g)
+    libera(cx, d) && s.in_vigore != g && !s.bloccati.contains(&g)
+}
+
+/// Una riforma in corso tiene: è [`aperta`] e il suo innesco vale ancora (il prerequisito
+/// dell'atto manca, o la disposizione in vigore dista dal ministro almeno `distanza_alleato`).
+fn tiene(cx: &Contesto, m: &Ministro, tipo: TipoProposta) -> bool {
+    let TipoProposta::Riforma {
+        disposizione: d,
+        gradino,
+        sblocca,
+    } = tipo
+    else {
+        return true;
+    };
+    let dati = cx.dati;
+    aperta(cx, d, gradino)
+        && match sblocca {
+            Some(k) => (dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni)).is_some(),
+            None => (dati.disposizioni()[d].posizione(cx.disposizioni.voci[d].in_vigore))
+                .is_some_and(|v| (v - m.posizione).abs() >= dati.manopola("distanza_alleato")),
+        }
 }
 
 /// L'atto del dicastero `i` più sentito (`o > 0`, a parità il primo), fra quelli senza cantiere
@@ -104,7 +129,7 @@ fn distanza(cx: &Contesto, i: usize, m: &Ministro) -> Option<TipoProposta> {
         let candidata = x.dicastero.as_ref() == Some(id)
             && x.norma == Norma::Ordinaria
             && s.bloccati.is_empty()
-            && !cx.parlamento.in_esame(d);
+            && libera(cx, d);
         let Some(vigore) = x.posizione(s.in_vigore).filter(|_| candidata) else {
             continue;
         };
@@ -139,8 +164,8 @@ impl Ministri {
     /// Una proposta di fondi già in corso si ricalcola sul suo atto: con un'agenda, o se l'atto
     /// è ormai pagabile, decade senza costo; altrimenti l'`importo` si aggiorna (`rinviata` e
     /// `turni_in_sospeso` restano). Un atto col prerequisito mancante non si propone, e la sua
-    /// proposta decade. Una proposta di riforma già in corso resta finché è [`aperta`], poi
-    /// decade senza costo.
+    /// proposta decade. Una proposta di riforma già in corso resta finché [`tiene`], poi decade
+    /// senza costo.
     pub(super) fn proponi(&mut self, cx: &Contesto) {
         let (dati, rif) = (cx.dati, margini_rif(cx.dati));
         let ammesso = |k: usize| {
@@ -163,11 +188,7 @@ impl Ministri {
                     TipoProposta::Fondi { atto, .. } => senza_agenda
                         .then(|| fondi(atto, mancano(cx, &rif, i, st, atto)))
                         .flatten(),
-                    TipoProposta::Riforma {
-                        disposizione,
-                        gradino,
-                        ..
-                    } => aperta(cx, disposizione, gradino).then_some(p.tipo),
+                    TipoProposta::Riforma { .. } => tiene(cx, m, p.tipo).then_some(p.tipo),
                 }
                 .map(|tipo| Proposta { tipo, ..p }),
                 None => senza_agenda
@@ -187,13 +208,15 @@ impl Ministri {
     }
 
     /// Default delle decisioni: una proposta non decisa resta in sospeso un turno (due se
-    /// rinviata), poi vale respinta.
+    /// rinviata), poi vale respinta. Una riforma che non [`tiene`] più decade senza costo.
     pub(crate) fn decidi_proposte(&mut self, cx: &Contesto) {
         for st in &mut self.dicasteri {
-            let Some(p) = st.proposta.as_mut() else {
+            let (Some(p), Some(m)) = (st.proposta.as_mut(), st.ministro.as_ref()) else {
                 continue;
             };
-            if p.turni_in_sospeso < 1 + u32::from(p.rinviata) {
+            if !tiene(cx, m, p.tipo) {
+                st.proposta = None;
+            } else if p.turni_in_sospeso < 1 + u32::from(p.rinviata) {
                 p.turni_in_sospeso += 1;
             } else {
                 st.proposta = None;

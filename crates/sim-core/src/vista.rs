@@ -257,7 +257,7 @@ pub struct VoceMinistero {
     pub cantieri: Vec<VoceCantiere>,
     /// Euro, prima delle rate dei cantieri.
     pub margine_residuo: i64,
-    /// La richiesta di fondi in attesa di Accogli, Rinvia o Respingi.
+    /// La proposta (di fondi o di riforma) in attesa di Accogli, Rinvia o Respingi.
     pub proposta: Option<VoceProposta>,
 }
 

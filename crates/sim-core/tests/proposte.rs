@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{edita, file_base, indice, sostituisci};
+use comune::{dati_base, edita, file_base, indice, sostituisci};
 use serde_json::{Value, json};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::{Causa, Proposta, TipoProposta};
@@ -325,7 +325,28 @@ fn salvataggi_con_proposte_corrotte_rifiutati() {
     let s = indice("sanita");
     let atto = fondi(p.ministri().dicasteri[s].proposta.unwrap()).0;
     assert!(edita(&p, |_| ()).is_ok());
+    let ticket = dati_base().disposizione("ticket").unwrap();
+    let riforma = move |j: &mut Value, gradino: usize, sblocca: Value| {
+        j["ministri"]["dicasteri"][s]["proposta"]["tipo"] =
+            json!({"riforma": {"disposizione": ticket, "gradino": gradino, "sblocca": sblocca}});
+    };
+    assert!(edita(&p, |j| riforma(j, 0, Value::Null)).is_ok());
     let righe: Vec<(&str, Modifica)> = vec![
+        (
+            "riforma a un gradino fuori dalla disposizione",
+            Box::new(move |j| riforma(j, 99, Value::Null)),
+        ),
+        (
+            "riforma che sblocca un atto di un altro dicastero",
+            Box::new(move |j| riforma(j, 0, json!(0))),
+        ),
+        (
+            "riforma in interim",
+            Box::new(move |j| {
+                riforma(j, 0, Value::Null);
+                j["ministri"]["dicasteri"][s]["ministro"] = Value::Null;
+            }),
+        ),
         (
             "importo nullo",
             Box::new(move |j| {

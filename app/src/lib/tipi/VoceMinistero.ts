@@ -43,6 +43,6 @@ atti: Array<VoceAtto>, cantieri: Array<VoceCantiere>,
  */
 margine_residuo: bigint, 
 /**
- * La richiesta di fondi in attesa di Accogli, Rinvia o Respingi.
+ * La proposta (di fondi o di riforma) in attesa di Accogli, Rinvia o Respingi.
  */
 proposta: VoceProposta | null, };
