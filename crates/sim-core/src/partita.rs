@@ -290,7 +290,7 @@ impl Partita {
             &self.misure,
             &b,
             &bozza,
-            self.indice_prezzi(),
+            &self.informazione.statistica,
         )
         .map_err(Errore::Bilancio)
     }

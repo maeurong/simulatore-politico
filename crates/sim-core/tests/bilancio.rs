@@ -344,3 +344,25 @@ fn bilancio_presentato_guasto_rifiutato_al_caricamento() {
         assert!(matches!(r, Err(Errore::SalvataggioIlleggibile(_))), "{r:?}");
     }
 }
+
+/// Crescita % della spesa netta del 2028 sul 2027 come la legge il controllo UE, a fine 2028.
+fn crescita_vera_2028(mut p: Partita) -> f64 {
+    for _ in 0..5 {
+        p.chiudi_turno();
+    }
+    let sn = &p.economia().regole_ue.spesa_netta;
+    100.0 * (sn[&2028] as f64 / sn[&2027] as f64 - 1.0)
+}
+
+#[test]
+fn il_riepilogo_prevede_la_crescita_della_spesa_netta_del_controllo_ue() {
+    let p = al_bilancio_2028(1);
+    let bozza = p.bozza_bilancio().unwrap();
+    for b in [bozza.clone(), p.indicizza(&bozza, &Voce::Tutto).unwrap()] {
+        let prevista = p.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta;
+        let mut q = edita(&p, |_| {}).unwrap();
+        presenta(&mut q, b).unwrap();
+        let vera = crescita_vera_2028(q);
+        assert!((prevista - vera).abs() < 0.5, "{prevista} {vera}");
+    }
+}

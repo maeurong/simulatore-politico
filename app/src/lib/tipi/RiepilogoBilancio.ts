@@ -14,7 +14,8 @@ costo_spesa: bigint,
  */
 costo_entrate: bigint, 
 /**
- * % sulla spesa netta dell'ultimo trimestre chiuso, annualizzata.
+ * Crescita % della spesa netta sull'anno prima di quello del bilancio, come la misura il
+ * controllo UE.
  */
 crescita_spesa_netta: number, 
 /**

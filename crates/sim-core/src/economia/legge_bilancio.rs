@@ -5,6 +5,7 @@ use super::Economia;
 use super::finanza::{Bilancio, BudgetDicastero, ContiTrimestre, conti_del_trimestre, euro};
 use crate::dati::DatiGioco;
 use crate::elettorato::Elettorato;
+use crate::informazione::Statistica;
 use crate::misure::Misure;
 use crate::partita::{LIMITE_EURO, Trimestre};
 use serde::{Deserialize, Serialize};
@@ -115,7 +116,8 @@ pub struct RiepilogoBilancio {
     pub costo_spesa: i64,
     /// Euro annui di gettito persi rispetto alla bozza.
     pub costo_entrate: i64,
-    /// % sulla spesa netta dell'ultimo trimestre chiuso, annualizzata.
+    /// Crescita % della spesa netta sull'anno prima di quello del bilancio, come la misura il
+    /// controllo UE.
     pub crescita_spesa_netta: f64,
     /// % del percorso concordato per l'anno del bilancio.
     pub tetto: f64,
@@ -270,8 +272,8 @@ fn conti_con(
     conti_del_trimestre(&e, dati, &misure)
 }
 
-/// Il riepilogo di `b`, già passato da `normalizza`, contro la `bozza`; `indice` è l'indice
-/// dei prezzi pubblicato.
+/// Il riepilogo di `b`, già passato da `normalizza`, contro la `bozza`, con l'indice dei prezzi
+/// e l'inflazione pubblicati da `stat`.
 pub(crate) fn riepilogo(
     e: &Economia,
     dati: &DatiGioco,
@@ -279,7 +281,7 @@ pub(crate) fn riepilogo(
     misure: &Misure,
     b: &Bilancio,
     bozza: &Bilancio,
-    indice: f64,
+    stat: &Statistica,
 ) -> Result<RiepilogoBilancio, String> {
     let annuo = |x: &Bilancio| x.spesa_totale() + x.fondo_riserva;
     let imposte = |c: &ContiTrimestre| {
@@ -290,18 +292,25 @@ pub(crate) fn riepilogo(
         conti_con(e, dati, el, misure, b),
         conti_con(e, dati, el, misure, bozza),
     );
-    // Base annua senza i decreti (una tantum) del trimestre: la spesa dei dicasteri meno la
-    // quota del bilancio è ciò che i decreti hanno aggiunto.
-    let ordinaria = euro(e.bilancio.spesa_totale() as f64 / 4.0);
-    let decreti = e.conti.spese.dicasteri - ordinaria;
-    let attuale = 4 * (e.spesa_netta_trimestre(dati) - decreti);
+    // La stessa grandezza del controllo UE: la spesa netta dell'anno prima di quello del
+    // bilancio, annualizzata sui trimestri già chiusi (tre in ottobre-dicembre).
+    let rif = b.anno.saturating_sub(1);
+    let chiusi = e.storico.iter().filter(|t| t.data.anno == rif).count() as i64;
+    let attuale = match e.regole_ue.spesa_netta.get(&rif) {
+        Some(&sn) if chiusi > 0 => sn * 4 / chiusi,
+        _ => 0,
+    };
     if attuale <= 0 {
-        return Err("spesa netta di riferimento nulla".into());
+        return Err("peso sul tetto UE non calcolabile: spesa netta di riferimento nulla".into());
     }
-    // Le entrate discrezionali di `b` contro quelle della bozza, rifatte sullo stesso stato.
-    let proposta = attuale - 4 * ordinaria + annuo(b)
+    // Spesa dei dicasteri di `b` al posto di quella dell'anno; il resto cresce con l'inflazione
+    // pubblicata, meno le entrate discrezionali di `b` rispetto a quelle in vigore (le stesse
+    // aliquote della bozza). Il fondo di riserva non è spesa finché nessuno lo spende.
+    let resto =
+        (attuale - e.bilancio.spesa_totale()) as f64 * (1.0 + stat.prima_stima.inflazione / 100.0);
+    let proposta = b.spesa_totale() + euro(resto)
         - 4 * (con_b.entrate_discrezionali - con_bozza.entrate_discrezionali);
-    let lp = indice;
+    let lp = stat.indice_prezzi;
     let perdita_reale = (b.dicasteri.iter())
         .map(|d| PerditaReale {
             voce: d.id.clone(),
