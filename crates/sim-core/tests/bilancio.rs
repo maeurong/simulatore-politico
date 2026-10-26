@@ -7,7 +7,7 @@ mod comune;
 use comune::{dati_base, edita, senza_shock};
 use serde_json::json;
 use sim_core::dati::DatiGioco;
-use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Voce, irpef};
+use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Scaglione, Voce, irpef};
 use sim_core::elettorato::{Condizione, Fascia, fascia_di};
 use sim_core::ministri::Causa;
 use sim_core::{Comando, Errore, Partita};
@@ -242,6 +242,27 @@ fn taglio_nominale_alza_la_perdita_e_l_aumento_oltre_l_indice_la_azzera() {
     b.dicasteri[3].salari += 1_000_000_000;
     b.dicasteri[3].spesa += 1_000_000_000;
     assert_eq!(perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita"), 0.0);
+}
+
+#[test]
+fn uno_scaglione_in_piu_e_una_struttura_nuova_senza_perdita() {
+    let p = al_bilancio_2028(1);
+    let mut b = p.bozza_bilancio().unwrap();
+    b.aliquote.irpef.insert(
+        0,
+        Scaglione {
+            fino_a: Some(15_000),
+            aliquota: 0.20,
+            livello_prezzi: 1.0,
+        },
+    );
+    let r = p.riepilogo_bilancio(&b).unwrap();
+    let scaglioni: Vec<f64> = (r.perdita_reale.iter())
+        .filter(|x| x.voce.starts_with("scaglione"))
+        .map(|x| x.perdita)
+        .collect();
+    assert_eq!(scaglioni.len(), 3);
+    assert!(scaglioni.iter().all(|x| x.abs() < 1e-9), "{scaglioni:?}");
 }
 
 #[test]

@@ -270,6 +270,8 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
         }
         // Il resto della spesa, fuori da salari, acquisti e margine, sta fra quello della bozza
         // e quello indicizzato per intero. Voci entro 1e15: le somme non traboccano.
+        // Contratto col client: `spesa` è il totale voluto (resto + salari + acquisti +
+        // margine); chi taglia una cifra lasciando `spesa` ferma sposta il taglio sul resto.
         let resto_bozza = z.spesa - cifre(z);
         // `as` satura: un livello quasi nullo da un salvataggio non fa traboccare.
         let indicizzato = (resto_bozza as f64 * attuale / z.livello_prezzi).round() as i64;
@@ -294,10 +296,12 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
     let a = &b.aliquote;
     a.valida()?;
     // La cifra di uno scaglione è la sua soglia, contro quella dello scaglione con lo stesso
-    // posto nella bozza; senza soglia nella bozza vale `attuale`.
+    // posto nella bozza; senza soglia nella bozza, o con un numero di scaglioni diverso (una
+    // struttura nuova, non un ritocco), vale `attuale`.
+    let stessi = a.irpef.len() == bozza.aliquote.irpef.len();
     let irpef = (a.irpef.iter().enumerate())
         .map(|(i, s)| {
-            let z = bozza.aliquote.irpef.get(i);
+            let z = bozza.aliquote.irpef.get(i).filter(|_| stessi);
             Scaglione {
                 fino_a: s.fino_a,
                 aliquota: s.aliquota,
