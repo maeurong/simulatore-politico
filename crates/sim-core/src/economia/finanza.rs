@@ -180,9 +180,8 @@ pub(crate) fn conti_del_trimestre(
     let el = |n: &str| dati.manopola(n);
     let (a, a0) = (&e.bilancio.aliquote, &s.aliquote);
     let eti = el("elasticita_imponibile");
-    let irpef = base(s.irpef_pil.valore, el("elasticita_irpef"), riscossione)
-        * misure.fattore_irpef
-        * misure.eti_irpef;
+    let irpef_base = base(s.irpef_pil.valore, el("elasticita_irpef"), riscossione);
+    let irpef = irpef_base * misure.fattore_irpef * misure.eti_irpef;
     // (entrata con `τ = τ₀`, fattore delle aliquote): l'entrata vera è il prodotto.
     let ires = (
         base(s.ires_pil.valore, el("elasticita_ires"), riscossione),
@@ -197,7 +196,7 @@ pub(crate) fn conti_del_trimestre(
         fattore(a.contributi, a0.contributi, eti),
     );
     // Il gettito dovuto alle aliquote cambiate: l'entrata meno quella con `τ = τ₀`.
-    let discrezionali = irpef * misure.irpef_discrezionale
+    let discrezionali = irpef_base * misure.irpef_discrezionale
         + [ires, iva, contributi]
             .iter()
             .map(|(x, f)| x * (f - 1.0))

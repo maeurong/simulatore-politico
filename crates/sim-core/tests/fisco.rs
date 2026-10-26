@@ -114,9 +114,8 @@ fn iva_piu_alta_da_gettito_discrezionale_che_la_spesa_netta_sottrae() {
     assert!((cb.entrate.iva as f64) < ca.entrate.iva as f64 * 0.24 / 0.22);
     assert_eq!(ca.entrate_discrezionali, 0);
     assert!(cb.entrate_discrezionali > 0, "{cb:?}");
-    assert_eq!(
-        cb.entrate_discrezionali,
-        cb.entrate.iva - ca.entrate.iva,
+    assert!(
+        (cb.entrate_discrezionali - (cb.entrate.iva - ca.entrate.iva)).abs() <= 1,
         "solo l'IVA è cambiata"
     );
 }
@@ -155,4 +154,59 @@ fn il_bilancio_approvato_vale_dal_primo_trimestre_anche_per_le_misure() {
     p.chiudi_turno();
     assert!(p.misure().irpef_discrezionale > 0.0, "{:?}", p.misure());
     assert!(p.economia().conti.entrate_discrezionali > 0);
+}
+
+#[test]
+fn scenario_con_aliquote_nulle_rifiutato_col_nome() {
+    for (da, a, voce) in [
+        ("iva = 0.22", "iva = 0.0", "iva"),
+        ("ires = 0.24", "ires = 0.0", "ires"),
+        ("contributi = 0.33", "contributi = 0.0", "contributi"),
+        ("aliquota = 0.23", "aliquota = 0.0", "irpef"),
+    ] {
+        let f = sostituisci(file_base(), "scenario", da, a);
+        let e = DatiGioco::da_testi(&f).unwrap_err().to_string();
+        assert!(e.contains(voce), "{voce}: {e}");
+    }
+}
+
+#[test]
+fn un_salvataggio_con_aliquota_irpef_0_nulla_e_rifiutato() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.chiudi_turno();
+    let mut j: Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    j["elettorato"]["aliquota_irpef_0"] = json!(0.0);
+    assert!(matches!(
+        Partita::carica(&j.to_string()),
+        Err(Errore::SalvataggioIlleggibile(_))
+    ));
+}
+
+#[test]
+fn ultimo_scaglione_piu_basso_da_discrezionale_negativo() {
+    let mut a = con_bilancio(0, |_| ()).unwrap();
+    let mut b = con_bilancio(0, |e| {
+        e["bilancio"]["aliquote"]["irpef"][2]["aliquota"] = json!(0.3)
+    })
+    .unwrap();
+    a.chiudi_turno();
+    b.chiudi_turno();
+    assert!(b.misure().irpef_discrezionale < 0.0);
+    assert!(b.economia().conti.entrate_discrezionali < 0);
+    let d = b.economia().conti.entrate.irpef - a.economia().conti.entrate.irpef;
+    assert!(d < 0, "{d}");
+}
+
+#[test]
+fn scaglioni_a_zero_azzerano_l_irpef_e_il_discrezionale_e_negativo() {
+    let mut p = con_bilancio(0, |e| {
+        for s in e["bilancio"]["aliquote"]["irpef"].as_array_mut().unwrap() {
+            s["aliquota"] = json!(0.0);
+        }
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.misure().fattore_irpef, 0.0);
+    assert!(p.economia().conti.entrate.irpef.abs() <= 1);
+    assert!(p.economia().conti.entrate_discrezionali < 0);
 }

@@ -481,8 +481,11 @@ impl Elettorato {
         if !self.base.e_finito() {
             return ko("elettorato.base non finita".into());
         }
-        if !(self.aliquota_irpef_0.is_finite() && (0.0..1.0).contains(&self.aliquota_irpef_0)) {
-            return ko("elettorato.aliquota_irpef_0 fuori da 0-1".into());
+        if !(self.aliquota_irpef_0.is_finite()
+            && self.aliquota_irpef_0 > 0.0
+            && self.aliquota_irpef_0 < 1.0)
+        {
+            return ko("elettorato.aliquota_irpef_0 fuori da (0, 1)".into());
         }
         Ok(())
     }

@@ -108,12 +108,17 @@ impl Elettorato {
             let r = {
                 let tasso = |s: &[Scaglione], l: f64, contributi: f64| irpef(s, l) / l + contributi;
                 let lordo_0 = dato.primario + dato.trasferimenti;
-                if lordo > 0.0 && lordo_0 > 0.0 {
+                let den = if lordo_0 > 0.0 {
+                    tasso(&s0.irpef, lordo_0, s0.contributi)
+                } else {
+                    0.0
+                };
+                if lordo > 0.0 && den > 0.0 {
                     tasso(
                         &e.bilancio.aliquote.irpef,
                         lordo,
                         e.bilancio.aliquote.contributi,
-                    ) / tasso(&s0.irpef, lordo_0, s0.contributi)
+                    ) / den
                 } else {
                     1.0
                 }

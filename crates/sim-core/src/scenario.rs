@@ -148,6 +148,24 @@ impl Scenario {
                 "tetti_spesa_netta assenti o non finiti".into(),
             ));
         }
-        self.aliquote.valida().map_err(Errore::StrutturaIncoerente)
+        self.aliquote
+            .valida()
+            .map_err(Errore::StrutturaIncoerente)?;
+        // Con un'aliquota di partenza nulla il gettito di riferimento non ha base di confronto.
+        let a = &self.aliquote;
+        let nulla = a
+            .irpef
+            .iter()
+            .any(|s| s.aliquota <= 0.0)
+            .then_some("irpef")
+            .or_else(|| (a.iva <= 0.0).then_some("iva"))
+            .or_else(|| (a.ires <= 0.0).then_some("ires"))
+            .or_else(|| (a.contributi <= 0.0).then_some("contributi"));
+        match nulla {
+            Some(voce) => Err(Errore::StrutturaIncoerente(format!(
+                "{voce}: l'aliquota dello scenario deve essere positiva"
+            ))),
+            None => Ok(()),
+        }
     }
 }

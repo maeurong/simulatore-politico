@@ -13,8 +13,8 @@ mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
-pub(crate) use legge_bilancio::eti;
 pub use legge_bilancio::{Aliquote, Scaglione, irpef};
+pub(crate) use legge_bilancio::{eti, fattore};
 pub use previdenza::Annata;
 pub use regole_ue::RegoleUe;
 pub use sfc::{Settori, Sfc};

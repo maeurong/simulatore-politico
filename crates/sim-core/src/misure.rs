@@ -2,7 +2,7 @@
 //! Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura del turno.
 
 use crate::dati::{DatiGioco, Ruolo};
-use crate::economia::{Economia, eti};
+use crate::economia::{Economia, eti, fattore};
 use crate::elettorato::Elettorato;
 use crate::errore::Errore;
 use crate::grandezze::{Grandezze, contributo};
@@ -37,8 +37,10 @@ pub struct Misure {
     pub merito: Vec<Vec<f64>>,
     /// `t(S, redditi correnti)/t₀`: l'aliquota media IRPEF di oggi su quella del turno zero.
     pub fattore_irpef: f64,
-    /// La parte del gettito IRPEF dovuta agli scaglioni cambiati, senza il drenaggio:
-    /// `1 − t(S₀, redditi correnti)/t(S, redditi correnti)`.
+    /// Moltiplicatore del gettito IRPEF dovuto agli scaglioni cambiati, senza il drenaggio:
+    /// `fattore_irpef · eti_irpef − (tₛ/t₀) · eti(tₛ, t₀)`, con `tₛ = t(S₀, redditi correnti)`.
+    /// Come per le altre imposte, è la differenza fra il moltiplicatore vero e quello con
+    /// le aliquote dello scenario.
     pub irpef_discrezionale: f64,
     /// Elasticità della base imponibile all'aliquota media IRPEF, `eti(t, t₀)`.
     pub eti_irpef: f64,
@@ -136,17 +138,15 @@ impl Misure {
         let t = el.aliquota_media_irpef(dati, &e.bilancio_in_vigore(data).aliquote.irpef);
         let t_scenario = el.aliquota_media_irpef(dati, &scenario.aliquote.irpef);
         let t0 = el.aliquota_irpef_0;
-        let (fattore_irpef, irpef_discrezionale) = if t > 0.0 && t0 > 0.0 {
-            (t / t0, 1.0 - t_scenario / t)
-        } else {
-            (1.0, 0.0)
-        };
+        let fattore_irpef = if t0 > 0.0 { t / t0 } else { 1.0 };
+        let imponibile = manopola("elasticita_imponibile");
+        let irpef_discrezionale = fattore(t, t0, imponibile) - fattore(t_scenario, t0, imponibile);
 
         Misure {
             riscossione,
             fattore_irpef,
             irpef_discrezionale,
-            eti_irpef: eti(t, t0, manopola("elasticita_imponibile")),
+            eti_irpef: eti(t, t0, imponibile),
             prezzo_energia,
             domanda_regionale: regionale("domanda_regionale", 0.0),
             disoccupazione_strutturale,
@@ -228,8 +228,8 @@ impl Misure {
         if self.riscossione <= 0.0 {
             return ko("riscossione non positiva".into());
         }
-        if self.fattore_irpef <= 0.0 || self.eti_irpef <= 0.0 {
-            return ko("fattore_irpef o eti_irpef non positivo".into());
+        if self.fattore_irpef < 0.0 || self.eti_irpef <= 0.0 {
+            return ko("fattore_irpef negativo o eti_irpef non positivo".into());
         }
         let vettori = [
             ("domanda_regionale", &self.domanda_regionale),
