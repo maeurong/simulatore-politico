@@ -2,7 +2,7 @@
 //! Il giocatore accoglie, rinvia (una volta) o respinge; ignorata un turno vale respinta.
 
 use super::agenda::{
-    Agenda, StatoAgenda, costo, disponibile, margini_rif, parti, penalizza, posizione,
+    Agenda, StatoAgenda, costo, disponibile, in_cantiere, margini_rif, parti, penalizza, posizione,
 };
 use super::{Causa, Contesto, Ministri};
 use crate::dati::DatiGioco;
@@ -22,7 +22,8 @@ pub struct Proposta {
 
 impl Ministri {
     /// Apertura, dopo le agende. Chi è in carica, senza agenda (nessun atto pagabile), e ha il
-    /// suo atto più sentito (`o > 0`, a parità il primo) non pagabile, chiede la differenza.
+    /// suo atto più sentito (`o > 0`, a parità il primo, mai uno già in cantiere) non pagabile,
+    /// chiede la differenza.
     /// Una proposta già in corso si ricalcola sul suo atto: con un'agenda, o se l'atto è ormai
     /// pagabile, decade senza costo; altrimenti l'`importo` si aggiorna (`rinviata` e
     /// `turni_in_sospeso` restano).
@@ -50,7 +51,10 @@ impl Ministri {
                 })
             } else {
                 let mut migliore: Option<(usize, f64)> = None;
-                for (k, a) in dati.atti_del_dicastero(i) {
+                for (k, a) in dati
+                    .atti_del_dicastero(i)
+                    .filter(|(k, _)| !in_cantiere(st, *k))
+                {
                     let o = parti(cx, i, m, a).0;
                     if o > 0.0 && migliore.is_none_or(|(_, b)| o > b) {
                         migliore = Some((k, o));
@@ -67,15 +71,15 @@ impl Ministri {
         }
     }
 
-    /// Default delle decisioni: una proposta non decisa passa a un turno in sospeso, poi vale
-    /// respinta.
+    /// Default delle decisioni: una proposta non decisa resta in sospeso un turno (due se
+    /// rinviata), poi vale respinta.
     pub(crate) fn decidi_proposte(&mut self, cx: &Contesto) {
         for st in &mut self.dicasteri {
             let Some(p) = st.proposta.as_mut() else {
                 continue;
             };
-            if p.turni_in_sospeso == 0 {
-                p.turni_in_sospeso = 1;
+            if p.turni_in_sospeso < 1 + u32::from(p.rinviata) {
+                p.turni_in_sospeso += 1;
             } else {
                 st.proposta = None;
                 let delta = -cx.dati.manopola("costo_respingere");
@@ -92,6 +96,10 @@ impl Ministri {
         let (Some(p), Some(m)) = (st.proposta.as_ref(), st.ministro.as_ref()) else {
             return Err(nessuna());
         };
+        if in_cantiere(st, p.atto) {
+            let atto = &dati.atti()[p.atto].id;
+            return Err(Errore::Comando(format!("cantiere già in corso: {atto}")));
+        }
         let agenda = match &st.agenda {
             Some(old) => Agenda {
                 atto: p.atto,
@@ -115,7 +123,7 @@ impl Ministri {
         Ok(importo)
     }
 
-    /// `Rinvia`: una volta, senza costo.
+    /// `Rinvia`: una volta, senza costo; la proposta resta un turno in più.
     pub(super) fn rinvia(&mut self, cx: &Contesto, i: usize) -> Result<(), Errore> {
         let id = &cx.dati.dicasteri()[i].id;
         let Some(p) = self.dicasteri[i].proposta.as_mut() else {
@@ -125,7 +133,6 @@ impl Ministri {
             return Err(Errore::Comando(format!("proposta già rinviata: {id}")));
         }
         p.rinviata = true;
-        p.turni_in_sospeso = 0;
         Ok(())
     }
 

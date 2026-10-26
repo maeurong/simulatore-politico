@@ -205,6 +205,146 @@ fn comandi_dell_agenda_non_ammessi_rifiutati_col_nome() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
+/// Il comando è rifiutato con `Errore::Comando` che contiene `nome`, e la partita resta identica.
+fn rifiuta(p: &mut Partita, c: Comando, nome: &str) {
+    let prima = p.salva().unwrap();
+    let e = p.comanda(c.clone()).unwrap_err();
+    assert!(
+        matches!(e, Errore::Comando(_)) && e.to_string().contains(nome),
+        "{c:?}: {e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima, "{c:?}");
+}
+
+fn dirotta(d: &str, atto: Option<&str>, regione: Option<&str>) -> Comando {
+    Comando::Dirotta {
+        dicastero: d.into(),
+        atto: atto.map(Into::into),
+        regione: regione.map(Into::into),
+    }
+}
+
+#[test]
+fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
+    const IT: &str = "infrastrutture_trasporti";
+    let mut p = Partita::nuova(dati_base(), 1);
+    let d = dati_base();
+    let di_giustizia = (d.atti().iter())
+        .find(|a| a.dicastero == "giustizia")
+        .unwrap()
+        .id
+        .clone();
+    rifiuta(
+        &mut p,
+        dirotta("sanita", Some(&di_giustizia), None),
+        &di_giustizia,
+    );
+    let v = p.vista();
+    let regione = ministero(&v, IT).agenda.as_ref().unwrap().regione.clone();
+    rifiuta(
+        &mut p,
+        dirotta(IT, None, regione.as_deref()),
+        &format!("niente da dirottare: {IT}"),
+    );
+    let (caro, di) = (v.ministeri.iter())
+        .find_map(|m| {
+            let a = m.atti.iter().find(|a| !a.pagabile)?;
+            Some((a.id.clone(), m.dicastero.clone()))
+        })
+        .unwrap();
+    rifiuta(
+        &mut p,
+        dirotta(&di, Some(&caro), None),
+        &format!("margine insufficiente per {caro}"),
+    );
+    p.comanda(ferma("sanita")).unwrap();
+    rifiuta(&mut p, ferma("sanita"), "agenda già modificata: sanita");
+    rifiuta(
+        &mut p,
+        dirotta("sanita", Some("sanita_case_comunita"), None),
+        "agenda già modificata: sanita",
+    );
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "giustizia".into(),
+    })
+    .unwrap();
+    p.chiudi_turno();
+    rifiuta(&mut p, ferma("giustizia"), "nessuna agenda: giustizia");
+    rifiuta(
+        &mut p,
+        dirotta("giustizia", Some(&di_giustizia), None),
+        "nessuna agenda: giustizia",
+    );
+    rifiuta(
+        &mut p,
+        Comando::FermaCantiere {
+            dicastero: "giustizia".into(),
+            atto: di_giustizia.clone(),
+        },
+        &format!("nessun cantiere {di_giustizia} in giustizia"),
+    );
+}
+
+/// Con le dimissioni chieste il ministro uscente non prende più comandi sull'agenda né sulle
+/// proposte.
+#[test]
+fn dimissioni_chieste_bloccano_i_comandi_del_dicastero() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    assert!(ministero(&p.vista(), "sanita").dimissioni_chieste);
+    let s = || "sanita".to_string();
+    for c in [
+        Comando::Ferma { dicastero: s() },
+        dirotta("sanita", Some("sanita_case_comunita"), None),
+        Comando::FermaCantiere {
+            dicastero: s(),
+            atto: "sanita_case_comunita".into(),
+        },
+        Comando::Accogli { dicastero: s() },
+        Comando::Rinvia { dicastero: s() },
+        Comando::Respingi { dicastero: s() },
+    ] {
+        rifiuta(&mut p, c, "dimissioni chieste: sanita");
+    }
+}
+
+/// Un atto già in cantiere nel dicastero non torna in agenda e non si dirotta su di lui.
+#[test]
+fn niente_cantiere_doppio_dello_stesso_atto() {
+    const CASE: &str = "sanita_case_comunita";
+    for seme in 1..=8 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        p.chiudi_turno();
+        let annunciato = ministero(&p.vista(), "sanita")
+            .agenda
+            .as_ref()
+            .unwrap()
+            .atto
+            .clone();
+        if annunciato != CASE {
+            p.comanda(dirotta("sanita", Some(CASE), None)).unwrap();
+        }
+        p.chiudi_turno();
+        let v = p.vista();
+        let m = ministero(&v, "sanita");
+        assert!(m.cantieri.iter().any(|c| c.atto == CASE), "seme {seme}");
+        assert!(
+            !m.agenda.as_ref().is_some_and(|a| a.atto == CASE),
+            "seme {seme}"
+        );
+        if m.agenda.is_some() {
+            rifiuta(
+                &mut p,
+                dirotta("sanita", Some(CASE), None),
+                &format!("cantiere già in corso: {CASE}"),
+            );
+        }
+    }
+}
+
 #[test]
 fn salvataggio_con_agenda_di_un_altro_dicastero_illeggibile() {
     let p = Partita::nuova(dati_base(), 1);

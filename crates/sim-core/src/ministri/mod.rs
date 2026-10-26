@@ -294,6 +294,13 @@ impl Ministri {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
         let st = &mut self.dicasteri[i];
+        let sul_ministro = matches!(
+            c,
+            Comando::ChiediDimissioni { .. } | Comando::ScegliSuccessore { .. }
+        );
+        if st.dimissioni_chieste && !sul_ministro {
+            return ko(format!("dimissioni chieste: {dicastero}"));
+        }
         match c {
             Comando::Accogli { .. } => return self.accogli(cx, i).map(Some),
             Comando::Rinvia { .. } => self.rinvia(cx, i)?,
@@ -351,6 +358,8 @@ impl Ministri {
                     dicastero: d.id.clone(),
                     ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),
                     rosa: st.rosa.iter().map(|x| voce(x, &[])).collect(),
+                    dimissioni_chieste: st.dimissioni_chieste,
+                    scelta: st.scelta,
                     causa_dimissioni: st.causa_dimissioni,
                     agenda: g.agenda,
                     motivo_senza_agenda: g.motivo_senza_agenda,

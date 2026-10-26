@@ -67,12 +67,14 @@ fn dimissioni_chieste_portano_interim_rosa_e_rodaggio() {
     assert_eq!(m.causa_dimissioni, Some(Causa::DimissioniChieste));
     assert!(m.rosa.iter().all(|x| x.partito == "destra"));
     assert!(m.rosa.windows(2).all(|w| w[0].capacita >= w[1].capacita));
+    assert!(!m.dimissioni_chieste && m.scelta.is_none());
     let scelto = m.rosa[1].nome.clone();
     p.comanda(Comando::ScegliSuccessore {
         dicastero: "sanita".into(),
         indice: 1,
     })
     .unwrap();
+    assert_eq!(ministero(&p.vista(), "sanita").scelta, Some(1));
     p.chiudi_turno();
     let x = ministero(&p.vista(), "sanita").ministro.clone().unwrap();
     assert_eq!(x.nome, scelto);

@@ -64,6 +64,11 @@ pub(super) fn posizione(dati: &DatiGioco, d: usize, atto: usize) -> Option<usize
     dati.atti_del_dicastero(d).position(|(k, _)| k == atto)
 }
 
+/// L'atto (indice di catalogo) ha già un cantiere in corso nel dicastero.
+pub(super) fn in_cantiere(st: &StatoDicastero, atto: usize) -> bool {
+    st.cantieri.iter().any(|c| c.atto == atto)
+}
+
 pub(super) fn disponibile(st: &StatoDicastero) -> i64 {
     st.margine_residuo - st.cantieri.iter().map(|c| c.rata).sum::<i64>()
 }
@@ -204,7 +209,8 @@ impl Ministri {
         self.proponi(cx);
     }
 
-    /// L'atto pagabile col punteggio più alto (a parità il primo), e la regione bersaglio.
+    /// L'atto pagabile e senza cantiere in corso col punteggio più alto (a parità il primo), e la
+    /// regione bersaglio.
     fn scegli(&self, cx: &Contesto, i: usize, rumore: &[f64], rif: i64) -> Option<Agenda> {
         let dati = cx.dati;
         let st = &self.dicasteri[i];
@@ -215,7 +221,7 @@ impl Ministri {
         let (libero, sigma) = (disponibile(st), dati.manopola("rumore_agenda"));
         let mut scelta: Option<(usize, f64)> = None;
         for (p, (k, a)) in atti.iter().enumerate() {
-            if costo(a, rif, cx.economia.livello_prezzi) > libero {
+            if costo(a, rif, cx.economia.livello_prezzi) > libero || in_cantiere(st, *k) {
                 continue;
             }
             let z = rumore.get(*k).copied().unwrap_or(0.0);
@@ -394,6 +400,9 @@ impl Ministri {
             return ko(format!("niente da dirottare: {id}"));
         }
         if let Some(k) = cambia_atto {
+            if in_cantiere(st, k) {
+                return ko(format!("cantiere già in corso: {}", dati.atti()[k].id));
+            }
             let rif = margini_rif(dati).get(i).copied().unwrap_or(0);
             if costo(&dati.atti()[k], rif, cx.economia.livello_prezzi) > disponibile(st) {
                 return ko(format!("margine insufficiente per {}", dati.atti()[k].id));

@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_ingresso, dati_base, senza_shock};
+use comune::{con_ingresso, dati_base, ferma_tutti, senza_shock};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
@@ -28,9 +28,15 @@ fn uno_shock_energetico_alza_di_piu_i_prezzi_dell_industria() {
     assert!(e.inflazione_importata > 0.0);
 }
 
+/// Senza shock e senza atti dei ministri: un atto sull'energia è uno shock di prezzo.
 #[test]
 fn senza_shock_l_inflazione_torna_verso_il_due_per_cento() {
-    let pi = giocata(&senza_shock(), 1, 40).economia().inflazione[0];
+    let mut p = giocata(&senza_shock(), 1, 0);
+    for _ in 0..40 {
+        ferma_tutti(&mut p);
+        p.chiudi_turno();
+    }
+    let pi = p.economia().inflazione[0];
     assert!((pi - 2.0).abs() < 0.5, "{pi}");
 }
 

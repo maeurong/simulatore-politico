@@ -244,6 +244,41 @@ fn respingere_toglie_la_proposta_e_costa_soddisfazione() {
     assert!((prima - s(&p) - costo).abs() < 1e-9, "{prima} -> {}", s(&p));
 }
 
+/// Rinvia al turno della nascita: la proposta sopravvive a due chiusure e vale respinta alla
+/// terza; al ricalcolo dell'importo `turni_in_sospeso` e `rinviata` restano.
+#[test]
+fn rinvia_tiene_la_proposta_un_turno_poi_vale_respinta() {
+    let mut p = con_proposta(1);
+    let proposta = |p: &Partita| p.ministri().dicasteri[3].proposta.clone();
+    let nata = proposta(&p).unwrap();
+    p.comanda(Comando::Rinvia {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let dopo = proposta(&p).unwrap();
+    assert_ne!(
+        dopo.importo, nata.importo,
+        "il margine annuo cambia l'importo"
+    );
+    assert_eq!((dopo.turni_in_sospeso, dopo.rinviata), (1, true));
+    let respinte = |p: &Partita| {
+        let v = p.vista();
+        let x = ministero(&v, "sanita").ministro.clone().unwrap();
+        (x.variazioni.iter())
+            .filter(|v| v.causa == Causa::PropostaRespinta)
+            .count()
+    };
+    p.chiudi_turno();
+    assert_eq!(proposta(&p).unwrap().turni_in_sospeso, 2);
+    assert_eq!(respinte(&p), 0);
+    p.chiudi_turno();
+    assert_eq!(respinte(&p), 1);
+    // L'atto resta impagabile: all'apertura nasce una proposta nuova.
+    let nuova = proposta(&p).unwrap();
+    assert_eq!((nuova.turni_in_sospeso, nuova.rinviata), (0, false));
+}
+
 /// Costo 2 quote: impagabile al turno 0 (un trimestre di margine), pagabile al turno 1
 /// (margine annuo), quindi la proposta del turno 0 decade all'apertura del turno 1.
 #[test]

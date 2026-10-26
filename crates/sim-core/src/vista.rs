@@ -80,6 +80,10 @@ pub struct VoceMinistero {
     /// `None` = interim.
     pub ministro: Option<VoceMinistro>,
     pub rosa: Vec<VoceMinistro>,
+    /// Il ministro uscirà a fine turno: nessun comando sul dicastero fino al successore.
+    pub dimissioni_chieste: bool,
+    /// Indice nella rosa del successore scelto; `None` = il primo.
+    pub scelta: Option<u8>,
     /// Perché il ministro è uscito; `Some` solo in interim.
     pub causa_dimissioni: Option<Causa>,
     /// L'atto annunciato per il turno; `None` in interim o a margine esaurito.

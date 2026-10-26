@@ -15,6 +15,14 @@ export type VoceMinistero = { dicastero: string,
  */
 ministro: VoceMinistro | null, rosa: Array<VoceMinistro>, 
 /**
+ * Il ministro uscirà a fine turno: nessun comando sul dicastero fino al successore.
+ */
+dimissioni_chieste: boolean, 
+/**
+ * Indice nella rosa del successore scelto; `None` = il primo.
+ */
+scelta: number | null, 
+/**
  * Perché il ministro è uscito; `Some` solo in interim.
  */
 causa_dimissioni: Causa | null, 
