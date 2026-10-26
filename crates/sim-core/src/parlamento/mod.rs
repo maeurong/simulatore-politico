@@ -532,7 +532,11 @@ impl Parlamento {
                         })
                         .collect(),
                     alleati_contro_fiducia: (aula.partiti.iter().zip(a_blocchi).enumerate())
-                        .filter(|&(j, (_, si))| !si && voto::alleato(aula.governo, j))
+                        .filter(|&(j, (_, si))| {
+                            m.forma != FormaMisura::Costituzionale
+                                && !si
+                                && voto::alleato(aula.governo, j)
+                        })
                         .map(|(_, (p, _))| p.id.clone())
                         .collect(),
                 }

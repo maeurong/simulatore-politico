@@ -1,5 +1,5 @@
 mod comune;
-use comune::{imposta, presenta, senza_shock, sostituisci};
+use comune::{edita, imposta, presenta, senza_shock, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum};
 use sim_core::vista::SeggiPartito;
@@ -216,6 +216,65 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
     };
     assert_eq!(flusso(&p), flusso(&gioca(false)));
     presenta(&mut p, &[("premio", "coalizione")]).unwrap();
+}
+
+/// Come sopra: approvata la prima a fine turno 0, la seconda decade all'apertura del turno 1.
+#[test]
+fn elettorale_non_piu_valida_decade_all_apertura_del_turno() {
+    let f = sostituisci(
+        senza_shock(),
+        "scenario",
+        "legge_elettorale = \"legge_180\"",
+        "legge_elettorale = \"proporzionale_3\"",
+    );
+    let mut p = partita(f);
+    presenta(&mut p, &[("coalizioni", "si")]).unwrap();
+    presenta(&mut p, &[("premio", "lista")]).unwrap();
+    let v = p.vista();
+    let (prima, seconda) = (v.calendario[0].id, v.calendario[1].id);
+    p.comanda(Comando::PoniFiducia { misura: prima }).unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    assert!(v.calendario.is_empty());
+    assert_eq!(v.esiti[0].misura, seconda);
+    assert!(v.esiti[0].decaduta.is_some());
+    let salvata = p.salva().unwrap();
+    let e = (p.comanda(Comando::PoniFiducia { misura: seconda })).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains(&format!("misura sconosciuta: {seconda}")),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), salvata);
+}
+
+/// Fiducia sull'elettorale: respinta o passata, il voto estrae le stesse uniformi.
+#[test]
+fn fiducia_sull_elettorale_estrae_lo_stesso_respinta_o_passata() {
+    let dopo = |respinta: bool| {
+        let mut p = partita(senza_shock());
+        presenta(&mut p, &[("soglia_lista", "0")]).unwrap();
+        let id = p.vista().calendario[0].id;
+        p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+        if respinta {
+            // Cento seggi della destra alla sinistra: il governo resta senza maggioranza.
+            p = edita(&p, |j| {
+                for n in j["parlamento"]["seggi_camera"].as_array_mut().unwrap() {
+                    match n.as_u64() {
+                        Some(189) => *n = serde_json::json!(89),
+                        Some(100) => *n = serde_json::json!(200),
+                        _ => {}
+                    }
+                }
+            })
+            .unwrap();
+        }
+        p.chiudi_turno();
+        assert_eq!(p.vista().esiti[0].fiducia_respinta, respinta);
+        let json: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        json["caso"]["flussi"]["Parlamento"].clone()
+    };
+    assert_eq!(dopo(true), dopo(false));
 }
 
 /// Durata della legislatura e numero dei parlamentari in una legge sola, coi gradini nuovi in

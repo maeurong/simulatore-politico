@@ -165,9 +165,14 @@ fn la_vista_conta_il_costo_della_fiducia_prima_di_porla() {
 
 #[test]
 fn niente_fiducia_su_una_norma_costituzionale() {
-    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    // Centrodestra in ultimatum e a due punti da 630 deputati: sotto fiducia voterebbe no.
+    let mut p = Partita::nuova(
+        DatiGioco::da_testi(&con(senza_shock(), "intesa_base", "30.0")).unwrap(),
+        1,
+    );
     presenta(&mut p, &[("numero_parlamentari", "630_315")]).unwrap();
     let id = p.vista().calendario[0].id;
+    assert!(p.vista().calendario[0].alleati_contro_fiducia.is_empty());
     let e = p.comanda(Comando::PoniFiducia { misura: id }).unwrap_err();
     assert!(
         e.to_string()

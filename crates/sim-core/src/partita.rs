@@ -200,6 +200,12 @@ impl Partita {
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
         self.parlamento.apri(self.turno);
+        // Le elettorali rese non valide dai voti e dagli arrivi decadono prima degli emendamenti.
+        for m in std::mem::take(&mut self.parlamento.misure) {
+            if !self.decade(&m) {
+                self.parlamento.misure.push(m);
+            }
+        }
         let aula = StatoAula {
             dati: &self.dati,
             disposizioni: &self.disposizioni,
@@ -315,27 +321,8 @@ impl Partita {
         };
         let mut m = self.parlamento.misure.remove(k);
         let elettorale = m.forma == FormaMisura::Elettorale;
-        // Un'elettorale che, dopo i voti e gli arrivi venuti dalla presentazione, darebbe una legge
-        // non valida decade senza voto: nessuna estrazione, nessun blocco, nessun costo.
-        if elettorale
-            && let Some(motivo) =
-                parlamento::legge_non_valida(&self.dati, &self.disposizioni, &m.valori)
-        {
-            let esito = EsitoVoto {
-                misura: id,
-                nome: parlamento::nome(&self.dati, &m.valori),
-                forma: m.forma,
-                data: self.data,
-                deliberazione: m.deliberazione,
-                camera: Conteggio { si: 0, no: 0 },
-                senato: Conteggio { si: 0, no: 0 },
-                approvata: false,
-                fiducia: m.fiducia,
-                fiducia_respinta: false,
-                linee: Vec::new(),
-                decaduta: Some(motivo),
-            };
-            self.parlamento.esiti.insert(0, esito);
+        // Due elettorali votate nella stessa chiusura: la seconda può decadere qui.
+        if self.decade(&m) {
             return;
         }
         let aula = self.stato_aula();
@@ -353,14 +340,19 @@ impl Partita {
         let mut senato = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, q_senato);
         let passa = |c: &Conteggio| c.si > c.no;
         let fiducia_respinta = m.fiducia && !(passa(&camera) && passa(&senato));
-        if a_blocchi && !fiducia_respinta {
-            camera = voto::conta(
+        // Il voto finale si estrae anche dopo la fiducia respinta, e si scarta: l'esito non sposta
+        // i franchi tiratori delle misure che seguono.
+        if a_blocchi {
+            let c = voto::conta(
                 &mut self.caso,
                 &pl.seggi_camera,
                 &p.linea,
                 &p.franchi_camera,
             );
-            senato = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, &p.franchi);
+            let s = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, &p.franchi);
+            if !fiducia_respinta {
+                (camera, senato) = (c, s);
+            }
         }
         // Tutti votano: `sì > no` è anche la maggioranza assoluta della seconda deliberazione.
         let approvata = passa(&camera) && passa(&senato);
@@ -438,6 +430,35 @@ impl Partita {
         }
     }
 
+    /// L'elettorale `m` che, dopo i voti e gli arrivi venuti dalla presentazione, darebbe una legge
+    /// non valida decade senza voto: esito con `decaduta`, nessuna estrazione, nessun blocco,
+    /// nessun costo. `true` se decade.
+    fn decade(&mut self, m: &Misura) -> bool {
+        if m.forma != FormaMisura::Elettorale {
+            return false;
+        }
+        let Some(motivo) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &m.valori)
+        else {
+            return false;
+        };
+        let esito = EsitoVoto {
+            misura: m.id,
+            nome: parlamento::nome(&self.dati, &m.valori),
+            forma: m.forma,
+            data: self.data,
+            deliberazione: m.deliberazione,
+            camera: Conteggio { si: 0, no: 0 },
+            senato: Conteggio { si: 0, no: 0 },
+            approvata: false,
+            fiducia: m.fiducia,
+            fiducia_respinta: false,
+            linee: Vec::new(),
+            decaduta: Some(motivo),
+        };
+        self.parlamento.esiti.insert(0, esito);
+        true
+    }
+
     /// I valori della misura approvata entrano in vigore, o arrivano fra `turni_rinvio_regime`
     /// turni se un emendamento accolto li rinvia.
     fn entra_in_vigore(&mut self, m: &Misura) {
@@ -480,7 +501,7 @@ impl Partita {
         let (dovuti, restano): (Vec<Referendum>, Vec<Referendum>) =
             std::mem::take(&mut self.parlamento.confermativi)
                 .into_iter()
-                .partition(|r| r.voto == turno);
+                .partition(|r| r.voto <= turno);
         self.parlamento.confermativi = restano;
         for r in dovuti {
             let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
@@ -921,7 +942,8 @@ impl Partita {
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia, grandezze, partiti e governo, elettorato, informazione, disposizioni.
+    /// economia, grandezze, partiti e governo, elettorato, informazione, disposizioni, parlamento
+    /// e intesa.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
