@@ -758,12 +758,21 @@ impl Partita {
         self.parlamento.apri_conversione(self.turno, fondi);
     }
 
-    /// Ritiro del decreto accolto (scelta 1): niente speso, nessuna conversione.
+    /// Ritiro del decreto accolto (scelta 1): niente speso, nessuna conversione, e si paga solo
+    /// il comando: con la questione di fiducia posta, gli alleati riavranno il suo costo d'intesa.
     pub(crate) fn ritira_decreto(&mut self, dicastero: usize, importo: i64) {
         if let Some(x) = self.economia.decreti.get_mut(dicastero) {
             *x -= importo;
         }
-        self.parlamento.ritira(dicastero);
+        let Some(m) = self.parlamento.ritira(dicastero).filter(|m| m.fiducia) else {
+            return;
+        };
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        for j in self.alleati() {
+            let x = self.partiti[j].posizione_dichiarata;
+            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova);
+            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        }
     }
 
     /// `Accogli` sulla firma (dicastero e atto) di un decreto decaduto: rifiutato
@@ -1184,11 +1193,29 @@ impl Partita {
         partita
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
+        partita.controlla_decreti()?;
         Ok(partita)
     }
 }
 
 impl Partita {
+    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo e con
+    /// la sua conversione in calendario.
+    fn controlla_decreti(&self) -> Result<(), Errore> {
+        let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
+        for (i, (st, &x)) in dicasteri.enumerate() {
+            let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+            let buono = decreto == x
+                && (decreto == 0
+                    || (decreto <= st.margine_residuo && self.parlamento.in_conversione(i)));
+            ok(
+                buono,
+                "decreto in agenda diverso da economia.decreti, oltre il margine o senza conversione",
+            )?;
+        }
+        Ok(())
+    }
+
     /// Partiti, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();

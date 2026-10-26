@@ -1,5 +1,5 @@
 mod comune;
-use comune::{imposta, presenta, senza_shock};
+use comune::{imposta, presenta, sanita_cara, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::{CausaIntesa, Decreto, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita};
@@ -187,7 +187,9 @@ fn niente_fiducia_su_una_norma_costituzionale() {
 
 #[test]
 fn salvare_a_meta_turno_conserva_l_aula() {
-    let mut p = al_voto(("eta_pensionabile", "62"));
+    let mut p = Partita::nuova(DatiGioco::da_testi(&sanita_cara(senza_shock())).unwrap(), 1);
+    presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+    p.chiudi_turno();
     accogli(&mut p, true).unwrap();
     presenta(&mut p, &[("ticket", "alto")]).unwrap();
     let id = p.vista().calendario[1].id;
@@ -198,6 +200,10 @@ fn salvare_a_meta_turno_conserva_l_aula() {
             a: "sanita".into(),
             importo: 1_000_000,
         },
+    })
+    .unwrap();
+    p.comanda(Comando::Accogli {
+        dicastero: "sanita".into(),
     })
     .unwrap();
     let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
@@ -247,6 +253,46 @@ fn comandi_dell_aula_non_ammessi_rifiutati_col_nome() {
             .to_string()
             .contains("emendamento già deciso: Centrodestra su «Età pensionabile: 65 anni»")
     );
+    // Sulla conversione di un decreto il nome è quello dei fondi.
+    let sposta = |importo| Comando::EmanaDecreto {
+        decreto: Decreto::Fondi {
+            da: "giustizia".into(),
+            a: "sanita".into(),
+            importo,
+        },
+    };
+    p.comanda(sposta(1_000_000)).unwrap();
+    let conversione = p.vista().calendario.last().unwrap().id;
+    p.comanda(Comando::PoniFiducia {
+        misura: conversione,
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let decreto = "«Decreto: fondi da Giustizia a Sanità»";
+    for (c, nome) in [
+        (
+            Comando::PoniFiducia {
+                misura: conversione,
+            },
+            format!("questione di fiducia già posta su {decreto}"),
+        ),
+        (
+            Comando::Emendamento {
+                misura: conversione,
+                partito: "centrodestra".into(),
+                accogli: true,
+            },
+            format!("nessun emendamento di Centrodestra su {decreto}"),
+        ),
+        (sposta(0), "importo non ammesso: 0".to_string()),
+    ] {
+        let e = p.comanda(c).unwrap_err();
+        assert!(
+            matches!(e, Errore::Comando(_)) && e.to_string().contains(&nome),
+            "{e}"
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
 }
 
 #[test]

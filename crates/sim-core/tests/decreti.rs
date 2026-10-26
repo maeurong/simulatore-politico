@@ -1,29 +1,12 @@
 mod comune;
-use comune::{dati_base, ferma_tranne, ferma_tutti, file_base, imposta, sostituisci};
+use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Errore, Partita};
 
-/// La Sanità con i quattro atti a 9 quote, come in tests/proposte.rs: il ministro chiede fondi.
 fn sanita_cara() -> FileDati {
-    let effetto = "effetti = [\n  { grandezza = \"qualita_servizio_sanitario\", intensita = ";
-    let mut f = file_base();
-    for coda in [
-        "8.0, ritardo = 1, forma = \"impulso\", durata = 2.0",
-        "8.0, ritardo = 1, forma = \"impulso\", durata = 1.5",
-        "4.0",
-        "2.0",
-    ] {
-        let costo = if coda == "2.0" {
-            "costo = 0.5\n"
-        } else {
-            "costo = 1.0\n"
-        };
-        let da = format!("{costo}{effetto}{coda}");
-        f = sostituisci(f, "atti", &da, &da.replacen(costo, "costo = 9.0\n", 1));
-    }
-    f
+    comune::sanita_cara(file_base())
 }
 
 fn accolta(f: FileDati) -> (Partita, i64) {
@@ -90,12 +73,23 @@ fn ferma_dopo_accogli_ritira_il_decreto() {
 
 #[test]
 fn dimissioni_dopo_accogli_ritirano_il_decreto() {
+    let prima = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1)
+        .vista()
+        .ministeri[3]
+        .margine_residuo;
     let (mut p, _) = accolta(sanita_cara());
     p.comanda(Comando::ChiediDimissioni {
         dicastero: "sanita".into(),
     })
     .unwrap();
     assert_eq!(p.economia().decreti[3], 0);
+    assert_eq!(p.vista().ministeri[3].margine_residuo, prima);
+    assert!(
+        p.vista()
+            .calendario
+            .iter()
+            .all(|m| m.forma != FormaMisura::Conversione)
+    );
 }
 
 #[test]
@@ -126,17 +120,18 @@ fn dirotta_dopo_accogli_tiene_il_decreto() {
 
 #[test]
 fn decreto_accolto_entra_nella_domanda_del_dicastero() {
-    let (mut a, _) = accolta(sanita_cara());
+    let (mut a, importo) = accolta(sanita_cara());
     let mut b = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
     b.comanda(Comando::Respingi {
         dicastero: "sanita".into(),
     })
     .unwrap();
-    for p in [&mut a, &mut b] {
-        // Fermare la Sanità in `a` ritirerebbe il decreto; in `b` non ha agenda.
-        ferma_tranne(p, "sanita");
-        p.chiudi_turno();
-    }
+    // Fermare la Sanità in `a` ritirerebbe il decreto; in `b` non ha agenda.
+    ferma_tranne(&mut a, "sanita");
+    ferma_tranne(&mut b, "sanita");
+    assert_eq!(a.economia().decreti[3], importo);
+    a.chiudi_turno();
+    b.chiudi_turno();
     let d = dati_base();
     let st = d.struttura();
     // La Sanità non ha un vettore proprio (`dati/base/dicasteri.toml`): usa la spesa pubblica nazionale.
@@ -151,7 +146,9 @@ fn decreto_accolto_entra_nella_domanda_del_dicastero() {
     let k = (0..quote.len())
         .max_by(|&x, &y| quote[x].total_cmp(&quote[y]))
         .unwrap();
-    assert!(a.economia().gap_settori[k] > b.economia().gap_settori[k]);
+    // La sola componente settoriale: l'impulso fiscale del decreto alza già l'output gap.
+    let settoriale = |p: &Partita| p.economia().gap_settori[k] - p.economia().output_gap[0];
+    assert!(settoriale(&a) > settoriale(&b));
 }
 
 #[test]
@@ -284,4 +281,101 @@ fn spostamento_decaduto_torna_indietro_e_non_si_ripete() {
             .contains("decreto decaduto non si ripete: giustizia → sanita"),
         "{e}"
     );
+}
+
+/// Il decreto accolto in agenda non si sposta: il tetto è il margine residuo senza il decreto.
+/// Spostato il resto, Ferma ritira il decreto e il margine resta non negativo.
+#[test]
+fn spostare_il_margine_del_decreto_accolto_e_rifiutato() {
+    let (mut p, importo) = accolta(sanita_cara());
+    let residuo = p.vista().ministeri[3].margine_residuo;
+    let prima = p.salva().unwrap();
+    // Anche un euro oltre il margine senza il decreto: entro il margine annuo, lo ferma solo il
+    // decreto in agenda.
+    for importo in [residuo, residuo - importo + 1] {
+        let e = p
+            .comanda(sposta("sanita", "giustizia", importo))
+            .unwrap_err();
+        assert!(
+            e.to_string().contains("margine insufficiente in sanita"),
+            "{e}"
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+    p.comanda(sposta("sanita", "giustizia", residuo - importo))
+        .unwrap();
+    p.comanda(Comando::Ferma {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    assert!(p.vista().ministeri[3].margine_residuo >= 0);
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+}
+
+/// Ritirare la conversione con la questione di fiducia posta rimborsa agli alleati il suo costo
+/// d'intesa (scelta 1: si paga solo Ferma).
+#[test]
+fn ritiro_dopo_la_fiducia_rimborsa_l_intesa() {
+    let ferma = |p: &mut Partita| {
+        p.comanda(Comando::Ferma {
+            dicastero: "sanita".into(),
+        })
+        .unwrap();
+    };
+    let (mut senza, _) = accolta(sanita_cara());
+    ferma(&mut senza);
+    let (mut con, _) = accolta(sanita_cara());
+    let id = (con.vista().calendario.iter())
+        .find(|m| m.forma == FormaMisura::Conversione)
+        .unwrap()
+        .id;
+    let prima = con.intesa().valori.clone();
+    con.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    assert_ne!(con.intesa().valori, prima);
+    ferma(&mut con);
+    let (c, s) = (&con.intesa().valori, &senza.intesa().valori);
+    assert!(
+        c.iter().zip(s).all(|(x, y)| (x - y).abs() < 1e-9),
+        "{c:?} {s:?}"
+    );
+}
+
+type Modifica = Box<dyn Fn(&mut serde_json::Value)>;
+
+/// Un salvataggio col decreto in agenda incoerente con economia, margine o calendario è illeggibile.
+#[test]
+fn decreto_incoerente_al_caricamento_rifiutato() {
+    let (p, importo) = accolta(sanita_cara());
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+    let residuo = p.vista().ministeri[3].margine_residuo;
+    let righe: Vec<(&str, Modifica)> = vec![
+        (
+            "decreto in agenda diverso da economia",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][3]["agenda"]["decreto"] = (importo - 1).into();
+            }),
+        ),
+        (
+            "economia senza il decreto",
+            Box::new(|j| j["economia"]["decreti"][3] = 0.into()),
+        ),
+        (
+            "decreto oltre il margine residuo",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][3]["agenda"]["decreto"] = (residuo + 1).into();
+                j["economia"]["decreti"][3] = (residuo + 1).into();
+            }),
+        ),
+        (
+            "conversione fuori dal calendario",
+            Box::new(|j| j["parlamento"]["misure"] = serde_json::json!([])),
+        ),
+    ];
+    for (caso, modifica) in righe {
+        let e = edita(&p, |j| modifica(j)).err();
+        assert!(
+            matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
+            "{caso}: {e:?}"
+        );
+    }
 }

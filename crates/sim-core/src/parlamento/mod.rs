@@ -515,11 +515,19 @@ impl Parlamento {
         self.prossima = self.prossima.saturating_add(1);
     }
 
-    /// Il decreto dei fondi accolti per `dicastero` esce dal calendario.
-    pub(crate) fn ritira(&mut self, dicastero: usize) {
-        (self.misure).retain(|m| {
-            !matches!(m.fondi, Some(FondiDecreto::Accolti { dicastero: d, .. }) if d == dicastero)
-        });
+    /// La conversione del decreto dei fondi accolti per `dicastero`, se c'è, esce dal calendario.
+    pub(crate) fn ritira(&mut self, dicastero: usize) -> Option<Misura> {
+        let k = (self.misure.iter()).position(|m| {
+            matches!(m.fondi, Some(FondiDecreto::Accolti { dicastero: d, .. }) if d == dicastero)
+        })?;
+        Some(self.misure.remove(k))
+    }
+
+    /// C'è in calendario la conversione dei fondi accolti per `dicastero`.
+    pub(crate) fn in_conversione(&self, dicastero: usize) -> bool {
+        (self.misure.iter()).any(|m| {
+            matches!(m.fondi, Some(FondiDecreto::Accolti { dicastero: d, .. }) if d == dicastero)
+        })
     }
 
     /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.

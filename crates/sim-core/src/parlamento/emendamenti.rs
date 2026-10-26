@@ -1,7 +1,7 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome, posizioni, voto};
+use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, voto};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -176,7 +176,7 @@ impl Parlamento {
         };
         let j = partiti.iter().position(|p| p.id == partito);
         let chi = j.map_or(partito, |j| partiti[j].nome.as_str());
-        let legge = nome(dati, &m.valori);
+        let legge = nome_misura(dati, m);
         let Some(e) = m.emendamenti.iter_mut().find(|e| Some(e.partito) == j) else {
             return ko(format!("nessun emendamento di {chi} su «{legge}»"));
         };
@@ -214,13 +214,13 @@ impl Parlamento {
             return ko(format!(
                 "La norma costituzionale passa da due deliberazioni e dal referendum: niente \
                  questione di fiducia su «{}»",
-                nome(dati, &m.valori)
+                nome_misura(dati, m)
             ));
         }
         if m.fiducia {
             return ko(format!(
                 "questione di fiducia già posta su «{}»",
-                nome(dati, &m.valori)
+                nome_misura(dati, m)
             ));
         }
         m.fiducia = true;

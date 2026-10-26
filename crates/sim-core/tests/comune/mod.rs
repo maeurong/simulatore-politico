@@ -237,3 +237,28 @@ pub fn presenta(p: &mut Partita, valori: &[(&str, &str)]) -> Result<(), Errore> 
         .collect();
     p.comanda(Comando::PresentaLegge { valori })
 }
+
+/// `f` con i quattro atti della Sanità a 9 quote, come in tests/proposte.rs: nessuno è pagabile,
+/// il ministro chiede fondi.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn sanita_cara(mut f: FileDati) -> FileDati {
+    let effetto = "effetti = [\n  { grandezza = \"qualita_servizio_sanitario\", intensita = ";
+    for coda in [
+        "8.0, ritardo = 1, forma = \"impulso\", durata = 2.0",
+        "8.0, ritardo = 1, forma = \"impulso\", durata = 1.5",
+        "4.0",
+        "2.0",
+    ] {
+        let costo = if coda == "2.0" {
+            "costo = 0.5\n"
+        } else {
+            "costo = 1.0\n"
+        };
+        let da = format!("{costo}{effetto}{coda}");
+        f = sostituisci(f, "atti", &da, &da.replacen(costo, "costo = 9.0\n", 1));
+    }
+    f
+}
