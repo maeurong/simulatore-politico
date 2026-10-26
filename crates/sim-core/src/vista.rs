@@ -1,6 +1,6 @@
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::ministri::{Causa, Variazione};
+use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::partita::Trimestre;
 use serde::Serialize;
 #[cfg(test)]
@@ -82,6 +82,62 @@ pub struct VoceMinistero {
     pub rosa: Vec<VoceMinistro>,
     /// Perché il ministro è uscito; `Some` solo in interim.
     pub causa_dimissioni: Option<Causa>,
+    /// L'atto annunciato per il turno; `None` in interim o a margine esaurito.
+    pub agenda: Option<VoceAgenda>,
+    /// Perché manca l'agenda: `interim` o `margine esaurito`.
+    pub motivo_senza_agenda: Option<String>,
+    /// I 4 atti del dicastero.
+    pub atti: Vec<VoceAtto>,
+    pub cantieri: Vec<VoceCantiere>,
+    /// Euro, prima delle rate dei cantieri.
+    pub margine_residuo: i64,
+}
+
+/// `atto` e `regione` sono id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceAgenda {
+    pub atto: String,
+    pub nome: String,
+    pub regione: Option<String>,
+    /// Euro per turno di lavori.
+    pub costo: i64,
+    pub motivo: String,
+    pub stato: StatoAgenda,
+    pub in_evidenza: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceAtto {
+    pub id: String,
+    pub nome: String,
+    pub motto: String,
+    /// Euro per turno di lavori.
+    pub costo: i64,
+    pub turni: u32,
+    pub pagabile: bool,
+    pub effetti: Vec<VoceEffetto>,
+}
+
+/// `grandezza` è un id; `ritardo` quello scritto, in turni.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceEffetto {
+    pub grandezza: String,
+    pub migliora: bool,
+    pub ritardo: u32,
+}
+
+/// `atto` e `regione` sono id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceCantiere {
+    pub atto: String,
+    pub regione: Option<String>,
+    pub turni_mancanti: u32,
+    pub rata: i64,
+    pub speso: i64,
 }
 
 /// Il ministro com'è visibile al giocatore: soddisfazione, agende e capacità, non lo stato nascosto.

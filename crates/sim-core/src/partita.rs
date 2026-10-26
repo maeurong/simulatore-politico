@@ -121,6 +121,8 @@ impl Partita {
     // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
     // nuovo, rose, agende, proposte).
     pub fn chiudi_turno(&mut self) {
+        let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
+        self.grandezze.effetti.extend(effetti);
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
         self.grandezze
@@ -165,6 +167,34 @@ impl Partita {
             ..cx
         };
         self.ministri.apri(&cx, &mut self.caso);
+    }
+
+    fn contesto(&self) -> Contesto<'_> {
+        Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        }
+    }
+
+    /// Esegue `f` sui ministri (in scrittura) con ciò che leggono del resto della partita.
+    pub(crate) fn con_contesto<R>(&mut self, f: impl FnOnce(&mut Ministri, &Contesto) -> R) -> R {
+        let cx = Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            turno: self.turno,
+            data: self.data,
+        };
+        f(&mut self.ministri, &cx)
     }
 
     /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
@@ -326,7 +356,7 @@ impl Partita {
                 })
                 .collect(),
             partiti: self.voci_partiti(),
-            ministeri: self.ministri.voci(&self.dati, &self.partiti),
+            ministeri: self.ministri.voci(&self.contesto()),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {

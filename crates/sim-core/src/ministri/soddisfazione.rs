@@ -5,7 +5,13 @@ use crate::dati::DatiGioco;
 use crate::grandezze::Verso;
 
 /// Ogni variazione si applica subito alla soddisfazione e si accoda con il suo turno.
-fn registra(m: &mut Ministro, v: &mut Vec<Variazione>, causa: Causa, delta: f64, turno: u32) {
+pub(super) fn registra(
+    m: &mut Ministro,
+    v: &mut Vec<Variazione>,
+    causa: Causa,
+    delta: f64,
+    turno: u32,
+) {
     m.soddisfazione += delta;
     v.push(Variazione {
         causa,

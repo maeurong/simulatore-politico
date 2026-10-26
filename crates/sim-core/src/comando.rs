@@ -10,8 +10,25 @@ use ts_rs::TS;
 #[cfg_attr(test, derive(TS), ts(export))]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum Comando {
-    ChiediDimissioni { dicastero: String },
-    ScegliSuccessore { dicastero: String, indice: u8 },
+    ChiediDimissioni {
+        dicastero: String,
+    },
+    ScegliSuccessore {
+        dicastero: String,
+        indice: u8,
+    },
+    Ferma {
+        dicastero: String,
+    },
+    Dirotta {
+        dicastero: String,
+        atto: Option<String>,
+        regione: Option<String>,
+    },
+    FermaCantiere {
+        dicastero: String,
+        atto: String,
+    },
 }
 
 impl Partita {
@@ -20,6 +37,6 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del dicastero in causa; la partita resta identica.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
-        self.ministri.comanda(&self.dati, c)
+        self.con_contesto(|ministri, cx| ministri.comanda(cx, c))
     }
 }

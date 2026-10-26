@@ -16,7 +16,10 @@ use std::fmt;
 #[cfg(test)]
 use ts_rs::TS;
 
+mod agenda;
 mod soddisfazione;
+
+pub use agenda::{Agenda, Cantiere, StatoAgenda};
 
 /// Perché la soddisfazione di un ministro è cambiata.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +29,9 @@ pub enum Causa {
     IndicatoreInCalo,
     ObiettivoRaggiunto,
     DimissioniChieste,
+    AttoFermato,
+    AttoDirottato,
+    CantiereFermato,
 }
 
 impl fmt::Display for Causa {
@@ -34,6 +40,9 @@ impl fmt::Display for Causa {
             Self::IndicatoreInCalo => "indicatore di servizio in calo",
             Self::ObiettivoRaggiunto => "obiettivo raggiunto",
             Self::DimissioniChieste => "dimissioni chieste dal Presidente del Consiglio",
+            Self::AttoFermato => "atto fermato dal Presidente del Consiglio",
+            Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
+            Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
         })
     }
 }
@@ -80,6 +89,11 @@ pub struct StatoDicastero {
     pub variazioni: Vec<Variazione>,
     /// Perché il ministro è uscito; `Some` solo in interim.
     pub causa_dimissioni: Option<Causa>,
+    /// L'atto annunciato per il turno in corso; `None` in interim o a margine esaurito.
+    pub agenda: Option<Agenda>,
+    pub cantieri: Vec<Cantiere>,
+    /// Euro ancora spendibili nell'anno, prima delle rate dei cantieri.
+    pub margine_residuo: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -123,6 +137,7 @@ impl Ministri {
             x.turni_in_carica = 1;
             m.dicasteri[i].ministro = Some(x);
         }
+        m.apri_agende(cx, caso);
         m
     }
 
@@ -206,6 +221,7 @@ impl Ministri {
                 st.causa_dimissioni = None;
             }
         }
+        self.apri_agende(cx, caso);
     }
 
     /// Forma e valori di un salvataggio contro i dati.
@@ -248,19 +264,27 @@ impl Ministri {
                 }
             }
         }
-        Ok(())
+        self.controlla_agende(dati).or_else(ko)
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla.
-    pub(crate) fn comanda(&mut self, dati: &DatiGioco, c: Comando) -> Result<(), Errore> {
-        let ko = |m: String| Err(Errore::Comando(m));
-        let (Comando::ChiediDimissioni { dicastero } | Comando::ScegliSuccessore { dicastero, .. }) =
-            &c;
+    pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<(), Errore> {
+        let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
+        let (Comando::ChiediDimissioni { dicastero }
+        | Comando::ScegliSuccessore { dicastero, .. }
+        | Comando::Ferma { dicastero }
+        | Comando::Dirotta { dicastero, .. }
+        | Comando::FermaCantiere { dicastero, .. }) = &c;
         let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
         let st = &mut self.dicasteri[i];
         match c {
+            Comando::Ferma { .. } => self.ferma(cx, i)?,
+            Comando::Dirotta { atto, regione, .. } => {
+                self.dirotta(cx, i, atto.as_deref(), regione.as_deref())?;
+            }
+            Comando::FermaCantiere { atto, .. } => self.ferma_cantiere(cx, i, &atto)?,
             Comando::ChiediDimissioni { dicastero } => {
                 if st.ministro.is_none() {
                     return ko(format!("{dicastero} è in interim"));
@@ -286,7 +310,8 @@ impl Ministri {
     }
 
     /// Le voci per la `Vista`, nell'ordine dei dicasteri.
-    pub(crate) fn voci(&self, dati: &DatiGioco, partiti: &[Partito]) -> Vec<VoceMinistero> {
+    pub(crate) fn voci(&self, cx: &Contesto) -> Vec<VoceMinistero> {
+        let (dati, partiti) = (cx.dati, cx.partiti);
         let soglia = dati.manopola("soglia_minaccia");
         let voce = |x: &Ministro, variazioni: &[Variazione]| VoceMinistro {
             nome: x.nome.clone(),
@@ -301,11 +326,20 @@ impl Ministri {
             variazioni: variazioni.to_vec(),
         };
         (dati.dicasteri().iter().zip(&self.dicasteri))
-            .map(|(d, st)| VoceMinistero {
-                dicastero: d.id.clone(),
-                ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),
-                rosa: st.rosa.iter().map(|x| voce(x, &[])).collect(),
-                causa_dimissioni: st.causa_dimissioni,
+            .enumerate()
+            .map(|(i, (d, st))| {
+                let g = self.voci_governo(cx, i);
+                VoceMinistero {
+                    dicastero: d.id.clone(),
+                    ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),
+                    rosa: st.rosa.iter().map(|x| voce(x, &[])).collect(),
+                    causa_dimissioni: st.causa_dimissioni,
+                    agenda: g.agenda,
+                    motivo_senza_agenda: g.motivo_senza_agenda,
+                    atti: g.atti,
+                    cantieri: g.cantieri,
+                    margine_residuo: st.margine_residuo,
+                }
             })
             .collect()
     }

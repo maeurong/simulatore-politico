@@ -143,6 +143,14 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "passo_obiettivo",
     "riduzione_rodaggio",
     "scarto_ministri",
+    "peso_obiettivo",
+    "peso_posizione",
+    "rumore_agenda",
+    "costo_fermare",
+    "peso_bisogno_bersaglio",
+    "peso_voti_bersaglio",
+    "costo_dirottare_regione",
+    "distanza_evidenza",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

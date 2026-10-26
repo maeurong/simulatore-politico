@@ -2,6 +2,7 @@
 //! La base segue il funzionamento reale (salari e acquisti a prezzi costanti) con un decadimento
 //! verso l'obiettivo; la vista le mostra con un turno di ritardo.
 
+use crate::atti::Forma;
 use crate::dati::DatiGioco;
 use crate::economia::{Bilancio, Economia};
 use crate::errore::Errore;
@@ -52,9 +53,45 @@ pub struct DatoGrandezza {
     pub dicasteri: Vec<String>,
 }
 
-/// Effetto di un atto sulle grandezze; i campi arrivano col Task 5.
+/// Effetto di un atto già registrato: `intensita` è quella corretta per la capacità del
+/// ministro, `inizio` il turno da cui conta.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct EffettoAttivo {}
+pub struct EffettoAttivo {
+    pub grandezza: usize,
+    /// `None` = vale ovunque.
+    pub regione: Option<usize>,
+    pub dicastero: usize,
+    pub intensita: f64,
+    pub inizio: u32,
+    pub forma: Forma,
+    /// Emivita (impulso) o vita utile (stock), in turni.
+    pub durata: f64,
+}
+
+/// Contributo al turno `turno`: 0 prima di `inizio`; impulso `I · 0.5^(età/durata)`,
+/// stock `I · max(0, 1 − età/durata)`.
+pub fn contributo(e: &EffettoAttivo, turno: u32) -> f64 {
+    let Some(eta) = turno.checked_sub(e.inizio) else {
+        return 0.0;
+    };
+    let x = f64::from(eta) / e.durata;
+    match e.forma {
+        Forma::Impulso => e.intensita * 0.5_f64.powf(x),
+        Forma::Stock => e.intensita * (1.0 - x).max(0.0),
+    }
+}
+
+/// Uno stock esce a fine vita utile, un impulso oltre dieci emivite.
+fn esaurito(e: &EffettoAttivo, turno: u32) -> bool {
+    let Some(eta) = turno.checked_sub(e.inizio) else {
+        return false;
+    };
+    let eta = f64::from(eta);
+    match e.forma {
+        Forma::Stock => eta >= e.durata,
+        Forma::Impulso => eta > 10.0 * e.durata,
+    }
+}
 
 /// Una riga per grandezza, lunga 1 o quanto le regioni.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -96,7 +133,7 @@ impl Grandezze {
     }
 
     /// Un passo: `prima ← valori`, poi la base verso l'obiettivo, poi i valori.
-    pub fn avanza(&mut self, dati: &DatiGioco, e: &Economia, _turno: u32) {
+    pub fn avanza(&mut self, dati: &DatiGioco, e: &Economia, turno: u32) {
         self.prima.clone_from(&self.valori);
         let (v_serv, v_turn, elast) = (
             dati.manopola("velocita_servizio"),
@@ -130,12 +167,16 @@ impl Grandezze {
                 *b += velocita * (obiettivo - *b);
             }
         }
-        // Task 5: qui si sommano i contributi degli effetti attivi.
         for (k, g) in dati.grandezze().iter().enumerate() {
-            for (v, b) in self.valori[k].iter_mut().zip(&self.basi[k]) {
-                *v = b.clamp(g.min, g.max);
+            for (r, (v, b)) in self.valori[k].iter_mut().zip(&self.basi[k]).enumerate() {
+                let somma: f64 = (self.effetti.iter())
+                    .filter(|e| e.grandezza == k && (e.regione.is_none() || e.regione == Some(r)))
+                    .map(|e| contributo(e, turno))
+                    .sum();
+                *v = (b + somma).clamp(g.min, g.max);
             }
         }
+        self.effetti.retain(|e| !esaurito(e, turno));
     }
 
     /// Valore nazionale: la riga se è una, altrimenti la media pesata sulle forze di lavoro.
@@ -152,9 +193,25 @@ impl Grandezze {
     ///
     /// # Errors
     /// `SalvataggioIlleggibile` se le righe non sono quante le grandezze o lunghe quanto devono,
-    /// o se un valore non è finito o esce da min-max.
+    /// se un valore non è finito o esce da min-max, o se un effetto punta a una grandezza, una
+    /// regione o un dicastero che non c'è, o ha intensità o durata non valide.
     pub fn controlla(&self, dati: &DatiGioco) -> Result<(), Errore> {
         let n = dati.regioni().len();
+        let buoni = self.effetti.iter().all(|e| {
+            let regione_giusta = |regionale: bool| e.regione.is_none_or(|r| regionale && r < n);
+            dati.grandezze()
+                .get(e.grandezza)
+                .is_some_and(|g| regione_giusta(g.regionale))
+                && e.dicastero < dati.dicasteri().len()
+                && e.intensita.is_finite()
+                && e.durata.is_finite()
+                && e.durata > 0.0
+        });
+        if !buoni {
+            return Err(Errore::SalvataggioIlleggibile(
+                "grandezze.effetti non combacia con i dati".into(),
+            ));
+        }
         for (nome, righe) in [
             ("basi", &self.basi),
             ("valori", &self.valori),
@@ -187,6 +244,46 @@ fn media(dati: &DatiGioco, riga: &[f64]) -> f64 {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn effetto(forma: Forma, intensita: f64, inizio: u32, durata: f64) -> EffettoAttivo {
+        EffettoAttivo {
+            grandezza: 0,
+            regione: None,
+            dicastero: 0,
+            intensita,
+            inizio,
+            forma,
+            durata,
+        }
+    }
+
+    #[test]
+    fn impulso_si_dimezza_a_ogni_emivita() {
+        let e = effetto(Forma::Impulso, 8.0, 2, 3.0);
+        assert_eq!(contributo(&e, 2), 8.0);
+        assert!((contributo(&e, 5) - 4.0).abs() < 1e-12);
+        assert!((contributo(&e, 8) - 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn stock_si_consuma_lungo_la_vita_utile() {
+        let e = effetto(Forma::Stock, 8.0, 1, 4.0);
+        assert_eq!(contributo(&e, 1), 8.0);
+        assert!((contributo(&e, 3) - 4.0).abs() < 1e-12);
+        assert_eq!(contributo(&e, 5), 0.0);
+        assert_eq!(contributo(&e, 50), 0.0);
+        assert!(esaurito(&e, 5) && !esaurito(&e, 4));
+    }
+
+    #[test]
+    fn niente_prima_del_ritardo() {
+        for forma in [Forma::Impulso, Forma::Stock] {
+            let e = effetto(forma, 8.0, 4, 3.0);
+            assert_eq!(contributo(&e, 3), 0.0);
+            assert!(!esaurito(&e, 3));
+            assert!(contributo(&e, 4) > 0.0);
+        }
+    }
 
     #[test]
     fn segno_del_verso() {

@@ -1,4 +1,6 @@
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::ministri::StatoAgenda;
+use sim_core::{Comando, Partita};
 
 #[allow(
     dead_code,
@@ -135,4 +137,33 @@ pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> Fil
         .join("\n")
         + "\n";
     f
+}
+
+/// Ferma le agende ancora annunciate, tranne quella di `tranne`, così due partite divergono
+/// solo per ciò che il test fa.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
+    for m in p.vista().ministeri {
+        let annunciata = m
+            .agenda
+            .as_ref()
+            .is_some_and(|a| a.stato == StatoAgenda::Annunciata);
+        if annunciata && m.dicastero != tranne {
+            p.comanda(Comando::Ferma {
+                dicastero: m.dicastero,
+            })
+            .unwrap();
+        }
+    }
+}
+
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn ferma_tutti(p: &mut Partita) {
+    ferma_tranne(p, "");
 }

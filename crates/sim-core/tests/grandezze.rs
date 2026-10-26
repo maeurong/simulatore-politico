@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta, senza_shock, sostituisci};
+use comune::{dati_base, ferma_tutti, file_base, imposta, senza_shock, sostituisci};
 use sim_core::dati::DatiGioco;
 use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::{Errore, Partita};
@@ -72,6 +72,8 @@ fn servizio_segue_il_funzionamento_reale() {
     let mut b = Partita::nuova(DatiGioco::da_testi(&fermo).unwrap(), 1);
     let mut serie = Vec::new();
     for _ in 0..10 {
+        ferma_tutti(&mut a);
+        ferma_tutti(&mut b);
         a.chiudi_turno();
         b.chiudi_turno();
         serie.push(a.grandezza("qualita_servizio_sanitario").unwrap());
@@ -93,6 +95,7 @@ fn servizio_in_calo_pesa_sul_partito_del_dicastero() {
     let giudizio = |f| {
         let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
         for _ in 0..10 {
+            ferma_tutti(&mut p);
             p.chiudi_turno();
         }
         let j = p

@@ -3,4 +3,4 @@
 /**
  * Perché la soddisfazione di un ministro è cambiata.
  */
-export type Causa = "indicatore_in_calo" | "obiettivo_raggiunto" | "dimissioni_chieste";
+export type Causa = "indicatore_in_calo" | "obiettivo_raggiunto" | "dimissioni_chieste" | "atto_fermato" | "atto_dirottato" | "cantiere_fermato";

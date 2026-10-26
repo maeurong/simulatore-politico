@@ -606,3 +606,59 @@ valore = 0.5
 min = 0.0
 max = 1.5
 ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_obiettivo]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_posizione]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[rumore_agenda]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_fermare]
+valore = 15.0
+min = 0.0
+max = 40.0
+ticket = "04"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_bisogno_bersaglio]
+valore = 0.5
+min = 0.0
+max = 3.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[peso_voti_bersaglio]
+valore = 0.5
+min = 0.0
+max = 3.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[costo_dirottare_regione]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "27"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[distanza_evidenza]
+valore = 2.0
+min = 1.0
+max = 4.0
+ticket = "09"
