@@ -1,0 +1,571 @@
+# Catalogo degli atti del ministro (ticket 16). Sanità dall'asset 16; gli altri 36 sono una bozza del piano 5 sotto revisione di Mario. Intensità e ritardi per un ministro di capacità 3.
+
+[[atto]]
+id = "economia_finanze_incroci"
+nome = "Incrocio delle banche dati fiscali"
+motto = "Il fisco scopre che lei ha due case e una barca."
+dicastero = "economia_finanze"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 2.5
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "efficienza_riscossione", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "economia_finanze_condono"
+nome = "Condono per chi paga subito"
+motto = "Pagare tardi, ma con la ricevuta."
+dicastero = "economia_finanze"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "efficienza_riscossione", intensita = 4.0, ritardo = 0, forma = "impulso", durata = 1.0 },
+  { grandezza = "efficienza_riscossione", intensita = -4.0, ritardo = 2, forma = "impulso", durata = 4.0 },
+]
+
+[[atto]]
+id = "economia_finanze_anagrafe"
+nome = "Anagrafe tributaria unica"
+motto = "Un solo schedario per tutti i cassetti."
+dicastero = "economia_finanze"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.0
+effetti = [
+  { grandezza = "efficienza_riscossione", intensita = 4.0, ritardo = 0, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "economia_finanze_concessionari"
+nome = "Riscossione affidata a concessionari privati"
+motto = "La cartella esattoriale, ora in appalto."
+dicastero = "economia_finanze"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "efficienza_riscossione", intensita = 2.0, ritardo = 3, forma = "stock", durata = 24.0 },
+]
+
+[[atto]]
+id = "sviluppo_economico_commesse"
+nome = "Commesse pubbliche alle imprese del territorio"
+motto = "Compriamo locale, anche se costa un po' di più."
+dicastero = "sviluppo_economico"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 2.5
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "domanda_regionale", intensita = 0.6, ritardo = 1, forma = "impulso", durata = 2.0 },
+  { grandezza = "sostegno_imprese", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "sviluppo_economico_sgravi"
+nome = "Sgravi mirati sulle zone industriali"
+motto = "Meno tasse dove i capannoni sono vuoti."
+dicastero = "sviluppo_economico"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "domanda_regionale", intensita = 1.0, ritardo = 0, forma = "impulso", durata = 1.5 },
+]
+
+[[atto]]
+id = "sviluppo_economico_distretti"
+nome = "Distretti produttivi e contratti di filiera"
+motto = "Tutti insieme, dal bullone al container."
+dicastero = "sviluppo_economico"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.5
+effetti = [
+  { grandezza = "investimenti_privati", intensita = 4.0, ritardo = 0, forma = "stock", durata = 36.0 },
+]
+
+[[atto]]
+id = "sviluppo_economico_zone"
+nome = "Zone economiche speciali con burocrazia ridotta"
+motto = "Qui i timbri si contano sulle dita di una mano."
+dicastero = "sviluppo_economico"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "investimenti_privati", intensita = 4.0, ritardo = 3, forma = "stock", durata = 30.0 },
+]
+
+[[atto]]
+id = "lavoro_welfare_bonus"
+nome = "Bonus straordinario per le famiglie in difficoltà"
+motto = "Un assegno e un sospiro di sollievo."
+dicastero = "lavoro_welfare"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 2.5
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "copertura_welfare", intensita = 8.0, ritardo = 0, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "lavoro_welfare_incentivi"
+nome = "Incentivi alle assunzioni stabili"
+motto = "Il contratto fisso torna di moda."
+dicastero = "lavoro_welfare"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "politiche_attive", intensita = 0.1, ritardo = 2, forma = "impulso", durata = 3.0 },
+]
+
+[[atto]]
+id = "lavoro_welfare_centri_impiego"
+nome = "Centri per l'impiego rinnovati"
+motto = "Lo sportello che, stavolta, trova davvero lavoro."
+dicastero = "lavoro_welfare"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.0
+effetti = [
+  { grandezza = "politiche_attive", intensita = 0.1, ritardo = 0, forma = "stock", durata = 40.0 },
+  { grandezza = "copertura_welfare", intensita = 4.0, ritardo = 0, forma = "stock", durata = 36.0 },
+]
+
+[[atto]]
+id = "lavoro_welfare_formazione"
+nome = "Formazione pagata dalle imprese"
+motto = "Imparare il mestiere dove si lavora, a spese dell'azienda."
+dicastero = "lavoro_welfare"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "politiche_attive", intensita = 0.05, ritardo = 3, forma = "stock", durata = 24.0 },
+]
+
+[[atto]]
+id = "sanita_liste_straordinario"
+nome = "Piano straordinario sulle liste d'attesa"
+motto = "Il numero d'attesa, finalmente, scende."
+dicastero = "sanita"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "qualita_servizio_sanitario", intensita = 8.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "sanita_convenzioni_privato"
+nome = "Convenzioni col privato accreditato"
+motto = "La sala operatoria accanto, già convenzionata."
+dicastero = "sanita"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "qualita_servizio_sanitario", intensita = 8.0, ritardo = 1, forma = "impulso", durata = 1.5 },
+]
+
+[[atto]]
+id = "sanita_case_comunita"
+nome = "Case di comunità e medicina territoriale"
+motto = "Il medico sotto casa, non in capo al mondo."
+dicastero = "sanita"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.0
+effetti = [
+  { grandezza = "qualita_servizio_sanitario", intensita = 4.0, ritardo = 0, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "sanita_accorpamento_asl"
+nome = "Accorpamento delle ASL e premi ai primari"
+motto = "Meno sigle, più primari contenti."
+dicastero = "sanita"
+velocita = "lento"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "qualita_servizio_sanitario", intensita = 2.0, ritardo = 4, forma = "stock", durata = 20.0 },
+]
+
+[[atto]]
+id = "istruzione_ricerca_supplenti"
+nome = "Assunzione straordinaria di supplenti"
+motto = "Una cattedra per ogni classe, finalmente."
+dicastero = "istruzione_ricerca"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 2.5
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "qualita_scuola", intensita = 8.0, ritardo = 1, forma = "impulso", durata = 2.5 },
+]
+
+[[atto]]
+id = "istruzione_ricerca_premi"
+nome = "Premi di merito agli istituti"
+motto = "Il registro diventa una classifica."
+dicastero = "istruzione_ricerca"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "qualita_scuola", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "istruzione_ricerca_edilizia"
+nome = "Edilizia scolastica e tempo pieno"
+motto = "Il soffitto regge, la campanella suona più tardi."
+dicastero = "istruzione_ricerca"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 6
+costo = 1.0
+effetti = [
+  { grandezza = "qualita_scuola", intensita = 4.0, ritardo = 0, forma = "stock", durata = 40.0 },
+  { grandezza = "capitale_umano", intensita = 2.0, ritardo = 4, forma = "stock", durata = 50.0 },
+]
+
+[[atto]]
+id = "istruzione_ricerca_atenei"
+nome = "Autonomia degli atenei e dottorati industriali"
+motto = "L'università fa i conti, e anche i brevetti."
+dicastero = "istruzione_ricerca"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "capitale_umano", intensita = 4.0, ritardo = 4, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "infrastrutture_trasporti_manutenzione"
+nome = "Manutenzione straordinaria delle strade locali"
+motto = "Le buche si chiudono, i cantieri arancioni restano."
+dicastero = "infrastrutture_trasporti"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "domanda_regionale", intensita = 0.6, ritardo = 0, forma = "impulso", durata = 2.0 },
+  { grandezza = "qualita_trasporti", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 3.0 },
+]
+
+[[atto]]
+id = "infrastrutture_trasporti_sblocca"
+nome = "Sblocco dei cantieri con commissari"
+motto = "Un commissario, una firma, una gru."
+dicastero = "infrastrutture_trasporti"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "domanda_regionale", intensita = 1.0, ritardo = 1, forma = "impulso", durata = 1.5 },
+]
+
+[[atto]]
+id = "infrastrutture_trasporti_ferrovie"
+nome = "Potenziamento delle linee ferroviarie locali"
+motto = "Il regionale in orario, per una volta."
+dicastero = "infrastrutture_trasporti"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 5
+costo = 1.0
+effetti = [
+  { grandezza = "stock_infrastrutture", intensita = 4.0, ritardo = 0, forma = "stock", durata = 50.0 },
+  { grandezza = "qualita_trasporti", intensita = 2.0, ritardo = 0, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "infrastrutture_trasporti_grandi_opere"
+nome = "Grandi opere in finanza di progetto"
+motto = "Il ponte lo paga chi lo attraversa."
+dicastero = "infrastrutture_trasporti"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 8
+costo = 2.0
+effetti = [
+  { grandezza = "stock_infrastrutture", intensita = 8.0, ritardo = 0, forma = "stock", durata = 60.0 },
+]
+
+[[atto]]
+id = "ambiente_energia_bollette"
+nome = "Bonus sulle bollette"
+motto = "La luce costa meno, almeno finché dura."
+dicastero = "ambiente_energia"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "prezzo_energia", intensita = -2.0, ritardo = 0, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "ambiente_energia_riserve"
+nome = "Riempimento accelerato delle riserve di gas"
+motto = "Gli stoccaggi pieni prima dell'inverno."
+dicastero = "ambiente_energia"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "sicurezza_energetica", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 3.0 },
+]
+
+[[atto]]
+id = "ambiente_energia_rinnovabili"
+nome = "Parco di rinnovabili e accumuli"
+motto = "Sole e vento, con le batterie per la sera."
+dicastero = "ambiente_energia"
+velocita = "lento"
+lato = "sinistra"
+posizione = 2.5
+turni = 6
+costo = 1.0
+effetti = [
+  { grandezza = "sicurezza_energetica", intensita = 4.0, ritardo = 0, forma = "stock", durata = 50.0 },
+  { grandezza = "prezzo_energia", intensita = -2.0, ritardo = 2, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "ambiente_energia_rigassificatori"
+nome = "Rigassificatori e nuove centrali"
+motto = "Una nave alla fonda e il contatore tira il fiato."
+dicastero = "ambiente_energia"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 5
+costo = 1.5
+effetti = [
+  { grandezza = "sicurezza_energetica", intensita = 8.0, ritardo = 0, forma = "stock", durata = 45.0 },
+  { grandezza = "prezzo_energia", intensita = -1.0, ritardo = 0, forma = "stock", durata = 30.0 },
+]
+
+[[atto]]
+id = "interno_agenti"
+nome = "Agenti di quartiere"
+motto = "Il vigile che sa come ti chiami."
+dicastero = "interno"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "sicurezza", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "interno_controlli"
+nome = "Controlli straordinari alle frontiere"
+motto = "Posti di blocco ovunque, anche dove non servono."
+dicastero = "interno"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "immigrazione_irregolare", intensita = -4.0, ritardo = 0, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "interno_accoglienza"
+nome = "Accoglienza diffusa e corridoi umanitari"
+motto = "Pochi per paese, nessuno per strada."
+dicastero = "interno"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 3
+costo = 1.0
+effetti = [
+  { grandezza = "immigrazione_irregolare", intensita = -4.0, ritardo = 0, forma = "stock", durata = 30.0 },
+  { grandezza = "sicurezza", intensita = 2.0, ritardo = 2, forma = "stock", durata = 20.0 },
+]
+
+[[atto]]
+id = "interno_videosorveglianza"
+nome = "Videosorveglianza e centri di rimpatrio"
+motto = "Mille telecamere, un solo registro."
+dicastero = "interno"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 4
+costo = 1.5
+effetti = [
+  { grandezza = "sicurezza", intensita = 4.0, ritardo = 0, forma = "stock", durata = 36.0 },
+  { grandezza = "immigrazione_irregolare", intensita = -2.0, ritardo = 2, forma = "stock", durata = 24.0 },
+]
+
+[[atto]]
+id = "giustizia_alternative"
+nome = "Pene alternative per le condanne brevi"
+motto = "Un braccialetto al posto della cella."
+dicastero = "giustizia"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "sovraffollamento_carceri", intensita = -4.0, ritardo = 1, forma = "impulso", durata = 3.0 },
+]
+
+[[atto]]
+id = "giustizia_arretrato"
+nome = "Squadre di giudici a termine per l'arretrato"
+motto = "Una montagna di fascicoli e un tavolo in più."
+dicastero = "giustizia"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "durata_processi", intensita = -8.0, ritardo = 1, forma = "impulso", durata = 3.0 },
+]
+
+[[atto]]
+id = "giustizia_anticorruzione"
+nome = "Autorità anticorruzione con più poteri"
+motto = "Il guardiano con le chiavi in tasca."
+dicastero = "giustizia"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.0
+effetti = [
+  { grandezza = "corruzione", intensita = -4.0, ritardo = 0, forma = "stock", durata = 40.0 },
+]
+
+[[atto]]
+id = "giustizia_telematico"
+nome = "Processo telematico e filtri sui ricorsi"
+motto = "La sentenza arriva per posta elettronica certificata."
+dicastero = "giustizia"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 1
+costo = 0.5
+effetti = [
+  { grandezza = "durata_processi", intensita = -4.0, ritardo = 3, forma = "stock", durata = 30.0 },
+]
+
+[[atto]]
+id = "esteri_difesa_missioni"
+nome = "Missioni di pace sotto mandato internazionale"
+motto = "Il casco blu, il caffè e un mandato."
+dicastero = "esteri_difesa"
+velocita = "rapido"
+lato = "sinistra"
+posizione = 3.0
+turni = 1
+costo = 1.0
+effetti = [
+  { grandezza = "prontezza_difesa", intensita = 4.0, ritardo = 1, forma = "impulso", durata = 2.0 },
+]
+
+[[atto]]
+id = "esteri_difesa_scorte"
+nome = "Rifornimento urgente delle scorte"
+motto = "I depositi si riempiono e la ragioneria trema."
+dicastero = "esteri_difesa"
+velocita = "rapido"
+lato = "destra"
+posizione = 5.0
+turni = 1
+costo = 1.5
+effetti = [
+  { grandezza = "prontezza_difesa", intensita = 8.0, ritardo = 0, forma = "impulso", durata = 2.5 },
+]
+
+[[atto]]
+id = "esteri_difesa_cooperazione"
+nome = "Difesa comune europea e addestramenti congiunti"
+motto = "Ventisette uniformi, un'unica esercitazione."
+dicastero = "esteri_difesa"
+velocita = "lento"
+lato = "sinistra"
+posizione = 3.0
+turni = 4
+costo = 1.0
+effetti = [
+  { grandezza = "prontezza_difesa", intensita = 4.0, ritardo = 0, forma = "stock", durata = 36.0 },
+]
+
+[[atto]]
+id = "esteri_difesa_ammodernamento"
+nome = "Ammodernamento dei mezzi"
+motto = "Gli stessi carri armati, ma con il navigatore."
+dicastero = "esteri_difesa"
+velocita = "lento"
+lato = "destra"
+posizione = 5.5
+turni = 8
+costo = 2.0
+effetti = [
+  { grandezza = "prontezza_difesa", intensita = 8.0, ritardo = 0, forma = "stock", durata = 60.0 },
+]
