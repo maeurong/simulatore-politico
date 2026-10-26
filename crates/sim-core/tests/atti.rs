@@ -79,3 +79,25 @@ fn effetto_fuori_dalla_riga_del_dicastero_rifiutato() {
         "{m}"
     );
 }
+
+#[test]
+fn intensita_e_durata_enormi_rifiutate_col_nome() {
+    let m = rifiuto(
+        "atti",
+        "grandezza = \"qualita_servizio_sanitario\", intensita = 8.0",
+        "grandezza = \"qualita_servizio_sanitario\", intensita = 8000.0",
+    );
+    assert!(
+        m.contains("sanita_liste_straordinario: intensita fuori intervallo"),
+        "{m}"
+    );
+    let m = rifiuto(
+        "atti",
+        "intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 2.0",
+        "intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 2000.0",
+    );
+    assert!(
+        m.contains("sanita_liste_straordinario: durata fuori intervallo"),
+        "{m}"
+    );
+}

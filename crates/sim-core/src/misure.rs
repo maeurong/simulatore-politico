@@ -196,6 +196,9 @@ impl Misure {
         if let Some((campo, _)) = scalari.iter().find(|(_, x)| !x.is_finite()) {
             return ko(format!("{campo} non finito"));
         }
+        if self.riscossione <= 0.0 {
+            return ko("riscossione non positiva".into());
+        }
         let vettori = [
             ("domanda_regionale", &self.domanda_regionale),
             (

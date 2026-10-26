@@ -138,13 +138,13 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                     a.id, g.id, a.dicastero
                 ));
             }
-            if !(e.intensita.is_finite() && e.intensita != 0.0) {
+            if !(e.intensita.is_finite() && e.intensita != 0.0 && e.intensita.abs() <= 1e3) {
                 return ko(format!("{}: intensita fuori intervallo", a.id));
             }
             if e.ritardo > 40 {
                 return ko(format!("{}: ritardo fuori intervallo", a.id));
             }
-            if !(e.durata.is_finite() && e.durata > 0.0) {
+            if !(e.durata.is_finite() && e.durata > 0.0 && e.durata <= 1000.0) {
                 return ko(format!("{}: durata fuori intervallo", a.id));
             }
             regionale |= g.regionale;

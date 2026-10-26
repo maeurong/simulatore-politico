@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::file_base;
+use comune::{file_base, imposta, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati, Ruolo};
 use sim_core::errore::Errore;
 
@@ -169,4 +169,76 @@ fn manopola_con_intervallo_rovesciato_rifiutata() {
     })
     .unwrap_err();
     assert!(matches!(e, Errore::FuoriIntervallo { ref nome, .. } if nome == "soglia_minaccia"));
+}
+
+#[test]
+fn soglie_dei_ministri_sono_manopole_richieste() {
+    for nome in ["soglia_dimissioni", "soglia_minaccia"] {
+        let f = sostituisci(
+            file_base(),
+            "manopole",
+            &format!("[{nome}]"),
+            &format!("[{nome}_x]"),
+        );
+        assert_eq!(
+            DatiGioco::da_testi(&f).unwrap_err(),
+            Errore::ManopolaMancante { nome: nome.into() }
+        );
+    }
+}
+
+#[test]
+fn scala_servizio_nulla_rifiutata_anche_se_il_file_la_ammette() {
+    let f = imposta(
+        file_base(),
+        "manopole",
+        "[scala_servizio]\nvalore = ",
+        "0.0",
+    );
+    let f = imposta(
+        f,
+        "manopole",
+        "[scala_servizio]\nvalore = 0.0\nmin = ",
+        "0.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(e.to_string().contains("scala_servizio"), "{e}");
+}
+
+#[test]
+fn indicatore_di_servizio_senza_spesa_di_funzionamento_rifiutato() {
+    let f = sostituisci(
+        file_base(),
+        "dicasteri",
+        "salari_pil = 2.0153",
+        "salari_pil = 0.0",
+    );
+    let f = sostituisci(
+        f,
+        "dicasteri",
+        "acquisti_pil = 4.1095",
+        "acquisti_pil = 0.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Grandezze(_)) && e.to_string().contains("sanita"),
+        "{e}"
+    );
+}
+
+#[test]
+fn piramide_senza_eta_da_lavoro_rifiutata() {
+    let mut f = file_base();
+    let inizio = f.economia.find("piramide = [").unwrap();
+    let fine = inizio + f.economia[inizio..].find(']').unwrap() + 1;
+    let eta: Vec<&str> = (0..=100)
+        .map(|a| if (15..=66).contains(&a) { "0" } else { "1" })
+        .collect();
+    f.economia
+        .replace_range(inizio..fine, &format!("piramide = [{}]", eta.join(", ")));
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::StrutturaIncoerente(_)) && e.to_string().contains("15"),
+        "{e}"
+    );
 }

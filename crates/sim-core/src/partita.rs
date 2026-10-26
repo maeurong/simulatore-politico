@@ -519,7 +519,7 @@ impl Partita {
 }
 
 /// Tetto agli importi in euro di un salvataggio: oltre, le somme in `i64` rischiano di traboccare.
-const LIMITE_EURO: i64 = 1_000_000_000_000_000;
+pub(crate) const LIMITE_EURO: i64 = 1_000_000_000_000_000;
 
 fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
     if condizione {
@@ -560,6 +560,12 @@ impl Economia {
         ok(
             self.sussidio_per_disoccupato >= 0,
             "economia.sussidio_per_disoccupato negativo",
+        )?;
+        ok(
+            self.livello_prezzi.is_finite()
+                && self.livello_prezzi > 0.0
+                && self.livello_prezzi <= 1e6,
+            "economia.livello_prezzi non finito o fuori da (0, 1e6]",
         )?;
         ok(
             self.tasso_medio_debito.is_finite(),

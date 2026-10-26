@@ -1,5 +1,6 @@
 mod comune;
-use comune::{dati_base, ferma_tranne, ferma_tutti, senza_shock};
+use comune::{dati_base, edita, ferma_tranne, ferma_tutti, indice, senza_shock};
+use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
@@ -358,4 +359,246 @@ fn salvataggio_con_agenda_di_un_altro_dicastero_illeggibile() {
     json["ministri"]["dicasteri"][i]["agenda"]["atto"] = serde_json::json!(0);
     let e = Partita::carica(&json.to_string()).unwrap_err();
     assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e}");
+}
+
+/// Tetto agli euro di un salvataggio (`LIMITE_EURO`).
+const LIMITE: i64 = 1_000_000_000_000_000;
+
+type Modifica = Box<dyn Fn(&mut Value)>;
+
+/// Turno 2 col seme 7: un cantiere di case di comunità nella Sanità, agende annunciate.
+fn con_cantiere() -> Partita {
+    let mut p = Partita::nuova(dati_base(), 7);
+    p.chiudi_turno();
+    p.comanda(dirotta("sanita", Some("sanita_case_comunita"), None))
+        .unwrap();
+    p.chiudi_turno();
+    p
+}
+
+#[test]
+fn salvataggi_corrotti_rifiutati_senza_panico() {
+    let p = con_cantiere();
+    let (s, it) = (indice("sanita"), indice("infrastrutture_trasporti"));
+    let n_regioni = dati_base().regioni().len();
+    assert!(edita(&p, |_| ()).is_ok());
+    let righe: Vec<(&str, Modifica)> = vec![
+        (
+            "rata enorme",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["cantieri"][0]["rata"] = json!(i64::MAX);
+            }),
+        ),
+        (
+            "speso oltre il tetto",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["cantieri"][0]["speso"] = json!(LIMITE + 1);
+            }),
+        ),
+        (
+            "somma delle rate oltre il tetto",
+            Box::new(move |j| {
+                let c = &mut j["ministri"]["dicasteri"][s]["cantieri"];
+                c[0]["rata"] = json!(LIMITE);
+                let doppio = c[0].clone();
+                c.as_array_mut().unwrap().push(doppio);
+            }),
+        ),
+        (
+            "81 cantieri",
+            Box::new(move |j| {
+                let c = &mut j["ministri"]["dicasteri"][s]["cantieri"];
+                let uno = c[0].clone();
+                *c = Value::Array(vec![uno; 81]);
+            }),
+        ),
+        (
+            "turni_mancanti 0",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["cantieri"][0]["turni_mancanti"] = json!(0);
+            }),
+        ),
+        (
+            "regione in un dicastero senza bersaglio",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["cantieri"][0]["regione"] = json!(0);
+            }),
+        ),
+        (
+            "regione oltre le regioni",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][it]["agenda"]["regione"] = json!(n_regioni);
+            }),
+        ),
+        (
+            "attaccamenti corti",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][it]["agenda"]["attaccamenti"] = json!([1.0]);
+            }),
+        ),
+        (
+            "agenda senza ministro",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][it]["ministro"] = Value::Null;
+            }),
+        ),
+        (
+            "margine residuo negativo",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(-1);
+            }),
+        ),
+        (
+            "margine residuo oltre il tetto",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(LIMITE + 1);
+            }),
+        ),
+        (
+            "causa delle dimissioni con un ministro",
+            Box::new(move |j| {
+                j["ministri"]["dicasteri"][it]["causa_dimissioni"] = json!("dimissioni_chieste");
+            }),
+        ),
+        (
+            "dimissioni chieste in interim",
+            Box::new(move |j| {
+                let d = &mut j["ministri"]["dicasteri"][it];
+                d["ministro"] = Value::Null;
+                d["agenda"] = Value::Null;
+                d["proposta"] = Value::Null;
+                d["dimissioni_chieste"] = json!(true);
+            }),
+        ),
+        (
+            "rosa con un ministro in carica",
+            Box::new(move |j| {
+                let d = &mut j["ministri"]["dicasteri"][it];
+                d["rosa"] = json!([d["ministro"], d["ministro"], d["ministro"]]);
+            }),
+        ),
+        (
+            "effetto oltre l'intervallo della grandezza",
+            Box::new(move |j| {
+                let e = json!({"grandezza": 0, "regione": null, "dicastero": 0, "intensita": 1e9,
+                "inizio": 0, "forma": "impulso", "durata": 2.0});
+                j["grandezze"]["effetti"].as_array_mut().unwrap().push(e);
+            }),
+        ),
+        (
+            "decreti negativi",
+            Box::new(|j| j["economia"]["decreti"] = json!(-1)),
+        ),
+        (
+            "decreti oltre il tetto",
+            Box::new(|j| j["economia"]["decreti"] = json!(LIMITE + 1)),
+        ),
+        (
+            "livello dei prezzi nullo",
+            Box::new(|j| j["economia"]["livello_prezzi"] = json!(0.0)),
+        ),
+        (
+            "livello dei prezzi negativo",
+            Box::new(|j| {
+                j["economia"]["livello_prezzi"] = json!(-1.0);
+            }),
+        ),
+        (
+            "livello dei prezzi oltre 1e6",
+            Box::new(|j| {
+                j["economia"]["livello_prezzi"] = json!(1e7);
+            }),
+        ),
+        (
+            "riscossione nulla",
+            Box::new(|j| j["misure"]["riscossione"] = json!(0.0)),
+        ),
+    ];
+    for (caso, modifica) in righe {
+        let e = edita(&p, |j| modifica(j)).err();
+        assert!(
+            matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
+            "{caso}: {e:?}"
+        );
+    }
+}
+
+/// Dirotta sulla regione ricalcola il motivo con la regione nuova.
+#[test]
+fn dirotta_di_regione_ricalcola_il_motivo() {
+    const IT: &str = "infrastrutture_trasporti";
+    let d = dati_base();
+    let nome = |id: &str| {
+        d.regioni()
+            .iter()
+            .find(|r| r.id == id)
+            .unwrap()
+            .nome
+            .clone()
+    };
+    let mut p = Partita::nuova(dati_base(), 11);
+    let scelta = ministero(&p.vista(), IT)
+        .agenda
+        .as_ref()
+        .unwrap()
+        .regione
+        .clone()
+        .unwrap();
+    let altra = if scelta == "calabria" {
+        "lombardia"
+    } else {
+        "calabria"
+    };
+    p.comanda(dirotta(IT, None, Some(altra))).unwrap();
+    let motivo = ministero(&p.vista(), IT)
+        .agenda
+        .as_ref()
+        .unwrap()
+        .motivo
+        .clone();
+    assert!(!motivo.contains(&nome(&scelta)), "{motivo}");
+    let coda = |perche: &str| format!("; {}: {perche}", nome(altra));
+    assert!(
+        motivo.ends_with(&coda("ci votano")) || motivo.ends_with(&coda("ne ha bisogno")),
+        "{motivo}"
+    );
+    assert_eq!(motivo.matches("; ").count(), 1, "{motivo}");
+}
+
+/// FermaCantiere costa l'attaccamento del ministro in carica all'atto, non quello di chi
+/// l'aveva avviato.
+#[test]
+fn ferma_cantiere_costa_l_attaccamento_del_ministro_in_carica() {
+    const CASE: &str = "sanita_case_comunita";
+    let s = indice("sanita");
+    let mut p = con_cantiere();
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    assert!(m.ministro.as_ref().unwrap().rodaggio);
+    assert!(m.cantieri.iter().any(|c| c.atto == CASE));
+    let d = dati_base();
+    let pos = d
+        .atti_del_dicastero(s)
+        .position(|(_, a)| a.id == CASE)
+        .unwrap();
+    let agenda = p.ministri().dicasteri[s].agenda.clone().unwrap();
+    let atteso = -d.manopola("costo_fermare") * agenda.attaccamenti[pos];
+    let prima = m.ministro.as_ref().unwrap().soddisfazione;
+    p.comanda(Comando::FermaCantiere {
+        dicastero: "sanita".into(),
+        atto: CASE.into(),
+    })
+    .unwrap();
+    let dopo = ministero(&p.vista(), "sanita").ministro.clone().unwrap();
+    assert!(
+        (dopo.soddisfazione - (prima + atteso).clamp(0.0, 100.0)).abs() < 1e-9,
+        "{prima} {atteso} {}",
+        dopo.soddisfazione
+    );
 }

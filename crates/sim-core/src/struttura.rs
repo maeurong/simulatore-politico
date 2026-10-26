@@ -194,15 +194,18 @@ impl Struttura {
         Ok(())
     }
 
-    /// Ultimo controllo della struttura: una piramide per età 0..=100.
+    /// Ultimo controllo della struttura: una piramide per età 0..=100, con qualcuno fra 15 e 66
+    /// anni (la forza lavoro della demografia).
     ///
     /// # Errors
-    /// `StrutturaIncoerente` se non ha 101 voci.
+    /// `StrutturaIncoerente` se non ha 101 voci o nessuno fra 15 e 66 anni.
     pub fn valida_piramide(&self) -> Result<(), Errore> {
-        if self.piramide.len() == ETA_PIRAMIDE {
-            Ok(())
-        } else {
+        if self.piramide.len() != ETA_PIRAMIDE {
             incoerente("la piramide deve avere 101 età")
+        } else if self.piramide[15..=66].iter().all(|&x| x == 0) {
+            incoerente("la piramide non ha nessuno fra 15 e 66 anni")
+        } else {
+            Ok(())
         }
     }
 }

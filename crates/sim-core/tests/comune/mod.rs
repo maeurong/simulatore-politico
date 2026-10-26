@@ -1,6 +1,6 @@
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::StatoAgenda;
-use sim_core::{Comando, Partita};
+use sim_core::{Comando, Errore, Partita};
 
 #[allow(
     dead_code,
@@ -139,8 +139,8 @@ pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> Fil
     f
 }
 
-/// Ferma le agende ancora annunciate, tranne quella di `tranne`, così due partite divergono
-/// solo per ciò che il test fa.
+/// Ferma le agende ancora annunciate, tranne quella di `tranne` e di chi ha le dimissioni chieste
+/// (non si esegue comunque), così due partite divergono solo per ciò che il test fa.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -151,7 +151,7 @@ pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
             .agenda
             .as_ref()
             .is_some_and(|a| a.stato == StatoAgenda::Annunciata);
-        if annunciata && m.dicastero != tranne {
+        if annunciata && !m.dimissioni_chieste && m.dicastero != tranne {
             p.comanda(Comando::Ferma {
                 dicastero: m.dicastero,
             })
@@ -166,4 +166,26 @@ pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
 )]
 pub fn ferma_tutti(p: &mut Partita) {
     ferma_tranne(p, "");
+}
+
+/// Salva, modifica il JSON con `f`, ricarica.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn edita(p: &Partita, f: impl FnOnce(&mut serde_json::Value)) -> Result<Partita, Errore> {
+    let mut json: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    f(&mut json);
+    Partita::carica(&json.to_string())
+}
+
+/// Indice del dicastero `id` nei dati di base.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn indice(id: &str) -> usize {
+    (dati_base().dicasteri().iter())
+        .position(|d| d.id == id)
+        .unwrap()
 }

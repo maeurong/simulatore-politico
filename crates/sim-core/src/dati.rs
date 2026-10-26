@@ -138,6 +138,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "velocita_turnover",
     "soddisfazione_base",
     "ritorno_soddisfazione",
+    "soglia_dimissioni",
+    "soglia_minaccia",
     "costo_calo_servizio",
     "premio_obiettivo",
     "passo_obiettivo",
@@ -419,6 +421,13 @@ impl DatiGioco {
             if !giusta {
                 return ko(format!("indicatore di servizio senza grandezza: {ind}"));
             }
+            // Valori negativi o non finiti li rifiuta la struttura, con il loro nome.
+            if d.salari_pil == 0.0 && d.acquisti_pil == 0.0 {
+                return ko(format!(
+                    "{}: indicatore di servizio {ind} senza spesa di funzionamento",
+                    d.id
+                ));
+            }
         }
         for (id, regionale) in GRANDEZZE_RICHIESTE {
             if !grandezze
@@ -495,6 +504,12 @@ impl DatiGioco {
                     nome: (*nome).into(),
                 });
             }
+        }
+        let scala = self.manopola("scala_servizio");
+        if scala <= 0.0 {
+            return Err(Errore::Grandezze(format!(
+                "manopola scala_servizio non positiva: {scala}"
+            )));
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
         self.elettorato

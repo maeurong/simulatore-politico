@@ -159,8 +159,8 @@ impl Grandezze {
                     (rapporto, v_serv)
                 }
             };
-            // 0/0, un riferimento nullo: nessuna spinta.
-            let rapporto = if rapporto.is_nan() { 1.0 } else { rapporto };
+            // Un riferimento nullo (0/0 o x/0): nessuna spinta.
+            let rapporto = if rapporto.is_finite() { rapporto } else { 1.0 };
             let obiettivo =
                 (g.iniziale * rapporto.powf(g.verso.segno() * elast)).clamp(g.min, g.max);
             for b in &mut self.basi[k] {
@@ -184,6 +184,11 @@ impl Grandezze {
         media(dati, &self.valori[g])
     }
 
+    /// Valore nazionale alla chiusura precedente, quello che la `Vista` mostra.
+    pub(crate) fn nazionale_prima(&self, dati: &DatiGioco, g: usize) -> f64 {
+        media(dati, &self.prima[g])
+    }
+
     /// Variazione nazionale nell'ultimo turno.
     pub(crate) fn variazione(&self, dati: &DatiGioco, g: usize) -> f64 {
         media(dati, &self.valori[g]) - media(dati, &self.prima[g])
@@ -201,7 +206,7 @@ impl Grandezze {
             let regione_giusta = |regionale: bool| e.regione.is_none_or(|r| regionale && r < n);
             dati.grandezze()
                 .get(e.grandezza)
-                .is_some_and(|g| regione_giusta(g.regionale))
+                .is_some_and(|g| regione_giusta(g.regionale) && e.intensita.abs() <= g.max - g.min)
                 && e.dicastero < dati.dicasteri().len()
                 && e.intensita.is_finite()
                 && e.durata.is_finite()

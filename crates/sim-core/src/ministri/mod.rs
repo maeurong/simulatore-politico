@@ -148,7 +148,8 @@ impl Ministri {
     }
 
     /// Un ministro nuovo per il dicastero `i`, del partito che lo tiene. Il nome non coincide
-    /// con quello di un ministro in carica o in rosa (al più 100 riestrazioni).
+    /// con quello di un ministro in carica o in rosa (al più 100 riestrazioni). L'obiettivo parte
+    /// dall'indicatore com'è visto, con un turno di ritardo.
     fn genera(&self, cx: &Contesto, caso: &mut Caso, i: usize) -> Ministro {
         let el = cx.dati.elettorato();
         let preso = |nome: &str| {
@@ -170,7 +171,7 @@ impl Ministri {
         let scarto = cx.dati.manopola("scarto_ministri") * caso.normale(Flusso::Governo);
         let posizione = (cx.partiti[partito].posizione_dichiarata + scarto).clamp(1.0, 7.0);
         let obiettivo = indicatore(cx, i).map_or(0.0, |k| {
-            cx.grandezze.nazionale(cx.dati, k)
+            cx.grandezze.nazionale_prima(cx.dati, k)
                 + cx.dati.grandezze()[k].verso.segno() * cx.dati.manopola("passo_obiettivo")
         });
         Ministro {
@@ -258,6 +259,12 @@ impl Ministri {
             }
             if st.causa_dimissioni.is_some() && st.ministro.is_some() {
                 return ko(format!("{}: causa delle dimissioni con un ministro", d.id));
+            }
+            if st.dimissioni_chieste && st.ministro.is_none() {
+                return ko(format!("{}: dimissioni chieste in interim", d.id));
+            }
+            if !st.rosa.is_empty() && st.ministro.is_some() {
+                return ko(format!("{}: rosa con un ministro in carica", d.id));
             }
             if st.scelta.is_some_and(|s| usize::from(s) >= st.rosa.len()) {
                 return ko(format!("{}: scelta fuori dalla rosa", d.id));

@@ -174,3 +174,23 @@ fn salvataggio_con_ministri_corti_illeggibile() {
     let e = Partita::carica(&json.to_string()).unwrap_err();
     assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e}");
 }
+
+/// La rosa fissa l'obiettivo su ciò che il Presidente del Consiglio vede (le grandezze del turno
+/// prima), non sul valore vero.
+#[test]
+fn rosa_fissa_l_obiettivo_sul_valore_visto() {
+    let d = dati_base();
+    let passo = d.manopola("passo_obiettivo");
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(dimissioni("sanita")).unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    let visto = (v.grandezze.iter())
+        .find(|g| g.id == "qualita_servizio_sanitario")
+        .unwrap()
+        .valori[0];
+    assert_ne!(Some(visto), p.grandezza("qualita_servizio_sanitario"));
+    for x in &ministero(&v, "sanita").rosa {
+        assert_eq!(x.obiettivo, visto + passo, "{}", x.nome);
+    }
+}

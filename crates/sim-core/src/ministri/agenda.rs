@@ -9,6 +9,7 @@ use crate::dati::DatiGioco;
 use crate::economia::Bilancio;
 use crate::errore::Errore;
 use crate::grandezze::EffettoAttivo;
+use crate::partita::LIMITE_EURO;
 use crate::vista::{VoceAgenda, VoceAtto, VoceCantiere, VoceEffetto};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -45,8 +46,10 @@ pub struct Cantiere {
     pub turni_mancanti: u32,
     pub rata: i64,
     pub speso: i64,
-    pub attaccamento: f64,
 }
+
+/// Cantieri ammessi per dicastero in un salvataggio.
+const MAX_CANTIERI: usize = 80;
 
 /// Margine annuo di ogni dicastero nel bilancio del turno zero.
 pub(super) fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
@@ -86,7 +89,7 @@ pub(super) fn parti(cx: &Contesto, i: usize, m: &Ministro, a: &Atto) -> (f64, f6
             .map(|e| e.intensita)
             .sum::<f64>();
         if d > 0.0 {
-            (segno * spinta).min(d) / d
+            ((segno * spinta).min(d) / d).clamp(-1.0, 1.0)
         } else {
             0.0
         }
@@ -139,6 +142,23 @@ fn termini_regioni(cx: &Contesto, partito: usize) -> Vec<(f64, f64)> {
             (peso_bisogno * bisogno, peso_voti * voti)
         })
         .collect()
+}
+
+/// `"; {regione}: ci votano"` o `"; {regione}: ne ha bisogno"`, secondo il termine che pesa di
+/// più nella regione `r`.
+fn motivo_regione(cx: &Contesto, termini: &[(f64, f64)], r: usize) -> String {
+    let (bisogno, voti) = termini[r];
+    let perche = if voti >= bisogno {
+        "ci votano"
+    } else {
+        "ne ha bisogno"
+    };
+    format!("; {}: {perche}", cx.dati.regioni()[r].nome)
+}
+
+/// Il motivo senza la coda della regione bersaglio.
+pub(super) fn senza_regione(motivo: &str) -> &str {
+    motivo.split_once("; ").map_or(motivo, |(base, _)| base)
 }
 
 /// Effetti di un atto al momento in cui si registrano: intensità `· c/3`, inizio dopo
@@ -265,12 +285,7 @@ impl Ministri {
             });
             if let Some((r, _)) = migliore {
                 regione = Some(r);
-                let perche = if termini[r].1 >= termini[r].0 {
-                    "ci votano"
-                } else {
-                    "ne ha bisogno"
-                };
-                motivo.push_str(&format!("; {}: {perche}", dati.regioni()[r].nome));
+                motivo.push_str(&motivo_regione(cx, &termini, r));
             }
         }
         Agenda {
@@ -322,17 +337,12 @@ impl Ministri {
             if atto.turni <= 1 {
                 nuovi.extend(effetti_di(dati, atto, i, ag.regione, c, cx.turno));
             } else {
-                let attaccamento = posizione(dati, i, ag.atto)
-                    .and_then(|p| ag.attaccamenti.get(p))
-                    .copied()
-                    .unwrap_or(0.0);
                 st.cantieri.push(Cantiere {
                     atto: ag.atto,
                     regione: ag.regione,
                     turni_mancanti: atto.turni - 1,
                     rata: spesa,
                     speso: spesa,
-                    attaccamento,
                 });
             }
         }
@@ -420,34 +430,44 @@ impl Ministri {
             cambia_regione.map_or(0.0, |r| (ber(ag.regione) - ber(Some(r))).max(0.0));
         let delta = -dati.manopola("costo_fermare") * perdita_atto
             - dati.manopola("costo_dirottare_regione") * perdita_regione;
+        let motivo = match (cambia_regione, st.ministro.as_ref()) {
+            (Some(r), Some(m)) => {
+                let coda = motivo_regione(cx, &termini_regioni(cx, m.partito), r);
+                Some(format!("{}{coda}", senza_regione(&ag.motivo)))
+            }
+            _ => None,
+        };
         let st = &mut self.dicasteri[i];
         if let Some(ag) = st.agenda.as_mut() {
             ag.atto = cambia_atto.unwrap_or(ag.atto);
             ag.regione = cambia_regione.or(ag.regione);
             ag.stato = StatoAgenda::Dirottata;
+            ag.motivo = motivo.unwrap_or(std::mem::take(&mut ag.motivo));
         }
         penalizza(st, Causa::AttoDirottato, delta, cx.turno);
         Ok(())
     }
 
-    /// `FermaCantiere`: quanto speso resta speso.
+    /// `FermaCantiere`: quanto speso resta speso; costa l'attaccamento all'atto del ministro in
+    /// carica.
     pub(super) fn ferma_cantiere(
         &mut self,
         cx: &Contesto,
         i: usize,
         atto: &str,
     ) -> Result<(), Errore> {
-        let id = &cx.dati.dicasteri()[i].id;
+        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
         let st = &mut self.dicasteri[i];
-        let trovato = st
-            .cantieri
-            .iter()
-            .position(|f| cx.dati.atti().get(f.atto).is_some_and(|a| a.id == atto));
+        let trovato = (st.cantieri.iter()).position(|f| dati.atti()[f.atto].id == atto);
         let Some(p) = trovato else {
             return Err(Errore::Comando(format!("nessun cantiere {atto} in {id}")));
         };
         let f = st.cantieri.remove(p);
-        let delta = -cx.dati.manopola("costo_fermare") * f.attaccamento;
+        let attaccamento = st.ministro.as_ref().map_or(0.0, |m| {
+            let (o, v) = parti(cx, i, m, &dati.atti()[f.atto]);
+            o + v
+        });
+        let delta = -dati.manopola("costo_fermare") * attaccamento;
         penalizza(st, Causa::CantiereFermato, delta, cx.turno);
         Ok(())
     }
@@ -460,8 +480,16 @@ impl Ministri {
             let regione_giusta = |r: Option<usize>| {
                 r.is_some() == d.regione_bersaglio && r.is_none_or(|r| r < n_regioni)
             };
-            if !(0..=1_000_000_000_000_000).contains(&st.margine_residuo) {
+            let in_limite = |x: i64| (0..=LIMITE_EURO).contains(&x);
+            if !in_limite(st.margine_residuo) {
                 return Err(format!("{}: margine residuo fuori dai limiti", d.id));
+            }
+            if st.cantieri.len() > MAX_CANTIERI {
+                return Err(format!("{}: più di {MAX_CANTIERI} cantieri", d.id));
+            }
+            let rate = (st.cantieri.iter()).try_fold(0_i64, |s, f| s.checked_add(f.rata));
+            if !rate.is_some_and(in_limite) {
+                return Err(format!("{}: rate dei cantieri oltre il tetto", d.id));
             }
             if let Some(ag) = &st.agenda {
                 let n_bersaglio = if d.regione_bersaglio { n_regioni } else { 0 };
@@ -483,9 +511,8 @@ impl Ministri {
                 let buono = suo(f.atto)
                     && regione_giusta(f.regione)
                     && f.turni_mancanti >= 1
-                    && f.rata >= 0
-                    && f.speso >= 0
-                    && f.attaccamento.is_finite();
+                    && in_limite(f.rata)
+                    && in_limite(f.speso);
                 if !buono {
                     return Err(format!("{}: cantiere non valido", d.id));
                 }
@@ -626,5 +653,42 @@ mod test {
         assert!((cinque[0].intensita - 5.0 * uno[0].intensita).abs() < 1e-12);
         assert_eq!(uno[0].inizio - 10, 5 * (cinque[0].inizio - 10));
         assert_eq!(cinque[0].inizio, 13);
+    }
+
+    /// Un atto che peggiora molto l'indicatore non va sotto `o = −1`.
+    #[test]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+    )]
+    fn o_resta_fra_meno_uno_e_uno() {
+        let d = dati();
+        let peso = d.manopola("peso_obiettivo");
+        let atto = |intensita: f64| Atto {
+            id: "prova".into(),
+            nome: "Prova".into(),
+            motto: String::new(),
+            dicastero: "sanita".into(),
+            velocita: Velocita::Rapido,
+            lato: Lato::Sinistra,
+            posizione: 3.0,
+            turni: 1,
+            costo: 1.0,
+            effetti: vec![EffettoAtto {
+                grandezza: "qualita_servizio_sanitario".into(),
+                intensita,
+                ritardo: 1,
+                forma: Forma::Impulso,
+                durata: 2.0,
+            }],
+        };
+        let mut p = crate::partita::Partita::nuova(d, 1);
+        p.con_contesto(|ministri, cx| {
+            let m = ministri.dicasteri[3].ministro.as_ref().unwrap();
+            for (intensita, atteso) in [(-1000.0, -1.0), (1000.0, 1.0)] {
+                let (o, _) = parti(cx, 3, m, &atto(intensita));
+                assert!((o - peso * atteso).abs() < 1e-12, "{intensita}: {o}");
+            }
+        });
     }
 }

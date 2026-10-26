@@ -2,22 +2,29 @@
 //! Il giocatore accoglie, rinvia (una volta) o respinge; ignorata un turno vale respinta.
 
 use super::agenda::{
-    Agenda, StatoAgenda, costo, disponibile, in_cantiere, margini_rif, parti, penalizza, posizione,
+    costo, disponibile, in_cantiere, margini_rif, parti, penalizza, posizione, senza_regione,
 };
-use super::{Causa, Contesto, Ministri};
+use super::{Causa, Contesto, Ministri, StatoDicastero};
 use crate::dati::DatiGioco;
 use crate::errore::Errore;
+use crate::partita::LIMITE_EURO;
 use crate::vista::VoceProposta;
 use serde::{Deserialize, Serialize};
 
 /// Una richiesta di fondi per un atto del catalogo; al più una per ministro.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Proposta {
     pub atto: usize,
     /// Euro che mancano al margine perché l'atto sia pagabile.
     pub importo: i64,
     pub turni_in_sospeso: u32,
     pub rinviata: bool,
+}
+
+/// Euro che mancano al margine perché l'atto `k` del dicastero `i` sia pagabile.
+fn mancano(cx: &Contesto, rif: &[i64], i: usize, st: &StatoDicastero, k: usize) -> i64 {
+    let spesa = costo(&cx.dati.atti()[k], rif[i], cx.economia.livello_prezzi);
+    spesa.saturating_sub(disponibile(st))
 }
 
 impl Ministri {
@@ -34,20 +41,12 @@ impl Ministri {
             let Some(m) = st.ministro.as_ref() else {
                 continue;
             };
-            let mancano = |k: usize| {
-                let spesa = costo(
-                    &dati.atti()[k],
-                    rif.get(i).copied().unwrap_or(0),
-                    cx.economia.livello_prezzi,
-                );
-                spesa - disponibile(st)
-            };
             let nuova = if st.agenda.is_some() {
                 None
             } else if let Some(p) = &st.proposta {
                 Some(Proposta {
-                    importo: mancano(p.atto),
-                    ..p.clone()
+                    importo: mancano(cx, &rif, i, st, p.atto),
+                    ..*p
                 })
             } else {
                 let mut migliore: Option<(usize, f64)> = None;
@@ -62,12 +61,12 @@ impl Ministri {
                 }
                 migliore.map(|(k, _)| Proposta {
                     atto: k,
-                    importo: mancano(k),
+                    importo: mancano(cx, &rif, i, st, k),
                     turni_in_sospeso: 0,
                     rinviata: false,
                 })
             };
-            self.dicasteri[i].proposta = nuova.filter(|p| p.importo > 0);
+            self.dicasteri[i].proposta = nuova.filter(|p| (1..=LIMITE_EURO).contains(&p.importo));
         }
     }
 
@@ -88,7 +87,9 @@ impl Ministri {
         }
     }
 
-    /// `Accogli`: rende l'importo del decreto, che entra anche nel margine residuo.
+    /// `Accogli`: ricalcola quanto manca e rende l'importo del decreto, che entra anche nel
+    /// margine residuo. Una proposta esiste solo senza agenda (la decade `proponi`, la rifiuta il
+    /// salvataggio).
     pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
         let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
         let st = &self.dicasteri[i];
@@ -96,26 +97,21 @@ impl Ministri {
         let (Some(p), Some(m)) = (st.proposta.as_ref(), st.ministro.as_ref()) else {
             return Err(nessuna());
         };
+        let atto = &dati.atti()[p.atto].id;
         if in_cantiere(st, p.atto) {
-            let atto = &dati.atti()[p.atto].id;
             return Err(Errore::Comando(format!("cantiere già in corso: {atto}")));
         }
-        let agenda = match &st.agenda {
-            Some(old) => Agenda {
-                atto: p.atto,
-                stato: StatoAgenda::Annunciata,
-                motivo: "fondi accolti".to_string(),
-                ..old.clone()
-            },
-            None => {
-                let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
-                let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
-                let att = parti.iter().map(|(o, v)| o + v).collect();
-                let pos = posizione(dati, i, p.atto).ok_or_else(nessuna)?;
-                Self::agenda_di(cx, i, m, &atti, &parti, att, pos)
-            }
-        };
-        let importo = p.importo;
+        let importo = mancano(cx, &margini_rif(dati), i, st, p.atto);
+        if importo <= 0 {
+            return Err(Errore::Comando(format!("fondi già sufficienti per {atto}")));
+        }
+        let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
+        let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
+        let att = parti.iter().map(|(o, v)| o + v).collect();
+        let pos = posizione(dati, i, p.atto).ok_or_else(nessuna)?;
+        let mut agenda = Self::agenda_di(cx, i, m, &atti, &parti, att, pos);
+        let coda = &agenda.motivo[senza_regione(&agenda.motivo).len()..];
+        agenda.motivo = format!("fondi accolti dal Presidente del Consiglio{coda}");
         let st = &mut self.dicasteri[i];
         st.margine_residuo += importo;
         st.agenda = Some(agenda);
@@ -153,7 +149,11 @@ impl Ministri {
         for (d, st) in dati.dicasteri().iter().zip(&self.dicasteri) {
             let Some(p) = &st.proposta else { continue };
             let suo = dati.atti().get(p.atto).is_some_and(|a| a.dicastero == d.id);
-            if !(suo && st.ministro.is_some() && (1..=1_000_000_000_000_000).contains(&p.importo)) {
+            let buona = suo
+                && st.ministro.is_some()
+                && st.agenda.is_none()
+                && (1..=LIMITE_EURO).contains(&p.importo);
+            if !buona {
                 return Err(format!("{}: proposta non valida", d.id));
             }
         }
