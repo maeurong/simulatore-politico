@@ -222,29 +222,11 @@ impl Misure {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::dati::dati_base as dati;
     use crate::partita::Partita;
 
-    #[expect(
-        clippy::unwrap_used,
-        reason = "nei test un unwrap che fallisce e' il fallimento voluto"
-    )]
-    fn dati() -> DatiGioco {
-        let file = crate::dati::FileDati {
-            dicasteri: include_str!("../../../dati/base/dicasteri.toml").into(),
-            manopole: include_str!("../../../dati/base/manopole.toml").into(),
-            economia: include_str!("../../../dati/base/economia.toml").into(),
-            regioni: include_str!("../../../dati/base/regioni.toml").into(),
-            scenario: include_str!("../../../dati/base/scenario.toml").into(),
-            elezioni: include_str!("../../../dati/base/elezioni.toml").into(),
-            elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
-            grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
-            atti: include_str!("../../../dati/base/atti.toml").into(),
-        };
-        DatiGioco::da_testi(&file).unwrap()
-    }
-
-    fn misure_di(p: &Partita, grandezze: &Grandezze, data: Trimestre) -> Misure {
-        Misure::da(&p.dati, grandezze, &p.ministri, p.economia(), 0, data)
+    fn misure_di(d: &DatiGioco, p: &Partita, grandezze: &Grandezze, data: Trimestre) -> Misure {
+        Misure::da(d, grandezze, p.ministri(), p.economia(), 0, data)
     }
 
     #[test]
@@ -268,19 +250,19 @@ mod test {
         let p = Partita::nuova(d.clone(), 1);
         let mut g = p.grandezze().clone();
         let data = Trimestre::TURNO_ZERO.successivo();
-        let base = misure_di(&p, &g, data).crescita_potenziale;
+        let base = misure_di(&d, &p, &g, data).crescita_potenziale;
         for nome in ["stock_infrastrutture", "capitale_umano"] {
             let k = d.grandezza(nome).unwrap();
             g.valori[k].fill(120.0);
         }
-        assert!(misure_di(&p, &g, data).crescita_potenziale > base);
+        assert!(misure_di(&d, &p, &g, data).crescita_potenziale > base);
     }
 
     #[test]
     fn misure_neutre_al_turno_zero() {
         let d = dati();
         let p = Partita::nuova(d.clone(), 1);
-        let m = misure_di(&p, p.grandezze(), Trimestre::TURNO_ZERO);
+        let m = misure_di(&d, &p, p.grandezze(), Trimestre::TURNO_ZERO);
         let neutre = Misure::neutre(&d);
         assert_eq!(m.riscossione, 1.0);
         assert_eq!(m.prezzo_energia, 0.0);

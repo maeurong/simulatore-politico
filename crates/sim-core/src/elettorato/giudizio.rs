@@ -51,7 +51,6 @@ impl Elettorato {
         let colpa =
             |resp: usize, p: usize| q * f64::from(p == pres) + (1.0 - q) * f64::from(p == resp);
         let scala = dati.manopola("scala_servizio");
-        // Per ogni grandezza con un responsabile: voce, variazione scalata col verso, partito.
         let servizi: Vec<(&str, f64, usize)> = (dati.grandezze().iter().enumerate())
             .filter_map(|(k, gr)| {
                 let resp = if gr.id == "occupazione_pubblica" {

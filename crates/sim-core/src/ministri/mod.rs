@@ -7,7 +7,7 @@ use crate::dati::DatiGioco;
 use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
-use crate::informazione::Sondaggio;
+use crate::informazione::{Sondaggio, indice};
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use crate::vista::{VoceMinistero, VoceMinistro};
@@ -108,7 +108,7 @@ pub struct Ministri {
 }
 
 /// Ciò che i ministri leggono della partita.
-pub struct Contesto<'a> {
+pub(crate) struct Contesto<'a> {
     pub dati: &'a DatiGioco,
     pub governo: &'a Governo,
     pub partiti: &'a [Partito],
@@ -127,13 +127,9 @@ fn indicatore(cx: &Contesto, i: usize) -> Option<usize> {
         .grandezza(&cx.dati.dicasteri()[i].indicatore_servizio)
 }
 
-fn indice(u: f64, lung: usize) -> usize {
-    ((u * lung as f64) as usize).min(lung.saturating_sub(1))
-}
-
 impl Ministri {
     /// I ministri del governo uscente, già oltre il rodaggio.
-    pub fn iniziali(cx: &Contesto, caso: &mut Caso) -> Ministri {
+    pub(crate) fn iniziali(cx: &Contesto, caso: &mut Caso) -> Ministri {
         let n = cx.dati.dicasteri().len();
         let mut m = Ministri {
             dicasteri: vec![StatoDicastero::default(); n],
@@ -186,7 +182,7 @@ impl Ministri {
     }
 
     /// Soglie di fine turno: servizio, obiettivo, ritorno alla base, dimissioni.
-    pub fn soglie(&mut self, cx: &Contesto) {
+    pub(crate) fn soglie(&mut self, cx: &Contesto) {
         for (i, st) in self.dicasteri.iter_mut().enumerate() {
             // I dati validati hanno l'indicatore; senza, restano turni e dimissioni.
             let servizio = indicatore(cx, i).map(|k| {
@@ -205,7 +201,7 @@ impl Ministri {
 
     /// Apertura del turno (`cx.turno` è già quello nuovo): variazioni vecchie, rose per gli
     /// interim appena aperti, ingresso del successore dopo il turno di interim.
-    pub fn apri(&mut self, cx: &Contesto, caso: &mut Caso) {
+    pub(crate) fn apri(&mut self, cx: &Contesto, caso: &mut Caso) {
         for i in 0..self.dicasteri.len() {
             let st = &mut self.dicasteri[i];
             st.variazioni
@@ -240,7 +236,7 @@ impl Ministri {
     /// `SalvataggioIlleggibile` se i dicasteri non sono quelli dei dati, un partito esce dai
     /// limiti, una capacità non è 1-5, una soddisfazione non è finita in 0-100, la rosa non è di
     /// 0 o 3 o la scelta esce dalla rosa.
-    pub fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+    pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::SalvataggioIlleggibile(format!("ministri: {m}")));
         let n = dati.dicasteri().len();
         if self.dicasteri.len() != n {
@@ -357,10 +353,11 @@ impl Ministri {
             causa_principale: causa_principale(variazioni),
             variazioni: variazioni.to_vec(),
         };
+        let rif = agenda::margini_rif(dati);
         (dati.dicasteri().iter().zip(&self.dicasteri))
             .enumerate()
             .map(|(i, (d, st))| {
-                let g = self.voci_governo(cx, i);
+                let g = self.voci_governo(cx, &rif, i);
                 VoceMinistero {
                     dicastero: d.id.clone(),
                     ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),

@@ -31,7 +31,7 @@ impl Economia {
 
     /// I `β` regionali, riscalati perché la loro media pesata valga `okun_nazionale`
     /// (economia-italiana-parametri:54-69, :120).
-    pub fn beta_okun(&self, dati: &DatiGioco) -> Vec<f64> {
+    pub(crate) fn beta_okun(&self, dati: &DatiGioco) -> Vec<f64> {
         let regioni = dati.regioni();
         let (somma, pesi) = regioni.iter().fold((0.0, 0.0), |(s, p), r| {
             (s + r.forze_lavoro * r.okun, p + r.forze_lavoro)

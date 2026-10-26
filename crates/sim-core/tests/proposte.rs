@@ -1,3 +1,8 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+
 mod comune;
 use comune::{edita, file_base, indice, sostituisci};
 use serde_json::{Value, json};

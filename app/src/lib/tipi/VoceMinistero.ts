@@ -27,7 +27,7 @@ scelta: number | null,
  */
 causa_dimissioni: Causa | null, 
 /**
- * L'atto annunciato per il turno; `None` in interim o a margine esaurito.
+ * L'atto annunciato per il turno.
  */
 agenda: VoceAgenda | null, 
 /**

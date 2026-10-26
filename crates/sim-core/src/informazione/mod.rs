@@ -10,6 +10,7 @@ use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
 
 mod campione;
+pub(crate) use campione::indice;
 mod sondaggio;
 mod statistica;
 pub use campione::{ElettoreCampione, Motivo, genera};

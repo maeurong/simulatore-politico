@@ -2,7 +2,7 @@
 //! Il giocatore accoglie, rinvia (una volta) o respinge; ignorata un turno vale respinta.
 
 use super::agenda::{
-    costo, disponibile, in_cantiere, margini_rif, parti, penalizza, posizione, senza_regione,
+    costo_atto, disponibile, in_cantiere, margini_rif, parti, penalizza, posizione, senza_regione,
 };
 use super::{Causa, Contesto, Ministri, StatoDicastero};
 use crate::dati::DatiGioco;
@@ -23,8 +23,7 @@ pub struct Proposta {
 
 /// Euro che mancano al margine perché l'atto `k` del dicastero `i` sia pagabile.
 fn mancano(cx: &Contesto, rif: &[i64], i: usize, st: &StatoDicastero, k: usize) -> i64 {
-    let spesa = costo(&cx.dati.atti()[k], rif[i], cx.economia.livello_prezzi);
-    spesa.saturating_sub(disponibile(st))
+    costo_atto(cx, rif, i, &cx.dati.atti()[k]).saturating_sub(disponibile(st))
 }
 
 impl Ministri {
@@ -107,9 +106,8 @@ impl Ministri {
         }
         let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
         let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
-        let att = parti.iter().map(|(o, v)| o + v).collect();
         let pos = posizione(dati, i, p.atto).ok_or_else(nessuna)?;
-        let mut agenda = Self::agenda_di(cx, i, m, &atti, &parti, att, pos);
+        let mut agenda = Self::agenda_di(cx, i, m, &atti, &parti, pos);
         let coda = &agenda.motivo[senza_regione(&agenda.motivo).len()..];
         agenda.motivo = format!("fondi accolti dal Presidente del Consiglio{coda}");
         let st = &mut self.dicasteri[i];
@@ -163,7 +161,7 @@ impl Ministri {
     /// La proposta del dicastero `i` per la `Vista`.
     pub(super) fn voce_proposta(&self, cx: &Contesto, i: usize) -> Option<VoceProposta> {
         let p = self.dicasteri[i].proposta.as_ref()?;
-        let a = cx.dati.atti().get(p.atto)?;
+        let a = &cx.dati.atti()[p.atto];
         Some(VoceProposta {
             atto: a.id.clone(),
             nome: a.nome.clone(),

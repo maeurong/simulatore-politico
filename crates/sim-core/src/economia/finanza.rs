@@ -87,7 +87,7 @@ pub struct ConsuntivoTrimestre {
 pub(crate) const TRIMESTRI_DI_STORIA: usize = 8;
 
 /// Arrotonda euro `f64` a euro interi (nessuna conversione di unità).
-pub(super) fn euro(x: f64) -> i64 {
+pub(crate) fn euro(x: f64) -> i64 {
     debug_assert!(x.is_finite(), "euro({x})");
     x.round() as i64
 }
@@ -206,6 +206,14 @@ pub(crate) fn consuntivo(e: &Economia, data: Trimestre) -> ConsuntivoTrimestre {
 }
 
 impl Economia {
+    /// Il bilancio che vale nel trimestre `data`: l'approvato dell'anno, se già in attesa.
+    pub(crate) fn bilancio_in_vigore(&self, data: Trimestre) -> &Bilancio {
+        match &self.bilancio_approvato {
+            Some(b) if b.anno == data.anno => b,
+            _ => &self.bilancio,
+        }
+    }
+
     /// Blocco finanza pubblica del trimestre `data`: prima della IS, sullo stato del turno prima.
     /// Rende la spesa netta del trimestre, con la disoccupazione che ha dato i sussidi.
     pub(super) fn finanza(&mut self, dati: &DatiGioco, data: Trimestre, riscossione: f64) -> i64 {

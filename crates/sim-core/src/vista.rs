@@ -18,7 +18,7 @@ pub struct Vista {
     /// Spread BTP-Bund in punti base, arrotondato.
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
-    /// Un ministero per dicastero, nell'ordine dei dicasteri.
+    /// Una voce per dicastero, nell'ordine dei dicasteri.
     pub ministeri: Vec<VoceMinistero>,
     pub sondaggio: Sondaggio,
     /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
@@ -86,7 +86,7 @@ pub struct VoceMinistero {
     pub scelta: Option<u8>,
     /// Perché il ministro è uscito; `Some` solo in interim.
     pub causa_dimissioni: Option<Causa>,
-    /// L'atto annunciato per il turno; `None` in interim o a margine esaurito.
+    /// L'atto annunciato per il turno.
     pub agenda: Option<VoceAgenda>,
     /// Perché manca l'agenda: `interim` o `margine esaurito`.
     pub motivo_senza_agenda: Option<String>,

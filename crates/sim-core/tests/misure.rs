@@ -1,3 +1,8 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+
 mod comune;
 use comune::{dati_base, ferma_tranne, ferma_tutti, imposta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};

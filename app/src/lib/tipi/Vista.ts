@@ -21,7 +21,7 @@ grandezze: Array<VoceGrandezza>,
  */
 spread_pb: number, partiti: Array<VocePartito>, 
 /**
- * Un ministero per dicastero, nell'ordine dei dicasteri.
+ * Una voce per dicastero, nell'ordine dei dicasteri.
  */
 ministeri: Array<VoceMinistero>, sondaggio: Sondaggio, 
 /**

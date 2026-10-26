@@ -22,7 +22,8 @@ use crate::dati::Dicastero;
 use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::partita::Trimestre;
 use crate::struttura::Struttura;
-use finanza::{MLD, euro};
+use finanza::MLD;
+pub(crate) use finanza::euro;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

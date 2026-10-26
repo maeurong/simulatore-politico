@@ -65,7 +65,7 @@ impl Trimestre {
 pub struct Partita {
     versione_schema: u32,
     caso: Caso,
-    pub(crate) dati: DatiGioco,
+    dati: DatiGioco,
     turno: u32,
     data: Trimestre,
     economia: Economia,
@@ -74,7 +74,7 @@ pub struct Partita {
     elettorato: Elettorato,
     informazione: Informazione,
     grandezze: Grandezze,
-    pub(crate) ministri: Ministri,
+    ministri: Ministri,
     misure: Misure,
 }
 
@@ -118,7 +118,7 @@ impl Partita {
         }
     }
 
-    // Ordine della chiusura (i task del piano 5 riempiono i passi che mancano):
+    // Ordine della chiusura:
     // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
     // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
@@ -223,12 +223,11 @@ impl Partita {
         self.economia.decreti += importo;
     }
 
-    /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
+    // Da qui a `informazione`: stato vero, per il CLI e i test, mai per la `Vista`.
     pub fn economia(&self) -> &Economia {
         &self.economia
     }
 
-    /// Stato vero delle grandezze: per il CLI e i test, mai per la `Vista`.
     pub fn grandezze(&self) -> &Grandezze {
         &self.grandezze
     }
@@ -239,17 +238,15 @@ impl Partita {
         Some(self.grandezze.nazionale(&self.dati, g))
     }
 
-    /// Misure dell'ultima chiusura: per il CLI e i test, mai per la `Vista`.
+    /// Misure dell'ultima chiusura.
     pub fn misure(&self) -> &Misure {
         &self.misure
     }
 
-    /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
     pub fn partiti(&self) -> &[Partito] {
         &self.partiti
     }
 
-    /// Stato vero dei ministri: per il CLI e i test, mai per la `Vista`.
     pub fn ministri(&self) -> &Ministri {
         &self.ministri
     }
@@ -258,17 +255,15 @@ impl Partita {
         &self.governo
     }
 
-    /// Stato vero dell'elettorato: per il CLI e i test, mai per la `Vista`.
     pub fn elettorato(&self) -> &Elettorato {
         &self.elettorato
     }
 
-    /// Intenzioni di voto vere per gruppo e nazionali: per il CLI e i test, mai per la `Vista`.
+    /// Intenzioni di voto vere per gruppo e nazionali.
     pub fn intenzioni_vere(&self) -> Intenzioni {
         Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
     }
 
-    /// Stato vero dell'informazione: per il CLI e i test, mai per la `Vista`.
     pub fn informazione(&self) -> &Informazione {
         &self.informazione
     }

@@ -69,25 +69,7 @@ pub(super) fn passo(
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[expect(
-        clippy::unwrap_used,
-        reason = "nei test un unwrap che fallisce e' il fallimento voluto"
-    )]
-    fn dati() -> DatiGioco {
-        let file = crate::dati::FileDati {
-            dicasteri: include_str!("../../../../dati/base/dicasteri.toml").into(),
-            manopole: include_str!("../../../../dati/base/manopole.toml").into(),
-            economia: include_str!("../../../../dati/base/economia.toml").into(),
-            regioni: include_str!("../../../../dati/base/regioni.toml").into(),
-            scenario: include_str!("../../../../dati/base/scenario.toml").into(),
-            elezioni: include_str!("../../../../dati/base/elezioni.toml").into(),
-            elettorato: include_str!("../../../../dati/base/elettorato.toml").into(),
-            grandezze: include_str!("../../../../dati/base/grandezze.toml").into(),
-            atti: include_str!("../../../../dati/base/atti.toml").into(),
-        };
-        DatiGioco::da_testi(&file).unwrap()
-    }
+    use crate::dati::dati_base as dati;
 
     fn stato(obiettivo: f64) -> StatoDicastero {
         StatoDicastero {

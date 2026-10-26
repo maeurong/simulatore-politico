@@ -258,6 +258,27 @@ struct FileGrandezze {
     grandezza: Vec<DatoGrandezza>,
 }
 
+/// I dati di base, per i test d'unità.
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+pub(crate) fn dati_base() -> DatiGioco {
+    let file = FileDati {
+        dicasteri: include_str!("../../../dati/base/dicasteri.toml").into(),
+        manopole: include_str!("../../../dati/base/manopole.toml").into(),
+        economia: include_str!("../../../dati/base/economia.toml").into(),
+        regioni: include_str!("../../../dati/base/regioni.toml").into(),
+        scenario: include_str!("../../../dati/base/scenario.toml").into(),
+        elezioni: include_str!("../../../dati/base/elezioni.toml").into(),
+        elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
+        grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
+        atti: include_str!("../../../dati/base/atti.toml").into(),
+    };
+    DatiGioco::da_testi(&file).unwrap()
+}
+
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
     Errore::Toml {
         file: file.into(),

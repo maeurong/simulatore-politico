@@ -64,7 +64,7 @@ fn scegli(pesi: &[f64], u: f64) -> usize {
 }
 
 /// Indice intero uniforme in `0..lung`, da `u` in `(0, 1]`.
-fn indice(u: f64, lung: usize) -> usize {
+pub(crate) fn indice(u: f64, lung: usize) -> usize {
     ((u * lung as f64) as usize).min(lung.saturating_sub(1))
 }
 

@@ -70,7 +70,7 @@ pub struct EffettoAttivo {
 
 /// Contributo al turno `turno`: 0 prima di `inizio`; impulso `I · 0.5^(età/durata)`,
 /// stock `I · max(0, 1 − età/durata)`.
-pub fn contributo(e: &EffettoAttivo, turno: u32) -> f64 {
+pub(crate) fn contributo(e: &EffettoAttivo, turno: u32) -> f64 {
     let Some(eta) = turno.checked_sub(e.inizio) else {
         return 0.0;
     };
@@ -303,18 +303,7 @@ mod test {
         reason = "nei test un unwrap che fallisce e' il fallimento voluto"
     )]
     fn meno_fondi_allungano_i_processi() {
-        let file = crate::dati::FileDati {
-            dicasteri: include_str!("../../../dati/base/dicasteri.toml").into(),
-            manopole: include_str!("../../../dati/base/manopole.toml").into(),
-            economia: include_str!("../../../dati/base/economia.toml").into(),
-            regioni: include_str!("../../../dati/base/regioni.toml").into(),
-            scenario: include_str!("../../../dati/base/scenario.toml").into(),
-            elezioni: include_str!("../../../dati/base/elezioni.toml").into(),
-            elettorato: include_str!("../../../dati/base/elettorato.toml").into(),
-            grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
-            atti: include_str!("../../../dati/base/atti.toml").into(),
-        };
-        let dati = DatiGioco::da_testi(&file).unwrap();
+        let dati = crate::dati::dati_base();
         let mut e = Economia::iniziale(&dati);
         for d in &mut e.bilancio.dicasteri {
             d.salari /= 2;

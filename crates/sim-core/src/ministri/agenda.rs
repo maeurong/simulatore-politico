@@ -6,7 +6,7 @@ use super::{Causa, Contesto, Ministri, Ministro, StatoDicastero, indicatore};
 use crate::atti::Atto;
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
-use crate::economia::Bilancio;
+use crate::economia::{Bilancio, euro};
 use crate::errore::Errore;
 use crate::grandezze::EffettoAttivo;
 use crate::partita::LIMITE_EURO;
@@ -57,9 +57,10 @@ pub(super) fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
     b.dicasteri.iter().map(|d| d.margine).collect()
 }
 
-/// Euro per turno di lavori: `round(costo · margine_rif/4 · livello_prezzi)`.
-pub(super) fn costo(a: &Atto, rif: i64, prezzi: f64) -> i64 {
-    (a.costo * rif as f64 / 4.0 * prezzi).round() as i64
+/// Euro per turno di lavori dell'atto nel dicastero `i`:
+/// `round(costo · margine_rif/4 · livello_prezzi)`, con `rif` i `margini_rif`.
+pub(super) fn costo_atto(cx: &Contesto, rif: &[i64], i: usize, a: &Atto) -> i64 {
+    euro(a.costo * rif[i] as f64 / 4.0 * cx.economia.livello_prezzi)
 }
 
 /// Posizione di un atto (indice di catalogo) fra i 4 del dicastero.
@@ -212,18 +213,14 @@ impl Ministri {
             .map(|_| caso.normale(Flusso::Governo))
             .collect();
         let rif = margini_rif(cx.dati);
-        let annuo = match &cx.economia.bilancio_approvato {
-            Some(b) if b.anno == cx.data.anno => b,
-            _ => &cx.economia.bilancio,
-        };
+        let annuo = cx.economia.bilancio_in_vigore(cx.data);
         for i in 0..self.dicasteri.len() {
             if cx.turno == 0 {
-                let m = rif.get(i).copied().unwrap_or(0);
-                self.dicasteri[i].margine_residuo = (m as f64 / 4.0).round() as i64;
+                self.dicasteri[i].margine_residuo = euro(rif[i] as f64 / 4.0);
             } else if cx.data.trimestre == 1 {
-                self.dicasteri[i].margine_residuo = annuo.dicasteri.get(i).map_or(0, |d| d.margine);
+                self.dicasteri[i].margine_residuo = annuo.dicasteri[i].margine;
             }
-            let agenda = self.scegli(cx, i, &rumore, rif.get(i).copied().unwrap_or(0));
+            let agenda = self.scegli(cx, i, &rumore, &rif);
             self.dicasteri[i].agenda = agenda;
         }
         self.proponi(cx);
@@ -231,27 +228,25 @@ impl Ministri {
 
     /// L'atto pagabile e senza cantiere in corso col punteggio più alto (a parità il primo), e la
     /// regione bersaglio.
-    fn scegli(&self, cx: &Contesto, i: usize, rumore: &[f64], rif: i64) -> Option<Agenda> {
+    fn scegli(&self, cx: &Contesto, i: usize, rumore: &[f64], rif: &[i64]) -> Option<Agenda> {
         let dati = cx.dati;
         let st = &self.dicasteri[i];
         let m = st.ministro.as_ref()?;
         let atti: Vec<(usize, &Atto)> = dati.atti_del_dicastero(i).collect();
         let parti: Vec<(f64, f64)> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
-        let attaccamenti: Vec<f64> = parti.iter().map(|(o, v)| o + v).collect();
         let (libero, sigma) = (disponibile(st), dati.manopola("rumore_agenda"));
         let mut scelta: Option<(usize, f64)> = None;
         for (p, (k, a)) in atti.iter().enumerate() {
-            if costo(a, rif, cx.economia.livello_prezzi) > libero || in_cantiere(st, *k) {
+            if costo_atto(cx, rif, i, a) > libero || in_cantiere(st, *k) {
                 continue;
             }
-            let z = rumore.get(*k).copied().unwrap_or(0.0);
-            let punteggio = attaccamenti[p] + sigma * z;
+            let punteggio = parti[p].0 + parti[p].1 + sigma * rumore[*k];
             if scelta.is_none_or(|(_, s)| punteggio > s) {
                 scelta = Some((p, punteggio));
             }
         }
         let (p, _) = scelta?;
-        Some(Self::agenda_di(cx, i, m, &atti, &parti, attaccamenti, p))
+        Some(Self::agenda_di(cx, i, m, &atti, &parti, p))
     }
 
     /// L'agenda sull'atto in posizione `p` fra i 4 del dicastero, con la regione bersaglio.
@@ -261,7 +256,6 @@ impl Ministri {
         m: &Ministro,
         atti: &[(usize, &Atto)],
         parti: &[(f64, f64)],
-        attaccamenti: Vec<f64>,
         p: usize,
     ) -> Agenda {
         let dati = cx.dati;
@@ -293,7 +287,7 @@ impl Ministri {
             regione,
             stato: StatoAgenda::Annunciata,
             motivo,
-            attaccamenti,
+            attaccamenti: parti.iter().map(|(o, v)| o + v).collect(),
             bersaglio,
         }
     }
@@ -302,7 +296,7 @@ impl Ministri {
     /// poi l'agenda se non fermata e senza dimissioni chieste. Rende gli effetti registrati;
     /// l'agenda si svuota. In interim i cantieri restano fermi.
     pub(crate) fn esegui(&mut self, cx: &Contesto) -> Vec<EffettoAttivo> {
-        let (dati, prezzi) = (cx.dati, cx.economia.livello_prezzi);
+        let dati = cx.dati;
         let rif = margini_rif(dati);
         let mut nuovi = Vec::new();
         for (i, st) in self.dicasteri.iter_mut().enumerate() {
@@ -318,18 +312,15 @@ impl Ministri {
                 }
             }
             for f in st.cantieri.iter().filter(|f| f.turni_mancanti == 0) {
-                if let Some(a) = dati.atti().get(f.atto) {
-                    nuovi.extend(effetti_di(dati, a, i, f.regione, c, cx.turno));
-                }
+                let a = &dati.atti()[f.atto];
+                nuovi.extend(effetti_di(dati, a, i, f.regione, c, cx.turno));
             }
             st.cantieri.retain(|f| f.turni_mancanti > 0);
             let Some(ag) = agenda.filter(|a| a.stato != StatoAgenda::Fermata) else {
                 continue;
             };
-            let Some(atto) = dati.atti().get(ag.atto) else {
-                continue;
-            };
-            let spesa = costo(atto, rif.get(i).copied().unwrap_or(0), prezzi);
+            let atto = &dati.atti()[ag.atto];
+            let spesa = costo_atto(cx, &rif, i, atto);
             if st.dimissioni_chieste || spesa > st.margine_residuo {
                 continue;
             }
@@ -413,8 +404,7 @@ impl Ministri {
             if in_cantiere(st, k) {
                 return ko(format!("cantiere già in corso: {}", dati.atti()[k].id));
             }
-            let rif = margini_rif(dati).get(i).copied().unwrap_or(0);
-            if costo(&dati.atti()[k], rif, cx.economia.livello_prezzi) > disponibile(st) {
+            if costo_atto(cx, &margini_rif(dati), i, &dati.atti()[k]) > disponibile(st) {
                 return ko(format!("margine insufficiente per {}", dati.atti()[k].id));
             }
         }
@@ -522,29 +512,27 @@ impl Ministri {
     }
 
     /// Agenda, atti e cantieri del dicastero `i` per la `Vista`. Mai rumore né attaccamenti.
-    pub(super) fn voci_governo(&self, cx: &Contesto, i: usize) -> VociGoverno {
+    pub(super) fn voci_governo(&self, cx: &Contesto, rif: &[i64], i: usize) -> VociGoverno {
         let (dati, st) = (cx.dati, &self.dicasteri[i]);
-        let rif = margini_rif(dati).get(i).copied().unwrap_or(0);
-        let prezzi = cx.economia.livello_prezzi;
         let libero = disponibile(st);
         let regione = |r: Option<usize>| r.map(|r| dati.regioni()[r].id.clone());
-        let agenda = st.agenda.as_ref().and_then(|ag| {
-            let atto = dati.atti().get(ag.atto)?;
+        let agenda = st.agenda.as_ref().map(|ag| {
+            let atto = &dati.atti()[ag.atto];
             let presidente = cx.partiti[cx.governo.presidente].posizione_dichiarata;
             let minaccia = st
                 .ministro
                 .as_ref()
                 .is_some_and(|m| m.soddisfazione < dati.manopola("soglia_minaccia"));
-            Some(VoceAgenda {
+            VoceAgenda {
                 atto: atto.id.clone(),
                 nome: atto.nome.clone(),
                 regione: regione(ag.regione),
-                costo: costo(atto, rif, prezzi),
+                costo: costo_atto(cx, rif, i, atto),
                 motivo: ag.motivo.clone(),
                 stato: ag.stato,
                 in_evidenza: minaccia
                     || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza"),
-            })
+            }
         });
         let motivo_senza_agenda = match (&agenda, &st.ministro) {
             (Some(_), _) => None,
@@ -554,7 +542,7 @@ impl Ministri {
         let atti = dati
             .atti_del_dicastero(i)
             .map(|(_, a)| {
-                let spesa = costo(a, rif, prezzi);
+                let spesa = costo_atto(cx, rif, i, a);
                 VoceAtto {
                     id: a.id.clone(),
                     nome: a.nome.clone(),
@@ -575,14 +563,12 @@ impl Ministri {
             })
             .collect();
         let cantieri = (st.cantieri.iter())
-            .filter_map(|f| {
-                Some(VoceCantiere {
-                    atto: dati.atti().get(f.atto)?.id.clone(),
-                    regione: regione(f.regione),
-                    turni_mancanti: f.turni_mancanti,
-                    rata: f.rata,
-                    speso: f.speso,
-                })
+            .map(|f| VoceCantiere {
+                atto: dati.atti()[f.atto].id.clone(),
+                regione: regione(f.regione),
+                turni_mancanti: f.turni_mancanti,
+                rata: f.rata,
+                speso: f.speso,
             })
             .collect();
         VociGoverno {
@@ -606,25 +592,7 @@ pub(super) struct VociGoverno {
 mod test {
     use super::*;
     use crate::atti::{EffettoAtto, Forma, Lato, Velocita};
-
-    #[expect(
-        clippy::unwrap_used,
-        reason = "nei test un unwrap che fallisce e' il fallimento voluto"
-    )]
-    fn dati() -> DatiGioco {
-        let file = crate::dati::FileDati {
-            dicasteri: include_str!("../../../../dati/base/dicasteri.toml").into(),
-            manopole: include_str!("../../../../dati/base/manopole.toml").into(),
-            economia: include_str!("../../../../dati/base/economia.toml").into(),
-            regioni: include_str!("../../../../dati/base/regioni.toml").into(),
-            scenario: include_str!("../../../../dati/base/scenario.toml").into(),
-            elezioni: include_str!("../../../../dati/base/elezioni.toml").into(),
-            elettorato: include_str!("../../../../dati/base/elettorato.toml").into(),
-            grandezze: include_str!("../../../../dati/base/grandezze.toml").into(),
-            atti: include_str!("../../../../dati/base/atti.toml").into(),
-        };
-        DatiGioco::da_testi(&file).unwrap()
-    }
+    use crate::dati::dati_base as dati;
 
     #[test]
     fn capacita_5_quintuplica_l_intensita_di_capacita_1_e_divide_il_ritardo() {
