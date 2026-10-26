@@ -1,6 +1,9 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::economia::{Annata, Economia};
+use crate::economia::{
+    self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
+    perdita_reale, perdite_scaglioni,
+};
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
@@ -10,7 +13,8 @@ use crate::ministri::{Contesto, Ministri};
 use crate::misure::Misure;
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
+    SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceBudget, VoceDicastero, VoceGrandezza,
+    VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -96,6 +100,7 @@ impl Partita {
                 grandezze: &grandezze,
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
+                indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
                 data: Trimestre::TURNO_ZERO,
             },
@@ -121,18 +126,20 @@ impl Partita {
     // Ordine della chiusura:
     // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (anno
-    // nuovo, rose, agende, proposte).
+    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (rose,
+    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
+        self.aula();
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
             &self.grandezze,
             &self.ministri,
             &self.economia,
+            &self.elettorato,
             self.turno,
             self.data,
         );
@@ -176,6 +183,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         };
@@ -188,6 +196,30 @@ impl Partita {
             ..cx
         };
         self.ministri.apri(&cx, &mut self.caso);
+        // Anno nuovo in esercizio provvisorio: costa la perdita reale del bilancio che continua.
+        if self.economia.esercizio_provvisorio(self.data) {
+            let perdite = self.perdite(self.economia.bilancio_in_vigore(self.data));
+            self.costo_taglio(&perdite);
+        }
+    }
+
+    /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
+    fn perdite(&self, b: &Bilancio) -> Vec<f64> {
+        let indice = self.indice_prezzi();
+        (b.dicasteri.iter())
+            .map(|d| perdita_reale(d.livello_prezzi, indice))
+            .collect()
+    }
+
+    /// `BudgetTagliato`: `−costo_taglio_budget · perdita` per ogni dicastero con ministro.
+    fn costo_taglio(&mut self, perdite: &[f64]) {
+        let costo = self.dati.manopola("costo_taglio_budget");
+        self.ministri.costo_taglio(perdite, costo, self.turno);
+    }
+
+    /// L'indice dei prezzi pubblicato: la legge di bilancio non legge il livello vero.
+    fn indice_prezzi(&self) -> f64 {
+        self.informazione.statistica.indice_prezzi
     }
 
     fn contesto(&self) -> Contesto<'_> {
@@ -198,6 +230,7 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         }
@@ -212,10 +245,104 @@ impl Partita {
             grandezze: &self.grandezze,
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
         };
         f(&mut self.ministri, &cx)
+    }
+
+    /// Aula: il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
+    /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
+    /// approvazione costa ai ministri la perdita reale delle loro voci.
+    fn aula(&mut self) {
+        let Some(b) = self.economia.bilancio_presentato.take() else {
+            return;
+        };
+        if self.economia.esercizio_provvisorio(self.data) {
+            for (st, d) in self.ministri.dicasteri.iter_mut().zip(&b.dicasteri) {
+                st.margine_residuo = d.margine / 4 * 3;
+            }
+        }
+        let perdite = self.perdite(&b);
+        self.costo_taglio(&perdite);
+        self.economia.bilancio_approvato = Some(b);
+    }
+
+    /// La bozza della legge di bilancio: in ottobre-dicembre senza bilancio approvato, la copia
+    /// nominale del bilancio in vigore con l'anno dopo; nell'esercizio provvisorio, la stessa con
+    /// l'anno in corso; altrimenti `None`.
+    pub fn bozza_bilancio(&self) -> Option<Bilancio> {
+        economia::bozza(&self.economia, self.data)
+    }
+
+    /// Le voci scelte di `b` rivalutate all'indice dei prezzi pubblicato.
+    ///
+    /// # Errors
+    /// `Bilancio` se il dicastero non c'è o una voce rivalutata esce da 0-1e15.
+    pub fn indicizza(&self, b: &Bilancio, voce: &Voce) -> Result<Bilancio, Errore> {
+        economia::indicizza(b, voce, self.indice_prezzi()).map_err(Errore::Bilancio)
+    }
+
+    /// Costo, peso sul tetto UE e perdita reale di `b` rispetto alla bozza, come lo approverebbe
+    /// l'aula.
+    ///
+    /// # Errors
+    /// `Bilancio` fuori stagione, con le stesse regole della presentazione, o con la spesa netta
+    /// di riferimento nulla.
+    pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
+        let (bozza, b) = self.bilancio_ammesso(b)?;
+        economia::riepilogo(
+            &self.economia,
+            &self.dati,
+            &self.elettorato,
+            &self.misure,
+            &b,
+            &bozza,
+            &self.informazione.statistica,
+        )
+        .map_err(Errore::Bilancio)
+    }
+
+    /// `PresentaBilancio`: sostituisce quello già presentato; l'aula lo approva in chiusura.
+    pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
+        let (_, b) = self.bilancio_ammesso(b)?;
+        self.economia.bilancio_presentato = Some(b);
+        Ok(())
+    }
+
+    /// La bozza e `b` come lo approverebbe l'aula.
+    fn bilancio_ammesso(&self, b: &Bilancio) -> Result<(Bilancio, Bilancio), Errore> {
+        let bozza =
+            (self.bozza_bilancio()).ok_or_else(|| Errore::Bilancio(FUORI_STAGIONE.into()))?;
+        let b = economia::normalizza(b, &bozza, self.indice_prezzi()).map_err(Errore::Bilancio)?;
+        Ok((bozza, b))
+    }
+
+    fn vista_bilancio(&self) -> VistaBilancio {
+        let e = &self.economia;
+        let b = e.bilancio_in_vigore(self.data);
+        let indice = self.indice_prezzi();
+        VistaBilancio {
+            anno: b.anno,
+            dicasteri: (b.dicasteri.iter())
+                .map(|d| VoceBudget {
+                    id: d.id.clone(),
+                    spesa: d.spesa,
+                    salari: d.salari,
+                    acquisti: d.acquisti,
+                    margine: d.margine,
+                    perdita_reale: perdita_reale(d.livello_prezzi, indice),
+                })
+                .collect(),
+            aliquote: b.aliquote.clone(),
+            perdita_reale_scaglioni: perdite_scaglioni(&b.aliquote, indice).collect(),
+            fondo_riserva: b.fondo_riserva,
+            presentabile: self.bozza_bilancio().is_some(),
+            presentato: e.bilancio_presentato.is_some(),
+            esercizio_provvisorio: e.esercizio_provvisorio(self.data),
+        }
     }
 
     /// `Accogli`: l'importo è un decreto, speso per intero nel trimestre che si chiude.
@@ -390,6 +517,7 @@ impl Partita {
                 prima_stima: s.prima_stima.clone(),
                 revisione: s.revisione.clone(),
             },
+            bilancio: self.vista_bilancio(),
         }
     }
 
@@ -457,8 +585,7 @@ impl Partita {
             ));
         }
         let id_dicasteri = || partita.dati.dicasteri().iter().map(|d| &d.id);
-        let bilanci = std::iter::once(&e.bilancio).chain(&e.bilancio_approvato);
-        for b in bilanci {
+        for b in e.bilanci() {
             if !b.dicasteri.iter().map(|d| &d.id).eq(id_dicasteri()) {
                 return Err(Errore::SalvataggioIlleggibile(
                     "economia.bilancio non combacia con i dicasteri dei dati".into(),
@@ -525,11 +652,17 @@ fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
 }
 
 impl Economia {
+    /// Il bilancio corrente, l'approvato e il presentato.
+    fn bilanci(&self) -> impl Iterator<Item = &Bilancio> {
+        std::iter::once(&self.bilancio)
+            .chain(&self.bilancio_approvato)
+            .chain(&self.bilancio_presentato)
+    }
+
     /// Invarianti dei conti che un salvataggio manomesso potrebbe rompere. L'ordine conta:
     /// i limiti sugli importi vengono prima delle somme che li usano.
     fn controlla_coerenza(&self, data: Trimestre) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
-        let bilanci = std::iter::once(&self.bilancio).chain(&self.bilancio_approvato);
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
         ok(
@@ -548,6 +681,26 @@ impl Economia {
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
+        for b in self.bilanci() {
+            ok(
+                b.aliquote.valida().is_ok()
+                    && b.dicasteri.iter().all(|d| livello_ok(d.livello_prezzi)),
+                "economia.bilancio: aliquote incoerenti o un livello_prezzi fuori da (0, 1e6]",
+            )?;
+            ok(
+                (b.dicasteri.iter())
+                    .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine])
+                    .chain([b.fondo_riserva])
+                    .all(|x| (0..=LIMITE_EURO).contains(&x)),
+                "economia.bilancio: una voce o il fondo_riserva fuori da 0-1e15",
+            )?;
+        }
+        if let Some(b) = &self.bilancio_presentato {
+            ok(
+                economia::bozza(self, data).is_some_and(|z| z.anno == b.anno),
+                "economia.bilancio_presentato fuori stagione o d'altro anno",
+            )?;
+        }
         ok(
             (0..=LIMITE_EURO).contains(&self.decreti),
             "economia.decreti fuori da 0-1e15",
@@ -590,11 +743,8 @@ impl Economia {
             st.stato,
             st.estero,
         ];
-        let importi_bilancio = bilanci
-            .flat_map(|b| &b.dicasteri)
-            .flat_map(|d| [d.spesa, d.salari, d.acquisti, d.margine]);
         ok(
-            importi.into_iter().chain(importi_bilancio).all(in_limite),
+            importi.into_iter().all(in_limite),
             "economia: un importo supera 1e15 euro",
         )?;
         ok(

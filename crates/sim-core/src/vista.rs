@@ -1,3 +1,4 @@
+use crate::economia::Aliquote;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
@@ -24,6 +25,40 @@ pub struct Vista {
     /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
     pub proiezione: Option<Vec<SeggiPartito>>,
     pub statistica: VistaStatistica,
+    pub bilancio: VistaBilancio,
+}
+
+/// Il bilancio in vigore nel trimestre: l'approvato se è dell'anno in corso, altrimenti il
+/// corrente.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaBilancio {
+    /// Anno del bilancio in vigore.
+    pub anno: u16,
+    pub dicasteri: Vec<VoceBudget>,
+    pub aliquote: Aliquote,
+    /// %, come `VoceBudget.perdita_reale`: una per scaglione con soglia, in ordine.
+    pub perdita_reale_scaglioni: Vec<f64>,
+    /// Euro annui.
+    pub fondo_riserva: i64,
+    /// C'è una bozza: si può presentare la legge di bilancio.
+    pub presentabile: bool,
+    /// Una legge di bilancio è già presentata nel turno: l'aula la approva in chiusura.
+    pub presentato: bool,
+    /// Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
+    pub esercizio_provvisorio: bool,
+}
+
+/// Euro annui; `perdita_reale` in %, il potere d'acquisto perso dalla cifra nominale.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceBudget {
+    pub id: String,
+    pub spesa: i64,
+    pub salari: i64,
+    pub acquisti: i64,
+    pub margine: i64,
+    pub perdita_reale: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -88,7 +123,7 @@ pub struct VoceMinistero {
     pub causa_dimissioni: Option<Causa>,
     /// L'atto annunciato per il turno.
     pub agenda: Option<VoceAgenda>,
-    /// Perché manca l'agenda: `interim` o `margine esaurito`.
+    /// Perché manca l'agenda: `esercizio provvisorio`, `interim` o `margine esaurito`.
     pub motivo_senza_agenda: Option<String>,
     /// I 4 atti del dicastero.
     pub atti: Vec<VoceAtto>,

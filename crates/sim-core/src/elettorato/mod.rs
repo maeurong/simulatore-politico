@@ -2,7 +2,7 @@
 //! (`elettorato.toml`) e il loro stato.
 
 use crate::dati::{DatiGioco, Dicastero};
-use crate::economia::Economia;
+use crate::economia::{Economia, Scaglione, irpef};
 use crate::errore::Errore;
 use crate::misure::Misure;
 use crate::struttura::Regione;
@@ -358,6 +358,8 @@ pub struct Elettorato {
     pub base: Indici,
     /// Disoccupazione per regione letta al turno prima, in %.
     pub ultima_disoccupazione: Vec<f64>,
+    /// Aliquota media IRPEF al turno zero, con gli scaglioni dello scenario.
+    pub aliquota_irpef_0: f64,
 }
 
 impl Elettorato {
@@ -368,7 +370,8 @@ impl Elettorato {
 
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
         let mut el = Elettorato {
-            base: Indici::da(e, dati, 1.0),
+            base: Indici::da(e, dati),
+            aliquota_irpef_0: 0.0,
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()
@@ -390,7 +393,23 @@ impl Elettorato {
         let neutre = Misure::neutre(dati);
         el.aggiorna_redditi(dati, e, &neutre);
         el.aggiorna_redditi(dati, e, &neutre);
+        el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
         el
+    }
+
+    /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti, con gli scaglioni `s`.
+    pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
+        let d = dati.elettorato();
+        let (mut imposta, mut lordo) = (0.0, 0.0);
+        for (k, g) in self.gruppi.iter().enumerate() {
+            let (n, l) = (
+                self.elettori(d, k),
+                g.reddito.primario + g.reddito.trasferimenti,
+            );
+            imposta += n * irpef(s, l);
+            lordo += n * l;
+        }
+        if lordo > 0.0 { imposta / lordo } else { 0.0 }
     }
 
     /// Lunghezze e finitezza, per uno stato letto da un salvataggio.
@@ -461,6 +480,12 @@ impl Elettorato {
         }
         if !self.base.e_finito() {
             return ko("elettorato.base non finita".into());
+        }
+        if !(self.aliquota_irpef_0.is_finite()
+            && self.aliquota_irpef_0 > 0.0
+            && self.aliquota_irpef_0 < 1.0)
+        {
+            return ko("elettorato.aliquota_irpef_0 fuori da (0, 1)".into());
         }
         Ok(())
     }

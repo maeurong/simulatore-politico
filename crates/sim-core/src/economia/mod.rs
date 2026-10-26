@@ -4,6 +4,7 @@ pub mod bce;
 pub mod congiuntura;
 mod finanza;
 pub mod lavoro;
+mod legge_bilancio;
 pub mod leontief;
 mod previdenza;
 mod regole_ue;
@@ -12,6 +13,11 @@ mod spread;
 
 pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
+pub use legge_bilancio::{Aliquote, PerditaReale, RiepilogoBilancio, Scaglione, Voce, irpef};
+pub(crate) use legge_bilancio::{
+    FUORI_STAGIONE, bozza, eti, fattore, indicizza, livello_ok, normalizza, perdita_reale,
+    perdite_scaglioni, riepilogo,
+};
 pub use previdenza::Annata;
 pub use regole_ue::RegoleUe;
 pub use sfc::{Settori, Sfc};
@@ -67,6 +73,8 @@ pub struct Economia {
     pub bilancio: Bilancio,
     /// Bilancio dell'anno dopo, se approvato.
     pub bilancio_approvato: Option<Bilancio>,
+    /// Legge di bilancio presentata nel turno, in attesa dell'aula.
+    pub bilancio_presentato: Option<Bilancio>,
     /// Euro dei decreti (fondi accolti) del turno: spesi per intero nel trimestre che si chiude,
     /// fuori dal bilancio annuo.
     pub decreti: i64,
@@ -152,6 +160,7 @@ impl Economia {
                 - dati.manopola("tasso_naturale_reale"),
             bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
             bilancio,
+            bilancio_presentato: None,
             decreti: 0,
             debito,
             tasso_medio_debito: s.costo_medio_debito.valore,
@@ -166,7 +175,7 @@ impl Economia {
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
         };
         e.avvia_previdenza(dati);
-        e.conti = finanza::conti_del_trimestre(&e, dati, 1.0);
+        e.conti = finanza::conti_del_trimestre(&e, &e.bilancio, dati, &Misure::neutre(dati));
         // L'ammenda della PDE la paga il primo passo, non il turno zero.
         e.conti.spese.ammende = 0;
         e.disavanzo_trimestre = e.conti.disavanzo();
@@ -200,7 +209,7 @@ impl Economia {
         data: Trimestre,
         misure: &Misure,
     ) {
-        let spesa_netta = self.finanza(dati, data, misure.riscossione);
+        let spesa_netta = self.finanza(dati, data, misure);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
         let shock_domanda = shock("sigma_domanda");

@@ -725,3 +725,45 @@ valore = 1.0
 min = 0.0
 max = 2.0
 ticket = "07"
+
+# finanza-pubblica:19 (0,12-0,4)
+[elasticita_imponibile_irpef]
+valore = 0.25
+min = 0.0
+max = 0.6
+ticket = "07"
+
+# finanza-pubblica:19 (0,12-0,4)
+[elasticita_imponibile_iva]
+valore = 0.25
+min = 0.0
+max = 0.6
+ticket = "07"
+
+# finanza-pubblica:19 (0,12-0,4)
+[elasticita_imponibile_ires]
+valore = 0.25
+min = 0.0
+max = 0.6
+ticket = "07"
+
+# finanza-pubblica:19 (0,12-0,4)
+[elasticita_imponibile_contributi]
+valore = 0.25
+min = 0.0
+max = 0.6
+ticket = "07"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca (punti di soddisfazione per punto % di perdita reale)
+[costo_taglio_budget]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "04"
+
+# pericolosita-naturale-regioni:134 (0,2-0,4 l'anno); stato-del-paese:110 (mld €)
+[fondo_riserva]
+valore = 0.3
+min = 0.0
+max = 2.0
+ticket = "19"

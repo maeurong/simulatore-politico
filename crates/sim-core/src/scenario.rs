@@ -1,5 +1,6 @@
 //! Scenario di partenza (`scenario.toml`): solo ingressi, i derivati si ricalcolano al caricamento.
 
+use crate::economia::Aliquote;
 use crate::errore::Errore;
 use crate::partiti::{DatoGoverno, DatoPartito};
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,8 @@ macro_rules! scenario {
             /// Tetto di crescita della spesa netta per anno; dopo l'ultimo vale l'ultimo.
             pub tetti_spesa_netta: BTreeMap<u16, f64>,
             pub clausola_nazionale_fino_a: u16,
+            /// Aliquote e scaglioni IRPEF del turno zero.
+            pub aliquote: Aliquote,
             /// Nome di un'impostazione di `elezioni.toml`.
             pub legge_elettorale: String,
             #[serde(rename = "partito")]
@@ -144,6 +147,25 @@ impl Scenario {
             return Err(Errore::StrutturaIncoerente(
                 "tetti_spesa_netta assenti o non finiti".into(),
             ));
+        }
+        let a = &self.aliquote;
+        let nello_scenario =
+            |m: String| Errore::StrutturaIncoerente(format!("scenario.toml [aliquote]: {m}"));
+        a.valida().map_err(nello_scenario)?;
+        // Con un'aliquota di partenza nulla il gettito di riferimento non ha base di confronto.
+        let irpef = (a.irpef.iter().enumerate()).map(|(i, s)| (format!("irpef[{i}]"), s.aliquota));
+        let altre = [
+            ("iva", a.iva),
+            ("ires", a.ires),
+            ("contributi", a.contributi),
+        ]
+        .map(|(nome, v)| (nome.to_string(), v));
+        for (nome, valore) in irpef.chain(altre) {
+            if valore <= 0.0 {
+                return Err(nello_scenario(format!(
+                    "{nome}: l'aliquota dello scenario deve essere positiva"
+                )));
+            }
         }
         Ok(())
     }

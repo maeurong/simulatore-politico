@@ -2,7 +2,7 @@
 
 use super::{Condizione, Elettorato};
 use crate::dati::DatiGioco;
-use crate::economia::Economia;
+use crate::economia::{Economia, Scaglione, irpef};
 use crate::misure::Misure;
 use serde::{Deserialize, Serialize};
 
@@ -44,23 +44,16 @@ pub struct Indici {
     pub pil: f64,
     pub pensione: f64,
     pub sussidio: f64,
-    pub pressione: f64,
 }
 
 impl Indici {
-    /// `riscossione` è quella con cui `e.conti` ha incassato l'IRPEF: la pressione la toglie,
-    /// perché pesa solo sugli autonomi (`aggiorna_redditi`), non su tutti i gruppi.
-    pub fn da(e: &Economia, dati: &DatiGioco, riscossione: f64) -> Indici {
-        let entrate = &e.conti.entrate;
+    pub fn da(e: &Economia, dati: &DatiGioco) -> Indici {
         Indici {
             salario: e.salario_medio(dati),
             salari_pubblici: e.bilancio.dicasteri.iter().map(|d| d.salari as f64).sum(),
             pil: e.pil_trimestrale,
             pensione: e.pensione_media(),
             sussidio: e.sussidio_effettivo(dati),
-            pressione: (entrate.irpef as f64 / riscossione.max(f64::MIN_POSITIVE)
-                + entrate.contributi as f64)
-                / (e.pil_trimestrale * 1e9),
         }
     }
 
@@ -71,7 +64,6 @@ impl Indici {
             self.pil,
             self.pensione,
             self.sussidio,
-            self.pressione,
         ]
         .iter()
         .all(|x| x.is_finite())
@@ -82,12 +74,13 @@ impl Elettorato {
     /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
     /// delle misure pesa anche sulle imposte degli autonomi.
     pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
-        let (i, b) = (Indici::da(e, dati, misure.riscossione), self.base);
+        let (i, b) = (Indici::da(e, dati), self.base);
         let d = dati.elettorato();
         let consumi = &dati.struttura().consumi;
         let media =
             |w: &[f64]| -> f64 { w.iter().zip(&e.prezzi_settori).map(|(w, p)| w * p).sum() };
         let costo_base = media(consumi);
+        let s0 = &dati.scenario().aliquote;
         // ponytail: base nulla (per esempio tutti i salari_pil a 0) = nessun termine di
         // confronto, il reddito resta quello dei dati invece di diventare NaN.
         let rapporto = |oggi: f64, base: f64| if base > 0.0 { oggi / base } else { 1.0 };
@@ -110,6 +103,26 @@ impl Elettorato {
             let lordo = primario + trasferimenti;
             let aliquota = d.aliquote.get(&dato.fascia).copied().unwrap_or_default();
             let paniere = d.paniere.get(&dato.fascia).map_or(0.0, |w| media(w));
+            // Aliquota effettiva del gruppo (IRPEF + contributi) oggi su quella del turno zero:
+            // il drenaggio nasce qui, col lordo nominale che cresce e gli scaglioni fermi.
+            let r = {
+                let tasso = |s: &[Scaglione], l: f64, contributi: f64| irpef(s, l) / l + contributi;
+                let lordo_0 = dato.primario + dato.trasferimenti;
+                let den = if lordo_0 > 0.0 {
+                    tasso(&s0.irpef, lordo_0, s0.contributi)
+                } else {
+                    0.0
+                };
+                if lordo > 0.0 && den > 0.0 {
+                    tasso(
+                        &e.bilancio.aliquote.irpef,
+                        lordo,
+                        e.bilancio.aliquote.contributi,
+                    ) / den
+                } else {
+                    1.0
+                }
+            };
             let evasione = if dato.condizione == Condizione::Autonomo {
                 misure.riscossione
             } else {
@@ -118,8 +131,7 @@ impl Elettorato {
             g.reddito = Reddito {
                 primario,
                 trasferimenti,
-                imposte: (aliquota * lordo * rapporto(i.pressione, b.pressione) * evasione)
-                    .min(lordo),
+                imposte: (aliquota * lordo * r * evasione).min(lordo),
                 paniere: e.livello_prezzi * paniere / costo_base,
             };
         }

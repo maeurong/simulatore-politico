@@ -58,9 +58,10 @@ pub(super) fn margini_rif(dati: &DatiGioco) -> Vec<i64> {
 }
 
 /// Euro per turno di lavori dell'atto nel dicastero `i`:
-/// `round(costo · margine_rif/4 · livello_prezzi)`, con `rif` i `margini_rif`.
+/// `round(costo · margine_rif/4 · indice_prezzi)`, con `rif` i `margini_rif` e l'indice
+/// pubblicato, così la `Vista` non rivela il livello vero.
 pub(super) fn costo_atto(cx: &Contesto, rif: &[i64], i: usize, a: &Atto) -> i64 {
-    euro(a.costo * rif[i] as f64 / 4.0 * cx.economia.livello_prezzi)
+    euro(a.costo * rif[i] as f64 / 4.0 * cx.indice_prezzi)
 }
 
 /// Posizione di un atto (indice di catalogo) fra i 4 del dicastero.
@@ -208,22 +209,42 @@ impl Ministri {
     /// Apertura dei lavori: il margine (turno zero: un trimestre del bilancio iniziale; ogni
     /// gennaio-marzo: l'anno intero del bilancio che vale), le 40 estrazioni di rumore nell'ordine
     /// del catalogo (sempre, anche per interim e margine esaurito), poi le agende.
+    /// Nell'esercizio provvisorio né agende né proposte.
     pub(super) fn apri_agende(&mut self, cx: &Contesto, caso: &mut Caso) {
         let rumore: Vec<f64> = (0..cx.dati.atti().len())
             .map(|_| caso.normale(Flusso::Governo))
             .collect();
         let rif = margini_rif(cx.dati);
         let annuo = cx.economia.bilancio_in_vigore(cx.data);
+        let provvisorio = cx.economia.esercizio_provvisorio(cx.data);
         for i in 0..self.dicasteri.len() {
             if cx.turno == 0 {
                 self.dicasteri[i].margine_residuo = euro(rif[i] as f64 / 4.0);
             } else if cx.data.trimestre == 1 {
                 self.dicasteri[i].margine_residuo = annuo.dicasteri[i].margine;
             }
-            let agenda = self.scegli(cx, i, &rumore, &rif);
+            let agenda = if provvisorio {
+                None
+            } else {
+                self.scegli(cx, i, &rumore, &rif)
+            };
             self.dicasteri[i].agenda = agenda;
         }
-        self.proponi(cx);
+        if provvisorio {
+            // Senza agende ogni ministro chiederebbe fondi che nessuno può accogliere.
+            self.dicasteri.iter_mut().for_each(|st| st.proposta = None);
+        } else {
+            self.proponi(cx);
+        }
+    }
+
+    /// `BudgetTagliato`: `−costo · perdita` per ogni dicastero con ministro, con `perdite` le
+    /// perdite reali in % delle voci, nell'ordine dei dicasteri; nulla dove la perdita non è
+    /// positiva.
+    pub(crate) fn costo_taglio(&mut self, perdite: &[f64], costo: f64, turno: u32) {
+        for (st, p) in self.dicasteri.iter_mut().zip(perdite) {
+            penalizza(st, Causa::BudgetTagliato, -costo * p.max(0.0), turno);
+        }
     }
 
     /// L'atto pagabile e senza cantiere in corso col punteggio più alto (a parità il primo), e la
@@ -534,8 +555,10 @@ impl Ministri {
                     || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza"),
             }
         });
+        let provvisorio = cx.economia.esercizio_provvisorio(cx.data);
         let motivo_senza_agenda = match (&agenda, &st.ministro) {
             (Some(_), _) => None,
+            (None, _) if provvisorio => Some("esercizio provvisorio".to_string()),
             (None, None) => Some("interim".to_string()),
             (None, Some(_)) => Some("margine esaurito".to_string()),
         };

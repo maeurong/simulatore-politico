@@ -155,6 +155,10 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "costo_respingere",
     "distanza_evidenza",
     "elasticita_riscossione",
+    "elasticita_imponibile_irpef",
+    "elasticita_imponibile_iva",
+    "elasticita_imponibile_ires",
+    "elasticita_imponibile_contributi",
     "spread_capacita",
     "stock_disoccupazione",
     "crescita_infrastrutture",
@@ -162,6 +166,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "crescita_giustizia",
     "crescita_energia",
     "crescita_demografia",
+    "costo_taglio_budget",
+    "fondo_riserva",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

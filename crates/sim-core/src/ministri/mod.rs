@@ -35,6 +35,7 @@ pub enum Causa {
     AttoDirottato,
     CantiereFermato,
     PropostaRespinta,
+    BudgetTagliato,
 }
 
 impl fmt::Display for Causa {
@@ -47,6 +48,7 @@ impl fmt::Display for Causa {
             Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
             Self::PropostaRespinta => "proposta di fondi respinta",
+            Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
         })
     }
 }
@@ -115,6 +117,8 @@ pub(crate) struct Contesto<'a> {
     pub grandezze: &'a Grandezze,
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
+    /// L'indice dei prezzi pubblicato, non il livello vero.
+    pub indice_prezzi: f64,
     pub turno: u32,
     pub data: Trimestre,
 }
@@ -282,7 +286,9 @@ impl Ministri {
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
-    /// del decreto: lo spende chi possiede l'economia.
+    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio` non arriva
+    /// mai qui (`Partita::comanda` lo intercetta), quindi «comando senza dicastero» non si
+    /// raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
         let (Comando::ChiediDimissioni { dicastero }
@@ -292,10 +298,18 @@ impl Ministri {
         | Comando::FermaCantiere { dicastero, .. }
         | Comando::Accogli { dicastero }
         | Comando::Rinvia { dicastero }
-        | Comando::Respingi { dicastero }) = &c;
+        | Comando::Respingi { dicastero }) = &c
+        else {
+            return ko("comando senza dicastero".into());
+        };
         let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
+        if matches!(c, Comando::Accogli { .. }) && cx.economia.esercizio_provvisorio(cx.data) {
+            return ko(format!(
+                "esercizio provvisorio: nessuna misura che costi denaro: {dicastero}"
+            ));
+        }
         let st = &mut self.dicasteri[i];
         let sul_ministro = matches!(
             c,
@@ -333,6 +347,8 @@ impl Ministri {
                 }
                 st.scelta = Some(indice);
             }
+            // Escluso dal `let ... else` in testa; lo intercetta `Partita::comanda`.
+            Comando::PresentaBilancio { .. } => {}
         }
         Ok(None)
     }
