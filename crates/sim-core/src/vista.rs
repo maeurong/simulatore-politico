@@ -4,7 +4,8 @@ use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
-    CausaIntesa, EsitoVoto, FormaMisura, ValoreProposto, VariazioneIntesa, VoceLinea,
+    CausaIntesa, EsitoVoto, FormaMisura, StatoEmendamento, ValoreProposto, VariazioneIntesa,
+    VoceLinea,
 };
 use crate::partita::Trimestre;
 use serde::Serialize;
@@ -65,6 +66,19 @@ pub struct VoceMisura {
     pub fiducia: bool,
     pub linee: Vec<VoceLinea>,
     pub forbice: Forbice,
+    pub emendamenti: Vec<VoceEmendamento>,
+    /// Gli alleati che con la fiducia voterebbero no (id).
+    pub alleati_contro_fiducia: Vec<String>,
+}
+
+/// L'emendamento di un alleato; `partito` è un id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceEmendamento {
+    pub partito: String,
+    pub testo: String,
+    pub motivo: String,
+    pub stato: StatoEmendamento,
 }
 
 /// Sì attesi ± 2σ per ramo, prima del voto; `maggioranza_*` = sì necessari; `in_bilico` se una

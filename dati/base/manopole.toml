@@ -893,3 +893,38 @@ valore = 0.05
 min = 0.0
 max = 0.5
 ticket = "06"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa persa dall'alleato a cui si respinge l'emendamento)
+[costo_emendamento_respinto]
+valore = 5.0
+min = 0.0
+max = 20.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (franchi tiratori in più, in quota, dell'alleato con l'emendamento respinto)
+[ft_emendamento_respinto]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa persa da ogni alleato per una questione di fiducia)
+[costo_fiducia]
+valore = 3.0
+min = 0.0
+max = 15.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa persa per la fiducia, per sei punti di distanza dalla misura)
+[costo_fiducia_distanza]
+valore = 6.0
+min = 0.0
+max = 20.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca; ticket 13:51, Italicum (turni fra il voto e l'arrivo di un valore rinviato da un emendamento)
+[turni_rinvio_regime]
+valore = 4.0
+min = 1.0
+max = 8.0
+ticket = "13"

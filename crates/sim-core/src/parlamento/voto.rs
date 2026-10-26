@@ -8,8 +8,27 @@ use crate::parlamento::Conteggio;
 use crate::partiti::{Governo, Partito};
 
 /// Fuori dal Presidente del Consiglio e al governo.
-fn alleato(governo: &Governo, j: usize) -> bool {
+pub(crate) fn alleato(governo: &Governo, j: usize) -> bool {
     j != governo.presidente && governo.al_governo(j)
+}
+
+/// La linea sotto fiducia: il governo vota sì, tranne l'alleato in ultimatum (intesa sotto
+/// `soglia_ultimatum`) distante almeno `distanza_alleato` da `nuova`; fuori dal governo no.
+pub fn linea_fiducia(
+    dati: &DatiGioco,
+    partiti: &[Partito],
+    governo: &Governo,
+    intesa: &[f64],
+    nuova: Option<f64>,
+) -> Vec<bool> {
+    let ultimatum = dati.manopola("soglia_ultimatum");
+    let distanza = dati.manopola("distanza_alleato");
+    (partiti.iter().zip(intesa).enumerate())
+        .map(|(j, (p, &i))| {
+            let lontana = nuova.is_some_and(|n| (p.posizione_dichiarata - n).abs() >= distanza);
+            governo.al_governo(j) && !(alleato(governo, j) && i < ultimatum && lontana)
+        })
+        .collect()
 }
 
 /// La linea di ogni partito, nell'ordine dei partiti. `posizioni` = media in vigore e media
@@ -141,6 +160,61 @@ mod tests {
             (intesa_bassa - (0.02 + 0.1 * 0.6)).abs() < 1e-12,
             "{intesa_bassa}"
         );
+    }
+
+    /// La prossima uniforme del flusso del parlamento dopo un voto su `seggi`.
+    fn dopo_il_voto(seggi: &[u32], linea: &[bool], q: &[f64]) -> f64 {
+        let mut caso = Caso::nuovo(7);
+        conta(&mut caso, seggi, linea, q);
+        caso.uniforme(Flusso::Parlamento)
+    }
+
+    #[test]
+    fn conta_estrae_sempre_un_uniforme_per_seggio() {
+        let seggi = [3, 0, 5];
+        let attesa = dopo_il_voto(&seggi, &[true; 3], &[0.3; 3]);
+        for linea in [[true; 3], [false; 3]] {
+            for q in [[0.0; 3], [1.0; 3]] {
+                assert_eq!(dopo_il_voto(&seggi, &linea, &q), attesa);
+            }
+        }
+    }
+
+    #[test]
+    fn la_fiducia_estrae_quanto_un_voto_libero() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let intesa = vec![30.0; partiti.len()];
+        let aula = StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+        };
+        let eta = dati.disposizione("eta_pensionabile").unwrap_or_default();
+        let misura = |fiducia| Misura {
+            id: 0,
+            forma: FormaMisura::Riforma,
+            valori: vec![(eta, 0)],
+            proponente: None,
+            presentata: 0,
+            voto: 0,
+            deliberazione: 0,
+            fiducia,
+            emendamenti: Vec::new(),
+            emendamenti_aperti: false,
+        };
+        let seggi = [9, 100, 20, 14, 48, 189, 20];
+        let dopo = |fiducia| {
+            let p = aula.previsione(&misura(fiducia));
+            assert!(p.franchi.iter().all(|&q| q == 0.0) == fiducia);
+            dopo_il_voto(&seggi, &p.linea, &p.franchi)
+        };
+        assert_eq!(dopo(true), dopo(false));
     }
 
     #[test]

@@ -293,8 +293,8 @@ impl Ministri {
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
-    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio` e
-    /// `PresentaLegge` non arrivano mai qui (`Partita::comanda` li intercetta), quindi «comando senza dicastero» non si
+    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio`,
+    /// `PresentaLegge`, `Emendamento` e `PoniFiducia` non arrivano mai qui (`Partita::comanda` li intercetta), quindi «comando senza dicastero» non si
     /// raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
@@ -355,7 +355,10 @@ impl Ministri {
                 st.scelta = Some(indice);
             }
             // Esclusi dal `let ... else` in testa; li intercetta `Partita::comanda`.
-            Comando::PresentaBilancio { .. } | Comando::PresentaLegge { .. } => {}
+            Comando::PresentaBilancio { .. }
+            | Comando::PresentaLegge { .. }
+            | Comando::Emendamento { .. }
+            | Comando::PoniFiducia { .. } => {}
         }
         Ok(None)
     }

@@ -169,3 +169,29 @@ fn dimissioni_del_proponente_non_fanno_cadere_la_legge() {
     p.chiudi_turno();
     assert_eq!(p.vista().esiti.len(), 1);
 }
+
+/// Salva e ricarica dopo il voto: le due copie restano identiche per tre chiusure.
+fn ricaricata_resta_identica(f: FileDati, approvata: bool) {
+    let mut p = partita(f, 1);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert_eq!(p.vista().esiti[0].approvata, approvata);
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    for _ in 0..3 {
+        p.chiudi_turno();
+        q.chiudi_turno();
+    }
+    assert_eq!(p.salva().unwrap(), q.salva().unwrap());
+}
+
+#[test]
+fn ricaricare_dopo_un_voto_approvato_non_cambia_il_seguito() {
+    ricaricata_resta_identica(senza_shock(), true);
+}
+
+#[test]
+fn ricaricare_dopo_un_voto_respinto_non_cambia_il_seguito() {
+    let f = con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0");
+    ricaricata_resta_identica(f, false);
+}

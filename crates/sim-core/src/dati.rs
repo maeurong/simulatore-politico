@@ -190,6 +190,11 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "distanza_alleato",
     "costo_norma_lontana",
     "scivolamento_percepita",
+    "costo_emendamento_respinto",
+    "ft_emendamento_respinto",
+    "costo_fiducia",
+    "costo_fiducia_distanza",
+    "turni_rinvio_regime",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

@@ -13,8 +13,7 @@ use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
 use crate::misure::Misure;
 use crate::parlamento::{
-    self, CausaIntesa, EsitoVoto, Intesa, Parlamento, StatoAula, ValoreProposto, VariazioneIntesa,
-    voto,
+    self, CausaIntesa, EsitoVoto, FormaMisura, Intesa, Parlamento, StatoAula, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
@@ -137,14 +136,16 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni → atti dei ministri → aula (conversioni → bilancio → leggi →
-    // referendum) → motore (misure, economia, grandezze,
+    // default delle decisioni (proposte, emendamenti aperti respinti) → atti dei ministri → aula
+    // (conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
     // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
-    // calendario → apertura (valori in arrivo, esiti dei due turni prima, rose, agende, proposte;
-    // il costo del taglio se l'anno entra in esercizio provvisorio).
+    // calendario → apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose,
+    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
+        let respinti = self.parlamento.respingi_aperti();
+        self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
         self.aula();
@@ -198,6 +199,14 @@ impl Partita {
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
         self.parlamento.apri(self.turno);
+        let aula = StatoAula {
+            dati: &self.dati,
+            disposizioni: &self.disposizioni,
+            partiti: &self.partiti,
+            governo: &self.governo,
+            intesa: &self.intesa.valori,
+        };
+        self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -296,7 +305,7 @@ impl Partita {
         };
         let m = self.parlamento.misure.remove(k);
         let aula = self.stato_aula();
-        let p = aula.previsione(&m.valori);
+        let p = aula.previsione(&m);
         let linee = aula.voci_linea(&p.linea);
         let pl = &self.parlamento;
         let camera = voto::conta(&mut self.caso, &pl.seggi_camera, &p.linea, &p.franchi);
@@ -306,7 +315,14 @@ impl Partita {
         let nuova = p.posizioni.map(|(_, n)| n);
         if approvata {
             let legge = format!("L. {id}/{}", self.data.anno);
+            let rinvio = self.dati.manopola("turni_rinvio_regime") as u32;
             for &(d, g) in &m.valori {
+                if parlamento::rinviata(&m.emendamenti, d) {
+                    let arrivo = turno.saturating_add(rinvio);
+                    // `controlla` e `presenta` garantiscono `d` e `g`: non fallisce.
+                    let _ = (self.disposizioni).programma(&self.dati, d, g, arrivo, &legge);
+                    continue;
+                }
                 (self.disposizioni).cambia(
                     &self.dati,
                     d,
@@ -320,9 +336,12 @@ impl Partita {
                 self.norma_lontana(nuova);
             }
         } else {
-            let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
-            let da = turno.saturating_add(1).saturating_add(blocco);
-            (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
+            // La fiducia respinta fa cadere la misura senza blocco (le dimissioni: piano 7).
+            if !m.fiducia {
+                let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
+                let da = turno.saturating_add(1).saturating_add(blocco);
+                (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
+            }
             if let Some(st) = m
                 .proponente
                 .and_then(|i| self.ministri.dicasteri.get_mut(i))
@@ -350,7 +369,7 @@ impl Partita {
             senato,
             approvata,
             fiducia: m.fiducia,
-            fiducia_respinta: false,
+            fiducia_respinta: m.fiducia && !approvata,
             linee,
         };
         self.parlamento.esiti.insert(0, esito);
@@ -362,22 +381,56 @@ impl Partita {
         let soglia = self.dati.manopola("distanza_alleato");
         let costo = self.dati.manopola("costo_norma_lontana");
         for j in self.alleati() {
-            let (Some(p), Some(x)) = (self.partiti.get(j), self.intesa.valori.get_mut(j)) else {
-                continue;
-            };
-            let distanza = (p.posizione_dichiarata - nuova).abs();
+            let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
             if distanza < soglia {
                 continue;
             }
             let delta = -costo * (distanza - soglia + 1.0);
-            *x = (*x + delta).max(0.0);
-            self.intesa.variazioni.push(VariazioneIntesa {
-                partito: j,
-                causa: CausaIntesa::NormaLontana,
-                delta,
-                turno: self.turno,
-            });
+            (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
         }
+    }
+
+    /// `Emendamento`: deciso dal giocatore; respinto, costa intesa all'alleato.
+    pub(crate) fn emendamento(
+        &mut self,
+        misura: u32,
+        partito: &str,
+        accogli: bool,
+    ) -> Result<(), Errore> {
+        let respinto =
+            (self.parlamento).decidi_emendamento(&self.partiti, misura, partito, accogli)?;
+        self.emendamenti_respinti(respinto);
+        Ok(())
+    }
+
+    /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
+    fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
+        let delta = -self.dati.manopola("costo_emendamento_respinto");
+        for j in alleati {
+            (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
+        }
+    }
+
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `costo_fiducia` più
+    /// `costo_fiducia_distanza` per sesto di asse fra lui e la misura, il doppio sull'elettorale.
+    pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
+        let m = self.parlamento.poni_fiducia(misura, self.turno)?;
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        let doppio = if m.forma == FormaMisura::Elettorale {
+            2.0
+        } else {
+            1.0
+        };
+        let (base, per_distanza) = (
+            self.dati.manopola("costo_fiducia"),
+            self.dati.manopola("costo_fiducia_distanza"),
+        );
+        for j in self.alleati() {
+            let d = nuova.map_or(0.0, |n| (self.partiti[j].posizione_dichiarata - n).abs());
+            let delta = -doppio * (base + per_distanza * d / 6.0);
+            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        }
+        Ok(())
     }
 
     fn stato_aula(&self) -> StatoAula<'_> {

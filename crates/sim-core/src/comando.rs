@@ -50,6 +50,16 @@ pub enum Comando {
     PresentaLegge {
         valori: Vec<ValoreProposto>,
     },
+    /// Accoglie o respinge l'emendamento del partito `partito` (id) sulla misura.
+    Emendamento {
+        misura: u32,
+        partito: String,
+        accogli: bool,
+    },
+    /// Pone la questione di fiducia: la misura si vota a fine turno.
+    PoniFiducia {
+        misura: u32,
+    },
 }
 
 impl Partita {
@@ -62,6 +72,12 @@ impl Partita {
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
             Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),
+            Comando::Emendamento {
+                misura,
+                partito,
+                accogli,
+            } => return self.emendamento(misura, &partito, accogli),
+            Comando::PoniFiducia { misura } => return self.poni_fiducia(misura),
             _ => {}
         }
         let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;

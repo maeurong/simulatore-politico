@@ -53,6 +53,20 @@ impl Intesa {
         }
     }
 
+    /// L'intesa del partito `j` cambia di `delta`, limitata a 0-100, e la variazione resta.
+    pub(crate) fn varia(&mut self, j: usize, causa: CausaIntesa, delta: f64, turno: u32) {
+        let Some(x) = self.valori.get_mut(j) else {
+            return;
+        };
+        *x = (*x + delta).clamp(0.0, 100.0);
+        self.variazioni.push(VariazioneIntesa {
+            partito: j,
+            causa,
+            delta,
+            turno,
+        });
+    }
+
     /// Soglie di fine turno: ritorno verso `intesa_base`, limitato a 0-100; le variazioni restano
     /// due turni, come quelle dei ministri.
     pub(crate) fn soglie(&mut self, dati: &DatiGioco, turno: u32) {
