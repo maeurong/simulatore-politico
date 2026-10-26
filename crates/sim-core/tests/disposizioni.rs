@@ -117,6 +117,33 @@ fn effetto_fuori_dalla_riga_del_dicastero_rifiutato() {
 }
 
 #[test]
+fn perimetro_su_grandezza_nazionale_rifiutato() {
+    let m = rifiuto(
+        "disposizioni",
+        "nome = \"nessuno stanziamento\", posizione = 5.0, saldo = -0.1, effetti = [{ grandezza = \"investimenti_privati\"",
+        "nome = \"nessuno stanziamento\", posizione = 5.0, saldo = -0.1, effetti = [{ grandezza = \"sostegno_imprese\"",
+    );
+    assert!(
+        m.contains("credito_zes: perimetro su sostegno_imprese nazionale"),
+        "{m}"
+    );
+}
+
+#[test]
+fn effetto_oltre_meta_intervallo_rifiutato() {
+    // regole_lavoro va da -5 a 5: un'intensità oltre 5 farebbe uscire Δ dal tetto del salvataggio.
+    let m = rifiuto(
+        "disposizioni",
+        "nome = \"reintegro\", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = \"regole_lavoro\", intensita = -0.3",
+        "nome = \"reintegro\", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = \"regole_lavoro\", intensita = -5.1",
+    );
+    assert!(
+        m.contains("licenziamento: effetto su regole_lavoro fuori intervallo"),
+        "{m}"
+    );
+}
+
+#[test]
 fn regione_del_perimetro_sconosciuta_rifiutata() {
     let m = rifiuto(
         "disposizioni",

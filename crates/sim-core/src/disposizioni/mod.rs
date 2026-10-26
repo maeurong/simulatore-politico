@@ -389,8 +389,16 @@ pub(crate) fn valida(
                 let Some(gr) = grandezze.iter().find(|x| x.id == e.grandezza) else {
                     return ko(format!("{id}: grandezza sconosciuta {}", e.grandezza));
                 };
-                if !(e.intensita.is_finite() && (1..=40).contains(&e.ritardo)) {
+                // Metà intervallo: il Δ fra due gradini resta nel tetto del salvataggio.
+                let tetto = (gr.max - gr.min) / 2.0;
+                if !(e.intensita.is_finite()
+                    && e.intensita.abs() <= tetto
+                    && (1..=40).contains(&e.ritardo))
+                {
                     return ko(format!("{id}: effetto su {} fuori intervallo", gr.id));
+                }
+                if !d.perimetro.is_empty() && !gr.regionale {
+                    return ko(format!("{id}: perimetro su {} nazionale", gr.id));
                 }
                 // Le regionali non hanno limite di dicastero.
                 if let Some(c) = &d.dicastero

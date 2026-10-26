@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_arrivo, ferma_tutti, senza_shock};
+use comune::{con_arrivo, ferma_tutti, imposta, senza_shock};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::disposizioni::Leve;
@@ -117,6 +117,26 @@ fn accise_alte_alzano_l_energia_e_portano_gettito() {
     let b = gioca(senza_shock(), 2);
     assert!(a.misure().prezzo_energia > b.misure().prezzo_energia);
     assert!(a.economia().conti.spese.disposizioni < b.economia().conti.spese.disposizioni);
+}
+
+#[test]
+fn salario_minimo_non_sposta_il_gettito_irpef() {
+    // Senza mobilità fra fasce: qui conta il canale diretto, non le quote che si spostano.
+    let fermi = || {
+        imposta(
+            senza_shock(),
+            "manopole",
+            "[mobilita_fasce]\nvalore = ",
+            "0.0",
+        )
+    };
+    let s = gioca(con_arrivo(fermi(), "salario_minimo", "11", 2027, 1), 3);
+    let b = gioca(fermi(), 3);
+    assert_eq!(s.misure().fattore_irpef, b.misure().fattore_irpef);
+    assert_eq!(
+        s.economia().conti.entrate.irpef,
+        b.economia().conti.entrate.irpef
+    );
 }
 
 #[test]

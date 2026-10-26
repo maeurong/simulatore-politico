@@ -350,6 +350,9 @@ pub struct Gruppo {
     pub voto_precedente: Vec<f64>,
     pub reddito: Reddito,
     pub reddito_prima: Reddito,
+    /// Euro annui: primario più trasferimenti senza salario minimo e reddito minimo, la base
+    /// dell'aliquota media IRPEF (le leve di reddito non muovono il gettito).
+    pub lordo_irpef: f64,
     /// Ultime crescite reali trimestrali in punti, la più recente in coda.
     pub crescite: Vec<f64>,
 }
@@ -389,6 +392,7 @@ impl Elettorato {
                     voto_precedente: vec![0.0; n_partiti + 1],
                     reddito: Reddito::default(),
                     reddito_prima: Reddito::default(),
+                    lordo_irpef: 0.0,
                     crescite: Vec::new(),
                 })
                 .collect(),
@@ -400,15 +404,13 @@ impl Elettorato {
         el
     }
 
-    /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti, con gli scaglioni `s`.
+    /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti senza le leve di
+    /// reddito (`lordo_irpef`), con gli scaglioni `s`.
     pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
         let d = dati.elettorato();
         let (mut imposta, mut lordo) = (0.0, 0.0);
         for (k, g) in self.gruppi.iter().enumerate() {
-            let (n, l) = (
-                self.elettori(d, k),
-                g.reddito.primario + g.reddito.trasferimenti,
-            );
+            let (n, l) = (self.elettori(d, k), g.lordo_irpef);
             imposta += n * irpef(s, l);
             lordo += n * l;
         }
@@ -458,7 +460,7 @@ impl Elettorato {
                     "elettorato.gruppi[{i}].crescite: al massimo {FINESTRA_MASSIMA} valori finiti"
                 ));
             }
-            if !(g.reddito.e_valido() && g.reddito_prima.e_valido()) {
+            if !(g.reddito.e_valido() && g.reddito_prima.e_valido() && g.lordo_irpef.is_finite()) {
                 return ko(format!(
                     "elettorato.gruppi[{i}]: reddito non finito o paniere non positivo"
                 ));

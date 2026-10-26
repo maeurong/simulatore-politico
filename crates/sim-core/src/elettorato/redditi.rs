@@ -102,15 +102,16 @@ impl Elettorato {
                     Condizione::Autonomo => rapporto(i.pil, b.pil),
                     _ => rapporto(i.salario, b.salario),
                 };
-            if c == Condizione::DipendentePrivato && bassa {
-                primario += copertura * (l.salario_minimo * ore - primario).max(0.0);
-            }
             let mut trasferimenti = dato.trasferimenti
                 * match dato.condizione {
                     Condizione::Pensionato => rapporto(i.pensione, b.pensione),
                     Condizione::DisoccupatoInattivo => rapporto(i.sussidio, b.sussidio),
                     _ => 1.0,
                 };
+            g.lordo_irpef = primario + trasferimenti;
+            if c == Condizione::DipendentePrivato && bassa {
+                primario += copertura * (l.salario_minimo * ore - primario).max(0.0);
+            }
             if c == Condizione::DisoccupatoInattivo && bassa {
                 trasferimenti = (trasferimenti + l.reddito_minimo - l0.reddito_minimo).max(0.0);
             }
