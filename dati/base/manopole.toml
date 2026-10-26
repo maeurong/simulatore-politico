@@ -774,3 +774,10 @@ valore = 0.3
 min = 0.0
 max = 1.0
 ticket = "17"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca: punti di gap della regione per unità di quota trattenuta
+[elasticita_autonomia]
+valore = 5.0
+min = 0.0
+max = 20.0
+ticket = "27"

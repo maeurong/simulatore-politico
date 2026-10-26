@@ -173,6 +173,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "fondo_riserva",
     "ore_salario_minimo",
     "copertura_salario_minimo",
+    "elasticita_autonomia",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
