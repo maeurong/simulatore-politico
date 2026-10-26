@@ -15,14 +15,17 @@ fn scaglioni_2026() -> Vec<Scaglione> {
         Scaglione {
             fino_a: Some(28_000),
             aliquota: 0.23,
+            livello_prezzi: 1.0,
         },
         Scaglione {
             fino_a: Some(50_000),
             aliquota: 0.33,
+            livello_prezzi: 1.0,
         },
         Scaglione {
             fino_a: None,
             aliquota: 0.43,
+            livello_prezzi: 1.0,
         },
     ]
 }
@@ -54,7 +57,8 @@ fn aliquote_del_turno_zero_lasciano_i_fattori_neutri() {
         p.economia().bilancio.aliquote,
         p.economia().bilancio_approvato.as_ref().unwrap().aliquote
     );
-    assert_eq!(p.economia().bilancio.livello_prezzi_scaglioni, 1.0);
+    let s = &p.economia().bilancio.aliquote.irpef;
+    assert!(s.iter().all(|x| x.livello_prezzi == 1.0));
     assert_eq!(p.economia().conti.entrate_discrezionali, 0);
     p.chiudi_turno();
     assert_eq!(p.misure().fattore_irpef, 1.0);
@@ -93,7 +97,7 @@ fn un_salvataggio_con_aliquote_incoerenti_e_rifiutato() {
         "{e:?}"
     );
     let e = con_bilancio(0, |e| {
-        e["bilancio"]["livello_prezzi_scaglioni"] = json!(0.0)
+        e["bilancio"]["aliquote"]["irpef"][0]["livello_prezzi"] = json!(0.0)
     })
     .err();
     assert!(

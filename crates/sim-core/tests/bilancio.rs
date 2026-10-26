@@ -245,6 +245,29 @@ fn taglio_nominale_alza_la_perdita_e_l_aumento_oltre_l_indice_la_azzera() {
 }
 
 #[test]
+fn alzare_la_prima_soglia_tocca_la_perdita_del_primo_scaglione_e_non_del_secondo() {
+    let p = al_bilancio_2028(1);
+    let bozza = p.bozza_bilancio().unwrap();
+    let prima = p.riepilogo_bilancio(&bozza).unwrap();
+    let mut b = bozza.clone();
+    b.aliquote.irpef[0].fino_a = b.aliquote.irpef[0].fino_a.map(|t| t + 200);
+    let dopo = p.riepilogo_bilancio(&b).unwrap();
+    assert!(perdita(&dopo, "scaglione 1") < perdita(&prima, "scaglione 1"));
+    assert_eq!(
+        perdita(&dopo, "scaglione 2"),
+        perdita(&prima, "scaglione 2")
+    );
+    let n = bozza.aliquote.irpef.len() - 1;
+    assert_eq!(p.vista().bilancio.perdita_reale_scaglioni.len(), n);
+    assert!(
+        !dopo
+            .perdita_reale
+            .iter()
+            .any(|x| x.voce == format!("scaglione {}", n + 1))
+    );
+}
+
+#[test]
 fn indicizzare_un_dicastero_o_gli_scaglioni_tocca_solo_quelli() {
     let p = al_bilancio_2028(1);
     let indice = p.informazione().statistica.indice_prezzi;
@@ -261,7 +284,7 @@ fn indicizzare_un_dicastero_o_gli_scaglioni_tocca_solo_quelli() {
     assert_eq!(b.aliquote, bozza.aliquote);
     let b = p.indicizza(&bozza, &Voce::Scaglioni).unwrap();
     assert_eq!(b.dicasteri, bozza.dicasteri);
-    assert_eq!(b.livello_prezzi_scaglioni, indice);
+    assert!(b.aliquote.irpef.iter().all(|s| s.livello_prezzi == indice));
     let soglie = |x: &Bilancio| {
         x.aliquote
             .irpef

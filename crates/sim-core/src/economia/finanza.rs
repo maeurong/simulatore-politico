@@ -32,8 +32,6 @@ pub struct Bilancio {
     pub anno: u16,
     pub dicasteri: Vec<BudgetDicastero>,
     pub aliquote: Aliquote,
-    /// Il livello dei prezzi a cui gli scaglioni hanno preso le soglie: 1 al turno zero.
-    pub livello_prezzi_scaglioni: f64,
     /// Euro annui stanziati per le emergenze; nessuno li spende fino al piano 9.
     pub fondo_riserva: i64,
 }
@@ -131,7 +129,6 @@ impl Bilancio {
                 })
                 .collect(),
             aliquote: dati.scenario().aliquote.clone(),
-            livello_prezzi_scaglioni: 1.0,
             fondo_riserva: euro(dati.manopola("fondo_riserva") * MLD),
         }
     }
@@ -155,7 +152,6 @@ impl Bilancio {
                 })
                 .collect(),
             aliquote: self.aliquote.clone(),
-            livello_prezzi_scaglioni: self.livello_prezzi_scaglioni,
             fondo_riserva: s(self.fondo_riserva),
         }
     }
@@ -192,21 +188,24 @@ pub(crate) fn conti_del_trimestre(
     };
     let el = |n: &str| dati.manopola(n);
     let (a, a0) = (&e.bilancio.aliquote, &s.aliquote);
-    let eti = el("elasticita_imponibile");
     let irpef_base = base(s.irpef_pil.valore, el("elasticita_irpef"), riscossione);
     let irpef = irpef_base * misure.fattore_irpef * misure.eti_irpef;
     // (entrata con `τ = τ₀`, fattore delle aliquote): l'entrata vera è il prodotto.
     let ires = (
         base(s.ires_pil.valore, el("elasticita_ires"), riscossione),
-        fattore(a.ires, a0.ires, eti),
+        fattore(a.ires, a0.ires, el("elasticita_imponibile_ires")),
     );
     let iva = (
         base(s.iva_pil.valore, el("elasticita_iva"), riscossione),
-        fattore(a.iva, a0.iva, eti),
+        fattore(a.iva, a0.iva, el("elasticita_imponibile_iva")),
     );
     let contributi = (
         base(s.contributi_pil.valore, el("elasticita_contributi"), 1.0),
-        fattore(a.contributi, a0.contributi, eti),
+        fattore(
+            a.contributi,
+            a0.contributi,
+            el("elasticita_imponibile_contributi"),
+        ),
     );
     // Il gettito dovuto alle aliquote cambiate: l'entrata meno quella con `τ = τ₀`.
     let discrezionali = irpef_base * misure.irpef_discrezionale

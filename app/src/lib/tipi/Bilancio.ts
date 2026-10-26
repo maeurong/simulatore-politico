@@ -7,10 +7,6 @@ import type { BudgetDicastero } from "./BudgetDicastero";
  */
 export type Bilancio = { anno: number, dicasteri: Array<BudgetDicastero>, aliquote: Aliquote, 
 /**
- * Il livello dei prezzi a cui gli scaglioni hanno preso le soglie: 1 al turno zero.
- */
-livello_prezzi_scaglioni: number, 
-/**
  * Euro annui stanziati per le emergenze; nessuno li spende fino al piano 9.
  */
 fondo_riserva: bigint, };

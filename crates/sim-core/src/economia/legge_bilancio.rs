@@ -19,6 +19,18 @@ use ts_rs::TS;
 pub struct Scaglione {
     pub fino_a: Option<i64>,
     pub aliquota: f64,
+    /// Il livello dei prezzi a cui la soglia ha preso la sua cifra nominale: 1 al turno zero.
+    #[serde(default = "uno")]
+    pub livello_prezzi: f64,
+}
+
+fn uno() -> f64 {
+    1.0
+}
+
+/// Livello dei prezzi ammesso per una voce: finito, in (0, 1e6].
+pub(crate) fn livello_ok(x: f64) -> bool {
+    x.is_finite() && x > 0.0 && x <= 1e6
 }
 
 /// Le aliquote che il giocatore può cambiare.
@@ -53,6 +65,9 @@ impl Aliquote {
         let in_range = |a: f64| (0.0..=MASSIMA).contains(&a);
         if !s.iter().all(|x| in_range(x.aliquota)) {
             return Err(format!("irpef: aliquota fuori da 0-{MASSIMA}"));
+        }
+        if !s.iter().all(|x| livello_ok(x.livello_prezzi)) {
+            return Err("irpef: livello_prezzi fuori da (0, 1e6]".into());
         }
         for (nome, a) in [
             ("iva", self.iva),
@@ -100,7 +115,7 @@ pub enum Voce {
     Scaglioni,
 }
 
-/// Perdita reale di una voce in %; `voce` è l'id del dicastero o `"scaglioni"`.
+/// Perdita reale di una voce in %; `voce` è l'id del dicastero o `scaglione N` (dal primo).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct PerditaReale {
@@ -128,6 +143,13 @@ pub struct RiepilogoBilancio {
 /// nominale (ticket 29).
 pub(crate) fn perdita_reale(livello_voce: f64, attuale: f64) -> f64 {
     100.0 * (1.0 - livello_voce / attuale)
+}
+
+/// La perdita reale di ogni scaglione con soglia, in ordine.
+pub(crate) fn perdite_scaglioni(a: &Aliquote, attuale: f64) -> impl Iterator<Item = f64> + '_ {
+    (a.irpef.iter())
+        .filter(|s| s.fino_a.is_some())
+        .map(move |s| perdita_reale(s.livello_prezzi, attuale))
 }
 
 pub(crate) const FUORI_STAGIONE: &str =
@@ -178,11 +200,12 @@ pub(crate) fn indicizza(b: &Bilancio, voce: &Voce, attuale: f64) -> Result<Bilan
         }
     }
     if tutto || *voce == Voce::Scaglioni {
-        let lp = b.livello_prezzi_scaglioni;
         for s in &mut b.aliquote.irpef {
-            s.fino_a = s.fino_a.map(|t| scala(t, lp, "scaglioni")).transpose()?;
+            s.fino_a = (s.fino_a)
+                .map(|t| scala(t, s.livello_prezzi, "scaglioni"))
+                .transpose()?;
+            s.livello_prezzi = attuale;
         }
-        b.livello_prezzi_scaglioni = attuale;
     }
     Ok(b)
 }
@@ -236,18 +259,35 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
     if !ammesso(b.fondo_riserva) {
         return Err("voce negativa o enorme: fondo_riserva".into());
     }
-    b.aliquote.valida()?;
-    // La cifra degli scaglioni è la soglia più alta.
-    let soglia = |x: &Bilancio| x.aliquote.irpef.iter().rev().find_map(|s| s.fino_a);
+    let a = &b.aliquote;
+    a.valida()?;
+    // La cifra di uno scaglione è la sua soglia, contro quella dello scaglione con lo stesso
+    // posto nella bozza; senza soglia nella bozza vale `attuale`.
+    let irpef = (a.irpef.iter().enumerate())
+        .map(|(i, s)| {
+            let z = bozza.aliquote.irpef.get(i);
+            Scaglione {
+                fino_a: s.fino_a,
+                aliquota: s.aliquota,
+                livello_prezzi: livello_pesato(
+                    z.map_or(attuale, |z| z.livello_prezzi),
+                    z.and_then(|z| z.fino_a).unwrap_or(0),
+                    s.fino_a.unwrap_or(0),
+                    attuale,
+                ),
+            }
+        })
+        .collect();
     Ok(Bilancio {
+        anno: b.anno,
         dicasteri,
-        livello_prezzi_scaglioni: livello_pesato(
-            bozza.livello_prezzi_scaglioni,
-            soglia(bozza).unwrap_or(0),
-            soglia(b).unwrap_or(0),
-            attuale,
-        ),
-        ..b.clone()
+        aliquote: Aliquote {
+            irpef,
+            iva: a.iva,
+            ires: a.ires,
+            contributi: a.contributi,
+        },
+        fondo_riserva: b.fondo_riserva,
     })
 }
 
@@ -323,23 +363,27 @@ pub(crate) fn riepilogo(
         (attuale - e.bilancio.spesa_totale()) as f64 * (1.0 + stat.prima_stima.inflazione / 100.0);
     let proposta = b.spesa_totale() + euro(resto)
         - 4 * (con_b.entrate_discrezionali - con_bozza.entrate_discrezionali);
-    let lp = stat.indice_prezzi;
-    let perdita_reale = (b.dicasteri.iter())
+    let indice = stat.indice_prezzi;
+    let perdite = (b.dicasteri.iter())
         .map(|d| PerditaReale {
             voce: d.id.clone(),
-            perdita: perdita_reale(d.livello_prezzi, lp),
+            perdita: perdita_reale(d.livello_prezzi, indice),
         })
-        .chain(std::iter::once(PerditaReale {
-            voce: "scaglioni".into(),
-            perdita: perdita_reale(b.livello_prezzi_scaglioni, lp),
-        }))
+        .chain(
+            perdite_scaglioni(&b.aliquote, indice)
+                .enumerate()
+                .map(|(i, perdita)| PerditaReale {
+                    voce: format!("scaglione {}", i + 1),
+                    perdita,
+                }),
+        )
         .collect();
     Ok(RiepilogoBilancio {
         costo_spesa: annuo(b) - annuo(bozza),
         costo_entrate: 4 * (imposte(&con_bozza) - imposte(&con_b)),
         crescita_spesa_netta: 100.0 * (proposta as f64 / attuale as f64 - 1.0),
         tetto: dati.scenario().tetto_spesa_netta(b.anno),
-        perdita_reale,
+        perdita_reale: perdite,
     })
 }
 
@@ -349,7 +393,11 @@ mod test {
 
     fn scaglioni() -> Vec<Scaglione> {
         [(Some(28_000), 0.23), (Some(50_000), 0.33), (None, 0.43)]
-            .map(|(fino_a, aliquota)| Scaglione { fino_a, aliquota })
+            .map(|(fino_a, aliquota)| Scaglione {
+                fino_a,
+                aliquota,
+                livello_prezzi: 1.0,
+            })
             .to_vec()
     }
 

@@ -8,9 +8,9 @@ import type { VoceBudget } from "./VoceBudget";
  */
 export type VistaBilancio = { anno: number, dicasteri: Array<VoceBudget>, aliquote: Aliquote, 
 /**
- * %, come `VoceBudget.perdita_reale`.
+ * %, come `VoceBudget.perdita_reale`: una per scaglione con soglia, in ordine.
  */
-perdita_reale_scaglioni: number, 
+perdita_reale_scaglioni: Array<number>, 
 /**
  * Euro annui.
  */

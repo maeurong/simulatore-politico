@@ -1,7 +1,8 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::economia::{
-    self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, perdita_reale,
+    self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
+    perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
@@ -331,7 +332,7 @@ impl Partita {
                 })
                 .collect(),
             aliquote: b.aliquote.clone(),
-            perdita_reale_scaglioni: perdita_reale(b.livello_prezzi_scaglioni, indice),
+            perdita_reale_scaglioni: perdite_scaglioni(&b.aliquote, indice).collect(),
             fondo_riserva: b.fondo_riserva,
             presentabile: self.bozza_bilancio().is_some(),
             presentato: e.bilancio_presentato.is_some(),
@@ -676,13 +677,11 @@ impl Economia {
                 && somma(|a| a.pensionati as f64 * a.importo as f64) <= limite,
             "economia.pensioni: vuote, negative, o con pensionati o spesa oltre 1e15",
         )?;
-        let livello_ok = |x: f64| x.is_finite() && x > 0.0;
         for b in bilanci.clone() {
             ok(
                 b.aliquote.valida().is_ok()
-                    && livello_ok(b.livello_prezzi_scaglioni)
                     && b.dicasteri.iter().all(|d| livello_ok(d.livello_prezzi)),
-                "economia.bilancio: aliquote incoerenti o un livello_prezzi non positivo",
+                "economia.bilancio: aliquote incoerenti o un livello_prezzi fuori da (0, 1e6]",
             )?;
             ok(
                 (0..=LIMITE_EURO).contains(&b.fondo_riserva),

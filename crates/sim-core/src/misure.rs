@@ -159,7 +159,7 @@ impl Misure {
         let t = el.aliquota_media_irpef(dati, scaglioni);
         let t_scenario = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
         let t0 = el.aliquota_irpef_0;
-        let imponibile = dati.manopola("elasticita_imponibile");
+        let imponibile = dati.manopola("elasticita_imponibile_irpef");
         Misure {
             fattore_irpef: if t0 > 0.0 { t / t0 } else { 1.0 },
             irpef_discrezionale: fattore(t, t0, imponibile) - fattore(t_scenario, t0, imponibile),

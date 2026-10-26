@@ -15,7 +15,8 @@ pub use bce::AreaEuro;
 pub use finanza::{Bilancio, BudgetDicastero, ConsuntivoTrimestre, ContiTrimestre, Entrate, Spese};
 pub use legge_bilancio::{Aliquote, PerditaReale, RiepilogoBilancio, Scaglione, Voce, irpef};
 pub(crate) use legge_bilancio::{
-    FUORI_STAGIONE, bozza, eti, fattore, indicizza, normalizza, perdita_reale, riepilogo,
+    FUORI_STAGIONE, bozza, eti, fattore, indicizza, livello_ok, normalizza, perdita_reale,
+    perdite_scaglioni, riepilogo,
 };
 pub use previdenza::Annata;
 pub use regole_ue::RegoleUe;

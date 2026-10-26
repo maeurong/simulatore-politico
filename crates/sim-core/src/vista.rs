@@ -36,8 +36,8 @@ pub struct VistaBilancio {
     pub anno: u16,
     pub dicasteri: Vec<VoceBudget>,
     pub aliquote: Aliquote,
-    /// %, come `VoceBudget.perdita_reale`.
-    pub perdita_reale_scaglioni: f64,
+    /// %, come `VoceBudget.perdita_reale`: una per scaglione con soglia, in ordine.
+    pub perdita_reale_scaglioni: Vec<f64>,
     /// Euro annui.
     pub fondo_riserva: i64,
     /// C'è una bozza: si può presentare la legge di bilancio.
