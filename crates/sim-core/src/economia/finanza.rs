@@ -188,7 +188,7 @@ pub(crate) fn conti_del_trimestre(
 ) -> ContiTrimestre {
     let s = dati.scenario();
     let riscossione = misure.riscossione;
-    let pil_potenziale = e.pil_potenziale_reale * e.livello_prezzi * 4.0 * MLD;
+    let pil_potenziale = e.pil_potenziale_annuo();
     // Elasticità lineare sul gap del turno prima (economia-italiana-parametri:109).
     let base = |quota: f64, elasticita: f64, risc: f64| {
         quota / 100.0 * pil_potenziale / 4.0 * (1.0 + elasticita * e.output_gap[0] / 100.0) * risc

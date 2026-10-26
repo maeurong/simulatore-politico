@@ -206,6 +206,22 @@ fn scala_servizio_nulla_rifiutata_anche_se_il_file_la_ammette() {
 }
 
 #[test]
+fn soglie_delle_fasce_rovesciate_rifiutate() {
+    let f = imposta(
+        file_base(),
+        "manopole",
+        "[soglia_fascia_poco]\nvalore = ",
+        "0.1",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    let testo = e.to_string();
+    assert!(
+        testo.contains("soglia_fascia_poco") && testo.contains("soglia_fascia_medio"),
+        "{e}"
+    );
+}
+
+#[test]
 fn indicatore_di_servizio_senza_spesa_di_funzionamento_rifiutato() {
     let f = sostituisci(
         file_base(),

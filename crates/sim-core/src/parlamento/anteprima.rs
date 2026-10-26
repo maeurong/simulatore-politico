@@ -9,6 +9,11 @@ use crate::disposizioni::{Gradino, variazioni};
 use crate::economia::euro;
 use crate::vista::{Anteprima, EffettoStimato, Fascia3, VoceLeva};
 
+/// Chiavi di `Caso::estemporaneo` dell'anteprima da 2^35: lo stesso flusso di
+/// `elettori_campione` (`turno · 1024 + gruppo`) ci arriva dopo 33 milioni di turni, e
+/// l'anteprima resta sotto il tetto di 2^36 fino a 34 mila turni.
+const OFFSET_CHIAVE: u64 = 1 << 35;
+
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
 /// `soglia_fascia_medio`, altrimenti `Molto`.
 fn fascia_vera(dati: &DatiGioco, k: usize, delta: f64) -> Fascia3 {
@@ -38,7 +43,9 @@ pub(crate) fn stima_fascia(vera: Fascia3, capacita: f64, u1: f64, u2: f64, error
 
 /// L'anteprima della misura `m` non ancora in calendario: costo annuo sul PIL potenziale annuo
 /// nominale `pil_annuo` (euro), fasce stimate con la `capacita` del proponente da un estrattore
-/// estemporaneo, che non avanza nessun flusso; linee, forbice e seggi come in calendario.
+/// estemporaneo, che non avanza nessun flusso, con la chiave di turno, disposizione e gradino:
+/// riordinare la legge o cambiarne le compagne non ricampiona la stima. Linee, forbice e seggi
+/// come in calendario.
 pub(crate) fn anteprima(
     parlamento: &Parlamento,
     aula: &StatoAula,
@@ -48,11 +55,6 @@ pub(crate) fn anteprima(
     pil_annuo: f64,
 ) -> Anteprima {
     let dati = aula.dati;
-    let chiave = (m.valori.iter().enumerate())
-        .map(|(k, &(d, g))| (k as u64 + 1) * (64 * d as u64 + g as u64))
-        .sum::<u64>()
-        + u64::from(m.presentata) * 1_000_003;
-    let mut rng = caso.estemporaneo(chiave);
     let errore = dati.manopola("errore_fascia");
     let (mut saldo, mut effetti, mut leve, mut gruppi) = (0.0, Vec::new(), Vec::new(), Vec::new());
     for &(d, g) in &m.valori {
@@ -74,6 +76,8 @@ pub(crate) fn anteprima(
                 });
             }
         }
+        let chiave = OFFSET_CHIAVE + u64::from(m.presentata) * 1_000_003 + 64 * d as u64 + g as u64;
+        let mut rng = caso.estemporaneo(chiave);
         for (id, delta, ritardo) in variazioni(prima, dopo) {
             let Some(k) = dati.grandezza(id) else {
                 continue;

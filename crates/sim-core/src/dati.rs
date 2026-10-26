@@ -643,6 +643,15 @@ impl DatiGioco {
                 });
             }
         }
+        let (poco, medio) = (
+            self.manopola("soglia_fascia_poco"),
+            self.manopola("soglia_fascia_medio"),
+        );
+        if poco > medio {
+            return Err(Errore::Grandezze(format!(
+                "manopola soglia_fascia_poco ({poco}) oltre soglia_fascia_medio ({medio})"
+            )));
+        }
         let scala = self.manopola("scala_servizio");
         if scala <= 0.0 {
             return Err(Errore::Grandezze(format!(
