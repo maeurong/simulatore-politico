@@ -1,6 +1,7 @@
 mod comune;
 use comune::{dati_base, file_base, imposta};
 use sim_core::dati::DatiGioco;
+use sim_core::ministri::Causa;
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
 
@@ -63,6 +64,7 @@ fn dimissioni_chieste_portano_interim_rosa_e_rodaggio() {
     let m = ministero(&v, "sanita");
     assert!(m.ministro.is_none());
     assert_eq!(m.rosa.len(), 3);
+    assert_eq!(m.causa_dimissioni, Some(Causa::DimissioniChieste));
     assert!(m.rosa.iter().all(|x| x.partito == "destra"));
     assert!(m.rosa.windows(2).all(|w| w[0].capacita >= w[1].capacita));
     let scelto = m.rosa[1].nome.clone();
@@ -75,6 +77,7 @@ fn dimissioni_chieste_portano_interim_rosa_e_rodaggio() {
     let x = ministero(&p.vista(), "sanita").ministro.clone().unwrap();
     assert_eq!(x.nome, scelto);
     assert!(x.rodaggio);
+    assert_eq!(ministero(&p.vista(), "sanita").causa_dimissioni, None);
     p.chiudi_turno();
     assert!(
         !ministero(&p.vista(), "sanita")
@@ -123,7 +126,7 @@ fn ministri_sotto_soglia_minacciano_e_si_dimettono_a_fine_turno() {
         p.vista()
             .ministeri
             .iter()
-            .all(|m| m.ministro.is_none() && m.rosa.len() == 3)
+            .all(|m| m.ministro.is_none() && m.rosa.len() == 3 && m.causa_dimissioni.is_some())
     );
 }
 

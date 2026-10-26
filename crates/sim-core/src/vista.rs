@@ -80,6 +80,8 @@ pub struct VoceMinistero {
     /// `None` = interim.
     pub ministro: Option<VoceMinistro>,
     pub rosa: Vec<VoceMinistro>,
+    /// Perché il ministro è uscito; `Some` solo in interim.
+    pub causa_dimissioni: Option<Causa>,
 }
 
 /// Il ministro com'è visibile al giocatore: soddisfazione, agende e capacità, non lo stato nascosto.

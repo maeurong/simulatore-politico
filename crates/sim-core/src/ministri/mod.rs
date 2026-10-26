@@ -25,6 +25,7 @@ mod soddisfazione;
 pub enum Causa {
     IndicatoreInCalo,
     ObiettivoRaggiunto,
+    DimissioniChieste,
 }
 
 impl fmt::Display for Causa {
@@ -32,6 +33,7 @@ impl fmt::Display for Causa {
         f.write_str(match self {
             Self::IndicatoreInCalo => "indicatore di servizio in calo",
             Self::ObiettivoRaggiunto => "obiettivo raggiunto",
+            Self::DimissioniChieste => "dimissioni chieste dal Presidente del Consiglio",
         })
     }
 }
@@ -76,6 +78,8 @@ pub struct StatoDicastero {
     pub scelta: Option<u8>,
     pub dimissioni_chieste: bool,
     pub variazioni: Vec<Variazione>,
+    /// Perché il ministro è uscito; `Some` solo in interim.
+    pub causa_dimissioni: Option<Causa>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -162,17 +166,15 @@ impl Ministri {
     /// Soglie di fine turno: servizio, obiettivo, ritorno alla base, dimissioni.
     pub fn soglie(&mut self, cx: &Contesto) {
         for (i, st) in self.dicasteri.iter_mut().enumerate() {
-            let Some(k) = indicatore(cx, i) else {
-                continue;
-            };
-            soddisfazione::passo(
-                st,
-                cx.dati,
-                cx.dati.grandezze()[k].verso,
-                cx.grandezze.nazionale(cx.dati, k),
-                cx.grandezze.variazione(cx.dati, k),
-                cx.turno,
-            );
+            // I dati validati hanno l'indicatore; senza, restano turni e dimissioni.
+            let servizio = indicatore(cx, i).map(|k| {
+                (
+                    cx.dati.grandezze()[k].verso,
+                    cx.grandezze.nazionale(cx.dati, k),
+                    cx.grandezze.variazione(cx.dati, k),
+                )
+            });
+            soddisfazione::passo(st, cx.dati, servizio, cx.turno);
         }
     }
 
@@ -201,6 +203,7 @@ impl Ministri {
                     x.turni_in_carica = 0;
                 }
                 st.scelta = None;
+                st.causa_dimissioni = None;
             }
         }
     }
@@ -227,6 +230,9 @@ impl Ministri {
                     d.id,
                     st.rosa.len()
                 ));
+            }
+            if st.causa_dimissioni.is_some() && st.ministro.is_some() {
+                return ko(format!("{}: causa delle dimissioni con un ministro", d.id));
             }
             if st.scelta.is_some_and(|s| usize::from(s) >= st.rosa.len()) {
                 return ko(format!("{}: scelta fuori dalla rosa", d.id));
@@ -299,13 +305,14 @@ impl Ministri {
                 dicastero: d.id.clone(),
                 ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),
                 rosa: st.rosa.iter().map(|x| voce(x, &[])).collect(),
+                causa_dimissioni: st.causa_dimissioni,
             })
             .collect()
     }
 }
 
 /// La causa con la somma più negativa; `None` se nessuna somma è negativa.
-fn causa_principale(variazioni: &[Variazione]) -> Option<Causa> {
+pub(super) fn causa_principale(variazioni: &[Variazione]) -> Option<Causa> {
     let mut somme: Vec<(Causa, f64)> = Vec::new();
     for v in variazioni {
         match somme.iter_mut().find(|(c, _)| *c == v.causa) {

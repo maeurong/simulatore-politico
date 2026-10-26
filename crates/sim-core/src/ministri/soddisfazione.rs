@@ -14,41 +14,47 @@ fn registra(m: &mut Ministro, v: &mut Vec<Variazione>, causa: Causa, delta: f64,
     });
 }
 
-/// Calo del servizio, obiettivo, ritorno alla base, dimissioni. `variazione` è
-/// `valore − prima` dell'indicatore, nel suo verso naturale.
+/// Calo del servizio, obiettivo, ritorno alla base, dimissioni. `servizio` è l'indicatore:
+/// verso, valore e `valore − prima` nel suo verso naturale.
 pub(super) fn passo(
     st: &mut StatoDicastero,
     dati: &DatiGioco,
-    verso: Verso,
-    valore: f64,
-    variazione: f64,
+    servizio: Option<(Verso, f64, f64)>,
     turno: u32,
 ) {
     let Some(m) = st.ministro.as_mut() else {
         return;
     };
-    let segno = verso.segno();
-    let calo = (-segno * variazione).max(0.0);
-    if calo > 0.0 {
-        let costo = -dati.manopola("costo_calo_servizio") * calo / dati.manopola("scala_servizio");
-        registra(m, &mut st.variazioni, Causa::IndicatoreInCalo, costo, turno);
-    }
-    if segno * (valore - m.obiettivo) >= 0.0 {
-        let premio = dati.manopola("premio_obiettivo");
-        registra(
-            m,
-            &mut st.variazioni,
-            Causa::ObiettivoRaggiunto,
-            premio,
-            turno,
-        );
-        m.obiettivo += segno * dati.manopola("passo_obiettivo");
+    if let Some((verso, valore, variazione)) = servizio {
+        let segno = verso.segno();
+        let calo = (-segno * variazione).max(0.0);
+        if calo > 0.0 {
+            let costo =
+                -dati.manopola("costo_calo_servizio") * calo / dati.manopola("scala_servizio");
+            registra(m, &mut st.variazioni, Causa::IndicatoreInCalo, costo, turno);
+        }
+        if segno * (valore - m.obiettivo) >= 0.0 {
+            let premio = dati.manopola("premio_obiettivo");
+            registra(
+                m,
+                &mut st.variazioni,
+                Causa::ObiettivoRaggiunto,
+                premio,
+                turno,
+            );
+            m.obiettivo += segno * dati.manopola("passo_obiettivo");
+        }
     }
     let base = dati.manopola("soddisfazione_base");
     m.soddisfazione += dati.manopola("ritorno_soddisfazione") * (base - m.soddisfazione);
     m.soddisfazione = m.soddisfazione.clamp(0.0, 100.0);
     m.turni_in_carica = m.turni_in_carica.saturating_add(1);
     if m.soddisfazione < dati.manopola("soglia_dimissioni") || st.dimissioni_chieste {
+        st.causa_dimissioni = if st.dimissioni_chieste {
+            Some(Causa::DimissioniChieste)
+        } else {
+            super::causa_principale(&st.variazioni)
+        };
         st.ministro = None;
         st.dimissioni_chieste = false;
     }
@@ -104,8 +110,8 @@ mod test {
         let d = dati();
         let scala = d.manopola("scala_servizio");
         let (mut uno, mut due) = (stato(1000.0), stato(1000.0));
-        passo(&mut uno, &d, Verso::Sale, 90.0, -scala, 1);
-        passo(&mut due, &d, Verso::Sale, 90.0, -2.0 * scala, 1);
+        passo(&mut uno, &d, Some((Verso::Sale, 90.0, -scala)), 1);
+        passo(&mut due, &d, Some((Verso::Sale, 90.0, -2.0 * scala)), 1);
         let (a, b) = (
             somma(&uno, Causa::IndicatoreInCalo),
             somma(&due, Causa::IndicatoreInCalo),
@@ -113,7 +119,7 @@ mod test {
         assert!(a[0] < 0.0);
         assert!((b[0] - 2.0 * a[0]).abs() < 1e-12);
         let mut migliora = stato(1000.0);
-        passo(&mut migliora, &d, Verso::Scende, 90.0, -scala, 1);
+        passo(&mut migliora, &d, Some((Verso::Scende, 90.0, -scala)), 1);
         assert!(somma(&migliora, Causa::IndicatoreInCalo).is_empty());
     }
 
@@ -126,13 +132,13 @@ mod test {
         );
         let obiettivo = |st: &StatoDicastero| st.ministro.as_ref().map(|m| m.obiettivo);
         let mut sale = stato(105.0);
-        passo(&mut sale, &d, Verso::Sale, 106.0, 0.0, 1);
+        passo(&mut sale, &d, Some((Verso::Sale, 106.0, 0.0)), 1);
         assert_eq!(somma(&sale, Causa::ObiettivoRaggiunto), [premio]);
         assert_eq!(obiettivo(&sale), Some(105.0 + passo_ob));
-        passo(&mut sale, &d, Verso::Sale, 106.0, 0.0, 2);
+        passo(&mut sale, &d, Some((Verso::Sale, 106.0, 0.0)), 2);
         assert_eq!(somma(&sale, Causa::ObiettivoRaggiunto), [premio]);
         let mut scende = stato(95.0);
-        passo(&mut scende, &d, Verso::Scende, 94.0, 0.0, 1);
+        passo(&mut scende, &d, Some((Verso::Scende, 94.0, 0.0)), 1);
         assert_eq!(somma(&scende, Causa::ObiettivoRaggiunto), [premio]);
         assert_eq!(obiettivo(&scende), Some(95.0 - passo_ob));
     }
