@@ -13,6 +13,7 @@ pub fn file_base() -> FileDati {
         scenario: include_str!("../../../../dati/base/scenario.toml").into(),
         elezioni: include_str!("../../../../dati/base/elezioni.toml").into(),
         elettorato: include_str!("../../../../dati/base/elettorato.toml").into(),
+        grandezze: include_str!("../../../../dati/base/grandezze.toml").into(),
     }
 }
 
@@ -93,6 +94,7 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
         "scenario" => &mut f.scenario,
         "elezioni" => &mut f.elezioni,
         "elettorato" => &mut f.elettorato,
+        "grandezze" => &mut f.grandezze,
         _ => panic!("file di dati sconosciuto: {file}"),
     }
 }

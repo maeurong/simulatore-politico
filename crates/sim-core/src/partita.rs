@@ -4,14 +4,17 @@ use crate::economia::{Annata, Economia};
 use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
 use crate::elezioni::{Esito, Voti, riparto};
 use crate::errore::Errore;
+use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::partiti::{self, Governo, Partito};
-use crate::vista::{SeggiPartito, Vista, VistaStatistica, VoceDicastero, VocePartito};
+use crate::vista::{
+    SeggiPartito, Vista, VistaStatistica, VoceDicastero, VoceGrandezza, VocePartito,
+};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 4;
+pub const VERSIONE_SCHEMA: u32 = 5;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -68,11 +71,13 @@ pub struct Partita {
     governo: Governo,
     elettorato: Elettorato,
     informazione: Informazione,
+    grandezze: Grandezze,
 }
 
 impl Partita {
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
         let economia = Economia::iniziale(&dati);
+        let grandezze = Grandezze::iniziali(&dati);
         let (partiti, governo) = partiti::iniziali(&dati);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
@@ -85,6 +90,7 @@ impl Partita {
             informazione,
             economia,
             elettorato,
+            grandezze,
             partiti,
             governo,
             dati,
@@ -93,16 +99,18 @@ impl Partita {
         }
     }
 
-    // Per ora: economia, redditi, giudizio (prima di composizione, che aggiorna
+    // Per ora: economia, grandezze, redditi, giudizio (prima di composizione, che aggiorna
     // ultima_disoccupazione), composizione, posizioni, sondaggio, statistica, calendario.
     // Ordine previsto a regime: atti dei ministri → aula → motore (economia, poi elettorato) →
     // soglie → eventi del turno dopo; voto delle elezioni dopo il motore.
     pub fn chiudi_turno(&mut self) {
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         self.economia.passo(&self.dati, &mut self.caso, self.data);
+        self.grandezze
+            .avanza(&self.dati, &self.economia, self.turno);
         self.elettorato.aggiorna_redditi(&self.dati, &self.economia);
         self.elettorato
-            .giudizio(&self.dati, &self.economia, &self.governo);
+            .giudizio(&self.dati, &self.economia, &self.governo, &self.grandezze);
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
@@ -128,6 +136,17 @@ impl Partita {
     /// Stato vero dell'economia: per il CLI e i test, mai per la `Vista`.
     pub fn economia(&self) -> &Economia {
         &self.economia
+    }
+
+    /// Stato vero delle grandezze: per il CLI e i test, mai per la `Vista`.
+    pub fn grandezze(&self) -> &Grandezze {
+        &self.grandezze
+    }
+
+    /// Valore nazionale vero di una grandezza.
+    pub fn grandezza(&self, id: &str) -> Option<f64> {
+        let g = self.dati.grandezza(id)?;
+        Some(self.grandezze.nazionale(&self.dati, g))
     }
 
     /// Stato vero dei partiti: per il CLI e i test, mai per la `Vista`.
@@ -259,6 +278,14 @@ impl Partita {
                     nome: d.nome.clone(),
                 })
                 .collect(),
+            grandezze: (self.dati.grandezze().iter().zip(&self.grandezze.prima))
+                .map(|(g, valori)| VoceGrandezza {
+                    id: g.id.clone(),
+                    nome: g.nome.clone(),
+                    verso: g.verso,
+                    valori: valori.clone(),
+                })
+                .collect(),
             partiti: self.voci_partiti(),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
@@ -271,7 +298,7 @@ impl Partita {
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia, partiti e governo, elettorato, informazione.
+    /// economia, grandezze, partiti e governo, elettorato, informazione.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -354,6 +381,7 @@ impl Partita {
             }
         }
         partita.economia.controlla_coerenza(partita.data)?;
+        partita.grandezze.controlla(&partita.dati)?;
         partita.controlla_partiti()?;
         Ok(partita)
     }

@@ -1,3 +1,4 @@
+use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::partita::Trimestre;
 use serde::Serialize;
@@ -11,6 +12,8 @@ pub struct Vista {
     pub turno: u32,
     pub data: Trimestre,
     pub dicasteri: Vec<VoceDicastero>,
+    /// Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
+    pub grandezze: Vec<VoceGrandezza>,
     /// Spread BTP-Bund in punti base, arrotondato.
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
@@ -54,4 +57,14 @@ pub struct VistaStatistica {
 pub struct VoceDicastero {
     pub id: String,
     pub nome: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceGrandezza {
+    pub id: String,
+    pub nome: String,
+    pub verso: Verso,
+    /// Una voce, o una per regione.
+    pub valori: Vec<f64>,
 }

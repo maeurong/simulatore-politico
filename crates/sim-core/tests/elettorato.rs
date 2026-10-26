@@ -615,7 +615,7 @@ fn giudizio_a_mano(
     let mut el = p.elettorato().clone();
     el.gruppi[i].reddito_prima = prima;
     el.gruppi[i].reddito = ora;
-    el.giudizio(&d, p.economia(), p.governo());
+    el.giudizio(&d, p.economia(), p.governo(), p.grandezze());
     let g = el.gruppi[i].giudizio.clone();
     (d, p, g)
 }
@@ -704,7 +704,7 @@ fn base_degenere_lascia_giudizio_e_crescite_finiti() {
     let p = Partita::nuova(dati_base(), 1);
     let mut el = p.elettorato().clone();
     el.gruppi[0].reddito_prima = Reddito::default();
-    el.giudizio(&d, p.economia(), p.governo());
+    el.giudizio(&d, p.economia(), p.governo(), p.grandezze());
     assert_eq!(el.gruppi[0].crescite, vec![0.0]);
     assert!(el.gruppi[0].giudizio.iter().all(|x| x.is_finite()));
 }

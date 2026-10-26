@@ -1,9 +1,11 @@
 //! Giudizio retrospettivo: ogni gruppo giudica i partiti di governo sul reddito reale (lavoro,
-//! prezzi, trasferimenti e imposte, una voce sola) e sulla disoccupazione, col responsabile per ruolo.
+//! prezzi, trasferimenti e imposte, una voce sola), sulla disoccupazione e sugli indicatori di
+//! servizio e l'occupazione pubblica, col responsabile per ruolo o per dicastero.
 
 use super::{Condizione, Elettorato, FINESTRA_MASSIMA, PER_REGIONE, condizione_di};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
+use crate::grandezze::Grandezze;
 use crate::partiti::Governo;
 
 /// Coefficiente dell'asimmetria per il segno di `x`: `2ρ/(1+ρ)` se `x > 0`, altrimenti `2/(1+ρ)`.
@@ -18,8 +20,15 @@ pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64 {
 
 impl Elettorato {
     /// Aggiorna il giudizio sui partiti di governo dalla variazione `reddito_prima → reddito` e
-    /// dalla disoccupazione contro `ultima_disoccupazione`, poi accoda la crescita alle aspettative.
-    pub fn giudizio(&mut self, dati: &DatiGioco, e: &Economia, governo: &Governo) {
+    /// dalla disoccupazione contro `ultima_disoccupazione` e dalla variazione delle grandezze
+    /// contro `prima`, poi accoda la crescita alle aspettative.
+    pub fn giudizio(
+        &mut self,
+        dati: &DatiGioco,
+        e: &Economia,
+        governo: &Governo,
+        grandezze: &Grandezze,
+    ) {
         let d = dati.elettorato();
         let rho = dati.manopola("asimmetria_giudizio");
         let q = dati.manopola("quota_colpa_presidente");
@@ -36,6 +45,21 @@ impl Elettorato {
             governo.partito_del_ruolo(dati, Ruolo::ColpaDisoccupazioneTrasferimenti);
         let colpa =
             |resp: usize, p: usize| q * f64::from(p == pres) + (1.0 - q) * f64::from(p == resp);
+        let scala = dati.manopola("scala_servizio");
+        // Per ogni grandezza con un responsabile: voce, variazione scalata col verso, partito.
+        let servizi: Vec<(&str, f64, usize)> = (dati.grandezze().iter().enumerate())
+            .filter_map(|(k, gr)| {
+                let resp = if gr.id == "occupazione_pubblica" {
+                    partito_imposte
+                } else {
+                    let i =
+                        (dati.dicasteri().iter()).position(|d| d.indicatore_servizio == gr.id)?;
+                    governo.dicasteri.get(i).copied()?
+                };
+                let delta = gr.verso.segno() * grandezze.variazione(dati, k) / scala;
+                Some((gr.id.as_str(), delta, resp))
+            })
+            .collect();
         for (i, g) in self.gruppi.iter_mut().enumerate() {
             let (r, c) = (i / PER_REGIONE, condizione_di(i));
             let (ora, prima) = (g.reddito, g.reddito_prima);
@@ -92,9 +116,13 @@ impl Elettorato {
             for (p, gp) in g.giudizio.iter_mut().enumerate() {
                 if governo.al_governo(p) {
                     let reddito: f64 = componenti.iter().map(|&(x, resp)| x * colpa(resp, p)).sum();
+                    let servizio: f64 = (servizi.iter())
+                        .map(|&(voce, dx, resp)| peso(voce) * asimmetrica(dx, rho) * colpa(resp, p))
+                        .sum();
                     *gp = lambda * *gp
                         + fattore * reddito
-                        + disoccupazione * colpa(partito_lavoro, p);
+                        + disoccupazione * colpa(partito_lavoro, p)
+                        + servizio;
                 }
             }
         }

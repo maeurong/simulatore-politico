@@ -529,3 +529,31 @@ valore = 0.3
 min = 0.0
 max = 1.0
 ticket = "25"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[scala_servizio]
+valore = 1.0
+min = 0.2
+max = 5.0
+ticket = "17"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[elasticita_servizio]
+valore = 1.0
+min = 0.2
+max = 2.0
+ticket = "03"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[velocita_servizio]
+valore = 0.25
+min = 0.0
+max = 1.0
+ticket = "03"
+
+# assunzione del piano 5, nessuna fonte in docs/ricerca
+[velocita_turnover]
+valore = 0.1
+min = 0.0
+max = 1.0
+ticket = "07"

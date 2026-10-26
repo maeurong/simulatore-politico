@@ -4,12 +4,17 @@ import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceDicastero } from "./VoceDicastero";
+import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VocePartito } from "./VocePartito";
 
 /**
  * Ciò che la UI può leggere della partita.
  */
 export type Vista = { turno: number, data: Trimestre, dicasteri: Array<VoceDicastero>, 
+/**
+ * Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
+ */
+grandezze: Array<VoceGrandezza>, 
 /**
  * Spread BTP-Bund in punti base, arrotondato.
  */

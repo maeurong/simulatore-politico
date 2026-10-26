@@ -1,0 +1,223 @@
+# Grandezze dei dicasteri: indici a 100 al turno zero (la ricerca non ha i livelli di partenza), tranne
+# domanda_regionale, prezzo_energia e politiche_attive, che sono scarti a 0 nella loro unità.
+# `dicasteri` sono quelli i cui atti possono muoverla. Valori provvisori, al bilanciamento.
+
+[[grandezza]]
+id = "efficienza_riscossione"
+nome = "Efficienza della riscossione"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["economia_finanze"]
+
+[[grandezza]]
+id = "sostegno_imprese"
+nome = "Sostegno alle imprese"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["sviluppo_economico"]
+
+[[grandezza]]
+id = "copertura_welfare"
+nome = "Copertura del welfare"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["lavoro_welfare"]
+
+[[grandezza]]
+id = "qualita_servizio_sanitario"
+nome = "Qualità del servizio sanitario"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["sanita"]
+
+[[grandezza]]
+id = "qualita_scuola"
+nome = "Qualità della scuola"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["istruzione_ricerca"]
+
+[[grandezza]]
+id = "qualita_trasporti"
+nome = "Qualità dei trasporti"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["infrastrutture_trasporti"]
+
+[[grandezza]]
+id = "sicurezza_energetica"
+nome = "Sicurezza energetica"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["ambiente_energia"]
+
+[[grandezza]]
+id = "sicurezza"
+nome = "Sicurezza"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["interno"]
+
+[[grandezza]]
+id = "durata_processi"
+nome = "Durata dei processi"
+dinamica = "servizio"
+verso = "scende"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["giustizia"]
+
+[[grandezza]]
+id = "prontezza_difesa"
+nome = "Prontezza della difesa"
+dinamica = "servizio"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["esteri_difesa"]
+
+[[grandezza]]
+id = "occupazione_pubblica"
+nome = "Occupazione pubblica"
+dinamica = "turnover"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = []
+
+[[grandezza]]
+id = "stock_infrastrutture"
+nome = "Stock di infrastrutture"
+dinamica = "fissa"
+verso = "sale"
+regionale = true
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["infrastrutture_trasporti"]
+
+[[grandezza]]
+id = "investimenti_privati"
+nome = "Investimenti privati"
+dinamica = "fissa"
+verso = "sale"
+regionale = true
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["sviluppo_economico"]
+
+[[grandezza]]
+id = "domanda_regionale"
+nome = "Domanda della regione (punti di gap)"
+dinamica = "fissa"
+verso = "sale"
+regionale = true
+iniziale = 0.0
+min = -5.0
+max = 5.0
+dicasteri = ["infrastrutture_trasporti", "sviluppo_economico"]
+
+[[grandezza]]
+id = "prezzo_energia"
+nome = "Prezzo dell'energia (% sugli input importati)"
+dinamica = "fissa"
+verso = "scende"
+regionale = false
+iniziale = 0.0
+min = -50.0
+max = 50.0
+dicasteri = ["ambiente_energia"]
+
+[[grandezza]]
+id = "politiche_attive"
+nome = "Politiche attive (punti di disoccupazione strutturale tolti)"
+dinamica = "fissa"
+verso = "sale"
+regionale = false
+iniziale = 0.0
+min = 0.0
+max = 5.0
+dicasteri = ["lavoro_welfare"]
+
+[[grandezza]]
+id = "capitale_umano"
+nome = "Capitale umano"
+dinamica = "fissa"
+verso = "sale"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["istruzione_ricerca"]
+
+[[grandezza]]
+id = "sovraffollamento_carceri"
+nome = "Sovraffollamento delle carceri"
+dinamica = "fissa"
+verso = "scende"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["giustizia"]
+
+[[grandezza]]
+id = "immigrazione_irregolare"
+nome = "Immigrazione irregolare"
+dinamica = "fissa"
+verso = "scende"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["interno"]
+
+[[grandezza]]
+id = "corruzione"
+nome = "Corruzione"
+dinamica = "fissa"
+verso = "scende"
+regionale = false
+iniziale = 100.0
+min = 0.0
+max = 200.0
+dicasteri = ["giustizia"]

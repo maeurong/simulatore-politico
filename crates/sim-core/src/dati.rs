@@ -2,6 +2,7 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
+use crate::grandezze::{DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
@@ -19,10 +20,11 @@ pub struct FileDati {
     pub scenario: String,
     pub elezioni: String,
     pub elettorato: String,
+    pub grandezze: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 7] = [
+    pub const NOMI: [&str; 8] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -30,6 +32,7 @@ impl FileDati {
         "scenario.toml",
         "elezioni.toml",
         "elettorato.toml",
+        "grandezze.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -45,6 +48,7 @@ impl FileDati {
             scenario: leggi(Self::NOMI[4])?,
             elezioni: leggi(Self::NOMI[5])?,
             elettorato: leggi(Self::NOMI[6])?,
+            grandezze: leggi(Self::NOMI[7])?,
         })
     }
 }
@@ -124,6 +128,21 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "errore_stima_disoccupazione",
     "errore_stima_inflazione",
     "errore_stima_disavanzo",
+    "scala_servizio",
+    "elasticita_servizio",
+    "velocita_servizio",
+    "velocita_turnover",
+];
+
+/// Grandezze che il motore legge per nome, con il `regionale` atteso.
+const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
+    ("occupazione_pubblica", false),
+    ("stock_infrastrutture", true),
+    ("investimenti_privati", true),
+    ("domanda_regionale", true),
+    ("prezzo_energia", false),
+    ("politiche_attive", false),
+    ("capitale_umano", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,11 +207,17 @@ pub struct DatiGioco {
     scenario: Scenario,
     elezioni: DatiElezioni,
     elettorato: DatiElettorato,
+    grandezze: Vec<DatoGrandezza>,
 }
 
 #[derive(Deserialize)]
 struct FileDicasteri {
     dicastero: Vec<Dicastero>,
+}
+
+#[derive(Deserialize)]
+struct FileGrandezze {
+    grandezza: Vec<DatoGrandezza>,
 }
 
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
@@ -205,6 +230,15 @@ fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
 impl DatiGioco {
     pub fn dicasteri(&self) -> &[Dicastero] {
         &self.dicasteri
+    }
+
+    pub fn grandezze(&self) -> &[DatoGrandezza] {
+        &self.grandezze
+    }
+
+    /// Posizione di una grandezza per id.
+    pub fn grandezza(&self, id: &str) -> Option<usize> {
+        self.grandezze.iter().position(|g| g.id == id)
     }
 
     pub fn manopole(&self) -> &BTreeMap<String, Manopola> {
@@ -283,6 +317,9 @@ impl DatiGioco {
             .map_err(|e| errore_toml("elezioni.toml", e))?;
         let elettorato = toml::from_str::<DatiElettorato>(&file.elettorato)
             .map_err(|e| errore_toml("elettorato.toml", e))?;
+        let grandezze = toml::from_str::<FileGrandezze>(&file.grandezze)
+            .map_err(|e| errore_toml("grandezze.toml", e))?
+            .grandezza;
 
         let dati = DatiGioco {
             dicasteri,
@@ -292,9 +329,55 @@ impl DatiGioco {
             scenario,
             elezioni,
             elettorato,
+            grandezze,
         };
         dati.valida()?;
         Ok(dati)
+    }
+
+    fn valida_grandezze(&self) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Grandezze(m));
+        let grandezze = &self.grandezze;
+        for (i, g) in grandezze.iter().enumerate() {
+            if grandezze[..i].iter().any(|p| p.id == g.id) {
+                return ko(format!("grandezza ripetuta: {}", g.id));
+            }
+            let finite = g.iniziale.is_finite() && g.min.is_finite() && g.max.is_finite();
+            if !(finite && g.min <= g.iniziale && g.iniziale <= g.max) {
+                return ko(format!("{}: iniziale fuori da min-max", g.id));
+            }
+            for id in &g.dicasteri {
+                let Some(d) = self.dicasteri.iter().find(|d| &d.id == id) else {
+                    return ko(format!("{}: dicastero sconosciuto {id}", g.id));
+                };
+                if g.regionale && !d.regione_bersaglio {
+                    return ko(format!(
+                        "{}: regionale, ma {id} non ha regione bersaglio",
+                        g.id
+                    ));
+                }
+            }
+        }
+        for d in &self.dicasteri {
+            let ind = &d.indicatore_servizio;
+            let giusta = grandezze
+                .iter()
+                .any(|g| &g.id == ind && g.dinamica == Dinamica::Servizio && !g.regionale);
+            if !giusta {
+                return ko(format!("indicatore di servizio senza grandezza: {ind}"));
+            }
+        }
+        for (id, regionale) in GRANDEZZE_RICHIESTE {
+            if !grandezze
+                .iter()
+                .any(|g| g.id == *id && g.regionale == *regionale)
+            {
+                return ko(format!(
+                    "grandezza richiesta mancante o di forma sbagliata: {id}"
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Coerenza dei dati, anche per quelli letti da un salvataggio.
@@ -306,7 +389,8 @@ impl DatiGioco {
     /// riferimento non positiva, piramide); `SettoreNonProduttivo`; `QuoteNonUnitarie`;
     /// `SettoreSconosciuto`; `Elettorato` e `Partiti` (vedi [`DatiElettorato`] e
     /// [`partiti::valida`]); `LeggeElettorale` e `DatiElettorali` (vedi
-    /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente.
+    /// [`DatiElezioni`]), `LeggeElettorale` se lo scenario sceglie un'impostazione inesistente;
+    /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste).
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -338,6 +422,7 @@ impl DatiGioco {
                 _ => {}
             }
         }
+        self.valida_grandezze()?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
             if !(finite && m.min <= m.valore && m.valore <= m.max) {
