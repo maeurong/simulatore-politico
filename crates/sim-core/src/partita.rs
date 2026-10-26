@@ -13,7 +13,7 @@ use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
 use crate::misure::Misure;
 use crate::parlamento::{
-    self, CausaIntesa, EsitoVoto, FormaMisura, Intesa, Parlamento, StatoAula, ValoreProposto, voto,
+    self, CausaIntesa, EsitoVoto, Intesa, Parlamento, StatoAula, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
@@ -411,23 +411,14 @@ impl Partita {
         }
     }
 
-    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `costo_fiducia` più
-    /// `costo_fiducia_distanza` per sesto di asse fra lui e la misura, il doppio sull'elettorale.
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`.
     pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
         let m = self.parlamento.poni_fiducia(misura, self.turno)?;
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
-        let doppio = if m.forma == FormaMisura::Elettorale {
-            2.0
-        } else {
-            1.0
-        };
-        let (base, per_distanza) = (
-            self.dati.manopola("costo_fiducia"),
-            self.dati.manopola("costo_fiducia_distanza"),
-        );
+        let forma = m.forma;
         for j in self.alleati() {
-            let d = nuova.map_or(0.0, |n| (self.partiti[j].posizione_dichiarata - n).abs());
-            let delta = -doppio * (base + per_distanza * d / 6.0);
+            let x = self.partiti[j].posizione_dichiarata;
+            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova);
             (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
         }
         Ok(())

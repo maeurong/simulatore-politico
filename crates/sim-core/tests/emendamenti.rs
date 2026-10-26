@@ -139,6 +139,31 @@ fn alleato_in_ultimatum_e_lontano_vota_no_alla_fiducia() {
 }
 
 #[test]
+fn la_vista_conta_il_costo_della_fiducia_prima_di_porla() {
+    // Centrodestra a 43: sopra la soglia d'ultimatum (40), sotto dopo il costo della fiducia
+    // su 62 anni (3 + 6 · 3/6 = 6).
+    let mut p = Partita::nuova(
+        DatiGioco::da_testi(&con(senza_shock(), "intesa_base", "43.0")).unwrap(),
+        1,
+    );
+    presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+    let v = p.vista();
+    assert!(!v.alleati[0].ultimatum);
+    assert_eq!(v.calendario[0].alleati_contro_fiducia, ["centrodestra"]);
+    p.comanda(Comando::PoniFiducia {
+        misura: v.calendario[0].id,
+    })
+    .unwrap();
+    assert_eq!(
+        p.vista().calendario[0].alleati_contro_fiducia,
+        ["centrodestra"]
+    );
+    p.chiudi_turno();
+    let e = &p.vista().esiti[0];
+    assert!(e.linee.iter().any(|l| l.partito == "centrodestra" && !l.si));
+}
+
+#[test]
 fn niente_fiducia_su_una_norma_costituzionale() {
     let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
     presenta(&mut p, &[("numero_parlamentari", "630_315")]).unwrap();

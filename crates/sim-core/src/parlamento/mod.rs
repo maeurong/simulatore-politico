@@ -16,8 +16,8 @@ mod emendamenti;
 mod intesa;
 pub mod voto;
 
-pub(crate) use emendamenti::rinviata;
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
+pub(crate) use emendamenti::{costo_fiducia, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 
 /// Posti del calendario per riforme ed elettorali.
@@ -415,8 +415,18 @@ impl Parlamento {
             .map(|m| {
                 let p = aula.previsione(m);
                 let nuova = p.posizioni.map(|(_, n)| n);
-                let a_blocchi =
-                    voto::linea_fiducia(dati, aula.partiti, aula.governo, aula.intesa, nuova);
+                // Senza fiducia, l'intesa dopo il suo costo; il resto sullo stato attuale.
+                let a_blocchi = if m.fiducia {
+                    p.linea.clone()
+                } else {
+                    let intesa: Vec<f64> = (aula.partiti.iter().zip(aula.intesa))
+                        .map(|(x, &i)| {
+                            let costo = costo_fiducia(dati, m.forma, x.posizione_dichiarata, nuova);
+                            (i - costo).clamp(0.0, 100.0)
+                        })
+                        .collect();
+                    voto::linea_fiducia(dati, aula.partiti, aula.governo, &intesa, nuova)
+                };
                 let camera = voto::forbice(&self.seggi_camera, &p.linea, &p.franchi);
                 let senato = voto::forbice(&self.seggi_senato, &p.linea, &p.franchi);
                 VoceMisura {
@@ -444,8 +454,8 @@ impl Parlamento {
                         in_bilico: camera[0] < maggioranza_camera || senato[0] < maggioranza_senato,
                     },
                     emendamenti: emendamenti::voci(dati, aula.partiti, &m.emendamenti),
-                    alleati_contro_fiducia: (aula.partiti.iter().zip(&a_blocchi).enumerate())
-                        .filter(|&(j, (_, &si))| !si && voto::alleato(aula.governo, j))
+                    alleati_contro_fiducia: (aula.partiti.iter().zip(a_blocchi).enumerate())
+                        .filter(|&(j, (_, si))| !si && voto::alleato(aula.governo, j))
                         .map(|(_, (p, _))| p.id.clone())
                         .collect(),
                 }

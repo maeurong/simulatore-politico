@@ -67,7 +67,8 @@ pub struct VoceMisura {
     pub linee: Vec<VoceLinea>,
     pub forbice: Forbice,
     pub emendamenti: Vec<VoceEmendamento>,
-    /// Gli alleati che con la fiducia voterebbero no (id).
+    /// Gli alleati che con la fiducia voterebbero no (id): sullo stato attuale, più il costo
+    /// della fiducia se non è ancora posta.
     pub alleati_contro_fiducia: Vec<String>,
 }
 

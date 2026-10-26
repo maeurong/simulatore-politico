@@ -11,6 +11,7 @@ import type { VoceLinea } from "./VoceLinea";
  */
 export type VoceMisura = { id: number, nome: string, forma: FormaMisura, proponente: string | null, valori: Array<ValoreProposto>, voto: Trimestre, deliberazione: number, fiducia: boolean, linee: Array<VoceLinea>, forbice: Forbice, emendamenti: Array<VoceEmendamento>, 
 /**
- * Gli alleati che con la fiducia voterebbero no (id).
+ * Gli alleati che con la fiducia voterebbero no (id): sullo stato attuale, più il costo
+ * della fiducia se non è ancora posta.
  */
 alleati_contro_fiducia: Array<string>, };
