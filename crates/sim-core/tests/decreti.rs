@@ -164,11 +164,48 @@ fn dirotta_dopo_accogli_tiene_il_decreto() {
     let nuovo = (dati_base().atti().iter())
         .position(|a| a.id == altro.id)
         .unwrap();
-    for (atto, ripetuto) in [(vecchio, false), (nuovo, true)] {
-        let e = proposta_forzata(&p, atto).comanda(accogli()).err();
-        let decaduto = e.is_some_and(|e| e.to_string().contains("decreto decaduto non si ripete"));
-        assert_eq!(decaduto, ripetuto, "atto {atto}");
-    }
+    let r = proposta_forzata(&p, vecchio).comanda(accogli());
+    assert!(r.is_ok(), "{r:?}");
+    let e = proposta_forzata(&p, nuovo).comanda(accogli()).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains(&format!("decreto decaduto non si ripete: {}", altro.nome)),
+        "{e}"
+    );
+}
+
+/// Dirotta un decreto accolto verso un atto col decreto già decaduto: rifiutato col nome,
+/// partita invariata (spec v1-giocabile:342).
+#[test]
+fn dirotta_verso_un_decreto_decaduto_e_rifiutato() {
+    let (p, _) = accolta(sanita_cara());
+    let v = p.vista();
+    let m = &v.ministeri[3];
+    let altro = (m.atti.iter())
+        .find(|a| a.pagabile && a.id != m.agenda.as_ref().unwrap().atto)
+        .unwrap();
+    let k = (dati_base().atti().iter())
+        .position(|a| a.id == altro.id)
+        .unwrap();
+    let mut p = edita(&p, |j| {
+        j["parlamento"]["decaduti"] =
+            serde_json::json!([{"accolti": {"dicastero": 3, "atto": k, "importo": 1}}]);
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(Comando::Dirotta {
+            dicastero: "sanita".into(),
+            atto: Some(altro.id.clone()),
+            regione: None,
+        })
+        .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains(&format!("decreto decaduto non si ripete: {}", altro.nome)),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
 }
 
 #[test]

@@ -336,6 +336,23 @@ fn abrogativo_in_corso_mette_la_disposizione_in_esame() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
+/// La disposizione in una legge in calendario è in esame: niente quesito sopra (iter-legislativo-italiano:131-137).
+#[test]
+fn legge_in_calendario_blocca_l_abrogativo() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    p.chiudi_turno();
+    presenta(&mut p, &[("licenziamento", "reintegro")]).unwrap();
+    let prima = p.salva().unwrap();
+    let e = p
+        .promuovi_referendum("sinistra", "licenziamento")
+        .unwrap_err();
+    assert!(
+        matches!(e, Errore::Comando(_)) && e.to_string().contains("Licenziamento è già in esame"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
 /// Un abrogativo col voto oltre l'anno e mezzo, o senza firme e col voto che non è quello del
 /// turno, è un salvataggio manomesso.
 #[test]

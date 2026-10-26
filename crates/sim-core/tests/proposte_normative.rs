@@ -91,6 +91,9 @@ fn accogliere_la_proposta_presenta_la_legge() {
         })
         .unwrap();
         assert_eq!(p.vista().calendario[0].valori[0].disposizione, d);
+        assert_eq!(p.vista().calendario[0].proponente.as_deref(), Some(LAVORO));
+        // La riforma avvicina la norma al ministro: firmarla non gli costa.
+        assert_eq!(variazioni(&p, LAVORO, Causa::NormaControPosizione), 0);
         trovata = true;
     }
     assert!(trovata);

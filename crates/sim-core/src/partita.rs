@@ -979,17 +979,7 @@ impl Partita {
         let Some((i, TipoProposta::Fondi { atto, .. })) = proposta else {
             return Ok(());
         };
-        let firma = FondiDecreto::Accolti {
-            dicastero: i,
-            atto,
-            importo: 0,
-        };
-        if self
-            .parlamento
-            .decaduti
-            .iter()
-            .any(|f| f.stessa_firma(&firma))
-        {
+        if self.parlamento.decaduto_accolto(i, atto) {
             let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
             return Err(Errore::Comando(format!(
                 "decreto decaduto non si ripete: {atto}"

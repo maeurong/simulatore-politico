@@ -402,6 +402,17 @@ impl Parlamento {
         (self.respinte.iter()).find_map(|&(x, da)| (x == d && da > turno).then_some(da))
     }
 
+    /// Il decreto accolto dal dicastero `i` per `atto` è decaduto: la firma non si ripete
+    /// (iter-legislativo-italiano:20-23, 67).
+    pub(crate) fn decaduto_accolto(&self, i: usize, atto: usize) -> bool {
+        (self.decaduti.iter()).any(|f| {
+            matches!(
+                *f,
+                FondiDecreto::Accolti { dicastero, atto: k, .. } if dicastero == i && k == atto
+            )
+        })
+    }
+
     /// Il referendum abrogativo che `promotore` chiede su `disposizione` al turno `turno`
     /// (iter-legislativo-italiano:131-137): firme in chiusura del turno, voto ad aprile-giugno
     /// dell'anno dopo; `valori` = la disposizione e il suo valore dopo l'abrogazione. Non tocca
@@ -410,8 +421,8 @@ impl Parlamento {
     /// # Errors
     /// `Comando`, nell'ordine: promotore sconosciuto o al governo, disposizione sconosciuta, non
     /// referendabile, niente da abrogare, valore dopo l'abrogazione già abrogato da un
-    /// referendum, legge elettorale non valida dopo l'abrogazione, un
-    /// referendum già in corso, fuori finestra.
+    /// referendum, legge elettorale non valida dopo l'abrogazione, disposizione in una misura in
+    /// calendario, un referendum già in corso, fuori finestra.
     pub(crate) fn abrogativo(
         &self,
         aula: &StatoAula,
@@ -449,6 +460,9 @@ impl Parlamento {
         }
         if let Some(m) = legge_non_valida(dati, aula.disposizioni, &[(d, dopo)]) {
             return ko(format!("quesito inammissibile su {}: {m}", x.nome));
+        }
+        if (self.misure.iter()).any(|m| m.valori.iter().any(|&(y, _)| y == d)) {
+            return ko(format!("{} è già in esame", x.nome));
         }
         if self.referendum.is_some() {
             return ko("un referendum è già in corso".into());

@@ -169,19 +169,10 @@ impl Ministri {
     pub(super) fn proponi(&mut self, cx: &Contesto) {
         let (dati, rif) = (cx.dati, margini_rif(cx.dati));
         let ammesso = |i: usize, k: usize| {
-            let firma = parlamento::FondiDecreto::Accolti {
-                dicastero: i,
-                atto: k,
-                importo: 0,
-            };
             dati.atti()[k]
                 .prerequisito_mancante(dati, cx.disposizioni)
                 .is_none()
-                && !cx
-                    .parlamento
-                    .decaduti
-                    .iter()
-                    .any(|f| f.stessa_firma(&firma))
+                && !cx.parlamento.decaduto_accolto(i, k)
         };
         let fondi = |i: usize, atto: usize, importo: i64| {
             ((1..=LIMITE_EURO).contains(&importo) && ammesso(i, atto))

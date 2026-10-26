@@ -429,6 +429,10 @@ impl Ministri {
             return ko(format!("niente da dirottare: {id}"));
         }
         if let Some(k) = cambia_atto {
+            if ag.decreto > 0 && cx.parlamento.decaduto_accolto(i, k) {
+                let nome = &dati.atti()[k].nome;
+                return ko(format!("decreto decaduto non si ripete: {nome}"));
+            }
             if in_cantiere(st, k) {
                 return ko(format!("cantiere già in corso: {}", dati.atti()[k].id));
             }
