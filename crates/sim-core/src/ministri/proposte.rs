@@ -104,6 +104,10 @@ impl Ministri {
         if importo <= 0 {
             return Err(Errore::Comando(format!("fondi già sufficienti per {atto}")));
         }
+        let sotto = |x: i64| x.checked_add(importo).is_some_and(|s| s <= LIMITE_EURO);
+        if !(sotto(st.margine_residuo) && sotto(cx.economia.decreti)) {
+            return Err(Errore::Comando(format!("importo troppo alto per {atto}")));
+        }
         let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
         let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
         let pos = posizione(dati, i, p.atto).ok_or_else(nessuna)?;

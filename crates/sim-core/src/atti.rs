@@ -138,7 +138,12 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                     a.id, g.id, a.dicastero
                 ));
             }
-            if !(e.intensita.is_finite() && e.intensita != 0.0 && e.intensita.abs() <= 1e3) {
+            // Con capacità 5 l'effetto vale intensità · 5/3: deve restare nel tetto del salvataggio.
+            let tetto = (g.max - g.min) * 3.0 / 5.0;
+            if !(e.intensita.is_finite()
+                && e.intensita != 0.0
+                && e.intensita.abs() <= tetto.min(1e3))
+            {
                 return ko(format!("{}: intensita fuori intervallo", a.id));
             }
             if e.ritardo > 40 {
