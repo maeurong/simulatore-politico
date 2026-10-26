@@ -3,7 +3,9 @@ use crate::economia::Aliquote;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
-use crate::parlamento::{CausaIntesa, EsitoVoto, FormaMisura, ValoreProposto, VariazioneIntesa};
+use crate::parlamento::{
+    CausaIntesa, EsitoVoto, FormaMisura, ValoreProposto, VariazioneIntesa, VoceLinea,
+};
 use crate::partita::Trimestre;
 use serde::Serialize;
 #[cfg(test)]
@@ -61,6 +63,20 @@ pub struct VoceMisura {
     pub voto: Trimestre,
     pub deliberazione: u8,
     pub fiducia: bool,
+    pub linee: Vec<VoceLinea>,
+    pub forbice: Forbice,
+}
+
+/// Sì attesi ± 2σ per ramo, prima del voto; `maggioranza_*` = sì necessari; `in_bilico` se una
+/// forbice scende sotto la sua maggioranza.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Forbice {
+    pub camera: [u32; 2],
+    pub senato: [u32; 2],
+    pub maggioranza_camera: u32,
+    pub maggioranza_senato: u32,
+    pub in_bilico: bool,
 }
 
 /// Una disposizione com'è in vigore; gradini, dicastero e perimetro sono id.

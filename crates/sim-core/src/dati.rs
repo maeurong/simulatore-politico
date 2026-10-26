@@ -179,6 +179,17 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "soglia_ultimatum",
     "costo_firma",
     "turni_blocco_respinta",
+    "peso_intesa_linea",
+    "malus_opposizione",
+    "ft_base",
+    "ft_distanza",
+    "ft_intesa",
+    "ft_max",
+    "costo_legge_respinta",
+    "valence_legge_respinta",
+    "distanza_alleato",
+    "costo_norma_lontana",
+    "scivolamento_percepita",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -302,6 +313,16 @@ pub(crate) fn dati_base() -> DatiGioco {
         disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
     };
     DatiGioco::da_testi(&file).unwrap()
+}
+
+#[cfg(test)]
+impl DatiGioco {
+    /// Per i test d'unità: il valore della manopola `nome`, se c'è.
+    pub(crate) fn imposta_manopola(&mut self, nome: &str, valore: f64) {
+        if let Some(m) = self.manopole.get_mut(nome) {
+            m.valore = valore;
+        }
+    }
 }
 
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {

@@ -109,13 +109,6 @@ impl Disposizioni {
     ///
     /// # Panics
     /// Se `d` non è l'indice di una voce.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "la chiamera' l'aula quando una legge passa, nella PR B"
-        )
-    )]
     pub(crate) fn cambia(
         &mut self,
         dati: &DatiGioco,

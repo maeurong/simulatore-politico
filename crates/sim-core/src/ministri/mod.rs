@@ -39,6 +39,7 @@ pub enum Causa {
     PropostaRespinta,
     BudgetTagliato,
     NormaControPosizione,
+    LeggeRespinta,
 }
 
 impl fmt::Display for Causa {
@@ -53,6 +54,7 @@ impl fmt::Display for Causa {
             Self::PropostaRespinta => "proposta di fondi respinta",
             Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
             Self::NormaControPosizione => "norma firmata contro la sua posizione",
+            Self::LeggeRespinta => "legge respinta in aula",
         })
     }
 }

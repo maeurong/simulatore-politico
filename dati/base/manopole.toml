@@ -816,3 +816,80 @@ valore = 2.0
 min = 1.0
 max = 8.0
 ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (peso dell'intesa nella linea di un alleato)
+[peso_intesa_linea]
+valore = 1.0
+min = 0.0
+max = 3.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (spinta al no di un partito fuori dal governo)
+[malus_opposizione]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (probabilità di base di un franco tiratore)
+[ft_base]
+valore = 0.02
+min = 0.0
+max = 1.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (franchi tiratori in più per distanza dalla norma)
+[ft_distanza]
+valore = 0.15
+min = 0.0
+max = 1.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (franchi tiratori in più per intesa sotto 50)
+[ft_intesa]
+valore = 0.1
+min = 0.0
+max = 1.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (tetto alla probabilità di un franco tiratore)
+[ft_max]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (soddisfazione persa dal ministro proponente di una legge respinta)
+[costo_legge_respinta]
+valore = 5.0
+min = 0.0
+max = 20.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio per una legge respinta)
+[valence_legge_respinta]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "08"
+
+# spec riga 100, alleato «distante almeno 2 punti dalla misura» (da qui perde intesa per una norma approvata)
+[distanza_alleato]
+valore = 2.0
+min = 1.0
+max = 4.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa persa per punto di distanza oltre distanza_alleato)
+[costo_norma_lontana]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "05"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (quota della distanza dalla norma votata recuperata dalla posizione percepita)
+[scivolamento_percepita]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "06"

@@ -10,9 +10,12 @@ use crate::elezioni::{Esito, LeggeElettorale, Voti, riparto};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::ministri::{Contesto, Ministri, causa_peggiore};
+use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
 use crate::misure::Misure;
-use crate::parlamento::{Intesa, Parlamento, ValoreProposto};
+use crate::parlamento::{
+    self, CausaIntesa, EsitoVoto, Intesa, Parlamento, StatoAula, ValoreProposto, VariazioneIntesa,
+    voto,
+};
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
     SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
@@ -134,11 +137,12 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
+    // default delle decisioni → atti dei ministri → aula (conversioni → bilancio → leggi →
+    // referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
     // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
-    // calendario → apertura (valori in arrivo, rose, agende, proposte; il costo del taglio se
-    // l'anno entra in esercizio provvisorio).
+    // calendario → apertura (valori in arrivo, esiti dei due turni prima, rose, agende, proposte;
+    // il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
@@ -193,6 +197,7 @@ impl Partita {
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
+        self.parlamento.apri(self.turno);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -264,11 +269,132 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    /// Aula: il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    fn aula(&mut self) {
+        self.approva_bilancio();
+        self.vota_leggi();
+    }
+
+    /// Le leggi col voto nel turno, in ordine di id (iter-legislativo-italiano:166).
+    fn vota_leggi(&mut self) {
+        let mut ids: Vec<u32> = (self.parlamento.misure.iter())
+            .filter(|m| m.voto == self.turno)
+            .map(|m| m.id)
+            .collect();
+        ids.sort_unstable();
+        for id in ids {
+            self.vota(id);
+        }
+    }
+
+    /// Il voto della misura `id` nei due rami; la misura esce dal calendario. Approvata: i valori
+    /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
+    /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
+    /// Consiglio. Chi vota sì sposta la sua posizione percepita verso la misura.
+    fn vota(&mut self, id: u32) {
+        let Some(k) = self.parlamento.misure.iter().position(|m| m.id == id) else {
+            return;
+        };
+        let m = self.parlamento.misure.remove(k);
+        let aula = self.stato_aula();
+        let p = aula.previsione(&m.valori);
+        let linee = aula.voci_linea(&p.linea);
+        let pl = &self.parlamento;
+        let camera = voto::conta(&mut self.caso, &pl.seggi_camera, &p.linea, &p.franchi);
+        let senato = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, &p.franchi);
+        let approvata = camera.si > camera.no && senato.si > senato.no;
+        let turno = self.turno;
+        let nuova = p.posizioni.map(|(_, n)| n);
+        if approvata {
+            let legge = format!("L. {id}/{}", self.data.anno);
+            for &(d, g) in &m.valori {
+                (self.disposizioni).cambia(
+                    &self.dati,
+                    d,
+                    g,
+                    turno,
+                    &legge,
+                    &mut self.grandezze.effetti,
+                );
+            }
+            if let Some(nuova) = nuova {
+                self.norma_lontana(nuova);
+            }
+        } else {
+            let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
+            let da = turno.saturating_add(1).saturating_add(blocco);
+            (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
+            if let Some(st) = m
+                .proponente
+                .and_then(|i| self.ministri.dicasteri.get_mut(i))
+            {
+                let costo = self.dati.manopola("costo_legge_respinta");
+                penalizza(st, Causa::LeggeRespinta, -costo, turno);
+            }
+            if let Some(pdc) = self.partiti.get_mut(self.governo.presidente) {
+                pdc.valence -= self.dati.manopola("valence_legge_respinta");
+            }
+        }
+        if let Some(nuova) = nuova {
+            let s = self.dati.manopola("scivolamento_percepita");
+            for (x, _) in self.partiti.iter_mut().zip(&p.linea).filter(|(_, si)| **si) {
+                x.posizione_percepita += s * (nuova - x.posizione_percepita);
+            }
+        }
+        let esito = EsitoVoto {
+            misura: id,
+            nome: parlamento::nome(&self.dati, &m.valori),
+            forma: m.forma,
+            data: self.data,
+            deliberazione: m.deliberazione,
+            camera,
+            senato,
+            approvata,
+            fiducia: m.fiducia,
+            fiducia_respinta: false,
+            linee,
+        };
+        self.parlamento.esiti.insert(0, esito);
+    }
+
+    /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
+    /// perde intesa.
+    fn norma_lontana(&mut self, nuova: f64) {
+        let soglia = self.dati.manopola("distanza_alleato");
+        let costo = self.dati.manopola("costo_norma_lontana");
+        for j in self.alleati() {
+            let (Some(p), Some(x)) = (self.partiti.get(j), self.intesa.valori.get_mut(j)) else {
+                continue;
+            };
+            let distanza = (p.posizione_dichiarata - nuova).abs();
+            if distanza < soglia {
+                continue;
+            }
+            let delta = -costo * (distanza - soglia + 1.0);
+            *x = (*x + delta).max(0.0);
+            self.intesa.variazioni.push(VariazioneIntesa {
+                partito: j,
+                causa: CausaIntesa::NormaLontana,
+                delta,
+                turno: self.turno,
+            });
+        }
+    }
+
+    fn stato_aula(&self) -> StatoAula<'_> {
+        StatoAula {
+            dati: &self.dati,
+            disposizioni: &self.disposizioni,
+            partiti: &self.partiti,
+            governo: &self.governo,
+            intesa: &self.intesa.valori,
+        }
+    }
+
+    /// Il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
     /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
     /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
     /// approvazione costa ai ministri la perdita reale delle loro voci.
-    fn aula(&mut self) {
+    fn approva_bilancio(&mut self) {
         let Some(b) = self.economia.bilancio_presentato.take() else {
             return;
         };
@@ -583,7 +709,7 @@ impl Partita {
                 })
                 .collect(),
             alleati: self.voci_alleati(),
-            calendario: self.parlamento.voci_calendario(&self.dati),
+            calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
         }
     }

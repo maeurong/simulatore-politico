@@ -5,14 +5,15 @@ use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
 use crate::errore::Errore;
 use crate::ministri::{Causa, Ministri, penalizza};
 use crate::partita::Trimestre;
-use crate::partiti::Partito;
+use crate::partiti::{Governo, Partito};
 use crate::scenario::Scenario;
-use crate::vista::VoceMisura;
+use crate::vista::{Forbice, VoceMisura};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
 mod intesa;
+pub mod voto;
 
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 
@@ -157,7 +158,7 @@ fn mesi(t: Trimestre) -> String {
 }
 
 /// `"{nome disposizione}: {nome gradino}"` uniti da `"; "`.
-fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
+pub(crate) fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
     let d = dati.disposizioni();
     (valori.iter())
         .filter_map(|&(k, g)| Some(format!("{}: {}", d.get(k)?.nome, d[k].gradini.get(g)?.nome)))
@@ -165,16 +166,66 @@ fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
         .join("; ")
 }
 
-/// Media delle posizioni dei gradini `g(d)` di `valori`; `None` se nessuno ha posizione.
-fn posizione_media(
+/// Posizione media in vigore e media nuova di `valori`, sulle sole disposizioni in cui hanno
+/// posizione sia il gradino in vigore sia il nuovo; `None` se nessuna.
+pub(crate) fn posizioni(
     dati: &DatiGioco,
+    disposizioni: &Disposizioni,
     valori: &[(usize, usize)],
-    g: impl Fn(usize, usize) -> usize,
-) -> Option<f64> {
-    let p: Vec<f64> = (valori.iter())
-        .filter_map(|&(d, x)| dati.disposizioni()[d].posizione(g(d, x)))
+) -> Option<(f64, f64)> {
+    let coppie: Vec<(f64, f64)> = (valori.iter())
+        .filter_map(|&(d, g)| {
+            let x = dati.disposizioni().get(d)?;
+            Some((
+                x.posizione(disposizioni.voci.get(d)?.in_vigore)?,
+                x.posizione(g)?,
+            ))
+        })
         .collect();
-    (!p.is_empty()).then(|| p.iter().sum::<f64>() / p.len() as f64)
+    let n = coppie.len() as f64;
+    let media = |f: fn(&(f64, f64)) -> f64| coppie.iter().map(f).sum::<f64>() / n;
+    (!coppie.is_empty()).then(|| (media(|c| c.0), media(|c| c.1)))
+}
+
+/// Ciò che le linee e i franchi tiratori leggono della partita.
+pub(crate) struct StatoAula<'a> {
+    pub dati: &'a DatiGioco,
+    pub disposizioni: &'a Disposizioni,
+    pub partiti: &'a [Partito],
+    pub governo: &'a Governo,
+    pub intesa: &'a [f64],
+}
+
+/// Posizioni, linea e probabilità dei franchi tiratori di una misura, sullo stato attuale.
+pub(crate) struct Previsione {
+    pub posizioni: Option<(f64, f64)>,
+    pub linea: Vec<bool>,
+    pub franchi: Vec<f64>,
+}
+
+impl StatoAula<'_> {
+    pub(crate) fn previsione(&self, valori: &[(usize, usize)]) -> Previsione {
+        let posizioni = posizioni(self.dati, self.disposizioni, valori);
+        let (dati, partiti, governo, intesa) = (self.dati, self.partiti, self.governo, self.intesa);
+        let linea = voto::linea(dati, partiti, governo, intesa, posizioni);
+        let nuova = posizioni.map(|(_, n)| n);
+        let franchi = voto::probabilita_franco(dati, partiti, governo, intesa, nuova, &linea);
+        Previsione {
+            posizioni,
+            linea,
+            franchi,
+        }
+    }
+
+    /// Una voce per partito, nell'ordine dei partiti.
+    pub(crate) fn voci_linea(&self, linea: &[bool]) -> Vec<VoceLinea> {
+        (self.partiti.iter().zip(linea))
+            .map(|(p, &si)| VoceLinea {
+                partito: p.id.clone(),
+                si,
+            })
+            .collect()
+    }
 }
 
 impl Parlamento {
@@ -295,9 +346,7 @@ impl Parlamento {
             (dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|x| &x.id == id));
         if let Some(st) = proponente.and_then(|i| ministri.dicasteri.get_mut(i)) {
             let m = st.ministro.as_ref().map(|m| m.posizione);
-            let nuova = posizione_media(dati, &scelti, |_, g| g);
-            let vigore = posizione_media(dati, &scelti, |d, _| disposizioni.voci[d].in_vigore);
-            if let (Some(m), Some(nuova), Some(vigore)) = (m, nuova, vigore) {
+            if let (Some(m), Some((vigore, nuova))) = (m, posizioni(dati, disposizioni, &scelti)) {
                 let lontananza = ((nuova - m).abs() - (vigore - m).abs()).max(0.0);
                 let delta = -dati.manopola("costo_firma") * lontananza;
                 penalizza(st, Causa::NormaControPosizione, delta, turno);
@@ -321,28 +370,50 @@ impl Parlamento {
         Ok(())
     }
 
-    /// Le misure in calendario per la `Vista`.
-    pub(crate) fn voci_calendario(&self, dati: &DatiGioco) -> Vec<VoceMisura> {
+    /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.
+    pub(crate) fn voci_calendario(&self, aula: &StatoAula) -> Vec<VoceMisura> {
+        let dati = aula.dati;
         let catalogo = dati.disposizioni();
+        let maggioranza_camera = voto::maggioranza(self.seggi_camera.iter().sum());
+        let maggioranza_senato = voto::maggioranza(self.seggi_senato.iter().sum());
         (self.misure.iter())
-            .map(|m| VoceMisura {
-                id: m.id,
-                nome: nome(dati, &m.valori),
-                forma: m.forma,
-                proponente: (m.proponente)
-                    .and_then(|i| dati.dicasteri().get(i))
-                    .map(|d| d.id.clone()),
-                valori: (m.valori.iter())
-                    .map(|&(d, g)| ValoreProposto {
-                        disposizione: catalogo[d].id.clone(),
-                        gradino: catalogo[d].gradini[g].id.clone(),
-                    })
-                    .collect(),
-                voto: data_di(m.voto),
-                deliberazione: m.deliberazione,
-                fiducia: m.fiducia,
+            .map(|m| {
+                let p = aula.previsione(&m.valori);
+                let camera = voto::forbice(&self.seggi_camera, &p.linea, &p.franchi);
+                let senato = voto::forbice(&self.seggi_senato, &p.linea, &p.franchi);
+                VoceMisura {
+                    id: m.id,
+                    nome: nome(dati, &m.valori),
+                    forma: m.forma,
+                    proponente: (m.proponente)
+                        .and_then(|i| dati.dicasteri().get(i))
+                        .map(|d| d.id.clone()),
+                    valori: (m.valori.iter())
+                        .map(|&(d, g)| ValoreProposto {
+                            disposizione: catalogo[d].id.clone(),
+                            gradino: catalogo[d].gradini[g].id.clone(),
+                        })
+                        .collect(),
+                    voto: data_di(m.voto),
+                    deliberazione: m.deliberazione,
+                    fiducia: m.fiducia,
+                    linee: aula.voci_linea(&p.linea),
+                    forbice: Forbice {
+                        camera,
+                        senato,
+                        maggioranza_camera,
+                        maggioranza_senato,
+                        in_bilico: camera[0] < maggioranza_camera || senato[0] < maggioranza_senato,
+                    },
+                }
             })
             .collect()
+    }
+
+    /// Apertura del turno `turno`: restano gli esiti dei due turni prima.
+    pub(crate) fn apri(&mut self, turno: u32) {
+        let da = data_di(turno.saturating_sub(2));
+        (self.esiti).retain(|e| (e.data.anno, e.data.trimestre) >= (da.anno, da.trimestre));
     }
 
     /// # Errors
