@@ -5,7 +5,9 @@ use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
-use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo};
+use crate::elettorato::{
+    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo,
+};
 use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
@@ -571,10 +573,9 @@ impl Partita {
                 invito: 0.0,
             };
             let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
-            let (si, no) = (a.si.round() as u64, a.no.round() as u64);
-            let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
-            let approvato = si > no;
-            if approvato {
+            let nome = parlamento::nome(&self.dati, &r.valori);
+            let esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
+            if esito.approvato {
                 let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
                 for &(d, g) in &r.valori {
                     (self.disposizioni).cambia(
@@ -587,17 +588,6 @@ impl Partita {
                     );
                 }
             }
-            let esito = EsitoReferendum {
-                tipo: r.tipo,
-                nome: parlamento::nome(&self.dati, &r.valori),
-                data: self.data,
-                si,
-                no,
-                votanti: si + no,
-                aventi_diritto,
-                quorum: (si + no) * 2 > aventi_diritto,
-                approvato,
-            };
             self.parlamento.esiti_referendum.insert(0, esito);
         }
     }
@@ -607,6 +597,8 @@ impl Partita {
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
     /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
+    /// Sull'elettorale che con le leggi e gli arrivi venuti dalla promozione darebbe una legge
+    /// non valida decade senza voto: esito con `decaduto`, nessun blocco, nessuna valence.
     fn vota_abrogativo(&mut self) {
         let turno = self.turno;
         let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
@@ -615,6 +607,24 @@ impl Partita {
         let Some(&(d, dopo)) = r.valori.first() else {
             return;
         };
+        let nome = parlamento::nome(&self.dati, &r.valori);
+        if let Some(m) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)])
+        {
+            let nessuno = Affluenza {
+                si: 0.0,
+                no: 0.0,
+                astenuti: 0.0,
+            };
+            let esito = EsitoReferendum {
+                decaduto: Some(format!(
+                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
+                     più applicabile ({m})"
+                )),
+                ..EsitoReferendum::da(r.tipo, nome, self.data, &nessuno)
+            };
+            self.parlamento.esiti_referendum.insert(0, esito);
+            return;
+        }
         let vigente = self.disposizioni.voci[d].in_vigore;
         let x = &self.dati.disposizioni()[d];
         let invito = if r.invito_astensione {
@@ -629,10 +639,9 @@ impl Partita {
             invito,
         };
         let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
-        let (si, no) = (a.si.round() as u64, a.no.round() as u64);
-        let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
-        let quorum = (si + no) * 2 > aventi_diritto;
-        let approvato = quorum && si > no;
+        let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
+        esito.approvato &= esito.quorum;
+        let (quorum, approvato) = (esito.quorum, esito.approvato);
         if approvato {
             let legge = format!("referendum del {}", self.data.anno);
             (self.disposizioni).cambia(
@@ -659,17 +668,6 @@ impl Partita {
         if let Some(p) = chi.and_then(|j| self.partiti.get_mut(j)) {
             p.valence -= self.dati.manopola(manopola);
         }
-        let esito = EsitoReferendum {
-            tipo: r.tipo,
-            nome: parlamento::nome(&self.dati, &r.valori),
-            data: self.data,
-            si,
-            no,
-            votanti: si + no,
-            aventi_diritto,
-            quorum,
-            approvato,
-        };
         self.parlamento.esiti_referendum.insert(0, esito);
     }
 

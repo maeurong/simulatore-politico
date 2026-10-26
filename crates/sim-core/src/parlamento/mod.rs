@@ -400,7 +400,8 @@ impl Parlamento {
     ///
     /// # Errors
     /// `Comando`, nell'ordine: promotore sconosciuto o al governo, disposizione sconosciuta, non
-    /// referendabile, niente da abrogare, legge elettorale non valida dopo l'abrogazione, un
+    /// referendabile, niente da abrogare (anche col valore dopo l'abrogazione bloccato da un
+    /// referendum), legge elettorale non valida dopo l'abrogazione, un
     /// referendum già in corso, fuori finestra.
     pub(crate) fn abrogativo(
         &self,
@@ -426,11 +427,13 @@ impl Parlamento {
         let dopo = (x.dopo_abrogazione.as_deref())
             .and_then(|g| x.gradino(g))
             .unwrap_or(s.precedente);
-        if s.legge.is_empty() || (dopo == s.in_vigore && s.in_arrivo.is_empty()) {
+        // Un gradino abrogato non torna: niente reviviscenza (disposizioni-al-turno-zero:64).
+        let nulla = dopo == s.in_vigore && s.in_arrivo.is_empty();
+        if s.legge.is_empty() || nulla || s.bloccati.contains(&dopo) {
             return ko(format!("niente da abrogare: {}", x.nome));
         }
         if let Some(m) = legge_non_valida(dati, aula.disposizioni, &[(d, dopo)]) {
-            return ko(format!("quesito inammissibile: {m}"));
+            return ko(format!("quesito inammissibile su {}: {m}", x.nome));
         }
         if self.referendum.is_some() {
             return ko("un referendum è già in corso".into());

@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_arrivo, imposta, presenta, senza_shock, sostituisci};
+use comune::{con_arrivo, edita, imposta, presenta, senza_shock, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::TipoReferendum;
 use sim_core::{Comando, Errore, Partita};
@@ -209,4 +209,105 @@ fn promozioni_non_ammesse_rifiutate_col_nome() {
     }
     assert_eq!(p.salva().unwrap(), prima);
     assert!(p.comanda(Comando::InvitaAstensione).is_err());
+}
+
+#[test]
+fn gradino_abrogato_non_torna_con_un_secondo_referendum() {
+    // Dopo l'abrogazione il precedente è «tutele crescenti», bloccato: un secondo quesito lo
+    // riporterebbe in vigore.
+    let mut p = al_voto(abrogazione_che_vince("-5.0"));
+    assert!(p.vista().esiti_referendum[0].approvato);
+    let e = p
+        .promuovi_referendum("sinistra", "licenziamento")
+        .unwrap_err();
+    assert!(
+        e.to_string().contains("niente da abrogare: Licenziamento"),
+        "{e}"
+    );
+}
+
+/// Il Rosatellum senza coalizioni: abrogare le coalizioni di oggi le toglie.
+fn coalizioni_abrogabili() -> FileDati {
+    sostituisci(
+        senza_shock(),
+        "scenario",
+        "coalizioni = true",
+        "coalizioni = false",
+    )
+}
+
+/// Porta il premio di maggioranza della partita al gradino `gradino`, passando dal salvataggio.
+fn con_premio(p: &Partita, gradino: &str) -> Partita {
+    let dati = DatiGioco::da_testi(&coalizioni_abrogabili()).unwrap();
+    let k = dati.disposizione("premio").unwrap();
+    let g = dati.disposizioni()[k].gradino(gradino).unwrap();
+    edita(p, |j| j["disposizioni"]["voci"][k]["in_vigore"] = g.into()).unwrap()
+}
+
+#[test]
+fn quesito_elettorale_inammissibile_col_nome() {
+    // Senza coalizioni resterebbe il premio alla coalizione della legge in vigore.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&coalizioni_abrogabili()).unwrap(), 1);
+    p.chiudi_turno();
+    let prima = p.salva().unwrap();
+    let e = p.promuovi_referendum("sinistra", "coalizioni").unwrap_err();
+    assert!(
+        e.to_string().contains(
+            "quesito inammissibile su Coalizioni: premio alla coalizione senza coalizioni"
+        ),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn elettorale_resa_non_valida_prima_del_voto_decade() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&coalizioni_abrogabili()).unwrap(), 1);
+    p.chiudi_turno();
+    let mut p = con_premio(&p, "nessuno");
+    p.promuovi_referendum("sinistra", "coalizioni").unwrap();
+    // Il premio alla coalizione torna prima del voto: senza coalizioni non sarebbe applicabile.
+    let mut p = con_premio(&p, "coalizione");
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    let r = &p.vista().esiti_referendum[0];
+    assert!(!r.approvato && r.votanti == 0, "{r:?}");
+    let motivo = r.decaduto.as_deref().unwrap_or_default();
+    assert!(motivo.starts_with("Decaduto senza voto"), "{motivo}");
+    assert_eq!(p.in_vigore("coalizioni"), Some("si"));
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+}
+
+#[test]
+fn salva_e_carica_con_l_abrogativo_in_corso_non_cambiano_l_esito() {
+    let gioca = |ricarica: bool| {
+        let rileggi = |p: Partita| {
+            if ricarica {
+                Partita::carica(&p.salva().unwrap()).unwrap()
+            } else {
+                p
+            }
+        };
+        let f = abrogazione_che_vince("0.0");
+        let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+        p.chiudi_turno();
+        p.promuovi_referendum("sinistra", "licenziamento").unwrap();
+        let mut p = rileggi(p);
+        p.chiudi_turno();
+        let mut p = rileggi(p);
+        p.comanda(Comando::InvitaAstensione).unwrap();
+        let mut p = rileggi(p);
+        for _ in 0..5 {
+            p.chiudi_turno();
+        }
+        p
+    };
+    let (sempre, ricaricata) = (gioca(false), gioca(true));
+    assert_eq!(sempre.vista().esiti_referendum.len(), 1);
+    assert_eq!(
+        sempre.vista().esiti_referendum,
+        ricaricata.vista().esiti_referendum
+    );
+    assert_eq!(sempre.salva().unwrap(), ricaricata.salva().unwrap());
 }
