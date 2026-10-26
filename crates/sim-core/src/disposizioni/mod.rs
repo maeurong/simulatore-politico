@@ -16,7 +16,7 @@ mod effetti;
 mod stato;
 
 pub use effetti::Leve;
-pub(crate) use effetti::effetti_del_cambio;
+pub(crate) use effetti::{effetti_del_cambio, variazioni};
 pub(crate) use stato::data_di;
 pub use stato::{Disposizioni, InArrivo, StatoDisposizione};
 

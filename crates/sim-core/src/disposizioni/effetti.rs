@@ -1,7 +1,7 @@
 //! Ciò che le disposizioni fanno al motore: le leve dei gradini in vigore e gli effetti di
 //! livello di un cambio di gradino.
 
-use super::{DatoDisposizione, Disposizioni};
+use super::{DatoDisposizione, Disposizioni, Gradino};
 use crate::atti::Forma;
 use crate::dati::DatiGioco;
 use crate::grandezze::EffettoAttivo;
@@ -81,6 +81,25 @@ impl Disposizioni {
     }
 }
 
+/// Per ogni grandezza toccata da `prima` o da `dopo`, nell'ordine di `dopo` e poi di `prima`:
+/// id, `Δ = I_dopo − I_prima` non nullo e il ritardo di `dopo` (di `prima` se `dopo` non la tocca).
+pub(crate) fn variazioni<'a>(prima: &'a Gradino, dopo: &'a Gradino) -> Vec<(&'a str, f64, u32)> {
+    let mut toccate: Vec<(&str, f64, u32)> = Vec::new();
+    for e in dopo.effetti.iter().chain(&prima.effetti) {
+        if toccate.iter().any(|t| t.0 == e.grandezza) {
+            continue;
+        }
+        let intensita = |g: &Gradino| {
+            (g.effetti.iter())
+                .find(|x| x.grandezza == e.grandezza)
+                .map_or(0.0, |x| x.intensita)
+        };
+        toccate.push((&e.grandezza, intensita(dopo) - intensita(prima), e.ritardo));
+    }
+    toccate.retain(|t| t.1 != 0.0);
+    toccate
+}
+
 /// Gli effetti di livello del passaggio della disposizione `d` dal gradino `da` al gradino `a`
 /// al turno `turno`, aggiunti a `effetti`: per ogni grandezza toccata, `Δ = I_a − I_da` dal
 /// ritardo di `a` (di `da` se `a` non la tocca), uno per regione del perimetro con `Δ · peso`,
@@ -110,22 +129,10 @@ pub(crate) fn effetti_del_cambio(
             .filter_map(|(r, p)| Some((Some(dati.regioni().iter().position(|x| &x.id == r)?), *p)))
             .collect()
     };
-    let mut toccate: Vec<&str> = Vec::new();
-    for e in dopo.effetti.iter().chain(&prima.effetti) {
-        if !toccate.contains(&e.grandezza.as_str()) {
-            toccate.push(&e.grandezza);
-        }
-    }
-    for id in toccate {
-        let ea = prima.effetti.iter().find(|e| e.grandezza == id);
-        let eb = dopo.effetti.iter().find(|e| e.grandezza == id);
-        let delta = eb.map_or(0.0, |e| e.intensita) - ea.map_or(0.0, |e| e.intensita);
-        let (Some(k), Some(e)) = (dati.grandezza(id), eb.or(ea)) else {
+    for (id, delta, ritardo) in variazioni(prima, dopo) {
+        let Some(k) = dati.grandezza(id) else {
             continue;
         };
-        if delta == 0.0 {
-            continue;
-        }
         for &(regione, peso) in &regioni {
             let inizio = (effetti.iter())
                 .filter(|x| {
@@ -136,7 +143,7 @@ pub(crate) fn effetti_del_cambio(
                         && x.inizio > turno
                 })
                 .map(|x| x.inizio)
-                .fold(turno.saturating_add(e.ritardo), u32::max);
+                .fold(turno.saturating_add(ritardo), u32::max);
             effetti.push(EffettoAttivo {
                 grandezza: k,
                 regione,

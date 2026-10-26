@@ -963,3 +963,24 @@ valore = 1.0
 min = -5.0
 max = 5.0
 ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (probabilità che un ministro di capacità 1 sposti di una la fascia di un effetto nell'anteprima; a capacità 5 mai)
+[errore_fascia]
+valore = 0.4
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (|Δ| / (max − min) della grandezza sotto cui un effetto dell'anteprima è poco)
+[soglia_fascia_poco]
+valore = 0.02
+min = 0.0
+max = 0.5
+ticket = "25"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (|Δ| / (max − min) della grandezza sotto cui un effetto dell'anteprima è medio)
+[soglia_fascia_medio]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "25"

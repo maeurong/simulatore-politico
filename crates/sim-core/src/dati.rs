@@ -200,6 +200,9 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "seggi_per_punto_linea",
     "costo_seggio_perso",
     "astensione_referendum",
+    "errore_fascia",
+    "soglia_fascia_poco",
+    "soglia_fascia_medio",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

@@ -13,12 +13,14 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+mod anteprima;
 mod decreti;
 mod emendamenti;
 mod intesa;
 mod regole;
 pub mod voto;
 
+pub(crate) use anteprima::anteprima;
 pub(crate) use decreti::ammetti;
 pub use decreti::{Decreto, FondiDecreto};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
@@ -347,6 +349,17 @@ impl StatoAula<'_> {
             })
             .collect()
     }
+
+    /// Una voce per partito dei seggi attesi della previsione; vuota fuori dall'elettorale.
+    pub(crate) fn voci_seggi(&self, seggi: &[(i32, i32)]) -> Vec<VariazioneSeggi> {
+        (self.partiti.iter().zip(seggi))
+            .map(|(x, &(camera, senato))| VariazioneSeggi {
+                partito: x.id.clone(),
+                camera,
+                senato,
+            })
+            .collect()
+    }
 }
 
 impl Parlamento {
@@ -385,10 +398,7 @@ impl Parlamento {
     /// proposta lui). Un rifiuto non tocca nulla.
     ///
     /// # Errors
-    /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
-    /// sconosciuto, norme di forma diversa, dicasteri diversi, gradino già in vigore, bloccato
-    /// dal referendum, disposizione già in esame (anche in un referendum confermativo), respinta
-    /// da poco, legge elettorale non valida, calendario pieno.
+    /// Quelli di `bozza`, poi `Comando` col calendario pieno.
     pub(crate) fn presenta(
         &mut self,
         dati: &DatiGioco,
@@ -397,6 +407,56 @@ impl Parlamento {
         turno: u32,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
+        let m = self.bozza(dati, disposizioni, turno, valori)?;
+        let (posti, occupati) = if m.forma == FormaMisura::Costituzionale {
+            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
+        } else {
+            (
+                POSTI_ORDINARI,
+                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
+            )
+        };
+        if self
+            .misure
+            .iter()
+            .filter(|m| occupati.contains(&m.forma))
+            .count()
+            >= posti
+        {
+            return ko("calendario pieno".into());
+        }
+        let firma = (m.proponente)
+            .zip(ministri)
+            .and_then(|(i, x)| x.dicasteri.get_mut(i));
+        if let Some(st) = firma {
+            let x = st.ministro.as_ref().map(|x| x.posizione);
+            if let (Some(x), Some((vigore, nuova))) = (x, posizioni(dati, disposizioni, &m.valori))
+            {
+                let lontananza = ((nuova - x).abs() - (vigore - x).abs()).max(0.0);
+                let delta = -dati.manopola("costo_firma") * lontananza;
+                penalizza(st, Causa::NormaControPosizione, delta, turno);
+            }
+        }
+        self.misure.push(m);
+        self.prossima = self.prossima.saturating_add(1);
+        Ok(())
+    }
+
+    /// La misura che `PresentaLegge` metterebbe in calendario, con tutte le sue regole tranne il
+    /// posto in calendario; non tocca nulla.
+    ///
+    /// # Errors
+    /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
+    /// sconosciuto, norme di forma diversa, dicasteri diversi, gradino già in vigore, bloccato
+    /// dal referendum, disposizione già in esame (anche in un referendum confermativo), respinta
+    /// da poco, legge elettorale non valida.
+    pub(crate) fn bozza(
+        &self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        turno: u32,
+        valori: &[ValoreProposto],
+    ) -> Result<Misura, Errore> {
         let catalogo = dati.disposizioni();
         if valori.is_empty() {
             return ko("legge vuota".into());
@@ -471,37 +531,9 @@ impl Parlamento {
             }
         }
         let costituzionale = forma == FormaMisura::Costituzionale;
-        let (posti, occupati) = if costituzionale {
-            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
-        } else {
-            (
-                POSTI_ORDINARI,
-                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
-            )
-        };
-        if self
-            .misure
-            .iter()
-            .filter(|m| occupati.contains(&m.forma))
-            .count()
-            >= posti
-        {
-            return ko("calendario pieno".into());
-        }
         let proponente =
             (dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|x| &x.id == id));
-        let firma = proponente
-            .zip(ministri)
-            .and_then(|(i, m)| m.dicasteri.get_mut(i));
-        if let Some(st) = firma {
-            let m = st.ministro.as_ref().map(|m| m.posizione);
-            if let (Some(m), Some((vigore, nuova))) = (m, posizioni(dati, disposizioni, &scelti)) {
-                let lontananza = ((nuova - m).abs() - (vigore - m).abs()).max(0.0);
-                let delta = -dati.manopola("costo_firma") * lontananza;
-                penalizza(st, Causa::NormaControPosizione, delta, turno);
-            }
-        }
-        self.misure.push(Misura {
+        Ok(Misura {
             id: self.prossima,
             forma,
             valori: scelti,
@@ -517,9 +549,7 @@ impl Parlamento {
             emendamenti: Vec::new(),
             emendamenti_aperti: false,
             fondi: None,
-        });
-        self.prossima = self.prossima.saturating_add(1);
-        Ok(())
+        })
     }
 
     /// La conversione del decreto `fondi`, votata a fine turno.
@@ -601,8 +631,6 @@ impl Parlamento {
     pub(crate) fn voci_calendario(&self, aula: &StatoAula) -> Vec<VoceMisura> {
         let dati = aula.dati;
         let catalogo = dati.disposizioni();
-        let maggioranza_camera = voto::maggioranza(self.seggi_camera.iter().sum());
-        let maggioranza_senato = voto::maggioranza(self.seggi_senato.iter().sum());
         (self.misure.iter())
             .map(|m| {
                 let p = aula.previsione(m);
@@ -619,8 +647,6 @@ impl Parlamento {
                         .collect();
                     voto::linea_fiducia(dati, aula.partiti, aula.governo, &intesa, nuova)
                 };
-                let camera = voto::forbice(&self.seggi_camera, &p.linea, &p.franchi_camera);
-                let senato = voto::forbice(&self.seggi_senato, &p.linea, &p.franchi);
                 VoceMisura {
                     id: m.id,
                     nome: nome_misura(dati, m),
@@ -638,21 +664,9 @@ impl Parlamento {
                     deliberazione: m.deliberazione,
                     fiducia: m.fiducia,
                     linee: aula.voci_linea(&p.linea),
-                    forbice: Forbice {
-                        camera,
-                        senato,
-                        maggioranza_camera,
-                        maggioranza_senato,
-                        in_bilico: camera[0] < maggioranza_camera || senato[0] < maggioranza_senato,
-                    },
+                    forbice: self.forbice(&p),
                     emendamenti: emendamenti::voci(dati, aula.partiti, &m.emendamenti),
-                    seggi: (aula.partiti.iter().zip(&p.seggi))
-                        .map(|(x, &(camera, senato))| VariazioneSeggi {
-                            partito: x.id.clone(),
-                            camera,
-                            senato,
-                        })
-                        .collect(),
+                    seggi: aula.voci_seggi(&p.seggi),
                     alleati_contro_fiducia: (aula.partiti.iter().zip(a_blocchi).enumerate())
                         .filter(|&(j, (_, si))| {
                             m.forma != FormaMisura::Costituzionale
@@ -664,6 +678,21 @@ impl Parlamento {
                 }
             })
             .collect()
+    }
+
+    /// I sì attesi ± 2σ per ramo con la linea e i franchi tiratori della previsione.
+    pub(crate) fn forbice(&self, p: &Previsione) -> Forbice {
+        let camera = voto::forbice(&self.seggi_camera, &p.linea, &p.franchi_camera);
+        let senato = voto::forbice(&self.seggi_senato, &p.linea, &p.franchi);
+        let maggioranza_camera = voto::maggioranza(self.seggi_camera.iter().sum());
+        let maggioranza_senato = voto::maggioranza(self.seggi_senato.iter().sum());
+        Forbice {
+            camera,
+            senato,
+            maggioranza_camera,
+            maggioranza_senato,
+            in_bilico: camera[0] < maggioranza_camera || senato[0] < maggioranza_senato,
+        }
     }
 
     /// Apertura del turno `turno`: restano gli esiti dei due turni prima.

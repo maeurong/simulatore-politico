@@ -11,15 +11,15 @@ use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
-use crate::misure::Misure;
+use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::parlamento::{
     self, CausaIntesa, Conteggio, Decreto, EsitoReferendum, EsitoVoto, FondiDecreto, FormaMisura,
     Intesa, Misura, Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget,
-    VoceDicastero, VoceGrandezza, VocePartito,
+    Anteprima, SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato,
+    VoceBudget, VoceDicastero, VoceGrandezza, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -733,6 +733,26 @@ impl Partita {
             self.turno,
             valori,
         )
+    }
+
+    /// L'anteprima della legge `valori` (spec riga 371): le regole di `PresentaLegge` tranne il
+    /// posto in calendario; la partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `PresentaLegge` tranne il calendario pieno.
+    pub fn anteprima(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore> {
+        let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let capacita = (m.proponente)
+            .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
+            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
+        Ok(parlamento::anteprima(
+            &self.parlamento,
+            &self.stato_aula(),
+            &m,
+            capacita,
+            &self.caso,
+            self.economia.pil_potenziale_annuo(),
+        ))
     }
 
     /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, senza

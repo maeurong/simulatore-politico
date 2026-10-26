@@ -196,6 +196,11 @@ impl Economia {
         e
     }
 
+    /// PIL potenziale annuo nominale, in euro.
+    pub(crate) fn pil_potenziale_annuo(&self) -> f64 {
+        self.pil_potenziale_reale * self.livello_prezzi * 4.0 * MLD
+    }
+
     // Ordine: misure (lette da `Misure`, costruita da `Partita`) → finanza pubblica e spesa
     // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
     // tasso BCE → SFC → storico → regole UE → spread.

@@ -1,5 +1,6 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::Aliquote;
+use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
@@ -95,6 +96,52 @@ pub struct VoceMisura {
     pub alleati_contro_fiducia: Vec<String>,
     /// Solo per le leggi elettorali: una voce per partito.
     pub seggi: Vec<VariazioneSeggi>,
+}
+
+/// Una legge prima della presentazione: costo annuo esatto in euro, effetti nominali a fasce
+/// stimate dal ministro proponente, leve che cambiano, gruppi toccati; linee, forbice e seggi
+/// come in calendario. `proponente` è l'id del dicastero.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Anteprima {
+    pub nome: String,
+    pub forma: FormaMisura,
+    pub proponente: Option<String>,
+    pub costo_annuo: i64,
+    pub effetti: Vec<EffettoStimato>,
+    pub leve: Vec<VoceLeva>,
+    pub gruppi: Vec<Condizione>,
+    pub linee: Vec<VoceLinea>,
+    pub forbice: Forbice,
+    pub seggi: Vec<VariazioneSeggi>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum Fascia3 {
+    Poco,
+    Medio,
+    Molto,
+}
+
+/// `grandezza` è un id; `fascia` quella stimata dal ministro; `ritardo` quello scritto, in turni.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct EffettoStimato {
+    pub grandezza: String,
+    pub migliora: bool,
+    pub fascia: Fascia3,
+    pub ritardo: u32,
+}
+
+/// Una leva che cambia: `da` in vigore, `a` con la legge.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceLeva {
+    pub leva: String,
+    pub da: f64,
+    pub a: f64,
 }
 
 /// L'emendamento di un alleato; `partito` è un id.
