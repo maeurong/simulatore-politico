@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Le misure normative dentro `sim-core`: 35 disposizioni di policy più le 9 della legge elettorale e le 2 costituzionali, con valore in vigore, legge d'origine, valore precedente, valore in arrivo ed effetti sul motore; l'aula col parlamento in carica, il calendario, le leggi di riforma presentate e votate con linee e franchi tiratori, emendamenti degli alleati, questione di fiducia, legge elettorale coi seggi attesi, norme costituzionali col referendum confermativo; decreti con conversione a fine turno, il voto della legge di bilancio, le proposte normative dei ministri, l'anteprima della misura e il referendum abrogativo.
+**Goal:** Le misure normative dentro `sim-core`: 35 disposizioni ordinarie più le 9 della legge elettorale e le 2 costituzionali, con valore in vigore, legge d'origine, valore precedente, valore in arrivo ed effetti sul motore; l'aula col parlamento in carica, il calendario, le leggi di riforma presentate e votate con linee e franchi tiratori, emendamenti degli alleati, questione di fiducia, legge elettorale coi seggi attesi, norme costituzionali col referendum confermativo; decreti con conversione a fine turno, il voto della legge di bilancio, le proposte normative dei ministri, l'anteprima della misura e il referendum abrogativo.
 
-**Architecture:** Due moduli nuovi in `sim-core`. `disposizioni/` porta il catalogo (undicesimo file di dati `dati/base/disposizioni.toml`, più le 9 elettorali generate dal menu di `elezioni.toml`), lo stato in partita e gli effetti: ogni cambio di valore diventa effetti di livello sulle grandezze del piano 5 e leve che il motore legge da `Misure`, al posto dei regimi che oggi stanno nello scenario. `parlamento/` porta seggi in carica, intesa degli alleati, misure in esame, voto, emendamenti, fiducia, decreti, referendum; il passo «aula» di `chiudi_turno` vota in ordine conversioni, bilancio, leggi, referendum. I comandi entrano dall'`enum Comando` esistente.
+**Architecture:** Due moduli nuovi in `sim-core`. `disposizioni/` porta il catalogo (decimo file di dati `dati/base/disposizioni.toml`, più le 9 elettorali generate dal menu di `elezioni.toml`), lo stato in partita e gli effetti: ogni cambio di valore diventa effetti di livello sulle grandezze del piano 5 e leve che il motore legge da `Misure`, al posto dei regimi che oggi stanno nello scenario. `parlamento/` porta seggi in carica, intesa degli alleati, misure in esame, voto, emendamenti, fiducia, decreti, referendum; il passo «aula» di `chiudi_turno` vota in ordine conversioni, bilancio, leggi, referendum. I comandi entrano dall'`enum Comando` esistente.
 
 **Tech Stack:** Rust 1.98, workspace esistente (`sim-core`, `sim-cli`, `app/src-tauri`), nessuna dipendenza nuova; Python 3 con la sola libreria standard per il controllo del catalogo; Tauri 2.12.3.
 
@@ -51,9 +51,10 @@ Prese dal piano, da confermare in review:
 8. **Anteprima sugli effetti nominali scritti nei dati**, come l'agenda del piano 5, mai su una simulazione dello stato vero: le fasce le sbaglia il ministro, non il motore.
 9. **Referendum abrogativo deciso dalla distanza**, senza giudizio sul governo (la spec lo mette solo nel confermativo); sui quesiti elettorali, che non hanno posizione, i votanti si dividono a metà e conta solo il quorum.
 10. **Disposizioni che nessuna grandezza legge** (cittadinanza, export di armi) muovono solo linee, emendamenti e posizione percepita.
-11. **L'esercizio provvisorio occupa il calendario come ottobre-dicembre**: è il turno del secondo voto sul bilancio.
+11. **L'esercizio provvisorio occupa il calendario come ottobre-dicembre, se il bilancio è presentato**: è il turno del secondo voto sul bilancio. Senza bilancio presentato il calendario non è occupato, nemmeno al turno 0: le leggi si votano.
 12. **Lo spostamento di fondi per decreto è ammesso anche nell'esercizio provvisorio**: ha saldo zero, non è una misura che costa denaro.
 13. **Regimi e parametri della spesa obbligatoria lasciano lo scenario**: `regime_pensioni`, `regime_sussidi`, `eta_pensione`, `indicizzazione_pensioni` e la manopola `sussidio_universale` diventano leve delle disposizioni, una sola fonte di verità; `pensione_minima` resta nello scenario come livello in euro, e la disposizione lo moltiplica. «Per fasce» vale 0,95 dell'inflazione [assunzione del piano 6: media dei tre scaglioni della L. 160/2019, c. 478, pesata a occhio], dove il piano 3 metteva 1.
+14. **Fiducia anche sul bilancio**: la spec (riga 342) la prevede su leggi e conversioni; il piano la estende alla legge di bilancio (Task 8 e 11), col voto a blocchi senza franchi tiratori.
 
 ## Global Constraints
 
@@ -93,7 +94,7 @@ Ogni brief nomina `skill-gate`, `caveman` e, per chi scrive codice (`rust-engine
 
 ### Task 1: Catalogo delle disposizioni
 
-Contenuto, non codice: 35 disposizioni di policy e 2 costituzionali sotto la revisione di Mario nella PR. Le 9 elettorali non stanno nel file: le genera il Task 2 dal menu.
+Contenuto, non codice: 35 disposizioni ordinarie e 2 costituzionali sotto la revisione di Mario nella PR. Le 9 elettorali non stanno nel file: le genera il Task 2 dal menu.
 
 **Files:**
 - Create: `dati/base/disposizioni.toml`
@@ -104,7 +105,7 @@ Contenuto, non codice: 35 disposizioni di policy e 2 costituzionali sotto la rev
 
 **Interfaces:**
 - Consumes: gli id delle grandezze di `dati/base/grandezze.toml` e la loro colonna `dicasteri`; la grandezza `regole_lavoro` che il Task 2 aggiunge al file delle grandezze (nazionale, `dicasteri = ["lavoro_welfare"]`, punti di disoccupazione strutturale tolti, iniziale 0, min −5, max 5); gli id dei dicasteri e delle regioni.
-- Produces: `dati/base/disposizioni.toml`, 37 `[[disposizione]]` nell'ordine della tabella sotto, che il Task 2 carica. Campi nell'ordine `id, nome, dicastero, tipo, norma, referendabile, gruppi, perimetro, partenza, legge, precedente, dopo_abrogazione, in_arrivo, gradini`; `dicastero` assente = fuori dicastero; `perimetro` e `dopo_abrogazione` solo dove servono; `in_arrivo` sempre scritto, anche vuoto (`in_arrivo = []`), perché il test helper `con_arrivo` del Task 3 lo cerca. Ogni gradino su una riga: `{ id, nome, posizione, saldo, leve, effetti }`, con `leve` ed `effetti` omessi se vuoti. `saldo` = costo annuo in % del PIL potenziale (positivo = spesa in più o entrate in meno) del gradino; il motore usa la differenza dal gradino di partenza, che quindi ha saldo 0. `effetti` = livello della grandezza col gradino in vigore, `{ grandezza, intensita, ritardo }`, sempre rispetto alla partenza (il gradino di partenza non ne ha).
+- Produces: `dati/base/disposizioni.toml`, 37 `[[disposizione]]` nell'ordine della tabella sotto, che il Task 2 carica. Campi nell'ordine `id, nome, dicastero, tipo, norma, referendabile, gruppi, perimetro, partenza, legge, precedente, dopo_abrogazione, in_arrivo, gradini`; `dicastero` assente = fuori dicastero; `perimetro` e `dopo_abrogazione` solo dove servono; `in_arrivo` sempre scritto, anche vuoto (`in_arrivo = []`), e su una riga sola anche con più arrivi, perché il test helper `con_arrivo` del Task 3 lo cerca e riscrive quella riga. Ogni gradino su una riga: `{ id, nome, posizione, saldo, leve, effetti }`, con `leve` ed `effetti` omessi se vuoti. `saldo` = costo annuo in % del PIL potenziale (positivo = spesa in più o entrate in meno) del gradino; il motore usa la differenza dal gradino di partenza, che quindi ha saldo 0. `effetti` = livello della grandezza col gradino in vigore, `{ grandezza, intensita, ritardo }`, sempre rispetto alla partenza (il gradino di partenza non ne ha).
 
 Le leve, chiuse (il Task 2 rifiuta un nome che non è qui), e chi le legge:
 
@@ -291,8 +292,9 @@ Il nucleare non ha precedente reale: «vietato» coincide col vigente, quindi un
 Regole per le altre 31, che il Task 2 valida:
 - `posizione` da 1.0 a 7.0, coerente con la scala dell'asset (sinistra più bassa); gradini ordinati per quantità hanno posizioni monotone;
 - `saldo` fra −2 e +2 (% del PIL potenziale), 0 alla partenza; nessun saldo sulle disposizioni le cui leve il motore conta già nei conti (pensioni e sussidi), saldo sulle altre leve che pesano sui conti (cuneo, forfettario, reddito minimo, accise, decontribuzione) e su ogni disposizione che costa o rende senza leva;
-- `effetti` solo su grandezze che hanno il dicastero della disposizione nella colonna `dicasteri` (per quelle fuori dicastero, nessun limite); intensità con la scala degli atti (indici 2 / 4 / 8 lieve, moderato, forte; `domanda_regionale` 0.3 / 0.6 / 1.0; `prezzo_energia` −1 / −2 / −4; `politiche_attive` e `regole_lavoro` 0.1 / 0.2 / 0.3), segno nel verso della grandezza; ritardo in turni, da 1 a 40;
+- `effetti` sulle grandezze nazionali solo se hanno il dicastero della disposizione nella colonna `dicasteri` (per quelle fuori dicastero, nessun limite); sulle grandezze regionali, applicate sul perimetro o in tutte le regioni senza regione bersaglio, nessun limite di dicastero (così `detrazione_edilizia`, di economia_finanze, su `domanda_regionale`); intensità con la scala degli atti (indici 2 / 4 / 8 lieve, moderato, forte; `domanda_regionale` 0.3 / 0.6 / 1.0; `prezzo_energia` −1 / −2 / −4; `politiche_attive` e `regole_lavoro` 0.1 / 0.2 / 0.3), segno nel verso della grandezza; ritardo in turni, da 1 a 40;
 - una leva sta in tutti i gradini della sua disposizione, col valore del gradino;
+- leve senza valore nella tabella: `forfettario` 1,0 al gradino di partenza (moltiplica le imposte degli autonomi: sotto 1 coi gradini più larghi, sopra 1 con `assente`); `accise` 0 al gradino di partenza (punti sul prezzo dell'energia, negativi con `basse`); `decontribuzione` in punti di disoccupazione strutturale, 0 al gradino `0` e crescente col gradino, con la scala di `regole_lavoro`;
 - `gruppi` sono le condizioni di `elettorato.toml` che la disposizione tocca, per l'anteprima;
 - nomi dei gradini in minuscolo, come si leggono in una frase («67 anni», «ius scholae»); nessuna legge vera col suo nome nel `nome`, che resta generico.
 
@@ -333,11 +335,11 @@ git commit -m "feat(dati): draft catalogue of the 37 dispositions"
 **Interfaces:**
 - Consumes: `DatiElezioni.menu` e `impostazioni` (`crates/sim-core/src/elezioni/mod.rs:58-92`), `Scenario.legge_elettorale`, `DatiGioco::grandezze()`, `Condizione` (serde `snake_case`, `crates/sim-core/src/elettorato/mod.rs:29-37`).
 - Produces:
-  - `sim_core::disposizioni::DatoDisposizione { pub id: String, pub nome: String, pub dicastero: Option<String>, pub tipo: TipoDisposizione, pub norma: Norma, pub referendabile: bool, pub gruppi: Vec<Condizione>, pub perimetro: BTreeMap<String, f64>, pub partenza: String, pub legge: String, pub precedente: String, pub dopo_abrogazione: Option<String>, pub in_arrivo: Vec<Arrivo>, pub gradini: Vec<Gradino> }`; `Gradino { pub id: String, pub nome: String, pub posizione: Option<f64>, pub saldo: f64, pub leve: BTreeMap<String, f64>, pub effetti: Vec<EffettoDisposizione> }`; `EffettoDisposizione { pub grandezza: String, pub intensita: f64, pub ritardo: u32 }`; `Arrivo { pub gradino: String, pub anno: u16, pub trimestre: u8 }`; `TipoDisposizione { Parametro, Regime }`, `Norma { Ordinaria, Costituzionale, Elettorale }`, serde `snake_case`, `Copy`, TS esportati. Default serde: `perimetro`, `leve`, `effetti`, `gruppi` vuoti; `dicastero`, `dopo_abrogazione` assenti; `norma` mai scritta `elettorale` nel file (rifiutata: `{id}: norma elettorale solo dal menu`).
+  - `sim_core::disposizioni::DatoDisposizione { pub id: String, pub nome: String, pub dicastero: Option<String>, pub tipo: TipoDisposizione, pub norma: Norma, pub referendabile: bool, pub gruppi: Vec<Condizione>, pub perimetro: BTreeMap<String, f64>, pub partenza: String, pub legge: String, pub precedente: String, pub dopo_abrogazione: Option<String>, pub in_arrivo: Vec<Arrivo>, pub gradini: Vec<Gradino> }`; `Gradino { pub id: String, pub nome: String, pub posizione: Option<f64>, pub saldo: f64, pub leve: BTreeMap<String, f64>, pub effetti: Vec<EffettoDisposizione> }`; `EffettoDisposizione { pub grandezza: String, pub intensita: f64, pub ritardo: u32 }`; `Arrivo { pub gradino: String, pub anno: u16, pub trimestre: u8 }`; `TipoDisposizione { Parametro, Regime }`, `Norma { Ordinaria, Costituzionale, Elettorale }`, serde `snake_case`, `Copy`, TS esportati. Default serde: `perimetro`, `leve`, `effetti`, `gruppi` vuoti; `dicastero`, `dopo_abrogazione` assenti; `norma` mai scritta `elettorale` nel file (rifiutata al parsing, in `da_testi`: `{id}: norma elettorale solo dal menu`).
   - `DatoDisposizione::gradino(&self, id: &str) -> Option<usize>`; `DatoDisposizione::posizione(&self, g: usize) -> Option<f64>`.
   - `DatiGioco::disposizioni() -> &[DatoDisposizione]`: le 37 del file nel loro ordine, poi le 9 elettorali; `DatiGioco::disposizione(id: &str) -> Option<usize>`.
   - `pub const LEVE: [&str; 15]` in `disposizioni/mod.rs`, la colonna «leva» della tabella del Task 1.
-  - `Scenario.legge_elettorale_precedente: LeggeElettorale`, in `scenario.toml` dopo `legge_elettorale`:
+  - `Scenario.legge_elettorale_precedente: LeggeElettorale`, in `scenario.toml` dopo la riga `coalizioni = [[…]]` (`dati/base/scenario.toml:12`) e prima di `[governo]`: subito dopo `legge_elettorale` la tabella nuova si prenderebbe la chiave `coalizioni` top-level che segue, e il TOML non si parserebbe più (chiave ripetuta):
     ```toml
     # Valori precedenti al turno zero: Rosatellum (L. 165/2017) senza collegi, ticket 13:41
     [legge_elettorale_precedente]
@@ -352,7 +354,7 @@ git commit -m "feat(dati): draft catalogue of the 37 dispositions"
     ```
   - `Errore::Disposizioni(String)` → `disposizioni non valide: {0}`.
 
-Le 9 elettorali, generate in `DatiGioco::da_testi` dopo la validazione del menu, `norma = Elettorale`, `dicastero = None`, `referendabile = true`, `legge = "L. 180/2026"`, `posizione = None` e `saldo = 0` in ogni gradino, `gruppi`, `perimetro`, `in_arrivo` vuoti, partenza dall'impostazione dello scenario e precedente da `legge_elettorale_precedente`, gradini e nomi:
+Le 9 elettorali, generate in `DatiGioco::da_testi` dopo il parsing, in quest'ordine: il rifiuto `{id}: norma elettorale solo dal menu` sulle voci del file, `elezioni.valida` sul menu, poi la generazione in coda alle 37. `norma = Elettorale`, `dicastero = None`, `referendabile = true`, `legge = "L. 180/2026"`, `posizione = None` e `saldo = 0` in ogni gradino, `gruppi`, `perimetro`, `in_arrivo` vuoti, partenza dall'impostazione dello scenario e precedente da `legge_elettorale_precedente`, gradini e nomi:
 
 | id | nome | tipo | gradini (id → nome) |
 |---|---|---|---|
@@ -366,7 +368,7 @@ Le 9 elettorali, generate in `DatiGioco::da_testi` dopo la validazione del menu,
 | `tetto` | Tetto ai seggi | parametro | menu `tetto` in ordine, id `{camera_pb}_{senato_pb}`, nome «55% alla Camera, 56,5% al Senato»; poi `nessuno` |
 | `formula` | Formula di riparto | regime | `hare` → «quozienti Hare», `dhondt` → «D'Hondt» |
 
-Controlli, in `DatiGioco::valida` dopo le grandezze e prima degli atti, in quest'ordine, messaggi esatti dentro `Errore::Disposizioni`: id ripetuto (`disposizione ripetuta: {id}`); dicastero sconosciuto (`{id}: dicastero sconosciuto {d}`); 2-10 gradini, id distinti (`{id}: servono da 2 a 10 gradini distinti`); `partenza`, `precedente`, `dopo_abrogazione`, gradini di `in_arrivo` fra i gradini (`{id}: gradino sconosciuto {g}`); per gradino: `posizione` presente e finita in 1-7 tranne le elettorali (`{id}: posizione di {g} fuori da 1-7`), `saldo` finito in −10..10 (`{id}: saldo di {g} fuori intervallo`), leve fra `LEVE` (`{id}: leva sconosciuta {l}`) e finite, effetti su grandezze esistenti (`{id}: grandezza sconosciuta {g}`) con intensità finita e ritardo ≤ 60 (`{id}: effetto su {g} fuori intervallo`) e il dicastero nella colonna `dicasteri` della grandezza (`{id}: {g} non è nella riga del dicastero {d}`); poi, per disposizione, ogni leva in tutti i gradini (`{id}: leva {l} non è in tutti i gradini`); perimetro con regioni note (`{id}: regione sconosciuta {r}`) e pesi in (0, 1] (`{id}: peso di {r} fuori da (0, 1]`); arrivi dopo il turno zero, in ordine strettamente crescente, trimestre 1-4 (`{id}: arrivi fuori ordine`); norma costituzionale non referendabile e fuori dicastero (`{id}: norma costituzionale referendabile o con dicastero`); infine ogni nome di `LEVE` in esattamente una disposizione (`leva richiesta mancante: {l}`, `leva in due disposizioni: {l}`). La legge elettorale precedente passa `LeggeElettorale::valida` (`Errore::LeggeElettorale` col prefisso `legge elettorale precedente: `).
+Controlli, in `DatiGioco::valida` dopo le grandezze e prima degli atti, con `self.elezioni.valida` anticipata prima di essi (oggi è in fondo, `crates/sim-core/src/dati.rs:546`). `valida` accetta le 9 elettorali generate: `Partita::carica` la riesegue sui dati del salvataggio (`crates/sim-core/src/partita.rs:575`), che le contengono. In quest'ordine, messaggi esatti dentro `Errore::Disposizioni`: id ripetuto (`disposizione ripetuta: {id}`); dicastero sconosciuto (`{id}: dicastero sconosciuto {d}`); 2-10 gradini, id distinti (`{id}: servono da 2 a 10 gradini distinti`); `partenza`, `precedente`, `dopo_abrogazione`, gradini di `in_arrivo` fra i gradini (`{id}: gradino sconosciuto {g}`); per gradino: `posizione` presente e finita in 1-7 tranne le elettorali (`{id}: posizione di {g} fuori da 1-7`), `saldo` finito in −2..2 (`{id}: saldo di {g} fuori intervallo`), leve fra `LEVE` (`{id}: leva sconosciuta {l}`) e finite, effetti su grandezze esistenti (`{id}: grandezza sconosciuta {g}`) con intensità finita e ritardo in 1-40 (`{id}: effetto su {g} fuori intervallo`) e, se la grandezza è nazionale, il dicastero nella colonna `dicasteri` della grandezza (`{id}: {g} non è nella riga del dicastero {d}`; le grandezze regionali non hanno limite di dicastero); poi, per disposizione, ogni leva in tutti i gradini (`{id}: leva {l} non è in tutti i gradini`); perimetro con regioni note (`{id}: regione sconosciuta {r}`) e pesi in (0, 1] (`{id}: peso di {r} fuori da (0, 1]`); arrivi dopo il turno zero, in ordine strettamente crescente, trimestre 1-4 (`{id}: arrivi fuori ordine`); norma costituzionale non referendabile e fuori dicastero (`{id}: norma costituzionale referendabile o con dicastero`); infine ogni nome di `LEVE` in esattamente una disposizione (`leva richiesta mancante: {l}`, `leva in due disposizioni: {l}`). La legge elettorale precedente passa `LeggeElettorale::valida` (`Errore::LeggeElettorale` col prefisso `legge elettorale precedente: `).
 
 La riga nuova di `grandezze.toml`, dopo `corruzione`: `id = "regole_lavoro"`, `nome = "Regole del lavoro (punti di disoccupazione strutturale tolti)"`, `dinamica = "fissa"`, `verso = "sale"`, `regionale = false`, `iniziale = 0.0`, `min = -5.0`, `max = 5.0`, `dicasteri = ["lavoro_welfare"]`. Il motore la legge dal Task 4.
 
@@ -498,10 +500,11 @@ git commit -m "feat(core): load and validate the dispositions catalogue"
 **Interfaces:**
 - Consumes: `DatiGioco::disposizioni()`, `Trimestre`, `riparto` e `LeggeElettorale` (`crates/sim-core/src/partita.rs:434-463`), `Contesto` dei ministri (`crates/sim-core/src/ministri/mod.rs:113-124`).
 - Produces:
-  - `sim_core::disposizioni::StatoDisposizione { pub in_vigore: usize, pub precedente: usize, pub legge: String, pub in_arrivo: Vec<(usize, u32)>, pub bloccati: Vec<usize> }` (gradini per indice; `in_arrivo` = gradino e turno d'apertura in cui arriva; `bloccati` = gradini abrogati da un referendum, Task 14); `Disposizioni { pub voci: Vec<StatoDisposizione> }`, `Clone, Debug, PartialEq, Serialize, Deserialize`.
-  - `Disposizioni::iniziali(dati: &DatiGioco) -> Disposizioni`: dai dati, col turno di ogni arrivo = numero di trimestri fra il turno zero e `(anno, trimestre)`.
-  - `Disposizioni::cambia(&mut self, dati: &DatiGioco, d: usize, g: usize, legge: &str) -> Vec<EffettoAttivo>`: `precedente ← in_vigore`, `in_vigore ← g`, `legge ← legge`, `in_arrivo` svuotato; rende gli effetti (vuoti fino al Task 4). Nessun effetto se `g == in_vigore` (resta solo la legge nuova).
-  - `Disposizioni::arrivi(&mut self, dati: &DatiGioco, turno: u32) -> Vec<EffettoAttivo>`: ogni arrivo con turno ≤ `turno`, in ordine, come `cambia` con la legge già in vigore; l'arrivo esce dalla lista. Un arrivo elettorale che darebbe una legge non valida si scarta (Task 9 lo testa).
+  - `sim_core::disposizioni::StatoDisposizione { pub in_vigore: usize, pub precedente: usize, pub legge: String, pub in_arrivo: Vec<InArrivo>, pub bloccati: Vec<usize> }` (gradini per indice; `bloccati` = gradini abrogati da un referendum, Task 14); `InArrivo { pub gradino: usize, pub turno: u32, pub legge: String }` (gradino, turno d'apertura in cui arriva, legge con cui arriva); `Disposizioni { pub voci: Vec<StatoDisposizione> }`, `Clone, Debug, PartialEq, Serialize, Deserialize`.
+  - `Disposizioni::iniziali(dati: &DatiGioco) -> Disposizioni`: dai dati, col turno di ogni arrivo = numero di trimestri fra il turno zero e `(anno, trimestre)` e la legge = la `legge` della disposizione.
+  - `Disposizioni::cambia(&mut self, dati: &DatiGioco, d: usize, g: usize, turno: u32, legge: &str) -> Vec<EffettoAttivo>`: `precedente ← in_vigore`, `in_vigore ← g`, `legge ← legge`, `in_arrivo` svuotato; rende gli effetti (vuoti fino al Task 4, che li fa partire da `turno`). Nessun effetto se `g == in_vigore` (resta solo la legge nuova).
+  - `Disposizioni::programma(&mut self, d: usize, g: usize, turno: u32, legge: &str)`: gli arrivi della disposizione `d` diventano uno solo, `g` al turno d'apertura `turno` con la legge `legge`; quelli già presenti, anche dai dati, si cancellano. Nessun effetto subito; la lista resta in ordine, quindi `controlla` e `salva()` restano validi. Lo usa il rinvio del Task 8.
+  - `Disposizioni::arrivi(&mut self, dati: &DatiGioco, turno: u32) -> Vec<EffettoAttivo>`: ogni arrivo con turno ≤ `turno`, in ordine, come `cambia` con la legge dell'arrivo; l'arrivo esce dalla lista. Lo scarto degli arrivi elettorali non validi lo aggiunge il Task 9.
   - `Disposizioni::legge_elettorale(&self, dati: &DatiGioco) -> LeggeElettorale` (dai 9 gradini in vigore); `Disposizioni::posizione(&self, dati, d) -> Option<f64>` (del gradino in vigore); `Disposizioni::controlla(&self, dati) -> Result<(), Errore>`.
   - `Partita::disposizioni() -> &Disposizioni`; `Partita::in_vigore(id: &str) -> Option<&str>` (id del gradino); `Partita::legge_elettorale() -> LeggeElettorale`.
   - `Atto.prerequisito: Option<Prerequisito>`, `Prerequisito { pub disposizione: String, pub gradini: Vec<String> }`; validato in `atti::valida` (`{id}: prerequisito su disposizione sconosciuta {d}`, `{id}: prerequisito su gradino sconosciuto {g}`).
@@ -519,6 +522,10 @@ Regole:
 ```rust
 /// Nella disposizione `id`, la riga `in_arrivo = ...` diventa un solo arrivo `gradino` dal
 /// trimestre dato: cambia una disposizione a un turno noto senza passare dall'aula.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
 pub fn con_arrivo(mut f: FileDati, id: &str, gradino: &str, anno: u16, trimestre: u8) -> FileDati {
     let testa = format!("id = \"{id}\"\n");
     let inizio = f.disposizioni.find(&testa).unwrap_or_else(|| panic!("{id} assente")) + testa.len();
@@ -536,6 +543,7 @@ pub fn con_arrivo(mut f: FileDati, id: &str, gradino: &str, anno: u16, trimestre
 mod comune;
 use comune::{con_arrivo, dati_base, edita, file_base, sostituisci};
 use sim_core::dati::DatiGioco;
+use sim_core::disposizioni::Disposizioni;
 use sim_core::{Errore, Partita};
 
 #[test]
@@ -580,6 +588,23 @@ fn arrivo_scritto_nei_dati_cambia_la_disposizione() {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     p.chiudi_turno();
     assert_eq!(p.in_vigore("eta_pensionabile"), Some("70"));
+}
+
+#[test]
+fn arrivo_programmato_sostituisce_gli_altri_e_porta_la_sua_legge() {
+    // Credito ZES: nei dati `1` al turno 1 e `0_75` al turno 5; l'arrivo programmato li sostituisce.
+    let d = dati_base();
+    let k = d.disposizione("credito_zes").unwrap();
+    let g = |id: &str| d.disposizioni()[k].gradino(id).unwrap();
+    let mut s = Disposizioni::iniziali(&d);
+    s.programma(k, g("0"), 3, "L. 7/2027");
+    assert_eq!(s.voci[k].in_arrivo.len(), 1);
+    s.controlla(&d).unwrap();
+    s.arrivi(&d, 2);
+    assert_eq!(s.voci[k].in_vigore, g("2_3"));
+    s.arrivi(&d, 3);
+    assert_eq!((s.voci[k].in_vigore, s.voci[k].legge.as_str()), (g("0"), "L. 7/2027"));
+    assert!(s.voci[k].in_arrivo.is_empty());
 }
 
 #[test]
@@ -643,16 +668,16 @@ git commit -m "feat(core): dispositions in the game state, scheduled values and 
 
 **Ricerca:** `docs/ricerca/modelli/finanza-pubblica.md:34` (indicizzazione delle pensioni in essere), `:44` (la formula cambia la pensione media solo per le coorti future); `docs/ricerca/modelli/ritardi-e-inerzia-delle-politiche.md:17-18` (ritardo prima dell'effetto); spec righe 298 (salario minimo nel reddito primario della fascia bassa dei dipendenti privati), 300-301 (regimi per le coorti future, indicizzazione unica leva retroattiva).
 
-**Dispatch:** `rust-engineer` · dopo il Task 3 · skill-gate: true. Cambia la forma di `Misure` e di `EffettoAttivo`: aggiorna ogni chiamante (`partita.rs`, `ministri/agenda.rs`, test d'economia, `sim-cli tara`).
+**Dispatch:** `rust-engineer` · dopo il Task 3 · skill-gate: true. Cambia la forma di `Misure` e di `EffettoAttivo`: aggiorna ogni chiamante (`partita.rs`, `ministri/agenda.rs`, test d'economia).
 
 **Interfaces:**
-- Consumes: `Disposizioni::cambia` e `arrivi` del Task 3; `Gradino.leve`, `effetti`, `saldo`; `Economia::previdenza` (`crates/sim-core/src/economia/previdenza.rs:53-87`), `conti_del_trimestre` (`crates/sim-core/src/economia/finanza.rs:190-260`), `spesa_netta_trimestre` (`crates/sim-core/src/economia/regole_ue.rs:64-82`), `aggiorna_redditi` (`crates/sim-core/src/elettorato/redditi.rs:76-138`).
+- Consumes: `Disposizioni::cambia` e `arrivi` del Task 3; `Gradino.leve`, `effetti`, `saldo`; `Economia::previdenza` (`crates/sim-core/src/economia/previdenza.rs:53-87`), `conti_del_trimestre` (`crates/sim-core/src/economia/finanza.rs:175-244`), `spesa_netta_trimestre` (`crates/sim-core/src/economia/regole_ue.rs:64-82`), `aggiorna_redditi` (`crates/sim-core/src/elettorato/redditi.rs:76-138`).
 - Produces:
   - `sim_core::disposizioni::Leve { pub regime_pensioni: f64, pub eta_pensione: f64, pub indicizzazione_pensioni: f64, pub pensione_minima: f64, pub sussidi: f64, pub reddito_minimo: f64, pub salario_minimo: f64, pub cuneo: f64, pub forfettario: f64, pub accise: f64, pub decontribuzione: f64, pub autonomia: f64, pub durata_legislatura: f64, pub seggi_camera: f64, pub seggi_senato: f64 }`, `Clone, Debug, PartialEq, Serialize, Deserialize`; `Leve::partenza(dati: &DatiGioco) -> Leve`; `Disposizioni::leve(&self, dati: &DatiGioco) -> Leve`.
   - `RegimePensioni::da_leva(x: f64) -> RegimePensioni` (0, 1, 2 arrotondati; fuori = `Contributivo`).
-  - `Misure.leve: Leve`, `Misure.leve_partenza: Leve`; `Misure::neutre` mette la partenza in entrambe; `Misure::da(…, disposizioni: &Disposizioni)`.
+  - `Misure.leve: Leve`, `Misure.leve_partenza: Leve`; `Misure::neutre` mette la partenza in entrambe; `Misure::da(…, disposizioni: &Disposizioni)`, a 8 parametri con `#[expect(clippy::too_many_arguments, reason = "…")]` (oggi 7, `crates/sim-core/src/misure.rs:82-90`).
   - `Misure.saldo_disposizioni: f64` = `Σ_d (saldo(in vigore) − saldo(partenza))`, % del PIL potenziale annuo.
-  - `Forma::Livello`: `contributo` = `intensita` da `inizio` in poi, per sempre; mai scaduto.
+  - `Forma::Livello`: `contributo` = `intensita` da `inizio` in poi, per sempre; mai scaduto (ramo `Livello` di `esaurito`, `crates/sim-core/src/grandezze.rs:85-94`, sempre `false`). Senza durata: la `durata` non conta (0.0) e il controllo `durata > 0` di `Grandezze::controlla` (`grandezze.rs:213-214`) vale solo per `Stock` e `Impulso`.
   - `EffettoAttivo.dicastero: Option<usize>` (`None` per le disposizioni fuori dicastero; il merito del piano 5 legge solo i `Some`).
   - `Spese.disposizioni: i64` (euro del trimestre, con segno), dentro il totale delle spese, la spesa primaria e la spesa netta.
 
@@ -807,7 +832,6 @@ git commit -m "feat(core): dispositions reach the engine through levers, levels 
 
 **Files:**
 - Modify: `crates/sim-core/src/misure.rs` (decontribuzione, autonomia, merito nel perimetro)
-- Modify: `crates/sim-core/src/vista.rs` (`VoceDisposizione.perimetro` già pieno dal Task 3: qui solo il test)
 - Modify: `dati/base/manopole.toml`
 - Test: `crates/sim-core/tests/territoriali.rs`
 
@@ -947,7 +971,7 @@ git commit -m "feat(core): territorial dispositions with perimeter and credit to
 
 **Files:**
 - Create: `crates/sim-core/src/parlamento/mod.rs` (`Parlamento`, `Misura`, calendario, presentazione), `crates/sim-core/src/parlamento/intesa.rs`
-- Modify: `crates/sim-core/src/comando.rs` (`PresentaLegge`), `crates/sim-core/src/ministri/mod.rs` (`Causa::NormaControPosizione`)
+- Modify: `crates/sim-core/src/comando.rs` (`PresentaLegge`), `crates/sim-core/src/ministri/mod.rs` (`Causa::NormaControPosizione`), `crates/sim-core/src/ministri/agenda.rs` (`penalizza` da `pub(super)` a `pub(crate)`, perché `parlamento/` lo chiama)
 - Modify: `crates/sim-core/src/partita.rs` (campi `parlamento`, `intesa`; seggi al turno zero; soglie dell'intesa; `carica`), `crates/sim-core/src/vista.rs`
 - Modify: `crates/sim-core/src/lib.rs`, `dati/base/manopole.toml`, `crates/sim-core/tests/comune/mod.rs` (`presenta`)
 - Test: `crates/sim-core/tests/calendario.rs`
@@ -959,7 +983,8 @@ git commit -m "feat(core): territorial dispositions with perimeter and credit to
 **Interfaces:**
 - Consumes: `riparto`, `Voti` (`crates/sim-core/src/elezioni/riparto.rs:16-60`), `Partita::intenzioni_vere`, `Disposizioni` del Task 3, `Ministri` e `penalizza` (`crates/sim-core/src/ministri/agenda.rs:198`).
 - Produces:
-  - `sim_core::parlamento::Parlamento { pub seggi_camera: Vec<u32>, pub seggi_senato: Vec<u32>, pub misure: Vec<Misura>, pub respinte: Vec<(usize, u32)>, pub prossima: u32, pub esiti: Vec<EsitoVoto> }` (`respinte` = disposizione e turno da cui si ripresenta); `Misura { pub id: u32, pub forma: FormaMisura, pub valori: Vec<(usize, usize)>, pub proponente: Option<usize>, pub presentata: u32, pub voto: u32, pub deliberazione: u8, pub fiducia: bool }` (`valori` = disposizione e gradino; `proponente` = dicastero; `voto` = turno nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali, 0 altrimenti); `FormaMisura { Riforma, Elettorale, Costituzionale, Conversione, Bilancio }`, `Copy`, serde `snake_case`, TS esportato. I Task 8, 10 e 11 aggiungono campi a `Misura`.
+  - `sim_core::parlamento::Parlamento { pub seggi_camera: Vec<u32>, pub seggi_senato: Vec<u32>, pub misure: Vec<Misura>, pub respinte: Vec<(usize, u32)>, pub prossima: u32, pub esiti: Vec<EsitoVoto> }` (`respinte` = disposizione e turno da cui si ripresenta); `Misura { pub id: u32, pub forma: FormaMisura, pub valori: Vec<(usize, usize)>, pub proponente: Option<usize>, pub presentata: u32, pub voto: u32, pub deliberazione: u8, pub fiducia: bool }` (`valori` = disposizione e gradino; `proponente` = dicastero; `voto` = turno nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali, 0 altrimenti); `FormaMisura { Riforma, Elettorale, Costituzionale, Conversione, Bilancio }`, `Copy`, serde `snake_case`, TS esportato. I Task 8 e 10 aggiungono campi a `Misura`.
+  - `EsitoVoto { pub misura: u32, pub nome: String, pub forma: FormaMisura, pub data: Trimestre, pub deliberazione: u8, pub camera: Conteggio, pub senato: Conteggio, pub approvata: bool, pub fiducia: bool, pub fiducia_respinta: bool, pub linee: Vec<VoceLinea> }`, `Conteggio { pub si: u32, pub no: u32 }`, `VoceLinea { pub partito: String, pub si: bool }`, `Clone, Debug, PartialEq`, TS esportati: qui per `Parlamento.esiti` e `Vista.esiti`, li riempie il Task 7.
   - `sim_core::parlamento::Intesa { pub valori: Vec<f64>, pub variazioni: Vec<VariazioneIntesa> }`, `VariazioneIntesa { pub partito: usize, pub causa: CausaIntesa, pub delta: f64, pub turno: u32 }`, `CausaIntesa { NormaLontana, EmendamentoRespinto, Fiducia, SeggiPersi }` (le ultime tre le usano i Task 8 e 9), `Display`: «norma lontana dalla sua posizione», «emendamento respinto», «questione di fiducia», «seggi persi con la legge elettorale».
   - `Comando::PresentaLegge { valori: Vec<ValoreProposto> }`; `sim_core::parlamento::ValoreProposto { pub disposizione: String, pub gradino: String }`, TS esportato.
   - `Causa::NormaControPosizione` («norma firmata contro la sua posizione»).
@@ -980,6 +1005,10 @@ Manopole nuove, `# assunzione del piano 6, nessuna fonte in docs/ricerca`: `inte
 `presenta` per i test, in `tests/comune/mod.rs`:
 
 ```rust
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
 pub fn presenta(p: &mut Partita, valori: &[(&str, &str)]) -> Result<(), Errore> {
     let valori = valori.iter().map(|(d, g)| ValoreProposto { disposizione: (*d).into(), gradino: (*g).into() }).collect();
     p.comanda(Comando::PresentaLegge { valori })
@@ -1068,7 +1097,7 @@ fn alleati_con_l_intesa_nella_vista() {
 }
 ```
 
-Il ministro del Lavoro è della destra (`dati/base/scenario.toml:17`), con la posizione a 6 ± lo scarto: il gradino `62` (posizione 2) lo allontana più del `68` (5), per ogni scarto entro ±1,5.
+Il ministro del Lavoro è della destra (`dati/base/scenario.toml`, chiave `lavoro_welfare` di `[governo]`), con la posizione a 6 ± lo scarto: il gradino `62` (posizione 2) lo allontana più del `68` (5), per ogni scarto entro ±1,5.
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
 
@@ -1106,10 +1135,10 @@ git commit -m "feat(core): sitting parliament, coalition agreement, bills and ca
 **Dispatch:** `rust-engineer` · dopo il Task 6 · skill-gate: true.
 
 **Interfaces:**
-- Consumes: `Parlamento`, `Misura`, `Intesa` del Task 6; `Disposizioni::cambia`; `Caso::uniforme(Flusso::Parlamento)`; `Partito.posizione_percepita` e `valence`.
+- Consumes: `Parlamento`, `Misura`, `Intesa`, `EsitoVoto` del Task 6; `Disposizioni::cambia`; `Caso::uniforme(Flusso::Parlamento)`; `Partito.posizione_percepita` e `valence`.
 - Produces:
   - `sim_core::parlamento::voto::linea(…) -> Vec<bool>` per partito, e `probabilita_franco(…) -> Vec<f64>`, usate dal voto, dalla vista e dall'anteprima del Task 13 (firma esatta a scelta del task, nello stesso modulo).
-  - `EsitoVoto { pub misura: u32, pub nome: String, pub forma: FormaMisura, pub data: Trimestre, pub deliberazione: u8, pub camera: Conteggio, pub senato: Conteggio, pub approvata: bool, pub fiducia: bool, pub fiducia_respinta: bool, pub linee: Vec<VoceLinea> }`, `Conteggio { pub si: u32, pub no: u32 }`, `VoceLinea { pub partito: String, pub si: bool }`, TS esportati.
+  - Gli `EsitoVoto` (tipo del Task 6) dei voti in aula, in `Parlamento.esiti` e `Vista.esiti`.
   - `VoceMisura` in più: `pub linee: Vec<VoceLinea>`, `pub forbice: Forbice`; `Forbice { pub camera: [u32; 2], pub senato: [u32; 2], pub maggioranza_camera: u32, pub maggioranza_senato: u32, pub in_bilico: bool }` (sì attesi ± 2σ, arrotondati e limitati ai seggi; `maggioranza_*` = sì necessari; `in_bilico` se una forbice scende sotto la sua maggioranza).
   - `Causa::LeggeRespinta` («legge respinta in aula»).
 
@@ -1117,7 +1146,7 @@ Regole:
 - **Linea** di una misura con disposizioni ordinarie o costituzionali, per il partito `j` in posizione dichiarata `p`: partito del Presidente del Consiglio sì (scelta 3); altrimenti `s = |p − pos_vigore| − |p − pos_nuova|`, più `peso_intesa_linea · (intesa_j − 50)/50` se alleato, meno `malus_opposizione` se fuori dal governo; sì se `s > 0`. Linea elettorale: Task 9. Conversione e bilancio: Task 10 e 11.
 - **Franchi tiratori**: `d_j = |p − pos_nuova|/6` (0 per le misure senza posizione); con linea sì `q = min(ft_max, ft_base + ft_distanza · d_j + [alleato] ft_intesa · max(0, 50 − intesa_j)/50)`; con linea no `q = min(ft_max, ft_base · (1 − d_j))`. Per ogni seggio una uniforme `u`; vota contro la linea se `u < q`. Sì contati per ramo.
 - **Esito**: approvata se in ciascun ramo `sì > no` (tutti i seggi votano); per la seconda deliberazione costituzionale il Task 9.
-- **Passo «aula»**, dopo l'esecuzione degli atti: le misure con `voto == turno`, in ordine di `id` (il Task 10 mette le conversioni prima, l'11 il bilancio). Approvata: per ogni valore `Disposizioni::cambia` con la legge `"L. {id}/{anno}"` e gli effetti in `grandezze.effetti`; la misura esce dal calendario. Respinta: esce, ogni disposizione in `respinte` fino a `turno + 1 + turni_blocco_respinta`; proponente `LeggeRespinta` di `−costo_legge_respinta`; partito del Presidente del Consiglio `valence −= valence_legge_respinta`. L'esito entra in `esiti`; all'apertura si tengono quelli dei due turni prima.
+- **Passo «aula»**, dopo l'esecuzione degli atti: le misure con `voto == turno`, in ordine di `id` (il Task 10 mette le conversioni prima, l'11 il bilancio). Approvata: per ogni valore `Disposizioni::cambia` con la legge `"L. {id}/{anno}"` e gli effetti in `grandezze.effetti`; la misura esce dal calendario. Respinta: esce, ogni disposizione in `respinte` fino a `turno + 1 + turni_blocco_respinta`; proponente `LeggeRespinta` di `−costo_legge_respinta`; partito del Presidente del Consiglio `valence −= valence_legge_respinta`. L'esito entra in testa a `esiti`: il più recente per primo (nello stesso turno, l'ultimo votato per primo); all'apertura si tengono quelli dei due turni prima.
 - **Norma lontana**: approvata una misura con posizione, ogni alleato con `|p − pos_nuova| ≥ distanza_alleato` perde `costo_norma_lontana · (|p − pos_nuova| − distanza_alleato + 1)` d'intesa (`CausaIntesa::NormaLontana`).
 - **Posizione percepita** (spec riga 313): dopo ogni voto su una misura con posizione, ogni partito con linea sì `posizione_percepita += scivolamento_percepita · (pos_nuova − posizione_percepita)`.
 - **Dimissioni del proponente**: la misura resta; i costi che toccherebbero il proponente non toccano nessuno se il dicastero è in interim al momento del voto.
@@ -1289,7 +1318,7 @@ git commit -m "feat(core): floor votes with party lines, snipers and perceived p
 **Dispatch:** `rust-engineer` · dopo il Task 7 · skill-gate: true.
 
 **Interfaces:**
-- Consumes: linea e franchi tiratori del Task 7, `Intesa`, `TipoDisposizione`, `StatoDisposizione.in_arrivo`.
+- Consumes: linea e franchi tiratori del Task 7, `Intesa`, `TipoDisposizione`, `StatoDisposizione.in_arrivo`, `Disposizioni::programma(&mut self, d: usize, g: usize, turno: u32, legge: &str)` del Task 3 (il rinvio).
 - Produces:
   - `Misura` in più: `pub emendamenti: Vec<RichiestaEmendamento>`, `pub emendamenti_aperti: bool`; `RichiestaEmendamento { pub partito: usize, pub proposta: Vec<(usize, Attenuazione)>, pub stato: StatoEmendamento, pub motivo: String }`; `Attenuazione { Gradino(usize), Rinvio }`; `StatoEmendamento { Aperto, Accolto, Respinto }`, `Copy`, TS esportato.
   - `Comando::Emendamento { misura: u32, partito: String, accogli: bool }`, `Comando::PoniFiducia { misura: u32 }`.
@@ -1298,7 +1327,7 @@ git commit -m "feat(core): floor votes with party lines, snipers and perceived p
 Regole:
 - **Quando**: all'apertura del turno in cui una riforma o una legge elettorale si vota (`voto == turno`), se `emendamenti_aperti == false` e senza fiducia, ogni alleato con `|p − pos_nuova| ≥ distanza_alleato`, o che tiene il dicastero delle disposizioni (scelta 5), chiede un emendamento; poi `emendamenti_aperti = true`. Sulla legge elettorale, che non ha posizione, lo chiede l'alleato che ci perde seggi (Task 9 porta il calcolo). Le costituzionali non ne hanno.
 - **Testo**, per disposizione: `Parametro` con gradino in vigore `a` e nuovo `b`, `|a − b| ≥ 2`: il gradino `round_verso_a((a + b)/2)` (la metà, arrotondata verso il vigente); `Regime`, o parametro con `|a − b| = 1`: `Rinvio`. `testo`: `"{nome}: {nome del gradino}"` o `"{nome}: in vigore fra {turni_rinvio_regime} turni"`, uniti da `"; "`. `motivo`: `"distante {d:.1} punti"` o `"tocca il suo dicastero {nome}"`.
-- **Accolto**: la misura prende il testo (il gradino a metà; per il rinvio il valore resta quello proposto e, approvato, diventa un arrivo al turno `voto + turni_rinvio_regime` invece di cambiare subito); quell'alleato vota sì e i suoi franchi tiratori hanno `q = ft_base`. **Respinto** (anche per default, primo passo della chiusura insieme alle proposte): intesa `−costo_emendamento_respinto` (`EmendamentoRespinto`); i suoi franchi tiratori su quella misura `q · (1 + ft_emendamento_respinto)`, sempre limitato a `ft_max`. Rifiuti: `misura sconosciuta: {id}`, `nessun emendamento di {partito} sulla misura {id}`, `emendamento già deciso: {partito}`.
+- **Accolto**: la misura prende il testo (il gradino a metà; per il rinvio il valore resta quello proposto e, approvato, diventa un arrivo invece di cambiare subito: `Disposizioni::programma(d, g, voto + turni_rinvio_regime, "L. {id}/{anno}")`, che sostituisce gli arrivi già in corso della disposizione e porta la legge della misura fino all'arrivo); quell'alleato vota sì e i suoi franchi tiratori hanno `q = ft_base`. **Respinto** (anche per default, primo passo della chiusura insieme alle proposte, tranne per le misure che slittano nel turno del bilancio, Task 11): intesa `−costo_emendamento_respinto` (`EmendamentoRespinto`); i suoi franchi tiratori su quella misura `q · (1 + ft_emendamento_respinto)`, sempre limitato a `ft_max`. Rifiuti: `misura sconosciuta: {id}`, `nessun emendamento di {partito} sulla misura {id}`, `emendamento già deciso: {partito}`.
 - **Fiducia**: ammessa su riforme, leggi elettorali, conversioni (Task 10) e bilancio (Task 11); rifiuti `niente fiducia su una norma costituzionale: {id}`, `fiducia già posta: {id}`, `misura sconosciuta: {id}`. Effetti: `voto = turno`, emendamenti aperti scartati senza costo, `fiducia = true`; ogni alleato perde `costo_fiducia + costo_fiducia_distanza · |p − pos_nuova|/6` d'intesa (`Fiducia`), il doppio sulla legge elettorale. Voto a blocchi: maggioranza sì tranne gli alleati con `intesa < soglia_ultimatum` e `|p − pos_nuova| ≥ distanza_alleato`, che votano no; fuori dal governo no; nessun franco tiratore (le estrazioni si fanno comunque). Respinta: la misura cade senza blocco di due turni e `fiducia_respinta = true` nell'esito (Confini: le dimissioni sono del piano 7). La legge elettorale ha il suo voto finale: Task 9.
 - **Vista**: `alleati_contro_fiducia` = gli alleati che con la fiducia voterebbero no, calcolato sempre (storia 65).
 
@@ -1397,6 +1426,10 @@ fn alleato_in_ultimatum_e_lontano_vota_no_alla_fiducia() {
     p.chiudi_turno();
     let e = &p.vista().esiti[0];
     assert!(e.linee.iter().any(|l| l.partito == "centrodestra" && !l.si));
+    // Voto a blocchi senza franchi tiratori: votano sì solo i seggi della destra.
+    let destra = v.seggi.iter().find(|s| s.partito == "destra").unwrap();
+    assert_eq!((e.camera.si, e.senato.si), (destra.camera, destra.senato));
+    assert_eq!(e.approvata, destra.camera * 2 > 400 && destra.senato * 2 > 200);
     assert_eq!(e.fiducia_respinta, !e.approvata);
 }
 
@@ -1479,13 +1512,13 @@ git commit -m "feat(core): coalition amendments and confidence votes"
 **Interfaces:**
 - Consumes: `Partita::proiezione_seggi` e `LeggeElettorale::valida`, voto ed emendamenti dei Task 7-8, `Leve.seggi_camera`/`seggi_senato`, `Elettorato` (posizioni dei gruppi, giudizio, astensione: `crates/sim-core/src/elettorato/voto.rs:53-85`).
 - Produces:
-  - `Elettorato::referendum(&self, dati: &DatiGioco, partiti: &[Partito], governo: &Governo, pos_si: Option<f64>, pos_no: Option<f64>, peso_governo: f64, invito: f64) -> Affluenza` (i partiti servono alla quota di governo del gruppo, dalle sue intenzioni); `Affluenza { pub si: f64, pub no: f64, pub astenuti: f64 }` in elettori. Per gruppo `i` e punto `x`: `u_si = −β(x − pos_si)² + peso_governo · γ · g_i`, `u_no = −β(x − pos_no)²` (termini di distanza a 0 se la posizione manca), `u_ast = astensione del gruppo + astensione_referendum + invito · quota di governo del gruppo`, con `g_i` il giudizio sul partito del Presidente del Consiglio; quote col softmax, pesate per `h_x` e per gli elettori.
+  - `Elettorato::referendum(&self, dati: &DatiGioco, partiti: &[Partito], governo: &Governo, pos_si: Option<f64>, pos_no: Option<f64>, peso_governo: f64, invito: f64) -> Affluenza`, con `#[expect(clippy::too_many_arguments, reason = "…")]` (i partiti servono alla quota di governo del gruppo, dalle sue intenzioni); `Affluenza { pub si: f64, pub no: f64, pub astenuti: f64 }` in elettori. Per gruppo `i` e punto `x`: `u_si = −β(x − pos_si)² + peso_governo · γ · g_i`, `u_no = −β(x − pos_no)²` (termini di distanza a 0 se la posizione manca), `u_ast = astensione del gruppo + astensione_referendum + invito · quota di governo del gruppo`, con `g_i` il giudizio sul partito del Presidente del Consiglio; quote col softmax, pesate per `h_x` e per gli elettori.
   - `sim_core::parlamento::Referendum { pub tipo: TipoReferendum, pub misura: Option<u32>, pub disposizione: usize, pub gradino: usize, pub promotore: Option<usize>, pub voto: u32, pub firme: bool, pub invito_astensione: bool }`, `TipoReferendum { Confermativo, Abrogativo }`; `Parlamento.referendum: Option<Referendum>` (uno alla volta, Task 14) e `Parlamento.confermativi: Vec<Referendum>`.
   - `EsitoReferendum { pub tipo: TipoReferendum, pub nome: String, pub data: Trimestre, pub si: u64, pub no: u64, pub votanti: u64, pub aventi_diritto: u64, pub quorum: bool, pub approvato: bool }`; `Vista.esiti_referendum: Vec<EsitoReferendum>`, `Vista.referendum: Vec<VistaReferendum>`, `VistaReferendum { pub tipo: TipoReferendum, pub nome: String, pub voto: Trimestre, pub promotore: Option<String>, pub invito_astensione: bool }`.
   - `VoceMisura.seggi: Vec<VariazioneSeggi>`, `VariazioneSeggi { pub partito: String, pub camera: i32, pub senato: i32 }` (solo per le leggi elettorali).
 
 Regole:
-- **Legge elettorale** (spec righe 340, 75): alla presentazione la legge in vigore con i valori nuovi deve passare `LeggeElettorale::valida`, considerando anche gli arrivi elettorali in corso (`legge elettorale non valida: {messaggio}`). `Δseggi_j` = seggi di Camera più Senato proiettati con la legge nuova meno quelli con la legge in vigore (proiezione sul sondaggio pubblico, coalizioni dell'ultimo voto, spec riga 322). Linea: partito del Presidente del Consiglio sì; altrimenti `s = Δseggi_j / seggi_per_punto_linea` più i termini d'intesa e malus del Task 7; sì se `s > 0`. Nessuna posizione: niente distanza nei franchi tiratori, niente percepita. Alla Camera il voto finale è segreto: `q` raddoppiato nei due sensi, limitato a `2 · ft_max`. Con la fiducia: prima il voto a blocchi del Task 8 (se respinto, `fiducia_respinta` e l'esito porta quei conteggi), poi il voto finale, che alla Camera ha i franchi tiratori raddoppiati e al Senato nessuno; l'esito porta i conteggi del voto finale. Bocciata al voto finale: cade la legge, `fiducia_respinta = false`. Approvata: ogni alleato con `Δseggi_j < 0` perde `costo_seggio_perso · |Δseggi_j|` d'intesa (`SeggiPersi`), anche se ha votato sì. Emendamento (Task 8): lo chiede l'alleato con `Δseggi_j < 0`.
+- **Legge elettorale** (spec righe 340, 75): alla presentazione la legge in vigore con i valori nuovi deve passare `LeggeElettorale::valida`, considerando anche gli arrivi elettorali in corso (`legge elettorale non valida: {messaggio}`, con `{messaggio}` la stringa dentro `Errore::LeggeElettorale`, non il suo `to_string()`, che aggiungerebbe «legge elettorale non ammessa: », `crates/sim-core/src/errore.rs:118`). `Δseggi_j` = seggi di Camera più Senato proiettati con la legge nuova meno quelli con la legge in vigore (proiezione sul sondaggio pubblico, coalizioni dell'ultimo voto, spec riga 322). Linea: partito del Presidente del Consiglio sì; altrimenti `s = Δseggi_j / seggi_per_punto_linea` più i termini d'intesa e malus del Task 7; sì se `s > 0`. Nessuna posizione: niente distanza nei franchi tiratori, niente percepita. Alla Camera il voto finale è segreto: `q` raddoppiato nei due sensi, limitato a `2 · ft_max`. Con la fiducia: prima il voto a blocchi del Task 8 (se respinto, `fiducia_respinta` e l'esito porta quei conteggi), poi il voto finale, con le linee del voto a blocchi (non quelle sui seggi attesi), che alla Camera ha i franchi tiratori raddoppiati e al Senato nessuno; l'esito porta i conteggi del voto finale. Bocciata al voto finale: cade la legge, `fiducia_respinta = false`. Approvata: ogni alleato con `Δseggi_j < 0` perde `costo_seggio_perso · |Δseggi_j|` d'intesa (`SeggiPersi`), anche se ha votato sì. Emendamento (Task 8): lo chiede l'alleato con `Δseggi_j < 0`.
 - **Arrivi elettorali non validi**: in `Disposizioni::arrivi`, gli arrivi di un turno si applicano insieme; se la legge elettorale che ne risulta non passa `valida`, quelli elettorali del turno si scartano e le loro disposizioni restano.
 - **Norma costituzionale**: prima deliberazione a fine del turno di presentazione (maggioranza semplice in ciascun ramo); se passa, `deliberazione = 2` e `voto = turno + 1`, a maggioranza assoluta (`sì > seggi/2` in ciascun ramo); niente emendamenti, niente fiducia. Respinta in una delle due: cade, blocco di due turni come le altre. Approvata la seconda con almeno i due terzi in entrambi i rami (`sì · 3 ≥ seggi · 2`): `Disposizioni::cambia` subito. Altrimenti, se i partiti fuori dal governo con linea no hanno almeno un quinto dei seggi in un ramo, un confermativo con `voto = turno + 1`; se no, `cambia` subito.
 - **Referendum confermativo**: nella chiusura del suo turno, `Elettorato::referendum` con `pos_si` = posizione del gradino nuovo, `pos_no` = del vigente, `peso_governo = 1`, `invito = 0`; approvato se `si > no`, senza quorum; poi `cambia` o niente. Esito in `esiti_referendum`.
@@ -1565,6 +1598,7 @@ fn bocciatura_della_legge_elettorale_non_e_una_fiducia_respinta() {
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     p.chiudi_turno();
     let e = &p.vista().esiti[0];
+    assert!(!e.approvata);
     assert!(!e.fiducia_respinta);
 }
 
@@ -1618,7 +1652,7 @@ fn senza_i_due_terzi_si_vota_il_referendum_confermativo() {
 }
 ```
 
-`300_150` (posizione 5,5) contro `400_200` (4,5) ha la linea sì del centrodestra (`0,5 − 0,5 + 0,2 > 0`), quindi la maggioranza la porta oltre le due deliberazioni. Con `malus_opposizione` a 5 nessun partito d'opposizione vota sì: la maggioranza non arriva ai due terzi (il governo da solo non li ha) e l'opposizione, che vota no con più di un quinto dei seggi, chiede il confermativo, che non ha quorum. Più test d'unità: in `elettorato/referendum.rs` `posizioni_uguali_dividono_a_meta` (con `peso_governo = 0`) e `invito_all_astensione_abbassa_i_votanti`; in `disposizioni/stato.rs` `arrivo_che_rompe_la_legge_elettorale_si_scarta` (Review Focus 5): uno stato col premio alla coalizione e un arrivo di `coalizioni = no` nello stesso turno di nessun altro, `arrivi` lo scarta, `coalizioni` resta `si`, `legge_elettorale` passa `valida`; con anche `premio = nessuno` nello stesso turno, entrambi arrivano.
+Nella bocciatura il voto a blocchi passa (nessun franco tiratore, la maggioranza ha più di metà dei seggi, Task 6); al voto finale, con le linee del voto a blocchi, `ft_base` 0,45 dà alla Camera `q` = 0,9 nei due sensi, quindi i sì attesi sono 0,1 · maggioranza + 0,9 · opposizione, sotto 200 perché la maggioranza ha più di 200 seggi: la Camera boccia, il Senato (senza franchi tiratori) no. `300_150` (posizione 5,5) contro `400_200` (4,5) ha la linea sì del centrodestra (`0,5 − 0,5 + 0,2 > 0`), quindi la maggioranza la porta oltre le due deliberazioni. Con `malus_opposizione` a 5 nessun partito d'opposizione vota sì: la maggioranza non arriva ai due terzi (il governo da solo non li ha) e l'opposizione, che vota no con più di un quinto dei seggi, chiede il confermativo, che non ha quorum. Più test d'unità: in `elettorato/referendum.rs` `posizioni_uguali_dividono_a_meta` (con `peso_governo = 0`) e `invito_all_astensione_abbassa_i_votanti`; in `disposizioni/stato.rs` `arrivo_che_rompe_la_legge_elettorale_si_scarta` (Review Focus 5): uno stato col premio alla coalizione e un arrivo di `coalizioni = no` nello stesso turno di nessun altro, `arrivi` lo scarta, `coalizioni` resta `si`, `legge_elettorale` passa `valida`; con anche `premio = nessuno` nello stesso turno, entrambi arrivano.
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
 
@@ -1650,7 +1684,7 @@ git commit -m "feat(core): electoral law by expected seats, constitutional norms
 - Modify: `crates/sim-core/src/economia/mod.rs` (`decreti: Vec<i64>` per dicastero, in domanda finale), `economia/finanza.rs` (somma nei conti, azzeramento dopo la domanda)
 - Modify: `crates/sim-core/src/ministri/mod.rs`, `ministri/agenda.rs` (`Agenda.decreto`, ritiro su Ferma e dimissioni), `ministri/proposte.rs` (Accogli rende il dicastero)
 - Modify: `crates/sim-core/src/comando.rs` (`EmanaDecreto`), `crates/sim-core/src/partita.rs` (conversioni prima nel passo «aula», `aggiungi_decreto`), `crates/sim-core/src/vista.rs`
-- Modify: `crates/sim-core/tests/proposte.rs:85`, `:90`, `:413` (`decreti` per dicastero), `dati/base/manopole.toml`
+- Modify: `crates/sim-core/tests/proposte.rs:85`, `:90`, `:413` (`decreti` per dicastero), `crates/sim-core/tests/agenda.rs:496-501` (i due guasti di `decreti` scrivono un vettore lungo quanto i dicasteri col valore guasto nella prima voce: lo scalare di oggi verrebbe rifiutato per il tipo e il test passerebbe a vuoto), `dati/base/manopole.toml`
 - Test: `crates/sim-core/tests/decreti.rs`
 
 **Ricerca:** `docs/ricerca/modelli/iter-legislativo-italiano.md:12-15` (vale subito, decade ex tunc, sessanta giorni insuperabili), `:20-23` (materie escluse, niente reiterazione), `:67` (decreto negato non si rinnova), `:163-164`.
@@ -1658,7 +1692,7 @@ git commit -m "feat(core): electoral law by expected seats, constitutional norms
 **Dispatch:** `rust-engineer` · primo della PR C, sul branch `feat/v1-piano-6-decreti` dalla punta della B dopo la sua review · skill-gate: true.
 
 **Interfaces:**
-- Consumes: `Ministri::accogli` (`crates/sim-core/src/ministri/proposte.rs:88-126`), `Ministri::ferma` (`crates/sim-core/src/ministri/agenda.rs:366-383`), `Ministri::comanda` (`crates/sim-core/src/ministri/mod.rs:292-354`), `Partita::aggiungi_decreto` (`crates/sim-core/src/partita.rs:349-351`), il ciclo della domanda dei dicasteri in `Economia::passo` (`crates/sim-core/src/economia/mod.rs:207-214`), voto e fiducia dei Task 7-8.
+- Consumes: `Ministri::accogli` (`crates/sim-core/src/ministri/proposte.rs:88-126`), `Ministri::ferma` (`crates/sim-core/src/ministri/agenda.rs:366-383`), `Ministri::comanda` (`crates/sim-core/src/ministri/mod.rs:292-354`), `Partita::aggiungi_decreto` (`crates/sim-core/src/partita.rs:349-351`), il ciclo della domanda dei dicasteri in `Economia::passo` (`crates/sim-core/src/economia/mod.rs:233-241`), voto e fiducia dei Task 7-8.
 - Produces:
   - `Economia.decreti: Vec<i64>`, un valore per dicastero; nei conti `spese.dicasteri` somma il totale; nel `passo` ogni decreto entra nella domanda finale col vettore del suo dicastero, come scostamento reale del trimestre (`decreti[d] / MLD / livello_prezzi`), e i decreti si azzerano dopo la domanda, non più in `finanza`.
   - `Agenda.decreto: i64` (l'importo del decreto di Accogli che l'ha messa in agenda, 0 altrimenti).
@@ -1743,10 +1777,11 @@ fn dirotta_dopo_accogli_tiene_il_decreto() {
     let (mut p, importo) = accolta(sanita_cara());
     let v = p.vista();
     let m = &v.ministeri[3];
-    if let Some(altro) = m.atti.iter().find(|a| a.pagabile && a.id != m.agenda.as_ref().unwrap().atto) {
-        p.comanda(Comando::Dirotta { dicastero: "sanita".into(), atto: Some(altro.id.clone()), regione: None }).unwrap();
-        assert_eq!(p.economia().decreti[3], importo);
-    }
+    // I quattro atti costano tutti 9 quote: il margine accolto per uno paga anche gli altri.
+    let altro = m.atti.iter().find(|a| a.pagabile && a.id != m.agenda.as_ref().unwrap().atto).expect("un altro atto pagabile");
+    p.comanda(Comando::Dirotta { dicastero: "sanita".into(), atto: Some(altro.id.clone()), regione: None }).unwrap();
+    assert_eq!(p.economia().decreti[3], importo);
+    assert!(p.vista().calendario.iter().any(|m| m.forma == FormaMisura::Conversione));
 }
 
 #[test]
@@ -1804,6 +1839,9 @@ fn decreti_non_ammessi_rifiutati_col_nome() {
 fn conversione_respinta_costa_e_non_si_ripete() {
     let f = imposta(imposta(sanita_cara(), "manopole", "[ft_base]\nvalore = ", "0.9"), "manopole", "[ft_max]\nvalore = ", "1.0");
     let (mut p, _) = accolta(f);
+    // Bilancio presentato al turno 0: il turno 1 non è in esercizio provvisorio, dove ogni Accogli è rifiutato.
+    let b = p.bozza_bilancio().unwrap();
+    p.comanda(Comando::PresentaBilancio { bilancio: b }).unwrap();
     p.chiudi_turno();
     assert!(p.vista().esiti.iter().any(|e| e.forma == FormaMisura::Conversione && !e.approvata));
     // Gli atti restano impagabili anche col margine di un anno: la proposta rinasce sullo stesso atto.
@@ -1839,7 +1877,8 @@ git commit -m "feat(core): decrees with same-turn conversion, withdrawal and sec
 ### Task 11: La legge di bilancio in aula
 
 **Files:**
-- Modify: `crates/sim-core/src/partita.rs` (passo «aula»: voto del bilancio; slittamento delle leggi nel turno del bilancio), `crates/sim-core/src/comando.rs` (`PresentaBilancio` apre la misura), `crates/sim-core/src/parlamento/mod.rs`, `parlamento/emendamenti.rs` (fiducia sulle leggi rifiutata nel turno del bilancio)
+- Modify: `crates/sim-core/src/partita.rs` (passo «aula»: voto del bilancio; slittamento delle leggi nel turno del bilancio), `crates/sim-core/src/comando.rs` (`PresentaBilancio` apre la misura), `crates/sim-core/src/parlamento/mod.rs`, `parlamento/emendamenti.rs` (fiducia sulle leggi rifiutata nel turno del bilancio; default degli emendamenti delle leggi che slittano)
+- Modify: `crates/sim-core/tests/decreti.rs` (fiducia sul bilancio in `conversione_respinta_costa_e_non_si_ripete`)
 - Test: `crates/sim-core/tests/bilancio_in_aula.rs`
 
 **Ricerca:** `docs/ricerca/modelli/iter-legislativo-italiano.md:85-87` (presentazione entro il 20 ottobre, esercizio provvisorio fino a quattro mesi, bilancio mai in commissione né a voto segreto), `:174`; `2026-10-25-v1-piano-5-governo.md:25` (aula senza voto, da sostituire).
@@ -1850,11 +1889,11 @@ git commit -m "feat(core): decrees with same-turn conversion, withdrawal and sec
 - Consumes: `Partita::aula` del piano 5 (`crates/sim-core/src/partita.rs:255-271`), `presenta_bilancio` (`:309-313`), `bozza_bilancio`, voto e fiducia dei Task 7-8.
 - Produces:
   - `PresentaBilancio` apre (o sostituisce) una misura `Bilancio` con `voto = turno`, senza proponente nel calendario ordinario; ripresentare tiene l'`id` e la fiducia già posta.
-  - `Partita::turno_del_bilancio(&self) -> bool` = `bozza_bilancio().is_some()` (ottobre-dicembre senza bilancio approvato, esercizio provvisorio).
+  - `Partita::turno_del_bilancio(&self) -> bool`: in calendario c'è una misura `Bilancio` con `voto == turno`, cioè un bilancio presentato in questo turno (ottobre-dicembre o esercizio provvisorio). Senza bilancio presentato è `false`, anche al turno 0 e nell'esercizio provvisorio.
 
 Regole:
 - **Voto** dopo le conversioni e prima delle leggi: linea maggioranza sì, opposizione no; franchi tiratori dalla sola intesa (scelta 4); fiducia ammessa. **Approvato**: il passo del piano 5 (margine residuo nell'esercizio provvisorio, costo del taglio, `bilancio_approvato`). **Respinto**: `bilancio_presentato` torna `None` e vale ciò che il piano 5 fa senza bilancio (esercizio provvisorio, poi l'anno con le cifre vecchie).
-- **Calendario occupato** (scelta 2 e 11): nel turno del bilancio le riforme, le leggi elettorali e le deliberazioni costituzionali con `voto == turno` passano a `voto = turno + 1` prima del voto; la fiducia su di esse è rifiutata (`il bilancio occupa il calendario: niente fiducia su {id} in questo turno`); presentare resta ammesso. Le conversioni si votano.
+- **Calendario occupato** (scelta 2 e 11): `turno_del_bilancio()` si calcola una volta, all'inizio del passo «aula», prima del voto del bilancio (dopo, un bilancio approvato è uscito dal calendario e `bozza_bilancio()` rende `None`). Nel turno del bilancio le riforme, le leggi elettorali e le deliberazioni costituzionali con `voto == turno` passano a `voto = turno + 1` prima del voto e perdono la fiducia posta, senza costo. I loro emendamenti aperti slittano con loro: il primo passo della chiusura, che legge lo stesso `turno_del_bilancio()` (il bilancio non è ancora votato), non li respinge per default, e il default scatta nella chiusura del turno del nuovo voto. La fiducia su di esse è rifiutata solo se il bilancio è in calendario per quel turno (`il bilancio occupa il calendario: niente fiducia su {id} in questo turno`); presentare resta ammesso. Le conversioni si votano.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
@@ -1926,14 +1965,47 @@ fn leggi_in_scadenza_slittano_nel_turno_del_bilancio() {
     let m = v.calendario.iter().find(|m| m.id == id).unwrap();
     assert_eq!(m.voto, Trimestre { anno: 2028, trimestre: 1 });
 }
+
+#[test]
+fn senza_bilancio_presentato_le_leggi_si_votano() {
+    // Turno 0 (ottobre-dicembre) e turno 1 (esercizio provvisorio), nessun bilancio presentato.
+    let mut p = al_turno(senza_shock(), 0);
+    assert!(p.bozza_bilancio().is_some() && !p.turno_del_bilancio());
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    presenta(&mut p, &[("ticket", "alto")]).unwrap();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.in_vigore("eta_pensionabile"), Some("68"));
+    assert!(p.vista().bilancio.esercizio_provvisorio && !p.turno_del_bilancio());
+    p.chiudi_turno();
+    assert!(p.vista().calendario.is_empty());
+}
+
+#[test]
+fn approvato_il_bilancio_le_leggi_slittano_lo_stesso() {
+    let mut p = al_turno(senza_shock(), 3);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    let id = p.vista().calendario.iter().find(|m| m.forma == FormaMisura::Riforma).unwrap().id;
+    // Fiducia posta prima di presentare il bilancio: ammessa, e persa con lo slittamento.
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    presenta_bozza(&mut p);
+    p.chiudi_turno();
+    let v = p.vista();
+    assert!(v.esiti.iter().any(|e| e.forma == FormaMisura::Bilancio && e.approvata));
+    assert!(v.esiti.iter().all(|e| e.forma != FormaMisura::Riforma));
+    let m = v.calendario.iter().find(|m| m.id == id).unwrap();
+    assert_eq!((m.voto, m.fiducia), (Trimestre { anno: 2028, trimestre: 1 }, false));
+}
 ```
 
-I test del piano 5 che presentano un bilancio (`crates/sim-core/tests/bilancio.rs`) passano dal voto: con `ft_base` 0,02 e la maggioranza del Task 6 lo approvano.
+I test del piano 5 che presentano un bilancio (`crates/sim-core/tests/bilancio.rs`) passano dal voto: con `ft_base` 0,02 e la maggioranza del Task 6 lo approvano. In `conversione_respinta_costa_e_non_si_ripete` (Task 10), dopo `PresentaBilancio`, si aggiunge la fiducia sulla misura `Bilancio` (`PoniFiducia` col suo `id`): con `ft_base` 0,9 il voto senza fiducia respingerebbe il bilancio e il turno 1 tornerebbe in esercizio provvisorio, dove Accogli è rifiutato prima del controllo sul decreto decaduto.
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
 
 Run: `cargo test -p sim-core --test bilancio_in_aula`
-Expected: FAIL: nessuna misura `Bilancio` in calendario.
+Expected: errore di compilazione, `Partita::turno_del_bilancio` non esiste.
 
 - [ ] **Step 3: Implementa voto del bilancio, calendario occupato e fiducia**
 
@@ -1954,7 +2026,7 @@ git commit -m "feat(core): budget law floor vote occupying the calendar"
 ### Task 12: Proposte normative dei ministri
 
 **Files:**
-- Modify: `crates/sim-core/src/ministri/proposte.rs` (`TipoProposta`, inneschi 2 e 3, Accogli di una riforma), `crates/sim-core/src/comando.rs`, `crates/sim-core/src/partita.rs` (Accogli di una riforma passa da `PresentaLegge`), `crates/sim-core/src/vista.rs`
+- Modify: `crates/sim-core/src/ministri/proposte.rs` (`TipoProposta`, inneschi 2 e 3, Accogli di una riforma, `controlla_proposte`), `crates/sim-core/src/ministri/mod.rs` (`Contesto.parlamento`, `EffettoComando::Riforma`), `crates/sim-core/src/comando.rs`, `crates/sim-core/src/partita.rs` (Accogli di una riforma passa da `PresentaLegge`), `crates/sim-core/src/vista.rs`
 - Test: `crates/sim-core/tests/proposte_normative.rs`
 
 **Ricerca:** - nessun riferimento pertinente (regole dei ticket 04 e 16: una proposta per ministro, disposizione più lontana di almeno 2 punti portata al valore più vicino, oppure lo sblocco del prerequisito; `.scratch/v1-giocabile/assets/16-catalogo-schema-e-sanita.md:38`).
@@ -1962,14 +2034,17 @@ git commit -m "feat(core): budget law floor vote occupying the calendar"
 **Dispatch:** `rust-engineer` · dopo il Task 11 · skill-gate: true.
 
 **Interfaces:**
-- Consumes: `Proposta` e `proponi` del piano 5 (`crates/sim-core/src/ministri/proposte.rs:15-73`), `Prerequisito` del Task 3, presentazione del Task 6.
+- Consumes: `Proposta` e `proponi` del piano 5 (`crates/sim-core/src/ministri/proposte.rs:15-73`), `Prerequisito` del Task 3, presentazione del Task 6, `EffettoComando` del Task 10, `Contesto` dei ministri (`crates/sim-core/src/ministri/mod.rs:113-124`).
 - Produces:
   - `Proposta { pub tipo: TipoProposta, pub turni_in_sospeso: u32, pub rinviata: bool }`, `TipoProposta { Fondi { atto: usize, importo: i64 }, Riforma { disposizione: usize, gradino: usize } }`; il salvataggio controlla anche la nuova forma.
+  - `Contesto.parlamento: &'a Parlamento` (tutti i costruttori di `Contesto` in `partita.rs`): l'innesco 3 legge le disposizioni in esame.
+  - `EffettoComando::Riforma { dicastero: usize, disposizione: usize, gradino: usize }`: `Ministri::comanda` lo rende per Accogli di una proposta di riforma senza toccare la proposta; `Partita` presenta la legge e toglie la proposta solo se la presentazione passa.
   - `VoceProposta` in più: `pub disposizione: Option<String>`, `pub gradino: Option<String>`; `atto` e `importo` restano per le proposte di fondi (`importo = 0` per le riforme).
 
 Regole:
 - **Inneschi**, all'apertura dopo le agende, per un ministro in carica senza proposta, nell'ordine: (1) fondi, come nel piano 5; (2) sblocco: il suo atto con l'`o` più alto (`o > 0`) ha il prerequisito non soddisfatto → la disposizione del prerequisito al primo gradino ammesso; (3) distanza: fra le disposizioni ordinarie del suo dicastero non in esame e senza gradini bloccati, quella con `|pos_vigore − pos_ministro|` più alta, se `≥ distanza_alleato`, al gradino con la posizione più vicina alla sua (a parità quello più vicino al vigente). Motivi: `"sblocca {nome dell'atto}"`, `"{nome della disposizione}: lontana dalla sua posizione"`.
-- **Accogli** di una riforma = `PresentaLegge` con quella disposizione e quel gradino; il rifiuto della presentazione (calendario pieno, respinta da poco) è il rifiuto di Accogli e la proposta resta. Nessun costo di firma: la vuole lui. Rinvia, Respingi e il default come per i fondi.
+- **Riforme e agenda**: gli inneschi 2 e 3 valgono anche per un ministro con un'agenda; una proposta di riforma convive con l'agenda e ha importo 0. Il piano 5 lo impedisce oggi in due punti, che qui si limitano alle proposte di fondi: `proponi` scarta la proposta con un'agenda e fuori da `1..=LIMITE_EURO` (`crates/sim-core/src/ministri/proposte.rs:43-68`), `controlla_proposte` rifiuta una proposta con agenda o con l'importo fuori intervallo (`proposte.rs:150-157`).
+- **Accogli** di una riforma = `PresentaLegge` con quella disposizione e quel gradino; il rifiuto della presentazione (calendario pieno, respinta da poco) è il rifiuto di Accogli e la proposta resta. Nessun costo di firma: la vuole lui. Nell'esercizio provvisorio resta rifiutato come ogni Accogli, dal controllo che scatta prima del dispatch (`crates/sim-core/src/ministri/mod.rs:308-312`). Rinvia, Respingi e il default come per i fondi.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
@@ -1977,31 +2052,46 @@ Regole:
 // crates/sim-core/tests/proposte_normative.rs
 mod comune;
 use comune::{file_base, presenta, sostituisci};
-use sim_core::dati::DatiGioco;
+use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::{Comando, Partita};
+
+/// Licenziamento a reintegro (posizione 2): il ministro del Lavoro della destra (6 ± scarto) è lontano.
+fn reintegro() -> FileDati {
+    sostituisci(file_base(), "disposizioni", "partenza = \"tutele_crescenti\"", "partenza = \"reintegro\"")
+}
+
+/// La disposizione della proposta di riforma del ministro del Lavoro, se ne ha una.
+fn proposta_di_riforma(p: &Partita) -> Option<String> {
+    let v = p.vista();
+    v.ministeri.iter().find(|m| m.dicastero == "lavoro_welfare")?.proposta.as_ref()?.disposizione.clone()
+}
 
 #[test]
 fn ministro_lontano_da_una_disposizione_propone_una_riforma() {
-    // Licenziamento a reintegro (posizione 2): il ministro del Lavoro della destra (6 ± scarto) è lontano.
-    let f = sostituisci(file_base(), "disposizioni", "partenza = \"tutele_crescenti\"", "partenza = \"reintegro\"");
-    let v = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1).vista();
-    let m = v.ministeri.iter().find(|m| m.dicastero == "lavoro_welfare").unwrap();
-    if m.agenda.is_some() {
-        let p = m.proposta.as_ref().unwrap();
-        assert!(p.disposizione.is_some() && p.motivo.ends_with("lontana dalla sua posizione"));
+    let mut trovata = false;
+    for seme in 1..=20 {
+        let v = Partita::nuova(DatiGioco::da_testi(&reintegro()).unwrap(), seme).vista();
+        let m = v.ministeri.iter().find(|m| m.dicastero == "lavoro_welfare").unwrap();
+        if let Some(p) = m.proposta.as_ref().filter(|p| p.disposizione.is_some()) {
+            assert!(p.motivo.ends_with("lontana dalla sua posizione"), "{}", p.motivo);
+            assert_eq!(p.importo, 0);
+            trovata = true;
+        }
     }
+    assert!(trovata);
 }
 
 #[test]
 fn accogliere_la_proposta_presenta_la_legge() {
-    let f = sostituisci(file_base(), "disposizioni", "partenza = \"tutele_crescenti\"", "partenza = \"reintegro\"");
-    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-    let v = p.vista();
-    let Some(prop) = v.ministeri.iter().find(|m| m.dicastero == "lavoro_welfare").and_then(|m| m.proposta.clone()) else { return };
-    if prop.disposizione.is_none() { return; }
-    p.comanda(Comando::Accogli { dicastero: "lavoro_welfare".into() }).unwrap();
-    let v = p.vista();
-    assert_eq!(v.calendario[0].valori[0].disposizione, prop.disposizione.unwrap());
+    let mut trovata = false;
+    for seme in 1..=20 {
+        let mut p = Partita::nuova(DatiGioco::da_testi(&reintegro()).unwrap(), seme);
+        let Some(d) = proposta_di_riforma(&p) else { continue };
+        p.comanda(Comando::Accogli { dicastero: "lavoro_welfare".into() }).unwrap();
+        assert_eq!(p.vista().calendario[0].valori[0].disposizione, d);
+        trovata = true;
+    }
+    assert!(trovata);
 }
 
 #[test]
@@ -2023,20 +2113,25 @@ fn proposta_di_sblocco_del_prerequisito() {
 
 #[test]
 fn calendario_pieno_rifiuta_accogli_e_tiene_la_proposta() {
-    let f = sostituisci(file_base(), "disposizioni", "partenza = \"tutele_crescenti\"", "partenza = \"reintegro\"");
-    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-    let ha = p.vista().ministeri.iter().any(|m| m.dicastero == "lavoro_welfare" && m.proposta.as_ref().is_some_and(|x| x.disposizione.is_some()));
-    if !ha { return; }
-    for (d, g) in [("ticket", "alto"), ("obbligo_scolastico", "18"), ("leva_militare", "obbligatoria")] {
-        presenta(&mut p, &[(d, g)]).unwrap();
+    let mut trovata = false;
+    for seme in 1..=20 {
+        let mut p = Partita::nuova(DatiGioco::da_testi(&reintegro()).unwrap(), seme);
+        if proposta_di_riforma(&p).is_none() {
+            continue;
+        }
+        for (d, g) in [("ticket", "alto"), ("obbligo_scolastico", "18"), ("leva_militare", "obbligatoria")] {
+            presenta(&mut p, &[(d, g)]).unwrap();
+        }
+        let e = p.comanda(Comando::Accogli { dicastero: "lavoro_welfare".into() }).unwrap_err();
+        assert!(e.to_string().contains("calendario pieno"), "{e}");
+        assert!(proposta_di_riforma(&p).is_some());
+        trovata = true;
     }
-    let e = p.comanda(Comando::Accogli { dicastero: "lavoro_welfare".into() }).unwrap_err();
-    assert!(e.to_string().contains("calendario pieno"), "{e}");
-    assert!(p.vista().ministeri.iter().any(|m| m.dicastero == "lavoro_welfare" && m.proposta.is_some()));
+    assert!(trovata);
 }
 ```
 
-I `return` anticipati coprono il caso in cui il ministro, col seme, abbia prima una proposta di fondi (innesco 1, che ha la precedenza): il test di sblocco cerca su 20 semi e deve trovarne almeno uno.
+Ogni test cicla sui semi 1-20 col flag `trovata`, come `proposta_di_sblocco_del_prerequisito`: col seme il ministro può avere prima una proposta di fondi (innesco 1, che ha la precedenza), e ogni test deve trovare almeno un seme con la proposta che cerca.
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
 
@@ -2064,6 +2159,7 @@ git commit -m "feat(core): ministers propose reforms and prerequisite unlocks"
 **Files:**
 - Create: `crates/sim-core/src/parlamento/anteprima.rs`
 - Modify: `crates/sim-core/src/partita.rs` (`anteprima`), `crates/sim-core/src/vista.rs`, `dati/base/manopole.toml`
+- Modify: `crates/sim-core/src/elettorato/mod.rs` (`Condizione` deriva `TS`, oggi no: `elettorato/mod.rs:28-29`)
 - Test: `crates/sim-core/tests/anteprima.rs`
 
 **Ricerca:** `docs/ricerca/sistemi/consiglieri-e-informazione-imperfetta.md:21` (la competenza del ministro corregge la stima), `:24` (tre livelli: stato vero, statistica, rapporto del consigliere); spec righe 371 (anteprima: costo esatto, effetti a fasce con l'errore che cala con la capacità), storia 55.
@@ -2074,7 +2170,7 @@ git commit -m "feat(core): ministers propose reforms and prerequisite unlocks"
 - Consumes: validazione della presentazione (Task 6), linee e forbice (Task 7), seggi della legge elettorale (Task 9), `Gradino.effetti`, `saldo`, `leve`, `gruppi`; `Caso::estemporaneo` (`crates/sim-core/src/partita.rs:416-417`).
 - Produces:
   - `Partita::anteprima(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore>`: le stesse regole di `PresentaLegge` tranne il posto in calendario; non cambia la partita.
-  - `Anteprima { pub nome: String, pub forma: FormaMisura, pub proponente: Option<String>, pub costo_annuo: i64, pub effetti: Vec<EffettoStimato>, pub leve: Vec<VoceLeva>, pub gruppi: Vec<Condizione>, pub linee: Vec<VoceLinea>, pub forbice: Forbice, pub seggi: Vec<VariazioneSeggi> }`; `EffettoStimato { pub grandezza: String, pub migliora: bool, pub fascia: Fascia3, pub ritardo: u32 }`; `Fascia3 { Poco, Medio, Molto }`; `VoceLeva { pub leva: String, pub da: f64, pub a: f64 }`; TS esportati.
+  - `Anteprima { pub nome: String, pub forma: FormaMisura, pub proponente: Option<String>, pub costo_annuo: i64, pub effetti: Vec<EffettoStimato>, pub leve: Vec<VoceLeva>, pub gruppi: Vec<Condizione>, pub linee: Vec<VoceLinea>, pub forbice: Forbice, pub seggi: Vec<VariazioneSeggi> }`; `EffettoStimato { pub grandezza: String, pub migliora: bool, pub fascia: Fascia3, pub ritardo: u32 }`; `Fascia3 { Poco, Medio, Molto }`; `VoceLeva { pub leva: String, pub da: f64, pub a: f64 }`; TS esportati. `Anteprima` e i tipi che contiene, compresi `Forbice` e `VariazioneSeggi`, derivano `Clone, Debug, PartialEq`: il test le confronta con `assert_eq!`.
   - `pub(crate) fn stima_fascia(vera: Fascia3, capacita: f64, u1: f64, u2: f64, errore: f64) -> Fascia3`, la regola della stima qui sotto, pura.
 
 Regole:
@@ -2176,7 +2272,7 @@ git commit -m "feat(core): measure preview with cost, estimated bands, lines and
 - Produces:
   - `Partita::promuovi_referendum(&mut self, promotore: &str, disposizione: &str) -> Result<(), Errore>`, pubblica: la chiameranno il comando del giocatore all'opposizione (piano 7) e i partiti IA (piano 8).
   - `Comando::InvitaAstensione`.
-  - `Vista.referendum` porta anche l'abrogativo, con la fase.
+  - `Vista.referendum` porta anche l'abrogativo, con la fase: `VistaReferendum` in più `pub firme: bool` (`false` firme in raccolta, `true` indetto; il confermativo sempre `true`).
 
 Regole:
 - **Promozione**, rifiuti esatti in quest'ordine: promotore sconosciuto (`partito sconosciuto: {id}`) o al governo (`il promotore è al governo: {id}`); disposizione sconosciuta; non referendabile (`{id} non è referendabile`); senza legge, o col valore dopo l'abrogazione uguale al vigente e nessun arrivo da cancellare (`niente da abrogare: {id}`); elettorale che darebbe una legge non valida (`quesito inammissibile: {messaggio}`); un referendum abrogativo già in corso (`un referendum è già in corso`); fuori finestra, cioè dopo luglio-settembre (`fuori finestra: si chiede entro luglio-settembre`).
