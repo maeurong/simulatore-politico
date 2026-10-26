@@ -188,8 +188,9 @@ pub(crate) fn indicizza(b: &Bilancio, voce: &Voce, attuale: f64) -> Result<Bilan
 }
 
 /// Il bilancio `b` come lo approverebbe l'aula, o il messaggio che ne nomina il guasto. La
-/// `spesa` si ricalcola dalla bozza; il livello dei prezzi di una voce (e degli scaglioni)
-/// resta quello della bozza se le cifre non cambiano, altrimenti diventa `attuale`.
+/// `spesa` è salari + acquisti + margine più il resto presentato, limitato fra quello della
+/// bozza e quello indicizzato per intero; il livello dei prezzi di una voce (e degli scaglioni)
+/// resta quello della bozza se la cifra non cambia, altrimenti la segue (`livello_pesato`).
 pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result<Bilancio, String> {
     if b.anno != bozza.anno {
         return Err(format!("anno {}, atteso {}", b.anno, bozza.anno));
@@ -203,22 +204,33 @@ pub(crate) fn normalizza(b: &Bilancio, bozza: &Bilancio, attuale: f64) -> Result
         return Err("dicasteri diversi da quelli dei dati".into());
     }
     let ammesso = |x: i64| (0..=LIMITE_EURO).contains(&x);
-    let cifre = |d: &BudgetDicastero| [d.salari, d.acquisti, d.margine];
-    let cifra = |d: &BudgetDicastero| cifre(d).iter().sum::<i64>();
+    let cifre = |d: &BudgetDicastero| d.salari + d.acquisti + d.margine;
     let mut dicasteri = Vec::with_capacity(b.dicasteri.len());
     for (d, z) in b.dicasteri.iter().zip(&bozza.dicasteri) {
-        if !cifre(d).into_iter().all(ammesso) {
+        if ![d.spesa, d.salari, d.acquisti, d.margine]
+            .into_iter()
+            .all(ammesso)
+        {
             return Err(format!("voce negativa o enorme: {}", d.id));
         }
-        // Voci della bozza e presentate entro 1e15: la somma non trabocca.
-        let spesa = z.spesa - cifra(z) + cifra(d);
+        // Il resto della spesa, fuori da salari, acquisti e margine, sta fra quello della bozza
+        // e quello indicizzato per intero. Voci entro 1e15: le somme non traboccano.
+        let resto_bozza = z.spesa - cifre(z);
+        // `as` satura: un livello quasi nullo da un salvataggio non fa traboccare.
+        let indicizzato = (resto_bozza as f64 * attuale / z.livello_prezzi).round() as i64;
+        let resto =
+            (d.spesa - cifre(d)).clamp(resto_bozza.min(indicizzato), resto_bozza.max(indicizzato));
+        let spesa = resto + cifre(d);
         if !ammesso(spesa) {
             return Err(format!("voce negativa o enorme: {}", d.id));
         }
         dicasteri.push(BudgetDicastero {
+            id: d.id.clone(),
             spesa,
-            livello_prezzi: livello_pesato(z.livello_prezzi, cifra(z), cifra(d), attuale),
-            ..d.clone()
+            salari: d.salari,
+            acquisti: d.acquisti,
+            margine: d.margine,
+            livello_prezzi: livello_pesato(z.livello_prezzi, z.spesa, spesa, attuale),
         });
     }
     if !ammesso(b.fondo_riserva) {
@@ -247,8 +259,9 @@ fn livello_pesato(livello: f64, prima: i64, dopo: i64, attuale: f64) -> f64 {
         livello
     } else if prima <= 0 {
         attuale
-    } else if dopo as f64 + 1.5 >= prima as f64 * attuale / livello {
-        // Indicizzata: `indicizza` arrotonda all'euro le tre cifre, al più 1,5 € in meno.
+    } else if dopo as f64 + 2.0 >= prima as f64 * attuale / livello {
+        // Indicizzata: la spesa è la somma di quattro cifre arrotondate all'euro, al più 2 € in
+        // meno.
         attuale
     } else {
         // ponytail: pavimento a un milionesimo dell'indice, perché una voce azzerata con

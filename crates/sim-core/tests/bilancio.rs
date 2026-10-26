@@ -240,6 +240,7 @@ fn taglio_nominale_alza_la_perdita_e_l_aumento_oltre_l_indice_la_azzera() {
     };
     let mut b = p.indicizza(&bozza, &sanita).unwrap();
     b.dicasteri[3].salari += 1_000_000_000;
+    b.dicasteri[3].spesa += 1_000_000_000;
     assert_eq!(perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita"), 0.0);
 }
 
@@ -365,4 +366,32 @@ fn il_riepilogo_prevede_la_crescita_della_spesa_netta_del_controllo_ue() {
         let vera = crescita_vera_2028(q);
         assert!((prevista - vera).abs() < 0.5, "{prevista} {vera}");
     }
+}
+
+fn presentato(p: &Partita) -> &Bilancio {
+    p.economia().bilancio_presentato.as_ref().unwrap()
+}
+
+#[test]
+fn indicizza_tutto_indicizza_la_spesa_intera_e_il_resto_oltre_il_tetto_si_limita() {
+    let mut p = al_bilancio_2028(1);
+    let indice = p.informazione().statistica.indice_prezzi;
+    let bozza = p.bozza_bilancio().unwrap();
+    let tutto = p.indicizza(&bozza, &Voce::Tutto).unwrap();
+    presenta(&mut p, tutto.clone()).unwrap();
+    for (d, z) in presentato(&p).dicasteri.iter().zip(&bozza.dicasteri) {
+        let attesa = (z.spesa as f64 * indice / z.livello_prezzi).round() as i64;
+        assert!(
+            (d.spesa - attesa).abs() <= 3,
+            "{} {} {attesa}",
+            d.id,
+            d.spesa
+        );
+    }
+    let spese = |b: &Bilancio| b.dicasteri.iter().map(|d| d.spesa).collect::<Vec<_>>();
+    let indicizzate = spese(presentato(&p));
+    let mut oltre = tutto;
+    oltre.dicasteri[3].spesa += 1_000_000_000_000;
+    presenta(&mut p, oltre).unwrap();
+    assert_eq!(spese(presentato(&p)), indicizzate);
 }
