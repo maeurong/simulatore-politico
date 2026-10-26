@@ -432,3 +432,46 @@ fn accogli_rifiuta_un_atto_gia_in_cantiere() {
     .unwrap();
     rifiuta(&mut q, accogli(), &format!("cantiere già in corso: {id}"));
 }
+
+/// Il prerequisito dell'atto proposto viene a mancare (arrivo di "ridotto" all'apertura del
+/// turno 1): la proposta decade senza costo di soddisfazione.
+#[test]
+fn la_proposta_decade_quando_il_prerequisito_viene_a_mancare() {
+    // Le convenzioni hanno l'effetto più forte: a parità d'indicatore è l'atto che il ministro vuole.
+    let senza_arrivo = sostituisci(
+        sanita_cara(),
+        "atti",
+        "intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 2.0",
+        "intensita = 0.1, ritardo = 1, forma = \"impulso\", durata = 2.0",
+    );
+    let f = comune::con_arrivo(
+        senza_arrivo.clone(),
+        "privato_accreditato",
+        "ridotto",
+        2027,
+        1,
+    );
+    let su_convenzioni = |seme: &u64| {
+        let v = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), *seme).vista();
+        let atto = (ministero(&v, "sanita").proposta.as_ref()).map(|x| x.atto.clone());
+        atto.as_deref() == Some("sanita_convenzioni_privato")
+    };
+    let seme = (1..=40)
+        .find(su_convenzioni)
+        .expect("un seme con la proposta sulle convenzioni");
+    // Gemella senza l'arrivo: la proposta sopravvive al turno, quindi a toglierla è il prerequisito.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), seme);
+    let mut g = Partita::nuova(DatiGioco::da_testi(&senza_arrivo).unwrap(), seme);
+    p.chiudi_turno();
+    g.chiudi_turno();
+    assert!(ministero(&g.vista(), "sanita").proposta.is_some());
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    assert!(m.proposta.is_none());
+    let x = m.ministro.as_ref().unwrap();
+    assert!(
+        x.variazioni
+            .iter()
+            .all(|v| v.causa != Causa::PropostaRespinta)
+    );
+}

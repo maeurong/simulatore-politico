@@ -156,3 +156,35 @@ fn salvataggio_con_disposizioni_guaste_illeggibile() {
         assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e}");
     }
 }
+
+/// Dopo il primo arrivo del credito ZES (2027 T1) resta il secondo (2028 T1) e il precedente è
+/// il gradino di partenza: salvare e ricaricare conserva tutto, e i due turni seguenti coincidono.
+#[test]
+fn salva_e_carica_dopo_un_arrivo_scattato_chiude_il_turno_in_modo_identico() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.chiudi_turno();
+    let z = |p: &Partita| {
+        let v = p.vista();
+        v.disposizioni
+            .into_iter()
+            .find(|d| d.id == "credito_zes")
+            .unwrap()
+    };
+    let d = z(&p);
+    assert_eq!(
+        (
+            d.in_vigore.as_str(),
+            d.precedente.as_str(),
+            d.in_arrivo.len()
+        ),
+        ("1", "2_3", 1)
+    );
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(z(&q), d);
+    assert_eq!(q.salva().unwrap(), p.salva().unwrap());
+    for _ in 0..2 {
+        p.chiudi_turno();
+        q.chiudi_turno();
+        assert_eq!(q.salva().unwrap(), p.salva().unwrap());
+    }
+}

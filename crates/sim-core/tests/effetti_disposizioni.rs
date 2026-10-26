@@ -140,6 +140,84 @@ fn salario_minimo_non_sposta_il_gettito_irpef() {
 }
 
 #[test]
+fn forfettario_assente_alza_le_imposte_degli_autonomi_e_non_quelle_dei_dipendenti() {
+    let a = gioca(
+        con_arrivo(senza_shock(), "forfettario", "assente", 2027, 1),
+        2,
+    );
+    let b = gioca(senza_shock(), 2);
+    let imposte = |p: &Partita, c| media(p, c, Fascia::Media, |r| r.imposte);
+    let (au, bu) = (
+        imposte(&a, Condizione::Autonomo),
+        imposte(&b, Condizione::Autonomo),
+    );
+    assert!(au > bu, "{au} {bu}");
+    let dip = Condizione::DipendentePrivato;
+    assert_eq!(imposte(&a, dip), imposte(&b, dip));
+}
+
+#[test]
+fn reddito_minimo_universale_alza_i_trasferimenti_dei_disoccupati_di_fascia_bassa() {
+    let u = gioca(
+        con_arrivo(senza_shock(), "reddito_minimo", "universale", 2027, 1),
+        2,
+    );
+    let b = gioca(senza_shock(), 2);
+    let trasf = |p: &Partita, f| media(p, Condizione::DisoccupatoInattivo, f, |r| r.trasferimenti);
+    // Categoriale 1200 -> universale 2400: scarto di 1200 euro, solo nella fascia bassa.
+    let scarto = trasf(&u, Fascia::Bassa) - trasf(&b, Fascia::Bassa);
+    assert!((scarto - 1200.0).abs() < 1e-6, "{scarto}");
+    assert_eq!(trasf(&u, Fascia::Media), trasf(&b, Fascia::Media));
+}
+
+fn annata(p: &Partita, anno: u16) -> f64 {
+    let e = p.economia();
+    e.pensioni.iter().find(|a| a.anno == anno).unwrap().importo as f64
+}
+
+#[test]
+fn pensione_minima_alta_tocca_solo_l_annata_nuova() {
+    // 50 volte la pensione minima: sopra la sostituzione, la leva morde sull'annata nuova.
+    let f = imposta(
+        senza_shock(),
+        "disposizioni",
+        "{ id = \"piu_50\", nome = \"più 50%\", posizione = 2.0, saldo = 0.0, leve = { pensione_minima = ",
+        "50.0",
+    );
+    let m = gioca(con_arrivo(f, "pensione_minima", "piu_50", 2027, 1), 5);
+    let b = gioca(senza_shock(), 5);
+    assert_eq!(annata(&m, 2026), annata(&b, 2026));
+    assert!(annata(&m, 2027) > annata(&b, 2027));
+}
+
+#[test]
+fn indicizzazione_piena_alza_tutte_le_annate_in_essere() {
+    let p = gioca(
+        con_arrivo(senza_shock(), "indicizzazione_pensioni", "piena", 2027, 1),
+        7,
+    );
+    let b = gioca(senza_shock(), 7);
+    for anno in [2026, 2027] {
+        assert!(annata(&p, anno) > annata(&b, anno), "{anno}");
+    }
+}
+
+#[test]
+fn credito_zes_porta_alle_spese_il_saldo_per_il_pil_potenziale() {
+    let p = gioca(con_arrivo(senza_shock(), "credito_zes", "1", 2027, 1), 2);
+    let saldo = p.misure().saldo_disposizioni;
+    assert!((saldo + 0.06).abs() < 1e-12, "{saldo}");
+    let e = p.economia();
+    let atteso = saldo / 100.0 * e.pil_potenziale_reale * e.livello_prezzi * 1e9;
+    let spese = e.conti.spese.disposizioni as f64;
+    // Il conto usa il PIL potenziale di inizio turno, e` cresciuto di poco a fine turno.
+    assert!(
+        spese != 0.0 && (spese / atteso - 1.0).abs() < 0.02,
+        "{spese} {atteso}"
+    );
+}
+
+#[test]
 fn effetto_di_livello_resta_finche_la_disposizione_non_cambia() {
     let f = con_arrivo(senza_shock(), "licenziamento", "solo_indennizzo", 2027, 1);
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
