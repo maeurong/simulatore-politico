@@ -3,6 +3,7 @@ use crate::economia::Aliquote;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
+use crate::parlamento::{CausaIntesa, EsitoVoto, FormaMisura, ValoreProposto, VariazioneIntesa};
 use crate::partita::Trimestre;
 use serde::Serialize;
 #[cfg(test)]
@@ -29,6 +30,37 @@ pub struct Vista {
     pub bilancio: VistaBilancio,
     /// Nell'ordine dei dati.
     pub disposizioni: Vec<VoceDisposizione>,
+    /// Il parlamento in carica.
+    pub seggi: Vec<SeggiPartito>,
+    pub alleati: Vec<VoceAlleato>,
+    pub calendario: Vec<VoceMisura>,
+    pub esiti: Vec<EsitoVoto>,
+}
+
+/// L'intesa di un alleato in cifre: il giocatore governa con lui.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceAlleato {
+    pub partito: String,
+    pub intesa: f64,
+    pub ultimatum: bool,
+    pub causa_principale: Option<CausaIntesa>,
+    /// Variazioni degli ultimi due turni.
+    pub variazioni: Vec<VariazioneIntesa>,
+}
+
+/// Una misura in calendario; `proponente` è l'id del dicastero.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceMisura {
+    pub id: u32,
+    pub nome: String,
+    pub forma: FormaMisura,
+    pub proponente: Option<String>,
+    pub valori: Vec<ValoreProposto>,
+    pub voto: Trimestre,
+    pub deliberazione: u8,
+    pub fiducia: bool,
 }
 
 /// Una disposizione com'è in vigore; gradini, dicastero e perimetro sono id.

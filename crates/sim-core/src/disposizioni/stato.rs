@@ -44,7 +44,7 @@ fn turno_di(anno: u16, trimestre: u8) -> u32 {
 }
 
 /// Il trimestre di calendario del turno `turno`.
-fn data_di(turno: u32) -> Trimestre {
+pub(crate) fn data_di(turno: u32) -> Trimestre {
     let zero = Trimestre::TURNO_ZERO;
     let q = (u32::from(zero.anno) * 4 + u32::from(zero.trimestre) - 1).saturating_add(turno);
     Trimestre {

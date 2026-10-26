@@ -2,6 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
+use crate::parlamento::ValoreProposto;
 use crate::partita::Partita;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -45,17 +46,23 @@ pub enum Comando {
     PresentaBilancio {
         bilancio: Bilancio,
     },
+    /// Presenta una legge: la mette in calendario fino al voto.
+    PresentaLegge {
+        valori: Vec<ValoreProposto>,
+    },
 }
 
 impl Partita {
     /// Applica un comando del giocatore.
     ///
     /// # Errors
-    /// `Comando` col nome del dicastero in causa, `Bilancio` col guasto della legge di
-    /// bilancio; la partita resta identica.
+    /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
+    /// della legge di bilancio; la partita resta identica.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
-        if let Comando::PresentaBilancio { bilancio } = c {
-            return self.presenta_bilancio(&bilancio);
+        match c {
+            Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
+            Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),
+            _ => {}
         }
         let accolta = self.con_contesto(|ministri, cx| ministri.comanda(cx, c))?;
         if let Some(importo) = accolta {

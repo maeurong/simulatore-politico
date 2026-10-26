@@ -55,6 +55,14 @@ impl RegimePensioni {
     }
 }
 
+/// Seggi per partito (id) della legislatura uscente; `i64` perché la validazione nomini un
+/// seggio negativo invece di fallire nel parsing.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ParlamentoUscente {
+    pub camera: BTreeMap<String, i64>,
+    pub senato: BTreeMap<String, i64>,
+}
+
 macro_rules! scenario {
     ($($campo:ident),* $(,)?) => {
         #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -70,6 +78,7 @@ macro_rules! scenario {
             pub legge_elettorale: String,
             /// Valori precedenti al turno zero, per i gradini «precedente» delle elettorali.
             pub legge_elettorale_precedente: LeggeElettorale,
+            pub parlamento_uscente: ParlamentoUscente,
             #[serde(rename = "partito")]
             pub partiti: Vec<DatoPartito>,
             pub governo: DatoGoverno,

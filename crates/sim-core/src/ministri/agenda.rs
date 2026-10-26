@@ -196,7 +196,7 @@ fn effetti_di(
 }
 
 /// Applica una variazione di soddisfazione al ministro, se c'è e se non è nulla.
-pub(super) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno: u32) {
+pub(crate) fn penalizza(st: &mut StatoDicastero, causa: Causa, delta: f64, turno: u32) {
     if delta == 0.0 {
         return;
     }

@@ -10,12 +10,13 @@ use crate::elezioni::{Esito, LeggeElettorale, Voti, riparto};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::ministri::{Contesto, Ministri};
+use crate::ministri::{Contesto, Ministri, causa_peggiore};
 use crate::misure::Misure;
+use crate::parlamento::{Intesa, Parlamento, ValoreProposto};
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceBudget, VoceDicastero, VoceGrandezza,
-    VocePartito,
+    SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
+    VoceGrandezza, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -82,6 +83,8 @@ pub struct Partita {
     ministri: Ministri,
     misure: Misure,
     disposizioni: Disposizioni,
+    parlamento: Parlamento,
+    intesa: Intesa,
 }
 
 impl Partita {
@@ -111,6 +114,8 @@ impl Partita {
             &mut caso,
         );
         Partita {
+            parlamento: Parlamento::uscente(&dati, &partiti),
+            intesa: Intesa::iniziale(&dati, partiti.len()),
             misure: Misure::neutre(&dati),
             disposizioni,
             versione_schema: VERSIONE_SCHEMA,
@@ -131,9 +136,9 @@ impl Partita {
     // Ordine della chiusura:
     // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (valori in
-    // arrivo, rose, agende, proposte; il costo del taglio se l'anno entra in esercizio
-    // provvisorio).
+    // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
+    // calendario → apertura (valori in arrivo, rose, agende, proposte; il costo del taglio se
+    // l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
@@ -184,6 +189,7 @@ impl Partita {
             self.data,
         );
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
+        self.intesa.soglie(&self.dati, self.turno);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
@@ -318,6 +324,17 @@ impl Partita {
         Ok(())
     }
 
+    /// `PresentaLegge`: la misura entra in calendario.
+    pub(crate) fn presenta_legge(&mut self, valori: &[ValoreProposto]) -> Result<(), Errore> {
+        (self.parlamento).presenta(
+            &self.dati,
+            &self.disposizioni,
+            &mut self.ministri,
+            self.turno,
+            valori,
+        )
+    }
+
     /// La bozza e `b` come lo approverebbe l'aula.
     fn bilancio_ammesso(&self, b: &Bilancio) -> Result<(Bilancio, Bilancio), Errore> {
         let bozza =
@@ -436,6 +453,21 @@ impl Partita {
         &self.disposizioni
     }
 
+    pub fn parlamento(&self) -> &Parlamento {
+        &self.parlamento
+    }
+
+    pub fn intesa(&self) -> &Intesa {
+        &self.intesa
+    }
+
+    /// I partiti al governo, escluso quello del Presidente del Consiglio.
+    pub fn alleati(&self) -> Vec<usize> {
+        (0..self.partiti.len())
+            .filter(|&j| j != self.governo.presidente && self.governo.al_governo(j))
+            .collect()
+    }
+
     /// L'id del gradino in vigore della disposizione `id`.
     pub fn in_vigore(&self, id: &str) -> Option<&str> {
         let k = self.dati.disposizione(id)?;
@@ -541,7 +573,39 @@ impl Partita {
             },
             bilancio: self.vista_bilancio(),
             disposizioni: self.disposizioni.voci_vista(&self.dati),
+            seggi: (self.partiti.iter())
+                .zip(&self.parlamento.seggi_camera)
+                .zip(&self.parlamento.seggi_senato)
+                .map(|((p, &camera), &senato)| SeggiPartito {
+                    partito: p.id.clone(),
+                    camera,
+                    senato,
+                })
+                .collect(),
+            alleati: self.voci_alleati(),
+            calendario: self.parlamento.voci_calendario(&self.dati),
+            esiti: self.parlamento.esiti.clone(),
         }
+    }
+
+    fn voci_alleati(&self) -> Vec<VoceAlleato> {
+        let soglia = self.dati.manopola("soglia_ultimatum");
+        (self.alleati().into_iter())
+            .map(|j| {
+                let variazioni: Vec<_> = (self.intesa.variazioni.iter())
+                    .filter(|v| v.partito == j)
+                    .cloned()
+                    .collect();
+                let intesa = self.intesa.valori.get(j).copied().unwrap_or_default();
+                VoceAlleato {
+                    partito: self.partiti[j].id.clone(),
+                    intesa,
+                    ultimatum: intesa < soglia,
+                    causa_principale: causa_peggiore(variazioni.iter().map(|v| (v.causa, v.delta))),
+                    variazioni,
+                }
+            })
+            .collect()
     }
 
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
@@ -573,7 +637,8 @@ impl Partita {
     /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
     /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
     /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`),
-    /// o disposizioni che non combaciano coi dati (`Disposizioni::controlla`).
+    /// o disposizioni, parlamento e intesa che non combaciano coi dati (`Disposizioni::controlla`,
+    /// `Parlamento::controlla`, `Intesa::controlla`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -631,6 +696,9 @@ impl Partita {
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
         partita.disposizioni.controlla(&partita.dati)?;
+        let n = partita.partiti.len();
+        partita.parlamento.controlla(&partita.dati, n)?;
+        partita.intesa.controlla(n)?;
         partita.controlla_partiti()?;
         partita
             .ministri

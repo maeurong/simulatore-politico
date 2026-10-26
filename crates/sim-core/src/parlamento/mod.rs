@@ -1,0 +1,371 @@
+//! Il parlamento in carica: seggi per partito, misure in calendario, esiti dei voti.
+
+use crate::dati::DatiGioco;
+use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
+use crate::errore::Errore;
+use crate::ministri::{Causa, Ministri, penalizza};
+use crate::partita::Trimestre;
+use crate::partiti::Partito;
+use crate::scenario::Scenario;
+use crate::vista::VoceMisura;
+use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use ts_rs::TS;
+
+mod intesa;
+
+pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
+
+/// Posti del calendario per riforme ed elettorali.
+pub const POSTI_ORDINARI: usize = 3;
+pub const POSTI_COSTITUZIONALI: usize = 1;
+/// Il posto dell'opposizione (iter-legislativo-italiano:151, un argomento su cinque): resta vuoto.
+pub const POSTI_OPPOSIZIONE: usize = 1;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
+pub enum FormaMisura {
+    Riforma,
+    Elettorale,
+    Costituzionale,
+    Conversione,
+    Bilancio,
+}
+
+/// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;
+/// `voto` = turno nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali,
+/// 0 altrimenti.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Misura {
+    pub id: u32,
+    pub forma: FormaMisura,
+    pub valori: Vec<(usize, usize)>,
+    pub proponente: Option<usize>,
+    pub presentata: u32,
+    pub voto: u32,
+    pub deliberazione: u8,
+    pub fiducia: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Conteggio {
+    pub si: u32,
+    pub no: u32,
+}
+
+/// `partito` è un id.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceLinea {
+    pub partito: String,
+    pub si: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct EsitoVoto {
+    pub misura: u32,
+    pub nome: String,
+    pub forma: FormaMisura,
+    pub data: Trimestre,
+    pub deliberazione: u8,
+    pub camera: Conteggio,
+    pub senato: Conteggio,
+    pub approvata: bool,
+    pub fiducia: bool,
+    pub fiducia_respinta: bool,
+    pub linee: Vec<VoceLinea>,
+}
+
+/// Un valore di una legge presentata: id della disposizione e del gradino.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct ValoreProposto {
+    pub disposizione: String,
+    pub gradino: String,
+}
+
+/// Seggi per partito nell'ordine dello scenario. `respinte` = disposizione e turno da cui si
+/// ripresenta; `prossima` = id della prossima misura.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Parlamento {
+    pub seggi_camera: Vec<u32>,
+    pub seggi_senato: Vec<u32>,
+    pub misure: Vec<Misura>,
+    pub respinte: Vec<(usize, u32)>,
+    pub prossima: u32,
+    pub esiti: Vec<EsitoVoto>,
+}
+
+/// Seggi di Camera e Senato al gradino di partenza di `numero_parlamentari`.
+fn seggi_partenza(disposizioni: &[DatoDisposizione]) -> Option<(f64, f64)> {
+    let d = disposizioni
+        .iter()
+        .find(|d| d.id == "numero_parlamentari")?;
+    let leve = &d.gradini.get(d.gradino(&d.partenza)?)?.leve;
+    Some((*leve.get("seggi_camera")?, *leve.get("seggi_senato")?))
+}
+
+/// Il parlamento uscente dello scenario contro partiti e `numero_parlamentari`.
+///
+/// # Errors
+/// `Partiti` col nome del ramo e del partito sconosciuto o coi seggi negativi, o con la somma
+/// diversa dai seggi di partenza.
+pub(crate) fn valida_uscente(
+    scenario: &Scenario,
+    disposizioni: &[DatoDisposizione],
+) -> Result<(), Errore> {
+    let ko = |m: String| Err(Errore::Partiti(format!("parlamento_uscente.{m}")));
+    let Some((camera, senato)) = seggi_partenza(disposizioni) else {
+        return ko("numero_parlamentari: manca coi seggi_camera e seggi_senato di partenza".into());
+    };
+    let u = &scenario.parlamento_uscente;
+    for (ramo, seggi, attesi) in [("camera", &u.camera, camera), ("senato", &u.senato, senato)] {
+        for (id, &n) in seggi {
+            if !scenario.partiti.iter().any(|p| &p.id == id) {
+                return ko(format!("{ramo}: partito sconosciuto: {id}"));
+            }
+            if n < 0 {
+                return ko(format!("{ramo}: seggi negativi a {id}"));
+            }
+        }
+        let somma: i64 = seggi.values().sum();
+        if somma as f64 != attesi {
+            return ko(format!(
+                "{ramo}: {somma} seggi, numero_parlamentari ne dà {attesi}"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn ko<T>(m: String) -> Result<T, Errore> {
+    Err(Errore::Comando(m))
+}
+
+/// `gennaio-marzo 2027`.
+fn mesi(t: Trimestre) -> String {
+    let m = match t.trimestre {
+        1 => "gennaio-marzo",
+        2 => "aprile-giugno",
+        3 => "luglio-settembre",
+        _ => "ottobre-dicembre",
+    };
+    format!("{m} {}", t.anno)
+}
+
+/// `"{nome disposizione}: {nome gradino}"` uniti da `"; "`.
+fn nome(dati: &DatiGioco, valori: &[(usize, usize)]) -> String {
+    let d = dati.disposizioni();
+    (valori.iter())
+        .filter_map(|&(k, g)| Some(format!("{}: {}", d.get(k)?.nome, d[k].gradini.get(g)?.nome)))
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+/// Media delle posizioni dei gradini `g(d)` di `valori`; `None` se nessuno ha posizione.
+fn posizione_media(
+    dati: &DatiGioco,
+    valori: &[(usize, usize)],
+    g: impl Fn(usize, usize) -> usize,
+) -> Option<f64> {
+    let p: Vec<f64> = (valori.iter())
+        .filter_map(|&(d, x)| dati.disposizioni()[d].posizione(g(d, x)))
+        .collect();
+    (!p.is_empty()).then(|| p.iter().sum::<f64>() / p.len() as f64)
+}
+
+impl Parlamento {
+    /// La legislatura uscente dello scenario; un partito assente non ha seggi.
+    pub(crate) fn uscente(dati: &DatiGioco, partiti: &[Partito]) -> Parlamento {
+        let u = &dati.scenario().parlamento_uscente;
+        let seggi = |ramo: &std::collections::BTreeMap<String, i64>| {
+            (partiti.iter())
+                .map(|p| {
+                    ramo.get(&p.id)
+                        .map_or(0, |&n| u32::try_from(n).unwrap_or(0))
+                })
+                .collect()
+        };
+        Parlamento {
+            seggi_camera: seggi(&u.camera),
+            seggi_senato: seggi(&u.senato),
+            ..Parlamento::default()
+        }
+    }
+
+    /// `PresentaLegge`: controlla, mette la misura in calendario e fa pagare al ministro
+    /// proponente la firma contro la sua posizione. Un rifiuto non tocca nulla.
+    ///
+    /// # Errors
+    /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
+    /// sconosciuto, norme di forma diversa, dicasteri diversi, gradino già in vigore, bloccato
+    /// dal referendum, disposizione già in esame, respinta da poco, calendario pieno.
+    pub(crate) fn presenta(
+        &mut self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        ministri: &mut Ministri,
+        turno: u32,
+        valori: &[ValoreProposto],
+    ) -> Result<(), Errore> {
+        let catalogo = dati.disposizioni();
+        if valori.is_empty() {
+            return ko("legge vuota".into());
+        }
+        let mut indici: Vec<usize> = Vec::with_capacity(valori.len());
+        for v in valori {
+            let Some(d) = dati.disposizione(&v.disposizione) else {
+                return ko(format!("disposizione sconosciuta: {}", v.disposizione));
+            };
+            if indici.contains(&d) {
+                return ko(format!("disposizione ripetuta: {}", v.disposizione));
+            }
+            indici.push(d);
+        }
+        let mut scelti: Vec<(usize, usize)> = Vec::with_capacity(valori.len());
+        for (v, &d) in valori.iter().zip(&indici) {
+            let Some(g) = catalogo[d].gradino(&v.gradino) else {
+                return ko(format!(
+                    "gradino sconosciuto: {} {}",
+                    v.disposizione, v.gradino
+                ));
+            };
+            scelti.push((d, g));
+        }
+        let norma = catalogo[indici[0]].norma;
+        if indici.iter().any(|&d| catalogo[d].norma != norma) {
+            return ko("norme di forma diversa nella stessa legge".into());
+        }
+        let forma = match norma {
+            Norma::Ordinaria => FormaMisura::Riforma,
+            Norma::Elettorale => FormaMisura::Elettorale,
+            Norma::Costituzionale => FormaMisura::Costituzionale,
+        };
+        let dicastero = &catalogo[indici[0]].dicastero;
+        if let Some(&d) = indici
+            .iter()
+            .find(|&&d| &catalogo[d].dicastero != dicastero)
+        {
+            return ko(format!(
+                "disposizioni di dicasteri diversi: {}",
+                catalogo[d].id
+            ));
+        }
+        for &(d, g) in &scelti {
+            let (id, stato) = (&catalogo[d].id, &disposizioni.voci[d]);
+            if stato.in_vigore == g {
+                return ko(format!("{id} è già a {}", catalogo[d].gradini[g].nome));
+            }
+            if stato.bloccati.contains(&g) {
+                let g = &catalogo[d].gradini[g].id;
+                return ko(format!("gradino bloccato dal referendum: {id} {g}"));
+            }
+            if (self.misure.iter()).any(|m| m.valori.iter().any(|&(x, _)| x == d)) {
+                return ko(format!("{id} è già in esame"));
+            }
+            if let Some(&(_, da)) = (self.respinte.iter()).find(|&&(x, da)| x == d && da > turno) {
+                return ko(format!(
+                    "{id} respinta: si ripresenta da {}",
+                    mesi(data_di(da))
+                ));
+            }
+        }
+        let costituzionale = forma == FormaMisura::Costituzionale;
+        let (posti, occupati) = if costituzionale {
+            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
+        } else {
+            (
+                POSTI_ORDINARI,
+                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
+            )
+        };
+        if self
+            .misure
+            .iter()
+            .filter(|m| occupati.contains(&m.forma))
+            .count()
+            >= posti
+        {
+            return ko("calendario pieno".into());
+        }
+        let proponente =
+            (dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|x| &x.id == id));
+        if let Some(st) = proponente.and_then(|i| ministri.dicasteri.get_mut(i)) {
+            let m = st.ministro.as_ref().map(|m| m.posizione);
+            let nuova = posizione_media(dati, &scelti, |_, g| g);
+            let vigore = posizione_media(dati, &scelti, |d, _| disposizioni.voci[d].in_vigore);
+            if let (Some(m), Some(nuova), Some(vigore)) = (m, nuova, vigore) {
+                let lontananza = ((nuova - m).abs() - (vigore - m).abs()).max(0.0);
+                let delta = -dati.manopola("costo_firma") * lontananza;
+                penalizza(st, Causa::NormaControPosizione, delta, turno);
+            }
+        }
+        self.misure.push(Misura {
+            id: self.prossima,
+            forma,
+            valori: scelti,
+            proponente,
+            presentata: turno,
+            voto: if costituzionale {
+                turno
+            } else {
+                turno.saturating_add(1)
+            },
+            deliberazione: u8::from(costituzionale),
+            fiducia: false,
+        });
+        self.prossima = self.prossima.saturating_add(1);
+        Ok(())
+    }
+
+    /// Le misure in calendario per la `Vista`.
+    pub(crate) fn voci_calendario(&self, dati: &DatiGioco) -> Vec<VoceMisura> {
+        let catalogo = dati.disposizioni();
+        (self.misure.iter())
+            .map(|m| VoceMisura {
+                id: m.id,
+                nome: nome(dati, &m.valori),
+                forma: m.forma,
+                proponente: (m.proponente)
+                    .and_then(|i| dati.dicasteri().get(i))
+                    .map(|d| d.id.clone()),
+                valori: (m.valori.iter())
+                    .map(|&(d, g)| ValoreProposto {
+                        disposizione: catalogo[d].id.clone(),
+                        gradino: catalogo[d].gradini[g].id.clone(),
+                    })
+                    .collect(),
+                voto: data_di(m.voto),
+                deliberazione: m.deliberazione,
+                fiducia: m.fiducia,
+            })
+            .collect()
+    }
+
+    /// # Errors
+    /// `SalvataggioIlleggibile` se i seggi non sono uno per partito o non sommano ai seggi dei
+    /// rami, o una misura o una respinta esce dalle disposizioni, dai gradini o dai dicasteri.
+    pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+        let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("parlamento: {m}")));
+        let (camera, senato) = seggi_partenza(dati.disposizioni()).unwrap_or_default();
+        for (seggi, totale) in [(&self.seggi_camera, camera), (&self.seggi_senato, senato)] {
+            if seggi.len() != n_partiti || f64::from(seggi.iter().sum::<u32>()) != totale {
+                return ko("seggi non uno per partito o diversi dai seggi del ramo");
+            }
+        }
+        let catalogo = dati.disposizioni();
+        let valore_ok =
+            |&(d, g): &(usize, usize)| catalogo.get(d).is_some_and(|x| g < x.gradini.len());
+        let misure_ok = self.misure.iter().all(|m| {
+            m.valori.iter().all(valore_ok)
+                && m.proponente.is_none_or(|i| i < dati.dicasteri().len())
+        });
+        if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {
+            return ko("una misura o una respinta fuori dalle disposizioni o dai dicasteri");
+        }
+        Ok(())
+    }
+}

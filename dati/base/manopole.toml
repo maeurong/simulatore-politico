@@ -781,3 +781,38 @@ valore = 5.0
 min = 0.0
 max = 20.0
 ticket = "27"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (intesa di partenza e di ritorno di ogni alleato, 0-100)
+[intesa_base]
+valore = 60.0
+min = 20.0
+max = 90.0
+ticket = "05"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (quota del divario da intesa_base recuperata a ogni turno)
+[ritorno_intesa]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "05"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (sotto questa intesa l'alleato pone l'ultimatum)
+[soglia_ultimatum]
+valore = 40.0
+min = 20.0
+max = 60.0
+ticket = "05"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (punti di soddisfazione per punto di posizione allontanata dal ministro proponente)
+[costo_firma]
+valore = 10.0
+min = 0.0
+max = 40.0
+ticket = "16"
+
+# iter-legislativo-italiano:66, sei mesi
+[turni_blocco_respinta]
+valore = 2.0
+min = 1.0
+max = 8.0
+ticket = "08"

@@ -174,6 +174,11 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "ore_salario_minimo",
     "copertura_salario_minimo",
     "elasticita_autonomia",
+    "intesa_base",
+    "ritorno_intesa",
+    "soglia_ultimatum",
+    "costo_firma",
+    "turni_blocco_respinta",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -615,6 +620,7 @@ impl DatiGioco {
             .valida(&self.regioni, &self.dicasteri, self.struttura.settori.len())?;
         self.scenario.valida()?;
         partiti::valida(&self.scenario, &self.dicasteri)?;
+        crate::parlamento::valida_uscente(&self.scenario, &self.disposizioni)?;
         self.struttura.valida_piramide()?;
         let x0 = produzione_riferimento(self);
         match x0.iter().position(|&x| x.is_nan() || x <= 0.0) {

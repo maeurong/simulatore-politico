@@ -11,6 +11,7 @@ pub mod grandezze;
 pub mod informazione;
 pub mod ministri;
 pub mod misure;
+pub mod parlamento;
 pub mod partita;
 pub mod partiti;
 pub mod scenario;

@@ -1,5 +1,6 @@
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::StatoAgenda;
+use sim_core::parlamento::ValoreProposto;
 use sim_core::{Comando, Errore, Partita};
 
 #[allow(
@@ -220,4 +221,19 @@ pub fn indice(id: &str) -> usize {
     (dati_base().dicasteri().iter())
         .position(|d| d.id == id)
         .unwrap()
+}
+
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn presenta(p: &mut Partita, valori: &[(&str, &str)]) -> Result<(), Errore> {
+    let valori = valori
+        .iter()
+        .map(|(d, g)| ValoreProposto {
+            disposizione: (*d).into(),
+            gradino: (*g).into(),
+        })
+        .collect();
+    p.comanda(Comando::PresentaLegge { valori })
 }
