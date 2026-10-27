@@ -1841,7 +1841,7 @@ impl Partita {
                     && unici(d.cessioni.iter().map(|c| c.0))
                     && d.cessioni.iter().all(|c| d.partiti.contains(&c.0))
             }),
-            "legislatura.dichiarazione con un partito ripetuto o una cessione fuori dai membri",
+            "legislatura.dichiarazione con un partito ripetuto, una cessione ripetuta o una cessione fuori dai membri",
         )?;
         ok(
             l.scadenza >= l.inizio,

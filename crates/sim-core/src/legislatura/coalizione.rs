@@ -267,8 +267,9 @@ impl Quadro<'_> {
 ///
 /// # Errors
 /// `Comando` col nome del partito in causa (l'id se sconosciuto): sconosciuto, ripetuto, il
-/// giocatore stesso, cessione a un partito fuori dalla coalizione, cessioni pari o oltre i seggi
-/// attesi del giocatore in un ramo, ogni membro non disponibile con la coalizione intera.
+/// giocatore stesso, cessione a un partito fuori dalla coalizione o ripetuta, cessioni pari o
+/// oltre i seggi attesi del giocatore in un ramo, ogni membro non disponibile con la coalizione
+/// intera.
 pub(crate) fn dichiarazione(
     q: &Quadro,
     partiti: &[String],
@@ -301,6 +302,9 @@ pub(crate) fn dichiarazione(
                 "{} non è nella coalizione: non puoi cedergli seggi",
                 nome(j)
             ));
+        }
+        if d.cessioni.iter().any(|c| c.0 == j) {
+            return ko(format!("Cessione ripetuta a {}", nome(j)));
         }
         d.cessioni.push((j, c.seggi));
     }

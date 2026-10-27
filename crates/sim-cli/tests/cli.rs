@@ -487,7 +487,7 @@ fn tara_rifiuta_la_manopola_che_non_trova() {
         "intestazione",
         "[luna_di_miele]",
         "[ luna_di_miele ]",
-        "luna_di_miele",
+        "nessuna riga `valore =` in [luna_di_miele]",
     );
 }
 

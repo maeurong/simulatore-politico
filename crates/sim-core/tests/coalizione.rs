@@ -115,6 +115,11 @@ fn dichiarazione_rifiutata_col_motivo() {
             vec![cessione("centrodestra", u32::MAX)],
             "Cessioni",
         ),
+        (
+            vec!["centrodestra"],
+            vec![cessione("centrodestra", 1), cessione("centrodestra", 1)],
+            "Cessione ripetuta a Centrodestra",
+        ),
         (vec!["inesistente"], vec![], "Partito sconosciuto"),
     ];
     let mut p = fondata(5.5);
