@@ -954,7 +954,8 @@ impl Partita {
     /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
     /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
     /// referendum già in corso, fuori finestra (dopo luglio-settembre); prima di tutto, l'ultimo
-    /// anno della legislatura (iter-legislativo-italiano:135), poi le Camere sciolte.
+    /// anno della legislatura (iter-legislativo-italiano:135), poi le Camere sciolte, poi i sei
+    /// mesi dopo i comizi: il turno dopo un voto (stessa fonte).
     pub fn promuovi_referendum(
         &mut self,
         promotore: &str,
@@ -967,6 +968,13 @@ impl Partita {
         }
         if self.legislatura.fase == Fase::Sciolta {
             return Err(Errore::Comando("Nessun referendum a Camere sciolte".into()));
+        }
+        let l = &self.legislatura;
+        if !l.elezioni.is_empty() && self.turno <= l.inizio {
+            return Err(Errore::Comando(
+                "Nessuna richiesta di referendum nei sei mesi dopo la convocazione dei comizi"
+                    .into(),
+            ));
         }
         let r = (self.parlamento).abrogativo(
             &self.stato_aula(),
@@ -1541,12 +1549,16 @@ impl Partita {
             return self.quadro().disponibilita(&self.dichiarazione_corrente());
         }
         let c = self.coalizione_del_giocatore();
-        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)))
+        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)), &[])
     }
 
-    /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore coi seggi
-    /// del voto (scelta 9 del piano 7).
-    fn dopo_il_voto(&self, quali: impl Iterator<Item = usize>) -> Vec<VoceDisponibilita> {
+    /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore, allargata
+    /// a `piu`, coi seggi del voto (scelta 9 del piano 7).
+    fn dopo_il_voto(
+        &self,
+        quali: impl Iterator<Item = usize>,
+        piu: &[usize],
+    ) -> Vec<VoceDisponibilita> {
         let pl = &self.parlamento;
         let q = Quadro {
             seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
@@ -1555,41 +1567,62 @@ impl Partita {
         let d = Dichiarazione {
             partiti: (self.coalizione_del_giocatore().into_iter())
                 .filter(|&j| j != self.giocatore)
+                .chain(piu.iter().copied())
                 .collect(),
             cessioni: Vec::new(),
         };
         q.voci(&d, quali)
     }
 
-    /// `Allarga`: in trattativa con l'incarico, il partito `id` entra nella coalizione se è
-    /// disponibile coi seggi del voto.
+    /// `Allarga`: in trattativa con l'incarico, i partiti `ids` entrano insieme nella coalizione
+    /// se ognuno è disponibile coi seggi del voto e la lista intera (formazione-di-coalizioni:13).
     ///
     /// # Errors
-    /// `Comando` col nome del partito (l'id se sconosciuto): fuori dalla trattativa con
-    /// l'incarico, sconosciuto, già nella coalizione, o con la causa se non è disponibile.
-    pub(crate) fn allarga(&mut self, id: &str) -> Result<(), Errore> {
+    /// `Comando` col nome del partito (l'id se sconosciuto), e la partita resta identica: lista
+    /// vuota, fuori dalla trattativa con l'incarico, sconosciuto, ripetuto, già nella coalizione,
+    /// o con la causa per ogni membro non disponibile.
+    pub(crate) fn allarga(&mut self, ids: &[String]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
-        let j = self.partiti.iter().position(|p| p.id == id);
+        if ids.is_empty() {
+            return ko("Allarga: nessun partito".into());
+        }
         if !self.con_incarico() {
-            let nome = j.map_or(id, |j| self.partiti[j].nome.as_str());
+            let nomi: Vec<&str> = (ids.iter())
+                .map(|id| {
+                    (self.partiti.iter().find(|p| &p.id == id))
+                        .map_or(id.as_str(), |p| p.nome.as_str())
+                })
+                .collect();
             return ko(format!(
-                "{nome}: allargamento solo in trattativa, con l'incarico"
+                "{}: allargamento solo in trattativa, con l'incarico",
+                nomi.join(", ")
             ));
         }
-        let Some(j) = j else {
-            return ko(format!("Partito sconosciuto: {id}"));
-        };
-        let nome = &self.partiti[j].nome;
-        if self.coalizione_del_giocatore().contains(&j) {
-            return ko(format!("{nome} è già nella coalizione"));
+        let c = self.coalizione_del_giocatore();
+        let mut lista = Vec::new();
+        for id in ids {
+            let Some(j) = self.partiti.iter().position(|p| &p.id == id) else {
+                return ko(format!("Partito sconosciuto: {id}"));
+            };
+            let nome = &self.partiti[j].nome;
+            if c.contains(&j) {
+                return ko(format!("{nome} è già nella coalizione"));
+            }
+            if lista.contains(&j) {
+                return ko(format!("{nome} ripetuto nell'allargamento"));
+            }
+            lista.push(j);
         }
-        if let Some(v) = self.dopo_il_voto(std::iter::once(j)).pop()
-            && !v.disponibile
-        {
-            return ko(format!("{nome} non entra: {}", v.causa));
+        let voci = self.dopo_il_voto(lista.iter().copied(), &lista);
+        let fuori: Vec<String> = (lista.iter().zip(voci))
+            .filter(|(_, v)| !v.disponibile)
+            .map(|(&j, v)| format!("{} non entra: {}", self.partiti[j].nome, v.causa))
+            .collect();
+        if !fuori.is_empty() {
+            return ko(fuori.join("; "));
         }
-        // La proposta fatta senza di lui decade: le richieste tornano alla spartizione di default.
-        self.legislatura.allargati.push(j);
+        // La proposta fatta senza di loro decade: le richieste tornano alla spartizione di default.
+        self.legislatura.allargati.extend(lista);
         self.legislatura.proposta = None;
         Ok(())
     }
@@ -1739,7 +1772,8 @@ impl Partita {
     /// Il governo nuovo alla chiusura della trattativa, dopo le soglie. Con l'incarico al
     /// giocatore la sua proposta (o quella di default), i tecnici al suo partito, e ogni alleato
     /// riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)`; con l'incarico IA il
-    /// primo partito per seggi e la spartizione di default. Senza maggioranza del giocatore (con
+    /// primo partito per seggi e la spartizione di default, e ogni alleato riparte da
+    /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
     /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
     /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
     /// scioglie le Camere: si vota nella chiusura del turno dopo. Poi ministri tutti nuovi,
@@ -1790,6 +1824,13 @@ impl Partita {
                 }
                 let delta = per_punto * (offerta - richiesta);
                 (self.intesa).varia(j, CausaIntesa::Spartizione, delta, self.turno);
+            }
+        } else {
+            let base = self.dati.manopola("intesa_base");
+            for &j in coalizione.iter().filter(|&&j| j != presidente) {
+                if let Some(x) = self.intesa.valori.get_mut(j) {
+                    *x = base;
+                }
             }
         }
         let entranti: Vec<usize> = (coalizione.iter().copied())

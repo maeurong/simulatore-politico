@@ -323,3 +323,36 @@ pub fn fondata(posizione: f64) -> Partita {
     };
     Partita::fonda(dati_base(), 7, &f).unwrap()
 }
+
+/// Seggi scritti a mano nell'ordine dei partiti; le somme devono restare i `totali`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn con_seggi(p: &Partita, camera: &[u32], senato: &[u32]) -> Partita {
+    edita(p, |j| {
+        let somma = |v: &[u32]| v.iter().sum::<u32>();
+        let totali = serde_json::json!([somma(camera), somma(senato)]);
+        assert_eq!(j["legislatura"]["totali"], totali);
+        j["parlamento"]["seggi_camera"] = serde_json::json!(camera);
+        j["parlamento"]["seggi_senato"] = serde_json::json!(senato);
+    })
+    .unwrap()
+}
+
+/// La partita vera (posizione 4,5) dopo il voto, in trattativa con l'incarico al giocatore,
+/// con `coalizioni` (JSON di indici) e seggi scritti a mano.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn in_trattativa(coalizioni: serde_json::Value, camera: &[u32], senato: &[u32]) -> Partita {
+    let mut p = fondata(4.5);
+    p.chiudi_turno();
+    let p = edita(&p, |j| {
+        j["legislatura"]["incarico"] = serde_json::json!("Giocatore");
+        j["legislatura"]["coalizioni"] = coalizioni;
+    })
+    .unwrap();
+    con_seggi(&p, camera, senato)
+}

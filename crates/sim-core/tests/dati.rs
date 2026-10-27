@@ -258,3 +258,15 @@ fn piramide_senza_eta_da_lavoro_rifiutata() {
         "{e}"
     );
 }
+
+#[test]
+fn coalizione_di_un_partito_solo_rifiutata() {
+    let f = sostituisci(
+        file_base(),
+        "scenario",
+        "[\"sinistra\", \"centrosinistra\"]",
+        "[\"sinistra\"]",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(e.to_string().contains("sinistra"), "{e}");
+}

@@ -139,6 +139,8 @@ pub struct StatoDicastero {
     pub margine_residuo: i64,
     /// La richiesta di fondi in attesa di una decisione; `None` in interim.
     pub proposta: Option<Proposta>,
+    /// Il ministro uscito era un tecnico: la rosa del successore è di tecnici.
+    pub rosa_tecnica: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -269,7 +271,8 @@ impl Ministri {
     }
 
     /// Apertura del turno (`cx.turno` è già quello nuovo): variazioni vecchie, rose per gli
-    /// interim appena aperti, ingresso del successore dopo il turno di interim.
+    /// interim appena aperti (di tecnici dopo un tecnico), ingresso del successore dopo il turno
+    /// di interim.
     pub(crate) fn apri(&mut self, cx: &Contesto, caso: &mut Caso) {
         for i in 0..self.dicasteri.len() {
             let st = &mut self.dicasteri[i];
@@ -279,8 +282,9 @@ impl Ministri {
                 continue;
             }
             if st.rosa.is_empty() {
+                let tecnica = st.rosa_tecnica;
                 for _ in 0..NELLA_ROSA {
-                    let x = self.genera(cx, caso, i, false);
+                    let x = self.genera(cx, caso, i, tecnica);
                     self.dicasteri[i].rosa.push(x);
                 }
                 self.dicasteri[i].rosa.sort_by(|a, b| {
@@ -294,6 +298,7 @@ impl Ministri {
                 }
                 st.scelta = None;
                 st.causa_dimissioni = None;
+                st.rosa_tecnica = false;
             }
         }
         self.apri_agende(cx, caso);

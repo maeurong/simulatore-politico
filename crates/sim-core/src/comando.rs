@@ -79,10 +79,11 @@ pub enum Comando {
     ProponiSpartizione {
         dicasteri: Vec<Assegnazione>,
     },
-    /// Allarga la coalizione in trattativa, con l'incarico, al partito `partito` (id): entra se è
-    /// disponibile coi seggi del voto. Il partito resta fino alla formazione del governo.
+    /// Allarga la coalizione in trattativa, con l'incarico, ai `partiti` (id): entrano tutti se
+    /// ognuno è disponibile coi seggi del voto e la lista intera, o nessuno. Restano fino alla
+    /// formazione del governo.
     Allarga {
-        partito: String,
+        partiti: Vec<String>,
     },
 }
 
@@ -123,8 +124,8 @@ impl Partita {
         if let Comando::ProponiSpartizione { dicasteri } = &c {
             return self.proponi_spartizione(dicasteri);
         }
-        if let Comando::Allarga { partito } = &c {
-            return self.allarga(partito);
+        if let Comando::Allarga { partiti } = &c {
+            return self.allarga(partiti);
         }
         self.di_governo()?;
         match c {
