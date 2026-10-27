@@ -91,6 +91,27 @@ fn allargare_in_crisi_salva_il_governo() {
     }
 }
 
+/// L'allargato entra come alla formazione: giudizio da zero, intesa alla base. L'estrema destra
+/// ha corso da sola: nessuna rottura.
+#[test]
+fn chi_entra_in_crisi_riparte_da_zero() {
+    let ed = partito("estrema_destra");
+    let mut p = edita(&in_crisi(), |j| {
+        j["elettorato"]["gruppi"][0]["giudizio"][ed] = serde_json::json!(-0.5);
+        j["intesa"]["valori"][ed] = serde_json::json!(30.0);
+    })
+    .unwrap();
+    p.comanda(Comando::Allarga {
+        partiti: vec!["estrema_destra".into()],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(p.governo().al_governo(ed));
+    assert!(p.elettorato().gruppi.iter().all(|g| g.giudizio[ed] == 0.0));
+    assert_eq!(p.intesa().valori[ed], dati_base().manopola("intesa_base"));
+    assert_eq!(p.intesa().ultimatum[ed], None);
+}
+
 /// Il centro (3) entra con la Sanità (3), poi esce: destra e centrodestra reggono.
 fn col_centro_che_esce() -> Partita {
     let p = Partita::nuova(dati_base(), 1);

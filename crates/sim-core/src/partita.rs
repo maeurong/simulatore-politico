@@ -1983,13 +1983,7 @@ impl Partita {
         let entranti: Vec<usize> = (coalizione.iter().copied())
             .filter(|&j| !self.governo.al_governo(j))
             .collect();
-        for gruppo in &mut self.elettorato.gruppi {
-            for &j in &entranti {
-                if let Some(x) = gruppo.giudizio.get_mut(j) {
-                    *x = 0.0;
-                }
-            }
-        }
+        self.giudizio_da_zero(&entranti);
         let tecnici: Vec<bool> = assegnati.iter().map(Option::is_none).collect();
         self.governo = Governo {
             presidente,
@@ -2005,6 +1999,17 @@ impl Partita {
         l.proposta = None;
         l.allargati.clear();
         l.maggioranza = None;
+    }
+
+    /// Il giudizio sul governo riparte da zero in ogni gruppo per chi entra al governo.
+    fn giudizio_da_zero(&mut self, entranti: &[usize]) {
+        for gruppo in &mut self.elettorato.gruppi {
+            for &j in entranti {
+                if let Some(x) = gruppo.giudizio.get_mut(j) {
+                    *x = 0.0;
+                }
+            }
+        }
     }
 
     /// Rottura dell'impegno, simmetrica (scelta 3 del piano 7b): chi della `coalizione` rompe con
@@ -2079,8 +2084,9 @@ impl Partita {
     }
 
     /// La fine della crisi (scelta 10 del piano 7b). Con la maggioranza, coalizione più allargati:
-    /// gli allargati entrano al governo, chi rompe l'impegno paga, rimpasto, ultimatum sul valore
-    /// corrente. Senza, la sfiducia automatica; non si vota se il governo è già dimissionario.
+    /// gli allargati entrano al governo come alla formazione (giudizio da zero, intesa alla base
+    /// senza ultimatum), chi rompe l'impegno paga, rimpasto, ultimatum sul valore corrente. Senza,
+    /// la sfiducia automatica; non si vota se il governo è già dimissionario.
     fn fine_della_crisi(&mut self) {
         let l = &mut self.legislatura;
         l.crisi = None;
@@ -2095,6 +2101,11 @@ impl Partita {
             self.sfiducia(None, None);
             return;
         }
+        let base = self.dati.manopola("intesa_base");
+        for &j in &allargati {
+            self.intesa.riparti(j, base);
+        }
+        self.giudizio_da_zero(&allargati);
         self.paga_rotture(&coalizione, &allargati, self.governo.presidente);
         self.governo.coalizione = coalizione;
         self.rimpasto();
@@ -2178,6 +2189,7 @@ impl Partita {
             })
         };
         let (camera, senato) = (blocchi(&pl.seggi_camera), blocchi(&pl.seggi_senato));
+        // Il pareggio respinge la mozione, anche quella automatica a fine crisi.
         let approvata = camera.si > camera.no || senato.si > senato.no;
         let nome = match dicastero.and_then(|i| self.dati.dicasteri().get(i)) {
             Some(d) => format!("Mozione di sfiducia al ministro di {}", d.nome),
