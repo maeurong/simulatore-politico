@@ -296,7 +296,7 @@ git commit -m "feat(core): valence che torna verso la base"
 - Consumes: `StatoAula::seggi_attesi` (`crates/sim-core/src/parlamento/regole.rs:152`), manopola `seggi_per_punto_linea`, `Quesito` del Task 1.
 - Produces:
   - `Quesito` guadagna `guadagno: Vec<f64>`, uno per partito (vuoto = nessuno). Con `guadagno` non vuoto, `u_si` del gruppo al punto `x` è `Σ_j v_j · guadagno_j`, con `v_j` le intenzioni del gruppo, e `u_no = 0`; le posizioni non contano. Sui quesiti elettorali `guadagno_j = (Δseggi Camera + Δseggi Senato)_j / seggi_per_punto_linea`, con `Δ` = seggi attesi con l'abrogazione meno seggi con la legge in vigore.
-  - In `vota_abrogativo`, prima del voto: se il gradino in vigore della disposizione è già quello dopo l'abrogazione, il referendum decade senza voto con `decaduto = "Decaduto senza voto: una legge ha già abrogato la disposizione"`, nessuna valence, nessun blocco. Se una legge ha cambiato il gradino in vigore dopo la promozione con un valore diverso, il quesito si trasferisce sul gradino nuovo: il titolo dell'esito è il gradino in vigore al voto (già oggi), e il gradino bloccato è quello.
+  - In `vota_abrogativo`, prima del voto: se il gradino in vigore della disposizione è già quello dopo l'abrogazione e non ci sono arrivi pendenti (stesso criterio della promozione), il referendum decade senza voto con `decaduto = "Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe"`, nessuna valence, nessun blocco. Se una legge ha cambiato il gradino in vigore dopo la promozione con un valore diverso, il quesito si trasferisce sul gradino nuovo: il titolo dell'esito è il gradino in vigore al voto (già oggi), e il gradino bloccato è quello.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
@@ -320,7 +320,7 @@ fn una_legge_che_abroga_prima_del_voto_fa_decadere_il_quesito() {
         p.chiudi_turno();
     }
     let e = &p.vista().esiti_referendum[0];
-    assert_eq!(e.decaduto.as_deref(), Some("Decaduto senza voto: una legge ha già abrogato la disposizione"));
+    assert_eq!(e.decaduto.as_deref(), Some("Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe"));
     assert!(!e.quorum && !e.approvato);
 }
 ```
