@@ -1,7 +1,7 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome, posizioni, voto};
+use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, slitta, voto};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -39,7 +39,7 @@ pub struct RichiestaEmendamento {
 }
 
 /// Per disposizione: una disposizione a gradini che salta almeno due gradini torna alla metà, arrotondata verso
-/// il vigente; un regime o un salto di un gradino si rinvia.
+/// il vigente; un regime, un salto di un gradino o una metà bloccata dal referendum si rinvia.
 fn proposta(
     dati: &DatiGioco,
     disposizioni: &Disposizioni,
@@ -47,14 +47,16 @@ fn proposta(
 ) -> Vec<(usize, Attenuazione)> {
     (valori.iter())
         .filter_map(|&(d, b)| {
-            let a = disposizioni.voci.get(d)?.in_vigore;
+            let s = disposizioni.voci.get(d)?;
+            let a = s.in_vigore;
             let parametro = dati.disposizioni().get(d)?.tipo == TipoDisposizione::Parametro;
-            let x = if parametro && a.abs_diff(b) >= 2 {
-                Attenuazione::Gradino(if a > b {
-                    (a + b).div_ceil(2)
-                } else {
-                    (a + b) / 2
-                })
+            let meta = if a > b {
+                (a + b).div_ceil(2)
+            } else {
+                (a + b) / 2
+            };
+            let x = if parametro && a.abs_diff(b) >= 2 && !s.bloccati.contains(&meta) {
+                Attenuazione::Gradino(meta)
             } else {
                 Attenuazione::Rinvio
             };
@@ -100,7 +102,7 @@ impl Parlamento {
     /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia
     /// e senza emendamenti già aperti, chiede un emendamento ogni alleato distante almeno
     /// `distanza_alleato` dalla misura, che tiene il dicastero proponente o che con la legge
-    /// elettorale perde seggi attesi.
+    /// elettorale perde seggi attesi; non chi ha già un emendamento deciso sulla misura.
     pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
@@ -117,7 +119,7 @@ impl Parlamento {
                 Vec::new()
             };
             for (j, p) in aula.partiti.iter().enumerate() {
-                if !voto::alleato(governo, j) {
+                if !voto::alleato(governo, j) || m.emendamenti.iter().any(|e| e.partito == j) {
                     continue;
                 }
                 let distanza = nuova.map(|n| (p.posizione_dichiarata - n).abs());
@@ -131,7 +133,7 @@ impl Parlamento {
                         format!("a {d} punti dalla sua posizione")
                     }
                     (_, Some(c), _) => format!("tocca il suo dicastero {}", c.nome),
-                    (_, _, Some(x)) => format!("perde {} seggi con la legge elettorale", -x),
+                    (_, _, Some(x)) => seggi_persi(-x),
                     _ => continue,
                 };
                 m.emendamenti.push(RichiestaEmendamento {
@@ -145,9 +147,11 @@ impl Parlamento {
         }
     }
 
-    /// Chiusura: ogni emendamento ancora aperto è respinto; rende gli alleati che pagano.
-    pub(crate) fn respingi_aperti(&mut self) -> Vec<usize> {
+    /// Chiusura: ogni emendamento ancora aperto è respinto, tranne quelli delle leggi che
+    /// slittano nel turno del bilancio (`occupato`); rende gli alleati che pagano.
+    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<usize> {
         let aperti = (self.misure.iter_mut())
+            .filter(|m| !(occupato && slitta(m, turno)))
             .flat_map(|m| m.emendamenti.iter_mut())
             .filter(|e| e.stato == StatoEmendamento::Aperto);
         (aperti)
@@ -176,7 +180,7 @@ impl Parlamento {
         };
         let j = partiti.iter().position(|p| p.id == partito);
         let chi = j.map_or(partito, |j| partiti[j].nome.as_str());
-        let legge = nome(dati, &m.valori);
+        let legge = nome_misura(dati, m);
         let Some(e) = m.emendamenti.iter_mut().find(|e| Some(e.partito) == j) else {
             return ko(format!("nessun emendamento di {chi} su «{legge}»"));
         };
@@ -200,27 +204,36 @@ impl Parlamento {
     /// `PoniFiducia`: la misura si vota nel turno e gli emendamenti aperti cadono senza costo.
     ///
     /// # Errors
-    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta.
+    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta,
+    /// legge nel turno del bilancio.
     pub(crate) fn poni_fiducia(
         &mut self,
         dati: &DatiGioco,
         misura: u32,
         turno: u32,
     ) -> Result<&Misura, Errore> {
+        let occupato = self.turno_del_bilancio(turno);
         let Some(m) = self.misure.iter_mut().find(|m| m.id == misura) else {
             return ko(format!("misura sconosciuta: {misura}"));
         };
         if m.forma == FormaMisura::Costituzionale {
             return ko(format!(
-                "La norma costituzionale passa da due deliberazioni e dal referendum: niente \
-                 questione di fiducia su «{}»",
-                nome(dati, &m.valori)
+                "niente questione di fiducia su «{}»: la norma costituzionale passa da due \
+                 deliberazioni e dal referendum",
+                nome_misura(dati, m)
             ));
         }
         if m.fiducia {
             return ko(format!(
                 "questione di fiducia già posta su «{}»",
-                nome(dati, &m.valori)
+                nome_misura(dati, m)
+            ));
+        }
+        if occupato && matches!(m.forma, FormaMisura::Riforma | FormaMisura::Elettorale) {
+            return ko(format!(
+                "il bilancio occupa il calendario: niente questione di fiducia su «{}» in questo \
+                 turno",
+                nome_misura(dati, m)
             ));
         }
         m.fiducia = true;
@@ -248,9 +261,49 @@ pub(crate) fn costo_fiducia(
     doppio * (dati.manopola("costo_fiducia") + dati.manopola("costo_fiducia_distanza") * d / 6.0)
 }
 
+/// Il motivo dell'alleato che perde `n` seggi attesi.
+fn seggi_persi(n: i32) -> String {
+    let seggi = if n == 1 { "seggio" } else { "seggi" };
+    format!("perde {n} {seggi} con la legge elettorale")
+}
+
 /// Un emendamento accolto rinvia la disposizione `d`.
 pub(crate) fn rinviata(emendamenti: &[RichiestaEmendamento], d: usize) -> bool {
     (emendamenti.iter())
         .filter(|e| e.stato == StatoEmendamento::Accolto)
         .any(|e| e.proposta.contains(&(d, Attenuazione::Rinvio)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    #[test]
+    fn un_seggio_perso_al_singolare() {
+        assert_eq!(seggi_persi(1), "perde 1 seggio con la legge elettorale");
+        assert_eq!(seggi_persi(3), "perde 3 seggi con la legge elettorale");
+    }
+
+    #[test]
+    fn gradino_a_meta_bloccato_diventa_rinvio() {
+        let dati = dati_base();
+        let d = dati.disposizione("salario_minimo").expect("nei dati base");
+        let g = |id: &str| {
+            dati.disposizioni()[d]
+                .gradino(id)
+                .expect("gradino nei dati base")
+        };
+        let mut disposizioni = Disposizioni::iniziali(&dati);
+        let valori = [(d, g("11"))];
+        assert_eq!(
+            proposta(&dati, &disposizioni, &valori),
+            vec![(d, Attenuazione::Gradino(g("7")))]
+        );
+        disposizioni.voci[d].bloccati.push(g("7"));
+        assert_eq!(
+            proposta(&dati, &disposizioni, &valori),
+            vec![(d, Attenuazione::Rinvio)]
+        );
+    }
 }

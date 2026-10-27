@@ -3,6 +3,7 @@ import type { TipoReferendum } from "./TipoReferendum";
 import type { Trimestre } from "./Trimestre";
 
 /**
- * Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato.
+ * Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato. `decaduto` =
+ * il referendum decaduto senza voto: il motivo leggibile, per il giocatore.
  */
-export type EsitoReferendum = { tipo: TipoReferendum, nome: string, data: Trimestre, si: bigint, no: bigint, votanti: bigint, aventi_diritto: bigint, quorum: boolean, approvato: boolean, };
+export type EsitoReferendum = { tipo: TipoReferendum, nome: string, data: Trimestre, si: bigint, no: bigint, votanti: bigint, aventi_diritto: bigint, quorum: boolean, approvato: boolean, decaduto: string | null, };

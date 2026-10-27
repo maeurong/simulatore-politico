@@ -24,7 +24,7 @@ fondo_riserva: bigint,
  */
 presentabile: boolean, 
 /**
- * Una legge di bilancio è già presentata nel turno: l'aula la approva in chiusura.
+ * Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.
  */
 presentato: boolean, 
 /**

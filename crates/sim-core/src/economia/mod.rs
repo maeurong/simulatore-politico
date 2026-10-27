@@ -75,9 +75,9 @@ pub struct Economia {
     pub bilancio_approvato: Option<Bilancio>,
     /// Legge di bilancio presentata nel turno, in attesa dell'aula.
     pub bilancio_presentato: Option<Bilancio>,
-    /// Euro dei decreti (fondi accolti) del turno: spesi per intero nel trimestre che si chiude,
-    /// fuori dal bilancio annuo.
-    pub decreti: i64,
+    /// Euro dei decreti (fondi accolti) del turno per dicastero: spesi per intero nel trimestre
+    /// che si chiude, fuori dal bilancio annuo.
+    pub decreti: Vec<i64>,
     /// Euro.
     pub debito: i64,
     /// % annuo.
@@ -161,7 +161,7 @@ impl Economia {
             bilancio_approvato: Some(finanza::bilancio_approvato_iniziale(dati, &bilancio)),
             bilancio,
             bilancio_presentato: None,
-            decreti: 0,
+            decreti: vec![0; dati.dicasteri().len()],
             debito,
             tasso_medio_debito: s.costo_medio_debito.valore,
             conti: ContiTrimestre::default(),
@@ -194,6 +194,11 @@ impl Economia {
         }
         e.spread = e.spread_dallo_stato(dati, CAPACITA_NEUTRA);
         e
+    }
+
+    /// PIL potenziale annuo nominale, in euro.
+    pub(crate) fn pil_potenziale_annuo(&self) -> f64 {
+        self.pil_potenziale_reale * self.livello_prezzi * 4.0 * MLD
     }
 
     // Ordine: misure (lette da `Misure`, costruita da `Partita`) → finanza pubblica e spesa
@@ -230,15 +235,19 @@ impl Economia {
             .zip(&st.esportazioni)
             .map(|(d, e)| d + e * x_estera)
             .collect();
-        // Scostamento reale della spesa trimestrale dei dicasteri dal turno zero, in miliardi.
+        // Scostamento reale della spesa trimestrale dei dicasteri dal turno zero, in miliardi,
+        // più i decreti del trimestre; poi i decreti si azzerano.
         let pil_annuo_0 = 4.0 * dati.scenario().pil_trimestrale.valore;
-        for (dic, b) in dati.dicasteri().iter().zip(&self.bilancio.dicasteri) {
+        let dicasteri = dati.dicasteri().iter().zip(&self.bilancio.dicasteri);
+        for ((dic, b), &decreto) in dicasteri.zip(&self.decreti) {
             let spesa_0 = dic.spesa_pil / 100.0 * pil_annuo_0;
-            let scostamento = (b.spesa as f64 / MLD / self.livello_prezzi - spesa_0) / 4.0;
+            let scostamento = (b.spesa as f64 / MLD / self.livello_prezzi - spesa_0) / 4.0
+                + decreto as f64 / MLD / self.livello_prezzi;
             for (i, di) in d.iter_mut().enumerate() {
                 *di += quota_dicastero(st, dic, i) * scostamento;
             }
         }
+        self.decreti.fill(0);
         let x = leontief::produzione(&st.a, &d);
         let x0 = produzione_riferimento(dati);
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());

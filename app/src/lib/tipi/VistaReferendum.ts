@@ -3,6 +3,7 @@ import type { TipoReferendum } from "./TipoReferendum";
 import type { Trimestre } from "./Trimestre";
 
 /**
- * Un referendum in attesa del voto; `promotore` è l'id di un partito.
+ * Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`
+ * = abrogativo con le firme in raccolta; il confermativo sempre `true`).
  */
-export type VistaReferendum = { tipo: TipoReferendum, nome: string, voto: Trimestre, promotore: string | null, invito_astensione: boolean, };
+export type VistaReferendum = { tipo: TipoReferendum, nome: string, voto: Trimestre, promotore: string | null, firme: boolean, invito_astensione: boolean, };

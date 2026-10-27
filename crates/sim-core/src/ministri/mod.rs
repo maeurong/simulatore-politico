@@ -9,6 +9,7 @@ use crate::economia::Economia;
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{Sondaggio, indice};
+use crate::parlamento::Parlamento;
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use crate::vista::{VoceMinistero, VoceMinistro};
@@ -23,7 +24,32 @@ mod soddisfazione;
 
 pub(crate) use agenda::penalizza;
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
-pub use proposte::Proposta;
+pub use proposte::{Proposta, TipoProposta};
+
+/// Ciò che un comando sui ministri lascia da fare a chi possiede economia e calendario: un
+/// decreto accolto da spendere e convertire, o ritirato; una proposta di riforma accolta da
+/// presentare (la proposta resta finché la presentazione non passa); un'agenda dirottata, la
+/// cui conversione segue il nuovo atto.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum EffettoComando {
+    Nessuno,
+    Dirottata {
+        dicastero: usize,
+    },
+    Decreto {
+        dicastero: usize,
+        importo: i64,
+    },
+    Ritiro {
+        dicastero: usize,
+        importo: i64,
+    },
+    Riforma {
+        dicastero: usize,
+        disposizione: usize,
+        gradino: usize,
+    },
+}
 
 /// Perché la soddisfazione di un ministro è cambiata.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,6 +66,8 @@ pub enum Causa {
     BudgetTagliato,
     NormaControPosizione,
     LeggeRespinta,
+    FondiTolti,
+    DecretoDecaduto,
 }
 
 impl fmt::Display for Causa {
@@ -51,10 +79,12 @@ impl fmt::Display for Causa {
             Self::AttoFermato => "atto fermato dal Presidente del Consiglio",
             Self::AttoDirottato => "atto dirottato dal Presidente del Consiglio",
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
-            Self::PropostaRespinta => "proposta di fondi respinta",
+            Self::PropostaRespinta => "proposta del ministro respinta",
             Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
             Self::NormaControPosizione => "norma firmata contro la sua posizione",
             Self::LeggeRespinta => "legge respinta in aula",
+            Self::FondiTolti => "fondi spostati ad altro dicastero",
+            Self::DecretoDecaduto => "decreto non convertito",
         })
     }
 }
@@ -124,6 +154,8 @@ pub(crate) struct Contesto<'a> {
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
     pub disposizioni: &'a Disposizioni,
+    /// Per le disposizioni già in esame.
+    pub parlamento: &'a Parlamento,
     /// L'indice dei prezzi pubblicato, non il livello vero.
     pub indice_prezzi: f64,
     pub turno: u32,
@@ -292,11 +324,14 @@ impl Ministri {
             .or_else(ko)
     }
 
-    /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
-    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio`,
-    /// `PresentaLegge`, `Emendamento` e `PoniFiducia` non arrivano mai qui (`Partita::comanda` li intercetta), quindi «comando senza dicastero» non si
-    /// raggiunge.
-    pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
+    /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende il decreto:
+    /// lo spende e lo converte chi possiede economia e calendario; su una proposta di riforma
+    /// rende la legge da presentare. `Ferma` sull'agenda col
+    /// decreto, o `ChiediDimissioni` sul suo dicastero, lo ritira (scelta 1): il margine torna a
+    /// prima. Invariante: `PresentaBilancio`, `PresentaLegge`, `Emendamento`, `PoniFiducia`,
+    /// `EmanaDecreto` e `InvitaAstensione` non arrivano mai qui (`Partita::comanda` li
+    /// intercetta), quindi «comando senza dicastero» non si raggiunge.
+    pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<EffettoComando, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
@@ -326,12 +361,34 @@ impl Ministri {
             return ko(format!("dimissioni chieste: {dicastero}"));
         }
         match c {
-            Comando::Accogli { .. } => return self.accogli(cx, i).map(Some),
+            Comando::Accogli { .. } => {
+                if let Some(TipoProposta::Riforma {
+                    disposizione,
+                    gradino,
+                    ..
+                }) = st.proposta.map(|p| p.tipo)
+                {
+                    return Ok(EffettoComando::Riforma {
+                        dicastero: i,
+                        disposizione,
+                        gradino,
+                    });
+                }
+                let importo = self.accogli(cx, i)?;
+                return Ok(EffettoComando::Decreto {
+                    dicastero: i,
+                    importo,
+                });
+            }
             Comando::Rinvia { .. } => self.rinvia(cx, i)?,
             Comando::Respingi { .. } => self.respingi(cx, i)?,
-            Comando::Ferma { .. } => self.ferma(cx, i)?,
+            Comando::Ferma { .. } => {
+                self.ferma(cx, i)?;
+                return Ok(self.ritira(i));
+            }
             Comando::Dirotta { atto, regione, .. } => {
                 self.dirotta(cx, i, atto.as_deref(), regione.as_deref())?;
+                return Ok(EffettoComando::Dirottata { dicastero: i });
             }
             Comando::FermaCantiere { atto, .. } => self.ferma_cantiere(cx, i, &atto)?,
             Comando::ChiediDimissioni { dicastero } => {
@@ -342,6 +399,7 @@ impl Ministri {
                     return ko(format!("dimissioni già chieste: {dicastero}"));
                 }
                 st.dimissioni_chieste = true;
+                return Ok(self.ritira(i));
             }
             Comando::ScegliSuccessore { dicastero, indice } => {
                 if st.ministro.is_some() {
@@ -358,9 +416,25 @@ impl Ministri {
             Comando::PresentaBilancio { .. }
             | Comando::PresentaLegge { .. }
             | Comando::Emendamento { .. }
-            | Comando::PoniFiducia { .. } => {}
+            | Comando::PoniFiducia { .. }
+            | Comando::EmanaDecreto { .. }
+            | Comando::InvitaAstensione => {}
         }
-        Ok(None)
+        Ok(EffettoComando::Nessuno)
+    }
+
+    /// Il decreto dell'agenda del dicastero `i`, se c'è, si ritira: il margine perde l'importo.
+    fn ritira(&mut self, i: usize) -> EffettoComando {
+        let st = &mut self.dicasteri[i];
+        let Some(ag) = st.agenda.as_mut().filter(|ag| ag.decreto > 0) else {
+            return EffettoComando::Nessuno;
+        };
+        let importo = std::mem::take(&mut ag.decreto);
+        st.margine_residuo -= importo;
+        EffettoComando::Ritiro {
+            dicastero: i,
+            importo,
+        }
     }
 
     /// Le voci per la `Vista`, nell'ordine dei dicasteri.

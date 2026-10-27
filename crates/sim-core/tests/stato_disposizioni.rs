@@ -84,7 +84,7 @@ fn arrivo_programmato_sostituisce_gli_altri_e_porta_la_sua_legge() {
     );
     s.programma(&d, k, g("0"), 3, "L. 7/2027").unwrap();
     assert_eq!(s.voci[k].in_arrivo.len(), 1);
-    s.controlla(&d).unwrap();
+    s.controlla(&d, 0).unwrap();
     s.arrivi(&d, 2, &mut Vec::new());
     assert_eq!(s.voci[k].in_vigore, g("2_3"));
     s.arrivi(&d, 3, &mut Vec::new());
@@ -159,6 +159,29 @@ fn salvataggio_con_disposizioni_guaste_illeggibile() {
     ] {
         let e = edita(&p, |j| guasto(j)).unwrap_err();
         assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e}");
+    }
+}
+
+/// Gradini bloccati ripetuti o fuori dai gradini, e un arrivo già scaduto al turno del
+/// salvataggio: illeggibile, col nome della disposizione.
+#[test]
+fn salvataggio_con_bloccati_o_arrivi_guasti_illeggibile() {
+    let p = Partita::nuova(dati_base(), 1);
+    for guasto in [
+        serde_json::json!({ "bloccati": [0, 0] }),
+        serde_json::json!({ "bloccati": [99] }),
+        serde_json::json!({ "in_arrivo": [{ "gradino": 0, "turno": 0, "legge": "L. 1/2026" }] }),
+    ] {
+        let e = edita(&p, |j| {
+            for (campo, valore) in guasto.as_object().unwrap() {
+                j["disposizioni"]["voci"][0][campo] = valore.clone();
+            }
+        })
+        .unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)) && e.to_string().contains("forfettario"),
+            "{e}"
+        );
     }
 }
 

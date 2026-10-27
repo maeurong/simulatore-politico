@@ -1,5 +1,6 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::Aliquote;
+use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
@@ -43,7 +44,8 @@ pub struct Vista {
     pub esiti_referendum: Vec<EsitoReferendum>,
 }
 
-/// Un referendum in attesa del voto; `promotore` è l'id di un partito.
+/// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`
+/// = abrogativo con le firme in raccolta; il confermativo sempre `true`).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaReferendum {
@@ -51,6 +53,7 @@ pub struct VistaReferendum {
     pub nome: String,
     pub voto: Trimestre,
     pub promotore: Option<String>,
+    pub firme: bool,
     pub invito_astensione: bool,
 }
 
@@ -95,6 +98,52 @@ pub struct VoceMisura {
     pub alleati_contro_fiducia: Vec<String>,
     /// Solo per le leggi elettorali: una voce per partito.
     pub seggi: Vec<VariazioneSeggi>,
+}
+
+/// Una legge prima della presentazione: costo annuo esatto in euro, effetti nominali a fasce
+/// stimate dal ministro proponente, leve che cambiano, gruppi toccati; linee, forbice e seggi
+/// come in calendario. `proponente` è l'id del dicastero.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Anteprima {
+    pub nome: String,
+    pub forma: FormaMisura,
+    pub proponente: Option<String>,
+    pub costo_annuo: i64,
+    pub effetti: Vec<EffettoStimato>,
+    pub leve: Vec<VoceLeva>,
+    pub gruppi: Vec<Condizione>,
+    pub linee: Vec<VoceLinea>,
+    pub forbice: Forbice,
+    pub seggi: Vec<VariazioneSeggi>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum Fascia3 {
+    Poco,
+    Medio,
+    Molto,
+}
+
+/// `grandezza` è un id; `fascia` quella stimata dal ministro; `ritardo` quello scritto, in turni.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct EffettoStimato {
+    pub grandezza: String,
+    pub migliora: bool,
+    pub fascia: Fascia3,
+    pub ritardo: u32,
+}
+
+/// Una leva che cambia: `da` in vigore, `a` con la legge.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceLeva {
+    pub leva: String,
+    pub da: f64,
+    pub a: f64,
 }
 
 /// L'emendamento di un alleato; `partito` è un id.
@@ -170,7 +219,7 @@ pub struct VistaBilancio {
     pub fondo_riserva: i64,
     /// C'è una bozza: si può presentare la legge di bilancio.
     pub presentabile: bool,
-    /// Una legge di bilancio è già presentata nel turno: l'aula la approva in chiusura.
+    /// Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.
     pub presentato: bool,
     /// Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
     pub esercizio_provvisorio: bool,
@@ -257,19 +306,22 @@ pub struct VoceMinistero {
     pub cantieri: Vec<VoceCantiere>,
     /// Euro, prima delle rate dei cantieri.
     pub margine_residuo: i64,
-    /// La richiesta di fondi in attesa di Accogli, Rinvia o Respingi.
+    /// La proposta (di fondi o di riforma) in attesa di Accogli, Rinvia o Respingi.
     pub proposta: Option<VoceProposta>,
 }
 
-/// `atto` è un id; `importo` sono gli euro che mancano al margine.
+/// Proposta di fondi: `atto` è un id, `importo` gli euro che mancano al margine. Proposta di
+/// riforma: `disposizione` e `gradino` sono id, nessun `atto` e `importo` 0.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceProposta {
-    pub atto: String,
+    pub atto: Option<String>,
     pub nome: String,
     pub importo: i64,
     pub motivo: String,
     pub rinviata: bool,
+    pub disposizione: Option<String>,
+    pub gradino: Option<String>,
 }
 
 /// `atto` e `regione` sono id.

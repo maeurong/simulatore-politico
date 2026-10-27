@@ -187,6 +187,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "ft_max",
     "costo_legge_respinta",
     "valence_legge_respinta",
+    "costo_decreto_decaduto",
+    "valence_decreto_decaduto",
     "distanza_alleato",
     "costo_norma_lontana",
     "scivolamento_percepita",
@@ -198,6 +200,12 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "seggi_per_punto_linea",
     "costo_seggio_perso",
     "astensione_referendum",
+    "valence_referendum_perso",
+    "valence_referendum_fallito",
+    "invito_astensione",
+    "errore_fascia",
+    "soglia_fascia_poco",
+    "soglia_fascia_medio",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -637,6 +645,15 @@ impl DatiGioco {
                     nome: (*nome).into(),
                 });
             }
+        }
+        let (poco, medio) = (
+            self.manopola("soglia_fascia_poco"),
+            self.manopola("soglia_fascia_medio"),
+        );
+        if poco > medio {
+            return Err(Errore::Grandezze(format!(
+                "manopola soglia_fascia_poco ({poco}) oltre soglia_fascia_medio ({medio})"
+            )));
         }
         let scala = self.manopola("scala_servizio");
         if scala <= 0.0 {

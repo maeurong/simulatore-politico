@@ -218,6 +218,7 @@ mod tests {
             fiducia,
             emendamenti: Vec::new(),
             emendamenti_aperti: false,
+            fondi: None,
         };
         let seggi = [9, 100, 20, 14, 48, 189, 20];
         let dopo = |fiducia| {
@@ -308,6 +309,7 @@ mod tests {
                 })
                 .collect(),
             emendamenti_aperti: true,
+            fondi: None,
         };
         aula.previsione(&misura).franchi[j]
     }

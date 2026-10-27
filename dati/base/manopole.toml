@@ -873,6 +873,20 @@ min = 0.0
 max = 0.5
 ticket = "08"
 
+# assunzione del piano 6, nessuna fonte in docs/ricerca (soddisfazione persa dal ministro proponente di un decreto non convertito)
+[costo_decreto_decaduto]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "08"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio per un decreto non convertito)
+[valence_decreto_decaduto]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "08"
+
 # spec riga 100, alleato «distante almeno 2 punti dalla misura» (da qui perde intesa per una norma approvata)
 [distanza_alleato]
 valore = 2.0
@@ -949,3 +963,45 @@ valore = 1.0
 min = -5.0
 max = 5.0
 ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio quando un referendum abrogativo passa)
+[valence_referendum_perso]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal promotore di un referendum abrogativo senza quorum)
+[valence_referendum_fallito]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (utilità dell'astensione in più, per quota di governo nelle intenzioni, quando il governo invita a disertare il referendum)
+[invito_astensione]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (probabilità che un ministro di capacità 1 sposti di una la fascia di un effetto nell'anteprima; a capacità 5 mai)
+[errore_fascia]
+valore = 0.4
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (|Δ| / (max − min) della grandezza sotto cui un effetto dell'anteprima è poco)
+[soglia_fascia_poco]
+valore = 0.02
+min = 0.0
+max = 0.5
+ticket = "25"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (|Δ| / (max − min) della grandezza sotto cui un effetto dell'anteprima è medio)
+[soglia_fascia_medio]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "25"

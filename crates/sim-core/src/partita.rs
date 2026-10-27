@@ -5,21 +5,23 @@ use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
-use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo};
+use crate::elettorato::{
+    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo,
+};
 use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
-use crate::misure::Misure;
+use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
+use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::parlamento::{
-    self, CausaIntesa, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Intesa, Misura,
-    Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
+    self, CausaIntesa, Conteggio, Decreto, EsitoReferendum, EsitoVoto, FondiDecreto, FormaMisura,
+    Intesa, Misura, Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget,
-    VoceDicastero, VoceGrandezza, VocePartito,
+    Anteprima, SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato,
+    VoceBudget, VoceDicastero, VoceGrandezza, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -101,6 +103,7 @@ impl Partita {
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
         let disposizioni = Disposizioni::iniziali(&dati);
+        let parlamento = Parlamento::uscente(&dati, &partiti);
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -110,6 +113,7 @@ impl Partita {
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
                 disposizioni: &disposizioni,
+                parlamento: &parlamento,
                 indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
                 data: Trimestre::TURNO_ZERO,
@@ -117,7 +121,7 @@ impl Partita {
             &mut caso,
         );
         Partita {
-            parlamento: Parlamento::uscente(&dati, &partiti),
+            parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
             misure: Misure::neutre(&dati),
             disposizioni,
@@ -137,19 +141,22 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni (proposte, emendamenti aperti respinti) → atti dei ministri → aula
-    // (conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
+    // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi
+    // che slittano) → atti dei ministri → aula (leggi slittate nel turno del bilancio →
+    // conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
     // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
     // calendario → apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose,
     // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
-        let respinti = self.parlamento.respingi_aperti();
+        // Prima del voto del bilancio: approvato, esce dal calendario.
+        let occupato = self.turno_del_bilancio();
+        let respinti = self.parlamento.respingi_aperti(self.turno, occupato);
         self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
-        self.aula();
+        self.aula(occupato);
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
@@ -223,6 +230,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -263,6 +271,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -279,6 +288,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
             data: self.data,
@@ -286,10 +296,39 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    fn aula(&mut self) {
-        self.approva_bilancio();
+    /// `occupato`: il turno del bilancio, letto prima di ogni voto.
+    fn aula(&mut self, occupato: bool) {
+        if occupato {
+            for m in self.parlamento.slitta_leggi(self.turno) {
+                self.rimborsa_fiducia(&m);
+            }
+        }
+        self.vota_forma(FormaMisura::Conversione);
+        self.vota_forma(FormaMisura::Bilancio);
         self.vota_leggi();
         self.vota_confermativi();
+        self.vota_abrogativo();
+        // Le firme dell'abrogativo chiesto nel turno sono raccolte.
+        if let Some(r) = &mut self.parlamento.referendum {
+            r.firme = true;
+        }
+    }
+
+    /// In calendario c'è un bilancio presentato in questo turno, col voto a fine turno.
+    pub fn turno_del_bilancio(&self) -> bool {
+        self.parlamento.turno_del_bilancio(self.turno)
+    }
+
+    /// Le misure di forma `forma`, in ordine di id: prima le conversioni dei decreti del turno
+    /// (scelta 2), poi il bilancio.
+    fn vota_forma(&mut self, forma: FormaMisura) {
+        let ids: Vec<u32> = (self.parlamento.misure.iter())
+            .filter(|m| m.forma == forma)
+            .map(|m| m.id)
+            .collect();
+        for id in ids {
+            self.vota(id);
+        }
     }
 
     /// Le leggi col voto nel turno, in ordine di id (iter-legislativo-italiano:166).
@@ -314,7 +353,9 @@ impl Partita {
     /// fiducia; approvata, ogni alleato che perde seggi attesi paga intesa. Costituzionale
     /// (iter-legislativo-italiano:76-80): la prima deliberazione approvata torna in calendario per
     /// la seconda; approvata la seconda senza i due terzi e con un quinto contro in un ramo, il
-    /// valore aspetta il referendum confermativo.
+    /// valore aspetta il referendum confermativo. Conversione respinta: il decreto decade
+    /// (`decreto_decaduto`), col costo e la valence del decreto invece di quelli della legge.
+    /// Bilancio approvato: `approva_bilancio`; respinto: il bilancio presentato cade.
     fn vota(&mut self, id: u32) {
         let Some(k) = self.parlamento.misure.iter().position(|m| m.id == id) else {
             return;
@@ -356,12 +397,19 @@ impl Partita {
         }
         // Tutti votano: `sì > no` è anche la maggioranza assoluta della seconda deliberazione.
         let approvata = passa(&camera) && passa(&senato);
+        if m.forma == FormaMisura::Bilancio {
+            if approvata {
+                self.approva_bilancio();
+            } else {
+                self.economia.bilancio_presentato = None;
+            }
+        }
         let turno = self.turno;
         let nuova = p.posizioni.map(|(_, n)| n);
         let prima = m.forma == FormaMisura::Costituzionale && m.deliberazione == 1;
         let esito = EsitoVoto {
             misura: id,
-            nome: parlamento::nome(&self.dati, &m.valori),
+            nome: parlamento::nome_misura(&self.dati, &m),
             forma: m.forma,
             data: self.data,
             deliberazione: m.deliberazione,
@@ -388,7 +436,7 @@ impl Partita {
                     valori: m.valori.clone(),
                     promotore: None,
                     voto,
-                    firme: false,
+                    firme: true,
                     invito_astensione: false,
                 });
             } else {
@@ -405,15 +453,24 @@ impl Partita {
                 let da = turno.saturating_add(1).saturating_add(blocco);
                 (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
             }
+            let (causa, costo, valence) = if m.forma == FormaMisura::Conversione {
+                let (c, v) = ("costo_decreto_decaduto", "valence_decreto_decaduto");
+                (Causa::DecretoDecaduto, c, v)
+            } else {
+                let (c, v) = ("costo_legge_respinta", "valence_legge_respinta");
+                (Causa::LeggeRespinta, c, v)
+            };
             if let Some(st) = m
                 .proponente
                 .and_then(|i| self.ministri.dicasteri.get_mut(i))
             {
-                let costo = self.dati.manopola("costo_legge_respinta");
-                penalizza(st, Causa::LeggeRespinta, -costo, turno);
+                penalizza(st, causa, -self.dati.manopola(costo), turno);
             }
             if let Some(pdc) = self.partiti.get_mut(self.governo.presidente) {
-                pdc.valence -= self.dati.manopola("valence_legge_respinta");
+                pdc.valence -= self.dati.manopola(valence);
+            }
+            if let Some(f) = m.fondi {
+                self.decreto_decaduto(f);
             }
         }
         if let Some(nuova) = nuova {
@@ -516,10 +573,9 @@ impl Partita {
                 invito: 0.0,
             };
             let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
-            let (si, no) = (a.si.round() as u64, a.no.round() as u64);
-            let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
-            let approvato = si > no;
-            if approvato {
+            let nome = parlamento::nome(&self.dati, &r.valori);
+            let esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
+            if esito.approvato {
                 let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
                 for &(d, g) in &r.valori {
                     (self.disposizioni).cambia(
@@ -532,19 +588,88 @@ impl Partita {
                     );
                 }
             }
-            let esito = EsitoReferendum {
-                tipo: r.tipo,
-                nome: parlamento::nome(&self.dati, &r.valori),
-                data: self.data,
-                si,
-                no,
-                votanti: si + no,
-                aventi_diritto,
-                quorum: (si + no) * 2 > aventi_diritto,
-                approvato,
-            };
             self.parlamento.esiti_referendum.insert(0, esito);
         }
+    }
+
+    /// L'abrogativo del turno (art. 75): sì al valore dopo l'abrogazione, no al vigente, nessun
+    /// peso del giudizio sul governo (scelta 9), `invito_astensione` se il governo l'ha chiesto.
+    /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
+    /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
+    /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
+    /// Se l'abrogazione renderebbe non valida la legge elettorale, con le leggi e gli arrivi venuti
+    /// dopo la promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco,
+    /// nessuna valence. Il titolo dell'esito è il gradino vigente che il quesito abroga.
+    fn vota_abrogativo(&mut self) {
+        let turno = self.turno;
+        let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
+            return;
+        };
+        let Some(&(d, dopo)) = r.valori.first() else {
+            return;
+        };
+        let vigente = self.disposizioni.voci[d].in_vigore;
+        let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
+        if let Some(m) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)])
+        {
+            let nessuno = Affluenza {
+                si: 0.0,
+                no: 0.0,
+                astenuti: 0.0,
+            };
+            let esito = EsitoReferendum {
+                decaduto: Some(format!(
+                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
+                     più applicabile ({m})"
+                )),
+                ..EsitoReferendum::da(r.tipo, nome, self.data, &nessuno)
+            };
+            self.parlamento.esiti_referendum.insert(0, esito);
+            return;
+        }
+        let x = &self.dati.disposizioni()[d];
+        let invito = if r.invito_astensione {
+            self.dati.manopola("invito_astensione")
+        } else {
+            0.0
+        };
+        let quesito = Quesito {
+            pos_si: x.posizione(dopo),
+            pos_no: x.posizione(vigente),
+            peso_governo: 0.0,
+            invito,
+        };
+        let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
+        let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
+        esito.approvato &= esito.quorum;
+        let (quorum, approvato) = (esito.quorum, esito.approvato);
+        if approvato {
+            let legge = format!("referendum del {}", self.data.anno);
+            (self.disposizioni).cambia(
+                &self.dati,
+                d,
+                dopo,
+                turno,
+                &legge,
+                &mut self.grandezze.effetti,
+            );
+            let bloccati = &mut self.disposizioni.voci[d].bloccati;
+            if vigente != dopo && !bloccati.contains(&vigente) {
+                bloccati.push(vigente);
+            }
+        }
+        let (chi, manopola) = if approvato {
+            (Some(self.governo.presidente), "valence_referendum_perso")
+        } else {
+            (
+                r.promotore.filter(|_| !quorum),
+                "valence_referendum_fallito",
+            )
+        };
+        if let Some(p) = chi.and_then(|j| self.partiti.get_mut(j)) {
+            p.valence -= self.dati.manopola(manopola);
+        }
+        self.parlamento.esiti_referendum.insert(0, esito);
     }
 
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
@@ -612,7 +737,7 @@ impl Partita {
         }
     }
 
-    /// Il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    /// Il bilancio presentato è approvato dall'aula. Se l'anno è in esercizio
     /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
     /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
     /// approvazione costa ai ministri la perdita reale delle loro voci.
@@ -665,10 +790,12 @@ impl Partita {
         .map_err(Errore::Bilancio)
     }
 
-    /// `PresentaBilancio`: sostituisce quello già presentato; l'aula lo approva in chiusura.
+    /// `PresentaBilancio`: sostituisce quello già presentato, nella stessa misura; l'aula lo vota
+    /// in chiusura.
     pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
         let (_, b) = self.bilancio_ammesso(b)?;
         self.economia.bilancio_presentato = Some(b);
+        self.parlamento.apri_bilancio(self.turno);
         Ok(())
     }
 
@@ -677,10 +804,83 @@ impl Partita {
         (self.parlamento).presenta(
             &self.dati,
             &self.disposizioni,
-            &mut self.ministri,
+            Some(&mut self.ministri),
             self.turno,
             valori,
         )
+    }
+
+    /// Il partito `promotore`, all'opposizione, chiede il referendum abrogativo su
+    /// `disposizione`: firme a fine turno, voto ad aprile-giugno dell'anno dopo.
+    ///
+    /// # Errors
+    /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
+    /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
+    /// referendum già in corso, fuori finestra (dopo luglio-settembre).
+    pub fn promuovi_referendum(
+        &mut self,
+        promotore: &str,
+        disposizione: &str,
+    ) -> Result<(), Errore> {
+        let r = (self.parlamento).abrogativo(
+            &self.stato_aula(),
+            self.turno,
+            promotore,
+            disposizione,
+        )?;
+        self.parlamento.referendum = Some(r);
+        Ok(())
+    }
+
+    /// `InvitaAstensione`.
+    pub(crate) fn invita_astensione(&mut self) -> Result<(), Errore> {
+        self.parlamento.invita_astensione()
+    }
+
+    /// L'anteprima della legge `valori`: le regole di `PresentaLegge` tranne il
+    /// posto in calendario; la partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `PresentaLegge` tranne il calendario pieno.
+    pub fn anteprima(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore> {
+        let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let capacita = (m.proponente)
+            .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
+            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
+        Ok(parlamento::anteprima(
+            &self.parlamento,
+            &self.stato_aula(),
+            &m,
+            capacita,
+            &self.caso,
+            self.economia.pil_potenziale_annuo(),
+        ))
+    }
+
+    /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, firma
+    /// del ministro compresa (spec, storia 32), e la proposta esce solo se la presentazione passa.
+    pub(crate) fn accogli_riforma(
+        &mut self,
+        dicastero: usize,
+        disposizione: usize,
+        gradino: usize,
+    ) -> Result<(), Errore> {
+        let x = &self.dati.disposizioni()[disposizione];
+        let valori = [ValoreProposto {
+            disposizione: x.id.clone(),
+            gradino: x.gradini[gradino].id.clone(),
+        }];
+        (self.parlamento).presenta(
+            &self.dati,
+            &self.disposizioni,
+            Some(&mut self.ministri),
+            self.turno,
+            &valori,
+        )?;
+        if let Some(st) = self.ministri.dicasteri.get_mut(dicastero) {
+            st.proposta = None;
+        }
+        Ok(())
     }
 
     /// La bozza e `b` come lo approverebbe l'aula.
@@ -716,9 +916,133 @@ impl Partita {
         }
     }
 
-    /// `Accogli`: l'importo è un decreto, speso per intero nel trimestre che si chiude.
-    pub(crate) fn aggiungi_decreto(&mut self, importo: i64) {
-        self.economia.decreti += importo;
+    /// `Accogli`: l'importo è un decreto del dicastero, speso per intero nel trimestre che si
+    /// chiude; la conversione va in calendario sull'atto dell'agenda.
+    pub(crate) fn aggiungi_decreto(&mut self, dicastero: usize, importo: i64) {
+        let Some(atto) = (self.ministri.dicasteri.get(dicastero))
+            .and_then(|st| st.agenda.as_ref())
+            .map(|ag| ag.atto)
+        else {
+            return;
+        };
+        if let Some(x) = self.economia.decreti.get_mut(dicastero) {
+            *x += importo;
+        }
+        let fondi = FondiDecreto::Accolti {
+            dicastero,
+            atto,
+            importo,
+        };
+        self.parlamento.apri_conversione(self.turno, fondi);
+    }
+
+    /// Ritiro del decreto accolto (scelta 1): niente speso, nessuna conversione, e si paga solo
+    /// il comando: con la questione di fiducia posta, gli alleati riavranno il suo costo d'intesa.
+    pub(crate) fn ritira_decreto(&mut self, dicastero: usize, importo: i64) {
+        if let Some(x) = self.economia.decreti.get_mut(dicastero) {
+            *x -= importo;
+        }
+        if let Some(m) = self.parlamento.ritira(dicastero).filter(|m| m.fiducia) {
+            self.rimborsa_fiducia(&m);
+        }
+    }
+
+    /// Dopo `Dirotta` la conversione del decreto accolto segue l'atto dell'agenda: decade, se
+    /// respinta, l'atto pagato davvero.
+    pub(crate) fn conversione_su_agenda(&mut self, dicastero: usize) {
+        let atto = (self.ministri.dicasteri.get(dicastero))
+            .and_then(|st| st.agenda.as_ref())
+            .map(|ag| ag.atto);
+        if let Some(atto) = atto {
+            self.parlamento.sposta_conversione(dicastero, atto);
+        }
+    }
+
+    /// Gli alleati riavranno il costo d'intesa della questione di fiducia posta su `m`.
+    fn rimborsa_fiducia(&mut self, m: &Misura) {
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        for j in self.alleati() {
+            let x = self.partiti[j].posizione_dichiarata;
+            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova);
+            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        }
+    }
+
+    /// `Accogli` sulla firma (dicastero e atto) di un decreto decaduto: rifiutato
+    /// (iter-legislativo-italiano:20-23, 67).
+    ///
+    /// # Errors
+    /// `Comando` col nome dell'atto.
+    pub(crate) fn accogli_ripetuto(&self, dicastero: &str) -> Result<(), Errore> {
+        let proposta = (self.dati.dicasteri().iter().position(|d| d.id == dicastero))
+            .and_then(|i| Some((i, self.ministri.dicasteri.get(i)?.proposta?.tipo)));
+        let Some((i, TipoProposta::Fondi { atto, .. })) = proposta else {
+            return Ok(());
+        };
+        if self.parlamento.decaduto_accolto(i, atto) {
+            let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
+            return Err(Errore::Comando(format!(
+                "decreto decaduto non si ripete: {atto}"
+            )));
+        }
+        Ok(())
+    }
+
+    /// `EmanaDecreto` (storia 46): sposta `importo` da margine e spesa di `da` a quelli di `a`,
+    /// nel bilancio in vigore e nei margini residui, anche nell'esercizio provvisorio (scelta 12).
+    /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
+    /// Spostabile: il margine residuo senza il decreto accolto in agenda, entro il margine annuo.
+    pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
+        let b = self.economia.bilancio_in_vigore(self.data);
+        let spostabili: Vec<i64> = (self.ministri.dicasteri.iter().zip(&b.dicasteri))
+            .map(|(st, d)| {
+                let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+                (st.margine_residuo - decreto).min(d.margine)
+            })
+            .collect();
+        let decaduti = &self.parlamento.decaduti;
+        let (da, a, importo) = parlamento::ammetti(&self.dati, decaduti, &spostabili, decreto)?;
+        let spesa = b.dicasteri.get(da).map_or(1, |d| d.spesa.max(1));
+        self.sposta_fondi(da, a, importo);
+        if let Some(st) = self.ministri.dicasteri.get_mut(da) {
+            let costo = self.dati.manopola("costo_taglio_budget");
+            let delta = -costo * 100.0 * importo as f64 / spesa as f64;
+            penalizza(st, Causa::FondiTolti, delta, self.turno);
+        }
+        let fondi = FondiDecreto::Spostati { da, a, importo };
+        self.parlamento.apri_conversione(self.turno, fondi);
+        Ok(())
+    }
+
+    /// `importo` passa da margine e spesa di `da` a quelli di `a` nel bilancio in vigore, e fra i
+    /// margini residui.
+    fn sposta_fondi(&mut self, da: usize, a: usize, importo: i64) {
+        let b = self.economia.bilancio_in_vigore_mut(self.data);
+        for (i, x) in [(da, -importo), (a, importo)] {
+            if let Some(d) = b.dicasteri.get_mut(i) {
+                d.margine += x;
+                d.spesa += x;
+            }
+            if let Some(st) = self.ministri.dicasteri.get_mut(i) {
+                st.margine_residuo += x;
+            }
+        }
+    }
+
+    /// Il decreto non convertito: il denaro speso resta speso, uno spostamento torna indietro
+    /// per quanto `a` ha ancora (iter-legislativo-italiano:163); la firma non si ripete.
+    fn decreto_decaduto(&mut self, f: FondiDecreto) {
+        if let FondiDecreto::Spostati { da, a, importo } = f {
+            let residuo = self
+                .ministri
+                .dicasteri
+                .get(a)
+                .map_or(0, |st| st.margine_residuo);
+            let annuo = (self.economia.bilancio_in_vigore(self.data).dicasteri.get(a))
+                .map_or(0, |d| d.margine);
+            self.sposta_fondi(a, da, importo.min(residuo).min(annuo).max(0));
+        }
+        self.parlamento.decaduti.push(f);
     }
 
     // Da qui a `informazione`: stato vero, per il CLI e i test, mai per la `Vista`.
@@ -922,6 +1246,7 @@ impl Partita {
                     promotore: (r.promotore)
                         .and_then(|j| self.partiti.get(j))
                         .map(|p| p.id.clone()),
+                    firme: r.firme,
                     invito_astensione: r.invito_astensione,
                 })
                 .collect(),
@@ -1023,6 +1348,13 @@ impl Partita {
                 ));
             }
         }
+        let n_dicasteri = partita.dati.dicasteri().len();
+        if e.decreti.len() != n_dicasteri {
+            return Err(Errore::SalvataggioIlleggibile(format!(
+                "economia.decreti ha {} voci, i dicasteri sono {n_dicasteri}",
+                e.decreti.len()
+            )));
+        }
         let n_settori = partita.dati.struttura().settori.len();
         for (campo, n) in [
             ("prezzi_settori", e.prezzi_settori.len()),
@@ -1037,19 +1369,57 @@ impl Partita {
         partita.economia.controlla_coerenza(partita.data)?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
-        partita.disposizioni.controlla(&partita.dati)?;
+        partita
+            .disposizioni
+            .controlla(&partita.dati, partita.turno)?;
         let n = partita.partiti.len();
-        partita.parlamento.controlla(&partita.dati, n)?;
+        partita
+            .parlamento
+            .controlla(&partita.dati, n, partita.turno)?;
         partita.intesa.controlla(n)?;
         partita.controlla_partiti()?;
         partita
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
+        partita.controlla_decreti()?;
+        let in_aula = (partita.parlamento.misure.iter())
+            .filter(|m| m.forma == FormaMisura::Bilancio)
+            .count();
+        ok(
+            in_aula == usize::from(partita.economia.bilancio_presentato.is_some())
+                && (in_aula == 0 || partita.turno_del_bilancio()),
+            "bilancio presentato senza la sua misura in calendario per il turno, o viceversa",
+        )?;
         Ok(partita)
     }
 }
 
 impl Partita {
+    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
+    /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
+    /// conversione.
+    fn controlla_decreti(&self) -> Result<(), Errore> {
+        let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
+        for (i, (st, &x)) in dicasteri.enumerate() {
+            let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+            let attesa =
+                (st.agenda.as_ref().filter(|ag| ag.decreto > 0)).map(|ag| FondiDecreto::Accolti {
+                    dicastero: i,
+                    atto: ag.atto,
+                    importo: ag.decreto,
+                });
+            let buono = decreto == x
+                && decreto <= st.margine_residuo
+                && self.parlamento.in_conversione(i) == attesa;
+            ok(
+                buono,
+                "decreto in agenda diverso da economia.decreti o dalla conversione, o oltre il \
+                 margine",
+            )?;
+        }
+        Ok(())
+    }
+
     /// Partiti, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
@@ -1137,7 +1507,8 @@ impl Economia {
             )?;
         }
         ok(
-            (0..=LIMITE_EURO).contains(&self.decreti),
+            self.decreti.iter().all(|x| (0..=LIMITE_EURO).contains(x))
+                && self.decreti.iter().sum::<i64>() <= LIMITE_EURO,
             "economia.decreti fuori da 0-1e15",
         )?;
         ok(

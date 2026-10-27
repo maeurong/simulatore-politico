@@ -4,6 +4,7 @@
 use super::{Conteggio, StatoAula};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, Leve};
+use crate::elettorato::Affluenza;
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Voti, riparto};
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
@@ -34,7 +35,8 @@ pub struct Referendum {
     pub invito_astensione: bool,
 }
 
-/// Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato.
+/// Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato. `decaduto` =
+/// il referendum decaduto senza voto: il motivo leggibile, per il giocatore.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct EsitoReferendum {
@@ -47,6 +49,28 @@ pub struct EsitoReferendum {
     pub aventi_diritto: u64,
     pub quorum: bool,
     pub approvato: bool,
+    pub decaduto: Option<String>,
+}
+
+impl EsitoReferendum {
+    /// L'esito dall'affluenza `a`: sì e no arrotondati, quorum, approvato con `sì > no`.
+    pub(crate) fn da(tipo: TipoReferendum, nome: String, data: Trimestre, a: &Affluenza) -> Self {
+        let (si, no) = (a.si.round() as u64, a.no.round() as u64);
+        let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
+        let votanti = si.saturating_add(no);
+        EsitoReferendum {
+            tipo,
+            nome,
+            data,
+            si,
+            no,
+            votanti,
+            aventi_diritto,
+            quorum: votanti.saturating_mul(2) > aventi_diritto,
+            approvato: si > no,
+            decaduto: None,
+        }
+    }
 }
 
 /// Riparto sul sondaggio pubblico con la legge `legge` e i seggi dei rami da `leve`: voti
@@ -144,5 +168,27 @@ impl StatoAula<'_> {
                 )
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Un elettorato manomesso oltre `u64::MAX / 2` non fa traboccare votanti e quorum.
+    #[test]
+    fn esito_con_elettorato_enorme_non_trabocca() {
+        let a = Affluenza {
+            si: 1e19,
+            no: 1e19,
+            astenuti: 1e19,
+        };
+        let e = EsitoReferendum::da(
+            TipoReferendum::Abrogativo,
+            String::new(),
+            Trimestre::TURNO_ZERO,
+            &a,
+        );
+        assert_eq!(e.votanti, u64::MAX);
     }
 }
