@@ -14,6 +14,7 @@ import type { VoceDicastero } from "./VoceDicastero";
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
 import type { VoceGrandezza } from "./VoceGrandezza";
+import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
@@ -97,6 +98,6 @@ richieste: Array<VoceRichiesta>,
  */
 elezioni: Array<EsitoElezioni>, 
 /**
- * In trattativa a chi va l'incarico: «giocatore» o «Capo dello Stato»; `None` altrove.
+ * In trattativa a chi va l'incarico; `None` altrove.
  */
-incarico: string | null, };
+incarico: VoceIncarico | null, };

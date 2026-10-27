@@ -25,7 +25,7 @@ use crate::parlamento::{
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
     Anteprima, SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato,
-    VoceBudget, VoceDicastero, VoceGrandezza, VocePartito,
+    VoceBudget, VoceDicastero, VoceGrandezza, VoceIncarico, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -236,14 +236,16 @@ impl Partita {
             // La bozza passa le regole della presentazione; se non le passasse, nessun bilancio.
             let _ = self.presenta_bilancio(&b);
         }
-        self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
+        self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
         // Prima del voto del bilancio: approvato, esce dal calendario.
         let occupato = self.turno_del_bilancio();
         let respinti = self.parlamento.respingi_aperti(self.turno, occupato);
         self.emendamenti_respinti(respinti);
-        let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
+        let effetti = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
-        if self.legislatura.fase != Fase::Sciolta {
+        if self.legislatura.fase == Fase::Sciolta {
+            self.vota_confermativi();
+        } else {
             self.aula(occupato);
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
@@ -293,7 +295,7 @@ impl Partita {
         if self.legislatura.turno_di_voto(self.turno) {
             self.vota_parlamento(&vero);
         }
-        self.con_contesto(|ministri, cx| ministri.soglie(cx));
+        self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
         self.intesa.soglie(&self.dati, self.turno);
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
@@ -378,8 +380,12 @@ impl Partita {
         }
     }
 
-    /// Esegue `f` sui ministri (in scrittura) con ciò che leggono del resto della partita.
-    pub(crate) fn con_contesto<R>(&mut self, f: impl FnOnce(&mut Ministri, &Contesto) -> R) -> R {
+    /// Esegue `f` sui ministri e sul generatore (in scrittura) con ciò che leggono del resto della
+    /// partita.
+    pub(crate) fn con_contesto<R>(
+        &mut self,
+        f: impl FnOnce(&mut Ministri, &Contesto, &mut Caso) -> R,
+    ) -> R {
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -393,7 +399,7 @@ impl Partita {
             turno: self.turno,
             data: self.data,
         };
-        f(&mut self.ministri, &cx)
+        f(&mut self.ministri, &cx, &mut self.caso)
     }
 
     /// `occupato`: il turno del bilancio, letto prima di ogni voto.
@@ -904,9 +910,10 @@ impl Partita {
     /// l'aula.
     ///
     /// # Errors
-    /// `Bilancio` fuori stagione, con le stesse regole della presentazione, o con la spesa netta
-    /// di riferimento nulla.
+    /// `Comando` come `PresentaBilancio` se il giocatore non governa; `Bilancio` fuori stagione,
+    /// con le stesse regole della presentazione, o con la spesa netta di riferimento nulla.
     pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
+        self.di_governo()?;
         let (bozza, b) = self.bilancio_ammesso(b)?;
         economia::riepilogo(
             &self.economia,
@@ -947,7 +954,7 @@ impl Partita {
     /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
     /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
     /// referendum già in corso, fuori finestra (dopo luglio-settembre); prima di tutto, l'ultimo
-    /// anno della legislatura (iter-legislativo-italiano:135).
+    /// anno della legislatura (iter-legislativo-italiano:135), poi le Camere sciolte.
     pub fn promuovi_referendum(
         &mut self,
         promotore: &str,
@@ -957,6 +964,9 @@ impl Partita {
             return Err(Errore::Comando(
                 "Nessuna richiesta di referendum nell'ultimo anno della legislatura".into(),
             ));
+        }
+        if self.legislatura.fase == Fase::Sciolta {
+            return Err(Errore::Comando("Nessun referendum a Camere sciolte".into()));
         }
         let r = (self.parlamento).abrogativo(
             &self.stato_aula(),
@@ -1798,20 +1808,7 @@ impl Partita {
             dicasteri: assegnati.iter().map(|a| a.unwrap_or(presidente)).collect(),
             coalizione,
         };
-        let cx = Contesto {
-            dati: &self.dati,
-            governo: &self.governo,
-            partiti: &self.partiti,
-            grandezze: &self.grandezze,
-            economia: &self.economia,
-            sondaggio: &self.informazione.sondaggio,
-            disposizioni: &self.disposizioni,
-            parlamento: &self.parlamento,
-            indice_prezzi: self.informazione.statistica.indice_prezzi,
-            turno: self.turno,
-            data: self.data,
-        };
-        (self.ministri).nuovo_governo(&cx, &mut self.caso, &tecnici);
+        self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
         let l = &mut self.legislatura;
         l.fase = Fase::Ordinaria;
         l.incarico = None;
@@ -1930,14 +1927,18 @@ impl Partita {
             richieste: self.richieste(),
             elezioni: l.elezioni.clone(),
             incarico: match (l.fase, &l.incarico) {
-                (Fase::Trattativa, Some(Incarico::Giocatore)) => Some("giocatore".into()),
-                (Fase::Trattativa, _) => Some("Capo dello Stato".into()),
+                (Fase::Trattativa, Some(Incarico::Giocatore)) => Some(VoceIncarico::Giocatore),
+                (Fase::Trattativa, _) => Some(VoceIncarico::CapoDelloStato),
                 _ => None,
             },
         }
     }
 
+    /// Sotto un governo IA nessuna: l'intesa è quella col giocatore, come in `quadro()`.
     fn voci_alleati(&self) -> Vec<VoceAlleato> {
+        if self.governo.presidente != self.giocatore {
+            return Vec::new();
+        }
         let soglia = self.dati.manopola("soglia_ultimatum");
         (self.alleati().into_iter())
             .map(|j| {

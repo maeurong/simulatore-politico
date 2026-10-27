@@ -141,7 +141,7 @@ impl Partita {
             Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }
-        match self.con_contesto(|ministri, cx| ministri.comanda(cx, c))? {
+        match self.con_contesto(|ministri, cx, _| ministri.comanda(cx, c))? {
             EffettoComando::Nessuno => {}
             EffettoComando::Dirottata { dicastero } => self.conversione_su_agenda(dicastero),
             EffettoComando::Decreto { dicastero, importo } => {

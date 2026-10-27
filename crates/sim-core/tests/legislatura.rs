@@ -1,3 +1,8 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+
 mod comune;
 use comune::{dati_base, edita, presenta, senza_shock};
 use sim_core::Partita;
@@ -51,6 +56,15 @@ fn a_fine_legislatura_le_leggi_in_esame_decadono_e_i_gradini_si_sbloccano() {
     assert_eq!(p.parlamento().confermativi.len(), 1);
     assert_eq!(p.in_vigore("tetto_contante"), Some("5000"));
     assert_eq!(p.legislatura().fase, Fase::Trattativa);
+    // Senza dichiarazione la destra corre ancora col centrodestra.
+    let indice = |id: &str| p.partiti().iter().position(|x| x.id == id).unwrap();
+    let (destra, centrodestra) = (indice("destra"), indice("centrodestra"));
+    assert!(
+        (p.legislatura().coalizioni.iter())
+            .any(|c| c.contains(&destra) && c.contains(&centrodestra)),
+        "{:?}",
+        p.legislatura().coalizioni
+    );
 }
 
 #[test]
@@ -122,4 +136,59 @@ fn la_durata_cambiata_vale_dalla_legislatura_dopo() {
     assert_eq!(p.legislatura().scadenza, 19);
     al_turno(&mut p, 20);
     assert_eq!(p.legislatura().scadenza, 35);
+}
+
+/// Partita di prova, voti alla scadenza 19 e 39: a ogni turno il salvataggio riletto è identico;
+/// la legislatura nuova parte dal turno dopo il voto e scade venti turni dopo.
+#[test]
+fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let mut fasi = Vec::new();
+    let mut voti = Vec::new();
+    while p.vista().turno < 41 {
+        let turno = p.vista().turno;
+        assert_eq!(
+            Partita::carica(&p.salva().unwrap()).unwrap(),
+            p,
+            "turno {turno}"
+        );
+        fasi.push(p.legislatura().fase);
+        let (elezioni, al_voto) = (p.vista().elezioni.len(), p.vista().turni_al_voto);
+        assert_eq!(al_voto, p.legislatura().scadenza - turno, "turno {turno}");
+        p.chiudi_turno();
+        if p.vista().elezioni.len() > elezioni {
+            assert_eq!(al_voto, 0, "turno {turno}");
+            assert_eq!(p.vista().elezioni.len(), elezioni + 1);
+            let l = p.legislatura();
+            assert_eq!((l.inizio, l.scadenza), (turno + 1, turno + 20));
+            voti.push(turno);
+        }
+    }
+    assert_eq!(voti, [19, 39]);
+    let attese: Vec<Fase> = (0..41)
+        .map(|t| match t {
+            20 | 40 => Fase::Trattativa,
+            _ => Fase::Ordinaria,
+        })
+        .collect();
+    assert_eq!(fasi, attese);
+}
+
+/// Un salvataggio coi totali da miliardi, e seggi che li sommano, non si carica: oltre il
+/// gradino più alto di `numero_parlamentari` nel catalogo.
+#[test]
+fn carica_rifiuta_i_seggi_oltre_il_catalogo() {
+    let p = Partita::nuova(dati_base(), 1);
+    let r = edita(&p, |j| {
+        j["legislatura"]["totali"] = serde_json::json!([3_000_000_000_u32, 3_000_000_000_u32]);
+        for ramo in ["seggi_camera", "seggi_senato"] {
+            let seggi = j["parlamento"][ramo].as_array_mut().unwrap();
+            for x in seggi.iter_mut() {
+                *x = 0.into();
+            }
+            seggi[0] = 3_000_000_000_u32.into();
+        }
+    });
+    let e = r.unwrap_err().to_string();
+    assert!(e.contains("oltre i seggi del catalogo"), "{e}");
 }

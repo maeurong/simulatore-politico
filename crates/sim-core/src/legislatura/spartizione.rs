@@ -89,8 +89,8 @@ pub(crate) fn maggioranza(seggi_c: &[u32], seggi_s: &[u32], coalizione: &[usize]
 
 /// La maggioranza minima connessa vincente (formazione-di-coalizioni:13): fra le finestre di
 /// partiti consecutivi per posizione dichiarata (a parità l'indice), senza quelli privi di seggi
-/// in entrambe le Camere e senza le finestre che contengono `escluso`, quelle con la
-/// maggioranza; la più piccola per numero di partiti, poi la più grande per seggi (Camera più
+/// in entrambe le Camere e senza `escluso` nella fila: la maggioranza può scavalcarlo. Quelle con
+/// la maggioranza; la più piccola per numero di partiti, poi la più grande per seggi (Camera più
 /// Senato), poi la più a sinistra. I partiti nell'ordine della fila.
 pub(crate) fn maggioranza_contigua(
     partiti: &[Partito],
@@ -100,7 +100,9 @@ pub(crate) fn maggioranza_contigua(
 ) -> Option<Vec<usize>> {
     let di = |v: &[u32], j: usize| v.get(j).copied().unwrap_or(0);
     let seggi = |j: usize| u64::from(di(seggi_c, j)) + u64::from(di(seggi_s, j));
-    let mut fila: Vec<usize> = (0..partiti.len()).filter(|&j| seggi(j) > 0).collect();
+    let mut fila: Vec<usize> = (0..partiti.len())
+        .filter(|&j| seggi(j) > 0 && Some(j) != escluso)
+        .collect();
     fila.sort_by(|&a, &b| {
         (partiti[a].posizione_dichiarata)
             .total_cmp(&partiti[b].posizione_dichiarata)
@@ -109,7 +111,6 @@ pub(crate) fn maggioranza_contigua(
     // ponytail: O(P³) su sette partiti; il 7b la riusa così com'è.
     (1..=fila.len()).find_map(|n| {
         (fila.windows(n))
-            .filter(|w| escluso.is_none_or(|e| !w.contains(&e)))
             .filter(|w| maggioranza(seggi_c, seggi_s, w))
             .fold(None::<&[usize]>, |meglio, w| {
                 let tot = |w: &[usize]| w.iter().map(|&j| seggi(j)).sum::<u64>();
@@ -154,6 +155,10 @@ mod tests {
         let (c, s) = ([10, 10, 10, 300, 10, 50, 10], [5, 5, 5, 150, 5, 25, 5]);
         assert_eq!(m(&in_fila, c, s, None), Some(vec![3]));
         assert_eq!(m(&in_fila, c, s, Some(3)), None);
+        // Con 3 al centro escluso, la finestra (2, 4, 5) lo scavalca; con lui vince (2, 3, 4).
+        let (c, s) = ([20, 20, 80, 100, 80, 80, 20], [10, 10, 40, 50, 40, 40, 10]);
+        assert_eq!(m(&in_fila, c, s, Some(3)), Some(vec![2, 4, 5]));
+        assert_eq!(m(&in_fila, c, s, None), Some(vec![2, 3, 4]));
         // A parità di partiti vince (1, 2), con più seggi, anche se (0, 1) è più a sinistra.
         let (c, s) = ([95, 110, 100, 10, 10, 40, 35], [50, 55, 50, 5, 5, 20, 15]);
         assert_eq!(m(&in_fila, c, s, None), Some(vec![1, 2]));

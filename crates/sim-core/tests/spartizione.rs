@@ -9,7 +9,7 @@ use sim_core::legislatura::{Assegnazione, Fase, Incarico};
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
 
-/// Al posto 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
+/// Alla posizione 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
 /// Task 9: al 6,5 nessun partito è disponibile, Task 7).
 fn vinta() -> Partita {
     let mut p = fondata(4.5);
@@ -129,14 +129,17 @@ fn i_tecnici_stanno_nella_quota_del_giocatore() {
         .dicasteri
         .iter()
         .zip(&di_partito.ministri().dicasteri);
+    let mut confrontate = 0;
     for (t, m) in coppie {
         let (t, m) = (t.ministro.as_ref().unwrap(), m.ministro.as_ref().unwrap());
         assert!((3..=5).contains(&t.capacita), "{t:?}");
         let dentro = |x: f64| x > 1.0 && x < 7.0;
         if dentro(t.posizione) && dentro(m.posizione) {
             assert!((t.posizione - 4.0 - (m.posizione - ancora)).abs() < 1e-9);
+            confrontate += 1;
         }
     }
+    assert!(confrontate > 0);
     let dopo = (p.comanda(Comando::ProponiSpartizione {
         dicasteri: tutto_a(&p, None),
     }))
@@ -283,10 +286,86 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
     let primo = *(coalizione.iter())
         .max_by_key(|&&j| pl.seggi_camera[j] + pl.seggi_senato[j])
         .unwrap();
+    let intesa = p.intesa().valori.clone();
     p.chiudi_turno();
     assert_eq!(p.governo().presidente, primo);
     assert_eq!(p.governo().coalizione, coalizione);
     assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
+    // Il governo IA non tocca l'intesa col giocatore e non nomina tecnici.
+    assert_eq!(p.intesa().valori, intesa);
+    assert!(
+        (p.intesa().variazioni.iter()).all(|v| v.causa != CausaIntesa::Spartizione),
+        "{:?}",
+        p.intesa().variazioni
+    );
+    assert!(
+        (p.ministri().dicasteri.iter()).all(|s| s.ministro.as_ref().is_none_or(|m| !m.tecnico))
+    );
+}
+
+/// `vinta()` fino al turno `t`, senza comandi.
+fn vinta_al_turno(t: u32) -> Partita {
+    let mut p = vinta();
+    p.chiudi_turno();
+    while p.vista().turno < t {
+        p.chiudi_turno();
+    }
+    p
+}
+
+/// Al secondo voto, alla scadenza del turno 20, il turno 21 è di trattativa: i comandi di governo
+/// sono rifiutati col motivo; a Camere sciolte, dal salvataggio, il giocatore non governa.
+#[test]
+fn in_trattativa_e_a_camere_sciolte_i_comandi_di_governo_sono_rifiutati() {
+    let mut p = vinta_al_turno(21);
+    assert_eq!(p.legislatura().fase, Fase::Trattativa);
+    assert_eq!(p.vista().elezioni.len(), 2);
+    assert!(!p.governa());
+    let prima = p.salva().unwrap();
+    let bilancio = p.economia().bilancio.clone();
+    for e in [
+        comune::presenta(&mut p, &[("tetto_contante", "1000")]),
+        p.comanda(Comando::Ferma {
+            dicastero: "sanita".into(),
+        }),
+        p.comanda(Comando::PresentaBilancio { bilancio }),
+    ] {
+        let e = e.unwrap_err().to_string();
+        assert!(e.contains("trattativa in corso"), "{e}");
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+    let mut p = edita(&p, |j| {
+        let l = &mut j["legislatura"];
+        l["fase"] = "sciolta".into();
+        l["incarico"] = serde_json::Value::Null;
+        l["proposta"] = serde_json::Value::Null;
+        l["allargati"] = serde_json::json!([]);
+    })
+    .unwrap();
+    assert!(!p.governa());
+    let e = (p.comanda(Comando::Ferma {
+        dicastero: "sanita".into(),
+    }))
+    .unwrap_err();
+    assert!(e.to_string().contains("Camere sciolte"), "{e}");
+}
+
+/// Il bilancio presentato al turno 20, quello del voto, si vota prima dello scioglimento: passa e
+/// non decade.
+#[test]
+fn il_bilancio_del_turno_del_voto_passa_prima_dello_scioglimento() {
+    let mut p = vinta_al_turno(20);
+    assert!(p.governa() && p.legislatura().turno_di_voto(20));
+    let bilancio = p.bozza_bilancio().unwrap();
+    assert_eq!(bilancio.anno, 2032);
+    p.comanda(Comando::PresentaBilancio { bilancio }).unwrap();
+    p.chiudi_turno();
+    let esito = (p.vista().esiti.into_iter())
+        .find(|e| e.forma == sim_core::parlamento::FormaMisura::Bilancio)
+        .unwrap();
+    assert!(esito.approvata && esito.decaduta.is_none(), "{esito:?}");
+    let approvato = p.economia().bilancio_approvato.as_ref().map(|b| b.anno);
+    assert_eq!(approvato, Some(2032));
 }
 
 /// Senza proposta l'offerta mostrata è quella della spartizione di default, la stessa che la

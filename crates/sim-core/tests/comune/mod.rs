@@ -213,7 +213,8 @@ pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
     if !p.governa() {
         let ids: Vec<String> = p.vista().dicasteri.into_iter().map(|d| d.id).collect();
         *p = edita(p, |j| {
-            let dicasteri = j["ministri"]["dicasteri"].as_array_mut().unwrap();
+            let dicasteri =
+                (j["ministri"]["dicasteri"].as_array_mut()).expect("ministri.dicasteri è un array");
             for (st, id) in dicasteri.iter_mut().zip(&ids) {
                 if id != tranne
                     && st["agenda"]["stato"] == "annunciata"

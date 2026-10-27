@@ -726,7 +726,7 @@ mod test {
             prerequisito: None,
         };
         let mut p = crate::partita::Partita::nuova(d, 1);
-        p.con_contesto(|ministri, cx| {
+        p.con_contesto(|ministri, cx, _| {
             let m = ministri.dicasteri[3].ministro.as_ref().unwrap();
             for (intensita, atteso) in [(-1000.0, -1.0), (1000.0, 1.0)] {
                 let (o, _) = parti(cx, 3, m, &atto(intensita));

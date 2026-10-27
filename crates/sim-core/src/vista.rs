@@ -68,8 +68,17 @@ pub struct Vista {
     pub richieste: Vec<VoceRichiesta>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
-    /// In trattativa a chi va l'incarico: «giocatore» o «Capo dello Stato»; `None` altrove.
-    pub incarico: Option<String>,
+    /// In trattativa a chi va l'incarico; `None` altrove.
+    pub incarico: Option<VoceIncarico>,
+}
+
+/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum VoceIncarico {
+    Giocatore,
+    CapoDelloStato,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

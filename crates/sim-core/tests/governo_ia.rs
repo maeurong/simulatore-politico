@@ -1,11 +1,18 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+
 mod comune;
 use comune::{file_base, fondata, imposta};
+use serde_json::json;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
-use sim_core::parlamento::{Decreto, ValoreProposto};
+use sim_core::parlamento::{Decreto, TipoReferendum, ValoreProposto};
+use sim_core::vista::VoceIncarico;
 use sim_core::{Comando, Partita};
 
 /// Proporzionale puro (`dati/base/elezioni.toml:307`): nessun premio, coalizioni facoltative.
-fn proporzionale(f: sim_core::dati::FileDati, posto: f64) -> Partita {
+fn proporzionale(f: sim_core::dati::FileDati, posizione: f64) -> Partita {
     let f = imposta(
         f,
         "scenario",
@@ -17,7 +24,7 @@ fn proporzionale(f: sim_core::dati::FileDati, posto: f64) -> Partita {
         7,
         &Fondazione {
             nome: "Partito nuovo".into(),
-            posto,
+            posto: posizione,
         },
     )
     .unwrap()
@@ -43,7 +50,7 @@ fn chi_perde_il_voto_va_all_opposizione() {
 fn senza_premio_si_allarga() {
     let mut p = proporzionale(file_base(), 3.5);
     p.chiudi_turno();
-    if p.vista().incarico.as_deref() == Some("giocatore") {
+    if p.vista().incarico == Some(VoceIncarico::Giocatore) {
         let fuori: Vec<String> = p
             .disponibilita()
             .into_iter()
@@ -60,24 +67,102 @@ fn senza_premio_si_allarga() {
     assert!(l.fase == Fase::Ordinaria || l.fase == Fase::Sciolta);
 }
 
+/// In trattativa, Camere alla pari con l'`incarico` dato: il giocatore con metà esatta di
+/// entrambe le Camere, gli altri con l'altra metà e la destra senza seggi. Nessuna maggioranza,
+/// né con lui né senza; i seggi sommano ai totali, 400 e 200.
+fn alla_pari(p: &Partita, incarico: serde_json::Value) -> Partita {
+    comune::edita(p, |j| {
+        assert_eq!(j["legislatura"]["totali"], json!([400, 200]));
+        j["legislatura"]["incarico"] = incarico;
+        j["parlamento"]["seggi_camera"] = json!([40, 40, 30, 30, 30, 0, 30, 200]);
+        j["parlamento"]["seggi_senato"] = json!([20, 20, 15, 15, 15, 0, 15, 100]);
+    })
+    .unwrap()
+}
+
+/// Al Capo dello Stato, con le Camere alla pari, nessuna maggioranza contigua senza il
+/// giocatore: si sciolgono dopo il voto del turno zero e di nuovo dopo il voto a Camere sciolte.
 #[test]
 fn due_scioglimenti_di_fila() {
-    // Proporzionale puro coi dati di base: il giocatore a 3,5 divide la fila, a sinistra e a
-    // destra di lui nessuna maggioranza contigua, e da solo non è primo alla Camera. Col seme 7
-    // le Camere si sciolgono a ogni trattativa. (Con le valence di sinistra, destra e
-    // centrosinistra al minimo, come voleva il piano, il giocatore prende da solo la
-    // maggioranza: 203 su 400 e 106 su 200.)
-    let mut p = proporzionale(file_base(), 3.5);
-    for _ in 0..6 {
-        p.chiudi_turno();
+    let mut p = fondata(1.5);
+    p.chiudi_turno(); // voto del turno zero
+    for voti in [1, 2] {
+        assert_eq!(p.legislatura().fase, Fase::Trattativa);
+        assert_eq!(p.vista().elezioni.len(), voti);
+        p = alla_pari(&p, serde_json::Value::Null);
+        p.chiudi_turno(); // trattativa
+        assert_eq!(p.legislatura().fase, Fase::Sciolta);
+        p = Partita::carica(&p.salva().unwrap()).unwrap();
+        p.chiudi_turno(); // voto a Camere sciolte
     }
-    assert!(p.vista().elezioni.len() >= 2);
-    assert_eq!(p.legislatura().fase, Fase::Sciolta);
+    assert_eq!(p.vista().elezioni.len(), 3);
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
 
-/// Sinistra e destra al minimo, proporzionale puro, posto 3,5: col seme 7 il giocatore è primo
-/// alla Camera senza maggioranza (176 su 400, 90 su 200), quindi ha l'incarico.
+/// Sciolte dopo il voto del turno zero, al turno 2.
+fn sciolta() -> Partita {
+    let mut p = fondata(1.5);
+    p.chiudi_turno();
+    let mut p = alla_pari(&p, serde_json::Value::Null);
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().fase, Fase::Sciolta);
+    p
+}
+
+/// A Camere sciolte nessun abrogativo si chiede; in trattativa sì.
+#[test]
+fn nessun_referendum_a_camere_sciolte() {
+    let mut p = sciolta();
+    let prima = p.salva().unwrap();
+    let e = (p.promuovi_referendum("sinistra", "licenziamento")).unwrap_err();
+    assert!(
+        e.to_string().contains("Nessun referendum a Camere sciolte"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+    let mut q = fondata(1.5);
+    q.chiudi_turno();
+    assert_eq!(q.legislatura().fase, Fase::Trattativa);
+    q.promuovi_referendum("sinistra", "licenziamento").unwrap();
+}
+
+/// Un confermativo col voto nel turno sciolto si vota in quel turno, non slitta.
+#[test]
+fn a_camere_sciolte_il_confermativo_si_vota() {
+    let p = sciolta();
+    let durata = comune::dati_base()
+        .disposizione("durata_legislatura")
+        .unwrap();
+    let mut p = comune::edita(&p, |j| {
+        j["parlamento"]["confermativi"] = json!([{
+            "tipo": "confermativo",
+            "misura": 99,
+            "valori": [[durata, 0]],
+            "promotore": null,
+            "voto": 2,
+            "firme": true,
+            "invito_astensione": false,
+        }]);
+    })
+    .unwrap();
+    assert_eq!(p.vista().turno, 2);
+    p.chiudi_turno();
+    assert!(p.parlamento().confermativi.is_empty());
+    assert!((p.vista().esiti_referendum.iter()).any(|r| r.tipo == TipoReferendum::Confermativo));
+}
+
+/// Sotto un governo IA la vista non mostra alleati.
+#[test]
+fn sotto_un_governo_ia_nessun_alleato() {
+    let mut p = fondata(1.5);
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
+    assert!(p.vista().alleati.is_empty());
+}
+
+/// Sinistra e destra al minimo, proporzionale puro, posizione 3,5: col seme 7 il giocatore è
+/// primo alla Camera senza maggioranza (176 su 400, 90 su 200), quindi ha l'incarico.
 fn primo_senza_maggioranza() -> Partita {
     let mut f = file_base();
     for id in ["sinistra", "destra"] {
@@ -85,7 +170,7 @@ fn primo_senza_maggioranza() -> Partita {
     }
     let mut p = proporzionale(f, 3.5);
     p.chiudi_turno();
-    assert_eq!(p.vista().incarico.as_deref(), Some("giocatore"));
+    assert_eq!(p.vista().incarico, Some(VoceIncarico::Giocatore));
     p
 }
 
@@ -193,6 +278,9 @@ fn alla_maggioranza_esatta_governare_vale_uno() {
 #[test]
 fn allargamenti_rifiutati_lasciano_la_partita_identica() {
     let mut p = primo_senza_maggioranza();
+    let dicasteri = tutto_a_me(&p);
+    p.comanda(Comando::ProponiSpartizione { dicasteri })
+        .unwrap();
     let prima = p.salva().unwrap();
     for (id, testo) in [
         (
@@ -208,6 +296,7 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
         assert!(e.to_string().contains(testo), "{e}");
     }
     assert_eq!(p.salva().unwrap(), prima);
+    assert!(p.legislatura().proposta.is_some());
     let allarga = |p: &mut Partita| {
         p.comanda(Comando::Allarga {
             partito: "centro".into(),
@@ -223,8 +312,9 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
 
 #[test]
 fn senza_maggioranza_le_camere_si_sciolgono() {
-    // Destra, 3 seggi, non porta la maggioranza e non è disponibile: entra dal salvataggio.
-    let p = primo_senza_maggioranza();
+    // Camere alla pari con l'incarico al giocatore. Destra, senza seggi, non porta la
+    // maggioranza e non è disponibile: entra dal salvataggio.
+    let p = alla_pari(&primo_senza_maggioranza(), json!("Giocatore"));
     let mut p = comune::edita(&p, |j| {
         j["legislatura"]["allargati"] = serde_json::json!([5])
     })
@@ -257,7 +347,7 @@ fn senza_incarico_decide_il_capo_dello_stato() {
     let mut p = fondata(1.5);
     p.chiudi_turno();
     let v = p.vista();
-    assert_eq!(v.incarico.as_deref(), Some("Capo dello Stato"));
+    assert_eq!(v.incarico, Some(VoceIncarico::CapoDelloStato));
     assert!(v.disponibilita.is_empty() && v.richieste.is_empty());
     p.chiudi_turno();
     assert_eq!(p.vista().incarico, None);
@@ -343,4 +433,7 @@ fn all_opposizione_le_anteprime_rifiutano_come_i_comandi() {
             }
         )
     );
+    let bilancio = p.economia().bilancio.clone();
+    let e = p.riepilogo_bilancio(&bilancio).unwrap_err().to_string();
+    assert_eq!(e, comando(&mut p, Comando::PresentaBilancio { bilancio }));
 }
