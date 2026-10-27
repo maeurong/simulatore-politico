@@ -101,7 +101,7 @@ fn posizione_fonda_la_partita_vera() {
 }
 
 #[test]
-fn posizione_non_ammesso_esce_con_errore() {
+fn posizione_non_ammessa_esce_con_errore() {
     rifiuta(
         &[
             "--dati",
