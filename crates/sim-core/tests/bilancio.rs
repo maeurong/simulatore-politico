@@ -551,6 +551,7 @@ fn provvisorio_poi_secondo_anno_poi_terzo() {
     b.dicasteri[3].margine *= 2;
     let margine = b.dicasteri[3].margine;
     presenta(&mut p, b).unwrap();
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
     p.chiudi_turno();
     let v = p.vista();
     assert_eq!(
@@ -583,6 +584,7 @@ fn gennaio_provvisorio_senza_presentare_fa_cadere_il_governo() {
     assert!(p.governa());
     p.chiudi_turno();
     assert!(!p.governa());
+    assert_ne!(p.vista().fase, sim_core::legislatura::Fase::Ordinaria);
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
 

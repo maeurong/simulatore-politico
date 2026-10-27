@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_seggi, dati_base, presenta};
+use comune::{chiudi_col_bilancio, con_seggi, dati_base, edita, partito, presenta};
 use sim_core::legislatura::{Fase, Incarico};
 use sim_core::{Comando, Partita};
 
@@ -74,4 +74,32 @@ fn dimissioni_nel_turno_del_voto() {
     assert_eq!(l.elezioni.len(), 1);
     assert_eq!(l.fase, Fase::Trattativa);
     assert!(!l.dimissioni);
+}
+
+/// Un governo IA (presiede il centrodestra) cade a `scadenza − 1`: il giocatore, primo nella
+/// contigua, ha l'incarico col ribaltone. Il turno dopo è quello del voto: vince il voto, la
+/// maggioranza del ribaltone si cancella e il salvataggio si ricarica.
+#[test]
+fn ribaltone_alla_vigilia_del_voto() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 18 {
+        chiudi_col_bilancio(&mut p);
+    }
+    let mut p = edita(&p, |j| {
+        j["governo"]["presidente"] = partito("centrodestra").into();
+        j["legislatura"]["dimissioni"] = true.into();
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let l = p.legislatura();
+    assert_eq!(l.incarico, Some(Incarico::Giocatore));
+    assert!(l.maggioranza.is_some());
+    assert!(l.turno_di_voto(p.vista().turno));
+    p.chiudi_turno(); // si vota
+    let l = p.legislatura();
+    assert_eq!(l.elezioni.len(), 1);
+    assert_eq!(l.fase, Fase::Trattativa);
+    assert_eq!(l.maggioranza, None);
+    assert!(l.allargati.is_empty());
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }

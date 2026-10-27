@@ -1595,6 +1595,9 @@ impl Partita {
         l.coalizioni = coalizioni;
         l.dichiarazione = None;
         l.proposta = None;
+        // Il ribaltone della vigilia del voto decade col voto.
+        l.maggioranza = None;
+        l.allargati.clear();
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -2017,14 +2020,21 @@ impl Partita {
     /// Passata al governo, dimissioni; al ministro, il ministro esce (`Sfiduciato`) e, se è di un
     /// alleato, l'alleato perde `costo_dimissioni_chieste`. Respinta, ogni alleato guadagna
     /// `intesa_sfiducia_respinta` e il `promotore` perde `valence_sfiducia_respinta`. `true` se
-    /// è passata.
-    #[expect(
-        dead_code,
-        reason = "la chiamano la fine della crisi (Task 5) e la sfiducia del giocatore (Task 7)"
+    /// è passata. Un `dicastero` fuori dai dati o in interim: nessun voto, `false`.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "la chiamano la fine della crisi (Task 5) e la sfiducia del giocatore (Task 7)"
+        )
     )]
     pub(crate) fn sfiducia(&mut self, dicastero: Option<usize>, promotore: Option<usize>) -> bool {
+        let ministro = |i: usize| self.ministri.dicasteri.get(i)?.ministro.as_ref();
+        let partito = match dicastero.map(|i| ministro(i).map(|m| m.partito)) {
+            Some(None) => return false,
+            x => x.flatten(),
+        };
         let g = &self.governo;
-        let partito = dicastero.map(|i| g.dicasteri.get(i).copied().unwrap_or(g.presidente));
         let pl = &self.parlamento;
         let q = Quadro {
             seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
@@ -2688,5 +2698,17 @@ mod tests {
         assert_ne!(p.informazione.bias, bias);
         assert_eq!(p.informazione.bias, attesi);
         assert_eq!(p.caso, caso);
+    }
+
+    /// Sfiducia a un dicastero fuori dai dati o in interim: nessun voto, nessun effetto.
+    #[test]
+    fn sfiducia_senza_ministro_non_si_vota() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let st = &mut p.ministri.dicasteri[0];
+        (st.ministro, st.agenda, st.proposta) = (None, None, None);
+        let prima = p.salva().unwrap();
+        assert!(!p.sfiducia(Some(0), Some(0)));
+        assert!(!p.sfiducia(Some(99), Some(0)));
+        assert_eq!(p.salva().unwrap(), prima);
     }
 }
