@@ -15,7 +15,8 @@ pub struct Affluenza {
 
 /// Il quesito: posizione del sì e del no (`None` = nessuna posizione), peso del giudizio sul
 /// governo nel sì, invito all'astensione, astensione di base del tipo di referendum, quota
-/// toccata per gruppo in 0-1 (vuoto = nessuno).
+/// toccata per gruppo in 0-1 (vuoto = nessuno), guadagno del sì per partito (vuoto = nessuno:
+/// con un guadagno le posizioni non contano).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Quesito {
     pub pos_si: Option<f64>,
@@ -24,6 +25,7 @@ pub struct Quesito {
     pub invito: f64,
     pub astensione: f64,
     pub toccati: Vec<f64>,
+    pub guadagno: Vec<f64>,
 }
 
 /// Per gruppo, quanto la disposizione `d` lo tocca: 1 se la sua condizione è fra i `gruppi`, per
@@ -65,6 +67,7 @@ impl Elettorato {
             invito,
             astensione: base,
             toccati,
+            guadagno,
         } = quesito;
         let (beta, gamma) = (
             dati.manopola("beta_distanza"),
@@ -88,10 +91,18 @@ impl Elettorato {
             let u_ast =
                 astensione(dati, i) + base - mobilitazione * toccato + invito * quota_governo;
             let elettori = self.elettori(dati.elettorato(), i);
+            let vantaggio: f64 = (v.iter().zip(&guadagno)).map(|(q, g)| q * g).sum();
             for (k, h) in g.posizione.iter().enumerate() {
                 let x = (k + 1) as f64;
-                let u_si = distanza(x, pos_si) + peso_governo * gamma * giudizio;
-                let q = softmax(&[u_si, distanza(x, pos_no), u_ast]);
+                let (u_si, u_no) = if guadagno.is_empty() {
+                    (
+                        distanza(x, pos_si) + peso_governo * gamma * giudizio,
+                        distanza(x, pos_no),
+                    )
+                } else {
+                    (vantaggio, 0.0)
+                };
+                let q = softmax(&[u_si, u_no, u_ast]);
                 let w = h * elettori;
                 a.si += w * q[0];
                 a.no += w * q[1];
@@ -124,6 +135,7 @@ mod tests {
                 invito,
                 astensione: dati.manopola("astensione_abrogativo"),
                 toccati: Vec::new(),
+                guadagno: Vec::new(),
             },
         )
     }

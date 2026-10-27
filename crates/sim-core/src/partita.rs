@@ -1,6 +1,6 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::disposizioni::{Disposizioni, data_di};
+use crate::disposizioni::{Disposizioni, Norma, data_di};
 use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
@@ -577,6 +577,7 @@ impl Partita {
                 invito: 0.0,
                 astensione: self.dati.manopola("astensione_confermativo"),
                 toccati: Vec::new(),
+                guadagno: Vec::new(),
             };
             let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
             let nome = parlamento::nome(&self.dati, &r.valori);
@@ -603,9 +604,12 @@ impl Partita {
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
     /// cancellano), il gradino abrogato si blocca e ogni partito al governo perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
-    /// Se l'abrogazione renderebbe non valida la legge elettorale, con le leggi e gli arrivi venuti
-    /// dopo la promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco,
-    /// nessuna valence. Il titolo dell'esito è il gradino vigente che il quesito abroga.
+    /// Se una legge ha già portato la disposizione al valore dopo l'abrogazione, o l'abrogazione
+    /// renderebbe non valida la legge elettorale con le leggi e gli arrivi venuti dopo la
+    /// promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco, nessuna
+    /// valence. Il titolo dell'esito è il gradino vigente che il quesito abroga: se una legge lo ha
+    /// cambiato, il quesito si sposta su quello. Sull'elettorale gli elettori votano i seggi
+    /// attesi (`Quesito::guadagno`).
     fn vota_abrogativo(&mut self) {
         let turno = self.turno;
         let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
@@ -616,18 +620,24 @@ impl Partita {
         };
         let vigente = self.disposizioni.voci[d].in_vigore;
         let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
-        if let Some(m) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)])
-        {
+        let decaduto = if vigente == dopo {
+            Some("Decaduto senza voto: una legge ha già abrogato la disposizione".to_string())
+        } else {
+            parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)]).map(|m| {
+                format!(
+                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
+                     più applicabile ({m})"
+                )
+            })
+        };
+        if decaduto.is_some() {
             let nessuno = Affluenza {
                 si: 0.0,
                 no: 0.0,
                 astenuti: 0.0,
             };
             let esito = EsitoReferendum {
-                decaduto: Some(format!(
-                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
-                     più applicabile ({m})"
-                )),
+                decaduto,
                 ..EsitoReferendum::da(r.tipo, nome, self.data, &nessuno)
             };
             self.parlamento.esiti_referendum.insert(0, esito);
@@ -639,6 +649,14 @@ impl Partita {
         } else {
             0.0
         };
+        let guadagno = if x.norma == Norma::Elettorale {
+            let per_punto = self.dati.manopola("seggi_per_punto_linea");
+            (self.stato_aula().seggi_attesi(&[(d, dopo)]).iter())
+                .map(|&(c, s)| f64::from(c + s) / per_punto)
+                .collect()
+        } else {
+            Vec::new()
+        };
         let quesito = Quesito {
             pos_si: x.posizione(dopo),
             pos_no: x.posizione(vigente),
@@ -646,6 +664,7 @@ impl Partita {
             invito,
             astensione: self.dati.manopola("astensione_abrogativo"),
             toccati: toccati(&self.dati, d),
+            guadagno,
         };
         let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
         let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);

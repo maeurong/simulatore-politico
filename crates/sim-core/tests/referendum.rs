@@ -430,3 +430,31 @@ fn abrogazione_approvata_costa_a_tutta_la_coalizione() {
     }
     assert!(persa("sinistra").abs() < 1e-9);
 }
+
+#[test]
+fn sull_abrogativo_elettorale_gli_elettori_votano_i_seggi() {
+    // Il premio alla coalizione è abrogabile: chi ne guadagna seggi è votato dalla maggioranza.
+    // Il ripescaggio no: nel sondaggio iniziale nessuna lista di coalizione resta sotto soglia,
+    // i seggi non cambiano e il quesito finisce pari.
+    let p = al_voto_su(
+        con(senza_shock(), "astensione_abrogativo", "-5.0"),
+        "premio",
+    );
+    let e = &p.vista().esiti_referendum[0];
+    assert!(e.si != e.no, "{e:?}"); // prima del piano 7 finivano pari
+}
+
+#[test]
+fn una_legge_che_abroga_prima_del_voto_fa_decadere_il_quesito() {
+    // Una legge porta il reintegro al turno 3, prima del voto (turno 6); in esame la
+    // disposizione non accetta altre leggi, quindi l'arrivo sta nei dati.
+    let f = con_arrivo(senza_shock(), "licenziamento", "reintegro", 2027, 3);
+    let p = al_voto_su(f, "licenziamento");
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    let e = &p.vista().esiti_referendum[0];
+    assert_eq!(
+        e.decaduto.as_deref(),
+        Some("Decaduto senza voto: una legge ha già abrogato la disposizione")
+    );
+    assert!(!e.quorum && !e.approvato);
+}
