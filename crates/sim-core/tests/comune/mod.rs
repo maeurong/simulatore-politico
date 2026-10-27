@@ -408,3 +408,15 @@ pub fn al_governo() -> Partita {
     p.chiudi_turno();
     p
 }
+
+/// Quanto la valence di `j` in `p` è scesa oltre il ritorno di un turno, dai `prima` (i partiti
+/// prima della chiusura).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn calo_oltre_il_ritorno(prima: &[sim_core::partiti::Partito], p: &Partita, j: usize) -> f64 {
+    let r = dati_base().manopola("ritorno_valence");
+    let x = &prima[j];
+    x.valence + r * (x.valence_base - x.valence) - p.partiti()[j].valence
+}

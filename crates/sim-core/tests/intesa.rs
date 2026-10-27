@@ -1,6 +1,7 @@
 mod comune;
-use comune::{dati_base, edita, in_trattativa, partito};
+use comune::{calo_oltre_il_ritorno, dati_base, edita, in_trattativa, partito};
 use sim_core::parlamento::CausaIntesa;
+use sim_core::partiti::Partito;
 use sim_core::{Comando, Partita};
 
 fn variazioni(p: &Partita, j: usize, c: CausaIntesa) -> Vec<f64> {
@@ -112,23 +113,54 @@ fn l_ultimatum_resta_con_la_sua_causa() {
 const CAMERA: [u32; 8] = [10, 60, 80, 30, 50, 50, 20, 100];
 const SENATO: [u32; 8] = [5, 30, 40, 15, 25, 25, 10, 50];
 
-#[test]
-fn allargare_all_altro_campo_rompe_l_impegno() {
-    let coalizioni = serde_json::json!([[7, 3], [1, 2], [4, 5]]);
-    let mut gemella = in_trattativa(coalizioni.clone(), &CAMERA, &SENATO);
-    let mut p = in_trattativa(coalizioni, &CAMERA, &SENATO);
+/// Allarga al centrosinistra (2, che ha corso col 1) e chiude la trattativa: rende la partita e
+/// i partiti prima della chiusura.
+fn allarga_al_centrosinistra(
+    coalizioni: serde_json::Value,
+    camera: &[u32],
+    senato: &[u32],
+) -> (Partita, Vec<Partito>) {
+    let mut p = in_trattativa(coalizioni, camera, senato);
     p.comanda(Comando::Allarga {
         partiti: vec!["centrosinistra".into()],
     })
     .unwrap();
+    let prima = p.partiti().to_vec();
     p.chiudi_turno();
-    gemella.chiudi_turno();
     assert!(p.governa());
+    (p, prima)
+}
+
+#[test]
+fn allargare_all_altro_campo_rompe_l_impegno() {
+    let (p, prima) = allarga_al_centrosinistra(
+        serde_json::json!([[7, 3], [1, 2], [4, 5]]),
+        &CAMERA,
+        &SENATO,
+    );
     let rotture = |j| variazioni(&p, j, CausaIntesa::RotturaImpegno);
     let costo = dati_base().manopola("intesa_rottura_impegno");
     assert_eq!(rotture(2), vec![-costo]);
     assert_eq!(rotture(3), vec![-costo]);
-    let calo = gemella.partiti()[7].valence - p.partiti()[7].valence;
+    // Il Presidente del Consiglio non ha intesa: paga solo la valence.
+    assert!(rotture(7).is_empty());
+    let atteso = dati_base().manopola("valence_rottura_impegno");
+    for j in [2, 3, 7] {
+        let calo = calo_oltre_il_ritorno(&prima, &p, j);
+        assert!((calo - atteso).abs() < 1e-9, "{j}: {calo} {atteso}");
+    }
+}
+
+/// Il giocatore che ha corso da solo paga la rottura se governa con chi ha corso contro di lui. I
+/// seggi del centro passano al centrosinistra: 7 + 2 hanno la maggioranza (210 su 400, 105 su 200).
+#[test]
+fn il_giocatore_da_solo_che_allarga_all_altro_campo_rompe() {
+    let (p, prima) = allarga_al_centrosinistra(
+        serde_json::json!([[7], [1, 2], [4, 5]]),
+        &[10, 60, 110, 0, 50, 50, 20, 100],
+        &[5, 30, 55, 0, 25, 25, 10, 50],
+    );
+    let calo = calo_oltre_il_ritorno(&prima, &p, 7);
     let atteso = dati_base().manopola("valence_rottura_impegno");
     assert!((calo - atteso).abs() < 1e-9, "{calo} {atteso}");
 }
