@@ -10,6 +10,7 @@ import type { VistaReferendum } from "./VistaReferendum";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
+import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
 import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceMinistero } from "./VoceMinistero";
@@ -59,4 +60,13 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceM
 /**
  * I referendum in attesa del voto.
  */
-referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, };
+referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, 
+/**
+ * Nel turno del voto, una voce per partito IA: la regola e la causa, mai i valori attesi;
+ * vuota altrove.
+ */
+disponibilita: Array<VoceDisponibilita>, 
+/**
+ * I membri dichiarati della coalizione del giocatore (id), senza di lui.
+ */
+coalizione: Array<string>, };

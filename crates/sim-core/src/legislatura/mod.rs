@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+mod coalizione;
 mod fondazione;
+pub use coalizione::{CausaDisponibilita, Cessione, Dichiarazione, VoceDisponibilita};
+pub(crate) use coalizione::{Quadro, coalizioni_al_voto, dichiarazione};
 pub use fondazione::{AnteprimaFondazione, Fondazione, Posto, posti};
 
 /// `Sciolta`: Camere sciolte, campagna, voto nella chiusura. `Trattativa`: il turno dopo il voto.
@@ -19,12 +22,14 @@ pub enum Fase {
 }
 
 /// `coalizioni`: quelle dell'ultimo voto, indici di partito; alla nascita quelle dello scenario.
+/// `dichiarazione`: la coalizione pre-elettorale del turno del voto, cancellata dal voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
     pub scadenza: u32,
     pub fase: Fase,
     pub coalizioni: Vec<Vec<usize>>,
+    pub dichiarazione: Option<Dichiarazione>,
 }
 
 impl Legislatura {

@@ -12,7 +12,10 @@ use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::legislatura::{Fase, Fine, Legislatura};
+use crate::legislatura::{
+    self, Cessione, Dichiarazione, Fase, Fine, Legislatura, Quadro, VoceDisponibilita,
+    coalizioni_al_voto,
+};
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::parlamento::{
@@ -138,6 +141,7 @@ impl Partita {
                 scadenza: 0,
                 fase: Fase::Sciolta,
                 coalizioni,
+                dichiarazione: None,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -147,6 +151,7 @@ impl Partita {
                 scadenza: (4.0 * durata - 1.0).round().max(0.0) as u32,
                 fase: Fase::Ordinaria,
                 coalizioni,
+                dichiarazione: None,
             };
             let uscente = Parlamento::uscente(&dati, &partiti);
             (uscente, governo.presidente, legislatura)
@@ -281,6 +286,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            coalizioni: &self.legislatura.coalizioni,
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
@@ -824,6 +830,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            coalizioni: &self.legislatura.coalizioni,
         }
     }
 
@@ -1352,7 +1359,58 @@ impl Partita {
             &self.informazione.sondaggio,
             &self.legge_elettorale(),
             &self.disposizioni.leve(&self.dati),
+            &self.legislatura.coalizioni,
         )
+    }
+
+    fn quadro(&self) -> Quadro<'_> {
+        Quadro {
+            dati: &self.dati,
+            partiti: &self.partiti,
+            sondaggio: &self.informazione.sondaggio,
+            legge: self.legge_elettorale(),
+            leve: self.disposizioni.leve(&self.dati),
+            ultime: &self.legislatura.coalizioni,
+            giocatore: self.giocatore,
+            intesa: &self.intesa.valori,
+            alleati: if self.governo.presidente == self.giocatore {
+                self.alleati()
+            } else {
+                Vec::new()
+            },
+        }
+    }
+
+    /// La disponibilità di ogni partito IA sulla dichiarazione in corso; senza dichiarazione,
+    /// sulla coalizione del giocatore dell'ultimo voto (alla fondazione, lui da solo).
+    pub fn disponibilita(&self) -> Vec<VoceDisponibilita> {
+        let l = &self.legislatura;
+        let d = l.dichiarazione.clone().unwrap_or_else(|| {
+            let sua = coalizioni_al_voto(&l.coalizioni, self.giocatore, None);
+            Dichiarazione {
+                partiti: (sua.into_iter().next().unwrap_or_default().into_iter())
+                    .filter(|&j| j != self.giocatore)
+                    .collect(),
+                cessioni: Vec::new(),
+            }
+        });
+        self.quadro().disponibilita(&d)
+    }
+
+    /// `DichiaraCoalizione`: solo nel turno del voto; sostituisce la dichiarazione precedente.
+    pub(crate) fn dichiara_coalizione(
+        &mut self,
+        partiti: &[String],
+        cessioni: &[Cessione],
+    ) -> Result<(), Errore> {
+        if !self.legislatura.turno_di_voto(self.turno) {
+            return Err(Errore::Comando(
+                "Coalizione: si dichiara solo nel turno del voto".into(),
+            ));
+        }
+        let d = legislatura::dichiarazione(&self.quadro(), partiti, cessioni)?;
+        self.legislatura.dichiarazione = Some(d);
+        Ok(())
     }
 
     fn voci_partiti(&self) -> Vec<VocePartito> {
@@ -1381,6 +1439,7 @@ impl Partita {
                 .collect()
         });
         let voto = self.turno_del_voto();
+        let l = &self.legislatura;
         Vista {
             turno: self.turno,
             data: self.data,
@@ -1447,6 +1506,15 @@ impl Partita {
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
+            disponibilita: if l.turno_di_voto(self.turno) && !self.finita() {
+                self.disponibilita()
+            } else {
+                Vec::new()
+            },
+            coalizione: (l.dichiarazione.iter().flat_map(|d| &d.partiti))
+                .filter_map(|&j| self.partiti.get(j))
+                .map(|p| p.id.clone())
+                .collect(),
         }
     }
 
@@ -1636,6 +1704,12 @@ impl Partita {
         ok(
             self.legislatura.coalizioni.iter().flatten().all(|&j| j < n),
             "legislatura.coalizioni con un partito fuori dai partiti",
+        )?;
+        let mut dichiarati = (self.legislatura.dichiarazione.iter())
+            .flat_map(|d| d.partiti.iter().chain(d.cessioni.iter().map(|c| &c.0)));
+        ok(
+            dichiarati.all(|&j| j < n && j != self.giocatore),
+            "legislatura.dichiarazione con un partito fuori dai partiti o col giocatore",
         )?;
         let pl = &self.parlamento;
         let vuoto = |seggi: &[u32]| seggi.iter().all(|&x| x == 0);

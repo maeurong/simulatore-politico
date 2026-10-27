@@ -74,8 +74,8 @@ impl EsitoReferendum {
 }
 
 /// Riparto sul sondaggio pubblico con la legge `legge` e i seggi dei rami da `leve`: voti
-/// regionali dalle quote degli incroci, coalizioni dell'ultimo voto, partiti senza coalizione
-/// da soli.
+/// regionali dalle quote degli incroci, `coalizioni` (indici di partito) da chi chiama, partiti
+/// senza coalizione da soli.
 ///
 /// # Errors
 /// Quelli di `elezioni::riparto`.
@@ -85,6 +85,7 @@ pub(crate) fn proietta(
     sondaggio: &Sondaggio,
     legge: &LeggeElettorale,
     leve: &Leve,
+    coalizioni: &[Vec<usize>],
 ) -> Result<Esito, Errore> {
     let n = partiti.len();
     let per_regione = (dati.elettorato().regioni.iter())
@@ -98,10 +99,6 @@ pub(crate) fn proietta(
             )
         })
         .collect();
-    let posizione = |id: &String| partiti.iter().position(|p| &p.id == id);
-    let coalizioni = (dati.scenario().coalizioni.iter())
-        .map(|c| c.iter().filter_map(posizione).collect())
-        .collect();
     // I totali dei rami da `numero_parlamentari`: `seggi_per_circoscrizione` regge ogni totale.
     let mut elezioni = dati.elezioni().clone();
     elezioni.camera.seggi = leve.seggi_camera.round() as u32;
@@ -110,7 +107,7 @@ pub(crate) fn proietta(
         &elezioni,
         legge,
         &Voti {
-            coalizioni,
+            coalizioni: coalizioni.to_vec(),
             per_regione,
         },
     )
@@ -152,7 +149,16 @@ impl StatoAula<'_> {
     pub(crate) fn seggi_attesi(&self, valori: &[(usize, usize)]) -> Vec<(i32, i32)> {
         let (dati, d) = (self.dati, self.disposizioni);
         let leve = d.leve(dati);
-        let proietta = |l: &LeggeElettorale| proietta(dati, self.partiti, self.sondaggio, l, &leve);
+        let proietta = |l: &LeggeElettorale| {
+            proietta(
+                dati,
+                self.partiti,
+                self.sondaggio,
+                l,
+                &leve,
+                self.coalizioni,
+            )
+        };
         let (Ok(prima), Ok(dopo)) = (
             proietta(&d.legge_elettorale(dati)),
             proietta(&d.legge_con(dati, valori)),

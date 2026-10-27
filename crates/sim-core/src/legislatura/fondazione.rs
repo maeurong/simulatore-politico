@@ -1,5 +1,6 @@
 //! La fondazione del partito del giocatore: nome, posto sull'asse, anteprima sul sondaggio.
 
+use super::VoceDisponibilita;
 use crate::dati::DatiGioco;
 use crate::elettorato::{PUNTI, media_pesata};
 use crate::errore::Errore;
@@ -18,12 +19,14 @@ pub struct Fondazione {
 }
 
 /// Un posto della fondazione: `quota_attesa` è la quota del giocatore fra i votanti, media sugli
-/// istituti del sondaggio del turno zero.
+/// istituti del sondaggio del turno zero; `disponibilita` quella dei partiti IA con la coalizione
+/// vuota.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Posto {
     pub posizione: f64,
     pub quota_attesa: f64,
+    pub disponibilita: Vec<VoceDisponibilita>,
 }
 
 /// `istogramma`: autocollocazione dell'elettorato sui 7 punti, dalle regioni del sondaggio.
@@ -66,7 +69,7 @@ fn ko<T>(m: String) -> Result<T, Errore> {
 }
 
 /// Media sugli istituti della quota del partito `j` fra i votanti; l'astensione è l'ultima voce.
-fn quota_fra_i_votanti(s: &Sondaggio, j: usize) -> f64 {
+pub(super) fn quota_fra_i_votanti(s: &Sondaggio, j: usize) -> f64 {
     let quote = s.istituti.iter().map(|r| {
         let astensione = r.quote.last().copied().unwrap_or(0.0);
         r.quote.get(j).copied().unwrap_or(0.0) / (1.0 - astensione)
@@ -134,6 +137,7 @@ impl Partita {
             anteprima.posti.push(Posto {
                 posizione,
                 quota_attesa: quota_fra_i_votanti(s, p.giocatore()),
+                disponibilita: p.disponibilita(),
             });
         }
         anteprima

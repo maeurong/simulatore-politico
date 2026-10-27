@@ -248,6 +248,8 @@ pub(crate) struct StatoAula<'a> {
     pub partiti: &'a [Partito],
     pub governo: &'a Governo,
     pub intesa: &'a [f64],
+    /// Le coalizioni dell'ultimo voto, per i seggi attesi.
+    pub coalizioni: &'a [Vec<usize>],
 }
 
 /// Posizioni, linea e probabilità dei franchi tiratori di una misura, sullo stato attuale.

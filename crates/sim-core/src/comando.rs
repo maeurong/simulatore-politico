@@ -2,7 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
-use crate::legislatura::Fase;
+use crate::legislatura::{Cessione, Fase};
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
@@ -68,6 +68,12 @@ pub enum Comando {
     },
     /// Invita a disertare il referendum abrogativo indetto, una volta.
     InvitaAstensione,
+    /// Dichiara la coalizione pre-elettorale nel turno del voto: `partiti` (id) senza il
+    /// giocatore, vuoto = da solo. Sostituisce la dichiarazione precedente.
+    DichiaraCoalizione {
+        partiti: Vec<String>,
+        cessioni: Vec<Cessione>,
+    },
 }
 
 impl Partita {
@@ -75,11 +81,15 @@ impl Partita {
     ///
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
-    /// della legge di bilancio; la partita resta identica. Ogni comando è di governo: a partita
-    /// finita, o se il giocatore non governa, `Comando` col motivo.
+    /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
+    /// comando tranne `DichiaraCoalizione` è di governo: se il giocatore non governa, `Comando`
+    /// col motivo.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
+        }
+        if let Comando::DichiaraCoalizione { partiti, cessioni } = &c {
+            return self.dichiara_coalizione(partiti, cessioni);
         }
         if !self.governa() {
             let motivo = match self.legislatura().fase {

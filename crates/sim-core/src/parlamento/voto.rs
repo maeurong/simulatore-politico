@@ -203,6 +203,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            coalizioni: &[],
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -284,6 +285,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            coalizioni: &[],
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
