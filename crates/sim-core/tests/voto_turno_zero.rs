@@ -5,13 +5,17 @@
 
 mod comune;
 use comune::{edita, fondata};
-use sim_core::legislatura::Fase;
+use sim_core::legislatura::{Cessione, Fase};
 use sim_core::{Comando, Partita};
 
 fn dichiara(p: &mut Partita, alleati: &[&str]) {
+    dichiara_con(p, alleati, Vec::new());
+}
+
+fn dichiara_con(p: &mut Partita, alleati: &[&str], cessioni: Vec<Cessione>) {
     p.comanda(Comando::DichiaraCoalizione {
         partiti: alleati.iter().map(|s| (*s).into()).collect(),
-        cessioni: Vec::new(),
+        cessioni,
     })
     .unwrap();
 }
@@ -21,6 +25,34 @@ fn votata(posto: f64, alleati: &[&str]) -> Partita {
     dichiara(&mut p, alleati);
     p.chiudi_turno();
     p
+}
+
+#[test]
+fn le_cessioni_passano_seggi_dopo_il_riparto() {
+    let k = 10;
+    let senza = votata(5.5, &["centrodestra"]);
+    let mut con = fondata(5.5);
+    let cessione = Cessione {
+        partito: "centrodestra".into(),
+        seggi: k,
+    };
+    dichiara_con(&mut con, &["centrodestra"], vec![cessione]);
+    con.chiudi_turno();
+    let (g, m) = (7, 4);
+    assert_eq!(con.partiti()[m].id, "centrodestra");
+    let (a, b) = (senza.parlamento(), con.parlamento());
+    assert_eq!(b.seggi_camera[g], a.seggi_camera[g] - k);
+    assert_eq!(b.seggi_camera[m], a.seggi_camera[m] + k);
+    assert_eq!(b.seggi_senato[g], a.seggi_senato[g] - k / 2);
+    assert_eq!(b.seggi_senato[m], a.seggi_senato[m] + k / 2);
+    assert_eq!(con.legislatura().totali, senza.legislatura().totali);
+    let e = &con.vista().elezioni[0];
+    let camera: Vec<u32> = e.voti.iter().map(|v| v.camera).collect();
+    let senato: Vec<u32> = e.voti.iter().map(|v| v.senato).collect();
+    assert_eq!(
+        (camera, senato),
+        (b.seggi_camera.clone(), b.seggi_senato.clone())
+    );
 }
 
 // Variante del brief: al posto 6,5 nessun partito è disponibile (Task 7); al posto 5,5 il
@@ -74,6 +106,7 @@ fn senza_seggi_la_partita_finisce() {
     p.chiudi_turno();
     assert!(p.finita());
     let prima = p.salva().unwrap();
+    assert!(Partita::carica(&prima).is_ok());
     p.chiudi_turno();
     assert_eq!(p.salva().unwrap(), prima);
     assert!(

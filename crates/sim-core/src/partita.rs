@@ -1433,6 +1433,9 @@ impl Partita {
             premio,
             coalizioni: coalizioni.iter().map(|c| ids(c)).collect(),
         };
+        // ponytail: col riparto rifiutato al turno zero le Camere restano vuote in Trattativa e il
+        // salvataggio non si ricarica; non deve accadere, la legge in vigore è sempre valida
+        // (piano 6 Task 9). Difesa se un giorno può accadere: restare in Sciolta.
         if let Some((camera, senato)) = eletti {
             self.legislatura.totali = (camera.iter().sum(), senato.iter().sum());
             self.parlamento.seggi_camera = camera;
@@ -1979,5 +1982,57 @@ impl Economia {
             self.disavanzo_trimestre == c.disavanzo(),
             "economia.disavanzo_trimestre diverso da quello dei conti",
         )
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::*;
+    use crate::caso::Flusso;
+    use crate::dati::dati_base;
+    use crate::legislatura::Fondazione;
+
+    fn fondata() -> Partita {
+        let f = Fondazione {
+            nome: "Partito nuovo".into(),
+            posto: 5.5,
+        };
+        Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    #[test]
+    fn il_voto_porta_il_voto_precedente_alle_intenzioni() {
+        let mut p = fondata();
+        // Alla fondazione voto precedente e intenzioni coincidono: la valence le separa.
+        p.partiti[p.giocatore].valence += 1.0;
+        let vero = p.intenzioni_vere();
+        let precedente = |p: &Partita| -> Vec<Vec<f64>> {
+            (p.elettorato.gruppi.iter())
+                .map(|g| g.voto_precedente.clone())
+                .collect()
+        };
+        assert_ne!(precedente(&p), vero.per_gruppo);
+        p.vota_parlamento(&vero);
+        assert_eq!(precedente(&p), vero.per_gruppo);
+    }
+
+    /// Bias nuovo: `n + 1` normali di `Flusso::Sondaggi`, nient'altro dal `Caso`.
+    #[test]
+    fn il_voto_riestrae_il_bias_comune() {
+        let mut p = fondata();
+        let vero = p.intenzioni_vere();
+        let (bias, mut caso) = (p.informazione.bias.clone(), p.caso.clone());
+        p.vota_parlamento(&vero);
+        let s = p.dati.manopola("sigma_bias_comune");
+        let attesi: Vec<f64> = (0..=p.partiti.len())
+            .map(|_| s * caso.normale(Flusso::Sondaggi))
+            .collect();
+        assert_ne!(p.informazione.bias, bias);
+        assert_eq!(p.informazione.bias, attesi);
+        assert_eq!(p.caso, caso);
     }
 }
