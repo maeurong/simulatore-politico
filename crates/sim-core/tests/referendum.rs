@@ -23,7 +23,7 @@ fn abrogazione_che_vince(astensione: &str) -> FileDati {
         "nome = \"reintegro\", posizione = 2.0",
         "nome = \"reintegro\", posizione = 4.0",
     );
-    con(f, "astensione_referendum", astensione)
+    con(f, "astensione_abrogativo", astensione)
 }
 
 fn al_voto(f: FileDati) -> Partita {
@@ -143,7 +143,7 @@ fn reddito_minimo_abrogato_diventa_non_istituito() {
         "nome = \"categoriale\", posizione = 7.0",
     );
     let mut p = Partita::nuova(
-        DatiGioco::da_testi(&con(f, "astensione_referendum", "-5.0")).unwrap(),
+        DatiGioco::da_testi(&con(f, "astensione_abrogativo", "-5.0")).unwrap(),
         1,
     );
     p.chiudi_turno();
@@ -372,4 +372,60 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
             "{voto} {firme}: {e:?}"
         );
     }
+}
+
+fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", disposizione).unwrap();
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    p
+}
+
+fn affluenza(p: &Partita) -> f64 {
+    let e = &p.vista().esiti_referendum[0];
+    e.votanti as f64 / e.aventi_diritto as f64
+}
+
+#[test]
+fn l_abrogativo_passa_il_quorum_solo_sui_temi_che_toccano_molti() {
+    // Il regime delle pensioni tocca quattro condizioni su sei.
+    assert!(
+        al_voto_su(senza_shock(), "regime_pensioni")
+            .vista()
+            .esiti_referendum[0]
+            .quorum
+    );
+    for d in ["licenziamento", "tetto_contante", "nucleare"] {
+        let p = al_voto_su(senza_shock(), d);
+        assert!(
+            !p.vista().esiti_referendum[0].quorum,
+            "{d}: {}",
+            affluenza(&p)
+        );
+    }
+}
+
+#[test]
+fn senza_gruppi_toccati_l_affluenza_dell_abrogativo_resta_bassa() {
+    let p = al_voto_su(senza_shock(), "nucleare");
+    assert!(affluenza(&p) < 0.35, "{}", affluenza(&p));
+}
+
+#[test]
+fn abrogazione_approvata_costa_a_tutta_la_coalizione() {
+    let prima = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let p = al_voto(abrogazione_che_vince("-5.0"));
+    let persa = |id: &str| {
+        let v = |q: &Partita| q.partiti().iter().find(|x| x.id == id).unwrap().valence;
+        v(&prima) - v(&p)
+    };
+    let dati = DatiGioco::da_testi(&senza_shock()).unwrap();
+    let pieno = dati.manopola("valence_referendum_perso");
+    for id in ["destra", "centrodestra"] {
+        assert!((persa(id) - pieno).abs() < 1e-9, "{id}: {}", persa(id));
+    }
+    assert!(persa("sinistra").abs() < 1e-9);
 }

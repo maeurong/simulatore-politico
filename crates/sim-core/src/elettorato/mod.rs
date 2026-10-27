@@ -18,6 +18,7 @@ mod redditi;
 mod referendum;
 mod voto;
 pub use redditi::{Indici, Reddito};
+pub(crate) use referendum::toccati;
 pub use referendum::{Affluenza, Quesito};
 pub use voto::{Intenzioni, intenzioni};
 

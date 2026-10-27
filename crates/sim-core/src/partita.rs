@@ -6,7 +6,7 @@ use crate::economia::{
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{
-    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo,
+    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 6;
+pub const VERSIONE_SCHEMA: u32 = 7;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -569,8 +569,10 @@ impl Partita {
             let quesito = Quesito {
                 pos_si,
                 pos_no,
-                peso_governo: 1.0,
+                peso_governo: self.dati.manopola("peso_governo_confermativo"),
                 invito: 0.0,
+                astensione: self.dati.manopola("astensione_confermativo"),
+                toccati: Vec::new(),
             };
             let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
             let nome = parlamento::nome(&self.dati, &r.valori);
@@ -595,7 +597,7 @@ impl Partita {
     /// L'abrogativo del turno (art. 75): sì al valore dopo l'abrogazione, no al vigente, nessun
     /// peso del giudizio sul governo (scelta 9), `invito_astensione` se il governo l'ha chiesto.
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
-    /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
+    /// cancellano), il gradino abrogato si blocca e ogni partito al governo perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
     /// Se l'abrogazione renderebbe non valida la legge elettorale, con le leggi e gli arrivi venuti
     /// dopo la promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco,
@@ -638,6 +640,8 @@ impl Partita {
             pos_no: x.posizione(vigente),
             peso_governo: 0.0,
             invito,
+            astensione: self.dati.manopola("astensione_abrogativo"),
+            toccati: toccati(&self.dati, d),
         };
         let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
         let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
@@ -658,16 +662,19 @@ impl Partita {
                 bloccati.push(vigente);
             }
         }
-        let (chi, manopola) = if approvato {
-            (Some(self.governo.presidente), "valence_referendum_perso")
-        } else {
-            (
-                r.promotore.filter(|_| !quorum),
-                "valence_referendum_fallito",
-            )
-        };
-        if let Some(p) = chi.and_then(|j| self.partiti.get_mut(j)) {
-            p.valence -= self.dati.manopola(manopola);
+        if approvato {
+            let perso = self.dati.manopola("valence_referendum_perso");
+            for (j, p) in self.partiti.iter_mut().enumerate() {
+                if self.governo.al_governo(j) {
+                    p.valence -= perso;
+                }
+            }
+        } else if let Some(p) = r
+            .promotore
+            .filter(|_| !quorum)
+            .and_then(|j| self.partiti.get_mut(j))
+        {
+            p.valence -= self.dati.manopola("valence_referendum_fallito");
         }
         self.parlamento.esiti_referendum.insert(0, esito);
     }
