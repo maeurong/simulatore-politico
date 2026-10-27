@@ -90,10 +90,13 @@ pub fn sostituisci_valence(mut f: FileDati, id: &str, v: f64) -> FileDati {
         .scenario
         .find(&testa)
         .unwrap_or_else(|| panic!("partito {id} assente nello scenario"));
+    // La sezione del partito finisce al `[[partito]]` successivo.
+    let sezione = &f.scenario[partito..];
+    let sezione = &sezione[..sezione.find("[[partito]]").unwrap_or(sezione.len())];
     let valence = partito
-        + f.scenario[partito..]
+        + sezione
             .find("[partito.valence]\nvalore = ")
-            .unwrap_or_else(|| panic!("{id}: valence assente"))
+            .unwrap_or_else(|| panic!("{id}: [partito.valence] assente nella sua sezione"))
         + "[partito.valence]\n".len();
     let fine = valence + f.scenario[valence..].find('\n').expect("riga valore");
     f.scenario

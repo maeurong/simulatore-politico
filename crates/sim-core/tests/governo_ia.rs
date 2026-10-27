@@ -1,6 +1,6 @@
 mod comune;
 use comune::{file_base, fondata, imposta};
-use sim_core::legislatura::{Fase, Fondazione};
+use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::{Comando, Partita};
 
@@ -112,6 +112,60 @@ fn allargata_alla_maggioranza_la_coalizione_governa() {
     assert!(p.legislatura().allargati.is_empty());
 }
 
+/// Ogni dicastero al giocatore.
+fn tutto_a_me(p: &Partita) -> Vec<Assegnazione> {
+    (p.vista().dicasteri.into_iter())
+        .map(|d| Assegnazione {
+            dicastero: d.id,
+            partito: Some("giocatore".into()),
+        })
+        .collect()
+}
+
+/// Una proposta fatta prima di allargare decade: l'allargato entra con la spartizione di default,
+/// non con zero dicasteri e l'intesa già sotto l'ultimatum.
+#[test]
+fn allargare_annulla_la_proposta() {
+    let mut p = primo_senza_maggioranza();
+    let dicasteri = tutto_a_me(&p);
+    p.comanda(Comando::ProponiSpartizione { dicasteri })
+        .unwrap();
+    p.comanda(Comando::Allarga {
+        partito: "centrodestra".into(),
+    })
+    .unwrap();
+    assert!(p.legislatura().proposta.is_none());
+    p.chiudi_turno();
+    let cd = (p.vista().alleati.into_iter())
+        .find(|a| a.partito == "centrodestra")
+        .unwrap();
+    assert!(!cd.ultimatum, "{cd:?}");
+    assert!(p.governo().dicasteri.contains(&4));
+}
+
+/// Una coalizione IA con la maggioranza al voto governa anche se non è contigua: estrema sinistra
+/// ed estrema destra, con 250 seggi su 400 e 125 su 200.
+#[test]
+fn l_incarico_ia_del_voto_vince_sulla_contigua() {
+    let mut p = fondata(1.5);
+    p.chiudi_turno();
+    let mut p = comune::edita(&p, |j| {
+        j["legislatura"]["incarico"] = serde_json::json!({ "Ia": { "coalizione": [0, 6] } });
+        j["parlamento"]["seggi_camera"] = serde_json::json!([150, 20, 20, 20, 20, 20, 100, 50]);
+        j["parlamento"]["seggi_senato"] = serde_json::json!([75, 10, 10, 10, 10, 10, 50, 25]);
+    })
+    .unwrap();
+    assert_eq!(
+        p.legislatura().incarico,
+        Some(Incarico::Ia {
+            coalizione: vec![0, 6]
+        })
+    );
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().fase, Fase::Ordinaria);
+    assert_eq!(p.governo().coalizione, vec![0, 6]);
+}
+
 /// Coi seggi veri del voto, non quelli proiettati, `P` vale 1 alla maggioranza esatta, non la
 /// metà della logistica: il centrodestra, a 1,5 dal giocatore, entra se con lui la coalizione ha
 /// 201 seggi su 400 e 101 su 200; con un seggio in meno alla Camera no. I seggi tolti al
@@ -175,21 +229,24 @@ fn senza_maggioranza_le_camere_si_sciolgono() {
         j["legislatura"]["allargati"] = serde_json::json!([5])
     })
     .unwrap();
+    let dicasteri = tutto_a_me(&p);
+    p.comanda(Comando::ProponiSpartizione { dicasteri })
+        .unwrap();
     p.chiudi_turno();
     let l = p.legislatura();
     assert_eq!(l.fase, Fase::Sciolta);
     assert!(l.allargati.is_empty() && l.incarico.is_none() && l.dichiarazione.is_none());
+    assert!(l.proposta.is_none());
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
     assert!(!p.governa());
     assert_eq!(p.vista().turni_al_voto, 0);
-    let e = p
-        .comanda(Comando::Allarga {
-            partito: "centro".into(),
-        })
-        .unwrap_err();
-    assert!(
-        e.to_string().contains("solo in trattativa, con l'incarico"),
-        "{e}"
-    );
+    for (id, nome) in [("centro", "Centro"), ("ignoto", "ignoto")] {
+        let e = p
+            .comanda(Comando::Allarga { partito: id.into() })
+            .unwrap_err();
+        let atteso = format!("{nome}: allargamento solo in trattativa, con l'incarico");
+        assert!(e.to_string().contains(&atteso), "{e}");
+    }
     p.chiudi_turno();
     assert_eq!(p.vista().elezioni.len(), 2);
     assert_eq!(p.legislatura().fase, Fase::Trattativa);

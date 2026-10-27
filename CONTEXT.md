@@ -205,7 +205,7 @@ Quanto un partito alleato sta bene nella coalizione; troppo bassa, pone un ultim
 _Evita_: scontento, lealtà
 
 **Disponibilità**:
-Quanto un partito è pronto a entrare nella coalizione del giocatore prima del voto, letta sui sondaggi e mostrata con la sua causa.
+Quanto un partito è pronto a entrare nella coalizione del giocatore prima del voto, letta sui sondaggi e mostrata con la sua causa. Vale anche dopo il voto, in trattativa con l'incarico, letta sui seggi veri.
 
 **Cassa del partito**:
 Il denaro di un partito, separato dal bilancio dello Stato: entra dal 2 per mille sui voti dell'ultima elezione e dalle donazioni, non va sotto zero, e si spende in campagna e in informazione (sondaggi privati, test di una misura, centro studi).

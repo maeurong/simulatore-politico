@@ -71,6 +71,13 @@ fn l_avarizia_costa_intesa_la_generosita_la_alza() {
             dicasteri: tutto_a(&avara, Some("giocatore")),
         })
         .unwrap();
+    // Senza dicasteri l'offerta è zero positivo, non -0,0 da una somma vuota.
+    let offerte: Vec<f64> = avara.richieste().iter().map(|r| r.offerta).collect();
+    assert!(!offerte.is_empty());
+    assert!(
+        offerte.iter().all(|o| *o == 0.0 && o.is_sign_positive()),
+        "{offerte:?}"
+    );
     avara.chiudi_turno();
     let mut di_default = vinta();
     di_default.chiudi_turno();

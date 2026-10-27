@@ -1544,14 +1544,18 @@ impl Partita {
     /// disponibile coi seggi del voto.
     ///
     /// # Errors
-    /// `Comando` con la fase, col nome del partito sconosciuto o già nella coalizione, o col
-    /// nome e la causa se non è disponibile.
+    /// `Comando` col nome del partito (l'id se sconosciuto): fuori dalla trattativa con
+    /// l'incarico, sconosciuto, già nella coalizione, o con la causa se non è disponibile.
     pub(crate) fn allarga(&mut self, id: &str) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
+        let j = self.partiti.iter().position(|p| p.id == id);
         if !self.con_incarico() {
-            return ko("Allargamento: solo in trattativa, con l'incarico".into());
+            let nome = j.map_or(id, |j| self.partiti[j].nome.as_str());
+            return ko(format!(
+                "{nome}: allargamento solo in trattativa, con l'incarico"
+            ));
         }
-        let Some(j) = self.partiti.iter().position(|p| p.id == id) else {
+        let Some(j) = j else {
             return ko(format!("Partito sconosciuto: {id}"));
         };
         let nome = &self.partiti[j].nome;
@@ -1563,7 +1567,9 @@ impl Partita {
         {
             return ko(format!("{nome} non entra: {}", v.causa));
         }
+        // La proposta fatta senza di lui decade: le richieste tornano alla spartizione di default.
         self.legislatura.allargati.push(j);
+        self.legislatura.proposta = None;
         Ok(())
     }
 
@@ -1677,8 +1683,8 @@ impl Partita {
             .map(|&j| {
                 let offerta = (self.dati.dicasteri().iter().zip(assegnati))
                     .filter(|&(_, &a)| a == Some(j))
-                    .map(|(d, _)| f64::from(d.peso_spartizione))
-                    .sum();
+                    // Da 0,0: la `sum` di un f64 vuoto dà -0,0.
+                    .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
                 (j, legislatura::richiesta(&self.dati, di(j), s), offerta)
             })
             .collect()
