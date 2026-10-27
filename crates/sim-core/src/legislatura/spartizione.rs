@@ -89,8 +89,8 @@ pub(crate) fn maggioranza(seggi_c: &[u32], seggi_s: &[u32], coalizione: &[usize]
 
 /// La maggioranza minima connessa vincente (formazione-di-coalizioni:13): fra le finestre di
 /// partiti consecutivi per posizione dichiarata (a parità l'indice), senza quelli privi di seggi
-/// in entrambe le Camere e senza `escluso` nella fila: la maggioranza può scavalcarlo. Quelle con
-/// la maggioranza; la più piccola per numero di partiti, poi la più grande per seggi (Camera più
+/// in entrambe le Camere e senza `escluso` (la finestra può scavalcarlo), quelle con la
+/// maggioranza; la più piccola per numero di partiti, poi la più grande per seggi (Camera più
 /// Senato), poi la più a sinistra. I partiti nell'ordine della fila.
 pub(crate) fn maggioranza_contigua(
     partiti: &[Partito],

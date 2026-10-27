@@ -828,10 +828,10 @@ impl Parlamento {
 
     /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
     /// misura in calendario decade senza voto, senza costi e senza blocco. Al voto in calendario
-    /// restano solo riforme, leggi elettorali e costituzionali, mai fiducie né conversioni: la
-    /// fiducia posta (`poni_fiducia`) e la conversione aperta hanno `voto = turno` e si votano
-    /// prima. Le respinte si dimenticano; l'abrogativo indetto e non ancora votato è sospeso,
-    /// senza valence. I confermativi restano.
+    /// possono esserci solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai
+    /// fiducie né conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno
+    /// `voto = turno` e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non
+    /// ancora votato è sospeso, senza valence. I confermativi restano.
     pub(crate) fn decadi_tutto(
         &mut self,
         dati: &DatiGioco,
