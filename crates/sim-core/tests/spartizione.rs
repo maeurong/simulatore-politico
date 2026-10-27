@@ -263,13 +263,17 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
     assert_eq!(p.governo().presidente, primo);
     assert_eq!(p.governo().coalizione, coalizione);
     assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
-    // Il governo IA non tocca l'intesa col giocatore e non nomina tecnici. Cambia solo chi ha
-    // variazioni nella chiusura: le pressioni sugli alleati del governo uscente, la rottura
-    // dell'impegno.
-    let toccati: Vec<usize> = p.intesa().variazioni.iter().map(|v| v.partito).collect();
-    for (j, (x, y)) in p.intesa().valori.iter().zip(&intesa).enumerate() {
-        assert!(toccati.contains(&j) || x == y, "{j}: {x} {y}");
-    }
+    // Il governo IA non tocca l'intesa col giocatore e non nomina tecnici: resta solo il ritorno
+    // verso la base, perché le pressioni dei turni ordinari l'hanno allontanata.
+    let dati = dati_base();
+    let (base, ritorno) = (
+        dati.manopola("intesa_base"),
+        dati.manopola("ritorno_intesa"),
+    );
+    let attesa: Vec<f64> = (intesa.iter())
+        .map(|x| (x + ritorno * (base - x)).clamp(0.0, 100.0))
+        .collect();
+    assert_eq!(p.intesa().valori, attesa);
     assert!(
         (p.intesa().variazioni.iter()).all(|v| v.causa != CausaIntesa::Spartizione),
         "{:?}",

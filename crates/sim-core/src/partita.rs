@@ -893,8 +893,12 @@ impl Partita {
     /// Pressioni di fine turno sull'intesa di ogni alleato del governo in carica: ministri
     /// scontenti, quota dei dicasteri sotto la richiesta di Gamson sui seggi veri, calo nei
     /// sondaggi rispetto all'ultimo voto (cicli-politico-economici-e-luna-di-miele:21). Una
-    /// variazione si registra solo se il delta non è zero.
+    /// variazione si registra solo se il delta non è zero. Solo in fase ordinaria: in trattativa
+    /// il governo uscente è in interim, e alla formazione l'intesa riparte comunque.
     fn pressioni_intesa(&mut self) {
+        if self.legislatura.fase != Fase::Ordinaria {
+            return;
+        }
         let d = |nome| self.dati.manopola(nome);
         let (minaccia, costo_ministri) = (d("soglia_minaccia"), d("costo_ministri_scontenti"));
         let (costo_quota, costo_calo) = (d("costo_quota_scoperta"), d("costo_calo_sondaggi"));
