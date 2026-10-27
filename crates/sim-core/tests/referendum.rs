@@ -441,20 +441,59 @@ fn sull_abrogativo_elettorale_gli_elettori_votano_i_seggi() {
         "premio",
     );
     let e = &p.vista().esiti_referendum[0];
-    assert!(e.si != e.no, "{e:?}"); // prima del piano 7 finivano pari
+    // il premio sposta i seggi, quindi sì e no non finiscono pari
+    assert!(e.no > e.si, "{e:?}");
 }
 
 #[test]
-fn una_legge_che_abroga_prima_del_voto_fa_decadere_il_quesito() {
-    // Una legge porta il reintegro al turno 3, prima del voto (turno 6); in esame la
-    // disposizione non accetta altre leggi, quindi l'arrivo sta nei dati.
+fn un_valore_gia_abrogato_prima_del_voto_fa_decadere_il_quesito() {
+    // Il reintegro entra in vigore al turno 3, prima del voto (turno 6); in esame la
+    // disposizione non accetta leggi, quindi l'arrivo sta nei dati.
     let f = con_arrivo(senza_shock(), "licenziamento", "reintegro", 2027, 3);
     let p = al_voto_su(f, "licenziamento");
     assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
     let e = &p.vista().esiti_referendum[0];
     assert_eq!(
         e.decaduto.as_deref(),
-        Some("Decaduto senza voto: una legge ha già abrogato la disposizione")
+        Some("Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe")
     );
     assert!(!e.quorum && !e.approvato);
+}
+
+#[test]
+fn un_arrivo_pendente_non_fa_decadere_il_quesito_sul_valore_gia_in_vigore() {
+    // Partenza e precedente coincidono: il quesito ammesso colpisce l'arrivo, non il vigente.
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "partenza = \"tutele_crescenti\"\nlegge = \"D.Lgs. 23/2015, art. 3\"",
+        "partenza = \"reintegro\"\nlegge = \"D.Lgs. 23/2015, art. 3\"",
+    );
+    let f = con_arrivo(f, "licenziamento", "solo_indennizzo", 2029, 4);
+    let p = al_voto_su(con(f, "astensione_abrogativo", "-5.0"), "licenziamento");
+    let e = &p.vista().esiti_referendum[0];
+    assert!(e.decaduto.is_none(), "{e:?}");
+    assert!(e.si + e.no > 0, "{e:?}");
+}
+
+#[test]
+fn un_abrogativo_su_un_gradino_spostato_dalla_legge_vota_quel_gradino() {
+    // Il solo indennizzo all'estremo destro: l'abrogazione verso il reintegro vince.
+    let f = sostituisci(
+        abrogazione_che_vince("-5.0"),
+        "disposizioni",
+        "nome = \"solo indennizzo\", posizione = 5.5",
+        "nome = \"solo indennizzo\", posizione = 7.0",
+    );
+    let mut p = al_voto_su(
+        con_arrivo(f, "licenziamento", "solo_indennizzo", 2027, 3),
+        "licenziamento",
+    );
+    let e = &p.vista().esiti_referendum[0];
+    assert!(e.decaduto.is_none(), "{e:?}");
+    assert_eq!(e.nome, "Licenziamento: solo indennizzo");
+    assert!(e.approvato, "{e:?}");
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    let err = presenta(&mut p, &[("licenziamento", "solo_indennizzo")]).unwrap_err();
+    assert!(err.to_string().contains("bloccato dal referendum"), "{err}");
 }

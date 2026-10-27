@@ -338,13 +338,14 @@ impl Ministri {
         let Some(i) = (cx.dati.dicasteri().iter()).position(|d| d.id == dicastero) else {
             return ko(format!("dicastero sconosciuto: {dicastero}"));
         };
+        let nome = &cx.dati.dicasteri()[i].nome;
         if accogli && cx.economia.esercizio_provvisorio(cx.data) {
             return ko(format!(
-                "esercizio provvisorio: nessuna misura che costi denaro: {dicastero}"
+                "esercizio provvisorio: nessuna misura che costi denaro: {nome}"
             ));
         }
         if self.dicasteri[i].dimissioni_chieste && !sul_ministro {
-            return ko(format!("dimissioni chieste: {dicastero}"));
+            return ko(format!("dimissioni chieste: {nome}"));
         }
         Ok(i)
     }

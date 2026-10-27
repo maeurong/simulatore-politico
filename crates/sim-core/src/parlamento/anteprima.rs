@@ -14,7 +14,8 @@ use crate::vista::{Anteprima, EffettoStimato, Fascia3, VoceLeva};
 /// l'anteprima resta sotto il tetto di 2^36 fino a 34 mila turni.
 const OFFSET_CHIAVE: u64 = 1 << 35;
 
-/// Sposta le chiavi degli atti dopo quelle delle disposizioni dello stesso turno (`64 · d + g`).
+/// Sposta le chiavi degli atti (`CHIAVE_ATTI + indice globale dell'atto`) dopo quelle delle
+/// disposizioni dello stesso turno (`64 · d + g`).
 const CHIAVE_ATTI: u64 = 500_000;
 
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
@@ -100,19 +101,11 @@ pub(crate) fn anteprima(
         }
     }
     let mut costo_annuo = euro(saldo / 100.0 * pil_annuo);
-    if let Some(FondiDecreto::Accolti {
-        dicastero,
-        atto,
-        importo,
-    }) = m.fondi
-    {
+    if let Some(FondiDecreto::Accolti { atto, importo, .. }) = m.fondi {
         // Un decreto accolto costa l'importo, e porta gli effetti nominali dell'atto.
         costo_annuo = importo;
-        let chiave = OFFSET_CHIAVE
-            + u64::from(m.presentata) * 1_000_003
-            + CHIAVE_ATTI
-            + 64 * dicastero as u64
-            + atto as u64;
+        let chiave =
+            OFFSET_CHIAVE + u64::from(m.presentata) * 1_000_003 + CHIAVE_ATTI + atto as u64;
         let mut rng = caso.estemporaneo(chiave);
         for e in &dati.atti()[atto].effetti {
             let Some(k) = dati.grandezza(&e.grandezza) else {

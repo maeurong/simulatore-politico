@@ -76,18 +76,25 @@ fn leggi_partita<T>(
     f(partita).map_err(|e| e.to_string())
 }
 
+// async: le anteprime prendono il Mutex che tiene `chiudi_turno`; fuori dal thread principale non lo bloccano.
 #[tauri::command]
-fn anteprima(valori: Vec<ValoreProposto>, stato: State<'_, Stato>) -> Result<Anteprima, String> {
+async fn anteprima(
+    valori: Vec<ValoreProposto>,
+    stato: State<'_, Stato>,
+) -> Result<Anteprima, String> {
     leggi_partita(&stato, |p| p.anteprima(&valori))
 }
 
 #[tauri::command]
-fn anteprima_decreto(decreto: Decreto, stato: State<'_, Stato>) -> Result<Anteprima, String> {
+async fn anteprima_decreto(decreto: Decreto, stato: State<'_, Stato>) -> Result<Anteprima, String> {
     leggi_partita(&stato, |p| p.anteprima_decreto(&decreto))
 }
 
 #[tauri::command]
-fn anteprima_accogli(dicastero: String, stato: State<'_, Stato>) -> Result<Anteprima, String> {
+async fn anteprima_accogli(
+    dicastero: String,
+    stato: State<'_, Stato>,
+) -> Result<Anteprima, String> {
     leggi_partita(&stato, |p| p.anteprima_accogli(&dicastero))
 }
 

@@ -604,7 +604,7 @@ impl Partita {
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
     /// cancellano), il gradino abrogato si blocca e ogni partito al governo perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
-    /// Se una legge ha già portato la disposizione al valore dopo l'abrogazione, o l'abrogazione
+    /// Se la disposizione ha già il valore dopo l'abrogazione e nessun arrivo, o l'abrogazione
     /// renderebbe non valida la legge elettorale con le leggi e gli arrivi venuti dopo la
     /// promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco, nessuna
     /// valence. Il titolo dell'esito è il gradino vigente che il quesito abroga: se una legge lo ha
@@ -620,8 +620,11 @@ impl Partita {
         };
         let vigente = self.disposizioni.voci[d].in_vigore;
         let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
-        let decaduto = if vigente == dopo {
-            Some("Decaduto senza voto: una legge ha già abrogato la disposizione".to_string())
+        let decaduto = if vigente == dopo && self.disposizioni.voci[d].in_arrivo.is_empty() {
+            Some(
+                "Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe"
+                    .to_string(),
+            )
         } else {
             parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)]).map(|m| {
                 format!(
@@ -922,7 +925,9 @@ impl Partita {
     /// `Comando` col nome del dicastero: sconosciuto, senza proposta di fondi, esercizio
     /// provvisorio, decreto decaduto, e i rifiuti di `Accogli` sull'atto.
     pub fn anteprima_accogli(&self, dicastero: &str) -> Result<Anteprima, Errore> {
+        self.accogli_ripetuto(dicastero)?;
         let cx = self.contesto();
+        // accogli = true (spende denaro), sul_ministro = false (non è un comando sul ministro)
         let i = self.ministri.ammesso(&cx, dicastero, true, false)?;
         let nome = &self.dati.dicasteri()[i].nome;
         let fondi = matches!(
@@ -934,7 +939,6 @@ impl Partita {
                 "nessuna proposta di fondi: {nome}"
             )));
         }
-        self.accogli_ripetuto(dicastero)?;
         let (atto, importo) = self.ministri.fondi_da_accogliere(&cx, i)?;
         let fondi = FondiDecreto::Accolti {
             dicastero: i,
@@ -1093,7 +1097,7 @@ impl Partita {
     /// `EmanaDecreto` (storia 46): sposta `importo` da margine e spesa di `da` a quelli di `a`,
     /// nel bilancio in vigore e nei margini residui, anche nell'esercizio provvisorio (scelta 12).
     /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
-    /// Spostabile: il margine residuo senza il decreto accolto in agenda, entro il margine annuo.
+    /// Spostabile: vedi `spostabili`.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
         let b = self.economia.bilancio_in_vigore(self.data);
         let spostabili = self.spostabili();

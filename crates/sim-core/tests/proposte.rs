@@ -219,7 +219,7 @@ fn comandi_delle_proposte_non_ammessi_rifiutati_col_nome() {
         })
         .unwrap_err();
     assert!(
-        matches!(e, Errore::Comando(_)) && e.to_string().contains("giustizia"),
+        matches!(e, Errore::Comando(_)) && e.to_string().contains("Giustizia"),
         "{e}"
     );
 }

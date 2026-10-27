@@ -579,9 +579,39 @@ fn anteprima_dell_accogli_rifiuta_come_accogli_dopo_le_dimissioni() {
 }
 
 #[test]
+fn anteprima_dell_accogli_rifiuta_in_esercizio_provvisorio() {
+    // Turno 4: bozza del 2028 mai presentata; turno 5: esercizio provvisorio.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&file_base()).unwrap(), 1);
+    for _ in 0..5 {
+        p.chiudi_turno();
+    }
+    assert!(p.vista().bilancio.esercizio_provvisorio);
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+    assert!(anteprima.contains("esercizio provvisorio"), "{anteprima}");
+}
+
+#[test]
+fn anteprima_dell_accogli_rifiuta_come_accogli_dopo_un_accogli() {
+    let (mut p, _) = accolta(sanita_cara());
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+}
+
+#[test]
 fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
     let p = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
-    let importo = p.vista().ministeri[3].proposta.as_ref().unwrap().importo;
+    let importo = (p.vista().ministeri.iter())
+        .find(|m| m.dicastero == "sanita")
+        .and_then(|m| m.proposta.as_ref())
+        .unwrap()
+        .importo;
     let prima = p.salva().unwrap();
     let a = p.anteprima_accogli("sanita").unwrap();
     assert_eq!(a.forma, FormaMisura::Conversione);

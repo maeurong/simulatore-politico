@@ -234,9 +234,9 @@ impl Ministri {
         cx: &Contesto,
         i: usize,
     ) -> Result<(usize, i64), Errore> {
-        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let st = &self.dicasteri[i];
-        let nessuna = || Errore::Comando(format!("nessuna proposta: {id}"));
+        let nessuna = || Errore::Comando(format!("nessuna proposta di fondi: {nome}"));
         let (Some(TipoProposta::Fondi { atto: k, .. }), Some(_)) =
             (st.proposta.map(|p| p.tipo), st.ministro.as_ref())
         else {

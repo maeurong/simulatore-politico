@@ -51,8 +51,9 @@ impl Elettorato {
     /// Per gruppo e punto `x`: `u_si = −β(x − pos_si)² + peso_governo·γ·g`, `u_no = −β(x −
     /// pos_no)²` (senza posizione, distanza zero), `u_ast` = astensione del gruppo +
     /// astensione del tipo − `mobilitazione_toccati`·toccati + `invito`·quota di governo nelle
-    /// sue intenzioni; `g` = giudizio
-    /// sul partito del Presidente del Consiglio. Quote col softmax, pesate per `h_x` e elettori.
+    /// sue intenzioni; `g` = giudizio sul partito del Presidente del Consiglio. Con `guadagno`
+    /// (quesito elettorale) `u_si` è il guadagno del sì pesato sulle intenzioni del gruppo, `u_no`
+    /// = 0 e le posizioni sono ignorate. Quote col softmax, pesate per `h_x` e elettori.
     pub fn referendum(
         &self,
         dati: &DatiGioco,
@@ -91,6 +92,8 @@ impl Elettorato {
             let u_ast =
                 astensione(dati, i) + base - mobilitazione * toccato + invito * quota_governo;
             let elettori = self.elettori(dati.elettorato(), i);
+            // `v` ha un posto in più dei partiti: l'astensione, che non ha guadagno.
+            debug_assert!(guadagno.is_empty() || guadagno.len() + 1 == v.len());
             let vantaggio: f64 = (v.iter().zip(&guadagno)).map(|(q, g)| q * g).sum();
             for (k, h) in g.posizione.iter().enumerate() {
                 let x = (k + 1) as f64;
