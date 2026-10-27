@@ -452,6 +452,45 @@ fn tara_rifiuta_una_coalizione_con_un_partito_sconosciuto() {
     std::fs::remove_dir_all(cartella).unwrap();
 }
 
+/// `tara` sulla copia dei dati con `manopole.toml` ritoccato da `da` ad `a`: esce con `frammento`.
+fn tara_rifiuta_le_manopole(nome: &str, da: &str, a: &str, frammento: &str) {
+    let cartella = copia_dati(nome);
+    let manopole = leggi(&cartella, "manopole.toml");
+    assert!(manopole.contains(da), "{da}");
+    std::fs::write(cartella.join("manopole.toml"), manopole.replace(da, a)).unwrap();
+    rifiuta(
+        &[
+            "tara",
+            "--dati",
+            cartella.to_str().unwrap(),
+            "--bersagli",
+            BERSAGLI,
+        ],
+        frammento,
+    );
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_rifiuta_il_giocatore_sopra_il_bersaglio_senza_luna_di_miele() {
+    tara_rifiuta_le_manopole(
+        "sopra",
+        "[valence_partito_nuovo]\nvalore = 0.0",
+        "[valence_partito_nuovo]\nvalore = 2.0",
+        "il bersaglio del giocatore sta sotto luna_di_miele = 0",
+    );
+}
+
+#[test]
+fn tara_rifiuta_la_manopola_che_non_trova() {
+    tara_rifiuta_le_manopole(
+        "intestazione",
+        "[luna_di_miele]",
+        "[ luna_di_miele ]",
+        "luna_di_miele",
+    );
+}
+
 #[test]
 fn tara_conta_le_righe_astensione_scritte_senza_spazi() {
     let cartella = copia_dati("senza-spazi");
