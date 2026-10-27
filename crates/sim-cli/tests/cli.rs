@@ -406,6 +406,32 @@ fn tara_accetta_un_intero_come_affluenza() {
 }
 
 #[test]
+fn tara_stampa_la_luna_di_miele_e_rilanciata_la_lascia_ferma() {
+    let cartella = copia_dati("luna");
+    let manopole = leggi(&cartella, "manopole.toml");
+    let scostata = manopole.replace("valore = 0.328125", "valore = 2.0");
+    assert_ne!(
+        manopole, scostata,
+        "la luna committata non e' piu' 0.328125"
+    );
+    std::fs::write(cartella.join("manopole.toml"), scostata).unwrap();
+    let luna = |out: &std::process::Output| {
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        v["luna_di_miele"].as_f64().unwrap()
+    };
+    let prima = luna(&tara_in(&cartella, BERSAGLI));
+    assert!((prima - 2.0).abs() > 0.1, "{prima}");
+    let dopo = luna(&tara_in(&cartella, BERSAGLI));
+    assert!((prima - dopo).abs() < 0.002, "{prima} {dopo}");
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
 fn tara_rifiuta_una_coalizione_con_un_partito_sconosciuto() {
     let cartella = copia_dati("coalizione");
     let scenario = leggi(&cartella, "scenario.toml").replace(

@@ -7,6 +7,7 @@
 use std::path::PathBuf;
 
 use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
+use sim_core::legislatura::{Fondazione, posti};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 const TOLLERANZA: f64 = 1e-4;
@@ -131,6 +132,72 @@ fn riscrivi_astensione(testo: &str, ids: &[String], astensione: &[f64]) -> (Stri
     })
 }
 
+/// Riscrive `valore` della manopola `[nome]`.
+fn riscrivi_manopola(testo: &str, nome: &str, v: f64) -> String {
+    let (mut dentro, intestazione) = (false, format!("[{nome}]"));
+    riscrivi(testo, |riga| {
+        if riga.starts_with('[') {
+            dentro = riga == intestazione;
+        }
+        (dentro && riga.starts_with("valore = ")).then(|| format!("valore = {v:.6}"))
+    })
+    .0
+}
+
+/// Spec riga 36: il posto medio del giocatore, fra i votanti, al 15%.
+const QUOTA_GIOCATORE: f64 = 0.15;
+const TOLLERANZA_LUNA: f64 = 5e-4;
+
+/// Media sui sei posti della quota vera del giocatore fra i votanti, turno zero, seme 0.
+fn quota_media_giocatore(file: &FileDati) -> Result<f64, String> {
+    let dati = DatiGioco::da_testi(file).map_err(|e| e.to_string())?;
+    let posti = posti(&dati);
+    let mut somma = 0.0;
+    for &posto in &posti {
+        let f = Fondazione {
+            nome: "Taratura".into(),
+            posto,
+        };
+        let partita = Partita::fonda(dati.clone(), 0, &f).map_err(|e| e.to_string())?;
+        let n = partita.giocatore();
+        let int = partita.intenzioni_vere();
+        somma += int.nazionali[n] / (1.0 - int.nazionali[n + 1]);
+    }
+    Ok(somma / posti.len() as f64)
+}
+
+/// Bisezione di una manopola su `[lo, hi]` (la media cresce con la manopola) fino al bersaglio.
+/// `Ok(None)` se il bersaglio sta sotto `lo`.
+fn bisezione(
+    file: &mut FileDati,
+    nome: &str,
+    (mut lo, mut hi): (f64, f64),
+) -> Result<Option<f64>, String> {
+    let misura = |file: &mut FileDati, x: f64| {
+        file.manopole = riscrivi_manopola(&file.manopole, nome, x);
+        quota_media_giocatore(file)
+    };
+    if misura(file, lo)? > QUOTA_GIOCATORE + TOLLERANZA_LUNA {
+        return Ok(None);
+    }
+    if misura(file, hi)? < QUOTA_GIOCATORE - TOLLERANZA_LUNA {
+        return Err(format!("{nome}: il bersaglio sta sopra {hi}"));
+    }
+    for _ in 0..60 {
+        let mezzo = (lo + hi) / 2.0;
+        let m = misura(file, mezzo)?;
+        if (m - QUOTA_GIOCATORE).abs() < TOLLERANZA_LUNA {
+            return Ok(Some(mezzo));
+        }
+        if m < QUOTA_GIOCATORE {
+            lo = mezzo
+        } else {
+            hi = mezzo
+        }
+    }
+    Err(format!("{nome}: la bisezione non converge"))
+}
+
 pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> {
     let (mut dati, mut bersagli) = (None, None);
     while let Some(nome) = args.next() {
@@ -234,6 +301,18 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
             return Err("la taratura diverge: scarto non finito".into());
         }
         if scarto < TOLLERANZA {
+            // Dopo le valence dei partiti IA: la luna di miele porta il posto medio al 15%.
+            let luna = if let Some(x) = bisezione(&mut file, "luna_di_miele", (0.0, 3.0))? {
+                x
+            } else {
+                // Neanche senza luna di miele: mezza luna e il resto sul peso del partito nuovo.
+                file.manopole = riscrivi_manopola(&file.manopole, "luna_di_miele", 0.5);
+                bisezione(&mut file, "valence_partito_nuovo", (-3.0, 0.0))?
+                    .ok_or("il bersaglio del giocatore sta sotto valence_partito_nuovo = -3")?;
+                0.5
+            };
+            let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
+            let nuovo = dati.manopola("valence_partito_nuovo");
             let coalizioni = coalizioni
                 .iter()
                 .map(|c| {
@@ -255,6 +334,7 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
             let nuovi = [
                 ("scenario.toml", &file.scenario),
                 ("elettorato.toml", &file.elettorato),
+                ("manopole.toml", &file.manopole),
             ];
             for (nome, testo) in nuovi {
                 let p = cartella.join(format!("{nome}.tmp"));
@@ -272,6 +352,8 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
                 "affluenza_nazionale": 1.0 - int.nazionali[valence.len()],
                 "valence": ids_partiti.iter().zip(&valence).collect::<Vec<_>>(),
                 "quote": quote,
+                "luna_di_miele": luna,
+                "valence_partito_nuovo": nuovo,
                 "coalizioni": coalizioni,
             });
             return serde_json::to_string_pretty(&uscita).map_err(|e| e.to_string());

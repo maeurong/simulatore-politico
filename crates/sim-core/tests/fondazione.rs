@@ -88,3 +88,43 @@ fn salvataggio_della_partita_vera_si_ricarica() {
     // Un giocatore fuori dai partiti è rifiutato.
     assert!(edita(&p, |j| j["giocatore"] = serde_json::json!(99)).is_err());
 }
+
+/// Quote vere fra i votanti, una per partito, alla partita appena fondata.
+fn quote_vere(p: &Partita) -> Vec<f64> {
+    let v = p.intenzioni_vere().nazionali;
+    let votanti = 1.0 - v[v.len() - 1];
+    v[..v.len() - 1].iter().map(|q| q / votanti).collect()
+}
+
+#[test]
+fn luna_di_miele_al_quindici_per_cento_del_posto_medio() {
+    let media = posti(&dati_base())
+        .iter()
+        .map(|&x| quote_vere(&fondata(x))[7])
+        .sum::<f64>()
+        / 6.0;
+    assert!((media - 0.15).abs() < 0.005, "{media}");
+}
+
+#[test]
+fn vincibile_da_ogni_posto() {
+    // Esiste un blocco di al più tre partiti contigui sull'asse, col giocatore, sopra il 42% dei
+    // votanti. Il tetto serve: senza, il blocco di tutti gli otto partiti fa 1 e il test non dice nulla.
+    for x in posti(&dati_base()) {
+        let p = fondata(x);
+        let q = quote_vere(&p);
+        let mut ordine: Vec<usize> = (0..q.len()).collect();
+        ordine.sort_by(|&a, &b| {
+            p.partiti()[a]
+                .posizione_dichiarata
+                .total_cmp(&p.partiti()[b].posizione_dichiarata)
+        });
+        let g = ordine.iter().position(|&j| j == 7).unwrap();
+        let migliore = (0..=g)
+            .flat_map(|i| (g..ordine.len()).map(move |k| (i, k)))
+            .filter(|(i, k)| k - i < 3)
+            .map(|(i, k)| ordine[i..=k].iter().map(|&j| q[j]).sum::<f64>())
+            .fold(0.0, f64::max);
+        assert!(migliore > 0.42, "posto {x}: {migliore}");
+    }
+}

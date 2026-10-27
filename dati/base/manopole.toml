@@ -1034,9 +1034,9 @@ min = 0.0
 max = 0.5
 ticket = "25"
 
-# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 per l'effetto (luna di miele dei leader al primo mandato); valore provvisorio del piano 7a, da tarare perché il posto medio dia circa il 15% (ticket 20) (valence in più del partito del giocatore alla fondazione: sta in valence e non in valence_base, quindi si spegne con ritorno_valence)
+# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 per l'effetto (luna di miele dei leader al primo mandato); tarata da sim-cli tara: media dei sei posti al 15% fra i votanti (spec riga 36, ticket 20) (valence in più del partito del giocatore alla fondazione: sta in valence e non in valence_base, quindi si spegne con ritorno_valence)
 [luna_di_miele]
-valore = 1.0
+valore = 0.328125
 min = 0.0
 max = 3.0
 ticket = "20"
