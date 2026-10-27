@@ -1,4 +1,4 @@
-//! La fondazione del partito del giocatore: nome, posto sull'asse, anteprima sul sondaggio.
+//! La fondazione del partito del giocatore: nome, posizione sull'asse, anteprima sul sondaggio.
 
 use super::VoceDisponibilita;
 use crate::dati::DatiGioco;
@@ -11,19 +11,19 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-/// Il nome del partito e il posto scelto, uno di `posti`.
+/// Il nome del partito e la posizione scelta, una di `posizioni`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fondazione {
     pub nome: String,
-    pub posto: f64,
+    pub posizione: f64,
 }
 
-/// Un posto della fondazione: `quota_attesa` è la quota del giocatore fra i votanti, media sugli
+/// Una posizione della fondazione: `quota_attesa` è la quota del giocatore fra i votanti, media sugli
 /// istituti del sondaggio del turno zero; `disponibilita` quella dei partiti IA con la coalizione
 /// vuota.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
-pub struct Posto {
+pub struct VocePosizione {
     pub posizione: f64,
     pub quota_attesa: f64,
     pub disponibilita: Vec<VoceDisponibilita>,
@@ -34,7 +34,7 @@ pub struct Posto {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct AnteprimaFondazione {
     pub istogramma: [f64; PUNTI],
-    pub posti: Vec<Posto>,
+    pub posizioni: Vec<VocePosizione>,
 }
 
 const LUNGHEZZA_NOME: usize = 40;
@@ -42,7 +42,7 @@ const SEGNAPOSTO: &str = "Partito nuovo";
 
 /// I punti medi fra due partiti consecutivi sull'asse, in ordine crescente: nessuno coincide con un
 /// partito.
-pub fn posti(dati: &DatiGioco) -> Vec<f64> {
+pub fn posizioni(dati: &DatiGioco) -> Vec<f64> {
     let mut posizioni: Vec<f64> = (dati.scenario().partiti.iter())
         .map(|p| p.posizione)
         .collect();
@@ -53,13 +53,13 @@ pub fn posti(dati: &DatiGioco) -> Vec<f64> {
 
 /// Il partito del giocatore: la luna di miele del leader al primo mandato sta in `valence` e non
 /// in `valence_base`, così si spegne col ritorno della valence.
-fn partito_nuovo(dati: &DatiGioco, nome: &str, posto: f64) -> Partito {
+fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
     let base = dati.manopola("valence_partito_nuovo");
     Partito {
         id: ID_GIOCATORE.into(),
         nome: nome.into(),
-        posizione_dichiarata: posto,
-        posizione_percepita: posto,
+        posizione_dichiarata: posizione,
+        posizione_percepita: posizione,
         valence: base + dati.manopola("luna_di_miele"),
         valence_base: base,
     }
@@ -95,7 +95,7 @@ impl Partita {
     ///
     /// # Errors
     /// `Fondazione` col nome vuoto o più lungo di 40 caratteri, con la posizione non valida (non
-    /// finita), o col posto che non è uno di `posti`.
+    /// finita), o con la posizione che non è una di `posizioni`.
     pub fn fonda(dati: DatiGioco, seme: u64, f: &Fondazione) -> Result<Partita, Errore> {
         let nome = f.nome.trim();
         if nome.is_empty() {
@@ -106,40 +106,40 @@ impl Partita {
                 "nome del partito più lungo di {LUNGHEZZA_NOME} caratteri"
             ));
         }
-        if !f.posto.is_finite() {
+        if !f.posizione.is_finite() {
             return ko("posizione non valida".into());
         }
-        let ammessi = posti(&dati);
-        let Some(&posto) = ammessi.iter().find(|x| (*x - f.posto).abs() <= 1e-9) else {
+        let ammessi = posizioni(&dati);
+        let Some(&posizione) = ammessi.iter().find(|x| (*x - f.posizione).abs() <= 1e-9) else {
             let virgola = |x: &f64| x.to_string().replace('.', ",");
             let elenco: Vec<String> = ammessi.iter().map(virgola).collect();
             return ko(format!(
                 "posizione {} non ammessa: scegli fra {}",
-                virgola(&f.posto),
+                virgola(&f.posizione),
                 elenco.join("; ")
             ));
         };
-        let partito = partito_nuovo(&dati, nome, posto);
+        let partito = partito_nuovo(&dati, nome, posizione);
         Ok(Partita::costruisci(dati, seme, Some(partito)))
     }
 
-    /// Per ogni posto, la quota attesa sul sondaggio del turno zero della partita che `fonda`
+    /// Per ogni posizione, la quota attesa sul sondaggio del turno zero della partita che `fonda`
     /// farebbe con `seme`: stesso seme, stesso sondaggio. Non tocca nessuna partita.
     pub fn anteprima_fondazione(dati: &DatiGioco, seme: u64) -> AnteprimaFondazione {
         let mut anteprima = AnteprimaFondazione {
             istogramma: [0.0; PUNTI],
-            posti: Vec::new(),
+            posizioni: Vec::new(),
         };
-        for posizione in posti(dati) {
+        for posizione in posizioni(dati) {
             // ponytail: una partita intera per posizione invece del solo sondaggio, così è per
             // costruzione quello di `fonda`; se pesa nella schermata, costruire solo elettorato e
             // informazione.
             let nuovo = partito_nuovo(dati, SEGNAPOSTO, posizione);
             let p = Partita::costruisci(dati.clone(), seme, Some(nuovo));
             let s = &p.informazione().sondaggio;
-            // Le autocollocazioni non dipendono dal posto: stesse estrazioni, stesso istogramma.
+            // Le autocollocazioni non dipendono dalla posizione: stesse estrazioni, stesso istogramma.
             anteprima.istogramma = istogramma(dati, s);
-            anteprima.posti.push(Posto {
+            anteprima.posizioni.push(VocePosizione {
                 posizione,
                 quota_attesa: quota_fra_i_votanti(s, p.giocatore()),
                 disponibilita: p.disponibilita(),

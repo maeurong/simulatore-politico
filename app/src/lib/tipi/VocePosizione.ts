@@ -2,8 +2,8 @@
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 
 /**
- * Un posto della fondazione: `quota_attesa` è la quota del giocatore fra i votanti, media sugli
+ * Una posizione della fondazione: `quota_attesa` è la quota del giocatore fra i votanti, media sugli
  * istituti del sondaggio del turno zero; `disponibilita` quella dei partiti IA con la coalizione
  * vuota.
  */
-export type Posto = { posizione: number, quota_attesa: number, disponibilita: Array<VoceDisponibilita>, };
+export type VocePosizione = { posizione: number, quota_attesa: number, disponibilita: Array<VoceDisponibilita>, };

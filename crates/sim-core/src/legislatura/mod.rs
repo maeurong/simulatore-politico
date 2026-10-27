@@ -10,7 +10,7 @@ mod spartizione;
 mod voto;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione};
-pub use fondazione::{AnteprimaFondazione, Fondazione, Posto, posti};
+pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
     maggioranza, maggioranza_contigua, richiesta, spartizione_di_default,

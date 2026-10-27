@@ -24,7 +24,7 @@ fn proporzionale(f: sim_core::dati::FileDati, posizione: f64) -> Partita {
         7,
         &Fondazione {
             nome: "Partito nuovo".into(),
-            posto: posizione,
+            posizione,
         },
     )
     .unwrap()

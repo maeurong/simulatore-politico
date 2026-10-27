@@ -15,8 +15,8 @@ fn dichiara(p: &mut Partita, partiti: &[&str]) -> Result<(), sim_core::Errore> {
     })
 }
 
-// Variante del brief: al posto 6,5 l'estrema destra non è mai disponibile (corre da sola con i
-// suoi seggi, entrando paga la distanza e non guadagna né seggi né maggioranza); al posto 5,5 il
+// Variante del brief: alla posizione 6,5 l'estrema destra non è mai disponibile (corre da sola con i
+// suoi seggi, entrando paga la distanza e non guadagna né seggi né maggioranza); alla posizione 5,5 il
 // centrodestra lascia la coalizione con la destra, più lontana, ed entra.
 #[test]
 fn un_vicino_disponibile_entra_un_lontano_no() {
@@ -31,7 +31,7 @@ fn un_vicino_disponibile_entra_un_lontano_no() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
-/// La partita vera al posto 5,5 col `valore_guida` dato.
+/// La partita vera alla posizione 5,5 col `valore_guida` dato.
 fn fondata_con_guida(valore: &str) -> Partita {
     let f = comune::imposta(
         comune::file_base(),
@@ -44,7 +44,7 @@ fn fondata_con_guida(valore: &str) -> Partita {
         7,
         &sim_core::legislatura::Fondazione {
             nome: "Partito nuovo".into(),
-            posto: 5.5,
+            posizione: 5.5,
         },
     )
     .unwrap()

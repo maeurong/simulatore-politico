@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 7;
+pub const VERSIONE_SCHEMA: u32 = 8;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -2355,7 +2355,7 @@ mod tests {
     fn fondata() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
-            posto: 5.5,
+            posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
     }

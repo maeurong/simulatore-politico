@@ -178,7 +178,7 @@ fn comandi_dell_agenda_non_ammessi_rifiutati_col_nome() {
                 atto: None,
                 regione: Some("calabria".into()),
             },
-            "sanita",
+            "Sanità",
         ),
         (
             Comando::Dirotta {
@@ -252,7 +252,7 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
     rifiuta(
         &mut p,
         dirotta(IT, None, regione.as_deref()),
-        &format!("niente da dirottare: {IT}"),
+        "niente da dirottare: Infrastrutture e Trasporti",
     );
     let (caro, di) = (v.ministeri.iter())
         .find_map(|m| {
@@ -266,22 +266,22 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
         &format!("margine insufficiente per {caro}"),
     );
     p.comanda(ferma("sanita")).unwrap();
-    rifiuta(&mut p, ferma("sanita"), "agenda già modificata: sanita");
+    rifiuta(&mut p, ferma("sanita"), "agenda già modificata: Sanità");
     rifiuta(
         &mut p,
         dirotta("sanita", Some("sanita_case_comunita"), None),
-        "agenda già modificata: sanita",
+        "agenda già modificata: Sanità",
     );
     p.comanda(Comando::ChiediDimissioni {
         dicastero: "giustizia".into(),
     })
     .unwrap();
     p.chiudi_turno();
-    rifiuta(&mut p, ferma("giustizia"), "nessuna agenda: giustizia");
+    rifiuta(&mut p, ferma("giustizia"), "nessuna agenda: Giustizia");
     rifiuta(
         &mut p,
         dirotta("giustizia", Some(&di_giustizia), None),
-        "nessuna agenda: giustizia",
+        "nessuna agenda: Giustizia",
     );
     rifiuta(
         &mut p,
@@ -289,7 +289,7 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
             dicastero: "giustizia".into(),
             atto: di_giustizia.clone(),
         },
-        &format!("nessun cantiere {di_giustizia} in giustizia"),
+        &format!("nessun cantiere {di_giustizia} in Giustizia"),
     );
 }
 

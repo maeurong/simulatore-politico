@@ -311,15 +311,15 @@ pub fn sanita_cara(mut f: FileDati) -> FileDati {
     f
 }
 
-/// La partita vera col seme 7, fondata al posto `posto`.
+/// La partita vera col seme 7, fondata alla posizione `posizione`.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
-pub fn fondata(posto: f64) -> Partita {
+pub fn fondata(posizione: f64) -> Partita {
     let f = sim_core::legislatura::Fondazione {
         nome: "Partito nuovo".into(),
-        posto,
+        posizione,
     };
     Partita::fonda(dati_base(), 7, &f).unwrap()
 }

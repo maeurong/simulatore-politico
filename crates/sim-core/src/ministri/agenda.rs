@@ -371,13 +371,13 @@ impl Ministri {
     /// `Ferma`: l'agenda annunciata non si esegue; costa soddisfazione in proporzione
     /// all'attaccamento del ministro all'atto.
     pub(super) fn ferma(&mut self, cx: &Contesto, i: usize) -> Result<(), Errore> {
-        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let st = &mut self.dicasteri[i];
         let Some(ag) = st.agenda.as_mut() else {
-            return Err(Errore::Comando(format!("nessuna agenda: {id}")));
+            return Err(Errore::Comando(format!("nessuna agenda: {nome}")));
         };
         if ag.stato != StatoAgenda::Annunciata {
-            return Err(Errore::Comando(format!("agenda già modificata: {id}")));
+            return Err(Errore::Comando(format!("agenda già modificata: {nome}")));
         }
         let att = posizione(dati, i, ag.atto)
             .and_then(|p| ag.attaccamenti.get(p))
@@ -397,14 +397,14 @@ impl Ministri {
         atto: Option<&str>,
         regione: Option<&str>,
     ) -> Result<(), Errore> {
-        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let ko = |m: String| Err(Errore::Comando(m));
         let st = &self.dicasteri[i];
         let Some(ag) = st.agenda.as_ref() else {
-            return ko(format!("nessuna agenda: {id}"));
+            return ko(format!("nessuna agenda: {nome}"));
         };
         if ag.stato != StatoAgenda::Annunciata {
-            return ko(format!("agenda già modificata: {id}"));
+            return ko(format!("agenda già modificata: {nome}"));
         }
         let nuovo_atto = match atto {
             None => None,
@@ -416,7 +416,7 @@ impl Ministri {
         let nuova_regione = match regione {
             None => None,
             Some(_) if !dati.dicasteri()[i].regione_bersaglio => {
-                return ko(format!("{id} non ha regione bersaglio"));
+                return ko(format!("{nome} non ha regione bersaglio"));
             }
             Some(r) => match dati.regioni().iter().position(|x| x.id == r) {
                 Some(k) => Some(k),
@@ -426,7 +426,7 @@ impl Ministri {
         let cambia_atto = nuovo_atto.filter(|&k| k != ag.atto);
         let cambia_regione = nuova_regione.filter(|&r| Some(r) != ag.regione);
         if cambia_atto.is_none() && cambia_regione.is_none() {
-            return ko(format!("niente da dirottare: {id}"));
+            return ko(format!("niente da dirottare: {nome}"));
         }
         if let Some(k) = cambia_atto {
             if ag.decreto > 0 && cx.parlamento.decaduto_accolto(i, k) {
@@ -481,11 +481,11 @@ impl Ministri {
         i: usize,
         atto: &str,
     ) -> Result<(), Errore> {
-        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let st = &mut self.dicasteri[i];
         let trovato = (st.cantieri.iter()).position(|f| dati.atti()[f.atto].id == atto);
         let Some(p) = trovato else {
-            return Err(Errore::Comando(format!("nessun cantiere {atto} in {id}")));
+            return Err(Errore::Comando(format!("nessun cantiere {atto} in {nome}")));
         };
         let f = st.cantieri.remove(p);
         let attaccamento = st.ministro.as_ref().map_or(0.0, |m| {

@@ -406,6 +406,7 @@ impl Ministri {
             matches!(c, Comando::Accogli { .. }),
             sul_ministro,
         )?;
+        let nome = &cx.dati.dicasteri()[i].nome;
         let st = &mut self.dicasteri[i];
         match c {
             Comando::Accogli { .. } => {
@@ -438,24 +439,22 @@ impl Ministri {
                 return Ok(EffettoComando::Dirottata { dicastero: i });
             }
             Comando::FermaCantiere { atto, .. } => self.ferma_cantiere(cx, i, &atto)?,
-            Comando::ChiediDimissioni { dicastero } => {
+            Comando::ChiediDimissioni { .. } => {
                 if st.ministro.is_none() {
-                    return ko(format!("{dicastero} è in interim"));
+                    return ko(format!("{nome} è in interim"));
                 }
                 if st.dimissioni_chieste {
-                    return ko(format!("dimissioni già chieste: {dicastero}"));
+                    return ko(format!("dimissioni già chieste: {nome}"));
                 }
                 st.dimissioni_chieste = true;
                 return Ok(self.ritira(i));
             }
-            Comando::ScegliSuccessore { dicastero, indice } => {
+            Comando::ScegliSuccessore { indice, .. } => {
                 if st.ministro.is_some() {
-                    return ko(format!("{dicastero} non è in interim"));
+                    return ko(format!("{nome} non è in interim"));
                 }
                 if usize::from(indice) >= st.rosa.len() {
-                    return ko(format!(
-                        "successore fuori dalla rosa di {dicastero}: {indice}"
-                    ));
+                    return ko(format!("successore fuori dalla rosa di {nome}: {indice}"));
                 }
                 st.scelta = Some(indice);
             }
