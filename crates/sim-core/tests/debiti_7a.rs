@@ -33,6 +33,15 @@ fn nessun_referendum_nei_sei_mesi_dopo_i_comizi() {
         .promuovi_referendum("sinistra", "licenziamento")
         .unwrap_err();
     assert!(e.to_string().contains("sei mesi"), "{e}");
+    // Al turno dopo l'inizio i sei mesi sono passati (iter-legislativo-italiano:135).
+    p.chiudi_turno();
+    assert_eq!(p.vista().turno, p.legislatura().inizio + 1);
+    let e = p.promuovi_referendum("sinistra", "licenziamento").err();
+    assert!(
+        e.as_ref()
+            .is_none_or(|e| !e.to_string().contains("sei mesi")),
+        "{e:?}"
+    );
 }
 
 /// Partiti 3 (centro, 4,0) e 4 (centrodestra, 5,0) accanto al giocatore (4,5): da soli non
@@ -58,4 +67,34 @@ fn due_partner_che_bastano_insieme_entrano_insieme() {
     p.chiudi_turno();
     assert!(p.governa());
     assert!(p.governo().al_governo(3) && p.governo().al_governo(4));
+}
+
+#[test]
+fn allargamenti_rifiutati_lasciano_la_partita_identica() {
+    let mut p = in_trattativa(serde_json::json!([[7]]), &CAMERA, &SENATO);
+    let prima = p.salva().unwrap();
+    for (ids, testo) in [
+        (vec![], "allargamento senza partiti"),
+        (
+            vec!["centro", "centro"],
+            "Centro ripetuto nell'allargamento",
+        ),
+        (
+            vec!["centro", "inesistente"],
+            "Partito sconosciuto: inesistente",
+        ),
+        (vec!["giocatore"], "Partito nuovo è già nella coalizione"),
+        // Il centro è disponibile e non compare; gli altri tre sì, separati da «; ».
+        (
+            vec!["centro", "centrodestra", "estrema_sinistra", "sinistra"],
+            "comando non ammesso: Centrodestra non entra: troppo lontano dalla tua posizione; \
+             Estrema sinistra non entra: troppo lontano dalla tua posizione; \
+             Sinistra non entra: troppo lontano dalla tua posizione",
+        ),
+    ] {
+        let partiti = ids.into_iter().map(String::from).collect();
+        let e = p.comanda(Comando::Allarga { partiti }).unwrap_err();
+        assert!(e.to_string().contains(testo), "{e}");
+        assert_eq!(p.salva().unwrap(), prima);
+    }
 }

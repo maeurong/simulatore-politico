@@ -171,6 +171,17 @@ fn comandi_non_ammessi_rifiutati_col_nome() {
     assert_eq!(q.salva().unwrap(), prima);
 }
 
+/// La rosa tecnica è del ministro uscito: con un ministro in carica lo stato è incoerente.
+#[test]
+fn salvataggio_con_rosa_tecnica_e_ministro_illeggibile() {
+    let p = Partita::nuova(dati_base(), 1);
+    let e = comune::edita(&p, |j| {
+        j["ministri"]["dicasteri"][0]["rosa_tecnica"] = serde_json::json!(true)
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("rosa tecnica"), "{e}");
+}
+
 #[test]
 fn salvataggio_con_ministri_corti_illeggibile() {
     let p = Partita::nuova(dati_base(), 1);

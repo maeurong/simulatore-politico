@@ -2193,7 +2193,7 @@ impl Partita {
             partita.turno,
             partita.legislatura.totali,
         )?;
-        partita.intesa.controlla(n)?;
+        partita.intesa.controlla(n, partita.turno)?;
         partita.controlla_partiti()?;
         partita
             .ministri
@@ -2285,6 +2285,10 @@ impl Partita {
         ok(
             l.scadenza >= l.inizio,
             "legislatura.scadenza prima dell'inizio",
+        )?;
+        ok(
+            (l.elezioni.iter().flat_map(|e| &e.voti)).all(|v| (0.0..=1.0).contains(&v.quota)),
+            "legislatura.elezioni con una quota fuori da 0-1",
         )?;
         ok(
             l.fase == Fase::Sciolta || self.turno <= l.scadenza,

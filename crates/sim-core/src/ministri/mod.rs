@@ -309,7 +309,7 @@ impl Ministri {
     /// # Errors
     /// `SalvataggioIlleggibile` se i dicasteri non sono quelli dei dati, un partito esce dai
     /// limiti, una capacità non è 1-5, una soddisfazione non è finita in 0-100, la rosa non è di
-    /// 0 o 3 o la scelta esce dalla rosa.
+    /// 0 o 3, la scelta esce dalla rosa o la rosa tecnica ha un ministro in carica.
     pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::SalvataggioIlleggibile(format!("ministri: {m}")));
         let n = dati.dicasteri().len();
@@ -335,6 +335,9 @@ impl Ministri {
             }
             if !st.rosa.is_empty() && st.ministro.is_some() {
                 return ko(format!("{}: rosa con un ministro in carica", d.id));
+            }
+            if st.rosa_tecnica && st.ministro.is_some() {
+                return ko(format!("{}: rosa tecnica con un ministro in carica", d.id));
             }
             if st.scelta.is_some_and(|s| usize::from(s) >= st.rosa.len()) {
                 return ko(format!("{}: scelta fuori dalla rosa", d.id));

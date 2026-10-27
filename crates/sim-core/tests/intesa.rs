@@ -304,3 +304,27 @@ fn in_trattativa_nessuna_pressione_sull_intesa() {
         .collect();
     assert!(v.is_empty(), "{v:?}");
 }
+
+/// Una variazione oltre il turno della partita, o una quota del voto fuori da 0-1 (darebbe un
+/// `SondaggiInCalo` sproporzionato): il salvataggio è illeggibile.
+#[test]
+fn carica_rifiuta_variazioni_future_e_quote_fuori_da_0_1() {
+    let p = comune::al_governo();
+    let dopo = p.vista().turno + 1;
+    let e = edita(
+        &p,
+        |j| {
+            j["intesa"]["variazioni"] =
+                json!([{ "partito": 0, "causa": "fiducia", "delta": -1.0, "turno": dopo }])
+        },
+    )
+    .unwrap_err();
+    assert!(e.to_string().contains("oltre il turno"), "{e}");
+    for q in [1.5, -0.1] {
+        let e = edita(&p, |j| {
+            j["legislatura"]["elezioni"][0]["voti"][0]["quota"] = json!(q)
+        })
+        .unwrap_err();
+        assert!(e.to_string().contains("quota"), "{q}: {e}");
+    }
+}

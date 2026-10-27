@@ -137,17 +137,20 @@ impl Intesa {
 
     /// # Errors
     /// `SalvataggioIlleggibile` se le voci non sono una per partito, un valore non è finito in
-    /// 0-100 o una variazione esce dai partiti o non è finita.
-    pub(crate) fn controlla(&self, n_partiti: usize) -> Result<(), Errore> {
+    /// 0-100 o una variazione esce dai partiti, non è finita o è oltre il `turno` della partita.
+    pub(crate) fn controlla(&self, n_partiti: usize, turno: u32) -> Result<(), Errore> {
         let buona = self.valori.len() == n_partiti
             && self.ultimatum.len() == n_partiti
             && self.valori.iter().all(|x| (0.0..=100.0).contains(x))
-            && (self.variazioni.iter()).all(|v| v.partito < n_partiti && v.delta.is_finite());
+            && (self.variazioni.iter())
+                .all(|v| v.partito < n_partiti && v.delta.is_finite() && v.turno <= turno);
         if buona {
             Ok(())
         } else {
             Err(Errore::SalvataggioIlleggibile(
-                "intesa: non una voce per partito, o un valore fuori da 0-100".into(),
+                "intesa: non una voce per partito, un valore fuori da 0-100 o una variazione \
+                 fuori dai partiti, non finita od oltre il turno"
+                    .into(),
             ))
         }
     }
