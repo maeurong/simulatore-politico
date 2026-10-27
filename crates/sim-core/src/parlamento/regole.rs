@@ -37,7 +37,8 @@ pub struct Referendum {
 }
 
 /// Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato. `decaduto` =
-/// il referendum decaduto senza voto: il motivo leggibile, per il giocatore.
+/// il motivo per cui il referendum non si è votato (decaduto o sospeso), leggibile per il
+/// giocatore.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct EsitoReferendum {

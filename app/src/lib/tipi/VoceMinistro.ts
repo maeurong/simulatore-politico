@@ -9,7 +9,11 @@ export type VoceMinistro = { nome: string,
 /**
  * Id del partito.
  */
-partito: string, capacita: number, posizione: number, obiettivo: number, soddisfazione: number, rodaggio: boolean, minaccia: boolean, causa_principale: Causa | null, 
+partito: string, capacita: number, posizione: number, obiettivo: number, soddisfazione: number, rodaggio: boolean, 
+/**
+ * Un tecnico, senza partito: `partito` è quello del Presidente del Consiglio.
+ */
+tecnico: boolean, minaccia: boolean, causa_principale: Causa | null, 
 /**
  * Variazioni di soddisfazione degli ultimi due turni, con la loro causa.
  */

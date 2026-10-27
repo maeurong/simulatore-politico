@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita};
+use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -55,13 +55,30 @@ pub struct Vista {
     /// I referendum in attesa del voto.
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
-    /// Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
+    /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
+    /// l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
+    /// coi seggi del voto. Vuota altrove.
     pub disponibilita: Vec<VoceDisponibilita>,
     /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
     pub coalizione: Vec<String>,
+    /// In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
+    /// l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
+    /// altrove.
+    pub richieste: Vec<VoceRichiesta>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
+    /// In trattativa a chi va l'incarico; `None` altrove.
+    pub incarico: Option<VoceIncarico>,
+}
+
+/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum VoceIncarico {
+    Giocatore,
+    CapoDelloStato,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`
@@ -405,6 +422,8 @@ pub struct VoceMinistro {
     pub obiettivo: f64,
     pub soddisfazione: f64,
     pub rodaggio: bool,
+    /// Un tecnico, senza partito: `partito` è quello del Presidente del Consiglio.
+    pub tecnico: bool,
     pub minaccia: bool,
     pub causa_principale: Option<Causa>,
     /// Variazioni di soddisfazione degli ultimi due turni, con la loro causa.

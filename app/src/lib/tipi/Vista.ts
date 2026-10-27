@@ -14,9 +14,11 @@ import type { VoceDicastero } from "./VoceDicastero";
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
 import type { VoceGrandezza } from "./VoceGrandezza";
+import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
+import type { VoceRichiesta } from "./VoceRichiesta";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -75,7 +77,9 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceM
  */
 referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, 
 /**
- * Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
+ * Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
+ * l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
+ * coi seggi del voto. Vuota altrove.
  */
 disponibilita: Array<VoceDisponibilita>, 
 /**
@@ -84,6 +88,16 @@ disponibilita: Array<VoceDisponibilita>,
  */
 coalizione: Array<string>, 
 /**
+ * In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
+ * l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
+ * altrove.
+ */
+richieste: Array<VoceRichiesta>, 
+/**
  * Gli esiti dei voti, il più recente per primo.
  */
-elezioni: Array<EsitoElezioni>, };
+elezioni: Array<EsitoElezioni>, 
+/**
+ * In trattativa a chi va l'incarico; `None` altrove.
+ */
+incarico: VoceIncarico | null, };

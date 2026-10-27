@@ -78,6 +78,32 @@ pub fn con_ingresso(mut f: FileDati, nome: &str, valore: f64) -> FileDati {
     f
 }
 
+/// Nella sezione `[[partito]]` di id `id` dello scenario, la riga `valore = ...` sotto
+/// `[partito.valence]` diventa `v`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn sostituisci_valence(mut f: FileDati, id: &str, v: f64) -> FileDati {
+    let testa = format!("id = \"{id}\"\n");
+    let partito = f
+        .scenario
+        .find(&testa)
+        .unwrap_or_else(|| panic!("partito {id} assente nello scenario"));
+    // La sezione del partito finisce al `[[partito]]` successivo.
+    let sezione = &f.scenario[partito..];
+    let sezione = &sezione[..sezione.find("[[partito]]").unwrap_or(sezione.len())];
+    let valence = partito
+        + sezione
+            .find("[partito.valence]\nvalore = ")
+            .unwrap_or_else(|| panic!("{id}: [partito.valence] assente nella sua sezione"))
+        + "[partito.valence]\n".len();
+    let fine = valence + f.scenario[valence..].find('\n').expect("riga valore");
+    f.scenario
+        .replace_range(valence..fine, &format!("valore = {v:?}"));
+    f
+}
+
 /// `replacen(da, a, 1)` nel file di nome `file`; panico se `da` non c'e'.
 #[allow(
     dead_code,
@@ -174,13 +200,31 @@ pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> Fil
 
 /// Ferma le agende ancora annunciate, tranne quella di `tranne` e di chi ha le dimissioni chieste
 /// (non si esegue comunque), così due partite divergono solo per ciò che il test fa. Senza il
-/// governo del giocatore (la trattativa dopo il voto alla scadenza) non ferma nulla.
+/// governo del giocatore (trattativa, governo IA dopo il voto alla scadenza) nessun comando è
+/// ammesso: le agende si fermano nel salvataggio, senza il costo di `Ferma`.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
+    if p.finita() {
+        return;
+    }
     if !p.governa() {
+        let ids: Vec<String> = p.vista().dicasteri.into_iter().map(|d| d.id).collect();
+        *p = edita(p, |j| {
+            let dicasteri =
+                (j["ministri"]["dicasteri"].as_array_mut()).expect("ministri.dicasteri è un array");
+            for (st, id) in dicasteri.iter_mut().zip(&ids) {
+                if id != tranne
+                    && st["agenda"]["stato"] == "annunciata"
+                    && st["dimissioni_chieste"] == false
+                {
+                    st["agenda"]["stato"] = "fermata".into();
+                }
+            }
+        })
+        .unwrap();
         return;
     }
     for m in p.vista().ministeri {

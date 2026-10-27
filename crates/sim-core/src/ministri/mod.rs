@@ -106,6 +106,7 @@ pub struct Ministro {
     pub obiettivo: f64,
     pub soddisfazione: f64,
     pub turni_in_carica: u32,
+    pub tecnico: bool,
 }
 
 impl Ministro {
@@ -178,7 +179,7 @@ impl Ministri {
             dicasteri: vec![StatoDicastero::default(); n],
         };
         for i in 0..n {
-            let mut x = m.genera(cx, caso, i);
+            let mut x = m.genera(cx, caso, i, false);
             x.turni_in_carica = 1;
             m.dicasteri[i].ministro = Some(x);
         }
@@ -186,10 +187,28 @@ impl Ministri {
         m
     }
 
+    /// I ministri di un governo nuovo, tutti in rodaggio, dicastero per dicastero nell'ordine dei
+    /// dati: `tecnici[i]` = un tecnico. Rose, scelte, dimissioni, variazioni e proposte si
+    /// svuotano; cantieri e margine restano al dicastero. Le agende le riapre l'apertura.
+    pub(crate) fn nuovo_governo(&mut self, cx: &Contesto, caso: &mut Caso, tecnici: &[bool]) {
+        for st in &mut self.dicasteri {
+            *st = StatoDicastero {
+                cantieri: std::mem::take(&mut st.cantieri),
+                margine_residuo: st.margine_residuo,
+                ..StatoDicastero::default()
+            };
+        }
+        for i in 0..self.dicasteri.len() {
+            let tecnico = tecnici.get(i).copied().unwrap_or(false);
+            self.dicasteri[i].ministro = Some(self.genera(cx, caso, i, tecnico));
+        }
+    }
+
     /// Un ministro nuovo per il dicastero `i`, del partito che lo tiene. Il nome non coincide
     /// con quello di un ministro in carica o in rosa (al più 100 riestrazioni). L'obiettivo parte
-    /// dall'indicatore com'è visto, con un turno di ritardo.
-    fn genera(&self, cx: &Contesto, caso: &mut Caso, i: usize) -> Ministro {
+    /// dall'indicatore com'è visto, con un turno di ritardo. Un `tecnico` (scelta 7 del piano 7)
+    /// ha posizione `4 + scarto` e capacità da 3 a 5.
+    fn genera(&self, cx: &Contesto, caso: &mut Caso, i: usize, tecnico: bool) -> Ministro {
         let el = cx.dati.elettorato();
         let preso = |nome: &str| {
             (self.dicasteri.iter())
@@ -206,9 +225,15 @@ impl Ministri {
             }
         }
         let partito = cx.governo.dicasteri[i];
-        let capacita = 5.min(1 + (5.0 * caso.uniforme(Flusso::Governo)) as u8);
+        let (minima, gradini) = if tecnico { (3, 3.0) } else { (1, 5.0) };
+        let capacita = 5.min(minima + (gradini * caso.uniforme(Flusso::Governo)) as u8);
         let scarto = cx.dati.manopola("scarto_ministri") * caso.normale(Flusso::Governo);
-        let posizione = (cx.partiti[partito].posizione_dichiarata + scarto).clamp(1.0, 7.0);
+        let ancora = if tecnico {
+            4.0
+        } else {
+            cx.partiti[partito].posizione_dichiarata
+        };
+        let posizione = (ancora + scarto).clamp(1.0, 7.0);
         let obiettivo = indicatore(cx, i).map_or(0.0, |k| {
             cx.grandezze.nazionale_prima(cx.dati, k)
                 + cx.dati.grandezze()[k].verso.segno() * cx.dati.manopola("passo_obiettivo")
@@ -221,6 +246,7 @@ impl Ministri {
             obiettivo,
             soddisfazione: cx.dati.manopola("soddisfazione_base"),
             turni_in_carica: 0,
+            tecnico,
         }
     }
 
@@ -254,7 +280,7 @@ impl Ministri {
             }
             if st.rosa.is_empty() {
                 for _ in 0..NELLA_ROSA {
-                    let x = self.genera(cx, caso, i);
+                    let x = self.genera(cx, caso, i, false);
                     self.dicasteri[i].rosa.push(x);
                 }
                 self.dicasteri[i].rosa.sort_by(|a, b| {
@@ -440,7 +466,9 @@ impl Ministri {
             | Comando::PoniFiducia { .. }
             | Comando::EmanaDecreto { .. }
             | Comando::InvitaAstensione
-            | Comando::DichiaraCoalizione { .. } => {}
+            | Comando::DichiaraCoalizione { .. }
+            | Comando::ProponiSpartizione { .. }
+            | Comando::Allarga { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }
@@ -471,6 +499,7 @@ impl Ministri {
             obiettivo: x.obiettivo,
             soddisfazione: x.soddisfazione,
             rodaggio: x.turni_in_carica == 0,
+            tecnico: x.tecnico,
             minaccia: x.soddisfazione < soglia,
             causa_principale: causa_principale(variazioni),
             variazioni: variazioni.to_vec(),

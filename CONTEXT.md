@@ -205,7 +205,17 @@ Quanto un partito alleato sta bene nella coalizione; troppo bassa, pone un ultim
 _Evita_: scontento, lealtà
 
 **Disponibilità**:
-Quanto un partito è pronto a entrare nella coalizione del giocatore prima del voto, letta sui sondaggi e mostrata con la sua causa.
+Quanto un partito è pronto a entrare nella coalizione del giocatore prima del voto, letta sui sondaggi e mostrata con la sua causa. Vale anche dopo il voto, in trattativa con l'incarico, letta sui seggi veri.
+
+**Trattativa**:
+Il turno dopo il voto in cui si forma il governo.
+
+**Incarico**:
+Il compito di formare il governo in trattativa: va alla coalizione del giocatore se ha la maggioranza o è la prima alla Camera, altrimenti al Capo dello Stato.
+
+**Spartizione**:
+L'assegnazione dei dicasteri ai partiti della coalizione o a tecnici; senza proposta vale quella di default.
+_Evita_: lottizzazione
 
 **Cassa del partito**:
 Il denaro di un partito, separato dal bilancio dello Stato: entra dal 2 per mille sui voti dell'ultima elezione e dalle donazioni, non va sotto zero, e si spende in campagna e in informazione (sondaggi privati, test di una misura, centro studi).

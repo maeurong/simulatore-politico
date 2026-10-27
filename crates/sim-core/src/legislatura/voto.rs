@@ -1,6 +1,7 @@
 //! Il voto: voti per regione dalle intenzioni vere, esito e incarico (premio e riparto di Camera e
 //! Senato, sistemi-elettorali:39-46).
 
+use super::spartizione::maggioranza;
 use crate::dati::DatiGioco;
 use crate::elettorato::{Elettorato, Intenzioni, PER_REGIONE};
 use crate::partita::Trimestre;
@@ -63,7 +64,9 @@ pub(crate) fn voti_per_regione(
 }
 
 /// La prima di `coalizioni` (la prima è del giocatore) con più della metà dei seggi in entrambe le
-/// Camere; i partiti fuori da ogni coalizione contano da soli.
+/// Camere; i partiti fuori da ogni coalizione contano da soli. Senza maggioranza, `Giocatore` se
+/// la sua coalizione ha più seggi alla Camera di ogni altra (scelta 9 del piano 7); altrimenti
+/// `None`, l'incarico al Capo dello Stato.
 pub(crate) fn incarico(
     coalizioni: &[Vec<usize>],
     giocatore: usize,
@@ -73,21 +76,25 @@ pub(crate) fn incarico(
     let soli = (0..camera.len())
         .filter(|j| !coalizioni.iter().flatten().any(|i| i == j))
         .map(|j| vec![j]);
-    let maggioranza = |c: &[usize], seggi: &[u32]| {
-        let s: u64 = (c.iter().filter_map(|&j| seggi.get(j)))
-            .map(|&x| u64::from(x))
-            .sum();
-        2 * s > seggi.iter().map(|&x| u64::from(x)).sum::<u64>()
-    };
-    (coalizioni.iter().cloned().chain(soli))
-        .find(|c| maggioranza(c, camera) && maggioranza(c, senato))
-        .map(|c| {
-            if c.contains(&giocatore) {
-                Incarico::Giocatore
-            } else {
-                Incarico::Ia { coalizione: c }
+    let blocchi: Vec<Vec<usize>> = coalizioni.iter().cloned().chain(soli).collect();
+    if let Some(c) = blocchi.iter().find(|c| maggioranza(camera, senato, c)) {
+        return Some(if c.contains(&giocatore) {
+            Incarico::Giocatore
+        } else {
+            Incarico::Ia {
+                coalizione: c.clone(),
             }
-        })
+        });
+    }
+    let alla_camera = |c: &[usize]| -> u32 { c.iter().filter_map(|&j| camera.get(j)).sum() };
+    let suoi = blocchi
+        .iter()
+        .find(|c| c.contains(&giocatore))
+        .map_or(0, |c| alla_camera(c));
+    (blocchi.iter())
+        .filter(|c| !c.contains(&giocatore))
+        .all(|c| alla_camera(c) < suoi)
+        .then_some(Incarico::Giocatore)
 }
 
 #[cfg(test)]
@@ -106,8 +113,16 @@ mod tests {
             coalizione: vec![2, 3],
         });
         assert_eq!(incarico(&c, 0, &[1, 1, 3, 3, 0], &[1, 1, 4, 2, 0]), ia);
-        // Metà esatta in un ramo: nessuna maggioranza assoluta.
-        assert_eq!(incarico(&c, 0, &[3, 3, 2, 1, 0], &[2, 2, 2, 2, 0]), None);
+        // Metà esatta in un ramo: nessuna maggioranza assoluta; prima alla Camera la coalizione
+        // IA, quindi l'incarico passa al Capo dello Stato.
+        assert_eq!(incarico(&c, 0, &[1, 1, 3, 1, 0], &[2, 2, 2, 2, 0]), None);
+        // Senza maggioranza, la coalizione del giocatore prima alla Camera ha l'incarico.
+        assert_eq!(
+            incarico(&c, 0, &[3, 3, 2, 1, 0], &[2, 2, 2, 2, 0]),
+            giocatore
+        );
+        // Alla pari con un'altra alla Camera non è la prima.
+        assert_eq!(incarico(&c, 0, &[2, 1, 2, 1, 0], &[2, 2, 2, 2, 0]), None);
         // Un partito fuori dalle coalizioni conta da solo.
         let solo = Some(Incarico::Ia {
             coalizione: vec![4],

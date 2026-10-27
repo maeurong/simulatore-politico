@@ -2,6 +2,7 @@
 
 use crate::dati::DatiGioco;
 use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
+use crate::elettorato::Affluenza;
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::ministri::{Causa, Ministri, penalizza};
@@ -93,7 +94,7 @@ pub struct EsitoVoto {
     pub fiducia: bool,
     pub fiducia_respinta: bool,
     pub linee: Vec<VoceLinea>,
-    /// La legge elettorale decaduta senza voto: il motivo leggibile, per il giocatore.
+    /// La misura decaduta senza voto: il motivo leggibile, per il giocatore.
     pub decaduta: Option<String>,
 }
 
@@ -825,6 +826,57 @@ impl Parlamento {
         }
     }
 
+    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
+    /// misura in calendario decade senza voto, senza costi e senza blocco. Al voto in calendario
+    /// possono esserci solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai
+    /// fiducie né conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno
+    /// `voto = turno` e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non
+    /// ancora votato è sospeso, senza valence. I confermativi restano.
+    pub(crate) fn decadi_tutto(
+        &mut self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        data: Trimestre,
+    ) {
+        for m in std::mem::take(&mut self.misure) {
+            self.esiti.insert(
+                0,
+                EsitoVoto {
+                    misura: m.id,
+                    nome: nome_misura(dati, &m),
+                    forma: m.forma,
+                    data,
+                    deliberazione: m.deliberazione,
+                    camera: Conteggio { si: 0, no: 0 },
+                    senato: Conteggio { si: 0, no: 0 },
+                    approvata: false,
+                    fiducia: m.fiducia,
+                    fiducia_respinta: false,
+                    linee: Vec::new(),
+                    decaduta: Some("Decaduta per la fine della legislatura".into()),
+                },
+            );
+        }
+        self.respinte.clear();
+        if let Some(r) = self.referendum.take() {
+            let vigente = (r.valori.iter())
+                .filter_map(|&(d, _)| Some((d, disposizioni.voci.get(d)?.in_vigore)))
+                .collect::<Vec<_>>();
+            let nessuno = Affluenza {
+                si: 0.0,
+                no: 0.0,
+                astenuti: 0.0,
+            };
+            self.esiti_referendum.insert(
+                0,
+                EsitoReferendum {
+                    decaduto: Some("Sospeso per lo scioglimento delle Camere".into()),
+                    ..EsitoReferendum::da(r.tipo, nome(dati, &vigente), data, &nessuno)
+                },
+            );
+        }
+    }
+
     /// Apertura del turno `turno`: restano gli esiti dei due turni prima.
     pub(crate) fn apri(&mut self, turno: u32) {
         let da = data_di(turno.saturating_sub(2));
@@ -835,7 +887,8 @@ impl Parlamento {
 
     /// # Errors
     /// `SalvataggioIlleggibile` se: i seggi non sono uno per partito o non sommano ai `totali` dei
-    /// rami del parlamento eletto (zero a Camere sciolte); una misura, un suo emendamento o una
+    /// rami del parlamento eletto (zero a Camere sciolte), o li sommano oltre il gradino più alto
+    /// di `seggi_camera` o `seggi_senato` nel catalogo; una misura, un suo emendamento o una
     /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti; un referendum
     /// esce dalle disposizioni, dai gradini o dai partiti, o ha il voto oltre `turno + 6`;
     /// l'abrogativo senza firme ha un voto diverso da quello chiesto nel `turno`.
@@ -847,14 +900,26 @@ impl Parlamento {
         totali: (u32, u32),
     ) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("parlamento: {m}")));
-        for (seggi, totale) in [
-            (&self.seggi_camera, totali.0),
-            (&self.seggi_senato, totali.1),
+        // Il tetto di un ramo: il gradino più alto del catalogo, da cui escono i totali eletti.
+        let tetto = |leva: &str| {
+            (dati.disposizioni().iter())
+                .flat_map(|d| &d.gradini)
+                .filter_map(|g| g.leve.get(leva))
+                .fold(0.0, |m: f64, &x| m.max(x))
+                .round() as u64
+        };
+        for (seggi, totale, leva) in [
+            (&self.seggi_camera, totali.0, "seggi_camera"),
+            (&self.seggi_senato, totali.1, "seggi_senato"),
         ] {
-            // Somma in u64 uguale a un totale u32: i `sum::<u32>()` a valle non traboccano.
+            // Somma in u64 uguale a un totale u32 entro il tetto: i `sum::<u32>()` a valle non
+            // traboccano, e il voto seggio per seggio resta breve.
             let somma: u64 = seggi.iter().map(|&n| u64::from(n)).sum();
-            if seggi.len() != n_partiti || somma != u64::from(totale) {
-                return ko("seggi non uno per partito o diversi dai seggi del ramo eletto");
+            if seggi.len() != n_partiti || somma != u64::from(totale) || somma > tetto(leva) {
+                return ko(
+                    "seggi non uno per partito, diversi dai seggi del ramo eletto o oltre i seggi \
+                     del catalogo",
+                );
             }
         }
         let catalogo = dati.disposizioni();
