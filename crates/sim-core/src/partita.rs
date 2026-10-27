@@ -1,21 +1,25 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::disposizioni::Disposizioni;
+use crate::disposizioni::{Disposizioni, data_di};
 use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
-use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, indice_gruppo};
-use crate::elezioni::{Esito, LeggeElettorale, Voti, riparto};
+use crate::elettorato::{Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo};
+use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
-use crate::ministri::{Contesto, Ministri};
+use crate::ministri::{Causa, Contesto, Ministri, causa_peggiore, penalizza};
 use crate::misure::Misure;
+use crate::parlamento::{
+    self, CausaIntesa, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Intesa, Misura,
+    Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
+};
 use crate::partiti::{self, Governo, Partito};
 use crate::vista::{
-    SeggiPartito, Vista, VistaBilancio, VistaStatistica, VoceBudget, VoceDicastero, VoceGrandezza,
-    VocePartito,
+    SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget,
+    VoceDicastero, VoceGrandezza, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -82,6 +86,8 @@ pub struct Partita {
     ministri: Ministri,
     misure: Misure,
     disposizioni: Disposizioni,
+    parlamento: Parlamento,
+    intesa: Intesa,
 }
 
 impl Partita {
@@ -111,6 +117,8 @@ impl Partita {
             &mut caso,
         );
         Partita {
+            parlamento: Parlamento::uscente(&dati, &partiti),
+            intesa: Intesa::iniziale(&dati, partiti.len()),
             misure: Misure::neutre(&dati),
             disposizioni,
             versione_schema: VERSIONE_SCHEMA,
@@ -129,13 +137,16 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni → atti dei ministri → aula → motore (misure, economia, grandezze,
+    // default delle decisioni (proposte, emendamenti aperti respinti) → atti dei ministri → aula
+    // (conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie → calendario → apertura (valori in
-    // arrivo, rose, agende, proposte; il costo del taglio se l'anno entra in esercizio
-    // provvisorio).
+    // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
+    // calendario → apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose,
+    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
     pub fn chiudi_turno(&mut self) {
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
+        let respinti = self.parlamento.respingi_aperti();
+        self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
         self.aula();
@@ -184,9 +195,26 @@ impl Partita {
             self.data,
         );
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
+        self.intesa.soglie(&self.dati, self.turno);
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
+        self.parlamento.apri(self.turno);
+        // Le elettorali rese non valide dai voti e dagli arrivi decadono prima degli emendamenti.
+        for m in std::mem::take(&mut self.parlamento.misure) {
+            if !self.decade(&m) {
+                self.parlamento.misure.push(m);
+            }
+        }
+        let aula = StatoAula {
+            dati: &self.dati,
+            disposizioni: &self.disposizioni,
+            sondaggio: &self.informazione.sondaggio,
+            partiti: &self.partiti,
+            governo: &self.governo,
+            intesa: &self.intesa.valori,
+        };
+        self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -258,11 +286,337 @@ impl Partita {
         f(&mut self.ministri, &cx)
     }
 
-    /// Aula: il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
+    fn aula(&mut self) {
+        self.approva_bilancio();
+        self.vota_leggi();
+        self.vota_confermativi();
+    }
+
+    /// Le leggi col voto nel turno, in ordine di id (iter-legislativo-italiano:166).
+    fn vota_leggi(&mut self) {
+        let mut ids: Vec<u32> = (self.parlamento.misure.iter())
+            .filter(|m| m.voto == self.turno)
+            .map(|m| m.id)
+            .collect();
+        ids.sort_unstable();
+        for id in ids {
+            self.vota(id);
+        }
+    }
+
+    /// Il voto della misura `id` nei due rami; la misura esce dal calendario. Approvata: i valori
+    /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
+    /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
+    /// Consiglio. Chi vota sì sposta la sua posizione percepita verso la misura.
+    ///
+    /// Elettorale (iter-legislativo-italiano:48-61): con la fiducia, prima il voto a blocchi e
+    /// poi il voto finale, che porta i conteggi; bocciata al voto finale cade la legge, non la
+    /// fiducia; approvata, ogni alleato che perde seggi attesi paga intesa. Costituzionale
+    /// (iter-legislativo-italiano:76-80): la prima deliberazione approvata torna in calendario per
+    /// la seconda; approvata la seconda senza i due terzi e con un quinto contro in un ramo, il
+    /// valore aspetta il referendum confermativo.
+    fn vota(&mut self, id: u32) {
+        let Some(k) = self.parlamento.misure.iter().position(|m| m.id == id) else {
+            return;
+        };
+        let mut m = self.parlamento.misure.remove(k);
+        let elettorale = m.forma == FormaMisura::Elettorale;
+        // Due elettorali votate nella stessa chiusura: la seconda può decadere qui.
+        if self.decade(&m) {
+            return;
+        }
+        let aula = self.stato_aula();
+        let p = aula.previsione(&m);
+        let linee = aula.voci_linea(&p.linea);
+        let pl = &self.parlamento;
+        let a_blocchi = m.fiducia && elettorale;
+        let nessuno = vec![0.0; p.linea.len()];
+        let (q_camera, q_senato) = if a_blocchi {
+            (&nessuno, &nessuno)
+        } else {
+            (&p.franchi_camera, &p.franchi)
+        };
+        let mut camera = voto::conta(&mut self.caso, &pl.seggi_camera, &p.linea, q_camera);
+        let mut senato = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, q_senato);
+        let passa = |c: &Conteggio| c.si > c.no;
+        let fiducia_respinta = m.fiducia && !(passa(&camera) && passa(&senato));
+        // Il voto finale si estrae anche dopo la fiducia respinta, e si scarta: l'esito non sposta
+        // i franchi tiratori delle misure che seguono.
+        if a_blocchi {
+            let c = voto::conta(
+                &mut self.caso,
+                &pl.seggi_camera,
+                &p.linea,
+                &p.franchi_camera,
+            );
+            let s = voto::conta(&mut self.caso, &pl.seggi_senato, &p.linea, &p.franchi);
+            if !fiducia_respinta {
+                (camera, senato) = (c, s);
+            }
+        }
+        // Tutti votano: `sì > no` è anche la maggioranza assoluta della seconda deliberazione.
+        let approvata = passa(&camera) && passa(&senato);
+        let turno = self.turno;
+        let nuova = p.posizioni.map(|(_, n)| n);
+        let prima = m.forma == FormaMisura::Costituzionale && m.deliberazione == 1;
+        let esito = EsitoVoto {
+            misura: id,
+            nome: parlamento::nome(&self.dati, &m.valori),
+            forma: m.forma,
+            data: self.data,
+            deliberazione: m.deliberazione,
+            approvata,
+            fiducia: m.fiducia,
+            fiducia_respinta,
+            linee,
+            camera,
+            senato,
+            decaduta: None,
+        };
+        if approvata && !prima {
+            let (c, s) = (&esito.camera, &esito.senato);
+            let pl = &self.parlamento;
+            let quinto = parlamento::quinto_contro(&self.governo, &pl.seggi_camera, &p.linea)
+                || parlamento::quinto_contro(&self.governo, &pl.seggi_senato, &p.linea);
+            let due_terzi = parlamento::due_terzi(c, &pl.seggi_camera)
+                && parlamento::due_terzi(s, &pl.seggi_senato);
+            if m.forma == FormaMisura::Costituzionale && !due_terzi && quinto {
+                let voto = turno.saturating_add(1);
+                self.parlamento.confermativi.push(Referendum {
+                    tipo: TipoReferendum::Confermativo,
+                    misura: Some(id),
+                    valori: m.valori.clone(),
+                    promotore: None,
+                    voto,
+                    firme: false,
+                    invito_astensione: false,
+                });
+            } else {
+                self.entra_in_vigore(&m);
+            }
+            if let Some(nuova) = nuova {
+                self.norma_lontana(nuova);
+            }
+            self.seggi_persi(&p.seggi);
+        } else if !approvata {
+            // La fiducia respinta fa cadere la misura senza blocco (le dimissioni: piano 7).
+            if !fiducia_respinta {
+                let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
+                let da = turno.saturating_add(1).saturating_add(blocco);
+                (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
+            }
+            if let Some(st) = m
+                .proponente
+                .and_then(|i| self.ministri.dicasteri.get_mut(i))
+            {
+                let costo = self.dati.manopola("costo_legge_respinta");
+                penalizza(st, Causa::LeggeRespinta, -costo, turno);
+            }
+            if let Some(pdc) = self.partiti.get_mut(self.governo.presidente) {
+                pdc.valence -= self.dati.manopola("valence_legge_respinta");
+            }
+        }
+        if let Some(nuova) = nuova {
+            let s = self.dati.manopola("scivolamento_percepita");
+            for (x, _) in self.partiti.iter_mut().zip(&p.linea).filter(|(_, si)| **si) {
+                x.posizione_percepita += s * (nuova - x.posizione_percepita);
+            }
+        }
+        self.parlamento.esiti.insert(0, esito);
+        if approvata && prima {
+            m.deliberazione = 2;
+            m.voto = turno.saturating_add(1);
+            self.parlamento.misure.push(m);
+        }
+    }
+
+    /// L'elettorale `m` che, dopo i voti e gli arrivi venuti dalla presentazione, darebbe una legge
+    /// non valida decade senza voto: esito con `decaduta`, nessuna estrazione, nessun blocco,
+    /// nessun costo. `true` se decade.
+    fn decade(&mut self, m: &Misura) -> bool {
+        if m.forma != FormaMisura::Elettorale {
+            return false;
+        }
+        let Some(motivo) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &m.valori)
+        else {
+            return false;
+        };
+        let esito = EsitoVoto {
+            misura: m.id,
+            nome: parlamento::nome(&self.dati, &m.valori),
+            forma: m.forma,
+            data: self.data,
+            deliberazione: m.deliberazione,
+            camera: Conteggio { si: 0, no: 0 },
+            senato: Conteggio { si: 0, no: 0 },
+            approvata: false,
+            fiducia: m.fiducia,
+            fiducia_respinta: false,
+            linee: Vec::new(),
+            decaduta: Some(format!(
+                "Decaduta senza voto: con le leggi già approvate non sarebbe più applicabile \
+                 ({motivo})"
+            )),
+        };
+        self.parlamento.esiti.insert(0, esito);
+        true
+    }
+
+    /// I valori della misura approvata entrano in vigore, o arrivano fra `turni_rinvio_regime`
+    /// turni se un emendamento accolto li rinvia.
+    fn entra_in_vigore(&mut self, m: &Misura) {
+        let (turno, legge) = (self.turno, format!("L. {}/{}", m.id, self.data.anno));
+        let rinvio = self.dati.manopola("turni_rinvio_regime") as u32;
+        for &(d, g) in &m.valori {
+            if parlamento::rinviata(&m.emendamenti, d) {
+                let arrivo = turno.saturating_add(rinvio);
+                // `controlla` e `presenta` garantiscono `d` e `g`: non fallisce.
+                let _ = (self.disposizioni).programma(&self.dati, d, g, arrivo, &legge);
+                continue;
+            }
+            (self.disposizioni).cambia(
+                &self.dati,
+                d,
+                g,
+                turno,
+                &legge,
+                &mut self.grandezze.effetti,
+            );
+        }
+    }
+
+    /// `SeggiPersi`: ogni alleato con `Δseggi < 0` perde `costo_seggio_perso · |Δseggi|`.
+    fn seggi_persi(&mut self, seggi: &[(i32, i32)]) {
+        let costo = self.dati.manopola("costo_seggio_perso");
+        for j in self.alleati() {
+            let delta = seggi.get(j).map_or(0, |&(c, s)| c + s);
+            if delta < 0 {
+                let d = costo * f64::from(delta);
+                (self.intesa).varia(j, CausaIntesa::SeggiPersi, d, self.turno);
+            }
+        }
+    }
+
+    /// I referendum confermativi del turno (art. 138, nessun quorum), uno per legge sulla
+    /// posizione media dei suoi valori: approvato con `sì > no`, entrano in vigore tutti.
+    fn vota_confermativi(&mut self) {
+        let turno = self.turno;
+        let (dovuti, restano): (Vec<Referendum>, Vec<Referendum>) =
+            std::mem::take(&mut self.parlamento.confermativi)
+                .into_iter()
+                .partition(|r| r.voto <= turno);
+        self.parlamento.confermativi = restano;
+        for r in dovuti {
+            let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
+            let (pos_no, pos_si) = (posizioni.map(|p| p.0), posizioni.map(|p| p.1));
+            let quesito = Quesito {
+                pos_si,
+                pos_no,
+                peso_governo: 1.0,
+                invito: 0.0,
+            };
+            let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
+            let (si, no) = (a.si.round() as u64, a.no.round() as u64);
+            let aventi_diritto = (a.si + a.no + a.astenuti).round() as u64;
+            let approvato = si > no;
+            if approvato {
+                let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
+                for &(d, g) in &r.valori {
+                    (self.disposizioni).cambia(
+                        &self.dati,
+                        d,
+                        g,
+                        turno,
+                        &legge,
+                        &mut self.grandezze.effetti,
+                    );
+                }
+            }
+            let esito = EsitoReferendum {
+                tipo: r.tipo,
+                nome: parlamento::nome(&self.dati, &r.valori),
+                data: self.data,
+                si,
+                no,
+                votanti: si + no,
+                aventi_diritto,
+                quorum: (si + no) * 2 > aventi_diritto,
+                approvato,
+            };
+            self.parlamento.esiti_referendum.insert(0, esito);
+        }
+    }
+
+    /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
+    /// perde intesa.
+    fn norma_lontana(&mut self, nuova: f64) {
+        let soglia = self.dati.manopola("distanza_alleato");
+        let costo = self.dati.manopola("costo_norma_lontana");
+        for j in self.alleati() {
+            let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
+            if distanza < soglia {
+                continue;
+            }
+            let delta = -costo * (distanza - soglia + 1.0);
+            (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
+        }
+    }
+
+    /// `Emendamento`: deciso dal giocatore; respinto, costa intesa all'alleato.
+    pub(crate) fn emendamento(
+        &mut self,
+        misura: u32,
+        partito: &str,
+        accogli: bool,
+    ) -> Result<(), Errore> {
+        let respinto = (self.parlamento).decidi_emendamento(
+            &self.dati,
+            &self.partiti,
+            misura,
+            partito,
+            accogli,
+        )?;
+        self.emendamenti_respinti(respinto);
+        Ok(())
+    }
+
+    /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
+    fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
+        let delta = -self.dati.manopola("costo_emendamento_respinto");
+        for j in alleati {
+            (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
+        }
+    }
+
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`.
+    pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
+        let m = (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        let forma = m.forma;
+        for j in self.alleati() {
+            let x = self.partiti[j].posizione_dichiarata;
+            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova);
+            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        }
+        Ok(())
+    }
+
+    fn stato_aula(&self) -> StatoAula<'_> {
+        StatoAula {
+            dati: &self.dati,
+            disposizioni: &self.disposizioni,
+            sondaggio: &self.informazione.sondaggio,
+            partiti: &self.partiti,
+            governo: &self.governo,
+            intesa: &self.intesa.valori,
+        }
+    }
+
+    /// Il bilancio presentato è approvato, senza voto per ora. Se l'anno è in esercizio
     /// provvisorio, il bilancio è dell'anno in corso, il passo di gennaio-marzo che segue lo mette
     /// in vigore e il margine residuo diventa 3/4 del margine del bilancio approvato. Ogni
     /// approvazione costa ai ministri la perdita reale delle loro voci.
-    fn aula(&mut self) {
+    fn approva_bilancio(&mut self) {
         let Some(b) = self.economia.bilancio_presentato.take() else {
             return;
         };
@@ -316,6 +670,17 @@ impl Partita {
         let (_, b) = self.bilancio_ammesso(b)?;
         self.economia.bilancio_presentato = Some(b);
         Ok(())
+    }
+
+    /// `PresentaLegge`: la misura entra in calendario.
+    pub(crate) fn presenta_legge(&mut self, valori: &[ValoreProposto]) -> Result<(), Errore> {
+        (self.parlamento).presenta(
+            &self.dati,
+            &self.disposizioni,
+            &mut self.ministri,
+            self.turno,
+            valori,
+        )
     }
 
     /// La bozza e `b` come lo approverebbe l'aula.
@@ -436,6 +801,21 @@ impl Partita {
         &self.disposizioni
     }
 
+    pub fn parlamento(&self) -> &Parlamento {
+        &self.parlamento
+    }
+
+    pub fn intesa(&self) -> &Intesa {
+        &self.intesa
+    }
+
+    /// I partiti al governo, escluso quello del Presidente del Consiglio.
+    pub fn alleati(&self) -> Vec<usize> {
+        (0..self.partiti.len())
+            .filter(|&j| j != self.governo.presidente && self.governo.al_governo(j))
+            .collect()
+    }
+
     /// L'id del gradino in vigore della disposizione `id`.
     pub fn in_vigore(&self, id: &str) -> Option<&str> {
         let k = self.dati.disposizione(id)?;
@@ -448,39 +828,19 @@ impl Partita {
         self.disposizioni.legge_elettorale(&self.dati)
     }
 
-    /// Riparto dei seggi sul sondaggio pubblico: voti regionali dalle quote degli incroci,
-    /// coalizioni dell'ultimo voto, partiti senza coalizione da soli.
+    /// Riparto dei seggi sul sondaggio pubblico con la legge elettorale e il numero dei
+    /// parlamentari in vigore: voti regionali dalle quote degli incroci, coalizioni dell'ultimo
+    /// voto, partiti senza coalizione da soli.
     ///
     /// # Errors
     /// Quelli di `elezioni::riparto`.
     pub fn proiezione_seggi(&self) -> Result<Esito, Errore> {
-        let n = self.partiti.len();
-        let per_regione = self
-            .dati
-            .elettorato()
-            .regioni
-            .iter()
-            .zip(&self.informazione.sondaggio.regioni)
-            .map(|(r, inc)| {
-                let voti = inc.quote.iter().take(n);
-                (
-                    r.id.clone(),
-                    voti.map(|q| (r.elettori as f64 * q).round() as u64)
-                        .collect(),
-                )
-            })
-            .collect();
-        let posizione = |id: &String| self.partiti.iter().position(|p| &p.id == id);
-        let coalizioni = (self.dati.scenario().coalizioni.iter())
-            .map(|c| c.iter().filter_map(posizione).collect())
-            .collect();
-        riparto(
-            self.dati.elezioni(),
+        parlamento::proietta(
+            &self.dati,
+            &self.partiti,
+            &self.informazione.sondaggio,
             &self.legge_elettorale(),
-            &Voti {
-                coalizioni,
-                per_regione,
-            },
+            &self.disposizioni.leve(&self.dati),
         )
     }
 
@@ -541,11 +901,57 @@ impl Partita {
             },
             bilancio: self.vista_bilancio(),
             disposizioni: self.disposizioni.voci_vista(&self.dati),
+            seggi: (self.partiti.iter())
+                .zip(&self.parlamento.seggi_camera)
+                .zip(&self.parlamento.seggi_senato)
+                .map(|((p, &camera), &senato)| SeggiPartito {
+                    partito: p.id.clone(),
+                    camera,
+                    senato,
+                })
+                .collect(),
+            alleati: self.voci_alleati(),
+            calendario: self.parlamento.voci_calendario(&self.stato_aula()),
+            esiti: self.parlamento.esiti.clone(),
+            referendum: (self.parlamento.referendum.iter())
+                .chain(&self.parlamento.confermativi)
+                .map(|r| VistaReferendum {
+                    tipo: r.tipo,
+                    nome: parlamento::nome(&self.dati, &r.valori),
+                    voto: data_di(r.voto),
+                    promotore: (r.promotore)
+                        .and_then(|j| self.partiti.get(j))
+                        .map(|p| p.id.clone()),
+                    invito_astensione: r.invito_astensione,
+                })
+                .collect(),
+            esiti_referendum: self.parlamento.esiti_referendum.clone(),
         }
     }
 
+    fn voci_alleati(&self) -> Vec<VoceAlleato> {
+        let soglia = self.dati.manopola("soglia_ultimatum");
+        (self.alleati().into_iter())
+            .map(|j| {
+                let variazioni: Vec<_> = (self.intesa.variazioni.iter())
+                    .filter(|v| v.partito == j)
+                    .cloned()
+                    .collect();
+                let intesa = self.intesa.valori.get(j).copied().unwrap_or_default();
+                VoceAlleato {
+                    partito: self.partiti[j].id.clone(),
+                    intesa,
+                    ultimatum: intesa < soglia,
+                    causa_principale: causa_peggiore(variazioni.iter().map(|v| (v.causa, v.delta))),
+                    variazioni,
+                }
+            })
+            .collect()
+    }
+
     /// Snapshot JSON completo: schema, stato del generatore (con il seme), dati, calendario,
-    /// economia, grandezze, partiti e governo, elettorato, informazione, disposizioni.
+    /// economia, grandezze, partiti e governo, elettorato, informazione, disposizioni, parlamento
+    /// e intesa.
     ///
     /// # Errors
     /// Serializzazione fallita, o stato che riletto non torna identico
@@ -573,7 +979,8 @@ impl Partita {
     /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
     /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
     /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`),
-    /// o disposizioni che non combaciano coi dati (`Disposizioni::controlla`).
+    /// o disposizioni, parlamento e intesa che non combaciano coi dati (`Disposizioni::controlla`,
+    /// `Parlamento::controlla`, `Intesa::controlla`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -631,6 +1038,9 @@ impl Partita {
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
         partita.disposizioni.controlla(&partita.dati)?;
+        let n = partita.partiti.len();
+        partita.parlamento.controlla(&partita.dati, n)?;
+        partita.intesa.controlla(n)?;
         partita.controlla_partiti()?;
         partita
             .ministri

@@ -174,6 +174,30 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "ore_salario_minimo",
     "copertura_salario_minimo",
     "elasticita_autonomia",
+    "intesa_base",
+    "ritorno_intesa",
+    "soglia_ultimatum",
+    "costo_firma",
+    "turni_blocco_respinta",
+    "peso_intesa_linea",
+    "malus_opposizione",
+    "ft_base",
+    "ft_distanza",
+    "ft_intesa",
+    "ft_max",
+    "costo_legge_respinta",
+    "valence_legge_respinta",
+    "distanza_alleato",
+    "costo_norma_lontana",
+    "scivolamento_percepita",
+    "costo_emendamento_respinto",
+    "ft_emendamento_respinto",
+    "costo_fiducia",
+    "costo_fiducia_distanza",
+    "turni_rinvio_regime",
+    "seggi_per_punto_linea",
+    "costo_seggio_perso",
+    "astensione_referendum",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -297,6 +321,16 @@ pub(crate) fn dati_base() -> DatiGioco {
         disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
     };
     DatiGioco::da_testi(&file).unwrap()
+}
+
+#[cfg(test)]
+impl DatiGioco {
+    /// Per i test d'unità: il valore della manopola `nome`, se c'è.
+    pub(crate) fn imposta_manopola(&mut self, nome: &str, valore: f64) {
+        if let Some(m) = self.manopole.get_mut(nome) {
+            m.valore = valore;
+        }
+    }
 }
 
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {
@@ -615,6 +649,7 @@ impl DatiGioco {
             .valida(&self.regioni, &self.dicasteri, self.struttura.settori.len())?;
         self.scenario.valida()?;
         partiti::valida(&self.scenario, &self.dicasteri)?;
+        crate::parlamento::valida_uscente(&self.scenario, &self.disposizioni)?;
         self.struttura.valida_piramide()?;
         let x0 = produzione_riferimento(self);
         match x0.iter().position(|&x| x.is_nan() || x <= 0.0) {

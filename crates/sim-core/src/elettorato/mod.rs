@@ -15,8 +15,10 @@ use ts_rs::TS;
 mod composizione;
 mod giudizio;
 mod redditi;
+mod referendum;
 mod voto;
 pub use redditi::{Indici, Reddito};
+pub use referendum::{Affluenza, Quesito};
 pub use voto::{Intenzioni, intenzioni};
 
 /// Punti dell'istogramma di posizione.

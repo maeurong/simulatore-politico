@@ -21,6 +21,7 @@ mod agenda;
 mod proposte;
 mod soddisfazione;
 
+pub(crate) use agenda::penalizza;
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
 pub use proposte::Proposta;
 
@@ -37,6 +38,8 @@ pub enum Causa {
     CantiereFermato,
     PropostaRespinta,
     BudgetTagliato,
+    NormaControPosizione,
+    LeggeRespinta,
 }
 
 impl fmt::Display for Causa {
@@ -50,6 +53,8 @@ impl fmt::Display for Causa {
             Self::CantiereFermato => "cantiere fermato dal Presidente del Consiglio",
             Self::PropostaRespinta => "proposta di fondi respinta",
             Self::BudgetTagliato => "spesa del dicastero tagliata in termini reali",
+            Self::NormaControPosizione => "norma firmata contro la sua posizione",
+            Self::LeggeRespinta => "legge respinta in aula",
         })
     }
 }
@@ -288,8 +293,8 @@ impl Ministri {
     }
 
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende l'importo
-    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio` non arriva
-    /// mai qui (`Partita::comanda` lo intercetta), quindi «comando senza dicastero» non si
+    /// del decreto: lo spende chi possiede l'economia. Invariante: `PresentaBilancio`,
+    /// `PresentaLegge`, `Emendamento` e `PoniFiducia` non arrivano mai qui (`Partita::comanda` li intercetta), quindi «comando senza dicastero» non si
     /// raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<Option<i64>, Errore> {
         let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
@@ -349,8 +354,11 @@ impl Ministri {
                 }
                 st.scelta = Some(indice);
             }
-            // Escluso dal `let ... else` in testa; lo intercetta `Partita::comanda`.
-            Comando::PresentaBilancio { .. } => {}
+            // Esclusi dal `let ... else` in testa; li intercetta `Partita::comanda`.
+            Comando::PresentaBilancio { .. }
+            | Comando::PresentaLegge { .. }
+            | Comando::Emendamento { .. }
+            | Comando::PoniFiducia { .. } => {}
         }
         Ok(None)
     }
@@ -395,16 +403,22 @@ impl Ministri {
     }
 }
 
-/// La causa con la somma più negativa; `None` se nessuna somma è negativa.
 pub(super) fn causa_principale(variazioni: &[Variazione]) -> Option<Causa> {
-    let mut somme: Vec<(Causa, f64)> = Vec::new();
-    for v in variazioni {
-        match somme.iter_mut().find(|(c, _)| *c == v.causa) {
-            Some((_, s)) => *s += v.delta,
-            None => somme.push((v.causa, v.delta)),
+    causa_peggiore(variazioni.iter().map(|v| (v.causa, v.delta)))
+}
+
+/// La causa con la somma più negativa; `None` se nessuna somma è negativa.
+pub(crate) fn causa_peggiore<C: Copy + PartialEq>(
+    variazioni: impl IntoIterator<Item = (C, f64)>,
+) -> Option<C> {
+    let mut somme: Vec<(C, f64)> = Vec::new();
+    for (causa, delta) in variazioni {
+        match somme.iter_mut().find(|(c, _)| *c == causa) {
+            Some((_, s)) => *s += delta,
+            None => somme.push((causa, delta)),
         }
     }
-    let peggiore = somme.into_iter().fold(None, |p: Option<(Causa, f64)>, x| {
+    let peggiore = somme.into_iter().fold(None, |p: Option<(C, f64)>, x| {
         if x.1 < p.map_or(0.0, |q| q.1) {
             Some(x)
         } else {
