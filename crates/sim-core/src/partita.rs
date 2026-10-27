@@ -922,37 +922,19 @@ impl Partita {
     /// `Comando` col nome del dicastero: sconosciuto, senza proposta di fondi, esercizio
     /// provvisorio, decreto decaduto, e i rifiuti di `Accogli` sull'atto.
     pub fn anteprima_accogli(&self, dicastero: &str) -> Result<Anteprima, Errore> {
-        let ko = |m: String| Err(Errore::Comando(m));
-        let Some(i) = (self.dati.dicasteri().iter()).position(|d| d.id == dicastero) else {
-            return ko(format!("dicastero sconosciuto: {dicastero}"));
-        };
+        let cx = self.contesto();
+        let i = self.ministri.ammesso(&cx, dicastero, true, false)?;
         let nome = &self.dati.dicasteri()[i].nome;
         let fondi = matches!(
             (self.ministri.dicasteri.get(i)).and_then(|st| st.proposta.map(|p| p.tipo)),
             Some(TipoProposta::Fondi { .. })
         );
         if !fondi {
-            return ko(format!("nessuna proposta di fondi: {nome}"));
-        }
-        if self.economia.esercizio_provvisorio(self.data) {
-            return ko(format!(
-                "esercizio provvisorio: nessuna misura che costi denaro: {nome}"
-            ));
+            return Err(Errore::Comando(format!(
+                "nessuna proposta di fondi: {nome}"
+            )));
         }
         self.accogli_ripetuto(dicastero)?;
-        let cx = Contesto {
-            dati: &self.dati,
-            governo: &self.governo,
-            partiti: &self.partiti,
-            grandezze: &self.grandezze,
-            economia: &self.economia,
-            sondaggio: &self.informazione.sondaggio,
-            disposizioni: &self.disposizioni,
-            parlamento: &self.parlamento,
-            indice_prezzi: self.informazione.statistica.indice_prezzi,
-            turno: self.turno,
-            data: self.data,
-        };
         let (atto, importo) = self.ministri.fondi_da_accogliere(&cx, i)?;
         let fondi = FondiDecreto::Accolti {
             dicastero: i,

@@ -565,6 +565,20 @@ fn anteprima_del_decreto_rifiuta_come_emana_decreto() {
 }
 
 #[test]
+fn anteprima_dell_accogli_rifiuta_come_accogli_dopo_le_dimissioni() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+}
+
+#[test]
 fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
     let p = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
     let importo = p.vista().ministeri[3].proposta.as_ref().unwrap().importo;
