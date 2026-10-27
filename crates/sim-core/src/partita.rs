@@ -146,6 +146,7 @@ impl Partita {
                 totali: (0, 0),
                 incarico: None,
                 proposta: None,
+                allargati: Vec::new(),
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -164,6 +165,7 @@ impl Partita {
                 ),
                 incarico: None,
                 proposta: None,
+                allargati: Vec::new(),
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -207,12 +209,13 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi
-    // che slittano) → atti dei ministri → aula (leggi slittate nel turno del bilancio →
-    // conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
-    // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → voto, nel turno del voto → soglie
-    // (ministri, ritorno dell'intesa) → governo nuovo, nel turno di trattativa → calendario →
+    // bilancio del governo IA in ottobre-dicembre → default delle decisioni (proposte, emendamenti
+    // aperti respinti tranne quelli delle leggi che slittano) → atti dei ministri → aula (leggi
+    // slittate nel turno del bilancio → conversioni → bilancio → leggi → referendum) → motore
+    // (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna
+    // ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto, nel turno
+    // del voto → soglie (ministri, ritorno dell'intesa) → governo nuovo, maggioranza contigua o
+    // scioglimento, nel turno di trattativa → calendario →
     // apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte;
     // il costo del taglio se l'anno entra in esercizio provvisorio).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula non vota: nessuno può
@@ -222,6 +225,17 @@ impl Partita {
             return;
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
+        // ponytail: governo IA minimo, il piano 8 lo sostituisce. Le proposte dei suoi ministri
+        // restano ignorate; in ottobre-dicembre presenta la bozza del bilancio, se c'è.
+        if self.legislatura.fase == Fase::Ordinaria
+            && !self.governa()
+            && self.data.trimestre == 4
+            && self.economia.bilancio_presentato.is_none()
+            && let Some(b) = self.bozza_bilancio()
+        {
+            // La bozza passa le regole della presentazione; se non le passasse, nessun bilancio.
+            let _ = self.presenta_bilancio(&b);
+        }
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         // Prima del voto del bilancio: approvato, esce dal calendario.
         let occupato = self.turno_del_bilancio();
@@ -959,6 +973,7 @@ impl Partita {
     /// # Errors
     /// Quelli di `PresentaLegge` tranne il calendario pieno.
     pub fn anteprima(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore> {
+        self.di_governo()?;
         let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
         let capacita = (m.proponente)
             .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
@@ -991,6 +1006,7 @@ impl Partita {
     /// # Errors
     /// `Comando`, come `EmanaDecreto`.
     pub fn anteprima_decreto(&self, decreto: &Decreto) -> Result<Anteprima, Errore> {
+        self.di_governo()?;
         let (da, a, importo) = parlamento::ammetti(
             &self.dati,
             &self.parlamento.decaduti,
@@ -1008,6 +1024,7 @@ impl Partita {
     /// `Comando` col nome del dicastero: sconosciuto, senza proposta di fondi, esercizio
     /// provvisorio, decreto decaduto, e i rifiuti di `Accogli` sull'atto.
     pub fn anteprima_accogli(&self, dicastero: &str) -> Result<Anteprima, Errore> {
+        self.di_governo()?;
         self.accogli_ripetuto(dicastero)?;
         let cx = self.contesto();
         // accogli = true (spende denaro), sul_ministro = false (non è un comando sul ministro)
@@ -1485,13 +1502,69 @@ impl Partita {
             } else {
                 Vec::new()
             },
+            seggi_veri: None,
         }
     }
 
+    /// In trattativa con l'incarico al giocatore.
+    fn con_incarico(&self) -> bool {
+        let l = &self.legislatura;
+        l.fase == Fase::Trattativa && l.incarico == Some(Incarico::Giocatore)
+    }
+
     /// La disponibilità di ogni partito IA sulla dichiarazione in corso; senza dichiarazione,
-    /// sulla coalizione del giocatore dell'ultimo voto (alla fondazione, lui da solo).
+    /// sulla coalizione del giocatore dell'ultimo voto (alla fondazione, lui da solo). In
+    /// trattativa con l'incarico, quella dei partiti fuori dalla coalizione a entrarvi.
     pub fn disponibilita(&self) -> Vec<VoceDisponibilita> {
-        self.quadro().disponibilita(&self.dichiarazione_corrente())
+        if !self.con_incarico() {
+            return self.quadro().disponibilita(&self.dichiarazione_corrente());
+        }
+        let c = self.coalizione_del_giocatore();
+        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)))
+    }
+
+    /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore coi seggi
+    /// del voto (scelta 9 del piano 7).
+    fn dopo_il_voto(&self, quali: impl Iterator<Item = usize>) -> Vec<VoceDisponibilita> {
+        let pl = &self.parlamento;
+        let q = Quadro {
+            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        };
+        let d = Dichiarazione {
+            partiti: (self.coalizione_del_giocatore().into_iter())
+                .filter(|&j| j != self.giocatore)
+                .collect(),
+            cessioni: Vec::new(),
+        };
+        q.voci(&d, quali)
+    }
+
+    /// `Allarga`: in trattativa con l'incarico, il partito `id` entra nella coalizione se è
+    /// disponibile coi seggi del voto.
+    ///
+    /// # Errors
+    /// `Comando` con la fase, col nome del partito sconosciuto o già nella coalizione, o col
+    /// nome e la causa se non è disponibile.
+    pub(crate) fn allarga(&mut self, id: &str) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        if !self.con_incarico() {
+            return ko("Allargamento: solo in trattativa, con l'incarico".into());
+        }
+        let Some(j) = self.partiti.iter().position(|p| p.id == id) else {
+            return ko(format!("Partito sconosciuto: {id}"));
+        };
+        let nome = &self.partiti[j].nome;
+        if self.coalizione_del_giocatore().contains(&j) {
+            return ko(format!("{nome} è già nella coalizione"));
+        }
+        if let Some(v) = self.dopo_il_voto(std::iter::once(j)).pop()
+            && !v.disponibile
+        {
+            return ko(format!("{nome} non entra: {}", v.causa));
+        }
+        self.legislatura.allargati.push(j);
+        Ok(())
     }
 
     /// La dichiarazione in corso; senza, la coalizione del giocatore dell'ultimo voto, senza
@@ -1534,8 +1607,7 @@ impl Partita {
     /// del partito sconosciuto o fuori dalla coalizione.
     pub(crate) fn proponi_spartizione(&mut self, dicasteri: &[Assegnazione]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
-        let l = &self.legislatura;
-        if l.fase != Fase::Trattativa || l.incarico != Some(Incarico::Giocatore) {
+        if !self.con_incarico() {
             return ko("Spartizione: si propone solo in trattativa, con l'incarico".into());
         }
         let d = self.dati.dicasteri();
@@ -1575,13 +1647,15 @@ impl Partita {
         Ok(())
     }
 
-    /// La coalizione del giocatore all'ultimo voto; lui da solo se non ne ha.
+    /// La coalizione del giocatore all'ultimo voto (lui da solo se non ne ha), più gli allargati.
     fn coalizione_del_giocatore(&self) -> Vec<usize> {
-        let g = self.giocatore;
-        (self.legislatura.coalizioni.iter())
+        let (g, l) = (self.giocatore, &self.legislatura);
+        let mut c = (l.coalizioni.iter())
             .find(|c| c.contains(&g))
             .cloned()
-            .unwrap_or_else(|| vec![g])
+            .unwrap_or_else(|| vec![g]);
+        c.extend(&l.allargati);
+        c
     }
 
     /// Seggi di Camera più Senato per partito.
@@ -1623,8 +1697,7 @@ impl Partita {
     /// In trattativa con l'incarico al giocatore, una voce per alleato: richiesta e offerta della
     /// proposta in corso o, senza, di quella di default che la chiusura applicherà; vuota altrove.
     pub fn richieste(&self) -> Vec<VoceRichiesta> {
-        let l = &self.legislatura;
-        if l.fase != Fase::Trattativa || l.incarico != Some(Incarico::Giocatore) {
+        if !self.con_incarico() {
             return Vec::new();
         }
         (self.quote(&self.assegnati_dal_giocatore()).into_iter())
@@ -1639,27 +1712,45 @@ impl Partita {
     /// Il governo nuovo alla chiusura della trattativa, dopo le soglie. Con l'incarico al
     /// giocatore la sua proposta (o quella di default), i tecnici al suo partito, e ogni alleato
     /// riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)`; con l'incarico IA il
-    /// primo partito per seggi e la spartizione di default. Poi ministri tutti nuovi, giudizio da
-    /// zero per chi entra al governo, fase ordinaria. Senza incarico la trattativa resta aperta
-    /// (Task 10).
+    /// primo partito per seggi e la spartizione di default. Senza maggioranza del giocatore (con
+    /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
+    /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
+    /// scioglie le Camere: si vota nella chiusura del turno dopo. Poi ministri tutti nuovi,
+    /// giudizio da zero per chi entra al governo, fase ordinaria.
     fn forma_governo(&mut self) {
         let seggi = self.seggi_per_partito();
         let di = |j: &usize| seggi.get(*j).copied().unwrap_or(0);
-        let (presidente, coalizione, assegnati) = match &self.legislatura.incarico {
-            None => return,
-            Some(Incarico::Giocatore) => (
-                self.giocatore,
-                self.coalizione_del_giocatore(),
-                self.assegnati_dal_giocatore(),
-            ),
-            Some(Incarico::Ia { coalizione }) => {
-                let guida = (coalizione.iter())
-                    .max_by_key(|&j| (di(j), std::cmp::Reverse(*j)))
-                    .copied()
-                    .unwrap_or(self.giocatore);
-                let v = legislatura::spartizione_di_default(&self.dati, coalizione, guida, &seggi);
-                (guida, coalizione.clone(), v.into_iter().map(Some).collect())
-            }
+        let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
+        let sua = self.coalizione_del_giocatore();
+        let (presidente, coalizione, assegnati) = if self.legislatura.incarico
+            == Some(Incarico::Giocatore)
+            && legislatura::maggioranza(camera, senato, &sua)
+        {
+            (self.giocatore, sua, self.assegnati_dal_giocatore())
+        } else {
+            let ia = match &self.legislatura.incarico {
+                Some(Incarico::Ia { coalizione }) => Some(coalizione.clone()),
+                _ => legislatura::maggioranza_contigua(
+                    &self.partiti,
+                    camera,
+                    senato,
+                    Some(self.giocatore),
+                ),
+            };
+            let Some(coalizione) = ia else {
+                let l = &mut self.legislatura;
+                l.fase = Fase::Sciolta;
+                l.incarico = None;
+                l.proposta = None;
+                l.allargati.clear();
+                return;
+            };
+            let guida = (coalizione.iter())
+                .max_by_key(|&j| (di(j), std::cmp::Reverse(*j)))
+                .copied()
+                .unwrap_or(self.giocatore);
+            let v = legislatura::spartizione_di_default(&self.dati, &coalizione, guida, &seggi);
+            (guida, coalizione, v.into_iter().map(Some).collect())
         };
         if presidente == self.giocatore {
             let (base, per_punto) = (
@@ -1708,6 +1799,7 @@ impl Partita {
         l.fase = Fase::Ordinaria;
         l.incarico = None;
         l.proposta = None;
+        l.allargati.clear();
     }
 
     fn voci_partiti(&self) -> Vec<VocePartito> {
@@ -1803,7 +1895,8 @@ impl Partita {
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
-            disponibilita: if l.turno_di_voto(self.turno) && !self.finita() {
+            disponibilita: if (l.turno_di_voto(self.turno) || self.con_incarico()) && !self.finita()
+            {
                 self.disponibilita()
             } else {
                 Vec::new()
@@ -1819,6 +1912,11 @@ impl Partita {
             },
             richieste: self.richieste(),
             elezioni: l.elezioni.clone(),
+            incarico: match (l.fase, &l.incarico) {
+                (Fase::Trattativa, Some(Incarico::Giocatore)) => Some("giocatore".into()),
+                (Fase::Trattativa, _) => Some("Capo dello Stato".into()),
+                _ => None,
+            },
         }
     }
 
@@ -2054,7 +2152,14 @@ impl Partita {
             "legislatura.incarico IA con una coalizione vuota o un partito fuori dai partiti",
         )?;
         let coalizione = self.coalizione_del_giocatore();
-        let in_trattativa = l.fase == Fase::Trattativa && l.incarico == Some(Incarico::Giocatore);
+        let in_trattativa = self.con_incarico();
+        ok(
+            l.allargati.iter().all(|&j| j < n)
+                && unici(coalizione.iter().copied())
+                && (in_trattativa || l.allargati.is_empty()),
+            "legislatura.allargati con un partito fuori dai partiti, ripetuto, già nella \
+             coalizione o fuori dalla trattativa col giocatore",
+        )?;
         ok(
             l.proposta.as_ref().is_none_or(|v| {
                 in_trattativa

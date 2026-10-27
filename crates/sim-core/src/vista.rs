@@ -55,7 +55,9 @@ pub struct Vista {
     /// I referendum in attesa del voto.
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
-    /// Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
+    /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
+    /// l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
+    /// coi seggi del voto. Vuota altrove.
     pub disponibilita: Vec<VoceDisponibilita>,
     /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
@@ -66,6 +68,8 @@ pub struct Vista {
     pub richieste: Vec<VoceRichiesta>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
+    /// In trattativa a chi va l'incarico: «giocatore» o «Capo dello Stato»; `None` altrove.
+    pub incarico: Option<String>,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

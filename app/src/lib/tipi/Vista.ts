@@ -76,7 +76,9 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceM
  */
 referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, 
 /**
- * Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
+ * Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
+ * l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
+ * coi seggi del voto. Vuota altrove.
  */
 disponibilita: Array<VoceDisponibilita>, 
 /**
@@ -93,4 +95,8 @@ richieste: Array<VoceRichiesta>,
 /**
  * Gli esiti dei voti, il più recente per primo.
  */
-elezioni: Array<EsitoElezioni>, };
+elezioni: Array<EsitoElezioni>, 
+/**
+ * In trattativa a chi va l'incarico: «giocatore» o «Capo dello Stato»; `None` altrove.
+ */
+incarico: string | null, };

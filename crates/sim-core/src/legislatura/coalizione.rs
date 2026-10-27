@@ -2,6 +2,7 @@
 //! (formazione-di-coalizioni:34, :48; premio alle liste della coalizione, sistemi-elettorali:39).
 
 use super::fondazione::quota_fra_i_votanti;
+use super::spartizione::maggioranza;
 use crate::dati::DatiGioco;
 use crate::disposizioni::Leve;
 use crate::elezioni::{LeggeElettorale, SeggiLista};
@@ -128,12 +129,18 @@ pub(crate) struct Quadro<'a> {
     pub intesa: &'a [f64],
     /// Gli alleati del giocatore in carica; vuoto se non è al governo.
     pub alleati: Vec<usize>,
+    /// Dopo il voto, i seggi veri di Camera e Senato: valgono per ogni coalizione al posto del
+    /// riparto sul sondaggio, e `P` vale 1 con la maggioranza in entrambe le Camere, 0 senza.
+    pub seggi_veri: Option<(Vec<u32>, Vec<u32>)>,
 }
 
 impl Quadro<'_> {
     /// Seggi di Camera e Senato per partito al voto con `d`: riparto sul sondaggio pubblico, poi
     /// le cessioni; zero se il riparto rifiuta i voti.
     fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
+        if let Some(veri) = &self.seggi_veri {
+            return veri.clone();
+        }
         let n = self.partiti.len();
         let c = coalizioni_al_voto(self.ultime, self.giocatore, Some(d));
         let esito = proietta(
@@ -155,7 +162,7 @@ impl Quadro<'_> {
 
     /// I termini, già pesati e con la loro causa, del valore atteso per `j` al voto con `d` e i
     /// `seggi` di `d`, nella sua coalizione `k`: `peso_seggi_coalizione · s_j / S`,
-    /// `peso_governare · P_k`, `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
+    /// `peso_governare · P_k` (coi seggi veri, 1 o 0), `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
     /// k del giocatore]`.
     fn termini(
@@ -180,7 +187,11 @@ impl Quadro<'_> {
             (seggi_k - f64::from(t / 2 + 1)) / f64::from(t.max(1))
         };
         let x = margine(camera).min(margine(senato)) / m("scala_maggioranza");
-        let governare = 1.0 / (1.0 + (-x).exp());
+        let governare = match self.seggi_veri {
+            Some(_) if maggioranza(camera, senato, &k) => 1.0,
+            Some(_) => 0.0,
+            None => 1.0 / (1.0 + (-x).exp()),
+        };
         let pos = |i: usize| self.partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
         let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
             .map(|&i| (pos(i) - pos(j)).abs())
@@ -221,7 +232,7 @@ impl Quadro<'_> {
     /// giocatore con lui aggiunto (e le cessioni di `d`) supera quello nella disposizione senza di
     /// lui; la causa è il termine con lo scarto più grande nel verso che decide, `Distanza` se
     /// nessuno scarta in quel verso.
-    fn voci(
+    pub(crate) fn voci(
         &self,
         d: &Dichiarazione,
         quali: impl Iterator<Item = usize>,

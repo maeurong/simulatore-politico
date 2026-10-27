@@ -79,16 +79,40 @@ pub enum Comando {
     ProponiSpartizione {
         dicasteri: Vec<Assegnazione>,
     },
+    /// Allarga la coalizione in trattativa, con l'incarico, al partito `partito` (id): entra se è
+    /// disponibile coi seggi del voto. Il partito resta fino alla formazione del governo.
+    Allarga {
+        partito: String,
+    },
 }
 
 impl Partita {
+    /// La guardia dei comandi di governo e delle loro anteprime.
+    ///
+    /// # Errors
+    /// `Comando` a partita finita o, se il giocatore non governa, col motivo.
+    pub(crate) fn di_governo(&self) -> Result<(), Errore> {
+        if self.finita() {
+            return Err(Errore::Comando("La partita è finita".into()));
+        }
+        if self.governa() {
+            return Ok(());
+        }
+        let motivo = match self.legislatura().fase {
+            Fase::Sciolta => "non governi: Camere sciolte",
+            Fase::Trattativa => "non governi: trattativa in corso",
+            Fase::Ordinaria => "non governi: sei all'opposizione",
+        };
+        Err(Errore::Comando(motivo.into()))
+    }
+
     /// Applica un comando del giocatore.
     ///
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
-    /// comando tranne `DichiaraCoalizione` e `ProponiSpartizione` è di governo: se il giocatore
-    /// non governa, `Comando` col motivo.
+    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione` e `Allarga` è di governo: se il
+    /// giocatore non governa, `Comando` col motivo.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
@@ -99,14 +123,10 @@ impl Partita {
         if let Comando::ProponiSpartizione { dicasteri } = &c {
             return self.proponi_spartizione(dicasteri);
         }
-        if !self.governa() {
-            let motivo = match self.legislatura().fase {
-                Fase::Sciolta => "non governi: Camere sciolte",
-                Fase::Trattativa => "non governi: trattativa in corso",
-                Fase::Ordinaria => "non governi: sei all'opposizione",
-            };
-            return Err(Errore::Comando(motivo.into()));
+        if let Comando::Allarga { partito } = &c {
+            return self.allarga(partito);
         }
+        self.di_governo()?;
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
             Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),

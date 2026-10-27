@@ -78,6 +78,29 @@ pub fn con_ingresso(mut f: FileDati, nome: &str, valore: f64) -> FileDati {
     f
 }
 
+/// Nella sezione `[[partito]]` di id `id` dello scenario, la riga `valore = ...` sotto
+/// `[partito.valence]` diventa `v`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn sostituisci_valence(mut f: FileDati, id: &str, v: f64) -> FileDati {
+    let testa = format!("id = \"{id}\"\n");
+    let partito = f
+        .scenario
+        .find(&testa)
+        .unwrap_or_else(|| panic!("partito {id} assente nello scenario"));
+    let valence = partito
+        + f.scenario[partito..]
+            .find("[partito.valence]\nvalore = ")
+            .unwrap_or_else(|| panic!("{id}: valence assente"))
+        + "[partito.valence]\n".len();
+    let fine = valence + f.scenario[valence..].find('\n').expect("riga valore");
+    f.scenario
+        .replace_range(valence..fine, &format!("valore = {v:?}"));
+    f
+}
+
 /// `replacen(da, a, 1)` nel file di nome `file`; panico se `da` non c'e'.
 #[allow(
     dead_code,

@@ -467,7 +467,8 @@ impl Ministri {
             | Comando::EmanaDecreto { .. }
             | Comando::InvitaAstensione
             | Comando::DichiaraCoalizione { .. }
-            | Comando::ProponiSpartizione { .. } => {}
+            | Comando::ProponiSpartizione { .. }
+            | Comando::Allarga { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }

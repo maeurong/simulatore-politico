@@ -12,7 +12,9 @@ pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione};
 pub use fondazione::{AnteprimaFondazione, Fondazione, Posto, posti};
 pub use spartizione::{Assegnazione, VoceRichiesta};
-pub(crate) use spartizione::{richiesta, spartizione_di_default};
+pub(crate) use spartizione::{
+    maggioranza, maggioranza_contigua, richiesta, spartizione_di_default,
+};
 pub use voto::{EsitoElezioni, Incarico, VotiPartito};
 pub(crate) use voto::{incarico, voti_per_regione};
 
@@ -32,6 +34,8 @@ pub enum Fase {
 /// `elezioni`: gli esiti dei voti, il più recente per primo. `totali`: i seggi di Camera e Senato
 /// del parlamento in carica. `incarico`: a chi va dopo l'ultimo voto. `proposta`: la spartizione
 /// proposta in trattativa, un partito per dicastero nell'ordine dei dati (`None` = un tecnico).
+/// `allargati`: i partiti entrati con `Allarga` nella coalizione del giocatore in trattativa, fuori
+/// da `coalizioni`; vuoto fuori dalla trattativa.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -43,6 +47,7 @@ pub struct Legislatura {
     pub totali: (u32, u32),
     pub incarico: Option<Incarico>,
     pub proposta: Option<Vec<Option<usize>>>,
+    pub allargati: Vec<usize>,
 }
 
 impl Legislatura {
