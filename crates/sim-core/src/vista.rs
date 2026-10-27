@@ -72,7 +72,8 @@ pub struct Vista {
     pub incarico: Option<VoceIncarico>,
     /// Il governo cade alla chiusura del turno.
     pub dimissioni: bool,
-    /// Turno di crisi: solo ordinaria amministrazione, `Allarga` ammesso.
+    /// Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
+    /// fuori dal turno del voto (che chiude la crisi).
     pub crisi: bool,
 }
 

@@ -148,7 +148,7 @@ impl Parlamento {
     }
 
     /// Chiusura: ogni emendamento ancora aperto è respinto, tranne quelli delle leggi che
-    /// slittano nel turno del bilancio (`occupato`); rende gli alleati che pagano.
+    /// slittano nel turno del bilancio o di crisi (`occupato`); rende gli alleati che pagano.
     pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<usize> {
         let aperti = (self.misure.iter_mut())
             .filter(|m| !(occupato && slitta(m, turno)))

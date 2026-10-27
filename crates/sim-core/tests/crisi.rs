@@ -2,7 +2,7 @@ mod comune;
 use comune::{con_seggi, dati_base, edita, partito, presenta};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
-use sim_core::parlamento::FormaMisura;
+use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Partita};
 
 /// Destra 100 e centrodestra 101 alla Camera (201 su 400), 50 e 51 al Senato: senza il
@@ -38,13 +38,71 @@ fn un_alleato_sotto_25_esce_e_apre_la_crisi() {
 fn in_crisi_solo_ordinaria_amministrazione() {
     let mut p = in_crisi();
     let prima = p.salva().unwrap();
-    let e = presenta(&mut p, &[("tetto_contante", "1000")]).unwrap_err();
-    assert!(e.to_string().contains("ordinaria amministrazione"), "{e}");
+    let valori = vec![ValoreProposto {
+        disposizione: "tetto_contante".into(),
+        gradino: "1000".into(),
+    }];
+    let decreto = Decreto::Fondi {
+        da: "sanita".into(),
+        a: "interno".into(),
+        importo: 1,
+    };
+    let rifiutati = [
+        Comando::PresentaLegge {
+            valori: valori.clone(),
+        },
+        Comando::PresentaBilancio {
+            bilancio: p.economia().bilancio.clone(),
+        },
+        Comando::EmanaDecreto {
+            decreto: decreto.clone(),
+        },
+        Comando::PoniFiducia { misura: 0 },
+        Comando::Accogli {
+            dicastero: "sanita".into(),
+        },
+    ];
+    let mut errori: Vec<String> = Vec::new();
+    for c in rifiutati {
+        errori.push(p.comanda(c).unwrap_err().to_string());
+    }
+    errori.push(p.anteprima(&valori).unwrap_err().to_string());
+    errori.push(p.anteprima_decreto(&decreto).unwrap_err().to_string());
+    errori.push(p.anteprima_accogli("sanita").unwrap_err().to_string());
+    for e in &errori {
+        assert!(e.contains("ordinaria amministrazione"), "{e}");
+    }
     assert_eq!(p.salva().unwrap(), prima);
-    p.comanda(Comando::Ferma {
-        dicastero: "sanita".into(),
+    // Ammessi: il controllo sui ministri e le dimissioni.
+    let con_proposta = (p.vista().ministeri.into_iter())
+        .find(|m| m.proposta.is_some())
+        .unwrap();
+    p.comanda(Comando::Respingi {
+        dicastero: con_proposta.dicastero,
     })
     .unwrap();
+    p.comanda(Comando::Dimettiti).unwrap();
+}
+
+/// Ticket 09, riga 45: la legge col voto nel turno di crisi resta ferma un turno, senza decadere.
+#[test]
+fn in_crisi_le_leggi_slittano() {
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let cd = partito("centrodestra");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();
+    let id = p.parlamento().misure.last().unwrap().id;
+    assert_eq!(p.parlamento().misure.last().unwrap().voto, 1);
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().crisi, Some(1));
+    p.comanda(Comando::Allarga {
+        partiti: vec!["estrema_destra".into()],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(!p.parlamento().esiti.iter().any(|e| e.misura == id));
+    let m = p.parlamento().misure.iter().find(|m| m.id == id).unwrap();
+    assert_eq!(m.voto, 2);
 }
 
 #[test]
@@ -112,9 +170,10 @@ fn chi_entra_in_crisi_riparte_da_zero() {
     assert_eq!(p.intesa().ultimatum[ed], None);
 }
 
-/// Il centro (3) entra con la Sanità (3), poi esce: destra e centrodestra reggono.
+/// Il centro (3) entra con la Sanità (3), poi esce: destra e centrodestra reggono (201 su 400,
+/// 101 su 200), alla pari di seggi, e il centrodestra chiede più dei suoi due dicasteri.
 fn col_centro_che_esce() -> Partita {
-    let p = Partita::nuova(dati_base(), 1);
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
     edita(&p, |j| {
         j["governo"]["dicasteri"][3] = serde_json::json!(3);
         j["governo"]["coalizione"]
@@ -130,12 +189,29 @@ fn col_centro_che_esce() -> Partita {
 #[test]
 fn rimpasto_se_la_maggioranza_regge() {
     let mut p = col_centro_che_esce();
+    let prima = p.governo().dicasteri.clone();
     p.chiudi_turno();
     assert!(!p.governo().al_governo(3));
     assert_ne!(p.governo().dicasteri[3], 3);
-    assert!(p.ministri().dicasteri[3].ministro.is_none());
     assert_eq!(p.legislatura().crisi, None);
     assert!(p.governa());
+    // Il centrodestra, che resta, tiene Ambiente ed Energia ed Esteri e Difesa.
+    let cd = partito("centrodestra");
+    assert_eq!(
+        (p.governo().dicasteri[6], p.governo().dicasteri[9]),
+        (cd, cd)
+    );
+    let causa = |k: usize| p.ministri().dicasteri[k].causa_dimissioni;
+    assert!(p.ministri().dicasteri[3].ministro.is_none());
+    assert_eq!(causa(3), Some(Causa::UscitaDalGoverno));
+    let cambiati: Vec<usize> = (0..prima.len())
+        .filter(|&k| k != 3 && prima[k] != p.governo().dicasteri[k])
+        .collect();
+    assert_eq!(cambiati, [1, 2, 4, 8]);
+    for k in cambiati {
+        assert!(p.ministri().dicasteri[k].ministro.is_none());
+        assert_eq!(causa(k), Some(Causa::Rimpasto), "dicastero {k}");
+    }
 }
 
 #[test]
@@ -149,6 +225,13 @@ fn rimpasto_con_interim_si_ricarica() {
     p.chiudi_turno();
     let q = Partita::carica(&p.salva().unwrap()).unwrap();
     assert_eq!(p, q);
+    // La Giustizia (8), già in interim, passa al centrodestra: resta la causa di prima, e la rosa
+    // è del partito nuovo.
+    let cd = partito("centrodestra");
+    let st = &p.ministri().dicasteri[8];
+    assert_eq!(p.governo().dicasteri[8], cd);
+    assert_eq!(st.causa_dimissioni, Some(Causa::DimissioniChieste));
+    assert!(!st.rosa.is_empty() && st.rosa.iter().all(|x| x.partito == cd));
 }
 
 #[test]

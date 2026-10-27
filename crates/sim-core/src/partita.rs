@@ -249,8 +249,9 @@ impl Partita {
             let _ = self.presenta_bilancio(&b);
         }
         self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
-        // Prima del voto del bilancio: approvato, esce dal calendario.
-        let occupato = self.turno_del_bilancio();
+        // Prima del voto del bilancio: approvato, esce dal calendario. In crisi le leggi restano
+        // ferme un turno senza decadere, come nel turno del bilancio (ticket 09, riga 45).
+        let occupato = self.turno_del_bilancio() || self.in_crisi();
         let respinti = self.parlamento.respingi_aperti(self.turno, occupato);
         self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
@@ -438,7 +439,7 @@ impl Partita {
         f(&mut self.ministri, &cx, &mut self.caso)
     }
 
-    /// `occupato`: il turno del bilancio, letto prima di ogni voto.
+    /// `occupato`: il turno del bilancio o di crisi, letto prima di ogni voto.
     fn aula(&mut self, occupato: bool) {
         if occupato {
             for m in self.parlamento.slitta_leggi(self.turno) {
@@ -2853,8 +2854,9 @@ mod tests {
     }
 
     /// Il centrodestra (4, posizione 5) vota la caduta del governo di 4 e 5 (destra, posizione 6,
-    /// presidente) coi seggi veri `c`, `s` e la sua intesa. Manopole dei dati: seggi 4, governare
-    /// 2, distanza 1, guida 1, intesa 2 su base 60. Restare: `4q + 2 − 1 − (60 − intesa) / 50`.
+    /// presidente) coi seggi veri `c`, `s` e la sua intesa `i`. Manopole dei dati: seggi 4,
+    /// governare 2, distanza 1, guida 1, intesa 2 su base 60. Con `q` la sua quota dei seggi veri,
+    /// restare vale `4q + 2 − |5 − 6| − 2 · (60 − i) / 100 = 4q + 1 − (60 − i) / 50`.
     fn cade(c: [u32; 7], s: [u32; 7], intesa: f64) -> bool {
         let mut p = Partita::nuova(dati_base(), 1);
         p.intesa.valori[4] = intesa;
@@ -2865,23 +2867,54 @@ mod tests {
         legislatura::vota_la_caduta(&q, 4, &[4, 5], 5)
     }
 
+    /// La maggioranza contigua senza la destra, che sceglie il ramo.
+    fn contigua(c: [u32; 7], s: [u32; 7]) -> Option<Vec<usize>> {
+        let p = Partita::nuova(dati_base(), 1);
+        legislatura::maggioranza_contigua(&p.partiti, &c, &s, Some(5))
+    }
+
     #[test]
     fn la_caduta_vale_sui_tre_rami() {
-        // Contigua senza la destra (4, 6), guidata dall'estrema destra: cadere vale
-        // `4q + 2 − 2`, cioè restare `− 1 + (60 − intesa) / 50`.
+        // Ramo 1: contigua (4, 6) con l'estrema destra prima per seggi (165 contro 152). Cadere
+        // vale `4q + 2 − |5 − 7| = 4q`: cade se `(60 − i) / 50 > 1`, cioè sotto intesa 10.
         let (c, s) = ([10, 40, 29, 10, 101, 100, 110], [5, 20, 14, 5, 51, 50, 55]);
+        assert_eq!(contigua(c, s), Some(vec![4, 6]));
         assert!(!cade(c, s, 60.0));
-        assert!(!cade(c, s, 50.0));
-        assert!(cade(c, s, 0.0));
-        // Stessa contigua guidata dal centrodestra: in più la guida, `+ 1`.
+        assert!(!cade(c, s, 15.0));
+        assert!(cade(c, s, 5.0));
+        // Ramo 2: stessa contigua col centrodestra primo (165 contro 152): in più la guida,
+        // cadere vale `4q + 1`; cade se `(60 − i) / 50 > 0`, cioè sotto la base.
         let (c, s) = ([10, 40, 29, 10, 110, 100, 101], [5, 20, 14, 5, 55, 50, 51]);
+        assert_eq!(contigua(c, s), Some(vec![4, 6]));
         assert!(!cade(c, s, 60.0));
-        assert!(cade(c, s, 50.0));
-        // La contigua senza la destra è a sinistra (0, 1, 2): cadere vale il voto proiettato
-        // sul sondaggio, col centrodestra da solo: `4q + 2P`, non oltre 0,4 su questo sondaggio
-        // (nessun seggio vero conta). Con 6 seggi veri su 600 restare vale 1,04 all'intesa base, −0,16 a zero.
+        assert!(cade(c, s, 59.0));
+        // Ramo 3: contigua (0, 1, 2), senza il centrodestra. Cadere vale i suoi termini al voto
+        // proiettato sul sondaggio, da solo: `4q' + 2P`, fra 0 e 0,4 su questo sondaggio, dove i
+        // seggi veri non contano. Con 6 seggi veri su 600 (`q` = 0,01) restare vale
+        // `1,04 − (60 − i) / 50`: 1,04 alla base, −0,16 a intesa zero.
         let (c, s) = ([10, 100, 100, 10, 4, 116, 60], [5, 50, 50, 5, 2, 58, 30]);
+        assert_eq!(contigua(c, s), Some(vec![0, 1, 2]));
         assert!(!cade(c, s, 60.0));
         assert!(cade(c, s, 0.0));
+    }
+
+    /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: niente
+    /// maggioranza, ma la sfiducia pareggia alla Camera e perde al Senato. Il pareggio la respinge.
+    #[test]
+    fn il_pareggio_respinge_la_sfiducia() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.parlamento.seggi_camera = vec![10, 40, 30, 20, 100, 100, 100];
+        p.parlamento.seggi_senato = vec![5, 20, 14, 10, 51, 50, 50];
+        let pl = &p.parlamento;
+        assert!(!legislatura::maggioranza(
+            &pl.seggi_camera,
+            &pl.seggi_senato,
+            &p.governo.coalizione
+        ));
+        assert!(!p.sfiducia(None, None));
+        let e = &p.parlamento.esiti[0];
+        assert_eq!((e.camera.si, e.camera.no), (200, 200));
+        assert!(e.senato.si < e.senato.no);
+        assert!(!e.approvata && !p.legislatura.dimissioni);
     }
 }

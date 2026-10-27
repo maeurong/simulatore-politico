@@ -712,10 +712,10 @@ impl Parlamento {
         (self.misure.iter()).any(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
     }
 
-    /// Nel turno del bilancio le leggi col voto nel turno passano al turno dopo e perdono la
-    /// questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti con la
-    /// fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui costo
-    /// si rimborsa.
+    /// Nel turno del bilancio o di crisi le leggi col voto nel turno passano al turno dopo e
+    /// perdono la questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti
+    /// con la fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui
+    /// costo si rimborsa.
     pub(crate) fn slitta_leggi(&mut self, turno: u32) -> Vec<Misura> {
         let mut con_fiducia = Vec::new();
         for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {

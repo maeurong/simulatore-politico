@@ -197,4 +197,15 @@ mod tests {
         let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[50, 50, 200], &[None; 10]);
         assert_eq!(v, [2, 0, 1, 0, 1, 2, 0, 2, 1, 2]);
     }
+
+    /// Seggi 100, 50, 150 come sopra, col partito 1 che tiene Esteri (9, peso 2): gli resta, e
+    /// la sua richiesta scoperta scende da 2,82 a 0,82. In più prende solo Ambiente (6), dove le
+    /// scoperte sono 0,67, 0,82 e 0,51; il suo peso totale resta 3, come senza il tenuto.
+    #[test]
+    fn il_tenuto_resta_e_sconta_la_richiesta() {
+        let mut tenuti = [None; 10];
+        tenuti[9] = Some(1);
+        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[100, 50, 150], &tenuti);
+        assert_eq!(v, [2, 2, 0, 2, 0, 2, 1, 0, 0, 1]);
+    }
 }
