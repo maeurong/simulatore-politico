@@ -55,16 +55,18 @@ impl Intesa {
         }
     }
 
-    /// L'intesa del partito `j` cambia di `delta`, limitata a 0-100, e la variazione resta.
+    /// L'intesa del partito `j` cambia di `delta`, limitata a 0-100, e resta la variazione
+    /// applicata, non quella chiesta.
     pub(crate) fn varia(&mut self, j: usize, causa: CausaIntesa, delta: f64, turno: u32) {
         let Some(x) = self.valori.get_mut(j) else {
             return;
         };
+        let prima = *x;
         *x = (*x + delta).clamp(0.0, 100.0);
         self.variazioni.push(VariazioneIntesa {
             partito: j,
             causa,
-            delta,
+            delta: *x - prima,
             turno,
         });
     }

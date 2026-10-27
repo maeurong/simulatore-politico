@@ -4,8 +4,9 @@
 )]
 
 mod comune;
-use comune::{edita, fondata};
+use comune::{dati_base, edita, fondata};
 use sim_core::legislatura::{Assegnazione, Fase, Incarico};
+use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
 
 /// Al posto 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
@@ -73,8 +74,22 @@ fn l_avarizia_costa_intesa_la_generosita_la_alza() {
     avara.chiudi_turno();
     let mut di_default = vinta();
     di_default.chiudi_turno();
-    for &j in &avara.alleati() {
+    let alleati = avara.alleati();
+    assert!(!alleati.is_empty());
+    let base = dati_base().manopola("intesa_base");
+    for &j in &alleati {
         assert!(avara.intesa().valori[j] < di_default.intesa().valori[j]);
+        // Senza dicasteri l'alleato resta in maggioranza.
+        assert!(avara.governo().al_governo(j) && !avara.governo().dicasteri.contains(&j));
+        // La variazione registrata è quella applicata: da intesa_base, mai sotto lo zero.
+        let v = (avara.intesa().variazioni.iter())
+            .find(|v| v.partito == j && v.causa == CausaIntesa::Spartizione)
+            .unwrap();
+        assert!(
+            (v.delta - (avara.intesa().valori[j] - base)).abs() < 1e-9,
+            "{v:?}"
+        );
+        assert!(v.delta >= -base, "{v:?}");
     }
     assert_eq!(avara.legislatura().fase, Fase::Ordinaria);
     assert!(avara.governa());
@@ -82,6 +97,13 @@ fn l_avarizia_costa_intesa_la_generosita_la_alza() {
 
 #[test]
 fn i_tecnici_stanno_nella_quota_del_giocatore() {
+    let mut di_partito = vinta();
+    di_partito
+        .comanda(Comando::ProponiSpartizione {
+            dicasteri: tutto_a(&di_partito, Some("giocatore")),
+        })
+        .unwrap();
+    di_partito.chiudi_turno();
     let mut p = vinta();
     p.comanda(Comando::ProponiSpartizione {
         dicasteri: tutto_a(&p, None),
@@ -92,6 +114,22 @@ fn i_tecnici_stanno_nella_quota_del_giocatore() {
     assert!(p.legislatura().incarico.is_none() && p.legislatura().proposta.is_none());
     assert!(p.governo().dicasteri.iter().all(|&k| k == g));
     assert!((p.ministri().dicasteri.iter()).all(|s| s.ministro.as_ref().unwrap().tecnico));
+    // Scelta 7: stesse estrazioni del ministro di partito, posizione ancorata a 4 invece che al
+    // partito del giocatore, capacità da 3 a 5.
+    let ancora = di_partito.partiti()[g].posizione_dichiarata;
+    let coppie = p
+        .ministri()
+        .dicasteri
+        .iter()
+        .zip(&di_partito.ministri().dicasteri);
+    for (t, m) in coppie {
+        let (t, m) = (t.ministro.as_ref().unwrap(), m.ministro.as_ref().unwrap());
+        assert!((3..=5).contains(&t.capacita), "{t:?}");
+        let dentro = |x: f64| x > 1.0 && x < 7.0;
+        if dentro(t.posizione) && dentro(m.posizione) {
+            assert!((t.posizione - 4.0 - (m.posizione - ancora)).abs() < 1e-9);
+        }
+    }
     let dopo = (p.comanda(Comando::ProponiSpartizione {
         dicasteri: tutto_a(&p, None),
     }))
@@ -122,10 +160,13 @@ fn proposte_non_valide_rifiutate_col_nome() {
 fn chi_entra_al_governo_e_giudicato_da_zero() {
     let p = vinta();
     let g = p.giocatore();
-    // Un giudizio residuo sul partito del giocatore, come da un governo passato.
+    let destra = p.partiti().iter().position(|x| x.id == "destra").unwrap();
+    assert!(p.governo().al_governo(destra));
+    // Un giudizio residuo sul partito del giocatore, come da un governo passato, e su chi resta.
     let mut p = edita(&p, |j| {
         for x in j["elettorato"]["gruppi"].as_array_mut().unwrap() {
             x["giudizio"][g] = serde_json::json!(1.0);
+            x["giudizio"][destra] = serde_json::json!(1.0);
         }
     })
     .unwrap();
@@ -134,6 +175,10 @@ fn chi_entra_al_governo_e_giudicato_da_zero() {
     assert!(
         (json["elettorato"]["gruppi"].as_array().unwrap().iter())
             .all(|x| x["giudizio"][g].as_f64().unwrap() == 0.0)
+    );
+    assert!(
+        (json["elettorato"]["gruppi"].as_array().unwrap().iter())
+            .all(|x| x["giudizio"][destra].as_f64().unwrap() != 0.0)
     );
 }
 
@@ -173,6 +218,18 @@ fn carica_rifiuta_proposta_e_coalizione_non_valide() {
             .to_string()
             .contains("legislatura.proposta")
     );
+    let vuota = edita(&p, |j| {
+        j["legislatura"]["incarico"] = serde_json::json!({ "Ia": { "coalizione": [] } });
+    });
+    let e = vuota.unwrap_err().to_string();
+    assert!(e.contains("legislatura.incarico"), "{e}");
+    let mut formata = vinta();
+    formata.chiudi_turno();
+    let fuori_fase = edita(&formata, |j| {
+        j["legislatura"]["proposta"] = serde_json::json!(vec![Some(g); 10]);
+    });
+    let e = fuori_fase.unwrap_err().to_string();
+    assert!(e.contains("legislatura.proposta"), "{e}");
     let ripetuta = edita(&p, |j| {
         j["governo"]["coalizione"] = serde_json::json!([g, g]);
     });
@@ -223,4 +280,22 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
     assert_eq!(p.governo().presidente, primo);
     assert_eq!(p.governo().coalizione, coalizione);
     assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
+}
+
+/// Senza proposta l'offerta mostrata è quella della spartizione di default, la stessa che la
+/// chiusura applica.
+#[test]
+fn senza_proposta_l_offerta_e_quella_di_default() {
+    let mut p = vinta();
+    let richieste = p.richieste();
+    p.chiudi_turno();
+    let dati = dati_base();
+    for v in &richieste {
+        let j = p.partiti().iter().position(|x| x.id == v.partito).unwrap();
+        let punti: f64 = (dati.dicasteri().iter().zip(&p.governo().dicasteri))
+            .filter(|&(_, &k)| k == j)
+            .map(|(d, _)| f64::from(d.peso_spartizione))
+            .sum();
+        assert!(punti > 0.0 && v.offerta == punti, "{v:?} {punti}");
+    }
 }

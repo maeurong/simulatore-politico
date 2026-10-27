@@ -61,7 +61,8 @@ pub struct Vista {
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
     pub coalizione: Vec<String>,
     /// In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
-    /// l'offerta della spartizione proposta (0 senza proposta); vuota altrove.
+    /// l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
+    /// altrove.
     pub richieste: Vec<VoceRichiesta>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,

@@ -1460,6 +1460,7 @@ impl Partita {
         l.elezioni.insert(0, esito);
         l.coalizioni = coalizioni;
         l.dichiarazione = None;
+        l.proposta = None;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -1609,14 +1610,24 @@ impl Partita {
             .collect()
     }
 
+    /// La spartizione del giocatore: la sua proposta o, senza, quella di default.
+    fn assegnati_dal_giocatore(&self) -> Vec<Option<usize>> {
+        self.legislatura.proposta.clone().unwrap_or_else(|| {
+            let c = self.coalizione_del_giocatore();
+            let seggi = self.seggi_per_partito();
+            let v = legislatura::spartizione_di_default(&self.dati, &c, self.giocatore, &seggi);
+            v.into_iter().map(Some).collect()
+        })
+    }
+
     /// In trattativa con l'incarico al giocatore, una voce per alleato: richiesta e offerta della
-    /// proposta in corso (0 senza proposta); vuota altrove.
+    /// proposta in corso o, senza, di quella di default che la chiusura applicherà; vuota altrove.
     pub fn richieste(&self) -> Vec<VoceRichiesta> {
         let l = &self.legislatura;
         if l.fase != Fase::Trattativa || l.incarico != Some(Incarico::Giocatore) {
             return Vec::new();
         }
-        (self.quote(l.proposta.as_deref().unwrap_or(&[])).into_iter())
+        (self.quote(&self.assegnati_dal_giocatore()).into_iter())
             .map(|(j, richiesta, offerta)| VoceRichiesta {
                 partito: self.partiti[j].id.clone(),
                 richiesta,
@@ -1636,14 +1647,11 @@ impl Partita {
         let di = |j: &usize| seggi.get(*j).copied().unwrap_or(0);
         let (presidente, coalizione, assegnati) = match &self.legislatura.incarico {
             None => return,
-            Some(Incarico::Giocatore) => {
-                let (g, c) = (self.giocatore, self.coalizione_del_giocatore());
-                let assegnati = self.legislatura.proposta.clone().unwrap_or_else(|| {
-                    let v = legislatura::spartizione_di_default(&self.dati, &c, g, &seggi);
-                    v.into_iter().map(Some).collect()
-                });
-                (g, c, assegnati)
-            }
+            Some(Incarico::Giocatore) => (
+                self.giocatore,
+                self.coalizione_del_giocatore(),
+                self.assegnati_dal_giocatore(),
+            ),
             Some(Incarico::Ia { coalizione }) => {
                 let guida = (coalizione.iter())
                     .max_by_key(|&j| (di(j), std::cmp::Reverse(*j)))
@@ -2038,19 +2046,23 @@ impl Partita {
         )?;
         ok(
             match &l.incarico {
-                Some(Incarico::Ia { coalizione }) => coalizione.iter().all(|&j| j < n),
+                Some(Incarico::Ia { coalizione }) => {
+                    !coalizione.is_empty() && coalizione.iter().all(|&j| j < n)
+                }
                 _ => true,
             },
-            "legislatura.incarico con un partito fuori dai partiti",
+            "legislatura.incarico IA con una coalizione vuota o un partito fuori dai partiti",
         )?;
         let coalizione = self.coalizione_del_giocatore();
+        let in_trattativa = l.fase == Fase::Trattativa && l.incarico == Some(Incarico::Giocatore);
         ok(
             l.proposta.as_ref().is_none_or(|v| {
-                v.len() == self.dati.dicasteri().len()
+                in_trattativa
+                    && v.len() == self.dati.dicasteri().len()
                     && v.iter().flatten().all(|j| coalizione.contains(j))
             }),
-            "legislatura.proposta non ha una voce per dicastero o ha un partito fuori dalla \
-             coalizione del giocatore",
+            "legislatura.proposta fuori dalla trattativa col giocatore, senza una voce per \
+             dicastero o con un partito fuori dalla sua coalizione",
         )?;
         let pl = &self.parlamento;
         let vuoto = |seggi: &[u32]| seggi.iter().all(|&x| x == 0);

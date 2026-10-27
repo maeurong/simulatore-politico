@@ -86,7 +86,8 @@ disponibilita: Array<VoceDisponibilita>,
 coalizione: Array<string>, 
 /**
  * In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
- * l'offerta della spartizione proposta (0 senza proposta); vuota altrove.
+ * l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
+ * altrove.
  */
 richieste: Array<VoceRichiesta>, 
 /**
