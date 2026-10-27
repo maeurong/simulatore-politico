@@ -512,3 +512,118 @@ fn decreto_incoerente_al_caricamento_rifiutato() {
         );
     }
 }
+
+fn indice_partito(p: &Partita, id: &str) -> usize {
+    p.partiti().iter().position(|x| x.id == id).unwrap()
+}
+
+#[test]
+fn anteprima_dello_spostamento_di_fondi() {
+    let p = Partita::nuova(dati_base(), 1);
+    let v = p.vista();
+    let margine = (v.ministeri.iter())
+        .find(|m| m.dicastero == "giustizia")
+        .unwrap()
+        .margine_residuo;
+    let d = Decreto::Fondi {
+        da: "giustizia".into(),
+        a: "sanita".into(),
+        importo: margine / 2,
+    };
+    let prima = p.salva().unwrap();
+    let a = p.anteprima_decreto(&d).unwrap();
+    assert_eq!(a.forma, FormaMisura::Conversione);
+    assert_eq!(a.costo_annuo, 0);
+    assert!(a.effetti.is_empty());
+    assert!(!a.linee.is_empty());
+    assert!(
+        (a.linee.iter()).all(|l| l.si == p.governo().al_governo(indice_partito(&p, &l.partito)))
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn anteprima_del_decreto_rifiuta_come_emana_decreto() {
+    let p = Partita::nuova(dati_base(), 1);
+    let prima = p.salva().unwrap();
+    let troppo = Decreto::Fondi {
+        da: "giustizia".into(),
+        a: "sanita".into(),
+        importo: i64::MAX / 2,
+    };
+    let senza_innesco = Decreto::Disposizioni { valori: Vec::new() };
+    for d in [troppo, senza_innesco] {
+        let anteprima = p.anteprima_decreto(&d).unwrap_err().to_string();
+        let mut q = Partita::nuova(dati_base(), 1);
+        let emana = q
+            .comanda(Comando::EmanaDecreto { decreto: d })
+            .unwrap_err()
+            .to_string();
+        assert_eq!(anteprima, emana);
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn anteprima_dell_accogli_rifiuta_come_accogli_dopo_le_dimissioni() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+}
+
+#[test]
+fn anteprima_dell_accogli_rifiuta_in_esercizio_provvisorio() {
+    // Turno 4: bozza del 2028 mai presentata; turno 5: esercizio provvisorio.
+    let mut p = Partita::nuova(DatiGioco::da_testi(&file_base()).unwrap(), 1);
+    for _ in 0..5 {
+        p.chiudi_turno();
+    }
+    assert!(p.vista().bilancio.esercizio_provvisorio);
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+    assert!(anteprima.contains("esercizio provvisorio"), "{anteprima}");
+}
+
+#[test]
+fn anteprima_dell_accogli_rifiuta_come_accogli_dopo_un_accogli() {
+    let (mut p, _) = accolta(sanita_cara());
+    let prima = p.salva().unwrap();
+    let anteprima = p.anteprima_accogli("sanita").unwrap_err().to_string();
+    assert_eq!(p.salva().unwrap(), prima);
+    let comando = p.comanda(accogli()).unwrap_err().to_string();
+    assert_eq!(anteprima, comando);
+}
+
+#[test]
+fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
+    let p = Partita::nuova(DatiGioco::da_testi(&sanita_cara()).unwrap(), 1);
+    let importo = (p.vista().ministeri.iter())
+        .find(|m| m.dicastero == "sanita")
+        .and_then(|m| m.proposta.as_ref())
+        .unwrap()
+        .importo;
+    let prima = p.salva().unwrap();
+    let a = p.anteprima_accogli("sanita").unwrap();
+    assert_eq!(a.forma, FormaMisura::Conversione);
+    assert_eq!(a.costo_annuo, importo);
+    assert!(!a.effetti.is_empty());
+    assert!(
+        p.anteprima_accogli("giustizia")
+            .unwrap_err()
+            .to_string()
+            .contains("Giustizia")
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+    let (accolta, _) = accolta(sanita_cara());
+    assert_eq!(accolta.vista().calendario.last().unwrap().nome, a.nome);
+}

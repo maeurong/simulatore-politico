@@ -324,6 +324,32 @@ impl Ministri {
             .or_else(ko)
     }
 
+    /// L'indice del dicastero `dicastero` (id) se un comando lo può toccare: `accogli` spende
+    /// denaro (non nell'esercizio provvisorio), e dopo le dimissioni chieste resta solo
+    /// `sul_ministro`. Il rifiuto non tocca nulla.
+    pub(crate) fn ammesso(
+        &self,
+        cx: &Contesto,
+        dicastero: &str,
+        accogli: bool,
+        sul_ministro: bool,
+    ) -> Result<usize, Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        let Some(i) = (cx.dati.dicasteri().iter()).position(|d| d.id == dicastero) else {
+            return ko(format!("dicastero sconosciuto: {dicastero}"));
+        };
+        let nome = &cx.dati.dicasteri()[i].nome;
+        if accogli && cx.economia.esercizio_provvisorio(cx.data) {
+            return ko(format!(
+                "esercizio provvisorio: nessuna misura che costi denaro: {nome}"
+            ));
+        }
+        if self.dicasteri[i].dimissioni_chieste && !sul_ministro {
+            return ko(format!("dimissioni chieste: {nome}"));
+        }
+        Ok(i)
+    }
+
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende il decreto:
     /// lo spende e lo converte chi possiede economia e calendario; su una proposta di riforma
     /// rende la legge da presentare. `Ferma` sull'agenda col
@@ -332,7 +358,7 @@ impl Ministri {
     /// `EmanaDecreto` e `InvitaAstensione` non arrivano mai qui (`Partita::comanda` li
     /// intercetta), quindi «comando senza dicastero» non si raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<EffettoComando, Errore> {
-        let (dati, ko) = (cx.dati, |m: String| Err(Errore::Comando(m)));
+        let ko = |m: String| Err(Errore::Comando(m));
         let (Comando::ChiediDimissioni { dicastero }
         | Comando::ScegliSuccessore { dicastero, .. }
         | Comando::Ferma { dicastero }
@@ -344,22 +370,17 @@ impl Ministri {
         else {
             return ko("comando senza dicastero".into());
         };
-        let Some(i) = dati.dicasteri().iter().position(|d| &d.id == dicastero) else {
-            return ko(format!("dicastero sconosciuto: {dicastero}"));
-        };
-        if matches!(c, Comando::Accogli { .. }) && cx.economia.esercizio_provvisorio(cx.data) {
-            return ko(format!(
-                "esercizio provvisorio: nessuna misura che costi denaro: {dicastero}"
-            ));
-        }
-        let st = &mut self.dicasteri[i];
         let sul_ministro = matches!(
             c,
             Comando::ChiediDimissioni { .. } | Comando::ScegliSuccessore { .. }
         );
-        if st.dimissioni_chieste && !sul_ministro {
-            return ko(format!("dimissioni chieste: {dicastero}"));
-        }
+        let i = self.ammesso(
+            cx,
+            dicastero,
+            matches!(c, Comando::Accogli { .. }),
+            sul_ministro,
+        )?;
+        let st = &mut self.dicasteri[i];
         match c {
             Comando::Accogli { .. } => {
                 if let Some(TipoProposta::Riforma {

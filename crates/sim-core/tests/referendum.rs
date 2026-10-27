@@ -23,7 +23,7 @@ fn abrogazione_che_vince(astensione: &str) -> FileDati {
         "nome = \"reintegro\", posizione = 2.0",
         "nome = \"reintegro\", posizione = 4.0",
     );
-    con(f, "astensione_referendum", astensione)
+    con(f, "astensione_abrogativo", astensione)
 }
 
 fn al_voto(f: FileDati) -> Partita {
@@ -143,7 +143,7 @@ fn reddito_minimo_abrogato_diventa_non_istituito() {
         "nome = \"categoriale\", posizione = 7.0",
     );
     let mut p = Partita::nuova(
-        DatiGioco::da_testi(&con(f, "astensione_referendum", "-5.0")).unwrap(),
+        DatiGioco::da_testi(&con(f, "astensione_abrogativo", "-5.0")).unwrap(),
         1,
     );
     p.chiudi_turno();
@@ -372,4 +372,128 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
             "{voto} {firme}: {e:?}"
         );
     }
+}
+
+fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    p.chiudi_turno();
+    p.promuovi_referendum("sinistra", disposizione).unwrap();
+    for _ in 0..6 {
+        p.chiudi_turno();
+    }
+    p
+}
+
+fn affluenza(p: &Partita) -> f64 {
+    let e = &p.vista().esiti_referendum[0];
+    e.votanti as f64 / e.aventi_diritto as f64
+}
+
+#[test]
+fn l_abrogativo_passa_il_quorum_solo_sui_temi_che_toccano_molti() {
+    // Il regime delle pensioni tocca quattro condizioni su sei.
+    assert!(
+        al_voto_su(senza_shock(), "regime_pensioni")
+            .vista()
+            .esiti_referendum[0]
+            .quorum
+    );
+    for d in ["licenziamento", "tetto_contante", "nucleare"] {
+        let p = al_voto_su(senza_shock(), d);
+        assert!(
+            !p.vista().esiti_referendum[0].quorum,
+            "{d}: {}",
+            affluenza(&p)
+        );
+    }
+}
+
+#[test]
+fn senza_gruppi_toccati_l_affluenza_dell_abrogativo_resta_bassa() {
+    let p = al_voto_su(senza_shock(), "nucleare");
+    assert!(affluenza(&p) < 0.35, "{}", affluenza(&p));
+}
+
+#[test]
+fn abrogazione_approvata_costa_a_tutta_la_coalizione() {
+    let prima = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let p = al_voto(abrogazione_che_vince("-5.0"));
+    let persa = |id: &str| {
+        let v = |q: &Partita| q.partiti().iter().find(|x| x.id == id).unwrap().valence;
+        v(&prima) - v(&p)
+    };
+    let dati = DatiGioco::da_testi(&senza_shock()).unwrap();
+    let pieno =
+        dati.manopola("valence_referendum_perso") * (1.0 - dati.manopola("ritorno_valence"));
+    for id in ["destra", "centrodestra"] {
+        assert!((persa(id) - pieno).abs() < 1e-9, "{id}: {}", persa(id));
+    }
+    assert!(persa("sinistra").abs() < 1e-9);
+}
+
+#[test]
+fn sull_abrogativo_elettorale_gli_elettori_votano_i_seggi() {
+    // Il premio alla coalizione è abrogabile: chi ne guadagna seggi è votato dalla maggioranza.
+    // Il ripescaggio no: nel sondaggio iniziale nessuna lista di coalizione resta sotto soglia,
+    // i seggi non cambiano e il quesito finisce pari.
+    let p = al_voto_su(
+        con(senza_shock(), "astensione_abrogativo", "-5.0"),
+        "premio",
+    );
+    let e = &p.vista().esiti_referendum[0];
+    // il premio sposta i seggi, quindi sì e no non finiscono pari
+    assert!(e.no > e.si, "{e:?}");
+}
+
+#[test]
+fn un_valore_gia_abrogato_prima_del_voto_fa_decadere_il_quesito() {
+    // Il reintegro entra in vigore al turno 3, prima del voto (turno 6); in esame la
+    // disposizione non accetta leggi, quindi l'arrivo sta nei dati.
+    let f = con_arrivo(senza_shock(), "licenziamento", "reintegro", 2027, 3);
+    let p = al_voto_su(f, "licenziamento");
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    let e = &p.vista().esiti_referendum[0];
+    assert_eq!(
+        e.decaduto.as_deref(),
+        Some("Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe")
+    );
+    assert!(!e.quorum && !e.approvato);
+}
+
+#[test]
+fn un_arrivo_pendente_non_fa_decadere_il_quesito_sul_valore_gia_in_vigore() {
+    // Partenza e precedente coincidono: il quesito ammesso colpisce l'arrivo, non il vigente.
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "partenza = \"tutele_crescenti\"\nlegge = \"D.Lgs. 23/2015, art. 3\"",
+        "partenza = \"reintegro\"\nlegge = \"D.Lgs. 23/2015, art. 3\"",
+    );
+    let f = con_arrivo(f, "licenziamento", "solo_indennizzo", 2029, 4);
+    let p = al_voto_su(con(f, "astensione_abrogativo", "-5.0"), "licenziamento");
+    let e = &p.vista().esiti_referendum[0];
+    assert!(e.decaduto.is_none(), "{e:?}");
+    assert!(e.si + e.no > 0, "{e:?}");
+}
+
+#[test]
+fn un_abrogativo_su_un_gradino_spostato_dalla_legge_vota_quel_gradino() {
+    // Il solo indennizzo all'estremo destro: l'abrogazione verso il reintegro vince.
+    let f = sostituisci(
+        abrogazione_che_vince("-5.0"),
+        "disposizioni",
+        "nome = \"solo indennizzo\", posizione = 5.5",
+        "nome = \"solo indennizzo\", posizione = 7.0",
+    );
+    let mut p = al_voto_su(
+        con_arrivo(f, "licenziamento", "solo_indennizzo", 2027, 3),
+        "licenziamento",
+    );
+    let e = &p.vista().esiti_referendum[0];
+    assert!(e.decaduto.is_none(), "{e:?}");
+    assert_eq!(e.nome, "Licenziamento: solo indennizzo");
+    assert!(e.approvato, "{e:?}");
+    assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    let err = presenta(&mut p, &[("licenziamento", "solo_indennizzo")]).unwrap_err();
+    assert!(err.to_string().contains("bloccato dal referendum"), "{err}");
 }

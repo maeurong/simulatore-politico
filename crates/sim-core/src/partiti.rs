@@ -29,6 +29,8 @@ pub struct Partito {
     pub posizione_dichiarata: f64,
     pub posizione_percepita: f64,
     pub valence: f64,
+    /// Valence del turno zero: verso questa torna `valence` a ogni turno.
+    pub valence_base: f64,
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`.
@@ -69,6 +71,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             posizione_dichiarata: p.posizione,
             posizione_percepita: p.posizione,
             valence: p.valence.valore,
+            valence_base: p.valence.valore,
         })
         .collect();
     let governo = Governo {

@@ -335,3 +335,19 @@ fn confermativo_respinto_non_porta_nessun_valore() {
     assert_eq!(p.in_vigore("durata_legislatura"), Some("5"));
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
 }
+
+#[test]
+fn il_confermativo_porta_alle_urne_circa_meta_degli_elettori() {
+    let p = costituzionale_doppia("5.0", "0.3");
+    let e = &p.vista().esiti_referendum[0];
+    let a = e.votanti as f64 / e.aventi_diritto as f64;
+    assert!((0.45..=0.55).contains(&a), "{a}");
+}
+
+#[test]
+fn nel_confermativo_la_distanza_pesa_piu_del_giudizio() {
+    // Gradini nuovi a 6,0, lontani dalla maggioranza degli elettori, col peso del giudizio dei dati:
+    // vince il no anche con un governo giudicato bene.
+    let peso = comune::dati_base().manopola("peso_giudizio").to_string();
+    assert!(!costituzionale_doppia("6.0", &peso).vista().esiti_referendum[0].approvato);
+}

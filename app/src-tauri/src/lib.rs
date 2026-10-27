@@ -4,6 +4,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use sim_core::parlamento::{Decreto, ValoreProposto};
+use sim_core::vista::Anteprima;
 use sim_core::{DatiGioco, FileDati, Partita, Vista};
 use tauri::{AppHandle, Manager, State};
 
@@ -64,10 +66,48 @@ async fn chiudi_turno(stato: State<'_, Stato>) -> Result<Vista, String> {
     chiudi(&stato)
 }
 
+/// Esegue `f` sulla partita in corso, in sola lettura.
+fn leggi_partita<T>(
+    stato: &Stato,
+    f: impl FnOnce(&Partita) -> Result<T, sim_core::Errore>,
+) -> Result<T, String> {
+    let guardia = stato.lock().map_err(|_| ERRORE_STATO)?;
+    let partita = guardia.as_ref().ok_or("nessuna partita in corso")?;
+    f(partita).map_err(|e| e.to_string())
+}
+
+// async: le anteprime prendono il Mutex che tiene `chiudi_turno`; fuori dal thread principale non lo bloccano.
+#[tauri::command]
+async fn anteprima(
+    valori: Vec<ValoreProposto>,
+    stato: State<'_, Stato>,
+) -> Result<Anteprima, String> {
+    leggi_partita(&stato, |p| p.anteprima(&valori))
+}
+
+#[tauri::command]
+async fn anteprima_decreto(decreto: Decreto, stato: State<'_, Stato>) -> Result<Anteprima, String> {
+    leggi_partita(&stato, |p| p.anteprima_decreto(&decreto))
+}
+
+#[tauri::command]
+async fn anteprima_accogli(
+    dicastero: String,
+    stato: State<'_, Stato>,
+) -> Result<Anteprima, String> {
+    leggi_partita(&stato, |p| p.anteprima_accogli(&dicastero))
+}
+
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(Stato::default())
-        .invoke_handler(tauri::generate_handler![nuova_partita, chiudi_turno])
+        .invoke_handler(tauri::generate_handler![
+            nuova_partita,
+            chiudi_turno,
+            anteprima,
+            anteprima_decreto,
+            anteprima_accogli
+        ])
         .run(tauri::generate_context!())
 }
 
@@ -83,6 +123,24 @@ mod tests {
     fn chiudi_senza_partita_da_errore() {
         let stato = Stato::default();
         assert_eq!(chiudi(&stato), Err("nessuna partita in corso".to_string()));
+    }
+
+    #[test]
+    fn anteprima_senza_partita_da_errore() {
+        let stato = Stato::default();
+        let r = leggi_partita(&stato, |p| p.anteprima_accogli("sanita"));
+        assert_eq!(r.err(), Some("nessuna partita in corso".to_string()));
+    }
+
+    #[test]
+    fn anteprima_rifiutata_porta_il_nome_del_dicastero() -> Result<(), String> {
+        let stato = Stato::default();
+        avvia(&stato, dati_base()?, 1)?;
+        let errore = leggi_partita(&stato, |p| p.anteprima_accogli("giustizia"))
+            .err()
+            .unwrap_or_default();
+        assert!(errore.contains("Giustizia"), "{errore}");
+        Ok(())
     }
 
     #[test]

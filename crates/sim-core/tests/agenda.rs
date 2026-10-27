@@ -315,7 +315,7 @@ fn dimissioni_chieste_bloccano_i_comandi_del_dicastero() {
         Comando::Rinvia { dicastero: s() },
         Comando::Respingi { dicastero: s() },
     ] {
-        rifiuta(&mut p, c, "dimissioni chieste: sanita");
+        rifiuta(&mut p, c, "dimissioni chieste: Sanità");
     }
 }
 

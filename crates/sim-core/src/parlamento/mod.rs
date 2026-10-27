@@ -657,7 +657,14 @@ impl Parlamento {
 
     /// La conversione del decreto `fondi`, votata a fine turno.
     pub(crate) fn apri_conversione(&mut self, turno: u32, fondi: FondiDecreto) {
-        self.misure.push(Misura {
+        let m = self.conversione(turno, fondi);
+        self.misure.push(m);
+        self.prossima = self.prossima.saturating_add(1);
+    }
+
+    /// La misura di conversione di `fondi` come entrerebbe in calendario.
+    pub(crate) fn conversione(&self, turno: u32, fondi: FondiDecreto) -> Misura {
+        Misura {
             id: self.prossima,
             forma: FormaMisura::Conversione,
             valori: Vec::new(),
@@ -669,8 +676,7 @@ impl Parlamento {
             emendamenti: Vec::new(),
             emendamenti_aperti: false,
             fondi: Some(fondi),
-        });
-        self.prossima = self.prossima.saturating_add(1);
+        }
     }
 
     /// La legge di bilancio presentata nel turno, votata a fine turno, fuori dal calendario

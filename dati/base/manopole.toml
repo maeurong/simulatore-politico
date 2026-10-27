@@ -957,18 +957,46 @@ min = 0.0
 max = 5.0
 ticket = "13"
 
-# assunzione del piano 6, nessuna fonte in docs/ricerca (utilità dell'astensione in più in un referendum)
-[astensione_referendum]
+# assunzione del piano 7, nessuna fonte in docs/ricerca (utilità dell'astensione in più nel referendum confermativo, senza quorum; tarata sul seme 1: affluenza 0,4995 con costituzionale_doppia(5.0, 0.3))
+[astensione_confermativo]
+valore = -0.15
+min = -5.0
+max = 5.0
+ticket = "12"
+
+# assunzione del piano 7, nessuna fonte in docs/ricerca (utilità dell'astensione in più nel referendum abrogativo, col quorum; tarata sul seme 1 con mobilitazione_toccati: affluenza 0,596 sul regime delle pensioni, 0,365 licenziamento, 0,268 tetto al contante, 0,233 nucleare)
+[astensione_abrogativo]
 valore = 1.0
 min = -5.0
 max = 5.0
 ticket = "12"
 
-# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal partito del Presidente del Consiglio quando un referendum abrogativo passa)
+# assunzione del piano 7, nessuna fonte in docs/ricerca (utilità dell'astensione in meno per quota di elettori toccati dal quesito; tarata insieme ad astensione_abrogativo, vedi sopra)
+[mobilitazione_toccati]
+valore = 2.0
+min = 0.0
+max = 5.0
+ticket = "12"
+
+# assunzione del piano 7, nessuna fonte in docs/ricerca (peso del giudizio sul governo nel sì del confermativo; 1,0 fa passare le norme lontane, 0,8 pure, 0,5 le respinge)
+[peso_governo_confermativo]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "12"
+
+# assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa da ogni partito al governo quando un referendum abrogativo passa)
 [valence_referendum_perso]
 valore = 0.1
 min = 0.0
 max = 0.5
+ticket = "12"
+
+# assunzione del piano 7, nessuna fonte in docs/ricerca (quota del divario da valence_base recuperata a ogni turno)
+[ritorno_valence]
+valore = 0.1
+min = 0.0
+max = 1.0
 ticket = "12"
 
 # assunzione del piano 6, nessuna fonte in docs/ricerca (valence persa dal promotore di un referendum abrogativo senza quorum)

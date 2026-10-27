@@ -1,12 +1,12 @@
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
-use crate::disposizioni::{Disposizioni, data_di};
+use crate::disposizioni::{Disposizioni, Norma, data_di};
 use crate::economia::{
     self, Annata, Bilancio, Economia, FUORI_STAGIONE, RiepilogoBilancio, Voce, livello_ok,
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{
-    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo,
+    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale};
 use crate::errore::Errore;
@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 6;
+pub const VERSIONE_SCHEMA: u32 = 7;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -203,6 +203,10 @@ impl Partita {
         );
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
         self.intesa.soglie(&self.dati, self.turno);
+        let ritorno = self.dati.manopola("ritorno_valence");
+        for p in &mut self.partiti {
+            p.valence += ritorno * (p.valence_base - p.valence);
+        }
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
@@ -569,8 +573,11 @@ impl Partita {
             let quesito = Quesito {
                 pos_si,
                 pos_no,
-                peso_governo: 1.0,
+                peso_governo: self.dati.manopola("peso_governo_confermativo"),
                 invito: 0.0,
+                astensione: self.dati.manopola("astensione_confermativo"),
+                toccati: Vec::new(),
+                guadagno: Vec::new(),
             };
             let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
             let nome = parlamento::nome(&self.dati, &r.valori);
@@ -595,11 +602,14 @@ impl Partita {
     /// L'abrogativo del turno (art. 75): sì al valore dopo l'abrogazione, no al vigente, nessun
     /// peso del giudizio sul governo (scelta 9), `invito_astensione` se il governo l'ha chiesto.
     /// Quorum e `sì > no`: la disposizione va al valore dopo l'abrogazione (gli arrivi si
-    /// cancellano), il gradino abrogato si blocca e il partito del Presidente del Consiglio perde
+    /// cancellano), il gradino abrogato si blocca e ogni partito al governo perde
     /// `valence_referendum_perso`. Senza quorum il promotore perde `valence_referendum_fallito`.
-    /// Se l'abrogazione renderebbe non valida la legge elettorale, con le leggi e gli arrivi venuti
-    /// dopo la promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco,
-    /// nessuna valence. Il titolo dell'esito è il gradino vigente che il quesito abroga.
+    /// Se la disposizione ha già il valore dopo l'abrogazione e nessun arrivo, o l'abrogazione
+    /// renderebbe non valida la legge elettorale con le leggi e gli arrivi venuti dopo la
+    /// promozione, il referendum decade senza voto: esito con `decaduto`, nessun blocco, nessuna
+    /// valence. Il titolo dell'esito è il gradino vigente che il quesito abroga: se una legge lo ha
+    /// cambiato, il quesito si sposta su quello. Sull'elettorale gli elettori votano i seggi
+    /// attesi (`Quesito::guadagno`).
     fn vota_abrogativo(&mut self) {
         let turno = self.turno;
         let Some(r) = self.parlamento.referendum.take_if(|r| r.voto <= turno) else {
@@ -610,18 +620,27 @@ impl Partita {
         };
         let vigente = self.disposizioni.voci[d].in_vigore;
         let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
-        if let Some(m) = parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)])
-        {
+        let decaduto = if vigente == dopo && self.disposizioni.voci[d].in_arrivo.is_empty() {
+            Some(
+                "Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe"
+                    .to_string(),
+            )
+        } else {
+            parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)]).map(|m| {
+                format!(
+                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
+                     più applicabile ({m})"
+                )
+            })
+        };
+        if decaduto.is_some() {
             let nessuno = Affluenza {
                 si: 0.0,
                 no: 0.0,
                 astenuti: 0.0,
             };
             let esito = EsitoReferendum {
-                decaduto: Some(format!(
-                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
-                     più applicabile ({m})"
-                )),
+                decaduto,
                 ..EsitoReferendum::da(r.tipo, nome, self.data, &nessuno)
             };
             self.parlamento.esiti_referendum.insert(0, esito);
@@ -633,11 +652,22 @@ impl Partita {
         } else {
             0.0
         };
+        let guadagno = if x.norma == Norma::Elettorale {
+            let per_punto = self.dati.manopola("seggi_per_punto_linea");
+            (self.stato_aula().seggi_attesi(&[(d, dopo)]).iter())
+                .map(|&(c, s)| f64::from(c + s) / per_punto)
+                .collect()
+        } else {
+            Vec::new()
+        };
         let quesito = Quesito {
             pos_si: x.posizione(dopo),
             pos_no: x.posizione(vigente),
             peso_governo: 0.0,
             invito,
+            astensione: self.dati.manopola("astensione_abrogativo"),
+            toccati: toccati(&self.dati, d),
+            guadagno,
         };
         let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
         let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
@@ -658,16 +688,19 @@ impl Partita {
                 bloccati.push(vigente);
             }
         }
-        let (chi, manopola) = if approvato {
-            (Some(self.governo.presidente), "valence_referendum_perso")
-        } else {
-            (
-                r.promotore.filter(|_| !quorum),
-                "valence_referendum_fallito",
-            )
-        };
-        if let Some(p) = chi.and_then(|j| self.partiti.get_mut(j)) {
-            p.valence -= self.dati.manopola(manopola);
+        if approvato {
+            let perso = self.dati.manopola("valence_referendum_perso");
+            for (j, p) in self.partiti.iter_mut().enumerate() {
+                if self.governo.al_governo(j) {
+                    p.valence -= perso;
+                }
+            }
+        } else if let Some(p) = r
+            .promotore
+            .filter(|_| !quorum)
+            .and_then(|j| self.partiti.get_mut(j))
+        {
+            p.valence -= self.dati.manopola("valence_referendum_fallito");
         }
         self.parlamento.esiti_referendum.insert(0, esito);
     }
@@ -857,6 +890,79 @@ impl Partita {
         ))
     }
 
+    /// Il massimo spostabile da ogni dicastero: il margine residuo senza il decreto accolto in
+    /// agenda, entro il margine annuo.
+    fn spostabili(&self) -> Vec<i64> {
+        let b = self.economia.bilancio_in_vigore(self.data);
+        (self.ministri.dicasteri.iter().zip(&b.dicasteri))
+            .map(|(st, d)| {
+                let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+                (st.margine_residuo - decreto).min(d.margine)
+            })
+            .collect()
+    }
+
+    /// L'anteprima del `decreto`: la conversione che aprirebbe, a saldo zero e senza effetti;
+    /// i rifiuti sono quelli di `EmanaDecreto` e la partita non cambia.
+    ///
+    /// # Errors
+    /// `Comando`, come `EmanaDecreto`.
+    pub fn anteprima_decreto(&self, decreto: &Decreto) -> Result<Anteprima, Errore> {
+        let (da, a, importo) = parlamento::ammetti(
+            &self.dati,
+            &self.parlamento.decaduti,
+            &self.spostabili(),
+            decreto,
+        )?;
+        let fondi = FondiDecreto::Spostati { da, a, importo };
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), a))
+    }
+
+    /// L'anteprima del decreto che `Accogli` produrrebbe per la proposta di fondi del
+    /// `dicastero`: il costo è l'importo, gli effetti quelli dell'atto; la partita non cambia.
+    ///
+    /// # Errors
+    /// `Comando` col nome del dicastero: sconosciuto, senza proposta di fondi, esercizio
+    /// provvisorio, decreto decaduto, e i rifiuti di `Accogli` sull'atto.
+    pub fn anteprima_accogli(&self, dicastero: &str) -> Result<Anteprima, Errore> {
+        self.accogli_ripetuto(dicastero)?;
+        let cx = self.contesto();
+        // accogli = true (spende denaro), sul_ministro = false (non è un comando sul ministro)
+        let i = self.ministri.ammesso(&cx, dicastero, true, false)?;
+        let nome = &self.dati.dicasteri()[i].nome;
+        let fondi = matches!(
+            (self.ministri.dicasteri.get(i)).and_then(|st| st.proposta.map(|p| p.tipo)),
+            Some(TipoProposta::Fondi { .. })
+        );
+        if !fondi {
+            return Err(Errore::Comando(format!(
+                "nessuna proposta di fondi: {nome}"
+            )));
+        }
+        let (atto, importo) = self.ministri.fondi_da_accogliere(&cx, i)?;
+        let fondi = FondiDecreto::Accolti {
+            dicastero: i,
+            atto,
+            importo,
+        };
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), i))
+    }
+
+    /// L'anteprima della conversione `m`, con la capacità del ministro del dicastero `proponente`.
+    fn anteprima_conversione(&self, m: &Misura, proponente: usize) -> Anteprima {
+        let capacita = (self.ministri.dicasteri.get(proponente))
+            .and_then(|st| st.ministro.as_ref())
+            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
+        parlamento::anteprima(
+            &self.parlamento,
+            &self.stato_aula(),
+            m,
+            capacita,
+            &self.caso,
+            self.economia.pil_potenziale_annuo(),
+        )
+    }
+
     /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, firma
     /// del ministro compresa (spec, storia 32), e la proposta esce solo se la presentazione passa.
     pub(crate) fn accogli_riforma(
@@ -991,15 +1097,10 @@ impl Partita {
     /// `EmanaDecreto` (storia 46): sposta `importo` da margine e spesa di `da` a quelli di `a`,
     /// nel bilancio in vigore e nei margini residui, anche nell'esercizio provvisorio (scelta 12).
     /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
-    /// Spostabile: il margine residuo senza il decreto accolto in agenda, entro il margine annuo.
+    /// Spostabile: vedi `spostabili`.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
         let b = self.economia.bilancio_in_vigore(self.data);
-        let spostabili: Vec<i64> = (self.ministri.dicasteri.iter().zip(&b.dicasteri))
-            .map(|(st, d)| {
-                let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
-                (st.margine_residuo - decreto).min(d.margine)
-            })
-            .collect();
+        let spostabili = self.spostabili();
         let decaduti = &self.parlamento.decaduti;
         let (da, a, importo) = parlamento::ammetti(&self.dati, decaduti, &spostabili, decreto)?;
         let spesa = b.dicasteri.get(da).map_or(1, |d| d.spesa.max(1));
@@ -1435,10 +1536,12 @@ impl Partita {
             "governo.dicasteri non combacia con i dicasteri o con i partiti",
         )?;
         ok(
-            self.partiti
-                .iter()
-                .all(|p| p.posizione_percepita.is_finite() && p.valence.is_finite()),
-            "partiti: posizione_percepita o valence non finita",
+            self.partiti.iter().all(|p| {
+                p.posizione_percepita.is_finite()
+                    && p.valence.is_finite()
+                    && p.valence_base.is_finite()
+            }),
+            "partiti: posizione_percepita, valence o valence_base non finita",
         )?;
         self.elettorato.controlla(&self.dati, n)?;
         self.informazione.controlla(&self.dati, n)
