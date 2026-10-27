@@ -9,6 +9,7 @@ pub mod elezioni;
 pub mod errore;
 pub mod grandezze;
 pub mod informazione;
+pub mod legislatura;
 pub mod ministri;
 pub mod misure;
 pub mod parlamento;

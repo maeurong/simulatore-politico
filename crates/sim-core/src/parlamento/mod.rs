@@ -833,8 +833,8 @@ impl Parlamento {
 
     /// # Errors
     /// `SalvataggioIlleggibile` se i seggi non sono uno per partito, uno supera o non sommano ai
-    /// seggi del ramo, o una misura, un suo emendamento o una respinta esce dalle disposizioni, dai gradini,
-    /// dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
+    /// seggi del ramo né a zero (Camere sciolte), o una misura, un suo emendamento o una respinta
+    /// esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
     /// partiti, o ha il voto oltre `turno + 6`, o l'abrogativo senza firme ha un voto diverso da
     /// quello chiesto nel `turno`.
     pub(crate) fn controlla(
@@ -850,7 +850,7 @@ impl Parlamento {
             let somma: u64 = seggi.iter().map(|&n| u64::from(n)).sum();
             if seggi.len() != n_partiti
                 || seggi.iter().any(|&n| f64::from(n) > totale)
-                || somma as f64 != totale
+                || (somma != 0 && somma as f64 != totale)
             {
                 return ko("seggi non uno per partito o diversi dai seggi del ramo");
             }

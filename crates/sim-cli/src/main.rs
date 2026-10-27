@@ -3,6 +3,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
+use sim_core::legislatura::Fondazione;
 use sim_core::{DatiGioco, FileDati, Partita};
 
 mod tara;
@@ -11,10 +12,12 @@ struct Argomenti {
     dati: String,
     seme: u64,
     turni: u32,
+    /// Con un posto, la partita vera fondata lì; senza, la partita di prova dal governo uscente.
+    posto: Option<f64>,
 }
 
 fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, String> {
-    let (mut dati, mut seme, mut turni) = (None, None, None);
+    let (mut dati, mut seme, mut turni, mut posto) = (None, None, None, None);
     while let Some(nome) = args.next() {
         let valore = args
             .next()
@@ -35,6 +38,13 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
                         .map_err(|_| format!("numero di turni non valido: {valore}"))?,
                 );
             }
+            "--posto" => {
+                posto = Some(
+                    valore
+                        .parse()
+                        .map_err(|_| format!("posto non valido: {valore}"))?,
+                );
+            }
             _ => return Err(format!("argomento sconosciuto: {nome}")),
         }
     }
@@ -42,6 +52,7 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
         dati: dati.ok_or("manca --dati <cartella>")?,
         seme: seme.ok_or("manca --seme <u64>")?,
         turni: turni.ok_or("manca --turni <u32>")?,
+        posto,
     })
 }
 
@@ -60,7 +71,16 @@ fn esegui() -> Result<String, String> {
     let cartella = Path::new(&argomenti.dati);
     let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
     let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
-    let mut partita = Partita::nuova(dati, argomenti.seme);
+    let mut partita = match argomenti.posto {
+        Some(posto) => {
+            let f = Fondazione {
+                nome: "Partito del giocatore".into(),
+                posto,
+            };
+            Partita::fonda(dati, argomenti.seme, &f).map_err(|e| e.to_string())?
+        }
+        None => Partita::nuova(dati, argomenti.seme),
+    };
     for _ in 0..argomenti.turni {
         partita.chiudi_turno();
     }

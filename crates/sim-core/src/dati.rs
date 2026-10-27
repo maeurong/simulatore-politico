@@ -210,6 +210,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "errore_fascia",
     "soglia_fascia_poco",
     "soglia_fascia_medio",
+    "luna_di_miele",
+    "valence_partito_nuovo",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

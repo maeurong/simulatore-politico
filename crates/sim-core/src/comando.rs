@@ -2,6 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
+use crate::legislatura::Fase;
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
@@ -74,8 +75,22 @@ impl Partita {
     ///
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
-    /// della legge di bilancio; la partita resta identica.
+    /// della legge di bilancio; la partita resta identica. Ogni comando è di governo: a partita
+    /// finita, o se il giocatore non governa, `Comando` col motivo.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
+        if self.finita() {
+            return Err(Errore::Comando("La partita è finita".into()));
+        }
+        if !self.governa() {
+            let motivo = match self.legislatura().fase {
+                Fase::Sciolta => "Camere sciolte",
+                Fase::Trattativa => "trattativa in corso",
+                Fase::Ordinaria => "all'opposizione",
+            };
+            return Err(Errore::Comando(format!(
+                "Comando di governo: il giocatore non governa ({motivo})"
+            )));
+        }
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
             Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),

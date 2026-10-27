@@ -80,6 +80,30 @@ fn flag_sconosciuto_esce_con_errore() {
 }
 
 #[test]
+fn posto_fonda_la_partita_vera() {
+    let out = sim(&[
+        "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4.5",
+    ]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let vista: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(vista["vista"]["giocatore"], "giocatore");
+}
+
+#[test]
+fn posto_non_ammesso_esce_con_errore() {
+    rifiuta(
+        &[
+            "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4",
+        ],
+        "posto 4",
+    );
+}
+
+#[test]
 fn flag_senza_valore_esce_con_errore() {
     rifiuta(
         &["--dati", DATI, "--seme", "1", "--turni"],

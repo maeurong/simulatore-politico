@@ -20,7 +20,7 @@ soglia_premio_pb = 4200
 taglia_premio_pb = 1750
 formula = "hare"
 
-# Parlamento della legislatura uscente: assunzione del piano 6. Coalizione di governo coi seggi reali del 2022 (destra e centrodestra, 237/400 e 115/200), resto in proporzione alle intenzioni del turno zero. Il piano 7 lo sostituisce col voto del turno zero.
+# Parlamento della legislatura uscente, solo per la partita di prova dal governo uscente (`Partita::nuova`): la partita vera parte a Camere sciolte (piano 7a, scelta 1). Seggi: assunzione del piano 6, coalizione di governo coi seggi reali del 2022 (destra e centrodestra, 237/400 e 115/200), resto in proporzione alle intenzioni del turno zero.
 [parlamento_uscente]
 camera = { estrema_sinistra = 9, sinistra = 100, centrosinistra = 20, centro = 14, centrodestra = 48, destra = 189, estrema_destra = 20 }
 senato = { estrema_sinistra = 5, sinistra = 52, centrosinistra = 10, centro = 7, centrodestra = 23, destra = 92, estrema_destra = 11 }

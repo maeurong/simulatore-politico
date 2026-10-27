@@ -3,6 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
+use crate::legislatura::Fase;
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -19,6 +20,15 @@ use ts_rs::TS;
 pub struct Vista {
     pub turno: u32,
     pub data: Trimestre,
+    /// L'id del partito del giocatore.
+    pub giocatore: String,
+    pub fase: Fase,
+    /// La data del turno del prossimo voto, nella sua chiusura.
+    pub voto: Trimestre,
+    pub turni_al_voto: u32,
+    /// Il giocatore guida il governo: i comandi di governo sono ammessi.
+    pub governa: bool,
+    pub finita: bool,
     pub dicasteri: Vec<VoceDicastero>,
     /// Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
     pub grandezze: Vec<VoceGrandezza>,
