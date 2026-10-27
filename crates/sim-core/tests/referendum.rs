@@ -423,7 +423,8 @@ fn abrogazione_approvata_costa_a_tutta_la_coalizione() {
         v(&prima) - v(&p)
     };
     let dati = DatiGioco::da_testi(&senza_shock()).unwrap();
-    let pieno = dati.manopola("valence_referendum_perso");
+    let pieno =
+        dati.manopola("valence_referendum_perso") * (1.0 - dati.manopola("ritorno_valence"));
     for id in ["destra", "centrodestra"] {
         assert!((persa(id) - pieno).abs() < 1e-9, "{id}: {}", persa(id));
     }

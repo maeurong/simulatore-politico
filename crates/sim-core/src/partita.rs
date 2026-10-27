@@ -203,6 +203,10 @@ impl Partita {
         );
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
         self.intesa.soglie(&self.dati, self.turno);
+        let ritorno = self.dati.manopola("ritorno_valence");
+        for p in &mut self.partiti {
+            p.valence += ritorno * (p.valence_base - p.valence);
+        }
         self.turno = self.turno.saturating_add(1);
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
@@ -1442,10 +1446,12 @@ impl Partita {
             "governo.dicasteri non combacia con i dicasteri o con i partiti",
         )?;
         ok(
-            self.partiti
-                .iter()
-                .all(|p| p.posizione_percepita.is_finite() && p.valence.is_finite()),
-            "partiti: posizione_percepita o valence non finita",
+            self.partiti.iter().all(|p| {
+                p.posizione_percepita.is_finite()
+                    && p.valence.is_finite()
+                    && p.valence_base.is_finite()
+            }),
+            "partiti: posizione_percepita, valence o valence_base non finita",
         )?;
         self.elettorato.controlla(&self.dati, n)?;
         self.informazione.controlla(&self.dati, n)

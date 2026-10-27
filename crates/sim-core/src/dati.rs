@@ -205,6 +205,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "peso_governo_confermativo",
     "valence_referendum_perso",
     "valence_referendum_fallito",
+    "ritorno_valence",
     "invito_astensione",
     "errore_fascia",
     "soglia_fascia_poco",

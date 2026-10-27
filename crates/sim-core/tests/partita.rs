@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base};
+use comune::{dati_base, edita, file_base};
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre, VERSIONE_SCHEMA};
 
 fn giocata(seme: u64, turni: u32) -> Partita {
@@ -470,4 +470,26 @@ fn salvataggio_con_informazione_guasta_illeggibile() {
             "{nome}: {e:?}"
         );
     }
+}
+
+#[test]
+fn la_valence_persa_torna_verso_la_base() {
+    let dati = dati_base();
+    let ritorno = dati.manopola("ritorno_valence");
+    let mut p = Partita::nuova(dati, 3);
+    let base = p.partiti()[p.governo().presidente].valence_base;
+    let colpita = edita(&p, |j| {
+        let pdc = j["governo"]["presidente"].as_u64().unwrap() as usize;
+        j["partiti"][pdc]["valence"] = serde_json::json!(base - 1.0);
+    })
+    .unwrap();
+    p = colpita;
+    p.chiudi_turno();
+    let v = p.partiti()[p.governo().presidente].valence;
+    assert!((v - (base - 1.0 + ritorno)).abs() < 1e-9, "{v}");
+    for _ in 0..40 {
+        p.chiudi_turno();
+    }
+    let v = p.partiti()[p.governo().presidente].valence;
+    assert!((v - base).abs() < 0.05, "{v}");
 }
