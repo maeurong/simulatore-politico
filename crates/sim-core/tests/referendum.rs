@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_arrivo, edita, imposta, presenta, senza_shock, sostituisci};
+use comune::{chiudi_col_bilancio, con_arrivo, edita, imposta, presenta, senza_shock, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::TipoReferendum;
 use sim_core::{Comando, Errore, Partita};
@@ -32,7 +32,7 @@ fn al_voto(f: FileDati) -> Partita {
     p.promuovi_referendum("sinistra", "licenziamento").unwrap();
     // Turno 1 (gennaio-marzo 2027): firme in chiusura, voto ad aprile-giugno 2028 (turno 6).
     for _ in 0..6 {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
     }
     p
 }
@@ -95,7 +95,7 @@ fn invito_all_astensione_abbassa_l_affluenza() {
             if invito && t == 5 {
                 p.comanda(Comando::InvitaAstensione).unwrap();
             }
-            p.chiudi_turno();
+            chiudi_col_bilancio(&mut p);
         }
         p.vista().esiti_referendum[0].votanti
     };
@@ -379,7 +379,7 @@ fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
     p.chiudi_turno();
     p.promuovi_referendum("sinistra", disposizione).unwrap();
     for _ in 0..6 {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
     }
     p
 }

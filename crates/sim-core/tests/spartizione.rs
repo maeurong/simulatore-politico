@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{al_governo, dati_base, edita, vinta};
+use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, vinta};
 use sim_core::legislatura::{Assegnazione, Fase, Incarico};
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
@@ -249,7 +249,7 @@ fn l_intesa_degli_alleati_riparte_dalla_base() {
 fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
     let mut p = Partita::nuova(comune::dati_base(), 7);
     for _ in 0..20 {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
     }
     let Some(Incarico::Ia { coalizione }) = p.legislatura().incarico.clone() else {
         panic!("{:?}", p.legislatura().incarico);
@@ -288,7 +288,7 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
 fn vinta_al_turno(t: u32) -> Partita {
     let mut p = al_governo();
     while p.vista().turno < t {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
     }
     p
 }

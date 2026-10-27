@@ -5,11 +5,13 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 mod coalizione;
+mod crisi;
 mod fondazione;
 mod spartizione;
 mod voto;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
+pub(crate) use crisi::{linea_sfiducia, vota_la_caduta};
 pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
 pub use spartizione::{Assegnazione, VoceRichiesta};
@@ -36,7 +38,9 @@ pub enum Fase {
 /// del parlamento in carica. `incarico`: a chi va dopo l'ultimo voto. `proposta`: la spartizione
 /// proposta in trattativa, un partito per dicastero nell'ordine dei dati (`None` = un tecnico).
 /// `allargati`: i partiti entrati con `Allarga` nella coalizione del giocatore in trattativa, fuori
-/// da `coalizioni`; vuoto fuori dalla trattativa.
+/// da `coalizioni`; vuoto fuori dalla trattativa. `dimissioni`: il governo cade alla chiusura del
+/// turno. `maggioranza`: la coalizione del ribaltone col giocatore primo per seggi, in trattativa;
+/// sostituisce la sua coalizione dell'ultimo voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -49,6 +53,8 @@ pub struct Legislatura {
     pub incarico: Option<Incarico>,
     pub proposta: Option<Vec<Option<usize>>>,
     pub allargati: Vec<usize>,
+    pub dimissioni: bool,
+    pub maggioranza: Option<Vec<usize>>,
 }
 
 impl Legislatura {

@@ -70,15 +70,19 @@ pub struct Vista {
     pub elezioni: Vec<EsitoElezioni>,
     /// In trattativa a chi va l'incarico; `None` altrove.
     pub incarico: Option<VoceIncarico>,
+    /// Il governo cade alla chiusura del turno.
+    pub dimissioni: bool,
 }
 
-/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato.
+/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato. `Guida`: dopo una
+/// caduta, il giocatore sta nella maggioranza del Capo dello Stato ma non è il primo per seggi.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub enum VoceIncarico {
     Giocatore,
     CapoDelloStato,
+    Guida,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

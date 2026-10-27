@@ -147,6 +147,8 @@ impl Partita {
                 incarico: None,
                 proposta: None,
                 allargati: Vec::new(),
+                dimissioni: false,
+                maggioranza: None,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -166,6 +168,8 @@ impl Partita {
                 incarico: None,
                 proposta: None,
                 allargati: Vec::new(),
+                dimissioni: false,
+                maggioranza: None,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -209,13 +213,16 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // bilancio del governo IA in ottobre-dicembre → default delle decisioni (proposte, emendamenti
-    // aperti respinti tranne quelli delle leggi che slittano) → atti dei ministri → aula (leggi
-    // slittate nel turno del bilancio → conversioni → bilancio → leggi → referendum) → motore
-    // (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna
-    // ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto, nel turno
-    // del voto → soglie (ministri, ritorno dell'intesa) → governo nuovo, maggioranza contigua o
-    // scioglimento, nel turno di trattativa → calendario →
+    // bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
+    // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
+    // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
+    // leggi, con le dimissioni dopo la fiducia respinta → referendum) → esercizio provvisorio
+    // senza bilancio, dimissioni → motore (misure, economia, grandezze, redditi, giudizio [prima di
+    // composizione, che aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio,
+    // statistica) → voto, nel turno del voto → soglie (ministri, ritorno dell'intesa) → Capo dello
+    // Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera) → governo nuovo,
+    // maggioranza contigua o scioglimento, nel turno di trattativa fuori dal turno del voto →
+    // calendario →
     // apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte;
     // il costo del taglio se l'anno entra in esercizio provvisorio).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula non vota: nessuno può
@@ -226,10 +233,11 @@ impl Partita {
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
         // ponytail: governo IA minimo, il piano 8 lo sostituisce. Le proposte dei suoi ministri
-        // restano ignorate; in ottobre-dicembre presenta la bozza del bilancio, se c'è.
+        // restano ignorate; in ottobre-dicembre e nell'esercizio provvisorio presenta la bozza del
+        // bilancio, se c'è.
         if self.legislatura.fase == Fase::Ordinaria
             && !self.governa()
-            && self.data.trimestre == 4
+            && (self.data.trimestre == 4 || self.economia.esercizio_provvisorio(self.data))
             && self.economia.bilancio_presentato.is_none()
             && let Some(b) = self.bozza_bilancio()
         {
@@ -247,6 +255,13 @@ impl Partita {
             self.vota_confermativi();
         } else {
             self.aula(occupato);
+        }
+        // Esercizio provvisorio (iter-legislativo-italiano:86): un turno solo, poi il governo cade,
+        // col bilancio respinto come con quello mai presentato.
+        if self.legislatura.fase == Fase::Ordinaria
+            && self.economia.esercizio_provvisorio(self.data)
+        {
+            self.legislatura.dimissioni = true;
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
@@ -292,7 +307,8 @@ impl Partita {
             reale_prima,
             self.data,
         );
-        if self.legislatura.turno_di_voto(self.turno) {
+        let di_voto = self.legislatura.turno_di_voto(self.turno);
+        if di_voto {
             self.vota_parlamento(&vero);
         }
         // Prima delle soglie dei ministri: chi si dimette nel turno conta ancora nella media.
@@ -304,7 +320,11 @@ impl Partita {
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
         }
-        if trattativa {
+        // Nel turno del voto vince il voto: le dimissioni si azzerano senza effetto.
+        if std::mem::take(&mut self.legislatura.dimissioni) && !di_voto {
+            self.capo_dello_stato();
+        }
+        if trattativa && !di_voto {
             self.forma_governo();
         }
         self.turno = self.turno.saturating_add(1);
@@ -557,8 +577,11 @@ impl Partita {
             }
             self.seggi_persi(&p.seggi);
         } else if !approvata {
-            // La fiducia respinta fa cadere la misura senza blocco (le dimissioni: piano 7).
-            if !fiducia_respinta {
+            // La fiducia respinta fa cadere la misura senza blocco e il governo
+            // (iter-legislativo-italiano:42: le dimissioni sono prassi, qui automatiche).
+            if fiducia_respinta {
+                self.legislatura.dimissioni = true;
+            } else {
                 let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
                 let da = turno.saturating_add(1).saturating_add(blocco);
                 (self.parlamento.respinte).extend(m.valori.iter().map(|&(d, _)| (d, da)));
@@ -1772,12 +1795,12 @@ impl Partita {
         Ok(())
     }
 
-    /// La coalizione del giocatore all'ultimo voto (lui da solo se non ne ha), più gli allargati.
+    /// La coalizione del giocatore: la maggioranza del ribaltone, se c'è, altrimenti quella
+    /// dell'ultimo voto (lui da solo se non ne ha); più gli allargati.
     fn coalizione_del_giocatore(&self) -> Vec<usize> {
         let (g, l) = (self.giocatore, &self.legislatura);
-        let mut c = (l.coalizioni.iter())
-            .find(|c| c.contains(&g))
-            .cloned()
+        let mut c = (l.maggioranza.clone())
+            .or_else(|| l.coalizioni.iter().find(|c| c.contains(&g)).cloned())
             .unwrap_or_else(|| vec![g]);
         c.extend(&l.allargati);
         c
@@ -1882,6 +1905,7 @@ impl Partita {
                 l.incarico = None;
                 l.proposta = None;
                 l.allargati.clear();
+                l.maggioranza = None;
                 return;
             };
             let guida = (coalizione.iter())
@@ -1944,6 +1968,133 @@ impl Partita {
         l.incarico = None;
         l.proposta = None;
         l.allargati.clear();
+        l.maggioranza = None;
+    }
+
+    /// `Dimettiti`: il governo cade alla chiusura del turno.
+    pub(crate) fn dimettiti(&mut self) {
+        self.legislatura.dimissioni = true;
+    }
+
+    /// Il Capo dello Stato dopo le dimissioni: la maggioranza contigua
+    /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, con tutti se il
+    /// governo era IA (scelta 11 del piano 7b). Senza il giocatore, l'incarico IA; col giocatore
+    /// primo per seggi (Camera più Senato, a parità l'indice più basso), l'incarico a lui con
+    /// quella maggioranza; col giocatore non primo, `Guida`. Trovata, si va in trattativa; senza,
+    /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce.
+    fn capo_dello_stato(&mut self) {
+        let g = self.giocatore;
+        let escluso = (self.governo.presidente == g).then_some(g);
+        let pl = &self.parlamento;
+        let trovata = legislatura::maggioranza_contigua(
+            &self.partiti,
+            &pl.seggi_camera,
+            &pl.seggi_senato,
+            escluso,
+        );
+        let seggi = self.seggi_per_partito();
+        let l = &mut self.legislatura;
+        let Some(coalizione) = trovata else {
+            l.fase = Fase::Sciolta;
+            return;
+        };
+        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
+        let primo = (coalizione.iter().copied()).max_by_key(|&j| (di(j), std::cmp::Reverse(j)));
+        l.fase = Fase::Trattativa;
+        l.incarico = Some(if !coalizione.contains(&g) {
+            Incarico::Ia { coalizione }
+        } else if primo == Some(g) {
+            l.maggioranza = Some(coalizione);
+            Incarico::Giocatore
+        } else {
+            Incarico::Guida { coalizione }
+        });
+    }
+
+    /// La mozione di sfiducia al governo (`dicastero` = `None`) o al ministro del `dicastero`,
+    /// votata a blocchi sui seggi dei partiti del sì e del no (iter-legislativo-italiano:43,
+    /// appello nominale): passa se il sì supera il no in almeno una Camera. L'esito si registra.
+    /// Passata al governo, dimissioni; al ministro, il ministro esce (`Sfiduciato`) e, se è di un
+    /// alleato, l'alleato perde `costo_dimissioni_chieste`. Respinta, ogni alleato guadagna
+    /// `intesa_sfiducia_respinta` e il `promotore` perde `valence_sfiducia_respinta`. `true` se
+    /// è passata.
+    #[expect(
+        dead_code,
+        reason = "la chiamano la fine della crisi (Task 5) e la sfiducia del giocatore (Task 7)"
+    )]
+    pub(crate) fn sfiducia(&mut self, dicastero: Option<usize>, promotore: Option<usize>) -> bool {
+        let g = &self.governo;
+        let partito = dicastero.map(|i| g.dicasteri.get(i).copied().unwrap_or(g.presidente));
+        let pl = &self.parlamento;
+        let q = Quadro {
+            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        };
+        let linea = legislatura::linea_sfiducia(
+            self.partiti.len(),
+            g,
+            &self.intesa.ultimatum,
+            partito,
+            |j| legislatura::vota_la_caduta(&q, j, &g.coalizione, g.presidente),
+        );
+        let blocchi = |seggi: &[u32]| {
+            (seggi.iter().zip(&linea)).fold(Conteggio { si: 0, no: 0 }, |c, (&x, &si)| {
+                if si {
+                    Conteggio { si: c.si + x, ..c }
+                } else {
+                    Conteggio { no: c.no + x, ..c }
+                }
+            })
+        };
+        let (camera, senato) = (blocchi(&pl.seggi_camera), blocchi(&pl.seggi_senato));
+        let approvata = camera.si > camera.no || senato.si > senato.no;
+        let nome = match dicastero.and_then(|i| self.dati.dicasteri().get(i)) {
+            Some(d) => format!("Mozione di sfiducia al ministro di {}", d.nome),
+            None => "Mozione di sfiducia al governo".into(),
+        };
+        let esito = EsitoVoto {
+            misura: self.parlamento.prossima,
+            nome,
+            forma: FormaMisura::Sfiducia,
+            data: self.data,
+            deliberazione: 0,
+            camera,
+            senato,
+            approvata,
+            fiducia: false,
+            fiducia_respinta: false,
+            linee: self.stato_aula().voci_linea(&linea),
+            decaduta: None,
+        };
+        self.parlamento.prossima = self.parlamento.prossima.saturating_add(1);
+        self.parlamento.esiti.insert(0, esito);
+        match (approvata, dicastero) {
+            (true, None) => self.legislatura.dimissioni = true,
+            (true, Some(i)) => {
+                if let Some(id) = self.dati.dicasteri().get(i).map(|d| d.id.clone()) {
+                    self.dimissioni_chieste(&id);
+                }
+                if let Some(st) = self.ministri.dicasteri.get_mut(i)
+                    && let Some(m) = st.ministro.take()
+                {
+                    st.rosa_tecnica = m.tecnico;
+                    st.causa_dimissioni = Some(Causa::Sfiduciato);
+                    st.dimissioni_chieste = false;
+                    st.proposta = None;
+                }
+            }
+            (false, _) => {
+                let delta = self.dati.manopola("intesa_sfiducia_respinta");
+                for j in self.alleati() {
+                    (self.intesa).varia(j, CausaIntesa::SfiduciaRespinta, delta, self.turno);
+                }
+                let valence = self.dati.manopola("valence_sfiducia_respinta");
+                if let Some(p) = promotore.and_then(|j| self.partiti.get_mut(j)) {
+                    p.valence -= valence;
+                }
+            }
+        }
+        approvata
     }
 
     fn voci_partiti(&self) -> Vec<VocePartito> {
@@ -2058,9 +2209,11 @@ impl Partita {
             elezioni: l.elezioni.clone(),
             incarico: match (l.fase, &l.incarico) {
                 (Fase::Trattativa, Some(Incarico::Giocatore)) => Some(VoceIncarico::Giocatore),
+                (Fase::Trattativa, Some(Incarico::Guida { .. })) => Some(VoceIncarico::Guida),
                 (Fase::Trattativa, _) => Some(VoceIncarico::CapoDelloStato),
                 _ => None,
             },
+            dimissioni: l.dimissioni,
         }
     }
 
@@ -2296,12 +2449,23 @@ impl Partita {
         )?;
         ok(
             match &l.incarico {
-                Some(Incarico::Ia { coalizione }) => {
+                Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
                     !coalizione.is_empty() && coalizione.iter().all(|&j| j < n)
                 }
                 _ => true,
             },
-            "legislatura.incarico IA con una coalizione vuota o un partito fuori dai partiti",
+            "legislatura.incarico IA o di guida con una coalizione vuota o un partito fuori dai \
+             partiti",
+        )?;
+        ok(
+            l.maggioranza.as_ref().is_none_or(|c| {
+                l.fase == Fase::Trattativa
+                    && l.incarico == Some(Incarico::Giocatore)
+                    && c.contains(&self.giocatore)
+                    && c.iter().all(|&j| j < n)
+            }),
+            "legislatura.maggioranza fuori dalla trattativa col giocatore, senza di lui o con un \
+             partito fuori dai partiti",
         )?;
         let coalizione = self.coalizione_del_giocatore();
         let in_trattativa = self.con_incarico();

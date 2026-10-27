@@ -100,4 +100,8 @@ elezioni: Array<EsitoElezioni>,
 /**
  * In trattativa a chi va l'incarico; `None` altrove.
  */
-incarico: VoceIncarico | null, };
+incarico: VoceIncarico | null, 
+/**
+ * Il governo cade alla chiusura del turno.
+ */
+dimissioni: boolean, };

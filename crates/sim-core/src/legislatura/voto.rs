@@ -33,11 +33,13 @@ pub struct EsitoElezioni {
 }
 
 /// A chi va l'incarico dopo il voto: la coalizione con la maggioranza assoluta in entrambe le
-/// Camere, del giocatore o IA (indici di partito).
+/// Camere, del giocatore o IA (indici di partito). `Guida`: dopo una caduta, il giocatore sta
+/// nella maggioranza del Capo dello Stato ma non è il primo per seggi.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Incarico {
     Giocatore,
     Ia { coalizione: Vec<usize> },
+    Guida { coalizione: Vec<usize> },
 }
 
 /// Per regione e partito `Σ_gruppi della regione round(elettori_i · v_ij)`, senza l'astensione.

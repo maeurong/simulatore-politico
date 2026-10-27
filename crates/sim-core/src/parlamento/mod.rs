@@ -45,6 +45,8 @@ pub enum FormaMisura {
     Costituzionale,
     Conversione,
     Bilancio,
+    /// La mozione di sfiducia, al governo o a un ministro: votata a blocchi, mai in calendario.
+    Sfiducia,
 }
 
 /// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;

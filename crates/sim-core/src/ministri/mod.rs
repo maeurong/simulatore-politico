@@ -68,6 +68,7 @@ pub enum Causa {
     LeggeRespinta,
     FondiTolti,
     DecretoDecaduto,
+    Sfiduciato,
 }
 
 impl fmt::Display for Causa {
@@ -85,6 +86,7 @@ impl fmt::Display for Causa {
             Self::LeggeRespinta => "legge respinta in aula",
             Self::FondiTolti => "fondi spostati ad altro dicastero",
             Self::DecretoDecaduto => "decreto non convertito",
+            Self::Sfiduciato => "sfiduciato dalle Camere",
         })
     }
 }
@@ -475,7 +477,8 @@ impl Ministri {
             | Comando::InvitaAstensione
             | Comando::DichiaraCoalizione { .. }
             | Comando::ProponiSpartizione { .. }
-            | Comando::Allarga { .. } => {}
+            | Comando::Allarga { .. }
+            | Comando::Dimettiti => {}
         }
         Ok(EffettoComando::Nessuno)
     }

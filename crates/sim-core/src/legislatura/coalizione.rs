@@ -118,6 +118,7 @@ pub(crate) fn cedi(
 
 /// Ciò che la disponibilità legge della partita: sondaggio pubblico, legge e seggi dei rami in
 /// vigore, coalizioni dell'ultimo voto.
+#[derive(Clone)]
 pub(crate) struct Quadro<'a> {
     pub dati: &'a DatiGioco,
     pub partiti: &'a [Partito],
@@ -137,7 +138,7 @@ pub(crate) struct Quadro<'a> {
 impl Quadro<'_> {
     /// Seggi di Camera e Senato per partito al voto con `d`: riparto sul sondaggio pubblico, poi
     /// le cessioni; zero se il riparto rifiuta i voti.
-    fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
+    pub(super) fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
         if let Some(veri) = &self.seggi_veri {
             return veri.clone();
         }
@@ -165,7 +166,7 @@ impl Quadro<'_> {
     /// `peso_governare · P_k` (coi seggi veri, 1 o 0), `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
     /// k del giocatore]`.
-    fn termini(
+    pub(super) fn termini(
         &self,
         d: &Dichiarazione,
         (camera, senato): &(Vec<u32>, Vec<u32>),
@@ -192,15 +193,7 @@ impl Quadro<'_> {
             Some(_) => 0.0,
             None => 1.0 / (1.0 + (-x).exp()),
         };
-        let pos = |i: usize| self.partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
-        let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
-            .map(|&i| (pos(i) - pos(j)).abs())
-            .collect();
-        let distanza = if altri.is_empty() {
-            0.0
-        } else {
-            altri.iter().sum::<f64>() / altri.len() as f64
-        };
+        let distanza = distanza(self.partiti, &k, j);
         // Nella coalizione del giocatore guida sempre il giocatore; chi corre da solo non guida
         // una coalizione (A9 del piano 2: coalizione di una lista sola = lista non coalizzata).
         let q = |i: &&usize| quota_fra_i_votanti(self.sondaggio, **i);
@@ -271,6 +264,20 @@ impl Quadro<'_> {
                 }
             })
             .collect()
+    }
+}
+
+/// La distanza media fra la posizione dichiarata di `j` e quelle degli altri membri di `k`; 0
+/// se non ce ne sono.
+pub(super) fn distanza(partiti: &[Partito], k: &[usize], j: usize) -> f64 {
+    let pos = |i: usize| partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
+    let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
+        .map(|&i| (pos(i) - pos(j)).abs())
+        .collect();
+    if altri.is_empty() {
+        0.0
+    } else {
+        altri.iter().sum::<f64>() / altri.len() as f64
     }
 }
 

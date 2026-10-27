@@ -85,6 +85,8 @@ pub enum Comando {
     Allarga {
         partiti: Vec<String>,
     },
+    /// Il Presidente del Consiglio si dimette: il governo cade alla chiusura del turno.
+    Dimettiti,
 }
 
 impl Partita {
@@ -139,6 +141,10 @@ impl Partita {
             Comando::PoniFiducia { misura } => return self.poni_fiducia(misura),
             Comando::EmanaDecreto { decreto } => return self.emana_decreto(&decreto),
             Comando::InvitaAstensione => return self.invita_astensione(),
+            Comando::Dimettiti => {
+                self.dimettiti();
+                return Ok(());
+            }
             Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }

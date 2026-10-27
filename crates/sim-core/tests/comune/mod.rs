@@ -420,3 +420,18 @@ pub fn calo_oltre_il_ritorno(prima: &[sim_core::partiti::Partito], p: &Partita, 
     let x = &prima[j];
     x.valence + r * (x.valence_base - x.valence) - p.partiti()[j].valence
 }
+
+/// Chiude il turno; se il giocatore governa, prima presenta la bozza del bilancio, se c'è: senza,
+/// il governo cadrebbe nell'esercizio provvisorio (piano 7b, Task 4).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn chiudi_col_bilancio(p: &mut Partita) {
+    if p.governa()
+        && let Some(bilancio) = p.bozza_bilancio()
+    {
+        p.comanda(Comando::PresentaBilancio { bilancio }).unwrap();
+    }
+    p.chiudi_turno();
+}

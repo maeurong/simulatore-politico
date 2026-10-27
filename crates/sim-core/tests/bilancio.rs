@@ -573,23 +573,17 @@ fn provvisorio_poi_secondo_anno_poi_terzo() {
     assert_eq!(p.economia().bilancio.anno, 2029);
 }
 
+/// Due gennai provvisori di fila non ci sono più (piano 7b, Task 4): senza bilancio, il governo
+/// cade nel primo, e il salvataggio dopo la caduta si ricarica.
 #[test]
-fn due_gennai_provvisori_di_fila_senza_presentare() {
+fn gennaio_provvisorio_senza_presentare_fa_cadere_il_governo() {
     let mut p = al_bilancio_2028(5);
     p.chiudi_turno();
     assert!(p.vista().bilancio.esercizio_provvisorio);
-    for _ in 0..4 {
-        p.chiudi_turno();
-    }
-    let v = p.vista();
-    assert_eq!((v.data.anno, v.data.trimestre), (2029, 1));
-    assert!(v.bilancio.esercizio_provvisorio);
-    let b = p.bozza_bilancio().unwrap();
-    assert_eq!(b.anno, 2029);
-    presenta(&mut p, b).unwrap();
-    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+    assert!(p.governa());
     p.chiudi_turno();
-    assert!(!p.vista().bilancio.esercizio_provvisorio);
+    assert!(!p.governa());
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
 
 #[test]
