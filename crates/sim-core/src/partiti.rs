@@ -36,16 +36,18 @@ pub struct Partito {
     pub valence_base: f64,
 }
 
-/// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`.
+/// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
+/// partiti della maggioranza, presidente compreso, anche senza dicasteri.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Governo {
     pub presidente: usize,
     pub dicasteri: Vec<usize>,
+    pub coalizione: Vec<usize>,
 }
 
 impl Governo {
     pub fn al_governo(&self, p: usize) -> bool {
-        self.presidente == p || self.dicasteri.contains(&p)
+        self.presidente == p || self.dicasteri.contains(&p) || self.coalizione.contains(&p)
     }
 
     /// Partito che tiene il dicastero col ruolo `r`.
@@ -77,13 +79,18 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             valence_base: p.valence.valore,
         })
         .collect();
+    let presidente = indice(&s.governo.presidente);
+    let dicasteri: Vec<usize> = (dati.dicasteri().iter())
+        .map(|d| s.governo.dicasteri.get(&d.id).map_or(0, indice))
+        .collect();
+    let coalizione = (std::iter::once(presidente).chain(dicasteri.iter().copied()))
+        .collect::<BTreeSet<usize>>()
+        .into_iter()
+        .collect();
     let governo = Governo {
-        presidente: indice(&s.governo.presidente),
-        dicasteri: dati
-            .dicasteri()
-            .iter()
-            .map(|d| s.governo.dicasteri.get(&d.id).map_or(0, indice))
-            .collect(),
+        presidente,
+        dicasteri,
+        coalizione,
     };
     (partiti, governo)
 }

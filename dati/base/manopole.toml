@@ -1,5 +1,5 @@
 # Intervalli provvisori, al bilanciamento.
-# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue, voto-spaziale, opinion-dynamics, sondaggi-ed-errore, voto-economico-e-retrospettivo = docs/ricerca/modelli/<alias>.md; dati-per-tarare-i-gruppi = docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md; "ticket N" = .scratch/v1-giocabile/issues/N-*.md; "alias:N" = riga N.
+# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue, voto-spaziale, opinion-dynamics, sondaggi-ed-errore, voto-economico-e-retrospettivo, formazione-di-coalizioni = docs/ricerca/modelli/<alias>.md; dati-per-tarare-i-gruppi = docs/ricerca/sintesi/dati-per-tarare-i-gruppi.md; "ticket N" = .scratch/v1-giocabile/issues/N-*.md; "alias:N" = riga N.
 
 [soglia_minaccia]
 valore = 40.0
@@ -1088,4 +1088,25 @@ ticket = "05"
 valore = 0.05
 min = 0.01
 max = 0.5
+ticket = "05"
+
+# formazione-di-coalizioni:30 (intercetta della legge di Gamson, quota dei portafogli sulla quota dei seggi)
+[gamson_intercetta]
+valore = 0.07
+min = 0.0
+max = 0.2
+ticket = "05"
+
+# formazione-di-coalizioni:30 (pendenza della legge di Gamson)
+[gamson_pendenza]
+valore = 0.79
+min = 0.5
+max = 1.0
+ticket = "05"
+
+# assunzione del piano 7, nessuna fonte in docs/ricerca (intesa di partenza di un alleato per punto di peso offerto sopra o sotto la sua richiesta)
+[intesa_per_punto]
+valore = 10.0
+min = 0.0
+max = 30.0
 ticket = "05"

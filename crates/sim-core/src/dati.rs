@@ -218,6 +218,9 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valore_guida",
     "peso_intesa_coalizione",
     "scala_maggioranza",
+    "gamson_intercetta",
+    "gamson_pendenza",
+    "intesa_per_punto",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

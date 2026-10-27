@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita};
+use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -60,6 +60,9 @@ pub struct Vista {
     /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
     pub coalizione: Vec<String>,
+    /// In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
+    /// l'offerta della spartizione proposta (0 senza proposta); vuota altrove.
+    pub richieste: Vec<VoceRichiesta>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
 }
@@ -405,6 +408,8 @@ pub struct VoceMinistro {
     pub obiettivo: f64,
     pub soddisfazione: f64,
     pub rodaggio: bool,
+    /// Un tecnico, senza partito: `partito` è quello del Presidente del Consiglio.
+    pub tecnico: bool,
     pub minaccia: bool,
     pub causa_principale: Option<Causa>,
     /// Variazioni di soddisfazione degli ultimi due turni, con la loro causa.

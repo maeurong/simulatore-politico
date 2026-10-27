@@ -81,6 +81,7 @@ mod test {
                 obiettivo,
                 soddisfazione: 60.0,
                 turni_in_carica: 1,
+                tecnico: false,
             }),
             ..StatoDicastero::default()
         }

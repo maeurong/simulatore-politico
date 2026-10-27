@@ -17,6 +17,7 @@ import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
+import type { VoceRichiesta } from "./VoceRichiesta";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -83,6 +84,11 @@ disponibilita: Array<VoceDisponibilita>,
  * lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
  */
 coalizione: Array<string>, 
+/**
+ * In trattativa con l'incarico al giocatore, una voce per alleato: la sua richiesta e
+ * l'offerta della spartizione proposta (0 senza proposta); vuota altrove.
+ */
+richieste: Array<VoceRichiesta>, 
 /**
  * Gli esiti dei voti, il più recente per primo.
  */

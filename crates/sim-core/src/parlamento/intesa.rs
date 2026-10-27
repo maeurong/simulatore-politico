@@ -16,6 +16,7 @@ pub enum CausaIntesa {
     EmendamentoRespinto,
     Fiducia,
     SeggiPersi,
+    Spartizione,
 }
 
 impl fmt::Display for CausaIntesa {
@@ -25,6 +26,7 @@ impl fmt::Display for CausaIntesa {
             Self::EmendamentoRespinto => "emendamento respinto",
             Self::Fiducia => "questione di fiducia",
             Self::SeggiPersi => "seggi persi con la legge elettorale",
+            Self::Spartizione => "quota dei dicasteri rispetto alla richiesta",
         })
     }
 }

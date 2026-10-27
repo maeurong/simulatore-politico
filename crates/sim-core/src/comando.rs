@@ -2,7 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
-use crate::legislatura::{Cessione, Fase};
+use crate::legislatura::{Assegnazione, Cessione, Fase};
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
@@ -74,6 +74,11 @@ pub enum Comando {
         partiti: Vec<String>,
         cessioni: Vec<Cessione>,
     },
+    /// Propone la spartizione in trattativa, con l'incarico: un'assegnazione per dicastero.
+    /// Sostituisce la proposta precedente.
+    ProponiSpartizione {
+        dicasteri: Vec<Assegnazione>,
+    },
 }
 
 impl Partita {
@@ -82,14 +87,17 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
-    /// comando tranne `DichiaraCoalizione` è di governo: se il giocatore non governa, `Comando`
-    /// col motivo.
+    /// comando tranne `DichiaraCoalizione` e `ProponiSpartizione` è di governo: se il giocatore
+    /// non governa, `Comando` col motivo.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
         }
         if let Comando::DichiaraCoalizione { partiti, cessioni } = &c {
             return self.dichiara_coalizione(partiti, cessioni);
+        }
+        if let Comando::ProponiSpartizione { dicasteri } = &c {
+            return self.proponi_spartizione(dicasteri);
         }
         if !self.governa() {
             let motivo = match self.legislatura().fase {

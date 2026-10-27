@@ -174,13 +174,30 @@ pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> Fil
 
 /// Ferma le agende ancora annunciate, tranne quella di `tranne` e di chi ha le dimissioni chieste
 /// (non si esegue comunque), così due partite divergono solo per ciò che il test fa. Senza il
-/// governo del giocatore (la trattativa dopo il voto alla scadenza) non ferma nulla.
+/// governo del giocatore (trattativa, governo IA dopo il voto alla scadenza) nessun comando è
+/// ammesso: le agende si fermano nel salvataggio, senza il costo di `Ferma`.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
+    if p.finita() {
+        return;
+    }
     if !p.governa() {
+        let ids: Vec<String> = p.vista().dicasteri.into_iter().map(|d| d.id).collect();
+        *p = edita(p, |j| {
+            let dicasteri = j["ministri"]["dicasteri"].as_array_mut().unwrap();
+            for (st, id) in dicasteri.iter_mut().zip(&ids) {
+                if id != tranne
+                    && st["agenda"]["stato"] == "annunciata"
+                    && st["dimissioni_chieste"] == false
+                {
+                    st["agenda"]["stato"] = "fermata".into();
+                }
+            }
+        })
+        .unwrap();
         return;
     }
     for m in p.vista().ministeri {
