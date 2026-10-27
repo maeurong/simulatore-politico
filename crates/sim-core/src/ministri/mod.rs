@@ -69,6 +69,8 @@ pub enum Causa {
     FondiTolti,
     DecretoDecaduto,
     Sfiduciato,
+    UscitaDalGoverno,
+    Rimpasto,
 }
 
 impl fmt::Display for Causa {
@@ -87,6 +89,8 @@ impl fmt::Display for Causa {
             Self::FondiTolti => "fondi spostati ad altro dicastero",
             Self::DecretoDecaduto => "decreto non convertito",
             Self::Sfiduciato => "sfiduciato dalle Camere",
+            Self::UscitaDalGoverno => "il suo partito ha lasciato la maggioranza",
+            Self::Rimpasto => "il dicastero passa a un altro partito",
         })
     }
 }
@@ -495,6 +499,26 @@ impl Ministri {
             dicastero: i,
             importo,
         }
+    }
+
+    /// Il dicastero `i` va in interim per `causa` (uscita dal governo, rimpasto): la rosa si
+    /// svuota e la riapre `apri`, col partito che ora tiene il dicastero. Già in interim, resta la
+    /// causa di prima.
+    // ponytail: niente ritiro del decreto: alla chiusura `esegui` ha già preso le agende
+    // (agenda.rs:331). Un chiamante fuori dalla chiusura deve ritirarlo come `ritira`.
+    pub(crate) fn dimetti(&mut self, i: usize, causa: Causa) {
+        let Some(st) = self.dicasteri.get_mut(i) else {
+            return;
+        };
+        if st.ministro.take().is_some() {
+            st.causa_dimissioni = Some(causa);
+        }
+        st.rosa.clear();
+        st.scelta = None;
+        st.rosa_tecnica = false;
+        st.dimissioni_chieste = false;
+        st.proposta = None;
+        st.agenda = None;
     }
 
     /// Le voci per la `Vista`, nell'ordine dei dicasteri.

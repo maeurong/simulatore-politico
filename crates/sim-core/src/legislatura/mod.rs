@@ -37,10 +37,11 @@ pub enum Fase {
 /// `elezioni`: gli esiti dei voti, il più recente per primo. `totali`: i seggi di Camera e Senato
 /// del parlamento in carica. `incarico`: a chi va dopo l'ultimo voto. `proposta`: la spartizione
 /// proposta in trattativa, un partito per dicastero nell'ordine dei dati (`None` = un tecnico).
-/// `allargati`: i partiti entrati con `Allarga` nella coalizione del giocatore in trattativa, fuori
-/// da `coalizioni`; vuoto fuori dalla trattativa. `dimissioni`: il governo cade alla chiusura del
+/// `allargati`: i partiti entrati con `Allarga` nella coalizione del giocatore in trattativa o in
+/// crisi, fuori da `coalizioni`; vuoto altrove. `dimissioni`: il governo cade alla chiusura del
 /// turno. `maggioranza`: la coalizione del ribaltone col giocatore primo per seggi, in trattativa;
-/// sostituisce la sua coalizione dell'ultimo voto.
+/// sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in corso, dopo
+/// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -55,6 +56,7 @@ pub struct Legislatura {
     pub allargati: Vec<usize>,
     pub dimissioni: bool,
     pub maggioranza: Option<Vec<usize>>,
+    pub crisi: Option<u32>,
 }
 
 impl Legislatura {

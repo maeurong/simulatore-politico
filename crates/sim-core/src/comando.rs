@@ -109,13 +109,28 @@ impl Partita {
         Err(Errore::Comando(motivo.into()))
     }
 
+    /// La guardia dell'ordinaria amministrazione (scelta 2 del piano 7b): nel turno di crisi niente
+    /// leggi, bilancio, decreti, fiducia, `Accogli`, né le anteprime di legge e decreto.
+    ///
+    /// # Errors
+    /// `Comando` nel turno di crisi.
+    pub(crate) fn fuori_dalla_crisi(&self) -> Result<(), Errore> {
+        if self.in_crisi() {
+            return Err(Errore::Comando(
+                "Crisi di governo: solo ordinaria amministrazione".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Applica un comando del giocatore.
     ///
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione` e `Allarga` è di governo: se il
-    /// giocatore non governa, `Comando` col motivo.
+    /// giocatore non governa, `Comando` col motivo. Nel turno di crisi `PresentaBilancio`,
+    /// `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e `Accogli`: `Comando`.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
@@ -130,6 +145,16 @@ impl Partita {
             return self.allarga(partiti);
         }
         self.di_governo()?;
+        if matches!(
+            c,
+            Comando::PresentaBilancio { .. }
+                | Comando::PresentaLegge { .. }
+                | Comando::EmanaDecreto { .. }
+                | Comando::PoniFiducia { .. }
+                | Comando::Accogli { .. }
+        ) {
+            self.fuori_dalla_crisi()?;
+        }
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
             Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),

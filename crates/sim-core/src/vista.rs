@@ -56,8 +56,8 @@ pub struct Vista {
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
     /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
-    /// l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
-    /// coi seggi del voto. Vuota altrove.
+    /// l'incarico al giocatore, o in crisi col giocatore al governo, una voce per partito fuori
+    /// dalla sua coalizione: se entrerebbe coi seggi veri. Vuota altrove.
     pub disponibilita: Vec<VoceDisponibilita>,
     /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
@@ -72,6 +72,8 @@ pub struct Vista {
     pub incarico: Option<VoceIncarico>,
     /// Il governo cade alla chiusura del turno.
     pub dimissioni: bool,
+    /// Turno di crisi: solo ordinaria amministrazione, `Allarga` ammesso.
+    pub crisi: bool,
 }
 
 /// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato. `Guida`: dopo una
