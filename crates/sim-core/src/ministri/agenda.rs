@@ -434,10 +434,10 @@ impl Ministri {
                 return ko(format!("decreto decaduto non si ripete: {nome}"));
             }
             if in_cantiere(st, k) {
-                return ko(format!("cantiere già in corso: {}", dati.atti()[k].id));
+                return ko(format!("cantiere già in corso: {}", dati.atti()[k].nome));
             }
             if costo_atto(cx, &margini_rif(dati), i, &dati.atti()[k]) > disponibile(st) {
-                return ko(format!("margine insufficiente per {}", dati.atti()[k].id));
+                return ko(format!("margine insufficiente per {}", dati.atti()[k].nome));
             }
             if let Some(m) = dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni) {
                 return ko(format!("{}: {m}", dati.atti()[k].id));

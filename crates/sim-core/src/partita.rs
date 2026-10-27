@@ -297,7 +297,7 @@ impl Partita {
         }
         self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
         self.pressioni_intesa();
-        // L'uscita degli alleati sotto `soglia_uscita` arriva col Task 5 del piano 7b.
+        // Gli alleati sotto `soglia_uscita`: servono per la loro uscita dal governo.
         let _escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
@@ -1652,7 +1652,7 @@ impl Partita {
     pub(crate) fn allarga(&mut self, ids: &[String]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
         if ids.is_empty() {
-            return ko("Allarga: nessun partito".into());
+            return ko("allargamento senza partiti".into());
         }
         if !self.con_incarico() {
             let nomi: Vec<&str> = (ids.iter())

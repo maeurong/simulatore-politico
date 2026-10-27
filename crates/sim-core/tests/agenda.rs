@@ -254,16 +254,16 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
         dirotta(IT, None, regione.as_deref()),
         "niente da dirottare: Infrastrutture e Trasporti",
     );
-    let (caro, di) = (v.ministeri.iter())
+    let (caro, nome, di) = (v.ministeri.iter())
         .find_map(|m| {
             let a = m.atti.iter().find(|a| !a.pagabile)?;
-            Some((a.id.clone(), m.dicastero.clone()))
+            Some((a.id.clone(), a.nome.clone(), m.dicastero.clone()))
         })
         .unwrap();
     rifiuta(
         &mut p,
         dirotta(&di, Some(&caro), None),
-        &format!("margine insufficiente per {caro}"),
+        &format!("margine insufficiente per {nome}"),
     );
     p.comanda(ferma("sanita")).unwrap();
     rifiuta(&mut p, ferma("sanita"), "agenda già modificata: Sanità");
@@ -323,6 +323,10 @@ fn dimissioni_chieste_bloccano_i_comandi_del_dicastero() {
 #[test]
 fn niente_cantiere_doppio_dello_stesso_atto() {
     const CASE: &str = "sanita_case_comunita";
+    let nome = (dati_base().atti().iter().find(|a| a.id == CASE))
+        .unwrap()
+        .nome
+        .clone();
     for seme in 1..=8 {
         let mut p = Partita::nuova(dati_base(), seme);
         p.chiudi_turno();
@@ -347,7 +351,7 @@ fn niente_cantiere_doppio_dello_stesso_atto() {
             rifiuta(
                 &mut p,
                 dirotta("sanita", Some(CASE), None),
-                &format!("cantiere già in corso: {CASE}"),
+                &format!("cantiere già in corso: {nome}"),
             );
         }
     }
