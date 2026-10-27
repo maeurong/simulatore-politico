@@ -118,7 +118,7 @@ fn secondo_voto_riparte_pulito() {
 #[test]
 fn a_camere_sciolte_l_aula_non_vota() {
     // Partita di prova con una legge in calendario per la chiusura del turno 1, poi Camere
-    // sciolte: la legge non si vota.
+    // sciolte: la legge non si vota, decade col voto delle Camere.
     let mut p = Partita::nuova(comune::dati_base(), 1);
     comune::presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
     p.chiudi_turno();
@@ -131,7 +131,13 @@ fn a_camere_sciolte_l_aula_non_vota() {
     })
     .unwrap();
     p.chiudi_turno();
-    assert!(p.vista().esiti.is_empty(), "{:?}", p.vista().esiti);
+    let esiti = p.vista().esiti;
+    assert!(
+        esiti
+            .iter()
+            .all(|e| e.decaduta.is_some() && e.linee.is_empty()),
+        "{esiti:?}"
+    );
 }
 
 #[test]

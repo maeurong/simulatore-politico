@@ -6,6 +6,6 @@ import type { VoceLinea } from "./VoceLinea";
 
 export type EsitoVoto = { misura: number, nome: string, forma: FormaMisura, data: Trimestre, deliberazione: number, camera: Conteggio, senato: Conteggio, approvata: boolean, fiducia: boolean, fiducia_respinta: boolean, linee: Array<VoceLinea>, 
 /**
- * La legge elettorale decaduta senza voto: il motivo leggibile, per il giocatore.
+ * La misura decaduta senza voto: il motivo leggibile, per il giocatore.
  */
 decaduta: string | null, };

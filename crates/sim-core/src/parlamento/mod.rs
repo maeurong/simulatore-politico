@@ -2,6 +2,7 @@
 
 use crate::dati::DatiGioco;
 use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
+use crate::elettorato::Affluenza;
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::ministri::{Causa, Ministri, penalizza};
@@ -93,7 +94,7 @@ pub struct EsitoVoto {
     pub fiducia: bool,
     pub fiducia_respinta: bool,
     pub linee: Vec<VoceLinea>,
-    /// La legge elettorale decaduta senza voto: il motivo leggibile, per il giocatore.
+    /// La misura decaduta senza voto: il motivo leggibile, per il giocatore.
     pub decaduta: Option<String>,
 }
 
@@ -822,6 +823,54 @@ impl Parlamento {
             maggioranza_camera,
             maggioranza_senato,
             in_bilico: camera[0] < maggioranza_camera || senato[0] < maggioranza_senato,
+        }
+    }
+
+    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
+    /// misura in calendario decade senza voto, costi né blocco; le respinte si dimenticano;
+    /// l'abrogativo indetto e non ancora votato è sospeso, senza valence. I confermativi restano.
+    pub(crate) fn decadi_tutto(
+        &mut self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        data: Trimestre,
+    ) {
+        for m in std::mem::take(&mut self.misure) {
+            self.esiti.insert(
+                0,
+                EsitoVoto {
+                    misura: m.id,
+                    nome: nome_misura(dati, &m),
+                    forma: m.forma,
+                    data,
+                    deliberazione: m.deliberazione,
+                    camera: Conteggio { si: 0, no: 0 },
+                    senato: Conteggio { si: 0, no: 0 },
+                    approvata: false,
+                    fiducia: m.fiducia,
+                    fiducia_respinta: false,
+                    linee: Vec::new(),
+                    decaduta: Some("Decaduta per la fine della legislatura".into()),
+                },
+            );
+        }
+        self.respinte.clear();
+        if let Some(r) = self.referendum.take() {
+            let vigente = (r.valori.iter())
+                .filter_map(|&(d, _)| Some((d, disposizioni.voci.get(d)?.in_vigore)))
+                .collect::<Vec<_>>();
+            let nessuno = Affluenza {
+                si: 0.0,
+                no: 0.0,
+                astenuti: 0.0,
+            };
+            self.esiti_referendum.insert(
+                0,
+                EsitoReferendum {
+                    decaduto: Some("Sospeso per lo scioglimento delle Camere".into()),
+                    ..EsitoReferendum::da(r.tipo, nome(dati, &vigente), data, &nessuno)
+                },
+            );
         }
     }
 

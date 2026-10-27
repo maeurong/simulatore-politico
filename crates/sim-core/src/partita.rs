@@ -946,12 +946,18 @@ impl Partita {
     /// # Errors
     /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
     /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
-    /// referendum già in corso, fuori finestra (dopo luglio-settembre).
+    /// referendum già in corso, fuori finestra (dopo luglio-settembre); prima di tutto, l'ultimo
+    /// anno della legislatura (iter-legislativo-italiano:135).
     pub fn promuovi_referendum(
         &mut self,
         promotore: &str,
         disposizione: &str,
     ) -> Result<(), Errore> {
+        if self.legislatura.ultimo_anno(self.turno) {
+            return Err(Errore::Comando(
+                "Nessuna richiesta di referendum nell'ultimo anno della legislatura".into(),
+            ));
+        }
         let r = (self.parlamento).abrogativo(
             &self.stato_aula(),
             self.turno,
@@ -1411,11 +1417,16 @@ impl Partita {
     }
 
     /// Il voto (premio e riparto, sistemi-elettorali:39; bias comune che si rivela,
-    /// sondaggi-ed-errore:50, :55): riparto delle intenzioni vere `vero` con le coalizioni al voto,
+    /// sondaggi-ed-errore:50, :55): prima la fine della legislatura (`decadi_tutto`, gradini
+    /// sbloccati, scelta 12), poi riparto delle intenzioni vere `vero` con le coalizioni al voto,
     /// la legge e i seggi dei rami in vigore, poi le cessioni; voto precedente = intenzioni, bias
     /// comune nuovo, legislatura nuova in trattativa, incarico. Riparto rifiutato: seggi di prima,
     /// esito con le quote senza seggi. Il giocatore senza seggi in entrambe le Camere: fine.
     fn vota_parlamento(&mut self, vero: &Intenzioni) {
+        (self.parlamento).decadi_tutto(&self.dati, &self.disposizioni, self.data);
+        for v in &mut self.disposizioni.voci {
+            v.bloccati.clear();
+        }
         let (n, g) = (self.partiti.len(), self.giocatore);
         let leve = self.disposizioni.leve(&self.dati);
         let coalizioni = self.coalizioni_correnti();
