@@ -249,6 +249,7 @@ pub(crate) struct StatoAula<'a> {
     pub partiti: &'a [Partito],
     pub governo: &'a Governo,
     pub intesa: &'a [f64],
+    pub ultimatum: &'a [Option<CausaIntesa>],
     /// Le coalizioni dell'ultimo voto, o nel turno del voto quelle al voto, per i seggi attesi.
     pub coalizioni: Vec<Vec<usize>>,
 }
@@ -292,7 +293,7 @@ impl StatoAula<'_> {
             }
         };
         if m.fiducia {
-            let linea = voto::linea_fiducia(dati, partiti, governo, intesa, nuova);
+            let linea = voto::linea_fiducia(dati, partiti, governo, self.ultimatum, nuova);
             let franchi = vec![0.0; linea.len()];
             let franchi_camera = if elettorale {
                 segreto(&voto::probabilita_franco(
@@ -766,18 +767,10 @@ impl Parlamento {
             .map(|m| {
                 let p = aula.previsione(m);
                 let nuova = p.posizioni.map(|(_, n)| n);
-                // Senza fiducia, l'intesa dopo il suo costo; il resto sullo stato attuale.
-                let a_blocchi = if m.fiducia {
-                    p.linea.clone()
-                } else {
-                    let intesa: Vec<f64> = (aula.partiti.iter().zip(aula.intesa))
-                        .map(|(x, &i)| {
-                            let costo = costo_fiducia(dati, m.forma, x.posizione_dichiarata, nuova);
-                            (i - costo).clamp(0.0, 100.0)
-                        })
-                        .collect();
-                    voto::linea_fiducia(dati, aula.partiti, aula.governo, &intesa, nuova)
-                };
+                // L'ultimatum è lo stato della chiusura precedente: il costo della fiducia non lo
+                // cambia prima del voto.
+                let a_blocchi =
+                    voto::linea_fiducia(dati, aula.partiti, aula.governo, aula.ultimatum, nuova);
                 VoceMisura {
                     id: m.id,
                     nome: nome_misura(dati, m),

@@ -7,7 +7,7 @@ mod comune;
 use comune::{file_base, fondata, imposta};
 use serde_json::json;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
-use sim_core::parlamento::{Decreto, TipoReferendum, ValoreProposto};
+use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
 use sim_core::vista::VoceIncarico;
 use sim_core::{Comando, Partita};
 
@@ -445,9 +445,19 @@ fn gli_alleati_del_governo_ia_partono_dalla_base() {
     let n = p.partiti().len();
     let mut p = comune::edita(&p, |j| j["intesa"]["valori"] = json!(vec![30.0; n])).unwrap();
     p.chiudi_turno(); // trattativa: governo IA
-    let base = comune::dati_base().manopola("intesa_base");
+    let dati = comune::dati_base();
+    let base = dati.manopola("intesa_base");
     assert!(!p.alleati().is_empty());
+    // Chi rompe l'impegno pre-elettorale parte da `intesa_base − intesa_rottura_impegno`.
     for j in p.alleati() {
-        assert!((p.intesa().valori[j] - base).abs() < 1e-9, "{j}");
+        let rompe = (p.intesa().variazioni.iter())
+            .any(|v| v.partito == j && v.causa == CausaIntesa::RotturaImpegno);
+        let attesa = base
+            - if rompe {
+                dati.manopola("intesa_rottura_impegno")
+            } else {
+                0.0
+            };
+        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
     }
 }

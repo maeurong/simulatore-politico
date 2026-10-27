@@ -142,6 +142,10 @@ impl Partita {
             Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }
+        let dimissioni = match &c {
+            Comando::ChiediDimissioni { dicastero } => Some(dicastero.clone()),
+            _ => None,
+        };
         match self.con_contesto(|ministri, cx, _| ministri.comanda(cx, c))? {
             EffettoComando::Nessuno => {}
             EffettoComando::Dirottata { dicastero } => self.conversione_su_agenda(dicastero),
@@ -156,6 +160,9 @@ impl Partita {
                 disposizione,
                 gradino,
             } => self.accogli_riforma(dicastero, disposizione, gradino)?,
+        }
+        if let Some(dicastero) = dimissioni {
+            self.dimissioni_chieste(&dicastero);
         }
         Ok(())
     }

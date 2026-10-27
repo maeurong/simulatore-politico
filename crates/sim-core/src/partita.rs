@@ -296,7 +296,9 @@ impl Partita {
             self.vota_parlamento(&vero);
         }
         self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
-        self.intesa.soglie(&self.dati, self.turno);
+        self.pressioni_intesa();
+        // L'uscita degli alleati sotto `soglia_uscita` arriva col Task 5 del piano 7b.
+        let _escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
@@ -321,6 +323,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
@@ -869,7 +872,68 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
+        }
+    }
+
+    /// `ChiediDimissioni` accolto sul dicastero `id`: se il ministro è di un alleato e non è un
+    /// tecnico, l'alleato perde `costo_dimissioni_chieste`.
+    pub(crate) fn dimissioni_chieste(&mut self, id: &str) {
+        let i = self.dati.dicasteri().iter().position(|d| d.id == id);
+        let ministro = i.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref());
+        let Some(m) = ministro.filter(|m| !m.tecnico && voto::alleato(&self.governo, m.partito))
+        else {
+            return;
+        };
+        let (j, delta) = (m.partito, -self.dati.manopola("costo_dimissioni_chieste"));
+        (self.intesa).varia(j, CausaIntesa::DimissioniChieste, delta, self.turno);
+    }
+
+    /// Pressioni di fine turno sull'intesa di ogni alleato del governo in carica: ministri
+    /// scontenti, quota dei dicasteri sotto la richiesta di Gamson sui seggi veri, calo nei
+    /// sondaggi rispetto all'ultimo voto (cicli-politico-economici-e-luna-di-miele:21). Una
+    /// variazione si registra solo se il delta non è zero.
+    fn pressioni_intesa(&mut self) {
+        let d = |nome| self.dati.manopola(nome);
+        let (minaccia, costo_ministri) = (d("soglia_minaccia"), d("costo_ministri_scontenti"));
+        let (costo_quota, costo_calo) = (d("costo_quota_scoperta"), d("costo_calo_sondaggi"));
+        let seggi = self.seggi_per_partito();
+        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
+        let maggioranza = self.governo.coalizione.iter().map(|&j| di(j)).sum();
+        let mut variazioni = Vec::new();
+        for j in self.alleati() {
+            let sodd: Vec<f64> = (self.ministri.dicasteri.iter())
+                .filter_map(|st| st.ministro.as_ref())
+                .filter(|m| m.partito == j)
+                .map(|m| m.soddisfazione)
+                .collect();
+            if !sodd.is_empty() {
+                let media = sodd.iter().sum::<f64>() / sodd.len() as f64;
+                let delta = -costo_ministri * (minaccia - media).max(0.0) / 10.0;
+                variazioni.push((j, CausaIntesa::MinistriScontenti, delta));
+            }
+            let offerta = (self.dati.dicasteri().iter().zip(&self.governo.dicasteri))
+                .filter(|&(_, &a)| a == j)
+                .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
+            let richiesta = legislatura::richiesta(&self.dati, di(j), maggioranza);
+            let delta = -costo_quota * (richiesta - offerta).max(0.0);
+            variazioni.push((j, CausaIntesa::QuotaScoperta, delta));
+            if let Some(voti) = self
+                .legislatura
+                .elezioni
+                .first()
+                .and_then(|e| e.voti.get(j))
+            {
+                let sondaggio = legislatura::quota_fra_i_votanti(&self.informazione.sondaggio, j);
+                let delta = -costo_calo * (voti.quota - sondaggio).max(0.0) * 100.0;
+                variazioni.push((j, CausaIntesa::SondaggiInCalo, delta));
+            }
+        }
+        for (j, causa, delta) in variazioni {
+            if delta != 0.0 {
+                (self.intesa).varia(j, causa, delta, self.turno);
+            }
         }
     }
 
@@ -1819,18 +1883,27 @@ impl Partita {
                 self.dati.manopola("intesa_per_punto"),
             );
             for (j, richiesta, offerta) in self.quote(&assegnati) {
-                if let Some(x) = self.intesa.valori.get_mut(j) {
-                    *x = base;
-                }
+                self.intesa.riparti(j, base);
                 let delta = per_punto * (offerta - richiesta);
                 (self.intesa).varia(j, CausaIntesa::Spartizione, delta, self.turno);
             }
         } else {
             let base = self.dati.manopola("intesa_base");
             for &j in coalizione.iter().filter(|&&j| j != presidente) {
-                if let Some(x) = self.intesa.valori.get_mut(j) {
-                    *x = base;
-                }
+                self.intesa.riparti(j, base);
+            }
+        }
+        // Rottura dell'impegno, simmetrica (scelta 3 del piano 7b): paga anche il giocatore.
+        let (valence, intesa) = (
+            self.dati.manopola("valence_rottura_impegno"),
+            self.dati.manopola("intesa_rottura_impegno"),
+        );
+        for j in legislatura::rotture(&self.legislatura.coalizioni, &coalizione, &coalizione) {
+            if let Some(p) = self.partiti.get_mut(j) {
+                p.valence -= valence;
+            }
+            if j != presidente {
+                (self.intesa).varia(j, CausaIntesa::RotturaImpegno, -intesa, self.turno);
             }
         }
         let entranti: Vec<usize> = (coalizione.iter().copied())
@@ -1980,18 +2053,18 @@ impl Partita {
         if self.governo.presidente != self.giocatore {
             return Vec::new();
         }
-        let soglia = self.dati.manopola("soglia_ultimatum");
         (self.alleati().into_iter())
             .map(|j| {
                 let variazioni: Vec<_> = (self.intesa.variazioni.iter())
                     .filter(|v| v.partito == j)
                     .cloned()
                     .collect();
-                let intesa = self.intesa.valori.get(j).copied().unwrap_or_default();
+                let causa_ultimatum = self.intesa.ultimatum.get(j).copied().flatten();
                 VoceAlleato {
                     partito: self.partiti[j].id.clone(),
-                    intesa,
-                    ultimatum: intesa < soglia,
+                    intesa: self.intesa.valori.get(j).copied().unwrap_or_default(),
+                    ultimatum: causa_ultimatum.is_some(),
+                    causa_ultimatum,
                     causa_principale: causa_peggiore(variazioni.iter().map(|v| (v.causa, v.delta))),
                     variazioni,
                 }

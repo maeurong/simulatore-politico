@@ -5,7 +5,11 @@ import type { VariazioneIntesa } from "./VariazioneIntesa";
 /**
  * L'intesa di un alleato in cifre: il giocatore governa con lui.
  */
-export type VoceAlleato = { partito: string, intesa: number, ultimatum: boolean, causa_principale: CausaIntesa | null, 
+export type VoceAlleato = { partito: string, intesa: number, ultimatum: boolean, 
+/**
+ * La causa con cui l'ultimatum è stato posto; resta finché dura.
+ */
+causa_ultimatum: CausaIntesa | null, causa_principale: CausaIntesa | null, 
 /**
  * Variazioni degli ultimi due turni.
  */

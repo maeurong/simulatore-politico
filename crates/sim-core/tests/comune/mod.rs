@@ -356,3 +356,55 @@ pub fn in_trattativa(coalizioni: serde_json::Value, camera: &[u32], senato: &[u3
     .unwrap();
     con_seggi(&p, camera, senato)
 }
+
+/// Indice del partito `id` nello scenario: lo stesso nella partita di prova e in quella vera.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn partito(id: &str) -> usize {
+    (dati_base().scenario().partiti.iter())
+        .position(|p| p.id == id)
+        .unwrap()
+}
+
+/// Alla posizione 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
+/// Task 9: al 6,5 nessun partito è disponibile, Task 7).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn vinta() -> Partita {
+    let mut p = fondata(4.5);
+    let alleati: Vec<String> = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti: alleati,
+        cessioni: vec![],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(
+        p.legislatura().incarico,
+        Some(sim_core::legislatura::Incarico::Giocatore),
+        "{:?}",
+        p.vista().elezioni[0]
+    );
+    p
+}
+
+/// `vinta()` con la trattativa chiusa: il giocatore governa.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn al_governo() -> Partita {
+    let mut p = vinta();
+    p.chiudi_turno();
+    p
+}

@@ -1,5 +1,5 @@
 mod comune;
-use comune::{imposta, presenta, sanita_cara, senza_shock};
+use comune::{edita, imposta, partito, presenta, sanita_cara, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::{CausaIntesa, Decreto, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita};
@@ -118,10 +118,14 @@ fn fiducia_vota_nel_turno_senza_franchi_tiratori() {
 
 #[test]
 fn alleato_in_ultimatum_e_lontano_vota_no_alla_fiducia() {
-    let mut p = Partita::nuova(
+    let p = Partita::nuova(
         DatiGioco::da_testi(&con(senza_shock(), "intesa_base", "30.0")).unwrap(),
         1,
     );
+    let mut p = edita(&p, |j| {
+        j["intesa"]["ultimatum"][partito("centrodestra")] = "norma_lontana".into();
+    })
+    .unwrap();
     presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
     let v = p.vista();
     assert_eq!(v.calendario[0].alleati_contro_fiducia, ["centrodestra"]);
@@ -143,9 +147,10 @@ fn alleato_in_ultimatum_e_lontano_vota_no_alla_fiducia() {
 }
 
 #[test]
-fn la_vista_conta_il_costo_della_fiducia_prima_di_porla() {
+fn il_costo_della_fiducia_porta_l_ultimatum_al_turno_dopo() {
     // Centrodestra a 43: sopra la soglia d'ultimatum (40), sotto dopo il costo della fiducia
-    // su 62 anni (3 + 6 · 3/6 = 6).
+    // su 62 anni (3 + 6 · 3/6 = 6). L'ultimatum è lo stato della chiusura precedente: al voto
+    // non c'è ancora, nasce nella chiusura.
     let mut p = Partita::nuova(
         DatiGioco::da_testi(&con(senza_shock(), "intesa_base", "43.0")).unwrap(),
         1,
@@ -153,18 +158,17 @@ fn la_vista_conta_il_costo_della_fiducia_prima_di_porla() {
     presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
     let v = p.vista();
     assert!(!v.alleati[0].ultimatum);
-    assert_eq!(v.calendario[0].alleati_contro_fiducia, ["centrodestra"]);
+    assert!(v.calendario[0].alleati_contro_fiducia.is_empty());
     p.comanda(Comando::PoniFiducia {
         misura: v.calendario[0].id,
     })
     .unwrap();
-    assert_eq!(
-        p.vista().calendario[0].alleati_contro_fiducia,
-        ["centrodestra"]
-    );
+    assert!(p.vista().calendario[0].alleati_contro_fiducia.is_empty());
     p.chiudi_turno();
-    let e = &p.vista().esiti[0];
-    assert!(e.linee.iter().any(|l| l.partito == "centrodestra" && !l.si));
+    let v = p.vista();
+    let e = &v.esiti[0];
+    assert!(e.linee.iter().any(|l| l.partito == "centrodestra" && l.si));
+    assert_eq!(v.alleati[0].causa_ultimatum, Some(CausaIntesa::Fiducia));
 }
 
 #[test]

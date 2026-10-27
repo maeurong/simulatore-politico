@@ -1110,3 +1110,52 @@ valore = 10.0
 min = 0.0
 max = 30.0
 ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (sotto questa intesa, a fine turno, l'alleato esce; spec riga 333)
+[soglia_uscita]
+valore = 25.0
+min = 0.0
+max = 40.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per 10 punti di soddisfazione media dei ministri dell'alleato sotto soglia_minaccia)
+[costo_ministri_scontenti]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per punto di peso dei dicasteri sotto la richiesta di Gamson)
+[costo_quota_scoperta]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per punto percentuale di calo nei sondaggi rispetto all'ultimo voto; cicli-politico-economici-e-luna-di-miele:21 per l'effetto)
+[costo_calo_sondaggi]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa dall'alleato quando il giocatore chiede le dimissioni di un suo ministro)
+[costo_dimissioni_chieste]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (valence persa da chi rompe l'impegno pre-elettorale alla formazione del governo)
+[valence_rottura_impegno]
+valore = 0.3
+min = 0.0
+max = 2.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa dall'alleato che rompe l'impegno pre-elettorale; formazione-di-coalizioni:48 per l'effetto)
+[intesa_rottura_impegno]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "05"

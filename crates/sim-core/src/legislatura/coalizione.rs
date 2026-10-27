@@ -348,6 +348,30 @@ pub(crate) fn dichiarazione(
     Ok(d)
 }
 
+/// Chi della `coalizione` di governo rompe l'impegno pre-elettorale, in ordine d'indice. L'impegno
+/// esiste solo per chi ha corso in una coalizione `C` di almeno due partiti di `ultime`: rompe se
+/// sta fra gli `entranti` e un compagno di `C` resta fuori dalla `coalizione`, o se un altro
+/// entrante ha corso in una coalizione di almeno due partiti diversa da `C`
+/// (formazione-di-coalizioni:48: cambiare campo costa).
+pub(crate) fn rotture(
+    ultime: &[Vec<usize>],
+    coalizione: &[usize],
+    entranti: &[usize],
+) -> Vec<usize> {
+    let campo = |j: usize| (ultime.iter()).find(|c| c.len() >= 2 && c.contains(&j));
+    let mut v: Vec<usize> = (coalizione.iter().copied())
+        .filter(|&j| {
+            let Some(c) = campo(j) else {
+                return false;
+            };
+            let lascia = entranti.contains(&j) && c.iter().any(|k| !coalizione.contains(k));
+            lascia || (entranti.iter()).any(|&k| k != j && campo(k).is_some_and(|ck| ck != c))
+        })
+        .collect();
+    v.sort_unstable();
+    v
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -384,6 +408,25 @@ mod tests {
         assert_eq!(
             coalizioni_al_voto(&[vec![2, 3]], 0, Some(&d)),
             vec![vec![0, 3]]
+        );
+    }
+
+    #[test]
+    fn rompe_chi_lascia_un_compagno_o_governa_con_l_altro_campo() {
+        let ultime = [vec![7], vec![1, 2], vec![4, 5]];
+        // 2 lascia 1; 7 governa con un partito dell'altro campo, ma ha corso da solo: libero.
+        assert_eq!(rotture(&ultime, &[2, 7], &[2, 7]), vec![2]);
+        // Allargare a chi ha corso da solo non rompe nulla.
+        assert_eq!(
+            rotture(&[vec![4, 5], vec![3]], &[3, 4, 5], &[3, 4, 5]),
+            Vec::<usize>::new()
+        );
+        // 5 governa senza il suo compagno 4.
+        assert_eq!(rotture(&[vec![4, 5]], &[5, 6], &[5, 6]), vec![5]);
+        // Un entrante che aveva corso da solo non fa rompere chi governa già.
+        assert_eq!(
+            rotture(&[vec![4, 5], vec![6]], &[5, 6], &[6]),
+            Vec::<usize>::new()
         );
     }
 }

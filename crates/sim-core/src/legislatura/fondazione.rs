@@ -70,7 +70,7 @@ fn ko<T>(m: String) -> Result<T, Errore> {
 }
 
 /// Media sugli istituti della quota del partito `j` fra i votanti; l'astensione è l'ultima voce.
-pub(super) fn quota_fra_i_votanti(s: &Sondaggio, j: usize) -> f64 {
+pub(crate) fn quota_fra_i_votanti(s: &Sondaggio, j: usize) -> f64 {
     let quote = s.istituti.iter().map(|r| {
         let astensione = r.quote.last().copied().unwrap_or(0.0);
         r.quote.get(j).copied().unwrap_or(0.0) / (1.0 - astensione)
