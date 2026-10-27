@@ -110,7 +110,12 @@ fn passa(seggi: &mut [u32], da: usize, a: usize, n: u32) {
 
 /// Le cessioni dopo il riparto (scelta 5 del piano 7): `n` seggi della Camera e `n / 2` del
 /// Senato dal giocatore al membro, mai oltre i seggi del giocatore.
-fn cedi(camera: &mut [u32], senato: &mut [u32], giocatore: usize, cessioni: &[(usize, u32)]) {
+pub(crate) fn cedi(
+    camera: &mut [u32],
+    senato: &mut [u32],
+    giocatore: usize,
+    cessioni: &[(usize, u32)],
+) {
     for &(j, n) in cessioni {
         passa(camera, giocatore, j, n);
         passa(senato, giocatore, j, n / 2);

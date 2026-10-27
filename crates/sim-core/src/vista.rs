@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{Fase, VoceDisponibilita};
+use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -55,8 +55,11 @@ pub struct Vista {
     /// Nel turno del voto, una voce per partito IA: la regola e la causa, mai i valori attesi;
     /// vuota altrove.
     pub disponibilita: Vec<VoceDisponibilita>,
-    /// I membri dichiarati della coalizione del giocatore (id), senza di lui.
+    /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
+    /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
     pub coalizione: Vec<String>,
+    /// Gli esiti dei voti, il più recente per primo.
+    pub elezioni: Vec<EsitoElezioni>,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

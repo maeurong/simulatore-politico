@@ -11,6 +11,7 @@ use crate::informazione::Sondaggio;
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -99,6 +100,21 @@ pub(crate) fn proietta(
             )
         })
         .collect();
+    riparto_con(dati, legge, leve, coalizioni, per_regione)
+}
+
+/// `elezioni::riparto` dei voti `per_regione` con la legge `legge`, i seggi dei rami da `leve` e
+/// le `coalizioni` (indici di partito).
+///
+/// # Errors
+/// Quelli di `elezioni::riparto`.
+pub(crate) fn riparto_con(
+    dati: &DatiGioco,
+    legge: &LeggeElettorale,
+    leve: &Leve,
+    coalizioni: &[Vec<usize>],
+    per_regione: BTreeMap<String, Vec<u64>>,
+) -> Result<Esito, Errore> {
     // I totali dei rami da `numero_parlamentari`: `seggi_per_circoscrizione` regge ogni totale.
     let mut elezioni = dati.elezioni().clone();
     elezioni.camera.seggi = leve.seggi_camera.round() as u32;
@@ -156,7 +172,7 @@ impl StatoAula<'_> {
                 self.sondaggio,
                 l,
                 &leve,
-                self.coalizioni,
+                &self.coalizioni,
             )
         };
         let (Ok(prima), Ok(dopo)) = (
