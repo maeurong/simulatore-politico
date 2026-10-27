@@ -56,6 +56,7 @@ pub enum Errore {
     Disposizioni(String),
     Comando(String),
     Bilancio(String),
+    Fondazione(String),
     Toml {
         file: String,
         messaggio: String,
@@ -126,6 +127,7 @@ impl fmt::Display for Errore {
             Self::Disposizioni(m) => write!(f, "disposizioni non valide: {m}"),
             Self::Comando(m) => write!(f, "comando non ammesso: {m}"),
             Self::Bilancio(m) => write!(f, "legge di bilancio non ammessa: {m}"),
+            Self::Fondazione(m) => write!(f, "fondazione del partito non valida: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

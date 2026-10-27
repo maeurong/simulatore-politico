@@ -38,13 +38,8 @@ impl Informazione {
         economia: &Economia,
     ) -> Informazione {
         let alt = partiti.len() + 1;
-        let (s_bias, s_ist) = (
-            dati.manopola("sigma_bias_comune"),
-            dati.manopola("sigma_istituto"),
-        );
-        let bias: Vec<f64> = (0..alt)
-            .map(|_| s_bias * caso.normale(Flusso::Sondaggi))
-            .collect();
+        let s_ist = dati.manopola("sigma_istituto");
+        let bias = bias(dati, caso, alt);
         let effetti_istituto: Vec<Vec<f64>> = dati
             .elettorato()
             .istituti
@@ -71,6 +66,12 @@ impl Informazione {
             sondaggio,
             statistica: Statistica::iniziale(dati, economia),
         }
+    }
+
+    /// Il bias comune della legislatura nuova, estratto al voto che lo rivela
+    /// (sondaggi-ed-errore:50, :55): un normale per alternativa, partiti e poi astensione.
+    pub(crate) fn riestrai_bias(&mut self, dati: &DatiGioco, caso: &mut Caso, n_partiti: usize) {
+        self.bias = bias(dati, caso, n_partiti + 1);
     }
 
     /// Nuovo sondaggio dalle intenzioni vere.
@@ -152,4 +153,12 @@ impl Informazione {
         }
         Ok(())
     }
+}
+
+/// `alt` normali di `Flusso::Sondaggi` per `sigma_bias_comune`.
+fn bias(dati: &DatiGioco, caso: &mut Caso, alt: usize) -> Vec<f64> {
+    let s = dati.manopola("sigma_bias_comune");
+    (0..alt)
+        .map(|_| s * caso.normale(Flusso::Sondaggi))
+        .collect()
 }

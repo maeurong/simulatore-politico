@@ -439,7 +439,8 @@ impl Ministri {
             | Comando::Emendamento { .. }
             | Comando::PoniFiducia { .. }
             | Comando::EmanaDecreto { .. }
-            | Comando::InvitaAstensione => {}
+            | Comando::InvitaAstensione
+            | Comando::DichiaraCoalizione { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }

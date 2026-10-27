@@ -3,6 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
+use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -19,6 +20,18 @@ use ts_rs::TS;
 pub struct Vista {
     pub turno: u32,
     pub data: Trimestre,
+    /// L'id del partito del giocatore.
+    pub giocatore: String,
+    /// La fase della legislatura: Camere sciolte, trattativa dopo il voto, governo in carica.
+    pub fase: Fase,
+    /// Il trimestre del prossimo voto: si vota nella chiusura di quel turno.
+    pub voto: Trimestre,
+    /// Turni che mancano al voto; 0 nel turno del voto.
+    pub turni_al_voto: u32,
+    /// Il giocatore guida il governo: i comandi di governo sono ammessi.
+    pub governa: bool,
+    /// La partita è finita.
+    pub finita: bool,
     pub dicasteri: Vec<VoceDicastero>,
     /// Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
     pub grandezze: Vec<VoceGrandezza>,
@@ -42,6 +55,13 @@ pub struct Vista {
     /// I referendum in attesa del voto.
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
+    /// Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
+    pub disponibilita: Vec<VoceDisponibilita>,
+    /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
+    /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
+    pub coalizione: Vec<String>,
+    /// Gli esiti dei voti, il più recente per primo.
+    pub elezioni: Vec<EsitoElezioni>,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

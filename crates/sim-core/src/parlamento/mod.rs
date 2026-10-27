@@ -27,7 +27,7 @@ pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
-pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro};
+pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, riparto_con};
 
 /// Posti del calendario per riforme ed elettorali.
 pub const POSTI_ORDINARI: usize = 3;
@@ -248,6 +248,8 @@ pub(crate) struct StatoAula<'a> {
     pub partiti: &'a [Partito],
     pub governo: &'a Governo,
     pub intesa: &'a [f64],
+    /// Le coalizioni dell'ultimo voto, o nel turno del voto quelle al voto, per i seggi attesi.
+    pub coalizioni: Vec<Vec<usize>>,
 }
 
 /// Posizioni, linea e probabilità dei franchi tiratori di una misura, sullo stato attuale.
@@ -832,27 +834,27 @@ impl Parlamento {
     }
 
     /// # Errors
-    /// `SalvataggioIlleggibile` se i seggi non sono uno per partito, uno supera o non sommano ai
-    /// seggi del ramo, o una misura, un suo emendamento o una respinta esce dalle disposizioni, dai gradini,
-    /// dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
-    /// partiti, o ha il voto oltre `turno + 6`, o l'abrogativo senza firme ha un voto diverso da
-    /// quello chiesto nel `turno`.
+    /// `SalvataggioIlleggibile` se: i seggi non sono uno per partito o non sommano ai `totali` dei
+    /// rami del parlamento eletto (zero a Camere sciolte); una misura, un suo emendamento o una
+    /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti; un referendum
+    /// esce dalle disposizioni, dai gradini o dai partiti, o ha il voto oltre `turno + 6`;
+    /// l'abrogativo senza firme ha un voto diverso da quello chiesto nel `turno`.
     pub(crate) fn controlla(
         &self,
         dati: &DatiGioco,
         n_partiti: usize,
         turno: u32,
+        totali: (u32, u32),
     ) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("parlamento: {m}")));
-        let (camera, senato) = seggi_partenza(dati.disposizioni()).unwrap_or_default();
-        for (seggi, totale) in [(&self.seggi_camera, camera), (&self.seggi_senato, senato)] {
-            // Ogni seggio entro il ramo e somma in u64: i `sum::<u32>()` a valle non traboccano.
+        for (seggi, totale) in [
+            (&self.seggi_camera, totali.0),
+            (&self.seggi_senato, totali.1),
+        ] {
+            // Somma in u64 uguale a un totale u32: i `sum::<u32>()` a valle non traboccano.
             let somma: u64 = seggi.iter().map(|&n| u64::from(n)).sum();
-            if seggi.len() != n_partiti
-                || seggi.iter().any(|&n| f64::from(n) > totale)
-                || somma as f64 != totale
-            {
-                return ko("seggi non uno per partito o diversi dai seggi del ramo");
+            if seggi.len() != n_partiti || somma != u64::from(totale) {
+                return ko("seggi non uno per partito o diversi dai seggi del ramo eletto");
             }
         }
         let catalogo = dati.disposizioni();

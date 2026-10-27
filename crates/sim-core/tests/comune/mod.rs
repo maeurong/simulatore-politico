@@ -173,12 +173,16 @@ pub fn riscrivi(mut f: FileDati, file: &str, prefisso: &str, nuova: &str) -> Fil
 }
 
 /// Ferma le agende ancora annunciate, tranne quella di `tranne` e di chi ha le dimissioni chieste
-/// (non si esegue comunque), così due partite divergono solo per ciò che il test fa.
+/// (non si esegue comunque), così due partite divergono solo per ciò che il test fa. Senza il
+/// governo del giocatore (la trattativa dopo il voto alla scadenza) non ferma nulla.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn ferma_tranne(p: &mut Partita, tranne: &str) {
+    if !p.governa() {
+        return;
+    }
     for m in p.vista().ministeri {
         let annunciata = m
             .agenda
@@ -261,4 +265,17 @@ pub fn sanita_cara(mut f: FileDati) -> FileDati {
         f = sostituisci(f, "atti", &da, &da.replacen(costo, "costo = 9.0\n", 1));
     }
     f
+}
+
+/// La partita vera col seme 7, fondata al posto `posto`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn fondata(posto: f64) -> Partita {
+    let f = sim_core::legislatura::Fondazione {
+        nome: "Partito nuovo".into(),
+        posto,
+    };
+    Partita::fonda(dati_base(), 7, &f).unwrap()
 }

@@ -6,6 +6,9 @@ use crate::scenario::{Ingresso, Scenario};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// L'id del partito del giocatore, riservato: nessun partito dello scenario può averlo.
+pub const ID_GIOCATORE: &str = "giocatore";
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DatoPartito {
     pub id: String,
@@ -102,6 +105,11 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
     for p in partiti {
         if !visti.insert(p.id.as_str()) {
             return Err(ko(format!("partito ripetuto: {}", p.id)));
+        }
+        if p.id == ID_GIOCATORE {
+            return Err(ko(format!(
+                "id riservato al partito del giocatore: {ID_GIOCATORE}"
+            )));
         }
         if !(p.posizione.is_finite() && (1.0..=7.0).contains(&p.posizione)) {
             return Err(ko(format!("posizione di {} fuori da 1-7", p.id)));

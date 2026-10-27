@@ -80,6 +80,30 @@ fn flag_sconosciuto_esce_con_errore() {
 }
 
 #[test]
+fn posto_fonda_la_partita_vera() {
+    let out = sim(&[
+        "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4.5",
+    ]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let vista: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(vista["vista"]["giocatore"], "giocatore");
+}
+
+#[test]
+fn posto_non_ammesso_esce_con_errore() {
+    rifiuta(
+        &[
+            "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4",
+        ],
+        "posizione 4 non ammessa",
+    );
+}
+
+#[test]
 fn flag_senza_valore_esce_con_errore() {
     rifiuta(
         &["--dati", DATI, "--seme", "1", "--turni"],
@@ -382,6 +406,32 @@ fn tara_accetta_un_intero_come_affluenza() {
 }
 
 #[test]
+fn tara_stampa_la_luna_di_miele_e_rilanciata_la_lascia_ferma() {
+    let cartella = copia_dati("luna");
+    let manopole = leggi(&cartella, "manopole.toml");
+    let scostata = manopole.replace("valore = 0.328125", "valore = 2.0");
+    assert_ne!(
+        manopole, scostata,
+        "la luna committata non e' piu' 0.328125"
+    );
+    std::fs::write(cartella.join("manopole.toml"), scostata).unwrap();
+    let luna = |out: &std::process::Output| {
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        v["luna_di_miele"].as_f64().unwrap()
+    };
+    let prima = luna(&tara_in(&cartella, BERSAGLI));
+    assert!((prima - 2.0).abs() > 0.1, "{prima}");
+    let dopo = luna(&tara_in(&cartella, BERSAGLI));
+    assert!((prima - dopo).abs() < 0.002, "{prima} {dopo}");
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
 fn tara_rifiuta_una_coalizione_con_un_partito_sconosciuto() {
     let cartella = copia_dati("coalizione");
     let scenario = leggi(&cartella, "scenario.toml").replace(
@@ -400,6 +450,45 @@ fn tara_rifiuta_una_coalizione_con_un_partito_sconosciuto() {
         "boh",
     );
     std::fs::remove_dir_all(cartella).unwrap();
+}
+
+/// `tara` sulla copia dei dati con `manopole.toml` ritoccato da `da` ad `a`: esce con `frammento`.
+fn tara_rifiuta_le_manopole(nome: &str, da: &str, a: &str, frammento: &str) {
+    let cartella = copia_dati(nome);
+    let manopole = leggi(&cartella, "manopole.toml");
+    assert!(manopole.contains(da), "{da}");
+    std::fs::write(cartella.join("manopole.toml"), manopole.replace(da, a)).unwrap();
+    rifiuta(
+        &[
+            "tara",
+            "--dati",
+            cartella.to_str().unwrap(),
+            "--bersagli",
+            BERSAGLI,
+        ],
+        frammento,
+    );
+    std::fs::remove_dir_all(cartella).unwrap();
+}
+
+#[test]
+fn tara_rifiuta_il_giocatore_sopra_il_bersaglio_senza_luna_di_miele() {
+    tara_rifiuta_le_manopole(
+        "sopra",
+        "[valence_partito_nuovo]\nvalore = 0.0",
+        "[valence_partito_nuovo]\nvalore = 2.0",
+        "il bersaglio del giocatore sta sotto luna_di_miele = 0",
+    );
+}
+
+#[test]
+fn tara_rifiuta_la_manopola_che_non_trova() {
+    tara_rifiuta_le_manopole(
+        "intestazione",
+        "[luna_di_miele]",
+        "[ luna_di_miele ]",
+        "nessuna riga `valore =` in [luna_di_miele]",
+    );
 }
 
 #[test]

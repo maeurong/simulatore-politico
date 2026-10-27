@@ -8,17 +8,21 @@ use crate::economia::{
 use crate::elettorato::{
     Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo, toccati,
 };
-use crate::elezioni::{Esito, LeggeElettorale};
+use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::legislatura::{
+    self, Cessione, Dichiarazione, EsitoElezioni, Fase, Fine, Incarico, Legislatura, Quadro,
+    VoceDisponibilita, VotiPartito, coalizioni_al_voto,
+};
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::parlamento::{
     self, CausaIntesa, Conteggio, Decreto, EsitoReferendum, EsitoVoto, FondiDecreto, FormaMisura,
     Intesa, Misura, Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
 };
-use crate::partiti::{self, Governo, Partito};
+use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
     Anteprima, SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato,
     VoceBudget, VoceDicastero, VoceGrandezza, VocePartito,
@@ -90,20 +94,77 @@ pub struct Partita {
     disposizioni: Disposizioni,
     parlamento: Parlamento,
     intesa: Intesa,
+    /// Indice del partito del giocatore.
+    giocatore: usize,
+    legislatura: Legislatura,
+    fine: Option<Fine>,
 }
 
 impl Partita {
+    /// La partita di prova dal governo uscente: parlamento uscente dello scenario, il giocatore
+    /// è il partito del Presidente del Consiglio e la legislatura dura `durata_legislatura`.
     pub fn nuova(dati: DatiGioco, seme: u64) -> Partita {
+        Partita::costruisci(dati, seme, None)
+    }
+
+    /// Il turno zero col governo uscente dello scenario. Con `nuovo` (la partita vera) il partito
+    /// del giocatore entra in coda prima di elettorato e informazione, così ogni vettore per
+    /// partito nasce della misura giusta, e le Camere sono sciolte, senza seggi.
+    pub(crate) fn costruisci(dati: DatiGioco, seme: u64, nuovo: Option<Partito>) -> Partita {
         let economia = Economia::iniziale(&dati);
         let grandezze = Grandezze::iniziali(&dati);
-        let (partiti, governo) = partiti::iniziali(&dati);
+        let (mut partiti, governo) = partiti::iniziali(&dati);
+        let coalizioni = (dati.scenario().coalizioni.iter())
+            .map(|c| {
+                (c.iter())
+                    .filter_map(|id| partiti.iter().position(|p| &p.id == id))
+                    .collect()
+            })
+            .collect();
+        let fondata = nuovo.is_some();
+        partiti.extend(nuovo);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
         let disposizioni = Disposizioni::iniziali(&dati);
-        let parlamento = Parlamento::uscente(&dati, &partiti);
+        let n = partiti.len();
+        let (parlamento, giocatore, legislatura) = if fondata {
+            let sciolte = Parlamento {
+                seggi_camera: vec![0; n],
+                seggi_senato: vec![0; n],
+                ..Parlamento::default()
+            };
+            let legislatura = Legislatura {
+                inizio: 0,
+                scadenza: 0,
+                fase: Fase::Sciolta,
+                coalizioni,
+                dichiarazione: None,
+                elezioni: Vec::new(),
+                totali: (0, 0),
+                incarico: None,
+            };
+            (sciolte, n.saturating_sub(1), legislatura)
+        } else {
+            let durata = disposizioni.leve(&dati).durata_legislatura;
+            let uscente = Parlamento::uscente(&dati, &partiti);
+            let legislatura = Legislatura {
+                inizio: 0,
+                scadenza: (4.0 * durata - 1.0).round().max(0.0) as u32,
+                fase: Fase::Ordinaria,
+                coalizioni,
+                dichiarazione: None,
+                elezioni: Vec::new(),
+                totali: (
+                    uscente.seggi_camera.iter().sum(),
+                    uscente.seggi_senato.iter().sum(),
+                ),
+                incarico: None,
+            };
+            (uscente, governo.presidente, legislatura)
+        };
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -137,6 +198,9 @@ impl Partita {
             dati,
             turno: 0,
             data: Trimestre::TURNO_ZERO,
+            giocatore,
+            legislatura,
+            fine: None,
         }
     }
 
@@ -145,10 +209,16 @@ impl Partita {
     // che slittano) → atti dei ministri → aula (leggi slittate nel turno del bilancio →
     // conversioni → bilancio → leggi → referendum) → motore (misure, economia, grandezze,
     // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione],
-    // composizione, posizioni, sondaggio, statistica) → soglie (ministri, ritorno dell'intesa) →
-    // calendario → apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose,
-    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio).
+    // composizione, posizioni, sondaggio, statistica) → voto, nel turno del voto → soglie
+    // (ministri, ritorno dell'intesa) → calendario → apertura (valori in arrivo, esiti dei due
+    // turni prima, emendamenti, rose, agende, proposte; il costo del taglio se l'anno entra in
+    // esercizio provvisorio).
+    // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula non vota: nessuno può
+    // presentare, il calendario è vuoto.
     pub fn chiudi_turno(&mut self) {
+        if self.finita() {
+            return;
+        }
         self.con_contesto(|ministri, cx| ministri.decidi_proposte(cx));
         // Prima del voto del bilancio: approvato, esce dal calendario.
         let occupato = self.turno_del_bilancio();
@@ -156,7 +226,9 @@ impl Partita {
         self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
-        self.aula(occupato);
+        if self.legislatura.fase != Fase::Sciolta {
+            self.aula(occupato);
+        }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
@@ -201,6 +273,9 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        if self.legislatura.turno_di_voto(self.turno) {
+            self.vota_parlamento(&vero);
+        }
         self.con_contesto(|ministri, cx| ministri.soglie(cx));
         self.intesa.soglie(&self.dati, self.turno);
         let ritorno = self.dati.manopola("ritorno_valence");
@@ -224,6 +299,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            coalizioni: self.coalizioni_correnti(),
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
@@ -767,6 +843,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            coalizioni: self.coalizioni_correnti(),
         }
     }
 
@@ -1234,6 +1311,35 @@ impl Partita {
         &self.intesa
     }
 
+    /// Indice del partito del giocatore.
+    pub fn giocatore(&self) -> usize {
+        self.giocatore
+    }
+
+    pub fn legislatura(&self) -> &Legislatura {
+        &self.legislatura
+    }
+
+    pub fn finita(&self) -> bool {
+        self.fine.is_some()
+    }
+
+    /// Il giocatore guida il governo in carica: i comandi di governo sono suoi.
+    pub fn governa(&self) -> bool {
+        !self.finita()
+            && self.legislatura.fase == Fase::Ordinaria
+            && self.governo.presidente == self.giocatore
+    }
+
+    /// Il turno del prossimo voto: questo a Camere sciolte, altrimenti la scadenza.
+    fn turno_del_voto(&self) -> u32 {
+        if self.legislatura.fase == Fase::Sciolta {
+            self.turno
+        } else {
+            self.legislatura.scadenza
+        }
+    }
+
     /// I partiti al governo, escluso quello del Presidente del Consiglio.
     pub fn alleati(&self) -> Vec<usize> {
         (0..self.partiti.len())
@@ -1254,8 +1360,9 @@ impl Partita {
     }
 
     /// Riparto dei seggi sul sondaggio pubblico con la legge elettorale e il numero dei
-    /// parlamentari in vigore: voti regionali dalle quote degli incroci, coalizioni dell'ultimo
-    /// voto, partiti senza coalizione da soli.
+    /// parlamentari in vigore: voti regionali dalle quote degli incroci; coalizioni correnti:
+    /// quelle al voto nel turno del voto, altrove quelle dell'ultimo voto; partiti senza
+    /// coalizione da soli.
     ///
     /// # Errors
     /// Quelli di `elezioni::riparto`.
@@ -1266,7 +1373,149 @@ impl Partita {
             &self.informazione.sondaggio,
             &self.legge_elettorale(),
             &self.disposizioni.leve(&self.dati),
+            &self.coalizioni_correnti(),
         )
+    }
+
+    /// Nel turno del voto le coalizioni al voto, altrove quelle dell'ultimo voto.
+    fn coalizioni_correnti(&self) -> Vec<Vec<usize>> {
+        let l = &self.legislatura;
+        if l.turno_di_voto(self.turno) {
+            coalizioni_al_voto(&l.coalizioni, self.giocatore, l.dichiarazione.as_ref())
+        } else {
+            l.coalizioni.clone()
+        }
+    }
+
+    /// Il voto (premio e riparto, sistemi-elettorali:39; bias comune che si rivela,
+    /// sondaggi-ed-errore:50, :55): riparto delle intenzioni vere `vero` con le coalizioni al voto,
+    /// la legge e i seggi dei rami in vigore, poi le cessioni; voto precedente = intenzioni, bias
+    /// comune nuovo, legislatura nuova in trattativa, incarico. Riparto rifiutato: seggi di prima,
+    /// esito con le quote senza seggi. Il giocatore senza seggi in entrambe le Camere: fine.
+    fn vota_parlamento(&mut self, vero: &Intenzioni) {
+        let (n, g) = (self.partiti.len(), self.giocatore);
+        let leve = self.disposizioni.leve(&self.dati);
+        let coalizioni = self.coalizioni_correnti();
+        let voti = legislatura::voti_per_regione(&self.dati, &self.elettorato, vero);
+        let per_partito: Vec<u64> = (0..n)
+            .map(|j| voti.values().filter_map(|v| v.get(j)).sum())
+            .collect();
+        let votanti = per_partito.iter().sum::<u64>().max(1) as f64;
+        let legge = self.legge_elettorale();
+        let riparto = parlamento::riparto_con(&self.dati, &legge, &leve, &coalizioni, voti);
+        let eletti = riparto.as_ref().ok().map(|e| {
+            let totali = |v: &[SeggiLista]| v.iter().map(SeggiLista::totale).collect::<Vec<_>>();
+            let (mut camera, mut senato) = (totali(&e.camera), totali(&e.senato));
+            let d = self.legislatura.dichiarazione.as_ref();
+            legislatura::cedi(&mut camera, &mut senato, g, d.map_or(&[], |d| &d.cessioni));
+            (camera, senato)
+        });
+        let ids = |c: &[usize]| -> Vec<String> {
+            (c.iter().filter_map(|&j| self.partiti.get(j)))
+                .map(|p| p.id.clone())
+                .collect()
+        };
+        let premio = (riparto.ok().and_then(|e| e.premio)).map(|s| match s {
+            Soggetto::Lista(j) => ids(&[j]).join("+"),
+            Soggetto::Coalizione(k) => ids(coalizioni.get(k).map_or(&[], Vec::as_slice)).join("+"),
+        });
+        let seggi = |v: Option<&Vec<u32>>, j: usize| v.and_then(|v| v.get(j)).copied().unwrap_or(0);
+        let esito = EsitoElezioni {
+            data: self.data,
+            affluenza: 1.0 - vero.nazionali.get(n).copied().unwrap_or(0.0),
+            voti: (self.partiti.iter().zip(&per_partito).enumerate())
+                .map(|(j, (p, &v))| VotiPartito {
+                    partito: p.id.clone(),
+                    quota: v as f64 / votanti,
+                    camera: seggi(eletti.as_ref().map(|e| &e.0), j),
+                    senato: seggi(eletti.as_ref().map(|e| &e.1), j),
+                })
+                .collect(),
+            premio,
+            coalizioni: coalizioni.iter().map(|c| ids(c)).collect(),
+        };
+        // ponytail: col riparto rifiutato restano i seggi di prima; al turno zero le Camere restano
+        // vuote in Trattativa, la partita finisce senza seggi e `salva` fallisce. Non deve
+        // accadere: la legge in vigore è sempre valida (piano 6 Task 9) e `carica` rifiuta le
+        // coalizioni e le dichiarazioni che il riparto rifiuterebbe.
+        if let Some((camera, senato)) = eletti {
+            self.legislatura.totali = (camera.iter().sum(), senato.iter().sum());
+            self.parlamento.seggi_camera = camera;
+            self.parlamento.seggi_senato = senato;
+        }
+        for (gruppo, v) in self.elettorato.gruppi.iter_mut().zip(&vero.per_gruppo) {
+            gruppo.voto_precedente.clone_from(v);
+        }
+        (self.informazione).riestrai_bias(&self.dati, &mut self.caso, n);
+        let pl = &self.parlamento;
+        let turno = self.turno;
+        let l = &mut self.legislatura;
+        l.incarico = legislatura::incarico(&coalizioni, g, &pl.seggi_camera, &pl.seggi_senato);
+        l.elezioni.insert(0, esito);
+        l.coalizioni = coalizioni;
+        l.dichiarazione = None;
+        l.inizio = turno.saturating_add(1);
+        l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
+        l.fase = Fase::Trattativa;
+        let nessuno = |v: &[u32]| v.get(g).is_none_or(|&x| x == 0);
+        if nessuno(&pl.seggi_camera) && nessuno(&pl.seggi_senato) {
+            self.fine = Some(Fine::SenzaSeggi);
+        }
+    }
+
+    fn quadro(&self) -> Quadro<'_> {
+        Quadro {
+            dati: &self.dati,
+            partiti: &self.partiti,
+            sondaggio: &self.informazione.sondaggio,
+            legge: self.legge_elettorale(),
+            leve: self.disposizioni.leve(&self.dati),
+            ultime: &self.legislatura.coalizioni,
+            giocatore: self.giocatore,
+            intesa: &self.intesa.valori,
+            alleati: if self.governo.presidente == self.giocatore {
+                self.alleati()
+            } else {
+                Vec::new()
+            },
+        }
+    }
+
+    /// La disponibilità di ogni partito IA sulla dichiarazione in corso; senza dichiarazione,
+    /// sulla coalizione del giocatore dell'ultimo voto (alla fondazione, lui da solo).
+    pub fn disponibilita(&self) -> Vec<VoceDisponibilita> {
+        self.quadro().disponibilita(&self.dichiarazione_corrente())
+    }
+
+    /// La dichiarazione in corso; senza, la coalizione del giocatore dell'ultimo voto, senza
+    /// cessioni.
+    fn dichiarazione_corrente(&self) -> Dichiarazione {
+        let l = &self.legislatura;
+        l.dichiarazione.clone().unwrap_or_else(|| {
+            let sua = coalizioni_al_voto(&l.coalizioni, self.giocatore, None);
+            Dichiarazione {
+                partiti: (sua.into_iter().next().unwrap_or_default().into_iter())
+                    .filter(|&j| j != self.giocatore)
+                    .collect(),
+                cessioni: Vec::new(),
+            }
+        })
+    }
+
+    /// `DichiaraCoalizione`: solo nel turno del voto; sostituisce la dichiarazione precedente.
+    pub(crate) fn dichiara_coalizione(
+        &mut self,
+        partiti: &[String],
+        cessioni: &[Cessione],
+    ) -> Result<(), Errore> {
+        if !self.legislatura.turno_di_voto(self.turno) {
+            return Err(Errore::Comando(
+                "Coalizione: si dichiara solo nel turno del voto".into(),
+            ));
+        }
+        let d = legislatura::dichiarazione(&self.quadro(), partiti, cessioni)?;
+        self.legislatura.dichiarazione = Some(d);
+        Ok(())
     }
 
     fn voci_partiti(&self) -> Vec<VocePartito> {
@@ -1294,9 +1543,19 @@ impl Partita {
                 })
                 .collect()
         });
+        let voto = self.turno_del_voto();
+        let l = &self.legislatura;
         Vista {
             turno: self.turno,
             data: self.data,
+            giocatore: (self.partiti.get(self.giocatore))
+                .map(|p| p.id.clone())
+                .unwrap_or_default(),
+            fase: self.legislatura.fase,
+            voto: data_di(voto),
+            turni_al_voto: voto.saturating_sub(self.turno),
+            governa: self.governa(),
+            finita: self.finita(),
             spread_pb: self.economia.spread.round() as i32,
             dicasteri: self
                 .dati
@@ -1352,6 +1611,21 @@ impl Partita {
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
+            disponibilita: if l.turno_di_voto(self.turno) && !self.finita() {
+                self.disponibilita()
+            } else {
+                Vec::new()
+            },
+            // Nel turno del voto la coalizione con cui si vota, anche ereditata; altrove nessuna.
+            coalizione: if l.turno_di_voto(self.turno) {
+                (self.dichiarazione_corrente().partiti.iter())
+                    .filter_map(|&j| self.partiti.get(j))
+                    .map(|p| p.id.clone())
+                    .collect()
+            } else {
+                Vec::new()
+            },
+            elezioni: l.elezioni.clone(),
         }
     }
 
@@ -1474,9 +1748,12 @@ impl Partita {
             .disposizioni
             .controlla(&partita.dati, partita.turno)?;
         let n = partita.partiti.len();
-        partita
-            .parlamento
-            .controlla(&partita.dati, n, partita.turno)?;
+        partita.parlamento.controlla(
+            &partita.dati,
+            n,
+            partita.turno,
+            partita.legislatura.totali,
+        )?;
         partita.intesa.controlla(n)?;
         partita.controlla_partiti()?;
         partita
@@ -1521,13 +1798,72 @@ impl Partita {
         Ok(())
     }
 
-    /// Partiti, governo ed elettorato di un salvataggio contro i dati.
+    /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati: il
+    /// partito del giocatore, se fondato, è l'ultimo, in più di quelli dello scenario.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
         let attesi = self.dati.scenario().partiti.len();
+        let fondato = self.giocatore.saturating_add(1) == n
+            && self.partiti.last().is_some_and(|p| p.id == ID_GIOCATORE);
+        let (attesi, giocatore_ok) = if fondato {
+            (attesi.saturating_add(1), true)
+        } else {
+            (attesi, self.giocatore < n)
+        };
         ok(
             n == attesi,
-            &format!("partiti ha {n} voci, lo scenario ne ha {attesi}"),
+            &format!("partiti ha {n} voci, ne servono {attesi}"),
+        )?;
+        ok(giocatore_ok, "giocatore fuori dai partiti")?;
+        ok(
+            self.legislatura.coalizioni.iter().flatten().all(|&j| j < n),
+            "legislatura.coalizioni con un partito fuori dai partiti",
+        )?;
+        let mut dichiarati = (self.legislatura.dichiarazione.iter())
+            .flat_map(|d| d.partiti.iter().chain(d.cessioni.iter().map(|c| &c.0)));
+        ok(
+            dichiarati.all(|&j| j < n && j != self.giocatore),
+            "legislatura.dichiarazione con un partito fuori dai partiti o col giocatore",
+        )?;
+        let l = &self.legislatura;
+        // Il riparto al voto rifiuta un partito in due liste: carica rifiuta lo stato che lo porta.
+        fn unici(v: impl IntoIterator<Item = usize>) -> bool {
+            let mut visti = std::collections::BTreeSet::new();
+            v.into_iter().all(|j| visti.insert(j))
+        }
+        ok(
+            unici(l.coalizioni.iter().flatten().copied()),
+            "legislatura.coalizioni non disgiunte",
+        )?;
+        ok(
+            l.dichiarazione.as_ref().is_none_or(|d| {
+                unici(d.partiti.iter().copied())
+                    && unici(d.cessioni.iter().map(|c| c.0))
+                    && d.cessioni.iter().all(|c| d.partiti.contains(&c.0))
+            }),
+            "legislatura.dichiarazione con un partito ripetuto, una cessione ripetuta o una cessione fuori dai membri",
+        )?;
+        ok(
+            l.scadenza >= l.inizio,
+            "legislatura.scadenza prima dell'inizio",
+        )?;
+        ok(
+            l.fase == Fase::Sciolta || self.turno <= l.scadenza,
+            "legislatura: turno oltre la scadenza fuori dalla fase sciolta",
+        )?;
+        ok(
+            match &l.incarico {
+                Some(Incarico::Ia { coalizione }) => coalizione.iter().all(|&j| j < n),
+                _ => true,
+            },
+            "legislatura.incarico con un partito fuori dai partiti",
+        )?;
+        let pl = &self.parlamento;
+        let vuoto = |seggi: &[u32]| seggi.iter().all(|&x| x == 0);
+        ok(
+            self.legislatura.fase == Fase::Sciolta
+                || !(vuoto(&pl.seggi_camera) || vuoto(&pl.seggi_senato)),
+            "legislatura.fase non sciolta con Camere senza seggi",
         )?;
         let g = &self.governo;
         ok(g.presidente < n, "governo.presidente fuori dai partiti")?;
@@ -1669,5 +2005,57 @@ impl Economia {
             self.disavanzo_trimestre == c.disavanzo(),
             "economia.disavanzo_trimestre diverso da quello dei conti",
         )
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::*;
+    use crate::caso::Flusso;
+    use crate::dati::dati_base;
+    use crate::legislatura::Fondazione;
+
+    fn fondata() -> Partita {
+        let f = Fondazione {
+            nome: "Partito nuovo".into(),
+            posto: 5.5,
+        };
+        Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    #[test]
+    fn il_voto_porta_il_voto_precedente_alle_intenzioni() {
+        let mut p = fondata();
+        // Alla fondazione voto precedente e intenzioni coincidono: la valence le separa.
+        p.partiti[p.giocatore].valence += 1.0;
+        let vero = p.intenzioni_vere();
+        let precedente = |p: &Partita| -> Vec<Vec<f64>> {
+            (p.elettorato.gruppi.iter())
+                .map(|g| g.voto_precedente.clone())
+                .collect()
+        };
+        assert_ne!(precedente(&p), vero.per_gruppo);
+        p.vota_parlamento(&vero);
+        assert_eq!(precedente(&p), vero.per_gruppo);
+    }
+
+    /// Bias nuovo: `n + 1` normali di `Flusso::Sondaggi`, nient'altro dal `Caso`.
+    #[test]
+    fn il_voto_riestrae_il_bias_comune() {
+        let mut p = fondata();
+        let vero = p.intenzioni_vere();
+        let (bias, mut caso) = (p.informazione.bias.clone(), p.caso.clone());
+        p.vota_parlamento(&vero);
+        let s = p.dati.manopola("sigma_bias_comune");
+        let attesi: Vec<f64> = (0..=p.partiti.len())
+            .map(|_| s * caso.normale(Flusso::Sondaggi))
+            .collect();
+        assert_ne!(p.informazione.bias, bias);
+        assert_eq!(p.informazione.bias, attesi);
+        assert_eq!(p.caso, caso);
     }
 }

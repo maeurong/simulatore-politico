@@ -203,6 +203,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            coalizioni: Vec::new(),
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -284,6 +285,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            coalizioni: Vec::new(),
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
