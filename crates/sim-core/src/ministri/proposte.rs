@@ -227,15 +227,17 @@ impl Ministri {
         }
     }
 
-    /// `Accogli` di una proposta di fondi: ricalcola quanto manca e rende l'importo del decreto,
-    /// che entra anche nel margine residuo e resta segnato nell'agenda per il ritiro. Una
-    /// proposta di fondi esiste solo senza agenda (la decade `proponi`, la rifiuta il
-    /// salvataggio).
-    pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
+    /// L'atto e l'importo che `Accogli` della proposta di fondi del dicastero `i` spenderebbe,
+    /// con le sue stesse regole; non tocca nulla.
+    pub(crate) fn fondi_da_accogliere(
+        &self,
+        cx: &Contesto,
+        i: usize,
+    ) -> Result<(usize, i64), Errore> {
         let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
         let st = &self.dicasteri[i];
         let nessuna = || Errore::Comando(format!("nessuna proposta: {id}"));
-        let (Some(TipoProposta::Fondi { atto: k, .. }), Some(m)) =
+        let (Some(TipoProposta::Fondi { atto: k, .. }), Some(_)) =
             (st.proposta.map(|p| p.tipo), st.ministro.as_ref())
         else {
             return Err(nessuna());
@@ -252,6 +254,19 @@ impl Ministri {
         if !(sotto(st.margine_residuo) && sotto(cx.economia.decreti.iter().sum())) {
             return Err(Errore::Comando(format!("importo troppo alto per {atto}")));
         }
+        Ok((k, importo))
+    }
+
+    /// `Accogli` di una proposta di fondi: ricalcola quanto manca e rende l'importo del decreto,
+    /// che entra anche nel margine residuo e resta segnato nell'agenda per il ritiro. Una
+    /// proposta di fondi esiste solo senza agenda (la decade `proponi`, la rifiuta il
+    /// salvataggio).
+    pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
+        let (k, importo) = self.fondi_da_accogliere(cx, i)?;
+        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let st = &self.dicasteri[i];
+        let nessuna = || Errore::Comando(format!("nessuna proposta: {id}"));
+        let m = st.ministro.as_ref().ok_or_else(nessuna)?;
         let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
         let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
         let pos = posizione(dati, i, k).ok_or_else(nessuna)?;

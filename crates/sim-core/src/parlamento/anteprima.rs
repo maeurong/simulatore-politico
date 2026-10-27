@@ -2,7 +2,7 @@
 //! stato vero (scelta 8). La fascia passa per la stima del ministro proponente, che sbaglia meno
 //! quanto più è capace (consiglieri-e-informazione-imperfetta:21, 24).
 
-use super::{Misura, Parlamento, StatoAula, nome_misura};
+use super::{FondiDecreto, Misura, Parlamento, StatoAula, nome_misura};
 use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Gradino, variazioni};
@@ -13,6 +13,9 @@ use crate::vista::{Anteprima, EffettoStimato, Fascia3, VoceLeva};
 /// `elettori_campione` (`turno · 1024 + gruppo`) ci arriva dopo 33 milioni di turni, e
 /// l'anteprima resta sotto il tetto di 2^36 fino a 34 mila turni.
 const OFFSET_CHIAVE: u64 = 1 << 35;
+
+/// Sposta le chiavi degli atti dopo quelle delle disposizioni dello stesso turno (`64 · d + g`).
+const CHIAVE_ATTI: u64 = 500_000;
 
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
 /// `soglia_fascia_medio`, altrimenti `Molto`.
@@ -96,6 +99,34 @@ pub(crate) fn anteprima(
             }
         }
     }
+    let mut costo_annuo = euro(saldo / 100.0 * pil_annuo);
+    if let Some(FondiDecreto::Accolti {
+        dicastero,
+        atto,
+        importo,
+    }) = m.fondi
+    {
+        // Un decreto accolto costa l'importo, e porta gli effetti nominali dell'atto.
+        costo_annuo = importo;
+        let chiave = OFFSET_CHIAVE
+            + u64::from(m.presentata) * 1_000_003
+            + CHIAVE_ATTI
+            + 64 * dicastero as u64
+            + atto as u64;
+        let mut rng = caso.estemporaneo(chiave);
+        for e in &dati.atti()[atto].effetti {
+            let Some(k) = dati.grandezza(&e.grandezza) else {
+                continue;
+            };
+            let (u1, u2) = (rng.uniforme(), rng.uniforme());
+            effetti.push(EffettoStimato {
+                grandezza: e.grandezza.clone(),
+                migliora: e.intensita * dati.grandezze()[k].verso.segno() > 0.0,
+                fascia: stima_fascia(fascia_vera(dati, k, e.intensita), capacita, u1, u2, errore),
+                ritardo: e.ritardo,
+            });
+        }
+    }
     let p = aula.previsione(m);
     Anteprima {
         nome: nome_misura(dati, m),
@@ -103,7 +134,7 @@ pub(crate) fn anteprima(
         proponente: (m.proponente)
             .and_then(|i| dati.dicasteri().get(i))
             .map(|d| d.id.clone()),
-        costo_annuo: euro(saldo / 100.0 * pil_annuo),
+        costo_annuo,
         effetti,
         leve,
         gruppi,

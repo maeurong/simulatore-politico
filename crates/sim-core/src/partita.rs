@@ -887,6 +887,96 @@ impl Partita {
         ))
     }
 
+    /// Il massimo spostabile da ogni dicastero: il margine residuo senza il decreto accolto in
+    /// agenda, entro il margine annuo.
+    fn spostabili(&self) -> Vec<i64> {
+        let b = self.economia.bilancio_in_vigore(self.data);
+        (self.ministri.dicasteri.iter().zip(&b.dicasteri))
+            .map(|(st, d)| {
+                let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
+                (st.margine_residuo - decreto).min(d.margine)
+            })
+            .collect()
+    }
+
+    /// L'anteprima del `decreto`: la conversione che aprirebbe, a saldo zero e senza effetti;
+    /// i rifiuti sono quelli di `EmanaDecreto` e la partita non cambia.
+    ///
+    /// # Errors
+    /// `Comando`, come `EmanaDecreto`.
+    pub fn anteprima_decreto(&self, decreto: &Decreto) -> Result<Anteprima, Errore> {
+        let (da, a, importo) = parlamento::ammetti(
+            &self.dati,
+            &self.parlamento.decaduti,
+            &self.spostabili(),
+            decreto,
+        )?;
+        let fondi = FondiDecreto::Spostati { da, a, importo };
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), a))
+    }
+
+    /// L'anteprima del decreto che `Accogli` produrrebbe per la proposta di fondi del
+    /// `dicastero`: il costo è l'importo, gli effetti quelli dell'atto; la partita non cambia.
+    ///
+    /// # Errors
+    /// `Comando` col nome del dicastero: sconosciuto, senza proposta di fondi, esercizio
+    /// provvisorio, decreto decaduto, e i rifiuti di `Accogli` sull'atto.
+    pub fn anteprima_accogli(&self, dicastero: &str) -> Result<Anteprima, Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        let Some(i) = (self.dati.dicasteri().iter()).position(|d| d.id == dicastero) else {
+            return ko(format!("dicastero sconosciuto: {dicastero}"));
+        };
+        let nome = &self.dati.dicasteri()[i].nome;
+        let fondi = matches!(
+            (self.ministri.dicasteri.get(i)).and_then(|st| st.proposta.map(|p| p.tipo)),
+            Some(TipoProposta::Fondi { .. })
+        );
+        if !fondi {
+            return ko(format!("nessuna proposta di fondi: {nome}"));
+        }
+        if self.economia.esercizio_provvisorio(self.data) {
+            return ko(format!(
+                "esercizio provvisorio: nessuna misura che costi denaro: {nome}"
+            ));
+        }
+        self.accogli_ripetuto(dicastero)?;
+        let cx = Contesto {
+            dati: &self.dati,
+            governo: &self.governo,
+            partiti: &self.partiti,
+            grandezze: &self.grandezze,
+            economia: &self.economia,
+            sondaggio: &self.informazione.sondaggio,
+            disposizioni: &self.disposizioni,
+            parlamento: &self.parlamento,
+            indice_prezzi: self.informazione.statistica.indice_prezzi,
+            turno: self.turno,
+            data: self.data,
+        };
+        let (atto, importo) = self.ministri.fondi_da_accogliere(&cx, i)?;
+        let fondi = FondiDecreto::Accolti {
+            dicastero: i,
+            atto,
+            importo,
+        };
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), i))
+    }
+
+    /// L'anteprima della conversione `m`, con la capacità del ministro del dicastero `proponente`.
+    fn anteprima_conversione(&self, m: &Misura, proponente: usize) -> Anteprima {
+        let capacita = (self.ministri.dicasteri.get(proponente))
+            .and_then(|st| st.ministro.as_ref())
+            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
+        parlamento::anteprima(
+            &self.parlamento,
+            &self.stato_aula(),
+            m,
+            capacita,
+            &self.caso,
+            self.economia.pil_potenziale_annuo(),
+        )
+    }
+
     /// `Accogli` di una proposta di riforma: la legge si presenta come con `PresentaLegge`, firma
     /// del ministro compresa (spec, storia 32), e la proposta esce solo se la presentazione passa.
     pub(crate) fn accogli_riforma(
@@ -1024,12 +1114,7 @@ impl Partita {
     /// Spostabile: il margine residuo senza il decreto accolto in agenda, entro il margine annuo.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
         let b = self.economia.bilancio_in_vigore(self.data);
-        let spostabili: Vec<i64> = (self.ministri.dicasteri.iter().zip(&b.dicasteri))
-            .map(|(st, d)| {
-                let decreto = st.agenda.as_ref().map_or(0, |ag| ag.decreto);
-                (st.margine_residuo - decreto).min(d.margine)
-            })
-            .collect();
+        let spostabili = self.spostabili();
         let decaduti = &self.parlamento.decaduti;
         let (da, a, importo) = parlamento::ammetti(&self.dati, decaduti, &spostabili, decreto)?;
         let spesa = b.dicasteri.get(da).map_or(1, |d| d.spesa.max(1));
