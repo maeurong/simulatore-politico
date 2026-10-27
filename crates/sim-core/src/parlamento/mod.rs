@@ -834,11 +834,11 @@ impl Parlamento {
     }
 
     /// # Errors
-    /// `SalvataggioIlleggibile` se i seggi non sono uno per partito o non sommano ai `totali` dei
-    /// rami del parlamento eletto (zero a Camere sciolte), o una misura, un suo emendamento o una
-    /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti, o un referendum esce dalle disposizioni, dai gradini o dai
-    /// partiti, o ha il voto oltre `turno + 6`, o l'abrogativo senza firme ha un voto diverso da
-    /// quello chiesto nel `turno`.
+    /// `SalvataggioIlleggibile` se: i seggi non sono uno per partito o non sommano ai `totali` dei
+    /// rami del parlamento eletto (zero a Camere sciolte); una misura, un suo emendamento o una
+    /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti; un referendum
+    /// esce dalle disposizioni, dai gradini o dai partiti, o ha il voto oltre `turno + 6`;
+    /// l'abrogativo senza firme ha un voto diverso da quello chiesto nel `turno`.
     pub(crate) fn controlla(
         &self,
         dati: &DatiGioco,

@@ -40,7 +40,8 @@ pub struct AnteprimaFondazione {
 const LUNGHEZZA_NOME: usize = 40;
 const SEGNAPOSTO: &str = "Partito nuovo";
 
-/// I punti medi fra partiti dello scenario consecutivi sull'asse, crescenti: mai sopra un partito.
+/// I punti medi fra due partiti consecutivi sull'asse, in ordine crescente: nessuno coincide con un
+/// partito.
 pub fn posti(dati: &DatiGioco) -> Vec<f64> {
     let mut posizioni: Vec<f64> = (dati.scenario().partiti.iter())
         .map(|p| p.posizione)
@@ -93,26 +94,29 @@ impl Partita {
     /// uscente dello scenario, Camere sciolte e voto nella chiusura del turno zero.
     ///
     /// # Errors
-    /// `Fondazione` col nome vuoto o più lungo di 40 caratteri, o col posto che non è uno di
-    /// `posti`.
+    /// `Fondazione` col nome vuoto o più lungo di 40 caratteri, con la posizione non valida (non
+    /// finita), o col posto che non è uno di `posti`.
     pub fn fonda(dati: DatiGioco, seme: u64, f: &Fondazione) -> Result<Partita, Errore> {
         let nome = f.nome.trim();
         if nome.is_empty() {
             return ko("nome del partito vuoto".into());
         }
         if nome.chars().count() > LUNGHEZZA_NOME {
-            return ko(format!("nome del partito oltre {LUNGHEZZA_NOME} caratteri"));
+            return ko(format!(
+                "nome del partito più lungo di {LUNGHEZZA_NOME} caratteri"
+            ));
         }
         if !f.posto.is_finite() {
-            return ko("posto non finito".into());
+            return ko("posizione non valida".into());
         }
         let ammessi = posti(&dati);
         let Some(&posto) = ammessi.iter().find(|x| (*x - f.posto).abs() <= 1e-9) else {
-            let elenco: Vec<String> = ammessi.iter().map(f64::to_string).collect();
+            let virgola = |x: &f64| x.to_string().replace('.', ",");
+            let elenco: Vec<String> = ammessi.iter().map(virgola).collect();
             return ko(format!(
-                "posto {} fuori dai posti ammessi ({})",
-                f.posto,
-                elenco.join(", ")
+                "posizione {} non ammessa: scegli fra {}",
+                virgola(&f.posto),
+                elenco.join("; ")
             ));
         };
         let partito = partito_nuovo(&dati, nome, posto);
@@ -127,8 +131,9 @@ impl Partita {
             posti: Vec::new(),
         };
         for posizione in posti(dati) {
-            // ponytail: sei partite intere invece del solo sondaggio, così è per costruzione quello
-            // di `fonda`; se pesa nella schermata, costruire solo elettorato e informazione.
+            // ponytail: una partita intera per posizione invece del solo sondaggio, così è per
+            // costruzione quello di `fonda`; se pesa nella schermata, costruire solo elettorato e
+            // informazione.
             let nuovo = partito_nuovo(dati, SEGNAPOSTO, posizione);
             let p = Partita::costruisci(dati.clone(), seme, Some(nuovo));
             let s = &p.informazione().sondaggio;

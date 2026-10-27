@@ -73,6 +73,65 @@ fn il_voto_del_turno_zero_elegge_il_parlamento() {
         e.coalizioni[0],
         vec!["giocatore".to_string(), "centrodestra".into()]
     );
+    assert!(0.0 < e.affluenza && e.affluenza < 1.0, "{}", e.affluenza);
+    let astensione = fondata(5.5).intenzioni_vere().nazionali[8];
+    assert!(
+        (e.affluenza - (1.0 - astensione)).abs() < 0.02,
+        "{}",
+        e.affluenza
+    );
+}
+
+#[test]
+fn chiudere_senza_dichiarare_vota_con_la_coalizione_ereditata() {
+    let mut p = fondata(5.5);
+    p.chiudi_turno();
+    assert_eq!(
+        p.vista().elezioni[0].coalizioni[0],
+        vec!["giocatore".to_string()]
+    );
+}
+
+#[test]
+fn secondo_voto_riparte_pulito() {
+    let p = votata(5.5, &["centrodestra"]);
+    let turno = p.vista().turno;
+    let mut p = edita(&p, |j| {
+        j["legislatura"]["fase"] = "ordinaria".into();
+        j["legislatura"]["scadenza"] = turno.into();
+    })
+    .unwrap();
+    dichiara(&mut p, &[]);
+    p.chiudi_turno();
+    let l = p.legislatura();
+    assert!(l.dichiarazione.is_none());
+    assert_eq!(l.elezioni.len(), 2);
+    let data = |i: usize| (l.elezioni[i].data.anno, l.elezioni[i].data.trimestre);
+    assert!(data(0) > data(1));
+    let ids: Vec<Vec<String>> = (l.coalizioni.iter())
+        .map(|c| c.iter().map(|&j| p.partiti()[j].id.clone()).collect())
+        .collect();
+    assert_eq!(ids, l.elezioni[0].coalizioni);
+    assert_eq!(l.inizio, turno + 1);
+}
+
+#[test]
+fn a_camere_sciolte_l_aula_non_vota() {
+    // Partita di prova con una legge in calendario per la chiusura del turno 1, poi Camere
+    // sciolte: la legge non si vota.
+    let mut p = Partita::nuova(comune::dati_base(), 1);
+    comune::presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.vista().calendario.len(), 1);
+    let mut p = edita(&p, |j| {
+        j["legislatura"]["fase"] = "sciolta".into();
+        j["parlamento"]["seggi_camera"] = serde_json::json!(vec![0; 7]);
+        j["parlamento"]["seggi_senato"] = serde_json::json!(vec![0; 7]);
+        j["legislatura"]["totali"] = serde_json::json!([0, 0]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(p.vista().esiti.is_empty(), "{:?}", p.vista().esiti);
 }
 
 #[test]
@@ -103,8 +162,11 @@ fn senza_seggi_la_partita_finisce() {
         },
     )
     .unwrap();
+    // Senza seggi attesi la coalizione da solo, senza cessioni, si dichiara.
+    dichiara(&mut p, &[]);
     p.chiudi_turno();
     assert!(p.finita());
+    assert!(p.vista().disponibilita.is_empty());
     let prima = p.salva().unwrap();
     assert!(Partita::carica(&prima).is_ok());
     p.chiudi_turno();
@@ -129,6 +191,82 @@ fn seggi_che_non_tornano_col_parlamento_eletto_rifiutati() {
     assert!(rifiutata(&p, "legislatura", "totali", 401));
     // A Camere sciolte i seggi sono zero, anche se sommano ai seggi del ramo.
     assert!(rifiutata(&fondata(5.5), "parlamento", "seggi_camera", 400));
+}
+
+#[test]
+fn salvataggio_incoerente_rifiutato() {
+    use serde_json::{Value, json};
+    let p = votata(5.5, &["centrodestra"]);
+    assert_eq!(p.legislatura().coalizioni[0], vec![7, 4]);
+    assert!(edita(&p, |_| {}).is_ok());
+    let dichiarazione = |partiti: Value, cessioni: Value| {
+        vec![(
+            "/legislatura/dichiarazione",
+            json!({"partiti": partiti, "cessioni": cessioni}),
+        )]
+    };
+    let casi = [
+        // Inizio oltre la scadenza (20), turno 1 entro: lo coglie solo il controllo sull'inizio.
+        (
+            "scadenza prima dell'inizio",
+            vec![("/legislatura/inizio", json!(21))],
+        ),
+        (
+            "coalizione con 99",
+            vec![("/legislatura/coalizioni/0/0", json!(99))],
+        ),
+        (
+            "incarico con 99",
+            vec![("/legislatura/incarico", json!({"Ia": {"coalizione": [99]}}))],
+        ),
+        (
+            "dichiarazione con 99",
+            dichiarazione(json!([99]), json!([])),
+        ),
+        (
+            "dichiarazione con un duplicato",
+            dichiarazione(json!([4, 4]), json!([])),
+        ),
+        (
+            "cessione a un non membro",
+            dichiarazione(json!([4]), json!([[3, 1]])),
+        ),
+        (
+            "cessione ripetuta",
+            dichiarazione(json!([4]), json!([[4, 1], [4, 1]])),
+        ),
+        (
+            "coalizioni non disgiunte",
+            vec![("/legislatura/coalizioni", json!([[7, 4], [4, 5]]))],
+        ),
+        (
+            "trattativa con Camere a zero",
+            vec![
+                ("/parlamento/seggi_camera", json!(vec![0; 8])),
+                ("/parlamento/seggi_senato", json!(vec![0; 8])),
+                ("/legislatura/totali", json!([0, 0])),
+            ],
+        ),
+        (
+            "turno oltre la scadenza",
+            vec![
+                ("/legislatura/inizio", json!(0)),
+                ("/legislatura/scadenza", json!(0)),
+            ],
+        ),
+    ];
+    let accettati: Vec<&str> = (casi.iter())
+        .filter(|(_, modifiche)| {
+            let modifica = |j: &mut Value| {
+                for (dove, v) in modifiche {
+                    *j.pointer_mut(dove).unwrap() = v.clone();
+                }
+            };
+            edita(&p, modifica).is_ok()
+        })
+        .map(|(nome, _)| *nome)
+        .collect();
+    assert!(accettati.is_empty(), "{accettati:?}");
 }
 
 // Decisione 2 del controller: nel turno del voto la Vista mostra le coalizioni con cui si vota.

@@ -1360,8 +1360,9 @@ impl Partita {
     }
 
     /// Riparto dei seggi sul sondaggio pubblico con la legge elettorale e il numero dei
-    /// parlamentari in vigore: voti regionali dalle quote degli incroci, coalizioni correnti
-    /// (`coalizioni_correnti`), partiti senza coalizione da soli.
+    /// parlamentari in vigore: voti regionali dalle quote degli incroci; coalizioni correnti:
+    /// quelle al voto nel turno del voto, altrove quelle dell'ultimo voto; partiti senza
+    /// coalizione da soli.
     ///
     /// # Errors
     /// Quelli di `elezioni::riparto`.
@@ -1433,9 +1434,10 @@ impl Partita {
             premio,
             coalizioni: coalizioni.iter().map(|c| ids(c)).collect(),
         };
-        // ponytail: col riparto rifiutato al turno zero le Camere restano vuote in Trattativa e il
-        // salvataggio non si ricarica; non deve accadere, la legge in vigore è sempre valida
-        // (piano 6 Task 9). Difesa se un giorno può accadere: restare in Sciolta.
+        // ponytail: col riparto rifiutato restano i seggi di prima; al turno zero le Camere restano
+        // vuote in Trattativa, la partita finisce senza seggi e `salva` fallisce. Non deve
+        // accadere: la legge in vigore è sempre valida (piano 6 Task 9) e `carica` rifiuta le
+        // coalizioni e le dichiarazioni che il riparto rifiuterebbe.
         if let Some((camera, senato)) = eletti {
             self.legislatura.totali = (camera.iter().sum(), senato.iter().sum());
             self.parlamento.seggi_camera = camera;
@@ -1824,9 +1826,30 @@ impl Partita {
             "legislatura.dichiarazione con un partito fuori dai partiti o col giocatore",
         )?;
         let l = &self.legislatura;
+        // Il riparto al voto rifiuta un partito in due liste: carica rifiuta lo stato che lo porta.
+        fn unici(v: impl IntoIterator<Item = usize>) -> bool {
+            let mut visti = std::collections::BTreeSet::new();
+            v.into_iter().all(|j| visti.insert(j))
+        }
+        ok(
+            unici(l.coalizioni.iter().flatten().copied()),
+            "legislatura.coalizioni non disgiunte",
+        )?;
+        ok(
+            l.dichiarazione.as_ref().is_none_or(|d| {
+                unici(d.partiti.iter().copied())
+                    && unici(d.cessioni.iter().map(|c| c.0))
+                    && d.cessioni.iter().all(|c| d.partiti.contains(&c.0))
+            }),
+            "legislatura.dichiarazione con un partito ripetuto o una cessione fuori dai membri",
+        )?;
         ok(
             l.scadenza >= l.inizio,
             "legislatura.scadenza prima dell'inizio",
+        )?;
+        ok(
+            l.fase == Fase::Sciolta || self.turno <= l.scadenza,
+            "legislatura: turno oltre la scadenza fuori dalla fase sciolta",
         )?;
         ok(
             match &l.incarico {
@@ -1840,7 +1863,7 @@ impl Partita {
         ok(
             self.legislatura.fase == Fase::Sciolta
                 || !(vuoto(&pl.seggi_camera) || vuoto(&pl.seggi_senato)),
-            "Camere senza seggi fuori dalla fase sciolta",
+            "legislatura.fase non sciolta con Camere senza seggi",
         )?;
         let g = &self.governo;
         ok(g.presidente < n, "governo.presidente fuori dai partiti")?;

@@ -31,11 +31,17 @@ fn la_partita_vera_comincia_a_camere_sciolte() {
 
 #[test]
 fn fondazione_non_valida_rifiutata_col_motivo() {
+    let lungo = "x".repeat(41);
     for (nome, posto, motivo) in [
         ("  ", 4.5, "nome"),
-        ("Partito", 4.0, "4"),
-        ("Partito", 0.5, "0.5"),
-        ("Partito", f64::NAN, "posto"),
+        (lungo.as_str(), 4.5, "più lungo di 40 caratteri"),
+        ("Partito", 4.0, "posizione 4 non ammessa"),
+        (
+            "Partito",
+            0.5,
+            "posizione 0,5 non ammessa: scegli fra 1,5; 2,5;",
+        ),
+        ("Partito", f64::NAN, "posizione non valida"),
     ] {
         let f = Fondazione {
             nome: nome.into(),
@@ -46,6 +52,11 @@ fn fondazione_non_valida_rifiutata_col_motivo() {
             altro => panic!("{nome:?} {posto}: {altro:?}"),
         }
     }
+    let f = Fondazione {
+        nome: "x".repeat(40),
+        posto: 4.5,
+    };
+    assert!(Partita::fonda(dati_base(), 7, &f).is_ok());
 }
 
 #[test]
@@ -57,7 +68,7 @@ fn comandi_di_governo_rifiutati_a_chi_non_governa() {
             dicastero: "sanita".into(),
         })
         .unwrap_err();
-    assert!(e.to_string().contains("Camere sciolte"), "{e}");
+    assert!(e.to_string().contains("non governi: Camere sciolte"), "{e}");
     assert_eq!(p.salva().unwrap(), prima);
 }
 

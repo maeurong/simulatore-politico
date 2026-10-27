@@ -25,15 +25,27 @@ export type Vista = { turno: number, data: Trimestre,
 /**
  * L'id del partito del giocatore.
  */
-giocatore: string, fase: Fase, 
+giocatore: string, 
 /**
- * La data del turno del prossimo voto, nella sua chiusura.
+ * La fase della legislatura: Camere sciolte, trattativa dopo il voto, governo in carica.
  */
-voto: Trimestre, turni_al_voto: number, 
+fase: Fase, 
+/**
+ * Il trimestre del prossimo voto: si vota nella chiusura di quel turno.
+ */
+voto: Trimestre, 
+/**
+ * Turni che mancano al voto; 0 nel turno del voto.
+ */
+turni_al_voto: number, 
 /**
  * Il giocatore guida il governo: i comandi di governo sono ammessi.
  */
-governa: boolean, finita: boolean, dicasteri: Array<VoceDicastero>, 
+governa: boolean, 
+/**
+ * La partita è finita.
+ */
+finita: boolean, dicasteri: Array<VoceDicastero>, 
 /**
  * Valori alla chiusura precedente: le grandezze arrivano con un turno di ritardo.
  */
@@ -63,8 +75,7 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceM
  */
 referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, 
 /**
- * Nel turno del voto, una voce per partito IA: la regola e la causa, mai i valori attesi;
- * vuota altrove.
+ * Nel turno del voto, una voce per partito IA: se è disponibile e perché; vuota altrove.
  */
 disponibilita: Array<VoceDisponibilita>, 
 /**

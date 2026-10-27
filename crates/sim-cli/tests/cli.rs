@@ -99,7 +99,7 @@ fn posto_non_ammesso_esce_con_errore() {
         &[
             "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4",
         ],
-        "posto 4",
+        "posizione 4 non ammessa",
     );
 }
 

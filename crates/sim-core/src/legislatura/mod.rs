@@ -7,7 +7,7 @@ use ts_rs::TS;
 mod coalizione;
 mod fondazione;
 mod voto;
-pub use coalizione::{CausaDisponibilita, Cessione, Dichiarazione, VoceDisponibilita};
+pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione};
 pub use fondazione::{AnteprimaFondazione, Fondazione, Posto, posti};
 pub use voto::{EsitoElezioni, Incarico, VotiPartito};

@@ -140,6 +140,8 @@ fn trimestre_fuori_intervallo_rifiutato() {
 fn contatori_al_limite_non_vanno_in_panico() {
     let s = salvataggio_modificato(|j| {
         j["turno"] = u32::MAX.into();
+        // Fuori dalle Camere sciolte il turno non passa la scadenza.
+        j["legislatura"]["scadenza"] = u32::MAX.into();
         j["data"] = serde_json::json!({ "anno": 2200, "trimestre": 4 });
         // A quel turno ogni valore in arrivo dei dati sarebbe già scaduto.
         for v in j["disposizioni"]["voci"].as_array_mut().unwrap() {

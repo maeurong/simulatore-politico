@@ -93,13 +93,11 @@ impl Partita {
         }
         if !self.governa() {
             let motivo = match self.legislatura().fase {
-                Fase::Sciolta => "Camere sciolte",
-                Fase::Trattativa => "trattativa in corso",
-                Fase::Ordinaria => "all'opposizione",
+                Fase::Sciolta => "non governi: Camere sciolte",
+                Fase::Trattativa => "non governi: trattativa in corso",
+                Fase::Ordinaria => "non governi: sei all'opposizione",
             };
-            return Err(Errore::Comando(format!(
-                "Comando di governo: il giocatore non governa ({motivo})"
-            )));
+            return Err(Errore::Comando(motivo.into()));
         }
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),

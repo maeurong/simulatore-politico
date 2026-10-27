@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-/// `seggi` della Camera, e la metà per difetto al Senato, che il giocatore cede dopo il riparto
-/// al partito `partito` (id) della sua coalizione.
+/// Seggi che il giocatore cede, dopo il riparto, a `partito` (id) della sua coalizione: `seggi`
+/// alla Camera e la metà, per difetto, al Senato.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Cessione {
@@ -30,7 +30,7 @@ pub struct Dichiarazione {
     pub cessioni: Vec<(usize, u32)>,
 }
 
-/// I cinque termini del valore atteso di una coalizione, nell'ordine di `Quadro::termini`.
+/// I cinque termini del valore atteso di una coalizione (`Quadro::termini`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CausaDisponibilita {
     Seggi,
@@ -41,15 +41,8 @@ pub enum CausaDisponibilita {
 }
 
 impl CausaDisponibilita {
-    const TUTTE: [Self; 5] = [
-        Self::Seggi,
-        Self::Governare,
-        Self::Distanza,
-        Self::Guida,
-        Self::Intesa,
-    ];
-
-    /// La causa in una riga; `con_te` = il termine spinge verso la coalizione del giocatore.
+    /// La causa come frammento in minuscolo, da comporre in una frase; `con_te` = il termine
+    /// spinge verso la coalizione del giocatore.
     pub fn testo(self, con_te: bool) -> &'static str {
         match (self, con_te) {
             (Self::Seggi, false) => "più seggi da solo",
@@ -64,8 +57,8 @@ impl CausaDisponibilita {
     }
 }
 
-/// La disponibilità di un partito IA (id) a entrare nella coalizione del giocatore: la regola e
-/// la causa, mai i valori attesi.
+/// La disponibilità di un partito IA (id) a entrare nella coalizione del giocatore: sì o no, con
+/// la causa. I valori attesi restano interni.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceDisponibilita {
@@ -99,17 +92,17 @@ pub(crate) fn coalizioni_al_voto(
     tutte
 }
 
-/// `n` seggi da `da` ad `a`, mai oltre quelli di `da`.
+/// `n` seggi dal giocatore `da` ad `a`: se ne aveva, gliene resta almeno uno.
 fn passa(seggi: &mut [u32], da: usize, a: usize, n: u32) {
     if da < seggi.len() && a < seggi.len() {
-        let n = n.min(seggi[da]);
+        let n = n.min(seggi[da].saturating_sub(1));
         seggi[da] -= n;
         seggi[a] += n;
     }
 }
 
 /// Le cessioni dopo il riparto (scelta 5 del piano 7): `n` seggi della Camera e `n / 2` del
-/// Senato dal giocatore al membro, mai oltre i seggi del giocatore.
+/// Senato dal giocatore al membro; in ogni ramo dove aveva seggi gliene resta almeno uno.
 pub(crate) fn cedi(
     camera: &mut [u32],
     senato: &mut [u32],
@@ -160,29 +153,33 @@ impl Quadro<'_> {
         (camera, senato)
     }
 
-    /// I termini, già pesati, del valore atteso per `j` al voto con `d`, nella sua coalizione `k`,
-    /// nell'ordine di `CausaDisponibilita`: `peso_seggi_coalizione · s_j / S`, `peso_governare ·
-    /// P_k`, `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
+    /// I termini, già pesati e con la loro causa, del valore atteso per `j` al voto con `d` e i
+    /// `seggi` di `d`, nella sua coalizione `k`: `peso_seggi_coalizione · s_j / S`,
+    /// `peso_governare · P_k`, `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
     /// k del giocatore]`.
-    fn termini(&self, d: &Dichiarazione, j: usize) -> [f64; 5] {
+    fn termini(
+        &self,
+        d: &Dichiarazione,
+        (camera, senato): &(Vec<u32>, Vec<u32>),
+        j: usize,
+    ) -> [(CausaDisponibilita, f64); 5] {
         let m = |nome: &str| self.dati.manopola(nome);
-        let (camera, senato) = self.seggi(d);
         let k = (coalizioni_al_voto(self.ultime, self.giocatore, Some(d)).into_iter())
             .find(|k| k.contains(&j))
             .unwrap_or_else(|| vec![j]);
         let del_giocatore = k.contains(&self.giocatore);
         let di = |v: &[u32], i: usize| f64::from(v.get(i).copied().unwrap_or(0));
         let totale = |v: &[u32]| v.iter().sum::<u32>();
-        let s = f64::from(totale(&camera).max(1)) + f64::from(totale(&senato).max(1));
-        let quota = (di(&camera, j) + di(&senato, j)) / s;
+        let s = f64::from(totale(camera).max(1)) + f64::from(totale(senato).max(1));
+        let quota = (di(camera, j) + di(senato, j)) / s;
         // Margine sulla maggioranza del ramo (metà più uno), in quota dei seggi del ramo.
         let margine = |v: &[u32]| {
             let t = totale(v);
             let seggi_k: f64 = k.iter().map(|&i| di(v, i)).sum();
             (seggi_k - f64::from(t / 2 + 1)) / f64::from(t.max(1))
         };
-        let x = margine(&camera).min(margine(&senato)) / m("scala_maggioranza");
+        let x = margine(camera).min(margine(senato)) / m("scala_maggioranza");
         let governare = 1.0 / (1.0 + (-x).exp());
         let pos = |i: usize| self.partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
         let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
@@ -205,23 +202,36 @@ impl Quadro<'_> {
         } else {
             0.0
         };
+        use CausaDisponibilita as C;
         [
-            m("peso_seggi_coalizione") * quota,
-            m("peso_governare") * governare,
-            -m("peso_distanza_coalizione") * distanza,
-            if guida { m("valore_guida") } else { 0.0 },
-            -m("peso_intesa_coalizione") * intesa,
+            (C::Seggi, m("peso_seggi_coalizione") * quota),
+            (C::Governare, m("peso_governare") * governare),
+            (C::Distanza, -m("peso_distanza_coalizione") * distanza),
+            (C::Guida, if guida { m("valore_guida") } else { 0.0 }),
+            (C::Intesa, -m("peso_intesa_coalizione") * intesa),
         ]
     }
 
-    /// Una voce per partito IA: disponibile se il valore atteso nella coalizione del giocatore con
-    /// lui aggiunto (e le cessioni di `d`) supera quello nella disposizione senza di lui; la causa
-    /// è il termine con lo scarto più grande nel verso che decide.
+    /// Una voce per partito IA: `voci` su tutti.
     pub(crate) fn disponibilita(&self, d: &Dichiarazione) -> Vec<VoceDisponibilita> {
-        // ponytail: due riparti per partito IA, senza cache; si memorizza se il profilo lo chiede.
-        (self.partiti.iter().enumerate())
-            .filter(|&(j, _)| j != self.giocatore)
-            .map(|(j, p)| {
+        self.voci(d, (0..self.partiti.len()).filter(|&j| j != self.giocatore))
+    }
+
+    /// Una voce per partito di `quali`: disponibile se il valore atteso nella coalizione del
+    /// giocatore con lui aggiunto (e le cessioni di `d`) supera quello nella disposizione senza di
+    /// lui; la causa è il termine con lo scarto più grande nel verso che decide, `Distanza` se
+    /// nessuno scarta in quel verso.
+    fn voci(
+        &self,
+        d: &Dichiarazione,
+        quali: impl Iterator<Item = usize>,
+    ) -> Vec<VoceDisponibilita> {
+        // ponytail: un riparto per partito oltre a quello di `d`, senza cache; si memorizza se il
+        // profilo lo chiede.
+        let di_d = self.seggi(d);
+        let seggi = |x: &Dichiarazione| if x == d { di_d.clone() } else { self.seggi(x) };
+        quali
+            .map(|j| {
                 let mut con = d.clone();
                 if !con.partiti.contains(&j) {
                     con.partiti.push(j);
@@ -230,15 +240,21 @@ impl Quadro<'_> {
                     partiti: d.partiti.iter().copied().filter(|&i| i != j).collect(),
                     cessioni: d.cessioni.iter().copied().filter(|c| c.0 != j).collect(),
                 };
-                let (a, b) = (self.termini(&con, j), self.termini(&senza, j));
-                let disponibile = a.iter().sum::<f64>() > b.iter().sum::<f64>();
+                let a = self.termini(&con, &seggi(&con), j);
+                let b = self.termini(&senza, &seggi(&senza), j);
+                let valore = |t: &[(CausaDisponibilita, f64)]| t.iter().map(|x| x.1).sum::<f64>();
+                let disponibile = valore(&a) > valore(&b);
                 let verso = if disponibile { 1.0 } else { -1.0 };
-                let causa = (a.iter().zip(&b).map(|(x, y)| verso * (x - y)))
-                    .zip(CausaDisponibilita::TUTTE)
-                    .max_by(|x, y| x.0.total_cmp(&y.0))
-                    .map_or(CausaDisponibilita::Seggi, |(_, c)| c);
+                let causa = (a.iter().zip(&b))
+                    .map(|(&(c, x), &(_, y))| (c, verso * (x - y)))
+                    .filter(|&(_, scarto)| scarto > 0.0)
+                    .max_by(|x, y| x.1.total_cmp(&y.1))
+                    .map_or(CausaDisponibilita::Distanza, |(c, _)| c);
                 VoceDisponibilita {
-                    partito: p.id.clone(),
+                    partito: self
+                        .partiti
+                        .get(j)
+                        .map_or_else(String::new, |p| p.id.clone()),
                     disponibile,
                     causa: causa.testo(disponibile).into(),
                 }
@@ -250,9 +266,9 @@ impl Quadro<'_> {
 /// La dichiarazione del comando `DichiaraCoalizione`, validata su `q`.
 ///
 /// # Errors
-/// `Comando` col nome del partito in causa: sconosciuto, ripetuto, il giocatore stesso, cessione a
-/// un partito fuori dalla coalizione, cessioni oltre i seggi attesi del giocatore, ogni membro non
-/// disponibile con la coalizione intera.
+/// `Comando` col nome del partito in causa (l'id se sconosciuto): sconosciuto, ripetuto, il
+/// giocatore stesso, cessione a un partito fuori dalla coalizione, cessioni pari o oltre i seggi
+/// attesi del giocatore in un ramo, ogni membro non disponibile con la coalizione intera.
 pub(crate) fn dichiarazione(
     q: &Quadro,
     partiti: &[String],
@@ -268,7 +284,10 @@ pub(crate) fn dichiarazione(
     for id in partiti {
         let j = indice(id)?;
         if j == q.giocatore {
-            return ko(format!("{} è il tuo partito: guida la coalizione", nome(j)));
+            return ko(format!(
+                "non puoi inserire il tuo partito ({}) fra i membri: la coalizione la guidi tu",
+                nome(j)
+            ));
         }
         if d.partiti.contains(&j) {
             return ko(format!("{} ripetuto nella coalizione", nome(j)));
@@ -278,7 +297,10 @@ pub(crate) fn dichiarazione(
     for c in cessioni {
         let j = indice(&c.partito)?;
         if !d.partiti.contains(&j) {
-            return ko(format!("Cessione a {}, fuori dalla coalizione", nome(j)));
+            return ko(format!(
+                "{} non è nella coalizione: non puoi cedergli seggi",
+                nome(j)
+            ));
         }
         d.cessioni.push((j, c.seggi));
     }
@@ -293,24 +315,60 @@ pub(crate) fn dichiarazione(
         attesi.0.get(g).copied().unwrap_or(0),
         attesi.1.get(g).copied().unwrap_or(0),
     );
-    if camera > ha_camera || senato > ha_senato {
+    // Pari ai seggi attesi è già troppo: il giocatore resterebbe senza seggi nel ramo.
+    if (camera > 0 && camera >= ha_camera) || (senato > 0 && senato >= ha_senato) {
         return ko(format!(
-            "Cessioni oltre i seggi attesi di {}: {camera} alla Camera su {ha_camera}, {senato} al \
-             Senato su {ha_senato}",
+            "Cessioni pari o oltre i seggi attesi di {}: {camera} seggi ceduti alla Camera su \
+             {ha_camera} attesi, {senato} al Senato su {ha_senato} (metà dei ceduti alla Camera)",
             nome(g)
         ));
     }
-    let fuori: Vec<String> = (q.disponibilita(&d).into_iter())
-        .filter(|v| !v.disponibile)
-        .filter_map(|v| {
-            let j = q.partiti.iter().position(|p| p.id == v.partito)?;
-            d.partiti
-                .contains(&j)
-                .then(|| format!("{} non entra: {}", nome(j), v.causa))
-        })
+    let fuori: Vec<String> = (d.partiti.iter().zip(q.voci(&d, d.partiti.iter().copied())))
+        .filter(|(_, v)| !v.disponibile)
+        .map(|(&j, v)| format!("{} non entra: {}", nome(j), v.causa))
         .collect();
     if !fuori.is_empty() {
         return ko(fuori.join("; "));
     }
     Ok(d)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cedi_non_oltre_i_seggi_del_giocatore() {
+        let (mut camera, mut senato) = (vec![5, 0], vec![2, 0]);
+        cedi(&mut camera, &mut senato, 0, &[(1, 9)]);
+        assert_eq!((camera, senato), (vec![1, 4], vec![1, 1]));
+        let (mut camera, mut senato) = (vec![5, 0], vec![2, 0]);
+        cedi(&mut camera, &mut senato, 0, &[(9, 3)]);
+        assert_eq!((camera, senato), (vec![5, 0], vec![2, 0]));
+    }
+
+    #[test]
+    fn coalizioni_al_voto_senza_dichiarazione() {
+        let ultime = [vec![0, 1], vec![2, 3, 7]];
+        assert_eq!(
+            coalizioni_al_voto(&ultime, 7, None),
+            vec![vec![2, 3, 7], vec![0, 1]]
+        );
+        assert_eq!(
+            coalizioni_al_voto(&ultime, 5, None),
+            vec![vec![5], vec![0, 1], vec![2, 3, 7]]
+        );
+    }
+
+    #[test]
+    fn coalizione_rimasta_di_un_partito_scartata() {
+        let d = Dichiarazione {
+            partiti: vec![3],
+            cessioni: Vec::new(),
+        };
+        assert_eq!(
+            coalizioni_al_voto(&[vec![2, 3]], 0, Some(&d)),
+            vec![vec![0, 3]]
+        );
+    }
 }
