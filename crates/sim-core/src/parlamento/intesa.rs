@@ -95,21 +95,13 @@ impl Intesa {
         });
     }
 
-    /// Soglie di fine turno, sul valore prima del ritorno (scelta 8 del piano 7b): l'alleato sotto
-    /// `soglia_ultimatum` e senza ultimatum lo pone, con la causa peggiore delle variazioni rimaste
-    /// (`NormaLontana` se non ce ne sono); alla soglia o sopra lo ritira; chi non è alleato non ne
-    /// ha. Rende gli alleati sotto `soglia_uscita`, in ordine d'indice. Poi ritorno verso
-    /// `intesa_base`, limitato a 0-100; le variazioni restano due turni, come quelle dei ministri.
-    pub(crate) fn soglie(&mut self, dati: &DatiGioco, turno: u32, alleati: &[usize]) -> Vec<usize> {
-        self.variazioni.retain(|v| v.turno >= turno);
-        let (soglia, uscita) = (
-            dati.manopola("soglia_ultimatum"),
-            dati.manopola("soglia_uscita"),
-        );
-        let mut escono = Vec::new();
+    /// L'ultimatum sul valore corrente: l'alleato sotto `soglia_ultimatum` e senza ultimatum lo
+    /// pone, con la causa peggiore delle sue variazioni (`NormaLontana` se non ce ne sono); alla
+    /// soglia o sopra lo ritira; chi non è alleato non ne ha.
+    pub(crate) fn ultimatum(&mut self, dati: &DatiGioco, alleati: &[usize]) {
+        let soglia = dati.manopola("soglia_ultimatum");
         for (j, (&x, u)) in self.valori.iter().zip(&mut self.ultimatum).enumerate() {
-            let alleato = alleati.contains(&j);
-            if !alleato || x >= soglia {
+            if !alleati.contains(&j) || x >= soglia {
                 *u = None;
             } else if u.is_none() {
                 let mie = (self.variazioni.iter()).filter(|v| v.partito == j);
@@ -118,10 +110,21 @@ impl Intesa {
                         .unwrap_or(CausaIntesa::NormaLontana),
                 );
             }
-            if alleato && x < uscita {
-                escono.push(j);
-            }
         }
+    }
+
+    /// Soglie di fine turno, sul valore prima del ritorno (scelta 8 del piano 7b): l'ultimatum,
+    /// con le variazioni di questo turno e del precedente, poi le variazioni del turno precedente
+    /// escono (restano due turni, come quelle dei ministri). Rende gli alleati sotto
+    /// `soglia_uscita`, in ordine d'indice. Poi ritorno verso `intesa_base`, limitato a 0-100.
+    pub(crate) fn soglie(&mut self, dati: &DatiGioco, turno: u32, alleati: &[usize]) -> Vec<usize> {
+        self.ultimatum(dati, alleati);
+        self.variazioni.retain(|v| v.turno >= turno);
+        let uscita = dati.manopola("soglia_uscita");
+        let escono = (self.valori.iter().enumerate())
+            .filter(|&(j, &x)| x < uscita && alleati.contains(&j))
+            .map(|(j, _)| j)
+            .collect();
         let (base, ritorno) = (
             dati.manopola("intesa_base"),
             dati.manopola("ritorno_intesa"),
@@ -147,5 +150,35 @@ impl Intesa {
                 "intesa: non una voce per partito, o un valore fuori da 0-100".into(),
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::dati::dati_base as dati;
+
+    #[test]
+    fn escono_gli_alleati_sotto_la_soglia_di_uscita() {
+        let d = dati();
+        let mut intesa = Intesa::iniziale(&d, 3);
+        intesa.valori[1] = 24.9;
+        intesa.valori[2] = 10.0;
+        assert_eq!(intesa.soglie(&d, 1, &[1]), vec![1]);
+        // Il non alleato a 10 non esce e non ha ultimatum.
+        assert_eq!(intesa.ultimatum[2], None);
+        intesa.valori[1] = 25.0;
+        intesa.valori[2] = 10.0;
+        assert_eq!(intesa.soglie(&d, 2, &[1]), Vec::<usize>::new());
+    }
+
+    /// La causa dell'ultimatum legge anche le variazioni del turno prima, quelle della formazione.
+    #[test]
+    fn la_causa_dell_ultimatum_legge_il_turno_prima() {
+        let d = dati();
+        let mut intesa = Intesa::iniziale(&d, 2);
+        intesa.varia(1, CausaIntesa::Spartizione, -30.0, 4);
+        intesa.soglie(&d, 5, &[1]);
+        assert_eq!(intesa.ultimatum[1], Some(CausaIntesa::Spartizione));
     }
 }

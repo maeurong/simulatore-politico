@@ -461,3 +461,33 @@ fn gli_alleati_del_governo_ia_partono_dalla_base() {
         assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
     }
 }
+
+/// Il giocatore (7), che ha corso da solo, non ha la maggioranza; l'incarico va all'IA con
+/// centrosinistra (2, che lascia l'1), centro (3, da solo, governa con 2 e 4) e centrodestra (4, che
+/// lascia il 5): rompono tutti e tre.
+#[test]
+fn l_ia_che_rompe_l_impegno_perde_valence_e_intesa() {
+    let p = comune::in_trattativa(
+        json!([[7], [1, 2], [4, 5]]),
+        &[10, 60, 80, 30, 50, 50, 20, 100],
+        &[5, 30, 40, 15, 25, 25, 10, 50],
+    );
+    let mut p = comune::edita(&p, |j| {
+        j["legislatura"]["incarico"] = json!({ "Ia": { "coalizione": [2, 3, 4] } })
+    })
+    .unwrap();
+    let prima = p.partiti().to_vec();
+    p.chiudi_turno();
+    assert_eq!(p.governo().coalizione, vec![2, 3, 4]);
+    let dati = comune::dati_base();
+    let valence = dati.manopola("valence_rottura_impegno");
+    for j in [2, 3, 4] {
+        let calo = comune::calo_oltre_il_ritorno(&prima, &p, j);
+        assert!((calo - valence).abs() < 1e-9, "{j}: {calo}");
+    }
+    let attesa = dati.manopola("intesa_base") - dati.manopola("intesa_rottura_impegno");
+    assert_eq!(p.alleati().len(), 2);
+    for j in p.alleati() {
+        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
+    }
+}

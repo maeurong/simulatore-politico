@@ -295,8 +295,9 @@ impl Partita {
         if self.legislatura.turno_di_voto(self.turno) {
             self.vota_parlamento(&vero);
         }
-        self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
+        // Prima delle soglie dei ministri: chi si dimette nel turno conta ancora nella media.
         self.pressioni_intesa();
+        self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
         // Gli alleati sotto `soglia_uscita`: servono per la loro uscita dal governo.
         let _escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
         let ritorno = self.dati.manopola("ritorno_valence");
@@ -902,9 +903,7 @@ impl Partita {
         let d = |nome| self.dati.manopola(nome);
         let (minaccia, costo_ministri) = (d("soglia_minaccia"), d("costo_ministri_scontenti"));
         let (costo_quota, costo_calo) = (d("costo_quota_scoperta"), d("costo_calo_sondaggi"));
-        let seggi = self.seggi_per_partito();
-        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
-        let maggioranza = self.governo.coalizione.iter().map(|&j| di(j)).sum();
+        let g = &self.governo;
         let mut variazioni = Vec::new();
         for j in self.alleati() {
             let sodd: Vec<f64> = (self.ministri.dicasteri.iter())
@@ -917,10 +916,8 @@ impl Partita {
                 let delta = -costo_ministri * (minaccia - media).max(0.0) / 10.0;
                 variazioni.push((j, CausaIntesa::MinistriScontenti, delta));
             }
-            let offerta = (self.dati.dicasteri().iter().zip(&self.governo.dicasteri))
-                .filter(|&(_, &a)| a == j)
-                .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
-            let richiesta = legislatura::richiesta(&self.dati, di(j), maggioranza);
+            let assegnati = g.dicasteri.iter().copied().map(Some);
+            let (richiesta, offerta) = self.richiesta_e_offerta(j, &g.coalizione, assegnati);
             let delta = -costo_quota * (richiesta - offerta).max(0.0);
             variazioni.push((j, CausaIntesa::QuotaScoperta, delta));
             if let Some(voti) = self
@@ -1794,20 +1791,32 @@ impl Partita {
             .collect()
     }
 
+    /// (richiesta, offerta) del partito `j` nella `coalizione`: la richiesta di Gamson sui seggi
+    /// veri, e i punti di peso dei dicasteri che `assegnati` gli dà.
+    fn richiesta_e_offerta(
+        &self,
+        j: usize,
+        coalizione: &[usize],
+        assegnati: impl Iterator<Item = Option<usize>>,
+    ) -> (f64, f64) {
+        let seggi = self.seggi_per_partito();
+        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
+        let offerta = (self.dati.dicasteri().iter().zip(assegnati))
+            .filter(|&(_, a)| a == Some(j))
+            // Da 0,0: la `sum` di un f64 vuoto dà -0,0.
+            .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
+        let s = coalizione.iter().map(|&k| di(k)).sum();
+        (legislatura::richiesta(&self.dati, di(j), s), offerta)
+    }
+
     /// Per alleato della coalizione del giocatore: (indice, richiesta, offerta di `assegnati`, i
     /// punti di peso dei dicasteri che gli dà).
     fn quote(&self, assegnati: &[Option<usize>]) -> Vec<(usize, f64, f64)> {
-        let (g, seggi) = (self.giocatore, self.seggi_per_partito());
         let coalizione = self.coalizione_del_giocatore();
-        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
-        let s = coalizione.iter().map(|&j| di(j)).sum();
-        (coalizione.iter().filter(|&&j| j != g))
+        (coalizione.iter().filter(|&&j| j != self.giocatore))
             .map(|&j| {
-                let offerta = (self.dati.dicasteri().iter().zip(assegnati))
-                    .filter(|&(_, &a)| a == Some(j))
-                    // Da 0,0: la `sum` di un f64 vuoto dà -0,0.
-                    .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
-                (j, legislatura::richiesta(&self.dati, di(j), s), offerta)
+                let (r, o) = self.richiesta_e_offerta(j, &coalizione, assegnati.iter().copied());
+                (j, r, o)
             })
             .collect()
     }
@@ -1845,7 +1854,8 @@ impl Partita {
     /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
     /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
     /// scioglie le Camere: si vota nella chiusura del turno dopo. Poi ministri tutti nuovi,
-    /// giudizio da zero per chi entra al governo, fase ordinaria.
+    /// giudizio da zero per chi entra al governo, l'ultimatum sul valore di partenza (l'alleato
+    /// che entra sotto la soglia lo pone subito, chi non è più alleato non ne ha), fase ordinaria.
     fn forma_governo(&mut self) {
         let seggi = self.seggi_per_partito();
         let di = |j: &usize| seggi.get(*j).copied().unwrap_or(0);
@@ -1927,6 +1937,8 @@ impl Partita {
             coalizione,
         };
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
+        let alleati = self.alleati();
+        self.intesa.ultimatum(&self.dati, &alleati);
         let l = &mut self.legislatura;
         l.fase = Fase::Ordinaria;
         l.incarico = None;
