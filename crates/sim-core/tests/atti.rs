@@ -108,6 +108,19 @@ fn intensita_e_durata_enormi_rifiutate_col_nome() {
 }
 
 #[test]
+fn atto_di_livello_rifiutato() {
+    let m = rifiuto(
+        "atti",
+        "intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 2.0",
+        "intensita = 8.0, ritardo = 1, forma = \"livello\", durata = 2.0",
+    );
+    assert!(
+        m.contains("sanita_liste_straordinario: forma livello solo per le disposizioni"),
+        "{m}"
+    );
+}
+
+#[test]
 fn intensita_oltre_il_tetto_del_salvataggio_rifiutata() {
     // qualita_servizio_sanitario va da 0 a 200: con capacità 5 l'effetto vale I·5/3 ≤ 200.
     let da = "grandezza = \"qualita_servizio_sanitario\", intensita = 8.0";
@@ -122,4 +135,26 @@ fn intensita_oltre_il_tetto_del_salvataggio_rifiutata() {
     );
     let ok = "grandezza = \"qualita_servizio_sanitario\", intensita = 120.0";
     DatiGioco::da_testi(&sostituisci(file_base(), "atti", da, ok)).unwrap();
+}
+
+#[test]
+fn prerequisito_sconosciuto_rifiutato_col_nome() {
+    let m = rifiuto(
+        "atti",
+        "disposizione = \"privato_accreditato\"",
+        "disposizione = \"privato\"",
+    );
+    assert!(
+        m.contains("sanita_convenzioni_privato: prerequisito su disposizione sconosciuta privato"),
+        "{m}"
+    );
+    let m = rifiuto(
+        "atti",
+        "gradini = [\"attuale\", \"ampio\"]",
+        "gradini = [\"attuale\", \"largo\"]",
+    );
+    assert!(
+        m.contains("sanita_convenzioni_privato: prerequisito su gradino sconosciuto largo"),
+        "{m}"
+    );
 }

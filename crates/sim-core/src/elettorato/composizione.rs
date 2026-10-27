@@ -206,6 +206,7 @@ mod test {
             voto_precedente: vec![0.5, 0.5],
             reddito: Reddito::default(),
             reddito_prima: Reddito::default(),
+            lordo_irpef: 0.0,
             crescite: vec![],
         }
     }

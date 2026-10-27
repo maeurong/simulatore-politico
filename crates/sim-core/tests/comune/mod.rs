@@ -17,6 +17,7 @@ pub fn file_base() -> FileDati {
         elettorato: include_str!("../../../../dati/base/elettorato.toml").into(),
         grandezze: include_str!("../../../../dati/base/grandezze.toml").into(),
         atti: include_str!("../../../../dati/base/atti.toml").into(),
+        disposizioni: include_str!("../../../../dati/base/disposizioni.toml").into(),
     }
 }
 
@@ -99,8 +100,39 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
         "elettorato" => &mut f.elettorato,
         "grandezze" => &mut f.grandezze,
         "atti" => &mut f.atti,
+        "disposizioni" => &mut f.disposizioni,
         _ => panic!("file di dati sconosciuto: {file}"),
     }
+}
+
+/// Nella disposizione `id`, la riga `in_arrivo = ...` diventa un solo arrivo `gradino` dal
+/// trimestre dato: cambia una disposizione a un turno noto senza passare dall'aula.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn con_arrivo(mut f: FileDati, id: &str, gradino: &str, anno: u16, trimestre: u8) -> FileDati {
+    let testa = format!("id = \"{id}\"\n");
+    let inizio = f
+        .disposizioni
+        .find(&testa)
+        .unwrap_or_else(|| panic!("{id} assente"))
+        + testa.len();
+    let riga = inizio
+        + f.disposizioni[inizio..]
+            .find("in_arrivo = ")
+            .unwrap_or_else(|| panic!("{id}: riga in_arrivo assente"));
+    let fine = riga
+        + f.disposizioni[riga..]
+            .find('\n')
+            .unwrap_or_else(|| panic!("{id}: fine della riga in_arrivo assente"));
+    f.disposizioni.replace_range(
+        riga..fine,
+        &format!(
+            "in_arrivo = [{{ gradino = \"{gradino}\", anno = {anno}, trimestre = {trimestre} }}]"
+        ),
+    );
+    f
 }
 
 /// Nel file `file`, il primo valore dopo `prefisso` (fino a `,` `]` `}` spazio o fine riga)

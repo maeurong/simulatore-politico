@@ -642,7 +642,7 @@ fn cantiere_solo() -> Partita {
 fn effetti_di(p: &Partita, dicastero: &str) -> Vec<sim_core::grandezze::EffettoAttivo> {
     let i = indice(dicastero);
     (p.grandezze().effetti.iter())
-        .filter(|e| e.dicastero == i)
+        .filter(|e| e.dicastero == Some(i))
         .cloned()
         .collect()
 }
@@ -944,4 +944,29 @@ fn il_costo_degli_atti_segue_l_indice_pubblicato_non_il_livello_vero() {
     assert_eq!(q.economia().livello_prezzi, p.economia().livello_prezzi);
     let rapporto = costo(&q) as f64 / costo(&p) as f64;
     assert!((rapporto - 1.1).abs() < 1e-6, "{rapporto}");
+}
+
+/// Convenzioni col privato a costo trascurabile e Privato accreditato a "ridotto": il margine
+/// basta, a negare il dirottamento resta solo il prerequisito.
+#[test]
+fn dirottare_su_un_atto_senza_prerequisito_e_rifiutato_e_la_partita_resta_identica() {
+    let costo_basso = comune::sostituisci(
+        file_base(),
+        "atti",
+        "costo = 1.0\neffetti = [\n  { grandezza = \"qualita_servizio_sanitario\", intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 1.5",
+        "costo = 0.1\neffetti = [\n  { grandezza = \"qualita_servizio_sanitario\", intensita = 8.0, ritardo = 1, forma = \"impulso\", durata = 1.5",
+    );
+    let f = comune::sostituisci(
+        costo_basso,
+        "disposizioni",
+        "partenza = \"attuale\"\nlegge = \"L. 199/2025, art. 1 c. 400\"",
+        "partenza = \"ridotto\"\nlegge = \"L. 199/2025, art. 1 c. 400\"",
+    );
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    assert!(ministero(&p.vista(), "sanita").agenda.is_some());
+    rifiuta(
+        &mut p,
+        dirotta("sanita", Some("sanita_convenzioni_privato"), None),
+        "sanita_convenzioni_privato: serve Privato accreditato: attuale o ampio",
+    );
 }

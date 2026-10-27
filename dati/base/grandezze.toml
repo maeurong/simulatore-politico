@@ -221,3 +221,14 @@ iniziale = 100.0
 min = 0.0
 max = 200.0
 dicasteri = ["giustizia"]
+
+[[grandezza]]
+id = "regole_lavoro"
+nome = "Regole del lavoro (punti di disoccupazione strutturale tolti)"
+dinamica = "fissa"
+verso = "sale"
+regionale = false
+iniziale = 0.0
+min = -5.0
+max = 5.0
+dicasteri = ["lavoro_welfare"]

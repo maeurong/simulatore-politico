@@ -9,6 +9,8 @@ use crate::struttura::Regione;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+#[cfg(test)]
+use ts_rs::TS;
 
 mod composizione;
 mod giudizio;
@@ -27,6 +29,7 @@ pub(crate) const FINESTRA_MASSIMA: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub enum Condizione {
     DipendentePrivato,
     DipendentePubblico,
@@ -347,6 +350,9 @@ pub struct Gruppo {
     pub voto_precedente: Vec<f64>,
     pub reddito: Reddito,
     pub reddito_prima: Reddito,
+    /// Euro annui: primario più trasferimenti senza salario minimo e reddito minimo, la base
+    /// dell'aliquota media IRPEF (le leve di reddito non muovono il gettito).
+    pub lordo_irpef: f64,
     /// Ultime crescite reali trimestrali in punti, la più recente in coda.
     pub crescite: Vec<f64>,
 }
@@ -369,8 +375,9 @@ impl Elettorato {
     }
 
     pub fn iniziale(dati: &DatiGioco, n_partiti: usize, e: &Economia) -> Elettorato {
+        let neutre = Misure::neutre(dati);
         let mut el = Elettorato {
-            base: Indici::da(e, dati),
+            base: Indici::da(e, dati, &neutre.leve),
             aliquota_irpef_0: 0.0,
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
@@ -385,27 +392,25 @@ impl Elettorato {
                     voto_precedente: vec![0.0; n_partiti + 1],
                     reddito: Reddito::default(),
                     reddito_prima: Reddito::default(),
+                    lordo_irpef: 0.0,
                     crescite: Vec::new(),
                 })
                 .collect(),
         };
         // Due volte, così `reddito_prima == reddito` al turno zero.
-        let neutre = Misure::neutre(dati);
         el.aggiorna_redditi(dati, e, &neutre);
         el.aggiorna_redditi(dati, e, &neutre);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
         el
     }
 
-    /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti, con gli scaglioni `s`.
+    /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti senza le leve di
+    /// reddito (`lordo_irpef`), con gli scaglioni `s`.
     pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
         let d = dati.elettorato();
         let (mut imposta, mut lordo) = (0.0, 0.0);
         for (k, g) in self.gruppi.iter().enumerate() {
-            let (n, l) = (
-                self.elettori(d, k),
-                g.reddito.primario + g.reddito.trasferimenti,
-            );
+            let (n, l) = (self.elettori(d, k), g.lordo_irpef);
             imposta += n * irpef(s, l);
             lordo += n * l;
         }
@@ -455,7 +460,7 @@ impl Elettorato {
                     "elettorato.gruppi[{i}].crescite: al massimo {FINESTRA_MASSIMA} valori finiti"
                 ));
             }
-            if !(g.reddito.e_valido() && g.reddito_prima.e_valido()) {
+            if !(g.reddito.e_valido() && g.reddito_prima.e_valido() && g.lordo_irpef.is_finite()) {
                 return ko(format!(
                     "elettorato.gruppi[{i}]: reddito non finito o paniere non positivo"
                 ));

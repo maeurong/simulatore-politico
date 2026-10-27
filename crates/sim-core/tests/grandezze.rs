@@ -13,7 +13,7 @@ use sim_core::{Errore, Partita};
 fn grandezze_base_si_caricano() {
     let p = Partita::nuova(dati_base(), 1);
     let v = p.vista();
-    assert_eq!(v.grandezze.len(), 20);
+    assert_eq!(v.grandezze.len(), 21);
     let stock = v
         .grandezze
         .iter()

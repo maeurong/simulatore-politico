@@ -1,4 +1,5 @@
 use crate::dati::DatiGioco;
+use crate::disposizioni::Disposizioni;
 use crate::errore::Errore;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -22,6 +23,8 @@ pub enum Lato {
 pub enum Forma {
     Impulso,
     Stock,
+    /// Vale da `inizio` in poi, per sempre: solo per le disposizioni.
+    Livello,
 }
 
 impl fmt::Display for Velocita {
@@ -47,6 +50,7 @@ impl fmt::Display for Forma {
         f.write_str(match self {
             Self::Impulso => "impulso",
             Self::Stock => "stock",
+            Self::Livello => "livello",
         })
     }
 }
@@ -72,6 +76,38 @@ pub struct Atto {
     pub turni: u32,
     pub costo: f64,
     pub effetti: Vec<EffettoAtto>,
+    #[serde(default)]
+    pub prerequisito: Option<Prerequisito>,
+}
+
+/// L'atto vale solo con uno di questi gradini in vigore nella disposizione.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Prerequisito {
+    pub disposizione: String,
+    pub gradini: Vec<String>,
+}
+
+impl Atto {
+    /// `Some("serve {disposizione}: {gradino} o {gradino}")` se il gradino in vigore della
+    /// disposizione richiesta non è fra quelli del prerequisito.
+    pub fn prerequisito_mancante(
+        &self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+    ) -> Option<String> {
+        let p = self.prerequisito.as_ref()?;
+        let k = dati.disposizione(&p.disposizione)?;
+        let d = &dati.disposizioni()[k];
+        let in_vigore = &d.gradini.get(disposizioni.voci.get(k)?.in_vigore)?.id;
+        if p.gradini.contains(in_vigore) {
+            return None;
+        }
+        let nomi: Vec<&str> = (p.gradini.iter())
+            .filter_map(|g| d.gradini.iter().find(|x| &x.id == g))
+            .map(|x| x.nome.as_str())
+            .collect();
+        Some(format!("serve {}: {}", d.nome, nomi.join(" o ")))
+    }
 }
 
 /// Coerenza del catalogo con i dicasteri e le grandezze.
@@ -146,6 +182,9 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             {
                 return ko(format!("{}: intensita fuori intervallo", a.id));
             }
+            if e.forma == Forma::Livello {
+                return ko(format!("{}: forma livello solo per le disposizioni", a.id));
+            }
             if e.ritardo > 40 {
                 return ko(format!("{}: ritardo fuori intervallo", a.id));
             }
@@ -163,6 +202,18 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                 "{}: nessun effetto su una grandezza regionale",
                 a.id
             ));
+        }
+        if let Some(p) = &a.prerequisito {
+            let Some(k) = dati.disposizione(&p.disposizione) else {
+                return ko(format!(
+                    "{}: prerequisito su disposizione sconosciuta {}",
+                    a.id, p.disposizione
+                ));
+            };
+            let d = &dati.disposizioni()[k];
+            if let Some(g) = p.gradini.iter().find(|g| d.gradino(g).is_none()) {
+                return ko(format!("{}: prerequisito su gradino sconosciuto {g}", a.id));
+            }
         }
     }
     Ok(())

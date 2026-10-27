@@ -5,4 +5,8 @@ export type VoceAtto = { id: string, nome: string, motto: string,
 /**
  * Euro per turno di lavori.
  */
-costo: bigint, turni: number, pagabile: boolean, effetti: Array<VoceEffetto>, };
+costo: bigint, turni: number, pagabile: boolean, 
+/**
+ * `serve {disposizione}: {gradino} o {gradino}`; l'atto non è pagabile.
+ */
+prerequisito_mancante: string | null, effetti: Array<VoceEffetto>, };

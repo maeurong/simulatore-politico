@@ -1,9 +1,11 @@
-//! Misure: ciò che gli atti dei ministri e gli stock fanno arrivare al motore economico.
-//! Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura del turno.
+//! Misure: ciò che gli atti dei ministri, gli stock e le disposizioni fanno arrivare al motore
+//! economico. Le costruisce `Partita` a ogni chiusura, dalle grandezze com'erano all'apertura
+//! del turno.
 
 use crate::dati::{DatiGioco, Ruolo};
+use crate::disposizioni::{Disposizioni, Leve};
 use crate::economia::{Economia, Scaglione, eti, fattore};
-use crate::elettorato::Elettorato;
+use crate::elettorato::{Elettorato, PER_REGIONE};
 use crate::errore::Errore;
 use crate::grandezze::{Grandezze, contributo};
 use crate::ministri::Ministri;
@@ -44,6 +46,10 @@ pub struct Misure {
     pub irpef_discrezionale: f64,
     /// Elasticità della base imponibile all'aliquota media IRPEF, `eti(t, t₀)`.
     pub eti_irpef: f64,
+    /// Le leve dei gradini in vigore.
+    pub leve: Leve,
+    /// `Σ (saldo in vigore − saldo di partenza)` delle disposizioni, % del PIL potenziale annuo.
+    pub saldo_disposizioni: f64,
 }
 
 /// `g(y) = 100 · (L(y)/L(y−1) − 1)`, con `L(y)` le persone di 15-66 anni nell'anno `y`: la
@@ -60,7 +66,8 @@ fn crescita_forza_lavoro(piramide: &[u32], anno: u16) -> f64 {
 }
 
 impl Misure {
-    /// Le misure che non cambiano nulla: riscossione 1, il resto a zero, capacità 3.
+    /// Le misure che non cambiano nulla: riscossione 1, il resto a zero, capacità 3, le leve
+    /// di partenza.
     pub fn neutre(dati: &DatiGioco) -> Misure {
         let n = dati.regioni().len();
         Misure {
@@ -74,11 +81,17 @@ impl Misure {
             fattore_irpef: 1.0,
             irpef_discrezionale: 0.0,
             eti_irpef: 1.0,
+            leve: Leve::partenza(dati),
+            saldo_disposizioni: 0.0,
         }
     }
 
-    /// Le misure del turno `turno` (trimestre `data`), dalle grandezze, dai ministri e
-    /// dall'economia.
+    /// Le misure del turno `turno` (trimestre `data`), dalle grandezze, dai ministri,
+    /// dall'economia e dalle disposizioni in vigore.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "ogni ingresso è uno stato diverso della partita, letto e non scritto"
+    )]
     pub fn da(
         dati: &DatiGioco,
         g: &Grandezze,
@@ -87,8 +100,10 @@ impl Misure {
         el: &Elettorato,
         turno: u32,
         data: Trimestre,
+        disposizioni: &Disposizioni,
     ) -> Misure {
         let n = dati.regioni().len();
+        let (leve, leve_partenza) = (disposizioni.leve(dati), Leve::partenza(dati));
         let manopola = |id: &str| dati.manopola(id);
         let nazionale =
             |id: &str, vuoto: f64| dati.grandezza(id).map_or(vuoto, |k| g.nazionale(dati, k));
@@ -104,14 +119,33 @@ impl Misure {
         let infrastrutture = regionale("stock_infrastrutture", 100.0);
         let investimenti = regionale("investimenti_privati", 100.0);
         let stock = manopola("stock_disoccupazione");
-        let politiche_attive = nazionale("politiche_attive", 0.0);
-        let disoccupazione_strutturale = infrastrutture
+        let punti_tolti = nazionale("politiche_attive", 0.0) + nazionale("regole_lavoro", 0.0);
+        let mut disoccupazione_strutturale: Vec<f64> = infrastrutture
             .iter()
             .zip(&investimenti)
-            .map(|(i, v)| -stock * ((i - 100.0) + (v - 100.0)) / 10.0 - politiche_attive)
+            .map(|(i, v)| -stock * ((i - 100.0) + (v - 100.0)) / 10.0 - punti_tolti)
             .collect();
+        let mut merito = Self::merito(dati, g, e, turno);
+        // La decontribuzione toglie punti di disoccupazione nel perimetro, col merito al
+        // dicastero della disposizione.
+        let (perimetro, dicastero) = Self::perimetro(dati, "decontribuzione");
+        let delta = leve.decontribuzione - leve_partenza.decontribuzione;
+        for (r, peso) in perimetro {
+            disoccupazione_strutturale[r] -= delta * peso;
+            if let Some(d) = dicastero {
+                merito[r][d] -= delta * peso;
+            }
+        }
+        let mut domanda_regionale = regionale("domanda_regionale", 0.0);
+        Self::autonomia(
+            dati,
+            el,
+            leve.autonomia - leve_partenza.autonomia,
+            &mut domanda_regionale,
+        );
 
-        let prezzo_energia = nazionale("prezzo_energia", 0.0);
+        let prezzo_energia =
+            nazionale("prezzo_energia", 0.0) + (leve.accise - leve_partenza.accise);
         // Prima del 2027 la demografia non sposta il potenziale dalla base calibrata.
         let anno = data.anno.max(ANNO_BASE);
         let piramide = &dati.struttura().piramide;
@@ -136,14 +170,16 @@ impl Misure {
         Misure {
             riscossione,
             prezzo_energia,
-            domanda_regionale: regionale("domanda_regionale", 0.0),
+            domanda_regionale,
             disoccupazione_strutturale,
             crescita_potenziale,
             capacita_economia,
-            merito: Self::merito(dati, g, e, turno),
+            merito,
             fattore_irpef: 1.0,
             irpef_discrezionale: 0.0,
             eti_irpef: 1.0,
+            saldo_disposizioni: disposizioni.saldo(dati),
+            leve,
         }
         // Gli scaglioni in vigore nel trimestre, non ancora quelli di `e.bilancio` a gennaio.
         .con_scaglioni(dati, el, &e.bilancio_in_vigore(data).aliquote.irpef)
@@ -168,6 +204,55 @@ impl Misure {
         }
     }
 
+    /// Il perimetro `(regione, peso)` e il dicastero della disposizione che porta la leva `leva`.
+    fn perimetro(dati: &DatiGioco, leva: &str) -> (Vec<(usize, f64)>, Option<usize>) {
+        let Some(d) = (dati.disposizioni().iter())
+            .find(|d| d.gradini.iter().any(|g| g.leve.contains_key(leva)))
+        else {
+            return (Vec::new(), None);
+        };
+        let regioni = (d.perimetro.iter())
+            .filter_map(|(r, p)| Some((dati.regioni().iter().position(|x| &x.id == r)?, *p)))
+            .collect();
+        let dicastero =
+            (d.dicastero.as_ref()).and_then(|c| dati.dicasteri().iter().position(|x| &x.id == c));
+        (regioni, dicastero)
+    }
+
+    /// L'autonomia con quota trattenuta `q`: con `g_r` la quota del reddito lordo dei gruppi
+    /// della regione sul totale, senza le leve di reddito (`lordo_irpef`), e `p_r` quella
+    /// degli elettori, `+e·q·(g_r/p_r − 1)` nel
+    /// perimetro e `−e·q·Σ_perimetro (g_s − p_s) / (1 − Σ_perimetro p_s)` fuori, così la somma
+    /// pesata per elettori resta zero. Nessun merito: è fuori dicastero.
+    fn autonomia(dati: &DatiGioco, el: &Elettorato, q: f64, domanda: &mut [f64]) {
+        let d = dati.elettorato();
+        let elettori: Vec<f64> = d.regioni.iter().map(|x| x.elettori as f64).collect();
+        let mut reddito = vec![0.0; elettori.len()];
+        for (k, gr) in el.gruppi.iter().enumerate() {
+            if let Some(x) = reddito.get_mut(k / PER_REGIONE) {
+                *x += el.elettori(d, k) * gr.lordo_irpef;
+            }
+        }
+        let (tot_e, tot_r) = (elettori.iter().sum::<f64>(), reddito.iter().sum::<f64>());
+        let (perimetro, _) = Self::perimetro(dati, "autonomia");
+        let quota_p: f64 = perimetro.iter().map(|&(r, _)| elettori[r] / tot_e).sum();
+        // Base degenere o perimetro che copre tutto il Paese: nessuno da cui spostare domanda.
+        if q == 0.0 || tot_e <= 0.0 || tot_r <= 0.0 || 1.0 - quota_p <= 1e-9 {
+            return;
+        }
+        let e = dati.manopola("elasticita_autonomia");
+        let scarto = |r: usize| reddito[r] / tot_r - elettori[r] / tot_e;
+        let fuori =
+            -e * q * perimetro.iter().map(|&(r, _)| scarto(r)).sum::<f64>() / (1.0 - quota_p);
+        for (r, x) in domanda.iter_mut().enumerate() {
+            *x += if perimetro.iter().any(|&(s, _)| s == r) {
+                e * q * scarto(r) * tot_e / elettori[r]
+            } else {
+                fuori
+            };
+        }
+    }
+
     /// Per regione e dicastero, i punti di disoccupazione dovuti ai suoi effetti regionali
     /// attivi: `β_r · domanda_regionale − stock_disoccupazione · (infrastrutture + investimenti)/10`.
     /// I valori delle grandezze sono quelli dell'ultimo `avanza`, cioè del turno prima: il merito
@@ -188,7 +273,9 @@ impl Misure {
             return merito;
         };
         for ef in &g.effetti {
-            let Some(r) = ef.regione else { continue };
+            let (Some(r), Some(dicastero)) = (ef.regione, ef.dicastero) else {
+                continue;
+            };
             let c = contributo(ef, visto);
             let k = Some(ef.grandezza);
             let punti = if k == domanda {
@@ -198,7 +285,7 @@ impl Misure {
             } else {
                 0.0
             };
-            merito[r][ef.dicastero] += punti;
+            merito[r][dicastero] += punti;
         }
         merito
     }
@@ -233,6 +320,7 @@ impl Misure {
             ("fattore_irpef", self.fattore_irpef),
             ("irpef_discrezionale", self.irpef_discrezionale),
             ("eti_irpef", self.eti_irpef),
+            ("saldo_disposizioni", self.saldo_disposizioni),
         ];
         if let Some((campo, _)) = scalari.iter().find(|(_, x)| !x.is_finite()) {
             return ko(format!("{campo} non finito"));
@@ -278,6 +366,7 @@ mod test {
             p.elettorato(),
             0,
             data,
+            p.disposizioni(),
         )
     }
 

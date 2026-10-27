@@ -184,7 +184,8 @@ fn effetti_di(
                 } else {
                     None
                 },
-                dicastero,
+                dicastero: Some(dicastero),
+                disposizione: None,
                 intensita: e.intensita * c / 3.0,
                 inizio: turno.saturating_add(ritardo),
                 forma: e.forma,
@@ -247,8 +248,8 @@ impl Ministri {
         }
     }
 
-    /// L'atto pagabile e senza cantiere in corso col punteggio più alto (a parità il primo), e la
-    /// regione bersaglio.
+    /// L'atto pagabile, senza cantiere in corso e col prerequisito soddisfatto col punteggio più
+    /// alto (a parità il primo), e la regione bersaglio.
     fn scegli(&self, cx: &Contesto, i: usize, rumore: &[f64], rif: &[i64]) -> Option<Agenda> {
         let dati = cx.dati;
         let st = &self.dicasteri[i];
@@ -258,7 +259,10 @@ impl Ministri {
         let (libero, sigma) = (disponibile(st), dati.manopola("rumore_agenda"));
         let mut scelta: Option<(usize, f64)> = None;
         for (p, (k, a)) in atti.iter().enumerate() {
-            if costo_atto(cx, rif, i, a) > libero || in_cantiere(st, *k) {
+            if costo_atto(cx, rif, i, a) > libero
+                || in_cantiere(st, *k)
+                || a.prerequisito_mancante(dati, cx.disposizioni).is_some()
+            {
                 continue;
             }
             let punteggio = parti[p].0 + parti[p].1 + sigma * rumore[*k];
@@ -428,6 +432,9 @@ impl Ministri {
             if costo_atto(cx, &margini_rif(dati), i, &dati.atti()[k]) > disponibile(st) {
                 return ko(format!("margine insufficiente per {}", dati.atti()[k].id));
             }
+            if let Some(m) = dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni) {
+                return ko(format!("{}: {m}", dati.atti()[k].id));
+            }
         }
         let att = |k: usize| {
             posizione(dati, i, k)
@@ -566,13 +573,15 @@ impl Ministri {
             .atti_del_dicastero(i)
             .map(|(_, a)| {
                 let spesa = costo_atto(cx, rif, i, a);
+                let prerequisito_mancante = a.prerequisito_mancante(dati, cx.disposizioni);
                 VoceAtto {
                     id: a.id.clone(),
                     nome: a.nome.clone(),
                     motto: a.motto.clone(),
                     costo: spesa,
                     turni: a.turni,
-                    pagabile: spesa <= libero,
+                    pagabile: spesa <= libero && prerequisito_mancante.is_none(),
+                    prerequisito_mancante,
                     effetti: (a.effetti.iter())
                         .map(|e| VoceEffetto {
                             migliora: dati.grandezza(&e.grandezza).is_some_and(|k| {
@@ -637,6 +646,7 @@ mod test {
                 forma: Forma::Impulso,
                 durata: 2.0,
             }],
+            prerequisito: None,
         };
         let uno = effetti_di(&d, &atto, 3, None, 1.0, 10);
         let cinque = effetti_di(&d, &atto, 3, None, 5.0, 10);
@@ -670,6 +680,7 @@ mod test {
                 effetto("stock_infrastrutture"),
                 effetto("qualita_trasporti"),
             ],
+            prerequisito: None,
         };
         let e = effetti_di(&d, &atto, 5, Some(3), 3.0, 0);
         assert_eq!(
@@ -704,6 +715,7 @@ mod test {
                 forma: Forma::Impulso,
                 durata: 2.0,
             }],
+            prerequisito: None,
         };
         let mut p = crate::partita::Partita::nuova(d, 1);
         p.con_contesto(|ministri, cx| {

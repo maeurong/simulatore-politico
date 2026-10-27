@@ -1,0 +1,675 @@
+# Disposizioni della v1 (ticket 16, 22, 24, 27). Valori di partenza, leggi e precedenti da docs/ricerca/sintesi/disposizioni-al-turno-zero.md e disposizioni-territoriali-al-turno-zero.md; posizioni, saldi ed effetti sono una bozza del piano 6 sotto revisione di Mario.
+
+[[disposizione]]
+id = "forfettario"
+nome = "Regime forfettario degli autonomi"
+dicastero = "economia_finanze"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["autonomo"]
+partenza = "85000"
+legge = "L. 197/2022, art. 1 c. 54"
+precedente = "65000"
+in_arrivo = []
+gradini = [
+  { id = "assente", nome = "assente", posizione = 2.0, saldo = -0.15, leve = { forfettario = 1.3 } },
+  { id = "65000", nome = "fino a 65.000 €", posizione = 3.5, saldo = -0.02, leve = { forfettario = 1.05 } },
+  { id = "85000", nome = "fino a 85.000 €", posizione = 4.5, saldo = 0.0, leve = { forfettario = 1.0 } },
+  { id = "100000", nome = "fino a 100.000 €", posizione = 5.5, saldo = 0.02, leve = { forfettario = 0.97 } },
+]
+
+[[disposizione]]
+id = "cuneo_fiscale"
+nome = "Cuneo fiscale"
+dicastero = "economia_finanze"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["dipendente_privato", "dipendente_pubblico"]
+partenza = "7"
+legge = "L. 207/2024, art. 1 c. 4-9"
+precedente = "0"
+in_arrivo = []
+gradini = [
+  { id = "0", nome = "nessuno", posizione = 3.5, saldo = -0.6, leve = { cuneo = 0.0 } },
+  { id = "3", nome = "3 punti", posizione = 4.0, saldo = -0.35, leve = { cuneo = 3.0 } },
+  { id = "7", nome = "7 punti", posizione = 4.5, saldo = 0.0, leve = { cuneo = 7.0 } },
+]
+
+[[disposizione]]
+id = "detrazione_edilizia"
+nome = "Detrazione edilizia"
+dicastero = "economia_finanze"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["autonomo"]
+partenza = "36_50"
+legge = "L. 199/2025, art. 1 c. 22"
+precedente = "36_50"
+in_arrivo = []
+gradini = [
+  { id = "0", nome = "nessuna", posizione = 5.5, saldo = -0.3, effetti = [{ grandezza = "domanda_regionale", intensita = -0.3, ritardo = 2 }] },
+  { id = "36_50", nome = "36-50%", posizione = 4.0, saldo = 0.0 },
+  { id = "65", nome = "65%", posizione = 3.5, saldo = 0.3, effetti = [{ grandezza = "domanda_regionale", intensita = 0.3, ritardo = 2 }] },
+  { id = "110", nome = "110%", posizione = 2.5, saldo = 1.5, effetti = [{ grandezza = "domanda_regionale", intensita = 1.0, ritardo = 2 }] },
+]
+
+[[disposizione]]
+id = "tetto_contante"
+nome = "Tetto al contante"
+dicastero = "economia_finanze"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["autonomo"]
+partenza = "5000"
+legge = "L. 197/2022, art. 1 c. 384"
+precedente = "1000"
+in_arrivo = []
+gradini = [
+  { id = "1000", nome = "1.000 €", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = "efficienza_riscossione", intensita = 4.0, ritardo = 2 }] },
+  { id = "3000", nome = "3.000 €", posizione = 3.0, saldo = 0.0, effetti = [{ grandezza = "efficienza_riscossione", intensita = 2.0, ritardo = 2 }] },
+  { id = "5000", nome = "5.000 €", posizione = 4.5, saldo = 0.0 },
+  { id = "nessuno", nome = "nessun tetto", posizione = 6.0, saldo = 0.0, effetti = [{ grandezza = "efficienza_riscossione", intensita = -4.0, ritardo = 2 }] },
+]
+
+[[disposizione]]
+id = "incentivo_investimenti"
+nome = "Incentivo fiscale agli investimenti"
+dicastero = "sviluppo_economico"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["autonomo"]
+partenza = "40"
+legge = "L. 199/2025, art. 1 c. 427"
+precedente = "40"
+in_arrivo = [{ gradino = "0", anno = 2028, trimestre = 4 }]
+gradini = [
+  { id = "0", nome = "nessuno", posizione = 3.0, saldo = -0.25, effetti = [{ grandezza = "investimenti_privati", intensita = -8.0, ritardo = 2 }] },
+  { id = "10", nome = "10% del costo", posizione = 3.5, saldo = -0.19, effetti = [{ grandezza = "investimenti_privati", intensita = -4.0, ritardo = 2 }] },
+  { id = "20", nome = "20% del costo", posizione = 4.0, saldo = -0.13, effetti = [{ grandezza = "investimenti_privati", intensita = -2.0, ritardo = 2 }] },
+  { id = "40", nome = "40% del costo", posizione = 4.5, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "concorrenza_servizi"
+nome = "Concorrenza nei servizi"
+dicastero = "sviluppo_economico"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["autonomo"]
+partenza = "licenze_chiuse"
+legge = "L. 21/1992, art. 8"
+precedente = "licenze_chiuse"
+in_arrivo = []
+gradini = [
+  { id = "licenze_chiuse", nome = "licenze chiuse", posizione = 5.0, saldo = 0.0 },
+  { id = "gare", nome = "gare", posizione = 3.5, saldo = 0.0, effetti = [{ grandezza = "investimenti_privati", intensita = 2.0, ritardo = 4 }, { grandezza = "sostegno_imprese", intensita = 2.0, ritardo = 2 }] },
+  { id = "libere", nome = "mercato libero", posizione = 3.0, saldo = 0.0, effetti = [{ grandezza = "investimenti_privati", intensita = 4.0, ritardo = 4 }, { grandezza = "sostegno_imprese", intensita = 4.0, ritardo = 2 }] },
+]
+
+[[disposizione]]
+id = "regime_pensioni"
+nome = "Regime delle pensioni"
+dicastero = "lavoro_welfare"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato", "dipendente_privato", "dipendente_pubblico", "autonomo"]
+partenza = "contributivo"
+legge = "DL 201/2011, art. 24 c. 2"
+precedente = "retributivo"
+in_arrivo = []
+gradini = [
+  { id = "retributivo", nome = "retributivo", posizione = 2.0, saldo = 0.0, leve = { regime_pensioni = 0.0 } },
+  { id = "contributivo", nome = "contributivo", posizione = 5.0, saldo = 0.0, leve = { regime_pensioni = 1.0 } },
+  { id = "quota_base_universale", nome = "quota base universale", posizione = 3.0, saldo = 0.0, leve = { regime_pensioni = 2.0 } },
+]
+
+[[disposizione]]
+id = "eta_pensionabile"
+nome = "Età pensionabile"
+dicastero = "lavoro_welfare"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato", "dipendente_privato", "dipendente_pubblico", "autonomo"]
+partenza = "67"
+legge = "L. 199/2025, art. 1 c. 185"
+precedente = "67"
+in_arrivo = []
+gradini = [
+  { id = "62", nome = "62 anni", posizione = 2.0, saldo = 0.0, leve = { eta_pensione = 62.0 } },
+  { id = "63", nome = "63 anni", posizione = 2.5, saldo = 0.0, leve = { eta_pensione = 63.0 } },
+  { id = "64", nome = "64 anni", posizione = 3.0, saldo = 0.0, leve = { eta_pensione = 64.0 } },
+  { id = "65", nome = "65 anni", posizione = 3.5, saldo = 0.0, leve = { eta_pensione = 65.0 } },
+  { id = "66", nome = "66 anni", posizione = 4.0, saldo = 0.0, leve = { eta_pensione = 66.0 } },
+  { id = "67", nome = "67 anni", posizione = 4.5, saldo = 0.0, leve = { eta_pensione = 67.0 } },
+  { id = "68", nome = "68 anni", posizione = 5.0, saldo = 0.0, leve = { eta_pensione = 68.0 } },
+  { id = "69", nome = "69 anni", posizione = 5.5, saldo = 0.0, leve = { eta_pensione = 69.0 } },
+  { id = "70", nome = "70 anni", posizione = 6.0, saldo = 0.0, leve = { eta_pensione = 70.0 } },
+]
+
+[[disposizione]]
+id = "indicizzazione_pensioni"
+nome = "Indicizzazione delle pensioni"
+dicastero = "lavoro_welfare"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato"]
+partenza = "per_fasce"
+legge = "L. 160/2019, art. 1 c. 478"
+precedente = "bloccata_sopra_soglia"
+in_arrivo = []
+gradini = [
+  { id = "piena", nome = "piena", posizione = 2.5, saldo = 0.0, leve = { indicizzazione_pensioni = 1.0 } },
+  { id = "per_fasce", nome = "per fasce", posizione = 4.0, saldo = 0.0, leve = { indicizzazione_pensioni = 0.95 } },
+  { id = "bloccata_sopra_soglia", nome = "bloccata sopra soglia", posizione = 5.5, saldo = 0.0, leve = { indicizzazione_pensioni = 0.7 } },
+]
+
+[[disposizione]]
+id = "pensione_minima"
+nome = "Pensione minima"
+dicastero = "lavoro_welfare"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato"]
+partenza = "attuale"
+legge = "L. 207/2024, art. 1 c. 177"
+precedente = "attuale"
+in_arrivo = []
+gradini = [
+  { id = "attuale", nome = "attuale", posizione = 4.0, saldo = 0.0, leve = { pensione_minima = 1.0 } },
+  { id = "piu_20", nome = "più 20%", posizione = 3.0, saldo = 0.0, leve = { pensione_minima = 1.2 } },
+  { id = "piu_50", nome = "più 50%", posizione = 2.0, saldo = 0.0, leve = { pensione_minima = 1.5 } },
+]
+
+[[disposizione]]
+id = "sussidi_disoccupazione"
+nome = "Sussidi di disoccupazione"
+dicastero = "lavoro_welfare"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["disoccupato_inattivo", "dipendente_privato"]
+partenza = "assicurativo"
+legge = "D.Lgs. 22/2015, art. 1"
+precedente = "assicurativo"
+in_arrivo = []
+gradini = [
+  { id = "assicurativo", nome = "assicurativo", posizione = 4.0, saldo = 0.0, leve = { sussidi = 1.0 } },
+  { id = "esteso", nome = "esteso", posizione = 3.0, saldo = 0.0, leve = { sussidi = 1.3 } },
+  { id = "universale", nome = "universale", posizione = 2.0, saldo = 0.0, leve = { sussidi = 1.6 } },
+]
+
+[[disposizione]]
+id = "reddito_minimo"
+nome = "Reddito minimo"
+dicastero = "lavoro_welfare"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["disoccupato_inattivo"]
+partenza = "categoriale"
+legge = "DL 48/2023, artt. 1-2"
+precedente = "universale"
+dopo_abrogazione = "non_istituito"
+in_arrivo = []
+gradini = [
+  { id = "non_istituito", nome = "non istituito", posizione = 5.5, saldo = -0.35, leve = { reddito_minimo = 0.0 } },
+  { id = "categoriale", nome = "categoriale", posizione = 4.0, saldo = 0.0, leve = { reddito_minimo = 1200.0 } },
+  { id = "universale", nome = "universale", posizione = 2.0, saldo = 0.3, leve = { reddito_minimo = 2400.0 } },
+]
+
+[[disposizione]]
+id = "salario_minimo"
+nome = "Salario minimo legale"
+dicastero = "lavoro_welfare"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["dipendente_privato"]
+partenza = "nessuno"
+legge = "DL 62/2026, art. 7"
+precedente = "nessuno"
+in_arrivo = []
+gradini = [
+  { id = "nessuno", nome = "nessuno", posizione = 5.0, saldo = 0.0, leve = { salario_minimo = 0.0 } },
+  { id = "7", nome = "7 €/h", posizione = 3.5, saldo = 0.0, leve = { salario_minimo = 7.0 }, effetti = [{ grandezza = "regole_lavoro", intensita = -0.1, ritardo = 4 }] },
+  { id = "9", nome = "9 €/h", posizione = 2.5, saldo = 0.0, leve = { salario_minimo = 9.0 }, effetti = [{ grandezza = "regole_lavoro", intensita = -0.2, ritardo = 4 }] },
+  { id = "11", nome = "11 €/h", posizione = 1.5, saldo = 0.0, leve = { salario_minimo = 11.0 }, effetti = [{ grandezza = "regole_lavoro", intensita = -0.3, ritardo = 4 }] },
+]
+
+[[disposizione]]
+id = "licenziamento"
+nome = "Licenziamento"
+dicastero = "lavoro_welfare"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["dipendente_privato"]
+partenza = "tutele_crescenti"
+legge = "D.Lgs. 23/2015, art. 3"
+precedente = "reintegro"
+in_arrivo = []
+gradini = [
+  { id = "reintegro", nome = "reintegro", posizione = 2.0, saldo = 0.0, effetti = [{ grandezza = "regole_lavoro", intensita = -0.3, ritardo = 4 }] },
+  { id = "tutele_crescenti", nome = "tutele crescenti", posizione = 4.0, saldo = 0.0 },
+  { id = "solo_indennizzo", nome = "solo indennizzo", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "regole_lavoro", intensita = 0.3, ritardo = 4 }] },
+]
+
+[[disposizione]]
+id = "decontribuzione"
+nome = "Sgravio contributivo nel Mezzogiorno"
+dicastero = "lavoro_welfare"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["dipendente_privato", "autonomo"]
+perimetro = { abruzzo = 1.0, molise = 1.0, campania = 1.0, puglia = 1.0, basilicata = 1.0, calabria = 1.0, sicilia = 1.0, sardegna = 1.0 }
+partenza = "20"
+legge = "L. 207/2024, art. 1 c. 406-412"
+precedente = "20"
+in_arrivo = [{ gradino = "15", anno = 2029, trimestre = 1 }, { gradino = "0", anno = 2030, trimestre = 1 }]
+gradini = [
+  { id = "0", nome = "nessuno sgravio", posizione = 4.5, saldo = -0.1, leve = { decontribuzione = 0.0 } },
+  { id = "15", nome = "15%", posizione = 4.0, saldo = -0.03, leve = { decontribuzione = 0.15 } },
+  { id = "20", nome = "20%", posizione = 3.5, saldo = 0.0, leve = { decontribuzione = 0.2 } },
+  { id = "30", nome = "30%", posizione = 3.0, saldo = 0.2, leve = { decontribuzione = 0.3 } },
+]
+
+[[disposizione]]
+id = "ticket"
+nome = "Ticket sanitario"
+dicastero = "sanita"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato", "disoccupato_inattivo"]
+partenza = "attuale"
+legge = "L. 537/1993, art. 8 c. 15"
+precedente = "attuale"
+in_arrivo = []
+gradini = [
+  { id = "nessuno", nome = "nessuno", posizione = 2.0, saldo = 0.07, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = -2.0, ritardo = 1 }] },
+  { id = "attuale", nome = "attuale", posizione = 4.0, saldo = 0.0 },
+  { id = "alto", nome = "alto", posizione = 6.0, saldo = -0.05, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = 2.0, ritardo = 1 }] },
+]
+
+[[disposizione]]
+id = "accesso_medicina"
+nome = "Accesso a Medicina"
+dicastero = "sanita"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["studente"]
+partenza = "semestre_filtro"
+legge = "D.Lgs. 71/2025, artt. 1-2"
+precedente = "numero_chiuso"
+in_arrivo = []
+gradini = [
+  { id = "numero_chiuso", nome = "numero chiuso", posizione = 5.0, saldo = 0.0, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = -2.0, ritardo = 24 }] },
+  { id = "semestre_filtro", nome = "semestre filtro", posizione = 4.0, saldo = 0.0 },
+  { id = "libero", nome = "libero", posizione = 2.0, saldo = 0.03, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = 4.0, ritardo = 28 }] },
+]
+
+[[disposizione]]
+id = "privato_accreditato"
+nome = "Privato accreditato"
+dicastero = "sanita"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["pensionato"]
+partenza = "attuale"
+legge = "L. 199/2025, art. 1 c. 400"
+precedente = "attuale"
+in_arrivo = []
+gradini = [
+  { id = "ridotto", nome = "ridotto", posizione = 2.0, saldo = -0.05, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = -2.0, ritardo = 2 }] },
+  { id = "attuale", nome = "attuale", posizione = 4.0, saldo = 0.0 },
+  { id = "ampio", nome = "ampio", posizione = 6.0, saldo = 0.05, effetti = [{ grandezza = "qualita_servizio_sanitario", intensita = 3.0, ritardo = 1 }] },
+]
+
+[[disposizione]]
+id = "obbligo_scolastico"
+nome = "Obbligo scolastico"
+dicastero = "istruzione_ricerca"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["studente"]
+partenza = "16"
+legge = "L. 296/2006, art. 1 c. 622"
+precedente = "16"
+in_arrivo = []
+gradini = [
+  { id = "16", nome = "fino a 16 anni", posizione = 4.0, saldo = 0.0 },
+  { id = "18", nome = "fino a 18 anni", posizione = 2.5, saldo = 0.1, effetti = [{ grandezza = "capitale_umano", intensita = 4.0, ritardo = 16 }] },
+]
+
+[[disposizione]]
+id = "tasse_universitarie"
+nome = "Tasse universitarie"
+dicastero = "istruzione_ricerca"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["studente"]
+partenza = "per_isee"
+legge = "L. 232/2016, art. 1 c. 255"
+precedente = "per_isee"
+in_arrivo = []
+gradini = [
+  { id = "gratuite", nome = "gratuite", posizione = 2.0, saldo = 0.07, effetti = [{ grandezza = "capitale_umano", intensita = 2.0, ritardo = 12 }] },
+  { id = "per_isee", nome = "per fasce ISEE", posizione = 4.0, saldo = 0.0 },
+  { id = "alte", nome = "alte", posizione = 5.5, saldo = -0.05, effetti = [{ grandezza = "capitale_umano", intensita = -2.0, ritardo = 8 }] },
+]
+
+[[disposizione]]
+id = "codice_appalti"
+nome = "Codice degli appalti"
+dicastero = "infrastrutture_trasporti"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "semplificato"
+legge = "D.Lgs. 36/2023, art. 50"
+precedente = "rigido"
+in_arrivo = []
+gradini = [
+  { id = "rigido", nome = "rigido", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "stock_infrastrutture", intensita = -2.0, ritardo = 4 }, { grandezza = "qualita_trasporti", intensita = -2.0, ritardo = 4 }] },
+  { id = "semplificato", nome = "semplificato", posizione = 4.0, saldo = 0.0 },
+  { id = "deroga_generale", nome = "deroga generale", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "stock_infrastrutture", intensita = 4.0, ritardo = 2 }, { grandezza = "qualita_trasporti", intensita = -2.0, ritardo = 8 }] },
+]
+
+[[disposizione]]
+id = "concessioni_autostradali"
+nome = "Concessioni autostradali"
+dicastero = "infrastrutture_trasporti"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "a_gara"
+legge = "L. 193/2024, art. 3"
+precedente = "a_gara"
+in_arrivo = []
+gradini = [
+  { id = "pubbliche", nome = "pubbliche", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "qualita_trasporti", intensita = 2.0, ritardo = 8 }] },
+  { id = "a_gara", nome = "a gara", posizione = 4.0, saldo = 0.0 },
+  { id = "private", nome = "private", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "qualita_trasporti", intensita = -2.0, ritardo = 8 }] },
+]
+
+[[disposizione]]
+id = "nucleare"
+nome = "Nucleare"
+dicastero = "ambiente_energia"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "vietato"
+legge = "L. 169/2026, art. 1"
+precedente = "vietato"
+in_arrivo = [{ gradino = "consentito", anno = 2027, trimestre = 4 }]
+gradini = [
+  { id = "vietato", nome = "vietato", posizione = 3.0, saldo = 0.0 },
+  { id = "consentito", nome = "consentito", posizione = 5.0, saldo = 0.0, effetti = [{ grandezza = "prezzo_energia", intensita = -3.0, ritardo = 40 }, { grandezza = "sicurezza_energetica", intensita = 4.0, ritardo = 40 }] },
+]
+
+[[disposizione]]
+id = "accise"
+nome = "Accise sui carburanti"
+dicastero = "ambiente_energia"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = []
+partenza = "attuali"
+legge = "L. 199/2025, art. 1 c. 129"
+precedente = "attuali"
+in_arrivo = []
+gradini = [
+  { id = "basse", nome = "basse", posizione = 5.5, saldo = 0.2, leve = { accise = -2.0 } },
+  { id = "attuali", nome = "attuali", posizione = 4.0, saldo = 0.0, leve = { accise = 0.0 } },
+  { id = "alte", nome = "alte", posizione = 2.0, saldo = -0.3, leve = { accise = 3.0 } },
+]
+
+[[disposizione]]
+id = "rinnovabili"
+nome = "Autorizzazioni per le rinnovabili"
+dicastero = "ambiente_energia"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "ordinarie"
+legge = "D.Lgs. 190/2024, art. 1"
+precedente = "ordinarie"
+in_arrivo = []
+gradini = [
+  { id = "ordinarie", nome = "ordinarie", posizione = 4.0, saldo = 0.0 },
+  { id = "accelerate", nome = "accelerate", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "prezzo_energia", intensita = -2.0, ritardo = 8 }, { grandezza = "sicurezza_energetica", intensita = 4.0, ritardo = 8 }] },
+]
+
+[[disposizione]]
+id = "decreto_flussi"
+nome = "Ingressi per lavoro"
+dicastero = "interno"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["dipendente_privato", "autonomo"]
+partenza = "attuali"
+legge = "DPCM 2/10/2025"
+precedente = "attuali"
+in_arrivo = []
+gradini = [
+  { id = "bassi", nome = "bassi", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "immigrazione_irregolare", intensita = 2.0, ritardo = 2 }] },
+  { id = "attuali", nome = "attuali", posizione = 4.0, saldo = 0.0 },
+  { id = "alti", nome = "alti", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "immigrazione_irregolare", intensita = -2.0, ritardo = 2 }] },
+]
+
+[[disposizione]]
+id = "cittadinanza"
+nome = "Cittadinanza"
+dicastero = "interno"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "ius_sanguinis"
+legge = "L. 91/1992, art. 3-bis"
+precedente = "ius_sanguinis"
+in_arrivo = []
+gradini = [
+  { id = "ius_sanguinis", nome = "ius sanguinis", posizione = 5.0, saldo = 0.0 },
+  { id = "ius_scholae", nome = "ius scholae", posizione = 3.0, saldo = 0.0 },
+  { id = "ius_soli_temperato", nome = "ius soli temperato", posizione = 2.0, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "accoglienza"
+nome = "Accoglienza dei richiedenti asilo"
+dicastero = "interno"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "centri"
+legge = "D.Lgs. 142/2015, art. 8"
+precedente = "centri"
+in_arrivo = []
+gradini = [
+  { id = "centri", nome = "centri", posizione = 5.0, saldo = 0.0 },
+  { id = "diffusa", nome = "diffusa", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "immigrazione_irregolare", intensita = -2.0, ritardo = 4 }, { grandezza = "sicurezza", intensita = 2.0, ritardo = 4 }] },
+]
+
+[[disposizione]]
+id = "prescrizione"
+nome = "Prescrizione"
+dicastero = "giustizia"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "improcedibilita"
+legge = "L. 134/2021"
+precedente = "bloccata"
+in_arrivo = []
+gradini = [
+  { id = "classica", nome = "classica", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "durata_processi", intensita = 2.0, ritardo = 4 }] },
+  { id = "bloccata", nome = "bloccata dopo il primo grado", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "durata_processi", intensita = 4.0, ritardo = 4 }] },
+  { id = "improcedibilita", nome = "improcedibilità", posizione = 4.0, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "pene_alternative"
+nome = "Pene alternative al carcere"
+dicastero = "giustizia"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "attuali"
+legge = "L. 689/1981, art. 53"
+precedente = "attuali"
+in_arrivo = []
+gradini = [
+  { id = "ristrette", nome = "ristrette", posizione = 5.5, saldo = 0.0, effetti = [{ grandezza = "sovraffollamento_carceri", intensita = 4.0, ritardo = 4 }] },
+  { id = "attuali", nome = "attuali", posizione = 4.0, saldo = 0.0 },
+  { id = "estese", nome = "estese", posizione = 2.5, saldo = 0.0, effetti = [{ grandezza = "sovraffollamento_carceri", intensita = -4.0, ritardo = 4 }] },
+]
+
+[[disposizione]]
+id = "intercettazioni"
+nome = "Intercettazioni"
+dicastero = "giustizia"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "limitate"
+legge = "L. 47/2025"
+precedente = "ampie"
+in_arrivo = []
+gradini = [
+  { id = "ampie", nome = "ampie", posizione = 3.0, saldo = 0.0, effetti = [{ grandezza = "corruzione", intensita = -2.0, ritardo = 8 }] },
+  { id = "limitate", nome = "limitate", posizione = 5.0, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "leva_militare"
+nome = "Leva militare"
+dicastero = "esteri_difesa"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = ["studente"]
+partenza = "sospesa"
+legge = "D.Lgs. 66/2010, art. 1929"
+precedente = "obbligatoria"
+in_arrivo = []
+gradini = [
+  { id = "sospesa", nome = "sospesa", posizione = 3.5, saldo = 0.0 },
+  { id = "volontaria_rafforzata", nome = "volontaria rafforzata", posizione = 5.0, saldo = 0.05, effetti = [{ grandezza = "prontezza_difesa", intensita = 2.0, ritardo = 8 }] },
+  { id = "obbligatoria", nome = "obbligatoria", posizione = 6.0, saldo = 0.3, effetti = [{ grandezza = "prontezza_difesa", intensita = 4.0, ritardo = 8 }] },
+]
+
+[[disposizione]]
+id = "export_armi"
+nome = "Export di armi"
+dicastero = "esteri_difesa"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+partenza = "restrittivo"
+legge = "L. 185/1990, art. 1"
+precedente = "restrittivo"
+in_arrivo = []
+gradini = [
+  { id = "restrittivo", nome = "restrittivo", posizione = 3.5, saldo = 0.0 },
+  { id = "permissivo", nome = "permissivo", posizione = 5.5, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "credito_zes"
+nome = "Credito d'imposta nella ZES unica"
+dicastero = "sviluppo_economico"
+tipo = "parametro"
+norma = "ordinaria"
+referendabile = false
+gruppi = ["autonomo"]
+perimetro = { abruzzo = 0.5, molise = 1.0, campania = 1.0, puglia = 1.0, basilicata = 1.0, calabria = 1.0, sicilia = 1.0, sardegna = 1.0, marche = 0.5, umbria = 0.5 }
+partenza = "2_3"
+legge = "DL 124/2023, art. 16"
+precedente = "2_3"
+in_arrivo = [{ gradino = "1", anno = 2027, trimestre = 1 }, { gradino = "0_75", anno = 2028, trimestre = 1 }]
+gradini = [
+  { id = "0", nome = "nessuno stanziamento", posizione = 5.0, saldo = -0.1, effetti = [{ grandezza = "investimenti_privati", intensita = -8.0, ritardo = 2 }] },
+  { id = "0_75", nome = "0,75 miliardi", posizione = 4.5, saldo = -0.07, effetti = [{ grandezza = "investimenti_privati", intensita = -6.0, ritardo = 2 }] },
+  { id = "1", nome = "1 miliardo", posizione = 4.0, saldo = -0.06, effetti = [{ grandezza = "investimenti_privati", intensita = -4.0, ritardo = 2 }] },
+  { id = "2_3", nome = "2,3 miliardi", posizione = 3.5, saldo = 0.0 },
+]
+
+[[disposizione]]
+id = "autonomia_differenziata"
+nome = "Autonomia differenziata"
+tipo = "regime"
+norma = "ordinaria"
+referendabile = true
+gruppi = []
+perimetro = { liguria = 1.0, lombardia = 1.0, piemonte = 1.0, veneto = 1.0 }
+partenza = "non_attuata"
+legge = "L. 86/2024"
+precedente = "non_attuata"
+in_arrivo = []
+gradini = [
+  { id = "non_attuata", nome = "non attuata", posizione = 3.0, saldo = 0.0, leve = { autonomia = 0.0 } },
+  { id = "prime_materie", nome = "prime materie", posizione = 5.0, saldo = 0.0, leve = { autonomia = 0.05 } },
+  { id = "intese_complete", nome = "intese complete", posizione = 6.0, saldo = 0.0, leve = { autonomia = 0.15 } },
+]
+
+[[disposizione]]
+id = "durata_legislatura"
+nome = "Durata della legislatura"
+tipo = "parametro"
+norma = "costituzionale"
+referendabile = false
+gruppi = []
+partenza = "5"
+legge = "Cost., art. 60"
+precedente = "5"
+in_arrivo = []
+gradini = [
+  { id = "4", nome = "4 anni", posizione = 3.5, saldo = 0.0, leve = { durata_legislatura = 4.0 } },
+  { id = "5", nome = "5 anni", posizione = 4.0, saldo = 0.0, leve = { durata_legislatura = 5.0 } },
+  { id = "6", nome = "6 anni", posizione = 4.5, saldo = 0.0, leve = { durata_legislatura = 6.0 } },
+]
+
+[[disposizione]]
+id = "numero_parlamentari"
+nome = "Numero dei parlamentari"
+tipo = "parametro"
+norma = "costituzionale"
+referendabile = false
+gruppi = []
+partenza = "400_200"
+legge = "L. cost. 1/2020"
+precedente = "630_315"
+in_arrivo = []
+gradini = [
+  { id = "300_150", nome = "300 deputati e 150 senatori", posizione = 5.5, saldo = 0.0, leve = { seggi_camera = 300.0, seggi_senato = 150.0 } },
+  { id = "400_200", nome = "400 deputati e 200 senatori", posizione = 4.5, saldo = 0.0, leve = { seggi_camera = 400.0, seggi_senato = 200.0 } },
+  { id = "630_315", nome = "630 deputati e 315 senatori", posizione = 3.0, saldo = 0.0, leve = { seggi_camera = 630.0, seggi_senato = 315.0 } },
+]

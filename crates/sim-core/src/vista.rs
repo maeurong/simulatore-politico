@@ -1,3 +1,4 @@
+use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::Aliquote;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
@@ -26,6 +27,44 @@ pub struct Vista {
     pub proiezione: Option<Vec<SeggiPartito>>,
     pub statistica: VistaStatistica,
     pub bilancio: VistaBilancio,
+    /// Nell'ordine dei dati.
+    pub disposizioni: Vec<VoceDisposizione>,
+}
+
+/// Una disposizione com'è in vigore; gradini, dicastero e perimetro sono id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceDisposizione {
+    pub id: String,
+    pub nome: String,
+    pub dicastero: Option<String>,
+    pub norma: Norma,
+    pub tipo: TipoDisposizione,
+    pub in_vigore: String,
+    pub legge: String,
+    pub precedente: String,
+    pub in_arrivo: Vec<VoceArrivo>,
+    pub referendabile: bool,
+    /// Le regioni; vuoto = tutto il Paese.
+    pub perimetro: Vec<String>,
+    pub gradini: Vec<VoceGradino>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceArrivo {
+    pub gradino: String,
+    pub data: Trimestre,
+}
+
+/// `bloccato` = abrogato da un referendum.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceGradino {
+    pub id: String,
+    pub nome: String,
+    pub posizione: Option<f64>,
+    pub bloccato: bool,
 }
 
 /// Il bilancio in vigore nel trimestre: l'approvato se è dell'anno in corso, altrimenti il
@@ -169,6 +208,8 @@ pub struct VoceAtto {
     pub costo: i64,
     pub turni: u32,
     pub pagabile: bool,
+    /// `serve {disposizione}: {gradino} o {gradino}`; l'atto non è pagabile.
+    pub prerequisito_mancante: Option<String>,
     pub effetti: Vec<VoceEffetto>,
 }
 

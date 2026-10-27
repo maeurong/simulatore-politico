@@ -198,6 +198,7 @@ costo = 1.0
 effetti = [
   { grandezza = "qualita_servizio_sanitario", intensita = 8.0, ritardo = 1, forma = "impulso", durata = 1.5 },
 ]
+prerequisito = { disposizione = "privato_accreditato", gradini = ["attuale", "ampio"] }
 
 [[atto]]
 id = "sanita_case_comunita"
