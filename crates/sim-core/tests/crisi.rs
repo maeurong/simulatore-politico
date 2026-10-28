@@ -329,7 +329,9 @@ fn crisi_in_esercizio_provvisorio_senza_allargamento() {
     assert!(!p.governa());
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);
     assert!(!p.legislatura().dimissioni && p.legislatura().crisi.is_none());
-    assert!(!(p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Sfiducia));
+    // La sfiducia automatica è al governo: quella individuale dell'opposizione IA, nei turni
+    // prima con un alleato in ultimatum, non conta.
+    assert!(!(p.vista().esiti.iter()).any(|e| e.nome == "Mozione di sfiducia al governo"));
 }
 
 /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: la sfiducia
@@ -465,7 +467,9 @@ fn crisi_alla_vigilia_del_voto_vince_il_voto() {
     assert_eq!(l.elezioni.len(), 1);
     assert_eq!(l.crisi, None);
     assert_eq!(l.fase, Fase::Trattativa);
-    assert!(!(p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Sfiducia));
+    // La sfiducia automatica è al governo: quella individuale dell'opposizione IA, nei turni
+    // prima con un alleato in ultimatum, non conta.
+    assert!(!(p.vista().esiti.iter()).any(|e| e.nome == "Mozione di sfiducia al governo"));
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
 

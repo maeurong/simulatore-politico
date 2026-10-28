@@ -9,6 +9,7 @@ use crate::informazione::indice;
 use crate::legislatura::{self, Fase};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto};
 use crate::vista::MossaIa;
+use std::cmp::Reverse;
 
 impl Partita {
     /// Una riga nel registro del turno, col partito `j`.
@@ -77,7 +78,8 @@ impl Partita {
 
     /// In coda all'apertura del turno, a partita non finita e in fase ordinaria: le mosse dei
     /// partiti IA (scelta 8 del piano). Il governo IA governa se il Presidente del Consiglio non è
-    /// il giocatore; nel turno di crisi, fuori dal turno del voto, affronta la crisi.
+    /// il giocatore; nel turno di crisi, fuori dal turno del voto, affronta la crisi. Poi
+    /// l'opposizione IA, chiunque governi.
     pub(super) fn apertura_ia(&mut self) {
         if self.finita() || self.legislatura.fase != Fase::Ordinaria {
             return;
@@ -87,6 +89,95 @@ impl Partita {
                 self.crisi_ia();
             }
             self.governo_ia();
+        }
+        self.opposizione_ia();
+    }
+
+    /// L'opposizione IA in apertura, anche contro un governo IA (decisione 3 di Mario).
+    fn opposizione_ia(&mut self) {
+        self.sfiducia_ia();
+    }
+
+    /// La sfiducia dell'opposizione IA (scelta 14 del piano): al governo se passerebbe sullo stato
+    /// dell'apertura; altrimenti, se passerebbe, al ministro del partito col giudizio medio
+    /// peggiore fra i gruppi (pesato per elettori), a parità il dicastero di peso maggiore, mai di
+    /// un alleato in ultimatum né in interim. Firme: i seggi alla Camera dei partiti IA fuori dal
+    /// governo, almeno un decimo (iter-legislativo-italiano:43, :141-142). Promotore: il più grande
+    /// di loro alla Camera, a parità l'indice più basso. Niente con una mozione già presentata, né
+    /// nel turno di crisi, dove la sfiducia automatica è già sul tavolo.
+    fn sfiducia_ia(&mut self) {
+        if self.parlamento.sfiducia.is_some() || self.in_crisi() {
+            return;
+        }
+        let ia_fuori = |j: usize| j != self.giocatore && !self.governo.al_governo(j);
+        let (firme, servono) = self.firme_sfiducia(ia_fuori);
+        let promotore = (self.parlamento.seggi_camera.iter().enumerate())
+            .filter(|&(j, _)| ia_fuori(j))
+            .max_by_key(|&(j, &n)| (n, Reverse(j)))
+            .map(|(j, _)| j);
+        let Some(promotore) = promotore.filter(|_| firme >= servono) else {
+            return;
+        };
+        let in_ultimatum: Vec<usize> = (self.alleati().into_iter())
+            .filter(|&j| self.in_ultimatum(j))
+            .collect();
+        // Fuori dalla crisi il governo ha la maggioranza: la mozione passa coi voti di un alleato
+        // in ultimatum, che la riga nomina.
+        let motivo = |dicastero: Option<usize>| {
+            let (linea, _, _, approvata) = self.voto_sfiducia(dicastero)?;
+            let nomi: Vec<&str> = (in_ultimatum.iter())
+                .filter(|&&j| linea.get(j) == Some(&true))
+                .filter_map(|&j| Some(self.partiti.get(j)?.nome.as_str()))
+                .collect();
+            let verbo = if nomi.len() > 1 {
+                "la voterebbero"
+            } else {
+                "la voterebbe"
+            };
+            (approvata && !nomi.is_empty())
+                .then(|| format!("{} in ultimatum {verbo}", nomi.join(" e ")))
+        };
+        let el = &self.elettorato;
+        // ponytail: il giudizio è per partito, non per dicastero: i ministri di un partito
+        // pareggiano e decide il peso. Via d'uscita: la colpa per dicastero registrata da
+        // `Elettorato::giudizio`. Somma pesata, non media: il denominatore è lo stesso per tutti.
+        let giudizio = |j: usize| -> f64 {
+            (el.gruppi.iter().enumerate())
+                .map(|(i, g)| {
+                    el.elettori(self.dati.elettorato(), i)
+                        * g.giudizio.get(j).copied().unwrap_or(0.0)
+                })
+                .sum()
+        };
+        let peso = |i: usize| {
+            self.dati
+                .dicasteri()
+                .get(i)
+                .map_or(0, |d| d.peso_spartizione)
+        };
+        let individuale = || {
+            let (i, m) = (self.ministri.dicasteri.iter().enumerate())
+                .filter_map(|(i, st)| Some((i, st.ministro.as_ref()?)))
+                .filter(|(_, m)| !in_ultimatum.contains(&m.partito))
+                .min_by(|&(a, x), &(b, y)| {
+                    (giudizio(x.partito).total_cmp(&giudizio(y.partito)))
+                        .then(peso(b).cmp(&peso(a)))
+                })?;
+            let nome = &self.dati.dicasteri().get(i)?.nome;
+            let testo = format!(
+                "Presenta la sfiducia a {}, {nome}: {}",
+                m.nome,
+                motivo(Some(i))?
+            );
+            Some((Some(i), testo))
+        };
+        let scelta = match motivo(None) {
+            Some(m) => Some((None, format!("Presenta la sfiducia al governo: {m}"))),
+            None => individuale(),
+        };
+        if let Some((dicastero, testo)) = scelta {
+            self.parlamento.sfiducia = Some((dicastero, promotore));
+            self.mossa(promotore, testo);
         }
     }
 

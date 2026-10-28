@@ -2689,7 +2689,7 @@ impl Partita {
                 .map(|d| &d.nome);
             return ko(format!("{} è in interim", nome.map_or("", |n| n.as_str())));
         };
-        let (firme, servono) = self.firme_sfiducia();
+        let (firme, servono) = self.firme_sfiducia(|j| !self.governo.al_governo(j));
         let anteprima = AnteprimaSfiducia {
             firme: firme >= servono,
             linee: self.stato_aula().voci_linea(&linea),
@@ -2698,13 +2698,13 @@ impl Partita {
         Ok((i, anteprima))
     }
 
-    /// Le firme della sfiducia del giocatore: i seggi alla Camera dei partiti fuori dalla
-    /// coalizione di governo, e quante ne servono, un decimo della Camera per eccesso
-    /// (iter-legislativo-italiano:142).
-    fn firme_sfiducia(&self) -> (u32, u32) {
+    /// Le firme della sfiducia: i seggi alla Camera dei partiti `firmatario` (per il giocatore
+    /// quelli fuori dalla coalizione di governo, per l'IA i soli partiti IA fuori), e quante ne
+    /// servono, un decimo della Camera per eccesso (iter-legislativo-italiano:142).
+    fn firme_sfiducia(&self, firmatario: impl Fn(usize) -> bool) -> (u32, u32) {
         let seggi = &self.parlamento.seggi_camera;
         let firme = (seggi.iter().enumerate())
-            .filter(|&(j, _)| !self.governo.al_governo(j))
+            .filter(|&(j, _)| firmatario(j))
             .map(|(_, &n)| n)
             .sum();
         (firme, seggi.iter().sum::<u32>().div_ceil(10))
@@ -2735,7 +2735,7 @@ impl Partita {
         }
         let (i, a) = self.sfiducia_ammessa(dicastero)?;
         if !a.firme {
-            let (n, m) = self.firme_sfiducia();
+            let (n, m) = self.firme_sfiducia(|j| !self.governo.al_governo(j));
             return Err(Errore::Comando(format!(
                 "servono {m} firme, un decimo della Camera: ne hai {n}"
             )));

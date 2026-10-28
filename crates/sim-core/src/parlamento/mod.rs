@@ -116,8 +116,8 @@ pub struct ValoreProposto {
 /// Seggi per partito nell'ordine dello scenario. `respinte` = disposizione e turno da cui si
 /// ripresenta; `prossima` = id della prossima misura; `referendum` = l'abrogativo in corso,
 /// uno alla volta; `confermativi` = i referendum confermativi in attesa del voto; `decaduti` =
-/// le firme dei decreti decaduti, che non si ripetono; `sfiducia` = la mozione del giocatore del
-/// turno (dicastero, `None` = al governo; promotore), votata in chiusura.
+/// le firme dei decreti decaduti, che non si ripetono; `sfiducia` = la mozione del giocatore o
+/// dell'opposizione IA del turno (dicastero, `None` = al governo; promotore), votata in chiusura.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Parlamento {
     pub seggi_camera: Vec<u32>,
