@@ -34,7 +34,9 @@ pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, ri
 pub const POSTI_ORDINARI: usize = 3;
 pub const POSTI_COSTITUZIONALI: usize = 1;
 /// Il posto riservato all'opposizione (iter-legislativo-italiano:119, un argomento su cinque), a
-/// rotazione fra i partiti fuori dal governo (scelta 15 del piano 7b): solo il giocatore lo usa.
+/// rotazione fra i partiti fuori dal governo (scelta 15 del piano 7b): un posto per turno, del
+/// giocatore o di un partito IA (scelta 16 del piano 8a). Conta solo le proposte presentate nel
+/// turno: quella del turno prima, al voto ora, non lo occupa.
 pub const POSTI_OPPOSIZIONE: usize = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,8 +55,8 @@ pub enum FormaMisura {
 /// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;
 /// `promotore` = il partito d'opposizione che l'ha portata nel posto riservato; `voto` = turno
 /// nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali, 0 altrimenti. `fondi`
-/// solo sulle conversioni. `linea_giocatore` = la linea scelta dal giocatore all'opposizione,
-/// `None` = quella di default.
+/// solo sulle conversioni. `linea_giocatore` = la linea scelta dal giocatore all'opposizione, o
+/// al governo sulle proposte dell'opposizione; `None` = quella di default.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Misura {
     pub id: u32,
@@ -267,6 +269,8 @@ pub(crate) struct StatoAula<'a> {
     /// Le coalizioni dell'ultimo voto, o nel turno del voto quelle al voto, per i seggi attesi.
     pub coalizioni: Vec<Vec<usize>>,
     pub giocatore: usize,
+    /// `Legislatura::ultimo_anno` del turno, per il malus dei partiti IA (scelta 19 del piano 8a).
+    pub ultimo_anno: bool,
 }
 
 /// Posizioni, linea e probabilità dei franchi tiratori di una misura, sullo stato attuale.
@@ -288,7 +292,8 @@ impl StatoAula<'_> {
     /// guadagno della linea è `Δseggi / seggi_per_punto_linea` e alla Camera i franchi tiratori
     /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
     /// e sul bilancio la maggioranza vota sì e l'opposizione no; senza posizione, i franchi
-    /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì.
+    /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì, e su
+    /// di essa il Presidente del Consiglio segue il guadagno (scelta 15 del piano 8a).
     /// La linea scelta dal giocatore (scelta 14 del piano 7b) vale per il suo partito, anche
     /// sotto fiducia; fuori dalla fiducia coi franchi tiratori
     /// `ft_base + ft_distanza · |x − sostenuta| / 6` entro `ft_max`: `sostenuta` è la posizione
@@ -348,7 +353,8 @@ impl StatoAula<'_> {
         let mut linea = if matches!(m.forma, FormaMisura::Conversione | FormaMisura::Bilancio) {
             (0..partiti.len()).map(|j| governo.al_governo(j)).collect()
         } else {
-            voto::linea(dati, governo, intesa, &guadagno)
+            let pdc_libero = m.promotore.is_some();
+            voto::linea(dati, governo, intesa, &guadagno, &self.malus(), pdc_libero)
         };
         let accolti = (m.emendamenti.iter()).filter(|e| e.stato == StatoEmendamento::Accolto);
         for j in accolti.map(|e| e.partito).chain(m.promotore) {
@@ -383,6 +389,25 @@ impl StatoAula<'_> {
             franchi,
             seggi,
         }
+    }
+
+    /// Il malus della linea per partito (scelta 19 del piano 8a): zero al governo,
+    /// `malus_opposizione` fuori, per i partiti IA × `(1 + crescita_malus_ultimo_anno)` nell'ultimo
+    /// anno. Il giocatore ha la sua linea.
+    pub(crate) fn malus(&self) -> Vec<f64> {
+        let base = self.dati.manopola("malus_opposizione");
+        let crescita = 1.0 + self.dati.manopola("crescita_malus_ultimo_anno");
+        (0..self.partiti.len())
+            .map(|j| {
+                if self.governo.al_governo(j) {
+                    0.0
+                } else if self.ultimo_anno && j != self.giocatore {
+                    base * crescita
+                } else {
+                    base
+                }
+            })
+            .collect()
     }
 
     /// Una voce per partito, nell'ordine dei partiti.
@@ -599,7 +624,7 @@ impl Parlamento {
         promotore: usize,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
-        if !self.posto_riservato_libero() {
+        if !self.posto_riservato_libero(turno) {
             return ko("il posto riservato è già occupato".into());
         }
         let m = self.bozza(dati, disposizioni, turno, valori)?;
@@ -615,9 +640,12 @@ impl Parlamento {
         Ok(())
     }
 
-    /// Nessuna proposta dell'opposizione occupa il posto riservato.
-    pub(crate) fn posto_riservato_libero(&self) -> bool {
-        (self.misure.iter().filter(|m| m.promotore.is_some())).count() < POSTI_OPPOSIZIONE
+    /// Nessuna proposta dell'opposizione presentata nel `turno` occupa il posto riservato.
+    pub(crate) fn posto_riservato_libero(&self, turno: u32) -> bool {
+        (self.misure.iter())
+            .filter(|m| m.promotore.is_some() && m.presentata == turno)
+            .count()
+            < POSTI_OPPOSIZIONE
     }
 
     /// `Linea`: la linea del giocatore sulla misura, `None` = quella di default.

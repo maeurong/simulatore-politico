@@ -1,6 +1,7 @@
 mod comune;
 use comune::*;
 use sim_core::comando::Comando;
+use sim_core::parlamento::CausaIntesa::NormaLontana;
 use sim_core::parlamento::FormaMisura;
 use sim_core::partita::Partita;
 
@@ -234,10 +235,11 @@ fn la_sfiducia_al_governo_nomina_l_alleato_in_ultimatum() {
     );
 }
 
-/// Nel turno del voto (19) il governo cade comunque al voto: l'opposizione IA non presenta,
-/// anche col centrodestra in ultimatum.
+/// Nel turno del voto (19) il governo cade comunque al voto: l'opposizione IA non presenta né la
+/// sfiducia, anche col centrodestra in ultimatum, né la proposta nel posto riservato, che
+/// decadrebbe senza voto.
 #[test]
-fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia() {
+fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia_ne_propone() {
     let mut p = Partita::nuova(dati_base(), 1);
     while p.vista().turno < 18 {
         chiudi_col_bilancio(&mut p);
@@ -253,4 +255,111 @@ fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia() {
     assert!(p.legislatura().turno_di_voto(p.vista().turno));
     assert!(p.alleati().contains(&cd));
     assert!(p.parlamento().sfiducia.is_none());
+    let turno = p.vista().turno;
+    assert!(
+        (p.parlamento().misure.iter()).all(|m| m.promotore.is_none() || m.presentata != turno),
+        "{:?}",
+        p.vista().mosse
+    );
+}
+
+/// Scelta 16 del piano: nel turno del posto riservato a un partito IA, la proposta-imbarazzo che
+/// almeno un partito di governo voterebbe.
+#[test]
+fn la_proposta_imbarazzo_piace_alla_maggioranza() {
+    let mut p = al_governo();
+    // Avanza finché il posto riservato tocca a un partito IA (col seme 7 già al turno 2): si
+    // guarda prima di chiudere, perché la chiusura svuota le mosse.
+    let mut proposta = None;
+    for _ in 0..8 {
+        proposta = (p.parlamento().misure.iter())
+            .find(|m| m.promotore.is_some_and(|j| j != p.giocatore()))
+            .cloned();
+        if proposta.is_some() {
+            break;
+        }
+        chiudi_col_bilancio(&mut p);
+    }
+    let m = proposta.expect("un turno del posto riservato a un partito IA");
+    let voce = p
+        .vista()
+        .calendario
+        .into_iter()
+        .find(|v| v.id == m.id)
+        .unwrap();
+    let inizio = format!("Porta nel posto riservato {}; ", voce.nome);
+    assert!(
+        (p.vista().mosse.iter()).any(|x| x.testo.starts_with(&inizio)),
+        "{:?}",
+        p.vista().mosse
+    );
+    // Almeno un partito di governo la voterebbe.
+    let indice = |id: &str| p.partiti().iter().position(|x| x.id == id).unwrap();
+    assert!((voce.linee.iter()).any(|l| l.si && p.governo().al_governo(indice(&l.partito))));
+}
+
+#[test]
+fn il_giocatore_al_governo_sceglie_la_linea_solo_sulle_proposte_dell_opposizione() {
+    let mut p = al_governo();
+    presenta(&mut p, &[("eta_pensionabile", "70")]).unwrap();
+    let id = p.parlamento().misure.last().unwrap().id;
+    let e = p
+        .comanda(Comando::Linea {
+            misura: id,
+            si: Some(false),
+        })
+        .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("solo sulle proposte dell'opposizione"),
+        "{e}"
+    );
+}
+
+/// Scelta 15 del piano 8a: la proposta dell'opposizione approvata col sì del giocatore che governa
+/// costa intesa agli alleati lontani, con la stessa norma lontana delle leggi del governo.
+#[test]
+fn la_proposta_dell_opposizione_approvata_costa_la_norma_lontana() {
+    let mut p = al_governo();
+    presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+    let id = p.parlamento().misure.last().unwrap().id;
+    let sinistra = partito("sinistra");
+    // La legge diventa una proposta della sinistra; la maggioranza la fanno estrema sinistra e
+    // sinistra, che ci guadagnano, col giocatore che sceglie il sì.
+    let p = edita(&p, |j| {
+        for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
+            if m["id"] == id {
+                m["promotore"] = sinistra.into();
+                m["proponente"] = serde_json::Value::Null;
+            }
+        }
+    })
+    .unwrap();
+    let mut p = con_seggi(
+        &p,
+        &[60, 100, 20, 15, 30, 40, 15, 120],
+        &[30, 50, 10, 8, 15, 20, 7, 60],
+    );
+    p.comanda(Comando::Linea {
+        misura: id,
+        si: Some(true),
+    })
+    .unwrap();
+    for _ in 0..3 {
+        if p.parlamento().misure.iter().all(|m| m.id != id) {
+            break;
+        }
+        chiudi_col_bilancio(&mut p);
+    }
+    let esito = (p.parlamento().esiti.iter()).find(|e| e.misura == id);
+    assert!(esito.is_some_and(|e| e.approvata), "{esito:?}");
+    // Centrodestra (5,0) e destra (6,0) distano almeno 3 dai 62 anni (2,0).
+    for a in ["centrodestra", "destra"].map(partito) {
+        assert!(p.alleati().contains(&a));
+        assert!(
+            (p.intesa().variazioni.iter()).any(|x| x.partito == a && x.causa == NormaLontana),
+            "{a}: {:?}",
+            p.intesa().variazioni
+        );
+    }
 }

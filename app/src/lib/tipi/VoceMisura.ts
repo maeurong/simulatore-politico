@@ -10,7 +10,8 @@ import type { VoceLinea } from "./VoceLinea";
 /**
  * Una misura in calendario; `proponente` è l'id del dicastero, `promotore` quello del partito
  * d'opposizione che l'ha portata nel posto riservato; `linea_giocatore` la linea scelta dal
- * giocatore all'opposizione, `None` = quella di default.
+ * giocatore all'opposizione, o al governo sulle proposte dell'opposizione; `None` = quella di
+ * default.
  */
 export type VoceMisura = { id: number, nome: string, forma: FormaMisura, proponente: string | null, promotore: string | null, linea_giocatore: boolean | null, valori: Array<ValoreProposto>, voto: Trimestre, deliberazione: number, fiducia: boolean, linee: Array<VoceLinea>, forbice: Forbice, emendamenti: Array<VoceEmendamento>, 
 /**

@@ -1,23 +1,25 @@
 mod comune;
-use comune::{all_opposizione, con_seggi, dati_base, edita, fondata};
+use comune::{all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, fondata};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
 use sim_core::vista::FasciaIntesa;
 use sim_core::{Comando, Partita};
 
+/// Chiude finché il posto riservato è del giocatore, senza le mosse dell'opposizione IA.
 fn al_posto_riservato(p: &mut Partita) {
     for _ in 0..8 {
         if p.vista().posto_riservato {
             return;
         }
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(p);
     }
     panic!("il posto riservato non arriva mai al giocatore");
 }
 
 /// Chiude finché la misura `id` esce dal calendario, togliendo prima di ogni chiusura le riforme e
-/// le elettorali del governo IA: il voto di `id` resta l'unico con posizione. Col seme 7 il posto
+/// le elettorali del governo IA, e dopo le mosse dell'opposizione IA: il voto di `id` resta
+/// l'unico con posizione. Col seme 7 il posto
 /// riservato arriva al giocatore in luglio-settembre 2027: il voto cade nel turno del bilancio e
 /// slitta di un turno, come ogni legge (ticket 09, riga 45).
 fn al_voto_da_sola(p: &mut Partita, id: u32) {
@@ -32,7 +34,7 @@ fn al_voto_da_sola(p: &mut Partita, id: u32) {
             });
         })
         .unwrap();
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(p);
         n += 1;
     }
 }
@@ -66,14 +68,24 @@ fn comandi_dell_opposizione_rifiutati_a_chi_governa() {
             Comando::PromuoviReferendum {
                 disposizione: "licenziamento".into(),
             },
-            Comando::Linea {
-                misura: 0,
-                si: Some(false),
-            },
         ] {
             let e = p.comanda(c).unwrap_err();
             assert!(e.to_string().contains("opposizione"), "{e}");
         }
+        // Scelta 15 del piano 8a: chi governa sceglie la linea sulle proposte dell'opposizione,
+        // quindi `Linea` passa la guardia e cade solo sulla misura che non c'è; a Camere sciolte
+        // resta la guardia dell'opposizione.
+        let atteso = if p.governa() {
+            "misura sconosciuta"
+        } else {
+            "opposizione"
+        };
+        let e = (p.comanda(Comando::Linea {
+            misura: 0,
+            si: Some(false),
+        }))
+        .unwrap_err();
+        assert!(e.to_string().contains(atteso), "{e}");
         assert_eq!(p.salva().unwrap(), prima);
     }
     let mut p = all_opposizione();
@@ -266,7 +278,7 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
     let mut attesa = p.partiti()[pdc].valence;
     let mut chiudi = |p: &mut Partita| {
         let data = p.vista().data;
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(p);
         let perso: f64 = (p.vista().esiti.iter())
             .filter(|e| e.data == data && e.misura != id && !e.approvata)
             .filter(|e| e.decaduta.is_none())

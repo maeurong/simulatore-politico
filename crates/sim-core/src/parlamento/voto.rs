@@ -44,20 +44,29 @@ pub fn guadagni(partiti: &[Partito], posizioni: Option<(f64, f64)>) -> Vec<f64> 
 }
 
 /// La linea di ogni partito, nell'ordine dei partiti. Il partito del Presidente del Consiglio
-/// vota sì; gli altri se `s > 0`, con `s` = `guadagno`, più l'intesa per gli alleati, meno
-/// `malus_opposizione` per chi è fuori dal governo.
-pub fn linea(dati: &DatiGioco, governo: &Governo, intesa: &[f64], guadagno: &[f64]) -> Vec<bool> {
+/// vota sì, o con `pdc_libero` (proposte dell'opposizione, scelta 15 del piano 8a) se
+/// `guadagno > 0`; gli altri se `s > 0`, con `s` = `guadagno`, più l'intesa per gli alleati, meno
+/// il `malus` del partito per chi è fuori dal governo.
+pub fn linea(
+    dati: &DatiGioco,
+    governo: &Governo,
+    intesa: &[f64],
+    guadagno: &[f64],
+    malus: &[f64],
+    pdc_libero: bool,
+) -> Vec<bool> {
     let peso = dati.manopola("peso_intesa_linea");
-    let malus = dati.manopola("malus_opposizione");
-    (intesa.iter().zip(guadagno).enumerate())
-        .map(|(j, (&i, &g))| {
-            if j == governo.presidente {
-                return true;
-            }
-            let s = if governo.al_governo(j) {
+    (intesa.iter().zip(guadagno).zip(malus).enumerate())
+        .map(|(j, ((&i, &g), &m))| {
+            let s = if j == governo.presidente {
+                if !pdc_libero {
+                    return true;
+                }
+                g
+            } else if governo.al_governo(j) {
                 g + peso * (i - 50.0) / 50.0
             } else {
-                g - malus
+                g - m
             };
             s > 0.0
         })
@@ -205,6 +214,7 @@ mod tests {
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
             giocatore: 0,
+            ultimo_anno: false,
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -259,6 +269,7 @@ mod tests {
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
             giocatore: g,
+            ultimo_anno: false,
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -322,6 +333,7 @@ mod tests {
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
             giocatore: g,
+            ultimo_anno: false,
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -406,6 +418,7 @@ mod tests {
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
             giocatore: 0,
+            ultimo_anno: false,
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
@@ -451,6 +464,95 @@ mod tests {
         assert!((franco_con_emendamento(&dati, Some(Respinto)) - 4.0 * q).abs() < 1e-12);
         dati.imposta_manopola("ft_max", 2.0 * q);
         assert!((franco_con_emendamento(&dati, Some(Respinto)) - 2.0 * q).abs() < 1e-12);
+    }
+
+    /// Scelta 15 del piano 8a: sulle proposte dell'opposizione il Presidente del Consiglio segue
+    /// il guadagno.
+    #[test]
+    fn il_pdc_libero_segue_il_guadagno() {
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let n = partiti.len();
+        let (intesa, malus) = (vec![50.0; n], vec![0.0; n]);
+        let guadagno = vec![-1.0; n];
+        let pc = governo.presidente;
+        assert!(!linea(&dati, &governo, &intesa, &guadagno, &malus, true)[pc]);
+        assert!(linea(&dati, &governo, &intesa, &guadagno, &malus, false)[pc]);
+    }
+
+    /// Scelta 19 del piano 8a: nell'ultimo anno il malus dei partiti IA d'opposizione cresce di
+    /// `crescita_malus_ultimo_anno`, quello del giocatore no.
+    #[test]
+    fn il_malus_cresce_nell_ultimo_anno() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let n = partiti.len();
+        let intesa = vec![50.0; n];
+        let ed = n - 1; // l'estrema destra, IA all'opposizione nella partita di prova
+        assert!(!governo.al_governo(ed));
+        let mut guadagno = vec![0.0; n];
+        guadagno[ed] = 1.2;
+        let mut malus = vec![0.0; n];
+        for (m, si) in [(1.0, true), (1.5, false)] {
+            malus[ed] = m;
+            assert_eq!(
+                linea(&dati, &governo, &intesa, &guadagno, &malus, false)[ed],
+                si
+            );
+        }
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let sondaggio = crate::informazione::Sondaggio {
+            istituti: Vec::new(),
+            condizioni: Vec::new(),
+            fasce: Vec::new(),
+            regioni: Vec::new(),
+        };
+        let ultimatum = vec![None; n];
+        let aula = |ultimo_anno, giocatore| StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            sondaggio: &sondaggio,
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+            ultimatum: &ultimatum,
+            coalizioni: Vec::new(),
+            giocatore,
+            ultimo_anno,
+        };
+        let base = dati.manopola("malus_opposizione");
+        let cresciuto = base * (1.0 + dati.manopola("crescita_malus_ultimo_anno"));
+        assert_eq!(aula(false, 0).malus()[ed], base);
+        assert_eq!(aula(true, 0).malus()[ed], cresciuto);
+        assert_eq!(aula(true, ed).malus()[ed], base, "il giocatore non cresce");
+        assert_eq!(aula(true, 0).malus()[governo.presidente], 0.0);
+        // La legge di `a_settanta_anni`: l'estrema destra (7) ci guadagna 2,5 − 1 = 1,5, che il
+        // malus cresciuto (1,5) annulla.
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
+        let settanta = dati.disposizioni()[eta]
+            .gradino("70")
+            .expect("70 anni nei dati base");
+        let m = Misura {
+            id: 0,
+            forma: FormaMisura::Riforma,
+            valori: vec![(eta, settanta)],
+            proponente: None,
+            promotore: None,
+            linea_giocatore: None,
+            presentata: 0,
+            voto: 0,
+            deliberazione: 0,
+            fiducia: false,
+            emendamenti: Vec::new(),
+            emendamenti_aperti: false,
+            fondi: None,
+        };
+        assert!(aula(false, 0).previsione(&m).linea[ed]);
+        assert!(!aula(true, 0).previsione(&m).linea[ed]);
     }
 
     #[test]

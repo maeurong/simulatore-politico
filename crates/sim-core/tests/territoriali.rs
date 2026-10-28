@@ -1,5 +1,8 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_arrivo, dati_base, ferma_tutti, imposta, senza_shock};
+use comune::{
+    chiudi_col_bilancio, con_arrivo, dati_base, ferma_tutti, imposta, senza_shock,
+    togli_opposizione_ia,
+};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 
@@ -14,9 +17,12 @@ fn coppia(f: FileDati, g: FileDati, turni: usize, mut ogni: impl FnMut(&Partita,
     for _ in 0..turni {
         ferma_tutti(&mut a);
         ferma_tutti(&mut b);
-        // Col bilancio il giocatore non cade: nessun governo IA a muovere le disposizioni.
+        // Col bilancio il giocatore non cade: nessun governo IA a muovere le disposizioni; senza
+        // le proposte dell'opposizione IA nemmeno lei.
         chiudi_col_bilancio(&mut a);
         chiudi_col_bilancio(&mut b);
+        togli_opposizione_ia(&mut a);
+        togli_opposizione_ia(&mut b);
         ogni(&a, &b);
     }
 }

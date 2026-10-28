@@ -189,7 +189,8 @@ pub struct AnteprimaSfiducia {
 
 /// Una misura in calendario; `proponente` è l'id del dicastero, `promotore` quello del partito
 /// d'opposizione che l'ha portata nel posto riservato; `linea_giocatore` la linea scelta dal
-/// giocatore all'opposizione, `None` = quella di default.
+/// giocatore all'opposizione, o al governo sulle proposte dell'opposizione; `None` = quella di
+/// default.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceMisura {

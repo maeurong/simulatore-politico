@@ -121,7 +121,7 @@ fn a_camere_sciolte_l_aula_non_vota() {
     // sciolte: la legge non si vota, decade col voto delle Camere.
     let mut p = Partita::nuova(comune::dati_base(), 1);
     comune::presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
-    p.chiudi_turno();
+    comune::chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(p.vista().calendario.len(), 1);
     let mut p = edita(&p, |j| {
         j["legislatura"]["fase"] = "sciolta".into();

@@ -1,5 +1,7 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_arrivo, ferma_tutti, imposta, senza_shock};
+use comune::{
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, ferma_tutti, imposta, senza_shock,
+};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::disposizioni::Leve;
@@ -9,7 +11,7 @@ fn gioca(f: FileDati, turni: usize) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     for _ in 0..turni {
         ferma_tutti(&mut p);
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
     }
     p
 }

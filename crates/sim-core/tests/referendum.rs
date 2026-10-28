@@ -1,5 +1,8 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_arrivo, edita, imposta, presenta, senza_shock, sostituisci};
+use comune::{
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, edita, imposta, presenta,
+    senza_shock, sostituisci,
+};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::TipoReferendum;
 use sim_core::{Comando, Errore, Partita};
@@ -28,7 +31,7 @@ fn abrogazione_che_vince(astensione: &str) -> FileDati {
 
 fn al_voto(f: FileDati) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     p.promuovi_referendum("sinistra", "licenziamento").unwrap();
     // Turno 1 (gennaio-marzo 2027): firme in chiusura, voto ad aprile-giugno 2028 (turno 6).
     for _ in 0..6 {
@@ -89,7 +92,7 @@ fn invito_all_astensione_abbassa_l_affluenza() {
             DatiGioco::da_testi(&abrogazione_che_vince("0.0")).unwrap(),
             1,
         );
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         p.promuovi_referendum("sinistra", "licenziamento").unwrap();
         for t in 0..6 {
             if invito && t == 5 {
@@ -146,7 +149,7 @@ fn reddito_minimo_abrogato_diventa_non_istituito() {
         DatiGioco::da_testi(&con(f, "astensione_abrogativo", "-5.0")).unwrap(),
         1,
     );
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     p.promuovi_referendum("estrema_destra", "reddito_minimo")
         .unwrap();
     for _ in 0..6 {
@@ -300,7 +303,7 @@ fn salva_e_carica_con_l_abrogativo_in_corso_non_cambiano_l_esito() {
         };
         let f = abrogazione_che_vince("0.0");
         let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         p.promuovi_referendum("sinistra", "licenziamento").unwrap();
         let mut p = rileggi(p);
         p.chiudi_turno();
@@ -376,7 +379,7 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
 
 fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     p.promuovi_referendum("sinistra", disposizione).unwrap();
     for _ in 0..6 {
         chiudi_col_bilancio(&mut p);

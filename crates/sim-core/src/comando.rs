@@ -93,8 +93,8 @@ pub enum Comando {
     /// Nel ribaltone col giocatore non primo per seggi, ne resta fuori: il Capo dello Stato cerca
     /// la maggioranza senza di lui.
     RifiutaRibaltone,
-    /// All'opposizione, la linea del partito del giocatore sulla misura: `None` torna a quella di
-    /// default.
+    /// All'opposizione, la linea del partito del giocatore sulla misura; al governo, solo sulle
+    /// proposte dell'opposizione. `None` torna a quella di default.
     Linea {
         misura: u32,
         si: Option<bool>,
@@ -174,7 +174,8 @@ impl Partita {
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
     /// `RifiutaRibaltone` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
-    /// `PromuoviReferendum`, con la guardia `all_opposizione`) è di governo: se il giocatore non
+    /// `PromuoviReferendum`, con la guardia `all_opposizione`; `Linea` anche a chi governa, sulle
+    /// proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
     /// turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
     /// `Accogli`: `Comando`.

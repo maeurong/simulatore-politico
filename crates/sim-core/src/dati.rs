@@ -220,6 +220,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "soglia_programma",
     "seggi_programma_elettorale",
     "margine_voto_anticipato",
+    "crescita_malus_ultimo_anno",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",

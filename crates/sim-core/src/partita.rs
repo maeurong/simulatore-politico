@@ -403,6 +403,7 @@ impl Partita {
             ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
             giocatore: self.giocatore,
+            ultimo_anno: self.legislatura.ultimo_anno(self.turno),
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
@@ -1065,6 +1066,7 @@ impl Partita {
             ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
             giocatore: self.giocatore,
+            ultimo_anno: self.legislatura.ultimo_anno(self.turno),
         }
     }
 
@@ -2758,12 +2760,20 @@ impl Partita {
             .and_then(|k| fila.get(k).copied())
     }
 
-    /// `Linea`: la linea del giocatore all'opposizione sulla misura.
+    /// `Linea`: la linea del giocatore all'opposizione sulla misura; al governo solo sulle
+    /// proposte dell'opposizione (scelta 15 del piano 8a).
     ///
     /// # Errors
-    /// `Comando` dalla guardia dell'opposizione o con la misura sconosciuta.
+    /// `Comando` dalla guardia dell'opposizione, al governo su una misura che non è una proposta
+    /// dell'opposizione, o con la misura sconosciuta.
     pub(crate) fn linea(&mut self, misura: u32, si: Option<bool>) -> Result<(), Errore> {
-        self.all_opposizione()?;
+        if !self.governa() {
+            self.all_opposizione()?;
+        } else if (self.parlamento.misure.iter()).any(|m| m.id == misura && m.promotore.is_none()) {
+            return Err(Errore::Comando(
+                "la linea del governo si sceglie solo sulle proposte dell'opposizione".into(),
+            ));
+        }
         self.parlamento.linea(misura, si)
     }
 
@@ -2905,7 +2915,7 @@ impl Partita {
             alleati_avversari: self.voci_avversari(),
             posto_riservato: self.all_opposizione().is_ok()
                 && self.posto_riservato() == Some(self.giocatore)
-                && self.parlamento.posto_riservato_libero(),
+                && self.parlamento.posto_riservato_libero(self.turno),
             calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())

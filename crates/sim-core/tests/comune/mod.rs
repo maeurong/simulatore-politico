@@ -436,6 +436,33 @@ pub fn chiudi_col_bilancio(p: &mut Partita) {
     p.chiudi_turno();
 }
 
+/// Chiude il turno e toglie quello che l'opposizione IA ha presentato in apertura
+/// (`togli_opposizione_ia`).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn chiudi_senza_opposizione_ia(p: &mut Partita) {
+    p.chiudi_turno();
+    togli_opposizione_ia(p);
+}
+
+/// Toglie quello che l'opposizione IA ha presentato in apertura: la sfiducia e le proposte nel
+/// posto riservato (piano 8a). Per le prove dove quelle mosse sono solo rumore.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn togli_opposizione_ia(p: &mut Partita) {
+    let g = p.giocatore();
+    *p = edita(p, |j| {
+        j["parlamento"]["sfiducia"] = serde_json::Value::Null;
+        (j["parlamento"]["misure"].as_array_mut().unwrap())
+            .retain(|m| m["promotore"].is_null() || m["promotore"] == g);
+    })
+    .unwrap();
+}
+
 /// La partita vera (posizione 4,5) nel turno dopo il voto, riportata con `edita` in fase
 /// ordinaria sotto il governo uscente (destra e centrodestra), con `incarico = null`, seggi
 /// scritti a mano e `dimissioni = true`; poi la chiusura, che chiama il Capo dello Stato.

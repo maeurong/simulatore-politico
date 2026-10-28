@@ -5,10 +5,11 @@
 use super::Partita;
 use crate::caso::Flusso;
 use crate::comando::Comando;
+use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::informazione::indice;
 use crate::legislatura::{self, Fase};
-use crate::parlamento::{self, StatoEmendamento, ValoreProposto};
+use crate::parlamento::{self, Misura, StatoEmendamento, ValoreProposto, voto};
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
@@ -97,6 +98,87 @@ impl Partita {
     /// L'opposizione IA in apertura, anche contro un governo IA (decisione 3 di Mario).
     fn opposizione_ia(&mut self) {
         self.sfiducia_ia();
+        self.proposta_ia();
+    }
+
+    /// La proposta-imbarazzo (scelta 16 del piano, iter-legislativo-italiano:125-127): col posto
+    /// riservato del turno a un partito IA e libero, fra le riforme ordinarie a una disposizione
+    /// ammesse da `Parlamento::bozza` col guadagno del promotore positivo, quella che massimizza
+    /// i seggi (Camera più Senato) dei partiti di governo con la linea sì; a parità il guadagno
+    /// del promotore, poi l'indice della disposizione e del gradino. Nessun candidato, nessuna
+    /// mossa; niente nel turno del voto, dove la proposta decadrebbe senza voto.
+    fn proposta_ia(&mut self) {
+        let Some(j) = self.posto_riservato().filter(|&j| j != self.giocatore) else {
+            return;
+        };
+        if !self.parlamento.posto_riservato_libero(self.turno)
+            || self.legislatura.turno_di_voto(self.turno)
+        {
+            return;
+        }
+        let aula = self.stato_aula();
+        let pl = &self.parlamento;
+        let seggi = |k: usize| {
+            pl.seggi_camera.get(k).copied().unwrap_or(0)
+                + pl.seggi_senato.get(k).copied().unwrap_or(0)
+        };
+        let mut migliore: Option<(u32, f64, ValoreProposto)> = None;
+        let ordinarie = (self.dati.disposizioni().iter()).filter(|x| x.norma == Norma::Ordinaria);
+        for x in ordinarie {
+            for g in &x.gradini {
+                let v = ValoreProposto {
+                    disposizione: x.id.clone(),
+                    gradino: g.id.clone(),
+                };
+                let valori = std::slice::from_ref(&v);
+                let Ok(m) = pl.bozza(&self.dati, &self.disposizioni, self.turno, valori) else {
+                    continue;
+                };
+                let m = Misura {
+                    proponente: None,
+                    promotore: Some(j),
+                    ..m
+                };
+                let p = aula.previsione(&m);
+                let guadagno = voto::guadagni(&self.partiti, p.posizioni)
+                    .get(j)
+                    .copied()
+                    .unwrap_or(0.0);
+                if guadagno <= 0.0 {
+                    continue;
+                }
+                let n = (p.linea.iter().enumerate())
+                    .filter(|&(k, &si)| si && self.governo.al_governo(k))
+                    .map(|(k, _)| seggi(k))
+                    .sum();
+                if migliore
+                    .as_ref()
+                    .is_none_or(|&(s, gd, _)| n > s || (n == s && guadagno > gd))
+                {
+                    migliore = Some((n, guadagno, v));
+                }
+            }
+        }
+        let Some((n, _, v)) = migliore else {
+            return;
+        };
+        let (dati, disposizioni, turno) = (&self.dati, &self.disposizioni, self.turno);
+        if (self.parlamento)
+            .presenta_proposta(dati, disposizioni, turno, j, &[v])
+            .is_ok()
+            && let Some(m) = self.parlamento.misure.last()
+        {
+            let nome = parlamento::nome_misura(&self.dati, m);
+            let voterebbero = match n {
+                0 => "nessun seggio della maggioranza la voterebbe".to_string(),
+                1 => "1 seggio della maggioranza la voterebbe".to_string(),
+                _ => format!("{n} seggi della maggioranza la voterebbero"),
+            };
+            self.mossa(
+                j,
+                format!("Porta nel posto riservato {nome}; {voterebbero}"),
+            );
+        }
     }
 
     /// La sfiducia dell'opposizione IA (scelta 14 del piano): al governo se passerebbe sullo stato

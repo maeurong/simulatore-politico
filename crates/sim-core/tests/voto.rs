@@ -1,5 +1,5 @@
 mod comune;
-use comune::{file_base, imposta, presenta, senza_shock};
+use comune::{chiudi_senza_opposizione_ia, file_base, imposta, presenta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::Causa;
 use sim_core::parlamento::FormaMisura;
@@ -17,10 +17,10 @@ fn partita(f: FileDati, seme: u64) -> Partita {
 fn legge_approvata_alla_fine_del_turno_dopo() {
     let mut p = partita(senza_shock(), 1);
     presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(p.in_vigore("eta_pensionabile"), Some("67"));
     assert!(p.vista().esiti.is_empty());
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let v = p.vista();
     let e = &v.esiti[0];
     assert_eq!(e.forma, FormaMisura::Riforma);
@@ -164,9 +164,9 @@ fn dimissioni_del_proponente_non_fanno_cadere_la_legge() {
         dicastero: "lavoro_welfare".into(),
     })
     .unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(p.vista().calendario.len(), 1);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(p.vista().esiti.len(), 1);
 }
 

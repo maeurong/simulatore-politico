@@ -1,19 +1,17 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_seggi, dati_base, edita, partito, presenta};
+use comune::{
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, partito,
+    presenta,
+};
 use sim_core::legislatura::{Fase, Incarico};
 use sim_core::{Comando, Partita};
 
-/// La destra e il centrodestra in minoranza: 150 su 400, 75 su 200.
+/// La destra e il centrodestra in minoranza: 150 su 400, 75 su 200. Le prove chiudono con
+/// `chiudi_senza_opposizione_ia`: l'opposizione IA, in maggioranza, presenterebbe la sfiducia in
+/// apertura, e queste prove vogliono il governo di minoranza in piedi fino all'esercizio
+/// provvisorio.
 const MINORANZA_C: [u32; 7] = [40, 80, 60, 30, 50, 100, 40];
 const MINORANZA_S: [u32; 7] = [20, 40, 30, 15, 25, 50, 20];
-
-/// Chiude il turno e ritira la sfiducia al governo che l'opposizione IA, in maggioranza, presenta
-/// in apertura: queste prove vogliono il governo di minoranza in piedi fino all'esercizio
-/// provvisorio.
-fn chiudi_senza_sfiducia(p: &mut Partita) {
-    p.chiudi_turno();
-    *p = edita(p, |j| j["parlamento"]["sfiducia"] = serde_json::Value::Null).unwrap();
-}
 
 #[test]
 fn dimettersi_porta_al_ribaltone_o_al_voto() {
@@ -52,12 +50,12 @@ fn fiducia_respinta_fa_dimettere() {
 fn bilancio_mancato_anche_in_esercizio_provvisorio() {
     let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &MINORANZA_C, &MINORANZA_S);
     for _ in 0..4 {
-        chiudi_senza_sfiducia(&mut p); // fino a ottobre-dicembre 2027
+        chiudi_senza_opposizione_ia(&mut p); // fino a ottobre-dicembre 2027
     }
     let b = p.bozza_bilancio().unwrap();
     p.comanda(Comando::PresentaBilancio { bilancio: b })
         .unwrap();
-    chiudi_senza_sfiducia(&mut p); // respinto: esercizio provvisorio nel 2028
+    chiudi_senza_opposizione_ia(&mut p); // respinto: esercizio provvisorio nel 2028
     assert!(p.governa());
     let b = p.bozza_bilancio().unwrap();
     p.comanda(Comando::PresentaBilancio { bilancio: b })
@@ -153,7 +151,7 @@ fn alla_caduta_il_calendario_decade() {
 fn fiducia_respinta_in_esercizio_provvisorio() {
     let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &MINORANZA_C, &MINORANZA_S);
     for _ in 0..5 {
-        chiudi_senza_sfiducia(&mut p); // fino a gennaio-marzo 2028, senza bilancio
+        chiudi_senza_opposizione_ia(&mut p); // fino a gennaio-marzo 2028, senza bilancio
     }
     assert!(p.governa());
     presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();

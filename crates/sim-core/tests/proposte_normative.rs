@@ -1,5 +1,7 @@
 mod comune;
-use comune::{edita, file_base, imposta, indice, presenta, sostituisci};
+use comune::{
+    chiudi_senza_opposizione_ia, edita, file_base, imposta, indice, presenta, sostituisci,
+};
 use serde_json::json;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::Causa;
@@ -176,12 +178,12 @@ fn legge_respinta_da_poco_non_si_ripropone() {
         let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), seme);
         let Some((d, _)) = riforma(&p) else { continue };
         p.comanda(accogli(LAVORO)).unwrap();
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         // Una proposta nata nel turno del voto lascerebbe il ministro senza innesco al turno dopo.
         let _ = p.comanda(Comando::Respingi {
             dicastero: LAVORO.into(),
         });
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         assert!(!p.vista().esiti[0].approvata);
         if ministero(&p, LAVORO).ministro.is_none() {
             continue;
@@ -189,7 +191,7 @@ fn legge_respinta_da_poco_non_si_ripropone() {
         assert_ne!(riforma(&p).map(|r| r.0), Some(d));
         // Controllo: il None non è un ministro muto, entro quattro turni propone altro.
         let altra = (0..4).find_map(|_| {
-            p.chiudi_turno();
+            chiudi_senza_opposizione_ia(&mut p);
             riforma(&p)
         });
         assert!(altra.is_some(), "il ministro non propone più nulla");
