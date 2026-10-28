@@ -72,6 +72,13 @@ fn una_sola_sfiducia_per_turno() {
         .comanda(Comando::Sfiducia { dicastero: None })
         .unwrap_err();
     assert!(e.to_string().contains("già presentata"), "{e}");
+    let sfiducie = |p: &Partita| {
+        (p.vista().esiti.iter())
+            .filter(|e| e.forma == FormaMisura::Sfiducia)
+            .count()
+    };
+    p.chiudi_turno();
+    assert_eq!(sfiducie(&p), 1);
     // Il centrodestra esce (intesa sotto `soglia_uscita`): destra e giocatore, 195 su 400, sono
     // in crisi. La destra in ultimatum voterebbe la sfiducia ai ministri del giocatore, ma nel
     // turno di crisi la sfiducia automatica è già sul tavolo: l'opposizione IA non ne presenta
@@ -88,6 +95,40 @@ fn una_sola_sfiducia_per_turno() {
     assert_eq!(p.legislatura().crisi, Some(p.vista().turno));
     assert!(p.alleati().contains(&destra));
     assert!(p.parlamento().sfiducia.is_none());
+    // Senza maggioranza, in chiusura la sola sfiducia automatica.
+    p.chiudi_turno();
+    assert_eq!(sfiducie(&p), 1);
+}
+
+/// La mozione IA presentata in apertura, l'ultimatum ritirato prima della chiusura: respinta, il
+/// promotore perde `valence_sfiducia_respinta` (meno il ritorno del turno) rispetto alla gemella
+/// senza mozione.
+#[test]
+fn la_sfiducia_ia_respinta_costa_valence_al_promotore() {
+    let mut p = al_governo_coi_seggi(true);
+    chiudi_col_bilancio(&mut p);
+    let (_, promotore) = p.parlamento().sfiducia.unwrap();
+    let cd = partito("centrodestra");
+    let senza_ultimatum = |j: &mut serde_json::Value| {
+        j["intesa"]["valori"][cd] = 60.0.into();
+        j["intesa"]["ultimatum"][cd] = serde_json::Value::Null;
+    };
+    let mut p = edita(&p, senza_ultimatum).unwrap();
+    let mut gemella = edita(&p, |j| {
+        j["parlamento"]["sfiducia"] = serde_json::Value::Null;
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    chiudi_col_bilancio(&mut gemella);
+    let e = (p.vista().esiti.into_iter())
+        .find(|e| e.forma == FormaMisura::Sfiducia)
+        .unwrap();
+    assert!(!e.approvata);
+    let dati = dati_base();
+    let atteso =
+        dati.manopola("valence_sfiducia_respinta") * (1.0 - dati.manopola("ritorno_valence"));
+    let persa = gemella.partiti()[promotore].valence - p.partiti()[promotore].valence;
+    assert!((persa - atteso).abs() < 1e-9, "{persa}");
 }
 
 #[test]

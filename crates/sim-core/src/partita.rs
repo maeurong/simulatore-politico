@@ -485,7 +485,7 @@ impl Partita {
     }
 
     /// `occupato`: il turno del bilancio o di crisi, letto prima di ogni voto. `true` se si è
-    /// votata la sfiducia del giocatore al governo.
+    /// votata la sfiducia del giocatore o dell'opposizione IA al governo.
     fn aula(&mut self, occupato: bool) -> bool {
         if occupato {
             for m in self.parlamento.slitta_leggi(self.turno) {
@@ -2419,7 +2419,8 @@ impl Partita {
     /// senza ultimatum), chi rompe l'impegno paga, rimpasto, ultimatum degli allargati sul valore
     /// corrente. Senza, la sfiducia automatica; respinta, la crisi si riapre il turno dopo. Non si
     /// vota se il governo è già dimissionario, né se nel turno si è già votata la sfiducia del
-    /// giocatore al governo (`sfiducia_votata`): respinta, vale come quella automatica.
+    /// giocatore o dell'opposizione IA al governo (`sfiducia_votata`): respinta, vale come quella
+    /// automatica.
     fn fine_della_crisi(&mut self, sfiducia_votata: bool) {
         let l = &mut self.legislatura;
         l.crisi = None;

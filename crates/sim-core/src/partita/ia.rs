@@ -1,5 +1,6 @@
-//! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta e il governo
-//! avversario che governa in apertura, affronta la crisi e va al voto anticipato.
+//! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta, il governo
+//! avversario che governa in apertura, affronta la crisi e va al voto anticipato, e l'opposizione
+//! che presenta la sfiducia.
 
 use super::Partita;
 use crate::caso::Flusso;
@@ -125,7 +126,9 @@ impl Partita {
         let in_ultimatum: Vec<usize> = (self.alleati().into_iter())
             .filter(|&j| self.in_ultimatum(j))
             .collect();
-        // Il motivo della riga: i partiti di governo che nella linea votano sì.
+        // Il motivo della riga: i partiti di governo che nella linea votano sì. Oggi sono solo gli
+        // alleati in ultimatum (`linea_sfiducia`, legislatura/crisi.rs:22-27): il nome senza «in
+        // ultimatum» non si raggiunge.
         let motivo = |dicastero: Option<usize>| {
             let (linea, _, _, approvata) = self.voto_sfiducia(dicastero)?;
             if !approvata {
@@ -144,8 +147,8 @@ impl Partita {
                 .collect();
             Some(match nomi.len() {
                 0 => "passerebbe coi voti dell'opposizione".to_string(),
-                1 => format!("{} la voterebbe", nomi.join(" e ")),
-                _ => format!("{} la voterebbero", nomi.join(" e ")),
+                1 => format!("{} la voterebbe", elenco(&nomi)),
+                _ => format!("{} la voterebbero", elenco(&nomi)),
             })
         };
         let el = &self.elettorato;
@@ -521,6 +524,14 @@ impl Partita {
     }
 }
 
+/// I nomi in elenco: «A», «A e B», «A, B e C».
+fn elenco(nomi: &[String]) -> String {
+    match nomi {
+        [primi @ .., ultimo] if !primi.is_empty() => format!("{} e {ultimo}", primi.join(", ")),
+        _ => nomi.join(""),
+    }
+}
+
 /// «budget indicizzati per il {percento}% dell'inflazione», con l'articolo eliso davanti ai
 /// numeri che si leggono con una vocale (l'1%, l'8%, l'11%, l'80-89%); a 0, «budget non
 /// indicizzati».
@@ -540,6 +551,7 @@ pub(super) fn indicizzati(percento: u32) -> String {
 mod tests {
     use super::super::tests::all_opposizione;
     use super::*;
+    use crate::parlamento::CausaIntesa;
     use crate::partiti::Vocazione;
 
     const AL_VOTO: &str =
@@ -717,5 +729,109 @@ mod tests {
         // Dimissioni e voto anticipato li consuma il Capo dello Stato nella stessa chiusura.
         assert!(!p.legislatura.dimissioni && !p.legislatura.voto_anticipato);
         assert_ne!(p.legislatura.fase, Fase::Ordinaria);
+    }
+
+    /// Governo IA 1-5 (220 su 400 alla Camera), il centrodestra (4, 40 seggi) in ultimatum: con
+    /// lui l'opposizione passa a 220, ma la caduta del governo non gli conviene. Giudizi azzerati.
+    /// Ministri: 0 e 9 destra, 1 e 5 centrodestra, 2 e 6 centrosinistra, 3 e 8 centro, 4 e 7
+    /// sinistra (pesi 1 e 2).
+    fn sfiducia_al_limite() -> Partita {
+        let mut p = all_opposizione();
+        p.parlamento.seggi_camera = vec![40, 80, 20, 20, 40, 60, 60, 80];
+        p.parlamento.seggi_senato = vec![10, 40, 10, 10, 20, 30, 30, 50];
+        p.intesa.valori[4] = 38.0;
+        p.intesa.ultimatum[4] = Some(CausaIntesa::Spartizione);
+        for g in &mut p.elettorato.gruppi {
+            g.giudizio.fill(0.0);
+        }
+        p.parlamento.sfiducia = None;
+        p.mosse.clear();
+        p
+    }
+
+    /// Il giudizio di `j` a `x` nel gruppo `i` (tutti con `None`).
+    fn giudica(p: &mut Partita, i: Option<usize>, j: usize, x: f64) {
+        for (k, g) in p.elettorato.gruppi.iter_mut().enumerate() {
+            if i.is_none_or(|i| i == k) {
+                g.giudizio[j] = x;
+            }
+        }
+    }
+
+    /// Pesato per elettori: la sinistra a −0,5 nel gruppo più grande è peggio del centrosinistra
+    /// a −1 nel più piccolo. Dei due ministri della sinistra, quello di peso 2 (Interno, 7).
+    #[test]
+    fn la_sfiducia_individuale_va_al_giudizio_pesato_peggiore_e_al_peso_maggiore() {
+        let mut p = sfiducia_al_limite();
+        let el: Vec<f64> = (0..p.elettorato.gruppi.len())
+            .map(|i| p.elettorato.elettori(p.dati.elettorato(), i))
+            .collect();
+        let grande = (0..el.len())
+            .max_by(|&a, &b| el[a].total_cmp(&el[b]))
+            .unwrap();
+        let piccolo = (0..el.len())
+            .min_by(|&a, &b| el[a].total_cmp(&el[b]))
+            .unwrap();
+        assert!(el[grande] * 0.5 > el[piccolo]);
+        giudica(&mut p, Some(grande), 1, -0.5);
+        giudica(&mut p, Some(piccolo), 2, -1.0);
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia, Some((Some(7), 6)));
+    }
+
+    /// Il centrodestra in ultimatum ha il giudizio peggiore: i suoi ministri restano fuori, la
+    /// sfiducia va al centro, il successivo; a parità di peso (1 e 1) il dicastero d'indice minore.
+    #[test]
+    fn la_sfiducia_individuale_salta_l_alleato_in_ultimatum() {
+        let mut p = sfiducia_al_limite();
+        giudica(&mut p, None, 4, -10.0);
+        giudica(&mut p, None, 3, -1.0);
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia, Some((Some(3), 6)));
+    }
+
+    /// Firme: l'estrema sinistra e l'estrema destra (35) restano sotto un decimo della Camera (40)
+    /// anche se col giocatore lo superano. Con 40 la sfiducia al governo, che passa coi soli voti
+    /// dell'opposizione (220 su 400), si presenta.
+    #[test]
+    fn firmano_solo_i_partiti_ia() {
+        let mut p = sfiducia_al_limite();
+        p.intesa.ultimatum[4] = None;
+        p.parlamento.seggi_camera = vec![10, 60, 20, 20, 40, 40, 25, 185];
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia, None);
+        p.parlamento.seggi_camera = vec![15, 60, 20, 20, 40, 40, 25, 180];
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia, Some((None, 6)));
+    }
+
+    #[test]
+    fn a_parita_di_seggi_promuove_l_indice_minore() {
+        let mut p = sfiducia_al_limite();
+        p.parlamento.seggi_camera = vec![50, 80, 20, 20, 40, 60, 50, 80];
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia.map(|(_, j)| j), Some(0));
+    }
+
+    #[test]
+    fn senza_partiti_ia_all_opposizione_ne_ministri_nessuna_sfiducia() {
+        let mut p = sfiducia_al_limite();
+        p.governo.coalizione.extend([0, 6]);
+        p.sfiducia_ia();
+        assert!(p.parlamento.sfiducia.is_none() && p.mosse.is_empty());
+        let mut p = sfiducia_al_limite();
+        for st in &mut p.ministri.dicasteri {
+            st.ministro = None;
+        }
+        p.sfiducia_ia();
+        assert!(p.parlamento.sfiducia.is_none() && p.mosse.is_empty());
+    }
+
+    #[test]
+    fn l_elenco_dei_partiti() {
+        let n = |v: &[&str]| elenco(&v.iter().map(|s| (*s).to_string()).collect::<Vec<_>>());
+        assert_eq!(n(&["A"]), "A");
+        assert_eq!(n(&["A", "B"]), "A e B");
+        assert_eq!(n(&["A", "B", "C"]), "A, B e C");
     }
 }
