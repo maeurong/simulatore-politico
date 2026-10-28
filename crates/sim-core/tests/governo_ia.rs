@@ -281,7 +281,7 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
     for (id, testo) in [
         (
             "estrema_sinistra",
-            "Estrema sinistra non entra: troppo lontano dalla tua posizione",
+            "Estrema sinistra non entra: posizione troppo lontana dalla tua",
         ),
         ("ignoto", "Partito sconosciuto: ignoto"),
         ("giocatore", "Partito nuovo è già nella coalizione"),
@@ -334,7 +334,7 @@ fn senza_maggioranza_le_camere_si_sciolgono() {
                 partiti: vec![id.into()],
             })
             .unwrap_err();
-        let atteso = format!("{nome}: allargamento solo in trattativa, con l'incarico");
+        let atteso = format!("{nome}: allargamento solo in trattativa con l'incarico");
         assert!(e.to_string().contains(&atteso), "{e}");
     }
     p.chiudi_turno();

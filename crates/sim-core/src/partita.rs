@@ -1716,7 +1716,7 @@ impl Partita {
                 })
                 .collect();
             return ko(format!(
-                "{}: allargamento solo in trattativa, con l'incarico, o in crisi al governo",
+                "{}: allargamento solo in trattativa con l'incarico, o in crisi mentre governi",
                 nomi.join(", ")
             ));
         }
@@ -1790,7 +1790,7 @@ impl Partita {
     pub(crate) fn proponi_spartizione(&mut self, dicasteri: &[Assegnazione]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
         if !self.con_incarico() {
-            return ko("Spartizione: si propone solo in trattativa, con l'incarico".into());
+            return ko("Spartizione: si propone solo in trattativa con l'incarico".into());
         }
         let d = self.dati.dicasteri();
         let coalizione = self.coalizione_del_giocatore();
@@ -2174,11 +2174,12 @@ impl Partita {
         }
     }
 
-    /// `ChiediGuida` (decisione 1 di Mario): il primo per seggi della coalizione del ribaltone
-    /// cede la guida, cioè la presidenza (formazione-di-coalizioni:22), se coi seggi veri e il
-    /// giocatore alla guida gli vale più del voto proiettato sul sondaggio pubblico con le
-    /// coalizioni dell'ultimo voto, dove pesa la guida della sua (formazione-di-coalizioni:48).
-    /// Ceduta, l'incarico passa al giocatore con quella maggioranza, come dopo il voto.
+    /// `ChiediGuida` (decisione 1 di Mario): la guida, cioè la presidenza
+    /// (formazione-di-coalizioni:22), la cede il primo per seggi della coalizione del ribaltone.
+    /// La cede se il ribaltone, coi seggi veri e il giocatore alla guida, gli vale più del voto
+    /// proiettato sul sondaggio pubblico con le coalizioni dell'ultimo voto, dove pesa la guida
+    /// della sua (formazione-di-coalizioni:48). Ceduta, l'incarico passa al giocatore con quella
+    /// maggioranza, come dopo il voto.
     ///
     /// # Errors
     /// `Comando` senza `Guida` aperta, o «{nome} non ti cede la guida: {causa}»; la partita resta
@@ -2267,7 +2268,7 @@ impl Partita {
         // Il pareggio respinge la mozione, anche quella automatica a fine crisi.
         let approvata = camera.si > camera.no || senato.si > senato.no;
         let nome = match dicastero.and_then(|i| self.dati.dicasteri().get(i)) {
-            Some(d) => format!("Mozione di sfiducia al ministro di {}", d.nome),
+            Some(d) => format!("Mozione di sfiducia individuale: {}", d.nome),
             None => "Mozione di sfiducia al governo".into(),
         };
         let esito = EsitoVoto {

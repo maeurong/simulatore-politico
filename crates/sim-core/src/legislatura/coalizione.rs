@@ -46,12 +46,12 @@ impl CausaDisponibilita {
     /// spinge verso la coalizione del giocatore.
     pub fn testo(self, con_te: bool) -> &'static str {
         match (self, con_te) {
-            (Self::Seggi, false) => "più seggi da solo",
+            (Self::Seggi, false) => "più seggi correndo da solo",
             (Self::Seggi, true) => "più seggi con te",
             (Self::Governare, false) => "più probabilità di governare altrove",
             (Self::Governare, true) => "più probabilità di governare con te",
-            (Self::Distanza, false) => "troppo lontano dalla tua posizione",
-            (Self::Distanza, true) => "vicino alla tua posizione",
+            (Self::Distanza, false) => "posizione troppo lontana dalla tua",
+            (Self::Distanza, true) => "posizione vicina alla tua",
             (Self::Guida, _) => "guiderebbe la propria coalizione",
             (Self::Intesa, _) => "intesa bassa con te",
         }

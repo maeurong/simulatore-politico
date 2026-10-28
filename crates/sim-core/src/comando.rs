@@ -135,9 +135,9 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida` e
-    /// `RifiutaRibaltone` è di governo: se il
-    /// giocatore non governa, `Comando` col motivo. Nel turno di crisi `PresentaBilancio`,
-    /// `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e `Accogli`: `Comando`.
+    /// `RifiutaRibaltone` è di governo: se il giocatore non governa, `Comando` col motivo. Nel
+    /// turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
+    /// `Accogli`: `Comando`.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
