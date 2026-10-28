@@ -101,12 +101,18 @@ pub struct Partita {
     giocatore: usize,
     legislatura: Legislatura,
     fine: Option<Fine>,
-    /// Chiusure iniziate col giocatore al governo.
+    /// Chiusure iniziate col giocatore Presidente del Consiglio, interim compreso (scelta 17).
     turni_al_governo: u32,
-    /// Le stringhe `legge` delle sue leggi, scritte quando entrano in vigore.
-    leggi_del_giocatore: Vec<String>,
+    /// Id e anno (`etichetta_legge`) delle sue leggi, scritti quando entrano in vigore.
+    leggi_del_giocatore: Vec<(u32, u16)>,
     /// I quattro indicatori al turno zero (`indicatori`).
     partenza: [f64; 4],
+}
+
+/// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
+/// le disposizioni in vigore alle leggi del giocatore nell'eredità.
+fn etichetta_legge(id: u32, anno: u16) -> String {
+    format!("L. {id}/{anno}")
 }
 
 impl Partita {
@@ -228,12 +234,13 @@ impl Partita {
         p
     }
 
-    /// Debito in % del PIL nominale annuo, spread in punti base, disoccupazione nazionale e
-    /// inflazione annualizzata dell'economia vera: stessi campi al turno zero e a fine partita.
+    /// Debito in % del PIL dell'anno mobile (come spread e regole UE), spread in punti base,
+    /// disoccupazione nazionale e inflazione annualizzata dell'economia vera: stessi campi al
+    /// turno zero e a fine partita.
     fn indicatori(&self) -> [f64; 4] {
         let e = &self.economia;
         [
-            100.0 * e.debito as f64 / (4.0 * e.pil_trimestrale * 1e9),
+            e.debito_e_disavanzo_pil().0,
             e.spread,
             e.disoccupazione_nazionale(&self.dati),
             e.inflazione[0],
@@ -263,7 +270,7 @@ impl Partita {
         if self.finita() {
             return;
         }
-        if self.governa() {
+        if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
@@ -722,9 +729,11 @@ impl Partita {
     /// I valori della misura approvata entrano in vigore, o arrivano fra `turni_rinvio_regime`
     /// turni se un emendamento accolto li rinvia.
     fn entra_in_vigore(&mut self, m: &Misura) {
-        let (turno, legge) = (self.turno, format!("L. {}/{}", m.id, self.data.anno));
-        if self.del_giocatore(m) {
-            self.leggi_del_giocatore.push(legge.clone());
+        let (turno, anno) = (self.turno, self.data.anno);
+        let legge = etichetta_legge(m.id, anno);
+        // Bilancio e conversioni non hanno valori: non sono leggi dell'eredità.
+        if !m.valori.is_empty() && self.del_giocatore(m) {
+            self.leggi_del_giocatore.push((m.id, anno));
         }
         let rinvio = self.dati.manopola("turni_rinvio_regime") as u32;
         for &(d, g) in &m.valori {
@@ -790,9 +799,10 @@ impl Partita {
             let nome = parlamento::nome(&self.dati, &r.valori);
             let esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
             if esito.approvato {
-                let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
+                let (id, anno) = (r.misura.unwrap_or_default(), self.data.anno);
+                let legge = etichetta_legge(id, anno);
                 if r.del_giocatore {
-                    self.leggi_del_giocatore.push(legge.clone());
+                    self.leggi_del_giocatore.push((id, anno));
                 }
                 for &(d, g) in &r.valori {
                     (self.disposizioni).cambia(
@@ -1625,18 +1635,25 @@ impl Partita {
 
     /// Ciò che il giocatore lascia, a partita finita.
     pub fn eredita(&self) -> Option<Eredita> {
-        let fine = self.fine?;
+        self.fine.map(|fine| self.eredita_di(fine))
+    }
+
+    /// L'eredità con la partita finita per `fine`.
+    fn eredita_di(&self, fine: Fine) -> Eredita {
+        let sua = |legge: &str| {
+            (self.leggi_del_giocatore.iter()).any(|&(id, anno)| legge == etichetta_legge(id, anno))
+        };
         let nomi = (self.dati.disposizioni().iter().zip(&self.disposizioni.voci))
-            .filter(|(_, v)| self.leggi_del_giocatore.contains(&v.legge))
+            .filter(|(_, v)| sua(&v.legge))
             .map(|(d, _)| d.nome.clone());
         let voci = [
-            ("debito_pil", "Debito in % del PIL"),
-            ("spread", "Spread"),
-            ("disoccupazione", "Disoccupazione"),
-            ("inflazione", "Inflazione"),
+            ("debito_pil", "Debito (% del PIL)"),
+            ("spread", "Spread (punti base)"),
+            ("disoccupazione", "Disoccupazione (%)"),
+            ("inflazione", "Inflazione annua (%)"),
         ];
         let fine_partita = self.indicatori();
-        Some(Eredita {
+        Eredita {
             fine,
             bozza: fine == Fine::SenzaSeggi,
             anni_al_governo: f64::from(self.turni_al_governo) / 4.0,
@@ -1649,7 +1666,7 @@ impl Partita {
                     fine,
                 })
                 .collect(),
-        })
+        }
     }
 
     /// Il giocatore lascia la partita: l'eredità subito.
@@ -1661,8 +1678,7 @@ impl Partita {
             return Err(Errore::Comando("La partita è finita".into()));
         }
         self.fine = Some(Fine::Abbandono);
-        self.eredita()
-            .ok_or_else(|| Errore::Comando("La partita è finita".into()))
+        Ok(self.eredita_di(Fine::Abbandono))
     }
 
     /// Il giocatore guida il governo in carica: i comandi di governo sono suoi.
@@ -3225,6 +3241,10 @@ impl Economia {
             "economia.livello_prezzi non finito o fuori da (0, 1e6]",
         )?;
         ok(
+            self.pil_trimestrale.is_finite() && self.pil_trimestrale > 0.0,
+            "economia.pil_trimestrale non finito o non positivo",
+        )?;
+        ok(
             self.tasso_medio_debito.is_finite(),
             "economia.tasso_medio_debito non finito",
         )?;
@@ -3337,6 +3357,40 @@ mod tests {
             (dopo - (prima + s * (vigente - prima))).abs() < 1e-12,
             "{dopo}"
         );
+    }
+
+    #[test]
+    fn il_bilancio_approvato_non_e_una_legge_del_giocatore() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.parlamento.apri_bilancio(p.turno);
+        let m = p.parlamento.misure.pop().unwrap();
+        p.entra_in_vigore(&m);
+        assert!(p.leggi_del_giocatore.is_empty());
+    }
+
+    #[test]
+    fn la_legge_del_governo_ia_non_entra_nell_eredita() {
+        let mut p = all_opposizione();
+        let m = a_settanta_anni(&p);
+        p.entra_in_vigore(&m);
+        let k = p.dati.disposizione("eta_pensionabile").unwrap();
+        assert_eq!(
+            p.disposizioni.voci[k].legge,
+            etichetta_legge(m.id, p.data.anno)
+        );
+        assert!(p.abbandona().unwrap().leggi_in_vigore.is_empty());
+    }
+
+    /// Il debito dell'eredità è quello di spread e regole UE, sull'anno mobile.
+    #[test]
+    fn il_debito_dell_eredita_e_sull_anno_mobile() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        for _ in 0..3 {
+            p.chiudi_turno();
+        }
+        let (debito, _) = p.economia.debito_e_disavanzo_pil();
+        let e = p.abbandona().unwrap();
+        assert_eq!(e.indicatori[0].fine, debito);
     }
 
     /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.

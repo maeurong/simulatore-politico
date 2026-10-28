@@ -1,5 +1,5 @@
 mod comune;
-use comune::{dati_base, presenta};
+use comune::{dati_base, edita, fondata, presenta};
 use sim_core::legislatura::Fine;
 use sim_core::{Comando, Partita};
 
@@ -80,6 +80,70 @@ fn eredita_di_chi_non_ha_mai_governato() {
             .all(|i| i.turno_zero.is_finite() && i.fine.is_finite())
     );
     assert!(p.abbandona().is_err());
+}
+
+/// Il confermativo di una legge del giocatore, approvato, la mette fra le sue leggi.
+#[test]
+fn il_confermativo_approvato_entra_nell_eredita() {
+    let dati = dati_base();
+    let k = dati.disposizione("salario_minimo").unwrap();
+    let g = dati.disposizioni()[k].gradino("7").unwrap();
+    let mut p = edita(&Partita::nuova(dati_base(), 1), |j| {
+        j["parlamento"]["confermativi"] = serde_json::json!([{
+            "tipo": "confermativo",
+            "misura": 99,
+            "valori": [[k, g]],
+            "promotore": null,
+            "del_giocatore": true,
+            "voto": 0,
+            "firme": true,
+            "invito_astensione": false,
+        }]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(p.vista().esiti_referendum[0].approvato);
+    let nome = dati.disposizioni()[k].nome.clone();
+    assert_eq!(p.abbandona().unwrap().leggi_in_vigore, vec![nome]);
+}
+
+#[test]
+fn i_turni_senza_governo_non_contano_negli_anni() {
+    let mut p = fondata(1.5);
+    for _ in 0..3 {
+        p.chiudi_turno(); // Camere sciolte, trattativa, opposizione
+    }
+    assert_eq!(p.abbandona().unwrap().anni_al_governo, 0.0);
+}
+
+/// Scelta 17: contano i turni da Presidente del Consiglio, anche l'interim dopo le dimissioni.
+#[test]
+fn l_interim_conta_negli_anni_al_governo() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(Comando::Dimettiti).unwrap();
+    p.chiudi_turno();
+    assert!(!p.governa());
+    assert_eq!(p.governo().presidente, p.giocatore());
+    p.chiudi_turno();
+    assert!((p.abbandona().unwrap().anni_al_governo - 0.5).abs() < 1e-12);
+}
+
+#[test]
+fn salvataggi_editati_rifiutati_col_motivo() {
+    let p = Partita::nuova(dati_base(), 1);
+    let rifiutato = |f: &dyn Fn(&mut serde_json::Value), frammento: &str| {
+        let e = edita(&p, f).err().unwrap().to_string();
+        assert!(e.contains(frammento), "{e}");
+    };
+    rifiutato(&|j| j["turni_al_governo"] = 2.into(), "turni_al_governo");
+    rifiutato(
+        &|j| j["parlamento"]["sfiducia"] = serde_json::json!([99, 0]),
+        "la sfiducia fuori dai dicasteri",
+    );
+    rifiutato(
+        &|j| j["economia"]["pil_trimestrale"] = 0.0.into(),
+        "pil_trimestrale",
+    );
 }
 
 #[test]
