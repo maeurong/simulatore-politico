@@ -7,7 +7,7 @@ use sim_core::{Comando, Partita};
 
 fn al_posto_riservato(p: &mut Partita) {
     for _ in 0..8 {
-        if p.vista().posto_opposizione {
+        if p.vista().posto_riservato {
             return;
         }
         p.chiudi_turno();
@@ -101,7 +101,7 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
         })
         .unwrap_err();
     assert!(e.to_string().contains("posto riservato"), "{e}");
-    assert!(!p.vista().posto_opposizione); // occupato dalla proposta
+    assert!(!p.vista().posto_riservato); // occupato dalla proposta
     let id = p.vista().calendario[0].id;
     assert_eq!(
         p.vista().calendario[0].promotore.as_deref(),
@@ -207,6 +207,19 @@ fn l_intesa_avversaria_si_vede_in_fasce() {
     assert_eq!(fascia(c).causa_ultimatum, None);
 }
 
+/// Storia 90: chi non governa non vede le agende dei ministri prima dell'esecuzione.
+#[test]
+fn senza_governo_le_agende_dei_ministri_non_si_vedono() {
+    let senza_agende = |p: &Partita| p.vista().ministeri.iter().all(|m| m.agenda.is_none());
+    let mut p = fondata(1.5); // Camere sciolte
+    assert!(senza_agende(&p));
+    p.chiudi_turno(); // trattativa
+    assert!(senza_agende(&p));
+    assert!(senza_agende(&all_opposizione()));
+    let p = Partita::nuova(dati_base(), 1);
+    assert!(p.vista().ministeri.iter().any(|m| m.agenda.is_some()));
+}
+
 #[test]
 fn le_fasce_solo_in_fase_ordinaria() {
     let mut p = fondata(1.5);
@@ -273,7 +286,7 @@ fn il_posto_riservato_ha_le_sue_regole() {
     // Turno 2: la fila è [estrema destra, giocatore] (l'estrema sinistra non ha seggi alla Camera),
     // e il posto va all'estrema destra.
     let mut p = all_opposizione();
-    assert!(!p.vista().posto_opposizione);
+    assert!(!p.vista().posto_riservato);
     let proposta = |d: &str, g: &str| Comando::PresentaProposta {
         valori: valori(&[(d, g)]),
     };

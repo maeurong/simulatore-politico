@@ -590,7 +590,7 @@ impl Parlamento {
         promotore: usize,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
-        if (self.misure.iter().filter(|m| m.promotore.is_some())).count() >= POSTI_OPPOSIZIONE {
+        if !self.posto_riservato_libero() {
             return ko("il posto riservato è già occupato".into());
         }
         let m = self.bozza(dati, disposizioni, turno, valori)?;
@@ -604,6 +604,11 @@ impl Parlamento {
         });
         self.prossima = self.prossima.saturating_add(1);
         Ok(())
+    }
+
+    /// Nessuna proposta dell'opposizione occupa il posto riservato.
+    pub(crate) fn posto_riservato_libero(&self) -> bool {
+        (self.misure.iter().filter(|m| m.promotore.is_some())).count() < POSTI_OPPOSIZIONE
     }
 
     /// `Linea`: la linea del giocatore sulla misura, `None` = quella di default.

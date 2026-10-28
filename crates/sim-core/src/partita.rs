@@ -28,7 +28,7 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
-    VoceGrandezza, VoceIncarico, VocePartito,
+    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -2741,7 +2741,12 @@ impl Partita {
                 })
                 .collect(),
             partiti: self.voci_partiti(),
-            ministeri: self.ministri.voci(&self.contesto()),
+            ministeri: (self.ministri.voci(&self.contesto()).into_iter())
+                .map(|m| VoceMinistero {
+                    agenda: m.agenda.filter(|_| self.governa()),
+                    ..m
+                })
+                .collect(),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {
@@ -2762,9 +2767,9 @@ impl Partita {
                 .collect(),
             alleati: self.voci_alleati(),
             alleati_avversari: self.voci_avversari(),
-            posto_opposizione: self.all_opposizione().is_ok()
+            posto_riservato: self.all_opposizione().is_ok()
                 && self.posto_riservato() == Some(self.giocatore)
-                && !(self.parlamento.misure.iter()).any(|m| m.promotore == Some(self.giocatore)),
+                && self.parlamento.posto_riservato_libero(),
             calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())

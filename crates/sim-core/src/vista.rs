@@ -38,7 +38,8 @@ pub struct Vista {
     /// Spread BTP-Bund in punti base, arrotondato.
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
-    /// Una voce per dicastero, nell'ordine dei dicasteri.
+    /// Una voce per dicastero, nell'ordine dei dicasteri. Senza `governa` nessuna agenda: chi
+    /// non governa non la vede prima dell'esecuzione (storia 90).
     pub ministeri: Vec<VoceMinistero>,
     pub sondaggio: Sondaggio,
     /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
@@ -53,9 +54,9 @@ pub struct Vista {
     /// In fase ordinaria sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in
     /// cifre. Vuota altrove.
     pub alleati_avversari: Vec<VoceFascia>,
-    /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero: una sua
-    /// proposta non è già in calendario.
-    pub posto_opposizione: bool,
+    /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
+    /// proposta dell'opposizione è già in calendario.
+    pub posto_riservato: bool,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
     /// I referendum in attesa del voto.

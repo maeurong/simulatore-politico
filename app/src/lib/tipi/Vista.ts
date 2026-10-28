@@ -59,7 +59,8 @@ grandezze: Array<VoceGrandezza>,
  */
 spread_pb: number, partiti: Array<VocePartito>, 
 /**
- * Una voce per dicastero, nell'ordine dei dicasteri.
+ * Una voce per dicastero, nell'ordine dei dicasteri. Senza `governa` nessuna agenda: chi
+ * non governa non la vede prima dell'esecuzione (storia 90).
  */
 ministeri: Array<VoceMinistero>, sondaggio: Sondaggio, 
 /**
@@ -80,10 +81,10 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>,
  */
 alleati_avversari: Array<VoceFascia>, 
 /**
- * Il posto riservato all'opposizione di questo turno è del giocatore, e libero: una sua
- * proposta non è già in calendario.
+ * Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
+ * proposta dell'opposizione è già in calendario.
  */
-posto_opposizione: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
+posto_riservato: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
 /**
  * I referendum in attesa del voto.
  */
