@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta, riscrivi, senza_shock};
+use comune::{chiudi_col_bilancio, dati_base, file_base, imposta, riscrivi, senza_shock};
 use sim_core::caso::Caso;
 use sim_core::elettorato::{Condizione, Fascia, PUNTI};
 use sim_core::informazione::{ElettoreCampione, Motivo, Sondaggio, genera};
@@ -107,7 +107,7 @@ fn la_media_degli_istituti_non_toglie_il_bias_comune() {
     let mut scarto = vec![0.0; p.partiti().len() + 1];
     let mut atteso = scarto.clone();
     for _ in 0..turni {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
         let vero = p.intenzioni_vere().nazionali;
         let bias = &p.informazione().bias;
         let somma: f64 = vero.iter().zip(bias).map(|(v, b)| v + b).sum();

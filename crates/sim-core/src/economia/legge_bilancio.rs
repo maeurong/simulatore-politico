@@ -242,6 +242,37 @@ pub(crate) fn indicizza(b: &Bilancio, voce: &Voce, attuale: f64) -> Result<Bilan
     Ok(b)
 }
 
+/// Le voci dei dicasteri × `1 + quota · (attuale / livello − 1)`, all'euro, col livello che
+/// segue nella stessa proporzione; gli scaglioni restano. `quota = 1` coincide con `indicizza`
+/// dei dicasteri, `quota = 0` lascia `b` com'è.
+pub(crate) fn indicizza_in_parte(
+    b: &Bilancio,
+    quota: f64,
+    attuale: f64,
+) -> Result<Bilancio, String> {
+    let mut b = b.clone();
+    for d in &mut b.dicasteri {
+        let lp = d.livello_prezzi;
+        // Scritta così perché le quote 0 e 1 rendano esattamente la voce e `indicizza`.
+        let scala = |x: i64| {
+            let y = (x as f64 * (1.0 - quota) + x as f64 * attuale / lp * quota).round();
+            if (0.0..=LIMITE_EURO as f64).contains(&y) {
+                Ok(y as i64)
+            } else {
+                Err(format!("voce negativa o enorme: {}", d.id))
+            }
+        };
+        (d.spesa, d.salari, d.acquisti, d.margine) = (
+            scala(d.spesa)?,
+            scala(d.salari)?,
+            scala(d.acquisti)?,
+            scala(d.margine)?,
+        );
+        d.livello_prezzi = lp * (1.0 - quota) + attuale * quota;
+    }
+    Ok(b)
+}
+
 /// Il bilancio `b` come lo approverebbe l'aula, o il messaggio che ne nomina il guasto. La
 /// `spesa` è salari + acquisti + margine più il resto presentato, limitato fra quello della
 /// bozza e quello indicizzato per intero; il livello dei prezzi di una voce (e degli scaglioni)
@@ -443,6 +474,42 @@ mod test {
             ires: 0.24,
             contributi: 0.33,
         }
+    }
+
+    #[test]
+    fn indicizzare_in_parte_sta_fra_zero_e_tutto() {
+        let b = Bilancio {
+            anno: 2027,
+            dicasteri: vec![BudgetDicastero {
+                id: "sanita".into(),
+                spesa: 1_000_000,
+                salari: 400_000,
+                acquisti: 300_000,
+                margine: 100_000,
+                livello_prezzi: 1.0,
+            }],
+            aliquote: con(scaglioni()),
+            fondo_riserva: 5,
+        };
+        let attuale = 1.1;
+        assert_eq!(indicizza_in_parte(&b, 0.0, attuale), Ok(b.clone()));
+        let tutto = indicizza(&b, &Voce::Tutto, attuale).unwrap_or_else(|e| panic!("{e}"));
+        let uno = indicizza_in_parte(&b, 1.0, attuale).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(uno.dicasteri, tutto.dicasteri);
+        assert_eq!(uno.aliquote, b.aliquote);
+        let meta = indicizza_in_parte(&b, 0.5, attuale).unwrap_or_else(|e| panic!("{e}"));
+        let d = &meta.dicasteri[0];
+        assert_eq!(
+            (d.spesa, d.salari, d.margine),
+            (1_050_000, 420_000, 105_000)
+        );
+        assert!(
+            (d.livello_prezzi - 1.05).abs() < 1e-12,
+            "{}",
+            d.livello_prezzi
+        );
+        assert_eq!(meta.aliquote, b.aliquote);
+        assert_eq!(meta.fondo_riserva, b.fondo_riserva);
     }
 
     #[test]

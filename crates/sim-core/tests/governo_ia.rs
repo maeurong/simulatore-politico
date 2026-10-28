@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{file_base, fondata, imposta};
+use comune::{all_opposizione, edita, file_base, fondata, imposta};
 use serde_json::json;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
@@ -378,7 +378,10 @@ fn il_governo_ia_presenta_il_bilancio() {
     for _ in 0..4 {
         p.chiudi_turno(); // voto, trattativa, aprile-giugno, luglio-settembre 2027
     }
-    // Ottobre-dicembre 2027: il bilancio del 2028 lo presenta il governo IA.
+    // Ottobre-dicembre 2027: il bilancio del 2028 lo presenta il governo IA in apertura, e la
+    // chiusura lo vota.
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.turno_del_bilancio());
     p.chiudi_turno();
     assert!(
         p.vista()
@@ -488,8 +491,16 @@ fn l_ia_che_rompe_l_impegno_perde_valence_e_intesa() {
     }
     let attesa = dati.manopola("intesa_base") - dati.manopola("intesa_rottura_impegno");
     assert_eq!(p.alleati().len(), 2);
+    // In minoranza il governo IA pone la fiducia sulle conversioni già in apertura: costa a parte.
     for j in p.alleati() {
-        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
+        let fiducia: f64 = (p.intesa().variazioni.iter())
+            .filter(|v| v.partito == j && v.causa == CausaIntesa::Fiducia)
+            .map(|v| v.delta)
+            .sum();
+        assert!(
+            (p.intesa().valori[j] - fiducia - attesa).abs() < 1e-9,
+            "{j}"
+        );
     }
 }
 
@@ -528,4 +539,98 @@ fn col_giocatore_al_governo_nessun_programma() {
     let p = comune::al_governo();
     assert!(p.governo().programma.is_empty());
     assert!(p.vista().programma.is_empty());
+}
+
+/// Dopo la nascita il governo IA porta in aula le prime voci del programma, fino a tre; le
+/// riforme accolte dai ministri vengono dopo e non contano.
+#[test]
+fn il_programma_va_in_aula_in_ordine() {
+    let p = all_opposizione();
+    let programma = &p.governo().programma;
+    let in_aula: Vec<usize> = (p.parlamento().misure.iter())
+        .filter(|m| m.promotore.is_none() && m.valori.len() == 1)
+        .map(|m| m.valori[0].0)
+        .filter(|k| programma.iter().any(|v| v.0 == *k))
+        .collect();
+    let attese: Vec<usize> = (p.governo().programma.iter())
+        .map(|v| v.0)
+        .take(in_aula.len())
+        .collect();
+    assert!(!in_aula.is_empty() && in_aula.len() <= 3);
+    assert_eq!(in_aula, attese);
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Porta in aula: "))
+    );
+}
+
+/// Il programma ridotto alla prima voce, scritta al gradino già in vigore: la presentazione la
+/// rifiuta, e il governo non porta nulla in aula né lascia righe.
+#[test]
+fn programma_esaurito_non_presenta_nulla() {
+    let p = all_opposizione();
+    let k = p.governo().programma[0].0;
+    let vigente = p.disposizioni().voci[k].in_vigore;
+    let mut p = edita(&p, |j| {
+        j["governo"]["programma"] = serde_json::json!([[k, vigente]]);
+        // Fuori la sola legge della voce: le conversioni dei decreti accolti restano.
+        let misure: Vec<serde_json::Value> = (j["parlamento"]["misure"].as_array().unwrap())
+            .iter()
+            .filter(|m| m["valori"].as_array().unwrap().iter().all(|v| v[0] != k))
+            .cloned()
+            .collect();
+        j["parlamento"]["misure"] = serde_json::json!(misure);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .all(|m| !m.testo.starts_with("Porta in aula"))
+    );
+    assert!((p.parlamento().misure.iter()).all(|m| m.valori.iter().all(|v| v.0 != k)));
+}
+
+#[test]
+fn il_bilancio_ia_sta_nel_tetto_senza_ultimatum() {
+    // Avanza al primo ottobre-dicembre sotto il governo IA; all'apertura del turno prima niente
+    // ultimatum e intesa piena, così la chiusura non ne pone.
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 3 {
+        p.chiudi_turno();
+    }
+    let n = p.partiti().len();
+    let mut p = edita(&p, |j| {
+        j["intesa"]["ultimatum"] = json!(vec![serde_json::Value::Null; n]);
+        j["intesa"]["valori"] = json!(vec![100.0; n]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.intesa().ultimatum.iter().all(Option::is_none));
+    let r = p
+        .riepilogo_presentato()
+        .expect("bilancio IA presentato in apertura");
+    assert!(r.crescita_spesa_netta <= r.tetto + 1e-6, "{r:?}");
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Bilancio "))
+    );
+}
+
+#[test]
+fn lo_stato_ia_sopravvive_al_salvataggio() {
+    let mut p = all_opposizione();
+    p.chiudi_turno();
+    let q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(p, q);
+    let fuori = edita(&p, |j| {
+        j["governo"]["programma"] = serde_json::json!([[999, 0]])
+    });
+    assert!(fuori.is_err());
 }

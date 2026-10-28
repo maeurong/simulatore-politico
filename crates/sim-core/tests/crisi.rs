@@ -407,28 +407,6 @@ fn a_fine_crisi_l_ultimatum_degli_alleati_resta() {
     assert!(p.intesa().ultimatum[cd].is_some());
 }
 
-/// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il
-/// bilancio, tranne in crisi.
-#[test]
-fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
-    let mut p = Partita::nuova(dati_base(), 1);
-    for _ in 0..4 {
-        p.chiudi_turno(); // fino a ottobre-dicembre 2027
-    }
-    let cd = partito("centrodestra");
-    let bilancio = |crisi: Option<u32>| {
-        let mut p = edita(&p, |j| {
-            j["governo"]["presidente"] = cd.into();
-            j["legislatura"]["crisi"] = serde_json::json!(crisi);
-        })
-        .unwrap();
-        p.chiudi_turno();
-        (p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Bilancio)
-    };
-    assert!(bilancio(None));
-    assert!(!bilancio(Some(4)));
-}
-
 /// La Sanità del centro uscente è già in interim, con una rosa del centro: dopo il rimpasto resta
 /// la causa di prima, la rosa è del nuovo titolare e il salvataggio si ricarica.
 #[test]

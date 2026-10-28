@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_arrivo, ferma_tutti, imposta, senza_shock};
+use comune::{chiudi_col_bilancio, con_arrivo, ferma_tutti, imposta, senza_shock};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::disposizioni::Leve;
@@ -225,7 +225,8 @@ fn effetto_di_livello_resta_finche_la_disposizione_non_cambia() {
     let mut serie = Vec::new();
     for _ in 0..20 {
         ferma_tutti(&mut p);
-        p.chiudi_turno();
+        // Col bilancio il giocatore non cade: nessun governo IA a cambiare la disposizione.
+        chiudi_col_bilancio(&mut p);
         serie.push(p.grandezza("regole_lavoro").unwrap());
     }
     // Arrivo all'apertura del turno 1, ritardo 4: vale dalla chiusura del turno 5.

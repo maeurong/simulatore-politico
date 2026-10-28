@@ -253,7 +253,7 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
+    // svuotamento delle mosse IA del turno prima → default delle
     // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → firme dell'abrogativo →
@@ -268,7 +268,7 @@ impl Partita {
     // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
     // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
     // (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte; il costo
-    // del taglio se l'anno entra in esercizio provvisorio).
+    // del taglio se l'anno entra in esercizio provvisorio) → mosse IA dell'apertura (`apertura_ia`).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
     // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
     // decade al voto, e nessuno può presentare.
@@ -281,19 +281,6 @@ impl Partita {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
-        // ponytail: governo IA minimo, il piano 8 lo sostituisce. Le proposte dei suoi ministri
-        // restano ignorate; in ottobre-dicembre e nell'esercizio provvisorio presenta la bozza del
-        // bilancio, se c'è, tranne in crisi (decisione 2 di Mario, per chiunque governi).
-        if self.legislatura.fase == Fase::Ordinaria
-            && !self.governa()
-            && !self.in_crisi()
-            && (self.data.trimestre == 4 || self.economia.esercizio_provvisorio(self.data))
-            && self.economia.bilancio_presentato.is_none()
-            && let Some(b) = self.bozza_bilancio()
-        {
-            // La bozza passa le regole della presentazione; se non le passasse, nessun bilancio.
-            let _ = self.presenta_bilancio(&b);
-        }
         self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
         // Prima del voto del bilancio: approvato, esce dal calendario. In crisi le leggi restano
         // ferme un turno senza decadere, come nel turno del bilancio (ticket 09, riga 45).
@@ -432,6 +419,7 @@ impl Partita {
             let perdite = self.perdite(self.economia.bilancio_in_vigore(self.data));
             self.costo_taglio(&perdite);
         }
+        self.apertura_ia();
     }
 
     /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
@@ -1143,6 +1131,18 @@ impl Partita {
     /// con le stesse regole della presentazione, o con la spesa netta di riferimento nulla.
     pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
         self.di_governo()?;
+        self.riepilogo_ammesso(b)
+    }
+
+    /// Il riepilogo del bilancio presentato contro la bozza, per chiunque: il bilancio in aula è
+    /// pubblico. `None` senza bilancio presentato o col riepilogo non calcolabile.
+    pub fn riepilogo_presentato(&self) -> Option<RiepilogoBilancio> {
+        let b = self.economia.bilancio_presentato.as_ref()?;
+        self.riepilogo_ammesso(b).ok()
+    }
+
+    /// `riepilogo_bilancio` senza la guardia su chi governa.
+    fn riepilogo_ammesso(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
         let (bozza, b) = self.bilancio_ammesso(b)?;
         economia::riepilogo(
             &self.economia,
@@ -3492,7 +3492,88 @@ mod tests {
         assert_eq!(e.indicatori[0].fine, debito);
     }
 
-    /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.
+    /// Una legge del governo IA col voto nel turno, senza emendamenti né fiducia: il suo id.
+    fn legge_del_governo_al_voto(p: &mut Partita) -> u32 {
+        let turno = p.turno;
+        let m = (p.parlamento.misure.iter_mut())
+            .find(|m| m.promotore.is_none() && m.forma == FormaMisura::Riforma)
+            .unwrap();
+        m.voto = turno;
+        m.fiducia = false;
+        m.emendamenti.clear();
+        m.id
+    }
+
+    /// L'alleato sotto `soglia_ultimatum` con un emendamento aperto: il governo IA lo accoglie.
+    #[test]
+    fn il_governo_ia_accoglie_l_emendamento_dell_alleato_sotto_40() {
+        let mut p = all_opposizione();
+        let id = legge_del_governo_al_voto(&mut p);
+        let a = *p.alleati().first().unwrap();
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.emendamenti.push(RichiestaEmendamento {
+            partito: a,
+            proposta: Vec::new(),
+            stato: StatoEmendamento::Aperto,
+            motivo: String::new(),
+        });
+        p.intesa.valori[a] = 30.0;
+        p.mosse.clear();
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let nome = &p.partiti[a].nome;
+        let riga = format!("Accoglie l'emendamento di {nome}: l'intesa di {nome} è sotto 40");
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Forbice in bilico (i seggi quasi tutti al giocatore, che vota no) e nessun ultimatum: il
+    /// governo IA pone la fiducia.
+    #[test]
+    fn il_governo_ia_pone_la_fiducia_se_la_forbice_e_in_bilico() {
+        let mut p = all_opposizione();
+        let id = legge_del_governo_al_voto(&mut p);
+        let g = p.giocatore;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == g { (390, 190) } else { (2, 1) };
+        }
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.linea_giocatore = Some(false);
+        p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
+        p.mosse.clear();
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert!(m.fiducia);
+        let riga = format!(
+            "Pone la fiducia su {}: la forbice include la sconfitta",
+            parlamento::nome_misura(&p.dati, m)
+        );
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il
+    /// bilancio, tranne in crisi. (Era in `tests/crisi.rs`: il turno di crisi nasce in chiusura,
+    /// e da fuori non si mette all'apertura di ottobre-dicembre.)
+    #[test]
+    fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
+        let mut p = all_opposizione();
+        while p.data.trimestre != 4 {
+            p.chiudi_turno();
+        }
+        p.economia.bilancio_presentato = None;
+        p.legislatura.crisi = Some(p.turno);
+        p.governo_ia();
+        assert!(p.economia.bilancio_presentato.is_none());
+        p.legislatura.crisi = None;
+        p.governo_ia();
+        assert!(p.economia.bilancio_presentato.is_some());
+    }
+
+    /// Sotto un governo IA il bilancio presentato in apertura non ha emendamenti, e nemmeno la
+    /// bozza ripresentata.
     #[test]
     fn il_bilancio_dell_ia_non_ha_emendamenti() {
         let mut p = all_opposizione();

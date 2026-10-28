@@ -778,7 +778,11 @@ fn margine_si_azzera_solo_a_gennaio_e_non_si_accumula() {
     assert_eq!((r[2], r[4]), (r[1], r[3]), "{r:?}");
     assert_eq!(r[5], r[1], "{r:?}");
     assert!(r[5..9].iter().all(|x| *x == r[1]), "{r:?}");
-    assert_eq!(r[9], r[1], "{r:?}");
+    // A gennaio 2029 governa l'IA, che ha indicizzato il bilancio: il margine riparte dal suo.
+    let v = p.vista();
+    assert_eq!(v.bilancio.anno, 2029);
+    let sanita = (v.bilancio.dicasteri.iter()).find(|d| d.id == "sanita");
+    assert_eq!(Some(r[9]), sanita.map(|d| d.margine), "{r:?}");
 }
 
 #[test]
