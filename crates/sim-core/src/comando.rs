@@ -113,6 +113,12 @@ pub enum Comando {
     PromuoviReferendum {
         disposizione: String,
     },
+    /// All'opposizione, nel turno dopo la seconda deliberazione della costituzionale `misura`
+    /// approvata senza i due terzi: chiede il referendum confermativo (`chiedi`) o vi rinuncia.
+    Confermativo {
+        misura: u32,
+        chiedi: bool,
+    },
 }
 
 impl Partita {
@@ -174,8 +180,8 @@ impl Partita {
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
     /// `RifiutaRibaltone` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
-    /// `PromuoviReferendum`, con la guardia `all_opposizione`; `Linea` anche a chi governa, sulle
-    /// proposte dell'opposizione) è di governo: se il giocatore non
+    /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
+    /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
     /// turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
     /// `Accogli`: `Comando`.
@@ -206,6 +212,10 @@ impl Partita {
                 self.all_opposizione()?;
                 let id = self.partiti()[self.giocatore()].id.clone();
                 return self.promuovi_referendum(&id, disposizione);
+            }
+            Comando::Confermativo { misura, chiedi } => {
+                self.all_opposizione()?;
+                return self.confermativo(*misura, *chiedi);
             }
             _ => {}
         }

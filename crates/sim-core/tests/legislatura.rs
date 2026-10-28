@@ -36,6 +36,7 @@ fn a_fine_legislatura_le_leggi_in_esame_decadono_e_i_gradini_si_sbloccano() {
             "voto": 24,
             "firme": false,
             "invito_astensione": false,
+            "richiesto": true,
             "del_giocatore": false,
         }]);
     })

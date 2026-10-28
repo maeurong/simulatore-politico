@@ -3,6 +3,7 @@
 use super::voto::{astensione, intenzioni, softmax};
 use super::{Elettorato, PER_REGIONE, condizione_di};
 use crate::dati::DatiGioco;
+use crate::informazione::Sondaggio;
 use crate::partiti::{Governo, Partito};
 
 /// Elettori che votano sì, no o si astengono.
@@ -105,15 +106,58 @@ impl Elettorato {
                 } else {
                     (vantaggio, 0.0)
                 };
-                let q = softmax(&[u_si, u_no, u_ast]);
-                let w = h * elettori;
-                a.si += w * q[0];
-                a.no += w * q[1];
-                a.astenuti += w * q[2];
+                a.aggiungi(h * elettori, [u_si, u_no, u_ast]);
             }
         }
         a
     }
+}
+
+impl Affluenza {
+    /// `w` elettori divisi fra sì, no e astensione col softmax delle utilità `u`.
+    fn aggiungi(&mut self, w: f64, u: [f64; 3]) {
+        let q = softmax(&u);
+        self.si += w * q[0];
+        self.no += w * q[1];
+        self.astenuti += w * q[2];
+    }
+}
+
+/// `Elettorato::referendum` sul `sondaggio`, che sbaglia come quelli veri (sondaggi-ed-errore:55):
+/// le regole IA non leggono lo stato vero. Per regione le posizioni dell'incrocio regionale al
+/// posto dei gruppi, pesate per gli elettori della regione nei dati; astensione dei dati e toccati
+/// sono la media dei gruppi della regione, pesata per le loro quote nei dati (la composizione del
+/// turno zero, non quella viva). Senza giudizio sul governo, invito né guadagno: `peso_governo`,
+/// `invito` e `guadagno` del quesito non contano.
+pub(crate) fn stima(dati: &DatiGioco, sondaggio: &Sondaggio, quesito: &Quesito) -> Affluenza {
+    let beta = dati.manopola("beta_distanza");
+    let mobilitazione = dati.manopola("mobilitazione_toccati");
+    let distanza = |x: f64, p: Option<f64>| p.map_or(0.0, |p| -beta * (x - p).powi(2));
+    let mut a = Affluenza {
+        si: 0.0,
+        no: 0.0,
+        astenuti: 0.0,
+    };
+    let regioni = dati.elettorato().regioni.iter().zip(&sondaggio.regioni);
+    for (r, (regione, incrocio)) in regioni.enumerate() {
+        let gruppi = r * PER_REGIONE..(r + 1) * PER_REGIONE;
+        let quota = |i: usize| dati.elettorato().gruppi.get(i).map_or(0.0, |g| g.quota);
+        let peso: f64 = gruppi.clone().map(quota).sum();
+        let media =
+            |f: &dyn Fn(usize) -> f64| gruppi.clone().map(|i| quota(i) * f(i)).sum::<f64>() / peso;
+        let u_ast = media(&|i| astensione(dati, i)) + quesito.astensione
+            - mobilitazione * media(&|i| quesito.toccati.get(i).copied().unwrap_or(0.0));
+        for (k, h) in incrocio.posizione.iter().enumerate() {
+            let x = (k + 1) as f64;
+            let u = [
+                distanza(x, quesito.pos_si),
+                distanza(x, quesito.pos_no),
+                u_ast,
+            ];
+            a.aggiungi(h * regione.elettori as f64, u);
+        }
+    }
+    a
 }
 
 #[cfg(test)]
@@ -121,6 +165,8 @@ mod tests {
     use super::*;
     use crate::dati::dati_base;
     use crate::economia::Economia;
+    use crate::elettorato::{PUNTI, media_pesata};
+    use crate::informazione::Incrocio;
     use crate::partiti;
 
     fn affluenza(dati: &DatiGioco, pos: (f64, f64), peso: f64, invito: f64) -> Affluenza {
@@ -158,5 +204,55 @@ mod tests {
         let totale = |a: &Affluenza| a.si + a.no + a.astenuti;
         assert!(con.si + con.no < senza.si + senza.no, "{con:?} {senza:?}");
         assert!((totale(&con) - totale(&senza)).abs() < 1e-6 * totale(&senza));
+    }
+
+    /// Un sondaggio senza errore, con le posizioni vere delle regioni: la stima di sì e no resta
+    /// entro 3 punti dal voto vero.
+    #[test]
+    fn la_stima_sul_sondaggio_vero_e_vicina() {
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let mut el = Elettorato::iniziale(&dati, partiti.len(), &Economia::iniziale(&dati));
+        el.avvia_voto(&dati, &partiti, &governo);
+        let regioni = (dati.elettorato().regioni.iter().enumerate())
+            .map(|(r, reg)| {
+                let gruppi = r * PER_REGIONE..(r + 1) * PER_REGIONE;
+                let pesi: Vec<f64> = (gruppi.clone())
+                    .map(|i| el.elettori(dati.elettorato(), i))
+                    .collect();
+                let posizioni = gruppi.map(|i| &el.gruppi[i].posizione[..]);
+                Incrocio {
+                    id: reg.id.clone(),
+                    campione: 0,
+                    quote: Vec::new(),
+                    posizione: media_pesata(&pesi, posizioni, PUNTI),
+                    approvazione: 0.0,
+                }
+            })
+            .collect();
+        let sondaggio = Sondaggio {
+            istituti: Vec::new(),
+            condizioni: Vec::new(),
+            fasce: Vec::new(),
+            regioni,
+        };
+        let d = dati.disposizione("regime_pensioni").unwrap();
+        let quesito = Quesito {
+            pos_si: Some(5.0),
+            pos_no: Some(3.0),
+            peso_governo: 0.0,
+            invito: 0.0,
+            astensione: dati.manopola("astensione_abrogativo"),
+            toccati: toccati(&dati, d),
+            guadagno: Vec::new(),
+        };
+        let quote = |a: Affluenza| {
+            let totale = a.si + a.no + a.astenuti;
+            (a.si / totale, a.no / totale)
+        };
+        let (si, no) = quote(stima(&dati, &sondaggio, &quesito));
+        let (si_vero, no_vero) = quote(el.referendum(&dati, &partiti, &governo, quesito));
+        assert!((si - si_vero).abs() < 0.03, "{si} {si_vero}");
+        assert!((no - no_vero).abs() < 0.03, "{no} {no_vero}");
     }
 }

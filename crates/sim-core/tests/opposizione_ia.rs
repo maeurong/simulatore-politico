@@ -404,3 +404,70 @@ fn la_proposta_dell_opposizione_costa_la_norma_lontana_solo_col_si_del_governo()
     assert!(alleati.iter().all(|a| col_si.contains(a)), "{col_si:?}");
     assert_eq!(norma_lontana_della_proposta(false), Vec::<usize>::new());
 }
+
+/// La partita di prova con le tutele crescenti all'estremo destro e il reintegro al centro, come
+/// in tests/referendum.rs: l'abrogazione del licenziamento piace a quasi tutti. `astensione` è
+/// `astensione_abrogativo`.
+fn licenziamento_abrogabile(astensione: &str) -> Partita {
+    let f = sostituisci(
+        senza_shock(),
+        "disposizioni",
+        "nome = \"tutele crescenti\", posizione = 4.0",
+        "nome = \"tutele crescenti\", posizione = 7.0",
+    );
+    let f = sostituisci(
+        f,
+        "disposizioni",
+        "nome = \"reintegro\", posizione = 2.0",
+        "nome = \"reintegro\", posizione = 4.0",
+    );
+    let f = imposta(
+        f,
+        "manopole",
+        "[astensione_abrogativo]\nvalore = ",
+        astensione,
+    );
+    Partita::nuova(sim_core::dati::DatiGioco::da_testi(&f).unwrap(), 1)
+}
+
+#[test]
+fn l_opposizione_ia_chiede_solo_referendum_vincenti() {
+    let mut p = licenziamento_abrogabile("-5.0");
+    // Ottobre-dicembre: fuori finestra. La proposta IA sul licenziamento lo metterebbe in esame.
+    chiudi_col_bilancio(&mut p);
+    togli_opposizione_ia(&mut p);
+    assert!(p.parlamento().referendum.is_none());
+    chiudi_col_bilancio(&mut p);
+    let r = (p.parlamento().referendum.clone()).expect("un abrogativo vincente c'è");
+    let promotore = r.promotore.unwrap();
+    assert_ne!(promotore, p.giocatore());
+    assert!(!p.governo().al_governo(promotore));
+    assert!(r.firme && r.richiesto);
+    let riga = (p.vista().mosse.into_iter())
+        .find(|m| m.testo.starts_with("Chiede il referendum su "))
+        .expect("la riga della mossa");
+    assert_eq!(riga.partito, p.partiti()[promotore].id);
+    assert!(
+        riga.testo.ends_with("% e il quorum") && riga.testo.contains(','),
+        "{}",
+        riga.testo
+    );
+    // Il giocatore ha la precedenza: col referendum chiesto nel turno l'IA non ne chiede altri.
+    let mut q = licenziamento_abrogabile("-5.0");
+    chiudi_col_bilancio(&mut q);
+    q.promuovi_referendum("sinistra", "nucleare").unwrap();
+    chiudi_col_bilancio(&mut q);
+    let r = q.parlamento().referendum.as_ref().unwrap();
+    assert_eq!(q.partiti()[r.promotore.unwrap()].id, "sinistra");
+    assert!(!(q.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum")));
+}
+
+#[test]
+fn senza_quorum_atteso_l_opposizione_ia_non_chiede_referendum() {
+    let mut p = licenziamento_abrogabile("5.0");
+    for _ in 0..3 {
+        chiudi_col_bilancio(&mut p);
+        assert!(p.parlamento().referendum.is_none());
+        assert!(!(p.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum")));
+    }
+}

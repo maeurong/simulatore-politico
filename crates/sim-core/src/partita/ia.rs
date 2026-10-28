@@ -1,12 +1,13 @@
 //! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta, il governo
 //! avversario che governa in apertura, affronta la crisi e va al voto anticipato, e l'opposizione
-//! che presenta la sfiducia.
+//! che presenta la sfiducia e chiede il referendum.
 
 use super::Partita;
 use crate::caso::Flusso;
 use crate::comando::Comando;
 use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
+use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
 use crate::legislatura::{self, Fase};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
@@ -270,6 +271,72 @@ impl Partita {
         if let Some((dicastero, testo)) = scelta {
             self.parlamento.sfiducia = Some((dicastero, promotore));
             self.mossa(promotore, testo);
+        }
+    }
+
+    /// L'abrogativo dell'opposizione IA (scelta 17 del piano), in aula prima delle firme se nel
+    /// turno nessuno ne ha chiesto uno (scelta 8). Sulla `stima` del sondaggio, fra le disposizioni
+    /// non elettorali che `Parlamento::abrogativo` ammette, quelle dove il sì vince e i votanti
+    /// superano la metà degli aventi diritto; vince il margine sì − no più ampio, a parità l'indice
+    /// minore. Promotore: il partito IA fuori dal governo, con seggi, che guadagna di più
+    /// dall'abrogazione, a parità l'indice minore; nessuno ci guadagna, nessun referendum. La
+    /// richiesta passa da `promuovi_referendum`, con le sue finestre (iter-legislativo-italiano:
+    /// 131-135).
+    pub(super) fn referendum_ia(&mut self) {
+        let pl = &self.parlamento;
+        let seggi = |j: usize| {
+            pl.seggi_camera.get(j).copied().unwrap_or(0)
+                + pl.seggi_senato.get(j).copied().unwrap_or(0)
+        };
+        let ia_fuori: Vec<usize> = (0..self.partiti.len())
+            .filter(|&j| j != self.giocatore && !self.governo.al_governo(j) && seggi(j) > 0)
+            .collect();
+        let Some(sonda) = ia_fuori.first().and_then(|&j| self.partiti.get(j)) else {
+            return;
+        };
+        let aula = self.stato_aula();
+        let sondaggio = &self.informazione.sondaggio;
+        let mut migliore: Option<(f64, Affluenza, usize, usize)> = None;
+        let non_elettorali =
+            (self.dati.disposizioni().iter()).filter(|x| x.norma != Norma::Elettorale);
+        for x in non_elettorali {
+            // Le regole non dipendono da quale partito fuori dal governo promuove.
+            let Ok(r) = pl.abrogativo(&aula, self.turno, &sonda.id, &x.id) else {
+                continue;
+            };
+            let Some(&(d, dopo)) = r.valori.first() else {
+                continue;
+            };
+            let a = stima(&self.dati, sondaggio, &self.quesito_abrogativo(d, dopo));
+            let margine = a.si - a.no;
+            let quorum = (a.si + a.no) * 2.0 > a.si + a.no + a.astenuti;
+            if margine > 0.0 && quorum && migliore.as_ref().is_none_or(|m| margine > m.0) {
+                migliore = Some((margine, a, d, dopo));
+            }
+        }
+        let Some((_, a, d, dopo)) = migliore else {
+            return;
+        };
+        let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &[(d, dopo)]);
+        let guadagni = voto::guadagni(&self.partiti, posizioni);
+        let guadagno = |j: usize| guadagni.get(j).copied().unwrap_or(0.0);
+        let Some(promotore) = (ia_fuori.into_iter())
+            .filter(|&j| guadagno(j) > 0.0)
+            .max_by(|&i, &j| guadagno(i).total_cmp(&guadagno(j)).then(j.cmp(&i)))
+        else {
+            return;
+        };
+        let x = &self.dati.disposizioni()[d];
+        let (nome, disposizione) = (x.nome.clone(), x.id.clone());
+        let id = self.partiti[promotore].id.clone();
+        if self.promuovi_referendum(&id, &disposizione).is_ok() {
+            let percento = format!("{:.1}", a.si / (a.si + a.no) * 100.0).replace('.', ",");
+            self.mossa(
+                promotore,
+                format!(
+                    "Chiede il referendum su {nome}: il sì vincerebbe col {percento}% e il quorum"
+                ),
+            );
         }
     }
 

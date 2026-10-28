@@ -36,6 +36,10 @@ pub struct Referendum {
     pub voto: u32,
     pub firme: bool,
     pub invito_astensione: bool,
+    /// Si vota: sempre l'abrogativo; il confermativo se un quinto di una Camera lo chiede (il
+    /// quinto contro, o il giocatore col suo `Confermativo`). Non richiesto, la legge entra in
+    /// vigore senza voto.
+    pub richiesto: bool,
 }
 
 /// Elettori arrotondati; `quorum` = più della metà degli aventi diritto ha votato. `decaduto` =

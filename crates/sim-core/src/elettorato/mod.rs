@@ -18,8 +18,8 @@ mod redditi;
 mod referendum;
 mod voto;
 pub use redditi::{Indici, Reddito};
-pub(crate) use referendum::toccati;
 pub use referendum::{Affluenza, Quesito};
+pub(crate) use referendum::{stima, toccati};
 pub use voto::{Intenzioni, intenzioni};
 
 /// Punti dell'istogramma di posizione.

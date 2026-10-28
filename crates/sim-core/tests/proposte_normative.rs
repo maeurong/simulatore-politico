@@ -313,7 +313,7 @@ fn abrogativo_in_corso_ferma_la_proposta_di_riforma() {
     let mut q = edita(&p, |j| {
         j["parlamento"]["referendum"] = json!({"tipo": "abrogativo", "misura": null,
             "valori": [[k, 0]], "promotore": null, "voto": 5, "firme": true,
-            "invito_astensione": false, "del_giocatore": false});
+            "invito_astensione": false, "del_giocatore": false, "richiesto": true});
     })
     .unwrap();
     q.chiudi_turno();

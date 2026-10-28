@@ -98,6 +98,7 @@ fn il_confermativo_approvato_entra_nell_eredita() {
             "voto": 0,
             "firme": true,
             "invito_astensione": false,
+            "richiesto": true,
         }]);
     })
     .unwrap();

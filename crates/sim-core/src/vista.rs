@@ -122,7 +122,9 @@ pub enum VoceIncarico {
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`
-/// = abrogativo con le firme in raccolta; il confermativo sempre `true`).
+/// = abrogativo con le firme in raccolta; il confermativo sempre `true`). `richiesto` = si vota
+/// (il confermativo non richiesto entra in vigore senza voto); `scelta` = il giocatore
+/// all'opposizione può ancora chiedere il confermativo o rinunciarvi (`Comando::Confermativo`).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaReferendum {
@@ -132,6 +134,8 @@ pub struct VistaReferendum {
     pub promotore: Option<String>,
     pub firme: bool,
     pub invito_astensione: bool,
+    pub richiesto: bool,
+    pub scelta: bool,
 }
 
 /// Seggi attesi in più (o in meno) di un partito con la legge elettorale; `partito` è un id.

@@ -167,6 +167,8 @@ fn senza_i_due_terzi_si_vota_il_referendum_confermativo() {
     let v = p.vista();
     assert!(v.esiti[0].approvata);
     assert_eq!(v.referendum[0].tipo, TipoReferendum::Confermativo);
+    // Il giocatore governa: il quinto contro lo chiede, lui non sceglie.
+    assert!(v.referendum[0].richiesto && !v.referendum[0].scelta);
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
     p.chiudi_turno();
     let r = &p.vista().esiti_referendum[0];

@@ -1,7 +1,7 @@
 mod comune;
 use comune::{
-    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, edita, imposta, presenta,
-    senza_shock, sostituisci,
+    all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, con_seggi,
+    dati_base, edita, imposta, presenta, senza_shock, sostituisci,
 };
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::TipoReferendum;
@@ -356,8 +356,8 @@ fn legge_in_calendario_blocca_l_abrogativo() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
-/// Un abrogativo col voto oltre l'anno e mezzo, o senza firme e col voto che non è quello del
-/// turno, è un salvataggio manomesso.
+/// Un abrogativo col voto oltre l'anno e mezzo, senza firme e col voto che non è quello del
+/// turno, o non richiesto, è un salvataggio manomesso.
 #[test]
 fn abrogativo_manomesso_al_caricamento_rifiutato() {
     let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
@@ -375,6 +375,14 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
             "{voto} {firme}: {e:?}"
         );
     }
+    let e = edita(&p, |j| {
+        j["parlamento"]["referendum"]["richiesto"] = false.into()
+    })
+    .err();
+    assert!(
+        matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
+        "{e:?}"
+    );
 }
 
 fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
@@ -499,4 +507,127 @@ fn un_abrogativo_su_un_gradino_spostato_dalla_legge_vota_quel_gradino() {
     assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
     let err = presenta(&mut p, &[("licenziamento", "solo_indennizzo")]).unwrap_err();
     assert!(err.to_string().contains("bloccato dal referendum"), "{err}");
+}
+
+/// Seggi di un ramo da `totale`: `giocatore` al partito del giocatore, il resto al partito del
+/// Presidente del Consiglio, nessuno agli altri.
+fn seggi_col_giocatore(p: &Partita, giocatore: u32, totale: u32) -> Vec<u32> {
+    let (g, pdc) = (p.giocatore(), p.governo().presidente);
+    (0..p.partiti().len())
+        .map(|j| match j {
+            _ if j == g => giocatore,
+            _ if j == pdc => totale - giocatore,
+            _ => 0,
+        })
+        .collect()
+}
+
+/// Da `all_opposizione()`: una costituzionale del governo IA (300 deputati e 150 senatori) in
+/// seconda deliberazione col voto nel turno e la linea no del giocatore, con seggi per cui passa
+/// senza i due terzi col solo partito del giocatore contro, oltre un quinto (140 su 400, 70 su
+/// 200). Dopo la chiusura il confermativo aspetta il voto.
+fn costituzionale_senza_due_terzi_all_opposizione() -> Partita {
+    let p = all_opposizione();
+    let p = con_seggi(
+        &p,
+        &seggi_col_giocatore(&p, 140, 400),
+        &seggi_col_giocatore(&p, 70, 200),
+    );
+    let dati = dati_base();
+    let k = dati.disposizione("numero_parlamentari").unwrap();
+    let g = dati.disposizioni()[k].gradino("300_150").unwrap();
+    let mut p = edita(&p, |j| {
+        let (id, turno) = (j["parlamento"]["prossima"].clone(), j["turno"].clone());
+        j["parlamento"]["prossima"] = (id.as_u64().unwrap() + 1).into();
+        let misura = serde_json::json!({
+            "id": id, "forma": "costituzionale", "valori": [[k, g]], "proponente": null,
+            "promotore": null, "linea_giocatore": false, "presentata": turno, "voto": turno,
+            "deliberazione": 2, "fiducia": false, "emendamenti": [],
+            "emendamenti_aperti": false, "fondi": null,
+        });
+        (j["parlamento"]["misure"].as_array_mut().unwrap()).push(misura);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(
+        p.parlamento().confermativi.len(),
+        1,
+        "{:?}",
+        p.vista().esiti
+    );
+    p
+}
+
+fn confermativo(p: &Partita, chiedi: bool) -> Comando {
+    let misura = p.parlamento().confermativi[0].misura.unwrap();
+    Comando::Confermativo { misura, chiedi }
+}
+
+#[test]
+fn il_giocatore_rinuncia_al_confermativo() {
+    let mut p = costituzionale_senza_due_terzi_all_opposizione();
+    p.comanda(confermativo(&p, false)).unwrap();
+    assert!(!p.vista().referendum[0].richiesto);
+    p.chiudi_turno();
+    assert!(p.parlamento().confermativi.is_empty());
+    assert!(p.vista().esiti_referendum.is_empty());
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
+}
+
+#[test]
+fn il_giocatore_ci_ripensa_e_chiede_il_confermativo() {
+    let mut p = costituzionale_senza_due_terzi_all_opposizione();
+    p.comanda(confermativo(&p, false)).unwrap();
+    p.comanda(confermativo(&p, true)).unwrap();
+    assert!(p.vista().referendum[0].richiesto);
+    p.chiudi_turno();
+    assert_eq!(
+        p.vista().esiti_referendum[0].tipo,
+        TipoReferendum::Confermativo
+    );
+}
+
+#[test]
+fn senza_scelta_vale_la_regola_dell_08() {
+    let mut p = costituzionale_senza_due_terzi_all_opposizione();
+    let v = p.vista();
+    assert!(v.referendum[0].richiesto && v.referendum[0].scelta);
+    p.chiudi_turno();
+    assert!(p.parlamento().confermativi.is_empty());
+    let r = &p.vista().esiti_referendum[0];
+    assert_eq!(r.tipo, TipoReferendum::Confermativo);
+    assert_eq!(
+        p.in_vigore("numero_parlamentari") == Some("300_150"),
+        r.approvato
+    );
+}
+
+#[test]
+fn chiedere_senza_un_quinto_e_rifiutato() {
+    let p = costituzionale_senza_due_terzi_all_opposizione();
+    // Il partito del giocatore scende sotto un quinto: 70 su 400, 35 su 200.
+    let mut p = con_seggi(
+        &p,
+        &seggi_col_giocatore(&p, 70, 400),
+        &seggi_col_giocatore(&p, 35, 200),
+    );
+    let prima = p.salva().unwrap();
+    let ignota = Comando::Confermativo {
+        misura: 9999,
+        chiedi: true,
+    };
+    for (c, atteso) in [
+        (
+            confermativo(&p, true),
+            "per chiederlo serve un quinto di una Camera, col tuo partito e i contrari",
+        ),
+        (ignota, "nessun confermativo da chiedere su questa misura"),
+    ] {
+        let e = p.comanda(c).unwrap_err();
+        assert!(
+            matches!(e, Errore::Comando(_)) && e.to_string().contains(atteso),
+            "{e}"
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
 }

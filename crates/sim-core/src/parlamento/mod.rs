@@ -549,6 +549,7 @@ impl Parlamento {
             voto,
             firme: false,
             invito_astensione: false,
+            richiesto: true,
         })
     }
 
@@ -1048,7 +1049,8 @@ impl Parlamento {
     /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti, come la
     /// sfiducia; un referendum
     /// esce dalle disposizioni, dai gradini o dai partiti, o ha il voto oltre `turno + 6`;
-    /// l'abrogativo senza firme ha un voto diverso da quello chiesto nel `turno`.
+    /// l'abrogativo non è richiesto, o senza firme ha un voto diverso da quello chiesto nel
+    /// `turno`.
     pub(crate) fn controlla(
         &self,
         dati: &DatiGioco,
@@ -1103,9 +1105,9 @@ impl Parlamento {
         if !self.decaduti.iter().all(|f| f.valido(dati)) {
             return ko("un decreto decaduto fuori dai dicasteri, dagli atti o da 0-1e15");
         }
-        // Senza firme, l'abrogativo è chiesto nel turno.
-        let firme_ok =
-            (self.referendum.iter()).all(|r| r.firme || Some(r.voto) == voto_abrogativo(turno));
+        // L'abrogativo si vota sempre; senza firme è chiesto nel turno.
+        let firme_ok = (self.referendum.iter())
+            .all(|r| r.richiesto && (r.firme || Some(r.voto) == voto_abrogativo(turno)));
         let referendum_ok = firme_ok
             && (self.referendum.iter().chain(&self.confermativi)).all(|r| {
                 r.valori.iter().all(valore_ok)

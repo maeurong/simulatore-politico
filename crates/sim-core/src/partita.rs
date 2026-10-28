@@ -258,7 +258,8 @@ impl Partita {
     // svuotamento delle mosse IA del turno prima → default delle
     // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
-    // leggi, con le dimissioni dopo la fiducia respinta → referendum → firme dell'abrogativo →
+    // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
+    // IA, se nel turno nessuno ne ha chiesto uno → firme dell'abrogativo →
     // sfiducia del giocatore all'opposizione) → esercizio provvisorio senza bilancio, dimissioni
     // → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
     // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
@@ -498,6 +499,10 @@ impl Partita {
         self.vota_leggi();
         self.vota_confermativi();
         self.vota_abrogativo();
+        // Il giocatore ha la precedenza: l'IA chiede solo se nel turno nessuno l'ha fatto.
+        if self.parlamento.referendum.is_none() {
+            self.referendum_ia();
+        }
         // Le firme dell'abrogativo chiesto nel turno sono raccolte.
         if let Some(r) = &mut self.parlamento.referendum {
             r.firme = true;
@@ -554,7 +559,9 @@ impl Partita {
     /// fiducia; approvata, ogni alleato che perde seggi attesi paga intesa. Costituzionale
     /// (iter-legislativo-italiano:76-80): la prima deliberazione approvata torna in calendario per
     /// la seconda; approvata la seconda senza i due terzi e con un quinto contro in un ramo, il
-    /// valore aspetta il referendum confermativo. Conversione respinta: il decreto decade
+    /// valore aspetta il referendum confermativo (`richiesto`); anche senza il quinto contro, se il
+    /// giocatore è fuori dal governo e col suo partito il quinto ci sarebbe (storia 97: non
+    /// richiesto finché non lo chiede). Conversione respinta: il decreto decade
     /// (`decreto_decaduto`), col costo e la valence del decreto invece di quelli della legge.
     /// Bilancio approvato: `approva_bilancio`; respinto: il bilancio presentato cade.
     fn vota(&mut self, id: u32) {
@@ -625,11 +632,14 @@ impl Partita {
         if approvata && !prima {
             let (c, s) = (&esito.camera, &esito.senato);
             let pl = &self.parlamento;
-            let quinto = parlamento::quinto_contro(&self.governo, &pl.seggi_camera, &p.linea)
-                || parlamento::quinto_contro(&self.governo, &pl.seggi_senato, &p.linea);
+            let richiesto = self.quinto_contro(&p.linea);
+            // Storia 97: il giocatore fuori dal governo può chiederlo se col suo partito il quinto
+            // c'è.
+            let chiedibile = !self.governo.al_governo(self.giocatore)
+                && self.quinto_contro(&self.linea_del_giocatore(&p.linea, false));
             let due_terzi = parlamento::due_terzi(c, &pl.seggi_camera)
                 && parlamento::due_terzi(s, &pl.seggi_senato);
-            if m.forma == FormaMisura::Costituzionale && !due_terzi && quinto {
+            if m.forma == FormaMisura::Costituzionale && !due_terzi && (richiesto || chiedibile) {
                 let voto = turno.saturating_add(1);
                 self.parlamento.confermativi.push(Referendum {
                     tipo: TipoReferendum::Confermativo,
@@ -640,6 +650,7 @@ impl Partita {
                     voto,
                     firme: true,
                     invito_astensione: false,
+                    richiesto,
                 });
             } else {
                 self.entra_in_vigore(&m);
@@ -786,7 +797,8 @@ impl Partita {
     }
 
     /// I referendum confermativi del turno (art. 138, nessun quorum), uno per legge sulla
-    /// posizione media dei suoi valori: approvato con `sì > no`, entrano in vigore tutti.
+    /// posizione media dei suoi valori: approvato con `sì > no`, entrano in vigore tutti. Il non
+    /// richiesto non si vota e non lascia esito: entra in vigore come approvato.
     fn vota_confermativi(&mut self) {
         let turno = self.turno;
         let (dovuti, restano): (Vec<Referendum>, Vec<Referendum>) =
@@ -795,21 +807,24 @@ impl Partita {
                 .partition(|r| r.voto <= turno);
         self.parlamento.confermativi = restano;
         for r in dovuti {
-            let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
-            let (pos_no, pos_si) = (posizioni.map(|p| p.0), posizioni.map(|p| p.1));
-            let quesito = Quesito {
-                pos_si,
-                pos_no,
-                peso_governo: self.dati.manopola("peso_governo_confermativo"),
-                invito: 0.0,
-                astensione: self.dati.manopola("astensione_confermativo"),
-                toccati: Vec::new(),
-                guadagno: Vec::new(),
-            };
-            let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
-            let nome = parlamento::nome(&self.dati, &r.valori);
-            let esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
-            if esito.approvato {
+            let esito = r.richiesto.then(|| {
+                let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &r.valori);
+                let (pos_no, pos_si) = (posizioni.map(|p| p.0), posizioni.map(|p| p.1));
+                let quesito = Quesito {
+                    pos_si,
+                    pos_no,
+                    peso_governo: self.dati.manopola("peso_governo_confermativo"),
+                    invito: 0.0,
+                    astensione: self.dati.manopola("astensione_confermativo"),
+                    toccati: Vec::new(),
+                    guadagno: Vec::new(),
+                };
+                let a =
+                    (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
+                let nome = parlamento::nome(&self.dati, &r.valori);
+                EsitoReferendum::da(r.tipo, nome, self.data, &a)
+            });
+            if esito.as_ref().is_none_or(|e| e.approvato) {
                 let (id, anno) = (r.misura.unwrap_or_default(), self.data.anno);
                 let legge = etichetta_legge(id, anno);
                 if r.del_giocatore {
@@ -826,7 +841,9 @@ impl Partita {
                     );
                 }
             }
-            self.parlamento.esiti_referendum.insert(0, esito);
+            if let Some(esito) = esito {
+                self.parlamento.esiti_referendum.insert(0, esito);
+            }
         }
     }
 
@@ -892,13 +909,9 @@ impl Partita {
             Vec::new()
         };
         let quesito = Quesito {
-            pos_si: x.posizione(dopo),
-            pos_no: x.posizione(vigente),
-            peso_governo: 0.0,
             invito,
-            astensione: self.dati.manopola("astensione_abrogativo"),
-            toccati: toccati(&self.dati, d),
             guadagno,
+            ..self.quesito_abrogativo(d, dopo)
         };
         let a = (self.elettorato).referendum(&self.dati, &self.partiti, &self.governo, quesito);
         let mut esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
@@ -934,6 +947,48 @@ impl Partita {
             p.valence -= self.dati.manopola("valence_referendum_fallito");
         }
         self.parlamento.esiti_referendum.insert(0, esito);
+    }
+
+    /// Il quesito dell'abrogativo su `d`: sì al gradino `dopo`, no al vigente, i toccati di `d`;
+    /// senza giudizio sul governo (scelta 9), invito né guadagno.
+    fn quesito_abrogativo(&self, d: usize, dopo: usize) -> Quesito {
+        let x = &self.dati.disposizioni()[d];
+        Quesito {
+            pos_si: x.posizione(dopo),
+            pos_no: x.posizione(self.disposizioni.voci[d].in_vigore),
+            peso_governo: 0.0,
+            invito: 0.0,
+            astensione: self.dati.manopola("astensione_abrogativo"),
+            toccati: toccati(&self.dati, d),
+            guadagno: Vec::new(),
+        }
+    }
+
+    /// I partiti fuori dal governo con la `linea` no fanno un quinto di una Camera
+    /// (iter-legislativo-italiano:77).
+    fn quinto_contro(&self, linea: &[bool]) -> bool {
+        let pl = &self.parlamento;
+        parlamento::quinto_contro(&self.governo, &pl.seggi_camera, linea)
+            || parlamento::quinto_contro(&self.governo, &pl.seggi_senato, linea)
+    }
+
+    /// `linea` col partito del giocatore che vota `si`.
+    fn linea_del_giocatore(&self, linea: &[bool], si: bool) -> Vec<bool> {
+        let mut linea = linea.to_vec();
+        if let Some(x) = linea.get_mut(self.giocatore) {
+            *x = si;
+        }
+        linea
+    }
+
+    /// La linea del voto sulla costituzionale `misura`, se il suo confermativo aspetta il voto:
+    /// dall'esito della seconda deliberazione, che resta due turni.
+    fn linea_del_confermativo(&self, misura: u32) -> Option<Vec<bool>> {
+        let pl = &self.parlamento;
+        pl.confermativi.iter().find(|r| r.misura == Some(misura))?;
+        let e = (pl.esiti.iter())
+            .find(|e| e.misura == misura && e.forma == FormaMisura::Costituzionale)?;
+        Some(e.linee.iter().map(|l| l.si).collect())
     }
 
     /// Il peso delle politiche nella vocazione di `j` (piano 8a): scala i colpi all'intesa.
@@ -1311,6 +1366,33 @@ impl Partita {
             disposizione,
         )?;
         self.parlamento.referendum = Some(r);
+        Ok(())
+    }
+
+    /// `Confermativo` (storia 97, iter-legislativo-italiano:77): il giocatore chiede il
+    /// confermativo della costituzionale `misura` se il suo partito, da solo o coi contrari, fa un
+    /// quinto di una Camera; rinunciando, resta richiesto se il quinto contro c'è senza di lui.
+    ///
+    /// # Errors
+    /// `Comando`, e la partita resta identica: nessun confermativo in attesa su `misura`, o
+    /// chiesto senza il quinto.
+    pub(crate) fn confermativo(&mut self, misura: u32, chiedi: bool) -> Result<(), Errore> {
+        let Some(linea) = self.linea_del_confermativo(misura) else {
+            return Err(Errore::Comando(
+                "nessun confermativo da chiedere su questa misura".into(),
+            ));
+        };
+        let richiesto = self.quinto_contro(&self.linea_del_giocatore(&linea, !chiedi));
+        if chiedi && !richiesto {
+            return Err(Errore::Comando(
+                "per chiederlo serve un quinto di una Camera, col tuo partito e i contrari".into(),
+            ));
+        }
+        for r in &mut self.parlamento.confermativi {
+            if r.misura == Some(misura) {
+                r.richiesto = richiesto;
+            }
+        }
         Ok(())
     }
 
@@ -2935,6 +3017,9 @@ impl Partita {
                         .map(|p| p.id.clone()),
                     firme: r.firme,
                     invito_astensione: r.invito_astensione,
+                    richiesto: r.richiesto,
+                    scelta: self.all_opposizione().is_ok()
+                        && (r.misura).is_some_and(|id| self.linea_del_confermativo(id).is_some()),
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
