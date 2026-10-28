@@ -99,16 +99,18 @@ pub(crate) fn voci(
 }
 
 impl Parlamento {
-    /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia
-    /// e senza emendamenti già aperti, chiede un emendamento ogni alleato distante almeno
-    /// `distanza_alleato` dalla misura, che tiene il dicastero proponente o che con la legge
-    /// elettorale perde seggi attesi; non chi ha già un emendamento deciso sulla misura.
+    /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia,
+    /// senza emendamenti già aperti e fuori dal posto riservato all'opposizione (scelta 15 del
+    /// piano 7b), chiede un emendamento ogni alleato distante almeno `distanza_alleato` dalla
+    /// misura, che tiene il dicastero proponente o che con la legge elettorale perde seggi attesi;
+    /// non chi ha già un emendamento deciso sulla misura.
     pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
         for m in &mut self.misure {
             let forma = matches!(m.forma, FormaMisura::Riforma | FormaMisura::Elettorale);
-            if !forma || m.voto != turno || m.emendamenti_aperti || m.fiducia {
+            let opposizione = m.promotore.is_some();
+            if !forma || m.voto != turno || m.emendamenti_aperti || m.fiducia || opposizione {
                 continue;
             }
             let nuova = posizioni(dati, aula.disposizioni, &m.valori).map(|(_, n)| n);

@@ -204,6 +204,7 @@ mod tests {
             intesa: &intesa,
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
+            giocatore: 0,
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -213,6 +214,8 @@ mod tests {
             forma: FormaMisura::Riforma,
             valori: vec![(eta, 0)],
             proponente: None,
+            promotore: None,
+            linea_giocatore: None,
             presentata: 0,
             voto: 0,
             deliberazione: 0,
@@ -287,6 +290,7 @@ mod tests {
             intesa: &intesa,
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
+            giocatore: 0,
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
@@ -299,6 +303,8 @@ mod tests {
             forma: FormaMisura::Riforma,
             valori: vec![(eta, 0)],
             proponente: None,
+            promotore: None,
+            linea_giocatore: None,
             presentata: 0,
             voto: 0,
             deliberazione: 0,

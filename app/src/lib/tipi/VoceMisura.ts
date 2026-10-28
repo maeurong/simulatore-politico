@@ -8,9 +8,11 @@ import type { VoceEmendamento } from "./VoceEmendamento";
 import type { VoceLinea } from "./VoceLinea";
 
 /**
- * Una misura in calendario; `proponente` è l'id del dicastero.
+ * Una misura in calendario; `proponente` è l'id del dicastero, `promotore` quello del partito
+ * d'opposizione che l'ha portata nel posto riservato; `linea_giocatore` la linea scelta dal
+ * giocatore all'opposizione, `None` = quella di default.
  */
-export type VoceMisura = { id: number, nome: string, forma: FormaMisura, proponente: string | null, valori: Array<ValoreProposto>, voto: Trimestre, deliberazione: number, fiducia: boolean, linee: Array<VoceLinea>, forbice: Forbice, emendamenti: Array<VoceEmendamento>, 
+export type VoceMisura = { id: number, nome: string, forma: FormaMisura, proponente: string | null, promotore: string | null, linea_giocatore: boolean | null, valori: Array<ValoreProposto>, voto: Trimestre, deliberazione: number, fiducia: boolean, linee: Array<VoceLinea>, forbice: Forbice, emendamenti: Array<VoceEmendamento>, 
 /**
  * Gli alleati che con la fiducia voterebbero no (id): sullo stato attuale, più il costo
  * della fiducia se non è ancora posta.

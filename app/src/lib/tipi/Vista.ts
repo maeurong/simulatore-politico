@@ -13,6 +13,7 @@ import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
+import type { VoceFascia } from "./VoceFascia";
 import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
@@ -71,7 +72,15 @@ disposizioni: Array<VoceDisposizione>,
 /**
  * Il parlamento in carica.
  */
-seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
+seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, 
+/**
+ * Sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in cifre.
+ */
+alleati_avversari: Array<VoceFascia>, 
+/**
+ * Il posto riservato all'opposizione di questo turno è del giocatore.
+ */
+posto_opposizione: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
 /**
  * I referendum in attesa del voto.
  */

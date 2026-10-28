@@ -50,6 +50,10 @@ pub struct Vista {
     /// Il parlamento in carica.
     pub seggi: Vec<SeggiPartito>,
     pub alleati: Vec<VoceAlleato>,
+    /// Sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in cifre.
+    pub alleati_avversari: Vec<VoceFascia>,
+    /// Il posto riservato all'opposizione di questo turno è del giocatore.
+    pub posto_opposizione: bool,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
     /// I referendum in attesa del voto.
@@ -124,7 +128,39 @@ pub struct VoceAlleato {
     pub variazioni: Vec<VariazioneIntesa>,
 }
 
-/// Una misura in calendario; `proponente` è l'id del dicastero.
+/// L'intesa di un alleato del governo IA vista dall'opposizione (ticket 12, riga 19): la causa
+/// solo in ultimatum.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceFascia {
+    pub partito: String,
+    pub fascia: FasciaIntesa,
+    pub causa_ultimatum: Option<CausaIntesa>,
+}
+
+/// `Ultimatum` con l'ultimatum posto, `Incrinata` sotto `soglia_incrinata`, `Solida` altrimenti.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum FasciaIntesa {
+    Solida,
+    Incrinata,
+    Ultimatum,
+}
+
+/// La sfiducia prima della presentazione: le firme bastano, la linea di ogni partito e l'esito
+/// sullo stato attuale, che il voto in chiusura ripete se nulla cambia prima.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct AnteprimaSfiducia {
+    pub firme: bool,
+    pub linee: Vec<VoceLinea>,
+    pub passa: bool,
+}
+
+/// Una misura in calendario; `proponente` è l'id del dicastero, `promotore` quello del partito
+/// d'opposizione che l'ha portata nel posto riservato; `linea_giocatore` la linea scelta dal
+/// giocatore all'opposizione, `None` = quella di default.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceMisura {
@@ -132,6 +168,8 @@ pub struct VoceMisura {
     pub nome: String,
     pub forma: FormaMisura,
     pub proponente: Option<String>,
+    pub promotore: Option<String>,
+    pub linea_giocatore: Option<bool>,
     pub valori: Vec<ValoreProposto>,
     pub voto: Trimestre,
     pub deliberazione: u8,

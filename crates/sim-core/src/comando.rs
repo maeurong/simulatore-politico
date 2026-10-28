@@ -93,6 +93,26 @@ pub enum Comando {
     /// Nel ribaltone col giocatore non primo per seggi, ne resta fuori: il Capo dello Stato cerca
     /// la maggioranza senza di lui.
     RifiutaRibaltone,
+    /// All'opposizione, la linea del partito del giocatore sulla misura: `None` torna a quella di
+    /// default.
+    Linea {
+        misura: u32,
+        si: Option<bool>,
+    },
+    /// All'opposizione, la mozione di sfiducia al governo (`None`) o al ministro del `dicastero`
+    /// (id): si vota in chiusura, dopo leggi e referendum.
+    Sfiducia {
+        dicastero: Option<String>,
+    },
+    /// All'opposizione, una legge nel posto riservato, nel turno in cui è del giocatore: si vota
+    /// al turno dopo.
+    PresentaProposta {
+        valori: Vec<ValoreProposto>,
+    },
+    /// All'opposizione, il referendum abrogativo su `disposizione` (id).
+    PromuoviReferendum {
+        disposizione: String,
+    },
 }
 
 impl Partita {
@@ -111,6 +131,24 @@ impl Partita {
             Fase::Sciolta => "non governi: Camere sciolte",
             Fase::Trattativa => "non governi: trattativa in corso",
             Fase::Ordinaria => "non governi: sei all'opposizione",
+        };
+        Err(Errore::Comando(motivo.into()))
+    }
+
+    /// La guardia dei comandi dell'opposizione e della loro anteprima: in fase ordinaria sotto un
+    /// governo IA, anche in crisi.
+    ///
+    /// # Errors
+    /// `Comando` a partita finita, quando il giocatore governa, a Camere sciolte e in trattativa.
+    pub(crate) fn all_opposizione(&self) -> Result<(), Errore> {
+        if self.finita() {
+            return Err(Errore::Comando("La partita è finita".into()));
+        }
+        let motivo = match self.legislatura().fase {
+            Fase::Sciolta => "Comando dell'opposizione: Camere sciolte",
+            Fase::Trattativa => "Comando dell'opposizione: trattativa in corso",
+            Fase::Ordinaria if self.governa() => "Comando dell'opposizione: governi tu",
+            Fase::Ordinaria => return Ok(()),
         };
         Err(Errore::Comando(motivo.into()))
     }
@@ -134,8 +172,10 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
-    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida` e
-    /// `RifiutaRibaltone` è di governo: se il giocatore non governa, `Comando` col motivo. Nel
+    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
+    /// `RifiutaRibaltone` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `PromuoviReferendum`, con la guardia `all_opposizione`) è di governo: se il giocatore non
+    /// governa, `Comando` col motivo. Nel
     /// turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
     /// `Accogli`: `Comando`.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
@@ -156,6 +196,17 @@ impl Partita {
         }
         if c == Comando::RifiutaRibaltone {
             return self.rifiuta_ribaltone();
+        }
+        match &c {
+            Comando::Linea { misura, si } => return self.linea(*misura, *si),
+            Comando::Sfiducia { dicastero } => return self.presenta_sfiducia(dicastero.as_deref()),
+            Comando::PresentaProposta { valori } => return self.presenta_proposta(valori),
+            Comando::PromuoviReferendum { disposizione } => {
+                self.all_opposizione()?;
+                let id = self.partiti()[self.giocatore()].id.clone();
+                return self.promuovi_referendum(&id, disposizione);
+            }
+            _ => {}
         }
         self.di_governo()?;
         if matches!(

@@ -24,8 +24,9 @@ use crate::parlamento::{
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
-    Anteprima, SeggiPartito, Vista, VistaBilancio, VistaReferendum, VistaStatistica, VoceAlleato,
-    VoceBudget, VoceDicastero, VoceGrandezza, VoceIncarico, VocePartito,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, SeggiPartito, Vista, VistaBilancio,
+    VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
+    VoceGrandezza, VoceIncarico, VocePartito,
 };
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -360,6 +361,7 @@ impl Partita {
             intesa: &self.intesa.valori,
             ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
+            giocatore: self.giocatore,
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
         let cx = Contesto {
@@ -456,6 +458,10 @@ impl Partita {
         if let Some(r) = &mut self.parlamento.referendum {
             r.firme = true;
         }
+        // Dopo `esegui`: il ministro sfiduciato non ha più un decreto in agenda.
+        if let Some((dicastero, promotore)) = self.parlamento.sfiducia.take() {
+            self.sfiducia(dicastero, Some(promotore));
+        }
     }
 
     /// In calendario c'è un bilancio presentato in questo turno, col voto a fine turno.
@@ -490,7 +496,9 @@ impl Partita {
     /// Il voto della misura `id` nei due rami; la misura esce dal calendario. Approvata: i valori
     /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
     /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
-    /// Consiglio. Chi vota sì sposta la sua posizione percepita verso la misura.
+    /// Consiglio, tranne sulla proposta dell'opposizione, che paga solo il blocco. Chi vota sì
+    /// sposta la sua posizione percepita verso la misura; il giocatore con la linea scelta, verso
+    /// la posizione che il suo voto sostiene.
     ///
     /// Elettorale (iter-legislativo-italiano:48-61): con la fiducia, prima il voto a blocchi e
     /// poi il voto finale, che porta i conteggi; bocciata al voto finale cade la legge, non la
@@ -613,17 +621,25 @@ impl Partita {
             {
                 penalizza(st, causa, -self.dati.manopola(costo), turno);
             }
-            if let Some(pdc) = self.partiti.get_mut(self.governo.presidente) {
+            // La proposta dell'opposizione respinta non costa nulla (scelta 15 del piano 7b).
+            if let Some(pdc) =
+                (self.partiti.get_mut(self.governo.presidente)).filter(|_| m.promotore.is_none())
+            {
                 pdc.valence -= self.dati.manopola(valence);
             }
             if let Some(f) = m.fondi {
                 self.decreto_decaduto(f);
             }
         }
-        if let Some(nuova) = nuova {
+        // Il giocatore con la linea scelta scivola verso la posizione che il suo voto sostiene: la
+        // nuova col sì, la vigente col no (scelta 14 del piano 7b).
+        if let Some((vigore, nuova)) = p.posizioni {
             let s = self.dati.manopola("scivolamento_percepita");
-            for (x, _) in self.partiti.iter_mut().zip(&p.linea).filter(|(_, si)| **si) {
-                x.posizione_percepita += s * (nuova - x.posizione_percepita);
+            let scelta = m.linea_giocatore.map(|_| self.giocatore);
+            let voti = self.partiti.iter_mut().zip(&p.linea).enumerate();
+            for (_, (x, &si)) in voti.filter(|&(j, (_, &si))| si || scelta == Some(j)) {
+                let sostenuta = if si { nuova } else { vigore };
+                x.posizione_percepita += s * (sostenuta - x.posizione_percepita);
             }
         }
         self.parlamento.esiti.insert(0, esito);
@@ -912,6 +928,7 @@ impl Partita {
             intesa: &self.intesa.valori,
             ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
+            giocatore: self.giocatore,
         }
     }
 
@@ -2273,33 +2290,11 @@ impl Partita {
     /// `intesa_sfiducia_respinta` e il `promotore` perde `valence_sfiducia_respinta`. `true` se
     /// è passata. Un `dicastero` fuori dai dati o in interim: nessun voto, `false`.
     pub(crate) fn sfiducia(&mut self, dicastero: Option<usize>, promotore: Option<usize>) -> bool {
-        let ministro = |i: usize| self.ministri.dicasteri.get(i)?.ministro.as_ref();
-        let (partito, tecnico) = match dicastero.map(ministro) {
-            Some(None) => return false,
-            Some(Some(m)) => (Some(m.partito), m.tecnico),
-            None => (None, false),
+        let tecnico = (dicastero.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref()))
+            .is_some_and(|m| m.tecnico);
+        let Some((linea, camera, senato, approvata)) = self.voto_sfiducia(dicastero) else {
+            return false;
         };
-        let (g, pl) = (&self.governo, &self.parlamento);
-        let q = self.quadro_veri();
-        let linea = legislatura::linea_sfiducia(
-            self.partiti.len(),
-            g,
-            &self.intesa.ultimatum,
-            partito,
-            |j| legislatura::vota_la_caduta(&q, j, &g.coalizione, g.presidente),
-        );
-        let blocchi = |seggi: &[u32]| {
-            (seggi.iter().zip(&linea)).fold(Conteggio { si: 0, no: 0 }, |c, (&x, &si)| {
-                if si {
-                    Conteggio { si: c.si + x, ..c }
-                } else {
-                    Conteggio { no: c.no + x, ..c }
-                }
-            })
-        };
-        let (camera, senato) = (blocchi(&pl.seggi_camera), blocchi(&pl.seggi_senato));
-        // Il pareggio respinge la mozione, anche quella automatica a fine crisi.
-        let approvata = camera.si > camera.no || senato.si > senato.no;
         let nome = match dicastero.and_then(|i| self.dati.dicasteri().get(i)) {
             Some(d) => format!("Mozione di sfiducia individuale: {}", d.nome),
             None => "Mozione di sfiducia al governo".into(),
@@ -2343,6 +2338,190 @@ impl Partita {
             }
         }
         approvata
+    }
+
+    /// La linea della sfiducia e i conteggi a blocchi di Camera e Senato sullo stato attuale, con
+    /// l'esito; `None` con un `dicastero` fuori dai dati o in interim.
+    fn voto_sfiducia(
+        &self,
+        dicastero: Option<usize>,
+    ) -> Option<(Vec<bool>, Conteggio, Conteggio, bool)> {
+        let partito = match dicastero {
+            Some(i) => Some(self.ministri.dicasteri.get(i)?.ministro.as_ref()?.partito),
+            None => None,
+        };
+        let (g, pl) = (&self.governo, &self.parlamento);
+        let q = self.quadro_veri();
+        let linea = legislatura::linea_sfiducia(
+            self.partiti.len(),
+            g,
+            &self.intesa.ultimatum,
+            partito,
+            |j| legislatura::vota_la_caduta(&q, j, &g.coalizione, g.presidente),
+        );
+        let blocchi = |seggi: &[u32]| {
+            (seggi.iter().zip(&linea)).fold(Conteggio { si: 0, no: 0 }, |c, (&x, &si)| {
+                if si {
+                    Conteggio { si: c.si + x, ..c }
+                } else {
+                    Conteggio { no: c.no + x, ..c }
+                }
+            })
+        };
+        let (camera, senato) = (blocchi(&pl.seggi_camera), blocchi(&pl.seggi_senato));
+        // Il pareggio respinge la mozione, anche quella automatica a fine crisi.
+        let approvata = camera.si > camera.no || senato.si > senato.no;
+        Some((linea, camera, senato, approvata))
+    }
+
+    /// Il dicastero della sfiducia del giocatore (`None` = al governo), le firme e la linea.
+    ///
+    /// # Errors
+    /// `Comando` dalla guardia dell'opposizione, col dicastero sconosciuto o in interim.
+    fn sfiducia_ammessa(
+        &self,
+        dicastero: Option<&str>,
+    ) -> Result<(Option<usize>, AnteprimaSfiducia), Errore> {
+        self.all_opposizione()?;
+        let ko = |m: String| Err(Errore::Comando(m));
+        let i = match dicastero {
+            None => None,
+            Some(id) => match self.dati.dicasteri().iter().position(|d| d.id == id) {
+                Some(i) => Some(i),
+                None => return ko(format!("dicastero sconosciuto: {id}")),
+            },
+        };
+        let Some((linea, _, _, passa)) = self.voto_sfiducia(i) else {
+            let nome = i
+                .and_then(|i| self.dati.dicasteri().get(i))
+                .map(|d| &d.nome);
+            return ko(format!("{} è in interim", nome.map_or("", |n| n.as_str())));
+        };
+        let (firme, servono) = self.firme_sfiducia();
+        let anteprima = AnteprimaSfiducia {
+            firme: firme >= servono,
+            linee: self.stato_aula().voci_linea(&linea),
+            passa,
+        };
+        Ok((i, anteprima))
+    }
+
+    /// Le firme della sfiducia del giocatore: i seggi alla Camera dei partiti fuori dalla
+    /// coalizione di governo, e quante ne servono, un decimo della Camera per eccesso
+    /// (iter-legislativo-italiano:142).
+    fn firme_sfiducia(&self) -> (u32, u32) {
+        let seggi = &self.parlamento.seggi_camera;
+        let firme = (seggi.iter().enumerate())
+            .filter(|&(j, _)| !self.governo.al_governo(j))
+            .map(|(_, &n)| n)
+            .sum();
+        (firme, seggi.iter().sum::<u32>().div_ceil(10))
+    }
+
+    /// L'anteprima della sfiducia del giocatore all'opposizione, al governo (`None`) o al ministro
+    /// del `dicastero` (id): le firme bastano, chi la voterebbe e se passa, come il voto in
+    /// chiusura se nulla cambia prima. Non tocca nulla.
+    ///
+    /// # Errors
+    /// `Comando` come `Sfiducia`, tranne la sfiducia già presentata e le firme che mancano.
+    pub fn anteprima_sfiducia(&self, dicastero: Option<&str>) -> Result<AnteprimaSfiducia, Errore> {
+        self.sfiducia_ammessa(dicastero).map(|(_, a)| a)
+    }
+
+    /// `Sfiducia` (scelta 13 del piano 7b): una per turno, votata in chiusura dopo leggi e
+    /// referendum.
+    ///
+    /// # Errors
+    /// `Comando`, e la partita resta identica: guardia dell'opposizione, sfiducia già presentata
+    /// nel turno, dicastero sconosciuto o in interim, firme sotto un decimo della Camera.
+    pub(crate) fn presenta_sfiducia(&mut self, dicastero: Option<&str>) -> Result<(), Errore> {
+        self.all_opposizione()?;
+        if self.parlamento.sfiducia.is_some() {
+            return Err(Errore::Comando(
+                "una sfiducia è già presentata in questo turno".into(),
+            ));
+        }
+        let (i, a) = self.sfiducia_ammessa(dicastero)?;
+        if !a.firme {
+            let (n, m) = self.firme_sfiducia();
+            return Err(Errore::Comando(format!(
+                "servono le firme di un decimo della Camera: {n} su {m}"
+            )));
+        }
+        self.parlamento.sfiducia = Some((i, self.giocatore));
+        Ok(())
+    }
+
+    /// Il partito del posto riservato all'opposizione nel turno (scelta 15 del piano 7b): la fila
+    /// sono i partiti fuori dalla coalizione di governo con seggi alla Camera, in ordine d'indice,
+    /// e nel turno `t` il posto va a `fila[t % fila.len()]`. `None` con la fila vuota.
+    fn posto_riservato(&self) -> Option<usize> {
+        let fila: Vec<usize> = (self.parlamento.seggi_camera.iter().enumerate())
+            .filter(|&(j, &n)| n > 0 && !self.governo.al_governo(j))
+            .map(|(j, _)| j)
+            .collect();
+        (self.turno as usize)
+            .checked_rem(fila.len())
+            .and_then(|k| fila.get(k).copied())
+    }
+
+    /// `Linea`: la linea del giocatore all'opposizione sulla misura.
+    ///
+    /// # Errors
+    /// `Comando` dalla guardia dell'opposizione o con la misura sconosciuta.
+    pub(crate) fn linea(&mut self, misura: u32, si: Option<bool>) -> Result<(), Errore> {
+        self.all_opposizione()?;
+        self.parlamento.linea(misura, si)
+    }
+
+    /// `PresentaProposta`: la legge del giocatore nel posto riservato, nel turno in cui è suo.
+    ///
+    /// # Errors
+    /// `Comando`, e la partita resta identica: guardia dell'opposizione, posto riservato di un
+    /// altro partito o di nessuno, poi quelli di `Parlamento::presenta_proposta`.
+    pub(crate) fn presenta_proposta(&mut self, valori: &[ValoreProposto]) -> Result<(), Errore> {
+        self.all_opposizione()?;
+        let g = self.giocatore;
+        match self.posto_riservato() {
+            Some(j) if j == g => {}
+            Some(j) => {
+                let nome = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+                return Err(Errore::Comando(format!(
+                    "il posto riservato di questo turno è di {nome}"
+                )));
+            }
+            None => {
+                return Err(Errore::Comando(
+                    "nessun posto riservato in questo turno".into(),
+                ));
+            }
+        }
+        (self.parlamento).presenta_proposta(&self.dati, &self.disposizioni, self.turno, g, valori)
+    }
+
+    /// Sotto un governo IA, l'intesa dei suoi alleati in fasce (spec riga 370): la causa solo in
+    /// ultimatum, mai le cifre.
+    fn voci_avversari(&self) -> Vec<VoceFascia> {
+        if self.governo.presidente == self.giocatore {
+            return Vec::new();
+        }
+        let soglia = self.dati.manopola("soglia_incrinata");
+        (self.alleati().into_iter())
+            .map(|j| {
+                let causa_ultimatum = self.intesa.ultimatum.get(j).copied().flatten();
+                let incrinata = self.intesa.valori.get(j).is_some_and(|&v| v < soglia);
+                let fascia = match (causa_ultimatum, incrinata) {
+                    (Some(_), _) => FasciaIntesa::Ultimatum,
+                    (None, true) => FasciaIntesa::Incrinata,
+                    (None, false) => FasciaIntesa::Solida,
+                };
+                VoceFascia {
+                    partito: self.partiti[j].id.clone(),
+                    fascia,
+                    causa_ultimatum,
+                }
+            })
+            .collect()
     }
 
     fn voci_partiti(&self) -> Vec<VocePartito> {
@@ -2422,6 +2601,9 @@ impl Partita {
                 })
                 .collect(),
             alleati: self.voci_alleati(),
+            alleati_avversari: self.voci_avversari(),
+            posto_opposizione: self.all_opposizione().is_ok()
+                && self.posto_riservato() == Some(self.giocatore),
             calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())

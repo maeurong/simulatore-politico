@@ -1173,3 +1173,10 @@ valore = 0.1
 min = 0.0
 max = 1.0
 ticket = "12"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa sotto cui l'opposizione vede incrinato un alleato del governo avversario)
+[soglia_incrinata]
+valore = 55.0
+min = 40.0
+max = 90.0
+ticket = "12"
