@@ -634,3 +634,84 @@ fn lo_stato_ia_sopravvive_al_salvataggio() {
     });
     assert!(fuori.is_err());
 }
+
+/// Il primo alleato del governo senza il quale la coalizione perde la maggioranza in una Camera.
+fn decisivo(p: &Partita) -> Option<usize> {
+    let (pl, g) = (p.parlamento(), p.governo());
+    let oltre = |seggi: &[u32], k: &[usize]| {
+        2 * k.iter().map(|&j| seggi[j]).sum::<u32>() > seggi.iter().sum::<u32>()
+    };
+    (g.coalizione.iter().copied())
+        .filter(|&a| a != g.presidente)
+        .find(|&a| {
+            let senza: Vec<usize> = g.coalizione.iter().copied().filter(|&j| j != a).collect();
+            !(oltre(&pl.seggi_camera, &senza) && oltre(&pl.seggi_senato, &senza))
+        })
+}
+
+/// L'alleato del governo IA senza il quale la coalizione perde la maggioranza esce sotto 25: il
+/// turno dopo è di crisi.
+fn in_crisi(p: Partita) -> Partita {
+    let alleato = decisivo(&p).expect("un alleato decisivo nel governo IA");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][alleato] = 10.0.into()).unwrap();
+    p.chiudi_turno();
+    assert!(p.vista().crisi);
+    p
+}
+
+#[test]
+fn in_crisi_il_governo_ia_allarga_o_si_dimette() {
+    let p = in_crisi(all_opposizione());
+    let l = p.legislatura();
+    assert!(!l.allargati.is_empty() || l.dimissioni);
+    assert!(!l.allargati.contains(&p.giocatore()));
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Allarga") || m.testo.starts_with("Si dimette"))
+    );
+}
+
+#[test]
+fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
+    // La crisi cade in ottobre-dicembre: ordinaria amministrazione, niente bilancio.
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 3 {
+        p.chiudi_turno();
+    }
+    let mut p = in_crisi(p);
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.economia().bilancio_presentato.is_none());
+    p.chiudi_turno();
+    assert!(p.salva().is_ok());
+}
+
+#[test]
+fn col_voto_anticipato_il_capo_dello_stato_esclude_chi_si_dimette() {
+    let p = all_opposizione();
+    let pdc = p.governo().presidente;
+    let mut p = edita(&p, |j| {
+        j["legislatura"]["dimissioni"] = true.into();
+        j["legislatura"]["voto_anticipato"] = true.into();
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(!p.legislatura().voto_anticipato);
+    match &p.legislatura().incarico {
+        Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
+            assert!(!coalizione.contains(&pdc));
+        }
+        Some(Incarico::Giocatore) => {
+            assert!(!p.legislatura().maggioranza.as_ref().unwrap().contains(&pdc));
+        }
+        None => assert_eq!(p.legislatura().fase, Fase::Sciolta),
+    }
+}
+
+#[test]
+fn voto_anticipato_solo_con_le_dimissioni() {
+    let p = all_opposizione();
+    let e = edita(&p, |j| j["legislatura"]["voto_anticipato"] = true.into());
+    assert!(e.is_err());
+}

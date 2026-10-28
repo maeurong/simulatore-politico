@@ -1236,3 +1236,10 @@ valore = 15.0
 min = 0.0
 max = 200.0
 ticket = "18"
+
+# assunzione del piano 8a, nessuna fonte in docs/ricerca (di quanto il valore atteso del voto anticipato, sul sondaggio pubblico, deve superare quello del restare al governo perché il Presidente del Consiglio IA si dimetta)
+[margine_voto_anticipato]
+valore = 0.5
+min = 0.0
+max = 4.0
+ticket = "18"

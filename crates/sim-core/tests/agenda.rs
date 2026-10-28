@@ -761,7 +761,10 @@ fn cantiere_con_residuo_pari_alla_rata_avanza() {
 
 #[test]
 fn margine_si_azzera_solo_a_gennaio_e_non_si_accumula() {
-    let mut p = Partita::nuova(fermare_gratis(), 1);
+    // Il governo IA del ribaltone (turno 6) resta fino a gennaio 2029: niente voto anticipato.
+    let f = imposta(file_base(), "manopole", "[costo_fermare]\nvalore = ", "0.0");
+    let f = imposta(f, "manopole", "[margine_voto_anticipato]\nvalore = ", "4.0");
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     let mut r = Vec::new();
     for turno in 0..=9 {
         r.push(residuo(&p, "sanita"));

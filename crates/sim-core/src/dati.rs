@@ -219,6 +219,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "alfa_governista",
     "soglia_programma",
     "seggi_programma_elettorale",
+    "margine_voto_anticipato",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",

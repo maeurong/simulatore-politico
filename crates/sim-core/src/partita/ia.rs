@@ -1,12 +1,12 @@
 //! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta e il governo
-//! avversario che governa in apertura.
+//! avversario che governa in apertura, affronta la crisi e va al voto anticipato.
 
 use super::Partita;
 use crate::caso::Flusso;
 use crate::comando::Comando;
 use crate::economia::{self, Bilancio};
 use crate::informazione::indice;
-use crate::legislatura::Fase;
+use crate::legislatura::{self, Fase};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto};
 use crate::vista::MossaIa;
 
@@ -77,13 +77,108 @@ impl Partita {
 
     /// In coda all'apertura del turno, a partita non finita e in fase ordinaria: le mosse dei
     /// partiti IA (scelta 8 del piano). Il governo IA governa se il Presidente del Consiglio non è
-    /// il giocatore.
+    /// il giocatore; nel turno di crisi, fuori dal turno del voto, affronta la crisi.
     pub(super) fn apertura_ia(&mut self) {
         if self.finita() || self.legislatura.fase != Fase::Ordinaria {
             return;
         }
         if self.governo.presidente != self.giocatore {
+            if self.in_crisi() && !self.legislatura.turno_di_voto(self.turno) {
+                self.crisi_ia();
+            }
             self.governo_ia();
+        }
+    }
+
+    /// Il governo IA nel turno di crisi (scelta 12 del piano, formazione-di-coalizioni:13): nella
+    /// fila per posizione dichiarata dei partiti con seggi, senza il giocatore, i due vicini della
+    /// coalizione; allarga a quello che le ridà la maggioranza in entrambe le Camere e ci
+    /// guadagna, il più vicino di posizione al membro accanto, a parità il più grande. Nessuno: si
+    /// dimette (iter-legislativo-italiano:42).
+    pub(super) fn crisi_ia(&mut self) {
+        let pc = self.governo.presidente;
+        let scelto = {
+            let pl = &self.parlamento;
+            let seggi = |j: usize| {
+                let di = |v: &[u32]| v.get(j).copied().unwrap_or(0);
+                di(&pl.seggi_camera) + di(&pl.seggi_senato)
+            };
+            let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
+            let mut fila: Vec<usize> = (0..self.partiti.len())
+                .filter(|&j| seggi(j) > 0 && j != self.giocatore)
+                .collect();
+            fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+            let coalizione = &self.governo.coalizione;
+            let dentro = |i: &usize| fila.get(*i).is_some_and(|j| coalizione.contains(j));
+            let primo = (0..fila.len()).find(dentro);
+            let ultimo = (0..fila.len()).rfind(dentro);
+            // (candidato, il membro accanto a lui nella fila)
+            let vicini = [
+                primo.and_then(|i| Some((*fila.get(i.checked_sub(1)?)?, *fila.get(i)?))),
+                ultimo.and_then(|i| Some((*fila.get(i + 1)?, *fila.get(i)?))),
+            ];
+            let q = self.quadro_veri();
+            // ponytail: il valore fuori dal governo è 0, non il termine dei seggi che il partito
+            // tiene comunque all'opposizione; il guadagno ne è sovrastimato. Via d'uscita: un
+            // `valore_all_opposizione` in `legislatura/crisi.rs`.
+            (vicini.into_iter().flatten())
+                .filter(|&(j, _)| {
+                    let mut con = coalizione.clone();
+                    con.push(j);
+                    legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
+                        && legislatura::valore_al_governo(&q, j, &con, false) > 0.0
+                })
+                .min_by(|&(a, x), &(b, y)| {
+                    ((pos(a) - pos(x)).abs())
+                        .total_cmp(&(pos(b) - pos(y)).abs())
+                        .then(seggi(b).cmp(&seggi(a)))
+                })
+                .map(|(j, _)| j)
+        };
+        match scelto.and_then(|j| Some((j, self.partiti.get(j)?.nome.clone()))) {
+            Some((j, nome)) => {
+                self.legislatura.allargati.push(j);
+                self.mossa(pc, format!("Allarga la maggioranza a {nome}"));
+            }
+            None => {
+                self.legislatura.dimissioni = true;
+                self.mossa(pc, "Si dimette: nessun partito contiguo ci guadagna".into());
+            }
+        }
+    }
+
+    /// Il voto anticipato si decide: governo IA in carica, fase ordinaria, dal quinto turno della
+    /// legislatura (`inizio + 4`) a due turni dalla scadenza, fuori dalla crisi (anche quella
+    /// aperta per il turno dopo) e senza dimissioni in corso.
+    fn finestra_voto_anticipato(&self) -> bool {
+        let l = &self.legislatura;
+        !self.finita()
+            && l.fase == Fase::Ordinaria
+            && self.governo.presidente != self.giocatore
+            && self.turno >= l.inizio.saturating_add(4)
+            && l.scadenza.saturating_sub(self.turno) >= 2
+            && l.crisi.is_none()
+            && !l.dimissioni
+    }
+
+    /// In chiusura, dopo il sondaggio (scelta 13 del piano): nella finestra, il governo IA si
+    /// dimette per andare al voto se il valore atteso del voto per il partito del Presidente del
+    /// Consiglio (`Quadro::valore` sul sondaggio pubblico, coalizioni dell'ultimo voto) supera di
+    /// `margine_voto_anticipato` quello del restare (`valore_al_governo` coi seggi veri e la
+    /// guida).
+    pub(super) fn voto_anticipato(&mut self) {
+        if !self.finestra_voto_anticipato() {
+            return;
+        }
+        let pc = self.governo.presidente;
+        let voto = self.quadro().valore(&self.dichiarazione_corrente(), pc);
+        let restare =
+            legislatura::valore_al_governo(&self.quadro_veri(), pc, &self.governo.coalizione, true);
+        if voto > restare + self.dati.manopola("margine_voto_anticipato") {
+            self.legislatura.dimissioni = true;
+            self.legislatura.voto_anticipato = true;
+            let testo = "Si dimette per andare al voto: i sondaggi gli danno più del restare";
+            self.mossa(pc, testo.into());
         }
     }
 
@@ -288,5 +383,71 @@ impl Partita {
             testo.push_str(&format!(", con le richieste di {}", nomi.join(", ")));
         }
         Some((b, quota, testo))
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::super::tests::all_opposizione;
+    use super::*;
+
+    const AL_VOTO: &str = "Si dimette per andare al voto: i sondaggi gli danno più del restare";
+
+    #[test]
+    fn niente_voto_anticipato_fuori_finestra() {
+        let mut p = all_opposizione();
+        let (inizio, scadenza) = (p.legislatura.inizio, p.legislatura.scadenza);
+        let mut a = |turno: u32, f: fn(&mut Partita)| {
+            p.turno = turno;
+            f(&mut p);
+            let si = p.finestra_voto_anticipato();
+            p.legislatura.crisi = None;
+            p.legislatura.dimissioni = false;
+            p.legislatura.fase = Fase::Ordinaria;
+            si
+        };
+        assert!(!a(inizio + 3, |_| {}));
+        assert!(a(inizio + 4, |_| {}));
+        assert!(a(scadenza - 2, |_| {}));
+        assert!(!a(scadenza - 1, |_| {}));
+        assert!(!a(scadenza, |_| {}));
+        assert!(!a(inizio + 4, |p| p.legislatura.crisi = Some(p.turno)));
+        assert!(!a(inizio + 4, |p| p.legislatura.dimissioni = true));
+        assert!(!a(inizio + 4, |p| p.legislatura.fase = Fase::Sciolta));
+    }
+
+    #[test]
+    fn si_va_al_voto_quando_conviene() {
+        let mut p = all_opposizione();
+        let pc = p.governo.presidente;
+        while p.turno < p.legislatura.inizio + 6 {
+            p.chiudi_turno();
+        }
+        assert_eq!(p.governo.presidente, pc);
+        assert_eq!(p.legislatura.fase, Fase::Ordinaria);
+        let mut resta = Partita::carica(&p.salva().unwrap()).unwrap();
+        resta.chiudi_turno();
+        assert!(resta.mosse.iter().all(|m| m.testo != AL_VOTO));
+        assert_eq!(resta.legislatura.fase, Fase::Ordinaria);
+        assert_eq!(resta.governo.presidente, pc);
+        for (j, x) in p.partiti.iter_mut().enumerate() {
+            x.valence = if j == pc { 3.0 } else { -3.0 };
+        }
+        // Gli alleati crollano nei sondaggi: con l'intesa piena non escono, e la crisi non c'è.
+        p.intesa.valori.fill(100.0);
+        p.chiudi_turno();
+        let id = &p.partiti[pc].id;
+        assert!(
+            p.mosse
+                .iter()
+                .any(|m| m.testo == AL_VOTO && &m.partito == id)
+        );
+        // Dimissioni e voto anticipato li consuma il Capo dello Stato nella stessa chiusura.
+        assert!(!p.legislatura.dimissioni && !p.legislatura.voto_anticipato);
+        assert_ne!(p.legislatura.fase, Fase::Ordinaria);
     }
 }

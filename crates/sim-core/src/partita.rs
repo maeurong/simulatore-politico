@@ -169,6 +169,7 @@ impl Partita {
                 dimissioni: false,
                 maggioranza: None,
                 crisi: None,
+                voto_anticipato: false,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -191,6 +192,7 @@ impl Partita {
                 dimissioni: false,
                 maggioranza: None,
                 crisi: None,
+                voto_anticipato: false,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -262,7 +264,8 @@ impl Partita {
     // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati
-    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della crisi
+    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
+    // governo IA, sul sondaggio appena rilevato (`voto_anticipato`) → fine della crisi
     // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
     // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
     // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
@@ -368,6 +371,8 @@ impl Partita {
         if l.fase == Fase::Ordinaria && !l.dimissioni && !di_voto {
             self.uscite(&escono);
         }
+        // Prima della fine della crisi, che la chiude: in crisi il governo IA non va al voto.
+        self.voto_anticipato();
         if self.legislatura.crisi == Some(self.turno) {
             self.fine_della_crisi(sfiducia_votata);
         }
@@ -1841,6 +1846,7 @@ impl Partita {
         l.maggioranza = None;
         l.allargati.clear();
         l.crisi = None;
+        l.voto_anticipato = false;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -2405,8 +2411,10 @@ impl Partita {
     }
 
     /// Il Capo dello Stato dopo le dimissioni: la maggioranza contigua
-    /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, con tutti se il
-    /// governo era IA (scelta 11 del piano 7b). Senza il giocatore, l'incarico IA; col giocatore
+    /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, senza il partito del
+    /// Presidente del Consiglio IA dimesso per il voto anticipato (decisione 2 di Mario, piano 8a),
+    /// con tutti per le altre cadute di un governo IA (scelta 11 del piano 7b); `voto_anticipato`
+    /// si azzera. Senza il giocatore, l'incarico IA; col giocatore
     /// primo per seggi (Camera più Senato, a parità l'indice più basso), l'incarico a lui con
     /// quella maggioranza; col giocatore non primo, `Guida`. Trovata, si va in trattativa; senza,
     /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce. Prima, le misure in
@@ -2419,7 +2427,9 @@ impl Partita {
         let del_governo = |m: &Misura| m.promotore.is_none();
         (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta, del_governo);
         let g = self.giocatore;
-        let escluso = (self.governo.presidente == g).then_some(g);
+        let anticipato = std::mem::take(&mut self.legislatura.voto_anticipato);
+        let presidente = self.governo.presidente;
+        let escluso = (presidente == g || anticipato).then_some(presidente);
         let pl = &self.parlamento;
         let trovata = legislatura::maggioranza_contigua(
             &self.partiti,
@@ -3207,12 +3217,29 @@ impl Partita {
         )?;
         let coalizione = self.coalizione_del_giocatore();
         let in_trattativa = self.con_incarico();
+        // In crisi sotto un governo IA gli allargati sono suoi (`crisi_ia`), mai il giocatore.
+        let crisi_ia = self.in_crisi()
+            && !self.governa()
+            && l.fase == Fase::Ordinaria
+            && !l.turno_di_voto(self.turno);
+        let allargata = if crisi_ia {
+            let mut c = self.governo.coalizione.clone();
+            c.extend(&l.allargati);
+            c
+        } else {
+            coalizione.clone()
+        };
         ok(
             l.allargati.iter().all(|&j| j < n)
-                && unici(coalizione.iter().copied())
-                && (self.allarga_ammesso() || l.allargati.is_empty()),
+                && unici(allargata.iter().copied())
+                && !(crisi_ia && l.allargati.contains(&self.giocatore))
+                && (self.allarga_ammesso() || crisi_ia || l.allargati.is_empty()),
             "legislatura.allargati con un partito fuori dai partiti, ripetuto, già nella \
-             coalizione o fuori dalla trattativa e dalla crisi col giocatore",
+             coalizione o fuori dalla trattativa e dalla crisi",
+        )?;
+        ok(
+            !l.voto_anticipato || l.dimissioni,
+            "legislatura.voto_anticipato senza dimissioni",
         )?;
         ok(
             l.proposta.as_ref().is_none_or(|v| {
@@ -3412,7 +3439,7 @@ mod tests {
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
     /// sotto un governo IA.
-    fn all_opposizione() -> Partita {
+    pub(super) fn all_opposizione() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 1.5,

@@ -15,10 +15,7 @@ mod voto;
 pub(crate) use coalizione::CausaDisponibilita;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
-pub(crate) use crisi::{linea_sfiducia, vota_la_caduta};
-// ponytail: i Task 6 e 8 del piano 8a usano `valore_al_governo`; togliere allora il `cfg(test)`.
-#[cfg(test)]
-pub(crate) use crisi::valore_al_governo;
+pub(crate) use crisi::{linea_sfiducia, valore_al_governo, vota_la_caduta};
 pub use eredita::{ConfrontoIndicatore, Eredita};
 pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
@@ -50,7 +47,8 @@ pub enum Fase {
 /// crisi, fuori da `coalizioni`; vuoto altrove. `dimissioni`: il governo cade alla chiusura del
 /// turno. `maggioranza`: la coalizione del ribaltone col giocatore primo per seggi, in trattativa;
 /// sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in corso, dopo
-/// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura.
+/// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura. `voto_anticipato`: le
+/// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -66,6 +64,7 @@ pub struct Legislatura {
     pub dimissioni: bool,
     pub maggioranza: Option<Vec<usize>>,
     pub crisi: Option<u32>,
+    pub voto_anticipato: bool,
 }
 
 impl Legislatura {
