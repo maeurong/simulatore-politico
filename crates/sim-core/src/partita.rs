@@ -3218,11 +3218,11 @@ impl Partita {
         let coalizione = self.coalizione_del_giocatore();
         let in_trattativa = self.con_incarico();
         // In crisi sotto un governo IA gli allargati sono suoi (`crisi_ia`), mai il giocatore.
-        let crisi_ia = self.in_crisi()
+        let in_crisi_ia = self.in_crisi()
             && !self.governa()
             && l.fase == Fase::Ordinaria
             && !l.turno_di_voto(self.turno);
-        let allargata = if crisi_ia {
+        let allargata = if in_crisi_ia {
             let mut c = self.governo.coalizione.clone();
             c.extend(&l.allargati);
             c
@@ -3232,8 +3232,8 @@ impl Partita {
         ok(
             l.allargati.iter().all(|&j| j < n)
                 && unici(allargata.iter().copied())
-                && !(crisi_ia && l.allargati.contains(&self.giocatore))
-                && (self.allarga_ammesso() || crisi_ia || l.allargati.is_empty()),
+                && !(in_crisi_ia && l.allargati.contains(&self.giocatore))
+                && (self.allarga_ammesso() || in_crisi_ia || l.allargati.is_empty()),
             "legislatura.allargati con un partito fuori dai partiti, ripetuto, già nella \
              coalizione o fuori dalla trattativa e dalla crisi",
         )?;

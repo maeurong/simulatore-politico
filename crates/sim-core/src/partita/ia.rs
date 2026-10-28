@@ -92,10 +92,11 @@ impl Partita {
 
     /// Il governo IA nel turno di crisi (scelta 12 del piano, formazione-di-coalizioni:13): nella
     /// fila per posizione dichiarata dei partiti con seggi, senza il giocatore, i due vicini della
-    /// coalizione; allarga a quello con l'intesa non sotto `soglia_uscita` (l'alleato appena
+    /// coalizione; allarga a quello con l'intesa non sotto `soglia_ultimatum` (l'alleato appena
     /// uscito resta fuori) che le ridà la maggioranza in entrambe le Camere e ci guadagna, il più
-    /// vicino di posizione al membro accanto, a parità il più grande. Nessuno: si dimette
-    /// (iter-legislativo-italiano:42).
+    /// vicino di posizione al membro accanto, a parità il più grande. Nessuno, o in esercizio
+    /// provvisorio (il governo cade comunque a fine turno, iter-legislativo-italiano:86): si
+    /// dimette (iter-legislativo-italiano:42).
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         let scelto = {
@@ -119,7 +120,10 @@ impl Partita {
                 ultimo.and_then(|i| Some((*fila.get(i + 1)?, *fila.get(i)?))),
             ];
             let q = self.quadro_veri();
-            let uscita = self.dati.manopola("soglia_uscita");
+            // Sotto `soglia_ultimatum`: l'alleato uscito sotto `soglia_uscita` non ci torna col
+            // ritorno dell'intesa di un turno.
+            let soglia = self.dati.manopola("soglia_ultimatum");
+            let provvisorio = self.economia.esercizio_provvisorio(self.data);
             // ponytail: il valore fuori dal governo è 0, non il termine dei seggi che il partito
             // tiene comunque all'opposizione; il guadagno ne è sovrastimato. Via d'uscita: un
             // `valore_all_opposizione` in `legislatura/crisi.rs`.
@@ -127,7 +131,8 @@ impl Partita {
                 .filter(|&(j, _)| {
                     let mut con = coalizione.clone();
                     con.push(j);
-                    !self.intesa.valori.get(j).is_some_and(|&x| x < uscita)
+                    !provvisorio
+                        && !self.intesa.valori.get(j).is_some_and(|&x| x < soglia)
                         && legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
                         && legislatura::valore_al_governo(&q, j, &con, false) > 0.0
                 })
@@ -424,15 +429,20 @@ mod tests {
     }
 
     #[test]
-    fn in_crisi_riprende_l_uscente_tornato_sopra_soglia() {
+    fn in_crisi_riprende_l_uscente_solo_da_soglia_ultimatum() {
         let mut p = all_opposizione();
         let destra = p.partiti.iter().position(|x| x.id == "destra").unwrap();
         p.intesa.valori[destra] = 10.0;
         p.chiudi_turno();
         assert!(p.in_crisi() && p.legislatura.dimissioni);
         assert!(p.legislatura.allargati.is_empty());
+        let soglia = p.dati.manopola("soglia_ultimatum");
         p.legislatura.dimissioni = false;
-        p.intesa.valori[destra] = p.dati.manopola("soglia_uscita");
+        p.intesa.valori[destra] = soglia - 1.0;
+        p.crisi_ia();
+        assert!(p.legislatura.dimissioni && p.legislatura.allargati.is_empty());
+        p.legislatura.dimissioni = false;
+        p.intesa.valori[destra] = soglia;
         p.crisi_ia();
         assert_eq!(p.legislatura.allargati, [destra]);
         assert!(
@@ -440,6 +450,8 @@ mod tests {
                 .iter()
                 .any(|m| m.testo == "Allarga la maggioranza a Destra")
         );
+        // `carica` ammette gli allargati del governo IA in crisi.
+        assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     }
 
     #[test]
@@ -461,7 +473,18 @@ mod tests {
         }
         // Gli alleati crollano nei sondaggi: con l'intesa piena non escono, e la crisi non c'è.
         p.intesa.valori.fill(100.0);
-        p.chiudi_turno();
+        let salvata = p.salva().unwrap();
+        // Voto − restare in questa chiusura: 5,9732 − 1,7933 = 4,1799 (misurato col seme 7).
+        let chiudi = |margine: f64| {
+            let mut q = Partita::carica(&salvata).unwrap();
+            q.dati.imposta_manopola("margine_voto_anticipato", margine);
+            q.chiudi_turno();
+            q
+        };
+        let q = chiudi(4.19);
+        assert!(q.mosse.iter().all(|m| m.testo != AL_VOTO));
+        assert_eq!(q.legislatura.fase, Fase::Ordinaria);
+        let p = chiudi(4.17);
         let id = &p.partiti[pc].id;
         assert!(
             p.mosse

@@ -649,42 +649,76 @@ fn decisivo(p: &Partita) -> Option<usize> {
         })
 }
 
-/// L'alleato del governo IA senza il quale la coalizione perde la maggioranza esce sotto 25: il
-/// turno dopo è di crisi.
-fn in_crisi(p: Partita) -> Partita {
+/// L'alleato del governo IA senza il quale la coalizione perde la maggioranza esce con `intesa`,
+/// sotto 25: il turno dopo è di crisi.
+fn in_crisi(p: Partita, intesa: f64) -> Partita {
     let alleato = decisivo(&p).expect("un alleato decisivo nel governo IA");
-    let mut p = edita(&p, |j| j["intesa"]["valori"][alleato] = 10.0.into()).unwrap();
+    let mut p = edita(&p, |j| j["intesa"]["valori"][alleato] = intesa.into()).unwrap();
     p.chiudi_turno();
     assert!(p.vista().crisi);
     p
 }
 
+const SI_DIMETTE: &str = "Si dimette: nessun partito contiguo ci guadagna";
+
 #[test]
 fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
-    let p = all_opposizione();
-    let uscente = decisivo(&p).unwrap();
-    let p = in_crisi(p);
-    let l = p.legislatura();
-    assert!(!l.allargati.contains(&uscente));
-    assert!(!l.allargati.contains(&p.giocatore()));
-    // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
-    assert!(l.dimissioni);
-    let riga = "Si dimette: nessun partito contiguo ci guadagna";
-    assert!(p.vista().mosse.iter().any(|m| m.testo == riga));
+    // 24: col ritorno dell'intesa l'uscente risale sopra 25 prima della crisi, non sopra 40.
+    for intesa in [10.0, 24.0] {
+        let p = all_opposizione();
+        let uscente = decisivo(&p).unwrap();
+        let p = in_crisi(p, intesa);
+        let l = p.legislatura();
+        assert!(!l.allargati.contains(&uscente), "{intesa}");
+        assert!(!l.allargati.contains(&p.giocatore()));
+        // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
+        assert!(l.dimissioni);
+        assert!(p.vista().mosse.iter().any(|m| m.testo == SI_DIMETTE));
+    }
+}
+
+/// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista
+/// (identitaria, la distanza le toglie il guadagno): uscita Destra, è il vicino che ridà la
+/// maggioranza al governo IA e ci guadagna.
+fn con_vicino(p: &Partita) -> Partita {
+    let camera = [10, 125, 26, 18, 33, 125, 30, 33];
+    let senato = [5, 69, 10, 7, 13, 65, 13, 18];
+    let p = comune::con_seggi(p, &camera, &senato);
+    edita(&p, |j| {
+        j["intesa"]["valori"][0] = 60.0.into();
+        j["partiti"][0]["vocazione"] = "governista".into();
+    })
+    .unwrap()
 }
 
 #[test]
-fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
-    // La crisi cade in ottobre-dicembre: ordinaria amministrazione, niente bilancio.
+fn il_governo_ia_in_crisi_allarga_ma_non_in_esercizio_provvisorio() {
     let mut p = all_opposizione();
     while p.vista().data.trimestre != 3 {
         p.chiudi_turno();
     }
-    let mut p = in_crisi(p);
-    assert_eq!(p.vista().data.trimestre, 4);
-    assert!(p.economia().bilancio_presentato.is_none());
+    // La crisi cade in ottobre-dicembre: ordinaria amministrazione, niente bilancio; allarga.
+    let mut q = in_crisi(con_vicino(&p), 10.0);
+    assert_eq!(q.vista().data.trimestre, 4);
+    assert!(q.economia().bilancio_presentato.is_none());
+    assert_eq!(q.legislatura().allargati, [0]);
+    q.chiudi_turno();
+    assert!(q.salva().is_ok());
+    // Ottobre-dicembre senza bilancio: la crisi cade a gennaio, in esercizio provvisorio, e il
+    // governo cade comunque a fine turno; niente allargamento.
     p.chiudi_turno();
-    assert!(p.salva().is_ok());
+    assert_eq!(p.vista().data.trimestre, 4);
+    let p = edita(&p, |j| {
+        j["economia"]["bilancio_presentato"] = json!(null);
+        let misure = j["parlamento"]["misure"].as_array_mut().unwrap();
+        misure.retain(|m| m["forma"] != "bilancio");
+    })
+    .unwrap();
+    let p = in_crisi(con_vicino(&p), 10.0);
+    assert_eq!(p.vista().data.trimestre, 1);
+    let l = p.legislatura();
+    assert!(l.allargati.is_empty() && l.dimissioni);
+    assert!(p.vista().mosse.iter().any(|m| m.testo == SI_DIMETTE));
 }
 
 #[test]
