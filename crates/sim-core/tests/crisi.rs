@@ -2,7 +2,7 @@ mod comune;
 use comune::{con_seggi, dati_base, edita, partito, presenta};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
-use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
+use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Partita};
 
 /// Destra 100 e centrodestra 101 alla Camera (201 su 400), 50 e 51 al Senato: senza il
@@ -260,4 +260,137 @@ fn salvare_a_meta_crisi() {
     a.chiudi_turno();
     b.chiudi_turno();
     assert_eq!(a.salva().unwrap(), b.salva().unwrap());
+}
+
+/// Spec riga 342 e decisione 2 di Mario: in crisi il bilancio non si presenta. Il centrodestra
+/// esce in ottobre-dicembre senza bilancio presentato: a gennaio, in esercizio provvisorio, la
+/// caduta è certa, l'allargamento inutile e la disponibilità vuota.
+#[test]
+fn crisi_in_esercizio_provvisorio_senza_allargamento() {
+    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    for _ in 0..4 {
+        p.chiudi_turno(); // fino a ottobre-dicembre 2027, senza bilancio
+    }
+    let cd = partito("centrodestra");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().crisi, Some(p.vista().turno));
+    assert!(p.governa());
+    assert!(p.vista().disponibilita.is_empty());
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(Comando::Allarga {
+            partiti: vec!["estrema_destra".into()],
+        })
+        .unwrap_err()
+        .to_string();
+    assert!(
+        e.contains(
+            "Estrema destra: allargamento inutile, senza bilancio in esercizio provvisorio il \
+             governo cade a fine turno"
+        ),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+    p.chiudi_turno();
+    assert!(!p.governa());
+    assert_ne!(p.legislatura().fase, Fase::Ordinaria);
+    assert!(!p.legislatura().dimissioni && p.legislatura().crisi.is_none());
+    assert!(!(p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Sfiducia));
+}
+
+/// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: la sfiducia
+/// automatica pareggia alla Camera e perde al Senato. Respinta, il governo resta senza
+/// maggioranza e la crisi si riapre (spec riga 336, niente governo di minoranza).
+#[test]
+fn sfiducia_pareggiata_riapre_la_crisi() {
+    let c = [10, 40, 30, 20, 100, 100, 100];
+    let s = [5, 20, 14, 10, 51, 50, 50];
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &c, &s);
+    let mut p = edita(&p, |j| j["legislatura"]["crisi"] = 0.into()).unwrap();
+    p.chiudi_turno();
+    let sfiducia = (p.vista().esiti.into_iter()).find(|e| e.forma == FormaMisura::Sfiducia);
+    assert!(sfiducia.is_some_and(|e| !e.approvata));
+    assert!(p.governa());
+    assert_eq!(p.legislatura().crisi, Some(1));
+    p.comanda(Comando::Allarga {
+        partiti: vec!["estrema_destra".into()],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(p.governa());
+    assert!(p.governo().al_governo(partito("estrema_destra")));
+    assert_eq!(p.legislatura().crisi, None);
+}
+
+/// Il centro (3), con la Sanità, esce e apre la crisi: destra e centrodestra, rimasti, hanno 181
+/// seggi su 400; l'estrema destra (110) rifà la maggioranza.
+fn col_centro_in_crisi() -> Partita {
+    let c = [10, 40, 39, 20, 81, 100, 110];
+    let s = [5, 20, 19, 10, 41, 50, 55];
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &c, &s);
+    let mut p = edita(&p, |j| {
+        j["governo"]["dicasteri"][3] = serde_json::json!(3);
+        j["governo"]["coalizione"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!(3));
+        j["ministri"]["dicasteri"][3]["ministro"]["partito"] = serde_json::json!(3);
+        j["intesa"]["valori"][3] = serde_json::json!(10.0);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().crisi, Some(1));
+    p
+}
+
+/// La Sanità del centro è in interim presso il presidente fino al rimpasto: nel turno di crisi il
+/// centrodestra, che resta, non paga la quota scoperta.
+#[test]
+fn in_crisi_niente_quota_scoperta() {
+    let mut p = col_centro_in_crisi();
+    p.chiudi_turno();
+    let cd = partito("centrodestra");
+    let quota = (p.intesa().variazioni.iter())
+        .any(|v| v.partito == cd && v.turno == 1 && v.causa == CausaIntesa::QuotaScoperta);
+    assert!(!quota);
+}
+
+/// A fine crisi l'estrema destra entra e l'ultimatum che le soglie pongono al centrodestra (39,9
+/// sotto 40) resta, anche se il ritorno lo riporta sopra la soglia nello stesso turno.
+#[test]
+fn a_fine_crisi_l_ultimatum_degli_alleati_resta() {
+    let cd = partito("centrodestra");
+    let p = col_centro_in_crisi();
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(39.9)).unwrap();
+    p.comanda(Comando::Allarga {
+        partiti: vec!["estrema_destra".into()],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(p.governa() && p.governo().al_governo(partito("estrema_destra")));
+    assert!(p.intesa().valori[cd] >= 40.0, "{}", p.intesa().valori[cd]);
+    assert!(p.intesa().ultimatum[cd].is_some());
+}
+
+/// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il
+/// bilancio, tranne in crisi.
+#[test]
+fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    for _ in 0..4 {
+        p.chiudi_turno(); // fino a ottobre-dicembre 2027
+    }
+    let cd = partito("centrodestra");
+    let bilancio = |crisi: Option<u32>| {
+        let mut p = edita(&p, |j| {
+            j["governo"]["presidente"] = cd.into();
+            j["legislatura"]["crisi"] = serde_json::json!(crisi);
+        })
+        .unwrap();
+        p.chiudi_turno();
+        (p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Bilancio)
+    };
+    assert!(bilancio(None));
+    assert!(!bilancio(Some(4)));
 }

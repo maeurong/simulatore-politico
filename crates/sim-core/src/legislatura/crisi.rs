@@ -32,7 +32,8 @@ pub(crate) fn linea_sfiducia(
 /// `j`, alleato del governo `attuale` presieduto da `presidente`, vota la caduta se gli vale più
 /// che restare, sui termini di `Quadro::termini` e coi seggi veri che `q` porta. Restare: seggi,
 /// governo certo, distanza da `attuale`, intesa sotto la base. Cadere: la maggioranza contigua
-/// senza `presidente` (formazione-di-coalizioni:13), se contiene `j`: seggi, governo certo,
+/// (formazione-di-coalizioni:13) senza `presidente` se è il giocatore, altrimenti con tutti come
+/// il Capo dello Stato (scelta 11 del piano 7b), se contiene `j`: seggi, governo certo,
 /// distanza da quella, guida se `j` è il primo per seggi (a parità l'indice più basso);
 /// altrimenti i termini di `j` al voto proiettato sul sondaggio, con le coalizioni dell'ultimo
 /// voto e `j` fuori da quella di `presidente`.
@@ -48,7 +49,8 @@ pub(crate) fn vota_la_caduta(q: &Quadro, j: usize, attuale: &[usize], presidente
     let restare = m("peso_seggi_coalizione") * quota + m("peso_governare")
         - m("peso_distanza_coalizione") * distanza(q.partiti, attuale, j)
         - m("peso_intesa_coalizione") * (m("intesa_base") - intesa).max(0.0) / 100.0;
-    let contigua = maggioranza_contigua(q.partiti, &camera, &senato, Some(presidente));
+    let escluso = (presidente == q.giocatore).then_some(presidente);
+    let contigua = maggioranza_contigua(q.partiti, &camera, &senato, escluso);
     let dopo = match contigua.filter(|k| k.contains(&j)) {
         Some(k) => {
             let primo = (k.iter()).max_by(|&&a, &&b| seggi(a).total_cmp(&seggi(b)).then(b.cmp(&a)));
