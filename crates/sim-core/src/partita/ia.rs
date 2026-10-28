@@ -92,9 +92,10 @@ impl Partita {
 
     /// Il governo IA nel turno di crisi (scelta 12 del piano, formazione-di-coalizioni:13): nella
     /// fila per posizione dichiarata dei partiti con seggi, senza il giocatore, i due vicini della
-    /// coalizione; allarga a quello che le ridà la maggioranza in entrambe le Camere e ci
-    /// guadagna, il più vicino di posizione al membro accanto, a parità il più grande. Nessuno: si
-    /// dimette (iter-legislativo-italiano:42).
+    /// coalizione; allarga a quello con l'intesa non sotto `soglia_uscita` (l'alleato appena
+    /// uscito resta fuori) che le ridà la maggioranza in entrambe le Camere e ci guadagna, il più
+    /// vicino di posizione al membro accanto, a parità il più grande. Nessuno: si dimette
+    /// (iter-legislativo-italiano:42).
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         let scelto = {
@@ -118,6 +119,7 @@ impl Partita {
                 ultimo.and_then(|i| Some((*fila.get(i + 1)?, *fila.get(i)?))),
             ];
             let q = self.quadro_veri();
+            let uscita = self.dati.manopola("soglia_uscita");
             // ponytail: il valore fuori dal governo è 0, non il termine dei seggi che il partito
             // tiene comunque all'opposizione; il guadagno ne è sovrastimato. Via d'uscita: un
             // `valore_all_opposizione` in `legislatura/crisi.rs`.
@@ -125,7 +127,8 @@ impl Partita {
                 .filter(|&(j, _)| {
                     let mut con = coalizione.clone();
                     con.push(j);
-                    legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
+                    !self.intesa.valori.get(j).is_some_and(|&x| x < uscita)
+                        && legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
                         && legislatura::valore_al_governo(&q, j, &con, false) > 0.0
                 })
                 .min_by(|&(a, x), &(b, y)| {
@@ -418,6 +421,25 @@ mod tests {
         assert!(!a(inizio + 4, |p| p.legislatura.crisi = Some(p.turno)));
         assert!(!a(inizio + 4, |p| p.legislatura.dimissioni = true));
         assert!(!a(inizio + 4, |p| p.legislatura.fase = Fase::Sciolta));
+    }
+
+    #[test]
+    fn in_crisi_riprende_l_uscente_tornato_sopra_soglia() {
+        let mut p = all_opposizione();
+        let destra = p.partiti.iter().position(|x| x.id == "destra").unwrap();
+        p.intesa.valori[destra] = 10.0;
+        p.chiudi_turno();
+        assert!(p.in_crisi() && p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty());
+        p.legislatura.dimissioni = false;
+        p.intesa.valori[destra] = p.dati.manopola("soglia_uscita");
+        p.crisi_ia();
+        assert_eq!(p.legislatura.allargati, [destra]);
+        assert!(
+            p.mosse
+                .iter()
+                .any(|m| m.testo == "Allarga la maggioranza a Destra")
+        );
     }
 
     #[test]

@@ -660,17 +660,17 @@ fn in_crisi(p: Partita) -> Partita {
 }
 
 #[test]
-fn in_crisi_il_governo_ia_allarga_o_si_dimette() {
-    let p = in_crisi(all_opposizione());
+fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
+    let p = all_opposizione();
+    let uscente = decisivo(&p).unwrap();
+    let p = in_crisi(p);
     let l = p.legislatura();
-    assert!(!l.allargati.is_empty() || l.dimissioni);
+    assert!(!l.allargati.contains(&uscente));
     assert!(!l.allargati.contains(&p.giocatore()));
-    assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .any(|m| m.testo.starts_with("Allarga") || m.testo.starts_with("Si dimette"))
-    );
+    // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
+    assert!(l.dimissioni);
+    let riga = "Si dimette: nessun partito contiguo ci guadagna";
+    assert!(p.vista().mosse.iter().any(|m| m.testo == riga));
 }
 
 #[test]
