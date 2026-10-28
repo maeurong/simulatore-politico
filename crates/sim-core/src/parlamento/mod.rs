@@ -912,10 +912,20 @@ impl Parlamento {
         }
     }
 
-    /// Ogni misura in calendario decade senza voto, senza costi e senza blocco, con l'esito
-    /// `decaduta`.
-    pub(crate) fn decadi_calendario(&mut self, dati: &DatiGioco, data: Trimestre, decaduta: &str) {
-        for m in std::mem::take(&mut self.misure) {
+    /// Ogni misura in calendario per cui vale `decade` decade senza voto, senza costi e senza
+    /// blocco, con l'esito `decaduta`; le altre restano.
+    pub(crate) fn decadi_calendario(
+        &mut self,
+        dati: &DatiGioco,
+        data: Trimestre,
+        decaduta: &str,
+        decade: impl Fn(&Misura) -> bool,
+    ) {
+        let (via, restano): (Vec<Misura>, Vec<Misura>) = std::mem::take(&mut self.misure)
+            .into_iter()
+            .partition(decade);
+        self.misure = restano;
+        for m in via {
             self.esiti.insert(
                 0,
                 EsitoVoto {
@@ -948,7 +958,9 @@ impl Parlamento {
         disposizioni: &Disposizioni,
         data: Trimestre,
     ) {
-        self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura");
+        self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura", |_| {
+            true
+        });
         self.respinte.clear();
         if let Some(r) = self.referendum.take() {
             let vigente = (r.valori.iter())

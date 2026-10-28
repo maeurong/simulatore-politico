@@ -302,3 +302,47 @@ fn il_posto_riservato_ha_le_sue_regole() {
         "una norma costituzionale non entra nel posto riservato",
     );
 }
+
+/// La proposta dell'opposizione non è del governo caduto: alla caduta senza voto non decade.
+#[test]
+fn la_proposta_dell_opposizione_sopravvive_alla_caduta() {
+    let mut p = all_opposizione();
+    al_posto_riservato(&mut p);
+    p.comanda(Comando::PresentaProposta {
+        valori: valori(&[("licenziamento", "reintegro")]),
+    })
+    .unwrap();
+    let id = p.vista().calendario[0].id;
+    let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = true.into()).unwrap();
+    p.chiudi_turno();
+    assert_ne!(p.legislatura().fase, Fase::Ordinaria);
+    assert!(p.vista().calendario.iter().any(|m| m.id == id));
+    assert!(!(p.vista().esiti.iter()).any(|e| e.misura == id));
+}
+
+/// In crisi sotto un governo IA, la sfiducia del giocatore respinta prende il posto di quella
+/// automatica: un solo voto, un solo ricompattamento, e la crisi si riapre.
+#[test]
+fn in_crisi_la_sfiducia_del_giocatore_sostituisce_quella_automatica() {
+    // Governo e opposizione pari alla Camera (200 e 200), il governo avanti al Senato (101).
+    let camera = [0, 100, 20, 20, 20, 40, 0, 200];
+    let senato = [0, 50, 15, 15, 11, 10, 0, 99];
+    let p = con_seggi(&all_opposizione(), &camera, &senato);
+    let turno = p.vista().turno;
+    let mut p = edita(&p, |j| j["legislatura"]["crisi"] = turno.into()).unwrap();
+    assert!(!p.anteprima_sfiducia(None).unwrap().passa);
+    let alleati = p.alleati();
+    p.comanda(Comando::Sfiducia { dicastero: None }).unwrap();
+    p.chiudi_turno();
+    let sfiducie = (p.vista().esiti.iter())
+        .filter(|e| e.forma == FormaMisura::Sfiducia)
+        .count();
+    assert_eq!(sfiducie, 1);
+    for j in alleati {
+        let ricompattati = (p.intesa().variazioni.iter())
+            .filter(|v| v.partito == j && v.causa == CausaIntesa::SfiduciaRespinta)
+            .count();
+        assert_eq!(ricompattati, 1, "{j}");
+    }
+    assert_eq!(p.legislatura().crisi, Some(turno + 1));
+}

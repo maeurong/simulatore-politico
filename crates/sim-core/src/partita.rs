@@ -244,19 +244,21 @@ impl Partita {
     // bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
     // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
-    // leggi, con le dimissioni dopo la fiducia respinta → referendum) → esercizio provvisorio
-    // senza bilancio, dimissioni → motore (misure, economia, grandezze, redditi, giudizio [prima di
-    // composizione, che aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio,
-    // statistica) → voto, nel turno del voto → soglie (ministri, ritorno dell'intesa) → uscite
-    // degli alleati (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della
-    // crisi (rimpasto o sfiducia) → Capo dello Stato se ci sono dimissioni, fuori dal turno del
-    // voto (che le azzera), col calendario del governo caduto che decade → governo nuovo,
-    // maggioranza contigua o scioglimento, nel turno di trattativa fuori dal turno del voto →
-    // calendario →
-    // apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte;
-    // il costo del taglio se l'anno entra in esercizio provvisorio).
+    // leggi, con le dimissioni dopo la fiducia respinta → referendum → firme dell'abrogativo →
+    // sfiducia del giocatore all'opposizione) → esercizio provvisorio senza bilancio, dimissioni
+    // → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
+    // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
+    // nel turno del voto → soglie (ministri, ritorno dell'intesa) → uscite degli alleati
+    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della crisi
+    // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
+    // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
+    // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
+    // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
+    // (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte; il costo
+    // del taglio se l'anno entra in esercizio provvisorio).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
-    // confermativi: il calendario si è svuotato alla caduta o al voto, e nessuno può presentare.
+    // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
+    // decade al voto, e nessuno può presentare.
     pub fn chiudi_turno(&mut self) {
         if self.finita() {
             return;
@@ -286,11 +288,12 @@ impl Partita {
         self.emendamenti_respinti(respinti);
         let effetti = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
-        if self.legislatura.fase == Fase::Sciolta {
+        let sfiducia_votata = if self.legislatura.fase == Fase::Sciolta {
             self.vota_confermativi();
+            false
         } else {
-            self.aula(occupato);
-        }
+            self.aula(occupato)
+        };
         // Esercizio provvisorio (iter-legislativo-italiano:86): un turno solo, poi il governo cade,
         // col bilancio respinto come con quello mai presentato.
         if self.legislatura.fase == Fase::Ordinaria
@@ -361,7 +364,7 @@ impl Partita {
             self.uscite(&escono);
         }
         if self.legislatura.crisi == Some(self.turno) {
-            self.fine_della_crisi();
+            self.fine_della_crisi(sfiducia_votata);
         }
         // Nel turno del voto vince il voto: le dimissioni si azzerano senza effetto.
         if std::mem::take(&mut self.legislatura.dimissioni) && !di_voto {
@@ -470,8 +473,9 @@ impl Partita {
         f(&mut self.ministri, &cx, &mut self.caso)
     }
 
-    /// `occupato`: il turno del bilancio o di crisi, letto prima di ogni voto.
-    fn aula(&mut self, occupato: bool) {
+    /// `occupato`: il turno del bilancio o di crisi, letto prima di ogni voto. `true` se si è
+    /// votata la sfiducia del giocatore al governo.
+    fn aula(&mut self, occupato: bool) -> bool {
         if occupato {
             for m in self.parlamento.slitta_leggi(self.turno) {
                 self.rimborsa_fiducia(&m);
@@ -487,9 +491,11 @@ impl Partita {
             r.firme = true;
         }
         // Dopo `esegui`: il ministro sfiduciato non ha più un decreto in agenda.
-        if let Some((dicastero, promotore)) = self.parlamento.sfiducia.take() {
-            self.sfiducia(dicastero, Some(promotore));
-        }
+        let Some((dicastero, promotore)) = self.parlamento.sfiducia.take() else {
+            return false;
+        };
+        self.sfiducia(dicastero, Some(promotore));
+        dicastero.is_none()
     }
 
     /// In calendario c'è un bilancio presentato in questo turno, col voto a fine turno.
@@ -524,7 +530,9 @@ impl Partita {
     /// Il voto della misura `id` nei due rami; la misura esce dal calendario. Approvata: i valori
     /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
     /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
-    /// Consiglio, tranne sulla proposta dell'opposizione, che paga solo il blocco. Chi vota sì
+    /// Consiglio, tranne sulla proposta dell'opposizione, che paga solo il blocco; approvata,
+    /// anche lei fa pagare intesa agli alleati del governo lontani dalla norma, o che con la
+    /// legge elettorale perdono seggi, come ogni altra. Chi vota sì
     /// sposta la sua posizione percepita verso la misura; il giocatore, a ogni voto, verso la
     /// posizione che il suo voto sostiene.
     ///
@@ -2297,8 +2305,9 @@ impl Partita {
     /// gli allargati entrano al governo come alla formazione (giudizio da zero, intesa alla base
     /// senza ultimatum), chi rompe l'impegno paga, rimpasto, ultimatum degli allargati sul valore
     /// corrente. Senza, la sfiducia automatica; respinta, la crisi si riapre il turno dopo. Non si
-    /// vota se il governo è già dimissionario.
-    fn fine_della_crisi(&mut self) {
+    /// vota se il governo è già dimissionario, né se nel turno si è già votata la sfiducia del
+    /// giocatore al governo (`sfiducia_votata`): respinta, vale come quella automatica.
+    fn fine_della_crisi(&mut self, sfiducia_votata: bool) {
         let l = &mut self.legislatura;
         l.crisi = None;
         let allargati = std::mem::take(&mut l.allargati);
@@ -2310,7 +2319,7 @@ impl Partita {
         let pl = &self.parlamento;
         if !legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &coalizione) {
             // Respinta, niente governo di minoranza (spec riga 336): la crisi si riapre.
-            if !self.sfiducia(None, None) {
+            if sfiducia_votata || !self.sfiducia(None, None) {
                 self.legislatura.crisi = Some(self.turno.saturating_add(1));
             }
             return;
@@ -2339,10 +2348,13 @@ impl Partita {
     /// quella maggioranza; col giocatore non primo, `Guida`. Trovata, si va in trattativa; senza,
     /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce. Prima, le misure in
     /// calendario del governo caduto decadono senza costi, come a fine legislatura
-    /// (iter-legislativo-italiano:80): una sua legge non costa al successore. I referendum restano.
+    /// (iter-legislativo-italiano:80): una sua legge non costa al successore. La proposta
+    /// dell'opposizione nel posto riservato non è del governo caduto e resta. I referendum
+    /// restano.
     fn capo_dello_stato(&mut self) {
         let decaduta = "Decaduta per la caduta del governo";
-        (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta);
+        let del_governo = |m: &Misura| m.promotore.is_none();
+        (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta, del_governo);
         let g = self.giocatore;
         let escluso = (self.governo.presidente == g).then_some(g);
         let pl = &self.parlamento;
