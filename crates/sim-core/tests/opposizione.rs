@@ -1,6 +1,7 @@
 mod comune;
 use comune::{all_opposizione, con_seggi, dati_base, edita, fondata};
 use sim_core::legislatura::Fase;
+use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
 use sim_core::vista::FasciaIntesa;
 use sim_core::{Comando, Partita};
@@ -112,15 +113,114 @@ fn la_sfiducia_respinta_ricompatta_e_costa_valence() {
     let e = (p.vista().esiti.into_iter())
         .find(|e| e.forma == FormaMisura::Sfiducia)
         .unwrap();
-    assert_eq!(e.approvata, a.passa); // ciò che l'anteprima mostrava
-    if !a.passa {
-        let g = p.giocatore();
-        let dati = dati_base();
-        let atteso =
-            dati.manopola("valence_sfiducia_respinta") * (1.0 - dati.manopola("ritorno_valence"));
-        let persa = gemella.partiti()[g].valence - p.partiti()[g].valence;
-        assert!((persa - atteso).abs() < 1e-9, "{persa}");
+    assert!(!a.passa); // il governo IA ha la maggioranza
+    assert!(!e.approvata); // ciò che l'anteprima mostrava
+    let g = p.giocatore();
+    let dati = dati_base();
+    let atteso =
+        dati.manopola("valence_sfiducia_respinta") * (1.0 - dati.manopola("ritorno_valence"));
+    let persa = gemella.partiti()[g].valence - p.partiti()[g].valence;
+    assert!((persa - atteso).abs() < 1e-9, "{persa}");
+}
+
+/// L'opposizione con 270 seggi su 400 alla Camera (giocatore 240, estrema destra 30).
+fn opposizione_in_maggioranza() -> Partita {
+    let p = all_opposizione();
+    let senato = p.parlamento().seggi_senato.clone();
+    con_seggi(&p, &[0, 50, 10, 10, 10, 50, 30, 240], &senato)
+}
+
+#[test]
+fn la_sfiducia_approvata_fa_cadere_il_governo() {
+    let mut p = opposizione_in_maggioranza();
+    assert!(p.anteprima_sfiducia(None).unwrap().passa);
+    p.comanda(Comando::Sfiducia { dicastero: None }).unwrap();
+    p.chiudi_turno();
+    let e = (p.vista().esiti.into_iter())
+        .find(|e| e.forma == FormaMisura::Sfiducia)
+        .unwrap();
+    assert!(e.approvata);
+    assert_ne!(p.legislatura().fase, Fase::Ordinaria); // trattativa o Camere sciolte
+}
+
+#[test]
+fn sfiducia_a_un_ministro_lo_manda_in_interim() {
+    let mut p = opposizione_in_maggioranza();
+    let (i, presidente) = (comune::indice("sanita"), p.governo().presidente);
+    assert!(p.ministri().dicasteri[i].ministro.is_some());
+    p.comanda(Comando::Sfiducia {
+        dicastero: Some("sanita".into()),
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let st = &p.ministri().dicasteri[i];
+    assert!(st.ministro.is_none());
+    assert_eq!(st.causa_dimissioni, Some(Causa::Sfiduciato));
+    assert_eq!(p.legislatura().fase, Fase::Ordinaria);
+    assert_eq!(p.governo().presidente, presidente);
+}
+
+#[test]
+fn una_sfiducia_per_turno_e_la_linea_su_una_misura_vera() {
+    let mut p = all_opposizione();
+    p.comanda(Comando::Sfiducia { dicastero: None }).unwrap();
+    let sfiducia = Comando::Sfiducia {
+        dicastero: Some("sanita".into()),
+    };
+    rifiutato(
+        &mut p,
+        sfiducia,
+        "una sfiducia è già presentata in questo turno",
+    );
+    let linea = Comando::Linea {
+        misura: 99,
+        si: Some(true),
+    };
+    rifiutato(&mut p, linea, "misura sconosciuta: 99");
+}
+
+/// Le firme bastano da un decimo esatto della Camera (40 su 400), non da uno in meno.
+#[test]
+fn le_firme_bastano_a_un_decimo_esatto() {
+    let p = all_opposizione();
+    let senato = p.parlamento().seggi_senato.clone();
+    for (opposizione, firme) in [(40, true), (39, false)] {
+        let camera = [0, 125, 26, 18, 33, 198 - opposizione, 0, opposizione];
+        let p = con_seggi(&p, &camera, &senato);
+        assert_eq!(
+            p.anteprima_sfiducia(None).unwrap().firme,
+            firme,
+            "{opposizione}"
+        );
     }
+}
+
+#[test]
+fn sfiducia_e_linea_sopravvivono_al_salvataggio() {
+    let mut p = all_opposizione();
+    al_posto_riservato(&mut p);
+    p.comanda(Comando::PresentaProposta {
+        valori: valori(&[("licenziamento", "reintegro")]),
+    })
+    .unwrap();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::Linea {
+        misura: id,
+        si: Some(false),
+    })
+    .unwrap();
+    p.comanda(Comando::Sfiducia { dicastero: None }).unwrap();
+    let salvato = p.salva().unwrap();
+    let ricaricata = Partita::carica(&salvato).unwrap();
+    assert_eq!(ricaricata.salva().unwrap(), salvato);
+    assert_eq!(
+        ricaricata.vista().calendario[0].linea_giocatore,
+        Some(false)
+    );
+    assert_eq!(
+        ricaricata.parlamento().sfiducia,
+        Some((None, p.giocatore()))
+    );
 }
 
 #[test]
@@ -136,7 +236,10 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
             valori: valori(&[("tetto_contante", "1000")]),
         })
         .unwrap_err();
-    assert!(e.to_string().contains("posto riservato"), "{e}");
+    assert!(
+        e.to_string().contains("il posto riservato è già occupato"),
+        "{e}"
+    );
     assert!(!p.vista().posto_riservato); // occupato dalla proposta
     let id = p.vista().calendario[0].id;
     assert_eq!(
