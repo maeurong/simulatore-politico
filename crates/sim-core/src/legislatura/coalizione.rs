@@ -162,7 +162,7 @@ impl Quadro<'_> {
     }
 
     /// `(peso_politiche, peso_poltrone)` della vocazione di `j` (piano 8a; misto 1 e 1).
-    pub(crate) fn pesi(&self, j: usize) -> (f64, f64) {
+    pub(super) fn pesi(&self, j: usize) -> (f64, f64) {
         let v = self
             .partiti
             .get(j)
@@ -170,12 +170,14 @@ impl Quadro<'_> {
         (v.peso_politiche(self.dati), v.peso_poltrone(self.dati))
     }
 
-    /// I termini, già pesati (seggi, governare e guida × poltrone, distanza × politiche: vocazione,
-    /// piano 8a) e con la loro causa, del valore atteso per `j` al voto con `d` e i
-    /// `seggi` di `d`, nella sua coalizione `k`: `peso_seggi_coalizione · s_j / S`,
-    /// `peso_governare · P_k` (coi seggi veri, 1 o 0), `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
+    /// I termini, già pesati dalla vocazione di `j` (piano 8a: `poltrone` e `politiche` sono i
+    /// suoi `peso_poltrone` e `peso_politiche`, vedi `pesi`) e con la loro causa, del valore
+    /// atteso per `j` al voto con `d` e i `seggi` di `d`, nella sua coalizione `k`:
+    /// `poltrone · peso_seggi_coalizione · s_j / S`, `poltrone · peso_governare · P_k` (coi seggi
+    /// veri, 1 o 0), `− politiche · peso_distanza_coalizione · d_jk`,
+    /// `poltrone · valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
-    /// k del giocatore]`.
+    /// k del giocatore]` (l'intesa non è pesata).
     pub(crate) fn termini(
         &self,
         d: &Dichiarazione,

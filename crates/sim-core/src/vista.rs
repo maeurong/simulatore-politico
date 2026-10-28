@@ -356,6 +356,7 @@ pub struct VocePartito {
     pub valence: f64,
     pub al_governo: bool,
     pub vocazione: Vocazione,
+    /// Vuoto per il partito del giocatore.
     pub leader: String,
 }
 

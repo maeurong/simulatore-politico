@@ -115,6 +115,27 @@ fn in_crisi_le_leggi_slittano() {
     assert_eq!(m.voto, 2);
 }
 
+/// Vocazione (piano 8a): l'estrema destra identitaria, a un punto di distanza, non entra per sole
+/// poltrone; resa mista (`con_seggi_ed_mista`) entra.
+#[test]
+fn identitaria_a_distanza_1_rifiuta_l_allargamento_per_sole_poltrone() {
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let cd = partito("centrodestra");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().crisi, Some(1));
+    let voce = (p.vista().disponibilita.into_iter())
+        .find(|v| v.partito == "estrema_destra")
+        .unwrap();
+    assert!(!voce.disponibile);
+    let e = p
+        .comanda(Comando::Allarga {
+            partiti: vec!["estrema_destra".into()],
+        })
+        .unwrap_err();
+    assert!(e.to_string().contains("Estrema destra non entra"), "{e}");
+}
+
 #[test]
 fn crisi_senza_allargamento_finisce_in_sfiducia() {
     let mut p = in_crisi();

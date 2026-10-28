@@ -4,4 +4,8 @@ import type { Vocazione } from "./Vocazione";
 /**
  * Valence esatta: è un ingresso dello scenario, non stato nascosto.
  */
-export type VocePartito = { id: string, nome: string, posizione_dichiarata: number, posizione_percepita: number, valence: number, al_governo: boolean, vocazione: Vocazione, leader: string, };
+export type VocePartito = { id: string, nome: string, posizione_dichiarata: number, posizione_percepita: number, valence: number, al_governo: boolean, vocazione: Vocazione, 
+/**
+ * Vuoto per il partito del giocatore.
+ */
+leader: string, };
