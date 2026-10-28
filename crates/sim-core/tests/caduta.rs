@@ -103,3 +103,17 @@ fn ribaltone_alla_vigilia_del_voto() {
     assert!(l.allargati.is_empty());
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
+
+/// La destra del giocatore tiene metà dei seggi in entrambe le Camere: senza di lei nessuna
+/// maggioranza, e il Capo dello Stato scioglie. Col governo IA la contigua con tutti c'è sempre
+/// (la fila intera ha tutti i seggi): lo scioglimento si vede solo dopo il governo del giocatore.
+#[test]
+fn senza_maggioranza_contigua_il_capo_dello_stato_scioglie() {
+    let c = [20, 60, 40, 20, 40, 200, 20];
+    let s = [10, 30, 20, 10, 20, 100, 10];
+    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &c, &s);
+    p.comanda(Comando::Dimettiti).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().fase, Fase::Sciolta);
+    assert_eq!(p.legislatura().incarico, None);
+}

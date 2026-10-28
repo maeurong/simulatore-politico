@@ -482,7 +482,9 @@ impl Ministri {
             | Comando::DichiaraCoalizione { .. }
             | Comando::ProponiSpartizione { .. }
             | Comando::Allarga { .. }
-            | Comando::Dimettiti => {}
+            | Comando::Dimettiti
+            | Comando::ChiediGuida
+            | Comando::RifiutaRibaltone => {}
         }
         Ok(EffettoComando::Nessuno)
     }

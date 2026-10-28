@@ -87,6 +87,12 @@ pub enum Comando {
     },
     /// Il Presidente del Consiglio si dimette: il governo cade alla chiusura del turno.
     Dimettiti,
+    /// Nel ribaltone col giocatore non primo per seggi, chiede la guida al primo: se la cede,
+    /// l'incarico passa al giocatore. Senza scelta, la chiusura la chiede.
+    ChiediGuida,
+    /// Nel ribaltone col giocatore non primo per seggi, ne resta fuori: il Capo dello Stato cerca
+    /// la maggioranza senza di lui.
+    RifiutaRibaltone,
 }
 
 impl Partita {
@@ -128,7 +134,8 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
-    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione` e `Allarga` è di governo: se il
+    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida` e
+    /// `RifiutaRibaltone` è di governo: se il
     /// giocatore non governa, `Comando` col motivo. Nel turno di crisi `PresentaBilancio`,
     /// `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e `Accogli`: `Comando`.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
@@ -143,6 +150,12 @@ impl Partita {
         }
         if let Comando::Allarga { partiti } = &c {
             return self.allarga(partiti);
+        }
+        if c == Comando::ChiediGuida {
+            return self.chiedi_guida();
+        }
+        if c == Comando::RifiutaRibaltone {
+            return self.rifiuta_ribaltone();
         }
         self.di_governo()?;
         if matches!(

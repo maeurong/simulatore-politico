@@ -244,16 +244,10 @@ impl Quadro<'_> {
                     partiti: d.partiti.iter().copied().filter(|&i| i != j).collect(),
                     cessioni: d.cessioni.iter().copied().filter(|c| c.0 != j).collect(),
                 };
-                let a = self.termini(&con, &seggi(&con), j);
-                let b = self.termini(&senza, &seggi(&senza), j);
-                let valore = |t: &[(CausaDisponibilita, f64)]| t.iter().map(|x| x.1).sum::<f64>();
-                let disponibile = valore(&a) > valore(&b);
-                let verso = if disponibile { 1.0 } else { -1.0 };
-                let causa = (a.iter().zip(&b))
-                    .map(|(&(c, x), &(_, y))| (c, verso * (x - y)))
-                    .filter(|&(_, scarto)| scarto > 0.0)
-                    .max_by(|x, y| x.1.total_cmp(&y.1))
-                    .map_or(CausaDisponibilita::Distanza, |(c, _)| c);
+                let (disponibile, causa) = confronta(
+                    &self.termini(&con, &seggi(&con), j),
+                    &self.termini(&senza, &seggi(&senza), j),
+                );
                 VoceDisponibilita {
                     partito: self
                         .partiti
@@ -265,6 +259,47 @@ impl Quadro<'_> {
             })
             .collect()
     }
+
+    /// Il valore atteso di `j` al voto con `d`: la somma dei suoi termini.
+    pub(crate) fn valore(&self, d: &Dichiarazione, j: usize) -> f64 {
+        somma(&self.termini(d, &self.seggi(d), j))
+    }
+
+    /// `j` cede la guida al giocatore se il suo valore con `d` su questo quadro supera quello con
+    /// `d_prima` sul quadro `prima`; altrimenti la causa, come in `voci`.
+    pub(crate) fn cede_la_guida(
+        &self,
+        d: &Dichiarazione,
+        prima: &Quadro,
+        d_prima: &Dichiarazione,
+        j: usize,
+    ) -> Result<(), CausaDisponibilita> {
+        let (cede, causa) = confronta(
+            &self.termini(d, &self.seggi(d), j),
+            &prima.termini(d_prima, &prima.seggi(d_prima), j),
+        );
+        if cede { Ok(()) } else { Err(causa) }
+    }
+}
+
+fn somma(t: &[(CausaDisponibilita, f64)]) -> f64 {
+    t.iter().map(|x| x.1).sum()
+}
+
+/// `a` vince se il suo valore supera quello di `b`; la causa è il termine con lo scarto più grande
+/// nel verso che decide, `Distanza` se nessuno scarta in quel verso.
+fn confronta(
+    a: &[(CausaDisponibilita, f64)],
+    b: &[(CausaDisponibilita, f64)],
+) -> (bool, CausaDisponibilita) {
+    let vince = somma(a) > somma(b);
+    let verso = if vince { 1.0 } else { -1.0 };
+    let causa = (a.iter().zip(b))
+        .map(|(&(c, x), &(_, y))| (c, verso * (x - y)))
+        .filter(|&(_, scarto)| scarto > 0.0)
+        .max_by(|x, y| x.1.total_cmp(&y.1))
+        .map_or(CausaDisponibilita::Distanza, |(c, _)| c);
+    (vince, causa)
 }
 
 /// La distanza media fra la posizione dichiarata di `j` e quelle degli altri membri di `k`; 0

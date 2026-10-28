@@ -1911,7 +1911,8 @@ impl Partita {
             .collect()
     }
 
-    /// Il governo nuovo alla chiusura della trattativa, dopo le soglie. Con l'incarico al
+    /// Il governo nuovo alla chiusura della trattativa, dopo le soglie. Con `Guida` ancora aperta
+    /// chiede la guida come `ChiediGuida`: ceduta, l'incarico è del giocatore. Con l'incarico al
     /// giocatore la sua proposta (o quella di default), i tecnici al suo partito, e ogni alleato
     /// riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)`; con l'incarico IA il
     /// primo partito per seggi e la spartizione di default, e ogni alleato riparte da
@@ -1922,8 +1923,10 @@ impl Partita {
     /// giudizio da zero per chi entra al governo, l'ultimatum sul valore di partenza (l'alleato
     /// che entra sotto la soglia lo pone subito, chi non è più alleato non ne ha), fase ordinaria.
     fn forma_governo(&mut self) {
+        // Il ribaltone senza scelta chiede la guida (decisione 1 di Mario); rifiutata, o senza
+        // `Guida` aperta, nulla cambia.
+        let _ = self.chiedi_guida();
         let seggi = self.seggi_per_partito();
-        let di = |j: &usize| seggi.get(*j).copied().unwrap_or(0);
         let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
         let sua = self.coalizione_del_giocatore();
         let (presidente, coalizione, assegnati) = if self.legislatura.incarico
@@ -1950,10 +1953,7 @@ impl Partita {
                 l.maggioranza = None;
                 return;
             };
-            let guida = (coalizione.iter())
-                .max_by_key(|&j| (di(j), std::cmp::Reverse(*j)))
-                .copied()
-                .unwrap_or(self.giocatore);
+            let guida = (self.primo_per_seggi(&coalizione)).unwrap_or(self.giocatore);
             let nessuno = vec![None; self.dati.dicasteri().len()];
             let v = legislatura::spartizione_di_default(
                 &self.dati,
@@ -2135,14 +2135,12 @@ impl Partita {
             &pl.seggi_senato,
             escluso,
         );
-        let seggi = self.seggi_per_partito();
-        let l = &mut self.legislatura;
         let Some(coalizione) = trovata else {
-            l.fase = Fase::Sciolta;
+            self.legislatura.fase = Fase::Sciolta;
             return;
         };
-        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
-        let primo = (coalizione.iter().copied()).max_by_key(|&j| (di(j), std::cmp::Reverse(j)));
+        let primo = self.primo_per_seggi(&coalizione);
+        let l = &mut self.legislatura;
         l.fase = Fase::Trattativa;
         l.incarico = Some(if !coalizione.contains(&g) {
             Incarico::Ia { coalizione }
@@ -2152,6 +2150,82 @@ impl Partita {
         } else {
             Incarico::Guida { coalizione }
         });
+    }
+
+    /// Il primo della `coalizione` per seggi (Camera più Senato), a parità l'indice più basso.
+    fn primo_per_seggi(&self, coalizione: &[usize]) -> Option<usize> {
+        let seggi = self.seggi_per_partito();
+        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
+        (coalizione.iter().copied()).max_by_key(|&j| (di(j), std::cmp::Reverse(j)))
+    }
+
+    /// La coalizione del ribaltone, in trattativa con `Guida`.
+    ///
+    /// # Errors
+    /// `Comando` senza `Guida` aperta.
+    fn guida_aperta(&self) -> Result<Vec<usize>, Errore> {
+        match &self.legislatura.incarico {
+            Some(Incarico::Guida { coalizione }) if self.legislatura.fase == Fase::Trattativa => {
+                Ok(coalizione.clone())
+            }
+            _ => Err(Errore::Comando(
+                "Ribaltone: nessuna guida da chiedere".into(),
+            )),
+        }
+    }
+
+    /// `ChiediGuida` (decisione 1 di Mario): il primo per seggi della coalizione del ribaltone
+    /// cede la guida, cioè la presidenza (formazione-di-coalizioni:22), se coi seggi veri e il
+    /// giocatore alla guida gli vale più del voto proiettato sul sondaggio pubblico con le
+    /// coalizioni dell'ultimo voto, dove pesa la guida della sua (formazione-di-coalizioni:48).
+    /// Ceduta, l'incarico passa al giocatore con quella maggioranza, come dopo il voto.
+    ///
+    /// # Errors
+    /// `Comando` senza `Guida` aperta, o «{nome} non ti cede la guida: {causa}»; la partita resta
+    /// identica.
+    pub(crate) fn chiedi_guida(&mut self) -> Result<(), Errore> {
+        let coalizione = self.guida_aperta()?;
+        let pl = &self.parlamento;
+        let veri = Quadro {
+            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        };
+        let ribaltone = Dichiarazione {
+            partiti: (coalizione.iter().copied())
+                .filter(|&j| j != self.giocatore)
+                .collect(),
+            cessioni: Vec::new(),
+        };
+        if let Some(l) = self.primo_per_seggi(&coalizione)
+            && let Err(causa) = veri.cede_la_guida(
+                &ribaltone,
+                &self.quadro(),
+                &self.dichiarazione_corrente(),
+                l,
+            )
+        {
+            return Err(Errore::Comando(format!(
+                "{} non ti cede la guida: {}",
+                self.partiti[l].nome,
+                causa.testo(false)
+            )));
+        }
+        let l = &mut self.legislatura;
+        l.incarico = Some(Incarico::Giocatore);
+        l.maggioranza = Some(coalizione);
+        Ok(())
+    }
+
+    /// `RifiutaRibaltone`: il giocatore resta fuori; la chiusura cerca la maggioranza contigua
+    /// senza di lui, altrimenti scioglie.
+    ///
+    /// # Errors
+    /// `Comando` senza `Guida` aperta.
+    pub(crate) fn rifiuta_ribaltone(&mut self) -> Result<(), Errore> {
+        self.guida_aperta()?;
+        // `maggioranza` è già `None`: `carica` la vuole solo con l'incarico al giocatore.
+        self.legislatura.incarico = None;
+        Ok(())
     }
 
     /// La mozione di sfiducia al governo (`dicastero` = `None`) o al ministro del `dicastero`,

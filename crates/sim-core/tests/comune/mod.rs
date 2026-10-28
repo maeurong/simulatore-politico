@@ -435,3 +435,26 @@ pub fn chiudi_col_bilancio(p: &mut Partita) {
     }
     p.chiudi_turno();
 }
+
+/// La partita vera (posizione 4,5) nel turno dopo il voto, riportata con `edita` in fase
+/// ordinaria sotto il governo uscente (destra e centrodestra), con `incarico = null`, seggi
+/// scritti a mano e `dimissioni = true`; poi la chiusura, che chiama il Capo dello Stato.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn caduto(camera: &[u32], senato: &[u32]) -> Partita {
+    let mut p = fondata(4.5);
+    p.chiudi_turno();
+    let p = edita(&p, |j| {
+        j["legislatura"]["fase"] = "ordinaria".into();
+        j["legislatura"]["incarico"] = serde_json::Value::Null;
+        j["legislatura"]["dimissioni"] = true.into();
+    })
+    .unwrap();
+    let mut p = con_seggi(&p, camera, senato);
+    assert_eq!(p.governo().presidente, partito("destra"));
+    assert!(p.governo().al_governo(partito("centrodestra")));
+    p.chiudi_turno();
+    p
+}

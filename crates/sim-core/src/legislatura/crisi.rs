@@ -84,7 +84,7 @@ pub(crate) fn vota_la_caduta(q: &Quadro, j: usize, attuale: &[usize], presidente
                     .collect(),
                 cessioni: Vec::new(),
             };
-            p.termini(&d, &p.seggi(&d), j).iter().map(|x| x.1).sum()
+            p.valore(&d, j)
         }
     };
     dopo > restare
