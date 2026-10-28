@@ -311,15 +311,112 @@ pub fn sanita_cara(mut f: FileDati) -> FileDati {
     f
 }
 
-/// La partita vera col seme 7, fondata al posto `posto`.
+/// La partita vera col seme 7, fondata alla posizione `posizione`.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
-pub fn fondata(posto: f64) -> Partita {
+pub fn fondata(posizione: f64) -> Partita {
     let f = sim_core::legislatura::Fondazione {
         nome: "Partito nuovo".into(),
-        posto,
+        posizione,
     };
     Partita::fonda(dati_base(), 7, &f).unwrap()
+}
+
+/// Seggi scritti a mano nell'ordine dei partiti; le somme devono restare i `totali`.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn con_seggi(p: &Partita, camera: &[u32], senato: &[u32]) -> Partita {
+    edita(p, |j| {
+        let somma = |v: &[u32]| v.iter().sum::<u32>();
+        let totali = serde_json::json!([somma(camera), somma(senato)]);
+        assert_eq!(j["legislatura"]["totali"], totali);
+        j["parlamento"]["seggi_camera"] = serde_json::json!(camera);
+        j["parlamento"]["seggi_senato"] = serde_json::json!(senato);
+    })
+    .unwrap()
+}
+
+/// La partita vera (posizione 4,5) dopo il voto, in trattativa con l'incarico al giocatore,
+/// con `coalizioni` (JSON di indici) e seggi scritti a mano.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn in_trattativa(coalizioni: serde_json::Value, camera: &[u32], senato: &[u32]) -> Partita {
+    let mut p = fondata(4.5);
+    p.chiudi_turno();
+    let p = edita(&p, |j| {
+        j["legislatura"]["incarico"] = serde_json::json!("Giocatore");
+        j["legislatura"]["coalizioni"] = coalizioni;
+    })
+    .unwrap();
+    con_seggi(&p, camera, senato)
+}
+
+/// Indice del partito `id` nello scenario: lo stesso nella partita di prova e in quella vera.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn partito(id: &str) -> usize {
+    (dati_base().scenario().partiti.iter())
+        .position(|p| p.id == id)
+        .unwrap()
+}
+
+/// Alla posizione 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
+/// Task 9: al 6,5 nessun partito è disponibile, Task 7).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn vinta() -> Partita {
+    let mut p = fondata(4.5);
+    let alleati: Vec<String> = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti: alleati,
+        cessioni: vec![],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(
+        p.legislatura().incarico,
+        Some(sim_core::legislatura::Incarico::Giocatore),
+        "{:?}",
+        p.vista().elezioni[0]
+    );
+    p
+}
+
+/// `vinta()` con la trattativa chiusa: il giocatore governa.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn al_governo() -> Partita {
+    let mut p = vinta();
+    p.chiudi_turno();
+    p
+}
+
+/// Quanto la valence di `j` in `p` è scesa oltre il ritorno di un turno, dai `prima` (i partiti
+/// prima della chiusura).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn calo_oltre_il_ritorno(prima: &[sim_core::partiti::Partito], p: &Partita, j: usize) -> f64 {
+    let r = dati_base().manopola("ritorno_valence");
+    let x = &prima[j];
+    x.valence + r * (x.valence_base - x.valence) - p.partiti()[j].valence
 }

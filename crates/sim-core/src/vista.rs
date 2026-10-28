@@ -110,6 +110,8 @@ pub struct VoceAlleato {
     pub partito: String,
     pub intesa: f64,
     pub ultimatum: bool,
+    /// La causa con cui l'ultimatum è stato posto; resta finché dura.
+    pub causa_ultimatum: Option<CausaIntesa>,
     pub causa_principale: Option<CausaIntesa>,
     /// Variazioni degli ultimi due turni.
     pub variazioni: Vec<VariazioneIntesa>,

@@ -263,9 +263,9 @@ impl Ministri {
     /// salvataggio).
     pub(super) fn accogli(&mut self, cx: &Contesto, i: usize) -> Result<i64, Errore> {
         let (k, importo) = self.fondi_da_accogliere(cx, i)?;
-        let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+        let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let st = &self.dicasteri[i];
-        let nessuna = || Errore::Comando(format!("nessuna proposta: {id}"));
+        let nessuna = || Errore::Comando(format!("nessuna proposta: {nome}"));
         let m = st.ministro.as_ref().ok_or_else(nessuna)?;
         let atti: Vec<_> = dati.atti_del_dicastero(i).collect();
         let parti: Vec<_> = atti.iter().map(|(_, a)| parti(cx, i, m, a)).collect();
@@ -283,12 +283,12 @@ impl Ministri {
 
     /// `Rinvia`: una volta, senza costo; la proposta resta un turno in più.
     pub(super) fn rinvia(&mut self, cx: &Contesto, i: usize) -> Result<(), Errore> {
-        let id = &cx.dati.dicasteri()[i].id;
+        let nome = &cx.dati.dicasteri()[i].nome;
         let Some(p) = self.dicasteri[i].proposta.as_mut() else {
-            return Err(Errore::Comando(format!("nessuna proposta: {id}")));
+            return Err(Errore::Comando(format!("nessuna proposta: {nome}")));
         };
         if p.rinviata {
-            return Err(Errore::Comando(format!("proposta già rinviata: {id}")));
+            return Err(Errore::Comando(format!("proposta già rinviata: {nome}")));
         }
         p.rinviata = true;
         Ok(())
@@ -298,8 +298,8 @@ impl Ministri {
     pub(super) fn respingi(&mut self, cx: &Contesto, i: usize) -> Result<(), Errore> {
         let st = &mut self.dicasteri[i];
         if st.proposta.take().is_none() {
-            let id = &cx.dati.dicasteri()[i].id;
-            return Err(Errore::Comando(format!("nessuna proposta: {id}")));
+            let nome = &cx.dati.dicasteri()[i].nome;
+            return Err(Errore::Comando(format!("nessuna proposta: {nome}")));
         }
         let delta = -cx.dati.manopola("costo_respingere");
         penalizza(st, Causa::PropostaRespinta, delta, cx.turno);

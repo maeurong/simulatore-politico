@@ -178,7 +178,7 @@ fn comandi_dell_agenda_non_ammessi_rifiutati_col_nome() {
                 atto: None,
                 regione: Some("calabria".into()),
             },
-            "sanita",
+            "Sanità",
         ),
         (
             Comando::Dirotta {
@@ -252,36 +252,36 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
     rifiuta(
         &mut p,
         dirotta(IT, None, regione.as_deref()),
-        &format!("niente da dirottare: {IT}"),
+        "niente da dirottare: Infrastrutture e Trasporti",
     );
-    let (caro, di) = (v.ministeri.iter())
+    let (caro, nome, di) = (v.ministeri.iter())
         .find_map(|m| {
             let a = m.atti.iter().find(|a| !a.pagabile)?;
-            Some((a.id.clone(), m.dicastero.clone()))
+            Some((a.id.clone(), a.nome.clone(), m.dicastero.clone()))
         })
         .unwrap();
     rifiuta(
         &mut p,
         dirotta(&di, Some(&caro), None),
-        &format!("margine insufficiente per {caro}"),
+        &format!("margine insufficiente per {nome}"),
     );
     p.comanda(ferma("sanita")).unwrap();
-    rifiuta(&mut p, ferma("sanita"), "agenda già modificata: sanita");
+    rifiuta(&mut p, ferma("sanita"), "agenda già modificata: Sanità");
     rifiuta(
         &mut p,
         dirotta("sanita", Some("sanita_case_comunita"), None),
-        "agenda già modificata: sanita",
+        "agenda già modificata: Sanità",
     );
     p.comanda(Comando::ChiediDimissioni {
         dicastero: "giustizia".into(),
     })
     .unwrap();
     p.chiudi_turno();
-    rifiuta(&mut p, ferma("giustizia"), "nessuna agenda: giustizia");
+    rifiuta(&mut p, ferma("giustizia"), "nessuna agenda: Giustizia");
     rifiuta(
         &mut p,
         dirotta("giustizia", Some(&di_giustizia), None),
-        "nessuna agenda: giustizia",
+        "nessuna agenda: Giustizia",
     );
     rifiuta(
         &mut p,
@@ -289,7 +289,7 @@ fn rifiuti_di_ferma_dirotta_e_ferma_cantiere_col_nome_e_partita_identica() {
             dicastero: "giustizia".into(),
             atto: di_giustizia.clone(),
         },
-        &format!("nessun cantiere {di_giustizia} in giustizia"),
+        &format!("nessun cantiere {di_giustizia} in Giustizia"),
     );
 }
 
@@ -323,6 +323,10 @@ fn dimissioni_chieste_bloccano_i_comandi_del_dicastero() {
 #[test]
 fn niente_cantiere_doppio_dello_stesso_atto() {
     const CASE: &str = "sanita_case_comunita";
+    let nome = (dati_base().atti().iter().find(|a| a.id == CASE))
+        .unwrap()
+        .nome
+        .clone();
     for seme in 1..=8 {
         let mut p = Partita::nuova(dati_base(), seme);
         p.chiudi_turno();
@@ -347,7 +351,7 @@ fn niente_cantiere_doppio_dello_stesso_atto() {
             rifiuta(
                 &mut p,
                 dirotta("sanita", Some(CASE), None),
-                &format!("cantiere già in corso: {CASE}"),
+                &format!("cantiere già in corso: {nome}"),
             );
         }
     }

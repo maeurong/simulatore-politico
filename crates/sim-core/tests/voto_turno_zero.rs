@@ -20,8 +20,8 @@ fn dichiara_con(p: &mut Partita, alleati: &[&str], cessioni: Vec<Cessione>) {
     .unwrap();
 }
 
-fn votata(posto: f64, alleati: &[&str]) -> Partita {
-    let mut p = fondata(posto);
+fn votata(posizione: f64, alleati: &[&str]) -> Partita {
+    let mut p = fondata(posizione);
     dichiara(&mut p, alleati);
     p.chiudi_turno();
     p
@@ -55,7 +55,7 @@ fn le_cessioni_passano_seggi_dopo_il_riparto() {
     );
 }
 
-// Variante del brief: al posto 6,5 nessun partito è disponibile (Task 7); al posto 5,5 il
+// Variante del brief: alla posizione 6,5 nessun partito è disponibile (Task 7); alla posizione 5,5 il
 // centrodestra entra.
 #[test]
 fn il_voto_del_turno_zero_elegge_il_parlamento() {
@@ -164,7 +164,7 @@ fn senza_seggi_la_partita_finisce() {
         7,
         &sim_core::legislatura::Fondazione {
             nome: "Partito nuovo".into(),
-            posto: 1.5,
+            posizione: 1.5,
         },
     )
     .unwrap();

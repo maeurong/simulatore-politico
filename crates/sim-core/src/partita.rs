@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 7;
+pub const VERSIONE_SCHEMA: u32 = 8;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -295,8 +295,11 @@ impl Partita {
         if self.legislatura.turno_di_voto(self.turno) {
             self.vota_parlamento(&vero);
         }
+        // Prima delle soglie dei ministri: chi si dimette nel turno conta ancora nella media.
+        self.pressioni_intesa();
         self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
-        self.intesa.soglie(&self.dati, self.turno);
+        // Gli alleati sotto `soglia_uscita`: servono per la loro uscita dal governo.
+        let _escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
@@ -321,6 +324,7 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
         };
         self.parlamento.apri_emendamenti(&aula, self.turno);
@@ -869,7 +873,68 @@ impl Partita {
             partiti: &self.partiti,
             governo: &self.governo,
             intesa: &self.intesa.valori,
+            ultimatum: &self.intesa.ultimatum,
             coalizioni: self.coalizioni_correnti(),
+        }
+    }
+
+    /// `ChiediDimissioni` accolto sul dicastero `id`: se il ministro è di un alleato e non è un
+    /// tecnico, l'alleato perde `costo_dimissioni_chieste`.
+    pub(crate) fn dimissioni_chieste(&mut self, id: &str) {
+        let i = self.dati.dicasteri().iter().position(|d| d.id == id);
+        let ministro = i.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref());
+        let Some(m) = ministro.filter(|m| !m.tecnico && voto::alleato(&self.governo, m.partito))
+        else {
+            return;
+        };
+        let (j, delta) = (m.partito, -self.dati.manopola("costo_dimissioni_chieste"));
+        (self.intesa).varia(j, CausaIntesa::DimissioniChieste, delta, self.turno);
+    }
+
+    /// Pressioni di fine turno sull'intesa di ogni alleato del governo in carica: ministri
+    /// scontenti, quota dei dicasteri sotto la richiesta di Gamson sui seggi veri, calo nei
+    /// sondaggi rispetto all'ultimo voto (cicli-politico-economici-e-luna-di-miele:21). Una
+    /// variazione si registra solo se il delta non è zero. Solo in fase ordinaria: in trattativa
+    /// il governo uscente è in interim, e alla formazione l'intesa riparte comunque.
+    fn pressioni_intesa(&mut self) {
+        if self.legislatura.fase != Fase::Ordinaria {
+            return;
+        }
+        let d = |nome| self.dati.manopola(nome);
+        let (minaccia, costo_ministri) = (d("soglia_minaccia"), d("costo_ministri_scontenti"));
+        let (costo_quota, costo_calo) = (d("costo_quota_scoperta"), d("costo_calo_sondaggi"));
+        let g = &self.governo;
+        let mut variazioni = Vec::new();
+        for j in self.alleati() {
+            let sodd: Vec<f64> = (self.ministri.dicasteri.iter())
+                .filter_map(|st| st.ministro.as_ref())
+                .filter(|m| m.partito == j)
+                .map(|m| m.soddisfazione)
+                .collect();
+            if !sodd.is_empty() {
+                let media = sodd.iter().sum::<f64>() / sodd.len() as f64;
+                let delta = -costo_ministri * (minaccia - media).max(0.0) / 10.0;
+                variazioni.push((j, CausaIntesa::MinistriScontenti, delta));
+            }
+            let assegnati = g.dicasteri.iter().copied().map(Some);
+            let (richiesta, offerta) = self.richiesta_e_offerta(j, &g.coalizione, assegnati);
+            let delta = -costo_quota * (richiesta - offerta).max(0.0);
+            variazioni.push((j, CausaIntesa::QuotaScoperta, delta));
+            if let Some(voti) = self
+                .legislatura
+                .elezioni
+                .first()
+                .and_then(|e| e.voti.get(j))
+            {
+                let sondaggio = legislatura::quota_fra_i_votanti(&self.informazione.sondaggio, j);
+                let delta = -costo_calo * (voti.quota - sondaggio).max(0.0) * 100.0;
+                variazioni.push((j, CausaIntesa::SondaggiInCalo, delta));
+            }
+        }
+        for (j, causa, delta) in variazioni {
+            if delta != 0.0 {
+                (self.intesa).varia(j, causa, delta, self.turno);
+            }
         }
     }
 
@@ -954,7 +1019,8 @@ impl Partita {
     /// `Comando`, e la partita resta identica: promotore sconosciuto o al governo, disposizione
     /// sconosciuta o non referendabile, niente da abrogare, quesito elettorale inammissibile, un
     /// referendum già in corso, fuori finestra (dopo luglio-settembre); prima di tutto, l'ultimo
-    /// anno della legislatura (iter-legislativo-italiano:135), poi le Camere sciolte.
+    /// anno della legislatura (iter-legislativo-italiano:135), poi le Camere sciolte, poi i sei
+    /// mesi dopo i comizi: il turno dopo un voto (stessa fonte).
     pub fn promuovi_referendum(
         &mut self,
         promotore: &str,
@@ -967,6 +1033,13 @@ impl Partita {
         }
         if self.legislatura.fase == Fase::Sciolta {
             return Err(Errore::Comando("Nessun referendum a Camere sciolte".into()));
+        }
+        let l = &self.legislatura;
+        if !l.elezioni.is_empty() && self.turno <= l.inizio {
+            return Err(Errore::Comando(
+                "Nessuna richiesta di referendum nei sei mesi dopo la convocazione dei comizi"
+                    .into(),
+            ));
         }
         let r = (self.parlamento).abrogativo(
             &self.stato_aula(),
@@ -1541,12 +1614,16 @@ impl Partita {
             return self.quadro().disponibilita(&self.dichiarazione_corrente());
         }
         let c = self.coalizione_del_giocatore();
-        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)))
+        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)), &[])
     }
 
-    /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore coi seggi
-    /// del voto (scelta 9 del piano 7).
-    fn dopo_il_voto(&self, quali: impl Iterator<Item = usize>) -> Vec<VoceDisponibilita> {
+    /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore, allargata
+    /// a `piu`, coi seggi del voto (scelta 9 del piano 7).
+    fn dopo_il_voto(
+        &self,
+        quali: impl Iterator<Item = usize>,
+        piu: &[usize],
+    ) -> Vec<VoceDisponibilita> {
         let pl = &self.parlamento;
         let q = Quadro {
             seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
@@ -1555,41 +1632,62 @@ impl Partita {
         let d = Dichiarazione {
             partiti: (self.coalizione_del_giocatore().into_iter())
                 .filter(|&j| j != self.giocatore)
+                .chain(piu.iter().copied())
                 .collect(),
             cessioni: Vec::new(),
         };
         q.voci(&d, quali)
     }
 
-    /// `Allarga`: in trattativa con l'incarico, il partito `id` entra nella coalizione se è
-    /// disponibile coi seggi del voto.
+    /// `Allarga`: in trattativa con l'incarico, i partiti `ids` entrano insieme nella coalizione
+    /// se ognuno è disponibile coi seggi del voto e la lista intera (formazione-di-coalizioni:13).
     ///
     /// # Errors
-    /// `Comando` col nome del partito (l'id se sconosciuto): fuori dalla trattativa con
-    /// l'incarico, sconosciuto, già nella coalizione, o con la causa se non è disponibile.
-    pub(crate) fn allarga(&mut self, id: &str) -> Result<(), Errore> {
+    /// `Comando` col nome del partito (l'id se sconosciuto), e la partita resta identica: lista
+    /// vuota, fuori dalla trattativa con l'incarico, sconosciuto, ripetuto, già nella coalizione,
+    /// o con la causa per ogni membro non disponibile.
+    pub(crate) fn allarga(&mut self, ids: &[String]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
-        let j = self.partiti.iter().position(|p| p.id == id);
+        if ids.is_empty() {
+            return ko("allargamento senza partiti".into());
+        }
         if !self.con_incarico() {
-            let nome = j.map_or(id, |j| self.partiti[j].nome.as_str());
+            let nomi: Vec<&str> = (ids.iter())
+                .map(|id| {
+                    (self.partiti.iter().find(|p| &p.id == id))
+                        .map_or(id.as_str(), |p| p.nome.as_str())
+                })
+                .collect();
             return ko(format!(
-                "{nome}: allargamento solo in trattativa, con l'incarico"
+                "{}: allargamento solo in trattativa, con l'incarico",
+                nomi.join(", ")
             ));
         }
-        let Some(j) = j else {
-            return ko(format!("Partito sconosciuto: {id}"));
-        };
-        let nome = &self.partiti[j].nome;
-        if self.coalizione_del_giocatore().contains(&j) {
-            return ko(format!("{nome} è già nella coalizione"));
+        let c = self.coalizione_del_giocatore();
+        let mut lista = Vec::new();
+        for id in ids {
+            let Some(j) = self.partiti.iter().position(|p| &p.id == id) else {
+                return ko(format!("Partito sconosciuto: {id}"));
+            };
+            let nome = &self.partiti[j].nome;
+            if c.contains(&j) {
+                return ko(format!("{nome} è già nella coalizione"));
+            }
+            if lista.contains(&j) {
+                return ko(format!("{nome} ripetuto nell'allargamento"));
+            }
+            lista.push(j);
         }
-        if let Some(v) = self.dopo_il_voto(std::iter::once(j)).pop()
-            && !v.disponibile
-        {
-            return ko(format!("{nome} non entra: {}", v.causa));
+        let voci = self.dopo_il_voto(lista.iter().copied(), &lista);
+        let fuori: Vec<String> = (lista.iter().zip(voci))
+            .filter(|(_, v)| !v.disponibile)
+            .map(|(&j, v)| format!("{} non entra: {}", self.partiti[j].nome, v.causa))
+            .collect();
+        if !fuori.is_empty() {
+            return ko(fuori.join("; "));
         }
-        // La proposta fatta senza di lui decade: le richieste tornano alla spartizione di default.
-        self.legislatura.allargati.push(j);
+        // La proposta fatta senza di loro decade: le richieste tornano alla spartizione di default.
+        self.legislatura.allargati.extend(lista);
         self.legislatura.proposta = None;
         Ok(())
     }
@@ -1693,20 +1791,32 @@ impl Partita {
             .collect()
     }
 
+    /// (richiesta, offerta) del partito `j` nella `coalizione`: la richiesta di Gamson sui seggi
+    /// veri, e i punti di peso dei dicasteri che `assegnati` gli dà.
+    fn richiesta_e_offerta(
+        &self,
+        j: usize,
+        coalizione: &[usize],
+        assegnati: impl Iterator<Item = Option<usize>>,
+    ) -> (f64, f64) {
+        let seggi = self.seggi_per_partito();
+        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
+        let offerta = (self.dati.dicasteri().iter().zip(assegnati))
+            .filter(|&(_, a)| a == Some(j))
+            // Da 0,0: la `sum` di un f64 vuoto dà -0,0.
+            .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
+        let s = coalizione.iter().map(|&k| di(k)).sum();
+        (legislatura::richiesta(&self.dati, di(j), s), offerta)
+    }
+
     /// Per alleato della coalizione del giocatore: (indice, richiesta, offerta di `assegnati`, i
     /// punti di peso dei dicasteri che gli dà).
     fn quote(&self, assegnati: &[Option<usize>]) -> Vec<(usize, f64, f64)> {
-        let (g, seggi) = (self.giocatore, self.seggi_per_partito());
         let coalizione = self.coalizione_del_giocatore();
-        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
-        let s = coalizione.iter().map(|&j| di(j)).sum();
-        (coalizione.iter().filter(|&&j| j != g))
+        (coalizione.iter().filter(|&&j| j != self.giocatore))
             .map(|&j| {
-                let offerta = (self.dati.dicasteri().iter().zip(assegnati))
-                    .filter(|&(_, &a)| a == Some(j))
-                    // Da 0,0: la `sum` di un f64 vuoto dà -0,0.
-                    .fold(0.0, |a, (d, _)| a + f64::from(d.peso_spartizione));
-                (j, legislatura::richiesta(&self.dati, di(j), s), offerta)
+                let (r, o) = self.richiesta_e_offerta(j, &coalizione, assegnati.iter().copied());
+                (j, r, o)
             })
             .collect()
     }
@@ -1739,11 +1849,13 @@ impl Partita {
     /// Il governo nuovo alla chiusura della trattativa, dopo le soglie. Con l'incarico al
     /// giocatore la sua proposta (o quella di default), i tecnici al suo partito, e ogni alleato
     /// riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)`; con l'incarico IA il
-    /// primo partito per seggi e la spartizione di default. Senza maggioranza del giocatore (con
+    /// primo partito per seggi e la spartizione di default, e ogni alleato riparte da
+    /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
     /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
     /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
     /// scioglie le Camere: si vota nella chiusura del turno dopo. Poi ministri tutti nuovi,
-    /// giudizio da zero per chi entra al governo, fase ordinaria.
+    /// giudizio da zero per chi entra al governo, l'ultimatum sul valore di partenza (l'alleato
+    /// che entra sotto la soglia lo pone subito, chi non è più alleato non ne ha), fase ordinaria.
     fn forma_governo(&mut self) {
         let seggi = self.seggi_per_partito();
         let di = |j: &usize| seggi.get(*j).copied().unwrap_or(0);
@@ -1785,11 +1897,27 @@ impl Partita {
                 self.dati.manopola("intesa_per_punto"),
             );
             for (j, richiesta, offerta) in self.quote(&assegnati) {
-                if let Some(x) = self.intesa.valori.get_mut(j) {
-                    *x = base;
-                }
+                self.intesa.riparti(j, base);
                 let delta = per_punto * (offerta - richiesta);
                 (self.intesa).varia(j, CausaIntesa::Spartizione, delta, self.turno);
+            }
+        } else {
+            let base = self.dati.manopola("intesa_base");
+            for &j in coalizione.iter().filter(|&&j| j != presidente) {
+                self.intesa.riparti(j, base);
+            }
+        }
+        // Rottura dell'impegno, simmetrica (scelta 3 del piano 7b): paga anche il giocatore.
+        let (valence, intesa) = (
+            self.dati.manopola("valence_rottura_impegno"),
+            self.dati.manopola("intesa_rottura_impegno"),
+        );
+        for j in legislatura::rotture(&self.legislatura.coalizioni, &coalizione, &coalizione) {
+            if let Some(p) = self.partiti.get_mut(j) {
+                p.valence -= valence;
+            }
+            if j != presidente {
+                (self.intesa).varia(j, CausaIntesa::RotturaImpegno, -intesa, self.turno);
             }
         }
         let entranti: Vec<usize> = (coalizione.iter().copied())
@@ -1809,6 +1937,8 @@ impl Partita {
             coalizione,
         };
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
+        let alleati = self.alleati();
+        self.intesa.ultimatum(&self.dati, &alleati);
         let l = &mut self.legislatura;
         l.fase = Fase::Ordinaria;
         l.incarico = None;
@@ -1939,18 +2069,18 @@ impl Partita {
         if self.governo.presidente != self.giocatore {
             return Vec::new();
         }
-        let soglia = self.dati.manopola("soglia_ultimatum");
         (self.alleati().into_iter())
             .map(|j| {
                 let variazioni: Vec<_> = (self.intesa.variazioni.iter())
                     .filter(|v| v.partito == j)
                     .cloned()
                     .collect();
-                let intesa = self.intesa.valori.get(j).copied().unwrap_or_default();
+                let causa_ultimatum = self.intesa.ultimatum.get(j).copied().flatten();
                 VoceAlleato {
                     partito: self.partiti[j].id.clone(),
-                    intesa,
-                    ultimatum: intesa < soglia,
+                    intesa: self.intesa.valori.get(j).copied().unwrap_or_default(),
+                    ultimatum: causa_ultimatum.is_some(),
+                    causa_ultimatum,
                     causa_principale: causa_peggiore(variazioni.iter().map(|v| (v.causa, v.delta))),
                     variazioni,
                 }
@@ -2063,7 +2193,7 @@ impl Partita {
             partita.turno,
             partita.legislatura.totali,
         )?;
-        partita.intesa.controlla(n)?;
+        partita.intesa.controlla(n, partita.turno)?;
         partita.controlla_partiti()?;
         partita
             .ministri
@@ -2155,6 +2285,10 @@ impl Partita {
         ok(
             l.scadenza >= l.inizio,
             "legislatura.scadenza prima dell'inizio",
+        )?;
+        ok(
+            (l.elezioni.iter().flat_map(|e| &e.voti)).all(|v| (0.0..=1.0).contains(&v.quota)),
+            "legislatura.elezioni con una quota fuori da 0-1",
         )?;
         ok(
             l.fase == Fase::Sciolta || self.turno <= l.scadenza,
@@ -2355,7 +2489,7 @@ mod tests {
     fn fondata() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
-            posto: 5.5,
+            posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
     }

@@ -7,7 +7,7 @@ mod comune;
 use comune::{file_base, fondata, imposta};
 use serde_json::json;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
-use sim_core::parlamento::{Decreto, TipoReferendum, ValoreProposto};
+use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
 use sim_core::vista::VoceIncarico;
 use sim_core::{Comando, Partita};
 
@@ -24,7 +24,7 @@ fn proporzionale(f: sim_core::dati::FileDati, posizione: f64) -> Partita {
         7,
         &Fondazione {
             nome: "Partito nuovo".into(),
-            posto: posizione,
+            posizione,
         },
     )
     .unwrap()
@@ -58,7 +58,7 @@ fn senza_premio_si_allarga() {
             .map(|v| v.partito)
             .collect();
         for x in fuori {
-            p.comanda(Comando::Allarga { partito: x }).unwrap();
+            p.comanda(Comando::Allarga { partiti: vec![x] }).unwrap();
         }
     }
     p.chiudi_turno();
@@ -109,7 +109,7 @@ fn sciolta() -> Partita {
     p
 }
 
-/// A Camere sciolte nessun abrogativo si chiede; in trattativa sì.
+/// A Camere sciolte nessun abrogativo si chiede (in trattativa nemmeno: tests/debiti_7a.rs).
 #[test]
 fn nessun_referendum_a_camere_sciolte() {
     let mut p = sciolta();
@@ -120,10 +120,6 @@ fn nessun_referendum_a_camere_sciolte() {
         "{e}"
     );
     assert_eq!(p.salva().unwrap(), prima);
-    let mut q = fondata(1.5);
-    q.chiudi_turno();
-    assert_eq!(q.legislatura().fase, Fase::Trattativa);
-    q.promuovi_referendum("sinistra", "licenziamento").unwrap();
 }
 
 /// Un confermativo col voto nel turno sciolto si vota in quel turno, non slitta.
@@ -184,7 +180,7 @@ fn allargata_alla_maggioranza_la_coalizione_governa() {
     };
     assert_eq!(disponibile(&p, "centrodestra"), Some(true));
     p.comanda(Comando::Allarga {
-        partito: "centrodestra".into(),
+        partiti: vec!["centrodestra".into()],
     })
     .unwrap();
     assert_eq!(p.legislatura().allargati, vec![4]);
@@ -216,7 +212,7 @@ fn allargare_annulla_la_proposta() {
     p.comanda(Comando::ProponiSpartizione { dicasteri })
         .unwrap();
     p.comanda(Comando::Allarga {
-        partito: "centrodestra".into(),
+        partiti: vec!["centrodestra".into()],
     })
     .unwrap();
     assert!(p.legislatura().proposta.is_none());
@@ -291,7 +287,9 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
         ("giocatore", "Partito nuovo è già nella coalizione"),
     ] {
         let e = p
-            .comanda(Comando::Allarga { partito: id.into() })
+            .comanda(Comando::Allarga {
+                partiti: vec![id.into()],
+            })
             .unwrap_err();
         assert!(e.to_string().contains(testo), "{e}");
     }
@@ -299,7 +297,7 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
     assert!(p.legislatura().proposta.is_some());
     let allarga = |p: &mut Partita| {
         p.comanda(Comando::Allarga {
-            partito: "centro".into(),
+            partiti: vec!["centro".into()],
         })
     };
     allarga(&mut p).unwrap();
@@ -332,7 +330,9 @@ fn senza_maggioranza_le_camere_si_sciolgono() {
     assert_eq!(p.vista().turni_al_voto, 0);
     for (id, nome) in [("centro", "Centro"), ("ignoto", "ignoto")] {
         let e = p
-            .comanda(Comando::Allarga { partito: id.into() })
+            .comanda(Comando::Allarga {
+                partiti: vec![id.into()],
+            })
             .unwrap_err();
         let atteso = format!("{nome}: allargamento solo in trattativa, con l'incarico");
         assert!(e.to_string().contains(&atteso), "{e}");
@@ -436,4 +436,58 @@ fn all_opposizione_le_anteprime_rifiutano_come_i_comandi() {
     let bilancio = p.economia().bilancio.clone();
     let e = p.riepilogo_bilancio(&bilancio).unwrap_err().to_string();
     assert_eq!(e, comando(&mut p, Comando::PresentaBilancio { bilancio }));
+}
+
+#[test]
+fn gli_alleati_del_governo_ia_partono_dalla_base() {
+    let mut p = fondata(1.5);
+    p.chiudi_turno(); // voto
+    let n = p.partiti().len();
+    let mut p = comune::edita(&p, |j| j["intesa"]["valori"] = json!(vec![30.0; n])).unwrap();
+    p.chiudi_turno(); // trattativa: governo IA
+    let dati = comune::dati_base();
+    let base = dati.manopola("intesa_base");
+    assert!(!p.alleati().is_empty());
+    // Chi rompe l'impegno pre-elettorale parte da `intesa_base − intesa_rottura_impegno`.
+    for j in p.alleati() {
+        let rompe = (p.intesa().variazioni.iter())
+            .any(|v| v.partito == j && v.causa == CausaIntesa::RotturaImpegno);
+        let attesa = base
+            - if rompe {
+                dati.manopola("intesa_rottura_impegno")
+            } else {
+                0.0
+            };
+        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
+    }
+}
+
+/// Il giocatore (7), che ha corso da solo, non ha la maggioranza; l'incarico va all'IA con
+/// centrosinistra (2, che lascia l'1), centro (3, da solo, governa con 2 e 4) e centrodestra (4, che
+/// lascia il 5): rompono tutti e tre.
+#[test]
+fn l_ia_che_rompe_l_impegno_perde_valence_e_intesa() {
+    let p = comune::in_trattativa(
+        json!([[7], [1, 2], [4, 5]]),
+        &[10, 60, 80, 30, 50, 50, 20, 100],
+        &[5, 30, 40, 15, 25, 25, 10, 50],
+    );
+    let mut p = comune::edita(&p, |j| {
+        j["legislatura"]["incarico"] = json!({ "Ia": { "coalizione": [2, 3, 4] } })
+    })
+    .unwrap();
+    let prima = p.partiti().to_vec();
+    p.chiudi_turno();
+    assert_eq!(p.governo().coalizione, vec![2, 3, 4]);
+    let dati = comune::dati_base();
+    let valence = dati.manopola("valence_rottura_impegno");
+    for j in [2, 3, 4] {
+        let calo = comune::calo_oltre_il_ritorno(&prima, &p, j);
+        assert!((calo - valence).abs() < 1e-9, "{j}: {calo}");
+    }
+    let attesa = dati.manopola("intesa_base") - dati.manopola("intesa_rottura_impegno");
+    assert_eq!(p.alleati().len(), 2);
+    for j in p.alleati() {
+        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
+    }
 }

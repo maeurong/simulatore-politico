@@ -221,6 +221,13 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "gamson_intercetta",
     "gamson_pendenza",
     "intesa_per_punto",
+    "soglia_uscita",
+    "costo_ministri_scontenti",
+    "costo_quota_scoperta",
+    "costo_calo_sondaggi",
+    "costo_dimissioni_chieste",
+    "valence_rottura_impegno",
+    "intesa_rottura_impegno",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

@@ -153,5 +153,11 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
             return Err(ko(format!("partito in due coalizioni: {id}")));
         }
     }
+    if let Some(c) = scenario.coalizioni.iter().find(|c| c.len() < 2) {
+        return Err(ko(format!(
+            "coalizione di meno di due partiti: {}",
+            c.join("+")
+        )));
+    }
     Ok(())
 }

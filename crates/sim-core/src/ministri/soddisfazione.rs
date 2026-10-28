@@ -61,6 +61,7 @@ pub(super) fn passo(
         } else {
             super::causa_principale(&st.variazioni)
         };
+        st.rosa_tecnica = m.tecnico;
         st.ministro = None;
         st.dimissioni_chieste = false;
     }

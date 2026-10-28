@@ -139,6 +139,8 @@ pub struct StatoDicastero {
     pub margine_residuo: i64,
     /// La richiesta di fondi in attesa di una decisione; `None` in interim.
     pub proposta: Option<Proposta>,
+    /// Il ministro uscito era un tecnico: la rosa del successore è di tecnici.
+    pub rosa_tecnica: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -269,7 +271,8 @@ impl Ministri {
     }
 
     /// Apertura del turno (`cx.turno` è già quello nuovo): variazioni vecchie, rose per gli
-    /// interim appena aperti, ingresso del successore dopo il turno di interim.
+    /// interim appena aperti (di tecnici dopo un tecnico), ingresso del successore dopo il turno
+    /// di interim.
     pub(crate) fn apri(&mut self, cx: &Contesto, caso: &mut Caso) {
         for i in 0..self.dicasteri.len() {
             let st = &mut self.dicasteri[i];
@@ -279,8 +282,9 @@ impl Ministri {
                 continue;
             }
             if st.rosa.is_empty() {
+                let tecnica = st.rosa_tecnica;
                 for _ in 0..NELLA_ROSA {
-                    let x = self.genera(cx, caso, i, false);
+                    let x = self.genera(cx, caso, i, tecnica);
                     self.dicasteri[i].rosa.push(x);
                 }
                 self.dicasteri[i].rosa.sort_by(|a, b| {
@@ -294,6 +298,7 @@ impl Ministri {
                 }
                 st.scelta = None;
                 st.causa_dimissioni = None;
+                st.rosa_tecnica = false;
             }
         }
         self.apri_agende(cx, caso);
@@ -304,7 +309,7 @@ impl Ministri {
     /// # Errors
     /// `SalvataggioIlleggibile` se i dicasteri non sono quelli dei dati, un partito esce dai
     /// limiti, una capacità non è 1-5, una soddisfazione non è finita in 0-100, la rosa non è di
-    /// 0 o 3 o la scelta esce dalla rosa.
+    /// 0 o 3, la scelta esce dalla rosa o la rosa tecnica ha un ministro in carica.
     pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::SalvataggioIlleggibile(format!("ministri: {m}")));
         let n = dati.dicasteri().len();
@@ -330,6 +335,9 @@ impl Ministri {
             }
             if !st.rosa.is_empty() && st.ministro.is_some() {
                 return ko(format!("{}: rosa con un ministro in carica", d.id));
+            }
+            if st.rosa_tecnica && st.ministro.is_some() {
+                return ko(format!("{}: rosa tecnica con un ministro in carica", d.id));
             }
             if st.scelta.is_some_and(|s| usize::from(s) >= st.rosa.len()) {
                 return ko(format!("{}: scelta fuori dalla rosa", d.id));
@@ -406,6 +414,7 @@ impl Ministri {
             matches!(c, Comando::Accogli { .. }),
             sul_ministro,
         )?;
+        let nome = &cx.dati.dicasteri()[i].nome;
         let st = &mut self.dicasteri[i];
         match c {
             Comando::Accogli { .. } => {
@@ -438,24 +447,22 @@ impl Ministri {
                 return Ok(EffettoComando::Dirottata { dicastero: i });
             }
             Comando::FermaCantiere { atto, .. } => self.ferma_cantiere(cx, i, &atto)?,
-            Comando::ChiediDimissioni { dicastero } => {
+            Comando::ChiediDimissioni { .. } => {
                 if st.ministro.is_none() {
-                    return ko(format!("{dicastero} è in interim"));
+                    return ko(format!("{nome} è in interim"));
                 }
                 if st.dimissioni_chieste {
-                    return ko(format!("dimissioni già chieste: {dicastero}"));
+                    return ko(format!("dimissioni già chieste: {nome}"));
                 }
                 st.dimissioni_chieste = true;
                 return Ok(self.ritira(i));
             }
-            Comando::ScegliSuccessore { dicastero, indice } => {
+            Comando::ScegliSuccessore { indice, .. } => {
                 if st.ministro.is_some() {
-                    return ko(format!("{dicastero} non è in interim"));
+                    return ko(format!("{nome} non è in interim"));
                 }
                 if usize::from(indice) >= st.rosa.len() {
-                    return ko(format!(
-                        "successore fuori dalla rosa di {dicastero}: {indice}"
-                    ));
+                    return ko(format!("successore fuori dalla rosa di {nome}: {indice}"));
                 }
                 st.scelta = Some(indice);
             }

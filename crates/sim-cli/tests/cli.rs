@@ -80,9 +80,16 @@ fn flag_sconosciuto_esce_con_errore() {
 }
 
 #[test]
-fn posto_fonda_la_partita_vera() {
+fn posizione_fonda_la_partita_vera() {
     let out = sim(&[
-        "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4.5",
+        "--dati",
+        DATI,
+        "--seme",
+        "7",
+        "--turni",
+        "1",
+        "--posizione",
+        "4.5",
     ]);
     assert!(
         out.status.success(),
@@ -94,10 +101,17 @@ fn posto_fonda_la_partita_vera() {
 }
 
 #[test]
-fn posto_non_ammesso_esce_con_errore() {
+fn posizione_non_ammessa_esce_con_errore() {
     rifiuta(
         &[
-            "--dati", DATI, "--seme", "7", "--turni", "1", "--posto", "4",
+            "--dati",
+            DATI,
+            "--seme",
+            "7",
+            "--turni",
+            "1",
+            "--posizione",
+            "4",
         ],
         "posizione 4 non ammessa",
     );
@@ -180,11 +194,11 @@ fn controlla_bersagli(cartella: &std::path::Path) {
         assert!((1.0 - astenuti / peso - atteso).abs() < 1e-3, "{id}");
     }
     let votanti = 1.0 - int.nazionali.last().unwrap();
-    for (j, p) in bersagli["posti"].as_array().unwrap().iter().enumerate() {
+    for (j, p) in bersagli["posizioni"].as_array().unwrap().iter().enumerate() {
         let atteso = p.as_float().unwrap() / 100.0;
         assert!(
             (int.nazionali[j] / votanti - atteso).abs() < 1e-3,
-            "posto {}",
+            "posizione {}",
             j + 1
         );
     }
@@ -340,8 +354,8 @@ fn tara_con(nome: &str, da: &str, a: &str) -> (std::path::PathBuf, std::process:
 fn tara_con_valence_fuori_intervallo_esce_senza_scrivere() {
     let (cartella, out) = tara_con(
         "fuori",
-        "posti = [3.165, 36.015, 7.12, 5.02, 8.42, 33.0, 7.26]",
-        "posti = [0.0001, 36.0, 7.12, 5.02, 8.42, 33.0, 10.4399]",
+        "posizioni = [3.165, 36.015, 7.12, 5.02, 8.42, 33.0, 7.26]",
+        "posizioni = [0.0001, 36.0, 7.12, 5.02, 8.42, 33.0, 10.4399]",
     );
     assert_eq!(out.status.code(), Some(1));
     let err = String::from_utf8_lossy(&out.stderr);
@@ -361,7 +375,7 @@ fn tara_rifiuta_un_bersaglio_impossibile() {
     let cartella = copia_dati("neg");
     let testo = std::fs::read_to_string(BERSAGLI)
         .unwrap()
-        .replace("posti = [3.165,", "posti = [-3.165,");
+        .replace("posizioni = [3.165,", "posizioni = [-3.165,");
     let bersagli = cartella.join("bersagli.toml");
     std::fs::write(&bersagli, testo).unwrap();
     rifiuta(
@@ -372,7 +386,7 @@ fn tara_rifiuta_un_bersaglio_impossibile() {
             "--bersagli",
             bersagli.to_str().unwrap(),
         ],
-        "posto 1 = -3.165, serve una quota positiva",
+        "posizione 1 = -3.165, serve una quota positiva",
     );
     std::fs::remove_dir_all(cartella).unwrap();
 }

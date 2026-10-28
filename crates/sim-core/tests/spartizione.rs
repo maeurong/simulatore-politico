@@ -4,36 +4,10 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, fondata};
+use comune::{al_governo, dati_base, edita, vinta};
 use sim_core::legislatura::{Assegnazione, Fase, Incarico};
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
-
-/// Alla posizione 4,5 con centrodestra e destra la coalizione prende il premio col seme 7 (sonda del
-/// Task 9: al 6,5 nessun partito è disponibile, Task 7).
-fn vinta() -> Partita {
-    let mut p = fondata(4.5);
-    let alleati: Vec<String> = (p.disponibilita().into_iter())
-        .filter(|v| {
-            v.disponibile
-                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
-        })
-        .map(|v| v.partito)
-        .collect();
-    p.comanda(Comando::DichiaraCoalizione {
-        partiti: alleati,
-        cessioni: vec![],
-    })
-    .unwrap();
-    p.chiudi_turno();
-    assert_eq!(
-        p.legislatura().incarico,
-        Some(Incarico::Giocatore),
-        "{:?}",
-        p.vista().elezioni[0]
-    );
-    p
-}
 
 fn tutto_a(p: &Partita, partito: Option<&str>) -> Vec<Assegnazione> {
     (p.vista().dicasteri.iter())
@@ -79,8 +53,7 @@ fn l_avarizia_costa_intesa_la_generosita_la_alza() {
         "{offerte:?}"
     );
     avara.chiudi_turno();
-    let mut di_default = vinta();
-    di_default.chiudi_turno();
+    let di_default = al_governo();
     let alleati = avara.alleati();
     assert!(!alleati.is_empty());
     let base = dati_base().manopola("intesa_base");
@@ -233,8 +206,7 @@ fn carica_rifiuta_proposta_e_coalizione_non_valide() {
     });
     let e = vuota.unwrap_err().to_string();
     assert!(e.contains("legislatura.incarico"), "{e}");
-    let mut formata = vinta();
-    formata.chiudi_turno();
+    let formata = al_governo();
     let fuori_fase = edita(&formata, |j| {
         j["legislatura"]["proposta"] = serde_json::json!(vec![Some(g); 10]);
     });
@@ -291,8 +263,17 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
     assert_eq!(p.governo().presidente, primo);
     assert_eq!(p.governo().coalizione, coalizione);
     assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
-    // Il governo IA non tocca l'intesa col giocatore e non nomina tecnici.
-    assert_eq!(p.intesa().valori, intesa);
+    // Il governo IA non tocca l'intesa col giocatore e non nomina tecnici: resta solo il ritorno
+    // verso la base, perché le pressioni dei turni ordinari l'hanno allontanata.
+    let dati = dati_base();
+    let (base, ritorno) = (
+        dati.manopola("intesa_base"),
+        dati.manopola("ritorno_intesa"),
+    );
+    let attesa: Vec<f64> = (intesa.iter())
+        .map(|x| (x + ritorno * (base - x)).clamp(0.0, 100.0))
+        .collect();
+    assert_eq!(p.intesa().valori, attesa);
     assert!(
         (p.intesa().variazioni.iter()).all(|v| v.causa != CausaIntesa::Spartizione),
         "{:?}",
@@ -305,8 +286,7 @@ fn con_l_incarico_ia_governa_il_primo_partito_per_seggi() {
 
 /// `vinta()` fino al turno `t`, senza comandi.
 fn vinta_al_turno(t: u32) -> Partita {
-    let mut p = vinta();
-    p.chiudi_turno();
+    let mut p = al_governo();
     while p.vista().turno < t {
         p.chiudi_turno();
     }

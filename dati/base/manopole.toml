@@ -1034,14 +1034,14 @@ min = 0.0
 max = 0.5
 ticket = "25"
 
-# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 per l'effetto (luna di miele dei leader al primo mandato); tarata da sim-cli tara: la quota media del giocatore fra i votanti, sui posti, al 15%, spec riga 36, ticket 20; valence in più del partito del giocatore alla fondazione: sta in valence e non in valence_base, quindi si spegne con ritorno_valence
+# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 per l'effetto (luna di miele dei leader al primo mandato); tarata da sim-cli tara: la quota media del giocatore fra i votanti, sulle posizioni, al 15%, spec riga 36, ticket 20; valence in più del partito del giocatore alla fondazione: sta in valence e non in valence_base, quindi si spegne con ritorno_valence
 [luna_di_miele]
 valore = 0.328125
 min = 0.0
 max = 3.0
 ticket = "20"
 
-# assunzione del piano 7a, nessuna fonte in docs/ricerca (valence_base del partito del giocatore, uguale per ogni posto: ticket 20)
+# assunzione del piano 7a, nessuna fonte in docs/ricerca (valence_base del partito del giocatore, uguale per ogni posizione: ticket 20)
 [valence_partito_nuovo]
 valore = 0.0
 min = -3.0
@@ -1106,6 +1106,55 @@ ticket = "05"
 
 # assunzione del piano 7, nessuna fonte in docs/ricerca (intesa di partenza di un alleato per punto di peso offerto sopra o sotto la sua richiesta)
 [intesa_per_punto]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (sotto questa intesa, a fine turno, l'alleato esce; spec riga 333)
+[soglia_uscita]
+valore = 25.0
+min = 0.0
+max = 40.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per 10 punti di soddisfazione media dei ministri dell'alleato sotto soglia_minaccia)
+[costo_ministri_scontenti]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per punto di peso dei dicasteri sotto la richiesta di Gamson)
+[costo_quota_scoperta]
+valore = 2.0
+min = 0.0
+max = 10.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa a turno per punto percentuale di calo nei sondaggi rispetto all'ultimo voto; cicli-politico-economici-e-luna-di-miele:21 per l'effetto)
+[costo_calo_sondaggi]
+valore = 1.0
+min = 0.0
+max = 5.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa dall'alleato quando il giocatore chiede le dimissioni di un suo ministro)
+[costo_dimissioni_chieste]
+valore = 10.0
+min = 0.0
+max = 30.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (valence persa da chi rompe l'impegno pre-elettorale alla formazione del governo)
+[valence_rottura_impegno]
+valore = 0.3
+min = 0.0
+max = 2.0
+ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa persa dall'alleato che rompe l'impegno pre-elettorale; formazione-di-coalizioni:48 per l'effetto)
+[intesa_rottura_impegno]
 valore = 10.0
 min = 0.0
 max = 30.0

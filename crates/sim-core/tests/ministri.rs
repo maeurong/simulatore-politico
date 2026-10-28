@@ -148,7 +148,7 @@ fn comandi_non_ammessi_rifiutati_col_nome() {
                 dicastero: "sanita".into(),
                 indice: 0,
             },
-            "sanita",
+            "Sanità",
         ),
     ] {
         let e = p.comanda(c).unwrap_err();
@@ -165,10 +165,21 @@ fn comandi_non_ammessi_rifiutati_col_nome() {
             indice: 3,
         })
         .unwrap_err();
-    assert!(e.to_string().contains("sanita"), "{e}");
+    assert!(e.to_string().contains("Sanità"), "{e}");
     let mut q = Partita::carica(&prima).unwrap();
     assert!(q.comanda(dimissioni("sanitá")).is_err());
     assert_eq!(q.salva().unwrap(), prima);
+}
+
+/// La rosa tecnica è del ministro uscito: con un ministro in carica lo stato è incoerente.
+#[test]
+fn salvataggio_con_rosa_tecnica_e_ministro_illeggibile() {
+    let p = Partita::nuova(dati_base(), 1);
+    let e = comune::edita(&p, |j| {
+        j["ministri"]["dicasteri"][0]["rosa_tecnica"] = serde_json::json!(true)
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("rosa tecnica"), "{e}");
 }
 
 #[test]
@@ -198,4 +209,29 @@ fn rosa_fissa_l_obiettivo_sul_valore_visto() {
     for x in &ministero(&v, "sanita").rosa {
         assert_eq!(x.obiettivo, visto + passo, "{}", x.nome);
     }
+}
+
+#[test]
+fn i_messaggi_dei_ministri_nominano_il_dicastero() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "sanita".into(),
+    })
+    .unwrap();
+    let e = p
+        .comanda(Comando::ChiediDimissioni {
+            dicastero: "sanita".into(),
+        })
+        .unwrap_err();
+    assert!(e.to_string().contains("Sanità"), "{e}");
+    let e = p
+        .comanda(Comando::ScegliSuccessore {
+            dicastero: "giustizia".into(),
+            indice: 0,
+        })
+        .unwrap_err();
+    assert!(
+        e.to_string().contains("Giustizia") && !e.to_string().contains("giustizia"),
+        "{e}"
+    );
 }

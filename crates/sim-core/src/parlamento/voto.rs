@@ -4,7 +4,7 @@
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
-use crate::parlamento::Conteggio;
+use crate::parlamento::{CausaIntesa, Conteggio};
 use crate::partiti::{Governo, Partito};
 
 /// Fuori dal Presidente del Consiglio e al governo.
@@ -12,21 +12,20 @@ pub(crate) fn alleato(governo: &Governo, j: usize) -> bool {
     j != governo.presidente && governo.al_governo(j)
 }
 
-/// La linea sotto fiducia: il governo vota sì, tranne l'alleato in ultimatum (intesa sotto
-/// `soglia_ultimatum`) distante almeno `distanza_alleato` da `nuova`; fuori dal governo no.
+/// La linea sotto fiducia: il governo vota sì, tranne l'alleato in ultimatum distante almeno
+/// `distanza_alleato` da `nuova`; fuori dal governo no.
 pub fn linea_fiducia(
     dati: &DatiGioco,
     partiti: &[Partito],
     governo: &Governo,
-    intesa: &[f64],
+    ultimatum: &[Option<CausaIntesa>],
     nuova: Option<f64>,
 ) -> Vec<bool> {
-    let ultimatum = dati.manopola("soglia_ultimatum");
     let distanza = dati.manopola("distanza_alleato");
-    (partiti.iter().zip(intesa).enumerate())
-        .map(|(j, (p, &i))| {
+    (partiti.iter().zip(ultimatum).enumerate())
+        .map(|(j, (p, u))| {
             let lontana = nuova.is_some_and(|n| (p.posizione_dichiarata - n).abs() >= distanza);
-            governo.al_governo(j) && !(alleato(governo, j) && i < ultimatum && lontana)
+            governo.al_governo(j) && !(alleato(governo, j) && u.is_some() && lontana)
         })
         .collect()
 }
@@ -203,6 +202,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
         };
         let eta = dati
@@ -285,6 +285,7 @@ mod tests {
             partiti: &partiti,
             governo: &governo,
             intesa: &intesa,
+            ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
         };
         let j = (partiti.iter())

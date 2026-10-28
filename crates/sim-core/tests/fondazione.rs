@@ -5,12 +5,12 @@
 
 mod comune;
 use comune::{dati_base, edita, fondata};
-use sim_core::legislatura::{Fase, Fondazione, posti};
+use sim_core::legislatura::{Fase, Fondazione, posizioni};
 use sim_core::{Comando, Errore, Partita};
 
 #[test]
-fn sei_posti_fra_i_sette_partiti() {
-    assert_eq!(posti(&dati_base()), vec![1.5, 2.5, 3.5, 4.5, 5.5, 6.5]);
+fn sei_posizioni_fra_i_sette_partiti() {
+    assert_eq!(posizioni(&dati_base()), vec![1.5, 2.5, 3.5, 4.5, 5.5, 6.5]);
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn la_partita_vera_comincia_a_camere_sciolte() {
 #[test]
 fn fondazione_non_valida_rifiutata_col_motivo() {
     let lungo = "x".repeat(41);
-    for (nome, posto, motivo) in [
+    for (nome, posizione, motivo) in [
         ("  ", 4.5, "nome"),
         (lungo.as_str(), 4.5, "più lungo di 40 caratteri"),
         ("Partito", 4.0, "posizione 4 non ammessa"),
@@ -45,16 +45,16 @@ fn fondazione_non_valida_rifiutata_col_motivo() {
     ] {
         let f = Fondazione {
             nome: nome.into(),
-            posto,
+            posizione,
         };
         match Partita::fonda(dati_base(), 7, &f) {
             Err(Errore::Fondazione(m)) => assert!(m.contains(motivo), "{m}"),
-            altro => panic!("{nome:?} {posto}: {altro:?}"),
+            altro => panic!("{nome:?} {posizione}: {altro:?}"),
         }
     }
     let f = Fondazione {
         nome: "x".repeat(40),
-        posto: 4.5,
+        posizione: 4.5,
     };
     assert!(Partita::fonda(dati_base(), 7, &f).is_ok());
 }
@@ -75,10 +75,10 @@ fn comandi_di_governo_rifiutati_a_chi_non_governa() {
 #[test]
 fn l_anteprima_della_fondazione_e_il_sondaggio_della_partita() {
     let a = Partita::anteprima_fondazione(&dati_base(), 7);
-    assert_eq!(a.posti.len(), 6);
+    assert_eq!(a.posizioni.len(), 6);
     let p = fondata(4.5);
     let v = p.vista();
-    let q = &a.posti[3];
+    let q = &a.posizioni[3];
     assert_eq!(q.posizione, 4.5);
     let atteso = v
         .sondaggio
@@ -108,8 +108,8 @@ fn quote_vere(p: &Partita) -> Vec<f64> {
 }
 
 #[test]
-fn luna_di_miele_al_quindici_per_cento_del_posto_medio() {
-    let media = posti(&dati_base())
+fn luna_di_miele_al_quindici_per_cento_della_posizione_media() {
+    let media = posizioni(&dati_base())
         .iter()
         .map(|&x| quote_vere(&fondata(x))[7])
         .sum::<f64>()
@@ -118,10 +118,10 @@ fn luna_di_miele_al_quindici_per_cento_del_posto_medio() {
 }
 
 #[test]
-fn vincibile_da_ogni_posto() {
+fn vincibile_da_ogni_posizione() {
     // Esiste un blocco di al più tre partiti contigui sull'asse, col giocatore, sopra il 42% dei
     // votanti. Il tetto serve: senza, il blocco di tutti gli otto partiti fa 1 e il test non dice nulla.
-    for x in posti(&dati_base()) {
+    for x in posizioni(&dati_base()) {
         let p = fondata(x);
         let q = quote_vere(&p);
         let mut ordine: Vec<usize> = (0..q.len()).collect();
@@ -136,6 +136,6 @@ fn vincibile_da_ogni_posto() {
             .filter(|(i, k)| k - i < 3)
             .map(|(i, k)| ordine[i..=k].iter().map(|&j| q[j]).sum::<f64>())
             .fold(0.0, f64::max);
-        assert!(migliore > 0.42, "posto {x}: {migliore}");
+        assert!(migliore > 0.42, "posizione {x}: {migliore}");
     }
 }

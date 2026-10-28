@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
-use sim_core::legislatura::{Fondazione, posti};
+use sim_core::legislatura::{Fondazione, posizioni};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 const TOLLERANZA: f64 = 1e-4;
@@ -15,7 +15,7 @@ const GIRI: u32 = 200;
 const USO: &str = "uso: sim-cli tara --dati <cartella> --bersagli <file>";
 
 struct Bersagli {
-    /// Quote fra i votanti per posto, somma 1.
+    /// Quote fra i votanti per posizione, somma 1.
     quote: Vec<f64>,
     /// Affluenza per regione, nell'ordine di `elettorato.toml`.
     affluenza: Vec<f64>,
@@ -26,35 +26,35 @@ fn numero(v: &toml::Value) -> Option<f64> {
     v.as_float().or_else(|| v.as_integer().map(|i| i as f64))
 }
 
-fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Bersagli, String> {
+fn leggi_bersagli(testo: &str, n_posizioni: usize, regioni: &[String]) -> Result<Bersagli, String> {
     let t: toml::Table = testo
         .parse()
         .map_err(|e| format!("bersagli illeggibili: {e}"))?;
-    let posti = t
-        .get("posti")
+    let posizioni = t
+        .get("posizioni")
         .and_then(toml::Value::as_array)
-        .ok_or("bersagli: manca `posti`")?;
-    let posti: Vec<f64> = posti
+        .ok_or("bersagli: manca `posizioni`")?;
+    let posizioni: Vec<f64> = posizioni
         .iter()
-        .map(|p| numero(p).ok_or("bersagli: `posti` vuole numeri"))
+        .map(|p| numero(p).ok_or("bersagli: `posizioni` vuole numeri"))
         .collect::<Result<_, _>>()?;
-    if posti.len() != n_posti {
+    if posizioni.len() != n_posizioni {
         return Err(format!(
-            "bersaglio non valido: {} posti, i partiti sono {n_posti}",
-            posti.len()
+            "bersaglio non valido: {} posizioni, i partiti sono {n_posizioni}",
+            posizioni.len()
         ));
     }
-    if let Some(i) = posti.iter().position(|p| !p.is_finite() || *p <= 0.0) {
+    if let Some(i) = posizioni.iter().position(|p| !p.is_finite() || *p <= 0.0) {
         return Err(format!(
-            "bersaglio non valido: posto {} = {}, serve una quota positiva",
+            "bersaglio non valido: posizione {} = {}, serve una quota positiva",
             i + 1,
-            posti[i]
+            posizioni[i]
         ));
     }
-    let somma: f64 = posti.iter().sum();
+    let somma: f64 = posizioni.iter().sum();
     if (somma - 100.0).abs() > 1e-6 {
         return Err(format!(
-            "bersaglio non valido: i posti sommano {somma}, non 100"
+            "bersaglio non valido: le posizioni sommano {somma}, non 100"
         ));
     }
     let tabella = t
@@ -78,7 +78,7 @@ fn leggi_bersagli(testo: &str, n_posti: usize, regioni: &[String]) -> Result<Ber
         })
         .collect::<Result<_, String>>()?;
     Ok(Bersagli {
-        quote: posti.iter().map(|p| p / 100.0).collect(),
+        quote: posizioni.iter().map(|p| p / 100.0).collect(),
         affluenza,
     })
 }
@@ -149,27 +149,27 @@ fn riscrivi_manopola(testo: &str, nome: &str, v: f64) -> Result<String, String> 
     Ok(nuovo)
 }
 
-/// Spec riga 36: la quota media del giocatore fra i votanti, sui posti, al 15%.
+/// Spec riga 36: la quota media del giocatore fra i votanti, sulle posizioni, al 15%.
 const QUOTA_GIOCATORE: f64 = 0.15;
 /// Mezzo decimo di punto: il bersaglio è un 15% tondo, più precisione allunga solo la bisezione.
 const TOLLERANZA_LUNA: f64 = 5e-4;
 
-/// Media sui posti della quota vera del giocatore fra i votanti, turno zero, seme 0.
+/// Media sulle posizioni della quota vera del giocatore fra i votanti, turno zero, seme 0.
 fn quota_media_giocatore(file: &FileDati) -> Result<f64, String> {
     let dati = DatiGioco::da_testi(file).map_err(|e| e.to_string())?;
-    let posti = posti(&dati);
+    let posizioni = posizioni(&dati);
     let mut somma = 0.0;
-    for &posto in &posti {
+    for &posizione in &posizioni {
         let f = Fondazione {
             nome: "Taratura".into(),
-            posto,
+            posizione,
         };
         let partita = Partita::fonda(dati.clone(), 0, &f).map_err(|e| e.to_string())?;
         let n = partita.giocatore();
         let int = partita.intenzioni_vere();
         somma += int.nazionali[n] / (1.0 - int.nazionali[n + 1]);
     }
-    Ok(somma / posti.len() as f64)
+    Ok(somma / posizioni.len() as f64)
 }
 
 /// Bisezione di una manopola su `[lo, hi]` (la media cresce con la manopola) fino al bersaglio.
@@ -305,7 +305,7 @@ pub fn esegui(mut args: impl Iterator<Item = String>) -> Result<String, String> 
         }
         if scarto < TOLLERANZA {
             // Dopo le valence dei partiti IA: la luna di miele porta la quota media del giocatore
-            // fra i votanti, sui posti, al 15%.
+            // fra i votanti, sulle posizioni, al 15%.
             let luna = bisezione(&mut file, "luna_di_miele", (0.0, 3.0))?;
             let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
             let nuovo = dati.manopola("valence_partito_nuovo");
