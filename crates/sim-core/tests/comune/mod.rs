@@ -420,3 +420,41 @@ pub fn calo_oltre_il_ritorno(prima: &[sim_core::partiti::Partito], p: &Partita, 
     let x = &prima[j];
     x.valence + r * (x.valence_base - x.valence) - p.partiti()[j].valence
 }
+
+/// Chiude il turno; se il giocatore governa, prima presenta la bozza del bilancio, se c'è: senza,
+/// il governo cadrebbe nell'esercizio provvisorio (piano 7b, Task 4).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn chiudi_col_bilancio(p: &mut Partita) {
+    if p.governa()
+        && let Some(bilancio) = p.bozza_bilancio()
+    {
+        p.comanda(Comando::PresentaBilancio { bilancio }).unwrap();
+    }
+    p.chiudi_turno();
+}
+
+/// La partita vera (posizione 4,5) nel turno dopo il voto, riportata con `edita` in fase
+/// ordinaria sotto il governo uscente (destra e centrodestra), con `incarico = null`, seggi
+/// scritti a mano e `dimissioni = true`; poi la chiusura, che chiama il Capo dello Stato.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn caduto(camera: &[u32], senato: &[u32]) -> Partita {
+    let mut p = fondata(4.5);
+    p.chiudi_turno();
+    let p = edita(&p, |j| {
+        j["legislatura"]["fase"] = "ordinaria".into();
+        j["legislatura"]["incarico"] = serde_json::Value::Null;
+        j["legislatura"]["dimissioni"] = true.into();
+    })
+    .unwrap();
+    let mut p = con_seggi(&p, camera, senato);
+    assert_eq!(p.governo().presidente, partito("destra"));
+    assert!(p.governo().al_governo(partito("centrodestra")));
+    p.chiudi_turno();
+    p
+}

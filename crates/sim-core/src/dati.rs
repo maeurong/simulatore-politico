@@ -228,6 +228,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "costo_dimissioni_chieste",
     "valence_rottura_impegno",
     "intesa_rottura_impegno",
+    "intesa_sfiducia_respinta",
+    "valence_sfiducia_respinta",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

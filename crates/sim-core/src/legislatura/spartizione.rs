@@ -47,12 +47,15 @@ fn pesi(dati: &DatiGioco) -> f64 {
 /// La spartizione di default (scelta 6 del piano 7): i dicasteri in ordine di peso decrescente
 /// (a parità quello dei dati), ciascuno al partito della `coalizione` con la richiesta scoperta
 /// più grande (a parità l'indice più basso); `guida` ha come richiesta il resto dei pesi. Un
-/// partito per dicastero, nell'ordine dei dati; `seggi` per partito, Camera più Senato.
+/// partito per dicastero, nell'ordine dei dati; `seggi` per partito, Camera più Senato. I
+/// dicasteri `Some` di `tenuti` restano a chi li tiene, al netto della sua richiesta (rimpasto,
+/// Gamson ricalcolata, formazione-di-coalizioni:16); si assegnano solo i `None`.
 pub(crate) fn spartizione_di_default(
     dati: &DatiGioco,
     coalizione: &[usize],
     guida: usize,
     seggi: &[u32],
+    tenuti: &[Option<usize>],
 ) -> Vec<usize> {
     let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
     let s: u32 = coalizione.iter().map(|&j| di(j)).sum();
@@ -67,13 +70,36 @@ pub(crate) fn spartizione_di_default(
     let mut ordine: Vec<usize> = (0..d.len()).collect();
     ordine.sort_by_key(|&i| std::cmp::Reverse(d[i].peso_spartizione));
     let mut v = vec![guida; d.len()];
-    for i in ordine {
+    for (i, &j) in tenuti.iter().enumerate() {
+        let Some(j) = j else { continue };
+        if let Some(x) = v.get_mut(i) {
+            *x = j;
+            if let Some(s) = scoperte.iter_mut().find(|s| s.0 == j) {
+                s.1 -= f64::from(d[i].peso_spartizione);
+            }
+        }
+    }
+    for i in ordine
+        .into_iter()
+        .filter(|&i| tenuti.get(i).is_none_or(Option::is_none))
+    {
         let k =
             (0..scoperte.len()).fold(0, |b, k| if scoperte[k].1 > scoperte[b].1 { k } else { b });
         v[i] = scoperte[k].0;
         scoperte[k].1 -= f64::from(d[i].peso_spartizione);
     }
     v
+}
+
+/// Il primo della `coalizione` per seggi (Camera più Senato), a parità l'indice più basso.
+pub(crate) fn primo_per_seggi(
+    coalizione: &[usize],
+    seggi_c: &[u32],
+    seggi_s: &[u32],
+) -> Option<usize> {
+    let di = |v: &[u32], j: usize| u64::from(v.get(j).copied().unwrap_or(0));
+    (coalizione.iter().copied())
+        .max_by_key(|&j| (di(seggi_c, j) + di(seggi_s, j), std::cmp::Reverse(j)))
 }
 
 /// La `coalizione` ha più della metà dei seggi in entrambe le Camere.
@@ -179,9 +205,27 @@ mod tests {
     /// uguali, 2,82, e la parità va all'indice più basso.
     #[test]
     fn la_spartizione_di_default_copre_le_richieste_in_ordine_di_peso() {
-        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[100, 50, 150]);
+        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[100, 50, 150], &[None; 10]);
         assert_eq!(v, [2, 1, 0, 1, 0, 2, 1, 0, 0, 2]);
-        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[50, 50, 200]);
+        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[50, 50, 200], &[None; 10]);
         assert_eq!(v, [2, 0, 1, 0, 1, 2, 0, 2, 1, 2]);
+    }
+
+    /// Un `tenuti` più lungo dei dicasteri: l'eccesso si ignora, senza panico.
+    #[test]
+    fn tenuti_oltre_i_dicasteri_si_ignorano() {
+        let v = spartizione_di_default(&dati_base(), &[0, 1], 1, &[100, 100], &[Some(0); 12]);
+        assert_eq!(v, [0; 10]);
+    }
+
+    /// Seggi 100, 50, 150 come sopra, col partito 1 che tiene Esteri (9, peso 2): gli resta, e
+    /// la sua richiesta scoperta scende da 2,82 a 0,82. In più prende solo Ambiente (6), dove le
+    /// scoperte sono 0,67, 0,82 e 0,51; il suo peso totale resta 3, come senza il tenuto.
+    #[test]
+    fn il_tenuto_resta_e_sconta_la_richiesta() {
+        let mut tenuti = [None; 10];
+        tenuti[9] = Some(1);
+        let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[100, 50, 150], &tenuti);
+        assert_eq!(v, [2, 2, 0, 2, 0, 2, 1, 0, 0, 1]);
     }
 }

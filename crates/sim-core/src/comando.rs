@@ -85,6 +85,14 @@ pub enum Comando {
     Allarga {
         partiti: Vec<String>,
     },
+    /// Il Presidente del Consiglio si dimette: il governo cade alla chiusura del turno.
+    Dimettiti,
+    /// Nel ribaltone col giocatore non primo per seggi, chiede la guida al primo: se la cede,
+    /// l'incarico passa al giocatore. Senza scelta, la chiusura la chiede.
+    ChiediGuida,
+    /// Nel ribaltone col giocatore non primo per seggi, ne resta fuori: il Capo dello Stato cerca
+    /// la maggioranza senza di lui.
+    RifiutaRibaltone,
 }
 
 impl Partita {
@@ -107,13 +115,29 @@ impl Partita {
         Err(Errore::Comando(motivo.into()))
     }
 
+    /// La guardia dell'ordinaria amministrazione (scelta 2 del piano 7b): nel turno di crisi niente
+    /// leggi, bilancio, decreti, fiducia, `Accogli`, né le anteprime di legge e decreto.
+    ///
+    /// # Errors
+    /// `Comando` nel turno di crisi.
+    pub(crate) fn fuori_dalla_crisi(&self) -> Result<(), Errore> {
+        if self.in_crisi() {
+            return Err(Errore::Comando(
+                "Crisi di governo: solo ordinaria amministrazione".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Applica un comando del giocatore.
     ///
     /// # Errors
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
-    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione` e `Allarga` è di governo: se il
-    /// giocatore non governa, `Comando` col motivo.
+    /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida` e
+    /// `RifiutaRibaltone` è di governo: se il giocatore non governa, `Comando` col motivo. Nel
+    /// turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
+    /// `Accogli`: `Comando`.
     pub fn comanda(&mut self, c: Comando) -> Result<(), Errore> {
         if self.finita() {
             return Err(Errore::Comando("La partita è finita".into()));
@@ -127,7 +151,23 @@ impl Partita {
         if let Comando::Allarga { partiti } = &c {
             return self.allarga(partiti);
         }
+        if c == Comando::ChiediGuida {
+            return self.chiedi_guida();
+        }
+        if c == Comando::RifiutaRibaltone {
+            return self.rifiuta_ribaltone();
+        }
         self.di_governo()?;
+        if matches!(
+            c,
+            Comando::PresentaBilancio { .. }
+                | Comando::PresentaLegge { .. }
+                | Comando::EmanaDecreto { .. }
+                | Comando::PoniFiducia { .. }
+                | Comando::Accogli { .. }
+        ) {
+            self.fuori_dalla_crisi()?;
+        }
         match c {
             Comando::PresentaBilancio { bilancio } => return self.presenta_bilancio(&bilancio),
             Comando::PresentaLegge { valori } => return self.presenta_legge(&valori),
@@ -139,6 +179,10 @@ impl Partita {
             Comando::PoniFiducia { misura } => return self.poni_fiducia(misura),
             Comando::EmanaDecreto { decreto } => return self.emana_decreto(&decreto),
             Comando::InvitaAstensione => return self.invita_astensione(),
+            Comando::Dimettiti => {
+                self.dimettiti();
+                return Ok(());
+            }
             Comando::Accogli { ref dicastero } => self.accogli_ripetuto(dicastero)?,
             _ => {}
         }

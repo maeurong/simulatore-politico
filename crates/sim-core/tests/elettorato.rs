@@ -4,7 +4,9 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci};
+use comune::{
+    chiudi_col_bilancio, dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci,
+};
 use sim_core::caso::{Caso, Flusso};
 use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo, intenzioni};
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
@@ -552,7 +554,7 @@ fn studenti_escono_verso_lavoro_e_disoccupazione_solo_a_gennaio() {
 fn solo_i_partiti_di_governo_hanno_un_giudizio() {
     let mut p = Partita::nuova(dati_base(), 5);
     for _ in 0..8 {
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
     }
     let gov = p.governo().clone();
     for j in (0..p.partiti().len()).filter(|j| !gov.al_governo(*j)) {

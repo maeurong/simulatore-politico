@@ -46,12 +46,12 @@ impl CausaDisponibilita {
     /// spinge verso la coalizione del giocatore.
     pub fn testo(self, con_te: bool) -> &'static str {
         match (self, con_te) {
-            (Self::Seggi, false) => "più seggi da solo",
+            (Self::Seggi, false) => "più seggi correndo da solo",
             (Self::Seggi, true) => "più seggi con te",
             (Self::Governare, false) => "più probabilità di governare altrove",
             (Self::Governare, true) => "più probabilità di governare con te",
-            (Self::Distanza, false) => "troppo lontano dalla tua posizione",
-            (Self::Distanza, true) => "vicino alla tua posizione",
+            (Self::Distanza, false) => "posizione troppo lontana dalla tua",
+            (Self::Distanza, true) => "posizione vicina alla tua",
             (Self::Guida, _) => "guiderebbe la propria coalizione",
             (Self::Intesa, _) => "intesa bassa con te",
         }
@@ -118,6 +118,7 @@ pub(crate) fn cedi(
 
 /// Ciò che la disponibilità legge della partita: sondaggio pubblico, legge e seggi dei rami in
 /// vigore, coalizioni dell'ultimo voto.
+#[derive(Clone)]
 pub(crate) struct Quadro<'a> {
     pub dati: &'a DatiGioco,
     pub partiti: &'a [Partito],
@@ -137,7 +138,7 @@ pub(crate) struct Quadro<'a> {
 impl Quadro<'_> {
     /// Seggi di Camera e Senato per partito al voto con `d`: riparto sul sondaggio pubblico, poi
     /// le cessioni; zero se il riparto rifiuta i voti.
-    fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
+    pub(super) fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
         if let Some(veri) = &self.seggi_veri {
             return veri.clone();
         }
@@ -165,7 +166,7 @@ impl Quadro<'_> {
     /// `peso_governare · P_k` (coi seggi veri, 1 o 0), `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
     /// k del giocatore]`.
-    fn termini(
+    pub(super) fn termini(
         &self,
         d: &Dichiarazione,
         (camera, senato): &(Vec<u32>, Vec<u32>),
@@ -192,15 +193,7 @@ impl Quadro<'_> {
             Some(_) => 0.0,
             None => 1.0 / (1.0 + (-x).exp()),
         };
-        let pos = |i: usize| self.partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
-        let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
-            .map(|&i| (pos(i) - pos(j)).abs())
-            .collect();
-        let distanza = if altri.is_empty() {
-            0.0
-        } else {
-            altri.iter().sum::<f64>() / altri.len() as f64
-        };
+        let distanza = distanza(self.partiti, &k, j);
         // Nella coalizione del giocatore guida sempre il giocatore; chi corre da solo non guida
         // una coalizione (A9 del piano 2: coalizione di una lista sola = lista non coalizzata).
         let q = |i: &&usize| quota_fra_i_votanti(self.sondaggio, **i);
@@ -251,16 +244,10 @@ impl Quadro<'_> {
                     partiti: d.partiti.iter().copied().filter(|&i| i != j).collect(),
                     cessioni: d.cessioni.iter().copied().filter(|c| c.0 != j).collect(),
                 };
-                let a = self.termini(&con, &seggi(&con), j);
-                let b = self.termini(&senza, &seggi(&senza), j);
-                let valore = |t: &[(CausaDisponibilita, f64)]| t.iter().map(|x| x.1).sum::<f64>();
-                let disponibile = valore(&a) > valore(&b);
-                let verso = if disponibile { 1.0 } else { -1.0 };
-                let causa = (a.iter().zip(&b))
-                    .map(|(&(c, x), &(_, y))| (c, verso * (x - y)))
-                    .filter(|&(_, scarto)| scarto > 0.0)
-                    .max_by(|x, y| x.1.total_cmp(&y.1))
-                    .map_or(CausaDisponibilita::Distanza, |(c, _)| c);
+                let (disponibile, causa) = confronta(
+                    &self.termini(&con, &seggi(&con), j),
+                    &self.termini(&senza, &seggi(&senza), j),
+                );
                 VoceDisponibilita {
                     partito: self
                         .partiti
@@ -271,6 +258,61 @@ impl Quadro<'_> {
                 }
             })
             .collect()
+    }
+
+    /// Il valore atteso di `j` al voto con `d`: la somma dei suoi termini.
+    pub(crate) fn valore(&self, d: &Dichiarazione, j: usize) -> f64 {
+        somma(&self.termini(d, &self.seggi(d), j))
+    }
+
+    /// `j` cede la guida al giocatore se il suo valore con `d` su questo quadro supera quello con
+    /// `d_prima` sul quadro `prima`; altrimenti la causa, come in `voci`.
+    pub(crate) fn cede_la_guida(
+        &self,
+        d: &Dichiarazione,
+        prima: &Quadro,
+        d_prima: &Dichiarazione,
+        j: usize,
+    ) -> Result<(), CausaDisponibilita> {
+        let (cede, causa) = confronta(
+            &self.termini(d, &self.seggi(d), j),
+            &prima.termini(d_prima, &prima.seggi(d_prima), j),
+        );
+        if cede { Ok(()) } else { Err(causa) }
+    }
+}
+
+fn somma(t: &[(CausaDisponibilita, f64)]) -> f64 {
+    t.iter().map(|x| x.1).sum()
+}
+
+/// `a` vince se il suo valore supera quello di `b`; la causa è il termine con lo scarto più grande
+/// nel verso che decide, `Distanza` se nessuno scarta in quel verso.
+fn confronta(
+    a: &[(CausaDisponibilita, f64)],
+    b: &[(CausaDisponibilita, f64)],
+) -> (bool, CausaDisponibilita) {
+    let vince = somma(a) > somma(b);
+    let verso = if vince { 1.0 } else { -1.0 };
+    let causa = (a.iter().zip(b))
+        .map(|(&(c, x), &(_, y))| (c, verso * (x - y)))
+        .filter(|&(_, scarto)| scarto > 0.0)
+        .max_by(|x, y| x.1.total_cmp(&y.1))
+        .map_or(CausaDisponibilita::Distanza, |(c, _)| c);
+    (vince, causa)
+}
+
+/// La distanza media fra la posizione dichiarata di `j` e quelle degli altri membri di `k`; 0
+/// se non ce ne sono.
+pub(super) fn distanza(partiti: &[Partito], k: &[usize], j: usize) -> f64 {
+    let pos = |i: usize| partiti.get(i).map_or(0.0, |p| p.posizione_dichiarata);
+    let altri: Vec<f64> = (k.iter().filter(|&&i| i != j))
+        .map(|&i| (pos(i) - pos(j)).abs())
+        .collect();
+    if altri.is_empty() {
+        0.0
+    } else {
+        altri.iter().sum::<f64>() / altri.len() as f64
     }
 }
 

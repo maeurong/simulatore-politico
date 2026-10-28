@@ -3,4 +3,4 @@
 /**
  * Perché la soddisfazione di un ministro è cambiata.
  */
-export type Causa = "indicatore_in_calo" | "obiettivo_raggiunto" | "dimissioni_chieste" | "atto_fermato" | "atto_dirottato" | "cantiere_fermato" | "proposta_respinta" | "budget_tagliato" | "norma_contro_posizione" | "legge_respinta" | "fondi_tolti" | "decreto_decaduto";
+export type Causa = "indicatore_in_calo" | "obiettivo_raggiunto" | "dimissioni_chieste" | "atto_fermato" | "atto_dirottato" | "cantiere_fermato" | "proposta_respinta" | "budget_tagliato" | "norma_contro_posizione" | "legge_respinta" | "fondi_tolti" | "decreto_decaduto" | "sfiduciato" | "uscita_dal_governo" | "rimpasto";

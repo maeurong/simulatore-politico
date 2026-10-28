@@ -251,6 +251,12 @@ _Evita_: governo nemico, maggioranza (che è il numero di seggi)
 Voto palese con cui il parlamento fa cadere il governo, o un singolo ministro; la coalizione vota no tranne gli alleati in ultimatum che dalla caduta guadagnano di più, gli altri partiti sì.
 _Evita_: mozione (da sola), questione di fiducia (che pone il governo)
 
+**Ribaltone**:
+Governo nuovo nato senza voto dopo una caduta, sulla maggioranza contigua che il Capo dello Stato trova in parlamento.
+
+**Capo dello Stato**:
+Istituzione a regole, non un giocatore: dopo una caduta cerca la maggioranza contigua o scioglie le Camere; promulga sempre.
+
 **Legislatura**:
 Periodo fra due elezioni; parte da 5 anni e la sua durata si cambia con una norma costituzionale.
 

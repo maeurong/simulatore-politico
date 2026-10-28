@@ -56,8 +56,8 @@ pub struct Vista {
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
     /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
-    /// l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
-    /// coi seggi del voto. Vuota altrove.
+    /// l'incarico al giocatore, o in crisi col giocatore al governo, una voce per partito fuori
+    /// dalla sua coalizione: se entrerebbe coi seggi veri. Vuota altrove.
     pub disponibilita: Vec<VoceDisponibilita>,
     /// Nel turno del voto i membri della coalizione del giocatore con cui si vota (id), senza di
     /// lui: dichiarati o, senza dichiarazione, quelli dell'ultimo voto; vuota altrove.
@@ -70,15 +70,22 @@ pub struct Vista {
     pub elezioni: Vec<EsitoElezioni>,
     /// In trattativa a chi va l'incarico; `None` altrove.
     pub incarico: Option<VoceIncarico>,
+    /// Il governo cade alla chiusura del turno.
+    pub dimissioni: bool,
+    /// Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
+    /// fuori dal turno del voto (che chiude la crisi).
+    pub crisi: bool,
 }
 
-/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato.
+/// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato. `Guida`: dopo una
+/// caduta, il giocatore sta nella maggioranza del Capo dello Stato ma non è il primo per seggi.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub enum VoceIncarico {
     Giocatore,
     CapoDelloStato,
+    Guida,
 }
 
 /// Un referendum in attesa del voto; `promotore` è l'id di un partito; `firme` = indetto (`false`

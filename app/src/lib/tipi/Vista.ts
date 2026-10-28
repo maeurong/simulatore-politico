@@ -78,8 +78,8 @@ seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, calendario: Array<VoceM
 referendum: Array<VistaReferendum>, esiti_referendum: Array<EsitoReferendum>, 
 /**
  * Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
- * l'incarico al giocatore, una voce per partito fuori dalla sua coalizione: se entrerebbe
- * coi seggi del voto. Vuota altrove.
+ * l'incarico al giocatore, o in crisi col giocatore al governo, una voce per partito fuori
+ * dalla sua coalizione: se entrerebbe coi seggi veri. Vuota altrove.
  */
 disponibilita: Array<VoceDisponibilita>, 
 /**
@@ -100,4 +100,13 @@ elezioni: Array<EsitoElezioni>,
 /**
  * In trattativa a chi va l'incarico; `None` altrove.
  */
-incarico: VoceIncarico | null, };
+incarico: VoceIncarico | null, 
+/**
+ * Il governo cade alla chiusura del turno.
+ */
+dimissioni: boolean, 
+/**
+ * Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
+ * fuori dal turno del voto (che chiude la crisi).
+ */
+crisi: boolean, };

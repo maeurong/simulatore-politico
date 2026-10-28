@@ -99,9 +99,23 @@ impl Intesa {
     /// pone, con la causa peggiore delle sue variazioni (`NormaLontana` se non ce ne sono); alla
     /// soglia o sopra lo ritira; chi non è alleato non ne ha.
     pub(crate) fn ultimatum(&mut self, dati: &DatiGioco, alleati: &[usize]) {
+        for (j, u) in self.ultimatum.iter_mut().enumerate() {
+            if !alleati.contains(&j) {
+                *u = None;
+            }
+        }
+        self.ultimatum_di(dati, alleati);
+    }
+
+    /// L'ultimatum sul valore corrente dei soli `quali`, alleati, come in `ultimatum`; gli altri
+    /// restano come sono.
+    pub(crate) fn ultimatum_di(&mut self, dati: &DatiGioco, quali: &[usize]) {
         let soglia = dati.manopola("soglia_ultimatum");
-        for (j, (&x, u)) in self.valori.iter().zip(&mut self.ultimatum).enumerate() {
-            if !alleati.contains(&j) || x >= soglia {
+        for &j in quali {
+            let (Some(&x), Some(u)) = (self.valori.get(j), self.ultimatum.get_mut(j)) else {
+                continue;
+            };
+            if x >= soglia {
                 *u = None;
             } else if u.is_none() {
                 let mie = (self.variazioni.iter()).filter(|v| v.partito == j);

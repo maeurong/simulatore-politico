@@ -45,6 +45,8 @@ pub enum FormaMisura {
     Costituzionale,
     Conversione,
     Bilancio,
+    /// La mozione di sfiducia, al governo o a un ministro: votata a blocchi, mai in calendario.
+    Sfiducia,
 }
 
 /// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;
@@ -710,10 +712,10 @@ impl Parlamento {
         (self.misure.iter()).any(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
     }
 
-    /// Nel turno del bilancio le leggi col voto nel turno passano al turno dopo e perdono la
-    /// questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti con la
-    /// fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui costo
-    /// si rimborsa.
+    /// Nel turno del bilancio o di crisi le leggi col voto nel turno passano al turno dopo e
+    /// perdono la questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti
+    /// con la fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui
+    /// costo si rimborsa.
     pub(crate) fn slitta_leggi(&mut self, turno: u32) -> Vec<Misura> {
         let mut con_fiducia = Vec::new();
         for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {
@@ -819,18 +821,9 @@ impl Parlamento {
         }
     }
 
-    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
-    /// misura in calendario decade senza voto, senza costi e senza blocco. Al voto in calendario
-    /// possono esserci solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai
-    /// fiducie né conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno
-    /// `voto = turno` e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non
-    /// ancora votato è sospeso, senza valence. I confermativi restano.
-    pub(crate) fn decadi_tutto(
-        &mut self,
-        dati: &DatiGioco,
-        disposizioni: &Disposizioni,
-        data: Trimestre,
-    ) {
+    /// Ogni misura in calendario decade senza voto, senza costi e senza blocco, con l'esito
+    /// `decaduta`.
+    pub(crate) fn decadi_calendario(&mut self, dati: &DatiGioco, data: Trimestre, decaduta: &str) {
         for m in std::mem::take(&mut self.misure) {
             self.esiti.insert(
                 0,
@@ -846,10 +839,25 @@ impl Parlamento {
                     fiducia: m.fiducia,
                     fiducia_respinta: false,
                     linee: Vec::new(),
-                    decaduta: Some("Decaduta per la fine della legislatura".into()),
+                    decaduta: Some(decaduta.into()),
                 },
             );
         }
+    }
+
+    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
+    /// misura in calendario decade (`decadi_calendario`). Al voto in calendario possono esserci
+    /// solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai fiducie né
+    /// conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno `voto = turno`
+    /// e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non ancora votato è
+    /// sospeso, senza valence. I confermativi restano.
+    pub(crate) fn decadi_tutto(
+        &mut self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        data: Trimestre,
+    ) {
+        self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura");
         self.respinte.clear();
         if let Some(r) = self.referendum.take() {
             let vigente = (r.valori.iter())

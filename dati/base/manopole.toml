@@ -1159,3 +1159,17 @@ valore = 10.0
 min = 0.0
 max = 30.0
 ticket = "05"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (intesa guadagnata da ogni alleato quando la sfiducia è respinta)
+[intesa_sfiducia_respinta]
+valore = 5.0
+min = 0.0
+max = 20.0
+ticket = "12"
+
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (valence persa dal promotore della sfiducia respinta)
+[valence_sfiducia_respinta]
+valore = 0.1
+min = 0.0
+max = 1.0
+ticket = "12"

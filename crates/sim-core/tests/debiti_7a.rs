@@ -87,9 +87,9 @@ fn allargamenti_rifiutati_lasciano_la_partita_identica() {
         // Il centro è disponibile e non compare; gli altri tre sì, separati da «; ».
         (
             vec!["centro", "centrodestra", "estrema_sinistra", "sinistra"],
-            "comando non ammesso: Centrodestra non entra: troppo lontano dalla tua posizione; \
-             Estrema sinistra non entra: troppo lontano dalla tua posizione; \
-             Sinistra non entra: troppo lontano dalla tua posizione",
+            "comando non ammesso: Centrodestra non entra: posizione troppo lontana dalla tua; \
+             Estrema sinistra non entra: posizione troppo lontana dalla tua; \
+             Sinistra non entra: posizione troppo lontana dalla tua",
         ),
     ] {
         let partiti = ids.into_iter().map(String::from).collect();

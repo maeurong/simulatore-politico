@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, presenta, senza_shock};
+use comune::{chiudi_col_bilancio, dati_base, edita, presenta, senza_shock};
 use sim_core::Partita;
 use sim_core::dati::DatiGioco;
 use sim_core::legislatura::Fase;
@@ -12,7 +12,7 @@ use sim_core::parlamento::TipoReferendum;
 
 fn al_turno(p: &mut Partita, t: u32) {
     while p.vista().turno < t {
-        p.chiudi_turno();
+        chiudi_col_bilancio(p);
     }
 }
 
@@ -155,7 +155,7 @@ fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
         fasi.push(p.legislatura().fase);
         let (elezioni, al_voto) = (p.vista().elezioni.len(), p.vista().turni_al_voto);
         assert_eq!(al_voto, p.legislatura().scadenza - turno, "turno {turno}");
-        p.chiudi_turno();
+        chiudi_col_bilancio(&mut p);
         if p.vista().elezioni.len() > elezioni {
             assert_eq!(al_voto, 0, "turno {turno}");
             assert_eq!(p.vista().elezioni.len(), elezioni + 1);
