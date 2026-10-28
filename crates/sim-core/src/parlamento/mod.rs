@@ -504,6 +504,7 @@ impl Parlamento {
             misura: None,
             valori: vec![(d, dopo)],
             promotore: Some(j),
+            del_giocatore: false,
             voto,
             firme: false,
             invito_astensione: false,

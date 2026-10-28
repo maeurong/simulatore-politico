@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
+use crate::legislatura::{Eredita, EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -61,6 +61,8 @@ pub struct Vista {
     /// I referendum in attesa del voto.
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
+    /// A partita finita, ciò che il giocatore lascia.
+    pub eredita: Option<Eredita>,
     /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
     /// l'incarico al giocatore, o in crisi col giocatore al governo, una voce per partito fuori
     /// dalla sua coalizione: se entrerebbe coi seggi veri. Vuota altrove.

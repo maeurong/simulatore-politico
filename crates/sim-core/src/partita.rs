@@ -13,8 +13,9 @@ use crate::errore::Errore;
 use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
-    self, Assegnazione, Cessione, Dichiarazione, EsitoElezioni, Fase, Fine, Incarico, Legislatura,
-    Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito, coalizioni_al_voto,
+    self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
+    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito,
+    coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
@@ -100,6 +101,12 @@ pub struct Partita {
     giocatore: usize,
     legislatura: Legislatura,
     fine: Option<Fine>,
+    /// Chiusure iniziate col giocatore al governo.
+    turni_al_governo: u32,
+    /// Le stringhe `legge` delle sue leggi, scritte quando entrano in vigore.
+    leggi_del_giocatore: Vec<String>,
+    /// I quattro indicatori al turno zero (`indicatori`).
+    partenza: [f64; 4],
 }
 
 impl Partita {
@@ -193,7 +200,7 @@ impl Partita {
             },
             &mut caso,
         );
-        Partita {
+        let mut p = Partita {
             parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
             misure: Misure::neutre(&dati),
@@ -213,7 +220,24 @@ impl Partita {
             giocatore,
             legislatura,
             fine: None,
-        }
+            turni_al_governo: 0,
+            leggi_del_giocatore: Vec::new(),
+            partenza: [0.0; 4],
+        };
+        p.partenza = p.indicatori();
+        p
+    }
+
+    /// Debito in % del PIL nominale annuo, spread in punti base, disoccupazione nazionale e
+    /// inflazione annualizzata dell'economia vera: stessi campi al turno zero e a fine partita.
+    fn indicatori(&self) -> [f64; 4] {
+        let e = &self.economia;
+        [
+            100.0 * e.debito as f64 / (4.0 * e.pil_trimestrale * 1e9),
+            e.spread,
+            e.disoccupazione_nazionale(&self.dati),
+            e.inflazione[0],
+        ]
     }
 
     // Ordine della chiusura:
@@ -236,6 +260,9 @@ impl Partita {
     pub fn chiudi_turno(&mut self) {
         if self.finita() {
             return;
+        }
+        if self.governa() {
+            self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
         // ponytail: governo IA minimo, il piano 8 lo sostituisce. Le proposte dei suoi ministri
@@ -588,6 +615,7 @@ impl Partita {
                     misura: Some(id),
                     valori: m.valori.clone(),
                     promotore: None,
+                    del_giocatore: self.del_giocatore(&m),
                     voto,
                     firme: true,
                     invito_astensione: false,
@@ -687,6 +715,9 @@ impl Partita {
     /// turni se un emendamento accolto li rinvia.
     fn entra_in_vigore(&mut self, m: &Misura) {
         let (turno, legge) = (self.turno, format!("L. {}/{}", m.id, self.data.anno));
+        if self.del_giocatore(m) {
+            self.leggi_del_giocatore.push(legge.clone());
+        }
         let rinvio = self.dati.manopola("turni_rinvio_regime") as u32;
         for &(d, g) in &m.valori {
             if parlamento::rinviata(&m.emendamenti, d) {
@@ -703,6 +734,14 @@ impl Partita {
                 &legge,
                 &mut self.grandezze.effetti,
             );
+        }
+    }
+
+    /// La misura è del giocatore: sua proposta d'opposizione, o del governo che presiede.
+    fn del_giocatore(&self, m: &Misura) -> bool {
+        match m.promotore {
+            Some(j) => j == self.giocatore,
+            None => self.governo.presidente == self.giocatore,
         }
     }
 
@@ -744,6 +783,9 @@ impl Partita {
             let esito = EsitoReferendum::da(r.tipo, nome, self.data, &a);
             if esito.approvato {
                 let legge = format!("L. {}/{}", r.misura.unwrap_or_default(), self.data.anno);
+                if r.del_giocatore {
+                    self.leggi_del_giocatore.push(legge.clone());
+                }
                 for &(d, g) in &r.valori {
                     (self.disposizioni).cambia(
                         &self.dati,
@@ -1571,6 +1613,48 @@ impl Partita {
 
     pub fn finita(&self) -> bool {
         self.fine.is_some()
+    }
+
+    /// Ciò che il giocatore lascia, a partita finita.
+    pub fn eredita(&self) -> Option<Eredita> {
+        let fine = self.fine?;
+        let nomi = (self.dati.disposizioni().iter().zip(&self.disposizioni.voci))
+            .filter(|(_, v)| self.leggi_del_giocatore.contains(&v.legge))
+            .map(|(d, _)| d.nome.clone());
+        let voci = [
+            ("debito_pil", "Debito in % del PIL"),
+            ("spread", "Spread"),
+            ("disoccupazione", "Disoccupazione"),
+            ("inflazione", "Inflazione"),
+        ];
+        let fine_partita = self.indicatori();
+        Some(Eredita {
+            fine,
+            bozza: fine == Fine::SenzaSeggi,
+            anni_al_governo: f64::from(self.turni_al_governo) / 4.0,
+            leggi_in_vigore: nomi.collect(),
+            indicatori: (voci.iter().zip(self.partenza).zip(fine_partita))
+                .map(|((&(id, nome), turno_zero), fine)| ConfrontoIndicatore {
+                    id: id.into(),
+                    nome: nome.into(),
+                    turno_zero,
+                    fine,
+                })
+                .collect(),
+        })
+    }
+
+    /// Il giocatore lascia la partita: l'eredità subito.
+    ///
+    /// # Errors
+    /// `Comando` a partita finita.
+    pub fn abbandona(&mut self) -> Result<Eredita, Errore> {
+        if self.finita() {
+            return Err(Errore::Comando("La partita è finita".into()));
+        }
+        self.fine = Some(Fine::Abbandono);
+        self.eredita()
+            .ok_or_else(|| Errore::Comando("La partita è finita".into()))
     }
 
     /// Il giocatore guida il governo in carica: i comandi di governo sono suoi.
@@ -2697,6 +2781,7 @@ impl Partita {
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
+            eredita: self.eredita(),
             disponibilita: if (l.turno_di_voto(self.turno) || self.allarga_ammesso())
                 && !self.finita()
             {
@@ -2903,6 +2988,11 @@ impl Partita {
     /// partito del giocatore, se fondato, è l'ultimo, in più di quelli dello scenario.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
+        ok(
+            self.turni_al_governo <= self.turno.saturating_add(1)
+                && self.partenza.iter().all(|x| x.is_finite()),
+            "turni_al_governo oltre il turno o partenza non finita",
+        )?;
         let attesi = self.dati.scenario().partiti.len();
         let fondato = self.giocatore.saturating_add(1) == n
             && self.partiti.last().is_some_and(|p| p.id == ID_GIOCATORE);
