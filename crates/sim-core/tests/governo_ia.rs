@@ -566,8 +566,8 @@ fn il_programma_va_in_aula_in_ordine() {
     );
 }
 
-/// Il programma ridotto alla prima voce, scritta al gradino già in vigore: la presentazione la
-/// rifiuta, e il governo non porta nulla in aula né lascia righe.
+/// Il programma ridotto alla prima voce, scritta al gradino già in vigore: il governo la scarta
+/// prima di presentarla (non è «non ancora in vigore»), e non porta nulla in aula né lascia righe.
 #[test]
 fn programma_esaurito_non_presenta_nulla() {
     let p = all_opposizione();

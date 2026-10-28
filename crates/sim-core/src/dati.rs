@@ -372,6 +372,11 @@ impl DatiGioco {
             m.valore = valore;
         }
     }
+
+    /// Per i test d'unità: lo scenario da ritoccare.
+    pub(crate) fn scenario_mut(&mut self) -> &mut Scenario {
+        &mut self.scenario
+    }
 }
 
 fn errore_toml(file: &str, e: toml::de::Error) -> Errore {

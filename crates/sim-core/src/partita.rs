@@ -3507,6 +3507,41 @@ mod tests {
     /// L'alleato sotto `soglia_ultimatum` con un emendamento aperto: il governo IA lo accoglie.
     #[test]
     fn il_governo_ia_accoglie_l_emendamento_dell_alleato_sotto_40() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        p.intesa.valori[a] = 30.0;
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga =
+            format!("Accoglie l'emendamento di {nome} su {legge}: l'intesa di {nome} è sotto 40");
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Alleato sopra la soglia e i seggi tutti al Presidente del Consiglio: senza l'alleato la
+    /// legge non rischia, e l'emendamento è respinto.
+    #[test]
+    fn il_governo_ia_respinge_l_emendamento_che_non_serve() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        p.intesa.valori[a] = 100.0;
+        let pc = p.governo.presidente;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
+        }
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Respinto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga = format!("Respinge l'emendamento di {nome} su {legge}");
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Una legge del governo IA al voto con l'emendamento aperto del primo alleato, mosse vuote:
+    /// la partita, l'id della legge e l'alleato.
+    fn con_emendamento_aperto() -> (Partita, u32, usize) {
         let mut p = all_opposizione();
         let id = legge_del_governo_al_voto(&mut p);
         let a = *p.alleati().first().unwrap();
@@ -3517,14 +3552,66 @@ mod tests {
             stato: StatoEmendamento::Aperto,
             motivo: String::new(),
         });
-        p.intesa.valori[a] = 30.0;
         p.mosse.clear();
-        p.governo_ia();
-        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
-        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
-        let nome = &p.partiti[a].nome;
-        let riga = format!("Accoglie l'emendamento di {nome}: l'intesa di {nome} è sotto 40");
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+        (p, id, a)
+    }
+
+    /// Il nome che la `Vista` dà alla misura `id` nel calendario.
+    fn nome_in_calendario(p: &Partita, id: u32) -> String {
+        let v = p.vista();
+        v.calendario.into_iter().find(|m| m.id == id).unwrap().nome
+    }
+
+    /// Tetto UE a metà fra la crescita della bozza e quella indicizzata per intero: la bisezione
+    /// trova la quota più alta dentro il tetto. Poi un alleato in ultimatum: le sue voci si
+    /// indicizzano per intero, il bilancio esce dal tetto e la riga lo dice.
+    #[test]
+    fn il_bilancio_ia_cerca_la_quota_piu_alta_entro_il_tetto() {
+        let mut p = all_opposizione();
+        while p.data.trimestre != 4 {
+            p.chiudi_turno();
+        }
+        p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
+        // Col seme 7 l'indice pubblicato (1,002) sta sotto il livello delle voci (1,019), e
+        // indicizzare taglierebbe: prezzi più alti, voci in perdita reale.
+        p.informazione.statistica.indice_prezzi = 1.2;
+        let (bozza, indice) = (p.bozza_bilancio().unwrap(), p.indice_prezzi());
+        let riepilogo = |p: &Partita, b: &Bilancio| p.riepilogo_ammesso(b).unwrap();
+        let crescita = |p: &Partita, q: f64| {
+            let b = economia::indicizza_in_parte(&bozza, q, indice).unwrap();
+            riepilogo(p, &b).crescita_spesa_netta
+        };
+        let (zero, uno) = (crescita(&p, 0.0), crescita(&p, 1.0));
+        assert!(zero < uno, "{zero} {uno}");
+        let tetto = f64::midpoint(zero, uno);
+        (p.dati.scenario_mut().tetti_spesa_netta) = [(2000, tetto)].into();
+        let (b, q, testo) = p.bilancio_ia().unwrap();
+        assert!(0.0 < q && q < 1.0, "{q}");
+        let r = riepilogo(&p, &b);
+        assert!(r.crescita_spesa_netta <= r.tetto, "{r:?}");
+        assert!(crescita(&p, q + 1e-3) > tetto);
+        let percento = (q * 100.0).round();
+        let attesa = format!(
+            "Bilancio {}: budget indicizzati al {percento:.0}% dell'inflazione, entro il tetto UE",
+            b.anno
+        );
+        assert_eq!(testo, attesa);
+        // Un alleato con dicasteri in ultimatum.
+        let a = (p.alleati().into_iter())
+            .find(|j| p.governo.dicasteri.contains(j))
+            .unwrap();
+        p.intesa.ultimatum[a] = Some(CausaIntesa::NormaLontana);
+        let (b, q2, testo) = p.bilancio_ia().unwrap();
+        assert_eq!(q2, q);
+        for (k, _) in (p.governo.dicasteri.iter().enumerate()).filter(|&(_, &j)| j == a) {
+            assert_eq!(b.dicasteri[k].livello_prezzi, indice, "{k}");
+        }
+        let attesa = format!(
+            "Bilancio {}: budget indicizzati al {percento:.0}% dell'inflazione, oltre il tetto UE, \
+             con le richieste di {}",
+            b.anno, p.partiti[a].nome
+        );
+        assert_eq!(testo, attesa);
     }
 
     /// Forbice in bilico (i seggi quasi tutti al giocatore, che vota no) e nessun ultimatum: il

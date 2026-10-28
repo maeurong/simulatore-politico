@@ -97,7 +97,7 @@ impl Partita {
         let pc = self.governo.presidente;
         if (self.data.trimestre == 4 || self.economia.esercizio_provvisorio(self.data))
             && self.economia.bilancio_presentato.is_none()
-            && let Some((bilancio, testo)) = self.bilancio_ia()
+            && let Some((bilancio, _, testo)) = self.bilancio_ia()
             && self.applica(Comando::PresentaBilancio { bilancio }).is_ok()
         {
             self.mossa(pc, testo);
@@ -167,10 +167,14 @@ impl Partita {
                 partito,
                 accogli,
             };
-            if self.applica(c).is_ok() {
+            // La legge col nome del calendario dopo la decisione (l'accolto ne cambia i gradini).
+            if self.applica(c).is_ok()
+                && let Some(m) = self.parlamento.misure.iter().find(|m| m.id == misura)
+            {
+                let legge = parlamento::nome_misura(&self.dati, m);
                 let testo = match motivo {
-                    Some(m) => format!("Accoglie l'emendamento di {nome}: {m}"),
-                    None => format!("Respinge l'emendamento di {nome}"),
+                    Some(m) => format!("Accoglie l'emendamento di {nome} su {legge}: {m}"),
+                    None => format!("Respinge l'emendamento di {nome} su {legge}"),
                 };
                 self.mossa(pc, testo);
             }
@@ -213,11 +217,13 @@ impl Partita {
         self.parlamento.forbice(&p).in_bilico
     }
 
-    /// Il bilancio del governo IA e la sua riga (scelta 10 del piano): la bozza coi budget dei
-    /// dicasteri indicizzati della quota più alta che tiene la crescita della spesa netta entro
-    /// il tetto UE (bisezione in 20 passi; quota 0 se nemmeno la bozza ci sta), poi i dicasteri
-    /// degli alleati in ultimatum indicizzati per intero, anche oltre il tetto. `None` senza bozza.
-    fn bilancio_ia(&self) -> Option<(Bilancio, String)> {
+    /// Il bilancio del governo IA, la quota e la riga (scelta 10 del piano): la bozza coi budget
+    /// dei dicasteri indicizzati della quota più alta che tiene la crescita della spesa netta
+    /// entro il tetto UE (bisezione in 20 passi; quota 0 se nemmeno la bozza ci sta), poi i
+    /// dicasteri degli alleati in ultimatum indicizzati per intero, anche oltre il tetto. La riga
+    /// dice entro od oltre il tetto sul bilancio finale; niente, se il riepilogo non si calcola.
+    /// `None` senza bozza.
+    pub(super) fn bilancio_ia(&self) -> Option<(Bilancio, f64, String)> {
         let bozza = self.bozza_bilancio()?;
         let indice = self.indice_prezzi();
         let con = |q: f64| economia::indicizza_in_parte(&bozza, q, indice).ok();
@@ -244,26 +250,43 @@ impl Partita {
         };
         let mut b = con(quota)?;
         let richiedenti: Vec<usize> = (self.alleati().into_iter())
-            .filter(|&j| self.in_ultimatum(j) && self.governo.dicasteri.contains(&j))
+            .filter(|&j| self.in_ultimatum(j))
             .collect();
-        let k: Vec<usize> = (self.governo.dicasteri.iter().enumerate())
-            .filter(|&(_, j)| richiedenti.contains(j))
-            .map(|(k, _)| k)
-            .collect();
+        let dicasteri_di = |j: usize| {
+            (self.governo.dicasteri.iter().enumerate())
+                .filter(move |&(_, &x)| x == j)
+                .map(|(k, _)| k)
+        };
+        let k: Vec<usize> = richiedenti.iter().flat_map(|&j| dicasteri_di(j)).collect();
+        // Solo gli alleati le cui voci l'indicizzazione piena cambia davvero.
+        let mut nomi = Vec::new();
         if !k.is_empty() {
-            b = self.indicizza_dicasteri(&b, &k).ok()?;
+            let pieno = self.indicizza_dicasteri(&b, &k).ok()?;
+            let spesa = |x: &Bilancio, k: usize| x.dicasteri.get(k).map(|d| d.spesa);
+            for &j in &richiedenti {
+                if dicasteri_di(j).any(|k| spesa(&b, k) != spesa(&pieno, k))
+                    && let Some(p) = self.partiti.get(j)
+                {
+                    nomi.push(p.nome.as_str());
+                }
+            }
+            b = pieno;
         }
         let mut testo = format!(
-            "Bilancio {}: budget indicizzati al {:.0}% dell'inflazione, entro il tetto UE",
+            "Bilancio {}: budget indicizzati al {:.0}% dell'inflazione",
             b.anno,
             (quota * 100.0).round()
         );
-        if !richiedenti.is_empty() {
-            let nomi: Vec<&str> = (richiedenti.iter())
-                .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.as_str()))
-                .collect();
+        if let Ok(r) = self.riepilogo_ammesso(&b) {
+            testo.push_str(if r.crescita_spesa_netta <= r.tetto {
+                ", entro il tetto UE"
+            } else {
+                ", oltre il tetto UE"
+            });
+        }
+        if !nomi.is_empty() {
             testo.push_str(&format!(", con le richieste di {}", nomi.join(", ")));
         }
-        Some((b, testo))
+        Some((b, quota, testo))
     }
 }
