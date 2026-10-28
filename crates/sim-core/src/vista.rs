@@ -10,6 +10,7 @@ use crate::parlamento::{
     ValoreProposto, VariazioneIntesa, VoceLinea,
 };
 use crate::partita::Trimestre;
+use crate::partiti::Vocazione;
 use serde::Serialize;
 #[cfg(test)]
 use ts_rs::TS;
@@ -344,6 +345,8 @@ pub struct VocePartito {
     pub posizione_percepita: f64,
     pub valence: f64,
     pub al_governo: bool,
+    pub vocazione: Vocazione,
+    pub leader: String,
 }
 
 /// La statistica senza `vera`.

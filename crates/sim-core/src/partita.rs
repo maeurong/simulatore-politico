@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 8;
+pub const VERSIONE_SCHEMA: u32 = 9;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -2723,6 +2723,8 @@ impl Partita {
                 posizione_percepita: p.posizione_percepita,
                 valence: p.valence,
                 al_governo: self.governo.al_governo(j),
+                vocazione: p.vocazione,
+                leader: p.leader.clone(),
             })
             .collect()
     }

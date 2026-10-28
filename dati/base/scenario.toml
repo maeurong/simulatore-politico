@@ -221,6 +221,8 @@ fonte = "nessuno scostamento al turno zero; scostamento %"
 id = "estrema_sinistra"
 nome = "Estrema sinistra"
 posizione = 1.0
+vocazione = "identitaria"
+leader = "Anna Ferrucci"
 
 [partito.valence]
 valore = -0.613476
@@ -232,6 +234,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "sinistra"
 nome = "Sinistra"
 posizione = 2.0
+vocazione = "mista"
+leader = "Luca Benedetti"
 
 [partito.valence]
 valore = 0.969668
@@ -243,6 +247,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "centrosinistra"
 nome = "Centrosinistra"
 posizione = 3.0
+vocazione = "mista"
+leader = "Chiara Lombardo"
 
 [partito.valence]
 valore = -0.522527
@@ -254,6 +260,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "centro"
 nome = "Centro"
 posizione = 4.0
+vocazione = "governista"
+leader = "Giorgio Valli"
 
 [partito.valence]
 valore = -0.889093
@@ -265,6 +273,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "centrodestra"
 nome = "Centrodestra"
 posizione = 5.0
+vocazione = "mista"
+leader = "Silvia Moretti"
 
 [partito.valence]
 valore = -0.425140
@@ -276,6 +286,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "destra"
 nome = "Destra"
 posizione = 6.0
+vocazione = "mista"
+leader = "Davide Ranieri"
 
 [partito.valence]
 valore = 0.820719
@@ -287,6 +299,8 @@ fonte = "tarata da sim-cli tara sui sondaggi di ottobre 2026 (strumenti/taratura
 id = "estrema_destra"
 nome = "Estrema destra"
 posizione = 7.0
+vocazione = "identitaria"
+leader = "Bruno Castellani"
 
 [partito.valence]
 valore = 0.015048

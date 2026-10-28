@@ -4,6 +4,8 @@
 
 use crate::dati::DatiGioco;
 use crate::partiti::Partito;
+#[cfg(test)]
+use crate::partiti::Vocazione;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -163,6 +165,8 @@ mod tests {
                 posizione_percepita: x,
                 valence: 0.0,
                 valence_base: 0.0,
+                vocazione: Vocazione::Mista,
+                leader: String::new(),
             })
             .collect()
     }
