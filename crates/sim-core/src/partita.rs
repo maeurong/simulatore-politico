@@ -955,7 +955,7 @@ impl Partita {
     ) -> Result<Option<Bilancio>, Errore> {
         let j = self.partiti.iter().position(|p| p.id == partito);
         let proposta = (self.parlamento.misure.iter())
-            .filter(|m| m.id == misura && m.forma == FormaMisura::Bilancio)
+            .filter(|m| m.id == misura && parlamento::bilancio_del_turno(m, self.turno))
             .flat_map(|m| &m.emendamenti)
             .find(|e| Some(e.partito) == j && e.stato == StatoEmendamento::Aperto);
         let (true, Some(e), Some(b)) = (accogli, proposta, &self.economia.bilancio_presentato)
@@ -1127,7 +1127,7 @@ impl Partita {
         let (_, mut b) = self.bilancio_ammesso(b)?;
         let turno = self.turno;
         let accolti: Vec<usize> = (self.parlamento.misure.iter())
-            .filter(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
+            .filter(|m| parlamento::bilancio_del_turno(m, turno))
             .flat_map(|m| &m.emendamenti)
             .filter(|e| e.stato == StatoEmendamento::Accolto)
             .flat_map(|e| e.proposta.iter().map(|p| p.0))
@@ -1153,8 +1153,8 @@ impl Partita {
         Ok(self.bilancio_ammesso(&b)?.1)
     }
 
-    /// Una richiesta per ogni alleato che tiene dicasteri la cui voce perde più di
-    /// `soglia_emendamento_bilancio` punti reali nel bilancio presentato.
+    /// Una richiesta per ogni alleato che tiene dicasteri la cui voce, nel bilancio presentato,
+    /// perde in termini reali più di `soglia_emendamento_bilancio` % del budget.
     fn richieste_di_indicizzazione(&self) -> Vec<RichiestaEmendamento> {
         let Some(b) = &self.economia.bilancio_presentato else {
             return Vec::new();

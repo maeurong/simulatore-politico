@@ -220,6 +220,11 @@ fn voto_abrogativo(turno: u32) -> Option<u32> {
     (trimestre <= 3).then(|| turno.saturating_add(6 - trimestre))
 }
 
+/// La legge di bilancio col voto nel `turno`.
+pub(crate) fn bilancio_del_turno(m: &Misura, turno: u32) -> bool {
+    m.forma == FormaMisura::Bilancio && m.voto == turno
+}
+
 /// La legge col voto nel turno, che nel turno del bilancio slitta al turno dopo.
 fn slitta(m: &Misura, turno: u32) -> bool {
     let legge = matches!(
@@ -791,7 +796,7 @@ impl Parlamento {
 
     /// In calendario c'è la legge di bilancio col voto nel turno.
     pub(crate) fn turno_del_bilancio(&self, turno: u32) -> bool {
-        (self.misure.iter()).any(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
+        (self.misure.iter()).any(|m| bilancio_del_turno(m, turno))
     }
 
     /// Nel turno del bilancio o di crisi le leggi col voto nel turno passano al turno dopo e

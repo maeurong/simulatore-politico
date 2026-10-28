@@ -1,7 +1,10 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, slitta, voto};
+use super::{
+    FormaMisura, Misura, Parlamento, StatoAula, bilancio_del_turno, ko, nome_misura, posizioni,
+    slitta, voto,
+};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -160,10 +163,11 @@ impl Parlamento {
     }
 
     /// Gli emendamenti della legge di bilancio del turno: restano i decisi, gli aperti diventano
-    /// `nuovi`, tranne quelli di chi ha già un emendamento deciso.
+    /// `nuovi`, tranne quelli di chi ha già un emendamento deciso. Con la fiducia posta, nessuno:
+    /// la fiducia ha fatto cadere gli aperti (`poni_fiducia`).
     pub(crate) fn emendamenti_bilancio(&mut self, turno: u32, nuovi: Vec<RichiestaEmendamento>) {
-        let bilancio = |m: &&mut Misura| m.forma == FormaMisura::Bilancio && m.voto == turno;
-        if let Some(m) = self.misure.iter_mut().find(bilancio) {
+        let bilancio = (self.misure.iter_mut()).find(|m| bilancio_del_turno(m, turno));
+        if let Some(m) = bilancio.filter(|m| !m.fiducia) {
             m.emendamenti
                 .retain(|e| e.stato != StatoEmendamento::Aperto);
             for n in nuovi {
@@ -295,23 +299,27 @@ fn seggi_persi(n: i32) -> String {
 }
 
 /// La richiesta aperta di `partito` sul bilancio: indicizzare i `perdite` (dicastero, perdita
-/// reale in punti).
+/// reale in % del budget), col motivo `"{dicastero}: il budget perde {x}% in termini reali"`
+/// per voce, unite da `"; "`.
 pub(crate) fn richiesta_bilancio(
     dati: &DatiGioco,
     partito: usize,
     perdite: &[(usize, f64)],
 ) -> RichiestaEmendamento {
-    let motivo = (perdite.iter())
-        .filter_map(|&(k, x)| {
+    let voci: Vec<(usize, &str, f64)> = (perdite.iter())
+        .filter_map(|&(k, x)| Some((k, dati.dicasteri().get(k)?.nome.as_str(), x)))
+        .collect();
+    let motivo = (voci.iter())
+        .map(|&(_, nome, x)| {
             let x = format!("{x:.1}").replace('.', ",");
-            Some(format!("{}: −{x}% reale", dati.dicasteri().get(k)?.nome))
+            format!("{nome}: il budget perde {x}% in termini reali")
         })
         .collect::<Vec<_>>()
         .join("; ");
     RichiestaEmendamento {
         partito,
-        proposta: (perdite.iter())
-            .map(|&(k, _)| (k, Attenuazione::Indicizza))
+        proposta: (voci.iter())
+            .map(|&(k, _, _)| (k, Attenuazione::Indicizza))
             .collect(),
         stato: StatoEmendamento::Aperto,
         motivo,

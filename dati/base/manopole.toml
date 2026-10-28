@@ -1181,7 +1181,7 @@ min = 40.0
 max = 90.0
 ticket = "12"
 
-# assunzione del piano 7b, nessuna fonte in docs/ricerca (punti reali persi da una voce di un dicastero dell'alleato oltre cui chiede di indicizzarla)
+# assunzione del piano 7b, nessuna fonte in docs/ricerca (perdita reale, in % del budget, di un dicastero dell'alleato oltre cui chiede di indicizzarlo)
 [soglia_emendamento_bilancio]
 valore = 1.0
 min = 0.0

@@ -380,7 +380,8 @@ fn gli_alleati_chiedono_di_indicizzare_i_loro_dicasteri() {
         .find(|e| e.partito == "centrodestra")
         .unwrap();
     assert!(e.testo.contains("indicizzato"), "{}", e.testo);
-    assert!(e.motivo.contains("% reale"), "{}", e.motivo);
+    assert!(e.motivo.contains(": il budget perde "), "{}", e.motivo);
+    assert!(e.motivo.contains("% in termini reali"), "{}", e.motivo);
     assert_eq!(e.stato, StatoEmendamento::Aperto);
 }
 
@@ -462,4 +463,22 @@ fn respinto_l_emendamento_i_franchi_tiratori_dell_alleato_crescono() {
         m.forbice,
         prima
     );
+}
+
+/// Con la fiducia posta sul bilancio, la ripresentazione non riapre emendamenti.
+#[test]
+fn ripresentato_sotto_fiducia_il_bilancio_non_riapre_emendamenti() {
+    let mut p = al_bilancio_del_2028();
+    let id = bilancio(&p).id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    presenta_bozza(&mut p);
+    let m = bilancio(&p);
+    assert!(m.fiducia);
+    assert!(
+        m.emendamenti
+            .iter()
+            .all(|e| e.stato != StatoEmendamento::Aperto)
+    );
+    p.chiudi_turno();
+    assert!(!(p.intesa().variazioni.iter()).any(|x| x.causa == CausaIntesa::EmendamentoRespinto));
 }
