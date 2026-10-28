@@ -293,7 +293,8 @@ impl StatoAula<'_> {
     /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
     /// e sul bilancio la maggioranza vota sì e l'opposizione no; senza posizione, i franchi
     /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì, e su
-    /// di essa il Presidente del Consiglio segue il guadagno (scelta 15 del piano 8a).
+    /// di essa il Presidente del Consiglio segue il guadagno, o la linea scelta se è il giocatore,
+    /// e gli alleati gli sono fedeli in quella direzione (scelta 15 del piano 8a).
     /// La linea scelta dal giocatore (scelta 14 del piano 7b) vale per il suo partito, anche
     /// sotto fiducia; fuori dalla fiducia coi franchi tiratori
     /// `ft_base + ft_distanza · |x − sostenuta| / 6` entro `ft_max`: `sostenuta` è la posizione
@@ -353,8 +354,14 @@ impl StatoAula<'_> {
         let mut linea = if matches!(m.forma, FormaMisura::Conversione | FormaMisura::Bilancio) {
             (0..partiti.len()).map(|j| governo.al_governo(j)).collect()
         } else {
-            let pdc_libero = m.promotore.is_some();
-            voto::linea(dati, governo, intesa, &guadagno, &self.malus(), pdc_libero)
+            // Sulla proposta dell'opposizione il Presidente del Consiglio è libero: la linea scelta
+            // dal giocatore se presiede lui, altrimenti il guadagno.
+            let pc = governo.presidente;
+            let linea_pdc = m.promotore.map(|_| {
+                (m.linea_giocatore.filter(|_| pc == g))
+                    .unwrap_or_else(|| guadagno.get(pc).is_some_and(|&x| x > 0.0))
+            });
+            voto::linea(dati, governo, intesa, &guadagno, &self.malus(), linea_pdc)
         };
         let accolti = (m.emendamenti.iter()).filter(|e| e.stato == StatoEmendamento::Accolto);
         for j in accolti.map(|e| e.partito).chain(m.promotore) {
@@ -627,17 +634,34 @@ impl Parlamento {
         if !self.posto_riservato_libero(turno) {
             return ko("il posto riservato è già occupato".into());
         }
+        let m = self.bozza_proposta(dati, disposizioni, turno, promotore, valori)?;
+        self.misure.push(m);
+        self.prossima = self.prossima.saturating_add(1);
+        Ok(())
+    }
+
+    /// La proposta del partito `promotore` che `presenta_proposta` metterebbe nel posto riservato,
+    /// senza guardare se il posto è libero; non tocca nulla.
+    ///
+    /// # Errors
+    /// `Comando`: quelli di `bozza`, poi con una norma costituzionale.
+    pub(crate) fn bozza_proposta(
+        &self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        turno: u32,
+        promotore: usize,
+        valori: &[ValoreProposto],
+    ) -> Result<Misura, Errore> {
         let m = self.bozza(dati, disposizioni, turno, valori)?;
         if m.forma == FormaMisura::Costituzionale {
             return ko("una norma costituzionale non entra nel posto riservato".into());
         }
-        self.misure.push(Misura {
+        Ok(Misura {
             proponente: None,
             promotore: Some(promotore),
             ..m
-        });
-        self.prossima = self.prossima.saturating_add(1);
-        Ok(())
+        })
     }
 
     /// Nessuna proposta dell'opposizione presentata nel `turno` occupa il posto riservato.

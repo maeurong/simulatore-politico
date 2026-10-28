@@ -543,8 +543,9 @@ impl Partita {
     /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
     /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
     /// Consiglio, tranne sulla proposta dell'opposizione, che paga solo il blocco; approvata,
-    /// anche lei fa pagare intesa agli alleati del governo lontani dalla norma, o che con la
-    /// legge elettorale perdono seggi, come ogni altra. Chi vota sì
+    /// anche lei fa pagare intesa agli alleati del governo lontani dalla norma, se il Presidente
+    /// del Consiglio ha votato sì (scelta 15 del piano 8a), o che con la legge elettorale perdono
+    /// seggi, come ogni altra. Chi vota sì
     /// sposta la sua posizione percepita verso la misura; il giocatore, a ogni voto, verso la
     /// posizione che il suo voto sostiene.
     ///
@@ -643,7 +644,12 @@ impl Partita {
             } else {
                 self.entra_in_vigore(&m);
             }
-            if let Some(nuova) = nuova {
+            // Sulla proposta dell'opposizione la norma lontana la paga solo il sì del Presidente
+            // del Consiglio, che la fa passare (scelta 15 del piano 8a).
+            let pdc_si = p.linea.get(self.governo.presidente) == Some(&true);
+            if let Some(nuova) = nuova
+                && (m.promotore.is_none() || pdc_si)
+            {
                 self.norma_lontana(nuova);
             }
             self.seggi_persi(&p.seggi);

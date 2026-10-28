@@ -44,27 +44,28 @@ pub fn guadagni(partiti: &[Partito], posizioni: Option<(f64, f64)>) -> Vec<f64> 
 }
 
 /// La linea di ogni partito, nell'ordine dei partiti. Il partito del Presidente del Consiglio
-/// vota sì, o con `pdc_libero` (proposte dell'opposizione, scelta 15 del piano 8a) se
-/// `guadagno > 0`; gli altri se `s > 0`, con `s` = `guadagno`, più l'intesa per gli alleati, meno
-/// il `malus` del partito per chi è fuori dal governo.
+/// vota sì, o `linea_pdc` quando è libero (proposte dell'opposizione, scelta 15 del piano 8a);
+/// gli altri se `s > 0`, con `s` = `guadagno`, più per gli alleati la fedeltà
+/// `peso_intesa_linea · (intesa − 50) / 50` verso la linea del Presidente del Consiglio (col segno
+/// opposto se vota no), meno il `malus` del partito per chi è fuori dal governo.
 pub fn linea(
     dati: &DatiGioco,
     governo: &Governo,
     intesa: &[f64],
     guadagno: &[f64],
     malus: &[f64],
-    pdc_libero: bool,
+    linea_pdc: Option<bool>,
 ) -> Vec<bool> {
     let peso = dati.manopola("peso_intesa_linea");
+    let pdc_si = linea_pdc.unwrap_or(true);
+    let verso = if pdc_si { 1.0 } else { -1.0 };
     (intesa.iter().zip(guadagno).zip(malus).enumerate())
         .map(|(j, ((&i, &g), &m))| {
-            let s = if j == governo.presidente {
-                if !pdc_libero {
-                    return true;
-                }
-                g
-            } else if governo.al_governo(j) {
-                g + peso * (i - 50.0) / 50.0
+            if j == governo.presidente {
+                return pdc_si;
+            }
+            let s = if governo.al_governo(j) {
+                g + verso * peso * (i - 50.0) / 50.0
             } else {
                 g - m
             };
@@ -466,18 +467,84 @@ mod tests {
         assert!((franco_con_emendamento(&dati, Some(Respinto)) - 2.0 * q).abs() < 1e-12);
     }
 
-    /// Scelta 15 del piano 8a: sulle proposte dell'opposizione il Presidente del Consiglio segue
-    /// il guadagno.
+    /// Correzione 1 del Task 8: l'intesa è fedeltà alla linea del Presidente del Consiglio, che
+    /// sulla proposta dell'opposizione può essere no.
     #[test]
-    fn il_pdc_libero_segue_il_guadagno() {
+    fn l_alleato_fedele_segue_la_linea_del_pdc() {
         let dati = dati_base();
         let (partiti, governo) = partiti::iniziali(&dati);
         let n = partiti.len();
-        let (intesa, malus) = (vec![50.0; n], vec![0.0; n]);
-        let guadagno = vec![-1.0; n];
+        let cd = (partiti.iter())
+            .position(|p| p.id == "centrodestra")
+            .expect("centrodestra nei dati base");
+        assert!(alleato(&governo, cd));
+        let mut intesa = vec![50.0; n];
+        intesa[cd] = 90.0;
+        let malus = vec![0.0; n];
+        let mut guadagno = vec![-1.0; n];
+        guadagno[cd] = 0.1;
         let pc = governo.presidente;
-        assert!(!linea(&dati, &governo, &intesa, &guadagno, &malus, true)[pc]);
-        assert!(linea(&dati, &governo, &intesa, &guadagno, &malus, false)[pc]);
+        let no = linea(&dati, &governo, &intesa, &guadagno, &malus, Some(false));
+        assert!(!no[pc] && !no[cd]);
+        let si = linea(&dati, &governo, &intesa, &guadagno, &malus, None);
+        assert!(si[pc] && si[cd]);
+    }
+
+    /// Scelta 15 del piano 8a: sulla proposta dell'opposizione il Presidente del Consiglio IA
+    /// segue il guadagno, sulla legge del governo vota sì.
+    #[test]
+    fn sulla_proposta_dell_opposizione_il_pdc_segue_il_guadagno() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let n = partiti.len();
+        let intesa = vec![50.0; n];
+        let ultimatum = vec![None; n];
+        let sondaggio = crate::informazione::Sondaggio {
+            istituti: Vec::new(),
+            condizioni: Vec::new(),
+            fasce: Vec::new(),
+            regioni: Vec::new(),
+        };
+        let aula = StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            sondaggio: &sondaggio,
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+            ultimatum: &ultimatum,
+            coalizioni: Vec::new(),
+            giocatore: 0,
+            ultimo_anno: false,
+        };
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
+        let sessantadue = dati.disposizioni()[eta]
+            .gradino("62")
+            .expect("62 anni nei dati base");
+        // A 62 anni (2,0) la destra del Presidente del Consiglio (6,0) perde 2,5.
+        let misura = |promotore| Misura {
+            id: 0,
+            forma: FormaMisura::Riforma,
+            valori: vec![(eta, sessantadue)],
+            proponente: None,
+            promotore,
+            linea_giocatore: None,
+            presentata: 0,
+            voto: 0,
+            deliberazione: 0,
+            fiducia: false,
+            emendamenti: Vec::new(),
+            emendamenti_aperti: false,
+            fondi: None,
+        };
+        let pc = governo.presidente;
+        assert!(!aula.previsione(&misura(Some(1))).linea[pc]);
+        assert!(aula.previsione(&misura(None)).linea[pc]);
     }
 
     /// Scelta 19 del piano 8a: nell'ultimo anno il malus dei partiti IA d'opposizione cresce di
@@ -498,7 +565,7 @@ mod tests {
         for (m, si) in [(1.0, true), (1.5, false)] {
             malus[ed] = m;
             assert_eq!(
-                linea(&dati, &governo, &intesa, &guadagno, &malus, false)[ed],
+                linea(&dati, &governo, &intesa, &guadagno, &malus, None)[ed],
                 si
             );
         }

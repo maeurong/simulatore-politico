@@ -316,16 +316,48 @@ fn il_giocatore_al_governo_sceglie_la_linea_solo_sulle_proposte_dell_opposizione
     );
 }
 
-/// Scelta 15 del piano 8a: la proposta dell'opposizione approvata col sì del giocatore che governa
-/// costa intesa agli alleati lontani, con la stessa norma lontana delle leggi del governo.
+/// Il posto riservato è uno per turno: la proposta IA del turno prima, che si vota ora, non toglie
+/// il posto al giocatore all'opposizione; una seconda proposta nello stesso turno sì.
 #[test]
-fn la_proposta_dell_opposizione_approvata_costa_la_norma_lontana() {
+fn la_proposta_ia_al_voto_non_occupa_il_posto_del_turno() {
+    let mut p = all_opposizione();
+    for _ in 0..8 {
+        if p.vista().posto_riservato {
+            break;
+        }
+        p.chiudi_turno();
+    }
+    assert!(
+        p.vista().posto_riservato,
+        "il posto non arriva al giocatore"
+    );
+    let (g, turno) = (p.giocatore(), p.vista().turno);
+    assert!(
+        (p.parlamento().misure.iter())
+            .any(|m| m.promotore.is_some_and(|j| j != g) && m.presentata + 1 == turno),
+        "nessuna proposta IA del turno prima in esame"
+    );
+    let proposta = |d: &str, g: &str| Comando::PresentaProposta {
+        valori: vec![sim_core::parlamento::ValoreProposto {
+            disposizione: d.into(),
+            gradino: g.into(),
+        }],
+    };
+    p.comanda(proposta("licenziamento", "reintegro")).unwrap();
+    let e = (p.comanda(proposta("tetto_contante", "1000"))).unwrap_err();
+    assert!(e.to_string().contains("già occupato"), "{e}");
+}
+
+/// La riforma a 62 anni presentata dal giocatore che governa, riscritta come proposta della
+/// sinistra, con la linea `si` del giocatore e seggi dove passa anche col suo no: gli alleati che
+/// pagano la norma lontana nella chiusura del voto. La proposta IA già in esame si toglie, così la
+/// proposta è l'unica norma al voto.
+fn norma_lontana_della_proposta(si: bool) -> Vec<usize> {
     let mut p = al_governo();
+    togli_opposizione_ia(&mut p);
     presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
     let id = p.parlamento().misure.last().unwrap().id;
     let sinistra = partito("sinistra");
-    // La legge diventa una proposta della sinistra; la maggioranza la fanno estrema sinistra e
-    // sinistra, che ci guadagnano, col giocatore che sceglie il sì.
     let p = edita(&p, |j| {
         for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
             if m["id"] == id {
@@ -335,31 +367,40 @@ fn la_proposta_dell_opposizione_approvata_costa_la_norma_lontana() {
         }
     })
     .unwrap();
+    // Estrema sinistra e sinistra, che ci guadagnano, hanno la maggioranza in entrambe le Camere.
     let mut p = con_seggi(
         &p,
-        &[60, 100, 20, 15, 30, 40, 15, 120],
-        &[30, 50, 10, 8, 15, 20, 7, 60],
+        &[120, 140, 20, 15, 30, 40, 15, 20],
+        &[60, 70, 10, 8, 15, 20, 7, 10],
     );
     p.comanda(Comando::Linea {
         misura: id,
-        si: Some(true),
+        si: Some(si),
     })
     .unwrap();
+    let mut turno = p.vista().turno;
     for _ in 0..3 {
         if p.parlamento().misure.iter().all(|m| m.id != id) {
             break;
         }
+        turno = p.vista().turno;
         chiudi_col_bilancio(&mut p);
     }
     let esito = (p.parlamento().esiti.iter()).find(|e| e.misura == id);
-    assert!(esito.is_some_and(|e| e.approvata), "{esito:?}");
+    assert!(esito.is_some_and(|e| e.approvata), "{si}: {esito:?}");
+    (p.intesa().variazioni.iter())
+        .filter(|x| x.turno == turno && x.causa == NormaLontana)
+        .map(|x| x.partito)
+        .collect()
+}
+
+/// Scelta 15 del piano 8a: la proposta dell'opposizione approvata costa la norma lontana agli
+/// alleati lontani solo col sì del governo del giocatore, che la fa passare.
+#[test]
+fn la_proposta_dell_opposizione_costa_la_norma_lontana_solo_col_si_del_governo() {
     // Centrodestra (5,0) e destra (6,0) distano almeno 3 dai 62 anni (2,0).
-    for a in ["centrodestra", "destra"].map(partito) {
-        assert!(p.alleati().contains(&a));
-        assert!(
-            (p.intesa().variazioni.iter()).any(|x| x.partito == a && x.causa == NormaLontana),
-            "{a}: {:?}",
-            p.intesa().variazioni
-        );
-    }
+    let alleati = ["centrodestra", "destra"].map(partito);
+    let col_si = norma_lontana_della_proposta(true);
+    assert!(alleati.iter().all(|a| col_si.contains(a)), "{col_si:?}");
+    assert_eq!(norma_lontana_della_proposta(false), Vec::<usize>::new());
 }

@@ -29,7 +29,7 @@ fn bilancio_si_vota_e_passa_con_la_maggioranza() {
             .iter()
             .any(|m| m.forma == FormaMisura::Bilancio)
     );
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     let e = p
         .vista()
         .esiti
@@ -54,7 +54,7 @@ fn franchi_al_90() -> FileDati {
 fn bilancio_respinto_porta_l_esercizio_provvisorio() {
     let mut p = al_turno(franchi_al_90(), 4);
     presenta_bozza(&mut p);
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     assert!(p.vista().bilancio.esercizio_provvisorio);
 }
 
@@ -72,7 +72,7 @@ fn fiducia_sul_bilancio_senza_franchi_tiratori() {
         .unwrap()
         .id;
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     assert!(!p.vista().bilancio.esercizio_provvisorio);
 }
 
@@ -210,13 +210,13 @@ fn bilancio_presentato_senza_misura_rifiutato_al_caricamento() {
 fn slittata(fiducia: bool) -> Partita {
     let mut p = al_turno(senza_shock(), 3);
     presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     if fiducia {
         let id = p.vista().calendario[0].id;
         p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     }
     presenta_bozza(&mut p);
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     p
 }
 
@@ -242,14 +242,14 @@ fn fiducia_persa_nello_slittamento_riapre_gli_emendamenti() {
     let gioca = |fiducia: bool| {
         let mut p = al_turno(senza_shock(), 3);
         presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
-        chiudi_senza_opposizione_ia(&mut p);
+        p.chiudi_turno();
         if fiducia {
             let id = p.vista().calendario[0].id;
             p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
         }
         presenta_bozza(&mut p);
-        chiudi_senza_opposizione_ia(&mut p);
-        chiudi_senza_opposizione_ia(&mut p);
+        p.chiudi_turno();
+        p.chiudi_turno();
         p
     };
     let (con, senza) = (gioca(true), gioca(false));
@@ -324,12 +324,29 @@ fn niente_fiducia_su_una_legge_elettorale_nel_turno_del_bilancio() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
+/// Nel turno del bilancio anche la proposta dell'opposizione IA slitta, e il posto riservato resta
+/// uno per turno: nel turno dopo convivono la slittata, quella del turno del bilancio e la nuova.
+#[test]
+fn la_proposta_ia_slitta_nel_turno_del_bilancio_e_il_posto_resta_per_turno() {
+    let mut p = al_turno(senza_shock(), 2);
+    p.chiudi_turno(); // turno 3: la proposta IA si vota al 4, il turno del bilancio
+    p.chiudi_turno();
+    presenta_bozza(&mut p);
+    p.chiudi_turno(); // turno 5
+    let g = p.giocatore();
+    let proposte: Vec<(u32, u32)> = (p.parlamento().misure.iter())
+        .filter(|m| m.promotore.is_some_and(|j| j != g))
+        .map(|m| (m.presentata, m.voto))
+        .collect();
+    assert_eq!(proposte, [(3, 5), (4, 5), (5, 6)]);
+}
+
 #[test]
 fn norma_costituzionale_slitta_nel_turno_del_bilancio() {
     let mut p = al_turno(senza_shock(), 4);
     presenta(&mut p, &[("numero_parlamentari", "630_315")]).unwrap();
     presenta_bozza(&mut p);
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     let v = p.vista();
     assert!(
         v.esiti
@@ -442,7 +459,7 @@ fn un_bilancio_indicizzato_non_riceve_emendamenti() {
 fn a_fine_turno_l_emendamento_aperto_sul_bilancio_e_respinto() {
     let mut p = al_bilancio_del_2028();
     assert_eq!(bilancio(&p).emendamenti[0].stato, StatoEmendamento::Aperto);
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     let pagato = (p.intesa().variazioni.iter())
         .filter(|x| x.causa == CausaIntesa::EmendamentoRespinto)
         .count();
@@ -479,6 +496,6 @@ fn ripresentato_sotto_fiducia_il_bilancio_non_riapre_emendamenti() {
             .iter()
             .all(|e| e.stato != StatoEmendamento::Aperto)
     );
-    chiudi_senza_opposizione_ia(&mut p);
+    p.chiudi_turno();
     assert!(!(p.intesa().variazioni.iter()).any(|x| x.causa == CausaIntesa::EmendamentoRespinto));
 }

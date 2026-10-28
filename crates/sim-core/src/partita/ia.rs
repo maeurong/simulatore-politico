@@ -9,7 +9,7 @@ use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::informazione::indice;
 use crate::legislatura::{self, Fase};
-use crate::parlamento::{self, Misura, StatoEmendamento, ValoreProposto, voto};
+use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
@@ -103,10 +103,10 @@ impl Partita {
 
     /// La proposta-imbarazzo (scelta 16 del piano, iter-legislativo-italiano:125-127): col posto
     /// riservato del turno a un partito IA e libero, fra le riforme ordinarie a una disposizione
-    /// ammesse da `Parlamento::bozza` col guadagno del promotore positivo, quella che massimizza
-    /// i seggi (Camera più Senato) dei partiti di governo con la linea sì; a parità il guadagno
-    /// del promotore, poi l'indice della disposizione e del gradino. Nessun candidato, nessuna
-    /// mossa; niente nel turno del voto, dove la proposta decadrebbe senza voto.
+    /// ammesse da `Parlamento::bozza_proposta` col guadagno del promotore positivo, quella che
+    /// massimizza i seggi (Camera più Senato) dei partiti di governo con la linea sì; a parità il
+    /// guadagno del promotore, poi l'indice della disposizione e del gradino. Nessun candidato,
+    /// nessuna mossa; niente nel turno del voto, dove la proposta decadrebbe senza voto.
     fn proposta_ia(&mut self) {
         let Some(j) = self.posto_riservato().filter(|&j| j != self.giocatore) else {
             return;
@@ -131,13 +131,9 @@ impl Partita {
                     gradino: g.id.clone(),
                 };
                 let valori = std::slice::from_ref(&v);
-                let Ok(m) = pl.bozza(&self.dati, &self.disposizioni, self.turno, valori) else {
+                let (dati, disposizioni) = (&self.dati, &self.disposizioni);
+                let Ok(m) = pl.bozza_proposta(dati, disposizioni, self.turno, j, valori) else {
                     continue;
-                };
-                let m = Misura {
-                    proponente: None,
-                    promotore: Some(j),
-                    ..m
                 };
                 let p = aula.previsione(&m);
                 let guadagno = voto::guadagni(&self.partiti, p.posizioni)
@@ -907,6 +903,22 @@ mod tests {
         }
         p.sfiducia_ia();
         assert!(p.parlamento.sfiducia.is_none() && p.mosse.is_empty());
+    }
+
+    /// Scelta 16 del piano: il promotore porta solo una proposta che gli conviene, anche se
+    /// un'altra raccoglierebbe più seggi di governo (senza il filtro vince una a −0,5).
+    #[test]
+    fn la_proposta_ia_conviene_al_promotore() {
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        p.parlamento.misure.retain(|m| m.promotore.is_none());
+        p.proposta_ia();
+        let m = (p.parlamento.misure.iter())
+            .find(|m| m.promotore.is_some())
+            .expect("la partita di prova dà il posto a un partito IA");
+        let j = m.promotore.unwrap_or(usize::MAX);
+        let posizioni = parlamento::posizioni(&p.dati, &p.disposizioni, &m.valori);
+        let guadagno = voto::guadagni(&p.partiti, posizioni);
+        assert!(guadagno[j] > 0.0, "{}: {}", j, guadagno[j]);
     }
 
     #[test]
