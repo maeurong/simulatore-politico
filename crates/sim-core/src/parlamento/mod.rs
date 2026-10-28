@@ -284,10 +284,10 @@ impl StatoAula<'_> {
     /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
     /// e sul bilancio la maggioranza vota sì e l'opposizione no; senza posizione, i franchi
     /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì.
-    /// Fuori dalla fiducia, la linea scelta dal giocatore (scelta 14 del piano 7b) vale per il
-    /// suo partito, coi franchi tiratori `ft_base + ft_distanza · |x − sostenuta| / 6` entro
-    /// `ft_max`: `sostenuta` è la posizione nuova col sì, la vigente col no; senza posizione
-    /// `ft_base`.
+    /// La linea scelta dal giocatore (scelta 14 del piano 7b) vale per il suo partito, anche
+    /// sotto fiducia; fuori dalla fiducia coi franchi tiratori
+    /// `ft_base + ft_distanza · |x − sostenuta| / 6` entro `ft_max`: `sostenuta` è la posizione
+    /// nuova col sì, la vigente col no; senza posizione `ft_base`.
     pub(crate) fn previsione(&self, m: &Misura) -> Previsione {
         let posizioni = posizioni(self.dati, self.disposizioni, &m.valori);
         let (dati, partiti, governo, intesa) = (self.dati, self.partiti, self.governo, self.intesa);
@@ -306,8 +306,15 @@ impl StatoAula<'_> {
                 q.to_vec()
             }
         };
+        let g = self.giocatore;
+        let scelta = |linea: &mut [bool]| {
+            if let (Some(scelta), Some(si)) = (m.linea_giocatore, linea.get_mut(g)) {
+                *si = scelta;
+            }
+        };
         if m.fiducia {
-            let linea = voto::linea_fiducia(dati, partiti, governo, self.ultimatum, nuova);
+            let mut linea = voto::linea_fiducia(dati, partiti, governo, self.ultimatum, nuova);
+            scelta(&mut linea);
             let franchi = vec![0.0; linea.len()];
             let franchi_camera = if elettorale {
                 segreto(&voto::probabilita_franco(
@@ -344,10 +351,7 @@ impl StatoAula<'_> {
                 *si = true;
             }
         }
-        let g = self.giocatore;
-        if let (Some(scelta), Some(si)) = (m.linea_giocatore, linea.get_mut(g)) {
-            *si = scelta;
-        }
+        scelta(&mut linea);
         let mut franchi = voto::probabilita_franco(dati, partiti, governo, intesa, nuova, &linea);
         let base = dati.manopola("ft_base");
         let respinto = 1.0 + dati.manopola("ft_emendamento_respinto");

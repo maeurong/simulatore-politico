@@ -525,8 +525,8 @@ impl Partita {
     /// entrano in vigore e gli alleati lontani perdono intesa. Respinta: blocco
     /// (iter-legislativo-italiano:171), costo al proponente e valence al Presidente del
     /// Consiglio, tranne sulla proposta dell'opposizione, che paga solo il blocco. Chi vota sì
-    /// sposta la sua posizione percepita verso la misura; il giocatore con la linea scelta, verso
-    /// la posizione che il suo voto sostiene.
+    /// sposta la sua posizione percepita verso la misura; il giocatore, a ogni voto, verso la
+    /// posizione che il suo voto sostiene.
     ///
     /// Elettorale (iter-legislativo-italiano:48-61): con la fiducia, prima il voto a blocchi e
     /// poi il voto finale, che porta i conteggi; bocciata al voto finale cade la legge, non la
@@ -660,13 +660,13 @@ impl Partita {
                 self.decreto_decaduto(f);
             }
         }
-        // Il giocatore con la linea scelta scivola verso la posizione che il suo voto sostiene: la
-        // nuova col sì, la vigente col no (scelta 14 del piano 7b).
+        // Il giocatore scivola a ogni voto verso la posizione che il suo voto sostiene, anche con
+        // la linea di default: la nuova col sì, la vigente col no (ticket 12, riga 44).
         if let Some((vigore, nuova)) = p.posizioni {
             let s = self.dati.manopola("scivolamento_percepita");
-            let scelta = m.linea_giocatore.map(|_| self.giocatore);
+            let g = self.giocatore;
             let voti = self.partiti.iter_mut().zip(&p.linea).enumerate();
-            for (_, (x, &si)) in voti.filter(|&(j, (_, &si))| si || scelta == Some(j)) {
+            for (_, (x, &si)) in voti.filter(|&(j, (_, &si))| si || j == g) {
                 let sostenuta = if si { nuova } else { vigore };
                 x.posizione_percepita += s * (sostenuta - x.posizione_percepita);
             }
@@ -3279,9 +3279,9 @@ mod tests {
         Partita::fonda(dati_base(), 7, &f).unwrap()
     }
 
-    /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.
-    #[test]
-    fn il_bilancio_dell_ia_non_ha_emendamenti() {
+    /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
+    /// sotto un governo IA.
+    fn all_opposizione() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 1.5,
@@ -3290,6 +3290,47 @@ mod tests {
         p.chiudi_turno(); // voto
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
+        p
+    }
+
+    /// La riforma dell'età pensionabile a 70 anni, presentata ma non in calendario.
+    fn a_settanta_anni(p: &Partita) -> Misura {
+        let valori = [ValoreProposto {
+            disposizione: "eta_pensionabile".into(),
+            gradino: "70".into(),
+        }];
+        (p.parlamento)
+            .bozza(&p.dati, &p.disposizioni, p.turno, &valori)
+            .unwrap()
+    }
+
+    /// Ticket 12, riga 44: il partito del giocatore scivola verso ciò che il suo voto sostiene anche
+    /// con la linea di default; col no, verso la posizione vigente.
+    #[test]
+    fn la_percepita_del_giocatore_segue_anche_la_linea_di_default() {
+        let mut p = all_opposizione();
+        let m = a_settanta_anni(&p);
+        let id = m.id;
+        let previsione = p.stato_aula().previsione(&m);
+        let g = p.giocatore;
+        assert!(!previsione.linea[g]);
+        assert_eq!(m.linea_giocatore, None);
+        let (vigente, _) = previsione.posizioni.unwrap();
+        p.parlamento.misure.push(Misura { voto: p.turno, ..m });
+        let prima = p.partiti[g].posizione_percepita;
+        p.vota(id);
+        let s = p.dati.manopola("scivolamento_percepita");
+        let dopo = p.partiti[g].posizione_percepita;
+        assert!(
+            (dopo - (prima + s * (vigente - prima))).abs() < 1e-12,
+            "{dopo}"
+        );
+    }
+
+    /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.
+    #[test]
+    fn il_bilancio_dell_ia_non_ha_emendamenti() {
+        let mut p = all_opposizione();
         // Dal secondo ottobre-dicembre: il primo anno i prezzi non hanno ancora mangiato i budget.
         for _ in 0..2 {
             p.chiudi_turno();
