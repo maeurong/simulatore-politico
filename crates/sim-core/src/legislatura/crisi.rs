@@ -108,6 +108,7 @@ mod tests {
             presidente: 5,
             dicasteri: vec![5, 5, 4],
             coalizione: vec![4, 5],
+            programma: Vec::new(),
         };
         let opposizione = [true, true, true, true, false, false, true];
         let nessuno = vec![None; 7];

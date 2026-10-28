@@ -28,7 +28,7 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
-    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito,
+    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1024,7 +1024,7 @@ impl Partita {
         Ok(())
     }
 
-    fn stato_aula(&self) -> StatoAula<'_> {
+    pub(crate) fn stato_aula(&self) -> StatoAula<'_> {
         StatoAula {
             dati: &self.dati,
             disposizioni: &self.disposizioni,
@@ -2241,11 +2241,27 @@ impl Partita {
             .collect();
         self.giudizio_da_zero(&entranti);
         let tecnici: Vec<bool> = assegnati.iter().map(Option::is_none).collect();
+        let programma = if presidente == self.giocatore {
+            Vec::new()
+        } else {
+            legislatura::programma(&self.stato_aula(), &coalizione, &seggi)
+        };
+        let prima = programma
+            .first()
+            .map(|&(d, _)| self.dati.disposizioni()[d].nome.clone());
+        let righe = programma.len();
         self.governo = Governo {
             presidente,
             dicasteri: assegnati.iter().map(|a| a.unwrap_or(presidente)).collect(),
             coalizione,
+            programma,
         };
+        if let Some(nome) = prima {
+            self.mossa(
+                presidente,
+                format!("Programma di governo: {righe} disposizioni, prima {nome}"),
+            );
+        }
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
         // Il voto appena passato (turno == inizio) l'ha già fatto cambiare per il calo: una sola
         // sconfitta, un solo cambio.
@@ -2876,6 +2892,23 @@ impl Partita {
             dimissioni: l.dimissioni,
             crisi: self.in_crisi(),
             mosse: self.mosse.clone(),
+            programma: self
+                .governo
+                .programma
+                .iter()
+                .map(|&(d, k)| {
+                    let (dato, gradino) = (
+                        &self.dati.disposizioni()[d],
+                        &self.dati.disposizioni()[d].gradini[k],
+                    );
+                    VoceProgramma {
+                        disposizione: dato.id.clone(),
+                        nome: dato.nome.clone(),
+                        gradino: gradino.id.clone(),
+                        nome_gradino: gradino.nome.clone(),
+                    }
+                })
+                .collect(),
         }
     }
 
@@ -3198,6 +3231,15 @@ impl Partita {
             "legislatura.fase non sciolta con Camere senza seggi",
         )?;
         let g = &self.governo;
+        let catalogo = self.dati.disposizioni();
+        ok(
+            g.programma
+                .iter()
+                .all(|&(d, k)| catalogo.get(d).is_some_and(|x| k < x.gradini.len()))
+                && (g.presidente != self.giocatore || g.programma.is_empty()),
+            "governo.programma con una disposizione o un gradino fuori dai dati, o non vuoto col \
+             giocatore Presidente del Consiglio",
+        )?;
         ok(g.presidente < n, "governo.presidente fuori dai partiti")?;
         ok(
             g.dicasteri.len() == self.dati.dicasteri().len() && g.dicasteri.iter().all(|&p| p < n),

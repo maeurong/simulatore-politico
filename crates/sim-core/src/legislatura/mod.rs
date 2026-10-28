@@ -8,6 +8,7 @@ mod coalizione;
 mod crisi;
 mod eredita;
 mod fondazione;
+mod programma;
 mod spartizione;
 mod voto;
 #[cfg(test)]
@@ -21,6 +22,7 @@ pub(crate) use crisi::valore_al_governo;
 pub use eredita::{ConfrontoIndicatore, Eredita};
 pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
+pub(crate) use programma::programma;
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
     maggioranza, maggioranza_contigua, primo_per_seggi, richiesta, spartizione_di_default,

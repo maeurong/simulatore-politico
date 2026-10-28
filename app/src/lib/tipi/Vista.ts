@@ -21,6 +21,7 @@ import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
+import type { VoceProgramma } from "./VoceProgramma";
 import type { VoceRichiesta } from "./VoceRichiesta";
 
 /**
@@ -131,4 +132,9 @@ crisi: boolean,
 /**
  * Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
  */
-mosse: Array<MossaIa>, };
+mosse: Array<MossaIa>, 
+/**
+ * Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
+ * giocatore Presidente del Consiglio.
+ */
+programma: Array<VoceProgramma>, };

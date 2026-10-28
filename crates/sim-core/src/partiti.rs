@@ -73,12 +73,15 @@ pub struct Partito {
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
-/// partiti della maggioranza, presidente compreso, anche senza dicasteri.
+/// partiti della maggioranza, presidente compreso, anche senza dicasteri. `programma`: il programma
+/// pubblico del governo IA, (disposizione, gradino) alla sua nascita; vuoto col giocatore
+/// Presidente del Consiglio.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Governo {
     pub presidente: usize,
     pub dicasteri: Vec<usize>,
     pub coalizione: Vec<usize>,
+    pub programma: Vec<(usize, usize)>,
 }
 
 impl Governo {
@@ -129,6 +132,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
         presidente,
         dicasteri,
         coalizione,
+        programma: Vec::new(),
     };
     (partiti, governo)
 }

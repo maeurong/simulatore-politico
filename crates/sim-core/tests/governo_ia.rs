@@ -492,3 +492,40 @@ fn l_ia_che_rompe_l_impegno_perde_valence_e_intesa() {
         assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
     }
 }
+
+#[test]
+fn il_governo_ia_nasce_col_programma_pubblico() {
+    let p = comune::all_opposizione();
+    let v = p.vista();
+    assert!(!v.programma.is_empty());
+    // In ordine di distanza decrescente del vigente dalla posizione della coalizione.
+    let g = p.governo();
+    let seggi: Vec<f64> = (0..p.partiti().len())
+        .map(|j| f64::from(p.parlamento().seggi_camera[j] + p.parlamento().seggi_senato[j]))
+        .collect();
+    let pos = g
+        .coalizione
+        .iter()
+        .map(|&j| seggi[j] * p.partiti()[j].posizione_dichiarata)
+        .sum::<f64>()
+        / g.coalizione.iter().map(|&j| seggi[j]).sum::<f64>();
+    let dati = comune::dati_base();
+    let d = dati.disposizioni();
+    let distanze: Vec<f64> = (g.programma.iter())
+        .filter_map(|&(k, _)| d[k].posizione(p.disposizioni().voci[k].in_vigore))
+        .map(|x| (x - pos).abs())
+        .collect();
+    assert!(distanze.windows(2).all(|w| w[0] >= w[1]), "{distanze:?}");
+    assert!(
+        v.mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Programma di governo"))
+    );
+}
+
+#[test]
+fn col_giocatore_al_governo_nessun_programma() {
+    let p = comune::al_governo();
+    assert!(p.governo().programma.is_empty());
+    assert!(p.vista().programma.is_empty());
+}

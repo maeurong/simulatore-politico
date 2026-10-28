@@ -217,6 +217,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "alfa_identitaria",
     "alfa_mista",
     "alfa_governista",
+    "soglia_programma",
+    "seggi_programma_elettorale",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",

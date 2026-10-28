@@ -7,7 +7,7 @@ use crate::vista::MossaIa;
 
 impl Partita {
     /// Una riga nel registro del turno, col partito `j`.
-    fn mossa(&mut self, j: usize, testo: String) {
+    pub(super) fn mossa(&mut self, j: usize, testo: String) {
         if let Some(p) = self.partiti.get(j) {
             self.mosse.push(MossaIa {
                 partito: p.id.clone(),

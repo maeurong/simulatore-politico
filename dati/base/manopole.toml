@@ -1222,3 +1222,17 @@ valore = 0.25
 min = 0.0
 max = 0.5
 ticket = "18"
+
+# docs/ricerca/sistemi/partiti-e-coalizioni.md:25 (partiti IA con posizioni proprie su più temi); di quanto una voce del programma deve avvicinare il vigente alla posizione della coalizione (punti dell'asse 1-7): assunzione del piano 8a, nessuna fonte per il valore
+[soglia_programma]
+valore = 0.5
+min = 0.0
+max = 2.0
+ticket = "18"
+
+# docs/ricerca/modelli/formazione-di-coalizioni.md:16 (Gamson, spartizione già di default); seggi attesi (Camera più Senato) che la legge elettorale migliore deve dare alla coalizione per entrare nel programma: assunzione del piano 8a, nessuna fonte per il valore
+[seggi_programma_elettorale]
+valore = 15.0
+min = 0.0
+max = 200.0
+ticket = "18"
