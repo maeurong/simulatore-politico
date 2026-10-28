@@ -1,5 +1,6 @@
 mod comune;
-use comune::{caduto, calo_oltre_il_ritorno, dati_base, partito};
+use comune::{caduto, calo_oltre_il_ritorno, dati_base, edita, partito};
+use serde_json::json;
 use sim_core::Comando;
 use sim_core::legislatura::{Fase, Incarico};
 
@@ -30,20 +31,18 @@ fn secondo_nel_ribaltone_chiedi_la_guida() {
         p.legislatura().incarico,
         Some(Incarico::Guida { .. })
     ));
-    match p.comanda(Comando::ChiediGuida) {
-        Ok(()) => {
-            assert_eq!(p.legislatura().incarico, Some(Incarico::Giocatore));
-            p.chiudi_turno();
-            assert!(p.governa());
-        }
-        Err(e) => assert!(e.to_string().contains("Centro"), "{e}"),
-    }
+    p.comanda(Comando::ChiediGuida).unwrap();
+    assert_eq!(p.legislatura().incarico, Some(Incarico::Giocatore));
+    p.chiudi_turno();
+    assert!(p.governa());
 }
 
 #[test]
 fn senza_scelta_il_default_chiede_la_guida() {
     let mut a = caduto(&SECONDO_C, &SECONDO_S);
     let mut b = caduto(&SECONDO_C, &SECONDO_S);
+    // Il default si valuta alla chiusura, dopo il motore; `b` lo valuta a inizio turno: col seme
+    // del test le due valutazioni coincidono.
     let accetta = b.comanda(Comando::ChiediGuida).is_ok();
     a.chiudi_turno();
     assert_eq!(a.governa(), accetta);
@@ -56,6 +55,7 @@ fn rifiutare_il_ribaltone_lascia_il_giocatore_fuori() {
     p.chiudi_turno();
     assert!(!p.governa());
     assert!(!p.governo().al_governo(p.giocatore()));
+    assert_eq!(p.legislatura().fase, Fase::Ordinaria);
 }
 
 /// Il ribaltone ceduto si forma come dopo il voto: il centrosinistra lascia la sinistra, sua
@@ -102,5 +102,50 @@ fn senza_guida_aperta_niente_da_chiedere() {
     for c in [Comando::ChiediGuida, Comando::RifiutaRibaltone] {
         let e = p.comanda(c).unwrap_err().to_string();
         assert!(e.contains("Ribaltone: nessuna guida da chiedere"), "{e}");
+    }
+}
+
+/// `carica` rifiuta i campi del 7b incoerenti, ognuno col suo messaggio.
+#[test]
+fn carica_rifiuta_crisi_e_maggioranza_incoerenti() {
+    let p = caduto(&SECONDO_C, &SECONDO_S);
+    let turno = p.vista().turno;
+    let guida = |c: serde_json::Value| json!({ "Guida": { "coalizione": c } });
+    let casi: [(&str, serde_json::Value, &str); 7] = [
+        (
+            "crisi",
+            json!(turno + 1),
+            "legislatura.crisi fuori dal turno in corso",
+        ),
+        (
+            "maggioranza",
+            json!([2, 3, 7]),
+            "legislatura.maggioranza fuori dalla trattativa col giocatore",
+        ),
+        ("incarico", guida(json!([])), "con una coalizione vuota"),
+        (
+            "incarico",
+            json!({ "Ia": { "coalizione": [2, 2, 3] } }),
+            "un partito ripetuto",
+        ),
+        (
+            "incarico",
+            guida(json!([2, 3, 3, 7])),
+            "un partito ripetuto",
+        ),
+        (
+            "incarico",
+            guida(json!([2, 3])),
+            "di guida senza il giocatore",
+        ),
+        (
+            "incarico",
+            guida(json!([2, 7])),
+            "col giocatore primo per seggi",
+        ),
+    ];
+    for (campo, valore, messaggio) in casi {
+        let e = edita(&p, |j| j["legislatura"][campo] = valore).unwrap_err();
+        assert!(e.to_string().contains(messaggio), "{campo}: {e}");
     }
 }

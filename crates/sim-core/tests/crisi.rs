@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_seggi, dati_base, edita, partito, presenta};
+use comune::{chiudi_col_bilancio, con_seggi, dati_base, edita, partito, presenta};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
@@ -246,6 +246,8 @@ fn due_cadute_nello_stesso_turno() {
             .any(|e| e.forma == FormaMisura::Sfiducia)
     );
     assert!(!p.governa());
+    assert!(!p.legislatura().dimissioni);
+    assert_eq!(p.legislatura().crisi, None);
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
 
@@ -393,4 +395,102 @@ fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
     };
     assert!(bilancio(None));
     assert!(!bilancio(Some(4)));
+}
+
+/// La Sanità del centro uscente è già in interim, con una rosa del centro: dopo il rimpasto resta
+/// la causa di prima, la rosa è del nuovo titolare e il salvataggio si ricarica.
+#[test]
+fn rimpasto_con_rosa_aperta_si_ricarica() {
+    let p = col_centro_che_esce();
+    let mut p = edita(&p, |j| {
+        let st = &mut j["ministri"]["dicasteri"][3];
+        let m = st["ministro"].take();
+        st["rosa"] = serde_json::json!([m.clone(), m.clone(), m]);
+        st["causa_dimissioni"] = "indicatore_in_calo".into();
+        st["agenda"] = serde_json::Value::Null;
+        st["proposta"] = serde_json::Value::Null;
+    })
+    .unwrap();
+    assert_eq!(p.ministri().dicasteri[3].rosa.len(), 3);
+    p.chiudi_turno();
+    assert!(!p.governo().al_governo(3));
+    let titolare = p.governo().dicasteri[3];
+    let st = &p.ministri().dicasteri[3];
+    assert!(st.rosa.iter().all(|x| x.partito == titolare));
+    assert_eq!(st.causa_dimissioni, Some(Causa::IndicatoreInCalo));
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+}
+
+/// La partita di prova a `scadenza − 1`, col bilancio presentato a ogni ottobre-dicembre.
+fn vigilia_del_voto() -> Partita {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 18 {
+        chiudi_col_bilancio(&mut p);
+    }
+    p
+}
+
+/// Il centrodestra esce alla vigilia del voto e apre la crisi nel turno del voto: lì `Allarga` è
+/// rifiutato e vince il voto, senza sfiducia.
+#[test]
+fn crisi_alla_vigilia_del_voto_vince_il_voto() {
+    let cd = partito("centrodestra");
+    let p = con_seggi(&vigilia_del_voto(), &CRISI_C, &CRISI_S);
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    p.chiudi_turno();
+    assert!(!p.governo().al_governo(cd));
+    assert_eq!(p.legislatura().crisi, Some(19));
+    assert!(p.governa() && p.legislatura().turno_di_voto(19));
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(Comando::Allarga {
+            partiti: vec!["estrema_destra".into()],
+        })
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("o in crisi mentre governi"), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+    p.chiudi_turno(); // si vota
+    let l = p.legislatura();
+    assert_eq!(l.elezioni.len(), 1);
+    assert_eq!(l.crisi, None);
+    assert_eq!(l.fase, Fase::Trattativa);
+    assert!(!(p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Sfiducia));
+    assert!(Partita::carica(&p.salva().unwrap()).is_ok());
+}
+
+/// Nel turno del voto nessuno esce: il centrodestra a intesa 10 resta nel governo uscente.
+#[test]
+fn nel_turno_del_voto_nessuna_uscita() {
+    let cd = partito("centrodestra");
+    let mut p = vigilia_del_voto();
+    chiudi_col_bilancio(&mut p);
+    let p = con_seggi(&p, &CRISI_C, &CRISI_S);
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    assert!(p.legislatura().turno_di_voto(p.vista().turno));
+    p.chiudi_turno(); // si vota
+    assert_eq!(p.legislatura().elezioni.len(), 1);
+    assert_eq!(p.legislatura().crisi, None);
+    assert!(p.governo().al_governo(cd));
+}
+
+/// Col governo IA in crisi il giocatore non allarga.
+#[test]
+fn senza_governare_niente_allargamento_in_crisi() {
+    let cd = partito("centrodestra");
+    let p = Partita::nuova(dati_base(), 1);
+    let mut p = edita(&p, |j| {
+        j["governo"]["presidente"] = cd.into();
+        j["legislatura"]["crisi"] = 0.into();
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(Comando::Allarga {
+            partiti: vec!["estrema_destra".into()],
+        })
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("o in crisi mentre governi"), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
 }

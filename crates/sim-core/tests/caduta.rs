@@ -138,3 +138,22 @@ fn alla_caduta_il_calendario_decade() {
     );
     assert!(!e.approvata);
 }
+
+/// Review Focus 1: a gennaio in esercizio provvisorio, senza bilancio, la fiducia respinta e il
+/// bilancio mancato fanno cadere il governo una volta sola.
+#[test]
+fn fiducia_respinta_in_esercizio_provvisorio() {
+    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &MINORANZA_C, &MINORANZA_S);
+    for _ in 0..5 {
+        p.chiudi_turno(); // fino a gennaio-marzo 2028, senza bilancio
+    }
+    assert!(p.governa());
+    presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.chiudi_turno();
+    assert!(p.vista().esiti.iter().any(|e| e.fiducia_respinta));
+    assert!(!p.governa());
+    assert_ne!(p.legislatura().fase, Fase::Ordinaria);
+    assert!(!p.legislatura().dimissioni);
+}

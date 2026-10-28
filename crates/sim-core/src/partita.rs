@@ -3029,6 +3029,37 @@ mod tests {
         assert!(cade(c, s, 0.0));
     }
 
+    /// Destra e centrodestra in minoranza (150 su 400, 75 su 200): la sfiducia al ministro del
+    /// centrodestra all'Ambiente passa, il ministro esce e il centrodestra paga le dimissioni
+    /// chieste.
+    #[test]
+    fn sfiducia_approvata_al_ministro_lo_toglie() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.parlamento.seggi_camera = vec![40, 80, 60, 30, 50, 100, 40];
+        p.parlamento.seggi_senato = vec![20, 40, 30, 15, 25, 50, 20];
+        let k = (p.dati.dicasteri().iter())
+            .position(|d| d.id == "ambiente_energia")
+            .unwrap();
+        assert_eq!(
+            p.ministri.dicasteri[k].ministro.as_ref().unwrap().partito,
+            4
+        );
+        let intesa = p.intesa.valori[4];
+        assert!(p.sfiducia(Some(k), Some(0)));
+        let e = &p.parlamento.esiti[0];
+        let nome = &p.dati.dicasteri()[k].nome;
+        assert_eq!(e.nome, format!("Mozione di sfiducia individuale: {nome}"));
+        let st = &p.ministri.dicasteri[k];
+        assert!(st.ministro.is_none());
+        assert_eq!(st.causa_dimissioni, Some(Causa::Sfiduciato));
+        let costo = p.dati.manopola("costo_dimissioni_chieste");
+        assert_eq!(p.intesa.valori[4], intesa - costo);
+        let chieste =
+            (p.intesa.variazioni.iter()).any(|v| v.causa == CausaIntesa::DimissioniChieste);
+        assert!(chieste);
+        assert!(!p.legislatura.dimissioni);
+    }
+
     /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: niente
     /// maggioranza, ma la sfiducia pareggia alla Camera e perde al Senato. Il pareggio la respinge.
     #[test]
@@ -3042,10 +3073,17 @@ mod tests {
             &pl.seggi_senato,
             &p.governo.coalizione
         ));
-        assert!(!p.sfiducia(None, None));
+        let (intesa, valence) = (p.intesa.valori[4], p.partiti[0].valence);
+        assert!(!p.sfiducia(None, Some(0)));
         let e = &p.parlamento.esiti[0];
         assert_eq!((e.camera.si, e.camera.no), (200, 200));
         assert!(e.senato.si < e.senato.no);
         assert!(!e.approvata && !p.legislatura.dimissioni);
+        let d = |nome| p.dati.manopola(nome);
+        assert_eq!(p.intesa.valori[4], intesa + d("intesa_sfiducia_respinta"));
+        assert_eq!(
+            p.partiti[0].valence,
+            valence - d("valence_sfiducia_respinta")
+        );
     }
 }
