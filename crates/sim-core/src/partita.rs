@@ -925,8 +925,13 @@ impl Partita {
         self.parlamento.esiti_referendum.insert(0, esito);
     }
 
+    /// Il peso delle politiche nella vocazione di `j` (piano 8a): scala i colpi all'intesa.
+    fn peso_politiche(&self, j: usize) -> f64 {
+        self.partiti[j].vocazione.peso_politiche(&self.dati)
+    }
+
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
-    /// perde intesa.
+    /// perde intesa, per il peso delle politiche della sua vocazione.
     fn norma_lontana(&mut self, nuova: f64) {
         let soglia = self.dati.manopola("distanza_alleato");
         let costo = self.dati.manopola("costo_norma_lontana");
@@ -935,7 +940,7 @@ impl Partita {
             if distanza < soglia {
                 continue;
             }
-            let delta = -costo * (distanza - soglia + 1.0);
+            let delta = -costo * (distanza - soglia + 1.0) * self.peso_politiche(j);
             (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
         }
     }
@@ -986,8 +991,9 @@ impl Partita {
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
     fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
-        let delta = -self.dati.manopola("costo_emendamento_respinto");
+        let costo = self.dati.manopola("costo_emendamento_respinto");
         for j in alleati {
+            let delta = -costo * self.peso_politiche(j);
             (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
         }
     }
@@ -3305,7 +3311,8 @@ mod tests {
     use super::*;
     use crate::caso::Flusso;
     use crate::dati::dati_base;
-    use crate::legislatura::Fondazione;
+    use crate::legislatura::{CausaDisponibilita, Fondazione};
+    use crate::partiti::Vocazione;
 
     fn fondata() -> Partita {
         let f = Fondazione {
@@ -3491,6 +3498,71 @@ mod tests {
     fn contigua(c: [u32; 7], s: [u32; 7]) -> Option<Vec<usize>> {
         let p = Partita::nuova(dati_base(), 1);
         legislatura::maggioranza_contigua(&p.partiti, &c, &s, Some(5))
+    }
+
+    #[test]
+    fn la_vocazione_pesa_norma_lontana_ed_emendamento() {
+        let calo = |v: Vocazione, f: fn(&mut Partita)| {
+            let mut p = Partita::nuova(dati_base(), 7);
+            p.partiti[4].vocazione = v;
+            let prima = p.intesa.valori[4];
+            f(&mut p);
+            prima - p.intesa.valori[4]
+        };
+        let norma = |p: &mut Partita| p.norma_lontana(1.0);
+        let emendamento = |p: &mut Partita| p.emendamenti_respinti([4]);
+        for f in [norma as fn(&mut Partita), emendamento] {
+            let mista = calo(Vocazione::Mista, f);
+            assert!(mista > 0.0);
+            assert!((calo(Vocazione::Identitaria, f) - 1.5 * mista).abs() < 1e-9);
+            assert!((calo(Vocazione::Governista, f) - 0.5 * mista).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn la_vocazione_pesa_i_termini_del_valore_atteso() {
+        let mut p = Partita::nuova(dati_base(), 7);
+        let d = Dichiarazione::default();
+        let termini = |p: &Partita| {
+            let q = p.quadro();
+            q.termini(&d, &q.seggi(&d), 0)
+        };
+        p.partiti[0].vocazione = Vocazione::Mista;
+        let mista = termini(&p);
+        p.partiti[0].vocazione = Vocazione::Identitaria;
+        let identitaria = termini(&p);
+        for ((c, x), (_, y)) in mista.iter().zip(&identitaria) {
+            let atteso = match c {
+                CausaDisponibilita::Distanza => 1.5 * x,
+                CausaDisponibilita::Intesa => *x,
+                _ => 0.5 * x,
+            };
+            assert!((y - atteso).abs() < 1e-9, "{c:?}");
+        }
+    }
+
+    /// `valore_al_governo` con un partito misto rende il vecchio restare senza intesa; con la
+    /// vocazione pesa le poltrone e la distanza.
+    #[test]
+    fn valore_al_governo_coi_pesi() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let (c, s) = ([10, 40, 29, 10, 101, 100, 110], [5, 20, 14, 5, 51, 50, 55]);
+        let valore = |p: &Partita, guida| {
+            let q = Quadro {
+                seggi_veri: Some((c.to_vec(), s.to_vec())),
+                ..p.quadro()
+            };
+            legislatura::valore_al_governo(&q, 4, &[4, 5], guida)
+        };
+        let quota =
+            f64::from(c[4] + s[4]) / f64::from(c.iter().sum::<u32>() + s.iter().sum::<u32>());
+        // seggi 4, governare 2, distanza 1, guida 1 (dati di prova); centrodestra a distanza 1.
+        let vecchio = 4.0 * quota + 2.0 - 1.0;
+        assert!((valore(&p, false) - vecchio).abs() < 1e-9);
+        assert!((valore(&p, true) - (vecchio + 1.0)).abs() < 1e-9);
+        p.partiti[4].vocazione = Vocazione::Identitaria;
+        let atteso = 0.5 * (4.0 * quota + 2.0) - 1.5 * 1.0;
+        assert!((valore(&p, false) - atteso).abs() < 1e-9);
     }
 
     #[test]

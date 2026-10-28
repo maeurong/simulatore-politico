@@ -106,7 +106,7 @@ pub(super) fn parti(cx: &Contesto, i: usize, m: &Ministro, a: &Atto) -> (f64, f6
 
 /// Per ogni regione `(peso_bisogno · b_r, peso_voti · w_r)`: bisogno (disoccupazione sopra la
 /// media, infrastrutture e investimenti sotto 100) e voti del partito sopra la sua quota
-/// nazionale nel sondaggio pubblico.
+/// nazionale nel sondaggio pubblico, questi × `peso_poltrone` della vocazione (piano 8a).
 fn termini_regioni(cx: &Contesto, partito: usize) -> Vec<(f64, f64)> {
     let dati = cx.dati;
     let al = |v: &[f64], r: usize| v.get(r).copied().unwrap_or(0.0);
@@ -133,9 +133,10 @@ fn termini_regioni(cx: &Contesto, partito: usize) -> Vec<(f64, f64)> {
     let riga = |id: &str| dati.grandezza(id).map(|k| &cx.grandezze.valori[k]);
     let (infrastrutture, investimenti) =
         (riga("stock_infrastrutture"), riga("investimenti_privati"));
+    let poltrone = (cx.partiti.get(partito)).map_or(1.0, |p| p.vocazione.peso_poltrone(dati));
     let (peso_bisogno, peso_voti) = (
         dati.manopola("peso_bisogno_bersaglio"),
-        dati.manopola("peso_voti_bersaglio"),
+        dati.manopola("peso_voti_bersaglio") * poltrone,
     );
     (0..n)
         .map(|r| {
@@ -633,6 +634,34 @@ mod test {
     use super::*;
     use crate::atti::{EffettoAtto, Forma, Lato, Velocita};
     use crate::dati::dati_base as dati;
+
+    /// Un partito governista pesa i voti nel bersaglio 1,5 volte il misto (vocazione, piano 8a);
+    /// il bisogno resta uguale.
+    #[test]
+    fn i_voti_nel_bersaglio_seguono_la_vocazione() {
+        use crate::partiti::Vocazione;
+        let mut p = crate::partita::Partita::nuova(dati(), 7);
+        let mut termini = |v| {
+            p.con_contesto(|_, cx, _| {
+                let mut partiti = cx.partiti.to_vec();
+                partiti[5].vocazione = v;
+                termini_regioni(
+                    &Contesto {
+                        partiti: &partiti,
+                        ..*cx
+                    },
+                    5,
+                )
+            })
+        };
+        let mista = termini(Vocazione::Mista);
+        let governista = termini(Vocazione::Governista);
+        assert!(mista.iter().any(|t| t.1 != 0.0));
+        for (m, g) in mista.iter().zip(&governista) {
+            assert!((g.1 - 1.5 * m.1).abs() < 1e-9);
+            assert_eq!(g.0, m.0);
+        }
+    }
 
     #[test]
     fn capacita_5_quintuplica_l_intensita_di_capacita_1_e_divide_il_ritardo() {

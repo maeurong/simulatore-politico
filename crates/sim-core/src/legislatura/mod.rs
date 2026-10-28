@@ -10,9 +10,12 @@ mod eredita;
 mod fondazione;
 mod spartizione;
 mod voto;
-pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
+pub use coalizione::{CausaDisponibilita, Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
 pub(crate) use crisi::{linea_sfiducia, vota_la_caduta};
+// ponytail: i Task 6 e 8 usano `valore_al_governo`; togliere allora il `cfg(test)`.
+#[cfg(test)]
+pub(crate) use crisi::valore_al_governo;
 pub use eredita::{ConfrontoIndicatore, Eredita};
 pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
