@@ -83,28 +83,33 @@ impl Partita {
             return;
         }
         if self.governo.presidente != self.giocatore {
-            if self.in_crisi() && !self.legislatura.turno_di_voto(self.turno) {
+            if self.in_crisi_ia() {
                 self.crisi_ia();
             }
             self.governo_ia();
         }
     }
 
-    /// Il governo IA nel turno di crisi (scelta 12 del piano, formazione-di-coalizioni:13): nella
-    /// fila per posizione dichiarata dei partiti con seggi, senza il giocatore, i due vicini della
-    /// coalizione; allarga a quello con l'intesa non sotto `soglia_ultimatum` (l'alleato appena
-    /// uscito resta fuori) che le ridà la maggioranza in entrambe le Camere e ci guadagna, il più
-    /// vicino di posizione al membro accanto, a parità il più grande. Nessuno, o in esercizio
-    /// provvisorio (il governo cade comunque a fine turno, iter-legislativo-italiano:86): si
-    /// dimette (iter-legislativo-italiano:42).
+    /// Il governo IA nel turno di crisi (scelta 12 del piano, formazione-di-coalizioni:13). In
+    /// esercizio provvisorio si dimette subito: il governo cade comunque a fine turno
+    /// (iter-legislativo-italiano:86). Altrimenti il governo IA guarda la fila dei partiti con
+    /// seggi per posizione dichiarata, senza il giocatore, e i due vicini della coalizione. Allarga
+    /// a quello che le ridà la maggioranza in entrambe le Camere e ci guadagna, con l'intesa non
+    /// sotto `soglia_ultimatum` (l'alleato appena uscito resta fuori); fra due, il più vicino di
+    /// posizione al membro accanto, a parità il più grande. Senza nessuno si dimette
+    /// (iter-legislativo-italiano:42).
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
+        if self.economia.esercizio_provvisorio(self.data) {
+            self.legislatura.dimissioni = true;
+            let testo = "Si dimette: in esercizio provvisorio non allarga la coalizione";
+            self.mossa(pc, testo.into());
+            return;
+        }
         let scelto = {
             let pl = &self.parlamento;
-            let seggi = |j: usize| {
-                let di = |v: &[u32]| v.get(j).copied().unwrap_or(0);
-                di(&pl.seggi_camera) + di(&pl.seggi_senato)
-            };
+            let tutti = self.seggi_per_partito();
+            let seggi = |j: usize| tutti.get(j).copied().unwrap_or(0);
             let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
             let mut fila: Vec<usize> = (0..self.partiti.len())
                 .filter(|&j| seggi(j) > 0 && j != self.giocatore)
@@ -123,7 +128,6 @@ impl Partita {
             // Sotto `soglia_ultimatum`: l'alleato uscito sotto `soglia_uscita` non ci torna col
             // ritorno dell'intesa di un turno.
             let soglia = self.dati.manopola("soglia_ultimatum");
-            let provvisorio = self.economia.esercizio_provvisorio(self.data);
             // ponytail: il valore fuori dal governo è 0, non il termine dei seggi che il partito
             // tiene comunque all'opposizione; il guadagno ne è sovrastimato. Via d'uscita: un
             // `valore_all_opposizione` in `legislatura/crisi.rs`.
@@ -131,8 +135,7 @@ impl Partita {
                 .filter(|&(j, _)| {
                     let mut con = coalizione.clone();
                     con.push(j);
-                    !provvisorio
-                        && !self.intesa.valori.get(j).is_some_and(|&x| x < soglia)
+                    !self.intesa.valori.get(j).is_some_and(|&x| x < soglia)
                         && legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
                         && legislatura::valore_al_governo(&q, j, &con, false) > 0.0
                 })
@@ -146,11 +149,13 @@ impl Partita {
         match scelto.and_then(|j| Some((j, self.partiti.get(j)?.nome.clone()))) {
             Some((j, nome)) => {
                 self.legislatura.allargati.push(j);
-                self.mossa(pc, format!("Allarga la maggioranza a {nome}"));
+                self.mossa(pc, format!("Allarga la coalizione a {nome}"));
             }
             None => {
                 self.legislatura.dimissioni = true;
-                self.mossa(pc, "Si dimette: nessun partito contiguo ci guadagna".into());
+                let testo = "Si dimette: nessun partito contiguo gli ridà la maggioranza con un \
+                             guadagno";
+                self.mossa(pc, testo.into());
             }
         }
     }
@@ -172,8 +177,8 @@ impl Partita {
     /// In chiusura, dopo il sondaggio (scelta 13 del piano): nella finestra, il governo IA si
     /// dimette per andare al voto se il valore atteso del voto per il partito del Presidente del
     /// Consiglio (`Quadro::valore` sul sondaggio pubblico, coalizioni dell'ultimo voto) supera di
-    /// `margine_voto_anticipato` quello del restare (`valore_al_governo` coi seggi veri e la
-    /// guida).
+    /// `margine_voto_anticipato` quello del restare. Il restare è `valore_al_governo` coi seggi
+    /// veri, con la guida: il termine `valore_guida` che spetta a chi presiede il governo.
     pub(super) fn voto_anticipato(&mut self) {
         if !self.finestra_voto_anticipato() {
             return;
@@ -185,7 +190,8 @@ impl Partita {
         if voto > restare + self.dati.manopola("margine_voto_anticipato") {
             self.legislatura.dimissioni = true;
             self.legislatura.voto_anticipato = true;
-            let testo = "Si dimette per andare al voto: i sondaggi gli danno più del restare";
+            let testo = "Si dimette puntando al voto: nei sondaggi il voto gli vale più che \
+                         restare al governo";
             self.mossa(pc, testo.into());
         }
     }
@@ -205,7 +211,7 @@ impl Partita {
         {
             self.mossa(pc, testo);
         }
-        // Col calendario pieno ogni voce che resta è rifiutata: provarle tutte è fermarsi lì.
+        // Col calendario pieno le voci che restano sono rifiutate una a una, senza righe.
         for (k, g) in self.governo.programma.clone() {
             let (Some(x), Some(v)) = (
                 self.dati.disposizioni().get(k),
@@ -250,7 +256,7 @@ impl Partita {
             }
             let (id, nome) = (d.id.clone(), d.nome.clone());
             if self.applica(Comando::Accogli { dicastero: id }).is_ok() {
-                self.mossa(pc, format!("Accoglie la proposta di {nome}"));
+                self.mossa(pc, format!("Accoglie la proposta del dicastero {nome}"));
             }
         }
         let soglia = self.dati.manopola("soglia_ultimatum");
@@ -347,7 +353,7 @@ impl Partita {
     /// entro il tetto UE (bisezione in 20 passi; quota 0 se nemmeno la bozza ci sta), poi i
     /// dicasteri degli alleati in ultimatum indicizzati per intero, anche oltre il tetto. La riga
     /// dice entro od oltre il tetto sul bilancio finale; niente, se il riepilogo non si calcola.
-    /// `None` senza bozza.
+    /// La quota serve solo ai test. `None` senza bozza o se l'indicizzazione fallisce.
     pub(super) fn bilancio_ia(&self) -> Option<(Bilancio, f64, String)> {
         let bozza = self.bozza_bilancio()?;
         let indice = self.indice_prezzi();
@@ -397,11 +403,8 @@ impl Partita {
             }
             b = pieno;
         }
-        let mut testo = format!(
-            "Bilancio {}: budget indicizzati al {:.0}% dell'inflazione",
-            b.anno,
-            (quota * 100.0).round()
-        );
+        let percento = (quota * 100.0).round() as u32;
+        let mut testo = format!("Bilancio {}: {}", b.anno, indicizzati(percento));
         if let Ok(r) = self.riepilogo_ammesso(&b) {
             testo.push_str(if r.crescita_spesa_netta <= r.tetto {
                 ", entro il tetto UE"
@@ -416,6 +419,17 @@ impl Partita {
     }
 }
 
+/// «budget indicizzati per il {percento}% dell'inflazione», con l'articolo eliso davanti ai
+/// numeri che si leggono con una vocale (l'1%, l'8%, l'11%, l'80-89%); a 0, «budget non
+/// indicizzati».
+pub(super) fn indicizzati(percento: u32) -> String {
+    match percento {
+        0 => "budget non indicizzati".into(),
+        1 | 8 | 11 | 80..=89 => format!("budget indicizzati per l'{percento}% dell'inflazione"),
+        _ => format!("budget indicizzati per il {percento}% dell'inflazione"),
+    }
+}
+
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
@@ -424,8 +438,91 @@ impl Partita {
 mod tests {
     use super::super::tests::all_opposizione;
     use super::*;
+    use crate::partiti::Vocazione;
 
-    const AL_VOTO: &str = "Si dimette per andare al voto: i sondaggi gli danno più del restare";
+    const AL_VOTO: &str =
+        "Si dimette puntando al voto: nei sondaggi il voto gli vale più che restare al governo";
+
+    /// Uscita la Destra (5), in crisi: la coalizione 1-4 non ha la maggioranza al Senato (99 su
+    /// 200). Vicini nella fila: l'estrema sinistra (0, a 1 dal membro accanto, governista, con
+    /// 10 e 5 seggi tolti al giocatore) che gliela ridà, e la Destra, tenuta fuori con l'intesa
+    /// sotto `soglia_ultimatum`.
+    fn in_crisi_senza_destra() -> Partita {
+        let mut p = all_opposizione();
+        p.parlamento.seggi_camera = vec![10, 125, 26, 18, 33, 125, 30, 33];
+        p.parlamento.seggi_senato = vec![5, 69, 10, 7, 13, 65, 13, 18];
+        p.governo.coalizione.retain(|&j| j != 5);
+        p.partiti[0].vocazione = Vocazione::Governista;
+        p.intesa.valori[5] = 30.0;
+        p.legislatura.crisi = Some(p.turno);
+        p.mosse.clear();
+        p
+    }
+
+    #[test]
+    fn in_crisi_allarga_solo_al_vicino_che_rida_la_maggioranza_e_ci_guadagna() {
+        let mut p = in_crisi_senza_destra();
+        p.crisi_ia();
+        assert_eq!(p.legislatura.allargati, [0]);
+        // Senza la maggioranza al Senato con lui (99 + 1).
+        let mut p = in_crisi_senza_destra();
+        p.parlamento.seggi_senato[0] = 1;
+        p.parlamento.seggi_senato[7] += 4;
+        p.crisi_ia();
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        // Identitaria, la distanza dalla coalizione le toglie il guadagno.
+        let mut p = in_crisi_senza_destra();
+        p.partiti[0].vocazione = Vocazione::Identitaria;
+        p.crisi_ia();
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        let riga = "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno";
+        assert!(p.mosse.iter().any(|m| m.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Con la Destra di nuovo ammessa, entrambi i vicini ridanno la maggioranza: a distanza 1 dal
+    /// membro accanto tutti e due, vince la Destra, più grande; l'estrema sinistra a 0,5 vince.
+    #[test]
+    fn in_crisi_allarga_al_piu_vicino_e_a_parita_al_piu_grande() {
+        let mut p = in_crisi_senza_destra();
+        p.intesa.valori[5] = 50.0;
+        p.crisi_ia();
+        assert_eq!(p.legislatura.allargati, [5]);
+        let mut p = in_crisi_senza_destra();
+        p.intesa.valori[5] = 50.0;
+        p.partiti[0].posizione_dichiarata = 1.5;
+        p.crisi_ia();
+        assert_eq!(p.legislatura.allargati, [0]);
+    }
+
+    /// Nel turno del voto la crisi la chiude il voto: `apertura_ia` non la affronta.
+    #[test]
+    fn nel_turno_del_voto_la_crisi_ia_non_agisce() {
+        let mut p = in_crisi_senza_destra();
+        p.turno = p.legislatura.scadenza;
+        p.legislatura.crisi = Some(p.turno);
+        assert!(p.legislatura.turno_di_voto(p.turno));
+        p.apertura_ia();
+        assert!(p.legislatura.allargati.is_empty() && !p.legislatura.dimissioni);
+        let mut p = in_crisi_senza_destra();
+        p.apertura_ia();
+        assert_eq!(p.legislatura.allargati, [0]);
+    }
+
+    #[test]
+    fn l_articolo_della_quota_si_elide_davanti_a_vocale() {
+        assert_eq!(indicizzati(0), "budget non indicizzati");
+        for (q, attesa) in [
+            (8, "per l'8%"),
+            (11, "per l'11%"),
+            (85, "per l'85%"),
+            (50, "per il 50%"),
+        ] {
+            assert_eq!(
+                indicizzati(q),
+                format!("budget indicizzati {attesa} dell'inflazione")
+            );
+        }
+    }
 
     #[test]
     fn niente_voto_anticipato_fuori_finestra() {
@@ -448,6 +545,7 @@ mod tests {
         assert!(!a(inizio + 4, |p| p.legislatura.crisi = Some(p.turno)));
         assert!(!a(inizio + 4, |p| p.legislatura.dimissioni = true));
         assert!(!a(inizio + 4, |p| p.legislatura.fase = Fase::Sciolta));
+        assert!(!a(inizio + 4, |p| p.governo.presidente = p.giocatore));
     }
 
     #[test]
@@ -470,7 +568,7 @@ mod tests {
         assert!(
             p.mosse
                 .iter()
-                .any(|m| m.testo == "Allarga la maggioranza a Destra")
+                .any(|m| m.testo == "Allarga la coalizione a Destra")
         );
         // `carica` ammette gli allargati del governo IA in crisi.
         assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);

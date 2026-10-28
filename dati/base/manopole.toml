@@ -1230,14 +1230,14 @@ min = 0.0
 max = 2.0
 ticket = "18"
 
-# docs/ricerca/modelli/formazione-di-coalizioni.md:16 (Gamson, spartizione già di default); seggi attesi (Camera più Senato) che la legge elettorale migliore deve dare alla coalizione per entrare nel programma: assunzione del piano 8a, nessuna fonte per il valore
+# seggi attesi (Camera più Senato) che la legge elettorale migliore deve dare alla coalizione per entrare nel programma: assunzione del piano 8a, nessuna fonte in docs/ricerca
 [seggi_programma_elettorale]
 valore = 15.0
 min = 0.0
 max = 200.0
 ticket = "18"
 
-# assunzione del piano 8a, nessuna fonte in docs/ricerca (di quanto il valore atteso del voto anticipato, sul sondaggio pubblico, deve superare quello del restare al governo perché il Presidente del Consiglio IA si dimetta)
+# assunzione del piano 8a, nessuna fonte in docs/ricerca (di quanto il valore atteso del voto anticipato, sul sondaggio pubblico, deve superare quello del restare al governo perché il Presidente del Consiglio IA si dimetta; nelle unità di `Quadro::valore`, le stesse di `valore_al_governo`: lo scarto voto meno restare misurato in `si_va_al_voto_quando_conviene` è circa 4,2)
 [margine_voto_anticipato]
 valore = 0.5
 min = 0.0

@@ -3,13 +3,18 @@
 use crate::disposizioni::Norma;
 use crate::parlamento::StatoAula;
 
+/// Il programma della `coalizione`: le voci (disposizione, gradino) nell'ordine in cui il governo
+/// le porta in aula; vuoto se la coalizione non ha seggi.
+///
 /// Posizione della coalizione: la media delle posizioni dichiarate pesata coi `seggi` di Camera
 /// più Senato. Per ogni disposizione ordinaria con posizione, il gradino non bloccato più vicino a
 /// quella posizione, se avvicina il vigente di almeno `soglia_programma`; in ordine di distanza
 /// decrescente del vigente. In coda, al più una voce elettorale (`elettorale`). Le costituzionali
-/// restano fuori. Vuoto se la coalizione non ha seggi.
-// ponytail: «non bloccato» = fuori da `bloccati` del referendum; le respinte da poco e le misure in
-// esame dipendono dal calendario del governo uscente e non entrano nel programma.
+/// restano fuori.
+// ponytail: «non bloccato» = fuori da `bloccati` del referendum. Tetto: il programma può
+// ripresentare una legge respinta da poco; il calendario la rifiuta finché dura il blocco di
+// `turni_blocco_respinta`, e il governo la riprova a ogni turno. Via d'uscita: escludere qui le
+// disposizioni in `Parlamento::respinte`, passandole dentro `StatoAula`.
 pub(crate) fn programma(
     aula: &StatoAula,
     coalizione: &[usize],
