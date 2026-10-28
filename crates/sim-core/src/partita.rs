@@ -1090,8 +1090,8 @@ impl Partita {
             .filter(|e| e.stato == StatoEmendamento::Accolto)
             .flat_map(|e| e.proposta.iter().map(|p| p.0))
             .collect();
-        if let Ok(x) = self.indicizza_dicasteri(&b, &accolti) {
-            b = x;
+        if !accolti.is_empty() {
+            b = self.indicizza_dicasteri(&b, &accolti)?;
         }
         self.economia.bilancio_presentato = Some(b);
         self.parlamento.apri_bilancio(turno);
@@ -3182,6 +3182,33 @@ mod tests {
             posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.
+    #[test]
+    fn il_bilancio_dell_ia_non_ha_emendamenti() {
+        let f = Fondazione {
+            nome: "Partito nuovo".into(),
+            posizione: 1.5,
+        };
+        let mut p = Partita::fonda(dati_base(), 7, &f).unwrap();
+        p.chiudi_turno(); // voto
+        p.chiudi_turno(); // trattativa
+        assert!(!p.governa());
+        // Dal secondo ottobre-dicembre: il primo anno i prezzi non hanno ancora mangiato i budget.
+        for _ in 0..2 {
+            p.chiudi_turno();
+            while p.data.trimestre != 4 {
+                p.chiudi_turno();
+            }
+        }
+        p.informazione.statistica.indice_prezzi = 1.2; // voci in perdita reale
+        let b = p.bozza_bilancio().unwrap();
+        p.presenta_bilancio(&b).unwrap();
+        let m = (p.parlamento.misure.iter())
+            .find(|m| m.forma == FormaMisura::Bilancio)
+            .unwrap();
+        assert!(m.emendamenti.is_empty());
     }
 
     #[test]

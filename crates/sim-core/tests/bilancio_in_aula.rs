@@ -387,7 +387,14 @@ fn gli_alleati_chiedono_di_indicizzare_i_loro_dicasteri() {
 #[test]
 fn accolto_l_emendamento_la_voce_e_indicizzata() {
     let mut p = al_bilancio_del_2028();
-    let voce = |p: &Partita| p.economia().bilancio_presentato.as_ref().unwrap().dicasteri[6].spesa;
+    let voce = |p: &Partita| {
+        let b = p.economia().bilancio_presentato.as_ref().unwrap();
+        b.dicasteri
+            .iter()
+            .find(|d| d.id == "ambiente_energia")
+            .unwrap()
+            .spesa
+    };
     let prima = voce(&p);
     emenda(&mut p, true);
     assert!(voce(&p) > prima);
@@ -428,4 +435,31 @@ fn un_bilancio_indicizzato_non_riceve_emendamenti() {
     p.comanda(Comando::PresentaBilancio { bilancio: b })
         .unwrap();
     assert!(bilancio(&p).emendamenti.is_empty());
+}
+
+#[test]
+fn a_fine_turno_l_emendamento_aperto_sul_bilancio_e_respinto() {
+    let mut p = al_bilancio_del_2028();
+    assert_eq!(bilancio(&p).emendamenti[0].stato, StatoEmendamento::Aperto);
+    p.chiudi_turno();
+    let pagato = (p.intesa().variazioni.iter())
+        .filter(|x| x.causa == CausaIntesa::EmendamentoRespinto)
+        .count();
+    assert_eq!(pagato, 1);
+}
+
+#[test]
+fn respinto_l_emendamento_i_franchi_tiratori_dell_alleato_crescono() {
+    let mut p = al_bilancio_del_2028();
+    let prima = bilancio(&p).forbice;
+    emenda(&mut p, false);
+    let m = bilancio(&p);
+    assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Respinto);
+    // `ft_emendamento_respinto` moltiplica i franchi: la forbice dei sì si abbassa.
+    assert!(
+        m.forbice.camera[0] < prima.camera[0],
+        "{:?} {:?}",
+        m.forbice,
+        prima
+    );
 }

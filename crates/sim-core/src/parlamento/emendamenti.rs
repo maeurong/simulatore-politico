@@ -72,16 +72,19 @@ fn proposta(
 fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
     let turni = dati.manopola("turni_rinvio_regime");
     (proposta.iter())
-        .filter_map(|&(d, x)| {
-            if x == Attenuazione::Indicizza {
+        .filter_map(|&(d, x)| match x {
+            Attenuazione::Indicizza => {
                 let nome = &dati.dicasteri().get(d)?.nome;
-                return Some(format!("{nome}: budget indicizzato all'inflazione"));
+                Some(format!("{nome}: budget indicizzato all'inflazione"))
             }
-            let d = dati.disposizioni().get(d)?;
-            Some(match x {
-                Attenuazione::Gradino(g) => format!("{}: {}", d.nome, d.gradini.get(g)?.nome),
-                _ => format!("{}: in vigore fra {turni} turni", d.nome),
-            })
+            Attenuazione::Gradino(g) => {
+                let d = dati.disposizioni().get(d)?;
+                Some(format!("{}: {}", d.nome, d.gradini.get(g)?.nome))
+            }
+            Attenuazione::Rinvio => {
+                let d = dati.disposizioni().get(d)?;
+                Some(format!("{}: in vigore fra {turni} turni", d.nome))
+            }
         })
         .collect::<Vec<_>>()
         .join("; ")
