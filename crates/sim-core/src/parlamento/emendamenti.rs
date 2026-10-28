@@ -12,12 +12,14 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// L'attenuazione chiesta su una disposizione: un gradino più vicino al vigente, o lo stesso
-/// valore in arrivo dopo `turni_rinvio_regime` turni.
+/// valore in arrivo dopo `turni_rinvio_regime` turni. Sulla legge di bilancio l'indice della
+/// coppia è il dicastero e l'attenuazione è `Indicizza`: il budget segue l'inflazione.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Attenuazione {
     Gradino(usize),
     Rinvio,
+    Indicizza,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,15 +67,20 @@ fn proposta(
         .collect()
 }
 
-/// `"{nome}: {gradino}"` o `"{nome}: in vigore fra {n} turni"`, uniti da `"; "`.
+/// `"{nome}: {gradino}"`, `"{nome}: in vigore fra {n} turni"` o `"{dicastero}: budget indicizzato
+/// all'inflazione"`, uniti da `"; "`.
 fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
     let turni = dati.manopola("turni_rinvio_regime");
     (proposta.iter())
         .filter_map(|&(d, x)| {
+            if x == Attenuazione::Indicizza {
+                let nome = &dati.dicasteri().get(d)?.nome;
+                return Some(format!("{nome}: budget indicizzato all'inflazione"));
+            }
             let d = dati.disposizioni().get(d)?;
             Some(match x {
                 Attenuazione::Gradino(g) => format!("{}: {}", d.nome, d.gradini.get(g)?.nome),
-                Attenuazione::Rinvio => format!("{}: in vigore fra {turni} turni", d.nome),
+                _ => format!("{}: in vigore fra {turni} turni", d.nome),
             })
         })
         .collect::<Vec<_>>()
@@ -146,6 +153,21 @@ impl Parlamento {
                 });
             }
             m.emendamenti_aperti = true;
+        }
+    }
+
+    /// Gli emendamenti della legge di bilancio del turno: restano i decisi, gli aperti diventano
+    /// `nuovi`, tranne quelli di chi ha già un emendamento deciso.
+    pub(crate) fn emendamenti_bilancio(&mut self, turno: u32, nuovi: Vec<RichiestaEmendamento>) {
+        let bilancio = |m: &&mut Misura| m.forma == FormaMisura::Bilancio && m.voto == turno;
+        if let Some(m) = self.misure.iter_mut().find(bilancio) {
+            m.emendamenti
+                .retain(|e| e.stato != StatoEmendamento::Aperto);
+            for n in nuovi {
+                if !m.emendamenti.iter().any(|e| e.partito == n.partito) {
+                    m.emendamenti.push(n);
+                }
+            }
         }
     }
 
@@ -267,6 +289,30 @@ pub(crate) fn costo_fiducia(
 fn seggi_persi(n: i32) -> String {
     let seggi = if n == 1 { "seggio" } else { "seggi" };
     format!("perde {n} {seggi} con la legge elettorale")
+}
+
+/// La richiesta aperta di `partito` sul bilancio: indicizzare i `perdite` (dicastero, perdita
+/// reale in punti).
+pub(crate) fn richiesta_bilancio(
+    dati: &DatiGioco,
+    partito: usize,
+    perdite: &[(usize, f64)],
+) -> RichiestaEmendamento {
+    let motivo = (perdite.iter())
+        .filter_map(|&(k, x)| {
+            let x = format!("{x:.1}").replace('.', ",");
+            Some(format!("{}: −{x}% reale", dati.dicasteri().get(k)?.nome))
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    RichiestaEmendamento {
+        partito,
+        proposta: (perdite.iter())
+            .map(|&(k, _)| (k, Attenuazione::Indicizza))
+            .collect(),
+        stato: StatoEmendamento::Aperto,
+        motivo,
+    }
 }
 
 /// Un emendamento accolto rinvia la disposizione `d`.

@@ -25,7 +25,7 @@ pub(crate) use anteprima::anteprima;
 pub(crate) use decreti::ammetti;
 pub use decreti::{Decreto, FondiDecreto};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
-pub(crate) use emendamenti::{costo_fiducia, rinviata};
+pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
 pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, riparto_con};
@@ -1008,6 +1008,7 @@ impl Parlamento {
                 && e.proposta.iter().all(|&(d, x)| match x {
                     Attenuazione::Gradino(g) => valore_ok(&(d, g)),
                     Attenuazione::Rinvio => d < catalogo.len(),
+                    Attenuazione::Indicizza => d < dati.dicasteri().len(),
                 })
         };
         let misure_ok = self.misure.iter().all(|m| {

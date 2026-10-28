@@ -20,7 +20,8 @@ use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, p
 use crate::misure::{CAPACITA_NEUTRA, Misure};
 use crate::parlamento::{
     self, CausaIntesa, Conteggio, Decreto, EsitoReferendum, EsitoVoto, FondiDecreto, FormaMisura,
-    Intesa, Misura, Parlamento, Referendum, StatoAula, TipoReferendum, ValoreProposto, voto,
+    Intesa, Misura, Parlamento, Referendum, RichiestaEmendamento, StatoAula, StatoEmendamento,
+    TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
@@ -886,6 +887,7 @@ impl Partita {
         partito: &str,
         accogli: bool,
     ) -> Result<(), Errore> {
+        let indicizzato = self.bilancio_emendato(misura, partito, accogli)?;
         let respinto = (self.parlamento).decidi_emendamento(
             &self.dati,
             &self.partiti,
@@ -893,8 +895,33 @@ impl Partita {
             partito,
             accogli,
         )?;
+        if indicizzato.is_some() {
+            self.economia.bilancio_presentato = indicizzato;
+        }
         self.emendamenti_respinti(respinto);
         Ok(())
+    }
+
+    /// Accogliere l'emendamento aperto di `partito` sul bilancio presentato: il bilancio con i
+    /// suoi dicasteri indicizzati. `None` per ogni altro caso (gli errori li dà
+    /// `decidi_emendamento`); un bilancio non ammesso è un rifiuto e la partita resta identica.
+    fn bilancio_emendato(
+        &self,
+        misura: u32,
+        partito: &str,
+        accogli: bool,
+    ) -> Result<Option<Bilancio>, Errore> {
+        let j = self.partiti.iter().position(|p| p.id == partito);
+        let proposta = (self.parlamento.misure.iter())
+            .filter(|m| m.id == misura && m.forma == FormaMisura::Bilancio)
+            .flat_map(|m| &m.emendamenti)
+            .find(|e| Some(e.partito) == j && e.stato == StatoEmendamento::Aperto);
+        let (true, Some(e), Some(b)) = (accogli, proposta, &self.economia.bilancio_presentato)
+        else {
+            return Ok(None);
+        };
+        let k: Vec<usize> = e.proposta.iter().map(|p| p.0).collect();
+        self.indicizza_dicasteri(b, &k).map(Some)
     }
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
@@ -1052,11 +1079,60 @@ impl Partita {
 
     /// `PresentaBilancio`: sostituisce quello già presentato, nella stessa misura; l'aula lo vota
     /// in chiusura.
+    /// Col giocatore al governo, ogni alleato chiede di indicizzare i suoi dicasteri in perdita
+    /// reale (`emendamenti_bilancio`); gli emendamenti accolti si riapplicano al bilancio nuovo.
     pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
-        let (_, b) = self.bilancio_ammesso(b)?;
+        let (_, mut b) = self.bilancio_ammesso(b)?;
+        let turno = self.turno;
+        let accolti: Vec<usize> = (self.parlamento.misure.iter())
+            .filter(|m| m.forma == FormaMisura::Bilancio && m.voto == turno)
+            .flat_map(|m| &m.emendamenti)
+            .filter(|e| e.stato == StatoEmendamento::Accolto)
+            .flat_map(|e| e.proposta.iter().map(|p| p.0))
+            .collect();
+        if let Ok(x) = self.indicizza_dicasteri(&b, &accolti) {
+            b = x;
+        }
         self.economia.bilancio_presentato = Some(b);
-        self.parlamento.apri_bilancio(self.turno);
+        self.parlamento.apri_bilancio(turno);
+        if self.governa() {
+            let nuovi = self.richieste_di_indicizzazione();
+            self.parlamento.emendamenti_bilancio(turno, nuovi);
+        }
         Ok(())
+    }
+
+    /// `b` con i budget dei dicasteri `k` indicizzati, come lo approverebbe l'aula.
+    fn indicizza_dicasteri(&self, b: &Bilancio, k: &[usize]) -> Result<Bilancio, Errore> {
+        let mut b = b.clone();
+        for d in k.iter().filter_map(|&k| self.dati.dicasteri().get(k)) {
+            b = self.indicizza(&b, &Voce::Dicastero { id: d.id.clone() })?;
+        }
+        Ok(self.bilancio_ammesso(&b)?.1)
+    }
+
+    /// Una richiesta per ogni alleato che tiene dicasteri la cui voce perde più di
+    /// `soglia_emendamento_bilancio` punti reali nel bilancio presentato.
+    fn richieste_di_indicizzazione(&self) -> Vec<RichiestaEmendamento> {
+        let Some(b) = &self.economia.bilancio_presentato else {
+            return Vec::new();
+        };
+        let (indice, soglia) = (
+            self.indice_prezzi(),
+            self.dati.manopola("soglia_emendamento_bilancio"),
+        );
+        let perdite = |j: usize| -> Vec<(usize, f64)> {
+            (b.dicasteri.iter().enumerate())
+                .filter(|&(k, _)| self.governo.dicasteri.get(k) == Some(&j))
+                .map(|(k, d)| (k, perdita_reale(d.livello_prezzi, indice)))
+                .filter(|&(_, x)| x > soglia)
+                .collect()
+        };
+        (self.alleati().into_iter())
+            .map(|j| (j, perdite(j)))
+            .filter(|(_, p)| !p.is_empty())
+            .map(|(j, p)| parlamento::richiesta_bilancio(&self.dati, j, &p))
+            .collect()
     }
 
     /// `PresentaLegge`: la misura entra in calendario.
