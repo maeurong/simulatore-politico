@@ -1,6 +1,8 @@
 mod comune;
-use comune::{all_opposizione, dati_base, fondata};
-use sim_core::parlamento::{FormaMisura, ValoreProposto};
+use comune::{all_opposizione, con_seggi, dati_base, edita, fondata};
+use sim_core::legislatura::Fase;
+use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
+use sim_core::vista::FasciaIntesa;
 use sim_core::{Comando, Partita};
 
 fn al_posto_riservato(p: &mut Partita) {
@@ -99,22 +101,28 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
         })
         .unwrap_err();
     assert!(e.to_string().contains("posto riservato"), "{e}");
-    let m = &p.vista().calendario[0];
-    assert_eq!(m.promotore.as_deref(), Some("giocatore"));
-    assert!(m.emendamenti.is_empty());
+    assert!(!p.vista().posto_opposizione); // occupato dalla proposta
+    let id = p.vista().calendario[0].id;
+    assert_eq!(
+        p.vista().calendario[0].promotore.as_deref(),
+        Some("giocatore")
+    );
     let pdc = p.governo().presidente;
     let v = p.partiti()[pdc].valence;
-    let n = al_voto(&mut p, m.id);
-    assert!(
-        p.vista()
-            .esiti
-            .iter()
-            .any(|e| e.nome.contains("Licenziament")),
-        "{:?}",
-        p.vista().esiti
-    );
-    // Respinta o approvata, la proposta non tocca la valence del Presidente del Consiglio
-    // oltre il ritorno verso la base.
+    // All'apertura del turno del voto gli alleati lontani (centro, centrodestra, destra) non
+    // chiedono emendamenti sulla proposta dell'opposizione.
+    p.chiudi_turno();
+    let vista = p.vista();
+    let m = vista.calendario.iter().find(|m| m.id == id).unwrap();
+    assert_eq!(m.voto, vista.data);
+    assert!(m.emendamenti.is_empty(), "{:?}", m.emendamenti);
+    let n = 1 + al_voto(&mut p, id);
+    let e = (p.vista().esiti.into_iter())
+        .find(|e| e.misura == id)
+        .unwrap();
+    assert!(e.nome.contains("Licenziament"), "{}", e.nome);
+    assert!(!e.approvata, "col seme 7 la proposta è respinta: {e:?}");
+    // Respinta, non tocca la valence del Presidente del Consiglio oltre il ritorno verso la base.
     let r = dati_base().manopola("ritorno_valence");
     let base = p.partiti()[pdc].valence_base;
     let attesa = base + (v - base) * (1.0 - r).powi(n);
@@ -136,6 +144,10 @@ fn la_linea_scelta_si_vede_e_si_vota() {
     })
     .unwrap();
     assert_eq!(p.vista().calendario[0].linea_giocatore, Some(false));
+    let g = p.giocatore();
+    let k = dati_base().disposizione("licenziamento").unwrap();
+    let vigente = p.disposizioni().posizione(&dati_base(), k).unwrap();
+    let prima = p.partiti()[g].posizione_percepita;
     al_voto(&mut p, id);
     let e = (p.vista().esiti.into_iter())
         .find(|e| e.misura == id)
@@ -146,6 +158,15 @@ fn la_linea_scelta_si_vede_e_si_vota() {
             .find(|l| l.partito == "giocatore")
             .unwrap()
             .si
+    );
+    // Col no la percepita scivola verso la posizione vigente (tutele crescenti), non verso il
+    // reintegro: è l'unico voto con posizione di queste chiusure.
+    let s = dati_base().manopola("scivolamento_percepita");
+    let attesa = prima + s * (vigente - prima);
+    let dopo = p.partiti()[g].posizione_percepita;
+    assert!(
+        (dopo - attesa).abs() < 1e-9,
+        "{prima} → {dopo}, attesa {attesa}"
     );
 }
 
@@ -168,4 +189,103 @@ fn l_intesa_avversaria_si_vede_in_fasce() {
     let v = p.vista();
     assert_eq!(v.alleati_avversari.len(), p.alleati().len());
     assert!(v.alleati.is_empty()); // nessuna cifra
+    let (a, b) = (p.alleati()[0], p.alleati()[1]);
+    let p = edita(&p, |j| {
+        j["intesa"]["valori"][a] = 60.0.into();
+        j["intesa"]["ultimatum"][b] = "norma_lontana".into();
+    })
+    .unwrap();
+    let id = |j: usize| p.partiti()[j].id.clone();
+    let fasce = p.vista().alleati_avversari;
+    let fascia = |j: usize| fasce.iter().find(|f| f.partito == id(j)).unwrap();
+    assert_eq!(fascia(a).fascia, FasciaIntesa::Solida);
+    assert_eq!(fascia(b).fascia, FasciaIntesa::Ultimatum);
+    assert_eq!(fascia(b).causa_ultimatum, Some(CausaIntesa::NormaLontana));
+    // Gli altri alleati stanno a 50, sotto soglia_incrinata.
+    let c = p.alleati()[2];
+    assert_eq!(fascia(c).fascia, FasciaIntesa::Incrinata);
+    assert_eq!(fascia(c).causa_ultimatum, None);
+}
+
+#[test]
+fn le_fasce_solo_in_fase_ordinaria() {
+    let mut p = fondata(1.5);
+    assert_eq!(p.legislatura().fase, Fase::Sciolta);
+    assert!(p.vista().alleati_avversari.is_empty());
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().fase, Fase::Trattativa);
+    assert_ne!(p.governo().presidente, p.giocatore());
+    assert!(p.vista().alleati_avversari.is_empty());
+}
+
+/// `c` è rifiutato con `frammento` nel messaggio, e la partita resta identica.
+fn rifiutato(p: &mut Partita, c: Comando, frammento: &str) {
+    let prima = p.salva().unwrap();
+    let e = p.comanda(c).unwrap_err();
+    assert!(e.to_string().contains(frammento), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn sfiducia_rifiutata_col_motivo() {
+    let mut p = all_opposizione();
+    let sfiducia = |d: &str| Comando::Sfiducia {
+        dicastero: Some(d.into()),
+    };
+    rifiutato(&mut p, sfiducia("inesistente"), "dicastero sconosciuto");
+    // L'anteprima non tocca nulla.
+    let prima = p.salva().unwrap();
+    p.anteprima_sfiducia(None).unwrap();
+    assert_eq!(p.salva().unwrap(), prima);
+    let mut p = edita(&p, |j| {
+        let d = &mut j["ministri"]["dicasteri"][0];
+        for campo in ["ministro", "agenda", "proposta"] {
+            d[campo] = serde_json::Value::Null;
+        }
+    })
+    .unwrap();
+    let interim = dati_base().dicasteri()[0].clone();
+    assert!(p.anteprima_sfiducia(Some(&interim.id)).is_err());
+    rifiutato(&mut p, sfiducia(&interim.id), "è in interim");
+}
+
+#[test]
+fn senza_firme_ne_posto_all_opposizione() {
+    let p = all_opposizione();
+    // L'opposizione (estrema sinistra, estrema destra, giocatore) senza seggi alla Camera.
+    let camera = [0, 145, 26, 18, 33, 178, 0, 0];
+    let mut p = con_seggi(&p, &camera, &p.parlamento().seggi_senato.clone());
+    assert!(!p.anteprima_sfiducia(None).unwrap().firme);
+    let sfiducia = Comando::Sfiducia { dicastero: None };
+    rifiutato(
+        &mut p,
+        sfiducia,
+        "servono le firme di un decimo della Camera: 0 su 40",
+    );
+    let proposta = Comando::PresentaProposta {
+        valori: valori(&[("licenziamento", "reintegro")]),
+    };
+    rifiutato(&mut p, proposta, "nessun posto riservato");
+}
+
+#[test]
+fn il_posto_riservato_ha_le_sue_regole() {
+    // Turno 2: la fila è [estrema destra, giocatore] (l'estrema sinistra non ha seggi alla Camera),
+    // e il posto va all'estrema destra.
+    let mut p = all_opposizione();
+    assert!(!p.vista().posto_opposizione);
+    let proposta = |d: &str, g: &str| Comando::PresentaProposta {
+        valori: valori(&[(d, g)]),
+    };
+    rifiutato(
+        &mut p,
+        proposta("licenziamento", "reintegro"),
+        "il posto riservato di questo turno è di",
+    );
+    al_posto_riservato(&mut p);
+    rifiutato(
+        &mut p,
+        proposta("durata_legislatura", "4"),
+        "una norma costituzionale non entra nel posto riservato",
+    );
 }

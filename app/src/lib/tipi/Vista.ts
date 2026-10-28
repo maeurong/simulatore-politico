@@ -74,11 +74,13 @@ disposizioni: Array<VoceDisposizione>,
  */
 seggi: Array<SeggiPartito>, alleati: Array<VoceAlleato>, 
 /**
- * Sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in cifre.
+ * In fase ordinaria sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in
+ * cifre. Vuota altrove.
  */
 alleati_avversari: Array<VoceFascia>, 
 /**
- * Il posto riservato all'opposizione di questo turno è del giocatore.
+ * Il posto riservato all'opposizione di questo turno è del giocatore, e libero: una sua
+ * proposta non è già in calendario.
  */
 posto_opposizione: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
 /**

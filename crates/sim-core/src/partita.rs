@@ -2499,10 +2499,10 @@ impl Partita {
         (self.parlamento).presenta_proposta(&self.dati, &self.disposizioni, self.turno, g, valori)
     }
 
-    /// Sotto un governo IA, l'intesa dei suoi alleati in fasce (spec riga 370): la causa solo in
-    /// ultimatum, mai le cifre.
+    /// In fase ordinaria sotto un governo IA, l'intesa dei suoi alleati in fasce (spec riga 370):
+    /// la causa solo in ultimatum, mai le cifre. Vuota altrove.
     fn voci_avversari(&self) -> Vec<VoceFascia> {
-        if self.governo.presidente == self.giocatore {
+        if self.legislatura.fase != Fase::Ordinaria || self.governo.presidente == self.giocatore {
             return Vec::new();
         }
         let soglia = self.dati.manopola("soglia_incrinata");
@@ -2603,7 +2603,8 @@ impl Partita {
             alleati: self.voci_alleati(),
             alleati_avversari: self.voci_avversari(),
             posto_opposizione: self.all_opposizione().is_ok()
-                && self.posto_riservato() == Some(self.giocatore),
+                && self.posto_riservato() == Some(self.giocatore)
+                && !(self.parlamento.misure.iter()).any(|m| m.promotore == Some(self.giocatore)),
             calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())
