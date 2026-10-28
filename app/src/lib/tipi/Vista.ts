@@ -4,6 +4,7 @@ import type { EsitoElezioni } from "./EsitoElezioni";
 import type { EsitoReferendum } from "./EsitoReferendum";
 import type { EsitoVoto } from "./EsitoVoto";
 import type { Fase } from "./Fase";
+import type { MossaIa } from "./MossaIa";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
@@ -126,4 +127,8 @@ dimissioni: boolean,
  * Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
  * fuori dal turno del voto (che chiude la crisi).
  */
-crisi: boolean, };
+crisi: boolean, 
+/**
+ * Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
+ */
+mosse: Array<MossaIa>, };

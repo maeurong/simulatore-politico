@@ -211,6 +211,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "soglia_fascia_poco",
     "soglia_fascia_medio",
     "luna_di_miele",
+    "luna_di_miele_leader",
+    "calo_cambio_leader",
     "valence_partito_nuovo",
     "alfa_identitaria",
     "alfa_mista",

@@ -26,11 +26,13 @@ use crate::parlamento::{
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, SeggiPartito, Vista, VistaBilancio,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
     VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito,
 };
 use serde::{Deserialize, Serialize};
+
+mod ia;
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -107,9 +109,11 @@ pub struct Partita {
     leggi_del_giocatore: Vec<(u32, u16)>,
     /// I quattro indicatori al turno zero (`indicatori`).
     partenza: [f64; 4],
+    /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
+    mosse: Vec<MossaIa>,
 }
 
-/// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
+/// «L.{id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
 /// le disposizioni in vigore alle leggi del giocatore nell'eredità.
 fn etichetta_legge(id: u32, anno: u16) -> String {
     format!("L. {id}/{anno}")
@@ -229,6 +233,7 @@ impl Partita {
             turni_al_governo: 0,
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
+            mosse: Vec::new(),
         };
         p.partenza = p.indicatori();
         p
@@ -270,6 +275,7 @@ impl Partita {
         if self.finita() {
             return;
         }
+        self.mosse.clear();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
@@ -1815,6 +1821,7 @@ impl Partita {
             gruppo.voto_precedente.clone_from(v);
         }
         (self.informazione).riestrai_bias(&self.dati, &mut self.caso, n);
+        self.leader_dopo_il_voto(&esito);
         let pl = &self.parlamento;
         let turno = self.turno;
         let l = &mut self.legislatura;
@@ -2217,6 +2224,8 @@ impl Partita {
                 self.intesa.riparti(j, base);
             }
         }
+        let uscente = self.governo.presidente;
+        let perde = !coalizione.contains(&uscente);
         self.paga_rotture(&coalizione, &coalizione, presidente);
         let entranti: Vec<usize> = (coalizione.iter().copied())
             .filter(|&j| !self.governo.al_governo(j))
@@ -2229,6 +2238,9 @@ impl Partita {
             coalizione,
         };
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
+        if perde {
+            self.cambia_leader(uscente, "la perdita del governo");
+        }
         let alleati = self.alleati();
         self.intesa.ultimatum(&self.dati, &alleati);
         let l = &mut self.legislatura;
@@ -2851,6 +2863,7 @@ impl Partita {
             },
             dimissioni: l.dimissioni,
             crisi: self.in_crisi(),
+            mosse: self.mosse.clone(),
         }
     }
 

@@ -11,7 +11,7 @@ use crate::parlamento::{
 };
 use crate::partita::Trimestre;
 use crate::partiti::Vocazione;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -85,6 +85,16 @@ pub struct Vista {
     /// Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
     /// fuori dal turno del voto (che chiude la crisi).
     pub crisi: bool,
+    /// Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
+    pub mosse: Vec<MossaIa>,
+}
+
+/// Una mossa di un partito IA: `partito` è l'id, `testo` il motivo, mai i valori attesi in cifre.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct MossaIa {
+    pub partito: String,
+    pub testo: String,
 }
 
 /// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato. `Guida`: dopo una

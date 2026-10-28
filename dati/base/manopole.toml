@@ -1041,6 +1041,20 @@ min = 0.0
 max = 3.0
 ticket = "20"
 
+# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 (luna di miele dei leader al primo mandato); stesso valore di luna_di_miele (valence in più al leader nuovo di un partito IA, che si spegne con ritorno_valence)
+[luna_di_miele_leader]
+valore = 0.328125
+min = 0.0
+max = 3.0
+ticket = "18"
+
+# assunzione del piano 8a, nessuna fonte in docs/ricerca (calo di quota fra i votanti, rispetto al voto precedente, che fa cambiare leader a un partito IA)
+[calo_cambio_leader]
+valore = 0.04
+min = 0.01
+max = 0.15
+ticket = "18"
+
 # assunzione del piano 7a, nessuna fonte in docs/ricerca (valence_base del partito del giocatore, uguale per ogni posizione: ticket 20)
 [valence_partito_nuovo]
 valore = 0.0
