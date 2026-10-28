@@ -117,3 +117,24 @@ fn senza_maggioranza_contigua_il_capo_dello_stato_scioglie() {
     assert_eq!(p.legislatura().fase, Fase::Sciolta);
     assert_eq!(p.legislatura().incarico, None);
 }
+
+/// iter-legislativo-italiano:80: la legge del governo caduto decade senza voto, come a fine
+/// legislatura, e non costa al successore.
+#[test]
+fn alla_caduta_il_calendario_decade() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::Dimettiti).unwrap();
+    p.chiudi_turno();
+    assert!(!p.governa());
+    assert!(p.vista().calendario.is_empty());
+    let e = (p.vista().esiti.into_iter())
+        .find(|e| e.misura == id)
+        .unwrap();
+    assert_eq!(
+        e.decaduta.as_deref(),
+        Some("Decaduta per la caduta del governo")
+    );
+    assert!(!e.approvata);
+}

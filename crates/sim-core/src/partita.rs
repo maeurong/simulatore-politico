@@ -223,14 +223,14 @@ impl Partita {
     // composizione, che aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio,
     // statistica) → voto, nel turno del voto → soglie (ministri, ritorno dell'intesa) → uscite
     // degli alleati (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della
-    // crisi (rimpasto o sfiducia) → Capo dello
-    // Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera) → governo nuovo,
+    // crisi (rimpasto o sfiducia) → Capo dello Stato se ci sono dimissioni, fuori dal turno del
+    // voto (che le azzera), col calendario del governo caduto che decade → governo nuovo,
     // maggioranza contigua o scioglimento, nel turno di trattativa fuori dal turno del voto →
     // calendario →
     // apertura (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte;
     // il costo del taglio se l'anno entra in esercizio provvisorio).
-    // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula non vota: nessuno può
-    // presentare, il calendario è vuoto.
+    // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
+    // confermativi: il calendario si è svuotato alla caduta o al voto, e nessuno può presentare.
     pub fn chiudi_turno(&mut self) {
         if self.finita() {
             return;
@@ -2153,8 +2153,12 @@ impl Partita {
     /// governo era IA (scelta 11 del piano 7b). Senza il giocatore, l'incarico IA; col giocatore
     /// primo per seggi (Camera più Senato, a parità l'indice più basso), l'incarico a lui con
     /// quella maggioranza; col giocatore non primo, `Guida`. Trovata, si va in trattativa; senza,
-    /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce.
+    /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce. Prima, le misure in
+    /// calendario del governo caduto decadono senza costi, come a fine legislatura
+    /// (iter-legislativo-italiano:80): una sua legge non costa al successore. I referendum restano.
     fn capo_dello_stato(&mut self) {
+        let decaduta = "Decaduta per la caduta del governo";
+        (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta);
         let g = self.giocatore;
         let escluso = (self.governo.presidente == g).then_some(g);
         let pl = &self.parlamento;

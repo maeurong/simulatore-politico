@@ -821,18 +821,9 @@ impl Parlamento {
         }
     }
 
-    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
-    /// misura in calendario decade senza voto, senza costi e senza blocco. Al voto in calendario
-    /// possono esserci solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai
-    /// fiducie né conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno
-    /// `voto = turno` e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non
-    /// ancora votato è sospeso, senza valence. I confermativi restano.
-    pub(crate) fn decadi_tutto(
-        &mut self,
-        dati: &DatiGioco,
-        disposizioni: &Disposizioni,
-        data: Trimestre,
-    ) {
+    /// Ogni misura in calendario decade senza voto, senza costi e senza blocco, con l'esito
+    /// `decaduta`.
+    pub(crate) fn decadi_calendario(&mut self, dati: &DatiGioco, data: Trimestre, decaduta: &str) {
         for m in std::mem::take(&mut self.misure) {
             self.esiti.insert(
                 0,
@@ -848,10 +839,25 @@ impl Parlamento {
                     fiducia: m.fiducia,
                     fiducia_respinta: false,
                     linee: Vec::new(),
-                    decaduta: Some("Decaduta per la fine della legislatura".into()),
+                    decaduta: Some(decaduta.into()),
                 },
             );
         }
+    }
+
+    /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
+    /// misura in calendario decade (`decadi_calendario`). Al voto in calendario possono esserci
+    /// solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai fiducie né
+    /// conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno `voto = turno`
+    /// e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non ancora votato è
+    /// sospeso, senza valence. I confermativi restano.
+    pub(crate) fn decadi_tutto(
+        &mut self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        data: Trimestre,
+    ) {
+        self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura");
         self.respinte.clear();
         if let Some(r) = self.referendum.take() {
             let vigente = (r.valori.iter())
