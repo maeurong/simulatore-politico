@@ -145,9 +145,9 @@ impl Partita {
             return Err(Errore::Comando("La partita è finita".into()));
         }
         let motivo = match self.legislatura().fase {
-            Fase::Sciolta => "Comando dell'opposizione: Camere sciolte",
-            Fase::Trattativa => "Comando dell'opposizione: trattativa in corso",
-            Fase::Ordinaria if self.governa() => "Comando dell'opposizione: governi tu",
+            Fase::Sciolta => "solo all'opposizione: Camere sciolte",
+            Fase::Trattativa => "solo all'opposizione: trattativa in corso",
+            Fase::Ordinaria if self.governa() => "solo all'opposizione: governi tu",
             Fase::Ordinaria => return Ok(()),
         };
         Err(Errore::Comando(motivo.into()))

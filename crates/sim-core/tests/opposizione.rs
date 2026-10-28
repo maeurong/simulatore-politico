@@ -64,6 +64,42 @@ fn comandi_dell_opposizione_rifiutati_a_chi_governa() {
     assert!(e.to_string().contains("opposizione"), "{e}");
 }
 
+/// Fuori dalla fase ordinaria, e a partita finita, i comandi dell'opposizione e l'anteprima della
+/// sfiducia sono rifiutati col motivo, e la partita resta identica.
+#[test]
+fn comandi_dell_opposizione_rifiutati_fuori_dalla_fase_ordinaria() {
+    let mut sciolta = fondata(1.5);
+    assert_eq!(sciolta.legislatura().fase, Fase::Sciolta);
+    let mut trattativa = fondata(1.5);
+    trattativa.chiudi_turno();
+    assert_eq!(trattativa.legislatura().fase, Fase::Trattativa);
+    let mut finita = all_opposizione();
+    finita.abbandona().unwrap();
+    for (p, motivo) in [
+        (&mut sciolta, "solo all'opposizione: Camere sciolte"),
+        (&mut trattativa, "solo all'opposizione: trattativa in corso"),
+        (&mut finita, "La partita è finita"),
+    ] {
+        for c in [
+            Comando::Sfiducia { dicastero: None },
+            Comando::PresentaProposta {
+                valori: valori(&[("licenziamento", "reintegro")]),
+            },
+            Comando::PromuoviReferendum {
+                disposizione: "licenziamento".into(),
+            },
+            Comando::Linea {
+                misura: 0,
+                si: Some(false),
+            },
+        ] {
+            rifiutato(p, c, motivo);
+        }
+        let e = p.anteprima_sfiducia(None).unwrap_err();
+        assert!(e.to_string().contains(motivo), "{e}");
+    }
+}
+
 #[test]
 fn la_sfiducia_respinta_ricompatta_e_costa_valence() {
     let mut p = all_opposizione();
@@ -273,7 +309,7 @@ fn senza_firme_ne_posto_all_opposizione() {
     rifiutato(
         &mut p,
         sfiducia,
-        "servono le firme di un decimo della Camera: 0 su 40",
+        "servono 40 firme, un decimo della Camera: ne hai 0",
     );
     let proposta = Comando::PresentaProposta {
         valori: valori(&[("licenziamento", "reintegro")]),

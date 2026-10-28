@@ -2334,7 +2334,8 @@ impl Partita {
         coalizione.extend(&allargati);
         let pl = &self.parlamento;
         if !legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &coalizione) {
-            // Respinta, niente governo di minoranza (spec riga 336): la crisi si riapre.
+            // Respinta, niente governo di minoranza (spec, «Governo, ministri e coalizione»): la
+            // crisi si riapre.
             if sfiducia_votata || !self.sfiducia(None, None) {
                 self.legislatura.crisi = Some(self.turno.saturating_add(1));
             }
@@ -2633,7 +2634,7 @@ impl Partita {
         if !a.firme {
             let (n, m) = self.firme_sfiducia();
             return Err(Errore::Comando(format!(
-                "servono le firme di un decimo della Camera: {n} su {m}"
+                "servono {m} firme, un decimo della Camera: ne hai {n}"
             )));
         }
         self.parlamento.sfiducia = Some((i, self.giocatore));
@@ -2687,8 +2688,9 @@ impl Partita {
         (self.parlamento).presenta_proposta(&self.dati, &self.disposizioni, self.turno, g, valori)
     }
 
-    /// In fase ordinaria sotto un governo IA, l'intesa dei suoi alleati in fasce (spec riga 370):
-    /// la causa solo in ultimatum, mai le cifre. Vuota altrove.
+    /// In fase ordinaria sotto un governo IA, l'intesa dei suoi alleati in fasce (spec,
+    /// «Informazione e cassa del partito»): la causa solo in ultimatum, mai le cifre. Vuota
+    /// altrove.
     fn voci_avversari(&self) -> Vec<VoceFascia> {
         if self.legislatura.fase != Fase::Ordinaria || self.governo.presidente == self.giocatore {
             return Vec::new();
