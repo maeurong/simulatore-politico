@@ -6,12 +6,14 @@ use ts_rs::TS;
 
 mod coalizione;
 mod crisi;
+mod eredita;
 mod fondazione;
 mod spartizione;
 mod voto;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
 pub(crate) use crisi::{linea_sfiducia, vota_la_caduta};
+pub use eredita::{ConfrontoIndicatore, Eredita};
 pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
 pub use spartizione::{Assegnazione, VoceRichiesta};
@@ -71,7 +73,11 @@ impl Legislatura {
     }
 }
 
+/// Come finisce la partita: senza seggi dopo il voto, o per scelta del giocatore.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
 pub enum Fine {
     SenzaSeggi,
+    Abbandono,
 }

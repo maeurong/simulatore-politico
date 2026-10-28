@@ -31,6 +31,8 @@ pub struct Referendum {
     pub misura: Option<u32>,
     pub valori: Vec<(usize, usize)>,
     pub promotore: Option<usize>,
+    /// Il confermativo è di una legge del giocatore.
+    pub del_giocatore: bool,
     pub voto: u32,
     pub firme: bool,
     pub invito_astensione: bool,

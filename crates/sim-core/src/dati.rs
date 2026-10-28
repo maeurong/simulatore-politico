@@ -230,6 +230,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "intesa_rottura_impegno",
     "intesa_sfiducia_respinta",
     "valence_sfiducia_respinta",
+    "soglia_incrinata",
+    "soglia_emendamento_bilancio",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

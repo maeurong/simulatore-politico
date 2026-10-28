@@ -458,3 +458,19 @@ pub fn caduto(camera: &[u32], senato: &[u32]) -> Partita {
     p.chiudi_turno();
     p
 }
+
+/// La partita vera all'estrema sinistra (posizione 1,5), da sola: dopo il voto e la trattativa il
+/// giocatore è all'opposizione sotto un governo IA, nel turno 2.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn all_opposizione() -> Partita {
+    let mut p = fondata(1.5);
+    p.chiudi_turno(); // voto
+    p.chiudi_turno(); // trattativa
+    assert_eq!(p.legislatura().fase, sim_core::legislatura::Fase::Ordinaria);
+    assert!(!p.governa());
+    assert!(!p.governo().al_governo(p.giocatore()));
+    p
+}

@@ -1,6 +1,7 @@
 mod comune;
 use comune::{edita, imposta, presenta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::economia::Voce;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita, Trimestre};
 
@@ -348,4 +349,136 @@ fn norma_costituzionale_slitta_nel_turno_del_bilancio() {
             1
         )
     );
+}
+
+fn al_bilancio_del_2028() -> Partita {
+    let mut p = al_turno(senza_shock(), 4); // ottobre-dicembre 2027
+    presenta_bozza(&mut p);
+    p
+}
+
+fn bilancio(p: &Partita) -> sim_core::vista::VoceMisura {
+    (p.vista().calendario.into_iter())
+        .find(|m| m.forma == FormaMisura::Bilancio)
+        .unwrap()
+}
+
+fn emenda(p: &mut Partita, accogli: bool) {
+    let misura = bilancio(p).id;
+    p.comanda(Comando::Emendamento {
+        misura,
+        partito: "centrodestra".into(),
+        accogli,
+    })
+    .unwrap();
+}
+
+#[test]
+fn gli_alleati_chiedono_di_indicizzare_i_loro_dicasteri() {
+    let m = bilancio(&al_bilancio_del_2028());
+    let e = (m.emendamenti.iter())
+        .find(|e| e.partito == "centrodestra")
+        .unwrap();
+    assert!(e.testo.contains("indicizzato"), "{}", e.testo);
+    assert!(e.motivo.contains(": il budget perde "), "{}", e.motivo);
+    assert!(e.motivo.contains("% in termini reali"), "{}", e.motivo);
+    assert_eq!(e.stato, StatoEmendamento::Aperto);
+}
+
+#[test]
+fn accolto_l_emendamento_la_voce_e_indicizzata() {
+    let mut p = al_bilancio_del_2028();
+    let voce = |p: &Partita| {
+        let b = p.economia().bilancio_presentato.as_ref().unwrap();
+        b.dicasteri
+            .iter()
+            .find(|d| d.id == "ambiente_energia")
+            .unwrap()
+            .spesa
+    };
+    let prima = voce(&p);
+    emenda(&mut p, true);
+    assert!(voce(&p) > prima);
+}
+
+#[test]
+fn respinto_l_emendamento_il_bilancio_non_cambia_e_l_alleato_paga() {
+    let mut p = al_bilancio_del_2028();
+    let prima = p.economia().bilancio_presentato.clone();
+    emenda(&mut p, false);
+    assert_eq!(p.economia().bilancio_presentato, prima);
+    let pagato = (p.intesa().variazioni.iter())
+        .filter(|x| x.causa == CausaIntesa::EmendamentoRespinto)
+        .count();
+    assert_eq!(pagato, 1);
+}
+
+#[test]
+fn ripresentato_il_bilancio_l_accolto_resta_e_si_riapplica() {
+    let mut p = al_bilancio_del_2028();
+    emenda(&mut p, true);
+    let indicizzato = p.economia().bilancio_presentato.clone();
+    presenta_bozza(&mut p);
+    assert_eq!(p.economia().bilancio_presentato, indicizzato);
+    let m = bilancio(&p);
+    let e = m.emendamenti.iter().filter(|e| e.partito == "centrodestra");
+    assert_eq!(
+        e.map(|e| e.stato).collect::<Vec<_>>(),
+        [StatoEmendamento::Accolto]
+    );
+}
+
+#[test]
+fn un_bilancio_indicizzato_non_riceve_emendamenti() {
+    let mut p = al_turno(senza_shock(), 4);
+    let b = p.bozza_bilancio().unwrap();
+    let b = p.indicizza(&b, &Voce::Tutto).unwrap();
+    p.comanda(Comando::PresentaBilancio { bilancio: b })
+        .unwrap();
+    assert!(bilancio(&p).emendamenti.is_empty());
+}
+
+#[test]
+fn a_fine_turno_l_emendamento_aperto_sul_bilancio_e_respinto() {
+    let mut p = al_bilancio_del_2028();
+    assert_eq!(bilancio(&p).emendamenti[0].stato, StatoEmendamento::Aperto);
+    p.chiudi_turno();
+    let pagato = (p.intesa().variazioni.iter())
+        .filter(|x| x.causa == CausaIntesa::EmendamentoRespinto)
+        .count();
+    assert_eq!(pagato, 1);
+}
+
+#[test]
+fn respinto_l_emendamento_i_franchi_tiratori_dell_alleato_crescono() {
+    let mut p = al_bilancio_del_2028();
+    let prima = bilancio(&p).forbice;
+    emenda(&mut p, false);
+    let m = bilancio(&p);
+    assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Respinto);
+    // `ft_emendamento_respinto` moltiplica i franchi: la forbice dei sì si abbassa.
+    assert!(
+        m.forbice.camera[0] < prima.camera[0],
+        "{:?} {:?}",
+        m.forbice,
+        prima
+    );
+}
+
+/// Con la fiducia posta sul bilancio, la ripresentazione non riapre emendamenti.
+#[test]
+fn ripresentato_sotto_fiducia_il_bilancio_non_riapre_emendamenti() {
+    let mut p = al_bilancio_del_2028();
+    let id = bilancio(&p).id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    presenta_bozza(&mut p);
+    let m = bilancio(&p);
+    assert!(m.fiducia);
+    assert!(
+        m.emendamenti
+            .iter()
+            .all(|e| e.stato != StatoEmendamento::Aperto)
+    );
+    p.chiudi_turno();
+    assert!(!(p.intesa().variazioni.iter()).any(|x| x.causa == CausaIntesa::EmendamentoRespinto));
 }

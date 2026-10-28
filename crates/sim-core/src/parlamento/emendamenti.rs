@@ -1,7 +1,10 @@
 //! Emendamenti degli alleati e questione di fiducia (issue 08:20, 08:24;
 //! iter-legislativo-italiano:38-44).
 
-use super::{FormaMisura, Misura, Parlamento, StatoAula, ko, nome_misura, posizioni, slitta, voto};
+use super::{
+    FormaMisura, Misura, Parlamento, StatoAula, bilancio_del_turno, ko, nome_misura, posizioni,
+    slitta, voto,
+};
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, TipoDisposizione};
 use crate::errore::Errore;
@@ -12,12 +15,14 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// L'attenuazione chiesta su una disposizione: un gradino più vicino al vigente, o lo stesso
-/// valore in arrivo dopo `turni_rinvio_regime` turni.
+/// valore in arrivo dopo `turni_rinvio_regime` turni. Sulla legge di bilancio l'indice della
+/// coppia è il dicastero e l'attenuazione è `Indicizza`: il budget segue l'inflazione.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Attenuazione {
     Gradino(usize),
     Rinvio,
+    Indicizza,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,16 +70,24 @@ fn proposta(
         .collect()
 }
 
-/// `"{nome}: {gradino}"` o `"{nome}: in vigore fra {n} turni"`, uniti da `"; "`.
+/// `"{nome}: {gradino}"`, `"{nome}: in vigore fra {n} turni"` o `"{dicastero}: budget indicizzato
+/// all'inflazione"`, uniti da `"; "`.
 fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
     let turni = dati.manopola("turni_rinvio_regime");
     (proposta.iter())
-        .filter_map(|&(d, x)| {
-            let d = dati.disposizioni().get(d)?;
-            Some(match x {
-                Attenuazione::Gradino(g) => format!("{}: {}", d.nome, d.gradini.get(g)?.nome),
-                Attenuazione::Rinvio => format!("{}: in vigore fra {turni} turni", d.nome),
-            })
+        .filter_map(|&(d, x)| match x {
+            Attenuazione::Indicizza => {
+                let nome = &dati.dicasteri().get(d)?.nome;
+                Some(format!("{nome}: budget indicizzato all'inflazione"))
+            }
+            Attenuazione::Gradino(g) => {
+                let d = dati.disposizioni().get(d)?;
+                Some(format!("{}: {}", d.nome, d.gradini.get(g)?.nome))
+            }
+            Attenuazione::Rinvio => {
+                let d = dati.disposizioni().get(d)?;
+                Some(format!("{}: in vigore fra {turni} turni", d.nome))
+            }
         })
         .collect::<Vec<_>>()
         .join("; ")
@@ -99,16 +112,18 @@ pub(crate) fn voci(
 }
 
 impl Parlamento {
-    /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia
-    /// e senza emendamenti già aperti, chiede un emendamento ogni alleato distante almeno
-    /// `distanza_alleato` dalla misura, che tiene il dicastero proponente o che con la legge
-    /// elettorale perde seggi attesi; non chi ha già un emendamento deciso sulla misura.
+    /// Apertura del turno `turno`: sulle riforme e le elettorali col voto nel turno, senza fiducia,
+    /// senza emendamenti già aperti e fuori dal posto riservato all'opposizione (scelta 15 del
+    /// piano 7b), chiede un emendamento ogni alleato distante almeno `distanza_alleato` dalla
+    /// misura, che tiene il dicastero proponente o che con la legge elettorale perde seggi attesi;
+    /// non chi ha già un emendamento deciso sulla misura.
     pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
         for m in &mut self.misure {
             let forma = matches!(m.forma, FormaMisura::Riforma | FormaMisura::Elettorale);
-            if !forma || m.voto != turno || m.emendamenti_aperti || m.fiducia {
+            let opposizione = m.promotore.is_some();
+            if !forma || m.voto != turno || m.emendamenti_aperti || m.fiducia || opposizione {
                 continue;
             }
             let nuova = posizioni(dati, aula.disposizioni, &m.valori).map(|(_, n)| n);
@@ -144,6 +159,22 @@ impl Parlamento {
                 });
             }
             m.emendamenti_aperti = true;
+        }
+    }
+
+    /// Gli emendamenti della legge di bilancio del turno: restano i decisi, gli aperti diventano
+    /// `nuovi`, tranne quelli di chi ha già un emendamento deciso. Con la fiducia posta, nessuno:
+    /// la fiducia ha fatto cadere gli aperti (`poni_fiducia`).
+    pub(crate) fn emendamenti_bilancio(&mut self, turno: u32, nuovi: Vec<RichiestaEmendamento>) {
+        let bilancio = (self.misure.iter_mut()).find(|m| bilancio_del_turno(m, turno));
+        if let Some(m) = bilancio.filter(|m| !m.fiducia) {
+            m.emendamenti
+                .retain(|e| e.stato != StatoEmendamento::Aperto);
+            for n in nuovi {
+                if !m.emendamenti.iter().any(|e| e.partito == n.partito) {
+                    m.emendamenti.push(n);
+                }
+            }
         }
     }
 
@@ -265,6 +296,34 @@ pub(crate) fn costo_fiducia(
 fn seggi_persi(n: i32) -> String {
     let seggi = if n == 1 { "seggio" } else { "seggi" };
     format!("perde {n} {seggi} con la legge elettorale")
+}
+
+/// La richiesta aperta di `partito` sul bilancio: indicizzare i `perdite` (dicastero, perdita
+/// reale in % del budget), col motivo `"{dicastero}: il budget perde {x}% in termini reali"`
+/// per voce, unite da `"; "`.
+pub(crate) fn richiesta_bilancio(
+    dati: &DatiGioco,
+    partito: usize,
+    perdite: &[(usize, f64)],
+) -> RichiestaEmendamento {
+    let voci: Vec<(usize, &str, f64)> = (perdite.iter())
+        .filter_map(|&(k, x)| Some((k, dati.dicasteri().get(k)?.nome.as_str(), x)))
+        .collect();
+    let motivo = (voci.iter())
+        .map(|&(_, nome, x)| {
+            let x = format!("{x:.1}").replace('.', ",");
+            format!("{nome}: il budget perde {x}% in termini reali")
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    RichiestaEmendamento {
+        partito,
+        proposta: (voci.iter())
+            .map(|&(k, _, _)| (k, Attenuazione::Indicizza))
+            .collect(),
+        stato: StatoEmendamento::Aperto,
+        motivo,
+    }
 }
 
 /// Un emendamento accolto rinvia la disposizione `d`.

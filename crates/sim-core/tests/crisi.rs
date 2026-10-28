@@ -303,7 +303,8 @@ fn crisi_in_esercizio_provvisorio_senza_allargamento() {
 
 /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: la sfiducia
 /// automatica pareggia alla Camera e perde al Senato. Respinta, il governo resta senza
-/// maggioranza e la crisi si riapre (spec riga 336, niente governo di minoranza).
+/// maggioranza e la crisi si riapre (spec, «Governo, ministri e coalizione»: niente governo di
+/// minoranza).
 #[test]
 fn sfiducia_pareggiata_riapre_la_crisi() {
     let c = [10, 40, 30, 20, 100, 100, 100];

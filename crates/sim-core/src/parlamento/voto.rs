@@ -204,6 +204,7 @@ mod tests {
             intesa: &intesa,
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
+            giocatore: 0,
         };
         let eta = dati
             .disposizione("eta_pensionabile")
@@ -213,6 +214,8 @@ mod tests {
             forma: FormaMisura::Riforma,
             valori: vec![(eta, 0)],
             proponente: None,
+            promotore: None,
+            linea_giocatore: None,
             presentata: 0,
             voto: 0,
             deliberazione: 0,
@@ -228,6 +231,121 @@ mod tests {
             dopo_il_voto(&seggi, &p.linea, &p.franchi)
         };
         assert_eq!(dopo(true), dopo(false));
+    }
+
+    /// Scelta 14 del piano 7b: col sì i franchi tiratori del giocatore crescono con la distanza
+    /// dalla posizione nuova, col no dalla vigente.
+    #[test]
+    fn la_linea_del_giocatore_ha_i_suoi_franchi_tiratori() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, StatoAula, posizioni};
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let intesa = vec![50.0; partiti.len()];
+        let g = 0; // l'estrema sinistra, fuori dal governo della partita di prova
+        let aula = StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            sondaggio: &crate::informazione::Sondaggio {
+                istituti: Vec::new(),
+                condizioni: Vec::new(),
+                fasce: Vec::new(),
+                regioni: Vec::new(),
+            },
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+            ultimatum: &vec![None; partiti.len()],
+            coalizioni: Vec::new(),
+            giocatore: g,
+        };
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
+        let valori = vec![(eta, 0)];
+        let (vigente, nuova) =
+            posizioni(&dati, &disposizioni, &valori).expect("eta_pensionabile ha posizione");
+        assert_ne!(vigente, nuova);
+        let x = partiti[g].posizione_dichiarata;
+        let ft = |nome| dati.manopola(nome);
+        for (si, sostenuta) in [(true, nuova), (false, vigente)] {
+            let m = Misura {
+                id: 0,
+                forma: FormaMisura::Riforma,
+                valori: valori.clone(),
+                proponente: None,
+                promotore: None,
+                linea_giocatore: Some(si),
+                presentata: 0,
+                voto: 0,
+                deliberazione: 0,
+                fiducia: false,
+                emendamenti: Vec::new(),
+                emendamenti_aperti: false,
+                fondi: None,
+            };
+            let p = aula.previsione(&m);
+            let atteso =
+                (ft("ft_base") + ft("ft_distanza") * (x - sostenuta).abs() / 6.0).min(ft("ft_max"));
+            assert_eq!(p.linea[g], si);
+            assert!(
+                (p.franchi[g] - atteso).abs() < 1e-12,
+                "{si}: {}",
+                p.franchi[g]
+            );
+        }
+    }
+
+    /// Sotto fiducia la linea scelta dal giocatore vale, senza franchi tiratori come per tutti.
+    #[test]
+    fn sotto_fiducia_la_linea_del_giocatore_vale() {
+        use crate::disposizioni::Disposizioni;
+        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        let dati = dati_base();
+        let (partiti, governo) = partiti::iniziali(&dati);
+        let disposizioni = Disposizioni::iniziali(&dati);
+        let intesa = vec![50.0; partiti.len()];
+        let g = 0; // l'estrema sinistra, fuori dal governo della partita di prova
+        let aula = StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            sondaggio: &crate::informazione::Sondaggio {
+                istituti: Vec::new(),
+                condizioni: Vec::new(),
+                fasce: Vec::new(),
+                regioni: Vec::new(),
+            },
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+            ultimatum: &vec![None; partiti.len()],
+            coalizioni: Vec::new(),
+            giocatore: g,
+        };
+        let eta = dati
+            .disposizione("eta_pensionabile")
+            .expect("eta_pensionabile nei dati base");
+        for si in [true, false] {
+            let m = Misura {
+                id: 0,
+                forma: FormaMisura::Riforma,
+                valori: vec![(eta, 0)],
+                proponente: None,
+                promotore: None,
+                linea_giocatore: Some(si),
+                presentata: 0,
+                voto: 0,
+                deliberazione: 0,
+                fiducia: true,
+                emendamenti: Vec::new(),
+                emendamenti_aperti: false,
+                fondi: None,
+            };
+            let p = aula.previsione(&m);
+            assert_eq!(p.linea[g], si);
+            assert_eq!(p.franchi[g], 0.0);
+        }
     }
 
     #[test]
@@ -287,6 +405,7 @@ mod tests {
             intesa: &intesa,
             ultimatum: &vec![None; partiti.len()],
             coalizioni: Vec::new(),
+            giocatore: 0,
         };
         let j = (partiti.iter())
             .position(|p| p.id == "centrodestra")
@@ -299,6 +418,8 @@ mod tests {
             forma: FormaMisura::Riforma,
             valori: vec![(eta, 0)],
             proponente: None,
+            promotore: None,
+            linea_giocatore: None,
             presentata: 0,
             voto: 0,
             deliberazione: 0,

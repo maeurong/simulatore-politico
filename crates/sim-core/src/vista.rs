@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
+use crate::legislatura::{Eredita, EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -38,7 +38,8 @@ pub struct Vista {
     /// Spread BTP-Bund in punti base, arrotondato.
     pub spread_pb: i32,
     pub partiti: Vec<VocePartito>,
-    /// Una voce per dicastero, nell'ordine dei dicasteri.
+    /// Una voce per dicastero, nell'ordine dei dicasteri. Senza `governa` nessuna agenda: chi
+    /// non governa non la vede prima dell'esecuzione (storia 90).
     pub ministeri: Vec<VoceMinistero>,
     pub sondaggio: Sondaggio,
     /// Seggi sul sondaggio pubblico; `None` solo se il riparto rifiuta i voti.
@@ -50,11 +51,19 @@ pub struct Vista {
     /// Il parlamento in carica.
     pub seggi: Vec<SeggiPartito>,
     pub alleati: Vec<VoceAlleato>,
+    /// In fase ordinaria sotto un governo IA, una voce per suo alleato: l'intesa in fasce, mai in
+    /// cifre. Vuota altrove.
+    pub alleati_avversari: Vec<VoceFascia>,
+    /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
+    /// proposta dell'opposizione è già in calendario.
+    pub posto_riservato: bool,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
     /// I referendum in attesa del voto.
     pub referendum: Vec<VistaReferendum>,
     pub esiti_referendum: Vec<EsitoReferendum>,
+    /// A partita finita, ciò che il giocatore lascia.
+    pub eredita: Option<Eredita>,
     /// Nel turno del voto, una voce per partito IA: se è disponibile e perché. In trattativa con
     /// l'incarico al giocatore, o in crisi col giocatore al governo, una voce per partito fuori
     /// dalla sua coalizione: se entrerebbe coi seggi veri. Vuota altrove.
@@ -124,7 +133,39 @@ pub struct VoceAlleato {
     pub variazioni: Vec<VariazioneIntesa>,
 }
 
-/// Una misura in calendario; `proponente` è l'id del dicastero.
+/// L'intesa di un alleato del governo IA vista dall'opposizione (ticket 12, riga 19): la causa
+/// solo in ultimatum.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceFascia {
+    pub partito: String,
+    pub fascia: FasciaIntesa,
+    pub causa_ultimatum: Option<CausaIntesa>,
+}
+
+/// `Ultimatum` con l'ultimatum posto, `Incrinata` sotto `soglia_incrinata`, `Solida` altrimenti.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum FasciaIntesa {
+    Solida,
+    Incrinata,
+    Ultimatum,
+}
+
+/// La sfiducia prima della presentazione: le firme bastano, la linea di ogni partito e l'esito
+/// sullo stato attuale, che il voto in chiusura ripete se nulla cambia prima.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct AnteprimaSfiducia {
+    pub firme: bool,
+    pub linee: Vec<VoceLinea>,
+    pub passa: bool,
+}
+
+/// Una misura in calendario; `proponente` è l'id del dicastero, `promotore` quello del partito
+/// d'opposizione che l'ha portata nel posto riservato; `linea_giocatore` la linea scelta dal
+/// giocatore all'opposizione, `None` = quella di default.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceMisura {
@@ -132,6 +173,8 @@ pub struct VoceMisura {
     pub nome: String,
     pub forma: FormaMisura,
     pub proponente: Option<String>,
+    pub promotore: Option<String>,
+    pub linea_giocatore: Option<bool>,
     pub valori: Vec<ValoreProposto>,
     pub voto: Trimestre,
     pub deliberazione: u8,

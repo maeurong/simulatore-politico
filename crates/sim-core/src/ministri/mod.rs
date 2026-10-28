@@ -395,8 +395,8 @@ impl Ministri {
     /// rende la legge da presentare. `Ferma` sull'agenda col
     /// decreto, o `ChiediDimissioni` sul suo dicastero, lo ritira (scelta 1): il margine torna a
     /// prima. Invariante: `PresentaBilancio`, `PresentaLegge`, `Emendamento`, `PoniFiducia`,
-    /// `EmanaDecreto` e `InvitaAstensione` non arrivano mai qui (`Partita::comanda` li
-    /// intercetta), quindi «comando senza dicastero» non si raggiunge.
+    /// `EmanaDecreto`, `InvitaAstensione` e i comandi dell'opposizione non arrivano mai qui
+    /// (`Partita::comanda` li intercetta), quindi «comando senza dicastero» non si raggiunge.
     pub(crate) fn comanda(&mut self, cx: &Contesto, c: Comando) -> Result<EffettoComando, Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
         let (Comando::ChiediDimissioni { dicastero }
@@ -484,7 +484,11 @@ impl Ministri {
             | Comando::Allarga { .. }
             | Comando::Dimettiti
             | Comando::ChiediGuida
-            | Comando::RifiutaRibaltone => {}
+            | Comando::RifiutaRibaltone
+            | Comando::Linea { .. }
+            | Comando::Sfiducia { .. }
+            | Comando::PresentaProposta { .. }
+            | Comando::PromuoviReferendum { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }
