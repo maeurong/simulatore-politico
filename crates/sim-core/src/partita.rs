@@ -956,14 +956,15 @@ impl Partita {
         })
     }
 
-    /// L'alleato `j` pagando `costo` d'intesa scenderebbe sotto `soglia_uscita` (scelta 9 del
-    /// piano 8a: il governo IA non fa la mossa).
-    fn sotto_uscita(&self, j: usize, costo: f64) -> bool {
-        let uscita = self.dati.manopola("soglia_uscita");
+    /// L'alleato `j` pagando `costo` d'intesa scenderebbe sotto `soglia_ultimatum` (scelta 9 del
+    /// piano 8a: il governo IA non fa la mossa). La soglia è l'ultimatum, non l'uscita: una mossa
+    /// sola non porta un alleato da 40 a sotto 25, la crisi nasce dall'accumulo su più turni.
+    fn sotto_ultimatum(&self, j: usize, costo: f64) -> bool {
+        let soglia = self.dati.manopola("soglia_ultimatum");
         self.intesa
             .valori
             .get(j)
-            .is_some_and(|&x| x - costo < uscita)
+            .is_some_and(|&x| x - costo < soglia)
     }
 
     /// `Emendamento`: deciso dal giocatore; respinto, costa intesa all'alleato.
@@ -3820,23 +3821,24 @@ mod tests {
         assert!(p.vista().programma.is_empty());
     }
 
-    /// Scelta 9 del piano: la fiducia costa almeno `costo_fiducia`, e l'alleato a `soglia_uscita`
-    /// ne scenderebbe sotto; il governo IA non la pone.
+    /// Scelta 9 del piano: la fiducia costa almeno `costo_fiducia`, e l'alleato a
+    /// `soglia_ultimatum` ne scenderebbe sotto; il governo IA non la pone.
     #[test]
-    fn niente_fiducia_che_porta_un_alleato_sotto_l_uscita() {
+    fn niente_fiducia_che_porta_un_alleato_sotto_l_ultimatum() {
         let (mut p, id) = legge_in_bilico();
         let a = *p.alleati().first().unwrap();
-        p.intesa.valori[a] = p.dati.manopola("soglia_uscita");
+        p.intesa.valori[a] = p.dati.manopola("soglia_ultimatum");
         p.governo_ia();
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert!(!m.fiducia);
         assert!(p.mosse.iter().all(|x| !x.testo.starts_with("Pone")));
     }
 
-    /// Scelta 9 del piano: l'alleato sopra `soglia_ultimatum`, la legge non rischia, ma il
-    /// respinto lo porterebbe sotto `soglia_uscita`: il governo IA accoglie e lo dice.
+    /// Scelta 9 del piano: l'alleato a `soglia_ultimatum` più il costo del respinto meno uno, la
+    /// legge non rischia, ma il respinto lo porterebbe sotto l'ultimatum: il governo IA accoglie e
+    /// lo dice.
     #[test]
-    fn il_governo_ia_accoglie_l_emendamento_che_porterebbe_l_alleato_sotto_l_uscita() {
+    fn il_governo_ia_accoglie_l_emendamento_che_porterebbe_l_alleato_sotto_l_ultimatum() {
         let (mut p, id, a) = con_emendamento_aperto();
         let pc = p.governo.presidente;
         for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
@@ -3845,25 +3847,24 @@ mod tests {
         {
             (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
         }
-        p.dati.imposta_manopola("costo_emendamento_respinto", 40.0);
-        let x = p.dati.manopola("soglia_uscita") + 40.0 * p.peso_politiche(a) - 1.0;
-        assert!(x >= p.dati.manopola("soglia_ultimatum"), "{x}");
-        p.intesa.valori[a] = x;
+        let costo = p.costo_respinto(a);
+        assert!(costo > 1.0, "{costo}");
+        p.intesa.valori[a] = p.dati.manopola("soglia_ultimatum") + costo - 1.0;
         p.governo_ia();
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
         let riga = format!(
             "Accoglie l'emendamento di {nome} su {legge}: respingerlo porterebbe la sua intesa \
-             sotto 25"
+             sotto 40"
         );
         assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
     }
 
-    /// Scelta 9 del piano: la sola voce del programma, fuori dal calendario e lontana dal primo
-    /// alleato; con l'intesa piena va in aula, a `soglia_uscita` no (la norma lontana costa).
+    /// Scelta 9 del piano: la sola voce del programma, fuori dal calendario, a 2,5 dal primo
+    /// alleato (la norma lontana costa); con l'intesa piena va in aula, a `soglia_ultimatum` no.
     #[test]
-    fn niente_norma_che_porta_un_alleato_sotto_l_uscita() {
+    fn niente_norma_che_porta_un_alleato_sotto_l_ultimatum() {
         let mut p = all_opposizione();
         let a = *p.alleati().first().unwrap();
         let posizione = |p: &Partita, k: usize, g: usize| {
@@ -3874,7 +3875,12 @@ mod tests {
             .unwrap();
         p.governo.programma = vec![(k, g)];
         (p.parlamento.misure).retain(|m| m.valori.iter().all(|v| v.0 != k));
-        p.partiti[a].posizione_dichiarata = if nuova < 4.0 { 7.0 } else { 1.0 };
+        p.partiti[a].posizione_dichiarata = if nuova < 4.0 {
+            nuova + 2.5
+        } else {
+            nuova - 2.5
+        };
+        assert!(p.costo_norma_lontana(a, nuova).is_some_and(|c| c > 0.0));
         let salvata = p.salva().unwrap();
         let in_aula = |intesa: f64| {
             let mut q = Partita::carica(&salvata).unwrap();
@@ -3883,7 +3889,7 @@ mod tests {
             (q.parlamento.misure.iter()).any(|m| m.valori.iter().any(|v| v.0 == k))
         };
         assert!(in_aula(100.0));
-        assert!(!in_aula(p.dati.manopola("soglia_uscita")));
+        assert!(!in_aula(p.dati.manopola("soglia_ultimatum")));
     }
 
     /// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il

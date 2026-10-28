@@ -231,7 +231,7 @@ impl Partita {
             let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &[(k, g)]);
             if let Some((_, nuova)) = nuova
                 && (self.alleati().into_iter()).any(|j| {
-                    (self.costo_norma_lontana(j, nuova)).is_some_and(|c| self.sotto_uscita(j, c))
+                    (self.costo_norma_lontana(j, nuova)).is_some_and(|c| self.sotto_ultimatum(j, c))
                 })
             {
                 continue;
@@ -275,10 +275,9 @@ impl Partita {
             let (partito, nome) = (p.id.clone(), p.nome.clone());
             let motivo = if self.intesa.valori.get(j).is_some_and(|&x| x < soglia) {
                 Some(format!("la sua intesa è sotto {soglia:.0}"))
-            } else if self.sotto_uscita(j, self.costo_respinto(j)) {
-                let uscita = self.dati.manopola("soglia_uscita");
+            } else if self.sotto_ultimatum(j, self.costo_respinto(j)) {
                 Some(format!(
-                    "respingerlo porterebbe la sua intesa sotto {uscita:.0}"
+                    "respingerlo porterebbe la sua intesa sotto {soglia:.0}"
                 ))
             } else if self.in_bilico(misura, Some(j)) {
                 Some(format!(
@@ -317,8 +316,9 @@ impl Partita {
                 continue;
             };
             let nome = parlamento::nome_misura(&self.dati, m);
-            // Scelta 9: niente fiducia che porti un alleato sotto `soglia_uscita`.
-            let regge = (self.costi_fiducia(m).into_iter()).all(|(j, c)| !self.sotto_uscita(j, c));
+            // Scelta 9: niente fiducia che porti un alleato sotto `soglia_ultimatum`.
+            let regge =
+                (self.costi_fiducia(m).into_iter()).all(|(j, c)| !self.sotto_ultimatum(j, c));
             if regge
                 && self.in_bilico(misura, None)
                 && self.applica(Comando::PoniFiducia { misura }).is_ok()
