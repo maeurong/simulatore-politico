@@ -139,3 +139,77 @@ fn sotto_un_governo_ia_l_opposizione_ia_sfiducia() {
     let giocatore = &p.partiti()[p.giocatore()].id;
     assert!(e.linee.iter().any(|v| &v.partito == giocatore && v.si));
 }
+
+/// L'opposizione IA ha da sola la maggioranza alla Camera (213 su 400), nessun alleato in
+/// ultimatum: la sfiducia al governo passerebbe coi soli voti dell'opposizione, e passa.
+#[test]
+fn la_sfiducia_al_governo_passa_coi_voti_dell_opposizione() {
+    let mut p = con_seggi(
+        &al_governo(),
+        &[0, 140, 30, 20, 30, 80, 23, 77],
+        &[0, 56, 10, 5, 16, 57, 13, 43],
+    );
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.parlamento().sfiducia, Some((None, partito("sinistra"))));
+    let riga = "Presenta la sfiducia al governo: passerebbe coi voti dell'opposizione";
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.testo == riga && m.partito == "sinistra"),
+        "{:?}",
+        p.vista().mosse
+    );
+    chiudi_col_bilancio(&mut p);
+    let e = (p.vista().esiti.into_iter())
+        .find(|e| e.forma == FormaMisura::Sfiducia)
+        .unwrap();
+    assert!(
+        e.approvata && e.nome == "Mozione di sfiducia al governo",
+        "{e:?}"
+    );
+}
+
+/// Sotto il governo IA 1-5, la destra in ultimatum ha più seggi di tutti (150 su 400): nella
+/// maggioranza contigua dopo la caduta guiderebbe lei, e vota la sfiducia al governo.
+#[test]
+fn la_sfiducia_al_governo_nomina_l_alleato_in_ultimatum() {
+    let p = con_seggi(
+        &all_opposizione(),
+        &[20, 60, 20, 20, 40, 150, 40, 50],
+        &[10, 30, 10, 10, 20, 75, 20, 25],
+    );
+    let destra = partito("destra");
+    let mut p = edita(&p, |j| {
+        j["intesa"]["valori"][destra] = 38.0.into();
+        j["intesa"]["ultimatum"][destra] = "spartizione".into();
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let ed = partito("estrema_destra");
+    assert_eq!(p.parlamento().sfiducia, Some((None, ed)));
+    let riga = "Presenta la sfiducia al governo: Destra in ultimatum la voterebbe";
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.testo == riga && m.partito == "estrema_destra"),
+        "{:?}",
+        p.vista().mosse
+    );
+}
+
+/// Nel turno del voto (19) il governo cade comunque al voto: l'opposizione IA non presenta,
+/// anche col centrodestra in ultimatum.
+#[test]
+fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 18 {
+        chiudi_col_bilancio(&mut p);
+    }
+    let cd = partito("centrodestra");
+    let mut p = edita(&p, |j| {
+        j["intesa"]["valori"][cd] = 38.0.into();
+        j["intesa"]["ultimatum"][cd] = "spartizione".into();
+        j["parlamento"]["sfiducia"] = serde_json::Value::Null;
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert!(p.legislatura().turno_di_voto(p.vista().turno));
+    assert!(p.alleati().contains(&cd));
+    assert!(p.parlamento().sfiducia.is_none());
+}

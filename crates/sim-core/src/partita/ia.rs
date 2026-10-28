@@ -104,9 +104,13 @@ impl Partita {
     /// un alleato in ultimatum né in interim. Firme: i seggi alla Camera dei partiti IA fuori dal
     /// governo, almeno un decimo (iter-legislativo-italiano:43, :141-142). Promotore: il più grande
     /// di loro alla Camera, a parità l'indice più basso. Niente con una mozione già presentata, né
-    /// nel turno di crisi, dove la sfiducia automatica è già sul tavolo.
+    /// nel turno di crisi, dove la sfiducia automatica è già sul tavolo, né nel turno del voto,
+    /// che chiude comunque il governo.
     fn sfiducia_ia(&mut self) {
-        if self.parlamento.sfiducia.is_some() || self.in_crisi() {
+        if self.parlamento.sfiducia.is_some()
+            || self.in_crisi()
+            || self.legislatura.turno_di_voto(self.turno)
+        {
             return;
         }
         let ia_fuori = |j: usize| j != self.giocatore && !self.governo.al_governo(j);
@@ -121,21 +125,28 @@ impl Partita {
         let in_ultimatum: Vec<usize> = (self.alleati().into_iter())
             .filter(|&j| self.in_ultimatum(j))
             .collect();
-        // Fuori dalla crisi il governo ha la maggioranza: la mozione passa coi voti di un alleato
-        // in ultimatum, che la riga nomina.
+        // Il motivo della riga: i partiti di governo che nella linea votano sì.
         let motivo = |dicastero: Option<usize>| {
             let (linea, _, _, approvata) = self.voto_sfiducia(dicastero)?;
-            let nomi: Vec<&str> = (in_ultimatum.iter())
-                .filter(|&&j| linea.get(j) == Some(&true))
-                .filter_map(|&j| Some(self.partiti.get(j)?.nome.as_str()))
+            if !approvata {
+                return None;
+            }
+            let nomi: Vec<String> = (0..self.partiti.len())
+                .filter(|&j| self.governo.al_governo(j) && linea.get(j) == Some(&true))
+                .filter_map(|j| {
+                    let nome = &self.partiti.get(j)?.nome;
+                    Some(if in_ultimatum.contains(&j) {
+                        format!("{nome} in ultimatum")
+                    } else {
+                        nome.clone()
+                    })
+                })
                 .collect();
-            let verbo = if nomi.len() > 1 {
-                "la voterebbero"
-            } else {
-                "la voterebbe"
-            };
-            (approvata && !nomi.is_empty())
-                .then(|| format!("{} in ultimatum {verbo}", nomi.join(" e ")))
+            Some(match nomi.len() {
+                0 => "passerebbe coi voti dell'opposizione".to_string(),
+                1 => format!("{} la voterebbe", nomi.join(" e ")),
+                _ => format!("{} la voterebbero", nomi.join(" e ")),
+            })
         };
         let el = &self.elettorato;
         // ponytail: il giudizio è per partito, non per dicastero: i ministri di un partito
