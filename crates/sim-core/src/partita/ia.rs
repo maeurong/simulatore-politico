@@ -3,7 +3,6 @@
 use super::Partita;
 use crate::caso::Flusso;
 use crate::informazione::indice;
-use crate::legislatura::EsitoElezioni;
 use crate::vista::MossaIa;
 
 impl Partita {
@@ -44,11 +43,11 @@ impl Partita {
         self.mossa(j, format!("Nuovo leader: {nuovo}, dopo {causa}"));
     }
 
-    /// Dopo il voto: ogni partito IA la cui quota fra i votanti è scesa di almeno
-    /// `calo_cambio_leader` sull'elezione precedente cambia leader. Alla prima elezione non c'è
-    /// un'elezione precedente.
-    pub(super) fn leader_dopo_il_voto(&mut self, esito: &EsitoElezioni) {
-        let Some(prima) = self.legislatura.elezioni.first() else {
+    /// Nella chiusura del voto, dopo il ritorno della valence: ogni partito IA la cui quota fra i
+    /// votanti è scesa di almeno `calo_cambio_leader` sull'elezione precedente cambia leader.
+    /// Alla prima elezione non c'è un'elezione precedente.
+    pub(super) fn leader_dopo_il_voto(&mut self) {
+        let [esito, prima, ..] = self.legislatura.elezioni.as_slice() else {
             return;
         };
         let soglia = self.dati.manopola("calo_cambio_leader");

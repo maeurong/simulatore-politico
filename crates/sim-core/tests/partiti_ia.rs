@@ -85,13 +85,20 @@ fn le_mosse_si_azzerano_a_ogni_chiusura() {
 
 #[test]
 fn chi_resta_alleato_non_cambia_leader() {
-    let mut p = vinta(); // la destra, se disponibile, entra nella coalizione del giocatore
     let destra = partito("destra");
+    let mut p = edita(&sinistra_al_governo(), |j| {
+        j["legislatura"]["incarico"] =
+            serde_json::json!({ "Ia": { "coalizione": [0, 1, 2, destra] } });
+    })
+    .unwrap();
+    assert_eq!(p.governo().presidente, destra); // uscente
     let prima = p.partiti()[destra].leader.clone();
     p.chiudi_turno();
-    if p.governo().al_governo(destra) {
-        assert_eq!(p.partiti()[destra].leader, prima);
-    }
+    // Precondizione: alleata del governo nuovo, ma senza la presidenza.
+    assert!(p.governo().al_governo(destra));
+    assert_ne!(p.governo().presidente, destra);
+    assert_eq!(p.partiti()[destra].leader, prima);
+    assert!(p.vista().mosse.iter().all(|m| m.partito != "destra"));
 }
 
 #[test]
@@ -108,8 +115,12 @@ fn il_calo_al_voto_cambia_leader() {
     .unwrap();
     let prima = p.partiti()[destra].leader.clone();
     p.chiudi_turno();
-    assert_ne!(p.partiti()[destra].leader, prima);
+    let dopo = &p.partiti()[destra];
+    assert_ne!(dopo.leader, prima);
+    let luna = dati_base().manopola("luna_di_miele_leader");
+    assert!((dopo.valence - (dopo.valence_base + luna)).abs() < 1e-9);
     assert!(p.vista().mosse.iter().any(|m| m.partito == "destra"
         && m.testo.contains("il calo di ")
+        && m.testo.contains(',')
         && m.testo.contains(" punti al voto")));
 }

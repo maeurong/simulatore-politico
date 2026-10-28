@@ -113,7 +113,7 @@ pub struct Partita {
     mosse: Vec<MossaIa>,
 }
 
-/// «L.{id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
+/// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
 /// le disposizioni in vigore alle leggi del giocatore nell'eredità.
 fn etichetta_legge(id: u32, anno: u16) -> String {
     format!("L. {id}/{anno}")
@@ -369,6 +369,10 @@ impl Partita {
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
+        }
+        // Dopo il ritorno: il leader nuovo chiude la chiusura con `valence_base` più la luna.
+        if di_voto {
+            self.leader_dopo_il_voto();
         }
         // Uscite e crisi (scelta 10 del piano 7b); nel turno del voto nessuna uscita, e la crisi
         // l'ha già chiusa `vota_parlamento`.
@@ -1821,7 +1825,6 @@ impl Partita {
             gruppo.voto_precedente.clone_from(v);
         }
         (self.informazione).riestrai_bias(&self.dati, &mut self.caso, n);
-        self.leader_dopo_il_voto(&esito);
         let pl = &self.parlamento;
         let turno = self.turno;
         let l = &mut self.legislatura;
