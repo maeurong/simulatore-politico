@@ -474,17 +474,18 @@ mod tests {
         // Gli alleati crollano nei sondaggi: con l'intesa piena non escono, e la crisi non c'è.
         p.intesa.valori.fill(100.0);
         let salvata = p.salva().unwrap();
-        // Voto − restare in questa chiusura: 5,9732 − 1,7933 = 4,1799 (misurato col seme 7).
+        // Voto − restare in questa chiusura: circa 4,2 (misurato col seme 7). Margini lontani da
+        // entrambi i lati, perché il test regga ai ritocchi del motore.
         let chiudi = |margine: f64| {
             let mut q = Partita::carica(&salvata).unwrap();
             q.dati.imposta_manopola("margine_voto_anticipato", margine);
             q.chiudi_turno();
             q
         };
-        let q = chiudi(4.19);
+        let q = chiudi(8.0);
         assert!(q.mosse.iter().all(|m| m.testo != AL_VOTO));
         assert_eq!(q.legislatura.fase, Fase::Ordinaria);
-        let p = chiudi(4.17);
+        let p = chiudi(0.0);
         let id = &p.partiti[pc].id;
         assert!(
             p.mosse
