@@ -220,6 +220,16 @@ impl Partita {
             if v.in_arrivo.last().map_or(v.in_vigore, |a| a.gradino) == g {
                 continue;
             }
+            // Scelta 9: il costo della norma lontana si sa già, dalla posizione del gradino; lo
+            // paga all'approvazione, e un emendamento accolto può solo cambiarlo.
+            let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &[(k, g)]);
+            if let Some((_, nuova)) = nuova
+                && (self.alleati().into_iter()).any(|j| {
+                    (self.costo_norma_lontana(j, nuova)).is_some_and(|c| self.sotto_uscita(j, c))
+                })
+            {
+                continue;
+            }
             let valori = vec![ValoreProposto {
                 disposizione: x.id.clone(),
                 gradino: gradino.id.clone(),
@@ -258,9 +268,16 @@ impl Partita {
             };
             let (partito, nome) = (p.id.clone(), p.nome.clone());
             let motivo = if self.intesa.valori.get(j).is_some_and(|&x| x < soglia) {
-                Some(format!("l'intesa di {nome} è sotto {soglia:.0}"))
+                Some(format!("la sua intesa è sotto {soglia:.0}"))
+            } else if self.sotto_uscita(j, self.costo_respinto(j)) {
+                let uscita = self.dati.manopola("soglia_uscita");
+                Some(format!(
+                    "respingerlo porterebbe la sua intesa sotto {uscita:.0}"
+                ))
             } else if self.in_bilico(misura, Some(j)) {
-                Some(format!("senza i voti di {nome} la legge rischia"))
+                Some(format!(
+                    "senza i voti di {nome} la legge rischia di non passare"
+                ))
             } else {
                 None
             };
@@ -290,14 +307,19 @@ impl Partita {
             .map(|m| m.id)
             .collect();
         for misura in al_voto {
-            let nome = (self.parlamento.misure.iter())
-                .find(|m| m.id == misura)
-                .map(|m| parlamento::nome_misura(&self.dati, m));
-            if let Some(nome) = nome
+            let Some(m) = self.parlamento.misure.iter().find(|m| m.id == misura) else {
+                continue;
+            };
+            let nome = parlamento::nome_misura(&self.dati, m);
+            // Scelta 9: niente fiducia che porti un alleato sotto `soglia_uscita`.
+            let regge = (self.costi_fiducia(m).into_iter()).all(|(j, c)| !self.sotto_uscita(j, c));
+            if regge
                 && self.in_bilico(misura, None)
                 && self.applica(Comando::PoniFiducia { misura }).is_ok()
             {
-                let testo = format!("Pone la fiducia su {nome}: la forbice include la sconfitta");
+                let testo = format!(
+                    "Pone la questione di fiducia su {nome}: la forbice include la sconfitta"
+                );
                 self.mossa(pc, testo);
             }
         }

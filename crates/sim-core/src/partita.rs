@@ -937,16 +937,33 @@ impl Partita {
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
     /// perde intesa, per il peso delle politiche della sua vocazione.
     fn norma_lontana(&mut self, nuova: f64) {
-        let soglia = self.dati.manopola("distanza_alleato");
-        let costo = self.dati.manopola("costo_norma_lontana");
         for j in self.alleati() {
-            let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
-            if distanza < soglia {
-                continue;
+            if let Some(costo) = self.costo_norma_lontana(j, nuova) {
+                (self.intesa).varia(j, CausaIntesa::NormaLontana, -costo, self.turno);
             }
-            let delta = -costo * (distanza - soglia + 1.0) * self.peso_politiche(j);
-            (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
         }
+    }
+
+    /// L'intesa che perde `j` per una norma approvata in posizione `nuova`; `None` se dista meno
+    /// di `distanza_alleato`.
+    fn costo_norma_lontana(&self, j: usize, nuova: f64) -> Option<f64> {
+        let soglia = self.dati.manopola("distanza_alleato");
+        let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
+        (distanza >= soglia).then(|| {
+            self.dati.manopola("costo_norma_lontana")
+                * (distanza - soglia + 1.0)
+                * self.peso_politiche(j)
+        })
+    }
+
+    /// L'alleato `j` pagando `costo` d'intesa scenderebbe sotto `soglia_uscita` (scelta 9 del
+    /// piano 8a: il governo IA non fa la mossa).
+    fn sotto_uscita(&self, j: usize, costo: f64) -> bool {
+        let uscita = self.dati.manopola("soglia_uscita");
+        self.intesa
+            .valori
+            .get(j)
+            .is_some_and(|&x| x - costo < uscita)
     }
 
     /// `Emendamento`: deciso dal giocatore; respinto, costa intesa all'alleato.
@@ -995,26 +1012,45 @@ impl Partita {
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
     fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
-        let costo = self.dati.manopola("costo_emendamento_respinto");
         for j in alleati {
-            let delta = -costo * self.peso_politiche(j);
+            let delta = -self.costo_respinto(j);
             (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
         }
     }
 
-    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`, la parte di distanza
-    /// per il peso delle politiche della sua vocazione.
+    /// L'intesa che perde l'alleato `j` col suo emendamento respinto.
+    fn costo_respinto(&self, j: usize) -> f64 {
+        self.dati.manopola("costo_emendamento_respinto") * self.peso_politiche(j)
+    }
+
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde il suo `costi_fiducia`.
     pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
-        let m = (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
-        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
-        let forma = m.forma;
-        for j in self.alleati() {
-            let x = self.partiti[j].posizione_dichiarata;
-            let peso = self.peso_politiche(j);
-            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova, peso);
-            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        // Gli emendamenti che la fiducia fa cadere non toccano i valori: il costo è lo stesso.
+        let costi = (self.parlamento.misure.iter())
+            .find(|m| m.id == misura)
+            .map(|m| self.costi_fiducia(m))
+            .unwrap_or_default();
+        (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
+        for (j, costo) in costi {
+            (self.intesa).varia(j, CausaIntesa::Fiducia, -costo, self.turno);
         }
         Ok(())
+    }
+
+    /// L'intesa che ogni alleato perde se si pone la fiducia su `m`: `parlamento::costo_fiducia`,
+    /// la parte di distanza per il peso delle politiche della sua vocazione.
+    fn costi_fiducia(&self, m: &Misura) -> Vec<(usize, f64)> {
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        (self.alleati().into_iter())
+            .map(|j| {
+                let x = self.partiti[j].posizione_dichiarata;
+                let peso = self.peso_politiche(j);
+                (
+                    j,
+                    parlamento::costo_fiducia(&self.dati, m.forma, x, nuova, peso),
+                )
+            })
+            .collect()
     }
 
     pub(crate) fn stato_aula(&self) -> StatoAula<'_> {
@@ -1476,12 +1512,8 @@ impl Partita {
 
     /// Gli alleati riavranno il costo d'intesa della questione di fiducia posta su `m`.
     fn rimborsa_fiducia(&mut self, m: &Misura) {
-        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
-        for j in self.alleati() {
-            let x = self.partiti[j].posizione_dichiarata;
-            let peso = self.peso_politiche(j);
-            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova, peso);
-            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        for (j, costo) in self.costi_fiducia(m) {
+            (self.intesa).varia(j, CausaIntesa::Fiducia, costo, self.turno);
         }
     }
 
@@ -3540,8 +3572,7 @@ mod tests {
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
-        let riga =
-            format!("Accoglie l'emendamento di {nome} su {legge}: l'intesa di {nome} è sotto 40");
+        let riga = format!("Accoglie l'emendamento di {nome} su {legge}: la sua intesa è sotto 40");
         assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
     }
 
@@ -3645,6 +3676,20 @@ mod tests {
     /// governo IA pone la fiducia.
     #[test]
     fn il_governo_ia_pone_la_fiducia_se_la_forbice_e_in_bilico() {
+        let (mut p, id) = legge_in_bilico();
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert!(m.fiducia);
+        let riga = format!(
+            "Pone la questione di fiducia su {}: la forbice include la sconfitta",
+            parlamento::nome_misura(&p.dati, m)
+        );
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Una legge del governo IA al voto in bilico (i seggi quasi tutti al giocatore, che vota
+    /// no), nessun ultimatum, mosse vuote: la partita e l'id della legge.
+    fn legge_in_bilico() -> (Partita, u32) {
         let mut p = all_opposizione();
         let id = legge_del_governo_al_voto(&mut p);
         let g = p.giocatore;
@@ -3658,14 +3703,73 @@ mod tests {
         m.linea_giocatore = Some(false);
         p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
         p.mosse.clear();
+        (p, id)
+    }
+
+    /// Scelta 9 del piano: la fiducia costa almeno `costo_fiducia`, e l'alleato a `soglia_uscita`
+    /// ne scenderebbe sotto; il governo IA non la pone.
+    #[test]
+    fn niente_fiducia_che_porta_un_alleato_sotto_l_uscita() {
+        let (mut p, id) = legge_in_bilico();
+        let a = *p.alleati().first().unwrap();
+        p.intesa.valori[a] = p.dati.manopola("soglia_uscita");
         p.governo_ia();
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
-        assert!(m.fiducia);
+        assert!(!m.fiducia);
+        assert!(p.mosse.iter().all(|x| !x.testo.starts_with("Pone")));
+    }
+
+    /// Scelta 9 del piano: l'alleato sopra `soglia_ultimatum`, la legge non rischia, ma il
+    /// respinto lo porterebbe sotto `soglia_uscita`: il governo IA accoglie e lo dice.
+    #[test]
+    fn il_governo_ia_accoglie_l_emendamento_che_porterebbe_l_alleato_sotto_l_uscita() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        let pc = p.governo.presidente;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
+        }
+        p.dati.imposta_manopola("costo_emendamento_respinto", 40.0);
+        let x = p.dati.manopola("soglia_uscita") + 40.0 * p.peso_politiche(a) - 1.0;
+        assert!(x >= p.dati.manopola("soglia_ultimatum"), "{x}");
+        p.intesa.valori[a] = x;
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
         let riga = format!(
-            "Pone la fiducia su {}: la forbice include la sconfitta",
-            parlamento::nome_misura(&p.dati, m)
+            "Accoglie l'emendamento di {nome} su {legge}: respingerlo porterebbe la sua intesa \
+             sotto 25"
         );
         assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Scelta 9 del piano: la sola voce del programma, fuori dal calendario e lontana dal primo
+    /// alleato; con l'intesa piena va in aula, a `soglia_uscita` no (la norma lontana costa).
+    #[test]
+    fn niente_norma_che_porta_un_alleato_sotto_l_uscita() {
+        let mut p = all_opposizione();
+        let a = *p.alleati().first().unwrap();
+        let posizione = |p: &Partita, k: usize, g: usize| {
+            parlamento::posizioni(&p.dati, &p.disposizioni, &[(k, g)]).map(|x| x.1)
+        };
+        let (k, g, nuova) = (p.governo.programma.iter())
+            .find_map(|&(k, g)| Some((k, g, posizione(&p, k, g)?)))
+            .unwrap();
+        p.governo.programma = vec![(k, g)];
+        (p.parlamento.misure).retain(|m| m.valori.iter().all(|v| v.0 != k));
+        p.partiti[a].posizione_dichiarata = if nuova < 4.0 { 7.0 } else { 1.0 };
+        let salvata = p.salva().unwrap();
+        let in_aula = |intesa: f64| {
+            let mut q = Partita::carica(&salvata).unwrap();
+            q.intesa.valori[a] = intesa;
+            q.governo_ia();
+            (q.parlamento.misure.iter()).any(|m| m.valori.iter().any(|v| v.0 == k))
+        };
+        assert!(in_aula(100.0));
+        assert!(!in_aula(p.dati.manopola("soglia_uscita")));
     }
 
     /// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il
