@@ -16,7 +16,7 @@ pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
-    maggioranza, maggioranza_contigua, richiesta, spartizione_di_default,
+    maggioranza, maggioranza_contigua, primo_per_seggi, richiesta, spartizione_di_default,
 };
 pub use voto::{EsitoElezioni, Incarico, VotiPartito};
 pub(crate) use voto::{incarico, voti_per_regione};

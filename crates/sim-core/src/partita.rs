@@ -1648,6 +1648,15 @@ impl Partita {
         }
     }
 
+    /// Il `Quadro` coi seggi veri del parlamento.
+    fn quadro_veri(&self) -> Quadro<'_> {
+        let pl = &self.parlamento;
+        Quadro {
+            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        }
+    }
+
     /// In trattativa con l'incarico al giocatore.
     fn con_incarico(&self) -> bool {
         let l = &self.legislatura;
@@ -1698,11 +1707,7 @@ impl Partita {
         quali: impl Iterator<Item = usize>,
         piu: &[usize],
     ) -> Vec<VoceDisponibilita> {
-        let pl = &self.parlamento;
-        let q = Quadro {
-            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
-            ..self.quadro()
-        };
+        let q = self.quadro_veri();
         let d = Dichiarazione {
             partiti: (self.coalizione_del_giocatore().into_iter())
                 .filter(|&j| j != self.giocatore)
@@ -2102,8 +2107,10 @@ impl Partita {
             &tenuti,
         );
         for (i, j) in v.into_iter().enumerate() {
-            if self.governo.dicasteri[i] != j {
-                self.governo.dicasteri[i] = j;
+            if let Some(d) = self.governo.dicasteri.get_mut(i)
+                && *d != j
+            {
+                *d = j;
                 self.ministri.dimetti(i, Causa::Rimpasto);
             }
         }
@@ -2187,9 +2194,8 @@ impl Partita {
 
     /// Il primo della `coalizione` per seggi (Camera più Senato), a parità l'indice più basso.
     fn primo_per_seggi(&self, coalizione: &[usize]) -> Option<usize> {
-        let seggi = self.seggi_per_partito();
-        let di = |j: usize| seggi.get(j).copied().unwrap_or(0);
-        (coalizione.iter().copied()).max_by_key(|&j| (di(j), std::cmp::Reverse(j)))
+        let pl = &self.parlamento;
+        legislatura::primo_per_seggi(coalizione, &pl.seggi_camera, &pl.seggi_senato)
     }
 
     /// La coalizione del ribaltone, in trattativa con `Guida`.
@@ -2219,11 +2225,7 @@ impl Partita {
     /// identica.
     pub(crate) fn chiedi_guida(&mut self) -> Result<(), Errore> {
         let coalizione = self.guida_aperta()?;
-        let pl = &self.parlamento;
-        let veri = Quadro {
-            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
-            ..self.quadro()
-        };
+        let veri = self.quadro_veri();
         let ribaltone = Dichiarazione {
             partiti: (coalizione.iter().copied())
                 .filter(|&j| j != self.giocatore)
@@ -2240,7 +2242,7 @@ impl Partita {
         {
             return Err(Errore::Comando(format!(
                 "{} non ti cede la guida: {}",
-                self.partiti[l].nome,
+                self.partiti.get(l).map_or("", |p| p.nome.as_str()),
                 causa.testo(false)
             )));
         }
@@ -2257,8 +2259,9 @@ impl Partita {
     /// `Comando` senza `Guida` aperta.
     pub(crate) fn rifiuta_ribaltone(&mut self) -> Result<(), Errore> {
         self.guida_aperta()?;
-        // `maggioranza` è già `None`: `carica` la vuole solo con l'incarico al giocatore.
-        self.legislatura.incarico = None;
+        let l = &mut self.legislatura;
+        l.incarico = None;
+        l.maggioranza = None;
         Ok(())
     }
 
@@ -2271,16 +2274,13 @@ impl Partita {
     /// è passata. Un `dicastero` fuori dai dati o in interim: nessun voto, `false`.
     pub(crate) fn sfiducia(&mut self, dicastero: Option<usize>, promotore: Option<usize>) -> bool {
         let ministro = |i: usize| self.ministri.dicasteri.get(i)?.ministro.as_ref();
-        let partito = match dicastero.map(|i| ministro(i).map(|m| m.partito)) {
+        let (partito, tecnico) = match dicastero.map(ministro) {
             Some(None) => return false,
-            x => x.flatten(),
+            Some(Some(m)) => (Some(m.partito), m.tecnico),
+            None => (None, false),
         };
-        let g = &self.governo;
-        let pl = &self.parlamento;
-        let q = Quadro {
-            seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
-            ..self.quadro()
-        };
+        let (g, pl) = (&self.governo, &self.parlamento);
+        let q = self.quadro_veri();
         let linea = legislatura::linea_sfiducia(
             self.partiti.len(),
             g,
@@ -2326,13 +2326,9 @@ impl Partita {
                 if let Some(id) = self.dati.dicasteri().get(i).map(|d| d.id.clone()) {
                     self.dimissioni_chieste(&id);
                 }
-                if let Some(st) = self.ministri.dicasteri.get_mut(i)
-                    && let Some(m) = st.ministro.take()
-                {
-                    st.rosa_tecnica = m.tecnico;
-                    st.causa_dimissioni = Some(Causa::Sfiduciato);
-                    st.dimissioni_chieste = false;
-                    st.proposta = None;
+                self.ministri.dimetti(i, Causa::Sfiduciato);
+                if let Some(st) = self.ministri.dicasteri.get_mut(i) {
+                    st.rosa_tecnica = tecnico;
                 }
             }
             (false, _) => {
@@ -2704,12 +2700,24 @@ impl Partita {
         ok(
             match &l.incarico {
                 Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
-                    !coalizione.is_empty() && coalizione.iter().all(|&j| j < n)
+                    !coalizione.is_empty()
+                        && coalizione.iter().all(|&j| j < n)
+                        && unici(coalizione.iter().copied())
                 }
                 _ => true,
             },
-            "legislatura.incarico IA o di guida con una coalizione vuota o un partito fuori dai \
-             partiti",
+            "legislatura.incarico IA o di guida con una coalizione vuota, un partito ripetuto o \
+             fuori dai partiti",
+        )?;
+        let g = self.giocatore;
+        ok(
+            match &l.incarico {
+                Some(Incarico::Guida { coalizione }) => {
+                    coalizione.contains(&g) && self.primo_per_seggi(coalizione) != Some(g)
+                }
+                _ => true,
+            },
+            "legislatura.incarico di guida senza il giocatore o col giocatore primo per seggi",
         )?;
         ok(
             l.maggioranza.as_ref().is_none_or(|c| {

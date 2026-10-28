@@ -503,9 +503,9 @@ impl Ministri {
         }
     }
 
-    /// Il dicastero `i` va in interim per `causa` (uscita dal governo, rimpasto): la rosa si
-    /// svuota e la riapre `apri`, col partito che ora tiene il dicastero. Già in interim, resta la
-    /// causa di prima.
+    /// Il dicastero `i` va in interim per `causa` (uscita dal governo, rimpasto, sfiducia): la
+    /// rosa si svuota e la riapre `apri`, col partito che ora tiene il dicastero. Già in interim,
+    /// resta la causa di prima.
     // ponytail: niente ritiro del decreto: alla chiusura `Ministri::esegui` ha già preso le
     // agende. Un chiamante fuori dalla chiusura deve ritirarlo come `ritira`.
     pub(crate) fn dimetti(&mut self, i: usize, causa: Causa) {

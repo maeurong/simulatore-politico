@@ -72,9 +72,11 @@ pub(crate) fn spartizione_di_default(
     let mut v = vec![guida; d.len()];
     for (i, &j) in tenuti.iter().enumerate() {
         let Some(j) = j else { continue };
-        v[i] = j;
-        if let Some(x) = scoperte.iter_mut().find(|x| x.0 == j) {
-            x.1 -= f64::from(d[i].peso_spartizione);
+        if let Some(x) = v.get_mut(i) {
+            *x = j;
+            if let Some(s) = scoperte.iter_mut().find(|s| s.0 == j) {
+                s.1 -= f64::from(d[i].peso_spartizione);
+            }
         }
     }
     for i in ordine
@@ -87,6 +89,17 @@ pub(crate) fn spartizione_di_default(
         scoperte[k].1 -= f64::from(d[i].peso_spartizione);
     }
     v
+}
+
+/// Il primo della `coalizione` per seggi (Camera più Senato), a parità l'indice più basso.
+pub(crate) fn primo_per_seggi(
+    coalizione: &[usize],
+    seggi_c: &[u32],
+    seggi_s: &[u32],
+) -> Option<usize> {
+    let di = |v: &[u32], j: usize| u64::from(v.get(j).copied().unwrap_or(0));
+    (coalizione.iter().copied())
+        .max_by_key(|&j| (di(seggi_c, j) + di(seggi_s, j), std::cmp::Reverse(j)))
 }
 
 /// La `coalizione` ha più della metà dei seggi in entrambe le Camere.
@@ -196,6 +209,13 @@ mod tests {
         assert_eq!(v, [2, 1, 0, 1, 0, 2, 1, 0, 0, 2]);
         let v = spartizione_di_default(&dati_base(), &[0, 1, 2], 2, &[50, 50, 200], &[None; 10]);
         assert_eq!(v, [2, 0, 1, 0, 1, 2, 0, 2, 1, 2]);
+    }
+
+    /// Un `tenuti` più lungo dei dicasteri: l'eccesso si ignora, senza panico.
+    #[test]
+    fn tenuti_oltre_i_dicasteri_si_ignorano() {
+        let v = spartizione_di_default(&dati_base(), &[0, 1], 1, &[100, 100], &[Some(0); 12]);
+        assert_eq!(v, [0; 10]);
     }
 
     /// Seggi 100, 50, 150 come sopra, col partito 1 che tiene Esteri (9, peso 2): gli resta, e

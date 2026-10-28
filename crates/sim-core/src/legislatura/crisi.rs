@@ -2,7 +2,7 @@
 //! della caduta per un alleato in ultimatum (scelta 12 del piano 7b).
 
 use super::coalizione::{Dichiarazione, Quadro, coalizioni_al_voto, distanza};
-use super::spartizione::maggioranza_contigua;
+use super::spartizione::{maggioranza_contigua, primo_per_seggi};
 use crate::parlamento::CausaIntesa;
 use crate::partiti::Governo;
 
@@ -53,8 +53,7 @@ pub(crate) fn vota_la_caduta(q: &Quadro, j: usize, attuale: &[usize], presidente
     let contigua = maggioranza_contigua(q.partiti, &camera, &senato, escluso);
     let dopo = match contigua.filter(|k| k.contains(&j)) {
         Some(k) => {
-            let primo = (k.iter()).max_by(|&&a, &&b| seggi(a).total_cmp(&seggi(b)).then(b.cmp(&a)));
-            let guida = if primo == Some(&j) {
+            let guida = if primo_per_seggi(&k, &camera, &senato) == Some(j) {
                 m("valore_guida")
             } else {
                 0.0
