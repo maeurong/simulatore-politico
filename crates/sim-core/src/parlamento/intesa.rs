@@ -24,6 +24,7 @@ pub enum CausaIntesa {
     SondaggiInCalo,
     RotturaImpegno,
     SfiduciaRespinta,
+    Promessa,
 }
 
 impl fmt::Display for CausaIntesa {
@@ -40,6 +41,7 @@ impl fmt::Display for CausaIntesa {
             Self::SondaggiInCalo => "calo nei sondaggi al governo",
             Self::RotturaImpegno => "rottura dell'impegno pre-elettorale",
             Self::SfiduciaRespinta => "sfiducia respinta",
+            Self::Promessa => "promessa contraria alla sua linea",
         })
     }
 }

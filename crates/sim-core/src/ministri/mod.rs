@@ -491,7 +491,8 @@ impl Ministri {
             | Comando::PromuoviReferendum { .. }
             | Comando::Confermativo { .. }
             | Comando::Riposiziona { .. }
-            | Comando::Campagna { .. } => {}
+            | Comando::Campagna { .. }
+            | Comando::Prometti { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }

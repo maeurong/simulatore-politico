@@ -131,6 +131,11 @@ pub enum Comando {
     Campagna {
         spese: Vec<Spesa>,
     },
+    /// In campagna elettorale, una volta, fino a 2 promesse (disposizione, gradino), id del
+    /// catalogo, su gradini diversi dal vigente: si verificano al voto dopo.
+    Prometti {
+        promesse: Vec<(String, String)>,
+    },
 }
 
 impl Partita {
@@ -191,7 +196,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -231,6 +236,7 @@ impl Partita {
             }
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
             Comando::Campagna { spese } => return self.campagna(spese.clone()),
+            Comando::Prometti { promesse } => return self.prometti(promesse),
             _ => {}
         }
         self.di_governo()?;

@@ -1,5 +1,5 @@
 mod comune;
-use comune::{con_ingresso, dati_base, ferma_tutti, senza_shock};
+use comune::{con_ingresso, dati_base, ferma_tutti, imposta, senza_shock};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
@@ -28,10 +28,18 @@ fn uno_shock_energetico_alza_di_piu_i_prezzi_dell_industria() {
     assert!(e.inflazione_importata > 0.0);
 }
 
-/// Senza shock e senza atti dei ministri: un atto sull'energia è uno shock di prezzo.
+/// Senza shock e senza atti dei ministri: un atto sull'energia è uno shock di prezzo. Senza la
+/// persuasione delle promesse IA: il test non misura la campagna, e col seme 1 le promesse al voto
+/// del turno 19 portano un altro governo, con le sue leggi (R24).
 #[test]
 fn senza_shock_l_inflazione_torna_verso_il_due_per_cento() {
-    let mut p = giocata(&senza_shock(), 1, 0);
+    let f = imposta(
+        senza_shock(),
+        "manopole",
+        "[persuasione_promessa]\nvalore = ",
+        "0.0",
+    );
+    let mut p = giocata(&f, 1, 0);
     for _ in 0..40 {
         ferma_tutti(&mut p);
         p.chiudi_turno();

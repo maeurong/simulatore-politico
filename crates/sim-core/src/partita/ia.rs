@@ -191,6 +191,39 @@ impl Partita {
         for (j, campagna) in campagne {
             self.partiti[j].campagna = campagna;
         }
+        self.promesse_ia();
+    }
+
+    /// Le promesse dei partiti IA attivi (scelta 17 del piano 8b), anche senza cassa: le prime 2
+    /// voci non ancora in vigore del programma, quello del governo se il partito lo presiede,
+    /// altrimenti `legislatura::programma` sulla coalizione del partito solo; una riga. Nessun
+    /// effetto sull'intesa.
+    fn promesse_ia(&mut self) {
+        let seggi = self.seggi_per_partito();
+        let aula = self.stato_aula();
+        let voci = &self.disposizioni.voci;
+        let promesse: Vec<(usize, Vec<(usize, usize)>)> = (self.partiti.iter().enumerate())
+            .filter(|&(j, p)| j != self.giocatore && !p.sciolto)
+            .map(|(j, _)| {
+                let programma = if self.governo.presidente == j {
+                    self.governo.programma.clone()
+                } else {
+                    legislatura::programma(&aula, &[j], &seggi)
+                };
+                let scelte = (programma.into_iter())
+                    .filter(|&(d, g)| voci.get(d).is_some_and(|v| v.in_vigore != g))
+                    .take(2)
+                    .collect();
+                (j, scelte)
+            })
+            .collect();
+        for (j, scelte) in promesse {
+            if !scelte.is_empty() {
+                let testo = format!("Promette {}", parlamento::nome(&self.dati, &scelte));
+                self.mossa(j, testo);
+            }
+            self.partiti[j].promesse_campagna = scelte;
+        }
     }
 
     /// Il valore atteso di ogni partito al voto con `d` (`Quadro::valore`), sul sondaggio
@@ -1749,6 +1782,63 @@ mod tests {
         p.campagna_ia();
         let c = &p.partiti[0].campagna;
         assert_eq!((c[0].bersaglio, c[1].bersaglio), (b, a), "{c:?}");
+    }
+
+    /// Il governo IA promette le prime 2 voci non in vigore del suo programma, un altro partito IA
+    /// con seggi le prime 2 del programma della sua coalizione da solo, con una riga e senza
+    /// toccare l'intesa; il giocatore e lo sciolto niente.
+    #[test]
+    fn promesse_ia_dal_programma() {
+        let mut p = all_opposizione();
+        let (g, pc) = (p.giocatore, p.governo.presidente);
+        let seggi = p.seggi_per_partito();
+        let altro = (0..p.partiti.len())
+            .find(|&j| j != g && j != pc && seggi[j] > 0)
+            .unwrap();
+        let sciolto = (0..p.partiti.len())
+            .find(|&j| j != g && j != pc && j != altro)
+            .unwrap();
+        p.partiti[sciolto].sciolto = true;
+        let prime = |p: &Partita, v: Vec<(usize, usize)>| -> Vec<(usize, usize)> {
+            let voci = &p.disposizioni.voci;
+            (v.into_iter())
+                .filter(|&(d, k)| voci[d].in_vigore != k)
+                .take(2)
+                .collect()
+        };
+        let del_governo = prime(&p, p.governo.programma.clone());
+        let dell_altro = prime(
+            &p,
+            legislatura::programma(&p.stato_aula(), &[altro], &seggi),
+        );
+        assert_eq!(del_governo.len(), 2);
+        assert_eq!(dell_altro.len(), 2);
+        let intesa = p.intesa.clone();
+        p.promesse_ia();
+        assert_eq!(p.partiti[pc].promesse_campagna, del_governo);
+        assert_eq!(p.partiti[altro].promesse_campagna, dell_altro);
+        assert!(p.partiti[g].promesse_campagna.is_empty());
+        assert!(p.partiti[sciolto].promesse_campagna.is_empty());
+        assert_eq!(p.intesa, intesa);
+        let riga = format!("Promette {}", parlamento::nome(&p.dati, &del_governo));
+        let id = p.partiti[pc].id.clone();
+        assert!(p.mosse.iter().any(|m| m.partito == id && m.testo == riga));
+    }
+
+    /// Lo sciolto perde le promesse in sospeso al voto, senza effetto e senza riga.
+    #[test]
+    fn lo_sciolto_perde_le_promesse_senza_riga() {
+        let mut p = all_opposizione();
+        let j = p.governo.presidente;
+        p.partiti[j].promesse = vec![(0, 0)];
+        p.partiti[j].turni_da_presidente = 10;
+        p.partiti[j].sciolto = true;
+        let valence = p.partiti[j].valence;
+        p.mosse.clear();
+        p.verifica_promesse();
+        assert!(p.partiti[j].promesse.is_empty());
+        assert_eq!(p.partiti[j].valence, valence);
+        assert!(p.mosse.is_empty());
     }
 
     #[test]

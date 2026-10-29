@@ -390,6 +390,18 @@ pub struct VocePartito {
     pub sciolto: bool,
     /// Euro: pubblica.
     pub cassa: i64,
+    /// Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
+    pub promesse: Vec<VocePromessa>,
+}
+
+/// Una promessa di campagna coi nomi del catalogo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VocePromessa {
+    pub disposizione: String,
+    pub gradino: String,
+    /// Fatta al voto prima, si verifica al prossimo.
+    pub in_sospeso: bool,
 }
 
 /// La statistica senza `vera`.

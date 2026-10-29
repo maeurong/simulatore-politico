@@ -2,8 +2,10 @@
 //! effetti-della-campagna-e-promesse:51-58).
 
 use crate::dati::DatiGioco;
+use crate::disposizioni::Disposizioni;
 use crate::elettorato::{Condizione, Elettorato, PER_REGIONE, PUNTI, condizione_di};
 use crate::errore::Errore;
+use crate::parlamento;
 use crate::partiti::Partito;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -141,14 +143,43 @@ fn forza(dati: &DatiGioco, el: &Elettorato, s: &Spesa) -> f64 {
 }
 
 /// Le spinte delle campagne dei partiti attivi (scelta 13): `forza_<leva>` × √(euro /
-/// (`spesa_riferimento` · s_b)) nei gruppi del bersaglio. Una voce per partito, sciolti compresi.
-pub(crate) fn spinte(dati: &DatiGioco, el: &Elettorato, partiti: &[Partito]) -> Spinte {
+/// (`spesa_riferimento` · s_b)) nei gruppi del bersaglio. Più le promesse della campagna (scelta
+/// 17): `persuasione_promessa` di valence per promessa nei gruppi la cui posizione media è più
+/// vicina al gradino promesso che al vigente, nulla senza posizione. Una voce per partito, sciolti
+/// compresi.
+pub(crate) fn spinte(
+    dati: &DatiGioco,
+    el: &Elettorato,
+    partiti: &[Partito],
+    disposizioni: &Disposizioni,
+) -> Spinte {
     let n_gruppi = el.gruppi.len();
     let mut s = Spinte {
         valence: vec![vec![0.0; partiti.len()]; n_gruppi],
         mobilita: vec![vec![0.0; partiti.len()]; n_gruppi],
     };
+    let medie: Vec<f64> = (el.gruppi.iter())
+        .map(|g| {
+            let pesi: f64 = g.posizione.iter().sum();
+            let somma: f64 = (g.posizione.iter().enumerate())
+                .map(|(k, h)| (k + 1) as f64 * h)
+                .sum();
+            somma / pesi
+        })
+        .collect();
+    let persuasione = dati.manopola("persuasione_promessa");
     for (j, p) in partiti.iter().enumerate().filter(|(_, p)| !p.sciolto) {
+        for &(d, g) in &p.promesse_campagna {
+            let Some((vigente, promessa)) = parlamento::posizioni(dati, disposizioni, &[(d, g)])
+            else {
+                continue;
+            };
+            for (riga, m) in s.valence.iter_mut().zip(&medie) {
+                if (m - promessa).abs() < (m - vigente).abs() {
+                    riga[j] += persuasione;
+                }
+            }
+        }
         for spesa in &p.campagna {
             let tabella = match spesa.leva {
                 Leva::Persuadere => &mut s.valence,
@@ -323,7 +354,7 @@ mod tests {
             leva: Leva::Persuadere,
             euro,
         });
-        let s = spinte(&dati, &el, &partiti);
+        let s = spinte(&dati, &el, &partiti, &Disposizioni::iniziali(&dati));
         let f = dati.manopola("forza_persuadere");
         let mut toccati = 0;
         for (i, riga) in s.valence.iter().enumerate() {
@@ -340,7 +371,7 @@ mod tests {
         assert!(s.mobilita.iter().flatten().all(|&m| m == 0.0));
         // Lo sciolto non fa campagna.
         partiti[2].sciolto = true;
-        let s = spinte(&dati, &el, &partiti);
+        let s = spinte(&dati, &el, &partiti, &Disposizioni::iniziali(&dati));
         assert!(s.valence.iter().flatten().all(|&v| v == 0.0));
         assert_eq!(s.valence[0].len(), partiti.len());
     }
