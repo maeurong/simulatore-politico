@@ -276,12 +276,14 @@ impl Parlamento {
 
 /// L'intesa che perde l'alleato in `posizione` se si pone la fiducia su una misura di forma
 /// `forma` in posizione `nuova`: `costo_fiducia` più `costo_fiducia_distanza` per sesto di asse,
-/// il doppio sull'elettorale.
+/// la parte di distanza per `peso` (il peso delle politiche della vocazione), il tutto doppio
+/// sull'elettorale.
 pub(crate) fn costo_fiducia(
     dati: &DatiGioco,
     forma: FormaMisura,
     posizione: f64,
     nuova: Option<f64>,
+    peso: f64,
 ) -> f64 {
     let d = nuova.map_or(0.0, |n| (posizione - n).abs());
     let doppio = if forma == FormaMisura::Elettorale {
@@ -289,7 +291,9 @@ pub(crate) fn costo_fiducia(
     } else {
         1.0
     };
-    doppio * (dati.manopola("costo_fiducia") + dati.manopola("costo_fiducia_distanza") * d / 6.0)
+    doppio
+        * (dati.manopola("costo_fiducia")
+            + dati.manopola("costo_fiducia_distanza") * d / 6.0 * peso)
 }
 
 /// Il motivo dell'alleato che perde `n` seggi attesi.

@@ -29,6 +29,24 @@ pub(crate) fn linea_sfiducia(
         .collect()
 }
 
+/// Il valore per `j` di stare al governo con `coalizione`, coi seggi veri di `q` e i pesi della
+/// sua vocazione (piano 8a): `poltrone · (peso_seggi_coalizione · quota + peso_governare +
+/// valore_guida · [guida]) − politiche · peso_distanza_coalizione · distanza(coalizione, j)`.
+pub(crate) fn valore_al_governo(q: &Quadro, j: usize, coalizione: &[usize], guida: bool) -> f64 {
+    let m = |nome: &str| q.dati.manopola(nome);
+    let (camera, senato) = q.seggi(&Dichiarazione::default());
+    let seggi = |i: usize| {
+        let di = |v: &[u32]| f64::from(v.get(i).copied().unwrap_or(0));
+        di(&camera) + di(&senato)
+    };
+    let totale =
+        f64::from(camera.iter().sum::<u32>().max(1)) + f64::from(senato.iter().sum::<u32>().max(1));
+    let (politiche, poltrone) = q.pesi(j);
+    let guida = if guida { m("valore_guida") } else { 0.0 };
+    poltrone * (m("peso_seggi_coalizione") * seggi(j) / totale + m("peso_governare") + guida)
+        - politiche * m("peso_distanza_coalizione") * distanza(q.partiti, coalizione, j)
+}
+
 /// `j`, alleato del governo `attuale` presieduto da `presidente`, vota la caduta se gli vale più
 /// che restare, sui termini di `Quadro::termini` e coi seggi veri che `q` porta. Restare: seggi,
 /// governo certo, distanza da `attuale`, intesa sotto la base. Cadere: la maggioranza contigua
@@ -40,27 +58,15 @@ pub(crate) fn linea_sfiducia(
 pub(crate) fn vota_la_caduta(q: &Quadro, j: usize, attuale: &[usize], presidente: usize) -> bool {
     let m = |nome: &str| q.dati.manopola(nome);
     let (camera, senato) = q.seggi(&Dichiarazione::default());
-    let di = |v: &[u32], i: usize| v.get(i).copied().unwrap_or(0);
-    let seggi = |i: usize| f64::from(di(&camera, i)) + f64::from(di(&senato, i));
-    let totale =
-        f64::from(camera.iter().sum::<u32>().max(1)) + f64::from(senato.iter().sum::<u32>().max(1));
-    let quota = seggi(j) / totale;
     let intesa = q.intesa.get(j).copied().unwrap_or(0.0);
-    let restare = m("peso_seggi_coalizione") * quota + m("peso_governare")
-        - m("peso_distanza_coalizione") * distanza(q.partiti, attuale, j)
+    let restare = valore_al_governo(q, j, attuale, false)
         - m("peso_intesa_coalizione") * (m("intesa_base") - intesa).max(0.0) / 100.0;
     let escluso = (presidente == q.giocatore).then_some(presidente);
     let contigua = maggioranza_contigua(q.partiti, &camera, &senato, escluso);
     let dopo = match contigua.filter(|k| k.contains(&j)) {
         Some(k) => {
-            let guida = if primo_per_seggi(&k, &camera, &senato) == Some(j) {
-                m("valore_guida")
-            } else {
-                0.0
-            };
-            m("peso_seggi_coalizione") * quota + m("peso_governare")
-                - m("peso_distanza_coalizione") * distanza(q.partiti, &k, j)
-                + guida
+            let guida = primo_per_seggi(&k, &camera, &senato) == Some(j);
+            valore_al_governo(q, j, &k, guida)
         }
         None => {
             let ultime: Vec<Vec<usize>> = (q.ultime.iter())

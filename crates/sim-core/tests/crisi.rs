@@ -10,8 +10,18 @@ use sim_core::{Comando, Partita};
 const CRISI_C: [u32; 7] = [10, 40, 29, 10, 101, 100, 110];
 const CRISI_S: [u32; 7] = [5, 20, 14, 5, 51, 50, 55];
 
+/// Come `con_seggi`, con l'estrema destra (identitaria) resa mista: entrare in un governo a un
+/// punto di distanza non le conviene più (vocazione, piano 8a), e queste prove vogliono che entri.
+fn con_seggi_ed_mista(p: &Partita, camera: &[u32], senato: &[u32]) -> Partita {
+    let ed = partito("estrema_destra");
+    edita(&con_seggi(p, camera, senato), |j| {
+        j["partiti"][ed]["vocazione"] = "mista".into();
+    })
+    .unwrap()
+}
+
 fn in_crisi() -> Partita {
-    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
     let cd = partito("centrodestra");
     let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
     p.chiudi_turno();
@@ -87,7 +97,7 @@ fn in_crisi_solo_ordinaria_amministrazione() {
 /// Ticket 09, riga 45: la legge col voto nel turno di crisi resta ferma un turno, senza decadere.
 #[test]
 fn in_crisi_le_leggi_slittano() {
-    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
     let cd = partito("centrodestra");
     let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
     presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();
@@ -103,6 +113,27 @@ fn in_crisi_le_leggi_slittano() {
     assert!(!p.parlamento().esiti.iter().any(|e| e.misura == id));
     let m = p.parlamento().misure.iter().find(|m| m.id == id).unwrap();
     assert_eq!(m.voto, 2);
+}
+
+/// Vocazione (piano 8a): l'estrema destra identitaria, a un punto di distanza, non entra per sole
+/// poltrone; resa mista (`con_seggi_ed_mista`) entra.
+#[test]
+fn identitaria_a_distanza_1_rifiuta_l_allargamento_per_sole_poltrone() {
+    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let cd = partito("centrodestra");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().crisi, Some(1));
+    let voce = (p.vista().disponibilita.into_iter())
+        .find(|v| v.partito == "estrema_destra")
+        .unwrap();
+    assert!(!voce.disponibile);
+    let e = p
+        .comanda(Comando::Allarga {
+            partiti: vec!["estrema_destra".into()],
+        })
+        .unwrap_err();
+    assert!(e.to_string().contains("Estrema destra non entra"), "{e}");
 }
 
 #[test]
@@ -173,7 +204,7 @@ fn chi_entra_in_crisi_riparte_da_zero() {
 /// Il centro (3) entra con la Sanità (3), poi esce: destra e centrodestra reggono (201 su 400,
 /// 101 su 200), alla pari di seggi, e il centrodestra chiede più dei suoi due dicasteri.
 fn col_centro_che_esce() -> Partita {
-    let p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
     edita(&p, |j| {
         j["governo"]["dicasteri"][3] = serde_json::json!(3);
         j["governo"]["coalizione"]
@@ -269,7 +300,7 @@ fn salvare_a_meta_crisi() {
 /// caduta è certa, l'allargamento inutile e la disponibilità vuota.
 #[test]
 fn crisi_in_esercizio_provvisorio_senza_allargamento() {
-    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
+    let mut p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &CRISI_C, &CRISI_S);
     for _ in 0..4 {
         p.chiudi_turno(); // fino a ottobre-dicembre 2027, senza bilancio
     }
@@ -309,7 +340,7 @@ fn crisi_in_esercizio_provvisorio_senza_allargamento() {
 fn sfiducia_pareggiata_riapre_la_crisi() {
     let c = [10, 40, 30, 20, 100, 100, 100];
     let s = [5, 20, 14, 10, 51, 50, 50];
-    let p = con_seggi(&Partita::nuova(dati_base(), 1), &c, &s);
+    let p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &c, &s);
     let mut p = edita(&p, |j| j["legislatura"]["crisi"] = 0.into()).unwrap();
     p.chiudi_turno();
     let sfiducia = (p.vista().esiti.into_iter()).find(|e| e.forma == FormaMisura::Sfiducia);
@@ -331,7 +362,7 @@ fn sfiducia_pareggiata_riapre_la_crisi() {
 fn col_centro_in_crisi() -> Partita {
     let c = [10, 40, 39, 20, 81, 100, 110];
     let s = [5, 20, 19, 10, 41, 50, 55];
-    let p = con_seggi(&Partita::nuova(dati_base(), 1), &c, &s);
+    let p = con_seggi_ed_mista(&Partita::nuova(dati_base(), 1), &c, &s);
     let mut p = edita(&p, |j| {
         j["governo"]["dicasteri"][3] = serde_json::json!(3);
         j["governo"]["coalizione"]
@@ -436,7 +467,7 @@ fn vigilia_del_voto() -> Partita {
 #[test]
 fn crisi_alla_vigilia_del_voto_vince_il_voto() {
     let cd = partito("centrodestra");
-    let p = con_seggi(&vigilia_del_voto(), &CRISI_C, &CRISI_S);
+    let p = con_seggi_ed_mista(&vigilia_del_voto(), &CRISI_C, &CRISI_S);
     let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
     p.chiudi_turno();
     assert!(!p.governo().al_governo(cd));
@@ -466,7 +497,7 @@ fn nel_turno_del_voto_nessuna_uscita() {
     let cd = partito("centrodestra");
     let mut p = vigilia_del_voto();
     chiudi_col_bilancio(&mut p);
-    let p = con_seggi(&p, &CRISI_C, &CRISI_S);
+    let p = con_seggi_ed_mista(&p, &CRISI_C, &CRISI_S);
     let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = serde_json::json!(10.0)).unwrap();
     assert!(p.legislatura().turno_di_voto(p.vista().turno));
     p.chiudi_turno(); // si vota

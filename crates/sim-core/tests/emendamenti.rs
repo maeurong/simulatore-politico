@@ -332,3 +332,33 @@ fn comandi_rifiutati_dopo_la_decisione_lasciano_la_partita_identica() {
     );
     assert_eq!(p.salva().unwrap(), dopo_fiducia);
 }
+
+/// Vocazione (piano 8a): solo la parte di distanza del costo della fiducia si pesa; identitaria
+/// 1,5 e governista 0,5 intorno al misto, quindi i loro costi sommano il doppio di quello misto.
+#[test]
+fn la_fiducia_pesa_la_distanza_per_vocazione() {
+    let cd = partito("centrodestra");
+    let costo = |vocazione: &str| {
+        let p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+        let mut p = edita(&p, |j| j["partiti"][cd]["vocazione"] = vocazione.into()).unwrap();
+        presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
+        let intesa = |p: &Partita| {
+            let v = p.vista();
+            (v.alleati.iter())
+                .find(|a| a.partito == "centrodestra")
+                .unwrap()
+                .intesa
+        };
+        let prima = intesa(&p);
+        let id = p.vista().calendario[0].id;
+        p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+        prima - intesa(&p)
+    };
+    let (mista, identitaria, governista) =
+        (costo("mista"), costo("identitaria"), costo("governista"));
+    assert!(
+        identitaria > mista && mista > governista && governista > 0.0,
+        "{identitaria} {mista} {governista}"
+    );
+    assert!((identitaria + governista - 2.0 * mista).abs() < 1e-9);
+}

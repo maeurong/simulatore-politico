@@ -5,9 +5,41 @@ use crate::errore::Errore;
 use crate::scenario::{Ingresso, Scenario};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+#[cfg(test)]
+use ts_rs::TS;
 
 /// L'id del partito del giocatore, riservato: nessun partito dello scenario può averlo.
 pub const ID_GIOCATORE: &str = "giocatore";
+
+/// Quanto un partito pesa le politiche rispetto alle poltrone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
+pub enum Vocazione {
+    Identitaria,
+    Mista,
+    Governista,
+}
+
+impl Vocazione {
+    fn alfa(self, dati: &DatiGioco) -> f64 {
+        dati.manopola(match self {
+            Self::Identitaria => "alfa_identitaria",
+            Self::Mista => "alfa_mista",
+            Self::Governista => "alfa_governista",
+        })
+    }
+
+    /// 2α: peso delle politiche nell'utilità del partito (α = 0,5 pesa 1).
+    pub fn peso_politiche(self, dati: &DatiGioco) -> f64 {
+        2.0 * self.alfa(dati)
+    }
+
+    /// 2(1 − α): peso dell'ufficio (poltrone) nell'utilità del partito.
+    pub fn peso_poltrone(self, dati: &DatiGioco) -> f64 {
+        2.0 * (1.0 - self.alfa(dati))
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DatoPartito {
@@ -16,6 +48,8 @@ pub struct DatoPartito {
     /// Da 1 (estrema sinistra) a 7 (estrema destra).
     pub posizione: f64,
     pub valence: Ingresso,
+    pub vocazione: Vocazione,
+    pub leader: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -34,6 +68,8 @@ pub struct Partito {
     pub valence: f64,
     /// Valence del turno zero: verso questa torna `valence` a ogni turno.
     pub valence_base: f64,
+    pub vocazione: Vocazione,
+    pub leader: String,
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
@@ -77,6 +113,8 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             posizione_percepita: p.posizione,
             valence: p.valence.valore,
             valence_base: p.valence.valore,
+            vocazione: p.vocazione,
+            leader: p.leader.clone(),
         })
         .collect();
     let presidente = indice(&s.governo.presidente);
@@ -117,6 +155,9 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
             return Err(ko(format!(
                 "id riservato al partito del giocatore: {ID_GIOCATORE}"
             )));
+        }
+        if p.leader.trim().is_empty() {
+            return Err(ko(format!("leader vuoto: {}", p.id)));
         }
         if !(p.posizione.is_finite() && (1.0..=7.0).contains(&p.posizione)) {
             return Err(ko(format!("posizione di {} fuori da 1-7", p.id)));
@@ -160,4 +201,24 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    #[test]
+    fn i_pesi_della_vocazione() {
+        let d = dati_base();
+        let casi = [
+            (Vocazione::Identitaria, 1.5, 0.5),
+            (Vocazione::Mista, 1.0, 1.0),
+            (Vocazione::Governista, 0.5, 1.5),
+        ];
+        for (v, politiche, poltrone) in casi {
+            assert!((v.peso_politiche(&d) - politiche).abs() < 1e-12, "{v:?}");
+            assert!((v.peso_poltrone(&d) - poltrone).abs() < 1e-12, "{v:?}");
+        }
+    }
 }

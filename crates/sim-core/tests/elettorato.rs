@@ -193,7 +193,7 @@ fn valence_fuori_intervallo_rifiutata_col_nome() {
     let f = imposta(
         file_base(),
         "scenario",
-        "id = \"centro\"\nnome = \"Centro\"\nposizione = 4.0\n\n[partito.valence]\nvalore = ",
+        "leader = \"Giorgio Valli\"\n\n[partito.valence]\nvalore = ",
         "9.0",
     );
     let e = DatiGioco::da_testi(&f).unwrap_err();
@@ -861,7 +861,7 @@ fn piu_valence_piu_voti() {
         let f = imposta(
             file_base(),
             "scenario",
-            "id = \"centro\"\nnome = \"Centro\"\nposizione = 4.0\n\n[partito.valence]\nvalore = ",
+            "leader = \"Giorgio Valli\"\n\n[partito.valence]\nvalore = ",
             valence,
         );
         Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1)

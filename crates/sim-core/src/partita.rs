@@ -26,15 +26,17 @@ use crate::parlamento::{
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, SeggiPartito, Vista, VistaBilancio,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
     VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito,
 };
 use serde::{Deserialize, Serialize};
+
+mod ia;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 8;
+pub const VERSIONE_SCHEMA: u32 = 9;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,6 +109,8 @@ pub struct Partita {
     leggi_del_giocatore: Vec<(u32, u16)>,
     /// I quattro indicatori al turno zero (`indicatori`).
     partenza: [f64; 4],
+    /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
+    mosse: Vec<MossaIa>,
 }
 
 /// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
@@ -229,6 +233,7 @@ impl Partita {
             turni_al_governo: 0,
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
+            mosse: Vec::new(),
         };
         p.partenza = p.indicatori();
         p
@@ -248,14 +253,15 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
+    // svuotamento delle mosse IA del turno prima → bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
     // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → firme dell'abrogativo →
     // sfiducia del giocatore all'opposizione) → esercizio provvisorio senza bilancio, dimissioni
     // → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
     // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
-    // nel turno del voto → soglie (ministri, ritorno dell'intesa) → uscite degli alleati
+    // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
+    // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati
     // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della crisi
     // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
     // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
@@ -270,6 +276,7 @@ impl Partita {
         if self.finita() {
             return;
         }
+        self.mosse.clear();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
@@ -363,6 +370,10 @@ impl Partita {
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
+        }
+        // Dopo il ritorno: il leader nuovo chiude la chiusura con `valence_base` più la luna.
+        if di_voto {
+            self.leader_dopo_il_voto();
         }
         // Uscite e crisi (scelta 10 del piano 7b); nel turno del voto nessuna uscita, e la crisi
         // l'ha già chiusa `vota_parlamento`.
@@ -925,8 +936,13 @@ impl Partita {
         self.parlamento.esiti_referendum.insert(0, esito);
     }
 
+    /// Il peso delle politiche nella vocazione di `j` (piano 8a): scala i colpi all'intesa.
+    fn peso_politiche(&self, j: usize) -> f64 {
+        self.partiti[j].vocazione.peso_politiche(&self.dati)
+    }
+
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
-    /// perde intesa.
+    /// perde intesa, per il peso delle politiche della sua vocazione.
     fn norma_lontana(&mut self, nuova: f64) {
         let soglia = self.dati.manopola("distanza_alleato");
         let costo = self.dati.manopola("costo_norma_lontana");
@@ -935,7 +951,7 @@ impl Partita {
             if distanza < soglia {
                 continue;
             }
-            let delta = -costo * (distanza - soglia + 1.0);
+            let delta = -costo * (distanza - soglia + 1.0) * self.peso_politiche(j);
             (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
         }
     }
@@ -986,20 +1002,23 @@ impl Partita {
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
     fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
-        let delta = -self.dati.manopola("costo_emendamento_respinto");
+        let costo = self.dati.manopola("costo_emendamento_respinto");
         for j in alleati {
+            let delta = -costo * self.peso_politiche(j);
             (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
         }
     }
 
-    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`.
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`, la parte di distanza
+    /// per il peso delle politiche della sua vocazione.
     pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
         let m = (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
         let forma = m.forma;
         for j in self.alleati() {
             let x = self.partiti[j].posizione_dichiarata;
-            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova);
+            let peso = self.peso_politiche(j);
+            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova, peso);
             (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
         }
         Ok(())
@@ -1455,7 +1474,8 @@ impl Partita {
         let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
         for j in self.alleati() {
             let x = self.partiti[j].posizione_dichiarata;
-            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova);
+            let peso = self.peso_politiche(j);
+            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova, peso);
             (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
         }
     }
@@ -2150,7 +2170,9 @@ impl Partita {
     /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
     /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
     /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
-    /// scioglie le Camere: si vota nella chiusura del turno dopo. Poi ministri tutti nuovi,
+    /// scioglie le Camere: si vota nella chiusura del turno dopo. Se l'uscente resta fuori dal
+    /// governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che il voto appena
+    /// passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi ministri tutti nuovi,
     /// giudizio da zero per chi entra al governo, l'ultimatum sul valore di partenza (l'alleato
     /// che entra sotto la soglia lo pone subito, chi non è più alleato non ne ha), fase ordinaria.
     fn forma_governo(&mut self) {
@@ -2211,6 +2233,8 @@ impl Partita {
                 self.intesa.riparti(j, base);
             }
         }
+        let uscente = self.governo.presidente;
+        let perde = !coalizione.contains(&uscente);
         self.paga_rotture(&coalizione, &coalizione, presidente);
         let entranti: Vec<usize> = (coalizione.iter().copied())
             .filter(|&j| !self.governo.al_governo(j))
@@ -2223,6 +2247,12 @@ impl Partita {
             coalizione,
         };
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
+        // Il voto appena passato (turno == inizio) l'ha già fatto cambiare per il calo: una sola
+        // sconfitta, un solo cambio.
+        let gia_cambiato = self.turno <= self.legislatura.inizio && self.calo(uscente).is_some();
+        if perde && !gia_cambiato {
+            self.cambia_leader(uscente, "la perdita del governo");
+        }
         let alleati = self.alleati();
         self.intesa.ultimatum(&self.dati, &alleati);
         let l = &mut self.legislatura;
@@ -2723,6 +2753,8 @@ impl Partita {
                 posizione_percepita: p.posizione_percepita,
                 valence: p.valence,
                 al_governo: self.governo.al_governo(j),
+                vocazione: p.vocazione,
+                leader: p.leader.clone(),
             })
             .collect()
     }
@@ -2843,6 +2875,7 @@ impl Partita {
             },
             dimissioni: l.dimissioni,
             crisi: self.in_crisi(),
+            mosse: self.mosse.clone(),
         }
     }
 
@@ -3041,6 +3074,27 @@ impl Partita {
             &format!("partiti ha {n} voci, ne servono {attesi}"),
         )?;
         ok(giocatore_ok, "giocatore fuori dai partiti")?;
+        // Il partito fondato dal giocatore non ha leader; gli altri, anche quello che il giocatore
+        // prende dallo scenario, ne hanno uno.
+        for p in &self.partiti {
+            if p.id == ID_GIOCATORE {
+                ok(
+                    p.leader.is_empty(),
+                    &format!("partito {}: il giocatore non ha un leader", p.id),
+                )?;
+            } else {
+                ok(
+                    !p.leader.trim().is_empty(),
+                    &format!("partito {}: leader vuoto", p.id),
+                )?;
+            }
+        }
+        for m in &self.mosse {
+            ok(
+                self.partiti.iter().any(|p| p.id == m.partito),
+                &format!("mosse: partito {} sconosciuto", m.partito),
+            )?;
+        }
         ok(
             self.legislatura.coalizioni.iter().flatten().all(|&j| j < n),
             "legislatura.coalizioni con un partito fuori dai partiti",
@@ -3303,7 +3357,8 @@ mod tests {
     use super::*;
     use crate::caso::Flusso;
     use crate::dati::dati_base;
-    use crate::legislatura::Fondazione;
+    use crate::legislatura::{CausaDisponibilita, Fondazione};
+    use crate::partiti::Vocazione;
 
     fn fondata() -> Partita {
         let f = Fondazione {
@@ -3489,6 +3544,98 @@ mod tests {
     fn contigua(c: [u32; 7], s: [u32; 7]) -> Option<Vec<usize>> {
         let p = Partita::nuova(dati_base(), 1);
         legislatura::maggioranza_contigua(&p.partiti, &c, &s, Some(5))
+    }
+
+    #[test]
+    fn la_vocazione_pesa_norma_lontana_ed_emendamento() {
+        let calo = |v: Vocazione, f: fn(&mut Partita)| {
+            let mut p = Partita::nuova(dati_base(), 7);
+            p.partiti[4].vocazione = v;
+            let prima = p.intesa.valori[4];
+            f(&mut p);
+            prima - p.intesa.valori[4]
+        };
+        let norma = |p: &mut Partita| p.norma_lontana(1.0);
+        let emendamento = |p: &mut Partita| p.emendamenti_respinti([4]);
+        for f in [norma as fn(&mut Partita), emendamento] {
+            let mista = calo(Vocazione::Mista, f);
+            assert!(mista > 0.0);
+            assert!((calo(Vocazione::Identitaria, f) - 1.5 * mista).abs() < 1e-9);
+            assert!((calo(Vocazione::Governista, f) - 0.5 * mista).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn la_vocazione_pesa_i_termini_del_valore_atteso() {
+        let mut p = Partita::nuova(dati_base(), 7);
+        // `a` alleato in carica nella coalizione del giocatore con l'intesa sotto la base (termine
+        // d'intesa non nullo); `b` e `c` in un'altra coalizione, dove uno guida.
+        p.intesa.valori.iter_mut().for_each(|v| *v = 10.0);
+        let altri: Vec<usize> = (0..p.partiti.len()).filter(|&j| j != p.giocatore).collect();
+        let (a, ultime) = (altri[0], [vec![altri[1], altri[2]]]);
+        let d = Dichiarazione {
+            partiti: vec![a],
+            cessioni: Vec::new(),
+        };
+        let termini = |p: &Partita, j| {
+            let q = Quadro {
+                ultime: &ultime,
+                alleati: vec![a],
+                ..p.quadro()
+            };
+            q.termini(&d, &q.seggi(&d), j)
+        };
+        // (vocazione, peso politiche, peso poltrone); l'intesa non si pesa.
+        let (mut guida, mut intesa) = (false, false);
+        for j in 0..p.partiti.len() {
+            p.partiti[j].vocazione = Vocazione::Mista;
+            let mista = termini(&p, j);
+            for (v, politiche, poltrone) in [
+                (Vocazione::Identitaria, 1.5, 0.5),
+                (Vocazione::Governista, 0.5, 1.5),
+            ] {
+                p.partiti[j].vocazione = v;
+                for ((c, x), (_, y)) in mista.iter().zip(&termini(&p, j)) {
+                    let atteso = match c {
+                        CausaDisponibilita::Distanza => politiche * x,
+                        CausaDisponibilita::Intesa => *x,
+                        _ => poltrone * x,
+                    };
+                    assert!((y - atteso).abs() < 1e-9, "{j} {v:?} {c:?}");
+                }
+            }
+            for (c, x) in mista {
+                guida |= c == CausaDisponibilita::Guida && x != 0.0;
+                intesa |= c == CausaDisponibilita::Intesa && x != 0.0;
+            }
+        }
+        assert!(guida && intesa, "senza Guida e Intesa la prova non prova");
+    }
+
+    /// `valore_al_governo` con un partito misto rende il vecchio restare senza intesa; con la
+    /// vocazione pesa le poltrone e la distanza.
+    #[test]
+    fn valore_al_governo_coi_pesi() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let (c, s) = ([10, 40, 29, 10, 101, 100, 110], [5, 20, 14, 5, 51, 50, 55]);
+        let valore = |p: &Partita, guida| {
+            let q = Quadro {
+                seggi_veri: Some((c.to_vec(), s.to_vec())),
+                ..p.quadro()
+            };
+            legislatura::valore_al_governo(&q, 4, &[4, 5], guida)
+        };
+        let quota =
+            f64::from(c[4] + s[4]) / f64::from(c.iter().sum::<u32>() + s.iter().sum::<u32>());
+        // seggi 4, governare 2, distanza 1, guida 1 (dati di prova); centrodestra a distanza 1.
+        let vecchio = 4.0 * quota + 2.0 - 1.0;
+        assert!((valore(&p, false) - vecchio).abs() < 1e-9);
+        assert!((valore(&p, true) - (vecchio + 1.0)).abs() < 1e-9);
+        p.partiti[4].vocazione = Vocazione::Identitaria;
+        let atteso = 0.5 * (4.0 * quota + 2.0) - 1.5 * 1.0;
+        assert!((valore(&p, false) - atteso).abs() < 1e-9);
+        // La guida pesa le poltrone: identitaria 0,5 × valore_guida (1).
+        assert!((valore(&p, true) - valore(&p, false) - 0.5).abs() < 1e-9);
     }
 
     #[test]

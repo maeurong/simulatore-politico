@@ -378,7 +378,7 @@ mod tests {
         use crate::parlamento::{FormaMisura, costo_fiducia};
         let dati = dati_base();
         let attesa = dati.manopola("costo_fiducia") + dati.manopola("costo_fiducia_distanza") * 0.5;
-        let costo = |forma| costo_fiducia(&dati, forma, 5.0, Some(2.0));
+        let costo = |forma| costo_fiducia(&dati, forma, 5.0, Some(2.0), 1.0);
         assert!((costo(FormaMisura::Riforma) - attesa).abs() < 1e-12);
         assert!((costo(FormaMisura::Elettorale) - 2.0 * attesa).abs() < 1e-12);
     }

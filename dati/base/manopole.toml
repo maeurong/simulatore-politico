@@ -1041,6 +1041,20 @@ min = 0.0
 max = 3.0
 ticket = "20"
 
+# docs/ricerca/modelli/cicli-politico-economici-e-luna-di-miele.md:22 (luna di miele dei leader al primo mandato); estenderla ai leader nuovi dei partiti IA è un'assunzione del piano 8a (la fonte parla di leader al primo mandato); stesso valore di luna_di_miele (valence in più al leader nuovo di un partito IA, che si spegne con ritorno_valence)
+[luna_di_miele_leader]
+valore = 0.328125
+min = 0.0
+max = 3.0
+ticket = "18"
+
+# assunzione del piano 8a, nessuna fonte in docs/ricerca (calo di quota fra i votanti, rispetto al voto precedente, che fa cambiare leader a un partito IA: 0,04 sono 4 punti percentuali di quota fra i votanti)
+[calo_cambio_leader]
+valore = 0.04
+min = 0.01
+max = 0.15
+ticket = "18"
+
 # assunzione del piano 7a, nessuna fonte in docs/ricerca (valence_base del partito del giocatore, uguale per ogni posizione: ticket 20)
 [valence_partito_nuovo]
 valore = 0.0
@@ -1187,3 +1201,24 @@ valore = 1.0
 min = 0.0
 max = 10.0
 ticket = "05"
+
+# docs/ricerca/modelli/abm-elettorali.md:35 (α fra politiche e ufficio, default 0,5); α della vocazione identitaria: peso delle politiche 2α, peso delle poltrone 2(1−α); i tre valori per vocazione sono un'assunzione del piano 8a
+[alfa_identitaria]
+valore = 0.75
+min = 0.5
+max = 1.0
+ticket = "18"
+
+# docs/ricerca/modelli/abm-elettorali.md:35 (α fra politiche e ufficio, default 0,5); α della vocazione mista: peso delle politiche 2α, peso delle poltrone 2(1−α); i tre valori per vocazione sono un'assunzione del piano 8a
+[alfa_mista]
+valore = 0.5
+min = 0.25
+max = 0.75
+ticket = "18"
+
+# docs/ricerca/modelli/abm-elettorali.md:35 (α fra politiche e ufficio, default 0,5); α della vocazione governista: peso delle politiche 2α, peso delle poltrone 2(1−α); i tre valori per vocazione sono un'assunzione del piano 8a
+[alfa_governista]
+valore = 0.25
+min = 0.0
+max = 0.5
+ticket = "18"

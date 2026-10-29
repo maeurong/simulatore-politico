@@ -9,7 +9,7 @@ use crate::elezioni::{LeggeElettorale, SeggiLista};
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::parlamento::proietta;
-use crate::partiti::Partito;
+use crate::partiti::{Partito, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -138,7 +138,7 @@ pub(crate) struct Quadro<'a> {
 impl Quadro<'_> {
     /// Seggi di Camera e Senato per partito al voto con `d`: riparto sul sondaggio pubblico, poi
     /// le cessioni; zero se il riparto rifiuta i voti.
-    pub(super) fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
+    pub(crate) fn seggi(&self, d: &Dichiarazione) -> (Vec<u32>, Vec<u32>) {
         if let Some(veri) = &self.seggi_veri {
             return veri.clone();
         }
@@ -161,12 +161,24 @@ impl Quadro<'_> {
         (camera, senato)
     }
 
-    /// I termini, già pesati e con la loro causa, del valore atteso per `j` al voto con `d` e i
-    /// `seggi` di `d`, nella sua coalizione `k`: `peso_seggi_coalizione · s_j / S`,
-    /// `peso_governare · P_k` (coi seggi veri, 1 o 0), `− peso_distanza_coalizione · d_jk`, `valore_guida · [j guida k]`,
+    /// `(peso_politiche, peso_poltrone)` della vocazione di `j` (piano 8a; misto 1 e 1).
+    pub(super) fn pesi(&self, j: usize) -> (f64, f64) {
+        let v = self
+            .partiti
+            .get(j)
+            .map_or(Vocazione::Mista, |p| p.vocazione);
+        (v.peso_politiche(self.dati), v.peso_poltrone(self.dati))
+    }
+
+    /// I termini, già pesati dalla vocazione di `j` (piano 8a: `poltrone` e `politiche` sono i
+    /// suoi `peso_poltrone` e `peso_politiche`, vedi `pesi`) e con la loro causa, del valore
+    /// atteso per `j` al voto con `d` e i `seggi` di `d`, nella sua coalizione `k`:
+    /// `poltrone · peso_seggi_coalizione · s_j / S`, `poltrone · peso_governare · P_k` (coi seggi
+    /// veri, 1 o 0), `− politiche · peso_distanza_coalizione · d_jk`,
+    /// `poltrone · valore_guida · [j guida k]`,
     /// `− peso_intesa_coalizione · max(0, intesa_base − intesa_j) / 100 · [j alleato in carica e
-    /// k del giocatore]`.
-    pub(super) fn termini(
+    /// k del giocatore]` (l'intesa non è pesata).
+    pub(crate) fn termini(
         &self,
         d: &Dichiarazione,
         (camera, senato): &(Vec<u32>, Vec<u32>),
@@ -207,11 +219,22 @@ impl Quadro<'_> {
             0.0
         };
         use CausaDisponibilita as C;
+        let (politiche, poltrone) = self.pesi(j);
         [
-            (C::Seggi, m("peso_seggi_coalizione") * quota),
-            (C::Governare, m("peso_governare") * governare),
-            (C::Distanza, -m("peso_distanza_coalizione") * distanza),
-            (C::Guida, if guida { m("valore_guida") } else { 0.0 }),
+            (C::Seggi, poltrone * m("peso_seggi_coalizione") * quota),
+            (C::Governare, poltrone * m("peso_governare") * governare),
+            (
+                C::Distanza,
+                -politiche * m("peso_distanza_coalizione") * distanza,
+            ),
+            (
+                C::Guida,
+                if guida {
+                    poltrone * m("valore_guida")
+                } else {
+                    0.0
+                },
+            ),
             (C::Intesa, -m("peso_intesa_coalizione") * intesa),
         ]
     }
