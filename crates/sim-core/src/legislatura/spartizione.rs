@@ -172,6 +172,7 @@ mod tests {
                 cassa: 0,
                 senza_seggi: 0,
                 ultimo_passo: 0.0,
+                minaccia: false,
             })
             .collect()
     }

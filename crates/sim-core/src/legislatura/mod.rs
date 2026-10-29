@@ -53,6 +53,7 @@ pub enum Fase {
 /// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
 /// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
 /// `protesta`: in questa legislatura è già nato un partito di protesta; azzerata al voto.
+/// `frange`: i partiti nati da una scissione in questa legislatura; azzerate al voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -71,6 +72,7 @@ pub struct Legislatura {
     pub voto_anticipato: bool,
     pub riposizionato: bool,
     pub protesta: bool,
+    pub frange: Vec<usize>,
 }
 
 impl Legislatura {

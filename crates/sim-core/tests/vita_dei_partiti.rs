@@ -182,3 +182,208 @@ fn una_sola_protesta_a_legislatura() {
     assert_eq!(p.partiti().len(), 7);
     assert!(p.vista().mosse.iter().all(|m| !m.testo.contains(PROTESTA)));
 }
+
+const CENTRODESTRA: usize = 4;
+const USCITA: &str =
+    "Esce dalla maggioranza: nei sondaggi il voto gli vale più che restare al governo";
+
+/// `p` con la percepita del partito `j` spostata di `d` dalla dichiarata.
+fn scivolata(p: &Partita, j: usize, d: f64) -> Partita {
+    let x = p.partiti()[j].posizione_dichiarata + d;
+    edita(p, |v| v["partiti"][j]["posizione_percepita"] = x.into()).unwrap()
+}
+
+fn righe(p: &Partita, testo: &str) -> usize {
+    (p.vista().mosse.iter())
+        .filter(|m| m.testo.contains(testo))
+        .count()
+}
+
+fn virgola(x: f64) -> String {
+    format!("{x:.1}").replace('.', ",")
+}
+
+/// La partita di prova con `margine_voto_anticipato` a −100: ogni frangia di governo vuole uscire.
+fn frangia_che_vuole_uscire() -> Partita {
+    let prefisso = "[margine_voto_anticipato]\nvalore = 0.5\nmin = ";
+    let f = comune::imposta(file_base(), "manopole", prefisso, "-100.0");
+    let f = comune::imposta(
+        f,
+        "manopole",
+        "[margine_voto_anticipato]\nvalore = ",
+        "-100.0",
+    );
+    Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1)
+}
+
+/// Il centrodestra, al governo col giocatore, a un punto: la frangia nasce in chiusura col 12%
+/// dei seggi (somme invariate) e della cassa (più le entrate del turno, che toccano a tutti e
+/// due), nella coalizione senza dicasteri; l'origine riparte con la percepita sulla dichiarata.
+/// Col margine di base la frangia resta.
+#[test]
+fn a_un_punto_il_partito_si_scinde() {
+    let p = Partita::nuova(dati_base(), 1);
+    let (camera, senato) = (
+        p.parlamento().seggi_camera.clone(),
+        p.parlamento().seggi_senato.clone(),
+    );
+    let cassa = p.partiti()[CENTRODESTRA].cassa;
+    let x = p.partiti()[CENTRODESTRA].posizione_dichiarata + 1.0;
+    let mut p = scivolata(&p, CENTRODESTRA, 1.0);
+    assert!(p.governo().al_governo(CENTRODESTRA));
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    let (o, f) = (&p.partiti()[CENTRODESTRA], &p.partiti()[7]);
+    assert_eq!(f.id, "nuovo_7");
+    assert_eq!((f.posizione_dichiarata, f.posizione_percepita), (x, x));
+    assert_eq!(o.posizione_percepita, o.posizione_dichiarata);
+    assert_eq!((f.vocazione, f.regola), (o.vocazione, o.regola));
+    assert!(!f.leader.is_empty() && f.leader != o.leader);
+    let quota = |n: u32| (f64::from(n) * 0.12).round() as u32;
+    let pl = p.parlamento();
+    let (c, s) = (pl.seggi_camera[7], pl.seggi_senato[7]);
+    assert!(c > 0 && s > 0);
+    assert_eq!(c, quota(camera[CENTRODESTRA]));
+    assert_eq!(s, quota(senato[CENTRODESTRA]));
+    assert_eq!(pl.seggi_camera[CENTRODESTRA] + c, camera[CENTRODESTRA]);
+    assert_eq!(pl.seggi_senato[CENTRODESTRA] + s, senato[CENTRODESTRA]);
+    assert_eq!(
+        pl.seggi_camera.iter().sum::<u32>(),
+        camera.iter().sum::<u32>()
+    );
+    assert_eq!(
+        pl.seggi_senato.iter().sum::<u32>(),
+        senato.iter().sum::<u32>()
+    );
+    assert!(f.cassa >= (cassa as f64 * 0.12).round() as i64);
+    assert!(o.cassa > f.cassa);
+    assert!(p.governo().coalizione.contains(&7));
+    assert!(!p.governo().dicasteri.contains(&7));
+    assert_eq!(p.legislatura().frange, vec![7]);
+    let riga = format!(
+        "Scissione: nasce {} con {c} deputati e {s} senatori, sulla posizione {}",
+        f.nome,
+        virgola(x)
+    );
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.partito == "centrodestra" && m.testo == riga),
+        "{:?}",
+        p.vista().mosse
+    );
+    assert_eq!(righe(&p, USCITA), 0);
+}
+
+/// A 0,6 una riga di minaccia, nessuna nascita; il turno dopo, ancora sopra 0,5, nessuna riga
+/// ripetuta; tornata sotto, la minaccia si spegne.
+#[test]
+fn a_mezzo_punto_solo_la_minaccia() {
+    let p = Partita::nuova(dati_base(), 1);
+    let d = p.partiti()[CENTRODESTRA].posizione_dichiarata;
+    let mut p = scivolata(&p, CENTRODESTRA, 0.6);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 7);
+    let distanza = p.partiti()[CENTRODESTRA].posizione_percepita - d;
+    let riga = format!(
+        "Minaccia di scissione: la posizione percepita dista {} dalla dichiarata",
+        virgola(distanza)
+    );
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.partito == "centrodestra" && m.testo == riga),
+        "{:?}",
+        p.vista().mosse
+    );
+    assert!(p.partiti()[CENTRODESTRA].minaccia);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    chiudi_col_bilancio(&mut p);
+    assert!(p.partiti()[CENTRODESTRA].posizione_percepita - d >= 0.5);
+    assert_eq!(righe(&p, "Minaccia di scissione"), 0);
+    assert_eq!(p.partiti().len(), 7);
+    let mut p = scivolata(&p, CENTRODESTRA, 0.0);
+    chiudi_col_bilancio(&mut p);
+    assert!(!p.partiti()[CENTRODESTRA].minaccia);
+}
+
+/// La partita vera: il giocatore resta allo stesso indice e senza leader, la frangia è IA.
+#[test]
+fn si_scinde_anche_il_partito_del_giocatore() {
+    let mut p = comune::fondata(4.5);
+    p.chiudi_turno(); // voto
+    let g = p.giocatore();
+    let n = p.partiti().len();
+    let mut p = scivolata(&p, g, -1.0);
+    p.chiudi_turno();
+    assert_eq!(p.giocatore(), g);
+    assert_eq!(p.partiti()[g].id, "giocatore");
+    assert!(p.partiti()[g].leader.is_empty());
+    assert_eq!(p.partiti()[g].posizione_percepita, 4.5);
+    let f = &p.partiti()[n];
+    assert_eq!(f.id, format!("nuovo_{n}"));
+    assert!(!f.leader.is_empty());
+    assert_eq!(f.posizione_dichiarata, 3.5);
+    assert!(
+        (p.vista().mosse.iter())
+            .any(|m| m.partito == "giocatore" && m.testo.starts_with("Scissione")),
+        "{:?}",
+        p.vista().mosse
+    );
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+}
+
+#[test]
+fn la_frangia_esce_quando_le_conviene() {
+    let p = frangia_che_vuole_uscire();
+    let mut p = scivolata(&p, CENTRODESTRA, 1.0);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    assert!(!p.governo().coalizione.contains(&7));
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.partito == "nuovo_7" && m.testo == USCITA),
+        "{:?}",
+        p.vista().mosse
+    );
+    // Rimpasto con la maggioranza, crisi il turno dopo senza.
+    let pl = p.parlamento();
+    let seggi = |v: &[u32]| -> u32 { p.governo().coalizione.iter().map(|&j| v[j]).sum() };
+    let maggioranza = 2 * seggi(&pl.seggi_camera) > pl.seggi_camera.iter().sum()
+        && 2 * seggi(&pl.seggi_senato) > pl.seggi_senato.iter().sum();
+    let crisi = p.legislatura().crisi == Some(p.vista().turno);
+    assert_ne!(maggioranza, crisi);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    // Fuori dalla coalizione non esce più.
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(righe(&p, USCITA), 0);
+}
+
+/// Con la frangia che vuole uscire: in crisi, con le dimissioni e nel turno del voto resta.
+#[test]
+fn la_frangia_non_esce_fuori_finestra() {
+    let p = scivolata(&frangia_che_vuole_uscire(), CENTRODESTRA, 1.0);
+    let mut p = edita(&p, |j| j["legislatura"]["crisi"] = 0.into()).unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    assert_eq!(righe(&p, USCITA), 0);
+    assert!(p.governo().coalizione.contains(&7));
+    let p = scivolata(&frangia_che_vuole_uscire(), CENTRODESTRA, 1.0);
+    let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = true.into()).unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    assert_eq!(righe(&p, USCITA), 0);
+    let mut p = frangia_che_vuole_uscire();
+    al_turno(&mut p, 19);
+    // Un punto e mezzo: l'aula del turno ne riporta indietro una parte.
+    let mut p = scivolata(&p, CENTRODESTRA, 1.5);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    assert_eq!(righe(&p, USCITA), 0);
+    assert!(p.legislatura().frange.is_empty());
+}
+
+#[test]
+fn la_scissione_sopravvive_al_salvataggio() {
+    let mut p = scivolata(&Partita::nuova(dati_base(), 1), CENTRODESTRA, 1.0);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 8);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    let e = edita(&p, |j| j["legislatura"]["frange"] = serde_json::json!([8])).unwrap_err();
+    assert!(e.to_string().contains("legislatura.frange"), "{e}");
+}

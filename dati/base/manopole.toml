@@ -1306,3 +1306,24 @@ valore = 1.0
 min = 0.5
 max = 2.0
 ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:119 (distanza fra percepita e dichiarata a cui il partito si scinde: 1 punto, come in spec; nessuna fonte usa questa misura, astrazione di gioco; intervallo 0,5-2 assunzione del piano 8b)
+[soglia_scissione]
+valore = 1.0
+min = 0.5
+max = 2.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:119 (distanza fra percepita e dichiarata a cui il partito minaccia la scissione: 0,5, come in spec; astrazione di gioco; intervallo 0,25-1 assunzione del piano 8b)
+[minaccia_scissione]
+valore = 0.5
+min = 0.25
+max = 1.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:117 (quota dei seggi che segue la scissione: 12%, mediana delle scissioni alla Camera 2010-2026, intervallo 5-30%); :118 (la cassa segue nella stessa proporzione) e il voto precedente dei gruppi anche, assunzione del piano 8b
+[quota_scissione]
+valore = 0.12
+min = 0.05
+max = 0.3
+ticket = "18"

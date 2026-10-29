@@ -94,6 +94,9 @@ pub struct Partito {
     pub senza_seggi: u8,
     /// L'ultimo spostamento della dichiarata, col segno: lo ripete o lo inverte Hunter.
     pub ultimo_passo: f64,
+    /// Ha già minacciato la scissione (scelta 7 del piano 8b); si spegne quando la percepita torna
+    /// sotto `minaccia_scissione` dalla dichiarata.
+    pub minaccia: bool,
 }
 
 impl Partito {
@@ -158,6 +161,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             cassa: 0,
             senza_seggi: 0,
             ultimo_passo: 0.0,
+            minaccia: false,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);

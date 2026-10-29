@@ -192,6 +192,7 @@ impl Partita {
                 voto_anticipato: false,
                 riposizionato: false,
                 protesta: false,
+                frange: Vec::new(),
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -217,6 +218,7 @@ impl Partita {
                 voto_anticipato: false,
                 riposizionato: false,
                 protesta: false,
+                frange: Vec::new(),
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -305,12 +307,12 @@ impl Partita {
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
     // IA, se nel turno nessuno ne ha chiesto uno → firme dell'abrogativo →
-    // sfiducia del giocatore all'opposizione) → esercizio provvisorio senza bilancio, dimissioni
-    // → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
+    // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
+    // dimissioni → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
     // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
-    // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati
-    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
+    // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
+    // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
     // governo IA, sul sondaggio appena rilevato (`voto_anticipato`) → fine della crisi
     // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
     // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
@@ -345,6 +347,9 @@ impl Partita {
         } else {
             self.aula(occupato)
         };
+        // Dopo l'aula, dove la percepita scivola coi voti, e prima del motore (scelta 7 del piano
+        // 8b).
+        self.scissioni();
         // Esercizio provvisorio (iter-legislativo-italiano:86): un turno solo, poi il governo cade,
         // col bilancio respinto come con quello mai presentato.
         if self.legislatura.fase == Fase::Ordinaria
@@ -404,7 +409,7 @@ impl Partita {
         // Prima delle soglie dei ministri: chi si dimette nel turno conta ancora nella media.
         self.pressioni_intesa();
         self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
-        let escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
+        let mut escono = (self.intesa).soglie(&self.dati, self.turno, &self.alleati());
         let ritorno = self.dati.manopola("ritorno_valence");
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
@@ -414,9 +419,15 @@ impl Partita {
             self.leader_dopo_il_voto();
         }
         // Uscite e crisi (scelta 10 del piano 7b); nel turno del voto nessuna uscita, e la crisi
-        // l'ha già chiusa `vota_parlamento`.
+        // l'ha già chiusa `vota_parlamento`. Con loro escono le frange di governo che lo vogliono
+        // (scelta 8 del piano 8b).
         let l = &self.legislatura;
         if l.fase == Fase::Ordinaria && !l.dimissioni && !di_voto {
+            for j in self.frange_in_uscita() {
+                if !escono.contains(&j) {
+                    escono.push(j);
+                }
+            }
             self.uscite(&escono);
         }
         // Prima della fine della crisi, che la chiude: in crisi il governo IA non va al voto.
@@ -2061,6 +2072,7 @@ impl Partita {
         l.voto_anticipato = false;
         l.riposizionato = false;
         l.protesta = false;
+        l.frange.clear();
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -3531,6 +3543,10 @@ impl Partita {
         ok(
             unici(l.coalizioni.iter().flatten().copied()),
             "legislatura.coalizioni non disgiunte",
+        )?;
+        ok(
+            l.frange.iter().all(|&j| j < n) && unici(l.frange.iter().copied()),
+            "legislatura.frange con un partito fuori dai partiti o ripetuto",
         )?;
         ok(
             l.dichiarazione.as_ref().is_none_or(|d| {
