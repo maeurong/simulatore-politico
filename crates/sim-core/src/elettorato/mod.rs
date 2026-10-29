@@ -407,6 +407,15 @@ impl Elettorato {
         el
     }
 
+    /// Un partito in coda: giudizio zero e voto precedente zero, prima dell'astensione.
+    pub(crate) fn aggiungi_partito(&mut self) {
+        for g in &mut self.gruppi {
+            g.giudizio.push(0.0);
+            let astensione = g.voto_precedente.len().saturating_sub(1);
+            g.voto_precedente.insert(astensione, 0.0);
+        }
+    }
+
     /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti senza le leve di
     /// reddito (`lordo_irpef`), con gli scaglioni `s`.
     pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {

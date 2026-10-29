@@ -49,7 +49,8 @@ pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
     e.into_iter().map(|x| x / somma).collect()
 }
 
-/// Utilità del gruppo `i` al punto `x` (1..=7): un valore per partito, poi l'astensione.
+/// Utilità del gruppo `i` al punto `x` (1..=7): un valore per partito, poi l'astensione. Uno
+/// sciolto vale −∞: l'astensione è sempre finita, quindi il softmax gli dà zero senza NaN.
 fn utilita(
     dati: &DatiGioco,
     el: &Elettorato,
@@ -67,6 +68,9 @@ fn utilita(
         .iter()
         .enumerate()
         .map(|(j, p)| {
+            if p.sciolto {
+                return f64::NEG_INFINITY;
+            }
             let giudizio = if governo.al_governo(j) {
                 g.giudizio[j]
             } else {
@@ -185,5 +189,22 @@ impl Elettorato {
         for (g, pi) in self.gruppi.iter_mut().zip(iniziali) {
             g.voto_precedente = pi;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Lo sciolto (−∞) prende zero, gli altri sommano a 1, nessun NaN; anche col voto precedente
+    /// allo sciolto (la fedeltà φ sommata a −∞ resta −∞).
+    #[test]
+    fn lo_sciolto_vale_zero_nel_softmax() {
+        let q = softmax(&[f64::NEG_INFINITY, 0.3, -1.0]);
+        assert_eq!(q[0], 0.0);
+        assert!(q.iter().all(|x| x.is_finite()));
+        assert!((q.iter().sum::<f64>() - 1.0).abs() < 1e-12);
+        let q = softmax(&[f64::NEG_INFINITY + 2.0, 0.3, -1.0]);
+        assert_eq!(q[0], 0.0);
     }
 }

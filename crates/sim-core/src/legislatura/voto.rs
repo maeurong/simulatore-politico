@@ -32,6 +32,13 @@ pub struct EsitoElezioni {
     pub coalizioni: Vec<Vec<String>>,
 }
 
+impl EsitoElezioni {
+    /// La quota del partito `id`; nessuna se non c'era a questo voto.
+    pub(crate) fn quota(&self, id: &str) -> Option<f64> {
+        self.voti.iter().find(|v| v.partito == id).map(|v| v.quota)
+    }
+}
+
 /// A chi va l'incarico dopo il voto: la coalizione con la maggioranza assoluta in entrambe le
 /// Camere, del giocatore o IA (indici di partito). `Guida`: dopo una caduta, il giocatore sta
 /// nella maggioranza del Capo dello Stato ma non è il primo per seggi.

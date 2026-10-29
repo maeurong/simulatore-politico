@@ -68,14 +68,15 @@ fn senza_premio_si_allarga() {
 }
 
 /// In trattativa, Camere alla pari con l'`incarico` dato: il giocatore con metà esatta di
-/// entrambe le Camere, gli altri con l'altra metà e la destra senza seggi. Nessuna maggioranza,
-/// né con lui né senza; i seggi sommano ai totali, 400 e 200.
+/// entrambe le Camere, gli altri con l'altra metà, l'estrema sinistra (sciolta dopo il secondo
+/// voto) e la destra senza seggi. Nessuna maggioranza, né con lui né senza; i seggi sommano ai
+/// totali, 400 e 200.
 fn alla_pari(p: &Partita, incarico: serde_json::Value) -> Partita {
     comune::edita(p, |j| {
         assert_eq!(j["legislatura"]["totali"], json!([400, 200]));
         j["legislatura"]["incarico"] = incarico;
-        j["parlamento"]["seggi_camera"] = json!([40, 40, 30, 30, 30, 0, 30, 200]);
-        j["parlamento"]["seggi_senato"] = json!([20, 20, 15, 15, 15, 0, 15, 100]);
+        j["parlamento"]["seggi_camera"] = json!([0, 80, 30, 30, 30, 0, 30, 200]);
+        j["parlamento"]["seggi_senato"] = json!([0, 40, 15, 15, 15, 0, 15, 100]);
     })
     .unwrap()
 }
@@ -661,7 +662,9 @@ fn in_crisi(p: Partita, intesa: f64) -> Partita {
 }
 
 const SI_DIMETTE: &str =
-    "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno";
+    "Si dimette: nessun partito contiguo gli ridà una maggioranza che gli convenga";
+const SI_DIMETTE_ROTTURA: &str =
+    "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui";
 const SI_DIMETTE_IN_PROVVISORIO: &str =
     "Si dimette: in esercizio provvisorio non allarga la coalizione";
 
@@ -675,10 +678,30 @@ fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
         let l = p.legislatura();
         assert!(!l.allargati.contains(&uscente), "{intesa}");
         assert!(!l.allargati.contains(&p.giocatore()));
-        // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
+        // L'uscente (Destra) è l'unico vicino con seggi e ridarebbe la maggioranza: ha rotto.
         assert!(l.dimissioni);
-        assert!(p.vista().mosse.iter().any(|m| m.testo == SI_DIMETTE));
+        let mosse = &p.vista().mosse;
+        assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE_ROTTURA));
+        assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE));
     }
+}
+
+/// Il giocatore tiene quasi tutti i seggi: nemmeno col vicino la coalizione IA ha la maggioranza.
+#[test]
+fn senza_vicini_il_motivo_resta_nessun_partito() {
+    let p = all_opposizione();
+    let (n, g) = (p.partiti().len(), p.giocatore());
+    let ripartisci = |totale: u32, altri: u32| -> Vec<u32> {
+        let resto = totale - altri * (n as u32 - 1);
+        (0..n).map(|j| if j == g { resto } else { altri }).collect()
+    };
+    let p = comune::con_seggi(&p, &ripartisci(400, 10), &ripartisci(200, 5));
+    let p = edita(&p, |j| j["intesa"]["valori"] = json!(vec![100.0; n])).unwrap();
+    let p = in_crisi(p, 10.0);
+    assert!(p.legislatura().dimissioni);
+    let mosse = &p.vista().mosse;
+    assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE));
+    assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE_ROTTURA));
 }
 
 /// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista

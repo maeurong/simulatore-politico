@@ -6,7 +6,7 @@ use crate::elettorato::{PUNTI, media_pesata};
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::partita::Partita;
-use crate::partiti::{ID_GIOCATORE, Partito, Vocazione};
+use crate::partiti::{ID_GIOCATORE, Partito, Regola, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -64,6 +64,10 @@ fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
         valence_base: base,
         vocazione: Vocazione::Mista,
         leader: String::new(),
+        regola: Regola::Sticker,
+        sciolto: false,
+        cassa: dati.manopola("dote_partito_nuovo").round() as i64,
+        senza_seggi: 0,
     }
 }
 

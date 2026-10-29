@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod cassa;
 mod coalizione;
 mod crisi;
 mod eredita;

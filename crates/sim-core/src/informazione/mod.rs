@@ -74,6 +74,28 @@ impl Informazione {
         self.bias = bias(dati, caso, n_partiti + 1);
     }
 
+    /// Un partito in coda, prima dell'astensione: bias, poi un effetto per istituto da
+    /// `Flusso::Sondaggi`; quota zero in ogni rilevazione e incrocio fino al sondaggio dopo.
+    pub(crate) fn aggiungi_partito(&mut self, dati: &DatiGioco, caso: &mut Caso) {
+        let prima_dell_astensione = |v: &mut Vec<f64>, x: f64| {
+            v.insert(v.len().saturating_sub(1), x);
+        };
+        let b = dati.manopola("sigma_bias_comune") * caso.normale(Flusso::Sondaggi);
+        prima_dell_astensione(&mut self.bias, b);
+        let s_ist = dati.manopola("sigma_istituto");
+        for h in &mut self.effetti_istituto {
+            prima_dell_astensione(h, s_ist * caso.normale(Flusso::Sondaggi));
+        }
+        let s = &mut self.sondaggio;
+        let incroci = (s.condizioni.iter_mut())
+            .chain(&mut s.fasce)
+            .chain(&mut s.regioni);
+        for q in (s.istituti.iter_mut().map(|r| &mut r.quote)).chain(incroci.map(|i| &mut i.quote))
+        {
+            prima_dell_astensione(q, 0.0);
+        }
+    }
+
     /// Nuovo sondaggio dalle intenzioni vere.
     pub(crate) fn rileva(
         &mut self,

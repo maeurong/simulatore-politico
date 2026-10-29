@@ -84,6 +84,8 @@ macro_rules! scenario {
             pub governo: DatoGoverno,
             /// Id di partito, per coalizione.
             pub coalizioni: Vec<Vec<String>>,
+            /// Nomi da cui si estraggono quelli dei partiti nuovi.
+            pub nomi_partiti: Vec<String>,
         }
 
         impl Scenario {

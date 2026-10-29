@@ -1250,3 +1250,38 @@ valore = 0.5
 min = 0.0
 max = 2.0
 ticket = "18"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:82 (il montante del 2 per mille è 32.584.199 € l'anno: un quarto a turno)
+[due_per_mille_turno]
+valore = 8146050.0
+min = 2000000.0
+max = 12000000.0
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:89 (donazioni detratte, circa 22 milioni l'anno: un quarto a turno)
+[donazioni_turno]
+valore = 5500000.0
+min = 1000000.0
+max = 10000000.0
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:90-92, :95 (la parte delle entrate che resta dopo il funzionamento: una legislatura di entrate vale dieci volte la campagna)
+[quota_libera_entrate]
+valore = 0.1
+min = 0.02
+max = 0.3
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:91 (dote di un partito nuovo: 0,5-1,5 milioni)
+[dote_partito_nuovo]
+valore = 1000000.0
+min = 500000.0
+max = 1500000.0
+ticket = "25"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca (quanti turni d'entrate del turno zero hanno in cassa i partiti dello scenario)
+[turni_cassa_iniziale]
+valore = 20.0
+min = 4.0
+max = 40.0
+ticket = "25"

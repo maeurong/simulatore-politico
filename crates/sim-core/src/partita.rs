@@ -14,7 +14,7 @@ use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
-    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito,
+    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito, cassa,
     coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
@@ -33,10 +33,11 @@ use crate::vista::{
 use serde::{Deserialize, Serialize};
 
 mod ia;
+mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 9;
+pub const VERSIONE_SCHEMA: u32 = 10;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,6 +114,15 @@ pub struct Partita {
     mosse: Vec<MossaIa>,
 }
 
+/// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
+/// zero a tutti se nessuno vota.
+fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
+    let (astensione, quote) = vero.nazionali.split_last().unwrap_or((&0.0, &[]));
+    let votanti = 1.0 - astensione;
+    let quota = |q: &f64| if votanti > 0.0 { q / votanti } else { 0.0 };
+    quote.iter().map(quota).collect()
+}
+
 /// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
 /// le disposizioni in vigore alle leggi del giocatore nell'eredità.
 fn etichetta_legge(id: u32, anno: u16) -> String {
@@ -141,9 +151,19 @@ impl Partita {
             })
             .collect();
         let fondata = nuovo.is_some();
+        let dello_scenario = partiti.len();
         partiti.extend(nuovo);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
+        // Cassa iniziale: `turni_cassa_iniziale` turni d'entrate col voto vero al posto
+        // dell'ultimo voto. Il fondato ha già la dote.
+        let quote =
+            quote_fra_i_votanti(&Intenzioni::calcola(&dati, &elettorato, &partiti, &governo));
+        let turni = dati.manopola("turni_cassa_iniziale");
+        let iniziali = cassa::entrate(&dati, &quote, &quote);
+        for (p, e) in partiti.iter_mut().zip(iniziali).take(dello_scenario) {
+            p.cassa = (e as f64 * turni).round() as i64;
+        }
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
@@ -239,6 +259,31 @@ impl Partita {
         };
         p.partenza = p.indicatori();
         p
+    }
+
+    /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
+    /// partito allungati: elettorato e informazione, nessun seggio, intesa di base senza
+    /// ultimatum. Restituisce il suo indice.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "lo chiameranno protesta e scissione")
+    )]
+    pub(crate) fn aggiungi_partito(&mut self, mut p: Partito) -> usize {
+        p.id = format!("nuovo_{}", self.partiti.len());
+        self.partiti.push(p);
+        self.elettorato.aggiungi_partito();
+        self.informazione
+            .aggiungi_partito(&self.dati, &mut self.caso);
+        self.parlamento.seggi_camera.push(0);
+        self.parlamento.seggi_senato.push(0);
+        self.intesa.valori.push(self.dati.manopola("intesa_base"));
+        self.intesa.ultimatum.push(None);
+        self.partiti.len().saturating_sub(1)
+    }
+
+    /// I partiti non sciolti.
+    pub(crate) fn attivi(&self) -> usize {
+        self.partiti.iter().filter(|p| !p.sciolto).count()
     }
 
     /// Debito in % del PIL dell'anno mobile (come spread e regole UE), spread in punti base,
@@ -350,6 +395,7 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        self.incassa(&vero);
         let di_voto = self.legislatura.turno_di_voto(self.turno);
         if di_voto {
             self.vota_parlamento(&vero);
@@ -1188,14 +1234,10 @@ impl Partita {
                 let delta = -costo_quota * (richiesta - offerta).max(0.0);
                 variazioni.push((j, CausaIntesa::QuotaScoperta, delta));
             }
-            if let Some(voti) = self
-                .legislatura
-                .elezioni
-                .first()
-                .and_then(|e| e.voti.get(j))
-            {
+            let id = self.partiti.get(j).map_or("", |p| p.id.as_str());
+            if let Some(quota) = (self.legislatura.elezioni.first()).and_then(|e| e.quota(id)) {
                 let sondaggio = legislatura::quota_fra_i_votanti(&self.informazione.sondaggio, j);
-                let delta = -costo_calo * (voti.quota - sondaggio).max(0.0) * 100.0;
+                let delta = -costo_calo * (quota - sondaggio).max(0.0) * 100.0;
                 variazioni.push((j, CausaIntesa::SondaggiInCalo, delta));
             }
         }
@@ -1741,6 +1783,25 @@ impl Partita {
         &self.elettorato
     }
 
+    /// Entrate della chiusura (scelta 10): 2 per mille sulla quota all'ultimo voto, abbinata per
+    /// id (zero a chi non c'era), donazioni sull'intenzione vera. Prima del primo voto il 2 per
+    /// mille usa l'intenzione vera, come la cassa iniziale. Gli sciolti non incassano.
+    fn incassa(&mut self, vero: &Intenzioni) {
+        let intenzione = quote_fra_i_votanti(vero);
+        let ultimo_voto: Vec<f64> = match self.legislatura.elezioni.first() {
+            Some(e) => (self.partiti.iter())
+                .map(|p| e.quota(&p.id).unwrap_or(0.0))
+                .collect(),
+            None => intenzione.clone(),
+        };
+        let entrate = cassa::entrate(&self.dati, &ultimo_voto, &intenzione);
+        for (p, e) in self.partiti.iter_mut().zip(entrate) {
+            if !p.sciolto {
+                p.cassa = p.cassa.saturating_add(e);
+            }
+        }
+    }
+
     /// Intenzioni di voto vere per gruppo e nazionali.
     pub fn intenzioni_vere(&self) -> Intenzioni {
         Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
@@ -2002,6 +2063,7 @@ impl Partita {
         if nessuno(&pl.seggi_camera) && nessuno(&pl.seggi_senato) {
             self.fine = Some(Fine::SenzaSeggi);
         }
+        self.scioglimenti();
     }
 
     fn quadro(&self) -> Quadro<'_> {
@@ -2073,7 +2135,7 @@ impl Partita {
     /// La disponibilità di ogni partito IA sulla dichiarazione in corso; senza dichiarazione,
     /// sulla coalizione del giocatore dell'ultimo voto (alla fondazione, lui da solo). In
     /// trattativa con l'incarico o in crisi al governo, quella dei partiti fuori dalla coalizione
-    /// a entrarvi; nessuna con la caduta certa.
+    /// a entrarvi; nessuna con la caduta certa. Gli sciolti non hanno voce.
     pub fn disponibilita(&self) -> Vec<VoceDisponibilita> {
         if self.caduta_certa() {
             return Vec::new();
@@ -2082,7 +2144,8 @@ impl Partita {
             return self.quadro().disponibilita(&self.dichiarazione_corrente());
         }
         let c = self.coalizione_del_giocatore();
-        self.dopo_il_voto((0..self.partiti.len()).filter(|j| !c.contains(j)), &[])
+        let fuori = |j: &usize| !c.contains(j) && self.partiti.get(*j).is_some_and(|p| !p.sciolto);
+        self.dopo_il_voto((0..self.partiti.len()).filter(fuori), &[])
     }
 
     /// La disponibilità dei partiti di `quali` a entrare nella coalizione del giocatore, allargata
@@ -2110,7 +2173,7 @@ impl Partita {
     /// # Errors
     /// `Comando` col nome del partito (l'id se sconosciuto), e la partita resta identica: lista
     /// vuota, fuori dalla trattativa con l'incarico e dalla crisi, in crisi con la caduta certa,
-    /// sconosciuto, ripetuto, già nella coalizione, o con la causa per ogni membro non
+    /// sconosciuto, sciolto, ripetuto, già nella coalizione, o con la causa per ogni membro non
     /// disponibile.
     pub(crate) fn allarga(&mut self, ids: &[String]) -> Result<(), Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
@@ -2139,6 +2202,9 @@ impl Partita {
                 return ko(format!("Partito sconosciuto: {id}"));
             };
             let nome = &self.partiti[j].nome;
+            if self.partiti[j].sciolto {
+                return ko(format!("{nome} si è sciolto"));
+            }
             if c.contains(&j) {
                 return ko(format!("{nome} è già nella coalizione"));
             }
@@ -2960,6 +3026,9 @@ impl Partita {
                 al_governo: self.governo.al_governo(j),
                 vocazione: p.vocazione,
                 leader: p.leader.clone(),
+                regola: p.regola,
+                sciolto: p.sciolto,
+                cassa: p.cassa,
             })
             .collect()
     }
@@ -3228,6 +3297,7 @@ impl Partita {
         partita
             .disposizioni
             .controlla(&partita.dati, partita.turno)?;
+        partita.controlla_elenco_partiti()?;
         let n = partita.partiti.len();
         partita.parlamento.controlla(
             &partita.dati,
@@ -3279,8 +3349,47 @@ impl Partita {
         Ok(())
     }
 
-    /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati: il
-    /// partito del giocatore, se fondato, è l'ultimo, in più di quelli dello scenario.
+    /// L'elenco dei partiti di un salvataggio, prima di ogni vettore per partito: quelli dello
+    /// scenario nell'ordine, poi al più il partito fondato dal giocatore, poi solo `nuovo_<indice>`;
+    /// id unici, il giocatore fra i partiti (il fondato, se c'è) e mai sciolto, al più
+    /// `MASSIMO_PARTITI` attivi.
+    fn controlla_elenco_partiti(&self) -> Result<(), Errore> {
+        let n = self.partiti.len();
+        let scenario = &self.dati.scenario().partiti;
+        ok(
+            n >= scenario.len(),
+            &format!("partiti ha {n} voci, ne servono almeno {}", scenario.len()),
+        )?;
+        for (p, s) in self.partiti.iter().zip(scenario) {
+            ok(
+                p.id == s.id,
+                &format!("partito dello scenario mancante o fuori ordine: {}", s.id),
+            )?;
+        }
+        let mut visti = std::collections::BTreeSet::new();
+        for (k, p) in self.partiti.iter().enumerate() {
+            ok(visti.insert(&p.id), &format!("partito ripetuto: {}", p.id))?;
+            let in_piu_ok = k < scenario.len()
+                || (k == scenario.len() && p.id == ID_GIOCATORE)
+                || p.id == format!("nuovo_{k}");
+            ok(in_piu_ok, &format!("partito in più non valido: {}", p.id))?;
+        }
+        let fondato = self.partiti.iter().position(|p| p.id == ID_GIOCATORE);
+        ok(
+            self.giocatore < n && fondato.is_none_or(|k| k == self.giocatore),
+            "giocatore fuori dai partiti o diverso dal partito fondato",
+        )?;
+        ok(
+            self.attivi() <= partiti::MASSIMO_PARTITI,
+            &format!("più di {} partiti attivi", partiti::MASSIMO_PARTITI),
+        )?;
+        ok(
+            self.partiti.get(self.giocatore).is_some_and(|p| !p.sciolto),
+            "il partito del giocatore non può essere sciolto",
+        )
+    }
+
+    /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
         ok(
@@ -3288,19 +3397,6 @@ impl Partita {
                 && self.partenza.iter().all(|x| x.is_finite()),
             "turni_al_governo oltre il turno o partenza non finita",
         )?;
-        let attesi = self.dati.scenario().partiti.len();
-        let fondato = self.giocatore.saturating_add(1) == n
-            && self.partiti.last().is_some_and(|p| p.id == ID_GIOCATORE);
-        let (attesi, giocatore_ok) = if fondato {
-            (attesi.saturating_add(1), true)
-        } else {
-            (attesi, self.giocatore < n)
-        };
-        ok(
-            n == attesi,
-            &format!("partiti ha {n} voci, ne servono {attesi}"),
-        )?;
-        ok(giocatore_ok, "giocatore fuori dai partiti")?;
         // Il partito fondato dal giocatore non ha leader; gli altri, anche quello che il giocatore
         // prende dallo scenario, ne hanno uno.
         for p in &self.partiti {
@@ -3319,7 +3415,53 @@ impl Partita {
                     &format!("partito {}: leader vuoto", p.id),
                 )?;
             }
+            ok(
+                (0..=LIMITE_EURO).contains(&p.cassa),
+                &format!("partito {}: cassa fuori da 0-1e15", p.id),
+            )?;
+            ok(
+                p.sciolto || p.senza_seggi < vita::ELEZIONI_SENZA_SEGGI,
+                &format!(
+                    "partito {}: troppe elezioni senza seggi senza sciogliersi",
+                    p.id
+                ),
+            )?;
         }
+        ok(
+            self.partiti
+                .get(self.giocatore)
+                .is_some_and(|p| p.senza_seggi == 0),
+            "il partito del giocatore non conta elezioni senza seggi",
+        )?;
+        // Lo sciolto esce dalle coalizioni e dall'incarico col voto che lo scioglie, e non ci
+        // rientra. Il governo no: quello in carica resta fino al governo nuovo e può tenerlo.
+        let sciolto = |j: &usize| self.partiti.get(*j).is_some_and(|p| p.sciolto);
+        let pl = &self.parlamento;
+        let incarico = match &self.legislatura.incarico {
+            Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
+                coalizione.as_slice()
+            }
+            _ => &[],
+        };
+        let mut con_sciolti = (self.legislatura.coalizioni.iter().flatten())
+            .chain(incarico)
+            .chain(&self.legislatura.allargati)
+            .chain(self.legislatura.maggioranza.iter().flatten())
+            .chain(
+                self.legislatura
+                    .dichiarazione
+                    .iter()
+                    .flat_map(|d| &d.partiti),
+            );
+        ok(
+            !con_sciolti.any(sciolto)
+                && (0..n).filter(sciolto).all(|j| {
+                    pl.seggi_camera.get(j).is_none_or(|&x| x == 0)
+                        && pl.seggi_senato.get(j).is_none_or(|&x| x == 0)
+                }),
+            "un partito sciolto con seggi o dentro coalizioni, incarico, allargati, maggioranza o \
+             dichiarazione",
+        )?;
         for m in &self.mosse {
             ok(
                 self.partiti.iter().any(|p| p.id == m.partito),
@@ -4345,5 +4487,136 @@ mod tests {
             p.partiti[0].valence,
             valence - d("valence_sfiducia_respinta")
         );
+    }
+
+    #[test]
+    fn aggiungi_partito_e_salvataggio() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let j = p.aggiungi_partito(p.partiti[2].clone());
+        assert_eq!(j, 7);
+        assert_eq!(p.partiti[7].id, "nuovo_7");
+        assert_eq!(p.giocatore, 5);
+        assert!(
+            p.elettorato
+                .gruppi
+                .iter()
+                .all(|g| g.voto_precedente.len() == 9)
+        );
+        assert_eq!(p.informazione.bias.len(), 9);
+        let pl = &p.parlamento;
+        assert_eq!((pl.seggi_camera.len(), pl.seggi_senato.len()), (8, 8));
+        assert_eq!((p.intesa.valori.len(), p.intesa.ultimatum.len()), (8, 8));
+        assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+        p.chiudi_turno();
+        assert!(p.informazione.controlla(&p.dati, 8).is_ok()); // n+1 voci in ogni rilevazione
+        assert!(p.intenzioni_vere().nazionali[7] > 0.0);
+    }
+
+    /// Il tetto di `MASSIMO_PARTITI` attivi (vita-dei-partiti:121): undici attivi non si caricano,
+    /// dieci attivi più uno sciolto sì.
+    #[test]
+    fn carica_rifiuta_piu_di_dieci_attivi() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        for _ in 0..4 {
+            p.aggiungi_partito(p.partiti[2].clone());
+        }
+        let json = serde_json::to_string(&p).unwrap();
+        let err = Partita::carica(&json).unwrap_err().to_string();
+        assert!(err.contains("più di 10 partiti attivi"), "{err}");
+        p.partiti[7].sciolto = true;
+        assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    }
+
+    /// L'estrema sinistra senza seggi, a un voto dallo scioglimento, nell'incarico IA [0, 2] e in
+    /// una coalizione di tre: si scioglie, l'incarico resta al centrosinistra, la coalizione
+    /// resta di due.
+    fn con_sciolta_in_incarico_e_coalizione() -> Partita {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.parlamento.seggi_camera[0] = 0;
+        p.parlamento.seggi_senato[0] = 0;
+        p.partiti[0].senza_seggi = 1;
+        p.legislatura.incarico = Some(Incarico::Ia {
+            coalizione: vec![0, 2],
+        });
+        p.legislatura.coalizioni = vec![vec![0, 1, 2], vec![4, 5]];
+        p.scioglimenti();
+        assert!(p.partiti[0].sciolto);
+        p
+    }
+
+    #[test]
+    fn lo_sciolto_esce_dall_incarico_ia() {
+        let p = con_sciolta_in_incarico_e_coalizione();
+        let attesa = Incarico::Ia {
+            coalizione: vec![2],
+        };
+        assert_eq!(p.legislatura.incarico, Some(attesa));
+    }
+
+    #[test]
+    fn la_coalizione_di_tre_perde_lo_sciolto_e_resta() {
+        let p = con_sciolta_in_incarico_e_coalizione();
+        assert_eq!(p.legislatura.coalizioni, [vec![1, 2], vec![4, 5]]);
+    }
+
+    /// Lo sciolto non ha voce di disponibilità, e dichiarazione e allargamento lo rifiutano.
+    #[test]
+    fn lo_sciolto_non_entra_in_coalizione() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.partiti[0].sciolto = true;
+        let id = p.partiti[0].id.clone();
+        assert!(p.disponibilita().iter().all(|v| v.partito != id));
+        let e =
+            legislatura::dichiarazione(&p.quadro(), std::slice::from_ref(&id), &[]).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "comando non ammesso: Estrema sinistra si è sciolto"
+        );
+        p.legislatura.fase = Fase::Trattativa;
+        p.legislatura.incarico = Some(Incarico::Giocatore);
+        assert!(p.disponibilita().iter().all(|v| v.partito != id));
+        let e = p.allarga(&[id]).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "comando non ammesso: Estrema sinistra si è sciolto"
+        );
+    }
+
+    #[test]
+    fn sciolto_non_prende_voti() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.partiti[0].sciolto = true;
+        let v = p.intenzioni_vere();
+        assert_eq!(v.nazionali[0], 0.0);
+        assert!((v.nazionali.iter().sum::<f64>() - 1.0).abs() < 1e-9);
+    }
+
+    /// Due esiti con un partito in più nel secondo, in testa: per indice il centro (3) leggerebbe
+    /// il centrosinistra del voto prima.
+    #[test]
+    fn calo_abbina_per_id() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let voce = |id: &str, quota| VotiPartito {
+            partito: id.into(),
+            quota,
+            camera: 0,
+            senato: 0,
+        };
+        let esito = |voti| EsitoElezioni {
+            data: Trimestre::TURNO_ZERO,
+            affluenza: 0.6,
+            voti,
+            premio: None,
+            coalizioni: Vec::new(),
+        };
+        let ids = (p.partiti.iter()).map(|x| x.id.clone()).collect::<Vec<_>>();
+        let prima = esito(ids.iter().map(|id| voce(id, 0.10)).collect());
+        let mut voti = vec![voce("nuovo_7", 0.05)];
+        voti.extend(ids.iter().map(|id| voce(id, 0.10)));
+        voti[4].quota = 0.02; // il centro
+        p.legislatura.elezioni = vec![esito(voti), prima];
+        let centro = 3;
+        assert!((p.calo(centro).unwrap() - 0.08).abs() < 1e-12);
+        assert_eq!(p.calo(2), None);
     }
 }

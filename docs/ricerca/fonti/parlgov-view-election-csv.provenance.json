@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://www.parlgov.org/data/parlgov-development_csv-utf-8/view_election.csv", "sha256": "a1dd3d83a47a97d468031bca4594080cfd8b583f05b6331f61720981d73ae440", "bytes": 1133617}, "tool": "curl", "tool_version": "8.7.1", "extracted": "2026-10-29"}

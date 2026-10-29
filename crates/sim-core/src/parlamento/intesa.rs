@@ -55,7 +55,7 @@ pub struct VariazioneIntesa {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Intesa {
-    /// Una voce per partito, nell'ordine dello scenario.
+    /// Una voce per partito.
     pub valori: Vec<f64>,
     pub variazioni: Vec<VariazioneIntesa>,
     /// Una voce per partito: l'ultimatum in corso, con la sua causa.

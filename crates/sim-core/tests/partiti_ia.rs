@@ -1,7 +1,86 @@
 mod comune;
 use comune::*;
 use sim_core::Partita;
-use sim_core::partiti::Vocazione;
+use sim_core::partiti::{Regola, Vocazione};
+
+#[test]
+fn ogni_partito_ha_la_sua_regola() {
+    let v = fondata(4.5).vista();
+    let regola = |id: &str| v.partiti.iter().find(|p| p.id == id).unwrap().regola;
+    let attese = [
+        ("estrema_sinistra", Regola::Sticker),
+        ("sinistra", Regola::Aggregator),
+        ("centrosinistra", Regola::Hunter),
+        ("centro", Regola::Governator),
+        ("centrodestra", Regola::Hunter),
+        ("destra", Regola::Aggregator),
+        ("estrema_destra", Regola::Sticker),
+        ("giocatore", Regola::Sticker),
+    ];
+    for (id, r) in attese {
+        assert_eq!(regola(id), r, "{id}");
+    }
+    assert!(v.partiti.iter().all(|p| !p.sciolto));
+}
+
+#[test]
+fn carica_rifiuta_un_partito_in_piu_non_valido() {
+    let p = fondata(4.5);
+    let e = edita(&p, |j| {
+        let mut intruso = j["partiti"][0].clone();
+        intruso["id"] = "intruso".into();
+        j["partiti"].as_array_mut().unwrap().push(intruso);
+    })
+    .unwrap_err();
+    assert!(
+        e.to_string().contains("partito in più non valido: intruso"),
+        "{e}"
+    );
+    let e = edita(&p, |j| {
+        let g = j["giocatore"].as_u64().unwrap() as usize;
+        j["partiti"][g]["sciolto"] = true.into();
+    })
+    .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("il partito del giocatore non può essere sciolto"),
+        "{e}"
+    );
+}
+
+/// Gli altri rifiuti dell'elenco dei partiti, sulla partita fondata (sette dello scenario più il
+/// giocatore all'indice 7).
+#[test]
+fn carica_rifiuta_un_elenco_di_partiti_storto() {
+    let p = fondata(4.5);
+    let rifiuto = |f: &dyn Fn(&mut serde_json::Value)| edita(&p, f).unwrap_err().to_string();
+    let e = rifiuto(&|j| {
+        let v = j["partiti"].as_array_mut().unwrap();
+        v.truncate(6);
+    });
+    assert!(e.contains("partiti ha 6 voci, ne servono almeno 7"), "{e}");
+    let e = rifiuto(&|j| j["partiti"].as_array_mut().unwrap().swap(0, 1));
+    assert!(
+        e.contains("partito dello scenario mancante o fuori ordine: estrema_sinistra"),
+        "{e}"
+    );
+    let e = rifiuto(&|j| {
+        let copia = j["partiti"][0].clone();
+        j["partiti"].as_array_mut().unwrap().push(copia);
+    });
+    assert!(e.contains("partito ripetuto: estrema_sinistra"), "{e}");
+    let e = rifiuto(&|j| j["giocatore"] = 0.into());
+    assert!(
+        e.contains("giocatore fuori dai partiti o diverso dal partito fondato"),
+        "{e}"
+    );
+    let e = rifiuto(&|j| {
+        let mut nuovo = j["partiti"][0].clone();
+        nuovo["id"] = "nuovo_9".into();
+        j["partiti"].as_array_mut().unwrap().push(nuovo);
+    });
+    assert!(e.contains("partito in più non valido: nuovo_9"), "{e}");
+}
 
 #[test]
 fn ogni_partito_ha_vocazione_e_leader() {

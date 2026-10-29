@@ -464,6 +464,19 @@ fn il_motivo_e_il_termine_che_domina() {
     assert!(tre(&v, c).iter().all(|e| e.motivo == Motivo::Governo));
 }
 
+/// Uno sciolto con la valence a −10 non abbassa la media del leader: il primo resta a pari
+/// merito con gli attivi, il motivo resta la vicinanza.
+#[test]
+fn lo_sciolto_fuori_dalle_medie_del_motivo() {
+    let mut v = vista_tutto_al_primo();
+    (v.partiti[1].sciolto, v.partiti[1].valence) = (true, -10.0);
+    let gente = tre(&v, Condizione::Pensionato);
+    assert!(
+        gente.iter().all(|e| e.motivo == Motivo::Vicinanza),
+        "{gente:?}"
+    );
+}
+
 #[test]
 fn proiezione_assente_se_il_riparto_rifiuta() {
     let p = Partita::nuova(dati_base(), 1);
