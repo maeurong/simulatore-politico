@@ -190,6 +190,7 @@ impl Partita {
                 maggioranza: None,
                 crisi: None,
                 voto_anticipato: false,
+                riposizionato: false,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -213,6 +214,7 @@ impl Partita {
                 maggioranza: None,
                 crisi: None,
                 voto_anticipato: false,
+                riposizionato: false,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -316,8 +318,9 @@ impl Partita {
     // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
     // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
     // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
-    // (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte; il costo
-    // del taglio se l'anno entra in esercizio provvisorio) → mosse IA dell'apertura (`apertura_ia`).
+    // (valori in arrivo, esiti dei due turni prima, campagna nel turno del voto, emendamenti, rose,
+    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio) → mosse IA
+    // dell'apertura (`apertura_ia`).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
     // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
     // decade al voto, e nessuno può presentare.
@@ -440,6 +443,8 @@ impl Partita {
                 self.parlamento.misure.push(m);
             }
         }
+        // Prima degli emendamenti: i partiti li scrivono sulle posizioni della campagna.
+        self.apertura_campagna();
         let aula = StatoAula {
             dati: &self.dati,
             disposizioni: &self.disposizioni,
@@ -2056,6 +2061,7 @@ impl Partita {
         l.allargati.clear();
         l.crisi = None;
         l.voto_anticipato = false;
+        l.riposizionato = false;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -2255,6 +2261,45 @@ impl Partita {
         }
         let d = legislatura::dichiarazione(&self.quadro(), partiti, cessioni)?;
         self.legislatura.dichiarazione = Some(d);
+        Ok(())
+    }
+
+    /// `Riposiziona` (scelta 5 del piano 8b): nel turno del voto, una volta, la dichiarata del
+    /// giocatore va su `posizione`, la percepita a metà strada.
+    ///
+    /// # Errors
+    /// `Comando` fuori dal turno del voto, al secondo comando, con la posizione fuori da 1-7, più
+    /// lontana di `passo_movimento` dalla dichiarata, o oltre un partito attivo (col nome).
+    pub(crate) fn riposiziona(&mut self, posizione: f64) -> Result<(), Errore> {
+        let ko = |m: &str| Err(Errore::Comando(m.into()));
+        if !self.legislatura.turno_di_voto(self.turno) {
+            return ko("Il riposizionamento si decide solo nel turno della campagna");
+        }
+        if self.legislatura.riposizionato {
+            return ko("Già riposizionato in questa campagna");
+        }
+        if !(1.0..=7.0).contains(&posizione) {
+            return ko("Posizione fuori da 1-7");
+        }
+        let g = self.giocatore;
+        let x = self.partiti[g].posizione_dichiarata;
+        if (posizione - x).abs() > self.dati.manopola("passo_movimento") + 1e-9 {
+            return ko("Al massimo mezzo punto dalla posizione dichiarata");
+        }
+        // Strettamente fra la dichiarata e la nuova: arrivare sul vicino è ammesso.
+        let scavalcato = (self.partiti.iter().enumerate())
+            .filter(|&(k, p)| k != g && !p.sciolto)
+            .map(|(_, p)| p)
+            .filter(|p| (p.posizione_dichiarata - x) * (posizione - p.posizione_dichiarata) > 0.0)
+            .min_by(|a, b| {
+                let d = |p: &Partito| (p.posizione_dichiarata - x).abs();
+                d(a).total_cmp(&d(b))
+            });
+        if let Some(p) = scavalcato {
+            return Err(Errore::Comando(format!("Non si scavalca {}", p.nome)));
+        }
+        self.partiti[g].sposta(posizione);
+        self.legislatura.riposizionato = true;
         Ok(())
     }
 
@@ -3611,8 +3656,9 @@ impl Partita {
                 p.posizione_percepita.is_finite()
                     && p.valence.is_finite()
                     && p.valence_base.is_finite()
+                    && p.ultimo_passo.is_finite()
             }),
-            "partiti: posizione_percepita, valence o valence_base non finita",
+            "partiti: posizione_percepita, valence, valence_base o ultimo_passo non finita",
         )?;
         self.elettorato.controlla(&self.dati, n)?;
         self.informazione.controlla(&self.dati, n)

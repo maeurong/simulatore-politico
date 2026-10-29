@@ -9,6 +9,7 @@ mod coalizione;
 mod crisi;
 mod eredita;
 mod fondazione;
+pub(crate) mod movimento;
 mod programma;
 mod spartizione;
 mod voto;
@@ -50,6 +51,7 @@ pub enum Fase {
 /// sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in corso, dopo
 /// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura. `voto_anticipato`: le
 /// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
+/// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -66,6 +68,7 @@ pub struct Legislatura {
     pub maggioranza: Option<Vec<usize>>,
     pub crisi: Option<u32>,
     pub voto_anticipato: bool,
+    pub riposizionato: bool,
 }
 
 impl Legislatura {

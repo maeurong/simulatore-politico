@@ -68,6 +68,7 @@ fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
         sciolto: false,
         cassa: dati.manopola("dote_partito_nuovo").round() as i64,
         senza_seggi: 0,
+        ultimo_passo: 0.0,
     }
 }
 

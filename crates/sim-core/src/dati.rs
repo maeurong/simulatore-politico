@@ -226,6 +226,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "quota_libera_entrate",
     "dote_partito_nuovo",
     "turni_cassa_iniziale",
+    "passo_movimento",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",

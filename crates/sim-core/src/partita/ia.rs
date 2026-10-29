@@ -9,8 +9,9 @@ use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, Fase};
+use crate::legislatura::{self, Fase, movimento};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
+use crate::partiti::Regola;
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
@@ -107,6 +108,76 @@ impl Partita {
             self.governo_ia();
         }
         self.opposizione_ia();
+    }
+
+    /// Nell'apertura del turno del voto, in ogni fase e a partita non finita: la campagna dei
+    /// partiti IA. Mai al turno zero, che non passa da qui (scelta 18 del piano 8b).
+    pub(super) fn apertura_campagna(&mut self) {
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
+            return;
+        }
+        self.movimenti_ia();
+    }
+
+    /// La regola di movimento (scelta 4 del piano 8b): i partiti IA attivi, in ordine d'indice,
+    /// ciascuno sulle posizioni già mosse; una riga per partito mosso.
+    fn movimenti_ia(&mut self) {
+        let massimo = self.dati.manopola("passo_movimento");
+        let seggi = self.seggi_per_partito();
+        for j in 0..self.partiti.len() {
+            let Some(p) = (self.partiti.get(j)).filter(|p| j != self.giocatore && !p.sciolto)
+            else {
+                continue;
+            };
+            let guadagno = match self.legislatura.elezioni.as_slice() {
+                [ultimo, prima, ..] => ultimo.quota(&p.id).zip(prima.quota(&p.id)),
+                _ => None,
+            }
+            .map(|(ora, allora)| ora > allora);
+            let c = movimento::Contesto {
+                centro: 4.0,
+                baricentro: movimento::baricentro(&self.dati, &self.informazione.sondaggio, j),
+                guadagno,
+                ultimo_passo: p.ultimo_passo,
+                al_governo: self.governo.al_governo(j),
+                posizione_governo: self.posizione_governo(&seggi),
+            };
+            let x = p.posizione_dichiarata;
+            let altri: Vec<f64> = (self.partiti.iter().enumerate())
+                .filter(|&(k, q)| k != j && !q.sciolto)
+                .map(|(_, q)| q.posizione_dichiarata)
+                .collect();
+            let nuova = movimento::limita(x, movimento::passo(p.regola, x, &c, massimo), &altri);
+            let perche = match (p.regola, guadagno) {
+                (Regola::Aggregator, _) => "verso i suoi elettori",
+                (Regola::Hunter, Some(true)) => "dopo un guadagno al voto ripete lo spostamento",
+                (Regola::Hunter, Some(false)) => "dopo una perdita al voto inverte lo spostamento",
+                (Regola::Hunter, None) => "alla prima legislatura va verso il centro",
+                (Regola::Governator, _) => "verso la posizione del governo",
+                (Regola::Sticker, _) => "",
+            };
+            if let Some(p) = self.partiti.get_mut(j) {
+                p.sposta(nuova);
+            }
+            if nuova != x {
+                let virgola = |x: f64| format!("{x:.1}").replace('.', ",");
+                let (da, a) = (virgola(x), virgola(nuova));
+                self.mossa(j, format!("Sposta la posizione da {da} a {a}: {perche}"));
+            }
+        }
+    }
+
+    /// La media delle dichiarate della coalizione di governo pesata coi `seggi` (scelta 7 del
+    /// piano 8a); senza seggi, la dichiarata del presidente.
+    fn posizione_governo(&self, seggi: &[u32]) -> f64 {
+        let peso = |j: usize| f64::from(seggi.get(j).copied().unwrap_or(0));
+        let dichiarata = |j: usize| self.partiti.get(j).map_or(4.0, |p| p.posizione_dichiarata);
+        let c = &self.governo.coalizione;
+        let totale: f64 = c.iter().map(|&j| peso(j)).sum();
+        if totale <= 0.0 {
+            return dichiarata(self.governo.presidente);
+        }
+        c.iter().map(|&j| peso(j) * dichiarata(j)).sum::<f64>() / totale
     }
 
     /// L'opposizione IA in apertura, anche contro un governo IA (decisione 3 di Mario).

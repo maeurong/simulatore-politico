@@ -489,7 +489,8 @@ impl Ministri {
             | Comando::Sfiducia { .. }
             | Comando::PresentaProposta { .. }
             | Comando::PromuoviReferendum { .. }
-            | Comando::Confermativo { .. } => {}
+            | Comando::Confermativo { .. }
+            | Comando::Riposiziona { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }
