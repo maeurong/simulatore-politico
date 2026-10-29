@@ -3,4 +3,4 @@
 /**
  * Perché l'intesa di un alleato è cambiata.
  */
-export type CausaIntesa = "norma_lontana" | "emendamento_respinto" | "fiducia" | "seggi_persi" | "spartizione" | "ministri_scontenti" | "dimissioni_chieste" | "quota_scoperta" | "sondaggi_in_calo" | "rottura_impegno" | "sfiducia_respinta";
+export type CausaIntesa = "norma_lontana" | "emendamento_respinto" | "fiducia" | "seggi_persi" | "spartizione" | "ministri_scontenti" | "dimissioni_chieste" | "quota_scoperta" | "sondaggi_in_calo" | "rottura_impegno" | "sfiducia_respinta" | "promessa";

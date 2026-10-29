@@ -50,7 +50,7 @@ impl Informazione {
                     .collect()
             })
             .collect();
-        let vero = Intenzioni::calcola(dati, el, partiti, governo);
+        let vero = Intenzioni::calcola(dati, el, partiti, governo, None);
         let sondaggio = sondaggio::rileva(
             dati,
             caso,

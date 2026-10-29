@@ -19,7 +19,7 @@ fn proporzionale(f: sim_core::dati::FileDati, posizione: f64) -> Partita {
         "legge_elettorale = \"",
         "proporzionale_puro\"",
     );
-    Partita::fonda(
+    let p = Partita::fonda(
         sim_core::dati::DatiGioco::da_testi(&f).unwrap(),
         7,
         &Fondazione {
@@ -27,6 +27,14 @@ fn proporzionale(f: sim_core::dati::FileDati, posizione: f64) -> Partita {
             posizione,
         },
     )
+    .unwrap();
+    // Casse IA vuote, come `fondata`: i casi sono tarati sul voto senza campagne IA.
+    let g = p.giocatore();
+    edita(&p, |j| {
+        for k in (0..p.partiti().len()).filter(|&k| k != g) {
+            j["partiti"][k]["cassa"] = 0.into();
+        }
+    })
     .unwrap()
 }
 

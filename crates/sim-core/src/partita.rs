@@ -14,8 +14,8 @@ use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
-    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito, cassa,
-    coalizioni_al_voto,
+    Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
+    VoceRichiesta, VotiPartito, campagna, cassa, coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
@@ -27,8 +27,9 @@ use crate::parlamento::{
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
-    VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
-    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
+    VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
+    VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
+    VocePromessa,
 };
 use serde::{Deserialize, Serialize};
 
@@ -157,8 +158,13 @@ impl Partita {
         elettorato.avvia_voto(&dati, &partiti, &governo);
         // Cassa iniziale: `turni_cassa_iniziale` turni d'entrate col voto vero al posto
         // dell'ultimo voto. Il fondato ha già la dote.
-        let quote =
-            quote_fra_i_votanti(&Intenzioni::calcola(&dati, &elettorato, &partiti, &governo));
+        let quote = quote_fra_i_votanti(&Intenzioni::calcola(
+            &dati,
+            &elettorato,
+            &partiti,
+            &governo,
+            None,
+        ));
         let turni = dati.manopola("turni_cassa_iniziale");
         let iniziali = cassa::entrate(&dati, &quote, &quote);
         for (p, e) in partiti.iter_mut().zip(iniziali).take(dello_scenario) {
@@ -276,9 +282,14 @@ impl Partita {
 
     /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
     /// partito allungati: elettorato e informazione, nessun seggio, intesa di base senza
-    /// ultimatum. Restituisce il suo indice.
+    /// ultimatum, nessuna campagna né promessa (la frangia non eredita quelle dell'origine), nessun
+    /// turno da presidente. Restituisce il suo indice.
     pub(crate) fn aggiungi_partito(&mut self, mut p: Partito) -> usize {
         p.id = format!("nuovo_{}", self.partiti.len());
+        p.campagna.clear();
+        p.promesse_campagna.clear();
+        p.promesse.clear();
+        p.turni_da_presidente = 0;
         self.partiti.push(p);
         self.elettorato.aggiungi_partito();
         self.informazione
@@ -309,14 +320,15 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → default delle
-    // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
+    // svuotamento delle mosse IA del turno prima → turni da presidente, in fase ordinaria →
+    // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
     // IA, se nel turno nessuno ne ha chiesto uno → firme dell'abrogativo →
     // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
-    // dimissioni → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
-    // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
+    // dimissioni → verifica delle promesse, campagna e promesse IA, spesa, nel turno del voto →
+    // motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
+    // convincere della campagna, posizioni, sondaggio, statistica) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
     // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
@@ -338,6 +350,13 @@ impl Partita {
         self.mosse.clear();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
+        }
+        // R29: solo in fase ordinaria il presidente governa; in trattativa l'uscente resta per gli
+        // affari correnti, a Camere sciolte è dimissionario.
+        if self.legislatura.fase == Fase::Ordinaria
+            && let Some(p) = self.partiti.get_mut(self.governo.presidente)
+        {
+            p.turni_da_presidente = p.turni_da_presidente.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
         self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
@@ -364,6 +383,13 @@ impl Partita {
             && self.economia.esercizio_provvisorio(self.data)
         {
             self.legislatura.dimissioni = true;
+        }
+        let di_voto = self.legislatura.turno_di_voto(self.turno);
+        // Dopo le scissioni, che portano via una parte della cassa (scelta 14 del piano 8b).
+        if di_voto {
+            self.verifica_promesse();
+            self.campagna_ia();
+            self.spendi_campagne();
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
@@ -393,6 +419,7 @@ impl Partita {
         );
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
+        campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
         self.informazione.rileva(
@@ -410,7 +437,6 @@ impl Partita {
             self.data,
         );
         self.incassa(&vero);
-        let di_voto = self.legislatura.turno_di_voto(self.turno);
         if di_voto {
             self.vota_parlamento(&vero);
         }
@@ -1820,9 +1846,171 @@ impl Partita {
         }
     }
 
-    /// Intenzioni di voto vere per gruppo e nazionali.
+    /// Intenzioni di voto vere per gruppo e nazionali, con le spinte delle campagne: ci sono solo
+    /// nel turno del voto, finché il voto non le svuota.
     pub fn intenzioni_vere(&self) -> Intenzioni {
-        Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
+        let (dati, el) = (&self.dati, &self.elettorato);
+        let spinte = campagna::spinte(dati, el, &self.partiti, &self.disposizioni);
+        Intenzioni::calcola(dati, el, &self.partiti, &self.governo, Some(&spinte))
+    }
+
+    /// La spesa della campagna (scelta 14), prima del motore: ogni partito attivo paga la sua
+    /// dalla cassa, con una riga. Oltre la cassa, che la scissione può aver ridotto dopo il
+    /// comando, le spese si tagliano in ordine.
+    fn spendi_campagne(&mut self) {
+        for j in 0..self.partiti.len() {
+            let p = &mut self.partiti[j];
+            if p.sciolto {
+                continue;
+            }
+            let mut resto = p.cassa;
+            p.campagna.retain_mut(|s| {
+                s.euro = s.euro.min(resto);
+                resto -= s.euro;
+                s.euro > 0
+            });
+            if p.campagna.is_empty() {
+                continue;
+            }
+            let speso = p.cassa - resto;
+            p.cassa = resto;
+            let testo = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
+            self.mossa(j, testo);
+        }
+    }
+
+    /// `Campagna` (scelte 13-14): nel turno del voto sostituisce la campagna del giocatore.
+    ///
+    /// # Errors
+    /// `Comando` fuori dal turno del voto e come [`Partita::anteprima_campagna`].
+    pub(crate) fn campagna(&mut self, spese: &[Spesa]) -> Result<(), Errore> {
+        self.controlla_campagna(spese)?;
+        let g = self.giocatore;
+        self.partiti[g].campagna = spese.to_vec();
+        Ok(())
+    }
+
+    /// L'anteprima della campagna (scelta 15): costo esatto e intensità per bersaglio, senza
+    /// leggere lo stato vero.
+    ///
+    /// # Errors
+    /// `Comando` fuori dal turno del voto, con più di 3 bersagli, un bersaglio ripetuto, una
+    /// regione sconosciuta, una spesa non positiva o il totale oltre la cassa del giocatore.
+    pub fn anteprima_campagna(
+        &self,
+        spese: &[Spesa],
+    ) -> Result<Vec<VoceAnteprimaCampagna>, Errore> {
+        self.controlla_campagna(spese)?;
+        Ok(campagna::anteprima(&self.dati, spese))
+    }
+
+    fn controlla_campagna(&self, spese: &[Spesa]) -> Result<(), Errore> {
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
+            return Err(Errore::Comando(
+                "Si spende solo in campagna elettorale".into(),
+            ));
+        }
+        let cassa = self.partiti[self.giocatore].cassa;
+        campagna::valida(&self.dati, spese, cassa)
+    }
+
+    /// `Prometti` (scelta 17 del piano 8b): in campagna elettorale, un comando solo, fino a 2
+    /// promesse (disposizione, gradino) diverse dal vigente. Col giocatore al governo, ogni
+    /// alleato la cui linea su una promessa sarebbe no perde `intesa_promessa` per il peso delle
+    /// politiche; una promessa su una disposizione senza posizione non costa nulla (R30).
+    ///
+    /// # Errors
+    /// `Comando` fuori dalla campagna elettorale o a partita finita, oltre 2 promesse, al secondo
+    /// comando, con una disposizione o un gradino sconosciuti (con l'id), un gradino già in vigore
+    /// o una disposizione ripetuta (col nome della disposizione).
+    pub(crate) fn prometti(&mut self, promesse: &[(String, String)]) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
+            return ko("Si promette solo in campagna elettorale".into());
+        }
+        if promesse.len() > 2 {
+            return ko("Al massimo 2 promesse".into());
+        }
+        let g = self.giocatore;
+        if !self.partiti[g].promesse_campagna.is_empty() {
+            return ko("Promesse già fatte in questa campagna elettorale".into());
+        }
+        let mut scelte: Vec<(usize, usize)> = Vec::new();
+        for (id, gradino) in promesse {
+            let Some(d) = self.dati.disposizione(id) else {
+                return ko(format!("Disposizione sconosciuta «{id}»"));
+            };
+            let dato = &self.dati.disposizioni()[d];
+            let Some(k) = dato.gradino(gradino) else {
+                return ko(format!("Gradino sconosciuto «{gradino}»"));
+            };
+            if self
+                .disposizioni
+                .voci
+                .get(d)
+                .is_some_and(|v| v.in_vigore == k)
+            {
+                let nome = campagna::promesse(&self.dati, &[(d, k)]);
+                return ko(format!("Già in vigore: {nome}"));
+            }
+            if scelte.iter().any(|&(x, _)| x == d) {
+                let nome = &dato.nome;
+                return ko(format!("Due promesse sulla stessa disposizione: {nome}"));
+            }
+            scelte.push((d, k));
+        }
+        if self.governa() {
+            let costo = self.dati.manopola("intesa_promessa");
+            for &promessa in &scelte {
+                let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &[promessa]);
+                if posizioni.is_none() {
+                    continue;
+                }
+                let linea =
+                    (self.stato_aula()).linea(&voto::guadagni(&self.partiti, posizioni), None);
+                for j in self.alleati() {
+                    if linea.get(j) == Some(&false) {
+                        let delta = -costo * self.peso_politiche(j);
+                        (self.intesa).varia(j, CausaIntesa::Promessa, delta, self.turno);
+                    }
+                }
+            }
+        }
+        self.partiti[g].promesse_campagna = scelte;
+        Ok(())
+    }
+
+    /// Nella chiusura del voto, prima delle intenzioni (scelta 17 del piano 8b): ogni promessa in
+    /// sospeso esce, mantenuta se la disposizione sta al gradino promesso, chiunque l'abbia portata
+    /// lì. Conta solo per il partito che ha presieduto il governo almeno `turni_promessa` turni in
+    /// questa legislatura: `+valence_promessa_mantenuta` o `−valence_promessa_mancata`, con una
+    /// riga. Lo sciolto le perde senza righe.
+    pub(super) fn verifica_promesse(&mut self) {
+        let turni = self.dati.manopola("turni_promessa");
+        let mantenuta = self.dati.manopola("valence_promessa_mantenuta");
+        let mancata = self.dati.manopola("valence_promessa_mancata");
+        for j in 0..self.partiti.len() {
+            let p = &mut self.partiti[j];
+            let promesse = std::mem::take(&mut p.promesse);
+            if p.sciolto || f64::from(p.turni_da_presidente) < turni {
+                continue;
+            }
+            for (d, g) in promesse {
+                let tenuta = self
+                    .disposizioni
+                    .voci
+                    .get(d)
+                    .is_some_and(|v| v.in_vigore == g);
+                let (delta, esito) = if tenuta {
+                    (mantenuta, "mantenuta")
+                } else {
+                    (-mancata, "mancata")
+                };
+                self.partiti[j].valence += delta;
+                let nome = campagna::promesse(&self.dati, &[(d, g)]);
+                self.mossa(j, format!("Promessa {esito}: {nome}"));
+            }
+        }
     }
 
     pub fn informazione(&self) -> &Informazione {
@@ -2069,6 +2257,13 @@ impl Partita {
         }
         for (gruppo, v) in self.elettorato.gruppi.iter_mut().zip(&vero.per_gruppo) {
             gruppo.voto_precedente.clone_from(v);
+        }
+        // La persuasione vale solo per questo voto (effetti-della-campagna-e-promesse:58); le
+        // promesse restano in sospeso fino al voto dopo.
+        for p in &mut self.partiti {
+            p.campagna.clear();
+            p.promesse = std::mem::take(&mut p.promesse_campagna);
+            p.turni_da_presidente = 0;
         }
         (self.informazione).riestrai_bias(&self.dati, &mut self.caso, n);
         let pl = &self.parlamento;
@@ -3123,6 +3318,17 @@ impl Partita {
                 regola: p.regola,
                 sciolto: p.sciolto,
                 cassa: p.cassa,
+                promesse: (p.promesse.iter().map(|&x| (x, true)))
+                    .chain(p.promesse_campagna.iter().map(|&x| (x, false)))
+                    .filter_map(|((d, g), in_sospeso)| {
+                        let x = self.dati.disposizioni().get(d)?;
+                        Some(VocePromessa {
+                            disposizione: x.nome.clone(),
+                            gradino: x.gradini.get(g)?.nome.clone(),
+                            in_sospeso,
+                        })
+                    })
+                    .collect(),
             })
             .collect()
     }
@@ -3266,6 +3472,12 @@ impl Partita {
                     }
                 })
                 .collect(),
+            campagna: VistaCampagna {
+                attiva: !self.finita() && l.turno_di_voto(self.turno),
+                spese: (self.partiti.get(self.giocatore))
+                    .map(|p| p.campagna.clone())
+                    .unwrap_or_default(),
+            },
         }
     }
 
@@ -3493,7 +3705,8 @@ impl Partita {
         )?;
         // Il partito fondato dal giocatore non ha leader; gli altri, anche quello che il giocatore
         // prende dallo scenario, ne hanno uno.
-        for p in &self.partiti {
+        let di_voto = self.legislatura.turno_di_voto(self.turno);
+        for (j, p) in self.partiti.iter().enumerate() {
             ok(
                 p.posizione_dichiarata.is_finite(),
                 &format!("partito {}: posizione dichiarata non finita", p.id),
@@ -3513,6 +3726,42 @@ impl Partita {
                 (0..=LIMITE_EURO).contains(&p.cassa),
                 &format!("partito {}: cassa fuori da 0-1e15", p.id),
             )?;
+            let catalogo = self.dati.disposizioni();
+            let valida =
+                |&(d, g): &(usize, usize)| catalogo.get(d).is_some_and(|x| g < x.gradini.len());
+            ok(
+                [&p.promesse_campagna, &p.promesse]
+                    .iter()
+                    .all(|v| v.len() <= 2 && v.iter().all(valida)),
+                &format!(
+                    "partito {}: più di 2 promesse o una promessa fuori dal catalogo",
+                    p.id
+                ),
+            )?;
+            // La campagna IA si riempie e si svuota nella stessa chiusura; quella del giocatore
+            // vive solo nel turno del voto, valida come il comando.
+            if p.sciolto {
+                ok(
+                    p.campagna.is_empty()
+                        && p.promesse_campagna.is_empty()
+                        && p.promesse.is_empty(),
+                    &format!("partito {}: sciolto con campagna o promesse", p.id),
+                )?;
+            } else if j == self.giocatore && di_voto {
+                ok(
+                    campagna::valida(&self.dati, &p.campagna, p.cassa).is_ok(),
+                    &format!("partito {}: campagna non valida", p.id),
+                )?;
+            } else {
+                ok(
+                    p.campagna.is_empty() && p.promesse_campagna.is_empty(),
+                    &format!(
+                        "partito {}: campagna o promesse della campagna fuori dal turno del voto \
+                         del giocatore",
+                        p.id
+                    ),
+                )?;
+            }
             ok(
                 p.sciolto || p.senza_seggi < vita::ELEZIONI_SENZA_SEGGI,
                 &format!(
@@ -3874,13 +4123,18 @@ mod tests {
     }
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
-    /// sotto un governo IA.
+    /// sotto un governo IA. Al voto le casse IA sono vuote: i casi che la usano sono tarati sul
+    /// governo che nasce senza campagne IA.
     pub(super) fn all_opposizione() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 1.5,
         };
         let mut p = Partita::fonda(dati_base(), 7, &f).unwrap();
+        let g = p.giocatore;
+        (p.partiti.iter_mut().enumerate())
+            .filter(|(j, _)| *j != g)
+            .for_each(|(_, x)| x.cassa = 0);
         p.chiudi_turno(); // voto
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
@@ -4647,6 +4901,56 @@ mod tests {
         p.scioglimenti();
         assert!(p.partiti[0].sciolto);
         p
+    }
+
+    /// t2: lo sciolto al voto non tiene promesse in sospeso, promesse della campagna né campagna.
+    #[test]
+    fn lo_sciolto_al_voto_non_ha_promesse_in_sospeso() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.parlamento.seggi_camera[0] = 0;
+        p.parlamento.seggi_senato[0] = 0;
+        p.partiti[0].senza_seggi = 1;
+        p.partiti[0].promesse = vec![(0, 0)];
+        p.partiti[0].promesse_campagna = vec![(1, 0)];
+        p.partiti[0].campagna = vec![Spesa {
+            bersaglio: legislatura::Bersaglio::Regione(0),
+            leva: legislatura::Leva::Persuadere,
+            euro: 1,
+        }];
+        p.scioglimenti();
+        let x = &p.partiti[0];
+        assert!(x.sciolto);
+        assert!(x.promesse.is_empty() && x.promesse_campagna.is_empty() && x.campagna.is_empty());
+    }
+
+    /// t3: la cassa ridotta dopo il comando (dalla scissione) taglia le spese in ordine: la prima
+    /// intera, la seconda a quello che resta, la terza fuori.
+    #[test]
+    fn campagna_oltre_la_cassa_si_taglia() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let g = p.giocatore;
+        let spesa = |r: usize| Spesa {
+            bersaglio: legislatura::Bersaglio::Regione(r),
+            leva: legislatura::Leva::Persuadere,
+            euro: 1_000_000,
+        };
+        p.partiti[g].campagna = vec![spesa(0), spesa(1), spesa(2)];
+        p.partiti[g].cassa = 1_500_000;
+        p.mosse.clear();
+        p.spendi_campagne();
+        assert_eq!(p.partiti[g].cassa, 0);
+        let euro: Vec<i64> = p.partiti[g].campagna.iter().map(|s| s.euro).collect();
+        assert_eq!(euro, [1_000_000, 500_000]);
+        let id = p.partiti[g].id.clone();
+        let righe: Vec<&str> = (p.mosse.iter())
+            .filter(|m| m.partito == id)
+            .map(|m| m.testo.as_str())
+            .collect();
+        let (a, b) = (&p.dati.regioni()[0].nome, &p.dati.regioni()[1].nome);
+        assert_eq!(
+            righe,
+            [format!("Spende 1.500.000 euro: persuade {a} e {b}")]
+        );
     }
 
     #[test]

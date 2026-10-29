@@ -2,6 +2,7 @@
 
 use crate::dati::{DatiGioco, Dicastero, Ruolo};
 use crate::errore::Errore;
+use crate::legislatura::Spesa;
 use crate::scenario::{Ingresso, Scenario};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -98,6 +99,15 @@ pub struct Partito {
     /// Ha già minacciato la scissione (scelta 7 del piano 8b); si spegne quando la percepita torna
     /// sotto `minaccia_scissione` dalla dichiarata.
     pub minaccia: bool,
+    /// La campagna del turno del voto (scelte 13-14 del piano 8b), svuotata al voto.
+    pub campagna: Vec<Spesa>,
+    /// Le promesse della campagna in corso, (disposizione, gradino) (scelta 17 del piano 8b); al
+    /// voto passano in `promesse`.
+    pub promesse_campagna: Vec<(usize, usize)>,
+    /// Le promesse in sospeso dal voto prima, verificate al voto dopo.
+    pub promesse: Vec<(usize, usize)>,
+    /// Chiusure iniziate da presidente del governo in questa legislatura; azzerato al voto.
+    pub turni_da_presidente: u32,
 }
 
 impl Partito {
@@ -162,6 +172,10 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             senza_seggi: 0,
             ultimo_passo: 0.0,
             minaccia: false,
+            campagna: Vec::new(),
+            promesse_campagna: Vec::new(),
+            promesse: Vec::new(),
+            turni_da_presidente: 0,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);

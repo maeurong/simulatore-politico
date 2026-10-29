@@ -4,10 +4,11 @@ use crate::disposizioni::Norma;
 use crate::parlamento::StatoAula;
 
 /// Il programma della `coalizione`: le voci (disposizione, gradino) nell'ordine in cui il governo
-/// le porta in aula; vuoto se la coalizione non ha seggi.
+/// le porta in aula; vuoto se la coalizione è vuota.
 ///
 /// Posizione della coalizione: la media delle posizioni dichiarate pesata coi `seggi` di Camera
-/// più Senato. Per ogni disposizione ordinaria con posizione, il gradino non bloccato più vicino a
+/// più Senato; senza seggi in tutta la coalizione ogni membro pesa 1 (R28: le promesse IA al
+/// turno zero e del partito senza seggi). Per ogni disposizione ordinaria con posizione, il gradino non bloccato più vicino a
 /// quella posizione, se avvicina il vigente di almeno `soglia_programma`; in ordine di distanza
 /// decrescente del vigente. In coda, al più una voce elettorale (`elettorale`). Le costituzionali
 /// restano fuori.
@@ -20,7 +21,9 @@ pub(crate) fn programma(
     coalizione: &[usize],
     seggi: &[u32],
 ) -> Vec<(usize, usize)> {
-    let peso = |j: usize| f64::from(seggi.get(j).copied().unwrap_or(0));
+    let di = |j: usize| f64::from(seggi.get(j).copied().unwrap_or(0));
+    let con_seggi = coalizione.iter().any(|&j| di(j) > 0.0);
+    let peso = |j: usize| if con_seggi { di(j) } else { 1.0 };
     let totale: f64 = coalizione.iter().map(|&j| peso(j)).sum();
     if totale <= 0.0 {
         return Vec::new();

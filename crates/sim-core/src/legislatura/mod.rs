@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod campagna;
 pub(crate) mod cassa;
 mod coalizione;
 mod crisi;
@@ -13,6 +14,7 @@ pub(crate) mod movimento;
 mod programma;
 mod spartizione;
 mod voto;
+pub use campagna::{Bersaglio, Intensita, Leva, Spesa, Spinte, VoceAnteprimaCampagna};
 #[cfg(test)]
 pub(crate) use coalizione::CausaDisponibilita;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};

@@ -311,7 +311,7 @@ pub fn sanita_cara(mut f: FileDati) -> FileDati {
     f
 }
 
-/// La partita vera col seme 7, fondata alla posizione `posizione`.
+/// La partita vera col seme 7, fondata alla posizione `posizione`, con le casse IA vuote.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -321,7 +321,16 @@ pub fn fondata(posizione: f64) -> Partita {
         nome: "Partito nuovo".into(),
         posizione,
     };
-    Partita::fonda(dati_base(), 7, &f).unwrap()
+    let p = Partita::fonda(dati_base(), 7, &f).unwrap();
+    // Casse IA vuote: i test che la usano non misurano la campagna e sono tarati sul voto del
+    // turno zero senza campagne IA.
+    let g = p.giocatore();
+    edita(&p, |j| {
+        for k in (0..p.partiti().len()).filter(|&k| k != g) {
+            j["partiti"][k]["cassa"] = 0.into();
+        }
+    })
+    .unwrap()
 }
 
 /// Seggi scritti a mano nell'ordine dei partiti; le somme devono restare i `totali`.

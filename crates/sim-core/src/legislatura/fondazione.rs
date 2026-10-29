@@ -71,6 +71,10 @@ pub(crate) fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Par
         senza_seggi: 0,
         ultimo_passo: 0.0,
         minaccia: false,
+        campagna: Vec::new(),
+        promesse_campagna: Vec::new(),
+        promesse: Vec::new(),
+        turni_da_presidente: 0,
     }
 }
 
