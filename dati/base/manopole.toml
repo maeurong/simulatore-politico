@@ -1335,30 +1335,30 @@ min = 0.0
 max = 0.1
 ticket = "18"
 
-# docs/ricerca/modelli/finanziamento-dei-partiti.md:92 (spesa di campagna di un grande partito: 2-3,5 milioni); la forza di ogni leva è forza_<leva> × √(euro / spesa_riferimento), effetti-della-campagna-e-promesse.md:52
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:92 (spesa di campagna di un grande partito: 2-3,5 milioni); la forza di ogni leva è forza_<leva> × √(euro / (spesa_riferimento × s_b)), con s_b la quota degli elettori nel bersaglio: la spinta per elettore, effetti-della-campagna-e-promesse.md:52
 [spesa_riferimento]
 valore = 3000000.0
 min = 2000000.0
 max = 3500000.0
 ticket = "26"
 
-# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:51, :54 (valence in più nei gruppi del bersaglio; tarata col test di scala, seme 1: a cassa piena, un terzo su ciascuna delle tre regioni più popolose, 0,6 vale 1,0 punti nazionali; 0,3-0,9 tiene 0,5-1,5 punti)
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:51, :54 (valence in più nei gruppi del bersaglio; tarata col test di scala, seme 1: a cassa piena, un terzo su ciascuna delle tre regioni più popolose, 0,21 vale 1,0 punti nazionali; il guadagno è quasi lineare nella forza, 0,105-0,315 tiene 0,5-1,5 punti)
 [forza_persuadere]
-valore = 0.6
-min = 0.3
-max = 0.9
+valore = 0.21
+min = 0.105
+max = 0.315
 ticket = "26"
 
-# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:53, :55 (utilità dell'astensione in meno ai punti entro 1 dalla dichiarata; tarata sull'effetto massimo, 1-2 punti d'astensione in meno fra i vicini: 0,1 a cassa piena sulla Lombardia toglie 1,7 punti fra i vicini della destra, seme 1; al test di scala vale 0,02 punti nazionali, sotto persuadere)
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:53, :55 (utilità dell'astensione in meno ai punti entro 1 dalla dichiarata; tarata sul rapporto con persuadere al test di scala, 0,02 come con la spinta non diluita: 0,04 vale 0,020 punti nazionali; a cassa piena sulla Lombardia la spinta resta circa 0,1, che toglie 1,7 punti d'astensione fra i vicini della destra, seme 1, dentro l'effetto massimo di 1-2 punti; 0,02-0,1 come il vecchio 0,05-0,25 in rapporto al valore)
 [forza_mobilitare]
-valore = 0.1
-min = 0.05
-max = 0.25
+valore = 0.04
+min = 0.02
+max = 0.1
 ticket = "26"
 
-# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:55-57 (quota dell'istogramma di ogni gruppo del bersaglio spostata sul punto della dichiarata, che l'ancora riassorbe; le posizioni si muovono poco, la più debole a pari spesa: al test di scala 0,005 vale 0,008 punti nazionali, sotto mobilitare)
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:55-57 (quota dell'istogramma di ogni gruppo del bersaglio spostata sul punto della dichiarata, che l'ancora riassorbe; le posizioni si muovono poco, la più debole a pari spesa: tarata sul rapporto con persuadere al test di scala, 0,008 come con la spinta non diluita: 0,00175 vale 0,008 punti nazionali, sotto mobilitare; 0-0,0035 come il vecchio 0-0,01 in rapporto al valore)
 [forza_convincere]
-valore = 0.005
+valore = 0.00175
 min = 0.0
-max = 0.01
+max = 0.0035
 ticket = "26"

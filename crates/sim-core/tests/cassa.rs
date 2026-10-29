@@ -56,7 +56,12 @@ fn le_casse_iniziali_dello_scenario_sono_venti_turni() {
 
 #[test]
 fn nella_partita_vera_i_partiti_dello_scenario_hanno_cassa_e_il_fondato_la_dote() {
-    let c = casse(&fondata(4.5));
+    // `fondata` azzera le casse IA: qui servono quelle dello scenario.
+    let f = sim_core::legislatura::Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 4.5,
+    };
+    let c = casse(&Partita::fonda(dati_base(), 7, &f).unwrap());
     assert_eq!(c.len(), 8);
     assert!(c[..7].iter().all(|&x| x > 0));
     assert_eq!(c[7], 1_000_000);

@@ -8,11 +8,13 @@ use crate::caso::Flusso;
 use crate::comando::Comando;
 use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
-use crate::elettorato::{Affluenza, stima};
+use crate::elettorato::{Affluenza, Condizione, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, Dichiarazione, Fase, Quadro, movimento, quota_fra_i_votanti};
+use crate::legislatura::{
+    self, Bersaglio, Dichiarazione, Fase, Leva, Quadro, Spesa, movimento, quota_fra_i_votanti,
+};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
-use crate::partiti::Regola;
+use crate::partiti::{Regola, Vocazione};
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
@@ -127,6 +129,68 @@ impl Partita {
         self.movimenti_ia();
         self.protesta();
         self.coalizioni_ia();
+    }
+
+    /// La campagna dei partiti IA (scelta 16 del piano 8b), nella chiusura del turno del voto
+    /// prima della spesa, turno zero compreso: ogni partito IA attivo con cassa la spende tutta
+    /// sui 3 bersagli che rendono di più, ciascuno con la sua leva migliore, divisa con
+    /// [`riparto_spesa`]. Rendimento per euro sull'incrocio del sondaggio pubblico
+    /// (sondaggi-ed-errore:55), con `q` la quota del partito fra i votanti, `a` l'astensione e
+    /// `w` = √s_b, perché la spinta si diluisce sulla quota s_b degli elettori nel bersaglio:
+    /// persuadere `w·q·(1−q)`, mobilitare `w·a·q`, convincere (solo gli identitari) `w·q·(1−q)`,
+    /// ognuna per la sua forza. A parità vince il bersaglio che viene
+    /// prima (le condizioni, poi le regioni) e la leva che viene prima (persuadere, mobilitare,
+    /// convincere).
+    // ponytail: stima al primo ordine del logit; la via d'uscita è simulare il voto sul sondaggio.
+    pub(super) fn campagna_ia(&mut self) {
+        let s = &self.informazione.sondaggio;
+        let bersagli: Vec<_> = (Condizione::TUTTE.map(Bersaglio::Condizione).into_iter())
+            .zip(&s.condizioni)
+            .chain((0..).map(Bersaglio::Regione).zip(&s.regioni))
+            .map(|(b, incrocio)| {
+                let w = b.quota_elettori(&self.dati, &self.elettorato).sqrt();
+                (b, &incrocio.quote, w)
+            })
+            .collect();
+        let forza = |l: Leva| l.forza(&self.dati);
+        let mut campagne = Vec::new();
+        for (j, p) in self.partiti.iter().enumerate() {
+            if j == self.giocatore || p.sciolto || p.cassa <= 0 {
+                continue;
+            }
+            let leve: &[Leva] = if p.vocazione == Vocazione::Identitaria {
+                &[Leva::Persuadere, Leva::Mobilitare, Leva::Convincere]
+            } else {
+                &[Leva::Persuadere, Leva::Mobilitare]
+            };
+            let mut candidati: Vec<(f64, Bersaglio, Leva)> = (bersagli.iter())
+                .filter_map(|&(b, quote, w)| {
+                    let a = quote.last().copied().unwrap_or(0.0);
+                    let q = quote.get(j).copied().unwrap_or(0.0) / (1.0 - a);
+                    let resa = |l: Leva| match l {
+                        Leva::Mobilitare => w * a * q * forza(l),
+                        Leva::Persuadere | Leva::Convincere => w * q * (1.0 - q) * forza(l),
+                    };
+                    (leve.iter().map(|&l| (resa(l), b, l)))
+                        .reduce(|m, x| if x.0 > m.0 { x } else { m })
+                })
+                .collect();
+            // Stabile: a parità resta l'ordine dei bersagli.
+            candidati.sort_by(|x, y| y.0.total_cmp(&x.0));
+            candidati.truncate(3);
+            let rese: Vec<f64> = candidati.iter().map(|c| c.0).collect();
+            let campagna: Vec<Spesa> = (candidati.iter().zip(riparto_spesa(p.cassa, &rese)))
+                .map(|(&(_, bersaglio, leva), euro)| Spesa {
+                    bersaglio,
+                    leva,
+                    euro,
+                })
+                .collect();
+            campagne.push((j, campagna));
+        }
+        for (j, campagna) in campagne {
+            self.partiti[j].campagna = campagna;
+        }
     }
 
     /// Il valore atteso di ogni partito al voto con `d` (`Quadro::valore`), sul sondaggio
@@ -1011,6 +1075,29 @@ pub(super) fn indicizzati(percento: u32) -> String {
     }
 }
 
+/// La `cassa` in proporzione al quadrato dei `rendimenti`, l'ottimo quando l'effetto cresce con
+/// la radice della spesa (effetti-della-campagna-e-promesse:52); in parti uguali se sono tutti
+/// zero, come per il partito appena nato che nel sondaggio non c'è ancora. Per difetto, col resto
+/// al primo.
+fn riparto_spesa(cassa: i64, rendimenti: &[f64]) -> Vec<i64> {
+    let somma: f64 = rendimenti.iter().map(|r| r * r).sum();
+    let mut euro: Vec<i64> = (rendimenti.iter())
+        .map(|r| {
+            let quota = if somma > 0.0 {
+                r * r / somma
+            } else {
+                1.0 / rendimenti.len() as f64
+            };
+            (cassa as f64 * quota).floor() as i64
+        })
+        .collect();
+    let resto = cassa - euro.iter().sum::<i64>();
+    if let Some(primo) = euro.first_mut() {
+        *primo += resto;
+    }
+    euro
+}
+
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
@@ -1572,6 +1659,96 @@ mod tests {
                 .iter()
                 .any(|m| m.partito == "estrema_destra" && m.testo == riga)
         );
+    }
+
+    #[test]
+    fn la_divisione_segue_il_quadrato_dei_rendimenti() {
+        // 1000 · 1/14, 4/14, 9/14 = 71,4, 285,7, 642,9: il resto (2) al primo.
+        assert_eq!(riparto_spesa(1000, &[1.0, 2.0, 3.0]), [73, 285, 642]);
+        // Senza rendimenti, in parti uguali.
+        assert_eq!(riparto_spesa(10, &[0.0, 0.0, 0.0]), [4, 3, 3]);
+    }
+
+    /// Al turno 19 ogni partito IA attivo con cassa ha tre bersagli distinti che sommano la
+    /// cassa, dal migliore (la spesa più grande); il giocatore sceglie la sua col comando.
+    #[test]
+    fn la_campagna_ia_su_tre_bersagli_distinti() {
+        let mut p = al_turno_19();
+        p.campagna_ia();
+        let g = p.giocatore;
+        assert!(p.partiti[g].campagna.is_empty());
+        let ia = (p.partiti.iter().enumerate()).filter(|(j, x)| *j != g && !x.sciolto);
+        let mut n = 0;
+        for (_, x) in ia {
+            let c = &x.campagna;
+            assert_eq!(c.len(), 3, "{}", x.id);
+            let distinti = c[0].bersaglio != c[1].bersaglio
+                && c[0].bersaglio != c[2].bersaglio
+                && c[1].bersaglio != c[2].bersaglio;
+            assert!(distinti, "{}: {c:?}", x.id);
+            assert_eq!(c.iter().map(|s| s.euro).sum::<i64>(), x.cassa, "{}", x.id);
+            assert!(c.windows(2).all(|w| w[0].euro >= w[1].euro), "{c:?}");
+            n += 1;
+        }
+        assert!(n > 0);
+    }
+
+    /// Il rendimento si legge sul sondaggio: l'estrema sinistra che nel sondaggio c'è solo nella
+    /// regione più piccola spende tutto lì.
+    #[test]
+    fn la_campagna_ia_legge_il_sondaggio() {
+        let mut p = al_turno_19();
+        let regioni = &p.dati.elettorato().regioni;
+        let piccola = (0..regioni.len())
+            .min_by_key(|&r| regioni[r].elettori)
+            .unwrap();
+        let s = &mut p.informazione.sondaggio;
+        for (r, i) in s.regioni.iter_mut().enumerate() {
+            i.quote[0] = if r == piccola { 0.5 } else { 0.0 };
+        }
+        for i in s.condizioni.iter_mut() {
+            i.quote[0] = 0.0;
+        }
+        p.campagna_ia();
+        let c = &p.partiti[0].campagna;
+        assert_eq!(c[0].bersaglio, Bersaglio::Regione(piccola), "{c:?}");
+        assert_eq!(c[0].euro, p.partiti[0].cassa);
+    }
+
+    /// R23: il rendimento cresce con √s_b, non con s_b. L'estrema sinistra sta nel sondaggio solo
+    /// fra i pensionati (A) e nella regione più popolosa (B, più piccola di A), senza astensione,
+    /// con q·(1−q) in B pari a quello in A per (s_A/s_B)^0,75: con √s_b vince B, con s_b vincerebbe A.
+    #[test]
+    fn il_rendimento_cresce_con_la_radice_degli_elettori() {
+        let mut p = al_turno_19();
+        let regioni = &p.dati.elettorato().regioni;
+        let r = (0..regioni.len())
+            .max_by_key(|&r| regioni[r].elettori)
+            .unwrap();
+        let (a, b) = (
+            Bersaglio::Condizione(Condizione::Pensionato),
+            Bersaglio::Regione(r),
+        );
+        let (s_a, s_b) = (
+            a.quota_elettori(&p.dati, &p.elettorato),
+            b.quota_elettori(&p.dati, &p.elettorato),
+        );
+        assert!(s_a > s_b, "{s_a} {s_b}");
+        let y_a = 0.01 * 0.99;
+        let y_b = y_a * (s_a / s_b).powf(0.75);
+        let x_b = (1.0 - (1.0 - 4.0 * y_b).sqrt()) / 2.0;
+        let s = &mut p.informazione.sondaggio;
+        for (k, i) in s.condizioni.iter_mut().enumerate() {
+            i.quote[0] = if k == 3 { 0.01 } else { 0.0 };
+            *i.quote.last_mut().unwrap() = 0.0;
+        }
+        for (k, i) in s.regioni.iter_mut().enumerate() {
+            i.quote[0] = if k == r { x_b } else { 0.0 };
+            *i.quote.last_mut().unwrap() = 0.0;
+        }
+        p.campagna_ia();
+        let c = &p.partiti[0].campagna;
+        assert_eq!((c[0].bersaglio, c[1].bersaglio), (b, a), "{c:?}");
     }
 
     #[test]

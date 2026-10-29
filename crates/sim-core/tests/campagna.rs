@@ -2,7 +2,7 @@ mod comune;
 use comune::{chiudi_col_bilancio, dati_base, edita, fondata};
 use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::legislatura::{Bersaglio, Intensita, Leva, Spesa};
-use sim_core::partiti::Regola;
+use sim_core::partiti::{Regola, Vocazione};
 use sim_core::{Comando, Partita};
 
 fn al_turno(p: &mut Partita, t: u32) {
@@ -213,12 +213,92 @@ fn sulle_tre(leva: Leva) -> Vec<Spesa> {
 }
 
 /// La partita di prova (seme 1) al turno 19, la campagna, con la cassa del giocatore alla spesa
-/// di riferimento. Nel Task 8 i partiti IA non fanno campagna.
+/// di riferimento e le casse IA vuote: le campagne IA vuote, si misura quella del giocatore.
 fn in_campagna() -> Partita {
     let mut p = Partita::nuova(dati_base(), 1);
     al_turno(&mut p, 19);
     let g = p.giocatore();
-    edita(&p, |j| j["partiti"][g]["cassa"] = riferimento().into()).unwrap()
+    edita(&p, |j| {
+        for k in 0..p.partiti().len() {
+            j["partiti"][k]["cassa"] = (if k == g { riferimento() } else { 0 }).into();
+        }
+    })
+    .unwrap()
+}
+
+/// Gli euro della riga «Spende N euro: …» del partito `id` nel registro, e la riga.
+fn spesa_nel_registro(p: &Partita, id: &str) -> Option<(i64, String)> {
+    let riga = (p.vista().mosse.into_iter())
+        .find(|m| m.partito == id && m.testo.starts_with("Spende "))?
+        .testo;
+    let euro = riga.strip_prefix("Spende ")?.split(' ').next()?;
+    Some((euro.replace('.', "").parse().ok()?, riga.clone()))
+}
+
+/// Chiude il turno del voto di `p`: ogni partito IA attivo spende tutta la cassa che aveva, con
+/// una riga; ne restituisce le righe.
+fn spendono_tutta_la_cassa(p: &mut Partita) -> Vec<(usize, String)> {
+    let g = p.giocatore();
+    let prima: Vec<(usize, String, i64)> = (p.partiti().iter().enumerate())
+        .filter(|(j, x)| *j != g && !x.sciolto && x.cassa > 0)
+        .map(|(j, x)| (j, x.id.clone(), x.cassa))
+        .collect();
+    assert!(!prima.is_empty());
+    chiudi_col_bilancio(p);
+    (prima.into_iter())
+        .map(|(j, id, cassa)| {
+            let (euro, riga) = spesa_nel_registro(p, &id).unwrap();
+            assert_eq!(euro, cassa, "{riga}");
+            (j, riga)
+        })
+        .collect()
+}
+
+/// Al voto del turno 19 e al turno zero di una partita fondata, che spende la cassa iniziale.
+#[test]
+fn i_partiti_ia_spendono_tutta_la_cassa() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    al_turno(&mut p, 19);
+    spendono_tutta_la_cassa(&mut p);
+    assert!(spesa_nel_registro(&p, &p.vista().giocatore).is_none());
+    // `fondata` ha le casse IA vuote: qui servono quelle iniziali.
+    let f = sim_core::legislatura::Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 1.5,
+    };
+    spendono_tutta_la_cassa(&mut Partita::fonda(dati_base(), 7, &f).unwrap());
+}
+
+#[test]
+fn solo_gli_identitari_convincono() {
+    // Con le forze tarate convincere non vince mai (persuadere ha la stessa formula e una forza
+    // più alta): qui la sua forza supera quella di persuadere, perché qualcuno convinca.
+    let f = comune::imposta(
+        comune::file_base(),
+        "manopole",
+        "[forza_convincere]\nvalore = ",
+        "0.3",
+    );
+    let f = comune::imposta(
+        f,
+        "manopole",
+        "[forza_convincere]\nvalore = 0.3\nmin = 0.0\nmax = ",
+        "1.0",
+    );
+    let dati = sim_core::dati::DatiGioco::da_testi(&f).unwrap();
+    assert!(dati.manopola("forza_convincere") > dati.manopola("forza_persuadere"));
+    let mut p = Partita::nuova(dati, 1);
+    al_turno(&mut p, 19);
+    let vocazioni: Vec<Vocazione> = p.partiti().iter().map(|x| x.vocazione).collect();
+    let mut identitari = 0;
+    for (j, riga) in spendono_tutta_la_cassa(&mut p) {
+        if vocazioni[j] != Vocazione::Identitaria {
+            assert!(!riga.contains("convince"), "{riga}");
+        } else if riga.contains("convince") {
+            identitari += 1;
+        }
+    }
+    assert!(identitari > 0);
 }
 
 /// La quota del giocatore fra i votanti al voto che chiude il turno di `base`, con la campagna
@@ -340,11 +420,21 @@ fn campagna_rifiutata_non_cambia_nulla() {
 fn anteprima_a_fasce() {
     let p = in_campagna();
     let prima = p.salva().unwrap();
-    let r = riferimento();
+    // L'intensità 1 è la spesa di riferimento per la quota s_b degli elettori nel bersaglio.
+    let d = dati_base();
+    let el = p.elettorato();
+    let pesi: Vec<f64> = (0..el.gruppi.len())
+        .map(|i| el.elettori(d.elettorato(), i))
+        .collect();
+    let studenti: f64 = (pesi.iter().enumerate())
+        .filter(|(i, _)| condizione_di(*i) == Condizione::Studente)
+        .map(|(_, w)| w)
+        .sum();
+    let r = riferimento() as f64 * studenti / pesi.iter().sum::<f64>();
     for (euro, intensita) in [
-        (r / 16, Intensita::Poco),
-        (r / 4, Intensita::Medio),
-        (r, Intensita::Molto),
+        ((r / 16.0).round() as i64, Intensita::Poco),
+        ((r / 4.0).round() as i64, Intensita::Medio),
+        (r.round() as i64, Intensita::Molto),
     ] {
         let spesa = Spesa {
             bersaglio: Bersaglio::Condizione(Condizione::Studente),

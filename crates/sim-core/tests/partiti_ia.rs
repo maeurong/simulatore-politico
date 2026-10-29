@@ -330,8 +330,9 @@ fn il_calo_al_voto_cambia_leader() {
         "Nuovo leader: {}, dopo il calo di {punti} punti percentuali al voto",
         dopo.leader
     );
+    // Al voto la destra spende anche la cassa: qui conta solo il cambio di leader.
     let testi: Vec<_> = (p.vista().mosse.iter())
-        .filter(|m| m.partito == "destra")
+        .filter(|m| m.partito == "destra" && !m.testo.starts_with("Spende "))
         .map(|m| m.testo.clone())
         .collect();
     assert_eq!(testi, [atteso]);

@@ -376,6 +376,7 @@ impl Partita {
         let di_voto = self.legislatura.turno_di_voto(self.turno);
         // Dopo le scissioni, che portano via una parte della cassa (scelta 14 del piano 8b).
         if di_voto {
+            self.campagna_ia();
             self.spendi_campagne();
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
@@ -1836,9 +1837,8 @@ impl Partita {
     /// Intenzioni di voto vere per gruppo e nazionali, con le spinte delle campagne: ci sono solo
     /// nel turno del voto, finché il voto non le svuota.
     pub fn intenzioni_vere(&self) -> Intenzioni {
-        let n = self.elettorato.gruppi.len();
-        let spinte = campagna::spinte(&self.dati, &self.partiti, n);
         let (dati, el) = (&self.dati, &self.elettorato);
+        let spinte = campagna::spinte(dati, el, &self.partiti);
         Intenzioni::calcola(dati, el, &self.partiti, &self.governo, Some(&spinte))
     }
 
@@ -1889,7 +1889,7 @@ impl Partita {
         spese: &[Spesa],
     ) -> Result<Vec<VoceAnteprimaCampagna>, Errore> {
         self.controlla_campagna(spese)?;
-        Ok(campagna::anteprima(&self.dati, spese))
+        Ok(campagna::anteprima(&self.dati, &self.elettorato, spese))
     }
 
     fn controlla_campagna(&self, spese: &[Spesa]) -> Result<(), Errore> {
@@ -3961,13 +3961,18 @@ mod tests {
     }
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
-    /// sotto un governo IA.
+    /// sotto un governo IA. Al voto le casse IA sono vuote: i casi che la usano sono tarati sul
+    /// governo che nasce senza campagne IA.
     pub(super) fn all_opposizione() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 1.5,
         };
         let mut p = Partita::fonda(dati_base(), 7, &f).unwrap();
+        let g = p.giocatore;
+        (p.partiti.iter_mut().enumerate())
+            .filter(|(j, _)| *j != g)
+            .for_each(|(_, x)| x.cassa = 0);
         p.chiudi_turno(); // voto
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());

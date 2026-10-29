@@ -182,6 +182,17 @@ fn ogni_caduta_ha_la_sua_causa() {
         let mut p = Partita::nuova(dati_base(), seme);
         while p.vista().turno < 41 {
             let (turno, data) = (p.vista().turno, p.vista().data);
+            // Casse IA vuote al voto: con le campagne IA nessun governo cade fino al 41, in 60 semi;
+            // qui si controllano le cause delle cadute, non la campagna.
+            if p.legislatura().turno_di_voto(turno) {
+                let g = p.giocatore();
+                p = edita(&p, |j| {
+                    for k in (0..p.partiti().len()).filter(|&k| k != g) {
+                        j["partiti"][k]["cassa"] = 0.into();
+                    }
+                })
+                .unwrap();
+            }
             let ordinaria = p.legislatura().fase == Fase::Ordinaria;
             let crisi = p.legislatura().crisi == Some(turno);
             let provvisorio = p.vista().bilancio.esercizio_provvisorio;

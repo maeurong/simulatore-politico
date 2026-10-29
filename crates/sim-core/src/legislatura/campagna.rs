@@ -22,11 +22,25 @@ pub enum Bersaglio {
 }
 
 impl Bersaglio {
-    fn contiene(self, i: usize) -> bool {
+    pub(crate) fn contiene(self, i: usize) -> bool {
         match self {
             Bersaglio::Condizione(c) => condizione_di(i) == c,
             Bersaglio::Regione(r) => i / PER_REGIONE == r,
         }
+    }
+
+    /// s_b: la quota degli elettori nei gruppi del bersaglio.
+    pub(crate) fn quota_elettori(self, dati: &DatiGioco, el: &Elettorato) -> f64 {
+        let d = dati.elettorato();
+        let (mut dentro, mut tutti) = (0.0, 0.0);
+        for i in 0..el.gruppi.len() {
+            let w = el.elettori(d, i);
+            tutti += w;
+            if self.contiene(i) {
+                dentro += w;
+            }
+        }
+        dentro / tutti
     }
 
     /// Il nome per il giocatore; `None` per una regione che non c'è.
@@ -60,7 +74,7 @@ pub enum Leva {
 }
 
 impl Leva {
-    fn forza(self, dati: &DatiGioco) -> f64 {
+    pub(crate) fn forza(self, dati: &DatiGioco) -> f64 {
         dati.manopola(match self {
             Leva::Mobilitare => "forza_mobilitare",
             Leva::Persuadere => "forza_persuadere",
@@ -115,18 +129,21 @@ pub struct Spinte {
     pub mobilita: Vec<Vec<f64>>,
 }
 
-/// √(euro / `spesa_riferimento`): la radice della spesa (effetti-della-campagna-e-promesse:52).
-fn radice(dati: &DatiGioco, euro: i64) -> f64 {
-    (euro.max(0) as f64 / dati.manopola("spesa_riferimento")).sqrt()
+/// √(euro / (`spesa_riferimento` · s_b)): la radice della spesa per elettore del bersaglio
+/// (effetti-della-campagna-e-promesse:52); 1 è la spesa di riferimento su tutto l'elettorato.
+fn radice(dati: &DatiGioco, el: &Elettorato, s: &Spesa) -> f64 {
+    let s_b = s.bersaglio.quota_elettori(dati, el);
+    (s.euro.max(0) as f64 / (dati.manopola("spesa_riferimento") * s_b)).sqrt()
 }
 
-fn forza(dati: &DatiGioco, s: &Spesa) -> f64 {
-    s.leva.forza(dati) * radice(dati, s.euro)
+fn forza(dati: &DatiGioco, el: &Elettorato, s: &Spesa) -> f64 {
+    s.leva.forza(dati) * radice(dati, el, s)
 }
 
 /// Le spinte delle campagne dei partiti attivi (scelta 13): `forza_<leva>` × √(euro /
-/// `spesa_riferimento`) nei gruppi del bersaglio. Una voce per partito, sciolti compresi.
-pub(crate) fn spinte(dati: &DatiGioco, partiti: &[Partito], n_gruppi: usize) -> Spinte {
+/// (`spesa_riferimento` · s_b)) nei gruppi del bersaglio. Una voce per partito, sciolti compresi.
+pub(crate) fn spinte(dati: &DatiGioco, el: &Elettorato, partiti: &[Partito]) -> Spinte {
+    let n_gruppi = el.gruppi.len();
     let mut s = Spinte {
         valence: vec![vec![0.0; partiti.len()]; n_gruppi],
         mobilita: vec![vec![0.0; partiti.len()]; n_gruppi],
@@ -138,7 +155,7 @@ pub(crate) fn spinte(dati: &DatiGioco, partiti: &[Partito], n_gruppi: usize) -> 
                 Leva::Mobilitare => &mut s.mobilita,
                 Leva::Convincere => continue,
             };
-            let f = forza(dati, spesa);
+            let f = forza(dati, el, spesa);
             for (i, riga) in tabella.iter_mut().enumerate() {
                 if spesa.bersaglio.contiene(i) {
                     riga[j] += f;
@@ -150,14 +167,14 @@ pub(crate) fn spinte(dati: &DatiGioco, partiti: &[Partito], n_gruppi: usize) -> 
 }
 
 /// Convincere (scelta 13): in ogni gruppo del bersaglio la quota `forza_convincere` × √(euro /
-/// `spesa_riferimento`), al più tutto, dell'istogramma passa al punto più vicino alla dichiarata
-/// del partito. Si chiama prima dell'ancora, che poi la riassorbe.
+/// (`spesa_riferimento` · s_b)), al più tutto, dell'istogramma passa al punto più vicino alla
+/// dichiarata del partito. Si chiama prima dell'ancora, che poi la riassorbe.
 pub(crate) fn convinci(dati: &DatiGioco, partiti: &[Partito], el: &mut Elettorato) {
     for p in partiti.iter().filter(|p| !p.sciolto) {
         // A metà fra due punti va su quello più a destra (`round` allontana da zero).
         let k = (p.posizione_dichiarata.round() as usize).clamp(1, PUNTI) - 1;
         for spesa in p.campagna.iter().filter(|s| s.leva == Leva::Convincere) {
-            let quota = forza(dati, spesa).min(1.0);
+            let quota = forza(dati, el, spesa).min(1.0);
             for (i, g) in el.gruppi.iter_mut().enumerate() {
                 if !spesa.bersaglio.contiene(i) {
                     continue;
@@ -198,12 +215,16 @@ pub(crate) fn valida(dati: &DatiGioco, spese: &[Spesa], cassa: i64) -> Result<()
     Ok(())
 }
 
-/// L'anteprima di spese già valide (scelta 15): legge solo i dati.
-pub(crate) fn anteprima(dati: &DatiGioco, spese: &[Spesa]) -> Vec<VoceAnteprimaCampagna> {
+/// L'anteprima di spese già valide (scelta 15): legge i dati e gli elettori per gruppo, pubblici.
+pub(crate) fn anteprima(
+    dati: &DatiGioco,
+    el: &Elettorato,
+    spese: &[Spesa],
+) -> Vec<VoceAnteprimaCampagna> {
     let riferimento = dati.manopola("spesa_riferimento").round() as i64;
     (spese.iter())
         .map(|s| {
-            let r = radice(dati, s.euro);
+            let r = radice(dati, el, s);
             let intensita = if r < 1.0 / 3.0 {
                 Intensita::Poco
             } else if r < 2.0 / 3.0 {
@@ -212,8 +233,8 @@ pub(crate) fn anteprima(dati: &DatiGioco, spese: &[Spesa]) -> Vec<VoceAnteprimaC
                 Intensita::Molto
             };
             let causa = format!(
-                "{} {}: {} euro, il {}% della forza di una campagna da {} euro (cresce con la \
-                 radice della spesa)",
+                "{} {}: {} euro, il {}% della forza di {} euro spesi su tutto l'elettorato \
+                 (cresce con la radice della spesa per elettore)",
                 maiuscola(s.leva.verbo()),
                 s.bersaglio.nome(dati).unwrap_or_default(),
                 migliaia(s.euro),
@@ -279,26 +300,36 @@ fn migliaia(euro: i64) -> String {
 mod tests {
     use super::*;
     use crate::dati::dati_base;
+    use crate::economia::Economia;
     use crate::partiti::iniziali;
 
+    /// La spesa di riferimento sulla quota s_b degli elettori dei pensionati vale l'intensità 1
+    /// (R23: la spinta per elettore del bersaglio).
     #[test]
     fn persuadere_una_condizione_tocca_solo_i_suoi_gruppi_e_il_suo_partito() {
         let dati = dati_base();
         let (mut partiti, _) = iniziali(&dati);
-        let euro = dati.manopola("spesa_riferimento").round() as i64;
+        let el = Elettorato::iniziale(&dati, partiti.len(), &Economia::iniziale(&dati));
+        let d = dati.elettorato();
+        let pesi: Vec<f64> = (0..el.gruppi.len()).map(|i| el.elettori(d, i)).collect();
+        let pensionati: f64 = (pesi.iter().enumerate())
+            .filter(|(i, _)| condizione_di(*i) == Condizione::Pensionato)
+            .map(|(_, w)| w)
+            .sum();
+        let s_b = pensionati / pesi.iter().sum::<f64>();
+        let euro = (dati.manopola("spesa_riferimento") * s_b).round() as i64;
         partiti[2].campagna.push(Spesa {
             bersaglio: Bersaglio::Condizione(Condizione::Pensionato),
             leva: Leva::Persuadere,
             euro,
         });
-        let n_gruppi = dati.elettorato().gruppi.len();
-        let s = spinte(&dati, &partiti, n_gruppi);
+        let s = spinte(&dati, &el, &partiti);
         let f = dati.manopola("forza_persuadere");
         let mut toccati = 0;
         for (i, riga) in s.valence.iter().enumerate() {
             for (j, &v) in riga.iter().enumerate() {
                 if j == 2 && condizione_di(i) == Condizione::Pensionato {
-                    assert!((v - f).abs() < 1e-12, "{i} {j} {v}");
+                    assert!((v - f).abs() < 1e-6, "{i} {j} {v}");
                     toccati += 1;
                 } else {
                     assert_eq!(v, 0.0, "{i} {j}");
@@ -309,7 +340,7 @@ mod tests {
         assert!(s.mobilita.iter().flatten().all(|&m| m == 0.0));
         // Lo sciolto non fa campagna.
         partiti[2].sciolto = true;
-        let s = spinte(&dati, &partiti, n_gruppi);
+        let s = spinte(&dati, &el, &partiti);
         assert!(s.valence.iter().flatten().all(|&v| v == 0.0));
         assert_eq!(s.valence[0].len(), partiti.len());
     }
