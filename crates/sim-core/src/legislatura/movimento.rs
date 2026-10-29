@@ -2,6 +2,7 @@
 //! abm-elettorali:14-18).
 
 use crate::dati::DatiGioco;
+use crate::elettorato::{PUNTI, softmax};
 use crate::informazione::Sondaggio;
 use crate::partiti::Regola;
 
@@ -50,23 +51,37 @@ pub(crate) fn limita(x: f64, passo: f64, altri: &[f64]) -> f64 {
     fermo.clamp(1.0, 7.0)
 }
 
-/// Il baricentro degli elettori del partito `j` sul sondaggio pubblico, come la stima del
-/// referendum IA (`elettorato/referendum.rs:127-150`): per regione la posizione media
-/// dell'incrocio, pesata con la quota del partito nell'incrocio e con gli elettori della regione
-/// nei dati. `None` se il partito non ha quota in nessuna regione.
-// ponytail: l'incrocio regionale non incrocia posizione e voto; la posizione media è di tutta
-// la regione. Via d'uscita: un istogramma per partito negli incroci del sondaggio.
-pub(crate) fn baricentro(dati: &DatiGioco, sondaggio: &Sondaggio, j: usize) -> Option<f64> {
-    let (mut somma, mut peso) = (0.0, 0.0);
+/// Gli elettori a ogni punto dell'asse sul sondaggio pubblico, come la stima del referendum IA
+/// (`elettorato/referendum.rs:127-150`): Σ_r w_r·h_rk, con h_rk l'istogramma `posizione`
+/// dell'incrocio regionale e w_r gli elettori della regione nei dati.
+pub(crate) fn istogramma(dati: &DatiGioco, sondaggio: &Sondaggio) -> [f64; PUNTI] {
+    let mut h = [0.0; PUNTI];
     for (regione, incrocio) in dati.elettorato().regioni.iter().zip(&sondaggio.regioni) {
-        let h: f64 = incrocio.posizione.iter().sum();
-        if h <= 0.0 {
-            continue;
+        for (h, x) in h.iter_mut().zip(&incrocio.posizione) {
+            *h += regione.elettori as f64 * x;
         }
-        let punti = incrocio.posizione.iter().enumerate();
-        let media = punti.map(|(k, h)| (k + 1) as f64 * h).sum::<f64>() / h;
-        let w = incrocio.quote.get(j).copied().unwrap_or(0.0) * regione.elettori as f64;
-        somma += w * media;
+    }
+    h
+}
+
+/// Il baricentro degli elettori del partito `j`, coi soli dati pubblici (ruling R10). A ogni punto
+/// k dell'asse P(j|k), il softmax di −`beta`·(k − x_i)² sulle `dichiarate` x_i (`None` = sciolto,
+/// escluso), stima chi vota il partito a quel punto. Baricentro = Σ k·h_k·P(j|k) / Σ h_k·P(j|k)
+/// sull'`istogramma`; `None` se il peso è zero.
+pub(crate) fn baricentro(
+    beta: f64,
+    istogramma: &[f64],
+    dichiarate: &[Option<f64>],
+    j: usize,
+) -> Option<f64> {
+    let (mut somma, mut peso) = (0.0, 0.0);
+    for (k, h) in istogramma.iter().enumerate() {
+        let x = (k + 1) as f64;
+        let u: Vec<f64> = (dichiarate.iter())
+            .map(|d| d.map_or(f64::NEG_INFINITY, |d| -beta * (x - d).powi(2)))
+            .collect();
+        let w = h * softmax(&u).get(j).copied().unwrap_or(0.0);
+        somma += w * x;
         peso += w;
     }
     (peso > 0.0).then(|| somma / peso)
@@ -146,6 +161,20 @@ mod tests {
             5.0 + passo(Regola::Governator, 5.0, &c(false), 0.5),
             4.8
         ));
+    }
+
+    #[test]
+    fn baricentro_sui_partiti_vicini() {
+        let dichiarate = [Some(2.0), Some(4.0), Some(6.0)];
+        let uniforme = [1.0; 7];
+        let b = |j| baricentro(0.186, &uniforme, &dichiarate, j).unwrap();
+        assert!(b(0) < 3.0, "{}", b(0));
+        assert!(b(2) > 5.0, "{}", b(2));
+        assert!(vicino(b(1), 4.0));
+        // Lo sciolto non vota: senza il partito a 2, quello a 4 prende anche la sinistra.
+        let senza = [None, Some(4.0), Some(6.0)];
+        assert!(baricentro(0.186, &uniforme, &senza, 1).unwrap() < b(1));
+        assert_eq!(baricentro(0.186, &[0.0; 7], &dichiarate, 0), None);
     }
 
     #[test]

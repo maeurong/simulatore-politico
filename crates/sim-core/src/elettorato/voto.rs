@@ -42,7 +42,7 @@ impl Intenzioni {
 }
 
 /// Softmax con lo shift del massimo.
-pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
+pub(crate) fn softmax(u: &[f64]) -> Vec<f64> {
     let max = u.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let e: Vec<f64> = u.iter().map(|x| (x - max).exp()).collect();
     let somma: f64 = e.iter().sum();

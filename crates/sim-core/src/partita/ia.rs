@@ -124,6 +124,8 @@ impl Partita {
     fn movimenti_ia(&mut self) {
         let massimo = self.dati.manopola("passo_movimento");
         let seggi = self.seggi_per_partito();
+        let beta = self.dati.manopola("beta_distanza");
+        let istogramma = movimento::istogramma(&self.dati, &self.informazione.sondaggio);
         for j in 0..self.partiti.len() {
             let Some(p) = (self.partiti.get(j)).filter(|p| j != self.giocatore && !p.sciolto)
             else {
@@ -134,9 +136,12 @@ impl Partita {
                 _ => None,
             }
             .map(|(ora, allora)| ora > allora);
+            let dichiarate: Vec<Option<f64>> = (self.partiti.iter())
+                .map(|q| (!q.sciolto).then_some(q.posizione_dichiarata))
+                .collect();
             let c = movimento::Contesto {
                 centro: 4.0,
-                baricentro: movimento::baricentro(&self.dati, &self.informazione.sondaggio, j),
+                baricentro: movimento::baricentro(beta, &istogramma, &dichiarate, j),
                 guadagno,
                 ultimo_passo: p.ultimo_passo,
                 al_governo: self.governo.al_governo(j),
