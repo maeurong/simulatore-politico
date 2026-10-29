@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://api.openalex.org/works?search=Not%20as%20expected%20role%20of%20performance%20expectations%20voter%20responses%20election%20pledge%20fulfilment&per_page=2", "sha256": "343a41fad47739ff7d798ea617eec9599e20f75d792c56fbe1531c29dd1093ea", "bytes": 1955}, "tool": "curl+python3 (abstract OpenAlex)", "tool_version": "n/d", "extracted": "2026-10-29"}

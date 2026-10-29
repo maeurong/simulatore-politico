@@ -35,6 +35,11 @@ Impianto base: elettori con punti ideali fissi in 2D, distribuiti in modo normal
 | peso policy vs ufficio α | 0 (solo ufficio) - 1 (solo policy); default 0,5 | (fonti/plos-lehrer-schumacher-2018.md) [V] |
 | fattore di sconto | 0,5 nelle figure | (fonti/plos-lehrer-schumacher-2018.md) [V] |
 | numero di partiti | variabile; 5 nelle figure principali | (fonti/plos-lehrer-schumacher-2018.md) [V] |
+| soglia di sopravvivenza (e di nascita) `T_s`, Laver-Schilperoord | provata a 5, 7,5, 10, 15, 20% del voto; 10% dà sistemi di 6-7 partiti | (fonti/laver-schilperoord-2007-nascita-partiti.md:112, :132) [V] |
+| sensibilità della nascita all'insoddisfazione `β`, memoria `α`, durata sotto soglia `T_t` | 0,0001; 0,5; 10 tick | (fonti/laver-schilperoord-2007-nascita-partiti.md:130) [V] |
+| soglia di sopravvivenza, memoria della fitness, memoria dell'insoddisfazione, Laver-Sergenti cap. 7 | 0,1; 0,5; 0,5 (esperimenti nel codice) | (fonti/laver-sergenti-netlogo-cap7.md:1349-1355) [V] |
+| nascite per elezione, Laver-Sergenti cap. 7 | al massimo una: si estrae un solo punto dello spazio | (fonti/laver-sergenti-netlogo-cap7.md:394-397) [V] |
+| passo (speed) di Hunter, Aggregator, Predator | 0,25, 0,5, 1, 2, 4 unità per tick, con deviazione standard degli elettori 10 e 20 tick per elezione; 1 nel cap. 10 | (fonti/laver-sergenti-netlogo-cap7.md:89, :97, :1341, :1355) [V]; cap. 10 [INF, file del modello letto in sessione, non catturato] |
 
 ## Costo computazionale
 

@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://api.openalex.org/works/doi:10.1177/0010414019830740", "sha256": "e5a88edbb06048e03346ba8009a174bfe683e81a7c031a62ee6c6147fc3d8821", "bytes": 1420}, "tool": "curl+python3 (abstract OpenAlex)", "tool_version": "n/d", "extracted": "2026-10-29"}
