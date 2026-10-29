@@ -198,7 +198,7 @@ fn una_sfiducia_per_turno_e_la_linea_su_una_misura_vera() {
     rifiutato(
         &mut p,
         sfiducia,
-        "una sfiducia è già presentata in questo turno",
+        "una sfiducia è già presentata in questo turno, da Partito nuovo",
     );
     let linea = Comando::Linea {
         misura: 99,

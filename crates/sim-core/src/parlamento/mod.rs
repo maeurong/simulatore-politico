@@ -361,7 +361,7 @@ impl StatoAula<'_> {
                 (m.linea_giocatore.filter(|_| pc == g))
                     .unwrap_or_else(|| guadagno.get(pc).is_some_and(|&x| x > 0.0))
             });
-            voto::linea(dati, governo, intesa, &guadagno, &self.malus(), linea_pdc)
+            self.linea(&guadagno, linea_pdc)
         };
         let accolti = (m.emendamenti.iter()).filter(|e| e.stato == StatoEmendamento::Accolto);
         for j in accolti.map(|e| e.partito).chain(m.promotore) {
@@ -1123,7 +1123,10 @@ impl Parlamento {
             return ko("un referendum fuori dalle disposizioni, dai gradini o dai partiti");
         }
         if !firme_ok {
-            return ko("l'abrogativo non richiesto, o senza firme e col voto fuori dal turno");
+            return ko(
+                "l'abrogativo non è richiesto, oppure è senza firme e il suo voto non cade nel \
+                 turno chiesto",
+            );
         }
         Ok(())
     }

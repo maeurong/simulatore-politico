@@ -171,6 +171,27 @@ fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
     assert_eq!((fasi[20], fasi[40]), (Fase::Trattativa, Fase::Trattativa));
 }
 
+/// La partita di `due_legislature_di_fila_con_salvataggio_a_ogni_turno`: ogni passaggio a una fase
+/// non ordinaria fuori dai voti (20 e 40) ha la sua causa nel turno prima, una sfiducia approvata
+/// o una crisi aperta.
+#[test]
+fn ogni_caduta_ha_la_sua_causa() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 41 {
+        let (turno, data) = (p.vista().turno, p.vista().data);
+        let ordinaria = p.legislatura().fase == Fase::Ordinaria;
+        let crisi = p.legislatura().crisi == Some(turno);
+        chiudi_col_bilancio(&mut p);
+        if !ordinaria || p.legislatura().fase == Fase::Ordinaria || [19, 39].contains(&turno) {
+            continue;
+        }
+        let sfiducia = (p.parlamento().esiti.iter()).any(|e| {
+            e.forma == sim_core::parlamento::FormaMisura::Sfiducia && e.data == data && e.approvata
+        });
+        assert!(sfiducia || crisi, "turno {}: nessuna causa", turno + 1);
+    }
+}
+
 /// Un salvataggio coi totali da miliardi, e seggi che li sommano, non si carica: oltre il
 /// gradino più alto di `numero_parlamentari` nel catalogo.
 #[test]

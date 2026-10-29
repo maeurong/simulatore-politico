@@ -365,7 +365,7 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
     p.promuovi_referendum("sinistra", "licenziamento").unwrap();
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
     let fuori = "un referendum fuori dalle disposizioni, dai gradini o dai partiti";
-    let abrogativo = "l'abrogativo non richiesto, o senza firme e col voto fuori dal turno";
+    let abrogativo = "l'abrogativo non è richiesto, oppure è senza firme e il suo voto non cade nel turno chiesto";
     for (voto, firme, richiesto, atteso) in [
         (1000, true, true, fuori),
         (7, false, true, abrogativo),
@@ -599,6 +599,46 @@ fn il_giocatore_rinuncia_al_confermativo() {
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
 }
 
+/// Il giocatore (90 su 400, 45 su 200) e l'estrema sinistra (90 e 45), che perde 1 dalla legge,
+/// votano no: l'estrema sinistra da sola fa un quinto, e la rinuncia del giocatore non toglie il
+/// confermativo.
+#[test]
+fn la_rinuncia_non_toglie_il_quinto_degli_altri() {
+    let p = all_opposizione();
+    let (g, es) = (p.giocatore(), partito("estrema_sinistra"));
+    let mut p = costituzionale_al_voto(&p, Some(false), &[(g, 90), (es, 90)], &[(g, 45), (es, 45)]);
+    assert_eq!(
+        p.parlamento().confermativi.len(),
+        1,
+        "{:?}",
+        p.vista().esiti
+    );
+    p.comanda(confermativo(&p, false)).unwrap();
+    assert!(p.vista().referendum[0].richiesto);
+}
+
+/// Review Focus 5: il confermativo non richiesto, la sfiducia dell'opposizione IA presentata e
+/// l'abrogativo IA in corso tornano uguali da `carica(salva())`.
+#[test]
+fn salva_e_carica_col_confermativo_non_richiesto_la_sfiducia_e_l_abrogativo_ia() {
+    let p = costituzionale_col_si_del_giocatore();
+    assert!(!p.parlamento().confermativi[0].richiesto);
+    let k = dati_base().disposizione("licenziamento").unwrap();
+    let ed = partito("estrema_destra");
+    let p = edita(&p, |j| {
+        j["parlamento"]["sfiducia"] = serde_json::json!([null, ed]);
+        let voto = j["turno"].as_u64().unwrap() + 1;
+        j["parlamento"]["referendum"] = serde_json::json!({
+            "tipo": "abrogativo", "misura": null, "valori": [[k, 0]], "promotore": ed,
+            "del_giocatore": false, "voto": voto, "firme": true, "invito_astensione": false,
+            "richiesto": true,
+        });
+    })
+    .unwrap();
+    assert_eq!(p.parlamento().sfiducia, Some((None, ed)));
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+}
+
 #[test]
 fn il_giocatore_ci_ripensa_e_chiede_il_confermativo() {
     let mut p = costituzionale_senza_due_terzi_all_opposizione();
@@ -645,7 +685,8 @@ fn chiedere_senza_un_quinto_e_rifiutato() {
     for (c, atteso) in [
         (
             confermativo(&p, true),
-            "per chiederlo serve un quinto di una Camera, col tuo partito e i contrari",
+            "per chiedere il referendum serve un quinto dei seggi di una Camera: il tuo partito \
+             più i partiti contrari alla misura",
         ),
         (ignota, "nessun confermativo da chiedere su questa misura"),
     ] {

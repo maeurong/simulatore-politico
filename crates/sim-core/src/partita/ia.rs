@@ -1,6 +1,6 @@
 //! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta, il governo
 //! avversario che governa in apertura, affronta la crisi e va al voto anticipato, e l'opposizione
-//! che presenta la sfiducia e chiede il referendum.
+//! che presenta la sfiducia, porta la proposta nel posto riservato e chiede il referendum.
 
 use super::Partita;
 use crate::caso::Flusso;
@@ -103,9 +103,10 @@ impl Partita {
     }
 
     /// La proposta-imbarazzo (scelta 16 del piano, iter-legislativo-italiano:125-127): col posto
-    /// riservato del turno a un partito IA e libero, fra le riforme ordinarie a una disposizione
-    /// ammesse da `Parlamento::bozza_proposta` col guadagno del promotore positivo, quella che
-    /// massimizza i seggi (Camera più Senato) dei partiti di governo con la linea sì; a parità il
+    /// riservato del turno assegnato a un partito IA e ancora libero, fra le riforme ordinarie a
+    /// una disposizione ammesse da `Parlamento::bozza_proposta` col guadagno del promotore
+    /// positivo, quella che massimizza i seggi (Camera più Senato) dei partiti di governo con la
+    /// linea sì, senza il giocatore se presiede lui: il suo voto lo decide lui. A parità il
     /// guadagno del promotore, poi l'indice della disposizione e del gradino. Nessun candidato,
     /// nessuna mossa; niente nel turno del voto, dove la proposta decadrebbe senza voto.
     fn proposta_ia(&mut self) {
@@ -119,10 +120,9 @@ impl Partita {
         }
         let aula = self.stato_aula();
         let pl = &self.parlamento;
-        let seggi = |k: usize| {
-            pl.seggi_camera.get(k).copied().unwrap_or(0)
-                + pl.seggi_senato.get(k).copied().unwrap_or(0)
-        };
+        let seggi = self.seggi_per_partito();
+        let presiede = self.governo.presidente == self.giocatore;
+        let conta = |k: usize| self.governo.al_governo(k) && !(presiede && k == self.giocatore);
         let mut migliore: Option<(u32, f64, ValoreProposto)> = None;
         let ordinarie = (self.dati.disposizioni().iter()).filter(|x| x.norma == Norma::Ordinaria);
         for x in ordinarie {
@@ -137,16 +137,16 @@ impl Partita {
                     continue;
                 };
                 let p = aula.previsione(&m);
-                let guadagno = voto::guadagni(&self.partiti, p.posizioni)
-                    .get(j)
+                // Col NaN il confronto è falso: la disposizione resta fuori.
+                let Some(guadagno) = (voto::guadagni(&self.partiti, p.posizioni).get(j))
                     .copied()
-                    .unwrap_or(0.0);
-                if guadagno <= 0.0 {
+                    .filter(|&g| g > 0.0)
+                else {
                     continue;
-                }
+                };
                 let n = (p.linea.iter().enumerate())
-                    .filter(|&(k, &si)| si && self.governo.al_governo(k))
-                    .map(|(k, _)| seggi(k))
+                    .filter(|&(k, &si)| si && conta(k))
+                    .filter_map(|(k, _)| seggi.get(k))
                     .sum();
                 if migliore
                     .as_ref()
@@ -166,10 +166,15 @@ impl Partita {
             && let Some(m) = self.parlamento.misure.last()
         {
             let nome = parlamento::nome_misura(&self.dati, m);
+            let di = if presiede {
+                "fra Camera e Senato dei partiti alleati"
+            } else {
+                "fra Camera e Senato dei partiti di governo"
+            };
             let voterebbero = match n {
-                0 => "nessun seggio della maggioranza la voterebbe".to_string(),
-                1 => "1 seggio della maggioranza la voterebbe".to_string(),
-                _ => format!("{n} seggi della maggioranza la voterebbero"),
+                0 => format!("nessun seggio {di} la voterebbe"),
+                1 => format!("1 seggio {di} la voterebbe"),
+                _ => format!("{n} seggi {di} la voterebbero"),
             };
             self.mossa(
                 j,
@@ -179,13 +184,14 @@ impl Partita {
     }
 
     /// La sfiducia dell'opposizione IA (scelta 14 del piano): al governo se passerebbe sullo stato
-    /// dell'apertura; altrimenti, se passerebbe, al ministro del partito col giudizio medio
-    /// peggiore fra i gruppi (pesato per elettori), a parità il dicastero di peso maggiore, mai di
-    /// un alleato in ultimatum né in interim. Firme: i seggi alla Camera dei partiti IA fuori dal
-    /// governo, almeno un decimo (iter-legislativo-italiano:43, :141-142). Promotore: il più grande
-    /// di loro alla Camera, a parità l'indice più basso. Niente con una mozione già presentata, né
-    /// nel turno di crisi, dove la sfiducia automatica è già sul tavolo, né nel turno del voto,
-    /// che chiude comunque il governo.
+    /// dell'apertura e la caduta non ridarebbe lo stesso governo (`rinascerebbe_uguale`);
+    /// altrimenti, se passerebbe, al ministro del partito col giudizio medio peggiore fra i gruppi
+    /// (pesato per elettori), a parità il dicastero di peso maggiore, mai di un alleato in
+    /// ultimatum né in interim. Firme: i seggi alla Camera dei partiti IA fuori dal governo, almeno
+    /// un decimo (iter-legislativo-italiano:43, :141-142). Promotore: il più grande di loro alla
+    /// Camera, a parità l'indice più basso. Niente con una mozione già presentata, né nel turno di
+    /// crisi, dove la sfiducia automatica è già sul tavolo, né nel turno del voto, che chiude
+    /// comunque il governo.
     fn sfiducia_ia(&mut self) {
         if self.parlamento.sfiducia.is_some()
             || self.in_crisi()
@@ -202,9 +208,7 @@ impl Partita {
         let Some(promotore) = promotore.filter(|_| firme >= servono) else {
             return;
         };
-        let in_ultimatum: Vec<usize> = (self.alleati().into_iter())
-            .filter(|&j| self.in_ultimatum(j))
-            .collect();
+        let in_ultimatum = self.alleati_in_ultimatum();
         // Il motivo della riga: i partiti di governo che nella linea votano sì. Oggi sono solo gli
         // alleati in ultimatum (`linea_sfiducia`, legislatura/crisi.rs:22-27): il nome senza «in
         // ultimatum» non si raggiunge.
@@ -264,7 +268,7 @@ impl Partita {
             );
             Some((Some(i), testo))
         };
-        let scelta = match motivo(None) {
+        let scelta = match motivo(None).filter(|_| !self.rinascerebbe_uguale()) {
             Some(m) => Some((None, format!("Presenta la sfiducia al governo: {m}"))),
             None => individuale(),
         };
@@ -274,22 +278,44 @@ impl Partita {
         }
     }
 
-    /// L'abrogativo dell'opposizione IA (scelta 17 del piano), in aula prima delle firme se nel
-    /// turno nessuno ne ha chiesto uno (scelta 8). Sulla `stima` del sondaggio, fra le disposizioni
-    /// non elettorali che `Parlamento::abrogativo` ammette, quelle dove il sì vince e i votanti
-    /// superano la metà degli aventi diritto; vince il margine sì − no più ampio, a parità l'indice
-    /// minore. Promotore: il partito IA fuori dal governo, con seggi, che guadagna di più
-    /// dall'abrogazione, a parità l'indice minore; nessuno ci guadagna, nessun referendum. La
-    /// richiesta passa da `promuovi_referendum`, con le sue finestre (iter-legislativo-italiano:
-    /// 131-135).
-    pub(super) fn referendum_ia(&mut self) {
-        let pl = &self.parlamento;
-        let seggi = |j: usize| {
-            pl.seggi_camera.get(j).copied().unwrap_or(0)
-                + pl.seggi_senato.get(j).copied().unwrap_or(0)
+    /// La caduta ridarebbe lo stesso governo (formazione-di-coalizioni:13): la maggioranza contigua
+    /// di `capo_dello_stato` è la coalizione di adesso, senza il giocatore, e il primo per seggi,
+    /// che riceve l'incarico IA, è il Presidente del Consiglio. Col giocatore dentro l'incarico è
+    /// suo o una `Guida`, sempre un governo diverso; senza maggioranza contigua si vota.
+    fn rinascerebbe_uguale(&self) -> bool {
+        let ordinata = |c: &[usize]| {
+            let mut c = c.to_vec();
+            c.sort_unstable();
+            c
         };
+        self.maggioranza_del_capo(false).is_some_and(|c| {
+            !c.contains(&self.giocatore)
+                && ordinata(&c) == ordinata(&self.governo.coalizione)
+                && self.primo_per_seggi(&c) == Some(self.governo.presidente)
+        })
+    }
+
+    /// L'abrogativo dell'opposizione IA (scelta 17 del piano), in aula dopo il voto dell'abrogativo
+    /// in corso e prima delle firme del turno, solo se all'apertura lo slot era libero (scelta 8);
+    /// solo in fase ordinaria e dentro le finestre di `promuovi_referendum`, controllate prima di
+    /// ogni stima. Sulla `stima` del sondaggio, fra le disposizioni non elettorali che
+    /// `Parlamento::abrogativo` ammette, quelle dove il sì vince e i votanti superano la metà degli
+    /// aventi diritto; vince il margine sì − no più ampio, a parità l'indice minore. Promotore: il
+    /// partito IA fuori dal governo, con seggi, che guadagna di più dall'abrogazione, a parità
+    /// l'indice minore; nessuno ci guadagna, nessun referendum. La richiesta passa da
+    /// `promuovi_referendum` (iter-legislativo-italiano:131-135).
+    pub(super) fn referendum_ia(&mut self) {
+        if self.legislatura.fase != Fase::Ordinaria || self.finestra_referendum().is_err() {
+            return;
+        }
+        let pl = &self.parlamento;
+        let seggi = self.seggi_per_partito();
         let ia_fuori: Vec<usize> = (0..self.partiti.len())
-            .filter(|&j| j != self.giocatore && !self.governo.al_governo(j) && seggi(j) > 0)
+            .filter(|&j| {
+                j != self.giocatore
+                    && !self.governo.al_governo(j)
+                    && seggi.get(j).is_some_and(|&n| n > 0)
+            })
             .collect();
         let Some(sonda) = ia_fuori.first().and_then(|&j| self.partiti.get(j)) else {
             return;
@@ -334,7 +360,8 @@ impl Partita {
             self.mossa(
                 promotore,
                 format!(
-                    "Chiede il referendum su {nome}: il sì vincerebbe col {percento}% e il quorum"
+                    "Chiede il referendum su {nome}: secondo il sondaggio il sì vincerebbe col \
+                     {percento}% dei voti e il quorum sarebbe raggiunto"
                 ),
             );
         }
@@ -586,6 +613,13 @@ impl Partita {
         self.intesa.ultimatum.get(j).is_some_and(Option::is_some)
     }
 
+    /// Gli alleati con un ultimatum in corso.
+    fn alleati_in_ultimatum(&self) -> Vec<usize> {
+        (self.alleati().into_iter())
+            .filter(|&j| self.in_ultimatum(j))
+            .collect()
+    }
+
     /// La forbice della misura `misura` include la sconfitta, con la linea di `senza` a no.
     fn in_bilico(&self, misura: u32, senza: Option<usize>) -> bool {
         let Some(m) = self.parlamento.misure.iter().find(|m| m.id == misura) else {
@@ -630,9 +664,7 @@ impl Partita {
             sotto
         };
         let mut b = con(quota)?;
-        let richiedenti: Vec<usize> = (self.alleati().into_iter())
-            .filter(|&j| self.in_ultimatum(j))
-            .collect();
+        let richiedenti = self.alleati_in_ultimatum();
         let dicasteri_di = |j: usize| {
             (self.governo.dicasteri.iter().enumerate())
                 .filter(move |&(_, &x)| x == j)
@@ -950,12 +982,80 @@ mod tests {
         assert_eq!(p.parlamento.sfiducia, Some((None, 6)));
     }
 
+    /// Centro (3) e centrodestra (4) in ultimatum votano la sfiducia ai ministri degli altri: la
+    /// riga li elenca entrambi, col plurale.
+    #[test]
+    fn la_riga_della_sfiducia_coi_due_alleati_in_ultimatum() {
+        let mut p = sfiducia_al_limite();
+        p.intesa.valori[3] = 38.0;
+        p.intesa.ultimatum[3] = Some(CausaIntesa::Spartizione);
+        p.sfiducia_ia();
+        let Some((Some(i), _)) = p.parlamento.sfiducia else {
+            panic!(
+                "attesa la sfiducia individuale: {:?}",
+                p.parlamento.sfiducia
+            );
+        };
+        let ministro = &p.ministri.dicasteri[i].ministro.as_ref().unwrap().nome;
+        let attesa = format!(
+            "Presenta la sfiducia a {ministro}, {}: Centro in ultimatum e Centrodestra in \
+             ultimatum la voterebbero",
+            p.dati.dicasteri()[i].nome
+        );
+        assert_eq!(
+            p.mosse.last().map(|m| m.testo.as_str()),
+            Some(attesa.as_str())
+        );
+    }
+
     #[test]
     fn a_parita_di_seggi_promuove_l_indice_minore() {
         let mut p = sfiducia_al_limite();
         p.parlamento.seggi_camera = vec![50, 80, 20, 20, 40, 60, 50, 80];
         p.sfiducia_ia();
         assert_eq!(p.parlamento.sfiducia.map(|(_, j)| j), Some(0));
+    }
+
+    /// Governo IA 3-5 presieduto dalla destra (5), la maggioranza contigua minima: 210 su 400 e
+    /// 105 su 200, la destra prima per seggi. Il centrodestra (4) in ultimatum vota la caduta, che
+    /// col Capo dello Stato ridarebbe lo stesso governo. I dicasteri delle sinistre alla destra.
+    fn sfiducia_allo_stesso_governo() -> Partita {
+        let mut p = sfiducia_al_limite();
+        p.parlamento.seggi_camera = vec![30, 50, 30, 70, 40, 100, 50, 30];
+        p.parlamento.seggi_senato = vec![15, 25, 15, 35, 20, 50, 25, 15];
+        p.governo.presidente = 5;
+        p.governo.coalizione = vec![3, 4, 5];
+        for d in &mut p.governo.dicasteri {
+            if *d < 3 {
+                *d = 5;
+            }
+        }
+        for st in &mut p.ministri.dicasteri {
+            if let Some(m) = &mut st.ministro
+                && m.partito < 3
+            {
+                m.partito = 5;
+            }
+        }
+        p
+    }
+
+    /// Correzione A2: la sfiducia al governo solo se la caduta darebbe un governo diverso; con la
+    /// guida al centro (3) il Capo dello Stato la darebbe alla destra, prima per seggi.
+    #[test]
+    fn niente_sfiducia_al_governo_che_rinascerebbe_uguale() {
+        let mut p = sfiducia_allo_stesso_governo();
+        assert!(p.voto_sfiducia(None).is_some_and(|v| v.3));
+        p.sfiducia_ia();
+        assert!(
+            matches!(p.parlamento.sfiducia, Some((Some(_), 1))),
+            "{:?}",
+            p.parlamento.sfiducia
+        );
+        let mut p = sfiducia_allo_stesso_governo();
+        p.governo.presidente = 3;
+        p.sfiducia_ia();
+        assert_eq!(p.parlamento.sfiducia, Some((None, 1)));
     }
 
     #[test]
@@ -982,10 +1082,49 @@ mod tests {
         let m = (p.parlamento.misure.iter())
             .find(|m| m.promotore.is_some())
             .expect("la partita di prova dà il posto a un partito IA");
-        let j = m.promotore.unwrap_or(usize::MAX);
+        let j = m.promotore.expect("cercata col promotore");
         let posizioni = parlamento::posizioni(&p.dati, &p.disposizioni, &m.valori);
         let guadagno = voto::guadagni(&p.partiti, posizioni);
         assert!(guadagno[j] > 0.0, "{}: {}", j, guadagno[j]);
+    }
+
+    /// Lo spareggio della proposta: coi partiti di governo senza seggi ogni candidata ne raccoglie
+    /// zero, e vince quella col guadagno del promotore più alto.
+    #[test]
+    fn a_parita_di_seggi_vince_il_guadagno_del_promotore() {
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        p.parlamento.misure.retain(|m| m.promotore.is_none());
+        for k in 0..p.partiti.len() {
+            if p.governo.al_governo(k) {
+                p.parlamento.seggi_camera[k] = 0;
+                p.parlamento.seggi_senato[k] = 0;
+            }
+        }
+        let j = (p.posto_riservato()).expect("la partita di prova dà il posto a un partito IA");
+        let guadagno = |p: &Partita, valori: &[(usize, usize)]| {
+            let posizioni = parlamento::posizioni(&p.dati, &p.disposizioni, valori);
+            voto::guadagni(&p.partiti, posizioni)[j]
+        };
+        // Prima della mossa: dopo, la disposizione scelta è in calendario e la bozza è rifiutata.
+        let mut massimo = f64::NEG_INFINITY;
+        for x in (p.dati.disposizioni().iter()).filter(|x| x.norma == Norma::Ordinaria) {
+            for g in &x.gradini {
+                let v = [ValoreProposto {
+                    disposizione: x.id.clone(),
+                    gradino: g.id.clone(),
+                }];
+                if let Ok(b) =
+                    (p.parlamento).bozza_proposta(&p.dati, &p.disposizioni, p.turno, j, &v)
+                {
+                    massimo = massimo.max(guadagno(&p, &b.valori));
+                }
+            }
+        }
+        p.proposta_ia();
+        let m = (p.parlamento.misure.iter())
+            .find(|m| m.promotore == Some(j))
+            .expect("una candidata col guadagno positivo c'è");
+        assert_eq!(guadagno(&p, &m.valori), massimo);
     }
 
     #[test]

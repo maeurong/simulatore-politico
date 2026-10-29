@@ -509,10 +509,14 @@ impl Partita {
         if let Some(r) = &mut self.parlamento.referendum {
             r.firme = true;
         }
-        // Dopo `esegui`: il ministro sfiduciato non ha più un decreto in agenda.
+        // Dopo `esegui`: il ministro sfiduciato non ha più un decreto in agenda. Sul governo già
+        // dimissionario (fiducia respinta, `Dimettiti`) la mozione si scarta senza voto.
         let Some((dicastero, promotore)) = self.parlamento.sfiducia.take() else {
             return false;
         };
+        if self.legislatura.dimissioni {
+            return false;
+        }
         self.sfiducia(dicastero, Some(promotore));
         dicastero.is_none()
     }
@@ -982,14 +986,19 @@ impl Partita {
         linea
     }
 
-    /// La linea del voto sulla costituzionale `misura`, se il suo confermativo aspetta il voto:
-    /// dall'esito della seconda deliberazione, che resta due turni.
-    fn linea_del_confermativo(&self, misura: u32) -> Option<Vec<bool>> {
+    /// L'esito della seconda deliberazione della costituzionale `misura`, che resta due turni, se
+    /// il suo confermativo aspetta il voto.
+    fn esito_del_confermativo(&self, misura: u32) -> Option<&EsitoVoto> {
         let pl = &self.parlamento;
         pl.confermativi.iter().find(|r| r.misura == Some(misura))?;
-        let e = (pl.esiti.iter()).find(|e| {
+        (pl.esiti.iter()).find(|e| {
             e.misura == misura && e.forma == FormaMisura::Costituzionale && e.deliberazione == 2
-        })?;
+        })
+    }
+
+    /// La linea del voto sulla costituzionale `misura`, da `esito_del_confermativo`.
+    fn linea_del_confermativo(&self, misura: u32) -> Option<Vec<bool>> {
+        let e = self.esito_del_confermativo(misura)?;
         Some(e.linee.iter().map(|l| l.si).collect())
     }
 
@@ -1346,6 +1355,22 @@ impl Partita {
         promotore: &str,
         disposizione: &str,
     ) -> Result<(), Errore> {
+        self.finestra_referendum()?;
+        let r = (self.parlamento).abrogativo(
+            &self.stato_aula(),
+            self.turno,
+            promotore,
+            disposizione,
+        )?;
+        self.parlamento.referendum = Some(r);
+        Ok(())
+    }
+
+    /// Le guardie di `promuovi_referendum` che non guardano né promotore né disposizione.
+    ///
+    /// # Errors
+    /// `Comando` nell'ultimo anno, a Camere sciolte, nei sei mesi dopo i comizi.
+    fn finestra_referendum(&self) -> Result<(), Errore> {
         if self.legislatura.ultimo_anno(self.turno) {
             return Err(Errore::Comando(
                 "Nessuna richiesta di referendum nell'ultimo anno della legislatura".into(),
@@ -1361,13 +1386,6 @@ impl Partita {
                     .into(),
             ));
         }
-        let r = (self.parlamento).abrogativo(
-            &self.stato_aula(),
-            self.turno,
-            promotore,
-            disposizione,
-        )?;
-        self.parlamento.referendum = Some(r);
         Ok(())
     }
 
@@ -1385,11 +1403,14 @@ impl Partita {
             ));
         };
         // ponytail: seggi e governo di adesso, non quelli del voto: cambiano solo con una crisi o
-        // un voto nel turno fra le due cose, caso raro.
+        // un voto nel turno fra le due cose, caso raro. Via d'uscita: rileggere seggi e governo al
+        // turno del voto in `linea_del_confermativo`.
         let richiesto = self.quinto_in_una_camera(&self.linea_del_giocatore(&linea, !chiedi));
         if chiedi && !richiesto {
             return Err(Errore::Comando(
-                "per chiederlo serve un quinto di una Camera, col tuo partito e i contrari".into(),
+                "per chiedere il referendum serve un quinto dei seggi di una Camera: il tuo \
+                 partito più i partiti contrari alla misura"
+                    .into(),
             ));
         }
         for r in &mut self.parlamento.confermativi {
@@ -2570,16 +2591,7 @@ impl Partita {
         (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta, del_governo);
         let g = self.giocatore;
         let anticipato = std::mem::take(&mut self.legislatura.voto_anticipato);
-        let presidente = self.governo.presidente;
-        let escluso = (presidente == g || anticipato).then_some(presidente);
-        let pl = &self.parlamento;
-        let trovata = legislatura::maggioranza_contigua(
-            &self.partiti,
-            &pl.seggi_camera,
-            &pl.seggi_senato,
-            escluso,
-        );
-        let Some(coalizione) = trovata else {
+        let Some(coalizione) = self.maggioranza_del_capo(anticipato) else {
             self.legislatura.fase = Fase::Sciolta;
             return;
         };
@@ -2594,6 +2606,20 @@ impl Partita {
         } else {
             Incarico::Guida { coalizione }
         });
+    }
+
+    /// La maggioranza contigua che cerca `capo_dello_stato`: senza il Presidente del Consiglio se
+    /// è il giocatore o se si è dimesso per il voto `anticipato`, altrimenti con tutti.
+    fn maggioranza_del_capo(&self, anticipato: bool) -> Option<Vec<usize>> {
+        let presidente = self.governo.presidente;
+        let escluso = (presidente == self.giocatore || anticipato).then_some(presidente);
+        let pl = &self.parlamento;
+        legislatura::maggioranza_contigua(
+            &self.partiti,
+            &pl.seggi_camera,
+            &pl.seggi_senato,
+            escluso,
+        )
     }
 
     /// Il primo della `coalizione` per seggi (Camera più Senato), a parità l'indice più basso.
@@ -2823,10 +2849,11 @@ impl Partita {
     /// nel turno, dicastero sconosciuto o in interim, firme sotto un decimo della Camera.
     pub(crate) fn presenta_sfiducia(&mut self, dicastero: Option<&str>) -> Result<(), Errore> {
         self.all_opposizione()?;
-        if self.parlamento.sfiducia.is_some() {
-            return Err(Errore::Comando(
-                "una sfiducia è già presentata in questo turno".into(),
-            ));
+        if let Some((_, j)) = self.parlamento.sfiducia {
+            let partito = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+            return Err(Errore::Comando(format!(
+                "una sfiducia è già presentata in questo turno, da {partito}"
+            )));
         }
         let (i, a) = self.sfiducia_ammessa(dicastero)?;
         if !a.firme {
@@ -2863,7 +2890,9 @@ impl Partita {
             self.all_opposizione()?;
         } else if (self.parlamento.misure.iter()).any(|m| m.id == misura && m.promotore.is_none()) {
             return Err(Errore::Comando(
-                "la linea del governo si sceglie solo sulle proposte dell'opposizione".into(),
+                "al governo puoi scegliere la linea del tuo partito solo sulle proposte \
+                 dell'opposizione"
+                    .into(),
             ));
         }
         self.parlamento.linea(misura, si)
@@ -3023,7 +3052,7 @@ impl Partita {
                     invito_astensione: r.invito_astensione,
                     richiesto: r.richiesto,
                     scelta: self.all_opposizione().is_ok()
-                        && (r.misura).is_some_and(|id| self.linea_del_confermativo(id).is_some()),
+                        && (r.misura).is_some_and(|id| self.esito_del_confermativo(id).is_some()),
                 })
                 .collect(),
             esiti_referendum: self.parlamento.esiti_referendum.clone(),
@@ -4079,6 +4108,33 @@ mod tests {
         assert!(!p.sfiducia(Some(0), Some(0)));
         assert!(!p.sfiducia(Some(99), Some(0)));
         assert_eq!(p.salva().unwrap(), prima);
+    }
+
+    /// Scelta 19 del piano 8a, dalla partita: `stato_aula` porta l'ultimo anno, e l'estrema destra
+    /// (6) non vota più la riforma a 70 anni, che le vale 1,5 contro il malus cresciuto a 1,5.
+    #[test]
+    fn nell_ultimo_anno_la_proposta_perde_l_estrema_destra() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let m = a_settanta_anni(&p);
+        assert!(p.stato_aula().previsione(&m).linea[6]);
+        p.turno = p.legislatura.scadenza - 3;
+        assert!(p.legislatura.ultimo_anno(p.turno));
+        assert!(!p.stato_aula().previsione(&m).linea[6]);
+    }
+
+    /// Correzione A4: sul governo già dimissionario la mozione si scarta senza voto.
+    #[test]
+    fn niente_sfiducia_sul_governo_dimissionario() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.legislatura.dimissioni = true;
+        p.parlamento.sfiducia = Some((None, 0));
+        assert!(!p.aula(false));
+        assert!(p.parlamento.sfiducia.is_none());
+        assert!(
+            (p.parlamento.esiti.iter()).all(|e| e.forma != FormaMisura::Sfiducia),
+            "{:?}",
+            p.parlamento.esiti
+        );
     }
 
     /// Il centrodestra (4, posizione 5) vota la caduta del governo di 4 e 5 (destra, posizione 6,

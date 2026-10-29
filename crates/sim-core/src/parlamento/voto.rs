@@ -4,7 +4,7 @@
 
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
-use crate::parlamento::{CausaIntesa, Conteggio};
+use crate::parlamento::{CausaIntesa, Conteggio, StatoAula};
 use crate::partiti::{Governo, Partito};
 
 /// Fuori dal Presidente del Consiglio e al governo.
@@ -43,35 +43,31 @@ pub fn guadagni(partiti: &[Partito], posizioni: Option<(f64, f64)>) -> Vec<f64> 
         .collect()
 }
 
-/// La linea di ogni partito, nell'ordine dei partiti. Il partito del Presidente del Consiglio
-/// vota sì, o `linea_pdc` quando è libero (proposte dell'opposizione, scelta 15 del piano 8a);
-/// gli altri se `s > 0`, con `s` = `guadagno`, più per gli alleati la fedeltà
-/// `peso_intesa_linea · (intesa − 50) / 50` verso la linea del Presidente del Consiglio (col segno
-/// opposto se vota no), meno il `malus` del partito per chi è fuori dal governo.
-pub fn linea(
-    dati: &DatiGioco,
-    governo: &Governo,
-    intesa: &[f64],
-    guadagno: &[f64],
-    malus: &[f64],
-    linea_pdc: Option<bool>,
-) -> Vec<bool> {
-    let peso = dati.manopola("peso_intesa_linea");
-    let pdc_si = linea_pdc.unwrap_or(true);
-    let verso = if pdc_si { 1.0 } else { -1.0 };
-    (intesa.iter().zip(guadagno).zip(malus).enumerate())
-        .map(|(j, ((&i, &g), &m))| {
-            if j == governo.presidente {
-                return pdc_si;
-            }
-            let s = if governo.al_governo(j) {
-                g + verso * peso * (i - 50.0) / 50.0
-            } else {
-                g - m
-            };
-            s > 0.0
-        })
-        .collect()
+impl StatoAula<'_> {
+    /// La linea di ogni partito, nell'ordine dei partiti. Il partito del Presidente del Consiglio
+    /// vota sì, o `linea_pdc` quando è libero (proposte dell'opposizione, scelta 15 del piano 8a);
+    /// gli altri se `s > 0`, con `s` = `guadagno`, più per gli alleati la fedeltà
+    /// `peso_intesa_linea · (intesa − 50) / 50` verso la linea del Presidente del Consiglio (col
+    /// segno opposto se vota no), meno il `malus` del partito per chi è fuori dal governo.
+    pub(crate) fn linea(&self, guadagno: &[f64], linea_pdc: Option<bool>) -> Vec<bool> {
+        let peso = self.dati.manopola("peso_intesa_linea");
+        let pdc_si = linea_pdc.unwrap_or(true);
+        let verso = if pdc_si { 1.0 } else { -1.0 };
+        let (governo, malus) = (self.governo, self.malus());
+        (self.intesa.iter().zip(guadagno).enumerate())
+            .map(|(j, (&i, &g))| {
+                if j == governo.presidente {
+                    return pdc_si;
+                }
+                let s = if governo.al_governo(j) {
+                    g + verso * peso * (i - 50.0) / 50.0
+                } else {
+                    g - malus.get(j).copied().unwrap_or(0.0)
+                };
+                s > 0.0
+            })
+            .collect()
+    }
 }
 
 /// Probabilità che un seggio di ogni partito voti contro la sua `linea`. `nuova` = posizione
@@ -471,8 +467,10 @@ mod tests {
     /// sulla proposta dell'opposizione può essere no.
     #[test]
     fn l_alleato_fedele_segue_la_linea_del_pdc() {
+        use crate::disposizioni::Disposizioni;
         let dati = dati_base();
         let (partiti, governo) = partiti::iniziali(&dati);
+        let disposizioni = Disposizioni::iniziali(&dati);
         let n = partiti.len();
         let cd = (partiti.iter())
             .position(|p| p.id == "centrodestra")
@@ -480,13 +478,29 @@ mod tests {
         assert!(alleato(&governo, cd));
         let mut intesa = vec![50.0; n];
         intesa[cd] = 90.0;
-        let malus = vec![0.0; n];
+        let aula = StatoAula {
+            dati: &dati,
+            disposizioni: &disposizioni,
+            sondaggio: &crate::informazione::Sondaggio {
+                istituti: Vec::new(),
+                condizioni: Vec::new(),
+                fasce: Vec::new(),
+                regioni: Vec::new(),
+            },
+            partiti: &partiti,
+            governo: &governo,
+            intesa: &intesa,
+            ultimatum: &vec![None; n],
+            coalizioni: Vec::new(),
+            giocatore: 0,
+            ultimo_anno: false,
+        };
         let mut guadagno = vec![-1.0; n];
         guadagno[cd] = 0.1;
         let pc = governo.presidente;
-        let no = linea(&dati, &governo, &intesa, &guadagno, &malus, Some(false));
+        let no = aula.linea(&guadagno, Some(false));
         assert!(!no[pc] && !no[cd]);
-        let si = linea(&dati, &governo, &intesa, &guadagno, &malus, None);
+        let si = aula.linea(&guadagno, None);
         assert!(si[pc] && si[cd]);
     }
 
@@ -495,7 +509,7 @@ mod tests {
     #[test]
     fn sulla_proposta_dell_opposizione_il_pdc_segue_il_guadagno() {
         use crate::disposizioni::Disposizioni;
-        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        use crate::parlamento::{FormaMisura, Misura};
         let dati = dati_base();
         let (partiti, governo) = partiti::iniziali(&dati);
         let disposizioni = Disposizioni::iniziali(&dati);
@@ -552,23 +566,13 @@ mod tests {
     #[test]
     fn il_malus_cresce_nell_ultimo_anno() {
         use crate::disposizioni::Disposizioni;
-        use crate::parlamento::{FormaMisura, Misura, StatoAula};
+        use crate::parlamento::{FormaMisura, Misura};
         let dati = dati_base();
         let (partiti, governo) = partiti::iniziali(&dati);
         let n = partiti.len();
         let intesa = vec![50.0; n];
         let ed = n - 1; // l'estrema destra, IA all'opposizione nella partita di prova
         assert!(!governo.al_governo(ed));
-        let mut guadagno = vec![0.0; n];
-        guadagno[ed] = 1.2;
-        let mut malus = vec![0.0; n];
-        for (m, si) in [(1.0, true), (1.5, false)] {
-            malus[ed] = m;
-            assert_eq!(
-                linea(&dati, &governo, &intesa, &guadagno, &malus, None)[ed],
-                si
-            );
-        }
         let disposizioni = Disposizioni::iniziali(&dati);
         let sondaggio = crate::informazione::Sondaggio {
             istituti: Vec::new(),
@@ -595,6 +599,11 @@ mod tests {
         assert_eq!(aula(true, 0).malus()[ed], cresciuto);
         assert_eq!(aula(true, ed).malus()[ed], base, "il giocatore non cresce");
         assert_eq!(aula(true, 0).malus()[governo.presidente], 0.0);
+        // Il guadagno 1,2 supera il malus (1) e resta sotto quello cresciuto (1,5).
+        let mut guadagno = vec![0.0; n];
+        guadagno[ed] = 1.2;
+        assert!(aula(false, 0).linea(&guadagno, None)[ed]);
+        assert!(!aula(true, 0).linea(&guadagno, None)[ed]);
         // La legge di `a_settanta_anni`: l'estrema destra (7) ci guadagna 2,5 − 1 = 1,5, che il
         // malus cresciuto (1,5) annulla.
         let eta = dati

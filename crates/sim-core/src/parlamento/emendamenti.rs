@@ -235,8 +235,8 @@ impl Parlamento {
     /// `PoniFiducia`: la misura si vota nel turno e gli emendamenti aperti cadono senza costo.
     ///
     /// # Errors
-    /// `Comando`: misura sconosciuta, norma costituzionale, questione di fiducia già posta,
-    /// legge nel turno del bilancio.
+    /// `Comando`: misura sconosciuta, proposta dell'opposizione, norma costituzionale, questione di
+    /// fiducia già posta, legge nel turno del bilancio.
     pub(crate) fn poni_fiducia(
         &mut self,
         dati: &DatiGioco,
@@ -247,6 +247,9 @@ impl Parlamento {
         let Some(m) = self.misure.iter_mut().find(|m| m.id == misura) else {
             return ko(format!("misura sconosciuta: {misura}"));
         };
+        if m.promotore.is_some() {
+            return ko("la fiducia si pone solo sulle misure del governo".into());
+        }
         if m.forma == FormaMisura::Costituzionale {
             return ko(format!(
                 "niente questione di fiducia su «{}»: la norma costituzionale passa da due \
