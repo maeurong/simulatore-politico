@@ -3,14 +3,16 @@
 //! che presenta la sfiducia, porta la proposta nel posto riservato e chiede il referendum.
 
 use super::Partita;
+use super::vita::virgola;
 use crate::caso::Flusso;
 use crate::comando::Comando;
 use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, Fase};
+use crate::legislatura::{self, Dichiarazione, Fase, Quadro, movimento, quota_fra_i_votanti};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
+use crate::partiti::Regola;
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
@@ -25,14 +27,23 @@ impl Partita {
         }
     }
 
-    /// Un nome di `lista` estratto da `Flusso::PartitiIa` fuori da `gia`; nessuno se in 100
-    /// estrazioni esce sempre un nome già usato.
-    #[expect(dead_code, reason = "lo chiameranno protesta e scissione")]
-    pub(super) fn nome_nuovo(&mut self, gia: &[String], lista: &[String]) -> Option<String> {
+    /// Un nome di `nomi_partiti` dello scenario estratto da `Flusso::PartitiIa`, diverso dai nomi
+    /// dei partiti; nessuno se in 100 estrazioni esce sempre un nome già usato.
+    pub(super) fn nome_nuovo(&mut self) -> Option<String> {
+        let lista = &self.dati.scenario().nomi_partiti;
+        let gia = |n: &String| self.partiti.iter().any(|p| &p.nome == n);
         (0..100)
             .filter_map(|_| lista.get(indice(self.caso.uniforme(Flusso::PartitiIa), lista.len())))
-            .find(|n| !gia.contains(n))
+            .find(|n| !gia(n))
             .cloned()
+    }
+
+    /// Nome e cognome di un leader nuovo, estratti da `Flusso::PartitiIa`.
+    pub(super) fn leader_nuovo(&mut self) -> String {
+        let el = self.dati.elettorato();
+        let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
+        let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
+        format!("{n} {c}")
     }
 
     /// Il partito IA `j` cambia leader: nome nuovo estratto da `Flusso::PartitiIa`; la valence
@@ -42,13 +53,10 @@ impl Partita {
         if j == self.giocatore {
             return;
         }
-        let el = self.dati.elettorato();
         let uscente = self.partiti.get(j).map(|p| p.leader.clone());
         let mut nuovo = None;
         for _ in 0..100 {
-            let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
-            let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
-            let candidato = format!("{n} {c}");
+            let candidato = self.leader_nuovo();
             if uscente.as_ref() != Some(&candidato) {
                 nuovo = Some(candidato);
                 break;
@@ -86,7 +94,7 @@ impl Partita {
                 continue;
             }
             if let Some(calo) = self.calo(j) {
-                let punti = format!("{:.1}", calo * 100.0).replace('.', ",");
+                let punti = virgola(calo * 100.0);
                 self.cambia_leader(j, &format!("il calo di {punti} punti percentuali al voto"));
             }
         }
@@ -107,6 +115,209 @@ impl Partita {
             self.governo_ia();
         }
         self.opposizione_ia();
+    }
+
+    /// Nell'apertura del turno del voto, in ogni fase e a partita non finita: la campagna dei
+    /// partiti IA (movimenti, protesta, coalizioni). Mai al turno zero, che non passa da qui
+    /// (scelta 18 del piano 8b).
+    pub(super) fn apertura_campagna(&mut self) {
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
+            return;
+        }
+        self.movimenti_ia();
+        self.protesta();
+        self.coalizioni_ia();
+    }
+
+    /// Il valore atteso di ogni partito al voto con `d` (`Quadro::valore`), sul sondaggio
+    /// pubblico con le coalizioni `ultime`: un riparto solo per tutti.
+    pub(super) fn valori(&self, d: &Dichiarazione, ultime: &[Vec<usize>]) -> Vec<f64> {
+        let q = Quadro {
+            ultime,
+            ..self.quadro()
+        };
+        let seggi = q.seggi(d);
+        (0..self.partiti.len())
+            .map(|j| q.termini(d, &seggi, j).iter().map(|t| t.1).sum())
+            .collect()
+    }
+
+    /// Le coalizioni IA pre-voto (scelta 11 del piano 8b; formazione-di-coalizioni:13,
+    /// abm-elettorali:35). Liberi: i partiti IA attivi fuori dalla coalizione del giocatore
+    /// (`dichiarazione_corrente`). Si parte dalle coalizioni dell'ultimo voto ristrette ai liberi;
+    /// chi resta fuori corre da solo. Fino a 10 giri; in ogni giro ogni libero, per quota nel
+    /// sondaggio (a parità l'indice), può restare, correre da solo o entrare in un gruppo con un
+    /// membro accanto a lui nella fila per dichiarata dei partiti attivi, anche di un partito solo,
+    /// se nessun membro ci perde; fa la mossa che gli vale di più (a parità la prima: da solo, poi
+    /// i gruppi in ordine), se supera lo stare di `margine_coalizione`. In `coalizioni_ia` la
+    /// coalizione del giocatore dell'ultimo voto, se c'è, poi i gruppi di almeno due partiti; una
+    /// riga per mossa.
+    fn coalizioni_ia(&mut self) {
+        let (g, d) = (self.giocatore, self.dichiarazione_corrente());
+        let attivo = |j: usize| self.partiti.get(j).is_some_and(|p| !p.sciolto);
+        let libero = |j: &usize| *j != g && attivo(*j) && !d.partiti.contains(j);
+        let ultime = &self.legislatura.coalizioni;
+        let sua: Vec<Vec<usize>> = ultime.iter().filter(|c| c.contains(&g)).cloned().collect();
+        let mut gruppi: Vec<Vec<usize>> = (ultime.iter())
+            .map(|c| c.iter().copied().filter(libero).collect::<Vec<_>>())
+            .filter(|c| !c.is_empty())
+            .collect();
+        for j in (0..self.partiti.len()).filter(libero) {
+            if !gruppi.iter().flatten().any(|&i| i == j) {
+                gruppi.push(vec![j]);
+            }
+        }
+        let quota = |j: usize| quota_fra_i_votanti(&self.informazione.sondaggio, j);
+        let mut ordine: Vec<usize> = gruppi.iter().flatten().copied().collect();
+        ordine.sort_by(|&a, &b| quota(b).total_cmp(&quota(a)).then(a.cmp(&b)));
+        let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
+        let mut fila: Vec<usize> = (0..self.partiti.len()).filter(|&j| attivo(j)).collect();
+        fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+        let rango = |j: usize| fila.iter().position(|&i| i == j);
+        let accanto = |j: usize, c: &[usize]| {
+            (c.iter()).any(|&m| {
+                rango(j)
+                    .zip(rango(m))
+                    .is_some_and(|(a, b)| a.abs_diff(b) == 1)
+            })
+        };
+        let al_voto = |gruppi: &[Vec<usize>]| -> Vec<Vec<usize>> {
+            (sua.iter().chain(gruppi.iter().filter(|c| c.len() >= 2)))
+                .cloned()
+                .collect()
+        };
+        let di = |v: &[f64], j: usize| v.get(j).copied().unwrap_or(0.0);
+        let margine = self.dati.manopola("margine_coalizione");
+        let mut base = self.valori(&d, &al_voto(&gruppi));
+        // (chi si muove, il gruppo in cui entra; vuoto se corre da solo)
+        let mut righe: Vec<(usize, Vec<usize>)> = Vec::new();
+        for _ in 0..10 {
+            let mut mosso = false;
+            for &j in &ordine {
+                let compagni: Vec<usize> = (gruppi.iter().find(|c| c.contains(&j)))
+                    .map(|c| c.iter().copied().filter(|&i| i != j).collect())
+                    .unwrap_or_default();
+                let resto: Vec<Vec<usize>> = (gruppi.iter())
+                    .map(|c| c.iter().copied().filter(|&i| i != j).collect::<Vec<_>>())
+                    .filter(|c| !c.is_empty())
+                    .collect();
+                let mut mosse: Vec<(Vec<Vec<usize>>, Vec<usize>)> = Vec::new();
+                if !compagni.is_empty() {
+                    let mut x = resto.clone();
+                    x.push(vec![j]);
+                    mosse.push((x, Vec::new()));
+                }
+                for (k, c) in resto.iter().enumerate() {
+                    if *c != compagni && accanto(j, c) {
+                        let mut x = resto.clone();
+                        if let Some(c) = x.get_mut(k) {
+                            c.push(j);
+                        }
+                        mosse.push((x, c.clone()));
+                    }
+                }
+                let (mut soglia, mut meglio) = (di(&base, j) + margine, None);
+                for (x, membri) in mosse {
+                    let v = self.valori(&d, &al_voto(&x));
+                    let assenso = membri.iter().all(|&m| di(&v, m) >= di(&base, m));
+                    if assenso && di(&v, j) > soglia {
+                        soglia = di(&v, j);
+                        meglio = Some((v, x, membri));
+                    }
+                }
+                if let Some((v, x, membri)) = meglio {
+                    (base, gruppi) = (v, x);
+                    righe.push((j, membri));
+                    mosso = true;
+                }
+            }
+            if !mosso {
+                break;
+            }
+        }
+        self.legislatura.coalizioni_ia = Some(al_voto(&gruppi));
+        for (j, membri) in righe {
+            let testo = if membri.is_empty() {
+                "Corre da solo: nel valore atteso ci guadagna".to_string()
+            } else {
+                let nomi: Vec<String> = (membri.iter().filter_map(|&m| self.partiti.get(m)))
+                    .map(|p| p.nome.clone())
+                    .collect();
+                format!(
+                    "Entra in coalizione con {}: nel valore atteso ci guadagna",
+                    elenco(&nomi)
+                )
+            };
+            self.mossa(j, testo);
+        }
+    }
+
+    /// La regola di movimento (scelta 4 del piano 8b): i partiti IA attivi, in ordine d'indice,
+    /// ciascuno sulle posizioni già mosse; una riga per partito mosso.
+    fn movimenti_ia(&mut self) {
+        let massimo = self.dati.manopola("passo_movimento");
+        let seggi = self.seggi_per_partito();
+        let beta = self.dati.manopola("beta_distanza");
+        let istogramma = movimento::istogramma(&self.dati, &self.informazione.sondaggio);
+        for j in 0..self.partiti.len() {
+            let Some(p) = (self.partiti.get(j)).filter(|p| j != self.giocatore && !p.sciolto)
+            else {
+                continue;
+            };
+            let guadagno = match self.legislatura.elezioni.as_slice() {
+                [ultimo, prima, ..] => ultimo.quota(&p.id).zip(prima.quota(&p.id)),
+                _ => None,
+            }
+            .map(|(ora, allora)| ora > allora);
+            let dichiarate: Vec<Option<f64>> = (self.partiti.iter())
+                .map(|q| (!q.sciolto).then_some(q.posizione_dichiarata))
+                .collect();
+            let c = movimento::Contesto {
+                centro: 4.0,
+                baricentro: movimento::baricentro(beta, &istogramma, &dichiarate, j),
+                guadagno,
+                ultimo_passo: p.ultimo_passo,
+                al_governo: self.governo.al_governo(j),
+                posizione_governo: self.posizione_governo(&seggi),
+            };
+            let x = p.posizione_dichiarata;
+            let altri: Vec<(usize, f64)> = (self.partiti.iter().enumerate())
+                .filter(|&(k, q)| k != j && !q.sciolto)
+                .map(|(k, q)| (k, q.posizione_dichiarata))
+                .collect();
+            let richiesto = movimento::passo(p.regola, x, &c, massimo);
+            let nuova = movimento::limita(j, x, richiesto, &altri);
+            let perche = match (p.regola, guadagno) {
+                (Regola::Aggregator, _) => "verso i suoi elettori",
+                (Regola::Hunter, Some(true)) => "dopo un guadagno al voto ripete lo spostamento",
+                (Regola::Hunter, Some(false)) => "dopo una perdita al voto inverte lo spostamento",
+                (Regola::Hunter, None) => "alla prima legislatura va verso il centro",
+                (Regola::Governator, _) => "verso la posizione del governo",
+                (Regola::Sticker, _) => "",
+            };
+            if let Some(p) = self.partiti.get_mut(j) {
+                p.sposta(nuova);
+                p.ultimo_passo = movimento::ultimo_passo(x, nuova, richiesto);
+            }
+            // Solo se si vede: il movimento resta anche quando le due cifre coincidono.
+            let (da, a) = (virgola(x), virgola(nuova));
+            if da != a {
+                self.mossa(j, format!("Sposta la posizione da {da} a {a}: {perche}"));
+            }
+        }
+    }
+
+    /// La media delle dichiarate della coalizione di governo pesata coi `seggi` (scelta 7 del
+    /// piano 8a); senza seggi, la dichiarata del presidente.
+    fn posizione_governo(&self, seggi: &[u32]) -> f64 {
+        let peso = |j: usize| f64::from(seggi.get(j).copied().unwrap_or(0));
+        let dichiarata = |j: usize| self.partiti.get(j).map_or(4.0, |p| p.posizione_dichiarata);
+        let c = &self.governo.coalizione;
+        let totale: f64 = c.iter().map(|&j| peso(j)).sum();
+        if totale <= 0.0 {
+            return dichiarata(self.governo.presidente);
+        }
+        c.iter().map(|&j| peso(j) * dichiarata(j)).sum::<f64>() / totale
     }
 
     /// L'opposizione IA in apertura, anche contro un governo IA (decisione 3 di Mario).
@@ -369,7 +580,7 @@ impl Partita {
         let (nome, disposizione) = (x.nome.clone(), x.id.clone());
         let id = self.partiti[promotore].id.clone();
         if self.promuovi_referendum(&id, &disposizione).is_ok() {
-            let percento = format!("{:.1}", a.si / (a.si + a.no) * 100.0).replace('.', ",");
+            let percento = virgola(a.si / (a.si + a.no) * 100.0);
             self.mossa(
                 promotore,
                 format!(
@@ -456,6 +667,65 @@ impl Partita {
                 self.mossa(pc, testo.into());
             }
         }
+    }
+
+    /// Il governo avversario col valore atteso (scelta 12 del piano 8b; formazione-di-coalizioni:13,
+    /// :22). Fila: i partiti con seggi senza il giocatore, per dichiarata (a parità l'indice).
+    /// Formatore: il primo della fila per seggi (Camera più Senato, a parità l'indice più basso).
+    /// Fra le finestre della fila che lo comprendono e hanno la maggioranza in entrambe le Camere,
+    /// quella che gli vale di più (`valore_al_governo` coi seggi veri, con la guida), purché ogni
+    /// membro ci guadagni (valore positivo; il formatore con la guida); a parità la meno numerosa
+    /// in seggi, poi gli indici. I partiti nell'ordine della fila; nessuna, `None`.
+    pub(super) fn maggioranza_ia(&self) -> Option<Vec<usize>> {
+        let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
+        let seggi = |j: usize| {
+            let di = |v: &[u32]| u64::from(v.get(j).copied().unwrap_or(0));
+            di(camera) + di(senato)
+        };
+        let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
+        let mut fila: Vec<usize> = (0..self.partiti.len())
+            .filter(|&j| seggi(j) > 0 && j != self.giocatore)
+            .collect();
+        fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+        let f = legislatura::primo_per_seggi(&fila, camera, senato)?;
+        let q = self.quadro_veri();
+        let vale = |w: &[usize], j: usize| legislatura::valore_al_governo(&q, j, w, j == f);
+        (1..=fila.len())
+            .flat_map(|n| fila.windows(n))
+            .filter(|w| w.contains(&f) && legislatura::maggioranza(camera, senato, w))
+            .filter(|w| w.iter().all(|&j| vale(w, j) > 0.0))
+            .map(|w| {
+                let mut indici = w.to_vec();
+                indici.sort_unstable();
+                (
+                    vale(w, f),
+                    w.iter().map(|&j| seggi(j)).sum::<u64>(),
+                    indici,
+                    w,
+                )
+            })
+            .max_by(|a, b| {
+                (a.0.total_cmp(&b.0))
+                    .then(b.1.cmp(&a.1))
+                    .then(b.2.cmp(&a.2))
+            })
+            .map(|(_, _, _, w)| w.to_vec())
+    }
+
+    /// La riga del formatore che forma il governo IA con `coalizione`.
+    pub(super) fn riga_del_formatore(&mut self, formatore: usize, coalizione: &[usize]) {
+        let nomi: Vec<String> = (coalizione.iter().filter(|&&j| j != formatore))
+            .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.clone()))
+            .collect();
+        let testo = if nomi.is_empty() {
+            "Forma il governo da solo: la maggioranza che gli vale di più".to_string()
+        } else {
+            format!(
+                "Forma il governo con {}: la maggioranza che gli vale di più",
+                elenco(&nomi)
+            )
+        };
+        self.mossa(formatore, testo);
     }
 
     /// Il voto anticipato si decide: governo IA in carica, fase ordinaria, dal quinto turno della
@@ -1162,6 +1432,146 @@ mod tests {
             .find(|m| m.promotore == Some(j))
             .expect("una candidata col guadagno positivo c'è");
         assert_eq!(guadagno(&p, &m.valori), massimo);
+    }
+
+    /// La partita di prova (seme 1) all'apertura del turno 19, la campagna.
+    fn al_turno_19() -> Partita {
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        while p.turno < 19 {
+            if p.governa()
+                && let Some(bilancio) = p.bozza_bilancio()
+            {
+                p.applica(Comando::PresentaBilancio { bilancio }).unwrap();
+            }
+            p.chiudi_turno();
+        }
+        p
+    }
+
+    /// Le coalizioni IA al turno 19 sono disgiunte e fatte di partiti attivi; fuori da quella del
+    /// giocatore, ogni gruppo ha almeno due partiti di rango contiguo nella fila per dichiarata.
+    /// Caso a mano: dopo i movimenti la sinistra (2,5) sta a un punto dal centrosinistra (3,5),
+    /// fuori dalla sua coalizione dell'ultimo voto ci guadagna e corre da sola; resta la sola
+    /// coalizione del giocatore, centrodestra e destra.
+    #[test]
+    fn le_coalizioni_ia_al_turno_19() {
+        let p = al_turno_19();
+        let ia = p.legislatura.coalizioni_ia.clone().unwrap();
+        let tutti: Vec<usize> = ia.iter().flatten().copied().collect();
+        let mut unici = tutti.clone();
+        unici.sort_unstable();
+        unici.dedup();
+        assert_eq!(unici.len(), tutti.len(), "{ia:?}");
+        assert!(tutti.iter().all(|&j| !p.partiti[j].sciolto));
+        let mut fila: Vec<usize> = (0..p.partiti.len())
+            .filter(|&j| !p.partiti[j].sciolto)
+            .collect();
+        let pos = |j: usize| p.partiti[j].posizione_dichiarata;
+        fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+        let rango = |j: usize| fila.iter().position(|&i| i == j).unwrap();
+        for c in ia.iter().filter(|c| !c.contains(&p.giocatore)) {
+            let mut r: Vec<usize> = c.iter().map(|&j| rango(j)).collect();
+            r.sort_unstable();
+            assert!(
+                r.len() >= 2 && r.windows(2).all(|w| w[1] == w[0] + 1),
+                "{c:?}"
+            );
+        }
+        assert_eq!(ia, [[4, 5]]);
+        assert_eq!(p.partiti[1].posizione_dichiarata, 2.5);
+        let corre = "Corre da solo: nel valore atteso ci guadagna";
+        assert!(
+            (p.mosse.iter()).any(|m| m.partito == "sinistra" && m.testo == corre),
+            "{:?}",
+            p.mosse
+        );
+    }
+
+    /// Il centro (Governator, fuori dal governo) da 5,50 al governo a 5,52: si muove, ma «da 5,5 a
+    /// 5,5» non si scrive.
+    #[test]
+    fn nessuna_riga_per_un_movimento_che_non_si_vede() {
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        assert!(!p.governo.al_governo(3));
+        for (j, x) in [(3, 5.5), (4, 5.52), (5, 5.52)] {
+            p.partiti[j].posizione_dichiarata = x;
+        }
+        p.movimenti_ia();
+        assert_eq!(p.partiti[3].posizione_dichiarata, 5.52);
+        assert!(
+            p.mosse.iter().all(|m| m.partito != "centro"),
+            "{:?}",
+            p.mosse
+        );
+    }
+
+    /// A Camere sciolte la campagna c'è (movimenti e coalizioni IA); a partita finita no.
+    #[test]
+    fn la_campagna_a_camere_sciolte_e_a_partita_finita() {
+        let a_camere_sciolte = || {
+            let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+            p.legislatura.fase = Fase::Sciolta;
+            p
+        };
+        let (mut sciolte, mut finita) = (a_camere_sciolte(), a_camere_sciolte());
+        sciolte.apertura_campagna();
+        assert!(sciolte.legislatura.coalizioni_ia.is_some());
+        assert!((sciolte.mosse.iter()).any(|m| m.testo.starts_with("Sposta la posizione")));
+        finita.fine = Some(crate::legislatura::Fine::Abbandono);
+        finita.apertura_campagna();
+        assert_eq!(finita.legislatura.coalizioni_ia, None);
+        assert!(finita.mosse.is_empty());
+    }
+
+    /// L'estrema destra Hunter al bordo 7 con l'ultimo passo +0,5 e un guadagno al voto: il passo
+    /// si annulla sul bordo, l'ultimo passo diventa −0,5 e nessuna riga; alla campagna dopo, con
+    /// un altro guadagno, ripete −0,5 e rimbalza verso il centro.
+    #[test]
+    fn hunter_al_bordo_rimbalza_verso_il_centro() {
+        use crate::legislatura::{EsitoElezioni, VotiPartito};
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        let data = p.data;
+        let esito = |quota| EsitoElezioni {
+            data,
+            affluenza: 0.6,
+            voti: vec![VotiPartito {
+                partito: "estrema_destra".into(),
+                quota,
+                camera: 0,
+                senato: 0,
+            }],
+            premio: None,
+            coalizioni: Vec::new(),
+        };
+        p.legislatura.elezioni = vec![esito(0.06), esito(0.05)];
+        let ed = &mut p.partiti[6];
+        (ed.regola, ed.posizione_dichiarata, ed.ultimo_passo) = (Regola::Hunter, 7.0, 0.5);
+        p.movimenti_ia();
+        assert_eq!(p.partiti[6].posizione_dichiarata, 7.0);
+        assert_eq!(p.partiti[6].ultimo_passo, -0.5);
+        assert!(p.mosse.iter().all(|m| m.partito != "estrema_destra"));
+        p.movimenti_ia();
+        assert_eq!(p.partiti[6].posizione_dichiarata, 6.5);
+        assert_eq!(p.partiti[6].ultimo_passo, -0.5);
+        let riga =
+            "Sposta la posizione da 7,0 a 6,5: dopo un guadagno al voto ripete lo spostamento";
+        assert!(
+            p.mosse
+                .iter()
+                .any(|m| m.partito == "estrema_destra" && m.testo == riga)
+        );
+        // Dopo una perdita inverte: torna sul bordo.
+        p.legislatura.elezioni = vec![esito(0.04), esito(0.05)];
+        p.mosse.clear();
+        p.movimenti_ia();
+        assert_eq!(p.partiti[6].posizione_dichiarata, 7.0);
+        let riga =
+            "Sposta la posizione da 6,5 a 7,0: dopo una perdita al voto inverte lo spostamento";
+        assert!(
+            p.mosse
+                .iter()
+                .any(|m| m.partito == "estrema_destra" && m.testo == riga)
+        );
     }
 
     #[test]

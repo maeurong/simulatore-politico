@@ -152,7 +152,13 @@ fn il_giocatore_non_cambia_mai_leader() {
     for _ in 0..24 {
         p.chiudi_turno();
         assert_eq!(p.partiti()[g].leader, "");
-        assert!(p.vista().mosse.iter().all(|m| m.partito != "giocatore"));
+        // Minaccia e scissione toccano anche il partito del giocatore (piano 8b), il leader no.
+        assert!(
+            (p.vista().mosse.iter())
+                .all(|m| m.partito != "giocatore" || !m.testo.starts_with("Nuovo leader")),
+            "{:?}",
+            p.vista().mosse
+        );
     }
     // Precondizione: il calo c'è stato (il voto è avvenuto con la quota di prima a 0,9).
     assert!(p.legislatura().elezioni.len() >= 2);

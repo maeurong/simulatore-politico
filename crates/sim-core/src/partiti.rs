@@ -92,6 +92,22 @@ pub struct Partito {
     pub cassa: i64,
     /// Elezioni di fila senza seggi (scelta 9 del piano 8b); a 2 il partito IA si scioglie.
     pub senza_seggi: u8,
+    /// L'ultimo passo chiesto dalla regola, col segno, rovesciato se `limita` l'ha annullato:
+    /// Hunter ne ripete o inverte la direzione.
+    pub ultimo_passo: f64,
+    /// Ha già minacciato la scissione (scelta 7 del piano 8b); si spegne quando la percepita torna
+    /// sotto `minaccia_scissione` dalla dichiarata.
+    pub minaccia: bool,
+}
+
+impl Partito {
+    /// Sposta la dichiarata su `nuova` e la percepita della metà nella stessa direzione (scelta 5
+    /// del piano 8b), dentro 1-7.
+    pub(crate) fn sposta(&mut self, nuova: f64) {
+        let d = nuova - self.posizione_dichiarata;
+        self.posizione_dichiarata = nuova;
+        self.posizione_percepita = (self.posizione_percepita + d / 2.0).clamp(1.0, 7.0);
+    }
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
@@ -144,6 +160,8 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             sciolto: false,
             cassa: 0,
             senza_seggi: 0,
+            ultimo_passo: 0.0,
+            minaccia: false,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);

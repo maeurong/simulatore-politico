@@ -119,6 +119,12 @@ pub enum Comando {
         misura: u32,
         chiedi: bool,
     },
+    /// In campagna elettorale, una volta, sposta la dichiarata del suo partito su `posizione`:
+    /// al più `passo_movimento` di distanza, senza cambiare il suo rango nella fila per (dichiarata,
+    /// indice).
+    Riposiziona {
+        posizione: f64,
+    },
 }
 
 impl Partita {
@@ -179,7 +185,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -217,6 +223,7 @@ impl Partita {
                 self.all_opposizione()?;
                 return self.confermativo(*misura, *chiedi);
             }
+            Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
             _ => {}
         }
         self.di_governo()?;

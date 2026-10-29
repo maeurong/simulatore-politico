@@ -42,7 +42,7 @@ impl Intenzioni {
 }
 
 /// Softmax con lo shift del massimo.
-pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
+pub(crate) fn softmax(u: &[f64]) -> Vec<f64> {
     let max = u.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let e: Vec<f64> = u.iter().map(|x| (x - max).exp()).collect();
     let somma: f64 = e.iter().sum();
@@ -51,7 +51,7 @@ pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
 
 /// Utilità del gruppo `i` al punto `x` (1..=7): un valore per partito, poi l'astensione. Uno
 /// sciolto vale −∞: l'astensione è sempre finita, quindi il softmax gli dà zero senza NaN.
-fn utilita(
+pub(crate) fn utilita(
     dati: &DatiGioco,
     el: &Elettorato,
     partiti: &[Partito],
