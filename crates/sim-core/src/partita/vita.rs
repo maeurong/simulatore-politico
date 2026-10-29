@@ -12,7 +12,7 @@ use crate::partiti::{MASSIMO_PARTITI, Regola, Vocazione};
 pub(super) const ELEZIONI_SENZA_SEGGI: u8 = 2;
 
 /// `x` con un decimale e la virgola.
-fn virgola(x: f64) -> String {
+pub(super) fn virgola(x: f64) -> String {
     format!("{x:.1}").replace('.', ",")
 }
 
@@ -40,8 +40,8 @@ impl Partita {
     /// `MASSIMO_PARTITI` attivi, nasce il partito di protesta sul `punto_di_protesta` dello stato
     /// vero. Quota del punto `k`: Σ elettori·h_k / Σ elettori; astensione: la media della
     /// probabilità d'astenersi al punto `k` (utilità senza fedeltà) pesata con elettori·h_k; media:
-    /// Σ_k quota_k·astensione_k, sulla stessa base senza fedeltà (Ruling R11: la media delle
-    /// intenzioni vere, con la fedeltà, sta sistematicamente più in alto). Hunter, identitario,
+    /// Σ_k quota_k·astensione_k, sulla stessa base senza fedeltà, perché la media delle intenzioni
+    /// vere, che la fedeltà la include, starebbe sempre più in alto. Hunter, identitario,
     /// come il partito fondato (valence con la luna di miele, cassa `dote_partito_nuovo`); nessun
     /// nome libero, nessuna nascita.
     pub(super) fn protesta(&mut self) {
@@ -89,9 +89,7 @@ impl Partita {
         else {
             return;
         };
-        let gia: Vec<String> = self.partiti.iter().map(|p| p.nome.clone()).collect();
-        let lista = self.dati.scenario().nomi_partiti.clone();
-        let Some(nome) = self.nome_nuovo(&gia, &lista) else {
+        let Some(nome) = self.nome_nuovo() else {
             return;
         };
         let mut p = partito_nuovo(&self.dati, &nome, (k + 1) as f64);
@@ -129,7 +127,7 @@ impl Partita {
             }
             if d >= minaccia && !gia {
                 let testo = format!(
-                    "Minaccia di scissione: la posizione percepita dista {} dalla dichiarata",
+                    "Minaccia di scissione: la posizione percepita dista {} punti dalla dichiarata",
                     virgola(d)
                 );
                 self.mossa(j, testo);
@@ -139,26 +137,31 @@ impl Partita {
 
     /// La frangia del partito `j`: nome e leader nuovi (`Flusso::PartitiIa`), sulla percepita di
     /// `j`, con vocazione, regola, `valence_base` e giudizio di `j` e la luna di miele del leader
-    /// nuovo; prende `quota_scissione` dei seggi di Camera e Senato e della cassa (arrotondati) e
-    /// del voto precedente di ogni gruppo, e l'intesa di `j`. Se `j` è al governo la frangia entra
-    /// nella coalizione, senza dicasteri. `j` riparte con la percepita sulla dichiarata. Senza un
-    /// nome libero non nasce: `false`.
+    /// nuovo; prende `quota_scissione` dei seggi di Camera e Senato e della cassa (arrotondati, mai
+    /// più di quanti ne ha `j`) e del voto precedente di ogni gruppo, e l'intesa di `j`. Se `j` è
+    /// al governo la frangia entra nella coalizione, senza dicasteri. `j` riparte con la percepita
+    /// sulla dichiarata. Senza seggi per la frangia in nessuna Camera, o senza un nome libero, non
+    /// nasce: `false`.
     fn scissione(&mut self, j: usize) -> bool {
-        let gia: Vec<String> = self.partiti.iter().map(|p| p.nome.clone()).collect();
-        let lista = self.dati.scenario().nomi_partiti.clone();
-        let Some(nome) = self.nome_nuovo(&gia, &lista) else {
+        let q = self.dati.manopola("quota_scissione");
+        let pl = &self.parlamento;
+        let presi = [&pl.seggi_camera, &pl.seggi_senato].map(|v| {
+            let n = v.get(j).copied().unwrap_or(0);
+            ((f64::from(n) * q).round() as u32).min(n)
+        });
+        if presi == [0, 0] {
+            return false;
+        }
+        let Some(nome) = self.nome_nuovo() else {
             return false;
         };
         let leader = self.leader_nuovo();
-        let (q, luna) = (
-            self.dati.manopola("quota_scissione"),
-            self.dati.manopola("luna_di_miele_leader"),
-        );
+        let luna = self.dati.manopola("luna_di_miele_leader");
         let Some(o) = self.partiti.get_mut(j) else {
             return false;
         };
         let x = o.posizione_percepita;
-        let cassa = (o.cassa as f64 * q).round() as i64;
+        let cassa = ((o.cassa as f64 * q).round() as i64).clamp(0, o.cassa.max(0));
         o.cassa -= cassa;
         o.posizione_percepita = o.posizione_dichiarata;
         o.minaccia = false;
@@ -173,19 +176,16 @@ impl Partita {
         f.ultimo_passo = 0.0;
         let k = self.aggiungi_partito(f);
         let pl = &mut self.parlamento;
-        let mut presi = [0; 2];
-        for (v, preso) in [&mut pl.seggi_camera, &mut pl.seggi_senato]
+        for (v, s) in [&mut pl.seggi_camera, &mut pl.seggi_senato]
             .into_iter()
-            .zip(&mut presi)
+            .zip(presi)
         {
-            let s = v.get(j).map_or(0, |&n| (f64::from(n) * q).round() as u32);
             if let Some(n) = v.get_mut(j) {
                 *n -= s;
             }
             if let Some(n) = v.get_mut(k) {
                 *n = s;
             }
-            *preso = s;
         }
         for g in &mut self.elettorato.gruppi {
             let v = g.voto_precedente.get(j).map_or(0.0, |v| v * q);
@@ -210,8 +210,10 @@ impl Partita {
         }
         self.legislatura.frange.push(k);
         let [c, s] = presi;
+        let deputati = if c == 1 { "deputato" } else { "deputati" };
+        let senatori = if s == 1 { "senatore" } else { "senatori" };
         let testo = format!(
-            "Scissione: nasce {nome} con {c} deputati e {s} senatori, sulla posizione {}",
+            "Scissione: nasce {nome} con {c} {deputati} e {s} {senatori}, sulla posizione {}",
             virgola(x)
         );
         self.mossa(j, testo);
@@ -222,27 +224,30 @@ impl Partita {
     /// piano 8b): le frange della legislatura al governo, Presidente del Consiglio escluso, per cui
     /// il voto vale più che restare, col confronto di `voto_anticipato` (`Quadro::valore` sul
     /// sondaggio pubblico contro `valore_al_governo` coi seggi veri, senza la guida, più
-    /// `margine_voto_anticipato`). Una riga per frangia; chi esce passa da `uscite`.
-    pub(super) fn frange_in_uscita(&mut self) -> Vec<usize> {
+    /// `margine_voto_anticipato`). Nessuna frangia esce nella chiusura in cui nasce, cioè con
+    /// l'indice da `nate` in su (vita-dei-partiti:61-67). Chi esce si aggiunge a `escono`, che poi
+    /// passa da `uscite`, con una riga se non c'era già.
+    pub(super) fn frange_in_uscita(&mut self, nate: usize, escono: &mut Vec<usize>) {
         if self.legislatura.crisi.is_some() {
-            return Vec::new();
+            return;
         }
         let margine = self.dati.manopola("margine_voto_anticipato");
         let d = self.dichiarazione_corrente();
         let (q, veri) = (self.quadro(), self.quadro_veri());
         let g = &self.governo;
-        let escono: Vec<usize> = (self.legislatura.frange.iter().copied())
+        let nuove: Vec<usize> = (self.legislatura.frange.iter().copied())
+            .filter(|&j| j < nate && !escono.contains(&j))
             .filter(|&j| j != g.presidente && g.coalizione.contains(&j))
             .filter(|&j| {
                 q.valore(&d, j) > valore_al_governo(&veri, j, &g.coalizione, false) + margine
             })
             .collect();
-        for &j in &escono {
+        for &j in &nuove {
             let testo = "Esce dalla maggioranza: nei sondaggi il voto gli vale più che restare al \
                          governo";
             self.mossa(j, testo.into());
         }
-        escono
+        escono.extend(nuove);
     }
 
     /// In coda al voto: un partito IA attivo senza seggi in entrambe le Camere conta un'elezione in
@@ -407,5 +412,83 @@ mod tests {
         assert!(p.partiti[4].minaccia);
         assert_eq!(p.mosse.len(), 1);
         assert!(p.mosse[0].testo.starts_with("Minaccia di scissione"));
+    }
+
+    /// Un punto oltre: la percepita del partito `j` a +1.
+    fn a_un_punto(mut p: Partita, j: usize) -> Partita {
+        p.partiti[j].posizione_percepita = p.partiti[j].posizione_dichiarata + 1.0;
+        p
+    }
+
+    /// Con 3 deputati e 2 senatori il 12% arrotonda a zero in tutte e due le Camere: niente
+    /// frangia senza seggi, resta la minaccia, con cassa e percepita intatte.
+    #[test]
+    fn senza_seggi_per_la_frangia_resta_minaccia() {
+        let mut p = a_un_punto(Partita::nuova(dati_base(), 1), 4);
+        (p.parlamento.seggi_camera[4], p.parlamento.seggi_senato[4]) = (3, 2);
+        let (cassa, percepita) = (p.partiti[4].cassa, p.partiti[4].posizione_percepita);
+        p.scissioni();
+        assert_eq!(p.partiti.len(), 7);
+        assert!(p.partiti[4].minaccia);
+        assert_eq!(p.partiti[4].cassa, cassa);
+        assert_eq!(p.partiti[4].posizione_percepita, percepita);
+        assert!(p.mosse[0].testo.starts_with("Minaccia di scissione"));
+    }
+
+    /// La sinistra, all'opposizione, con 5 deputati e 3 senatori: la frangia prende 1 deputato e
+    /// nessun senatore, resta fuori dalla coalizione di governo ma è una frangia della legislatura.
+    #[test]
+    fn la_scissione_all_opposizione_arrotonda_senza_sottrarre_troppo() {
+        let mut p = a_un_punto(Partita::nuova(dati_base(), 1), 1);
+        assert!(!p.governo.al_governo(1));
+        (p.parlamento.seggi_camera[1], p.parlamento.seggi_senato[1]) = (5, 3);
+        p.scissioni();
+        assert_eq!(p.partiti.len(), 8);
+        assert_eq!(p.parlamento.seggi_camera[1], 4);
+        assert_eq!(
+            (p.parlamento.seggi_camera[7], p.parlamento.seggi_senato[7]),
+            (1, 0)
+        );
+        assert_eq!(p.parlamento.seggi_senato[1], 3);
+        assert!(!p.governo.coalizione.contains(&7));
+        assert_eq!(p.legislatura.frange, [7]);
+        let nome = &p.partiti[7].nome;
+        let riga =
+            format!("Scissione: nasce {nome} con 1 deputato e 0 senatori, sulla posizione 3,0");
+        assert_eq!(p.mosse[0].testo, riga);
+    }
+
+    /// Nella partita di prova il partito del giocatore (la destra, Aggregator nello scenario) è
+    /// Sticker, e Sticker nasce la sua frangia.
+    #[test]
+    fn la_frangia_del_giocatore_e_sticker() {
+        let mut p = a_un_punto(Partita::nuova(dati_base(), 1), 5);
+        assert_eq!(p.giocatore, 5);
+        assert_eq!(p.partiti[5].regola, Regola::Sticker);
+        p.scissioni();
+        assert_eq!(p.partiti.len(), 8);
+        assert_eq!(p.partiti[7].regola, Regola::Sticker);
+    }
+
+    /// `quota_scissione` manomessa oltre 1 e la cassa sotto zero: la frangia prende al più tutti i
+    /// seggi e mai cassa negativa; l'origine non va sotto zero seggi.
+    #[test]
+    fn la_scissione_regge_una_quota_oltre_uno() {
+        let mut dati = dati_base();
+        dati.imposta_manopola("quota_scissione", 2.0);
+        let mut p = a_un_punto(Partita::nuova(dati, 1), 4);
+        p.partiti[4].cassa = -5;
+        let (c, s) = (p.parlamento.seggi_camera[4], p.parlamento.seggi_senato[4]);
+        p.scissioni();
+        assert_eq!(p.partiti.len(), 8);
+        assert_eq!(
+            (p.parlamento.seggi_camera[4], p.parlamento.seggi_senato[4]),
+            (0, 0)
+        );
+        assert_eq!(
+            (p.parlamento.seggi_camera[7], p.parlamento.seggi_senato[7]),
+            (c, s)
+        );
+        assert_eq!((p.partiti[4].cassa, p.partiti[7].cassa), (-5, 0));
     }
 }

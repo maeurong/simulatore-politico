@@ -119,8 +119,9 @@ pub enum Comando {
         misura: u32,
         chiedi: bool,
     },
-    /// Nel turno della campagna, una volta, sposta la dichiarata del suo partito su `posizione`:
-    /// al più `passo_movimento` di distanza, senza scavalcare un partito attivo.
+    /// In campagna elettorale, una volta, sposta la dichiarata del suo partito su `posizione`:
+    /// al più `passo_movimento` di distanza, senza cambiare il suo rango nella fila per (dichiarata,
+    /// indice).
     Riposiziona {
         posizione: f64,
     },

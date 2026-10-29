@@ -64,21 +64,30 @@ fn lo_sciolto_esce_dalle_coalizioni() {
     let mut p = senza_estrema_sinistra();
     al_turno(&mut p, 19);
     // Estrema sinistra (0, senza seggi, a un voto dallo scioglimento) in coalizione col
-    // centrosinistra (2), con intesa; le coalizioni di prima non le contengono. Insieme stanno
-    // sotto la soglia di coalizione: nessun premio, l'estrema sinistra resta senza seggi.
+    // centrosinistra (2), con intesa; le coalizioni di prima non le contengono. Al turno della
+    // campagna si vota con `coalizioni_ia`: lì la stessa coalizione. Insieme stanno sotto la
+    // soglia di coalizione: nessun premio, l'estrema sinistra resta senza seggi.
     let mut p = edita(&p, |j| {
         j["partiti"][0]["senza_seggi"] = 1.into();
-        let c = j["legislatura"]["coalizioni"].as_array_mut().unwrap();
-        for k in c.iter_mut() {
-            k.as_array_mut()
-                .unwrap()
-                .retain(|x| ![0, 2].contains(&x.as_u64().unwrap()));
+        for chiave in ["coalizioni", "coalizioni_ia"] {
+            let c = j["legislatura"][chiave].as_array_mut().unwrap();
+            for k in c.iter_mut() {
+                k.as_array_mut()
+                    .unwrap()
+                    .retain(|x| ![0, 2].contains(&x.as_u64().unwrap()));
+            }
+            c.retain(|k| !k.as_array().unwrap().is_empty());
+            c.push(serde_json::json!([0, 2]));
         }
-        c.push(serde_json::json!([0, 2]));
         j["intesa"]["valori"][0] = 60.0.into();
     })
     .unwrap();
     chiudi_col_bilancio(&mut p);
+    let coalizioni = &p.legislatura().elezioni[0].coalizioni;
+    let premessa = ["estrema_sinistra", "centrosinistra"]
+        .map(String::from)
+        .to_vec();
+    assert!(coalizioni.contains(&premessa), "{coalizioni:?}");
     assert!(p.partiti()[0].sciolto);
     let l = p.legislatura();
     assert!(l.coalizioni.iter().flatten().all(|&j| j != 0 && j != 2));
@@ -122,12 +131,11 @@ const PROTESTA: &str = "partito di protesta";
 /// La partita di prova con la destra a 4,5 e l'estrema destra a 5: il tratto 6-7 resta scoperto.
 /// `soglia_protesta` all'1% (minimo compreso), perché la quota del punto 7 non conti.
 fn destra_al_centro() -> Partita {
-    let f = comune::sostituisci(
-        file_base(),
-        "scenario",
-        "posizione = 6.0",
-        "posizione = 4.5",
-    );
+    destra_al_centro_da(file_base())
+}
+
+fn destra_al_centro_da(f: sim_core::dati::FileDati) -> Partita {
+    let f = comune::sostituisci(f, "scenario", "posizione = 6.0", "posizione = 4.5");
     let f = comune::sostituisci(f, "scenario", "posizione = 7.0", "posizione = 5.0");
     let prefisso = "[soglia_protesta]\nvalore = 0.1\nmin = ";
     let f = comune::imposta(f, "manopole", prefisso, "0.01");
@@ -261,8 +269,10 @@ fn a_un_punto_il_partito_si_scinde() {
     assert!(!p.governo().dicasteri.contains(&7));
     assert_eq!(p.legislatura().frange, vec![7]);
     let riga = format!(
-        "Scissione: nasce {} con {c} deputati e {s} senatori, sulla posizione {}",
+        "Scissione: nasce {} con {c} {} e {s} {}, sulla posizione {}",
         f.nome,
+        if c == 1 { "deputato" } else { "deputati" },
+        if s == 1 { "senatore" } else { "senatori" },
         virgola(x)
     );
     assert!(
@@ -284,7 +294,7 @@ fn a_mezzo_punto_solo_la_minaccia() {
     assert_eq!(p.partiti().len(), 7);
     let distanza = p.partiti()[CENTRODESTRA].posizione_percepita - d;
     let riga = format!(
-        "Minaccia di scissione: la posizione percepita dista {} dalla dichiarata",
+        "Minaccia di scissione: la posizione percepita dista {} punti dalla dichiarata",
         virgola(distanza)
     );
     assert!(
@@ -329,13 +339,28 @@ fn si_scinde_anche_il_partito_del_giocatore() {
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
 }
 
-#[test]
-fn la_frangia_esce_quando_le_conviene() {
-    let p = frangia_che_vuole_uscire();
-    let mut p = scivolata(&p, CENTRODESTRA, 1.0);
+/// La frangia del centrodestra appena nata, con `margine_voto_anticipato` a −100: nella chiusura in
+/// cui nasce non esce (vita-dei-partiti:61-67).
+fn frangia_appena_nata() -> Partita {
+    let mut p = scivolata(&frangia_che_vuole_uscire(), CENTRODESTRA, 1.0);
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.partiti().len(), 8);
+    assert_eq!(righe(&p, USCITA), 0);
+    assert!(p.governo().coalizione.contains(&7));
+    p
+}
+
+/// Nata in una chiusura, esce in quella dopo. Senza dicasteri da lasciare, nessun rimpasto: i
+/// dicasteri restano dove sono.
+#[test]
+fn la_frangia_esce_quando_le_conviene() {
+    let mut p = frangia_appena_nata();
+    let dicasteri = p.governo().dicasteri.clone();
+    chiudi_col_bilancio(&mut p);
     assert!(!p.governo().coalizione.contains(&7));
+    if p.legislatura().crisi.is_none() {
+        assert_eq!(p.governo().dicasteri, dicasteri);
+    }
     assert!(
         (p.vista().mosse.iter()).any(|m| m.partito == "nuovo_7" && m.testo == USCITA),
         "{:?}",
@@ -354,28 +379,100 @@ fn la_frangia_esce_quando_le_conviene() {
     assert_eq!(righe(&p, USCITA), 0);
 }
 
-/// Con la frangia che vuole uscire: in crisi, con le dimissioni e nel turno del voto resta.
+/// La frangia nata che vuole uscire: in crisi, con le dimissioni, in trattativa e nel turno del
+/// voto resta.
 #[test]
 fn la_frangia_non_esce_fuori_finestra() {
-    let p = scivolata(&frangia_che_vuole_uscire(), CENTRODESTRA, 1.0);
-    let mut p = edita(&p, |j| j["legislatura"]["crisi"] = 0.into()).unwrap();
-    chiudi_col_bilancio(&mut p);
-    assert_eq!(p.partiti().len(), 8);
-    assert_eq!(righe(&p, USCITA), 0);
-    assert!(p.governo().coalizione.contains(&7));
-    let p = scivolata(&frangia_che_vuole_uscire(), CENTRODESTRA, 1.0);
-    let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = true.into()).unwrap();
-    chiudi_col_bilancio(&mut p);
-    assert_eq!(p.partiti().len(), 8);
-    assert_eq!(righe(&p, USCITA), 0);
+    let nata = frangia_appena_nata();
+    let t = nata.vista().turno;
+    for (chiave, valore) in [
+        ("crisi", serde_json::json!(t)),
+        ("dimissioni", true.into()),
+        ("fase", "trattativa".into()),
+    ] {
+        let mut p = edita(&nata, |j| j["legislatura"][chiave] = valore).unwrap();
+        chiudi_col_bilancio(&mut p);
+        assert_eq!(righe(&p, USCITA), 0, "{chiave}");
+    }
+    // Nata nella chiusura del 18, al voto del 19 resta; dopo il voto non è più una frangia.
     let mut p = frangia_che_vuole_uscire();
-    al_turno(&mut p, 19);
-    // Un punto e mezzo: l'aula del turno ne riporta indietro una parte.
+    al_turno(&mut p, 18);
     let mut p = scivolata(&p, CENTRODESTRA, 1.5);
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.partiti().len(), 8);
+    assert_eq!(p.legislatura().frange, vec![7]);
+    chiudi_col_bilancio(&mut p);
     assert_eq!(righe(&p, USCITA), 0);
     assert!(p.legislatura().frange.is_empty());
+}
+
+/// La frangia e il centrodestra sotto `soglia_uscita` escono nella stessa chiusura: una sola
+/// crisi, aperta per il turno dopo, e la riga d'uscita solo sulla frangia (l'uscita per l'intesa
+/// non ne scrive).
+#[test]
+fn frangia_e_alleato_escono_insieme() {
+    let p = edita(&frangia_appena_nata(), |j| {
+        j["intesa"]["valori"][CENTRODESTRA] = 0.0.into();
+    })
+    .unwrap();
+    let mut p = p;
+    chiudi_col_bilancio(&mut p);
+    let c = &p.governo().coalizione;
+    assert!(!c.contains(&7) && !c.contains(&CENTRODESTRA), "{c:?}");
+    assert_eq!(p.legislatura().crisi, Some(p.vista().turno));
+    let uscite: Vec<String> = (p.vista().mosse.into_iter())
+        .filter(|m| m.testo == USCITA)
+        .map(|m| m.partito)
+        .collect();
+    assert_eq!(uscite, ["nuovo_7"]);
+}
+
+/// La frangia già in uscita per l'intesa non riceve anche la riga del valore atteso.
+#[test]
+fn la_frangia_uscita_per_l_intesa_non_ha_la_riga() {
+    let p = edita(&frangia_appena_nata(), |j| {
+        j["intesa"]["valori"][7] = 0.0.into();
+    })
+    .unwrap();
+    let mut p = p;
+    chiudi_col_bilancio(&mut p);
+    assert!(!p.governo().coalizione.contains(&7));
+    assert_eq!(righe(&p, USCITA), 0);
+}
+
+/// Con un solo nome nello scenario, «Orizzonte Comune», dato alla sinistra: la scissione resta
+/// minaccia e la protesta non nasce. Con lo stesso nome libero nascono tutte e due.
+#[test]
+fn senza_nomi_liberi_nessuna_nascita() {
+    let un_nome = || {
+        let riga = "nomi_partiti = [\"Orizzonte Comune\"]";
+        comune::riscrivi(file_base(), "scenario", "nomi_partiti = ", riga)
+    };
+    let preso = |p: &Partita| edita(p, |j| j["partiti"][1]["nome"] = "Orizzonte Comune".into());
+    let scissione = |p: Partita| {
+        let mut p = scivolata(&p, CENTRODESTRA, 1.0);
+        chiudi_col_bilancio(&mut p);
+        p
+    };
+    let dati = DatiGioco::da_testi(&un_nome()).unwrap();
+    let p = scissione(preso(&Partita::nuova(dati, 1)).unwrap());
+    assert_eq!(p.partiti().len(), 7);
+    assert!(p.partiti()[CENTRODESTRA].minaccia);
+    assert_eq!(righe(&p, "Minaccia di scissione"), 1);
+    assert_eq!(righe(&p, "Scissione"), 0);
+    let dati = DatiGioco::da_testi(&un_nome()).unwrap();
+    assert_eq!(scissione(Partita::nuova(dati, 1)).partiti().len(), 8);
+
+    let protesta = |p: Partita| {
+        let mut p = p;
+        al_turno(&mut p, 19);
+        p
+    };
+    let p = protesta(preso(&destra_al_centro_da(un_nome())).unwrap());
+    assert_eq!(p.partiti().len(), 7);
+    assert_eq!(righe(&p, PROTESTA), 0);
+    let p = protesta(destra_al_centro_da(un_nome()));
+    assert_eq!(p.partiti().len(), 8);
 }
 
 #[test]
@@ -386,4 +483,10 @@ fn la_scissione_sopravvive_al_salvataggio() {
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     let e = edita(&p, |j| j["legislatura"]["frange"] = serde_json::json!([8])).unwrap_err();
     assert!(e.to_string().contains("legislatura.frange"), "{e}");
+    let e = edita(&p, |j| {
+        j["legislatura"]["frange"] = serde_json::json!([7, 7])
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("legislatura.frange"), "{e}");
+    edita(&p, |j| j["legislatura"]["frange"] = serde_json::json!([7])).unwrap();
 }

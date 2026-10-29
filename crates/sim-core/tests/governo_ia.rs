@@ -891,3 +891,56 @@ fn voto_anticipato_solo_con_le_dimissioni() {
     let e = edita(&p, |j| j["legislatura"]["voto_anticipato"] = true.into());
     assert!(e.is_err());
 }
+
+/// Senza una maggioranza che convenga a tutti i membri (`peso_governare` a −100: al governo
+/// ognuno ci perde) il Capo dello Stato ripiega sulla contigua a regole, come prima dell'8b,
+/// senza la riga del formatore: coi seggi del test sopra, centrodestra e destra. Senza nemmeno
+/// quella (il giocatore con la maggioranza dei seggi, o con tutti) le Camere si sciolgono.
+#[test]
+fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
+    let f = imposta(
+        file_base(),
+        "manopole",
+        "[peso_governare]\nvalore = 2.0\nmin = ",
+        "-100.0",
+    );
+    let f = imposta(f, "manopole", "[peso_governare]\nvalore = ", "-100.0");
+    let fondazione = Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 1.5,
+    };
+    let dati = sim_core::dati::DatiGioco::da_testi(&f).unwrap();
+    let mut base = Partita::fonda(dati, 7, &fondazione).unwrap();
+    base.chiudi_turno();
+    let formatore =
+        |p: &Partita| (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Forma il governo"));
+    let mut p = comune::edita(&base, |j| {
+        j["legislatura"]["incarico"] = serde_json::Value::Null;
+        j["parlamento"]["seggi_camera"] = json!([20, 20, 20, 20, 90, 150, 60, 20]);
+        j["parlamento"]["seggi_senato"] = json!([10, 10, 10, 10, 45, 75, 30, 10]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.legislatura().fase, Fase::Ordinaria);
+    assert_eq!(p.governo().coalizione, [4, 5]);
+    assert_eq!(p.governo().presidente, 5);
+    assert!(!formatore(&p), "{:?}", p.vista().mosse);
+    for (camera, senato) in [
+        (
+            [20, 20, 20, 20, 20, 50, 49, 201],
+            [10, 10, 10, 10, 10, 25, 24, 101],
+        ),
+        ([0, 0, 0, 0, 0, 0, 0, 400], [0, 0, 0, 0, 0, 0, 0, 200]),
+    ] {
+        let mut p = comune::edita(&base, |j| {
+            j["legislatura"]["incarico"] = serde_json::Value::Null;
+            j["parlamento"]["seggi_camera"] = json!(camera);
+            j["parlamento"]["seggi_senato"] = json!(senato);
+        })
+        .unwrap();
+        p.chiudi_turno();
+        assert_eq!(p.legislatura().fase, Fase::Sciolta, "{camera:?}");
+        assert!(!formatore(&p), "{:?}", p.vista().mosse);
+        assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    }
+}

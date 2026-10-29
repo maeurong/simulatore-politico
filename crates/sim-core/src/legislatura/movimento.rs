@@ -20,18 +20,24 @@ pub(crate) struct Contesto {
 }
 
 /// Lo spostamento della dichiarata `x` secondo la regola `r`, al più `massimo` in valore assoluto.
-/// Sticker fermo; Aggregator verso il baricentro; Hunter ripete l'ultimo passo dopo un guadagno,
-/// lo inverte dopo una perdita, senza due voti va verso il centro; Governator fermo al governo,
+/// Sticker fermo; Aggregator verso il baricentro; Hunter, a passo pieno, ripete la direzione
+/// dell'ultimo passo dopo un guadagno e la inverte dopo una perdita (abm-elettorali:16), senza
+/// direzione resta fermo, senza due voti va verso il centro; Governator fermo al governo,
 /// altrimenti verso la posizione del governo senza superarla.
 pub(crate) fn passo(r: Regola, x: f64, c: &Contesto, massimo: f64) -> f64 {
     let limite = |d: f64| d.clamp(-massimo, massimo);
     let verso = |y: f64| limite(y - x);
+    let direzione = if c.ultimo_passo == 0.0 {
+        0.0
+    } else {
+        massimo.copysign(c.ultimo_passo)
+    };
     match r {
         Regola::Sticker => 0.0,
         Regola::Aggregator => c.baricentro.map_or(0.0, verso),
         Regola::Hunter => match c.guadagno {
-            Some(true) => limite(c.ultimo_passo),
-            Some(false) => limite(-c.ultimo_passo),
+            Some(true) => direzione,
+            Some(false) => -direzione,
             None => verso(c.centro),
         },
         Regola::Governator if c.al_governo => 0.0,
@@ -39,16 +45,32 @@ pub(crate) fn passo(r: Regola, x: f64, c: &Contesto, massimo: f64) -> f64 {
     }
 }
 
-/// La posizione nuova da `x` col `passo`: mai oltre il primo degli `altri` nella direzione del
-/// passo (uguale ammessa), mai fuori da 1-7.
-pub(crate) fn limita(x: f64, passo: f64, altri: &[f64]) -> f64 {
-    let y = x + passo;
-    let fermo = if passo > 0.0 {
-        (altri.iter().copied()).filter(|&a| a > x).fold(y, f64::min)
+/// La posizione nuova del partito `j` da `x` col `passo`, dentro 1-7, senza cambiare l'ordine della
+/// fila per (dichiarata, indice): si ferma sul primo degli `altri` (indice, dichiarata) che lo
+/// segue nella direzione del passo, anche alla stessa posizione; arriva sulla sua posizione solo
+/// se gli indici tengono l'ordine, altrimenti un soffio prima.
+pub(crate) fn limita(j: usize, x: f64, passo: f64, altri: &[(usize, f64)]) -> f64 {
+    let y = (x + passo).clamp(1.0, 7.0);
+    let dopo = |k: usize, a: f64| a > x || (a == x && k > j);
+    // ponytail: «un soffio prima» = il float accanto; a video resta la stessa cifra del vicino.
+    if passo > 0.0 {
+        (altri.iter().filter(|&&(k, a)| dopo(k, a)))
+            .map(|&(k, a)| if k > j { a } else { a.next_down() })
+            .fold(y, f64::min)
+    } else if passo < 0.0 {
+        (altri.iter().filter(|&&(k, a)| !dopo(k, a)))
+            .map(|&(k, a)| if k < j { a } else { a.next_up() })
+            .fold(y, f64::max)
     } else {
-        (altri.iter().copied()).filter(|&a| a < x).fold(y, f64::max)
-    };
-    fermo.clamp(1.0, 7.0)
+        x
+    }
+}
+
+/// L'ultimo passo che Hunter ricorda dopo lo spostamento da `x` a `y`: il passo `richiesto`, anche
+/// se `limita` l'ha accorciato; rovesciato se l'ha annullato, così il partito fermo sul vicino o
+/// sul bordo torna indietro.
+pub(crate) fn ultimo_passo(x: f64, y: f64, richiesto: f64) -> f64 {
+    if y == x { -richiesto } else { richiesto }
 }
 
 /// Gli elettori a ogni punto dell'asse sul sondaggio pubblico, come la stima del referendum IA
@@ -64,7 +86,7 @@ pub(crate) fn istogramma(dati: &DatiGioco, sondaggio: &Sondaggio) -> [f64; PUNTI
     h
 }
 
-/// Il baricentro degli elettori del partito `j`, coi soli dati pubblici (ruling R10). A ogni punto
+/// Il baricentro degli elettori del partito `j`, coi soli dati pubblici. A ogni punto
 /// k dell'asse P(j|k), il softmax di −`beta`·(k − x_i)² sulle `dichiarate` x_i (`None` = sciolto,
 /// escluso), stima chi vota il partito a quel punto. Baricentro = Σ k·h_k·P(j|k) / Σ h_k·P(j|k)
 /// sull'`istogramma`; `None` se il peso è zero.
@@ -132,9 +154,10 @@ mod tests {
 
     #[test]
     fn hunter_ripete_inverte_o_va_al_centro() {
+        // Un ultimo passo accorciato (−0,1) dà la direzione, non l'ampiezza.
         let c = |guadagno| Contesto {
             guadagno,
-            ultimo_passo: -0.5,
+            ultimo_passo: -0.1,
             ..contesto()
         };
         assert!(vicino(
@@ -147,6 +170,11 @@ mod tests {
         ));
         assert!(vicino(passo(Regola::Hunter, 3.0, &c(None), 0.5), 0.5));
         assert!(vicino(passo(Regola::Hunter, 5.0, &c(None), 0.5), -0.5));
+        let fermo = Contesto {
+            guadagno: Some(true),
+            ..contesto()
+        };
+        assert_eq!(passo(Regola::Hunter, 4.0, &fermo, 0.5), 0.0);
     }
 
     #[test]
@@ -179,11 +207,48 @@ mod tests {
 
     #[test]
     fn limita_al_vicino_e_all_asse() {
-        assert!(vicino(limita(3.0, 0.5, &[3.2, 1.0]), 3.2));
-        assert!(vicino(limita(3.0, -0.5, &[3.2, 2.8]), 2.8));
-        assert!(vicino(limita(3.0, 0.5, &[2.8, 4.0]), 3.5));
-        assert!(vicino(limita(6.8, 0.5, &[]), 7.0));
-        assert!(vicino(limita(1.2, -0.5, &[]), 1.0));
-        assert!(vicino(limita(3.0, 0.0, &[3.0]), 3.0));
+        // Il partito 3 a 3,0.
+        let l = |passo: f64, altri: &[(usize, f64)]| limita(3, 3.0, passo, altri);
+        assert_eq!(l(0.5, &[(5, 3.2), (0, 1.0)]), 3.2);
+        assert_eq!(l(-0.5, &[(5, 3.2), (0, 2.8)]), 2.8);
+        assert_eq!(l(0.5, &[(5, 2.8), (0, 4.0)]), 3.5);
+        assert_eq!(limita(3, 6.8, 0.5, &[]), 7.0);
+        assert_eq!(limita(3, 1.2, -0.5, &[]), 1.0);
+        assert_eq!(l(0.0, &[(5, 3.0)]), 3.0);
+    }
+
+    /// L'ordine della fila per (dichiarata, indice) tiene: alla stessa posizione ferma chi lo segue
+    /// nella direzione del passo, non chi lo precede; sulla posizione di un vicino con l'indice
+    /// che invertirebbe l'ordine si ferma un soffio prima.
+    #[test]
+    fn limita_non_scavalca_nemmeno_dal_pareggio() {
+        let l = |passo: f64, altri: &[(usize, f64)]| limita(3, 3.0, passo, altri);
+        assert_eq!(l(0.5, &[(5, 3.0)]), 3.0);
+        assert_eq!(l(-0.5, &[(5, 3.0)]), 2.5);
+        assert_eq!(l(-0.5, &[(1, 3.0)]), 3.0);
+        assert_eq!(l(0.5, &[(1, 3.0)]), 3.5);
+        let y = l(0.5, &[(1, 3.2)]);
+        assert!(y < 3.2 && vicino(y, 3.2), "{y}");
+        let y = l(-0.5, &[(5, 2.8)]);
+        assert!(y > 2.8 && vicino(y, 2.8), "{y}");
+    }
+
+    /// Hunter al bordo 7 dopo un guadagno: il passo richiesto (+0,5) si annulla, l'ultimo passo
+    /// diventa −0,5, e al guadagno dopo rimbalza verso il centro.
+    #[test]
+    fn hunter_al_bordo_rimbalza() {
+        let c = |ultimo_passo| Contesto {
+            guadagno: Some(true),
+            ultimo_passo,
+            ..contesto()
+        };
+        let richiesto = passo(Regola::Hunter, 7.0, &c(0.5), 0.5);
+        let y = limita(6, 7.0, richiesto, &[]);
+        assert_eq!(y, 7.0);
+        let ultimo = ultimo_passo(7.0, y, richiesto);
+        assert_eq!(ultimo, -0.5);
+        let richiesto = passo(Regola::Hunter, 7.0, &c(ultimo), 0.5);
+        assert_eq!(limita(6, 7.0, richiesto, &[]), 6.5);
+        assert_eq!(ultimo_passo(7.0, 6.5, richiesto), -0.5);
     }
 }

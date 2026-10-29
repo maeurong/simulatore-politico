@@ -92,7 +92,8 @@ pub struct Partito {
     pub cassa: i64,
     /// Elezioni di fila senza seggi (scelta 9 del piano 8b); a 2 il partito IA si scioglie.
     pub senza_seggi: u8,
-    /// L'ultimo spostamento della dichiarata, col segno: lo ripete o lo inverte Hunter.
+    /// L'ultimo passo chiesto dalla regola, col segno, rovesciato se `limita` l'ha annullato:
+    /// Hunter ne ripete o inverte la direzione.
     pub ultimo_passo: f64,
     /// Ha già minacciato la scissione (scelta 7 del piano 8b); si spegne quando la percepita torna
     /// sotto `minaccia_scissione` dalla dichiarata.
@@ -106,7 +107,6 @@ impl Partito {
         let d = nuova - self.posizione_dichiarata;
         self.posizione_dichiarata = nuova;
         self.posizione_percepita = (self.posizione_percepita + d / 2.0).clamp(1.0, 7.0);
-        self.ultimo_passo = d;
     }
 }
 

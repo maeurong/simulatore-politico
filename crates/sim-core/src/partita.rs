@@ -24,7 +24,7 @@ use crate::parlamento::{
     Intesa, Misura, Parlamento, Referendum, RichiestaEmendamento, StatoAula, StatoEmendamento,
     TipoReferendum, ValoreProposto, voto,
 };
-use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
+use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
@@ -265,6 +265,11 @@ impl Partita {
             partenza: [0.0; 4],
             mosse: Vec::new(),
         };
+        // Il partito del giocatore non segue una regola IA (scelta 4 del piano 8b), nemmeno quando
+        // viene dallo scenario: le sue frange nascono Sticker.
+        if let Some(x) = p.partiti.get_mut(p.giocatore) {
+            x.regola = Regola::Sticker;
+        }
         p.partenza = p.indicatori();
         p
     }
@@ -351,6 +356,7 @@ impl Partita {
         };
         // Dopo l'aula, dove la percepita scivola coi voti, e prima del motore (scelta 7 del piano
         // 8b).
+        let nate = self.partiti.len();
         self.scissioni();
         // Esercizio provvisorio (iter-legislativo-italiano:86): un turno solo, poi il governo cade,
         // col bilancio respinto come con quello mai presentato.
@@ -425,11 +431,7 @@ impl Partita {
         // (scelta 8 del piano 8b).
         let l = &self.legislatura;
         if l.fase == Fase::Ordinaria && !l.dimissioni && !di_voto {
-            for j in self.frange_in_uscita() {
-                if !escono.contains(&j) {
-                    escono.push(j);
-                }
-            }
+            self.frange_in_uscita(nate, &mut escono);
             self.uscite(&escono);
         }
         // Prima della fine della crisi, che la chiude: in crisi il governo IA non va al voto.
@@ -2288,33 +2290,43 @@ impl Partita {
         Ok(())
     }
 
-    /// `Riposiziona` (scelta 5 del piano 8b): nel turno del voto, una volta, la dichiarata del
+    /// `Riposiziona` (scelta 5 del piano 8b): in campagna elettorale, una volta, la dichiarata del
     /// giocatore va su `posizione`, la percepita a metà strada.
     ///
     /// # Errors
-    /// `Comando` fuori dal turno del voto, al secondo comando, con la posizione fuori da 1-7, più
-    /// lontana di `passo_movimento` dalla dichiarata, o oltre un partito attivo (col nome).
+    /// `Comando` fuori dalla campagna elettorale, al secondo comando, con la posizione fuori da
+    /// 1-7, più lontana di `passo_movimento` dalla dichiarata, o se cambia il suo rango nella fila
+    /// per (dichiarata, indice) rispetto a un partito attivo (col nome).
     pub(crate) fn riposiziona(&mut self, posizione: f64) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::Comando(m.into()));
         if !self.legislatura.turno_di_voto(self.turno) {
-            return ko("Il riposizionamento si decide solo nel turno della campagna");
+            return ko("Il riposizionamento si decide solo in campagna elettorale");
         }
         if self.legislatura.riposizionato {
-            return ko("Già riposizionato in questa campagna");
+            return ko("Già riposizionato in questa campagna elettorale");
         }
         if !(1.0..=7.0).contains(&posizione) {
             return ko("Posizione fuori da 1-7");
         }
         let g = self.giocatore;
         let x = self.partiti[g].posizione_dichiarata;
-        if (posizione - x).abs() > self.dati.manopola("passo_movimento") + 1e-9 {
-            return ko("Al massimo mezzo punto dalla posizione dichiarata");
+        let passo = self.dati.manopola("passo_movimento");
+        if (posizione - x).abs() > passo + 1e-9 {
+            let punti = if passo == 1.0 { "punto" } else { "punti" };
+            let passo = passo.to_string().replace('.', ",");
+            return Err(Errore::Comando(format!(
+                "Al massimo {passo} {punti} dalla posizione dichiarata"
+            )));
         }
-        // Strettamente fra la dichiarata e la nuova: arrivare sul vicino è ammesso.
+        // L'ordine della fila per (dichiarata, indice) non cambia: arrivare sul vicino è ammesso
+        // solo se l'indice lo lascia dov'è.
+        let prima = |k: usize, a: f64, y: f64| a < y || (a == y && k < g);
         let scavalcato = (self.partiti.iter().enumerate())
             .filter(|&(k, p)| k != g && !p.sciolto)
+            .filter(|&(k, p)| {
+                prima(k, p.posizione_dichiarata, x) != prima(k, p.posizione_dichiarata, posizione)
+            })
             .map(|(_, p)| p)
-            .filter(|p| (p.posizione_dichiarata - x) * (posizione - p.posizione_dichiarata) > 0.0)
             .min_by(|a, b| {
                 let d = |p: &Partito| (p.posizione_dichiarata - x).abs();
                 d(a).total_cmp(&d(b))
@@ -2469,8 +2481,9 @@ impl Partita {
     /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
     /// gli allargati) né incarico IA, il formatore sceglie la maggioranza che gli vale di più
     /// (`maggioranza_ia`, scelta 12 del piano 8b), governo IA come sopra con la sua riga; senza
-    /// nemmeno quella le Camere si sciolgono: si vota nella chiusura del turno dopo. Se l'uscente
-    /// resta fuori dal governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che
+    /// quella, la maggioranza contigua a regole senza il giocatore (`maggioranza_contigua`), senza
+    /// riga; senza nemmeno questa le Camere si sciolgono: si vota nella chiusura del turno dopo.
+    /// Se l'uscente resta fuori dal governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che
     /// il voto appena passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi
     /// ministri tutti nuovi, giudizio da zero per chi entra al governo, l'ultimatum sul valore di
     /// partenza (l'alleato che entra sotto la soglia lo pone subito, chi non è più alleato non ne
@@ -2488,9 +2501,18 @@ impl Partita {
         {
             (self.giocatore, sua, self.assegnati_dal_giocatore())
         } else {
+            // Senza una maggioranza che convenga a tutti, la contigua a regole come prima dell'8b.
             let ia = match &self.legislatura.incarico {
                 Some(Incarico::Ia { coalizione }) => Some((coalizione.clone(), false)),
-                _ => self.maggioranza_ia().map(|k| (k, true)),
+                _ => (self.maggioranza_ia().map(|k| (k, true))).or_else(|| {
+                    let contigua = legislatura::maggioranza_contigua(
+                        &self.partiti,
+                        camera,
+                        senato,
+                        Some(self.giocatore),
+                    );
+                    contigua.map(|k| (k, false))
+                }),
             };
             let Some((coalizione, scelta)) = ia else {
                 let l = &mut self.legislatura;
@@ -2610,13 +2632,14 @@ impl Partita {
 
     /// Escono dal governo gli alleati `escono` (sotto `soglia_uscita`): i loro ministri si
     /// dimettono (`UscitaDalGoverno`), i dicasteri passano al presidente in interim, l'ultimatum
-    /// cade. Se la coalizione rimasta ha la maggioranza, rimpasto; altrimenti il turno dopo è di
-    /// crisi (una crisi già aperta non si allunga).
+    /// cade. Se la coalizione rimasta ha la maggioranza, rimpasto, se qualche dicastero è passato
+    /// in interim; altrimenti il turno dopo è di crisi (una crisi già aperta non si allunga).
     fn uscite(&mut self, escono: &[usize]) {
         if escono.is_empty() {
             return;
         }
         let g = &mut self.governo;
+        let mut interim = false;
         for &j in escono {
             g.coalizione.retain(|&k| k != j);
             if let Some(u) = self.intesa.ultimatum.get_mut(j) {
@@ -2626,12 +2649,15 @@ impl Partita {
                 if *d == j {
                     *d = g.presidente;
                     self.ministri.dimetti(i, Causa::UscitaDalGoverno);
+                    interim = true;
                 }
             }
         }
         let pl = &self.parlamento;
         if legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &g.coalizione) {
-            self.rimpasto();
+            if interim {
+                self.rimpasto();
+            }
         } else if self.legislatura.crisi.is_none() {
             self.legislatura.crisi = Some(self.turno.saturating_add(1));
         }
