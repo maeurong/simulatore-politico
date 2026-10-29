@@ -9,4 +9,8 @@ export type VocePartito = { id: string, nome: string, posizione_dichiarata: numb
 /**
  * Vuoto per il partito del giocatore.
  */
-leader: string, regola: Regola, sciolto: boolean, };
+leader: string, regola: Regola, sciolto: boolean, 
+/**
+ * Euro: pubblica.
+ */
+cassa: bigint, };

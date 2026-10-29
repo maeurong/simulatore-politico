@@ -169,6 +169,7 @@ mod tests {
                 leader: String::new(),
                 regola: Regola::Sticker,
                 sciolto: false,
+                cassa: 0,
             })
             .collect()
     }

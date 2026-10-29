@@ -88,6 +88,8 @@ pub struct Partito {
     pub regola: Regola,
     /// Resta al suo indice, senza voti.
     pub sciolto: bool,
+    /// Euro, mai sotto zero (scelta 10 del piano 8b).
+    pub cassa: i64,
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
@@ -138,6 +140,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             leader: p.leader.clone(),
             regola: p.regola,
             sciolto: false,
+            cassa: 0,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);

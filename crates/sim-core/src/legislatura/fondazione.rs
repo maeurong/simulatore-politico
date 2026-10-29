@@ -66,6 +66,7 @@ fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
         leader: String::new(),
         regola: Regola::Sticker,
         sciolto: false,
+        cassa: dati.manopola("dote_partito_nuovo").round() as i64,
     }
 }
 

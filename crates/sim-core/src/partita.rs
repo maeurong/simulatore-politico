@@ -14,7 +14,7 @@ use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
-    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito,
+    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito, cassa,
     coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
@@ -113,6 +113,12 @@ pub struct Partita {
     mosse: Vec<MossaIa>,
 }
 
+/// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima).
+fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
+    let (astensione, quote) = vero.nazionali.split_last().unwrap_or((&0.0, &[]));
+    quote.iter().map(|q| q / (1.0 - astensione)).collect()
+}
+
 /// «L. {id}/{anno}»: la legge che porta in vigore i valori della misura `id`, la chiave che lega
 /// le disposizioni in vigore alle leggi del giocatore nell'eredità.
 fn etichetta_legge(id: u32, anno: u16) -> String {
@@ -141,9 +147,19 @@ impl Partita {
             })
             .collect();
         let fondata = nuovo.is_some();
+        let dello_scenario = partiti.len();
         partiti.extend(nuovo);
         let mut elettorato = Elettorato::iniziale(&dati, partiti.len(), &economia);
         elettorato.avvia_voto(&dati, &partiti, &governo);
+        // Cassa iniziale: `turni_cassa_iniziale` turni d'entrate col voto vero al posto
+        // dell'ultimo voto. Il fondato ha già la dote.
+        let quote =
+            quote_fra_i_votanti(&Intenzioni::calcola(&dati, &elettorato, &partiti, &governo));
+        let turni = dati.manopola("turni_cassa_iniziale");
+        let iniziali = cassa::entrate(&dati, &quote, &quote);
+        for (p, e) in partiti.iter_mut().zip(iniziali).take(dello_scenario) {
+            p.cassa = (e as f64 * turni).round() as i64;
+        }
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
@@ -376,6 +392,7 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        self.incassa(&vero);
         let di_voto = self.legislatura.turno_di_voto(self.turno);
         if di_voto {
             self.vota_parlamento(&vero);
@@ -1767,6 +1784,25 @@ impl Partita {
         &self.elettorato
     }
 
+    /// Entrate della chiusura (scelta 10): 2 per mille sulla quota all'ultimo voto, abbinata per
+    /// id (zero a chi non c'era), donazioni sull'intenzione vera. Gli sciolti non incassano.
+    fn incassa(&mut self, vero: &Intenzioni) {
+        let intenzione = quote_fra_i_votanti(vero);
+        let ultimo = self.legislatura.elezioni.first();
+        let ultimo_voto: Vec<f64> = (self.partiti.iter())
+            .map(|p| {
+                let voto = ultimo.and_then(|e| e.voti.iter().find(|v| v.partito == p.id));
+                voto.map_or(0.0, |v| v.quota)
+            })
+            .collect();
+        let entrate = cassa::entrate(&self.dati, &ultimo_voto, &intenzione);
+        for (p, e) in self.partiti.iter_mut().zip(entrate) {
+            if !p.sciolto {
+                p.cassa = p.cassa.saturating_add(e);
+            }
+        }
+    }
+
     /// Intenzioni di voto vere per gruppo e nazionali.
     pub fn intenzioni_vere(&self) -> Intenzioni {
         Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
@@ -2988,6 +3024,7 @@ impl Partita {
                 leader: p.leader.clone(),
                 regola: p.regola,
                 sciolto: p.sciolto,
+                cassa: p.cassa,
             })
             .collect()
     }

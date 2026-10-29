@@ -378,6 +378,8 @@ pub struct VocePartito {
     pub leader: String,
     pub regola: Regola,
     pub sciolto: bool,
+    /// Euro: pubblica.
+    pub cassa: i64,
 }
 
 /// La statistica senza `vera`.
