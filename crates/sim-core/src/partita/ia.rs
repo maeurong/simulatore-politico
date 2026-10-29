@@ -9,7 +9,7 @@ use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, Fase};
+use crate::legislatura::{self, EsitoElezioni, Fase};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
@@ -25,26 +25,29 @@ impl Partita {
         }
     }
 
-    /// Il partito IA `j` cambia leader: nome nuovo estratto da `Flusso::PartitiIa`; la valence
-    /// riparte da `valence_base` più la luna di miele. Mai sul partito del giocatore. Se in 100
-    /// estrazioni il nome esce sempre uguale all'uscente, niente cambio e niente mossa.
+    /// Un nome di `lista` estratto da `Flusso::PartitiIa` fuori da `gia`; nessuno se in 100
+    /// estrazioni esce sempre un nome già usato.
+    pub(super) fn nome_nuovo(&mut self, gia: &[String], lista: &[String]) -> Option<String> {
+        (0..100)
+            .filter_map(|_| lista.get(indice(self.caso.uniforme(Flusso::PartitiIa), lista.len())))
+            .find(|n| !gia.contains(n))
+            .cloned()
+    }
+
+    /// Il partito IA `j` cambia leader: nome e cognome nuovi (`nome_nuovo` su tutte le coppie dei
+    /// dati), diversi da quelli dei leader in carica; la valence riparte da `valence_base` più la
+    /// luna di miele. Mai sul partito del giocatore. Nessun nome nuovo, niente cambio e niente
+    /// mossa.
     pub(super) fn cambia_leader(&mut self, j: usize, causa: &str) {
         if j == self.giocatore {
             return;
         }
         let el = self.dati.elettorato();
-        let uscente = self.partiti.get(j).map(|p| p.leader.clone());
-        let mut nuovo = None;
-        for _ in 0..100 {
-            let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
-            let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
-            let candidato = format!("{n} {c}");
-            if uscente.as_ref() != Some(&candidato) {
-                nuovo = Some(candidato);
-                break;
-            }
-        }
-        let Some(nuovo) = nuovo else {
+        let lista: Vec<String> = (el.nomi.iter())
+            .flat_map(|n| el.cognomi.iter().map(move |c| format!("{n} {c}")))
+            .collect();
+        let gia: Vec<String> = self.partiti.iter().map(|p| p.leader.clone()).collect();
+        let Some(nuovo) = self.nome_nuovo(&gia, &lista) else {
             return;
         };
         let luna = self.dati.manopola("luna_di_miele_leader");
@@ -57,14 +60,15 @@ impl Partita {
     }
 
     /// Il calo di quota fra i votanti del partito `j` sull'elezione precedente, se arriva a
-    /// `calo_cambio_leader`. Alla prima elezione non c'è un'elezione precedente.
+    /// `calo_cambio_leader`, coi voti abbinati per id. Alla prima elezione non c'è un'elezione
+    /// precedente; un partito assente da una delle due non cala.
     pub(super) fn calo(&self, j: usize) -> Option<f64> {
         let [esito, prima, ..] = self.legislatura.elezioni.as_slice() else {
             return None;
         };
-        // ponytail: i voti si abbinano per posizione, valido finché i partiti non cambiano fra
-        // due voti (l'8b li fa cambiare: lì si abbina per id).
-        let calo = prima.voti.get(j)?.quota - esito.voti.get(j)?.quota;
+        let id = &self.partiti.get(j)?.id;
+        let quota = |e: &EsitoElezioni| e.voti.iter().find(|v| &v.partito == id).map(|v| v.quota);
+        let calo = quota(prima)? - quota(esito)?;
         (calo >= self.dati.manopola("calo_cambio_leader")).then_some(calo)
     }
 

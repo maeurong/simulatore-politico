@@ -10,7 +10,7 @@ use crate::parlamento::{
     ValoreProposto, VariazioneIntesa, VoceLinea,
 };
 use crate::partita::Trimestre;
-use crate::partiti::Vocazione;
+use crate::partiti::{Regola, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -376,6 +376,8 @@ pub struct VocePartito {
     pub vocazione: Vocazione,
     /// Vuoto per il partito del giocatore.
     pub leader: String,
+    pub regola: Regola,
+    pub sciolto: bool,
 }
 
 /// La statistica senza `vera`.

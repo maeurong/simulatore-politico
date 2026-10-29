@@ -11,6 +11,20 @@ use ts_rs::TS;
 /// L'id del partito del giocatore, riservato: nessun partito dello scenario può averlo.
 pub const ID_GIOCATORE: &str = "giocatore";
 
+/// Tetto ai partiti attivi (vita-dei-partiti:121: liste con seggi 9-14, NEV 3,5-6,4).
+pub const MASSIMO_PARTITI: usize = 10;
+
+/// Regola di movimento di un partito sull'asse (abm-elettorali:14-18).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+#[serde(rename_all = "snake_case")]
+pub enum Regola {
+    Sticker,
+    Aggregator,
+    Hunter,
+    Governator,
+}
+
 /// Quanto un partito pesa le politiche rispetto alle poltrone.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
@@ -50,6 +64,7 @@ pub struct DatoPartito {
     pub valence: Ingresso,
     pub vocazione: Vocazione,
     pub leader: String,
+    pub regola: Regola,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -70,6 +85,9 @@ pub struct Partito {
     pub valence_base: f64,
     pub vocazione: Vocazione,
     pub leader: String,
+    pub regola: Regola,
+    /// Resta al suo indice, senza voti.
+    pub sciolto: bool,
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
@@ -118,6 +136,8 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             valence_base: p.valence.valore,
             vocazione: p.vocazione,
             leader: p.leader.clone(),
+            regola: p.regola,
+            sciolto: false,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);
@@ -147,8 +167,11 @@ fn ko(m: String) -> Errore {
 /// `Partiti` col nome del colpevole.
 pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore> {
     let partiti = &scenario.partiti;
-    if !(2..=10).contains(&partiti.len()) {
-        return Err(ko(format!("{} partiti, servono da 2 a 10", partiti.len())));
+    if !(2..=MASSIMO_PARTITI).contains(&partiti.len()) {
+        return Err(ko(format!(
+            "{} partiti, servono da 2 a {MASSIMO_PARTITI}",
+            partiti.len()
+        )));
     }
     let mut visti = BTreeSet::new();
     for p in partiti {
@@ -166,6 +189,13 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
         if !(p.posizione.is_finite() && (1.0..=7.0).contains(&p.posizione)) {
             return Err(ko(format!("posizione di {} fuori da 1-7", p.id)));
         }
+    }
+    if scenario.nomi_partiti.is_empty() {
+        return Err(ko("nomi_partiti: nessun nome per i partiti nuovi".into()));
+    }
+    let usato = |n: &&String| partiti.iter().any(|p| &p.nome == *n);
+    if let Some(nome) = scenario.nomi_partiti.iter().find(usato) {
+        return Err(ko(format!("nome di partito nuovo già usato: {nome}")));
     }
     let esiste = |id: &str| visti.contains(id);
     let g = &scenario.governo;
@@ -224,5 +254,22 @@ mod tests {
             assert!((v.peso_politiche(&d) - politiche).abs() < 1e-12, "{v:?}");
             assert!((v.peso_poltrone(&d) - poltrone).abs() < 1e-12, "{v:?}");
         }
+    }
+
+    #[test]
+    fn nomi_partiti_vuota_o_gia_usata_rifiutata() {
+        let d = dati_base();
+        let mut s = d.scenario().clone();
+        assert!(s.nomi_partiti.len() >= 8);
+        assert!(valida(&s, d.dicasteri()).is_ok());
+        s.nomi_partiti.push("Centro".into());
+        let e = valida(&s, d.dicasteri()).unwrap_err();
+        assert!(
+            e.to_string()
+                .contains("nome di partito nuovo già usato: Centro"),
+            "{e}"
+        );
+        s.nomi_partiti.clear();
+        assert!(valida(&s, d.dicasteri()).is_err());
     }
 }

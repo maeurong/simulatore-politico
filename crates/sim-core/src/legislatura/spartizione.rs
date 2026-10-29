@@ -5,7 +5,7 @@
 use crate::dati::DatiGioco;
 use crate::partiti::Partito;
 #[cfg(test)]
-use crate::partiti::Vocazione;
+use crate::partiti::{Regola, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -167,6 +167,8 @@ mod tests {
                 valence_base: 0.0,
                 vocazione: Vocazione::Mista,
                 leader: String::new(),
+                regola: Regola::Sticker,
+                sciolto: false,
             })
             .collect()
     }

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-/// Quote: partiti nell'ordine dello scenario, poi l'astensione.
+/// Quote: una per partito, poi l'astensione.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Rilevazione {
@@ -51,7 +51,8 @@ fn normalizza(v: Vec<f64>, ripiego: &[f64]) -> Vec<f64> {
     }
 }
 
-/// `max(0, v_j + spostamento_j + √(d·v_j(1 − v_j)/n)·z)`, rinormalizzato.
+/// `max(0, v_j + spostamento_j + √(d·v_j(1 − v_j)/n)·z)`, rinormalizzato; zero dove il vero è
+/// zero (lo sciolto), senza spostamento.
 fn campiona(
     vero: &[f64],
     spostamento: &[f64],
@@ -64,7 +65,8 @@ fn campiona(
         .zip(spostamento)
         .map(|(p, s)| {
             let sd = (disegno * p * (1.0 - p) / n).max(0.0).sqrt();
-            (p + s + sd * z()).max(0.0)
+            let q = (p + s + sd * z()).max(0.0);
+            if *p > 0.0 { q } else { 0.0 }
         })
         .collect();
     normalizza(q, vero)
