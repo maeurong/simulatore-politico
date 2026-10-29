@@ -28,7 +28,7 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
-    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito,
+    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
 };
 use serde::{Deserialize, Serialize};
 
@@ -169,6 +169,7 @@ impl Partita {
                 dimissioni: false,
                 maggioranza: None,
                 crisi: None,
+                voto_anticipato: false,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -191,6 +192,7 @@ impl Partita {
                 dimissioni: false,
                 maggioranza: None,
                 crisi: None,
+                voto_anticipato: false,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -253,7 +255,7 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → bilancio del governo IA in ottobre-dicembre e nell'esercizio provvisorio → default delle
+    // svuotamento delle mosse IA del turno prima → default delle
     // decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → firme dell'abrogativo →
@@ -262,13 +264,14 @@ impl Partita {
     // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati
-    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → fine della crisi
+    // (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
+    // governo IA, sul sondaggio appena rilevato (`voto_anticipato`) → fine della crisi
     // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
     // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
     // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
     // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
     // (valori in arrivo, esiti dei due turni prima, emendamenti, rose, agende, proposte; il costo
-    // del taglio se l'anno entra in esercizio provvisorio).
+    // del taglio se l'anno entra in esercizio provvisorio) → mosse IA dell'apertura (`apertura_ia`).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
     // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
     // decade al voto, e nessuno può presentare.
@@ -281,19 +284,6 @@ impl Partita {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
-        // ponytail: governo IA minimo, il piano 8 lo sostituisce. Le proposte dei suoi ministri
-        // restano ignorate; in ottobre-dicembre e nell'esercizio provvisorio presenta la bozza del
-        // bilancio, se c'è, tranne in crisi (decisione 2 di Mario, per chiunque governi).
-        if self.legislatura.fase == Fase::Ordinaria
-            && !self.governa()
-            && !self.in_crisi()
-            && (self.data.trimestre == 4 || self.economia.esercizio_provvisorio(self.data))
-            && self.economia.bilancio_presentato.is_none()
-            && let Some(b) = self.bozza_bilancio()
-        {
-            // La bozza passa le regole della presentazione; se non le passasse, nessun bilancio.
-            let _ = self.presenta_bilancio(&b);
-        }
         self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
         // Prima del voto del bilancio: approvato, esce dal calendario. In crisi le leggi restano
         // ferme un turno senza decadere, come nel turno del bilancio (ticket 09, riga 45).
@@ -381,6 +371,8 @@ impl Partita {
         if l.fase == Fase::Ordinaria && !l.dimissioni && !di_voto {
             self.uscite(&escono);
         }
+        // Prima della fine della crisi, che la chiude: in crisi il governo IA non va al voto.
+        self.voto_anticipato();
         if self.legislatura.crisi == Some(self.turno) {
             self.fine_della_crisi(sfiducia_votata);
         }
@@ -432,6 +424,7 @@ impl Partita {
             let perdite = self.perdite(self.economia.bilancio_in_vigore(self.data));
             self.costo_taglio(&perdite);
         }
+        self.apertura_ia();
     }
 
     /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
@@ -944,16 +937,34 @@ impl Partita {
     /// Norma approvata in posizione `nuova`: ogni alleato distante almeno `distanza_alleato`
     /// perde intesa, per il peso delle politiche della sua vocazione.
     fn norma_lontana(&mut self, nuova: f64) {
-        let soglia = self.dati.manopola("distanza_alleato");
-        let costo = self.dati.manopola("costo_norma_lontana");
         for j in self.alleati() {
-            let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
-            if distanza < soglia {
-                continue;
+            if let Some(costo) = self.costo_norma_lontana(j, nuova) {
+                (self.intesa).varia(j, CausaIntesa::NormaLontana, -costo, self.turno);
             }
-            let delta = -costo * (distanza - soglia + 1.0) * self.peso_politiche(j);
-            (self.intesa).varia(j, CausaIntesa::NormaLontana, delta, self.turno);
         }
+    }
+
+    /// L'intesa che perde `j` per una norma approvata in posizione `nuova`; `None` se dista meno
+    /// di `distanza_alleato`.
+    fn costo_norma_lontana(&self, j: usize, nuova: f64) -> Option<f64> {
+        let soglia = self.dati.manopola("distanza_alleato");
+        let distanza = (self.partiti[j].posizione_dichiarata - nuova).abs();
+        (distanza >= soglia).then(|| {
+            self.dati.manopola("costo_norma_lontana")
+                * (distanza - soglia + 1.0)
+                * self.peso_politiche(j)
+        })
+    }
+
+    /// L'alleato `j` pagando `costo` d'intesa scenderebbe sotto `soglia_ultimatum` (scelta 9 del
+    /// piano 8a: il governo IA non fa la mossa). La soglia è l'ultimatum, non l'uscita: una mossa
+    /// sola non porta un alleato da 40 a sotto 25, la crisi nasce dall'accumulo su più turni.
+    fn sotto_ultimatum(&self, j: usize, costo: f64) -> bool {
+        let soglia = self.dati.manopola("soglia_ultimatum");
+        self.intesa
+            .valori
+            .get(j)
+            .is_some_and(|&x| x - costo < soglia)
     }
 
     /// `Emendamento`: deciso dal giocatore; respinto, costa intesa all'alleato.
@@ -1002,29 +1013,48 @@ impl Partita {
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
     fn emendamenti_respinti(&mut self, alleati: impl IntoIterator<Item = usize>) {
-        let costo = self.dati.manopola("costo_emendamento_respinto");
         for j in alleati {
-            let delta = -costo * self.peso_politiche(j);
+            let delta = -self.costo_respinto(j);
             (self.intesa).varia(j, CausaIntesa::EmendamentoRespinto, delta, self.turno);
         }
     }
 
-    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde `parlamento::costo_fiducia`, la parte di distanza
-    /// per il peso delle politiche della sua vocazione.
+    /// L'intesa che perde l'alleato `j` col suo emendamento respinto.
+    fn costo_respinto(&self, j: usize) -> f64 {
+        self.dati.manopola("costo_emendamento_respinto") * self.peso_politiche(j)
+    }
+
+    /// `PoniFiducia`: la misura si vota nel turno; ogni alleato perde il suo `costi_fiducia`.
     pub(crate) fn poni_fiducia(&mut self, misura: u32) -> Result<(), Errore> {
-        let m = (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
-        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
-        let forma = m.forma;
-        for j in self.alleati() {
-            let x = self.partiti[j].posizione_dichiarata;
-            let peso = self.peso_politiche(j);
-            let delta = -parlamento::costo_fiducia(&self.dati, forma, x, nuova, peso);
-            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        // Gli emendamenti che la fiducia fa cadere non toccano i valori: il costo è lo stesso.
+        let costi = (self.parlamento.misure.iter())
+            .find(|m| m.id == misura)
+            .map(|m| self.costi_fiducia(m))
+            .unwrap_or_default();
+        (self.parlamento).poni_fiducia(&self.dati, misura, self.turno)?;
+        for (j, costo) in costi {
+            (self.intesa).varia(j, CausaIntesa::Fiducia, -costo, self.turno);
         }
         Ok(())
     }
 
-    fn stato_aula(&self) -> StatoAula<'_> {
+    /// L'intesa che ogni alleato perde se si pone la fiducia su `m`: `parlamento::costo_fiducia`,
+    /// la parte di distanza per il peso delle politiche della sua vocazione.
+    fn costi_fiducia(&self, m: &Misura) -> Vec<(usize, f64)> {
+        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
+        (self.alleati().into_iter())
+            .map(|j| {
+                let x = self.partiti[j].posizione_dichiarata;
+                let peso = self.peso_politiche(j);
+                (
+                    j,
+                    parlamento::costo_fiducia(&self.dati, m.forma, x, nuova, peso),
+                )
+            })
+            .collect()
+    }
+
+    pub(crate) fn stato_aula(&self) -> StatoAula<'_> {
         StatoAula {
             dati: &self.dati,
             disposizioni: &self.disposizioni,
@@ -1143,6 +1173,18 @@ impl Partita {
     /// con le stesse regole della presentazione, o con la spesa netta di riferimento nulla.
     pub fn riepilogo_bilancio(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
         self.di_governo()?;
+        self.riepilogo_ammesso(b)
+    }
+
+    /// Il riepilogo del bilancio presentato contro la bozza, per chiunque: il bilancio in aula è
+    /// pubblico. `None` senza bilancio presentato o col riepilogo non calcolabile.
+    pub fn riepilogo_presentato(&self) -> Option<RiepilogoBilancio> {
+        let b = self.economia.bilancio_presentato.as_ref()?;
+        self.riepilogo_ammesso(b).ok()
+    }
+
+    /// `riepilogo_bilancio` senza la guardia su chi governa.
+    fn riepilogo_ammesso(&self, b: &Bilancio) -> Result<RiepilogoBilancio, Errore> {
         let (bozza, b) = self.bilancio_ammesso(b)?;
         economia::riepilogo(
             &self.economia,
@@ -1471,12 +1513,8 @@ impl Partita {
 
     /// Gli alleati riavranno il costo d'intesa della questione di fiducia posta su `m`.
     fn rimborsa_fiducia(&mut self, m: &Misura) {
-        let nuova = parlamento::posizioni(&self.dati, &self.disposizioni, &m.valori).map(|p| p.1);
-        for j in self.alleati() {
-            let x = self.partiti[j].posizione_dichiarata;
-            let peso = self.peso_politiche(j);
-            let delta = parlamento::costo_fiducia(&self.dati, m.forma, x, nuova, peso);
-            (self.intesa).varia(j, CausaIntesa::Fiducia, delta, self.turno);
+        for (j, costo) in self.costi_fiducia(m) {
+            (self.intesa).varia(j, CausaIntesa::Fiducia, costo, self.turno);
         }
     }
 
@@ -1841,6 +1879,7 @@ impl Partita {
         l.maggioranza = None;
         l.allargati.clear();
         l.crisi = None;
+        l.voto_anticipato = false;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -1892,6 +1931,16 @@ impl Partita {
     /// In crisi col giocatore al governo, fuori dal turno del voto (che chiude la crisi).
     fn in_crisi_al_governo(&self) -> bool {
         self.in_crisi() && self.governa() && !self.legislatura.turno_di_voto(self.turno)
+    }
+
+    /// In crisi sotto un governo IA in fase ordinaria, fuori dal turno del voto: la affronta
+    /// `crisi_ia`.
+    fn in_crisi_ia(&self) -> bool {
+        let l = &self.legislatura;
+        self.in_crisi()
+            && !self.governa()
+            && l.fase == Fase::Ordinaria
+            && !l.turno_di_voto(self.turno)
     }
 
     /// In crisi al governo nell'esercizio provvisorio: in crisi il bilancio non si presenta, e il
@@ -2241,11 +2290,29 @@ impl Partita {
             .collect();
         self.giudizio_da_zero(&entranti);
         let tecnici: Vec<bool> = assegnati.iter().map(Option::is_none).collect();
+        let programma = if presidente == self.giocatore {
+            Vec::new()
+        } else {
+            legislatura::programma(&self.stato_aula(), &coalizione, &seggi)
+        };
+        let prima = programma
+            .first()
+            .map(|&(d, _)| self.dati.disposizioni()[d].nome.clone());
+        let righe = programma.len();
         self.governo = Governo {
             presidente,
             dicasteri: assegnati.iter().map(|a| a.unwrap_or(presidente)).collect(),
             coalizione,
+            programma,
         };
+        if let Some(nome) = prima {
+            let testo = if righe == 1 {
+                format!("Programma di governo: 1 disposizione, {nome}")
+            } else {
+                format!("Programma di governo: {righe} disposizioni, la prima è {nome}")
+            };
+            self.mossa(presidente, testo);
+        }
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
         // Il voto appena passato (turno == inizio) l'ha già fatto cambiare per il calo: una sola
         // sconfitta, un solo cambio.
@@ -2389,11 +2456,15 @@ impl Partita {
     }
 
     /// Il Capo dello Stato dopo le dimissioni: la maggioranza contigua
-    /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, con tutti se il
-    /// governo era IA (scelta 11 del piano 7b). Senza il giocatore, l'incarico IA; col giocatore
-    /// primo per seggi (Camera più Senato, a parità l'indice più basso), l'incarico a lui con
-    /// quella maggioranza; col giocatore non primo, `Guida`. Trovata, si va in trattativa; senza,
-    /// le Camere si sciolgono. Nessuna luna di miele al governo che nasce. Prima, le misure in
+    /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, senza il partito del
+    /// Presidente del Consiglio IA dimesso per il voto anticipato (decisione 2 di Mario, piano 8a),
+    /// con tutti per le altre cadute di un governo IA (scelta 11 del piano 7b); `voto_anticipato`
+    /// si azzera.
+    ///
+    /// Senza il giocatore, l'incarico IA; col giocatore primo per seggi (Camera più Senato, a
+    /// parità l'indice più basso), l'incarico a lui con quella maggioranza; col giocatore non
+    /// primo, `Guida`. Trovata, si va in trattativa; senza, le Camere si sciolgono. Nessuna luna
+    /// di miele al governo che nasce. Prima, le misure in
     /// calendario del governo caduto decadono senza costi, come a fine legislatura
     /// (iter-legislativo-italiano:80): una sua legge non costa al successore. La proposta
     /// dell'opposizione nel posto riservato non è del governo caduto e resta. I referendum
@@ -2403,7 +2474,9 @@ impl Partita {
         let del_governo = |m: &Misura| m.promotore.is_none();
         (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta, del_governo);
         let g = self.giocatore;
-        let escluso = (self.governo.presidente == g).then_some(g);
+        let anticipato = std::mem::take(&mut self.legislatura.voto_anticipato);
+        let presidente = self.governo.presidente;
+        let escluso = (presidente == g || anticipato).then_some(presidente);
         let pl = &self.parlamento;
         let trovata = legislatura::maggioranza_contigua(
             &self.partiti,
@@ -2876,6 +2949,25 @@ impl Partita {
             dimissioni: l.dimissioni,
             crisi: self.in_crisi(),
             mosse: self.mosse.clone(),
+            programma: self
+                .governo
+                .programma
+                .iter()
+                // Fuori dalla fase ordinaria il governo è dimissionario: niente programma.
+                .filter(|_| l.fase == Fase::Ordinaria)
+                .map(|&(d, k)| {
+                    let (dato, gradino) = (
+                        &self.dati.disposizioni()[d],
+                        &self.dati.disposizioni()[d].gradini[k],
+                    );
+                    VoceProgramma {
+                        disposizione: dato.id.clone(),
+                        nome: dato.nome.clone(),
+                        gradino: gradino.id.clone(),
+                        nome_gradino: gradino.nome.clone(),
+                    }
+                })
+                .collect(),
         }
     }
 
@@ -3077,6 +3169,10 @@ impl Partita {
         // Il partito fondato dal giocatore non ha leader; gli altri, anche quello che il giocatore
         // prende dallo scenario, ne hanno uno.
         for p in &self.partiti {
+            ok(
+                p.posizione_dichiarata.is_finite(),
+                &format!("partito {}: posizione dichiarata non finita", p.id),
+            )?;
             if p.id == ID_GIOCATORE {
                 ok(
                     p.leader.is_empty(),
@@ -3174,12 +3270,29 @@ impl Partita {
         )?;
         let coalizione = self.coalizione_del_giocatore();
         let in_trattativa = self.con_incarico();
+        // In crisi sotto un governo IA gli allargati sono suoi: al più uno, mai il giocatore, mai
+        // in esercizio provvisorio (`crisi_ia`).
+        let in_crisi_ia = self.in_crisi_ia();
+        let disgiunti = if in_crisi_ia {
+            unici(self.governo.coalizione.iter().chain(&l.allargati).copied())
+        } else {
+            unici(coalizione.iter().copied())
+        };
+        let allarga_ia = in_crisi_ia
+            && l.allargati.len() <= 1
+            && !l.allargati.contains(&self.giocatore)
+            && !self.economia.esercizio_provvisorio(self.data);
         ok(
             l.allargati.iter().all(|&j| j < n)
-                && unici(coalizione.iter().copied())
-                && (self.allarga_ammesso() || l.allargati.is_empty()),
+                && disgiunti
+                && (self.allarga_ammesso() || allarga_ia || l.allargati.is_empty()),
             "legislatura.allargati con un partito fuori dai partiti, ripetuto, già nella \
-             coalizione o fuori dalla trattativa e dalla crisi col giocatore",
+             coalizione, fuori dalla trattativa e dalla crisi, o nella crisi del governo IA più \
+             di uno, il giocatore o in esercizio provvisorio",
+        )?;
+        ok(
+            !l.voto_anticipato || l.dimissioni,
+            "legislatura.voto_anticipato senza dimissioni",
         )?;
         ok(
             l.proposta.as_ref().is_none_or(|v| {
@@ -3198,6 +3311,15 @@ impl Partita {
             "legislatura.fase non sciolta con Camere senza seggi",
         )?;
         let g = &self.governo;
+        let catalogo = self.dati.disposizioni();
+        ok(
+            g.programma
+                .iter()
+                .all(|&(d, k)| catalogo.get(d).is_some_and(|x| k < x.gradini.len()))
+                && (g.presidente != self.giocatore || g.programma.is_empty()),
+            "governo.programma con una disposizione o un gradino fuori dai dati, o non vuoto col \
+             giocatore Presidente del Consiglio",
+        )?;
         ok(g.presidente < n, "governo.presidente fuori dai partiti")?;
         ok(
             g.dicasteri.len() == self.dati.dicasteri().len() && g.dicasteri.iter().all(|&p| p < n),
@@ -3357,6 +3479,7 @@ mod tests {
     use super::*;
     use crate::caso::Flusso;
     use crate::dati::dati_base;
+    use crate::disposizioni::InArrivo;
     use crate::legislatura::{CausaDisponibilita, Fondazione};
     use crate::partiti::Vocazione;
 
@@ -3370,7 +3493,7 @@ mod tests {
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
     /// sotto un governo IA.
-    fn all_opposizione() -> Partita {
+    pub(super) fn all_opposizione() -> Partita {
         let f = Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 1.5,
@@ -3450,7 +3573,345 @@ mod tests {
         assert_eq!(e.indicatori[0].fine, debito);
     }
 
-    /// Sotto un governo IA il segnaposto presenta la bozza e nessun alleato emenda il bilancio.
+    /// Una legge del governo IA col voto nel turno, senza emendamenti né fiducia: il suo id.
+    fn legge_del_governo_al_voto(p: &mut Partita) -> u32 {
+        let turno = p.turno;
+        let m = (p.parlamento.misure.iter_mut())
+            .find(|m| m.promotore.is_none() && m.forma == FormaMisura::Riforma)
+            .unwrap();
+        m.voto = turno;
+        m.fiducia = false;
+        m.emendamenti.clear();
+        m.id
+    }
+
+    /// L'alleato sotto `soglia_ultimatum` con un emendamento aperto: il governo IA lo accoglie.
+    #[test]
+    fn il_governo_ia_accoglie_l_emendamento_dell_alleato_sotto_40() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        p.intesa.valori[a] = 30.0;
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga = format!("Accoglie l'emendamento di {nome} su {legge}: la sua intesa è sotto 40");
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Alleato sopra la soglia e i seggi tutti al Presidente del Consiglio: senza l'alleato la
+    /// legge non rischia, e l'emendamento è respinto.
+    #[test]
+    fn il_governo_ia_respinge_l_emendamento_che_non_serve() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        p.intesa.valori[a] = 100.0;
+        let pc = p.governo.presidente;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
+        }
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Respinto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga = format!("Respinge l'emendamento di {nome} su {legge}");
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Una legge del governo IA al voto con l'emendamento aperto del primo alleato, mosse vuote:
+    /// la partita, l'id della legge e l'alleato.
+    fn con_emendamento_aperto() -> (Partita, u32, usize) {
+        let mut p = all_opposizione();
+        let id = legge_del_governo_al_voto(&mut p);
+        let a = *p.alleati().first().unwrap();
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.emendamenti.push(RichiestaEmendamento {
+            partito: a,
+            proposta: Vec::new(),
+            stato: StatoEmendamento::Aperto,
+            motivo: String::new(),
+        });
+        p.mosse.clear();
+        (p, id, a)
+    }
+
+    /// Il nome che la `Vista` dà alla misura `id` nel calendario.
+    fn nome_in_calendario(p: &Partita, id: u32) -> String {
+        let v = p.vista();
+        v.calendario.into_iter().find(|m| m.id == id).unwrap().nome
+    }
+
+    /// Tetto UE a metà fra la crescita della bozza e quella indicizzata per intero: la bisezione
+    /// trova la quota più alta dentro il tetto. Poi un alleato in ultimatum: le sue voci si
+    /// indicizzano per intero, il bilancio esce dal tetto e la riga lo dice.
+    #[test]
+    fn il_bilancio_ia_cerca_la_quota_piu_alta_entro_il_tetto() {
+        let mut p = all_opposizione();
+        while p.data.trimestre != 4 {
+            p.chiudi_turno();
+        }
+        p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
+        // Col seme 7 l'indice pubblicato (1,002) sta sotto il livello delle voci (1,019), e
+        // indicizzare taglierebbe: prezzi più alti, voci in perdita reale.
+        p.informazione.statistica.indice_prezzi = 1.2;
+        let (bozza, indice) = (p.bozza_bilancio().unwrap(), p.indice_prezzi());
+        let riepilogo = |p: &Partita, b: &Bilancio| p.riepilogo_ammesso(b).unwrap();
+        let crescita = |p: &Partita, q: f64| {
+            let b = economia::indicizza_in_parte(&bozza, q, indice).unwrap();
+            riepilogo(p, &b).crescita_spesa_netta
+        };
+        let (zero, uno) = (crescita(&p, 0.0), crescita(&p, 1.0));
+        assert!(zero < uno, "{zero} {uno}");
+        let tetto = f64::midpoint(zero, uno);
+        (p.dati.scenario_mut().tetti_spesa_netta) = [(2000, tetto)].into();
+        let (b, q, testo) = p.bilancio_ia().unwrap();
+        assert!(0.0 < q && q < 1.0, "{q}");
+        let r = riepilogo(&p, &b);
+        assert!(r.crescita_spesa_netta <= r.tetto, "{r:?}");
+        assert!(crescita(&p, q + 1e-3) > tetto);
+        let budget = ia::indicizzati((q * 100.0).round() as u32);
+        let attesa = format!("Bilancio {}: {budget}, entro il tetto UE", b.anno);
+        assert_eq!(testo, attesa);
+        // Un alleato con dicasteri in ultimatum.
+        let a = (p.alleati().into_iter())
+            .find(|j| p.governo.dicasteri.contains(j))
+            .unwrap();
+        p.intesa.ultimatum[a] = Some(CausaIntesa::NormaLontana);
+        let (b, q2, testo) = p.bilancio_ia().unwrap();
+        assert_eq!(q2, q);
+        for (k, _) in (p.governo.dicasteri.iter().enumerate()).filter(|&(_, &j)| j == a) {
+            assert_eq!(b.dicasteri[k].livello_prezzi, indice, "{k}");
+        }
+        let attesa = format!(
+            "Bilancio {}: {budget}, oltre il tetto UE, con le richieste di {}",
+            b.anno, p.partiti[a].nome
+        );
+        assert_eq!(testo, attesa);
+    }
+
+    /// Forbice in bilico (i seggi quasi tutti al giocatore, che vota no) e nessun ultimatum: il
+    /// governo IA pone la fiducia.
+    #[test]
+    fn il_governo_ia_pone_la_fiducia_se_la_forbice_e_in_bilico() {
+        let (mut p, id) = legge_in_bilico();
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert!(m.fiducia);
+        let riga = format!(
+            "Pone la questione di fiducia su {}: la forbice include la sconfitta",
+            parlamento::nome_misura(&p.dati, m)
+        );
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Una legge del governo IA al voto in bilico (i seggi quasi tutti al giocatore, che vota
+    /// no), nessun ultimatum, mosse vuote: la partita e l'id della legge.
+    fn legge_in_bilico() -> (Partita, u32) {
+        let mut p = all_opposizione();
+        let id = legge_del_governo_al_voto(&mut p);
+        let g = p.giocatore;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == g { (390, 190) } else { (2, 1) };
+        }
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.linea_giocatore = Some(false);
+        p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
+        p.mosse.clear();
+        (p, id)
+    }
+
+    /// Senza i voti dell'alleato la legge in bilico rischia: il governo IA accoglie anche con
+    /// l'intesa piena.
+    #[test]
+    fn il_governo_ia_accoglie_l_emendamento_senza_cui_la_legge_rischia() {
+        let (mut p, id) = legge_in_bilico();
+        let a = *p.alleati().first().unwrap();
+        p.intesa.valori[a] = 100.0;
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.emendamenti.push(RichiestaEmendamento {
+            partito: a,
+            proposta: Vec::new(),
+            stato: StatoEmendamento::Aperto,
+            motivo: String::new(),
+        });
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga = format!(
+            "Accoglie l'emendamento di {nome} su {legge}: senza i voti di {nome} la legge rischia \
+             di non passare"
+        );
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    #[test]
+    fn niente_fiducia_con_un_alleato_in_ultimatum() {
+        let (mut p, id) = legge_in_bilico();
+        let a = *p.alleati().first().unwrap();
+        p.intesa.ultimatum[a] = Some(CausaIntesa::NormaLontana);
+        p.governo_ia();
+        assert!(!p.parlamento.misure.iter().any(|m| m.id == id && m.fiducia));
+    }
+
+    /// I seggi quasi tutti al Presidente del Consiglio: la forbice regge, niente fiducia.
+    #[test]
+    fn niente_fiducia_se_la_forbice_regge() {
+        let (mut p, id) = legge_in_bilico();
+        let pc = p.governo.presidente;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
+        }
+        p.governo_ia();
+        assert!(!p.parlamento.misure.iter().any(|m| m.id == id && m.fiducia));
+    }
+
+    /// Il programma ridotto alla prima voce: già in esame, o già approvata e in arrivo, non si
+    /// ripresenta.
+    #[test]
+    fn la_voce_in_esame_o_in_arrivo_non_si_ripresenta() {
+        let mut p = all_opposizione();
+        let (k, g) = p.governo.programma[0];
+        assert!((p.parlamento.misure.iter()).any(|m| m.valori.contains(&(k, g))));
+        p.governo.programma = vec![(k, g)];
+        p.ministri
+            .dicasteri
+            .iter_mut()
+            .for_each(|d| d.proposta = None);
+        let n = p.parlamento.misure.len();
+        p.governo_ia();
+        assert_eq!(p.parlamento.misure.len(), n);
+        (p.parlamento.misure).retain(|m| m.valori.iter().all(|v| v.0 != k));
+        let n = p.parlamento.misure.len();
+        p.disposizioni.voci[k].in_arrivo.push(InArrivo {
+            gradino: g,
+            turno: p.turno + 1,
+            legge: String::new(),
+        });
+        p.governo_ia();
+        assert_eq!(p.parlamento.misure.len(), n);
+    }
+
+    /// Gli emendamenti alle proposte dell'opposizione non sono del governo IA.
+    #[test]
+    fn il_governo_ia_non_tocca_gli_emendamenti_alle_proposte_dell_opposizione() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        let g = p.giocatore;
+        let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
+        m.promotore = Some(g);
+        p.intesa.valori[a] = 30.0;
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Aperto);
+    }
+
+    /// Fuori dalla fase ordinaria il governo è dimissionario: la vista non mostra il programma.
+    #[test]
+    fn fuori_dalla_fase_ordinaria_niente_programma() {
+        let mut p = all_opposizione();
+        assert!(!p.vista().programma.is_empty());
+        p.legislatura.fase = Fase::Trattativa;
+        assert!(p.vista().programma.is_empty());
+    }
+
+    /// Scelta 9 del piano: la fiducia costa almeno `costo_fiducia`, e l'alleato a
+    /// `soglia_ultimatum` ne scenderebbe sotto; il governo IA non la pone.
+    #[test]
+    fn niente_fiducia_che_porta_un_alleato_sotto_l_ultimatum() {
+        let (mut p, id) = legge_in_bilico();
+        let a = *p.alleati().first().unwrap();
+        p.intesa.valori[a] = p.dati.manopola("soglia_ultimatum");
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert!(!m.fiducia);
+        assert!(p.mosse.iter().all(|x| !x.testo.starts_with("Pone")));
+    }
+
+    /// Scelta 9 del piano: l'alleato a `soglia_ultimatum` più il costo del respinto meno uno, la
+    /// legge non rischia, ma il respinto lo porterebbe sotto l'ultimatum: il governo IA accoglie e
+    /// lo dice.
+    #[test]
+    fn il_governo_ia_accoglie_l_emendamento_che_porterebbe_l_alleato_sotto_l_ultimatum() {
+        let (mut p, id, a) = con_emendamento_aperto();
+        let pc = p.governo.presidente;
+        for (j, (c, s)) in (p.parlamento.seggi_camera.iter_mut())
+            .zip(p.parlamento.seggi_senato.iter_mut())
+            .enumerate()
+        {
+            (*c, *s) = if j == pc { (390, 190) } else { (2, 1) };
+        }
+        let costo = p.costo_respinto(a);
+        assert!(costo > 1.0, "{costo}");
+        p.intesa.valori[a] = p.dati.manopola("soglia_ultimatum") + costo - 1.0;
+        p.governo_ia();
+        let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
+        assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
+        let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
+        let riga = format!(
+            "Accoglie l'emendamento di {nome} su {legge}: respingerlo porterebbe la sua intesa \
+             sotto 40"
+        );
+        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// Scelta 9 del piano: la sola voce del programma, fuori dal calendario, a 2,5 dal primo
+    /// alleato (la norma lontana costa); con l'intesa piena va in aula, a `soglia_ultimatum` no.
+    #[test]
+    fn niente_norma_che_porta_un_alleato_sotto_l_ultimatum() {
+        let mut p = all_opposizione();
+        let a = *p.alleati().first().unwrap();
+        let posizione = |p: &Partita, k: usize, g: usize| {
+            parlamento::posizioni(&p.dati, &p.disposizioni, &[(k, g)]).map(|x| x.1)
+        };
+        let (k, g, nuova) = (p.governo.programma.iter())
+            .find_map(|&(k, g)| Some((k, g, posizione(&p, k, g)?)))
+            .unwrap();
+        p.governo.programma = vec![(k, g)];
+        (p.parlamento.misure).retain(|m| m.valori.iter().all(|v| v.0 != k));
+        p.partiti[a].posizione_dichiarata = if nuova < 4.0 {
+            nuova + 2.5
+        } else {
+            nuova - 2.5
+        };
+        assert!(p.costo_norma_lontana(a, nuova).is_some_and(|c| c > 0.0));
+        let salvata = p.salva().unwrap();
+        let in_aula = |intesa: f64| {
+            let mut q = Partita::carica(&salvata).unwrap();
+            q.intesa.valori[a] = intesa;
+            q.governo_ia();
+            (q.parlamento.misure.iter()).any(|m| m.valori.iter().any(|v| v.0 == k))
+        };
+        assert!(in_aula(100.0));
+        assert!(!in_aula(p.dati.manopola("soglia_ultimatum")));
+    }
+
+    /// Decisione 2 di Mario, per chiunque governi: in ottobre-dicembre il governo IA presenta il
+    /// bilancio, tranne in crisi. (Era in `tests/crisi.rs`: il turno di crisi nasce in chiusura,
+    /// e da fuori non si mette all'apertura di ottobre-dicembre.)
+    #[test]
+    fn il_governo_ia_in_crisi_non_presenta_il_bilancio() {
+        let mut p = all_opposizione();
+        while p.data.trimestre != 4 {
+            p.chiudi_turno();
+        }
+        p.economia.bilancio_presentato = None;
+        p.legislatura.crisi = Some(p.turno);
+        p.governo_ia();
+        assert!(p.economia.bilancio_presentato.is_none());
+        p.legislatura.crisi = None;
+        p.governo_ia();
+        assert!(p.economia.bilancio_presentato.is_some());
+    }
+
+    /// Sotto un governo IA il bilancio presentato in apertura non ha emendamenti, e nemmeno la
+    /// bozza ripresentata.
     #[test]
     fn il_bilancio_dell_ia_non_ha_emendamenti() {
         let mut p = all_opposizione();

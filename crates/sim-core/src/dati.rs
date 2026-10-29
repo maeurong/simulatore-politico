@@ -217,6 +217,9 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "alfa_identitaria",
     "alfa_mista",
     "alfa_governista",
+    "soglia_programma",
+    "seggi_programma_elettorale",
+    "margine_voto_anticipato",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",
@@ -369,6 +372,11 @@ impl DatiGioco {
         if let Some(m) = self.manopole.get_mut(nome) {
             m.valore = valore;
         }
+    }
+
+    /// Per i test d'unità: lo scenario da ritoccare.
+    pub(crate) fn scenario_mut(&mut self) -> &mut Scenario {
+        &mut self.scenario
     }
 }
 

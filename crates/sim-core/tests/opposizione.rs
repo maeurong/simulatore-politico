@@ -16,17 +16,33 @@ fn al_posto_riservato(p: &mut Partita) {
     panic!("il posto riservato non arriva mai al giocatore");
 }
 
-/// Chiude finché la misura `id` esce dal calendario e rende le chiusure. Col seme 7 il posto
+/// Chiude finché la misura `id` esce dal calendario, togliendo prima di ogni chiusura le riforme e
+/// le elettorali del governo IA: il voto di `id` resta l'unico con posizione. Col seme 7 il posto
 /// riservato arriva al giocatore in luglio-settembre 2027: il voto cade nel turno del bilancio e
 /// slitta di un turno, come ogni legge (ticket 09, riga 45).
-fn al_voto(p: &mut Partita, id: u32) -> i32 {
+fn al_voto_da_sola(p: &mut Partita, id: u32) {
     let mut n = 0;
     while p.vista().calendario.iter().any(|m| m.id == id) {
         assert!(n < 3, "la misura {id} non arriva al voto");
+        *p = edita(p, |j| {
+            let misure = j["parlamento"]["misure"].as_array_mut().unwrap();
+            misure.retain(|m| {
+                !(m["promotore"].is_null()
+                    && (m["forma"] == "riforma" || m["forma"] == "elettorale"))
+            });
+        })
+        .unwrap();
         p.chiudi_turno();
         n += 1;
     }
-    n
+}
+
+/// La proposta del giocatore in calendario, fra le leggi del governo IA: il suo id.
+fn proposta_del_giocatore(p: &Partita) -> u32 {
+    (p.vista().calendario.iter())
+        .find(|m| m.promotore.as_deref() == Some("giocatore"))
+        .unwrap()
+        .id
 }
 
 fn valori(v: &[(&str, &str)]) -> Vec<ValoreProposto> {
@@ -203,7 +219,7 @@ fn sfiducia_e_linea_sopravvivono_al_salvataggio() {
         valori: valori(&[("licenziamento", "reintegro")]),
     })
     .unwrap();
-    let id = p.vista().calendario[0].id;
+    let id = proposta_del_giocatore(&p);
     p.comanda(Comando::Linea {
         misura: id,
         si: Some(false),
@@ -213,10 +229,9 @@ fn sfiducia_e_linea_sopravvivono_al_salvataggio() {
     let salvato = p.salva().unwrap();
     let ricaricata = Partita::carica(&salvato).unwrap();
     assert_eq!(ricaricata.salva().unwrap(), salvato);
-    assert_eq!(
-        ricaricata.vista().calendario[0].linea_giocatore,
-        Some(false)
-    );
+    let v = ricaricata.vista();
+    let m = v.calendario.iter().find(|m| m.id == id).unwrap();
+    assert_eq!(m.linea_giocatore, Some(false));
     assert_eq!(
         ricaricata.parlamento().sfiducia,
         Some((None, p.giocatore()))
@@ -241,31 +256,48 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
         "{e}"
     );
     assert!(!p.vista().posto_riservato); // occupato dalla proposta
-    let id = p.vista().calendario[0].id;
-    assert_eq!(
-        p.vista().calendario[0].promotore.as_deref(),
-        Some("giocatore")
-    );
+    let id = proposta_del_giocatore(&p);
     let pdc = p.governo().presidente;
-    let v = p.partiti()[pdc].valence;
+    // Respinta, non tocca la valence del Presidente del Consiglio oltre il ritorno verso la base
+    // e le leggi e i decreti del governo IA respinti nelle stesse chiusure.
+    let d = dati_base();
+    let r = d.manopola("ritorno_valence");
+    let base = p.partiti()[pdc].valence_base;
+    let mut attesa = p.partiti()[pdc].valence;
+    let mut chiudi = |p: &mut Partita| {
+        let data = p.vista().data;
+        p.chiudi_turno();
+        let perso: f64 = (p.vista().esiti.iter())
+            .filter(|e| e.data == data && e.misura != id && !e.approvata)
+            .filter(|e| e.decaduta.is_none())
+            .map(|e| match e.forma {
+                FormaMisura::Conversione => d.manopola("valence_decreto_decaduto"),
+                _ => d.manopola("valence_legge_respinta"),
+            })
+            .sum();
+        attesa = base + (attesa - perso - base) * (1.0 - r);
+    };
     // All'apertura del turno del voto gli alleati lontani (centro, centrodestra, destra) non
     // chiedono emendamenti sulla proposta dell'opposizione.
-    p.chiudi_turno();
+    chiudi(&mut p);
     let vista = p.vista();
     let m = vista.calendario.iter().find(|m| m.id == id).unwrap();
     assert_eq!(m.voto, vista.data);
     assert!(m.emendamenti.is_empty(), "{:?}", m.emendamenti);
-    let n = 1 + al_voto(&mut p, id);
+    for _ in 0..3 {
+        if p.vista().calendario.iter().all(|m| m.id != id) {
+            break;
+        }
+        chiudi(&mut p);
+    }
+    assert!(p.vista().calendario.iter().all(|m| m.id != id));
     let e = (p.vista().esiti.into_iter())
         .find(|e| e.misura == id)
         .unwrap();
     assert!(e.nome.contains("Licenziament"), "{}", e.nome);
     assert!(!e.approvata, "col seme 7 la proposta è respinta: {e:?}");
-    // Respinta, non tocca la valence del Presidente del Consiglio oltre il ritorno verso la base.
-    let r = dati_base().manopola("ritorno_valence");
-    let base = p.partiti()[pdc].valence_base;
-    let attesa = base + (v - base) * (1.0 - r).powi(n);
-    assert!((p.partiti()[pdc].valence - attesa).abs() < 1e-9);
+    let valence = p.partiti()[pdc].valence;
+    assert!((valence - attesa).abs() < 1e-9, "{valence} {attesa}");
 }
 
 #[test]
@@ -276,18 +308,20 @@ fn la_linea_scelta_si_vede_e_si_vota() {
         valori: valori(&[("licenziamento", "reintegro")]),
     })
     .unwrap();
-    let id = p.vista().calendario[0].id;
+    let id = proposta_del_giocatore(&p);
     p.comanda(Comando::Linea {
         misura: id,
         si: Some(false),
     })
     .unwrap();
-    assert_eq!(p.vista().calendario[0].linea_giocatore, Some(false));
+    let v = p.vista();
+    let m = v.calendario.iter().find(|m| m.id == id).unwrap();
+    assert_eq!(m.linea_giocatore, Some(false));
     let g = p.giocatore();
     let k = dati_base().disposizione("licenziamento").unwrap();
     let vigente = p.disposizioni().posizione(&dati_base(), k).unwrap();
     let prima = p.partiti()[g].posizione_percepita;
-    al_voto(&mut p, id);
+    al_voto_da_sola(&mut p, id);
     let e = (p.vista().esiti.into_iter())
         .find(|e| e.misura == id)
         .unwrap();
@@ -451,7 +485,7 @@ fn la_proposta_dell_opposizione_sopravvive_alla_caduta() {
         valori: valori(&[("licenziamento", "reintegro")]),
     })
     .unwrap();
-    let id = p.vista().calendario[0].id;
+    let id = proposta_del_giocatore(&p);
     let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = true.into()).unwrap();
     p.chiudi_turno();
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);

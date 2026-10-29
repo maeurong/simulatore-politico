@@ -358,6 +358,11 @@ fn la_catena_delle_sanzioni_si_attraversa() {
     assert!(conto_mosso);
 }
 
+// ponytail: il tetto di convalida di 1e15 euro (controlli dell'economia in `partita.rs`) è un
+// confine di fiducia del salvataggio; 48 anni al 12% d'inflazione lo superano col governo IA che
+// indicizza i budget (scelta 10 del piano 8a), perché il debito non ha un tetto nel modello. Il
+// salvataggio si prova quindi al turno 160. Via d'uscita: il piano 12, con un tetto o una
+// retroazione sul debito, oppure importi in un'unità più grande.
 #[test]
 fn scenario_estremo_resta_finito() {
     let f = con_ingresso(
@@ -370,11 +375,13 @@ fn scenario_estremo_resta_finito() {
         15.0,
     );
     let mut p = Partita::nuova(dati(f), 9);
-    for _ in 0..200 {
+    for turno in 1..=200 {
         p.chiudi_turno();
         assert_eq!(p.economia().residuo_sfc(), 0);
+        if turno == 160 {
+            assert!(p.salva().is_ok());
+        }
     }
-    assert!(p.salva().is_ok());
 }
 
 // Un controllo annuale gira chiudendo il terzo turno (T2 2027, sull'anno 2026).

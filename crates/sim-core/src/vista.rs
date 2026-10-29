@@ -87,6 +87,19 @@ pub struct Vista {
     pub crisi: bool,
     /// Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
     pub mosse: Vec<MossaIa>,
+    /// Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
+    /// giocatore Presidente del Consiglio.
+    pub programma: Vec<VoceProgramma>,
+}
+
+/// Una voce del programma del governo IA: disposizione e gradino, con id e nomi dai dati.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceProgramma {
+    pub disposizione: String,
+    pub nome: String,
+    pub gradino: String,
+    pub nome_gradino: String,
 }
 
 /// Una mossa di un partito IA: `partito` è l'id, `testo` il motivo, mai i valori attesi in cifre.

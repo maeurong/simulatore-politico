@@ -209,6 +209,16 @@ impl Partita {
             _ => {}
         }
         self.di_governo()?;
+        self.applica(c)
+    }
+
+    /// Il corpo dei comandi di governo, senza guardia su chi governa: li usa anche il governo IA.
+    /// Nel turno di crisi `PresentaBilancio`, `PresentaLegge`, `EmanaDecreto`, `PoniFiducia` e
+    /// `Accogli`: `Comando`. Gli altri comandi non passano da qui.
+    ///
+    /// # Errors
+    /// Come `comanda`, tranne le guardie del giocatore.
+    pub(crate) fn applica(&mut self, c: Comando) -> Result<(), Errore> {
         if matches!(
             c,
             Comando::PresentaBilancio { .. }
@@ -260,5 +270,34 @@ impl Partita {
             self.dimissioni_chieste(&dicastero);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+    use crate::legislatura::Fondazione;
+
+    /// `applica` non guarda chi governa: l'opposizione che lo chiama con `Dimettiti` mette le
+    /// dimissioni al governo IA, mentre `comanda` la respinge.
+    #[test]
+    fn applica_non_guarda_chi_governa() {
+        let f = Fondazione {
+            nome: "Partito nuovo".into(),
+            posizione: 1.5,
+        };
+        let mut p = Partita::fonda(dati_base(), 7, &f).unwrap();
+        p.chiudi_turno(); // voto
+        p.chiudi_turno(); // trattativa
+        assert!(!p.governa());
+        assert!(p.comanda(Comando::Dimettiti).is_err());
+        assert!(!p.legislatura().dimissioni);
+        p.applica(Comando::Dimettiti).unwrap();
+        assert!(p.legislatura().dimissioni);
     }
 }

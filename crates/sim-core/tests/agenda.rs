@@ -761,7 +761,11 @@ fn cantiere_con_residuo_pari_alla_rata_avanza() {
 
 #[test]
 fn margine_si_azzera_solo_a_gennaio_e_non_si_accumula() {
-    let mut p = Partita::nuova(fermare_gratis(), 1);
+    // Il governo IA del ribaltone (turno 6) resta fino a gennaio 2029: `margine_voto_anticipato`
+    // a 4 lo tiene lontano dal voto anticipato.
+    let f = imposta(file_base(), "manopole", "[costo_fermare]\nvalore = ", "0.0");
+    let f = imposta(f, "manopole", "[margine_voto_anticipato]\nvalore = ", "4.0");
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     let mut r = Vec::new();
     for turno in 0..=9 {
         r.push(residuo(&p, "sanita"));
@@ -778,7 +782,11 @@ fn margine_si_azzera_solo_a_gennaio_e_non_si_accumula() {
     assert_eq!((r[2], r[4]), (r[1], r[3]), "{r:?}");
     assert_eq!(r[5], r[1], "{r:?}");
     assert!(r[5..9].iter().all(|x| *x == r[1]), "{r:?}");
-    assert_eq!(r[9], r[1], "{r:?}");
+    // A gennaio 2029 governa l'IA, che ha indicizzato il bilancio: il margine riparte dal suo.
+    let v = p.vista();
+    assert_eq!(v.bilancio.anno, 2029);
+    let sanita = (v.bilancio.dicasteri.iter()).find(|d| d.id == "sanita");
+    assert_eq!(Some(r[9]), sanita.map(|d| d.margine), "{r:?}");
 }
 
 #[test]

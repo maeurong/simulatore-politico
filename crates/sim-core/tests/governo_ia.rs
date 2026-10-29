@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{file_base, fondata, imposta};
+use comune::{all_opposizione, edita, file_base, fondata, imposta};
 use serde_json::json;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
@@ -378,7 +378,10 @@ fn il_governo_ia_presenta_il_bilancio() {
     for _ in 0..4 {
         p.chiudi_turno(); // voto, trattativa, aprile-giugno, luglio-settembre 2027
     }
-    // Ottobre-dicembre 2027: il bilancio del 2028 lo presenta il governo IA.
+    // Ottobre-dicembre 2027: il bilancio del 2028 lo presenta il governo IA in apertura, e la
+    // chiusura lo vota.
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.turno_del_bilancio());
     p.chiudi_turno();
     assert!(
         p.vista()
@@ -488,7 +491,347 @@ fn l_ia_che_rompe_l_impegno_perde_valence_e_intesa() {
     }
     let attesa = dati.manopola("intesa_base") - dati.manopola("intesa_rottura_impegno");
     assert_eq!(p.alleati().len(), 2);
+    // In minoranza il governo IA pone la fiducia sulle conversioni già in apertura: costa a parte.
     for j in p.alleati() {
-        assert!((p.intesa().valori[j] - attesa).abs() < 1e-9, "{j}");
+        let fiducia: f64 = (p.intesa().variazioni.iter())
+            .filter(|v| v.partito == j && v.causa == CausaIntesa::Fiducia)
+            .map(|v| v.delta)
+            .sum();
+        assert!(
+            (p.intesa().valori[j] - fiducia - attesa).abs() < 1e-9,
+            "{j}"
+        );
     }
+}
+
+#[test]
+fn il_governo_ia_nasce_col_programma_pubblico() {
+    let p = comune::all_opposizione();
+    let v = p.vista();
+    assert!(!v.programma.is_empty());
+    // In ordine di distanza decrescente del vigente dalla posizione della coalizione.
+    let g = p.governo();
+    let seggi: Vec<f64> = (0..p.partiti().len())
+        .map(|j| f64::from(p.parlamento().seggi_camera[j] + p.parlamento().seggi_senato[j]))
+        .collect();
+    let pos = g
+        .coalizione
+        .iter()
+        .map(|&j| seggi[j] * p.partiti()[j].posizione_dichiarata)
+        .sum::<f64>()
+        / g.coalizione.iter().map(|&j| seggi[j]).sum::<f64>();
+    let dati = comune::dati_base();
+    let d = dati.disposizioni();
+    let distanze: Vec<f64> = (g.programma.iter())
+        .filter_map(|&(k, _)| d[k].posizione(p.disposizioni().voci[k].in_vigore))
+        .map(|x| (x - pos).abs())
+        .collect();
+    assert!(distanze.windows(2).all(|w| w[0] >= w[1]), "{distanze:?}");
+    assert!(
+        v.mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Programma di governo"))
+    );
+}
+
+#[test]
+fn col_giocatore_al_governo_nessun_programma() {
+    let p = comune::al_governo();
+    assert!(p.governo().programma.is_empty());
+    assert!(p.vista().programma.is_empty());
+}
+
+/// Dopo la nascita il governo IA porta in aula le prime voci del programma, fino a tre; le
+/// riforme accolte dai ministri vengono dopo e non contano.
+#[test]
+fn il_programma_va_in_aula_in_ordine() {
+    let p = all_opposizione();
+    let programma = &p.governo().programma;
+    let in_aula: Vec<usize> = (p.parlamento().misure.iter())
+        .filter(|m| m.promotore.is_none() && m.valori.len() == 1)
+        .map(|m| m.valori[0].0)
+        .filter(|k| programma.iter().any(|v| v.0 == *k))
+        .collect();
+    let attese: Vec<usize> = (p.governo().programma.iter())
+        .map(|v| v.0)
+        .take(in_aula.len())
+        .collect();
+    assert!(!in_aula.is_empty() && in_aula.len() <= 3);
+    assert_eq!(in_aula, attese);
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Porta in aula: "))
+    );
+}
+
+/// Il programma ridotto alla prima voce, scritta al gradino già in vigore: il governo la scarta
+/// prima di presentarla (non è «non ancora in vigore»), e non porta nulla in aula né lascia righe.
+#[test]
+fn programma_esaurito_non_presenta_nulla() {
+    let p = all_opposizione();
+    let k = p.governo().programma[0].0;
+    let vigente = p.disposizioni().voci[k].in_vigore;
+    let mut p = edita(&p, |j| {
+        j["governo"]["programma"] = serde_json::json!([[k, vigente]]);
+        // Fuori la sola legge della voce: le conversioni dei decreti accolti restano.
+        let misure: Vec<serde_json::Value> = (j["parlamento"]["misure"].as_array().unwrap())
+            .iter()
+            .filter(|m| m["valori"].as_array().unwrap().iter().all(|v| v[0] != k))
+            .cloned()
+            .collect();
+        j["parlamento"]["misure"] = serde_json::json!(misure);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .all(|m| !m.testo.starts_with("Porta in aula"))
+    );
+    assert!((p.parlamento().misure.iter()).all(|m| m.valori.iter().all(|v| v.0 != k)));
+}
+
+#[test]
+fn il_bilancio_ia_sta_nel_tetto_senza_ultimatum() {
+    // Avanza al primo ottobre-dicembre sotto il governo IA; all'apertura del turno prima niente
+    // ultimatum e intesa piena, così la chiusura non ne pone.
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 3 {
+        p.chiudi_turno();
+    }
+    let n = p.partiti().len();
+    let mut p = edita(&p, |j| {
+        j["intesa"]["ultimatum"] = json!(vec![serde_json::Value::Null; n]);
+        j["intesa"]["valori"] = json!(vec![100.0; n]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.intesa().ultimatum.iter().all(Option::is_none));
+    let r = p
+        .riepilogo_presentato()
+        .expect("bilancio IA presentato in apertura");
+    assert!(r.crescita_spesa_netta <= r.tetto + 1e-6, "{r:?}");
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo.starts_with("Bilancio "))
+    );
+}
+
+#[test]
+fn lo_stato_ia_sopravvive_al_salvataggio() {
+    let mut p = all_opposizione();
+    p.chiudi_turno();
+    let q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(p, q);
+    let fuori = edita(&p, |j| {
+        j["governo"]["programma"] = serde_json::json!([[999, 0]])
+    });
+    assert!(fuori.is_err());
+}
+
+/// Il primo alleato del governo senza il quale la coalizione perde la maggioranza in una Camera.
+fn decisivo(p: &Partita) -> Option<usize> {
+    let (pl, g) = (p.parlamento(), p.governo());
+    let oltre = |seggi: &[u32], k: &[usize]| {
+        2 * k.iter().map(|&j| seggi[j]).sum::<u32>() > seggi.iter().sum::<u32>()
+    };
+    (g.coalizione.iter().copied())
+        .filter(|&a| a != g.presidente)
+        .find(|&a| {
+            let senza: Vec<usize> = g.coalizione.iter().copied().filter(|&j| j != a).collect();
+            !(oltre(&pl.seggi_camera, &senza) && oltre(&pl.seggi_senato, &senza))
+        })
+}
+
+/// L'alleato del governo IA senza il quale la coalizione perde la maggioranza esce con `intesa`,
+/// sotto 25: il turno dopo è di crisi.
+fn in_crisi(p: Partita, intesa: f64) -> Partita {
+    let alleato = decisivo(&p).expect("un alleato decisivo nel governo IA");
+    let mut p = edita(&p, |j| j["intesa"]["valori"][alleato] = intesa.into()).unwrap();
+    p.chiudi_turno();
+    assert!(p.vista().crisi);
+    p
+}
+
+const SI_DIMETTE: &str =
+    "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno";
+const SI_DIMETTE_IN_PROVVISORIO: &str =
+    "Si dimette: in esercizio provvisorio non allarga la coalizione";
+
+#[test]
+fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
+    // 24: col ritorno dell'intesa l'uscente risale sopra 25 prima della crisi, non sopra 40.
+    for intesa in [10.0, 24.0] {
+        let p = all_opposizione();
+        let uscente = decisivo(&p).unwrap();
+        let p = in_crisi(p, intesa);
+        let l = p.legislatura();
+        assert!(!l.allargati.contains(&uscente), "{intesa}");
+        assert!(!l.allargati.contains(&p.giocatore()));
+        // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
+        assert!(l.dimissioni);
+        assert!(p.vista().mosse.iter().any(|m| m.testo == SI_DIMETTE));
+    }
+}
+
+/// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista
+/// (con la sua, identitaria, la distanza le toglierebbe il guadagno): uscita Destra, è il vicino
+/// che ridà la maggioranza al governo IA e ci guadagna.
+fn con_vicino(p: &Partita) -> Partita {
+    let camera = [10, 125, 26, 18, 33, 125, 30, 33];
+    let senato = [5, 69, 10, 7, 13, 65, 13, 18];
+    let p = comune::con_seggi(p, &camera, &senato);
+    edita(&p, |j| {
+        j["intesa"]["valori"][0] = 60.0.into();
+        j["partiti"][0]["vocazione"] = "governista".into();
+    })
+    .unwrap()
+}
+
+#[test]
+fn il_governo_ia_in_crisi_allarga_ma_non_in_esercizio_provvisorio() {
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 3 {
+        p.chiudi_turno();
+    }
+    // La crisi cade in ottobre-dicembre: ordinaria amministrazione, niente bilancio; allarga.
+    let mut q = in_crisi(con_vicino(&p), 10.0);
+    assert_eq!(q.vista().data.trimestre, 4);
+    assert!(q.economia().bilancio_presentato.is_none());
+    assert_eq!(q.legislatura().allargati, [0]);
+    q.chiudi_turno();
+    assert!(q.salva().is_ok());
+    // Ottobre-dicembre senza bilancio: la crisi cade a gennaio, in esercizio provvisorio, e il
+    // governo cade comunque a fine turno; niente allargamento.
+    p.chiudi_turno();
+    assert_eq!(p.vista().data.trimestre, 4);
+    let p = edita(&p, |j| {
+        j["economia"]["bilancio_presentato"] = json!(null);
+        let misure = j["parlamento"]["misure"].as_array_mut().unwrap();
+        misure.retain(|m| m["forma"] != "bilancio");
+    })
+    .unwrap();
+    let p = in_crisi(con_vicino(&p), 10.0);
+    assert_eq!(p.vista().data.trimestre, 1);
+    assert!(p.economia().bilancio_presentato.is_none());
+    let l = p.legislatura();
+    assert!(l.allargati.is_empty() && l.dimissioni);
+    assert!(
+        p.vista()
+            .mosse
+            .iter()
+            .any(|m| m.testo == SI_DIMETTE_IN_PROVVISORIO)
+    );
+}
+
+#[test]
+fn col_voto_anticipato_il_capo_dello_stato_esclude_chi_si_dimette() {
+    let p = all_opposizione();
+    let pdc = p.governo().presidente;
+    let mut p = edita(&p, |j| {
+        j["legislatura"]["dimissioni"] = true.into();
+        j["legislatura"]["voto_anticipato"] = true.into();
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert!(!p.legislatura().voto_anticipato);
+    match &p.legislatura().incarico {
+        Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
+            assert!(!coalizione.contains(&pdc));
+        }
+        Some(Incarico::Giocatore) => {
+            assert!(!p.legislatura().maggioranza.as_ref().unwrap().contains(&pdc));
+        }
+        None => assert_eq!(p.legislatura().fase, Fase::Sciolta),
+    }
+}
+
+/// Le guardie di `carica` sullo stato del governo IA. In crisi (turno 2, aprile-giugno) gli
+/// allargati validi sono un solo partito fuori dalla coalizione e non il giocatore.
+#[test]
+fn carica_rifiuta_lo_stato_ia_non_valido() {
+    let p = all_opposizione();
+    let k = p.governo().programma[0].0;
+    assert!(edita(&p, |j| j["governo"]["programma"] = json!([[k, 999]])).is_err());
+    let g = comune::al_governo();
+    assert!(edita(&g, |j| j["governo"]["programma"] = json!([[k, 0]])).is_err());
+    let fuori: Vec<usize> = (0..p.partiti().len())
+        .filter(|j| !p.governo().coalizione.contains(j) && *j != p.giocatore())
+        .collect();
+    let in_crisi = |allargati: serde_json::Value| {
+        edita(&p, |j| {
+            j["legislatura"]["crisi"] = j["turno"].clone();
+            j["legislatura"]["allargati"] = allargati;
+        })
+    };
+    assert!(in_crisi(json!([fuori[0]])).is_ok());
+    assert!(in_crisi(json!([p.giocatore()])).is_err());
+    assert!(in_crisi(json!([p.governo().coalizione[0]])).is_err());
+    assert!(in_crisi(json!([fuori[0], fuori[1]])).is_err());
+}
+
+/// Con la Sanità che chiede fondi, il governo IA accoglie la proposta in apertura.
+#[test]
+fn il_governo_ia_accoglie_la_proposta_del_dicastero() {
+    let dati = sim_core::dati::DatiGioco::da_testi(&comune::sanita_cara(file_base())).unwrap();
+    let f = Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 1.5,
+    };
+    let mut p = Partita::fonda(dati, 7, &f).unwrap();
+    p.chiudi_turno(); // voto
+    p.chiudi_turno(); // trattativa: governo IA
+    assert!(!p.governa());
+    let v = p.vista();
+    let sanita = v
+        .ministeri
+        .iter()
+        .find(|m| m.dicastero == "sanita")
+        .unwrap();
+    assert!(sanita.proposta.is_none());
+    assert!(
+        v.mosse
+            .iter()
+            .any(|m| m.testo == "Accoglie la proposta del dicastero Sanità"),
+        "{:?}",
+        v.mosse
+    );
+}
+
+/// Ottobre-dicembre senza bilancio, fuori dalla crisi: a gennaio, in esercizio provvisorio, il
+/// governo IA lo presenta in apertura.
+#[test]
+fn il_governo_ia_presenta_il_bilancio_in_esercizio_provvisorio() {
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 4 {
+        p.chiudi_turno();
+    }
+    let n = p.partiti().len();
+    let mut p = edita(&p, |j| {
+        j["economia"]["bilancio_presentato"] = json!(null);
+        let misure = j["parlamento"]["misure"].as_array_mut().unwrap();
+        misure.retain(|m| m["forma"] != "bilancio");
+        j["intesa"]["ultimatum"] = json!(vec![serde_json::Value::Null; n]);
+        j["intesa"]["valori"] = json!(vec![100.0; n]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    assert_eq!(v.data.trimestre, 1);
+    assert!(v.bilancio.esercizio_provvisorio && !v.crisi);
+    assert!(p.economia().bilancio_presentato.is_some());
+    assert!(v.mosse.iter().any(|m| m.testo.starts_with("Bilancio ")));
+}
+
+#[test]
+fn voto_anticipato_solo_con_le_dimissioni() {
+    let p = all_opposizione();
+    let e = edita(&p, |j| j["legislatura"]["voto_anticipato"] = true.into());
+    assert!(e.is_err());
 }
