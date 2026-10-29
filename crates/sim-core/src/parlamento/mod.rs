@@ -1108,12 +1108,11 @@ impl Parlamento {
         // L'abrogativo si vota sempre; senza firme è chiesto nel turno.
         let firme_ok = (self.referendum.iter())
             .all(|r| r.richiesto && (r.firme || Some(r.voto) == voto_abrogativo(turno)));
-        let referendum_ok = firme_ok
-            && (self.referendum.iter().chain(&self.confermativi)).all(|r| {
-                r.valori.iter().all(valore_ok)
-                    && r.promotore.is_none_or(|j| j < n_partiti)
-                    && r.voto <= turno.saturating_add(6)
-            });
+        let referendum_ok = (self.referendum.iter().chain(&self.confermativi)).all(|r| {
+            r.valori.iter().all(valore_ok)
+                && r.promotore.is_none_or(|j| j < n_partiti)
+                && r.voto <= turno.saturating_add(6)
+        });
         if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {
             return ko("una misura o una respinta fuori dalle disposizioni o dai dicasteri");
         }
@@ -1122,6 +1121,9 @@ impl Parlamento {
         }
         if !referendum_ok {
             return ko("un referendum fuori dalle disposizioni, dai gradini o dai partiti");
+        }
+        if !firme_ok {
+            return ko("l'abrogativo non richiesto, o senza firme e col voto fuori dal turno");
         }
         Ok(())
     }

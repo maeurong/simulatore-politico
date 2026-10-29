@@ -2,7 +2,7 @@ mod comune;
 use comune::*;
 use sim_core::comando::Comando;
 use sim_core::parlamento::CausaIntesa::NormaLontana;
-use sim_core::parlamento::FormaMisura;
+use sim_core::parlamento::{FormaMisura, TipoReferendum};
 use sim_core::partita::Partita;
 
 /// Il giocatore (7) governa con centrodestra (4) e destra (5). Opposizione: 175 su 400 alla Camera
@@ -405,29 +405,78 @@ fn la_proposta_dell_opposizione_costa_la_norma_lontana_solo_col_si_del_governo()
     assert_eq!(norma_lontana_della_proposta(false), Vec::<usize>::new());
 }
 
-/// La partita di prova con le tutele crescenti all'estremo destro e il reintegro al centro, come
-/// in tests/referendum.rs: l'abrogazione del licenziamento piace a quasi tutti. `astensione` è
-/// `astensione_abrogativo`.
-fn licenziamento_abrogabile(astensione: &str) -> Partita {
-    let f = sostituisci(
+/// `senza_shock()` con `astensione_abrogativo` a `astensione`.
+fn con_astensione(astensione: &str) -> sim_core::dati::FileDati {
+    imposta(
         senza_shock(),
+        "manopole",
+        "[astensione_abrogativo]\nvalore = ",
+        astensione,
+    )
+}
+
+/// Le tutele crescenti all'estremo destro e il reintegro al centro, come in tests/referendum.rs:
+/// l'abrogazione del licenziamento (7,0 → 4,0) piace a quasi tutti.
+fn col_licenziamento(f: sim_core::dati::FileDati) -> sim_core::dati::FileDati {
+    let f = sostituisci(
+        f,
         "disposizioni",
         "nome = \"tutele crescenti\", posizione = 4.0",
         "nome = \"tutele crescenti\", posizione = 7.0",
     );
-    let f = sostituisci(
+    sostituisci(
         f,
         "disposizioni",
         "nome = \"reintegro\", posizione = 2.0",
         "nome = \"reintegro\", posizione = 4.0",
-    );
-    let f = imposta(
+    )
+}
+
+/// Il reddito categoriale a 6,5: l'abrogazione verso il «non istituito» (5,5) vince, ma con un
+/// margine più stretto del licenziamento, perché le due posizioni sono vicine.
+fn col_reddito(f: sim_core::dati::FileDati) -> sim_core::dati::FileDati {
+    sostituisci(
         f,
-        "manopole",
-        "[astensione_abrogativo]\nvalore = ",
-        astensione,
-    );
-    Partita::nuova(sim_core::dati::DatiGioco::da_testi(&f).unwrap(), 1)
+        "disposizioni",
+        "nome = \"categoriale\", posizione = 4.0",
+        "nome = \"categoriale\", posizione = 6.5",
+    )
+}
+
+fn partita_di_prova(f: &sim_core::dati::FileDati) -> Partita {
+    Partita::nuova(sim_core::dati::DatiGioco::da_testi(f).unwrap(), 1)
+}
+
+fn licenziamento_abrogabile(astensione: &str) -> Partita {
+    partita_di_prova(&col_licenziamento(con_astensione(astensione)))
+}
+
+/// Chiude il turno e toglie le mosse IA dell'apertura: la proposta IA sul licenziamento lo
+/// metterebbe in esame.
+fn chiudi_e_togli(p: &mut Partita) {
+    chiudi_col_bilancio(p);
+    togli_opposizione_ia(p);
+}
+
+/// La posizione dichiarata dei partiti `posizioni` (id, posizione), scritta con `edita`.
+fn con_posizioni(p: &Partita, posizioni: &[(&str, f64)]) -> Partita {
+    edita(p, |j| {
+        for &(id, x) in posizioni {
+            j["partiti"][partito(id)]["posizione_dichiarata"] = x.into();
+        }
+    })
+    .unwrap()
+}
+
+/// L'abrogativo in corso: id della disposizione e del promotore.
+fn abrogativo(p: &Partita) -> Option<(String, String)> {
+    let r = p.parlamento().referendum.as_ref()?;
+    let d = dati_base().disposizioni()[r.valori[0].0].id.clone();
+    Some((d, p.partiti()[r.promotore?].id.clone()))
+}
+
+fn chiede(p: &Partita) -> bool {
+    (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum"))
 }
 
 #[test]
@@ -462,12 +511,94 @@ fn l_opposizione_ia_chiede_solo_referendum_vincenti() {
     assert!(!(q.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum")));
 }
 
+/// Lo stato di `l_opposizione_ia_chiede_solo_referendum_vincenti`, che col quorum chiede il
+/// licenziamento, ma con l'astensione alta.
 #[test]
 fn senza_quorum_atteso_l_opposizione_ia_non_chiede_referendum() {
     let mut p = licenziamento_abrogabile("5.0");
-    for _ in 0..3 {
+    chiudi_e_togli(&mut p);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(abrogativo(&p), None);
+    assert!(!chiede(&p));
+}
+
+/// Col quorum ma senza le posizioni spostate il sì perde ovunque (sul sondaggio del turno 1 il no
+/// vince di 1-10 milioni): nessun referendum. Il nucleare non è referendabile: il suo quesito, che
+/// abroga solo l'arrivo, finisce pari senza nessuno che ci guadagni, e nasconderebbe gli altri.
+#[test]
+fn col_quorum_ma_col_si_perdente_l_opposizione_ia_non_chiede() {
+    let f = sostituisci(
+        con_astensione("-5.0"),
+        "disposizioni",
+        "referendabile = true\ngruppi = []\npartenza = \"vietato\"",
+        "referendabile = false\ngruppi = []\npartenza = \"vietato\"",
+    );
+    let mut p = partita_di_prova(&f);
+    chiudi_e_togli(&mut p);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(abrogativo(&p), None);
+    assert!(!chiede(&p));
+}
+
+/// Licenziamento (7,0 → 4,0) e reddito (6,5 → 5,5) vincono entrambi: l'IA chiede quello col
+/// margine sì − no più ampio, il licenziamento; da solo vince il reddito. Promotore: chi guadagna
+/// di più dall'abrogazione del licenziamento, con le posizioni spostate perché i guadagni
+/// differiscano: estrema sinistra a 5,0 (+1), sinistra a 2,0 (+3), centrosinistra a 4,5 (+2),
+/// centro a 6,0 (−1), estrema destra a 7,0 (−3).
+#[test]
+fn vince_il_margine_piu_ampio_e_il_promotore_che_guadagna_di_piu() {
+    let chiesto = |f: sim_core::dati::FileDati| {
+        let mut p = partita_di_prova(&f);
+        chiudi_e_togli(&mut p);
+        let posizioni = [
+            ("estrema_sinistra", 5.0),
+            ("centrosinistra", 4.5),
+            ("centro", 6.0),
+        ];
+        let mut p = con_posizioni(&p, &posizioni);
         chiudi_col_bilancio(&mut p);
-        assert!(p.parlamento().referendum.is_none());
-        assert!(!(p.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum")));
+        abrogativo(&p)
+    };
+    let entrambi = col_reddito(col_licenziamento(con_astensione("-5.0")));
+    assert_eq!(
+        chiesto(entrambi),
+        Some(("licenziamento".into(), "sinistra".into()))
+    );
+    let solo_reddito = chiesto(col_reddito(con_astensione("-5.0")));
+    assert_eq!(solo_reddito.map(|r| r.0).as_deref(), Some("reddito_minimo"));
+}
+
+/// Il licenziamento vince, ma i partiti IA all'opposizione stanno tutti a 6,0 o oltre: nessuno
+/// guadagna dall'abrogazione verso il 4,0, quindi niente referendum.
+#[test]
+fn senza_un_promotore_che_ci_guadagni_niente_referendum() {
+    let mut p = licenziamento_abrogabile("-5.0");
+    chiudi_e_togli(&mut p);
+    let a_destra = ["estrema_sinistra", "sinistra", "centrosinistra", "centro"].map(|id| (id, 6.0));
+    let mut p = con_posizioni(&p, &a_destra);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(abrogativo(&p), None);
+    assert!(!chiede(&p));
+}
+
+/// Scelta 8: nel turno in cui si vota l'abrogativo del giocatore lo slot si libera, ma il giocatore
+/// non ha ancora avuto il turno per chiederne un altro: l'IA aspetta il turno dopo.
+#[test]
+fn nel_turno_del_voto_dell_abrogativo_l_ia_non_chiede_il_successivo() {
+    let mut p = licenziamento_abrogabile("-5.0");
+    chiudi_e_togli(&mut p);
+    p.promuovi_referendum("sinistra", "nucleare").unwrap();
+    // Turni 1-5: lo slot è occupato. Il voto è nella chiusura del turno 6.
+    for _ in 1..6 {
+        chiudi_e_togli(&mut p);
     }
+    assert_eq!(p.vista().turno, 6);
+    chiudi_e_togli(&mut p);
+    assert!((p.vista().esiti_referendum.iter()).any(|e| e.tipo == TipoReferendum::Abrogativo));
+    assert_eq!(abrogativo(&p), None);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(
+        abrogativo(&p).map(|r| r.0).as_deref(),
+        Some("licenziamento")
+    );
 }

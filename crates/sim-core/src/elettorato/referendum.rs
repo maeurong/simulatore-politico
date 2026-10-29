@@ -207,7 +207,8 @@ mod tests {
     }
 
     /// Un sondaggio senza errore, con le posizioni vere delle regioni: la stima di sì e no resta
-    /// entro 3 punti dal voto vero.
+    /// entro 3 punti dal voto vero. Spostato di un punto verso il sì, la stima del sì sale (da 31,0
+    /// a 35,6%): legge il sondaggio.
     #[test]
     fn la_stima_sul_sondaggio_vero_e_vicina() {
         let dati = dati_base();
@@ -251,8 +252,18 @@ mod tests {
             (a.si / totale, a.no / totale)
         };
         let (si, no) = quote(stima(&dati, &sondaggio, &quesito));
+        // Il sondaggio spostato di un punto a destra, verso il sì: la stima lo segue.
+        let mut a_destra = sondaggio.clone();
+        for r in &mut a_destra.regioni {
+            let ultimo = r.posizione[PUNTI - 1];
+            r.posizione.rotate_right(1);
+            r.posizione[0] = 0.0;
+            r.posizione[PUNTI - 1] += ultimo;
+        }
+        let (si_spostato, _) = quote(stima(&dati, &a_destra, &quesito));
         let (si_vero, no_vero) = quote(el.referendum(&dati, &partiti, &governo, quesito));
         assert!((si - si_vero).abs() < 0.03, "{si} {si_vero}");
         assert!((no - no_vero).abs() < 0.03, "{no} {no_vero}");
+        assert!(si_spostato > si + 0.02, "{si_spostato} {si}");
     }
 }

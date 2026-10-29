@@ -1,10 +1,10 @@
 mod comune;
 use comune::{
-    all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, con_seggi,
-    dati_base, edita, imposta, presenta, senza_shock, sostituisci,
+    al_governo, all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo,
+    con_seggi, dati_base, edita, imposta, partito, presenta, senza_shock, sostituisci,
 };
 use sim_core::dati::{DatiGioco, FileDati};
-use sim_core::parlamento::TipoReferendum;
+use sim_core::parlamento::{FormaMisura, TipoReferendum};
 use sim_core::{Comando, Errore, Partita};
 
 fn con(f: FileDati, nome: &str, valore: &str) -> FileDati {
@@ -364,25 +364,24 @@ fn abrogativo_manomesso_al_caricamento_rifiutato() {
     p.chiudi_turno();
     p.promuovi_referendum("sinistra", "licenziamento").unwrap();
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
-    for (voto, firme) in [(1000, true), (7, false)] {
+    let fuori = "un referendum fuori dalle disposizioni, dai gradini o dai partiti";
+    let abrogativo = "l'abrogativo non richiesto, o senza firme e col voto fuori dal turno";
+    for (voto, firme, richiesto, atteso) in [
+        (1000, true, true, fuori),
+        (7, false, true, abrogativo),
+        (6, false, false, abrogativo),
+    ] {
         let e = edita(&p, |j| {
             j["parlamento"]["referendum"]["voto"] = voto.into();
             j["parlamento"]["referendum"]["firme"] = firme.into();
+            j["parlamento"]["referendum"]["richiesto"] = richiesto.into();
         })
         .err();
         assert!(
-            matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
-            "{voto} {firme}: {e:?}"
+            matches!(&e, Some(Errore::SalvataggioIlleggibile(m)) if m.contains(atteso)),
+            "{voto} {firme} {richiesto}: {e:?}"
         );
     }
-    let e = edita(&p, |j| {
-        j["parlamento"]["referendum"]["richiesto"] = false.into()
-    })
-    .err();
-    assert!(
-        matches!(e, Some(Errore::SalvataggioIlleggibile(_))),
-        "{e:?}"
-    );
 }
 
 fn al_voto_su(f: FileDati, disposizione: &str) -> Partita {
@@ -509,30 +508,62 @@ fn un_abrogativo_su_un_gradino_spostato_dalla_legge_vota_quel_gradino() {
     assert!(err.to_string().contains("bloccato dal referendum"), "{err}");
 }
 
-/// Seggi di un ramo da `totale`: `giocatore` al partito del giocatore, il resto al partito del
+/// Seggi di un ramo da `totale`: `quote` (partito, seggi) scritte a mano, il resto al partito del
 /// Presidente del Consiglio, nessuno agli altri.
-fn seggi_col_giocatore(p: &Partita, giocatore: u32, totale: u32) -> Vec<u32> {
-    let (g, pdc) = (p.giocatore(), p.governo().presidente);
+fn seggi_a(p: &Partita, quote: &[(usize, u32)], totale: u32) -> Vec<u32> {
+    let pdc = p.governo().presidente;
+    let scritti: u32 = quote.iter().map(|q| q.1).sum();
     (0..p.partiti().len())
-        .map(|j| match j {
-            _ if j == g => giocatore,
-            _ if j == pdc => totale - giocatore,
-            _ => 0,
+        .map(|j| match quote.iter().find(|q| q.0 == j) {
+            Some(&(_, n)) => n,
+            None if j == pdc => totale - scritti,
+            None => 0,
         })
         .collect()
 }
 
-/// Da `all_opposizione()`: una costituzionale del governo IA (300 deputati e 150 senatori) in
-/// seconda deliberazione col voto nel turno e la linea no del giocatore, con seggi per cui passa
-/// senza i due terzi col solo partito del giocatore contro, oltre un quinto (140 su 400, 70 su
-/// 200). Dopo la chiusura il confermativo aspetta il voto.
+/// Da `all_opposizione()`: la costituzionale passa senza i due terzi col solo partito del
+/// giocatore contro, oltre un quinto (140 su 400, 70 su 200). Il confermativo aspetta il voto.
 fn costituzionale_senza_due_terzi_all_opposizione() -> Partita {
     let p = all_opposizione();
-    let p = con_seggi(
-        &p,
-        &seggi_col_giocatore(&p, 140, 400),
-        &seggi_col_giocatore(&p, 70, 200),
+    let g = p.giocatore();
+    let p = costituzionale_al_voto(&p, Some(false), &[(g, 140)], &[(g, 70)]);
+    assert_eq!(
+        p.parlamento().confermativi.len(),
+        1,
+        "{:?}",
+        p.vista().esiti
     );
+    p
+}
+
+/// Da `all_opposizione()`, storia 97: il giocatore vota sì (90 su 400, 45 su 200), il
+/// centrosinistra al governo vota no (guadagno −1: 3,0 contro 4,5 → 5,5) e toglie i due terzi (150
+/// e 75); fuori dal governo nessuno è contro, quindi niente quinto contro. Col giocatore il quinto
+/// ci sarebbe: il confermativo aspetta la sua richiesta.
+fn costituzionale_col_si_del_giocatore() -> Partita {
+    let p = all_opposizione();
+    let (g, cs) = (p.giocatore(), partito("centrosinistra"));
+    let p = costituzionale_al_voto(&p, Some(true), &[(g, 90), (cs, 150)], &[(g, 45), (cs, 75)]);
+    assert_eq!(
+        p.parlamento().confermativi.len(),
+        1,
+        "{:?}",
+        p.vista().esiti
+    );
+    p
+}
+
+/// Da `p`: i seggi `camera` e `senato` (`seggi_a` su 400 e 200), poi la costituzionale del governo
+/// (300 deputati e 150 senatori) in seconda deliberazione col voto nel turno e la linea `linea`
+/// del giocatore (`None` = quella di default), scritta con `edita`; poi la chiusura.
+fn costituzionale_al_voto(
+    p: &Partita,
+    linea: Option<bool>,
+    camera: &[(usize, u32)],
+    senato: &[(usize, u32)],
+) -> Partita {
+    let p = con_seggi(p, &seggi_a(p, camera, 400), &seggi_a(p, senato, 200));
     let dati = dati_base();
     let k = dati.disposizione("numero_parlamentari").unwrap();
     let g = dati.disposizioni()[k].gradino("300_150").unwrap();
@@ -541,7 +572,7 @@ fn costituzionale_senza_due_terzi_all_opposizione() -> Partita {
         j["parlamento"]["prossima"] = (id.as_u64().unwrap() + 1).into();
         let misura = serde_json::json!({
             "id": id, "forma": "costituzionale", "valori": [[k, g]], "proponente": null,
-            "promotore": null, "linea_giocatore": false, "presentata": turno, "voto": turno,
+            "promotore": null, "linea_giocatore": linea, "presentata": turno, "voto": turno,
             "deliberazione": 2, "fiducia": false, "emendamenti": [],
             "emendamenti_aperti": false, "fondi": null,
         });
@@ -549,12 +580,6 @@ fn costituzionale_senza_due_terzi_all_opposizione() -> Partita {
     })
     .unwrap();
     p.chiudi_turno();
-    assert_eq!(
-        p.parlamento().confermativi.len(),
-        1,
-        "{:?}",
-        p.vista().esiti
-    );
     p
 }
 
@@ -606,10 +631,11 @@ fn senza_scelta_vale_la_regola_dell_08() {
 fn chiedere_senza_un_quinto_e_rifiutato() {
     let p = costituzionale_senza_due_terzi_all_opposizione();
     // Il partito del giocatore scende sotto un quinto: 70 su 400, 35 su 200.
+    let g = p.giocatore();
     let mut p = con_seggi(
         &p,
-        &seggi_col_giocatore(&p, 70, 400),
-        &seggi_col_giocatore(&p, 35, 200),
+        &seggi_a(&p, &[(g, 70)], 400),
+        &seggi_a(&p, &[(g, 35)], 200),
     );
     let prima = p.salva().unwrap();
     let ignota = Comando::Confermativo {
@@ -630,4 +656,75 @@ fn chiedere_senza_un_quinto_e_rifiutato() {
         );
     }
     assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn col_si_del_giocatore_il_confermativo_aspetta_la_sua_richiesta() {
+    let mut p = costituzionale_col_si_del_giocatore();
+    let v = p.vista();
+    assert!(!v.referendum[0].richiesto && v.referendum[0].scelta);
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
+    // Senza richiesta: niente voto, niente esito, la legge entra in vigore.
+    p.chiudi_turno();
+    assert!(p.parlamento().confermativi.is_empty());
+    assert!(p.vista().esiti_referendum.is_empty());
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
+    // Con la richiesta si vota.
+    let mut q = costituzionale_col_si_del_giocatore();
+    q.comanda(confermativo(&q, true)).unwrap();
+    assert!(q.vista().referendum[0].richiesto);
+    q.chiudi_turno();
+    assert_eq!(
+        q.vista().esiti_referendum[0].tipo,
+        TipoReferendum::Confermativo
+    );
+}
+
+/// Il giocatore governa col centrodestra, che con l'intesa a 0 vota no (guadagno 0 meno la
+/// fedeltà) e toglie i due terzi; fuori dal governo nessuno ha seggi: niente confermativo, la
+/// legge entra subito in vigore.
+#[test]
+fn al_governo_senza_quinto_contro_la_costituzionale_entra_subito_in_vigore() {
+    let cd = partito("centrodestra");
+    let p = edita(&al_governo(), |j| j["intesa"]["valori"][cd] = 0.0.into()).unwrap();
+    let p = costituzionale_al_voto(&p, None, &[(cd, 150)], &[(cd, 75)]);
+    let e = (p.parlamento().esiti.iter())
+        .find(|e| e.forma == FormaMisura::Costituzionale)
+        .unwrap();
+    assert!(e.approvata && e.camera.si * 3 < 800, "{e:?}");
+    assert!(p.parlamento().confermativi.is_empty());
+    assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
+}
+
+#[test]
+fn al_governo_il_confermativo_e_rifiutato_dalla_guardia() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let c = Comando::Confermativo {
+        misura: 0,
+        chiedi: true,
+    };
+    let e = p.comanda(c).unwrap_err();
+    assert!(
+        e.to_string().contains("solo all'opposizione: governi tu"),
+        "{e}"
+    );
+}
+
+/// Sull'abrogativo il giocatore all'opposizione non ha nulla da scegliere.
+#[test]
+fn sull_abrogativo_nessuna_scelta() {
+    let p = all_opposizione();
+    let k = dati_base().disposizione("licenziamento").unwrap();
+    let p = edita(&p, |j| {
+        let voto = j["turno"].as_u64().unwrap() + 1;
+        j["parlamento"]["referendum"] = serde_json::json!({
+            "tipo": "abrogativo", "misura": null, "valori": [[k, 0]], "promotore": 0,
+            "del_giocatore": false, "voto": voto, "firme": true, "invito_astensione": false,
+            "richiesto": true,
+        });
+    })
+    .unwrap();
+    let r = &p.vista().referendum[0];
+    assert_eq!(r.tipo, TipoReferendum::Abrogativo);
+    assert!(!r.scelta);
 }

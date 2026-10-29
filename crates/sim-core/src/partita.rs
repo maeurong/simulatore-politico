@@ -498,9 +498,11 @@ impl Partita {
         self.vota_forma(FormaMisura::Bilancio);
         self.vota_leggi();
         self.vota_confermativi();
+        // Il giocatore ha la precedenza (scelta 8): l'IA chiede solo se lo slot era libero già
+        // in apertura, non quando si libera ora col voto dell'abrogativo.
+        let libero = self.parlamento.referendum.is_none();
         self.vota_abrogativo();
-        // Il giocatore ha la precedenza: l'IA chiede solo se nel turno nessuno l'ha fatto.
-        if self.parlamento.referendum.is_none() {
+        if libero {
             self.referendum_ia();
         }
         // Le firme dell'abrogativo chiesto nel turno sono raccolte.
@@ -632,11 +634,10 @@ impl Partita {
         if approvata && !prima {
             let (c, s) = (&esito.camera, &esito.senato);
             let pl = &self.parlamento;
-            let richiesto = self.quinto_contro(&p.linea);
-            // Storia 97: il giocatore fuori dal governo può chiederlo se col suo partito il quinto
-            // c'è.
-            let chiedibile = !self.governo.al_governo(self.giocatore)
-                && self.quinto_contro(&self.linea_del_giocatore(&p.linea, false));
+            let richiesto = self.quinto_in_una_camera(&p.linea);
+            // Storia 97: il giocatore può chiederlo se col suo partito il quinto c'è. Al governo i
+            // suoi seggi non contano, come quelli di ogni partito di governo.
+            let chiedibile = self.quinto_in_una_camera(&self.linea_del_giocatore(&p.linea, false));
             let due_terzi = parlamento::due_terzi(c, &pl.seggi_camera)
                 && parlamento::due_terzi(s, &pl.seggi_senato);
             if m.forma == FormaMisura::Costituzionale && !due_terzi && (richiesto || chiedibile) {
@@ -964,9 +965,9 @@ impl Partita {
         }
     }
 
-    /// I partiti fuori dal governo con la `linea` no fanno un quinto di una Camera
-    /// (iter-legislativo-italiano:77).
-    fn quinto_contro(&self, linea: &[bool]) -> bool {
+    /// `parlamento::quinto_contro` in Camera o in Senato: i partiti fuori dal governo con la
+    /// `linea` no fanno un quinto di una Camera (iter-legislativo-italiano:77).
+    fn quinto_in_una_camera(&self, linea: &[bool]) -> bool {
         let pl = &self.parlamento;
         parlamento::quinto_contro(&self.governo, &pl.seggi_camera, linea)
             || parlamento::quinto_contro(&self.governo, &pl.seggi_senato, linea)
@@ -986,8 +987,9 @@ impl Partita {
     fn linea_del_confermativo(&self, misura: u32) -> Option<Vec<bool>> {
         let pl = &self.parlamento;
         pl.confermativi.iter().find(|r| r.misura == Some(misura))?;
-        let e = (pl.esiti.iter())
-            .find(|e| e.misura == misura && e.forma == FormaMisura::Costituzionale)?;
+        let e = (pl.esiti.iter()).find(|e| {
+            e.misura == misura && e.forma == FormaMisura::Costituzionale && e.deliberazione == 2
+        })?;
         Some(e.linee.iter().map(|l| l.si).collect())
     }
 
@@ -1382,7 +1384,9 @@ impl Partita {
                 "nessun confermativo da chiedere su questa misura".into(),
             ));
         };
-        let richiesto = self.quinto_contro(&self.linea_del_giocatore(&linea, !chiedi));
+        // ponytail: seggi e governo di adesso, non quelli del voto: cambiano solo con una crisi o
+        // un voto nel turno fra le due cose, caso raro.
+        let richiesto = self.quinto_in_una_camera(&self.linea_del_giocatore(&linea, !chiedi));
         if chiedi && !richiesto {
             return Err(Errore::Comando(
                 "per chiederlo serve un quinto di una Camera, col tuo partito e i contrari".into(),
