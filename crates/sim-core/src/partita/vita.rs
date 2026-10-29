@@ -33,9 +33,10 @@ impl Partita {
     /// `MASSIMO_PARTITI` attivi, nasce il partito di protesta sul `punto_di_protesta` dello stato
     /// vero. Quota del punto `k`: Σ elettori·h_k / Σ elettori; astensione: la media della
     /// probabilità d'astenersi al punto `k` (utilità senza fedeltà) pesata con elettori·h_k; media:
-    /// l'astensione nazionale delle intenzioni vere. Hunter, identitario, come il partito fondato
-    /// (valence con la luna di miele, cassa `dote_partito_nuovo`); nessun nome libero, nessuna
-    /// nascita.
+    /// Σ_k quota_k·astensione_k, sulla stessa base senza fedeltà (Ruling R11: la media delle
+    /// intenzioni vere, con la fedeltà, sta sistematicamente più in alto). Hunter, identitario,
+    /// come il partito fondato (valence con la luna di miele, cassa `dote_partito_nuovo`); nessun
+    /// nome libero, nessuna nascita.
     pub(super) fn protesta(&mut self) {
         if self.legislatura.protesta || self.attivi() >= MASSIMO_PARTITI {
             return;
@@ -68,12 +69,7 @@ impl Partita {
             }
         });
         quote.iter_mut().for_each(|q| *q /= elettori);
-        let media = self
-            .intenzioni_vere()
-            .nazionali
-            .last()
-            .copied()
-            .unwrap_or(0.0);
+        let media: f64 = quote.iter().zip(&astensione).map(|(q, a)| q * a).sum();
         let dichiarate: Vec<f64> = (self.partiti.iter())
             .filter(|p| !p.sciolto)
             .map(|p| p.posizione_dichiarata)
