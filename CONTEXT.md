@@ -135,7 +135,7 @@ Voto popolare che cancella la legge che ha fissato il valore in vigore di una di
 _Evita_: referendum (da solo)
 
 **Linea**:
-Il voto che un partito dà a una misura, sì o no, deciso dalla distanza fra la sua posizione e quella della misura (per una legge di riforma: se il valore nuovo gli è più vicino di quello in vigore; per la legge elettorale: se gli fa guadagnare seggi) e, per un alleato, dall'intesa. All'opposizione il giocatore sceglie la linea del suo partito; votare lontano dalla propria posizione costa franchi tiratori.
+Il voto che un partito dà a una misura, sì o no, deciso dalla distanza fra la sua posizione e quella della misura (per una legge di riforma: se il valore nuovo gli è più vicino di quello in vigore; per la legge elettorale: se gli fa guadagnare seggi) e, per un alleato, dall'intesa. All'opposizione il giocatore sceglie la linea del suo partito; al governo solo sulle proposte dell'opposizione, le sole dove il Presidente del Consiglio non vota sì per forza. Votare lontano dalla propria posizione costa franchi tiratori.
 _Evita_: indicazione di voto, disciplina
 
 **Franco tiratore**:
@@ -241,10 +241,10 @@ Il turno in cui il governo ha perso la maggioranza: il giocatore allarga la coal
 _Evita_: crisi (per le emergenze del paese, che sono eventi)
 
 **Opposizione**:
-Dove finisce il giocatore quando perde il governo (sfiducia, sconfitta elettorale, ribaltone); la partita continua. Senza dicasteri né budget, il giocatore decide la linea del suo partito, presenta sfiducie, proposte di legge e referendum, e torna al governo col voto o con un ribaltone che guida lui.
+Dove finisce il giocatore quando perde il governo (sfiducia, sconfitta elettorale, ribaltone); la partita continua. Senza dicasteri né budget, il giocatore decide la linea del suo partito, presenta sfiducie, proposte di legge e referendum, e torna al governo col voto o con un ribaltone che guida lui. Lo stesso fanno i partiti IA all'opposizione, contro chiunque governi: la sfiducia quando passerebbe e la caduta darebbe un governo diverso, la proposta nel posto riservato che imbarazza il governo, il referendum che vincerebbe.
 
 **Governo avversario**:
-Il governo dei partiti IA mentre il giocatore è all'opposizione; segue le stesse regole di coalizione, intesa e crisi del governo del giocatore.
+Il governo dei partiti IA mentre il giocatore è all'opposizione; segue le stesse regole di coalizione, intesa e crisi del governo del giocatore. L'opposizione IA lo sfiducia, gli porta proposte e gli chiede referendum come fa col governo del giocatore.
 _Evita_: governo nemico, maggioranza (che è il numero di seggi)
 
 **Sfiducia**:
