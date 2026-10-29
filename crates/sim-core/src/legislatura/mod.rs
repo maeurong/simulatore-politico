@@ -19,8 +19,8 @@ pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
 pub(crate) use crisi::{linea_sfiducia, valore_al_governo, vota_la_caduta};
 pub use eredita::{ConfrontoIndicatore, Eredita};
-pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
+pub(crate) use fondazione::{partito_nuovo, quota_fra_i_votanti};
 pub(crate) use programma::programma;
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
@@ -52,6 +52,7 @@ pub enum Fase {
 /// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura. `voto_anticipato`: le
 /// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
 /// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
+/// `protesta`: in questa legislatura è già nato un partito di protesta; azzerata al voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -69,6 +70,7 @@ pub struct Legislatura {
     pub crisi: Option<u32>,
     pub voto_anticipato: bool,
     pub riposizionato: bool,
+    pub protesta: bool,
 }
 
 impl Legislatura {

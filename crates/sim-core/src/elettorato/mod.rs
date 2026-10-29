@@ -20,8 +20,8 @@ mod voto;
 pub use redditi::{Indici, Reddito};
 pub use referendum::{Affluenza, Quesito};
 pub(crate) use referendum::{stima, toccati};
-pub(crate) use voto::softmax;
 pub use voto::{Intenzioni, intenzioni};
+pub(crate) use voto::{softmax, utilita};
 
 /// Punti dell'istogramma di posizione.
 pub const PUNTI: usize = 7;

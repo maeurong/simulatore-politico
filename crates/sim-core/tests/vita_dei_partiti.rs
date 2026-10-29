@@ -116,3 +116,69 @@ fn il_giocatore_non_si_scioglie() {
     assert!(!p.partiti()[g].sciolto);
     assert_eq!(p.partiti()[g].senza_seggi, 0);
 }
+
+const PROTESTA: &str = "partito di protesta";
+
+/// La partita di prova con la destra a 4,5 e l'estrema destra a 5: il tratto 6-7 resta scoperto.
+/// `soglia_protesta` all'1% (minimo compreso), perché la quota del punto 7 non conti.
+fn destra_al_centro() -> Partita {
+    let f = comune::sostituisci(
+        file_base(),
+        "scenario",
+        "posizione = 6.0",
+        "posizione = 4.5",
+    );
+    let f = comune::sostituisci(f, "scenario", "posizione = 7.0", "posizione = 5.0");
+    let prefisso = "[soglia_protesta]\nvalore = 0.1\nmin = ";
+    let f = comune::imposta(f, "manopole", prefisso, "0.01");
+    let f = comune::imposta(f, "manopole", "[soglia_protesta]\nvalore = ", "0.01");
+    Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1)
+}
+
+#[test]
+fn nasce_la_protesta_dove_l_asse_e_scoperto() {
+    let mut p = destra_al_centro();
+    al_turno(&mut p, 18);
+    assert_eq!(p.partiti().len(), 7);
+    chiudi_col_bilancio(&mut p); // apertura del turno 19, la campagna
+    let nuovo = p.partiti().last().unwrap();
+    assert_eq!(nuovo.id, "nuovo_7");
+    assert!(
+        nuovo.posizione_dichiarata >= 6.0,
+        "{}",
+        nuovo.posizione_dichiarata
+    );
+    assert_eq!(nuovo.posizione_percepita, nuovo.posizione_dichiarata);
+    assert_eq!(nuovo.regola, sim_core::partiti::Regola::Hunter);
+    assert_eq!(nuovo.vocazione, sim_core::partiti::Vocazione::Identitaria);
+    assert_eq!(nuovo.cassa, 1_000_000);
+    assert!(!nuovo.leader.is_empty());
+    assert_eq!(p.parlamento().seggi_camera[7], 0);
+    assert_eq!(p.parlamento().seggi_senato[7], 0);
+    assert!(p.legislatura().protesta);
+    let riga = format!(
+        "Nasce {}, partito di protesta in posizione {}: elettori lontani dai partiti e astensione alta",
+        nuovo.nome, nuovo.posizione_dichiarata
+    );
+    assert!(
+        (p.vista().mosse.iter()).any(|m| m.partito == "nuovo_7" && m.testo == riga),
+        "{:?}",
+        p.vista().mosse
+    );
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    chiudi_col_bilancio(&mut p); // il voto
+    let esito = &p.legislatura().elezioni[0];
+    let voti = esito.voti.iter().find(|v| v.partito == "nuovo_7").unwrap();
+    assert!(voti.quota > 0.0);
+    assert!(!p.legislatura().protesta);
+}
+
+#[test]
+fn una_sola_protesta_a_legislatura() {
+    let mut p = destra_al_centro();
+    al_turno(&mut p, 18);
+    let mut p = edita(&p, |j| j["legislatura"]["protesta"] = true.into()).unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.partiti().len(), 7);
+    assert!(p.vista().mosse.iter().all(|m| !m.testo.contains(PROTESTA)));
+}

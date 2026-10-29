@@ -52,8 +52,9 @@ pub fn posizioni(dati: &DatiGioco) -> Vec<f64> {
 }
 
 /// Il partito del giocatore: la luna di miele del leader al primo mandato sta in `valence` e non
-/// in `valence_base`, così si spegne col ritorno della valence.
-fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
+/// in `valence_base`, così si spegne col ritorno della valence. Anche il partito di protesta nasce
+/// da qui.
+pub(crate) fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
     let base = dati.manopola("valence_partito_nuovo");
     Partito {
         id: ID_GIOCATORE.into(),

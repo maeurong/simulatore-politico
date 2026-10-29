@@ -28,12 +28,19 @@ impl Partita {
 
     /// Un nome di `lista` estratto da `Flusso::PartitiIa` fuori da `gia`; nessuno se in 100
     /// estrazioni esce sempre un nome già usato.
-    #[expect(dead_code, reason = "lo chiameranno protesta e scissione")]
     pub(super) fn nome_nuovo(&mut self, gia: &[String], lista: &[String]) -> Option<String> {
         (0..100)
             .filter_map(|_| lista.get(indice(self.caso.uniforme(Flusso::PartitiIa), lista.len())))
             .find(|n| !gia.contains(n))
             .cloned()
+    }
+
+    /// Nome e cognome di un leader nuovo, estratti da `Flusso::PartitiIa`.
+    pub(super) fn leader_nuovo(&mut self) -> String {
+        let el = self.dati.elettorato();
+        let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
+        let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
+        format!("{n} {c}")
     }
 
     /// Il partito IA `j` cambia leader: nome nuovo estratto da `Flusso::PartitiIa`; la valence
@@ -43,13 +50,10 @@ impl Partita {
         if j == self.giocatore {
             return;
         }
-        let el = self.dati.elettorato();
         let uscente = self.partiti.get(j).map(|p| p.leader.clone());
         let mut nuovo = None;
         for _ in 0..100 {
-            let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
-            let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
-            let candidato = format!("{n} {c}");
+            let candidato = self.leader_nuovo();
             if uscente.as_ref() != Some(&candidato) {
                 nuovo = Some(candidato);
                 break;
@@ -111,12 +115,14 @@ impl Partita {
     }
 
     /// Nell'apertura del turno del voto, in ogni fase e a partita non finita: la campagna dei
-    /// partiti IA. Mai al turno zero, che non passa da qui (scelta 18 del piano 8b).
+    /// partiti IA (movimenti, poi protesta). Mai al turno zero, che non passa da qui (scelta 18
+    /// del piano 8b).
     pub(super) fn apertura_campagna(&mut self) {
         if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
             return;
         }
         self.movimenti_ia();
+        self.protesta();
     }
 
     /// La regola di movimento (scelta 4 del piano 8b): i partiti IA attivi, in ordine d'indice,

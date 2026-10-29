@@ -191,6 +191,7 @@ impl Partita {
                 crisi: None,
                 voto_anticipato: false,
                 riposizionato: false,
+                protesta: false,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -215,6 +216,7 @@ impl Partita {
                 crisi: None,
                 voto_anticipato: false,
                 riposizionato: false,
+                protesta: false,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -266,10 +268,6 @@ impl Partita {
     /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
     /// partito allungati: elettorato e informazione, nessun seggio, intesa di base senza
     /// ultimatum. Restituisce il suo indice.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "lo chiameranno protesta e scissione")
-    )]
     pub(crate) fn aggiungi_partito(&mut self, mut p: Partito) -> usize {
         p.id = format!("nuovo_{}", self.partiti.len());
         self.partiti.push(p);
@@ -2062,6 +2060,7 @@ impl Partita {
         l.crisi = None;
         l.voto_anticipato = false;
         l.riposizionato = false;
+        l.protesta = false;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;

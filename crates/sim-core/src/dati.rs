@@ -227,6 +227,8 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "dote_partito_nuovo",
     "turni_cassa_iniziale",
     "passo_movimento",
+    "soglia_protesta",
+    "distanza_protesta",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",
