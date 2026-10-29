@@ -1,5 +1,8 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_arrivo, ferma_tutti, imposta, senza_shock};
+use comune::{
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo, ferma_tutti, imposta,
+    senza_shock, togli_opposizione_ia,
+};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::disposizioni::Leve;
@@ -9,7 +12,7 @@ fn gioca(f: FileDati, turni: usize) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     for _ in 0..turni {
         ferma_tutti(&mut p);
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
     }
     p
 }
@@ -34,12 +37,12 @@ fn partenza_non_tocca_il_motore() {
     let mut p = Partita::nuova(d.clone(), 1);
     assert_eq!(p.misure().leve, Leve::partenza(&d));
     ferma_tutti(&mut p);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     // Il credito ZES arriva a 1 miliardo all'apertura del turno 1: fino a lì il saldo è zero.
     assert_eq!(p.economia().conti.spese.disposizioni, 0);
     for _ in 0..3 {
         ferma_tutti(&mut p);
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         assert_eq!(p.misure().leve, Leve::partenza(&d));
     }
 }
@@ -225,8 +228,10 @@ fn effetto_di_livello_resta_finche_la_disposizione_non_cambia() {
     let mut serie = Vec::new();
     for _ in 0..20 {
         ferma_tutti(&mut p);
-        // Col bilancio il giocatore non cade: nessun governo IA a cambiare la disposizione.
+        // Col bilancio il giocatore non cade: nessun governo IA a cambiare la disposizione; senza
+        // le proposte dell'opposizione IA nemmeno lei.
         chiudi_col_bilancio(&mut p);
+        togli_opposizione_ia(&mut p);
         serie.push(p.grandezza("regole_lavoro").unwrap());
     }
     // Arrivo all'apertura del turno 1, ritardo 4: vale dalla chiusura del turno 5.

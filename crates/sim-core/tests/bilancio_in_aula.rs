@@ -1,5 +1,5 @@
 mod comune;
-use comune::{edita, imposta, presenta, senza_shock};
+use comune::{chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::economia::Voce;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, StatoEmendamento};
@@ -8,7 +8,7 @@ use sim_core::{Comando, Errore, Partita, Trimestre};
 fn al_turno(f: FileDati, turni: usize) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     for _ in 0..turni {
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
     }
     p
 }
@@ -80,7 +80,7 @@ fn fiducia_sul_bilancio_senza_franchi_tiratori() {
 fn leggi_in_scadenza_slittano_nel_turno_del_bilancio() {
     let mut p = al_turno(senza_shock(), 3);
     presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     presenta_bozza(&mut p);
     let id = p
         .vista()
@@ -97,7 +97,7 @@ fn leggi_in_scadenza_slittano_nel_turno_del_bilancio() {
     );
     assert_eq!(p.salva().unwrap(), prima);
     presenta(&mut p, &[("ticket", "alto")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let v = p.vista();
     assert!(v.esiti.iter().all(|e| e.forma != FormaMisura::Riforma));
     let m = v.calendario.iter().find(|m| m.id == id).unwrap();
@@ -115,7 +115,7 @@ fn leggi_in_scadenza_slittano_nel_turno_del_bilancio() {
 fn emendamenti_aperti_slittano_con_la_legge() {
     let mut p = al_turno(senza_shock(), 3);
     presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     presenta_bozza(&mut p);
     let stati = |p: &Partita| -> Vec<StatoEmendamento> {
         let v = p.vista();
@@ -128,9 +128,9 @@ fn emendamenti_aperti_slittano_con_la_legge() {
         })
     };
     assert_eq!(stati(&p), [StatoEmendamento::Aperto]);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(stati(&p), [StatoEmendamento::Aperto]);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert!(
         p.vista()
             .esiti
@@ -154,10 +154,10 @@ fn senza_bilancio_presentato_le_leggi_si_votano() {
     presenta(&mut p, &[("ticket", "alto")]).unwrap();
     let id = p.vista().calendario[0].id;
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert_eq!(p.in_vigore("eta_pensionabile"), Some("68"));
     assert!(p.vista().bilancio.esercizio_provvisorio && !p.turno_del_bilancio());
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     assert!(p.vista().calendario.is_empty());
 }
 
@@ -165,7 +165,7 @@ fn senza_bilancio_presentato_le_leggi_si_votano() {
 fn approvato_il_bilancio_le_leggi_slittano_lo_stesso() {
     let mut p = al_turno(senza_shock(), 3);
     presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let id = p
         .vista()
         .calendario
@@ -176,7 +176,7 @@ fn approvato_il_bilancio_le_leggi_slittano_lo_stesso() {
     // Fiducia posta prima di presentare il bilancio: ammessa, e persa con lo slittamento.
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     presenta_bozza(&mut p);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let v = p.vista();
     assert!(
         v.esiti
@@ -272,7 +272,7 @@ fn fiducia_persa_nello_slittamento_riapre_gli_emendamenti() {
 fn emendamento_deciso_non_si_richiede_dopo_lo_slittamento() {
     let mut p = al_turno(senza_shock(), 3);
     presenta(&mut p, &[("eta_pensionabile", "62")]).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let id = p.vista().calendario[0].id;
     p.comanda(Comando::Emendamento {
         misura: id,
@@ -282,7 +282,7 @@ fn emendamento_deciso_non_si_richiede_dopo_lo_slittamento() {
     .unwrap();
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     presenta_bozza(&mut p);
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let v = p.vista();
     let m = v.calendario.iter().find(|m| m.id == id).unwrap();
     let stati: Vec<StatoEmendamento> = m.emendamenti.iter().map(|e| e.stato).collect();
@@ -322,6 +322,23 @@ fn niente_fiducia_su_una_legge_elettorale_nel_turno_del_bilancio() {
         "{e}"
     );
     assert_eq!(p.salva().unwrap(), prima);
+}
+
+/// Nel turno del bilancio anche la proposta dell'opposizione IA slitta, e il posto riservato resta
+/// uno per turno: nel turno dopo convivono la slittata, quella del turno del bilancio e la nuova.
+#[test]
+fn la_proposta_ia_slitta_nel_turno_del_bilancio_e_il_posto_resta_per_turno() {
+    let mut p = al_turno(senza_shock(), 2);
+    p.chiudi_turno(); // turno 3: la proposta IA si vota al 4, il turno del bilancio
+    p.chiudi_turno();
+    presenta_bozza(&mut p);
+    p.chiudi_turno(); // turno 5
+    let g = p.giocatore();
+    let proposte: Vec<(u32, u32)> = (p.parlamento().misure.iter())
+        .filter(|m| m.promotore.is_some_and(|j| j != g))
+        .map(|m| (m.presentata, m.voto))
+        .collect();
+    assert_eq!(proposte, [(3, 5), (4, 5), (5, 6)]);
 }
 
 #[test]

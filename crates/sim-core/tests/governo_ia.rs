@@ -138,6 +138,7 @@ fn a_camere_sciolte_il_confermativo_si_vota() {
             "voto": 2,
             "firme": true,
             "invito_astensione": false,
+            "richiesto": true,
             "del_giocatore": false,
         }]);
     })

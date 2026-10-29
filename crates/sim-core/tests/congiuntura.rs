@@ -1,5 +1,7 @@
 mod comune;
-use comune::{con_ingresso, dati_base, file_base, imposta, senza_shock};
+use comune::{
+    chiudi_senza_opposizione_ia, con_ingresso, dati_base, file_base, imposta, senza_shock,
+};
 use sim_core::caso::{Caso, Flusso};
 use sim_core::elettorato::{Condizione, Fascia, PUNTI};
 use sim_core::{DatiGioco, FileDati, Partita};
@@ -7,7 +9,7 @@ use sim_core::{DatiGioco, FileDati, Partita};
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(f).unwrap(), seme);
     for _ in 0..turni {
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
     }
     p
 }

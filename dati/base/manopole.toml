@@ -1243,3 +1243,10 @@ valore = 0.5
 min = 0.0
 max = 4.0
 ticket = "18"
+
+# assunzione del piano 8a, nessuna fonte in docs/ricerca (di quanto cresce, in quota, il `malus_opposizione` dei partiti IA fuori dal governo nell'ultimo anno della legislatura)
+[crescita_malus_ultimo_anno]
+valore = 0.5
+min = 0.0
+max = 2.0
+ticket = "18"

@@ -36,6 +36,7 @@ fn a_fine_legislatura_le_leggi_in_esame_decadono_e_i_gradini_si_sbloccano() {
             "voto": 24,
             "firme": false,
             "invito_astensione": false,
+            "richiesto": true,
             "del_giocatore": false,
         }]);
     })
@@ -166,13 +167,29 @@ fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
         }
     }
     assert_eq!(voti, [19, 39]);
-    let attese: Vec<Fase> = (0..41)
-        .map(|t| match t {
-            20 | 40 => Fase::Trattativa,
-            _ => Fase::Ordinaria,
-        })
-        .collect();
-    assert_eq!(fasi, attese);
+    // Solo dopo i voti: in mezzo le mosse IA possono far cadere un governo.
+    assert_eq!((fasi[20], fasi[40]), (Fase::Trattativa, Fase::Trattativa));
+}
+
+/// La partita di `due_legislature_di_fila_con_salvataggio_a_ogni_turno`: ogni passaggio a una fase
+/// non ordinaria fuori dai voti (20 e 40) ha la sua causa nel turno prima, una sfiducia approvata
+/// o una crisi aperta.
+#[test]
+fn ogni_caduta_ha_la_sua_causa() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 41 {
+        let (turno, data) = (p.vista().turno, p.vista().data);
+        let ordinaria = p.legislatura().fase == Fase::Ordinaria;
+        let crisi = p.legislatura().crisi == Some(turno);
+        chiudi_col_bilancio(&mut p);
+        if !ordinaria || p.legislatura().fase == Fase::Ordinaria || [19, 39].contains(&turno) {
+            continue;
+        }
+        let sfiducia = (p.parlamento().esiti.iter()).any(|e| {
+            e.forma == sim_core::parlamento::FormaMisura::Sfiducia && e.data == data && e.approvata
+        });
+        assert!(sfiducia || crisi, "turno {}: nessuna causa", turno + 1);
+    }
 }
 
 /// Un salvataggio coi totali da miliardi, e seggi che li sommano, non si carica: oltre il

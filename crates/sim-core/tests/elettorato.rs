@@ -5,7 +5,8 @@
 
 mod comune;
 use comune::{
-    chiudi_col_bilancio, dati_base, file_base, imposta, riscrivi, senza_shock, sostituisci,
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, dati_base, file_base, imposta, riscrivi,
+    senza_shock, sostituisci,
 };
 use sim_core::caso::{Caso, Flusso};
 use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo, intenzioni};
@@ -584,7 +585,7 @@ fn giudizi_del_centrodestra(quota_presidente: &str) -> Vec<f64> {
     );
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 3);
     for _ in 0..6 {
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
     }
     let j = p
         .partiti()

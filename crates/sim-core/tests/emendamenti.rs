@@ -196,7 +196,8 @@ fn salvare_a_meta_turno_conserva_l_aula() {
     p.chiudi_turno();
     accogli(&mut p, true).unwrap();
     presenta(&mut p, &[("ticket", "alto")]).unwrap();
-    let id = p.vista().calendario[1].id;
+    // La legge del ticket: la proposta IA dell'apertura, prima in calendario, non ammette fiducia.
+    let id = p.parlamento().misure.last().unwrap().id;
     p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
     p.comanda(Comando::EmanaDecreto {
         decreto: Decreto::Fondi {

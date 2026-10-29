@@ -1,5 +1,5 @@
 mod comune;
-use comune::{edita, imposta, presenta, senza_shock, sostituisci};
+use comune::{chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum};
 use sim_core::vista::SeggiPartito;
@@ -167,6 +167,8 @@ fn senza_i_due_terzi_si_vota_il_referendum_confermativo() {
     let v = p.vista();
     assert!(v.esiti[0].approvata);
     assert_eq!(v.referendum[0].tipo, TipoReferendum::Confermativo);
+    // Il giocatore governa: il quinto contro lo chiede, lui non sceglie.
+    assert!(v.referendum[0].richiesto && !v.referendum[0].scelta);
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
     p.chiudi_turno();
     let r = &p.vista().esiti_referendum[0];
@@ -194,9 +196,9 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
         }
         let id = p.vista().calendario[0].id;
         p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         assert_eq!(p.in_vigore("coalizioni"), Some("si"));
-        p.chiudi_turno();
+        chiudi_senza_opposizione_ia(&mut p);
         p
     };
     let mut p = gioca(true);
@@ -236,7 +238,7 @@ fn elettorale_non_piu_valida_decade_all_apertura_del_turno() {
     let v = p.vista();
     let (prima, seconda) = (v.calendario[0].id, v.calendario[1].id);
     p.comanda(Comando::PoniFiducia { misura: prima }).unwrap();
-    p.chiudi_turno();
+    chiudi_senza_opposizione_ia(&mut p);
     let v = p.vista();
     assert!(v.calendario.is_empty());
     assert_eq!(v.esiti[0].misura, seconda);

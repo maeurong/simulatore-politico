@@ -34,7 +34,9 @@ pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, ri
 pub const POSTI_ORDINARI: usize = 3;
 pub const POSTI_COSTITUZIONALI: usize = 1;
 /// Il posto riservato all'opposizione (iter-legislativo-italiano:119, un argomento su cinque), a
-/// rotazione fra i partiti fuori dal governo (scelta 15 del piano 7b): solo il giocatore lo usa.
+/// rotazione fra i partiti fuori dal governo (scelta 15 del piano 7b): un posto per turno, del
+/// giocatore o di un partito IA (scelta 16 del piano 8a). Conta solo le proposte presentate nel
+/// turno: quella del turno prima, al voto ora, non lo occupa.
 pub const POSTI_OPPOSIZIONE: usize = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,8 +55,8 @@ pub enum FormaMisura {
 /// Una misura in calendario. `valori` = disposizione e gradino; `proponente` = dicastero;
 /// `promotore` = il partito d'opposizione che l'ha portata nel posto riservato; `voto` = turno
 /// nella cui chiusura si vota; `deliberazione` 1 o 2 per le costituzionali, 0 altrimenti. `fondi`
-/// solo sulle conversioni. `linea_giocatore` = la linea scelta dal giocatore all'opposizione,
-/// `None` = quella di default.
+/// solo sulle conversioni. `linea_giocatore` = la linea scelta dal giocatore all'opposizione, o
+/// al governo sulle proposte dell'opposizione; `None` = quella di default.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Misura {
     pub id: u32,
@@ -116,8 +118,8 @@ pub struct ValoreProposto {
 /// Seggi per partito nell'ordine dello scenario. `respinte` = disposizione e turno da cui si
 /// ripresenta; `prossima` = id della prossima misura; `referendum` = l'abrogativo in corso,
 /// uno alla volta; `confermativi` = i referendum confermativi in attesa del voto; `decaduti` =
-/// le firme dei decreti decaduti, che non si ripetono; `sfiducia` = la mozione del giocatore del
-/// turno (dicastero, `None` = al governo; promotore), votata in chiusura.
+/// le firme dei decreti decaduti, che non si ripetono; `sfiducia` = la mozione del giocatore o
+/// dell'opposizione IA del turno (dicastero, `None` = al governo; promotore), votata in chiusura.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Parlamento {
     pub seggi_camera: Vec<u32>,
@@ -267,6 +269,8 @@ pub(crate) struct StatoAula<'a> {
     /// Le coalizioni dell'ultimo voto, o nel turno del voto quelle al voto, per i seggi attesi.
     pub coalizioni: Vec<Vec<usize>>,
     pub giocatore: usize,
+    /// `Legislatura::ultimo_anno` del turno, per il malus dei partiti IA (scelta 19 del piano 8a).
+    pub ultimo_anno: bool,
 }
 
 /// Posizioni, linea e probabilità dei franchi tiratori di una misura, sullo stato attuale.
@@ -288,7 +292,9 @@ impl StatoAula<'_> {
     /// guadagno della linea è `Δseggi / seggi_per_punto_linea` e alla Camera i franchi tiratori
     /// raddoppiano, entro `2 · ft_max`, anche nel voto finale dopo la fiducia. Sulla conversione
     /// e sul bilancio la maggioranza vota sì e l'opposizione no; senza posizione, i franchi
-    /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì.
+    /// tiratori vengono dalla sola intesa. Il promotore della proposta d'opposizione vota sì, e su
+    /// di essa il Presidente del Consiglio segue il guadagno, o la linea scelta se è il giocatore,
+    /// e gli alleati gli sono fedeli in quella direzione (scelta 15 del piano 8a).
     /// La linea scelta dal giocatore (scelta 14 del piano 7b) vale per il suo partito, anche
     /// sotto fiducia; fuori dalla fiducia coi franchi tiratori
     /// `ft_base + ft_distanza · |x − sostenuta| / 6` entro `ft_max`: `sostenuta` è la posizione
@@ -348,7 +354,14 @@ impl StatoAula<'_> {
         let mut linea = if matches!(m.forma, FormaMisura::Conversione | FormaMisura::Bilancio) {
             (0..partiti.len()).map(|j| governo.al_governo(j)).collect()
         } else {
-            voto::linea(dati, governo, intesa, &guadagno)
+            // Sulla proposta dell'opposizione il Presidente del Consiglio è libero: la linea scelta
+            // dal giocatore se presiede lui, altrimenti il guadagno.
+            let pc = governo.presidente;
+            let linea_pdc = m.promotore.map(|_| {
+                (m.linea_giocatore.filter(|_| pc == g))
+                    .unwrap_or_else(|| guadagno.get(pc).is_some_and(|&x| x > 0.0))
+            });
+            self.linea(&guadagno, linea_pdc)
         };
         let accolti = (m.emendamenti.iter()).filter(|e| e.stato == StatoEmendamento::Accolto);
         for j in accolti.map(|e| e.partito).chain(m.promotore) {
@@ -383,6 +396,25 @@ impl StatoAula<'_> {
             franchi,
             seggi,
         }
+    }
+
+    /// Il malus della linea per partito (scelta 19 del piano 8a): zero al governo,
+    /// `malus_opposizione` fuori, per i partiti IA × `(1 + crescita_malus_ultimo_anno)` nell'ultimo
+    /// anno. Il giocatore ha la sua linea.
+    pub(crate) fn malus(&self) -> Vec<f64> {
+        let base = self.dati.manopola("malus_opposizione");
+        let crescita = 1.0 + self.dati.manopola("crescita_malus_ultimo_anno");
+        (0..self.partiti.len())
+            .map(|j| {
+                if self.governo.al_governo(j) {
+                    0.0
+                } else if self.ultimo_anno && j != self.giocatore {
+                    base * crescita
+                } else {
+                    base
+                }
+            })
+            .collect()
     }
 
     /// Una voce per partito, nell'ordine dei partiti.
@@ -517,6 +549,7 @@ impl Parlamento {
             voto,
             firme: false,
             invito_astensione: false,
+            richiesto: true,
         })
     }
 
@@ -599,25 +632,45 @@ impl Parlamento {
         promotore: usize,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
-        if !self.posto_riservato_libero() {
+        if !self.posto_riservato_libero(turno) {
             return ko("il posto riservato è già occupato".into());
         }
-        let m = self.bozza(dati, disposizioni, turno, valori)?;
-        if m.forma == FormaMisura::Costituzionale {
-            return ko("una norma costituzionale non entra nel posto riservato".into());
-        }
-        self.misure.push(Misura {
-            proponente: None,
-            promotore: Some(promotore),
-            ..m
-        });
+        let m = self.bozza_proposta(dati, disposizioni, turno, promotore, valori)?;
+        self.misure.push(m);
         self.prossima = self.prossima.saturating_add(1);
         Ok(())
     }
 
-    /// Nessuna proposta dell'opposizione occupa il posto riservato.
-    pub(crate) fn posto_riservato_libero(&self) -> bool {
-        (self.misure.iter().filter(|m| m.promotore.is_some())).count() < POSTI_OPPOSIZIONE
+    /// La proposta del partito `promotore` che `presenta_proposta` metterebbe nel posto riservato,
+    /// senza guardare se il posto è libero; non tocca nulla.
+    ///
+    /// # Errors
+    /// `Comando`: quelli di `bozza`, poi con una norma costituzionale.
+    pub(crate) fn bozza_proposta(
+        &self,
+        dati: &DatiGioco,
+        disposizioni: &Disposizioni,
+        turno: u32,
+        promotore: usize,
+        valori: &[ValoreProposto],
+    ) -> Result<Misura, Errore> {
+        let m = self.bozza(dati, disposizioni, turno, valori)?;
+        if m.forma == FormaMisura::Costituzionale {
+            return ko("una norma costituzionale non entra nel posto riservato".into());
+        }
+        Ok(Misura {
+            proponente: None,
+            promotore: Some(promotore),
+            ..m
+        })
+    }
+
+    /// Nessuna proposta dell'opposizione presentata nel `turno` occupa il posto riservato.
+    pub(crate) fn posto_riservato_libero(&self, turno: u32) -> bool {
+        (self.misure.iter())
+            .filter(|m| m.promotore.is_some() && m.presentata == turno)
+            .count()
+            < POSTI_OPPOSIZIONE
     }
 
     /// `Linea`: la linea del giocatore sulla misura, `None` = quella di default.
@@ -996,7 +1049,8 @@ impl Parlamento {
     /// respinta esce dalle disposizioni, dai gradini, dai dicasteri o dai partiti, come la
     /// sfiducia; un referendum
     /// esce dalle disposizioni, dai gradini o dai partiti, o ha il voto oltre `turno + 6`;
-    /// l'abrogativo senza firme ha un voto diverso da quello chiesto nel `turno`.
+    /// l'abrogativo non è richiesto, o senza firme ha un voto diverso da quello chiesto nel
+    /// `turno`.
     pub(crate) fn controlla(
         &self,
         dati: &DatiGioco,
@@ -1051,15 +1105,14 @@ impl Parlamento {
         if !self.decaduti.iter().all(|f| f.valido(dati)) {
             return ko("un decreto decaduto fuori dai dicasteri, dagli atti o da 0-1e15");
         }
-        // Senza firme, l'abrogativo è chiesto nel turno.
-        let firme_ok =
-            (self.referendum.iter()).all(|r| r.firme || Some(r.voto) == voto_abrogativo(turno));
-        let referendum_ok = firme_ok
-            && (self.referendum.iter().chain(&self.confermativi)).all(|r| {
-                r.valori.iter().all(valore_ok)
-                    && r.promotore.is_none_or(|j| j < n_partiti)
-                    && r.voto <= turno.saturating_add(6)
-            });
+        // L'abrogativo si vota sempre; senza firme è chiesto nel turno.
+        let firme_ok = (self.referendum.iter())
+            .all(|r| r.richiesto && (r.firme || Some(r.voto) == voto_abrogativo(turno)));
+        let referendum_ok = (self.referendum.iter().chain(&self.confermativi)).all(|r| {
+            r.valori.iter().all(valore_ok)
+                && r.promotore.is_none_or(|j| j < n_partiti)
+                && r.voto <= turno.saturating_add(6)
+        });
         if !misure_ok || self.respinte.iter().any(|&(d, _)| d >= catalogo.len()) {
             return ko("una misura o una respinta fuori dalle disposizioni o dai dicasteri");
         }
@@ -1068,6 +1121,12 @@ impl Parlamento {
         }
         if !referendum_ok {
             return ko("un referendum fuori dalle disposizioni, dai gradini o dai partiti");
+        }
+        if !firme_ok {
+            return ko(
+                "l'abrogativo non è richiesto, oppure è senza firme e il suo voto non cade nel \
+                 turno chiesto",
+            );
         }
         Ok(())
     }
