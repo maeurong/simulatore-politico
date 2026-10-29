@@ -201,7 +201,13 @@ fn primo_voto_nessun_cambio() {
     let prima: Vec<_> = p.partiti().iter().map(|x| x.leader.clone()).collect();
     p.chiudi_turno();
     assert_eq!(p.legislatura().elezioni.len(), 1);
-    assert!(p.vista().mosse.is_empty());
+    // Al turno zero i partiti IA promettono anche senza seggi (R28); le casse IA di `fondata` sono
+    // vuote, quindi nessuno spende: oltre le promesse, nessuna mossa.
+    let mosse = p.vista().mosse;
+    assert!(
+        mosse.iter().all(|m| m.testo.starts_with("Promette ")),
+        "{mosse:?}"
+    );
     let dopo: Vec<_> = p.partiti().iter().map(|x| x.leader.clone()).collect();
     assert_eq!(prima, dopo);
 }

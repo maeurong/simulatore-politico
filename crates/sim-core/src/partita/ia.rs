@@ -11,7 +11,8 @@ use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, Condizione, stima};
 use crate::informazione::indice;
 use crate::legislatura::{
-    self, Bersaglio, Dichiarazione, Fase, Leva, Quadro, Spesa, movimento, quota_fra_i_votanti,
+    self, Bersaglio, Dichiarazione, Fase, Leva, Quadro, Spesa, campagna, movimento,
+    quota_fra_i_votanti,
 };
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::partiti::{Regola, Vocazione};
@@ -136,8 +137,8 @@ impl Partita {
     /// sui 3 bersagli che rendono di più, ciascuno con la sua leva migliore, divisa con
     /// [`riparto_spesa`]. Rendimento per euro sull'incrocio del sondaggio pubblico
     /// (sondaggi-ed-errore:55), con `q` la quota del partito fra i votanti, `a` l'astensione e
-    /// `w` = √s_b, perché la spinta si diluisce sulla quota s_b degli elettori nel bersaglio:
-    /// persuadere `w·q·(1−q)`, mobilitare `w·a·q`, convincere (solo gli identitari) `w·q·(1−q)`,
+    /// `w` = √s_b, perché la spinta si diluisce sulla quota s_b degli elettori nel bersaglio, letta
+    /// sulla composizione dei dati come l'anteprima del giocatore: persuadere `w·q·(1−q)`, mobilitare `w·a·q`, convincere (solo gli identitari) `w·q·(1−q)`,
     /// ognuna per la sua forza. A parità vince il bersaglio che viene
     /// prima (le condizioni, poi le regioni) e la leva che viene prima (persuadere, mobilitare,
     /// convincere).
@@ -148,7 +149,7 @@ impl Partita {
             .zip(&s.condizioni)
             .chain((0..).map(Bersaglio::Regione).zip(&s.regioni))
             .map(|(b, incrocio)| {
-                let w = b.quota_elettori(&self.dati, &self.elettorato).sqrt();
+                let w = b.quota_elettori(&self.dati, None).sqrt();
                 (b, &incrocio.quote, w)
             })
             .collect();
@@ -195,9 +196,9 @@ impl Partita {
     }
 
     /// Le promesse dei partiti IA attivi (scelta 17 del piano 8b), anche senza cassa: le prime 2
-    /// voci non ancora in vigore del programma, quello del governo se il partito lo presiede,
-    /// altrimenti `legislatura::programma` sulla coalizione del partito solo; una riga. Nessun
-    /// effetto sull'intesa.
+    /// voci non ancora in vigore del programma (R28): quello del governo se il partito lo presiede
+    /// e non è vuoto, altrimenti `legislatura::programma` sulla coalizione del partito solo, anche
+    /// senza seggi; una riga. Nessun effetto sull'intesa.
     fn promesse_ia(&mut self) {
         let seggi = self.seggi_per_partito();
         let aula = self.stato_aula();
@@ -205,11 +206,12 @@ impl Partita {
         let promesse: Vec<(usize, Vec<(usize, usize)>)> = (self.partiti.iter().enumerate())
             .filter(|&(j, p)| j != self.giocatore && !p.sciolto)
             .map(|(j, _)| {
-                let programma = if self.governo.presidente == j {
-                    self.governo.programma.clone()
-                } else {
-                    legislatura::programma(&aula, &[j], &seggi)
-                };
+                let programma =
+                    if self.governo.presidente == j && !self.governo.programma.is_empty() {
+                        self.governo.programma.clone()
+                    } else {
+                        legislatura::programma(&aula, &[j], &seggi)
+                    };
                 let scelte = (programma.into_iter())
                     .filter(|&(d, g)| voci.get(d).is_some_and(|v| v.in_vigore != g))
                     .take(2)
@@ -219,7 +221,7 @@ impl Partita {
             .collect();
         for (j, scelte) in promesse {
             if !scelte.is_empty() {
-                let testo = format!("Promette {}", parlamento::nome(&self.dati, &scelte));
+                let testo = format!("Promette {}", campagna::promesse(&self.dati, &scelte));
                 self.mossa(j, testo);
             }
             self.partiti[j].promesse_campagna = scelte;
@@ -1734,7 +1736,7 @@ mod tests {
         let regioni = &p.dati.elettorato().regioni;
         let piccola = (0..regioni.len())
             .min_by_key(|&r| regioni[r].elettori)
-            .unwrap();
+            .expect("i dati hanno almeno una regione");
         let s = &mut p.informazione.sondaggio;
         for (r, i) in s.regioni.iter_mut().enumerate() {
             i.quote[0] = if r == piccola { 0.5 } else { 0.0 };
@@ -1757,14 +1759,14 @@ mod tests {
         let regioni = &p.dati.elettorato().regioni;
         let r = (0..regioni.len())
             .max_by_key(|&r| regioni[r].elettori)
-            .unwrap();
+            .expect("i dati hanno almeno una regione");
         let (a, b) = (
             Bersaglio::Condizione(Condizione::Pensionato),
             Bersaglio::Regione(r),
         );
         let (s_a, s_b) = (
-            a.quota_elettori(&p.dati, &p.elettorato),
-            b.quota_elettori(&p.dati, &p.elettorato),
+            a.quota_elettori(&p.dati, None),
+            b.quota_elettori(&p.dati, None),
         );
         assert!(s_a > s_b, "{s_a} {s_b}");
         let y_a = 0.01 * 0.99;
@@ -1773,11 +1775,15 @@ mod tests {
         let s = &mut p.informazione.sondaggio;
         for (k, i) in s.condizioni.iter_mut().enumerate() {
             i.quote[0] = if k == 3 { 0.01 } else { 0.0 };
-            *i.quote.last_mut().unwrap() = 0.0;
+            *i.quote
+                .last_mut()
+                .expect("l'incrocio ha la voce dell'astensione") = 0.0;
         }
         for (k, i) in s.regioni.iter_mut().enumerate() {
             i.quote[0] = if k == r { x_b } else { 0.0 };
-            *i.quote.last_mut().unwrap() = 0.0;
+            *i.quote
+                .last_mut()
+                .expect("l'incrocio ha la voce dell'astensione") = 0.0;
         }
         p.campagna_ia();
         let c = &p.partiti[0].campagna;
@@ -1794,10 +1800,10 @@ mod tests {
         let seggi = p.seggi_per_partito();
         let altro = (0..p.partiti.len())
             .find(|&j| j != g && j != pc && seggi[j] > 0)
-            .unwrap();
+            .expect("dopo il voto un partito IA fuori dal governo ha seggi");
         let sciolto = (0..p.partiti.len())
             .find(|&j| j != g && j != pc && j != altro)
-            .unwrap();
+            .expect("la partita ha più di tre partiti");
         p.partiti[sciolto].sciolto = true;
         let prime = |p: &Partita, v: Vec<(usize, usize)>| -> Vec<(usize, usize)> {
             let voci = &p.disposizioni.voci;
@@ -1820,7 +1826,11 @@ mod tests {
         assert!(p.partiti[g].promesse_campagna.is_empty());
         assert!(p.partiti[sciolto].promesse_campagna.is_empty());
         assert_eq!(p.intesa, intesa);
-        let riga = format!("Promette {}", parlamento::nome(&p.dati, &del_governo));
+        let riga = format!("Promette {}", campagna::promesse(&p.dati, &del_governo));
+        assert!(
+            riga.starts_with("Promette «") && riga.contains("» e «"),
+            "{riga}"
+        );
         let id = p.partiti[pc].id.clone();
         assert!(p.mosse.iter().any(|m| m.partito == id && m.testo == riga));
     }
@@ -1839,6 +1849,32 @@ mod tests {
         assert!(p.partiti[j].promesse.is_empty());
         assert_eq!(p.partiti[j].valence, valence);
         assert!(p.mosse.is_empty());
+    }
+
+    /// Scelta 15 (sp2): anteprima e campagna IA leggono s_b dalla composizione dei dati, quella
+    /// viva non le sposta.
+    #[test]
+    fn anteprima_e_campagna_ia_non_leggono_la_composizione_viva() {
+        let spese = [Spesa {
+            bersaglio: Bersaglio::Condizione(Condizione::Pensionato),
+            leva: Leva::Persuadere,
+            euro: 1_000,
+        }];
+        let mut prima = al_turno_19();
+        let anteprima = prima.anteprima_campagna(&spese).unwrap();
+        prima.campagna_ia();
+        let mut p = al_turno_19();
+        for (i, g) in p.elettorato.gruppi.iter_mut().enumerate() {
+            if crate::elettorato::condizione_di(i) == Condizione::Pensionato {
+                g.quota *= 2.0;
+            }
+        }
+        assert_eq!(p.anteprima_campagna(&spese).unwrap(), anteprima);
+        p.campagna_ia();
+        let campagne = |p: &Partita| -> Vec<Vec<Spesa>> {
+            p.partiti.iter().map(|x| x.campagna.clone()).collect()
+        };
+        assert_eq!(campagne(&p), campagne(&prima));
     }
 
     #[test]

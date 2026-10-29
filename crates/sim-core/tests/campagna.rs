@@ -1,5 +1,6 @@
 mod comune;
 use comune::{chiudi_col_bilancio, dati_base, edita, fondata};
+use serde_json::json;
 use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::legislatura::{Bersaglio, Intensita, Leva, Spesa};
 use sim_core::partiti::{Regola, Vocazione};
@@ -365,6 +366,70 @@ fn convincere_dura_oltre_il_voto() {
     );
 }
 
+/// La spesa `s` in JSON.
+fn json(s: &Spesa) -> serde_json::Value {
+    serde_json::to_value(s).unwrap()
+}
+
+/// S1, t1, C1: `carica` valida le campagne. Il giocatore nel turno del voto come il comando
+/// (regione sconosciuta, euro negativi), fuori vuote; i partiti IA sempre vuote (si riempiono e
+/// si svuotano nella stessa chiusura); lo sciolto senza campagna né promesse.
+#[test]
+fn carica_rifiuta_campagna_storta() {
+    let p = in_campagna();
+    let g = p.giocatore();
+    let buona = Spesa {
+        bersaglio: Bersaglio::Regione(0),
+        leva: Leva::Persuadere,
+        euro: 1000,
+    };
+    let con = |p: &Partita, j: usize, campo: &str, v: serde_json::Value| {
+        edita(p, |x| x["partiti"][j][campo] = v)
+    };
+    assert!(con(&p, g, "campagna", json!([json(&buona)])).is_ok());
+    let regione = Spesa {
+        bersaglio: Bersaglio::Regione(99),
+        ..buona.clone()
+    };
+    let negativa = Spesa {
+        euro: -1000,
+        ..buona.clone()
+    };
+    let ia = (g + 1) % p.partiti().len();
+    let fuori = Partita::nuova(dati_base(), 1);
+    let fg = fuori.giocatore();
+    let gradino = json!([[0, 0]]);
+    let (storta, a_riposo) = ("campagna non valida", "fuori dal turno del voto");
+    for (q, j, campo, v, atteso) in [
+        (&p, g, "campagna", json!([json(&regione)]), storta),
+        (&p, g, "campagna", json!([json(&negativa)]), storta),
+        (&p, ia, "campagna", json!([json(&buona)]), a_riposo),
+        (&p, ia, "promesse_campagna", gradino.clone(), a_riposo),
+        (&fuori, fg, "campagna", json!([json(&buona)]), a_riposo),
+        (&fuori, fg, "promesse_campagna", gradino.clone(), a_riposo),
+    ] {
+        let e = con(q, j, campo, v.clone()).unwrap_err().to_string();
+        assert!(e.contains(atteso), "{j} {campo} {v}: {e}");
+    }
+    for campo in ["campagna", "promesse", "promesse_campagna"] {
+        let v = if campo == "campagna" {
+            json!([json(&buona)])
+        } else {
+            gradino.clone()
+        };
+        let e = edita(&p, |x| {
+            x["partiti"][ia]["sciolto"] = true.into();
+            x["partiti"][ia][campo] = v;
+        })
+        .unwrap_err()
+        .to_string();
+        assert!(
+            e.contains("sciolto con campagna o promesse"),
+            "{campo}: {e}"
+        );
+    }
+}
+
 /// La campagna rifiutata col messaggio `atteso`, anche in anteprima, non cambia nulla.
 fn campagna_rifiutata(p: &mut Partita, spese: &[Spesa], atteso: &str) {
     let prima = p.salva().unwrap();
@@ -404,11 +469,27 @@ fn campagna_rifiutata_non_cambia_nulla() {
     let nome = dati_base().regioni()[3].nome.clone();
     let ripetuto = format!("Bersaglio ripetuto: {nome}");
     campagna_rifiutata(&mut p, &[spesa(3, 1000), spesa(3, 1000)], &ripetuto);
+    // Stesso bersaglio con leve diverse: stesso rifiuto.
+    let pensionati = |leva| Spesa {
+        bersaglio: Bersaglio::Condizione(Condizione::Pensionato),
+        leva,
+        euro: 1000,
+    };
+    campagna_rifiutata(
+        &mut p,
+        &[pensionati(Leva::Persuadere), pensionati(Leva::Mobilitare)],
+        "Bersaglio ripetuto: pensionati",
+    );
     let zero = [spesa(0, 1000), spesa(1, 0)];
-    campagna_rifiutata(&mut p, &zero, "Spesa non positiva");
-    campagna_rifiutata(&mut p, &[spesa(0, -5)], "Spesa non positiva");
+    let positiva = "La spesa deve essere maggiore di zero";
+    campagna_rifiutata(&mut p, &zero, positiva);
+    campagna_rifiutata(&mut p, &[spesa(0, -5)], positiva);
     let oltre = [spesa(0, riferimento()), spesa(1, 1)];
-    campagna_rifiutata(&mut p, &oltre, "Spesa oltre la cassa: 3.000.000 euro");
+    campagna_rifiutata(
+        &mut p,
+        &oltre,
+        "Spesa oltre la cassa, che è di 3.000.000 euro",
+    );
     campagna_rifiutata(&mut p, &[spesa(20, 1000)], "Regione sconosciuta");
     assert_eq!(p.vista().campagna.spese, vec![spesa(0, 1000)]);
     // Sostituisce la campagna già scelta; vuota la annulla.
@@ -420,11 +501,13 @@ fn campagna_rifiutata_non_cambia_nulla() {
 fn anteprima_a_fasce() {
     let p = in_campagna();
     let prima = p.salva().unwrap();
-    // L'intensità 1 è la spesa di riferimento per la quota s_b degli elettori nel bersaglio.
+    // L'intensità 1 è la spesa di riferimento per la quota s_b degli elettori nel bersaglio, con
+    // la composizione dei dati (scelta 15: l'anteprima non legge quella viva).
     let d = dati_base();
-    let el = p.elettorato();
-    let pesi: Vec<f64> = (0..el.gruppi.len())
-        .map(|i| el.elettori(d.elettorato(), i))
+    let e = d.elettorato();
+    let per_regione = e.gruppi.len() / e.regioni.len();
+    let pesi: Vec<f64> = (e.gruppi.iter().enumerate())
+        .map(|(i, g)| g.quota * e.regioni[i / per_regione].elettori as f64)
         .collect();
     let studenti: f64 = (pesi.iter().enumerate())
         .filter(|(i, _)| condizione_di(*i) == Condizione::Studente)
@@ -454,6 +537,10 @@ fn anteprima_a_fasce() {
             "{}",
             v.causa
         );
+        // t9: l'intensità 1 è il 100% della spesa di riferimento su tutto l'elettorato.
+        if intensita == Intensita::Molto {
+            assert!(v.causa.contains("è il 100% di quello"), "{}", v.causa);
+        }
     }
     assert_eq!(p.salva().unwrap(), prima);
 }

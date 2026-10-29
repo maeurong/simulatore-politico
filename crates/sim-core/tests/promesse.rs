@@ -1,5 +1,6 @@
 mod comune;
 use comune::{chiudi_col_bilancio, dati_base, edita};
+use sim_core::legislatura::Fase;
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
 
@@ -29,11 +30,11 @@ fn in_vigore(p: &Partita, id: &str) -> (usize, usize) {
     (d, p.disposizioni().voci[d].in_vigore)
 }
 
-/// «Disposizione: gradino», il nome di una promessa.
+/// «Disposizione: gradino», il nome di una promessa fra caporali.
 fn nome(d: usize, g: usize) -> String {
     let dati = dati_base();
     let x = &dati.disposizioni()[d];
-    format!("{}: {}", x.nome, x.gradini[g].nome)
+    format!("«{}: {}»", x.nome, x.gradini[g].nome)
 }
 
 /// Un gradino della disposizione `d` diverso dal vigente in `p`.
@@ -46,18 +47,29 @@ fn altro_gradino(p: &Partita, d: usize) -> usize {
 /// dopo la chiusura e le mosse del suo partito.
 fn al_voto_con(p: &Partita, promesse: &[(usize, usize)], turni: u32) -> (f64, Vec<String>) {
     let g = p.giocatore();
-    let mut p = edita(p, |j| {
-        j["partiti"][g]["promesse"] = serde_json::json!(promesse);
-        j["partiti"][g]["turni_da_presidente"] = turni.into();
+    let p = chiuso_con(p, g, promesse, turni);
+    (p.partiti()[g].valence, mosse_di(&p, g))
+}
+
+/// Il partito `j` di `p` con le promesse in sospeso `promesse` e `turni` turni da presidente;
+/// chiude il turno.
+fn chiuso_con(p: &Partita, j: usize, promesse: &[(usize, usize)], turni: u32) -> Partita {
+    let mut p = edita(p, |x| {
+        x["partiti"][j]["promesse"] = serde_json::json!(promesse);
+        x["partiti"][j]["turni_da_presidente"] = turni.into();
     })
     .unwrap();
     p.chiudi_turno();
-    let id = p.partiti()[g].id.clone();
-    let mosse = (p.vista().mosse.into_iter())
+    p
+}
+
+/// Le mosse del partito `j` nell'ultima chiusura di `p`.
+fn mosse_di(p: &Partita, j: usize) -> Vec<String> {
+    let id = p.partiti()[j].id.clone();
+    (p.vista().mosse.into_iter())
         .filter(|m| m.partito == id)
         .map(|m| m.testo)
-        .collect();
-    (p.partiti()[g].valence, mosse)
+        .collect()
 }
 
 /// Mantenuta: il gradino promesso è in vigore al voto dopo. Con 3 turni chiusi da presidente la
@@ -138,9 +150,113 @@ fn al_voto_la_promessa_resta_in_sospeso() {
     assert_eq!(p.partiti()[g].promesse, vec![(d, gr)]);
     assert!(p.vista().partiti[g].promesse[0].in_sospeso);
     assert!(p.partiti().iter().all(|x| x.turni_da_presidente == 0));
+    // R29: in trattativa l'uscente non presiede il governo; il contatore riparte in fase
+    // ordinaria.
+    assert_eq!(p.legislatura().fase, Fase::Trattativa);
+    let uscente = p.governo().presidente;
+    p.chiudi_turno();
+    assert_eq!(p.partiti()[uscente].turni_da_presidente, 0);
+    assert_eq!(p.legislatura().fase, Fase::Ordinaria);
     let pc = p.governo().presidente;
     p.chiudi_turno();
     assert_eq!(p.partiti()[pc].turni_da_presidente, 1);
+}
+
+/// R29: a Camere sciolte il presidente è dimissionario e il turno non conta. Alla partita
+/// fondata (turno 0, Camere sciolte) il presidente IA con 3 turni resta a 3 e la promessa esce
+/// senza riga; con 4 conta.
+#[test]
+fn a_camere_sciolte_il_turno_da_presidente_non_conta() {
+    let p = comune::fondata(1.5);
+    assert_eq!(p.legislatura().fase, Fase::Sciolta);
+    let pc = p.governo().presidente;
+    assert_ne!(pc, p.giocatore());
+    let (d, _) = in_vigore(&p, "eta_pensionabile");
+    let g = altro_gradino(&p, d);
+    let promessa = |m: &[String]| m.iter().any(|x| x.starts_with("Promessa"));
+    assert!(!promessa(&mosse_di(&chiuso_con(&p, pc, &[(d, g)], 3), pc)));
+    assert!(promessa(&mosse_di(&chiuso_con(&p, pc, &[(d, g)], 4), pc)));
+}
+
+/// La quota fra i votanti del giocatore all'ultimo voto di `p`.
+fn quota_al_voto(p: &Partita) -> f64 {
+    let id = &p.partiti()[p.giocatore()].id;
+    (p.vista().elezioni[0].voti.iter())
+        .find(|v| &v.partito == id)
+        .unwrap()
+        .quota
+}
+
+/// t10: al voto la promessa mancata toglie 1,5-2 volte i voti che la mantenuta dà
+/// (effetti-della-campagna-e-promesse:61).
+#[test]
+fn la_mancata_pesa_da_una_volta_e_mezza_a_due_la_mantenuta() {
+    let p = in_campagna();
+    let g = p.giocatore();
+    let (d, vigente) = in_vigore(&p, "eta_pensionabile");
+    let altro = altro_gradino(&p, d);
+    let senza = quota_al_voto(&chiuso_con(&p, g, &[], 3));
+    let su = quota_al_voto(&chiuso_con(&p, g, &[(d, vigente)], 3)) - senza;
+    let giu = senza - quota_al_voto(&chiuso_con(&p, g, &[(d, altro)], 3));
+    let r = giu / su;
+    eprintln!("t10: mantenuta +{su}, mancata -{giu}, rapporto {r}");
+    assert!((1.5..=2.0).contains(&r), "{r} {su} {giu}");
+}
+
+/// R28 (sp1, C4): alla partita fondata, nella chiusura del turno 0, il presidente dello scenario
+/// e gli altri partiti IA promettono, anche senza seggi.
+#[test]
+fn al_turno_zero_promettono_il_presidente_e_gli_altri_partiti_ia() {
+    let mut p = comune::fondata(1.5);
+    let g = p.giocatore();
+    let pc = p.governo().presidente;
+    assert_ne!(pc, g);
+    let ia: Vec<usize> = (0..p.partiti().len())
+        .filter(|&j| j != g && !p.partiti()[j].sciolto)
+        .collect();
+    assert!(ia.contains(&pc));
+    p.chiudi_turno();
+    for j in ia {
+        let m = mosse_di(&p, j);
+        let promette: Vec<&String> = m.iter().filter(|x| x.starts_with("Promette «")).collect();
+        eprintln!("{}: {promette:?}", p.partiti()[j].id);
+        assert_eq!(promette.len(), 1, "{}: {m:?}", p.partiti()[j].id);
+    }
+}
+
+/// R30: una promessa su una disposizione senza posizione (l'elettorale) non costa intesa, anche
+/// all'alleato a 40.
+#[test]
+fn la_promessa_senza_posizione_non_costa_intesa() {
+    let p = in_campagna();
+    let cd = comune::partito("centrodestra");
+    assert!(p.alleati().contains(&cd));
+    let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = 40.0.into()).unwrap();
+    let dati = dati_base();
+    let (k, elettorale) = (dati.disposizioni().iter().enumerate())
+        .find(|(_, x)| x.gradini.iter().all(|g| g.posizione.is_none()))
+        .unwrap();
+    let gr = altro_gradino(&p, k);
+    prometti(&mut p, &[(&elettorale.id, &elettorale.gradini[gr].id)]).unwrap();
+    assert_eq!(p.intesa().valori[cd], 40.0);
+    let promessa = (p.intesa().variazioni.iter()).any(|v| v.causa == CausaIntesa::Promessa);
+    assert!(!promessa);
+}
+
+/// t7: il giocatore che non governa promette senza toccare l'intesa, anche la promessa che
+/// allontana un alleato a 50 dalla sua posizione.
+#[test]
+fn chi_non_governa_promette_senza_costo_d_intesa() {
+    let p = comune::fondata(1.5);
+    assert!(!p.governa());
+    let alleato = p.alleati()[0];
+    let mut p = edita(&p, |j| j["intesa"]["valori"][alleato] = 50.0.into()).unwrap();
+    let x = p.partiti()[alleato].posizione_dichiarata;
+    let (d, g, guadagno) = estrema(&p, x, -1.0);
+    assert!(guadagno < 0.0);
+    let prima = p.intesa().clone();
+    prometti(&mut p, &[(&d, &g)]).unwrap();
+    assert_eq!(p.intesa(), &prima);
 }
 
 /// Il gradino della disposizione `d` diverso dal vigente che fa guadagnare di più (`verso` = 1) o
@@ -195,6 +311,11 @@ fn la_promessa_costa_intesa_agli_alleati_con_linea_no() {
         dati.manopola("intesa_promessa") * lontana.partiti()[cd].vocazione.peso_politiche(&dati);
     assert!(costo > 0.0);
     assert_eq!(della_promessa(&lontana), vec![-costo]);
+    // k9: la linea include l'intesa, la causa dice che non la condivide.
+    assert_eq!(
+        CausaIntesa::Promessa.to_string(),
+        "promessa che non condivide"
+    );
     assert!((lontana.intesa().valori[cd] - (prima - costo)).abs() < 1e-12);
     let (d, g, guadagno) = estrema(&p, x, 1.0);
     assert!(guadagno > 0.0, "{d} {g} {guadagno}");
@@ -269,9 +390,9 @@ fn promessa_rifiutata_non_cambia_nulla() {
     rifiutato(
         &mut p,
         &[("nessuna", "x")],
-        "Disposizione sconosciuta: nessuna",
+        "Disposizione sconosciuta «nessuna»",
     );
-    rifiutato(&mut p, &[(e, "nessuno")], "Gradino sconosciuto: nessuno");
+    rifiutato(&mut p, &[(e, "nessuno")], "Gradino sconosciuto «nessuno»");
     let (_, vigente_ora) = in_vigore(&p, e);
     assert_eq!(vigente_ora, vigente);
     rifiutato(
@@ -279,17 +400,19 @@ fn promessa_rifiutata_non_cambia_nulla() {
         &[(e, &x.gradini[vigente].id)],
         &format!("Già in vigore: {}", nome(d, vigente)),
     );
-    let g2 = altro_gradino(&p, d);
-    rifiutato(
-        &mut p,
-        &[(e, &altro), (e, &altro)],
-        &format!("Promessa ripetuta: {}", nome(d, g2)),
-    );
+    let ripetuta = format!("Due promesse sulla stessa disposizione: {}", x.nome);
+    rifiutato(&mut p, &[(e, &altro), (e, &altro)], &ripetuta);
+    // Gradini diversi sulla stessa disposizione: stesso rifiuto.
+    let terzo = (x.gradini.iter().enumerate())
+        .find(|&(k, gr)| k != vigente && gr.id != altro)
+        .map(|(_, gr)| gr.id.clone())
+        .unwrap();
+    rifiutato(&mut p, &[(e, &altro), (e, &terzo)], &ripetuta);
     prometti(&mut p, &[(e, &altro)]).unwrap();
     rifiutato(
         &mut p,
         &[(e, &altro)],
-        "Promesse già fatte in questa campagna",
+        "Promesse già fatte in questa campagna elettorale",
     );
 }
 

@@ -235,7 +235,7 @@ impl Partita {
                 return self.confermativo(*misura, *chiedi);
             }
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
-            Comando::Campagna { spese } => return self.campagna(spese.clone()),
+            Comando::Campagna { spese } => return self.campagna(spese),
             Comando::Prometti { promesse } => return self.prometti(promesse),
             _ => {}
         }

@@ -138,4 +138,8 @@ mosse: Array<MossaIa>,
  * Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
  * giocatore Presidente del Consiglio.
  */
-programma: Array<VoceProgramma>, campagna: VistaCampagna, };
+programma: Array<VoceProgramma>, 
+/**
+ * La campagna del giocatore: spese scelte e se il comando è ammesso.
+ */
+campagna: VistaCampagna, };

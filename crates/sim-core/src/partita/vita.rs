@@ -252,8 +252,8 @@ impl Partita {
     }
 
     /// In coda al voto: un partito IA attivo senza seggi in entrambe le Camere conta un'elezione in
-    /// più, altrimenti il conto riparte; a `ELEZIONI_SENZA_SEGGI` si scioglie, con la sua riga. Lo
-    /// sciolto esce dalle coalizioni dell'ultimo voto (quella che resta di un partito solo cade) e
+    /// più, altrimenti il conto riparte; a `ELEZIONI_SENZA_SEGGI` si scioglie, con la sua riga, e
+    /// perde campagna e promesse, anche quelle in sospeso. Lo sciolto esce dalle coalizioni dell'ultimo voto (quella che resta di un partito solo cade) e
     /// dall'incarico IA. Il giocatore no: senza seggi la partita finisce già.
     pub(super) fn scioglimenti(&mut self) {
         let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
@@ -273,6 +273,9 @@ impl Partita {
             };
             if p.senza_seggi >= ELEZIONI_SENZA_SEGGI {
                 p.sciolto = true;
+                p.campagna.clear();
+                p.promesse_campagna.clear();
+                p.promesse.clear();
                 sciolti.push(j);
             }
         }

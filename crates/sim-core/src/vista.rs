@@ -90,6 +90,7 @@ pub struct Vista {
     /// Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
     /// giocatore Presidente del Consiglio.
     pub programma: Vec<VoceProgramma>,
+    /// La campagna del giocatore: spese scelte e se il comando è ammesso.
     pub campagna: VistaCampagna,
 }
 

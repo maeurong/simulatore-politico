@@ -78,6 +78,8 @@ fn lo_sciolto_non_incassa() {
     assert!(p.legislatura().elezioni[0].voti[0].quota > 0.0);
     let mut p = edita(&p, |j| {
         j["partiti"][0]["sciolto"] = true.into();
+        // Lo sciolto non tiene le promesse fatte al voto (`carica` lo rifiuta).
+        j["partiti"][0]["promesse"] = serde_json::json!([]);
         for ramo in ["seggi_camera", "seggi_senato"] {
             let v = &mut j["parlamento"][ramo];
             let x = v[0].as_u64().unwrap();
