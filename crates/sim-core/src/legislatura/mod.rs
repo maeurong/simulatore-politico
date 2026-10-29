@@ -54,6 +54,9 @@ pub enum Fase {
 /// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
 /// `protesta`: in questa legislatura è già nato un partito di protesta; azzerata al voto.
 /// `frange`: i partiti nati da una scissione in questa legislatura; azzerate al voto.
+/// `coalizioni_ia`: nel turno del voto, la coalizione del giocatore dell'ultimo voto (se c'è) e
+/// quelle ricomposte dai partiti IA in apertura; al voto prendono il posto di `coalizioni`, che
+/// resta il patto dell'ultimo voto per le rotture d'impegno. Azzerate al voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -73,6 +76,7 @@ pub struct Legislatura {
     pub riposizionato: bool,
     pub protesta: bool,
     pub frange: Vec<usize>,
+    pub coalizioni_ia: Option<Vec<Vec<usize>>>,
 }
 
 impl Legislatura {

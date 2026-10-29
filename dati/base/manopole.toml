@@ -1327,3 +1327,10 @@ valore = 0.12
 min = 0.05
 max = 0.3
 ticket = "18"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca (di quanto il valore atteso di una mossa deve superare quello dello stare perché un partito IA cambi coalizione nella campagna)
+[margine_coalizione]
+valore = 0.01
+min = 0.0
+max = 0.1
+ticket = "18"

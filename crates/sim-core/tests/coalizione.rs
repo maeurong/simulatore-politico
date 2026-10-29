@@ -221,3 +221,83 @@ fn cedere_i_seggi_attesi_meno_uno_lascia_un_seggio() {
         assert!(prima == 0 || dopo >= 1, "{prima} -> {dopo}");
     }
 }
+
+fn al_turno(p: &mut Partita, t: u32) {
+    while p.vista().turno < t {
+        comune::chiudi_col_bilancio(p);
+    }
+}
+
+/// Partita di prova: all'apertura del turno 19, la campagna, i partiti IA ricompongono le
+/// coalizioni in `coalizioni_ia`; il patto dell'ultimo voto resta in `coalizioni` fino al voto,
+/// che azzera le prime e scrive nelle seconde quelle con cui si è votato.
+#[test]
+fn le_coalizioni_ia_non_toccano_il_patto_dell_ultimo_voto() {
+    let mut p = Partita::nuova(comune::dati_base(), 1);
+    al_turno(&mut p, 18);
+    let patto = p.legislatura().coalizioni.clone();
+    assert!(p.legislatura().coalizioni_ia.is_none());
+    comune::chiudi_col_bilancio(&mut p);
+    assert_eq!(p.vista().turno, 19);
+    assert_eq!(p.legislatura().coalizioni, patto);
+    let ia = p.legislatura().coalizioni_ia.clone().unwrap();
+    assert!(ia.contains(&vec![4, 5]), "{ia:?}");
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+    comune::chiudi_col_bilancio(&mut p);
+    let l = p.legislatura();
+    assert!(l.coalizioni_ia.is_none());
+    let ids =
+        |c: &[usize]| -> Vec<String> { c.iter().map(|&j| p.partiti()[j].id.clone()).collect() };
+    let al_voto: Vec<Vec<String>> = l.coalizioni.iter().map(|c| ids(c)).collect();
+    assert_eq!(al_voto, l.elezioni[0].coalizioni);
+    let mut attese: Vec<Vec<usize>> = ia.into_iter().filter(|c| c.len() >= 2).collect();
+    attese.sort();
+    let mut votate = l.coalizioni.clone();
+    votate.sort();
+    assert_eq!(votate, attese);
+}
+
+/// Al turno zero la campagna dei partiti IA non gira: si vota con le coalizioni dello scenario.
+#[test]
+fn senza_campagna_restano_le_coalizioni_dell_ultimo_voto() {
+    let mut p = fondata(5.5);
+    assert!(p.legislatura().coalizioni_ia.is_none());
+    assert_eq!(p.legislatura().coalizioni, vec![vec![1, 2], vec![4, 5]]);
+    p.chiudi_turno();
+    assert!(p.legislatura().coalizioni_ia.is_none());
+    assert_eq!(
+        p.legislatura().coalizioni,
+        vec![vec![7], vec![1, 2], vec![4, 5]]
+    );
+}
+
+/// `carica` rifiuta le coalizioni IA con un partito fuori dai partiti, ripetuto o sciolto.
+#[test]
+fn carica_rifiuta_coalizioni_ia_non_valide() {
+    let mut p = Partita::nuova(comune::dati_base(), 1);
+    al_turno(&mut p, 19);
+    let con = |c: serde_json::Value| comune::edita(&p, |j| j["legislatura"]["coalizioni_ia"] = c);
+    assert!(con(serde_json::json!([[4, 5], [0, 1]])).is_ok());
+    for c in [
+        serde_json::json!([[4, 5], [0, 9]]),
+        serde_json::json!([[4, 5], [0, 4]]),
+    ] {
+        let e = con(c).unwrap_err();
+        assert!(e.to_string().contains("coalizioni_ia"), "{e}");
+    }
+    // L'estrema sinistra sciolta, coi suoi seggi passati alla sinistra.
+    let sciolta = |c: serde_json::Value| {
+        comune::edita(&p, |j| {
+            j["partiti"][0]["sciolto"] = true.into();
+            for ramo in ["seggi_camera", "seggi_senato"] {
+                let v = j["parlamento"][ramo].as_array_mut().unwrap();
+                let n = v[0].as_u64().unwrap() + v[1].as_u64().unwrap();
+                v[0] = 0.into();
+                v[1] = n.into();
+            }
+            j["legislatura"]["coalizioni_ia"] = c;
+        })
+    };
+    assert!(sciolta(serde_json::json!([[4, 5], [1, 2]])).is_ok());
+    assert!(sciolta(serde_json::json!([[4, 5], [0, 1]])).is_err());
+}

@@ -232,6 +232,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "soglia_scissione",
     "minaccia_scissione",
     "quota_scissione",
+    "margine_coalizione",
     "peso_seggi_coalizione",
     "peso_governare",
     "peso_distanza_coalizione",

@@ -9,7 +9,7 @@ use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, Fase, movimento};
+use crate::legislatura::{self, Dichiarazione, Fase, Quadro, movimento, quota_fra_i_votanti};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::partiti::Regola;
 use crate::vista::MossaIa;
@@ -115,14 +115,138 @@ impl Partita {
     }
 
     /// Nell'apertura del turno del voto, in ogni fase e a partita non finita: la campagna dei
-    /// partiti IA (movimenti, poi protesta). Mai al turno zero, che non passa da qui (scelta 18
-    /// del piano 8b).
+    /// partiti IA (movimenti, protesta, coalizioni). Mai al turno zero, che non passa da qui
+    /// (scelta 18 del piano 8b).
     pub(super) fn apertura_campagna(&mut self) {
         if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
             return;
         }
         self.movimenti_ia();
         self.protesta();
+        self.coalizioni_ia();
+    }
+
+    /// Il valore atteso di ogni partito al voto con `d` (`Quadro::valore`), sul sondaggio
+    /// pubblico con le coalizioni `ultime`: un riparto solo per tutti.
+    pub(super) fn valori(&self, d: &Dichiarazione, ultime: &[Vec<usize>]) -> Vec<f64> {
+        let q = Quadro {
+            ultime,
+            ..self.quadro()
+        };
+        let seggi = q.seggi(d);
+        (0..self.partiti.len())
+            .map(|j| q.termini(d, &seggi, j).iter().map(|t| t.1).sum())
+            .collect()
+    }
+
+    /// Le coalizioni IA pre-voto (scelta 11 del piano 8b; formazione-di-coalizioni:13,
+    /// abm-elettorali:35). Liberi: i partiti IA attivi fuori dalla coalizione del giocatore
+    /// (`dichiarazione_corrente`). Si parte dalle coalizioni dell'ultimo voto ristrette ai liberi;
+    /// chi resta fuori corre da solo. Fino a 10 giri; in ogni giro ogni libero, per quota nel
+    /// sondaggio (a parità l'indice), può restare, correre da solo o entrare in un gruppo con un
+    /// membro accanto a lui nella fila per dichiarata dei partiti attivi, anche di un partito solo,
+    /// se nessun membro ci perde; fa la mossa che gli vale di più (a parità la prima: da solo, poi
+    /// i gruppi in ordine), se supera lo stare di `margine_coalizione`. In `coalizioni_ia` la
+    /// coalizione del giocatore dell'ultimo voto, se c'è, poi i gruppi di almeno due partiti; una
+    /// riga per mossa.
+    fn coalizioni_ia(&mut self) {
+        let (g, d) = (self.giocatore, self.dichiarazione_corrente());
+        let attivo = |j: usize| self.partiti.get(j).is_some_and(|p| !p.sciolto);
+        let libero = |j: &usize| *j != g && attivo(*j) && !d.partiti.contains(j);
+        let ultime = &self.legislatura.coalizioni;
+        let sua: Vec<Vec<usize>> = ultime.iter().filter(|c| c.contains(&g)).cloned().collect();
+        let mut gruppi: Vec<Vec<usize>> = (ultime.iter())
+            .map(|c| c.iter().copied().filter(libero).collect::<Vec<_>>())
+            .filter(|c| !c.is_empty())
+            .collect();
+        for j in (0..self.partiti.len()).filter(libero) {
+            if !gruppi.iter().flatten().any(|&i| i == j) {
+                gruppi.push(vec![j]);
+            }
+        }
+        let quota = |j: usize| quota_fra_i_votanti(&self.informazione.sondaggio, j);
+        let mut ordine: Vec<usize> = gruppi.iter().flatten().copied().collect();
+        ordine.sort_by(|&a, &b| quota(b).total_cmp(&quota(a)).then(a.cmp(&b)));
+        let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
+        let mut fila: Vec<usize> = (0..self.partiti.len()).filter(|&j| attivo(j)).collect();
+        fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+        let posto = |j: usize| fila.iter().position(|&i| i == j);
+        let accanto = |j: usize, c: &[usize]| {
+            (c.iter()).any(|&m| {
+                posto(j)
+                    .zip(posto(m))
+                    .is_some_and(|(a, b)| a.abs_diff(b) == 1)
+            })
+        };
+        let al_voto = |gruppi: &[Vec<usize>]| -> Vec<Vec<usize>> {
+            (sua.iter().chain(gruppi.iter().filter(|c| c.len() >= 2)))
+                .cloned()
+                .collect()
+        };
+        let di = |v: &[f64], j: usize| v.get(j).copied().unwrap_or(0.0);
+        let margine = self.dati.manopola("margine_coalizione");
+        let mut base = self.valori(&d, &al_voto(&gruppi));
+        // (chi si muove, il gruppo in cui entra; vuoto se corre da solo)
+        let mut righe: Vec<(usize, Vec<usize>)> = Vec::new();
+        for _ in 0..10 {
+            let mut mosso = false;
+            for &j in &ordine {
+                let compagni: Vec<usize> = (gruppi.iter().find(|c| c.contains(&j)))
+                    .map(|c| c.iter().copied().filter(|&i| i != j).collect())
+                    .unwrap_or_default();
+                let resto: Vec<Vec<usize>> = (gruppi.iter())
+                    .map(|c| c.iter().copied().filter(|&i| i != j).collect::<Vec<_>>())
+                    .filter(|c| !c.is_empty())
+                    .collect();
+                let mut mosse: Vec<(Vec<Vec<usize>>, Vec<usize>)> = Vec::new();
+                if !compagni.is_empty() {
+                    let mut x = resto.clone();
+                    x.push(vec![j]);
+                    mosse.push((x, Vec::new()));
+                }
+                for (k, c) in resto.iter().enumerate() {
+                    if *c != compagni && accanto(j, c) {
+                        let mut x = resto.clone();
+                        if let Some(c) = x.get_mut(k) {
+                            c.push(j);
+                        }
+                        mosse.push((x, c.clone()));
+                    }
+                }
+                let (mut soglia, mut meglio) = (di(&base, j) + margine, None);
+                for (x, membri) in mosse {
+                    let v = self.valori(&d, &al_voto(&x));
+                    let assenso = membri.iter().all(|&m| di(&v, m) >= di(&base, m));
+                    if assenso && di(&v, j) > soglia {
+                        soglia = di(&v, j);
+                        meglio = Some((v, x, membri));
+                    }
+                }
+                if let Some((v, x, membri)) = meglio {
+                    (base, gruppi) = (v, x);
+                    righe.push((j, membri));
+                    mosso = true;
+                }
+            }
+            if !mosso {
+                break;
+            }
+        }
+        self.legislatura.coalizioni_ia = Some(al_voto(&gruppi));
+        for (j, membri) in righe {
+            let testo = if membri.is_empty() {
+                "Corre da solo: nel valore atteso ci guadagna".to_string()
+            } else {
+                let nomi: Vec<String> = (membri.iter().filter_map(|&m| self.partiti.get(m)))
+                    .map(|p| p.nome.clone())
+                    .collect();
+                format!(
+                    "Entra in coalizione con {}: nel valore atteso ci guadagna",
+                    elenco(&nomi)
+                )
+            };
+            self.mossa(j, testo);
+        }
     }
 
     /// La regola di movimento (scelta 4 del piano 8b): i partiti IA attivi, in ordine d'indice,
@@ -538,6 +662,65 @@ impl Partita {
                 self.mossa(pc, testo.into());
             }
         }
+    }
+
+    /// Il governo avversario col valore atteso (scelta 12 del piano 8b; formazione-di-coalizioni:13,
+    /// :22). Fila: i partiti con seggi senza il giocatore, per dichiarata (a parità l'indice).
+    /// Formatore: il primo della fila per seggi (Camera più Senato, a parità l'indice più basso).
+    /// Fra le finestre della fila che lo comprendono e hanno la maggioranza in entrambe le Camere,
+    /// quella che gli vale di più (`valore_al_governo` coi seggi veri, con la guida), purché ogni
+    /// membro ci guadagni (valore positivo; il formatore con la guida); a parità la meno numerosa
+    /// in seggi, poi gli indici. I partiti nell'ordine della fila; nessuna, `None`.
+    pub(super) fn maggioranza_ia(&self) -> Option<Vec<usize>> {
+        let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
+        let seggi = |j: usize| {
+            let di = |v: &[u32]| u64::from(v.get(j).copied().unwrap_or(0));
+            di(camera) + di(senato)
+        };
+        let pos = |j: usize| self.partiti.get(j).map_or(0.0, |p| p.posizione_dichiarata);
+        let mut fila: Vec<usize> = (0..self.partiti.len())
+            .filter(|&j| seggi(j) > 0 && j != self.giocatore)
+            .collect();
+        fila.sort_by(|&a, &b| pos(a).total_cmp(&pos(b)).then(a.cmp(&b)));
+        let f = legislatura::primo_per_seggi(&fila, camera, senato)?;
+        let q = self.quadro_veri();
+        let vale = |w: &[usize], j: usize| legislatura::valore_al_governo(&q, j, w, j == f);
+        (1..=fila.len())
+            .flat_map(|n| fila.windows(n))
+            .filter(|w| w.contains(&f) && legislatura::maggioranza(camera, senato, w))
+            .filter(|w| w.iter().all(|&j| vale(w, j) > 0.0))
+            .map(|w| {
+                let mut indici = w.to_vec();
+                indici.sort_unstable();
+                (
+                    vale(w, f),
+                    w.iter().map(|&j| seggi(j)).sum::<u64>(),
+                    indici,
+                    w,
+                )
+            })
+            .max_by(|a, b| {
+                (a.0.total_cmp(&b.0))
+                    .then(b.1.cmp(&a.1))
+                    .then(b.2.cmp(&a.2))
+            })
+            .map(|(_, _, _, w)| w.to_vec())
+    }
+
+    /// La riga del formatore che forma il governo IA con `coalizione`.
+    pub(super) fn riga_del_formatore(&mut self, formatore: usize, coalizione: &[usize]) {
+        let nomi: Vec<String> = (coalizione.iter().filter(|&&j| j != formatore))
+            .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.clone()))
+            .collect();
+        let testo = if nomi.is_empty() {
+            "Forma il governo da solo: la maggioranza che gli vale di più".to_string()
+        } else {
+            format!(
+                "Forma il governo con {}: la maggioranza che gli vale di più",
+                elenco(&nomi)
+            )
+        };
+        self.mossa(formatore, testo);
     }
 
     /// Il voto anticipato si decide: governo IA in carica, fase ordinaria, dal quinto turno della
@@ -1244,6 +1427,90 @@ mod tests {
             .find(|m| m.promotore == Some(j))
             .expect("una candidata col guadagno positivo c'è");
         assert_eq!(guadagno(&p, &m.valori), massimo);
+    }
+
+    /// La partita di prova (seme 1) all'apertura del turno 19, la campagna.
+    fn al_turno_19() -> Partita {
+        let mut p = Partita::nuova(crate::dati::dati_base(), 1);
+        while p.turno < 19 {
+            if p.governa()
+                && let Some(bilancio) = p.bozza_bilancio()
+            {
+                p.applica(Comando::PresentaBilancio { bilancio }).unwrap();
+            }
+            p.chiudi_turno();
+        }
+        p
+    }
+
+    /// Al turno 19 nessun partito IA libero ha una mossa singola che gli valga più di
+    /// `margine_coalizione`: correre da solo, o entrare in un gruppo con un membro accanto a lui
+    /// nella fila per dichiarata (nessun partito attivo fra i due), se nessun membro ci perde.
+    #[test]
+    fn le_coalizioni_ia_sono_un_equilibrio() {
+        let p = al_turno_19();
+        let (g, d) = (p.giocatore, p.dichiarazione_corrente());
+        let margine = p.dati.manopola("margine_coalizione");
+        let ia = p.legislatura.coalizioni_ia.clone().unwrap();
+        let (sua, mut gruppi): (Vec<_>, Vec<_>) = ia.into_iter().partition(|c| c.contains(&g));
+        let attivo = |j: usize| !p.partiti[j].sciolto;
+        let liberi: Vec<usize> = (0..p.partiti.len())
+            .filter(|&j| j != g && attivo(j) && !d.partiti.contains(&j))
+            .collect();
+        assert!(liberi.len() >= 4, "{liberi:?}");
+        for &j in &liberi {
+            if !gruppi.iter().flatten().any(|&i| i == j) {
+                gruppi.push(vec![j]);
+            }
+        }
+        let valori = |gruppi: &[Vec<usize>]| {
+            let ultime: Vec<Vec<usize>> = (sua.iter())
+                .chain(gruppi.iter().filter(|c| c.len() >= 2))
+                .cloned()
+                .collect();
+            p.valori(&d, &ultime)
+        };
+        let base = valori(&gruppi);
+        let pos = |j: usize| p.partiti[j].posizione_dichiarata;
+        let prima = |a: usize, b: usize| pos(a) < pos(b) || (pos(a) == pos(b) && a < b);
+        let accanto = |a: usize, b: usize| {
+            let (x, y) = if prima(a, b) { (a, b) } else { (b, a) };
+            !(0..p.partiti.len()).any(|k| attivo(k) && prima(x, k) && prima(k, y))
+        };
+        for &j in &liberi {
+            let compagni: Vec<usize> = (gruppi.iter().find(|c| c.contains(&j)).unwrap().iter())
+                .copied()
+                .filter(|&i| i != j)
+                .collect();
+            let resto: Vec<Vec<usize>> = (gruppi.iter())
+                .map(|c| c.iter().copied().filter(|&i| i != j).collect::<Vec<_>>())
+                .filter(|c| !c.is_empty())
+                .collect();
+            let mut mosse = Vec::new();
+            if !compagni.is_empty() {
+                let mut x = resto.clone();
+                x.push(vec![j]);
+                mosse.push((x, Vec::new()));
+            }
+            for (k, c) in resto.iter().enumerate() {
+                if *c != compagni && c.iter().any(|&m| accanto(j, m)) {
+                    let mut x = resto.clone();
+                    x[k].push(j);
+                    mosse.push((x, c.clone()));
+                }
+            }
+            for (x, membri) in mosse {
+                let v = valori(&x);
+                if membri.iter().all(|&m| v[m] >= base[m]) {
+                    assert!(
+                        v[j] <= base[j] + margine,
+                        "{j}: {x:?} {} > {}",
+                        v[j],
+                        base[j]
+                    );
+                }
+            }
+        }
     }
 
     #[test]

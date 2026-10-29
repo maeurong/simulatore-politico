@@ -193,6 +193,7 @@ impl Partita {
                 riposizionato: false,
                 protesta: false,
                 frange: Vec::new(),
+                coalizioni_ia: None,
             };
             (sciolte, n.saturating_sub(1), legislatura)
         } else {
@@ -219,6 +220,7 @@ impl Partita {
                 riposizionato: false,
                 protesta: false,
                 frange: Vec::new(),
+                coalizioni_ia: None,
             };
             (uscente, governo.presidente, legislatura)
         };
@@ -1986,9 +1988,19 @@ impl Partita {
     fn coalizioni_correnti(&self) -> Vec<Vec<usize>> {
         let l = &self.legislatura;
         if l.turno_di_voto(self.turno) {
-            coalizioni_al_voto(&l.coalizioni, self.giocatore, l.dichiarazione.as_ref())
+            coalizioni_al_voto(self.ultime(), self.giocatore, l.dichiarazione.as_ref())
         } else {
             l.coalizioni.clone()
+        }
+    }
+
+    /// Le coalizioni da cui partono quelle al voto: nel turno del voto le `coalizioni_ia`, se la
+    /// campagna le ha ricomposte, altrimenti quelle dell'ultimo voto.
+    fn ultime(&self) -> &[Vec<usize>] {
+        let l = &self.legislatura;
+        match &l.coalizioni_ia {
+            Some(c) if l.turno_di_voto(self.turno) => c,
+            _ => &l.coalizioni,
         }
     }
 
@@ -2073,6 +2085,7 @@ impl Partita {
         l.riposizionato = false;
         l.protesta = false;
         l.frange.clear();
+        l.coalizioni_ia = None;
         l.inizio = turno.saturating_add(1);
         l.scadenza = turno.saturating_add((4.0 * leve.durata_legislatura).round() as u32);
         l.fase = Fase::Trattativa;
@@ -2090,7 +2103,7 @@ impl Partita {
             sondaggio: &self.informazione.sondaggio,
             legge: self.legge_elettorale(),
             leve: self.disposizioni.leve(&self.dati),
-            ultime: &self.legislatura.coalizioni,
+            ultime: self.ultime(),
             giocatore: self.giocatore,
             intesa: &self.intesa.valori,
             alleati: if self.governo.presidente == self.giocatore {
@@ -2454,13 +2467,14 @@ impl Partita {
     /// riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)`; con l'incarico IA il
     /// primo partito per seggi e la spartizione di default, e ogni alleato riparte da
     /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
-    /// gli allargati) né incarico IA, il Capo dello Stato cerca la maggioranza contigua senza il
-    /// giocatore (formazione-di-coalizioni:13), governo IA come sopra; senza nemmeno quella
-    /// scioglie le Camere: si vota nella chiusura del turno dopo. Se l'uscente resta fuori dal
-    /// governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che il voto appena
-    /// passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi ministri tutti nuovi,
-    /// giudizio da zero per chi entra al governo, l'ultimatum sul valore di partenza (l'alleato
-    /// che entra sotto la soglia lo pone subito, chi non è più alleato non ne ha), fase ordinaria.
+    /// gli allargati) né incarico IA, il formatore sceglie la maggioranza che gli vale di più
+    /// (`maggioranza_ia`, scelta 12 del piano 8b), governo IA come sopra con la sua riga; senza
+    /// nemmeno quella le Camere si sciolgono: si vota nella chiusura del turno dopo. Se l'uscente
+    /// resta fuori dal governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che
+    /// il voto appena passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi
+    /// ministri tutti nuovi, giudizio da zero per chi entra al governo, l'ultimatum sul valore di
+    /// partenza (l'alleato che entra sotto la soglia lo pone subito, chi non è più alleato non ne
+    /// ha), fase ordinaria.
     fn forma_governo(&mut self) {
         // Il ribaltone senza scelta chiede la guida (decisione 1 di Mario); rifiutata, o senza
         // `Guida` aperta, nulla cambia.
@@ -2475,15 +2489,10 @@ impl Partita {
             (self.giocatore, sua, self.assegnati_dal_giocatore())
         } else {
             let ia = match &self.legislatura.incarico {
-                Some(Incarico::Ia { coalizione }) => Some(coalizione.clone()),
-                _ => legislatura::maggioranza_contigua(
-                    &self.partiti,
-                    camera,
-                    senato,
-                    Some(self.giocatore),
-                ),
+                Some(Incarico::Ia { coalizione }) => Some((coalizione.clone(), false)),
+                _ => self.maggioranza_ia().map(|k| (k, true)),
             };
-            let Some(coalizione) = ia else {
+            let Some((coalizione, scelta)) = ia else {
                 let l = &mut self.legislatura;
                 l.fase = Fase::Sciolta;
                 l.incarico = None;
@@ -2493,6 +2502,9 @@ impl Partita {
                 return;
             };
             let guida = (self.primo_per_seggi(&coalizione)).unwrap_or(self.giocatore);
+            if scelta {
+                self.riga_del_formatore(guida, &coalizione);
+            }
             let nessuno = vec![None; self.dati.dicasteri().len()];
             let v = legislatura::spartizione_di_default(
                 &self.dati,
@@ -3500,6 +3512,7 @@ impl Partita {
             _ => &[],
         };
         let mut con_sciolti = (self.legislatura.coalizioni.iter().flatten())
+            .chain(self.legislatura.coalizioni_ia.iter().flatten().flatten())
             .chain(incarico)
             .chain(&self.legislatura.allargati)
             .chain(self.legislatura.maggioranza.iter().flatten())
@@ -3547,6 +3560,11 @@ impl Partita {
         ok(
             l.frange.iter().all(|&j| j < n) && unici(l.frange.iter().copied()),
             "legislatura.frange con un partito fuori dai partiti o ripetuto",
+        )?;
+        let ia = l.coalizioni_ia.iter().flatten().flatten().copied();
+        ok(
+            ia.clone().all(|j| j < n) && unici(ia),
+            "legislatura.coalizioni_ia con un partito fuori dai partiti o in due coalizioni",
         )?;
         ok(
             l.dichiarazione.as_ref().is_none_or(|d| {

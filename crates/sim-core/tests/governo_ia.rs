@@ -250,6 +250,38 @@ fn l_incarico_ia_del_voto_vince_sulla_contigua() {
     assert_eq!(p.governo().coalizione, vec![0, 6]);
 }
 
+/// In trattativa senza incarico la destra (5), prima per seggi, forma il governo: col centrodestra
+/// (4, posizione 5) ha 240 seggi su 400 e 120 su 200, con l'estrema destra (6, identitaria) 210 e
+/// 105. La contigua a regole prenderebbe il centrodestra, con più seggi; il formatore guarda la
+/// distanza. Con l'estrema destra a 6,5 sceglie lei (mezzo punto contro uno); a 6,9 gli varrebbe
+/// ancora di più, ma lei al governo ci perde (`0,5 · (4q + 2) − 1,5 · 0,9 < 0` con la sua quota
+/// `q` dei seggi sotto 0,175): resta il centrodestra.
+#[test]
+fn il_formatore_sceglie_la_maggioranza_che_gli_vale_di_piu() {
+    let mut base = fondata(1.5);
+    base.chiudi_turno();
+    for (posizione, attesa) in [(6.5, [5, 6]), (6.9, [4, 5])] {
+        let mut p = comune::edita(&base, |j| {
+            j["legislatura"]["incarico"] = serde_json::Value::Null;
+            j["parlamento"]["seggi_camera"] = json!([20, 20, 20, 20, 90, 150, 60, 20]);
+            j["parlamento"]["seggi_senato"] = json!([10, 10, 10, 10, 45, 75, 30, 10]);
+            j["partiti"][6]["posizione_dichiarata"] = posizione.into();
+        })
+        .unwrap();
+        p.chiudi_turno();
+        assert_eq!(p.legislatura().fase, Fase::Ordinaria);
+        assert_eq!(p.governo().coalizione, attesa, "{posizione}");
+        assert_eq!(p.governo().presidente, 5);
+        let altro = &p.partiti()[if attesa[0] == 5 { 6 } else { 4 }].nome;
+        let riga = format!("Forma il governo con {altro}: la maggioranza che gli vale di più");
+        assert!(
+            (p.vista().mosse.iter()).any(|m| m.partito == "destra" && m.testo == riga),
+            "{:?}",
+            p.vista().mosse
+        );
+    }
+}
+
 /// Coi seggi veri del voto, non quelli proiettati, `P` vale 1 alla maggioranza esatta, non la
 /// metà della logistica: il centrodestra, a 1,5 dal giocatore, entra se con lui la coalizione ha
 /// 201 seggi su 400 e 101 su 200; con un seggio in meno alla Camera no. I seggi tolti al
