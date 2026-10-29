@@ -170,6 +170,7 @@ mod tests {
                 regola: Regola::Sticker,
                 sciolto: false,
                 cassa: 0,
+                senza_seggi: 0,
             })
             .collect()
     }

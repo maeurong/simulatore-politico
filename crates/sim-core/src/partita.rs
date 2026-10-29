@@ -33,6 +33,7 @@ use crate::vista::{
 use serde::{Deserialize, Serialize};
 
 mod ia;
+mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -2064,6 +2065,7 @@ impl Partita {
         if nessuno(&pl.seggi_camera) && nessuno(&pl.seggi_senato) {
             self.fine = Some(Fine::SenzaSeggi);
         }
+        self.scioglimenti();
     }
 
     fn quadro(&self) -> Quadro<'_> {

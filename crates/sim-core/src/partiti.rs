@@ -90,6 +90,8 @@ pub struct Partito {
     pub sciolto: bool,
     /// Euro, mai sotto zero (scelta 10 del piano 8b).
     pub cassa: i64,
+    /// Elezioni di fila senza seggi (scelta 9 del piano 8b); a 2 il partito IA si scioglie.
+    pub senza_seggi: u8,
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i
@@ -141,6 +143,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             regola: p.regola,
             sciolto: false,
             cassa: 0,
+            senza_seggi: 0,
         })
         .collect();
     let presidente = indice(&s.governo.presidente);

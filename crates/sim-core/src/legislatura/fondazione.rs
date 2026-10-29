@@ -67,6 +67,7 @@ fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
         regola: Regola::Sticker,
         sciolto: false,
         cassa: dati.manopola("dote_partito_nuovo").round() as i64,
+        senza_seggi: 0,
     }
 }
 

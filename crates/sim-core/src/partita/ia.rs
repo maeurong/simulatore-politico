@@ -76,6 +76,9 @@ impl Partita {
     /// cambia leader.
     pub(super) fn leader_dopo_il_voto(&mut self) {
         for j in 0..self.partiti.len() {
+            if self.partiti.get(j).is_some_and(|p| p.sciolto) {
+                continue;
+            }
             if let Some(calo) = self.calo(j) {
                 let punti = format!("{:.1}", calo * 100.0).replace('.', ",");
                 self.cambia_leader(j, &format!("il calo di {punti} punti percentuali al voto"));
