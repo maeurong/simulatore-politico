@@ -2,7 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
-use crate::legislatura::{Assegnazione, Cessione, Fase};
+use crate::legislatura::{Assegnazione, Cessione, Fase, Spesa};
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
@@ -125,6 +125,12 @@ pub enum Comando {
     Riposiziona {
         posizione: f64,
     },
+    /// Nel turno del voto, la campagna del suo partito: fino a 3 bersagli distinti, una leva
+    /// ciascuno, euro positivi entro la cassa. Sostituisce quella già scelta; si paga in
+    /// chiusura, prima del voto.
+    Campagna {
+        spese: Vec<Spesa>,
+    },
 }
 
 impl Partita {
@@ -185,7 +191,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone`, `Riposiziona` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -224,6 +230,7 @@ impl Partita {
                 return self.confermativo(*misura, *chiedi);
             }
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
+            Comando::Campagna { spese } => return self.campagna(spese.clone()),
             _ => {}
         }
         self.di_governo()?;

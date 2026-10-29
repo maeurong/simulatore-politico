@@ -62,6 +62,7 @@ impl Partita {
                     &self.governo,
                     i,
                     x,
+                    None,
                 );
                 let astensione = softmax(&u).last().copied().unwrap_or(0.0);
                 quote[k] += w * h;

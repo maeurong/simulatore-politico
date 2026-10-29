@@ -490,7 +490,8 @@ impl Ministri {
             | Comando::PresentaProposta { .. }
             | Comando::PromuoviReferendum { .. }
             | Comando::Confermativo { .. }
-            | Comando::Riposiziona { .. } => {}
+            | Comando::Riposiziona { .. }
+            | Comando::Campagna { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }

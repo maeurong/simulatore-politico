@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{Eredita, EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
+use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
@@ -90,6 +90,16 @@ pub struct Vista {
     /// Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
     /// giocatore Presidente del Consiglio.
     pub programma: Vec<VoceProgramma>,
+    pub campagna: VistaCampagna,
+}
+
+/// La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
+/// `spese` quella scelta, che la chiusura paga.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaCampagna {
+    pub attiva: bool,
+    pub spese: Vec<Spesa>,
 }
 
 /// Una voce del programma del governo IA: disposizione e gradino, con id e nomi dai dati.

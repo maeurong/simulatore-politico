@@ -1,5 +1,7 @@
 mod comune;
 use comune::{chiudi_col_bilancio, dati_base, edita, fondata};
+use sim_core::elettorato::{Condizione, condizione_di};
+use sim_core::legislatura::{Bersaglio, Intensita, Leva, Spesa};
 use sim_core::partiti::Regola;
 use sim_core::{Comando, Partita};
 
@@ -183,4 +185,224 @@ fn riposizionamento_del_giocatore() {
     riposiziona(&mut f, 1.8).unwrap();
     let g = f.giocatore();
     assert_eq!(f.partiti()[g].posizione_dichiarata, 1.8);
+}
+
+fn riferimento() -> i64 {
+    dati_base().manopola("spesa_riferimento").round() as i64
+}
+
+/// Le tre regioni con più elettori.
+fn piu_popolose() -> Vec<usize> {
+    let d = dati_base();
+    let mut r: Vec<(u64, usize)> = (d.elettorato().regioni.iter().enumerate())
+        .map(|(i, x)| (x.elettori, i))
+        .collect();
+    r.sort_by(|a, b| b.cmp(a));
+    r.into_iter().take(3).map(|(_, i)| i).collect()
+}
+
+/// Un terzo della spesa di riferimento su ciascuna delle tre regioni più popolose.
+fn sulle_tre(leva: Leva) -> Vec<Spesa> {
+    (piu_popolose().into_iter())
+        .map(|r| Spesa {
+            bersaglio: Bersaglio::Regione(r),
+            leva,
+            euro: riferimento() / 3,
+        })
+        .collect()
+}
+
+/// La partita di prova (seme 1) al turno 19, la campagna, con la cassa del giocatore alla spesa
+/// di riferimento. Nel Task 8 i partiti IA non fanno campagna.
+fn in_campagna() -> Partita {
+    let mut p = Partita::nuova(dati_base(), 1);
+    al_turno(&mut p, 19);
+    let g = p.giocatore();
+    edita(&p, |j| j["partiti"][g]["cassa"] = riferimento().into()).unwrap()
+}
+
+/// La quota del giocatore fra i votanti al voto che chiude il turno di `base`, con la campagna
+/// `spese`.
+fn quota_al_voto(base: &Partita, spese: &[Spesa]) -> f64 {
+    let mut p = edita(base, |_| {}).unwrap();
+    let spese = spese.to_vec();
+    p.comanda(Comando::Campagna { spese }).unwrap();
+    chiudi_col_bilancio(&mut p);
+    let id = p.partiti()[p.giocatore()].id.clone();
+    let esito = &p.vista().elezioni[0];
+    esito.voti.iter().find(|v| v.partito == id).unwrap().quota
+}
+
+#[test]
+fn la_campagna_a_cassa_piena_vale_da_mezzo_a_un_punto_e_mezzo() {
+    let base = in_campagna();
+    let guadagno = quota_al_voto(&base, &sulle_tre(Leva::Persuadere)) - quota_al_voto(&base, &[]);
+    assert!((0.005..=0.015).contains(&guadagno), "{guadagno}");
+}
+
+#[test]
+fn le_leve_a_pari_spesa() {
+    let base = in_campagna();
+    let senza = quota_al_voto(&base, &[]);
+    let [p, m, c] = [Leva::Persuadere, Leva::Mobilitare, Leva::Convincere]
+        .map(|l| quota_al_voto(&base, &sulle_tre(l)) - senza);
+    assert!(p >= m && m > c && c > 0.0, "{p} {m} {c}");
+}
+
+/// Massa dei pensionati sul punto di indice `k`, sommata sui loro 60 gruppi.
+fn massa_pensionati(p: &Partita, k: usize) -> f64 {
+    (p.elettorato().gruppi.iter().enumerate())
+        .filter(|(i, _)| condizione_di(*i) == Condizione::Pensionato)
+        .map(|(_, g)| g.posizione[k])
+        .sum()
+}
+
+#[test]
+fn convincere_dura_oltre_il_voto() {
+    let base = in_campagna();
+    let g = base.giocatore();
+    // La destra dichiara 6: il punto di indice 5.
+    assert_eq!(base.partiti()[g].posizione_dichiarata, 6.0);
+    let spese = vec![Spesa {
+        bersaglio: Bersaglio::Condizione(Condizione::Pensionato),
+        leva: Leva::Convincere,
+        euro: riferimento(),
+    }];
+    let mut con = edita(&base, |_| {}).unwrap();
+    let mut senza = edita(&base, |_| {}).unwrap();
+    con.comanda(Comando::Campagna { spese }).unwrap();
+    let mut scarti = Vec::new();
+    for _ in 0..2 {
+        chiudi_col_bilancio(&mut con);
+        chiudi_col_bilancio(&mut senza);
+        scarti.push(massa_pensionati(&con, 5) - massa_pensionati(&senza, 5));
+    }
+    // Dopo il voto la campagna è vuota: nessuna spinta nuova, l'ancora riassorbe.
+    assert!(con.partiti()[g].campagna.is_empty());
+    assert!(
+        scarti[0] > 0.0 && scarti[1] > 0.0 && scarti[1] < scarti[0],
+        "{scarti:?}"
+    );
+}
+
+/// La campagna rifiutata col messaggio `atteso`, anche in anteprima, non cambia nulla.
+fn campagna_rifiutata(p: &mut Partita, spese: &[Spesa], atteso: &str) {
+    let prima = p.salva().unwrap();
+    let e = p.anteprima_campagna(spese).unwrap_err().to_string();
+    assert!(e.contains(atteso), "{e}");
+    let spese = spese.to_vec();
+    let e = p
+        .comanda(Comando::Campagna { spese })
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains(atteso), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn campagna_rifiutata_non_cambia_nulla() {
+    let spesa = |r: usize, euro: i64| Spesa {
+        bersaglio: Bersaglio::Regione(r),
+        leva: Leva::Persuadere,
+        euro,
+    };
+    let mut p = Partita::nuova(dati_base(), 1);
+    al_turno(&mut p, 18);
+    let fuori = "Si spende solo in campagna elettorale";
+    campagna_rifiutata(&mut p, &[spesa(0, 1)], fuori);
+    assert!(!p.vista().campagna.attiva);
+
+    let mut p = in_campagna();
+    assert!(p.vista().campagna.attiva);
+    // La campagna già scelta resta dopo i rifiuti.
+    p.comanda(Comando::Campagna {
+        spese: vec![spesa(0, 1000)],
+    })
+    .unwrap();
+    let quattro: Vec<Spesa> = (0..4).map(|r| spesa(r, 1000)).collect();
+    campagna_rifiutata(&mut p, &quattro, "Al massimo 3 bersagli");
+    let nome = dati_base().regioni()[3].nome.clone();
+    let ripetuto = format!("Bersaglio ripetuto: {nome}");
+    campagna_rifiutata(&mut p, &[spesa(3, 1000), spesa(3, 1000)], &ripetuto);
+    let zero = [spesa(0, 1000), spesa(1, 0)];
+    campagna_rifiutata(&mut p, &zero, "Spesa non positiva");
+    campagna_rifiutata(&mut p, &[spesa(0, -5)], "Spesa non positiva");
+    let oltre = [spesa(0, riferimento()), spesa(1, 1)];
+    campagna_rifiutata(&mut p, &oltre, "Spesa oltre la cassa: 3.000.000 euro");
+    campagna_rifiutata(&mut p, &[spesa(20, 1000)], "Regione sconosciuta");
+    assert_eq!(p.vista().campagna.spese, vec![spesa(0, 1000)]);
+    // Sostituisce la campagna già scelta; vuota la annulla.
+    p.comanda(Comando::Campagna { spese: vec![] }).unwrap();
+    assert!(p.vista().campagna.spese.is_empty());
+}
+
+#[test]
+fn anteprima_a_fasce() {
+    let p = in_campagna();
+    let prima = p.salva().unwrap();
+    let r = riferimento();
+    for (euro, intensita) in [
+        (r / 16, Intensita::Poco),
+        (r / 4, Intensita::Medio),
+        (r, Intensita::Molto),
+    ] {
+        let spesa = Spesa {
+            bersaglio: Bersaglio::Condizione(Condizione::Studente),
+            leva: Leva::Mobilitare,
+            euro,
+        };
+        let voci = p.anteprima_campagna(std::slice::from_ref(&spesa)).unwrap();
+        assert_eq!(voci.len(), 1);
+        let v = &voci[0];
+        assert_eq!(
+            (&v.bersaglio, v.leva, v.euro),
+            (&spesa.bersaglio, spesa.leva, euro)
+        );
+        assert_eq!(v.intensita, intensita, "{euro}");
+        assert!(
+            !v.causa.is_empty() && !v.causa.contains('\n'),
+            "{}",
+            v.causa
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn spese_al_turno_zero() {
+    let mut p = fondata(1.5);
+    let g = p.giocatore();
+    let dote = dati_base().manopola("dote_partito_nuovo").round() as i64;
+    assert_eq!(p.partiti()[g].cassa, dote);
+    p.comanda(Comando::Campagna {
+        spese: vec![Spesa {
+            bersaglio: Bersaglio::Condizione(Condizione::Studente),
+            leva: Leva::Persuadere,
+            euro: 400_000,
+        }],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    let id = &v.giocatore;
+    let riga = "Spende 400.000 euro: persuade studenti";
+    assert!(
+        (v.mosse.iter()).any(|m| &m.partito == id && m.testo == riga),
+        "{:?}",
+        v.mosse
+    );
+    assert!(p.partiti()[g].campagna.is_empty());
+    // Prima del primo voto le entrate leggono la quota vera fra i votanti da tutte e due le parti:
+    // la quota al voto la ripete, a meno dell'arrotondamento dei voti.
+    let d = dati_base();
+    let quota = (v.elezioni[0].voti.iter())
+        .find(|x| &x.partito == id)
+        .unwrap()
+        .quota;
+    let entrate = (d.manopola("due_per_mille_turno") + d.manopola("donazioni_turno"))
+        * quota
+        * d.manopola("quota_libera_entrate");
+    let atteso = dote - 400_000 + entrate.round() as i64;
+    let cassa = p.partiti()[g].cassa;
+    assert!((cassa - atteso).abs() <= 2, "{cassa} {atteso}");
 }

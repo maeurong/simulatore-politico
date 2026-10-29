@@ -9,6 +9,7 @@ import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
 import type { VistaBilancio } from "./VistaBilancio";
+import type { VistaCampagna } from "./VistaCampagna";
 import type { VistaReferendum } from "./VistaReferendum";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceAlleato } from "./VoceAlleato";
@@ -137,4 +138,4 @@ mosse: Array<MossaIa>,
  * Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
  * giocatore Presidente del Consiglio.
  */
-programma: Array<VoceProgramma>, };
+programma: Array<VoceProgramma>, campagna: VistaCampagna, };

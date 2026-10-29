@@ -173,6 +173,7 @@ mod tests {
                 senza_seggi: 0,
                 ultimo_passo: 0.0,
                 minaccia: false,
+                campagna: Vec::new(),
             })
             .collect()
     }

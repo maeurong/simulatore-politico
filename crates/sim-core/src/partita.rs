@@ -14,8 +14,8 @@ use crate::grandezze::Grandezze;
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
-    Fine, Incarico, Legislatura, Quadro, VoceDisponibilita, VoceRichiesta, VotiPartito, cassa,
-    coalizioni_al_voto,
+    Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
+    VoceRichiesta, VotiPartito, campagna, cassa, coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
@@ -27,8 +27,8 @@ use crate::parlamento::{
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
-    VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero, VoceFascia,
-    VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
+    VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
+    VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
 };
 use serde::{Deserialize, Serialize};
 
@@ -157,8 +157,13 @@ impl Partita {
         elettorato.avvia_voto(&dati, &partiti, &governo);
         // Cassa iniziale: `turni_cassa_iniziale` turni d'entrate col voto vero al posto
         // dell'ultimo voto. Il fondato ha già la dote.
-        let quote =
-            quote_fra_i_votanti(&Intenzioni::calcola(&dati, &elettorato, &partiti, &governo));
+        let quote = quote_fra_i_votanti(&Intenzioni::calcola(
+            &dati,
+            &elettorato,
+            &partiti,
+            &governo,
+            None,
+        ));
         let turni = dati.manopola("turni_cassa_iniziale");
         let iniziali = cassa::entrate(&dati, &quote, &quote);
         for (p, e) in partiti.iter_mut().zip(iniziali).take(dello_scenario) {
@@ -276,9 +281,11 @@ impl Partita {
 
     /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
     /// partito allungati: elettorato e informazione, nessun seggio, intesa di base senza
-    /// ultimatum. Restituisce il suo indice.
+    /// ultimatum, nessuna campagna (la frangia non eredita quella dell'origine). Restituisce il
+    /// suo indice.
     pub(crate) fn aggiungi_partito(&mut self, mut p: Partito) -> usize {
         p.id = format!("nuovo_{}", self.partiti.len());
+        p.campagna.clear();
         self.partiti.push(p);
         self.elettorato.aggiungi_partito();
         self.informazione
@@ -315,8 +322,9 @@ impl Partita {
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
     // IA, se nel turno nessuno ne ha chiesto uno → firme dell'abrogativo →
     // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
-    // dimissioni → motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
-    // aggiorna ultima_disoccupazione], composizione, posizioni, sondaggio, statistica) → voto,
+    // dimissioni → spesa della campagna, nel turno del voto → motore (misure, economia, grandezze,
+    // redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
+    // convincere della campagna, posizioni, sondaggio, statistica) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
     // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
@@ -365,6 +373,11 @@ impl Partita {
         {
             self.legislatura.dimissioni = true;
         }
+        let di_voto = self.legislatura.turno_di_voto(self.turno);
+        // Dopo le scissioni, che portano via una parte della cassa (scelta 14 del piano 8b).
+        if di_voto {
+            self.spendi_campagne();
+        }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let nuove = Misure::da(
             &self.dati,
@@ -393,6 +406,7 @@ impl Partita {
         );
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
+        campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
         self.informazione.rileva(
@@ -410,7 +424,6 @@ impl Partita {
             self.data,
         );
         self.incassa(&vero);
-        let di_voto = self.legislatura.turno_di_voto(self.turno);
         if di_voto {
             self.vota_parlamento(&vero);
         }
@@ -1820,9 +1833,73 @@ impl Partita {
         }
     }
 
-    /// Intenzioni di voto vere per gruppo e nazionali.
+    /// Intenzioni di voto vere per gruppo e nazionali, con le spinte delle campagne: ci sono solo
+    /// nel turno del voto, finché il voto non le svuota.
     pub fn intenzioni_vere(&self) -> Intenzioni {
-        Intenzioni::calcola(&self.dati, &self.elettorato, &self.partiti, &self.governo)
+        let n = self.elettorato.gruppi.len();
+        let spinte = campagna::spinte(&self.dati, &self.partiti, n);
+        let (dati, el) = (&self.dati, &self.elettorato);
+        Intenzioni::calcola(dati, el, &self.partiti, &self.governo, Some(&spinte))
+    }
+
+    /// La spesa della campagna (scelta 14), prima del motore: ogni partito attivo paga la sua
+    /// dalla cassa, con una riga. Oltre la cassa, che la scissione può aver ridotto dopo il
+    /// comando, le spese si tagliano in ordine.
+    fn spendi_campagne(&mut self) {
+        for j in 0..self.partiti.len() {
+            let p = &mut self.partiti[j];
+            if p.sciolto {
+                continue;
+            }
+            let mut resto = p.cassa;
+            p.campagna.retain_mut(|s| {
+                s.euro = s.euro.min(resto);
+                resto -= s.euro;
+                s.euro > 0
+            });
+            if p.campagna.is_empty() {
+                continue;
+            }
+            let speso = p.cassa - resto;
+            p.cassa = resto;
+            let testo = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
+            self.mossa(j, testo);
+        }
+    }
+
+    /// `Campagna` (scelte 13-14): nel turno del voto sostituisce la campagna del giocatore.
+    ///
+    /// # Errors
+    /// `Comando` fuori dal turno del voto e come [`Partita::anteprima_campagna`].
+    pub(crate) fn campagna(&mut self, spese: Vec<Spesa>) -> Result<(), Errore> {
+        self.controlla_campagna(&spese)?;
+        let g = self.giocatore;
+        self.partiti[g].campagna = spese;
+        Ok(())
+    }
+
+    /// L'anteprima della campagna (scelta 15): costo esatto e intensità per bersaglio, senza
+    /// leggere lo stato vero.
+    ///
+    /// # Errors
+    /// `Comando` fuori dal turno del voto, con più di 3 bersagli, un bersaglio ripetuto, una
+    /// regione sconosciuta, una spesa non positiva o il totale oltre la cassa del giocatore.
+    pub fn anteprima_campagna(
+        &self,
+        spese: &[Spesa],
+    ) -> Result<Vec<VoceAnteprimaCampagna>, Errore> {
+        self.controlla_campagna(spese)?;
+        Ok(campagna::anteprima(&self.dati, spese))
+    }
+
+    fn controlla_campagna(&self, spese: &[Spesa]) -> Result<(), Errore> {
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
+            return Err(Errore::Comando(
+                "Si spende solo in campagna elettorale".into(),
+            ));
+        }
+        let cassa = self.partiti[self.giocatore].cassa;
+        campagna::valida(&self.dati, spese, cassa)
     }
 
     pub fn informazione(&self) -> &Informazione {
@@ -2069,6 +2146,10 @@ impl Partita {
         }
         for (gruppo, v) in self.elettorato.gruppi.iter_mut().zip(&vero.per_gruppo) {
             gruppo.voto_precedente.clone_from(v);
+        }
+        // La persuasione vale solo per questo voto (effetti-della-campagna-e-promesse:58).
+        for p in &mut self.partiti {
+            p.campagna.clear();
         }
         (self.informazione).riestrai_bias(&self.dati, &mut self.caso, n);
         let pl = &self.parlamento;
@@ -3266,6 +3347,12 @@ impl Partita {
                     }
                 })
                 .collect(),
+            campagna: VistaCampagna {
+                attiva: !self.finita() && l.turno_di_voto(self.turno),
+                spese: (self.partiti.get(self.giocatore))
+                    .map(|p| p.campagna.clone())
+                    .unwrap_or_default(),
+            },
         }
     }
 
