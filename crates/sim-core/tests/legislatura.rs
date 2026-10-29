@@ -171,25 +171,40 @@ fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
     assert_eq!((fasi[20], fasi[40]), (Fase::Trattativa, Fase::Trattativa));
 }
 
-/// La partita di `due_legislature_di_fila_con_salvataggio_a_ogni_turno`: ogni passaggio a una fase
-/// non ordinaria fuori dai voti (20 e 40) ha la sua causa nel turno prima, una sfiducia approvata
-/// o una crisi aperta.
+/// Le partite dei semi 1..=20, fino al turno 41: ogni passaggio a una fase non ordinaria fuori dai
+/// voti (20 e 40) ha la sua causa nel turno prima: una sfiducia approvata, una crisi aperta o le
+/// dimissioni del governo IA (anche in esercizio provvisorio: la mossa comincia con «Si dimette»).
 #[test]
 fn ogni_caduta_ha_la_sua_causa() {
-    let mut p = Partita::nuova(dati_base(), 1);
-    while p.vista().turno < 41 {
-        let (turno, data) = (p.vista().turno, p.vista().data);
-        let ordinaria = p.legislatura().fase == Fase::Ordinaria;
-        let crisi = p.legislatura().crisi == Some(turno);
-        chiudi_col_bilancio(&mut p);
-        if !ordinaria || p.legislatura().fase == Fase::Ordinaria || [19, 39].contains(&turno) {
-            continue;
+    let mut casi = 0;
+    for seme in 1..=20 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        while p.vista().turno < 41 {
+            let (turno, data) = (p.vista().turno, p.vista().data);
+            let ordinaria = p.legislatura().fase == Fase::Ordinaria;
+            let crisi = p.legislatura().crisi == Some(turno);
+            chiudi_col_bilancio(&mut p);
+            if !ordinaria || p.legislatura().fase == Fase::Ordinaria || [19, 39].contains(&turno) {
+                continue;
+            }
+            let sfiducia = (p.parlamento().esiti.iter()).any(|e| {
+                e.forma == sim_core::parlamento::FormaMisura::Sfiducia
+                    && e.data == data
+                    && e.approvata
+            });
+            let dimissioni = (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Si dimette"));
+            casi += 1;
+            assert!(
+                sfiducia || crisi || dimissioni,
+                "seme {seme}, turno {}: nessuna causa",
+                turno + 1
+            );
         }
-        let sfiducia = (p.parlamento().esiti.iter()).any(|e| {
-            e.forma == sim_core::parlamento::FormaMisura::Sfiducia && e.data == data && e.approvata
-        });
-        assert!(sfiducia || crisi, "turno {}: nessuna causa", turno + 1);
     }
+    assert!(
+        casi > 0,
+        "nessuna caduta in 20 semi: il test non controlla nulla"
+    );
 }
 
 /// Un salvataggio coi totali da miliardi, e seggi che li sommano, non si carica: oltre il

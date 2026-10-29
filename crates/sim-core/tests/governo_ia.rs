@@ -662,6 +662,8 @@ fn in_crisi(p: Partita, intesa: f64) -> Partita {
 
 const SI_DIMETTE: &str =
     "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno";
+const SI_DIMETTE_ROTTURA: &str =
+    "Si dimette: il solo partito contiguo che gli ridà la maggioranza ha rotto con lui";
 const SI_DIMETTE_IN_PROVVISORIO: &str =
     "Si dimette: in esercizio provvisorio non allarga la coalizione";
 
@@ -675,10 +677,30 @@ fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
         let l = p.legislatura();
         assert!(!l.allargati.contains(&uscente), "{intesa}");
         assert!(!l.allargati.contains(&p.giocatore()));
-        // L'uscente (Destra) è l'unico vicino con seggi: il governo si dimette.
+        // L'uscente (Destra) è l'unico vicino con seggi e ridarebbe la maggioranza: ha rotto.
         assert!(l.dimissioni);
-        assert!(p.vista().mosse.iter().any(|m| m.testo == SI_DIMETTE));
+        let mosse = &p.vista().mosse;
+        assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE_ROTTURA));
+        assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE));
     }
+}
+
+/// Il giocatore tiene quasi tutti i seggi: nemmeno col vicino la coalizione IA ha la maggioranza.
+#[test]
+fn senza_vicini_il_motivo_resta_nessun_partito() {
+    let p = all_opposizione();
+    let (n, g) = (p.partiti().len(), p.giocatore());
+    let ripartisci = |totale: u32, altri: u32| -> Vec<u32> {
+        let resto = totale - altri * (n as u32 - 1);
+        (0..n).map(|j| if j == g { resto } else { altri }).collect()
+    };
+    let p = comune::con_seggi(&p, &ripartisci(400, 10), &ripartisci(200, 5));
+    let p = edita(&p, |j| j["intesa"]["valori"] = json!(vec![100.0; n])).unwrap();
+    let p = in_crisi(p, 10.0);
+    assert!(p.legislatura().dimissioni);
+    let mosse = &p.vista().mosse;
+    assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE));
+    assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE_ROTTURA));
 }
 
 /// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista

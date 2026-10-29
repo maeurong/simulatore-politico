@@ -374,7 +374,8 @@ impl Partita {
     /// a quello che le ridà la maggioranza in entrambe le Camere e ci guadagna, con l'intesa non
     /// sotto `soglia_ultimatum` (l'alleato appena uscito resta fuori); fra due, il più vicino di
     /// posizione al membro accanto, a parità il più grande. Senza nessuno si dimette
-    /// (iter-legislativo-italiano:42).
+    /// (iter-legislativo-italiano:42), col motivo vero: la rottura d'intesa se a darle la maggioranza
+    /// con un guadagno sarebbe stato solo chi è sotto soglia.
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         if self.economia.esercizio_provvisorio(self.data) {
@@ -408,21 +409,25 @@ impl Partita {
             // ponytail: il valore fuori dal governo è 0, non il termine dei seggi che il partito
             // tiene comunque all'opposizione; il guadagno ne è sovrastimato. Via d'uscita: un
             // `valore_all_opposizione` in `legislatura/crisi.rs`.
-            (vicini.into_iter().flatten())
+            let utili: Vec<(usize, usize)> = (vicini.into_iter().flatten())
                 .filter(|&(j, _)| {
                     let mut con = coalizione.clone();
                     con.push(j);
-                    !self.intesa.valori.get(j).is_some_and(|&x| x < soglia)
-                        && legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
+                    legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &con)
                         && legislatura::valore_al_governo(&q, j, &con, false) > 0.0
                 })
+                .collect();
+            let scelto = (utili.iter().copied())
+                .filter(|&(j, _)| !self.intesa.valori.get(j).is_some_and(|&x| x < soglia))
                 .min_by(|&(a, x), &(b, y)| {
                     ((pos(a) - pos(x)).abs())
                         .total_cmp(&(pos(b) - pos(y)).abs())
                         .then(seggi(b).cmp(&seggi(a)))
                 })
-                .map(|(j, _)| j)
+                .map(|(j, _)| j);
+            (scelto, !utili.is_empty())
         };
+        let (scelto, rotto) = scelto;
         match scelto.and_then(|j| Some((j, self.partiti.get(j)?.nome.clone()))) {
             Some((j, nome)) => {
                 self.legislatura.allargati.push(j);
@@ -430,8 +435,11 @@ impl Partita {
             }
             None => {
                 self.legislatura.dimissioni = true;
-                let testo = "Si dimette: nessun partito contiguo gli ridà la maggioranza con un \
-                             guadagno";
+                let testo = if rotto {
+                    "Si dimette: il solo partito contiguo che gli ridà la maggioranza ha rotto con lui"
+                } else {
+                    "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno"
+                };
                 self.mossa(pc, testo.into());
             }
         }
@@ -766,7 +774,9 @@ mod tests {
         p.partiti[0].vocazione = Vocazione::Identitaria;
         p.crisi_ia();
         assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
-        let riga = "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno";
+        // Resta la Destra, utile ma rotta (intesa 30): il motivo è la rottura.
+        let riga =
+            "Si dimette: il solo partito contiguo che gli ridà la maggioranza ha rotto con lui";
         assert!(p.mosse.iter().any(|m| m.testo == riga), "{:?}", p.mosse);
     }
 
