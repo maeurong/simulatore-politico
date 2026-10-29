@@ -173,7 +173,8 @@ fn due_legislature_di_fila_con_salvataggio_a_ogni_turno() {
 
 /// Le partite dei semi 1..=20, fino al turno 41: ogni passaggio a una fase non ordinaria fuori dai
 /// voti (20 e 40) ha la sua causa nel turno prima: una sfiducia approvata, una crisi aperta o le
-/// dimissioni del governo IA (anche in esercizio provvisorio: la mossa comincia con «Si dimette»).
+/// dimissioni del governo IA (una mossa che comincia con «Si dimette») o l'esercizio provvisorio,
+/// che fa cadere il governo a fine turno senza mossa.
 #[test]
 fn ogni_caduta_ha_la_sua_causa() {
     let mut casi = 0;
@@ -183,6 +184,7 @@ fn ogni_caduta_ha_la_sua_causa() {
             let (turno, data) = (p.vista().turno, p.vista().data);
             let ordinaria = p.legislatura().fase == Fase::Ordinaria;
             let crisi = p.legislatura().crisi == Some(turno);
+            let provvisorio = p.vista().bilancio.esercizio_provvisorio;
             chiudi_col_bilancio(&mut p);
             if !ordinaria || p.legislatura().fase == Fase::Ordinaria || [19, 39].contains(&turno) {
                 continue;
@@ -195,7 +197,7 @@ fn ogni_caduta_ha_la_sua_causa() {
             let dimissioni = (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Si dimette"));
             casi += 1;
             assert!(
-                sfiducia || crisi || dimissioni,
+                sfiducia || crisi || dimissioni || provvisorio,
                 "seme {seme}, turno {}: nessuna causa",
                 turno + 1
             );

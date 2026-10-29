@@ -9,7 +9,7 @@ use crate::disposizioni::Norma;
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, stima};
 use crate::informazione::indice;
-use crate::legislatura::{self, EsitoElezioni, Fase};
+use crate::legislatura::{self, Fase};
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::vista::MossaIa;
 use std::cmp::Reverse;
@@ -27,6 +27,7 @@ impl Partita {
 
     /// Un nome di `lista` estratto da `Flusso::PartitiIa` fuori da `gia`; nessuno se in 100
     /// estrazioni esce sempre un nome già usato.
+    #[expect(dead_code, reason = "lo chiameranno protesta e scissione")]
     pub(super) fn nome_nuovo(&mut self, gia: &[String], lista: &[String]) -> Option<String> {
         (0..100)
             .filter_map(|_| lista.get(indice(self.caso.uniforme(Flusso::PartitiIa), lista.len())))
@@ -34,20 +35,26 @@ impl Partita {
             .cloned()
     }
 
-    /// Il partito IA `j` cambia leader: nome e cognome nuovi (`nome_nuovo` su tutte le coppie dei
-    /// dati), diversi da quelli dei leader in carica; la valence riparte da `valence_base` più la
-    /// luna di miele. Mai sul partito del giocatore. Nessun nome nuovo, niente cambio e niente
-    /// mossa.
+    /// Il partito IA `j` cambia leader: nome nuovo estratto da `Flusso::PartitiIa`; la valence
+    /// riparte da `valence_base` più la luna di miele. Mai sul partito del giocatore. Se in 100
+    /// estrazioni il nome esce sempre uguale all'uscente, niente cambio e niente mossa.
     pub(super) fn cambia_leader(&mut self, j: usize, causa: &str) {
         if j == self.giocatore {
             return;
         }
         let el = self.dati.elettorato();
-        let lista: Vec<String> = (el.nomi.iter())
-            .flat_map(|n| el.cognomi.iter().map(move |c| format!("{n} {c}")))
-            .collect();
-        let gia: Vec<String> = self.partiti.iter().map(|p| p.leader.clone()).collect();
-        let Some(nuovo) = self.nome_nuovo(&gia, &lista) else {
+        let uscente = self.partiti.get(j).map(|p| p.leader.clone());
+        let mut nuovo = None;
+        for _ in 0..100 {
+            let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
+            let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
+            let candidato = format!("{n} {c}");
+            if uscente.as_ref() != Some(&candidato) {
+                nuovo = Some(candidato);
+                break;
+            }
+        }
+        let Some(nuovo) = nuovo else {
             return;
         };
         let luna = self.dati.manopola("luna_di_miele_leader");
@@ -67,8 +74,7 @@ impl Partita {
             return None;
         };
         let id = &self.partiti.get(j)?.id;
-        let quota = |e: &EsitoElezioni| e.voti.iter().find(|v| &v.partito == id).map(|v| v.quota);
-        let calo = quota(prima)? - quota(esito)?;
+        let calo = prima.quota(id)? - esito.quota(id)?;
         (calo >= self.dati.manopola("calo_cambio_leader")).then_some(calo)
     }
 
@@ -381,8 +387,8 @@ impl Partita {
     /// a quello che le ridà la maggioranza in entrambe le Camere e ci guadagna, con l'intesa non
     /// sotto `soglia_ultimatum` (l'alleato appena uscito resta fuori); fra due, il più vicino di
     /// posizione al membro accanto, a parità il più grande. Senza nessuno si dimette
-    /// (iter-legislativo-italiano:42), col motivo vero: la rottura d'intesa se a darle la maggioranza
-    /// con un guadagno sarebbe stato solo chi è sotto soglia.
+    /// (iter-legislativo-italiano:42), col motivo vero: la rottura d'intesa se a darle una
+    /// maggioranza che le convenga sarebbe stato solo chi è sotto soglia.
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         if self.economia.esercizio_provvisorio(self.data) {
@@ -391,7 +397,7 @@ impl Partita {
             self.mossa(pc, testo.into());
             return;
         }
-        let scelto = {
+        let (scelto, rotto) = {
             let pl = &self.parlamento;
             let tutti = self.seggi_per_partito();
             let seggi = |j: usize| tutti.get(j).copied().unwrap_or(0);
@@ -434,7 +440,6 @@ impl Partita {
                 .map(|(j, _)| j);
             (scelto, !utili.is_empty())
         };
-        let (scelto, rotto) = scelto;
         match scelto.and_then(|j| Some((j, self.partiti.get(j)?.nome.clone()))) {
             Some((j, nome)) => {
                 self.legislatura.allargati.push(j);
@@ -443,9 +448,10 @@ impl Partita {
             None => {
                 self.legislatura.dimissioni = true;
                 let testo = if rotto {
-                    "Si dimette: il solo partito contiguo che gli ridà la maggioranza ha rotto con lui"
+                    "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in \
+                     intesa con lui"
                 } else {
-                    "Si dimette: nessun partito contiguo gli ridà la maggioranza con un guadagno"
+                    "Si dimette: nessun partito contiguo gli ridà una maggioranza che gli convenga"
                 };
                 self.mossa(pc, testo.into());
             }
@@ -782,9 +788,23 @@ mod tests {
         p.crisi_ia();
         assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
         // Resta la Destra, utile ma rotta (intesa 30): il motivo è la rottura.
-        let riga =
-            "Si dimette: il solo partito contiguo che gli ridà la maggioranza ha rotto con lui";
+        let riga = "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in \
+                    intesa con lui";
         assert!(p.mosse.iter().any(|m| m.testo == riga), "{:?}", p.mosse);
+    }
+
+    /// L'estrema destra (6) sciolta, senza seggi, spostata fra l'estrema sinistra e la Sinistra:
+    /// fuori dalla fila, il vicino contiguo resta l'estrema sinistra, che le ridà la maggioranza.
+    #[test]
+    fn in_crisi_lo_sciolto_non_conta_nella_fila() {
+        let mut p = in_crisi_senza_destra();
+        p.partiti[6].sciolto = true;
+        p.partiti[6].posizione_dichiarata = 1.5;
+        let pl = &mut p.parlamento;
+        pl.seggi_camera[7] += std::mem::take(&mut pl.seggi_camera[6]);
+        pl.seggi_senato[7] += std::mem::take(&mut pl.seggi_senato[6]);
+        p.crisi_ia();
+        assert_eq!(p.legislatura.allargati, [0]);
     }
 
     /// Con la Destra di nuovo ammessa, entrambi i vicini ridanno la maggioranza: a distanza 1 dal

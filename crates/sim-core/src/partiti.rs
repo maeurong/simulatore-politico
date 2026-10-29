@@ -173,9 +173,11 @@ fn ko(m: String) -> Errore {
 /// `Partiti` col nome del colpevole.
 pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore> {
     let partiti = &scenario.partiti;
-    if !(2..=MASSIMO_PARTITI).contains(&partiti.len()) {
+    // Uno sotto il tetto: il partito che il giocatore fonda è l'ultimo che ci sta.
+    let massimo = MASSIMO_PARTITI - 1;
+    if !(2..=massimo).contains(&partiti.len()) {
         return Err(ko(format!(
-            "{} partiti, servono da 2 a {MASSIMO_PARTITI}",
+            "{} partiti, servono da 2 a {massimo}",
             partiti.len()
         )));
     }
@@ -188,6 +190,9 @@ pub fn valida(scenario: &Scenario, dicasteri: &[Dicastero]) -> Result<(), Errore
             return Err(ko(format!(
                 "id riservato al partito del giocatore: {ID_GIOCATORE}"
             )));
+        }
+        if p.id.starts_with("nuovo_") {
+            return Err(ko(format!("id riservato ai partiti nuovi: {}", p.id)));
         }
         if p.leader.trim().is_empty() {
             return Err(ko(format!("leader vuoto: {}", p.id)));
@@ -277,5 +282,33 @@ mod tests {
         );
         s.nomi_partiti.clear();
         assert!(valida(&s, d.dicasteri()).is_err());
+    }
+
+    /// Lo scenario sta uno sotto `MASSIMO_PARTITI` (il fondato ci deve stare) e non usa il
+    /// prefisso dei partiti nuovi.
+    #[test]
+    fn scenario_sotto_il_tetto_e_senza_id_nuovo() {
+        let d = dati_base();
+        let mut s = d.scenario().clone();
+        s.partiti[0].id = "nuovo_0".into();
+        let e = valida(&s, d.dicasteri()).unwrap_err();
+        assert!(
+            e.to_string()
+                .contains("id riservato ai partiti nuovi: nuovo_0"),
+            "{e}"
+        );
+        let mut s = d.scenario().clone();
+        while s.partiti.len() < MASSIMO_PARTITI {
+            let mut p = s.partiti[0].clone();
+            p.id = format!("altro_{}", s.partiti.len());
+            s.partiti.push(p);
+        }
+        let e = valida(&s, d.dicasteri()).unwrap_err();
+        assert!(
+            e.to_string().contains("10 partiti, servono da 2 a 9"),
+            "{e}"
+        );
+        s.partiti.pop();
+        assert!(valida(&s, d.dicasteri()).is_ok());
     }
 }

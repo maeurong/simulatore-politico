@@ -9,7 +9,7 @@ use sim_core::Partita;
 use sim_core::dati::DatiGioco;
 use sim_core::legislatura::Fine;
 
-const RIGA: &str = "Si scioglie dopo due elezioni senza seggi";
+const RIGA: &str = "Si scioglie dopo 2 elezioni senza seggi";
 
 fn al_turno(p: &mut Partita, t: u32) {
     while p.vista().turno < t {
@@ -84,8 +84,15 @@ fn lo_sciolto_esce_dalle_coalizioni() {
     assert!(l.coalizioni.iter().flatten().all(|&j| j != 0 && j != 2));
     assert!(l.coalizioni.iter().all(|c| c.len() >= 2));
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
-    al_turno(&mut p, 24);
-    assert!(p.vista().turno >= 24);
+    // Il voto dopo, con lo sciolto presente: quota e seggi zero, il riparto riesce, si ricarica.
+    al_turno(&mut p, 39);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.legislatura().elezioni.len(), 2);
+    let esito = &p.legislatura().elezioni[0];
+    let v = &esito.voti[0];
+    assert_eq!((v.quota, v.camera, v.senato), (0.0, 0, 0));
+    assert!(esito.voti.iter().map(|v| v.camera).sum::<u32>() > 0);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
 }
 
 #[test]

@@ -5,7 +5,7 @@ use super::Partita;
 use crate::legislatura::Incarico;
 
 /// Elezioni di fila senza seggi dopo le quali un partito IA si scioglie.
-const ELEZIONI_SENZA_SEGGI: u8 = 2;
+pub(super) const ELEZIONI_SENZA_SEGGI: u8 = 2;
 
 impl Partita {
     /// In coda al voto: un partito IA attivo senza seggi in entrambe le Camere conta un'elezione in
@@ -34,10 +34,11 @@ impl Partita {
             }
         }
         for &j in &sciolti {
-            self.mossa(j, "Si scioglie dopo due elezioni senza seggi".into());
+            let testo = format!("Si scioglie dopo {ELEZIONI_SENZA_SEGGI} elezioni senza seggi");
+            self.mossa(j, testo);
         }
         let l = &mut self.legislatura;
-        // Cade quella che perde un membro e resta di uno solo; il giocatore da solo non perde nulla.
+        // Una coalizione ridotta a un solo membro dallo scioglimento cade.
         l.coalizioni.retain_mut(|c| {
             let prima = c.len();
             c.retain(|j| !sciolti.contains(j));

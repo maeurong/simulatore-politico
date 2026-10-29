@@ -9,7 +9,7 @@ legge_elettorale = "legge_180"
 # Coalizioni del 2022 ricondotte alle posizioni [assunzione del piano 4; la corrispondenza fra partiti veri e posizioni resta fuori dai dati, spec riga 284]. Regola: la collocazione CHES 2024 (`lrgen`) si tronca, classi [k, k+1), poi il TAGLIO dei 7 punti; ne escono sinistra e centrosinistra (posizioni 2-3), centrodestra e destra (posizioni 5-6).
 coalizioni = [["sinistra", "centrosinistra"], ["centrodestra", "destra"]]
 # Nomi dei partiti nuovi (protesta, scissione), estratti con Flusso::PartitiIa: assunzione del piano 8b, nessuna fonte in docs/ricerca
-nomi_partiti = ["Orizzonte Comune", "Patto Civico", "Movimento per l'Italia", "Lista Territori", "Nuova Repubblica", "Rinascita Democratica", "Unione dei Cittadini", "Voce del Paese", "Patria e Lavoro", "Comunità Solidale"]
+nomi_partiti = ["Orizzonte Comune", "Punto d'Incontro", "Rotta Nuova", "Lista dei Territori", "Nuova Repubblica", "Rinascita Democratica", "Unione dei Cittadini", "Voce del Paese", "Prospettiva", "La Bussola"]
 
 # Valori precedenti al turno zero: Rosatellum (L. 165/2017) senza collegi, ticket 13:41
 [legge_elettorale_precedente]
