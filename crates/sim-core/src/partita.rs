@@ -355,29 +355,42 @@ impl Partita {
         ]
     }
 
-    /// Aggiunge alla serie gli indicatori dell'apertura del turno. La metà più uno viene dai
-    /// seggi dei rami nella legge in vigore, non da `legislatura.totali`, che a Camere sciolte è
-    /// zero; i seggi della coalizione sono quelli veri del parlamento.
+    /// Aggiunge alla serie gli indicatori dell'apertura del turno. La metà più uno è delle Camere
+    /// che siedono (`legislatura.totali`): una `numero_parlamentari` cambiata a metà legislatura
+    /// vale dal voto. A Camere sciolte, coi totali a zero, viene dai seggi della legge in vigore.
+    /// I seggi della coalizione sono quelli veri del parlamento.
     fn registra_punto(&mut self) {
         let mut c = self.coalizione_del_giocatore();
         c.sort_unstable();
         c.dedup();
         c.retain(|&j| j < self.partiti.len());
         let s = &self.informazione.sondaggio;
-        let consenso = (c.iter())
+        let consenso: f64 = (c.iter())
             .map(|&j| legislatura::quota_fra_i_votanti(s, j))
             .sum();
-        let leve = self.disposizioni.leve(&self.dati);
-        let margine = |seggi: &[u32], totale: f64| {
+        // ponytail: non finito solo con un sondaggio degenere (nessun istituto, o astensione a 1
+        // in un istituto); a zero, così `salva` non rifiuta la partita.
+        let consenso = if consenso.is_finite() { consenso } else { 0.0 };
+        let (camera, senato) = match self.legislatura.totali {
+            (0, 0) => {
+                let leve = self.disposizioni.leve(&self.dati);
+                (
+                    leve.seggi_camera.round() as u32,
+                    leve.seggi_senato.round() as u32,
+                )
+            }
+            totali => totali,
+        };
+        let margine = |seggi: &[u32], totale: u32| {
             let della_coalizione: u32 = c.iter().filter_map(|&j| seggi.get(j)).sum();
-            della_coalizione as i32 - voto::maggioranza(totale.round() as u32) as i32
+            della_coalizione as i32 - voto::maggioranza(totale) as i32
         };
         let punto = PuntoSerie {
             turno: self.turno,
             data: self.data,
             consenso,
-            maggioranza_camera: margine(&self.parlamento.seggi_camera, leve.seggi_camera),
-            maggioranza_senato: margine(&self.parlamento.seggi_senato, leve.seggi_senato),
+            maggioranza_camera: margine(&self.parlamento.seggi_camera, camera),
+            maggioranza_senato: margine(&self.parlamento.seggi_senato, senato),
             spread_pb: self.economia.spread.round() as i32,
         };
         self.serie.push(punto);
@@ -3739,12 +3752,13 @@ impl Partita {
 
 impl Partita {
     /// La serie: un punto per apertura, coi turni da 0 al turno corrente (al precedente se la
-    /// partita è finita nella chiusura, che non apre il turno), e consenso finito.
+    /// partita è finita senza seggi nella chiusura, che non apre il turno; l'abbandono non tocca
+    /// il turno), e consenso finito.
     fn controlla_serie(&self) -> Result<(), Errore> {
         let contigui = (self.serie.iter().zip(0u32..)).all(|(s, k)| s.turno == k);
         let ultimo = self.serie.last().map(|s| s.turno);
-        let finita_in_chiusura =
-            self.finita() && ultimo.map(|u| u.saturating_add(1)) == Some(self.turno);
+        let finita_in_chiusura = self.fine == Some(Fine::SenzaSeggi)
+            && ultimo.map(|u| u.saturating_add(1)) == Some(self.turno);
         ok(
             contigui && (ultimo == Some(self.turno) || finita_in_chiusura),
             &format!(
@@ -4248,6 +4262,48 @@ mod tests {
             posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    /// A metà legislatura una `numero_parlamentari` cambiata non sposta la maggioranza delle
+    /// Camere che siedono.
+    #[test]
+    fn la_maggioranza_e_delle_camere_che_siedono() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let prima = p.serie[0].clone();
+        let k = p.dati.disposizione("numero_parlamentari").unwrap();
+        p.disposizioni.voci[k].in_vigore = p.dati.disposizioni()[k].gradino("630_315").unwrap();
+        assert_eq!(p.disposizioni.leve(&p.dati).seggi_camera, 630.0);
+        p.registra_punto();
+        let dopo = p.serie.last().unwrap();
+        assert_eq!(
+            (dopo.maggioranza_camera, dopo.maggioranza_senato),
+            (prima.maggioranza_camera, prima.maggioranza_senato)
+        );
+        let c = p.coalizione_del_giocatore();
+        let della_coalizione: u32 = c.iter().map(|&j| p.parlamento.seggi_camera[j]).sum();
+        let attesa = della_coalizione as i32 - (p.legislatura.totali.0 / 2 + 1) as i32;
+        assert_eq!(dopo.maggioranza_camera, attesa);
+    }
+
+    /// Il consenso somma la coalizione una volta sola: l'alleato anche fra gli allargati conta
+    /// una volta, lo sciolto vale la sua quota zero, l'indice fuori dai partiti si salta.
+    #[test]
+    fn il_consenso_somma_la_coalizione_una_volta_sola() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let g = p.giocatore;
+        let mut altri = (0..p.partiti.len()).filter(|&j| j != g);
+        let (a, b) = (altri.next().unwrap(), altri.next().unwrap());
+        p.partiti[b].sciolto = true;
+        for r in &mut p.informazione.sondaggio.istituti {
+            r.quote[b] = 0.0;
+        }
+        p.legislatura.maggioranza = Some(vec![g, a, b]);
+        p.legislatura.allargati = vec![a, p.partiti.len()];
+        p.registra_punto();
+        let q = |j| legislatura::quota_fra_i_votanti(&p.informazione.sondaggio, j);
+        assert!(q(a) > 0.0 && q(g) > 0.0);
+        let consenso = p.serie.last().unwrap().consenso;
+        assert!((consenso - (q(g) + q(a))).abs() < 1e-12, "{consenso}");
     }
 
     /// Al turno `u32::MAX` la chiusura satura senza panico. Da un salvataggio lì non si arriva

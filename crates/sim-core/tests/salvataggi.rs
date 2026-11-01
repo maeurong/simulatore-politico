@@ -1,6 +1,6 @@
 mod comune;
 use comune::{dati_base, edita, fondata};
-use sim_core::{Errore, Partita, VERSIONE_SCHEMA};
+use sim_core::{Errore, Partita, SuMisura, VERSIONE_SCHEMA};
 
 #[test]
 fn un_punto_per_apertura() {
@@ -64,6 +64,19 @@ fn la_testata_regge_un_salvataggio() {
         (1, VERSIONE_SCHEMA, false)
     );
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap().testata(), t);
+}
+
+#[test]
+fn la_testata_porta_il_nome_dello_scenario_su_misura() {
+    let base = dati_base();
+    let mut s = SuMisura::base(&base);
+    s.nome = "Italia indebitata".into();
+    let p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+    assert_eq!(p.testata().scenario, "Italia indebitata");
+    assert_eq!(
+        Partita::carica(&p.salva().unwrap()).unwrap().testata(),
+        p.testata()
+    );
 }
 
 #[test]
