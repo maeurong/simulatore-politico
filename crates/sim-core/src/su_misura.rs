@@ -262,6 +262,7 @@ impl DatiGioco {
     /// per una legge, una disposizione, un gradino o una sostituzione che la base non ha, poi
     /// gli errori di [`DatiGioco::valida`].
     pub fn con_su_misura(&self, s: &SuMisura) -> Result<DatiGioco, Errore> {
+        debug_assert!(self.su_misura().is_none(), "solo dati di base");
         s.valida(self)?;
         let mut d = self.clone();
         let c = &s.cursori;
@@ -272,10 +273,9 @@ impl DatiGioco {
         sc.inflazione.valore = c.inflazione;
         // Sussidio a testa fermo: la NASpI segue i disoccupati.
         sc.spesa_sussidi.valore *= c.disoccupazione / u0;
-        // Lo spostamento dell'obiettivo della regola di Taylor.
-        sc.tasso_bce.valore += (1.0 + self.manopola("taylor_inflazione"))
-            * self.manopola("quota_italia_area_euro")
-            * (c.inflazione - pi0);
+        // Spostamento dell'obiettivo di Taylor, senza la quota italiana: anche `inflazione_resto`
+        // segue il cursore, quindi l'inflazione d'area si sposta di Δπ intero.
+        sc.tasso_bce.valore += (1.0 + self.manopola("taylor_inflazione")) * (c.inflazione - pi0);
         let el = &mut d.elettorato;
         let quote: Vec<f64> = el.gruppi.iter().map(|g| g.quota).collect();
         for r in 0..el.regioni.len() {

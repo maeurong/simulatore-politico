@@ -171,10 +171,8 @@ fn l_inflazione_sposta_il_tasso_bce() {
     let mut s = SuMisura::base(&base);
     s.cursori.inflazione = 6.0;
     let d = base.con_su_misura(&s).unwrap();
-    let attesa = base.scenario().tasso_bce.valore
-        + (1.0 + base.manopola("taylor_inflazione"))
-            * base.manopola("quota_italia_area_euro")
-            * 1.8;
+    let attesa =
+        base.scenario().tasso_bce.valore + (1.0 + base.manopola("taylor_inflazione")) * 1.8;
     assert!((d.scenario().tasso_bce.valore - attesa).abs() < 1e-9);
 }
 
