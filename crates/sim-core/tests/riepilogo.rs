@@ -25,6 +25,12 @@ fn il_riepilogo_della_base_e_vincibile_ovunque() {
         assert!(p.coalizione.iter().any(|id| id == "giocatore"));
         assert!((1..=3).contains(&p.coalizione.len()));
         assert!(p.quota_coalizione >= p.quota_attesa);
+        assert!(
+            p.quota_coalizione > 0.42,
+            "{}: {}",
+            p.posizione,
+            p.quota_coalizione
+        );
     }
 }
 

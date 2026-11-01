@@ -21,8 +21,8 @@ pub const NOME_BASE: &str = "Italia di oggi";
 /// delle leggi del giocatore, così l'eredità non le scambia per sue.
 pub const ETICHETTA_GOVERNO_USCENTE: &str = "Legge del governo uscente (2026)";
 
-/// Gli ingressi che i tre cursori assoluti scrivono: le sostituzioni non li nominano (scelta 9).
-pub(crate) const NOMI_CURSORI_ASSOLUTI: [&str; 3] = ["debito_pil", "disoccupazione", "inflazione"];
+/// Gli ingressi che i tre cursori assoluti scrivono: le sostituzioni non li nominano.
+const NOMI_CURSORI_ASSOLUTI: [&str; 3] = ["debito_pil", "disoccupazione", "inflazione"];
 
 /// Gli ingressi dei tre cursori sintetici, in `[cursori]` di `scenario.toml`: nemmeno questi.
 pub(crate) const NOMI_CURSORI_SINTETICI: [&str; 3] = ["ricchezza", "eta_mediana", "orientamento"];
@@ -116,6 +116,14 @@ fn nell_intervallo(nome: &str, valore: f64, i: &Ingresso) -> Result<(), Errore> 
     }
 }
 
+/// Da dati già su misura i cursori si applicherebbero due volte.
+fn solo_dati_di_base(d: &DatiGioco) -> Result<(), Errore> {
+    match d.su_misura() {
+        None => Ok(()),
+        Some(_) => Err(Errore::SuMisura("dati già su misura".into())),
+    }
+}
+
 impl SuMisura {
     /// Lo scenario di base, coi valori dei dati: nessuna differenza. Solo dati di base: da dati
     /// già su misura darebbe «Italia di oggi» coi valori derivati.
@@ -140,14 +148,15 @@ impl SuMisura {
     }
 
     /// Legge un file di differenze, riempie dalla base (solo dati di base) ciò che manca e lo
-    /// valida come
-    /// [`DatiGioco::con_su_misura`].
+    /// valida come [`DatiGioco::con_su_misura`].
     ///
     /// # Errors
-    /// `SuMisura` per un TOML malformato o un nome sconosciuto, poi gli errori di
-    /// [`DatiGioco::con_su_misura`].
+    /// `SuMisura` per dati già su misura, un TOML malformato o un nome sconosciuto, poi gli
+    /// errori di [`DatiGioco::con_su_misura`].
     pub fn da_toml(testo: &str, base: &DatiGioco) -> Result<SuMisura, Errore> {
-        let f: FileSuMisura = toml::from_str(testo).map_err(|e| Errore::SuMisura(e.to_string()))?;
+        solo_dati_di_base(base)?;
+        let f: FileSuMisura = toml::from_str(testo)
+            .map_err(|e| Errore::SuMisura(format!("file illeggibile: {e}")))?;
         let b = SuMisura::base(base).cursori;
         let c = f.cursori;
         let s = SuMisura {
@@ -267,12 +276,12 @@ impl DatiGioco {
     /// le applica `Partita::costruisci` come leggi del turno zero.
     ///
     /// # Errors
-    /// `ScenarioFuoriIntervallo` per un cursore fuori dall'intervallo della base, `SuMisura`
-    /// per una legge, una disposizione, un gradino o una sostituzione che la base non ha, o per
-    /// gradini elettorali che insieme non fanno una legge valida, poi gli errori di
-    /// [`DatiGioco::valida`].
+    /// `SuMisura` per dati già su misura, `ScenarioFuoriIntervallo` per un cursore fuori
+    /// dall'intervallo della base, `SuMisura` per una legge, una disposizione, un gradino o una
+    /// sostituzione che la base non ha, o per gradini elettorali che insieme non fanno una legge
+    /// valida, poi gli errori di [`DatiGioco::valida`].
     pub fn con_su_misura(&self, s: &SuMisura) -> Result<DatiGioco, Errore> {
-        debug_assert!(self.su_misura().is_none(), "solo dati di base");
+        solo_dati_di_base(self)?;
         s.valida(self)?;
         let mut d = self.clone();
         let c = &s.cursori;
@@ -285,7 +294,8 @@ impl DatiGioco {
         sc.spesa_sussidi.valore *= c.disoccupazione / u0;
         // Spostamento dell'obiettivo di Taylor, senza la quota italiana: anche `inflazione_resto`
         // segue il cursore, quindi l'inflazione d'area si sposta di Δπ intero.
-        // −0,5 è il pavimento storico della BCE; dal primo turno la Taylor muove comunque il tasso.
+        // Il clamp tiene il tasso nell'intervallo della base; la Taylor lo muove comunque dal
+        // primo turno.
         let t = &mut sc.tasso_bce;
         t.valore = (t.valore + (1.0 + self.manopola("taylor_inflazione")) * (c.inflazione - pi0))
             .clamp(t.min, t.max);
@@ -296,16 +306,16 @@ impl DatiGioco {
                 el.sposta(da, a, m);
             }
         }
-        // Sintetici come scarti: `Scenario::valida` (scenario.rs:200) vuole 0 nella base.
+        // Sintetici come scarti: `Scenario::valida` vuole 0 nella base.
         ricchezza(&mut d, 1.0 + c.ricchezza / 100.0);
         eta(&mut d, c.eta_mediana);
         orientamento(&mut d, c.orientamento);
         // Poi legge, gradini elettorali e sostituzioni, che vincono.
         d.scenario.legge_elettorale.clone_from(&c.legge_elettorale);
         legge_elettorale(&mut d, self, s)?;
-        let sc = &mut d.scenario;
+        let mut ingressi = d.scenario.ingressi_mut();
         for (nome, valore) in &s.sostituzioni {
-            if let Some((_, i)) = sc.ingressi_mut().into_iter().find(|(n, _)| n == nome) {
+            if let Some((_, i)) = ingressi.iter_mut().find(|(n, _)| n == nome) {
                 i.valore = *valore;
             }
         }
@@ -337,6 +347,10 @@ fn legge_elettorale(d: &mut DatiGioco, base: &DatiGioco, s: &SuMisura) -> Result
         .iter()
         .filter(|x| x.norma == Norma::Elettorale);
     if vecchie.zip(&nuove).all(|(a, b)| a.partenza == b.partenza) {
+        // Regole della base: anche il nome, così nome e regole non divergono.
+        d.scenario
+            .legge_elettorale
+            .clone_from(&base.scenario().legge_elettorale);
         return Ok(());
     }
     d.scenario.legge_elettorale_precedente = prima.clone();
@@ -353,6 +367,9 @@ fn legge_elettorale(d: &mut DatiGioco, base: &DatiGioco, s: &SuMisura) -> Result
 /// Spese in euro e redditi dei gruppi per `k`; soglie in euro ferme, quindi `irpef_pil` e le
 /// aliquote di fascia seguono l'aliquota media IRPEF sui redditi scalati.
 fn ricchezza(d: &mut DatiGioco, k: f64) {
+    if k == 1.0 {
+        return;
+    }
     let aliquote = |d: &DatiGioco| {
         let el = Elettorato::iniziale(d, 0, &Economia::iniziale(d));
         let s = &d.scenario().aliquote.irpef;
@@ -430,10 +447,16 @@ fn eta(d: &mut DatiGioco, anni: f64) {
     for (x, c) in d.struttura.piramide.iter_mut().zip(inclinata(basso)) {
         cumulata += c;
         let ora: f64 = cumulata.round();
+        debug_assert!(ora >= prima, "cumulata decrescente: {ora} < {prima}");
         *x = (ora - prima) as u32;
         prima = ora;
     }
-    let pensione = (Leve::partenza(d).eta_pensione as usize).min(base.len() - 1);
+    let eta_pensione = Leve::partenza(d).eta_pensione;
+    debug_assert!(
+        (0.0..base.len() as f64).contains(&eta_pensione),
+        "età di pensione fuori dalla piramide: {eta_pensione}"
+    );
+    let pensione = (eta_pensione as usize).min(base.len() - 1);
     let oltre: f64 = base[pensione..].iter().sum();
     debug_assert!(oltre > 0.0, "nessuno oltre l'età di pensione");
     let r = d.struttura.piramide[pensione..]
@@ -463,6 +486,11 @@ fn eta(d: &mut DatiGioco, anni: f64) {
             if r >= 1.0 {
                 el.sposta(da, pens, tasso * m);
             } else {
+                // `sposta` si fermerebbe in silenzio alla quota del pensionato.
+                debug_assert!(
+                    tasso * m <= el.gruppi[pens].quota + 1e-12,
+                    "il pensionato {pens} cede più della sua quota"
+                );
                 el.sposta(pens, da, tasso * m);
             }
         }

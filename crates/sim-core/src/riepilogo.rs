@@ -65,8 +65,8 @@ impl Avviso {
     pub fn testo(&self) -> String {
         match self {
             Avviso::SenzaMaggioranza { posizioni } => format!(
-                "Da {} nessuna coalizione con te ha la maggioranza attesa in entrambe le Camere, \
-                 prima della campagna",
+                "Da {}, nessuna coalizione con te ha la maggioranza attesa in entrambe le Camere, \
+                 prima della campagna.",
                 elenco(posizioni)
             ),
         }
@@ -82,37 +82,58 @@ fn elenco(xs: &[f64]) -> String {
     }
 }
 
-/// Il riepilogo dei dati, deterministico e senza seme. I conti vengono dalla partita di prova
-/// al turno zero; consenso e seggi da una partita fondata per posizione, sulle intenzioni vere
-/// prima delle campagne IA del turno zero.
+/// Il riepilogo dei dati, deterministico e senza seme: una partita fondata per posizione, sulle
+/// intenzioni vere prima delle campagne IA del turno zero. I conti vengono dalla prima.
 pub fn riepilogo(dati: &DatiGioco) -> RiepilogoScenario {
-    let prova = Partita::nuova(dati.clone(), SEME);
-    let e = prova.economia();
-    let sul_pil = |euro: i64| 100.0 * euro as f64 / (e.pil_trimestrale * 1e9);
+    let mut r = None;
     let posizioni: Vec<PosizioneAttesa> = (posizioni(dati).into_iter())
-        .map(|x| attesa(dati, x))
+        .map(|x| {
+            // ponytail: una partita intera per posizione, come `anteprima_fondazione`; se pesa
+            // nella schermata, la via leggera di cursori-dello-scenario.md:171-175 (un'economia
+            // per stato, per posizione solo elettorato e voto).
+            let nuovo = partito_nuovo(dati, SEGNAPOSTO, x);
+            let p = Partita::costruisci(dati.clone(), SEME, Some(nuovo));
+            r.get_or_insert_with(|| conti(dati, &p));
+            attesa(dati, &p, x)
+        })
         .collect();
+    // Nessuna posizione se i partiti dello scenario stanno tutti in un punto: i conti allora
+    // vengono dalla partita del governo uscente.
+    let mut r = r.unwrap_or_else(|| conti(dati, &Partita::nuova(dati.clone(), SEME)));
     let senza: Vec<f64> = (posizioni.iter())
         .filter(|p| !p.maggioranza)
         .map(|p| p.posizione)
         .collect();
+    if !senza.is_empty() {
+        r.avvisi.push(Avviso::SenzaMaggioranza { posizioni: senza });
+    }
+    r.posizioni = posizioni;
+    r
+}
+
+/// I conti del turno zero, senza posizioni né avvisi. Non dipendono dal partito fondato:
+/// `Partita::costruisci` li prende da `Economia::iniziale` e da `Disposizioni::iniziali` con le
+/// leggi dello scenario, che non leggono i partiti.
+fn conti(dati: &DatiGioco, p: &Partita) -> RiepilogoScenario {
+    let e = p.economia();
+    let sul_pil = |euro: i64| 100.0 * euro as f64 / (e.pil_trimestrale * 1e9);
     RiepilogoScenario {
         spread_pb: e.spread.round() as i32,
         interessi_pil: sul_pil(e.conti.spese.interessi),
         disavanzo_pil: sul_pil(e.disavanzo_trimestre),
-        saldo_disposizioni_pil: prova.disposizioni().saldo(dati),
-        posizioni,
-        avvisi: if senza.is_empty() {
-            Vec::new()
-        } else {
-            vec![Avviso::SenzaMaggioranza { posizioni: senza }]
-        },
+        saldo_disposizioni_pil: p.disposizioni().saldo(dati),
+        posizioni: Vec::new(),
+        avvisi: Vec::new(),
     }
 }
 
-/// Il blocco migliore col giocatore `g` (spec righe 282 e 285): al più `BLOCCO` partiti contigui
-/// sull'asse (posizione dichiarata, a parità l'indice), quello con la quota più alta; a parità il
-/// primo per inizio, poi per fine. Gli indici in ordine.
+/// Il blocco migliore col giocatore `g`: al più `BLOCCO` partiti contigui sull'asse (posizione
+/// dichiarata, a parità l'indice), quello con la quota più alta; a parità il primo per inizio,
+/// poi per fine. Gli indici in ordine.
+#[expect(
+    clippy::expect_used,
+    reason = "`g` è il giocatore della partita, quindi un indice di `partiti`"
+)]
 fn blocco(partiti: &[Partito], quote: &[f64], g: usize) -> Vec<usize> {
     let mut fila: Vec<usize> = (0..partiti.len()).collect();
     fila.sort_by(|&a, &b| {
@@ -120,7 +141,7 @@ fn blocco(partiti: &[Partito], quote: &[f64], g: usize) -> Vec<usize> {
             .total_cmp(&partiti[b].posizione_dichiarata)
             .then(a.cmp(&b))
     });
-    let at = fila.iter().position(|&j| j == g).unwrap_or(0);
+    let at = (fila.iter().position(|&j| j == g)).expect("il giocatore è sempre fra i partiti");
     let quota = |f: &[usize]| f.iter().filter_map(|&j| quote.get(j)).sum::<f64>();
     let mut migliore = &fila[at..=at];
     for i in at.saturating_sub(BLOCCO - 1)..=at {
@@ -135,12 +156,7 @@ fn blocco(partiti: &[Partito], quote: &[f64], g: usize) -> Vec<usize> {
     b
 }
 
-fn attesa(dati: &DatiGioco, posizione: f64) -> PosizioneAttesa {
-    // ponytail: una partita intera per posizione, come `anteprima_fondazione`; se pesa nella
-    // schermata, la via leggera di cursori-dello-scenario.md:171-175 (un'economia per stato, per
-    // posizione solo elettorato e voto).
-    let nuovo = partito_nuovo(dati, SEGNAPOSTO, posizione);
-    let p = Partita::costruisci(dati.clone(), SEME, Some(nuovo));
+fn attesa(dati: &DatiGioco, p: &Partita, posizione: f64) -> PosizioneAttesa {
     let (g, partiti, el) = (p.giocatore(), p.partiti(), p.elettorato());
     let vero = Intenzioni::calcola(dati, el, partiti, p.governo(), None);
     let sondaggio = Sondaggio::atteso(dati, el, &vero, p.governo().presidente);
@@ -174,9 +190,13 @@ mod tests {
     fn il_testo_dell_avviso_elenca_le_posizioni() {
         let a = |posizioni: Vec<f64>| Avviso::SenzaMaggioranza { posizioni }.testo();
         let coda = "nessuna coalizione con te ha la maggioranza attesa in entrambe le Camere, \
-                    prima della campagna";
-        assert_eq!(a(vec![1.5]), format!("Da 1,5 {coda}"));
-        assert_eq!(a(vec![1.5, 6.5]), format!("Da 1,5 e 6,5 {coda}"));
-        assert_eq!(a(vec![1.5, 2.5, 6.5]), format!("Da 1,5; 2,5 e 6,5 {coda}"));
+                    prima della campagna.";
+        assert_eq!(a(vec![1.5]), format!("Da 1,5, {coda}"));
+        assert_eq!(a(vec![1.5, 6.5]), format!("Da 1,5 e 6,5, {coda}"));
+        assert_eq!(
+            a(vec![1.5, 2.5, 6.5]),
+            "Da 1,5; 2,5 e 6,5, nessuna coalizione con te ha la maggioranza attesa in entrambe le \
+             Camere, prima della campagna."
+        );
     }
 }

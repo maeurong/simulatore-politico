@@ -15,6 +15,9 @@ fn la_base_non_cambia_i_dati() {
     let base = comune::dati_base();
     let d = base.con_su_misura(&SuMisura::base(&base)).unwrap();
     assert_eq!(d.scenario(), base.scenario());
+    assert_eq!(d.elettorato(), base.elettorato());
+    assert_eq!(d.struttura(), base.struttura());
+    assert_eq!(d.disposizioni(), base.disposizioni());
     assert_eq!(d.nome_scenario(), "Italia di oggi");
     assert_eq!(base.nome_scenario(), "Italia di oggi");
     assert!(base.su_misura().is_none());
@@ -132,14 +135,17 @@ fn errore_su_misura_si_stampa_col_prefisso() {
 }
 
 #[test]
-#[cfg(debug_assertions)]
-#[should_panic(expected = "solo dati di base")]
-fn la_base_da_dati_gia_su_misura_e_un_errore_di_programma() {
+fn dati_gia_su_misura_rifiutati() {
     let base = comune::dati_base();
     let mut s = SuMisura::base(&base);
     s.cursori.debito_pil = 150.0;
     let derivati = base.con_su_misura(&s).unwrap();
-    SuMisura::base(&derivati);
+    let e = derivati.con_su_misura(&s);
+    assert!(e.is_err());
+    let atteso = "scenario su misura non valido: dati già su misura";
+    assert_eq!(e.unwrap_err().to_string(), atteso);
+    let e = SuMisura::da_toml("nome = \"Altra\"\n", &derivati).unwrap_err();
+    assert_eq!(e.to_string(), atteso);
 }
 
 #[test]
@@ -411,6 +417,7 @@ fn l_eta_piu_giovane_toglie_pensionati_e_conserva_le_quote() {
 
 #[test]
 fn eta_e_ricchezza_commutano() {
+    // Commuta solo `spesa_pensioni`: `irpef_pil` dipende dall'ordine, e l'ordine è fisso.
     let base = comune::dati_base().scenario().spesa_pensioni.valore;
     let spesa = |eta, ricchezza| con_eta(eta, ricchezza).scenario().spesa_pensioni.valore;
     let insieme = spesa(2.0, 10.0);
@@ -492,6 +499,26 @@ fn gradini_elettorali_incoerenti_rifiutati() {
     );
     s.disposizioni.insert("premio".into(), "nessuno".into());
     assert!(base.con_su_misura(&s).is_ok());
+}
+
+#[test]
+fn legge_nuova_con_i_gradini_della_base_torna_al_nome_di_base() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.legge_elettorale = "proporzionale_3".into();
+    for x in (base.disposizioni().iter()).filter(|x| x.norma == Norma::Elettorale) {
+        s.disposizioni.insert(x.id.clone(), x.partenza.clone());
+    }
+    let d = base.con_su_misura(&s).unwrap();
+    assert_eq!(
+        d.scenario().legge_elettorale,
+        base.scenario().legge_elettorale
+    );
+    assert_eq!(d.disposizioni(), base.disposizioni());
+    assert_eq!(
+        d.legge_elettorale_iniziale(),
+        base.legge_elettorale_iniziale()
+    );
 }
 
 #[test]

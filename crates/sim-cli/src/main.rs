@@ -78,7 +78,7 @@ fn esegui() -> Result<String, String> {
     let mut dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
     if let Some(percorso) = &argomenti.scenario {
         let testo = std::fs::read_to_string(percorso)
-            .map_err(|e| format!("impossibile leggere {percorso}: {e}"))?;
+            .map_err(|e| format!("impossibile leggere lo scenario {percorso}: {e}"))?;
         let s = SuMisura::da_toml(&testo, &dati).map_err(|e| e.to_string())?;
         dati = dati.con_su_misura(&s).map_err(|e| e.to_string())?;
     }
