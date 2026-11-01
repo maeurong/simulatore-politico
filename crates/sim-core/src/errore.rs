@@ -57,6 +57,7 @@ pub enum Errore {
     Comando(String),
     Bilancio(String),
     Fondazione(String),
+    SuMisura(String),
     Toml {
         file: String,
         messaggio: String,
@@ -128,6 +129,7 @@ impl fmt::Display for Errore {
             Self::Comando(m) => write!(f, "comando non ammesso: {m}"),
             Self::Bilancio(m) => write!(f, "legge di bilancio non ammessa: {m}"),
             Self::Fondazione(m) => write!(f, "fondazione del partito non valida: {m}"),
+            Self::SuMisura(m) => write!(f, "scenario su misura non valido: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

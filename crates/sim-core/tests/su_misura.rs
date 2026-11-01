@@ -1,0 +1,123 @@
+#![expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+
+mod comune;
+use sim_core::su_misura::SuMisura;
+
+#[test]
+fn la_base_non_cambia_i_dati() {
+    let base = comune::dati_base();
+    let d = base.con_su_misura(&SuMisura::base(&base)).unwrap();
+    assert_eq!(d.scenario(), base.scenario());
+    assert_eq!(d.nome_scenario(), "Italia di oggi");
+    assert_eq!(base.nome_scenario(), "Italia di oggi");
+    assert!(base.su_misura().is_none());
+    assert_eq!(d.su_misura(), Some(&SuMisura::base(&base)));
+}
+
+#[test]
+fn andata_e_ritorno_del_file() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.nome = "Italia indebitata".into();
+    s.cursori.debito_pil = 150.0;
+    s.sostituzioni.insert("costo_medio_debito".into(), 3.2);
+    let testo = s.in_toml(&base);
+    assert!(!testo.contains("ricchezza"), "solo differenze: {testo}");
+    assert!(!testo.contains("inflazione"), "solo differenze: {testo}");
+    assert_eq!(SuMisura::da_toml(&testo, &base).unwrap(), s);
+}
+
+#[test]
+fn andata_e_ritorno_con_nomi_da_virgolettare() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.nome = "L'Italia \"di domani\"".into();
+    s.cursori.ricchezza = -10.0;
+    s.cursori.legge_elettorale = "proporzionale_3".into();
+    s.disposizioni.insert("cuneo_fiscale".into(), "0".into());
+    s.sostituzioni.insert("valence di destra".into(), 0.5);
+    let testo = s.in_toml(&base);
+    assert_eq!(SuMisura::da_toml(&testo, &base).unwrap(), s);
+}
+
+#[test]
+fn file_vuoto_e_la_base_col_suo_nome() {
+    let base = comune::dati_base();
+    let s = SuMisura::da_toml("nome = \"Altra Italia\"\n", &base).unwrap();
+    assert_eq!(s.nome, "Altra Italia");
+    assert_eq!(s.cursori, SuMisura::base(&base).cursori);
+    assert!(s.disposizioni.is_empty() && s.sostituzioni.is_empty());
+}
+
+#[test]
+fn sostituzione_e_cursore_assoluto_arrivano_allo_scenario() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.nome = "Italia indebitata".into();
+    s.cursori.debito_pil = 150.0;
+    s.sostituzioni.insert("costo_medio_debito".into(), 3.2);
+    let d = base.con_su_misura(&s).unwrap();
+    assert_eq!(d.scenario().debito_pil.valore, 150.0);
+    assert_eq!(d.scenario().costo_medio_debito.valore, 3.2);
+    assert_eq!(d.scenario().debito_pil.min, base.scenario().debito_pil.min);
+    assert_eq!(d.nome_scenario(), "Italia indebitata");
+}
+
+#[test]
+fn sostituzione_fuori_intervallo_rifiutata_col_nome() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.sostituzioni.insert("costo_medio_debito".into(), 99.0);
+    let e = base.con_su_misura(&s).unwrap_err().to_string();
+    assert!(e.contains("costo_medio_debito"), "{e}");
+}
+
+#[test]
+fn su_misura_ostile_rifiutato_col_nome() {
+    let base = comune::dati_base();
+    let casi = [
+        ("[cursori]\npil = 1.0", "`pil`"),
+        ("[sostituzioni]\ndebito = 1.0", "debito"),
+        ("[sostituzioni]\ndebito_pil = 150.0", "debito_pil"),
+        ("[sostituzioni]\nricchezza = 0.0", "ricchezza"),
+        ("[cursori]\ndebito_pil = 170.0", "debito_pil"),
+        ("[cursori]\ndisoccupazione = 4.0", "disoccupazione"),
+        ("[cursori]\ninflazione = -1.0", "inflazione"),
+        ("[cursori]\nricchezza = 25.0", "ricchezza"),
+        ("[cursori]\neta_mediana = -6.0", "eta_mediana"),
+        ("[cursori]\norientamento = nan", "orientamento"),
+        (
+            "[cursori]\nlegge_elettorale = \"maggioritario\"",
+            "maggioritario",
+        ),
+        (
+            "[disposizioni]\nnumero_parlamentari = \"400\"",
+            "numero_parlamentari",
+        ),
+        (
+            "[disposizioni]\nnumero_parlamentari = \"400_200\"",
+            "numero_parlamentari",
+        ),
+        ("[disposizioni]\ncuneo_fiscale = \"99\"", "cuneo_fiscale"),
+        ("[disposizioni]\ninesistente = \"0\"", "inesistente"),
+        ("pil = 1.0", "`pil`"),
+    ];
+    for (corpo, colpevole) in casi {
+        let testo = format!("nome = \"Ostile\"\n{corpo}\n");
+        let e = SuMisura::da_toml(&testo, &base).unwrap_err().to_string();
+        assert!(e.contains(colpevole), "{corpo} -> {e}");
+    }
+    let e = SuMisura::da_toml("[cursori]\n", &base)
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("nome"), "{e}");
+}
+
+#[test]
+fn errore_su_misura_si_stampa_col_prefisso() {
+    let e = sim_core::Errore::SuMisura("x".into());
+    assert_eq!(e.to_string(), "scenario su misura non valido: x");
+}
