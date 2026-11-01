@@ -103,6 +103,17 @@ fn eredita_di_chi_non_ha_mai_governato() {
             .all(|i| i.turno_zero.is_finite() && i.fine.is_finite())
     );
     assert!(p.abbandona().is_err());
+    // Finita nella chiusura: nessun punto per il turno che non si apre, e si salva lo stesso.
+    assert_eq!(p.serie().len(), 1);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
+}
+
+#[test]
+fn i_riavvolgimenti_entrano_nell_eredita() {
+    let mut p = fondata(3.5);
+    p.imposta_riavvolgimenti(3);
+    assert_eq!(p.abbandona().unwrap().riavvolgimenti, 3);
+    assert_eq!(p.eredita().unwrap().riavvolgimenti, 3);
 }
 
 /// Il confermativo di una legge del giocatore, approvato, la mette fra le sue leggi.

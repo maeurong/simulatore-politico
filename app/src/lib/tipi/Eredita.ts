@@ -5,4 +5,4 @@ import type { Fine } from "./Fine";
 /**
  * Ciò che il giocatore lascia a partita finita. `bozza` vale solo per `SenzaSeggi`.
  */
-export type Eredita = { fine: Fine, bozza: boolean, anni_al_governo: number, leggi_in_vigore: Array<string>, indicatori: Array<ConfrontoIndicatore>, };
+export type Eredita = { fine: Fine, bozza: boolean, anni_al_governo: number, riavvolgimenti: number, leggi_in_vigore: Array<string>, indicatori: Array<ConfrontoIndicatore>, };

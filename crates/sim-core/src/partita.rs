@@ -25,6 +25,7 @@ use crate::parlamento::{
     TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
+use crate::salvataggi::{PuntoSerie, Testata};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
@@ -114,6 +115,11 @@ pub struct Partita {
     partenza: [f64; 4],
     /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
     mosse: Vec<MossaIa>,
+    /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
+    serie: Vec<PuntoSerie>,
+    /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
+    /// il turno a cui torna.
+    riavvolgimenti: u32,
 }
 
 /// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
@@ -297,6 +303,8 @@ impl Partita {
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
             mosse: Vec::new(),
+            serie: Vec::new(),
+            riavvolgimenti: 0,
         };
         // Il partito del giocatore non segue una regola IA (scelta 4 del piano 8b), nemmeno quando
         // viene dallo scenario: le sue frange nascono Sticker.
@@ -304,6 +312,7 @@ impl Partita {
             x.regola = Regola::Sticker;
         }
         p.partenza = p.indicatori();
+        p.registra_punto();
         p
     }
 
@@ -344,6 +353,34 @@ impl Partita {
             e.disoccupazione_nazionale(&self.dati),
             e.inflazione[0],
         ]
+    }
+
+    /// Aggiunge alla serie gli indicatori dell'apertura del turno. La metà più uno viene dai
+    /// seggi dei rami nella legge in vigore, non da `legislatura.totali`, che a Camere sciolte è
+    /// zero; i seggi della coalizione sono quelli veri del parlamento.
+    fn registra_punto(&mut self) {
+        let mut c = self.coalizione_del_giocatore();
+        c.sort_unstable();
+        c.dedup();
+        c.retain(|&j| j < self.partiti.len());
+        let s = &self.informazione.sondaggio;
+        let consenso = (c.iter())
+            .map(|&j| legislatura::quota_fra_i_votanti(s, j))
+            .sum();
+        let leve = self.disposizioni.leve(&self.dati);
+        let margine = |seggi: &[u32], totale: f64| {
+            let della_coalizione: u32 = c.iter().filter_map(|&j| seggi.get(j)).sum();
+            della_coalizione as i32 - voto::maggioranza(totale.round() as u32) as i32
+        };
+        let punto = PuntoSerie {
+            turno: self.turno,
+            data: self.data,
+            consenso,
+            maggioranza_camera: margine(&self.parlamento.seggi_camera, leve.seggi_camera),
+            maggioranza_senato: margine(&self.parlamento.seggi_senato, leve.seggi_senato),
+            spread_pb: self.economia.spread.round() as i32,
+        };
+        self.serie.push(punto);
     }
 
     // Ordine della chiusura:
@@ -544,6 +581,9 @@ impl Partita {
             self.costo_taglio(&perdite);
         }
         self.apertura_ia();
+        if !self.finita() {
+            self.registra_punto();
+        }
     }
 
     /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
@@ -2100,6 +2140,33 @@ impl Partita {
         self.fine.is_some()
     }
 
+    /// Gli indicatori a ogni apertura di turno, dal turno zero.
+    pub fn serie(&self) -> &[PuntoSerie] {
+        &self.serie
+    }
+
+    /// Ciò che l'elenco delle partite mostra di questa.
+    pub fn testata(&self) -> Testata {
+        Testata {
+            nome: self.partiti[self.giocatore].nome.clone(),
+            scenario: self.dati.nome_scenario().into(),
+            turno: self.turno,
+            data: self.data,
+            versione_schema: self.versione_schema,
+            finita: self.finita(),
+        }
+    }
+
+    /// Il guscio, dopo aver caricato il turno a cui il giocatore torna, riporta il contatore
+    /// dei riavvolgimenti, che nello snapshot di quel turno è rimasto indietro.
+    pub fn imposta_riavvolgimenti(&mut self, n: u32) {
+        self.riavvolgimenti = n;
+    }
+
+    pub fn riavvolgimenti(&self) -> u32 {
+        self.riavvolgimenti
+    }
+
     /// Ciò che il giocatore lascia, a partita finita.
     pub fn eredita(&self) -> Option<Eredita> {
         self.fine.map(|fine| self.eredita_di(fine))
@@ -2124,6 +2191,7 @@ impl Partita {
             fine,
             bozza: fine == Fine::SenzaSeggi,
             anni_al_governo: f64::from(self.turni_al_governo) / 4.0,
+            riavvolgimenti: self.riavvolgimenti,
             leggi_in_vigore: nomi.collect(),
             indicatori: (voci.iter().zip(self.partenza).zip(fine_partita))
                 .map(|((&(id, nome), turno_zero), fine)| ConfrontoIndicatore {
@@ -3565,13 +3633,15 @@ impl Partita {
     /// Ricostruisce una partita da uno snapshot JSON, validandolo.
     ///
     /// # Errors
-    /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
+    /// JSON illeggibile, versione dello schema mancante o non intera (`SalvataggioIlleggibile`,
+    /// non schema 0), schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
     /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
     /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
     /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
     /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`),
     /// o disposizioni, parlamento e intesa che non combaciano coi dati (`Disposizioni::controlla`,
-    /// `Parlamento::controlla`, `Intesa::controlla`).
+    /// `Parlamento::controlla`, `Intesa::controlla`), o serie degli indicatori che non arriva al
+    /// turno (`controlla_serie`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -3579,7 +3649,9 @@ impl Partita {
             .get("versione_schema")
             .and_then(serde_json::Value::as_u64)
             .and_then(|v| u32::try_from(v).ok())
-            .unwrap_or(0);
+            .ok_or_else(|| {
+                Errore::SalvataggioIlleggibile("manca la versione dello schema".into())
+            })?;
         if trovata != VERSIONE_SCHEMA {
             return Err(Errore::SchemaDiverso {
                 trovata,
@@ -3652,6 +3724,7 @@ impl Partita {
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
         partita.controlla_decreti()?;
+        partita.controlla_serie()?;
         let in_aula = (partita.parlamento.misure.iter())
             .filter(|m| m.forma == FormaMisura::Bilancio)
             .count();
@@ -3665,6 +3738,26 @@ impl Partita {
 }
 
 impl Partita {
+    /// La serie: un punto per apertura, coi turni da 0 al turno corrente (al precedente se la
+    /// partita è finita nella chiusura, che non apre il turno), e consenso finito.
+    fn controlla_serie(&self) -> Result<(), Errore> {
+        let contigui = (self.serie.iter().zip(0u32..)).all(|(s, k)| s.turno == k);
+        let ultimo = self.serie.last().map(|s| s.turno);
+        let finita_in_chiusura =
+            self.finita() && ultimo.map(|u| u.saturating_add(1)) == Some(self.turno);
+        ok(
+            contigui && (ultimo == Some(self.turno) || finita_in_chiusura),
+            &format!(
+                "serie degli indicatori con turni non contigui da 0 al turno {}",
+                self.turno
+            ),
+        )?;
+        ok(
+            self.serie.iter().all(|s| s.consenso.is_finite()),
+            "serie degli indicatori con un consenso non finito",
+        )
+    }
+
     /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
     /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
     /// conversione.
@@ -4155,6 +4248,27 @@ mod tests {
             posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    /// Al turno `u32::MAX` la chiusura satura senza panico. Da un salvataggio lì non si arriva
+    /// (la serie avrebbe un punto per turno), quindi i campi si scrivono a mano.
+    #[test]
+    fn contatori_al_limite_non_vanno_in_panico() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.chiudi_turno();
+        p.turno = u32::MAX;
+        // Fuori dalle Camere sciolte il turno non passa la scadenza.
+        p.legislatura.scadenza = u32::MAX;
+        p.data = Trimestre {
+            anno: 2200,
+            trimestre: 4,
+        };
+        // A quel turno ogni valore in arrivo dei dati sarebbe già scaduto.
+        for v in &mut p.disposizioni.voci {
+            v.in_arrivo.clear();
+        }
+        p.chiudi_turno();
+        assert_eq!(p.turno, u32::MAX);
     }
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione

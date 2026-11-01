@@ -20,6 +20,7 @@ pub struct Eredita {
     pub fine: Fine,
     pub bozza: bool,
     pub anni_al_governo: f64,
+    pub riavvolgimenti: u32,
     pub leggi_in_vigore: Vec<String>,
     pub indicatori: Vec<ConfrontoIndicatore>,
 }
