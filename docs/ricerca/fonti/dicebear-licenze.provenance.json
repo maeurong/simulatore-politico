@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://www.dicebear.com/licenses/", "sha256": "194867dce4b707206b7f955789fb019694962ffdb6a305b1b5fb9bfd7aae2ddb", "bytes": 8478}, "tool": "curl + python3 stdlib (re, html)", "tool_version": "curl 8.7.1 / python 3.14.7", "extracted": "2026-11-01"}

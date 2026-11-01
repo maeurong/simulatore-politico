@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://raw.githubusercontent.com/tauri-apps/tauri/tauri-v2.12.3/crates/tauri/src/webview/scripts/zoom-hotkey.js", "sha256": "99537c2ce7577500157551ebf12ede43e303c5c9a355a195b6c3ad7379f501cb", "bytes": 1420}, "tool": "curl", "tool_version": "n/d", "extracted": "2026-11-01"}
