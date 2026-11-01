@@ -470,6 +470,13 @@ fn il_gradino_elettorale_dell_editor_e_la_partenza() {
         ("500", "300")
     );
     assert_eq!(v.legge, ETICHETTA_GOVERNO_USCENTE);
+    // Un'altra voce, non toccata: la partenza è quella della 180, e la 180 è anche il precedente
+    // (la base ha invece il Rosatellum come precedente: qui la legge di base fa da precedente).
+    let premio = voce(&p, "premio");
+    assert_eq!(
+        (premio.in_vigore.as_str(), premio.precedente.as_str()),
+        ("coalizione", "coalizione")
+    );
 }
 
 #[test]
@@ -506,4 +513,54 @@ fn la_disposizione_dell_editor_ha_effetto() {
     assert_eq!(p.disposizioni().leve(&d).cuneo, 0.0);
     let nella_base = Partita::fonda(base, 7, &f).unwrap();
     assert_eq!(voce(&nella_base, "cuneo_fiscale").in_vigore, "7");
+}
+
+/// `SuMisura` con ogni cursore numerico all'estremo `scelto` del suo intervallo di base.
+fn agli_estremi(base: &sim_core::DatiGioco, massimo: bool) -> SuMisura {
+    let scelto = |i: &sim_core::scenario::Ingresso| if massimo { i.max } else { i.min };
+    let (s, mut m) = (base.scenario(), SuMisura::base(base));
+    m.cursori.debito_pil = scelto(&s.debito_pil);
+    m.cursori.disoccupazione = scelto(&s.disoccupazione);
+    m.cursori.inflazione = scelto(&s.inflazione);
+    m.cursori.ricchezza = scelto(&s.cursori.ricchezza);
+    m.cursori.eta_mediana = scelto(&s.cursori.eta_mediana);
+    m.cursori.orientamento = scelto(&s.cursori.orientamento);
+    m
+}
+
+#[test]
+fn tutti_i_cursori_al_minimo_e_al_massimo_insieme_sono_giocabili() {
+    let base = comune::dati_base();
+    for massimo in [false, true] {
+        let nome = if massimo { "massimi" } else { "minimi" };
+        let s = agli_estremi(&base, massimo);
+        let mut p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+        let somma = |p: &Partita| p.elettorato().gruppi.iter().map(|g| g.quota).sum::<f64>();
+        let prima = somma(&p);
+        for _ in 0..8 {
+            p.chiudi_turno();
+        }
+        let dopo = somma(&p);
+        assert!(
+            dopo.is_finite() && (dopo - prima).abs() < 1e-6,
+            "{nome}: {prima} -> {dopo}"
+        );
+    }
+}
+
+#[test]
+fn andata_e_ritorno_con_ogni_campo_diverso_dalla_base() {
+    let base = comune::dati_base();
+    let mut s = agli_estremi(&base, false);
+    assert_ne!(
+        s.cursori,
+        SuMisura::base(&base).cursori,
+        "il minimo deve differire"
+    );
+    s.nome = "Tutto cambiato".into();
+    s.cursori.legge_elettorale = "proporzionale_3".into();
+    s.disposizioni.insert("soglia_lista".into(), "500".into());
+    s.sostituzioni.insert("costo_medio_debito".into(), 3.2);
+    let testo = s.in_toml(&base);
+    assert_eq!(SuMisura::da_toml(&testo, &base).unwrap(), s, "{testo}");
 }
