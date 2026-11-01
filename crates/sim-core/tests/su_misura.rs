@@ -230,3 +230,66 @@ fn il_debito_muove_interessi_e_spread() {
     assert!(e1.spread > e0.spread);
     assert!(e1.conti.spese.interessi > e0.conti.spese.interessi);
 }
+
+#[test]
+fn la_ricchezza_scala_le_spese_in_euro_e_fa_mordere_gli_scaglioni() {
+    use sim_core::elettorato::Fascia;
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.ricchezza = 10.0;
+    let d = base.con_su_misura(&s).unwrap();
+    let (b, n) = (base.scenario(), d.scenario());
+    for (nome, prima, dopo) in [
+        ("pil", b.pil_trimestrale.valore, n.pil_trimestrale.valore),
+        ("pensioni", b.spesa_pensioni.valore, n.spesa_pensioni.valore),
+        ("sussidi", b.spesa_sussidi.valore, n.spesa_sussidi.valore),
+        (
+            "altre",
+            b.altre_prestazioni.valore,
+            n.altre_prestazioni.valore,
+        ),
+    ] {
+        assert!(
+            (dopo - prima * 1.1).abs() < 1e-9,
+            "{nome}: {dopo} != {prima} x 1,1"
+        );
+    }
+    for (g0, g1) in base.elettorato().gruppi.iter().zip(&d.elettorato().gruppi) {
+        assert!((g1.primario - g0.primario * 1.1).abs() < 1e-9);
+        assert!((g1.trasferimenti - g0.trasferimenti * 1.1).abs() < 1e-9);
+    }
+    assert_eq!(n.aliquote, b.aliquote);
+    assert_eq!(n.pensione_minima, b.pensione_minima);
+    assert!(n.irpef_pil.valore > b.irpef_pil.valore + 0.1);
+    // Bassa e media restano nel primo scaglione anche scalate: morde solo l'alta.
+    let (a0, a1) = (&base.elettorato().aliquote, &d.elettorato().aliquote);
+    for (f, a) in a1 {
+        assert!(*a >= a0[f] - 1e-12, "fascia {f}: {a} < {}", a0[f]);
+    }
+    assert!(a1[&Fascia::Alta] > a0[&Fascia::Alta] + 0.005);
+}
+
+#[test]
+fn l_orientamento_sposta_la_media_e_conserva_la_massa() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.orientamento = 0.5;
+    let d = base.con_su_misura(&s).unwrap();
+    let media = |d: &sim_core::DatiGioco| -> f64 {
+        let el = d.elettorato();
+        let (mut somma, mut peso) = (0.0, 0.0);
+        for (i, g) in el.gruppi.iter().enumerate() {
+            let w = el.regioni[i / 18].elettori as f64 * g.quota;
+            for (k, p) in g.posizione.iter().enumerate() {
+                somma += w * p * (k + 1) as f64;
+            }
+            peso += w;
+        }
+        somma / peso
+    };
+    for g in &d.elettorato().gruppi {
+        assert!((g.posizione.iter().sum::<f64>() - 1.0).abs() < 1e-12);
+    }
+    let spostamento = media(&d) - media(&base);
+    assert!((spostamento - 0.473).abs() <= 0.005, "{spostamento}");
+}

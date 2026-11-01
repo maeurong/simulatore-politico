@@ -2,7 +2,8 @@
 
 use crate::dati::DatiGioco;
 use crate::disposizioni::Norma;
-use crate::elettorato::spostamenti_lavoro;
+use crate::economia::Economia;
+use crate::elettorato::{Elettorato, Fascia, PUNTI, fascia_di, spostamenti_lavoro};
 use crate::errore::Errore;
 use crate::scenario::Ingresso;
 use serde::{Deserialize, Serialize};
@@ -254,8 +255,8 @@ impl DatiGioco {
     /// Una copia di questi dati con lo scenario su misura applicato, poi validata.
     ///
     /// Applica i tre cursori assoluti coi loro derivati (disoccupazione: spesa NASpI e quote dei
-    /// gruppi; inflazione: tasso BCE), il nome della legge elettorale e le sostituzioni, per
-    /// ultime. I cursori sintetici e le disposizioni si validano soltanto.
+    /// gruppi; inflazione: tasso BCE), ricchezza e orientamento, il nome della legge elettorale
+    /// e le sostituzioni, per ultime. L'età e le disposizioni si validano soltanto.
     ///
     /// # Errors
     /// `ScenarioFuoriIntervallo` per un cursore fuori dall'intervallo della base, `SuMisura`
@@ -286,7 +287,10 @@ impl DatiGioco {
                 el.sposta(da, a, m);
             }
         }
-        // Qui i cursori sintetici (Task 2-3), poi legge, gradini elettorali e sostituzioni.
+        ricchezza(&mut d, 1.0 + c.ricchezza / 100.0);
+        // Qui l'età (Task 3).
+        orientamento(&mut d, c.orientamento);
+        // Poi legge, gradini elettorali e sostituzioni, che vincono.
         let sc = &mut d.scenario;
         sc.legge_elettorale.clone_from(&c.legge_elettorale);
         for (nome, valore) in &s.sostituzioni {
@@ -297,5 +301,55 @@ impl DatiGioco {
         d.su_misura = Some(s.clone());
         d.valida()?;
         Ok(d)
+    }
+}
+
+/// Spese in euro e redditi dei gruppi per `k`; soglie in euro ferme, quindi `irpef_pil` e le
+/// aliquote di fascia seguono l'aliquota media IRPEF sui redditi scalati.
+fn ricchezza(d: &mut DatiGioco, k: f64) {
+    let aliquote = |d: &DatiGioco| {
+        let el = Elettorato::iniziale(d, 0, &Economia::iniziale(d));
+        let s = &d.scenario().aliquote.irpef;
+        let fasce = Fascia::TUTTE.map(|f| el.aliquota_media_irpef_se(d, s, |i| fascia_di(i) == f));
+        (el.aliquota_media_irpef(d, s), fasce)
+    };
+    let (t1, f1) = aliquote(d);
+    let sc = &mut d.scenario;
+    for i in [
+        &mut sc.pil_trimestrale,
+        &mut sc.spesa_pensioni,
+        &mut sc.spesa_sussidi,
+        &mut sc.altre_prestazioni,
+    ] {
+        i.valore *= k;
+    }
+    for g in &mut d.elettorato.gruppi {
+        g.primario *= k;
+        g.trasferimenti *= k;
+    }
+    let (tk, fk) = aliquote(d);
+    d.scenario.irpef_pil.valore *= tk / t1;
+    for ((f, a), b) in Fascia::TUTTE.iter().zip(fk).zip(f1) {
+        if let Some(x) = d.elettorato.aliquote.get_mut(f) {
+            *x *= a / b;
+        }
+    }
+}
+
+/// Ogni istogramma passa `|x|` della massa di ogni punto al vicino nel verso di `x`; al bordo
+/// resta dov'è.
+fn orientamento(d: &mut DatiGioco, x: f64) {
+    for g in &mut d.elettorato.gruppi {
+        let p = g.posizione;
+        g.posizione = [0.0; PUNTI];
+        for (k, m) in p.iter().enumerate() {
+            let vicino = if x >= 0.0 {
+                (k + 1).min(PUNTI - 1)
+            } else {
+                k.saturating_sub(1)
+            };
+            g.posizione[k] += (1.0 - x.abs()) * m;
+            g.posizione[vicino] += x.abs() * m;
+        }
     }
 }
