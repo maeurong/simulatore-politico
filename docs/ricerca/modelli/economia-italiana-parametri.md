@@ -1,7 +1,7 @@
 ---
 tipo: modello
-fonti: [fonti/degrauwe-ji-2013-self-fulfilling-crises.md, fonti/bdi-qef-128-2012-premi-rischio-sovrano.md, fonti/bdi-boleco-4-2018-spread.md, fonti/bdi-boleco-3-2022-spread.md, fonti/ecb-pr-2022-07-21-tpi.md, fonti/ecb-pr-2012-09-06-omt.md, fonti/ecb-op-372-2025-tpi-omt.md, fonti/ecb-lagarde-econ-2025-12-03-tpi.md, fonti/ball-leigh-loungani-2013-okun.md, fonti/econbull-bonaventura-2020-okun-regioni.md, fonti/ecb-wp-546-garnier-wilhelmsen-2005.md, fonti/ijcb-riggi-santoro-2015-phillips-italia.md, fonti/istat-cet-2022-2024-comunicato.md, fonti/istat-pil-territoriale-prel-2025.md, fonti/istat-note-legali.md, fonti/ade-irpef-aliquote-2026.md, fonti/ade-iva-norme-aliquote.md, fonti/ade-ires-infogen.md, fonti/ec-dp-098-2019-semi-elasticita.md, fonti/ecb-capital-key-2026.md]
-aggiornato: 2026-10-17
+fonti: [fonti/degrauwe-ji-2013-self-fulfilling-crises.md, fonti/bdi-qef-128-2012-premi-rischio-sovrano.md, fonti/bdi-boleco-4-2018-spread.md, fonti/bdi-boleco-3-2022-spread.md, fonti/ecb-pr-2022-07-21-tpi.md, fonti/ecb-pr-2012-09-06-omt.md, fonti/ecb-op-372-2025-tpi-omt.md, fonti/ecb-lagarde-econ-2025-12-03-tpi.md, fonti/ball-leigh-loungani-2013-okun.md, fonti/econbull-bonaventura-2020-okun-regioni.md, fonti/ecb-wp-546-garnier-wilhelmsen-2005.md, fonti/ijcb-riggi-santoro-2015-phillips-italia.md, fonti/istat-cet-2022-2024-comunicato.md, fonti/istat-pil-territoriale-prel-2025.md, fonti/istat-note-legali.md, fonti/ade-irpef-aliquote-2026.md, fonti/ade-iva-norme-aliquote.md, fonti/ade-ires-infogen.md, fonti/ec-dp-098-2019-semi-elasticita.md, fonti/ecb-capital-key-2026.md, fonti/esm-guideline-precautionary-assistance.md, fonti/zettelmeyer-trebesch-gulati-2013-greek-autopsy.md]
+aggiornato: 2026-10-29
 ---
 # Parametri dell'economia italiana
 
@@ -116,7 +116,7 @@ Per la regola di Taylor della BCE nel gioco, il peso giusto dell'Italia nell'inf
 
 - **Spread**: $s = s_0 + \max(0,\,-0{,}0523\,b + 0{,}0009\,b^2) + \kappa_t$, con $b$ debito/PIL atteso e $\kappa_t$ un premio di sfiducia che scatta con eventi politici e decade, tarato sui due casi in cui lo spread osservato ha superato di 150-250 pb quello «giustificato» (2012, 2022) [INF]. Con il debito italiano intorno al 137% la pendenza marginale è circa 19 pb per punto di debito, cinque volte Laubach [M sopra].
 - **Tetto del TPI**: se i quattro criteri valgono, la BCE riporta $\kappa_t$ verso zero ma non tocca la parte da fondamentali (gli acquisti si fermano se le tensioni dipendono dai fondamentali). Un «nessuna azione efficace» in PDE, una procedura per squilibri o una DSA negativa tolgono il tetto [INF, dai criteri].
-- **OMT**: solo dopo una richiesta al MES con programma e condizionalità; è l'evento-scelta già fissato in [[decisioni]] (MES con OMT o ristrutturazione).
+- **OMT**: solo dopo una richiesta al MES con programma e condizionalità; è l'evento-scelta già fissato in [[decisioni]] (MES con OMT o ristrutturazione). Criteri PCCL ed ECCL del MES (fonti/esm-guideline-precautionary-assistance.md) [V], aste del 2011 (nessuna scoperta, rendimenti fino al 7,89%) e PSI greco del 2012 (taglio del 58-65% in valore attuale, adesione del 96,9%; fonti/zettelmeyer-trebesch-gulati-2013-greek-autopsy.md) [V] in [[situazioni-ed-eventi-al-turno-zero]] §5.
 - **Okun per regione**: coefficienti della tab. 2 nella forma in differenze, con $u^*$ regionale che ha isteresi; per la coerenza col nazionale (-0,25 in gap) serve una ricalibrazione della media [INF].
 - **Congiuntura**: IS e Phillips dell'area euro di Garnier-Wilhelmsen per l'Italia come primo default, con la pendenza della Phillips bassa (0,05) coerente con l'appiattimento italiano dopo il 1999 [INF].
 - **Settori**: i 10 settori della v1 combaciano con l'A*10 ISTAT regionale fino al 2023; il 2024 regionale esiste solo a 6 branche [M].
@@ -185,6 +185,12 @@ Per la regola di Taylor della BCE nel gioco, il peso giusto dell'Italia nell'inf
 - **URL** https://www.ecb.europa.eu/ecb/orga/capital/html/index.en.html · [V]
   **perché conta qui** peso dell'Italia nel capitale BCE dopo l'ingresso della Bulgaria
   **cosa se ne prende** 13,0993% del capitale, 15,8307% della chiave dell'Eurosistema (fonti/ecb-capital-key-2026.md)
+- **URL** https://www.esm.europa.eu/system/files/document/esm_guideline_on_precautionary_financial_assistance.pdf · [V]
+  **perché conta qui** condizioni d'accesso alla linea precauzionale MES che apre l'OMT
+  **cosa se ne prende** i sei criteri della PCCL, l'ECCL per chi ne manca alcuni, un anno più due rinnovi di sei mesi (fonti/esm-guideline-precautionary-assistance.md, art. 2)
+- **URL** https://www.economic-policy.org/wp-content/uploads/2013/04/zettelmeyer.pdf · [V]
+  **perché conta qui** unico precedente di ristrutturazione di titoli di Stato nell'area euro, per l'opzione «ristrutturazione»
+  **cosa se ne prende** adesione del 96,9%, taglio del 58-65% in valore attuale, clausole retroattive, esenzione della BCE (fonti/zettelmeyer-trebesch-gulati-2013-greek-autopsy.md)
 
 ## Collegamenti
 

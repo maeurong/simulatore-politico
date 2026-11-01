@@ -1,7 +1,7 @@
 ---
 tipo: dataset
-fonti: [fonti/dpc-classificazione-sismica.md, fonti/dpc-classificazione-sismica-csv-2025-05.md, fonti/dpc-note-legali.md, fonti/ingv-cpti15-download-licenza.md, fonti/ingv-cpti15-v4-estratto-mw55-1900.md, fonti/ispra-idrogeo-indicatori-regioni-2026-10.md, fonti/ispra-dissesto-2024-executive-summary.md, fonti/ispra-note-legali.md, fonti/ispra-siccita-disponibilita-idrica-2023.md, fonti/effis-burntareas-it-aggregato-regioni.md, fonti/effis-data-license.md, fonti/ispra-analisi-effis-2024.md, fonti/ispra-analisi-effis-2025.md, fonti/eurostat-cli-iad-loss-it.md, fonti/eea-italia-perdite-eventi-climatici-2025.md, fonti/casaitalia-sintesi-rapporto-2017.md, fonti/camera-temi-terremoti-2026.md, fonti/mit-linee-guida-classificazione-rischio-sismico.md, fonti/mit-sismabonus-slide-2017.md, fonti/nibs-mitigation-saves-2019-pagina.md, fonti/nibs-mitigation-saves-2019-overview.md]
-aggiornato: 2026-10-17
+fonti: [fonti/dpc-classificazione-sismica.md, fonti/dpc-classificazione-sismica-csv-2025-05.md, fonti/dpc-note-legali.md, fonti/ingv-cpti15-download-licenza.md, fonti/ingv-cpti15-v4-estratto-mw55-1900.md, fonti/ispra-idrogeo-indicatori-regioni-2026-10.md, fonti/ispra-dissesto-2024-executive-summary.md, fonti/ispra-note-legali.md, fonti/ispra-siccita-disponibilita-idrica-2023.md, fonti/effis-burntareas-it-aggregato-regioni.md, fonti/effis-data-license.md, fonti/ispra-analisi-effis-2024.md, fonti/ispra-analisi-effis-2025.md, fonti/eurostat-cli-iad-loss-it.md, fonti/eea-italia-perdite-eventi-climatici-2025.md, fonti/casaitalia-sintesi-rapporto-2017.md, fonti/camera-temi-terremoti-2026.md, fonti/mit-linee-guida-classificazione-rischio-sismico.md, fonti/mit-sismabonus-slide-2017.md, fonti/nibs-mitigation-saves-2019-pagina.md, fonti/nibs-mitigation-saves-2019-overview.md, fonti/dpc-delibera-2017-06-22-crisi-idrica-parma-piacenza.md, fonti/dpc-delibera-2022-07-04-deficit-idrico.md, fonti/dpc-delibera-2024-05-06-deficit-idrico-sicilia.md, fonti/camera-temi-alluvione-emilia-romagna-2023.md]
+aggiornato: 2026-10-29
 ---
 # Pericolosità naturale per regione
 
@@ -123,6 +123,7 @@ Proposta minima [INF, da decidere nel ticket 15]:
   - **Alluvioni e frane:** λ = N_idro × w(r). N_idro, il numero nazionale di emergenze idro gravi all'anno, è una **manopola**: il dato non esiste aperto. Valore iniziale proposto: 4, da tarare finché la perdita media simulata torna intorno ai ~1-5 miliardi l'anno di Casa Italia ed Eurostat. Stagione: più probabile nel quarto trimestre [INF, non misurato].
   - **Incendi:** la colonna (h) è già una probabilità trimestrale media. Meglio concentrarla nel terzo trimestre, dove cade l'87% dei grandi incendi: p_Q3 ≈ min(1; 3,5 × h), gli altri trimestri ≈ 0.
   - **Siccità:** non è un evento puntuale ma una situazione a soglia con isteresi, come in [[crisi-ed-eventi]]. Si accende sugli anni secchi, a scala nazionale o di distretto; Sicilia, Sardegna e Po sono le aree più colpite nel 2022.
+    - Aggiornamento del 29/10/2026: le siccità reali sono state gestite come emergenze regionali, con delibera del CdM e prima tranche dal Fondo (8,65 milioni per Parma e Piacenza nel 2017, 36,5 milioni per cinque regioni nel 2022, 20 milioni per la Sicilia nel 2024) (fonti/dpc-delibera-2017-06-22-crisi-idrica-parma-piacenza.md, fonti/dpc-delibera-2022-07-04-deficit-idrico.md, fonti/dpc-delibera-2024-05-06-deficit-idrico-sicilia.md) [V]. Nessuna grandezza del motore misura l'acqua. [[situazioni-ed-eventi-al-turno-zero]] §3 propone quindi un'emergenza regionale prolungata invece della situazione [INF].
 - **Gravità**, in euro di danno:
   - sisma: circa 10 miliardi in media per episodio, con coda lunga. Basta un moltiplicatore casuale su tre livelli (lieve, grave, catastrofico) con media 1;
   - idro: lo stesso ordine di grandezza dell'Emilia-Romagna 2023 per l'evento grave, cioè 8,5 miliardi;
@@ -131,12 +132,13 @@ Proposta minima [INF, da decidere nel ticket 15]:
   La gravità si moltiplica per (1 − k × prevenzione), con prevenzione ∈ [0, 1] presa dallo stock di infrastrutture e dalla sicurezza ambientale della regione:
   - k_sisma = 0,85, il salto G → B del DM 58: l'unico coefficiente con un appiglio italiano;
   - per idro e incendi, k va dichiarato come scelta di design. Si può ancorare al fatto che un rapporto beneficio/costo di 4-8:1 rende la prevenzione conveniente, ma non dice di quanto riduca il danno a turno.
-- **Fondo di riserva:** gli incrementi del Fondo per le emergenze nazionali nel 2024-2026 vanno da 100 a 400 milioni l'anno, contro un danno atteso medio di circa 4-8 miliardi l'anno (sismi più eventi climatici). Il fondo copre la prima emergenza, mai la ricostruzione. Questo regge l'opzione «decreto a debito» del ticket 15. Taglia di partenza proposta: 0,2-0,4 miliardi l'anno [INF].
+- **Fondo di riserva:** gli incrementi del Fondo per le emergenze nazionali nel 2024-2026 vanno da 100 a 400 milioni l'anno, contro un danno atteso medio di circa 4-8 miliardi l'anno (sismi più eventi climatici). Il fondo copre la prima emergenza, mai la ricostruzione. Questo regge l'opzione «decreto a debito» del ticket 15. Taglia di partenza proposta: 0,2-0,4 miliardi l'anno [INF]. Uso reale per evento: la prima delibera mette 10 milioni per l'alluvione dell'Emilia-Romagna 2023, contro 4,7 miliardi stanziati in tutto a fine 2024 per decreto (fonti/camera-temi-alluvione-emilia-romagna-2023.md) [V]; dettagli in [[situazioni-ed-eventi-al-turno-zero]] §4.
 - **Da evitare:** la quota (a) e il peso (f) pesati sui comuni o sulla popolazione 2011 vanno bene per pesi relativi, non come probabilità assolute.
 
 ## Collegamenti
 - [[crisi-ed-eventi]]: il rischio trimestrale è l'ingresso della M degli eventi puntuali; la siccità è una situazione a soglia.
 - [[decisioni]]: decisione del 17/10/2026 sulle emergenze naturali (ticket 15).
+- [[situazioni-ed-eventi-al-turno-zero]]: siccità come emergenza o situazione, e gli usi del Fondo per evento.
 - [[istat]]: popolazione per pesare la quota (a) sugli abitanti, se serve.
 - [[eurostat]]: licenza di `cli_iad_loss`.
 - [[servizi-pubblici]]: stock di infrastrutture e sicurezza ambientale come prevenzione.

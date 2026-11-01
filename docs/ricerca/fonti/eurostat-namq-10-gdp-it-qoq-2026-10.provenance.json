@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/namq_10_gdp?geo=IT&unit=CLV_PCH_PRE&s_adj=SCA&na_item=B1GQ&sinceTimePeriod=2000-Q1", "sha256": "9a304499607eb0f73a7bcb7054ab367906cddae30a297fa0661214a6ac658219", "bytes": 2487}, "tool": "curl+python3 json", "tool_version": "n/d", "extracted": "2026-10-29"}

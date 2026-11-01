@@ -1,7 +1,7 @@
 ---
 tipo: modello
-fonti: [fonti/nij-five-things-deterrence.md, fonti/wikipedia-this-is-the-police.md, fonti/wikipedia-papers-please.md, fonti/unodc-legal.md]
-aggiornato: 2026-10-16
+fonti: [fonti/nij-five-things-deterrence.md, fonti/wikipedia-this-is-the-police.md, fonti/wikipedia-papers-please.md, fonti/unodc-legal.md, fonti/cedu-torreggiani-2013-testo.md, fonti/giustizia-detenuti-presenti-1991-2026.md, fonti/giustizia-detenuti-capienze-2026-09-30.md]
+aggiornato: 2026-10-29
 ---
 # Criminalità e giustizia
 
@@ -34,6 +34,9 @@ Il modello economico del crimine (Becker) tratta il reato come scelta: beneficio
 - [[this-is-the-police]]: allocazione di agenti scarsi fra chiamate concorrenti, con corruzione e mafia (fonti/wikipedia-this-is-the-police.md).
 - [[papers-please]]: l'applicazione della regola al singolo caso, sotto quota e con mazzette (fonti/wikipedia-papers-please.md).
 
+## Carceri: livelli italiani
+- Sentenza pilota Torreggiani (CEDU, 8/1/2013): nel 2010, 67.961 detenuti per 45.000 posti, sovraffollamento del 151%; ad aprile 2012, il 148% (fonti/cedu-torreggiani-2013-testo.md, §§ 23, 29) [V]. Al 30/09/2026: 66.063 presenti su 51.319 posti regolamentari, il 128,7% [M] (fonti/giustizia-detenuti-capienze-2026-09-30.md). Massimo della serie semestrale: 68.258 al 30/06/2010 (fonti/giustizia-detenuti-presenti-1991-2026.md) [V]. Tendenza e soglie in [[situazioni-ed-eventi-al-turno-zero]] §1.4.
+
 ## Per il nostro gioco
 - Prendere: certezza > severità come regola del modello, con l'opinione pubblica che crede il contrario. È un dilemma politico onesto.
 - Evitare: «più pena = meno crimine» come effetto lineare.
@@ -45,3 +48,4 @@ Il modello economico del crimine (Becker) tratta il reato come scelta: beneficio
 - [[mercato-del-lavoro-e-disuguaglianza]] (altro filone): disoccupazione giovanile e disuguaglianza come cause.
 - [[servizi-pubblici]]: polizia come servizio a raggio e pattuglie (Cities: Skylines II).
 - [[crisi-ed-eventi]]: l'ondata di criminalità come situazione a soglia.
+- [[situazioni-ed-eventi-al-turno-zero]]: delitti denunciati e carceri al turno zero, con picchi e variabilità.
