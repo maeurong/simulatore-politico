@@ -1,5 +1,6 @@
 mod comune;
 use comune::{dati_base, edita, fondata};
+use sim_core::salvataggi::{FORMATO_ALBO, VoceAlbo};
 use sim_core::{Errore, Partita, SuMisura, VERSIONE_SCHEMA};
 
 #[test]
@@ -124,6 +125,69 @@ fn la_serie_si_controlla_al_caricamento() {
             "{caso}: {e:?}"
         );
     }
+}
+
+#[test]
+fn la_voce_dell_albo_regge_un_formato_futuro() {
+    let mut p = fondata(3.5);
+    p.chiudi_turno();
+    p.abbandona().unwrap();
+    let v = p.voce_albo().unwrap();
+    let mut j = serde_json::to_value(&v).unwrap();
+    j["campo_del_futuro"] = serde_json::json!({"a": 1});
+    assert_eq!(serde_json::from_value::<VoceAlbo>(j).unwrap(), v);
+}
+
+#[test]
+fn l_albo_porta_elezioni_e_serie() {
+    let mut p = fondata(3.5);
+    for _ in 0..60 {
+        if !p.legislatura().elezioni.is_empty() {
+            break;
+        }
+        p.chiudi_turno();
+    }
+    assert!(!p.legislatura().elezioni.is_empty());
+    p.chiudi_turno();
+    p.abbandona().unwrap();
+    let v = p.voce_albo().unwrap();
+    let e = p.eredita().unwrap();
+    assert_eq!(v.formato_albo, FORMATO_ALBO);
+    assert_eq!(v.esito, "Abbandono");
+    assert_eq!(v.nome, p.testata().nome);
+    assert_eq!(v.scenario, p.testata().scenario);
+    assert_eq!(v.turni, p.testata().turno);
+    // Un punto per apertura giocata, turno zero compreso; l'abbandono non chiude.
+    assert_eq!(v.serie.len(), v.turni as usize + 1);
+    assert_eq!(v.serie.as_slice(), p.serie());
+    assert_eq!(v.inizio, v.serie[0].data);
+    assert_eq!(v.fine, p.testata().data);
+    assert_eq!(v.elezioni.len(), p.legislatura().elezioni.len());
+    let (el, es) = (&v.elezioni[0], &p.legislatura().elezioni[0]);
+    assert_eq!(el.data, es.data);
+    assert_eq!(el.voti.len(), es.voti.len());
+    let mio = &p.partiti()[p.giocatore()];
+    let suo = es.voti.iter().find(|x| x.partito == mio.id);
+    assert_eq!(
+        el.seggi_giocatore,
+        suo.map_or((0, 0), |x| (x.camera, x.senato))
+    );
+    assert!(el.voti.iter().any(|(n, _)| *n == mio.nome));
+    assert_eq!(v.anni_al_governo, e.anni_al_governo);
+    assert_eq!(v.leggi_in_vigore, e.leggi_in_vigore);
+    assert_eq!(v.riavvolgimenti, e.riavvolgimenti);
+    assert_eq!(v.indicatori.len(), e.indicatori.len());
+    for (a, b) in v.indicatori.iter().zip(&e.indicatori) {
+        assert_eq!(
+            (&a.id, &a.nome, a.turno_zero, a.fine),
+            (&b.id, &b.nome, b.turno_zero, b.fine)
+        );
+    }
+}
+
+#[test]
+fn nessuna_voce_a_partita_in_corso() {
+    assert!(fondata(3.5).voce_albo().is_none());
 }
 
 #[test]

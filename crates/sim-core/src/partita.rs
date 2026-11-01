@@ -25,7 +25,7 @@ use crate::parlamento::{
     TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
-use crate::salvataggi::{PuntoSerie, Testata};
+use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
@@ -2168,6 +2168,49 @@ impl Partita {
             versione_schema: self.versione_schema,
             finita: self.finita(),
         }
+    }
+
+    /// La voce dell'albo; nessuna a partita in corso. Eredità e testata non si ricalcolano.
+    pub fn voce_albo(&self) -> Option<VoceAlbo> {
+        let e = self.eredita()?;
+        let t = self.testata();
+        let nome_di = |id: &str| {
+            (self.partiti.iter())
+                .find(|p| p.id == id)
+                .map_or_else(|| id.to_owned(), |p| p.nome.clone())
+        };
+        let mio = &self.partiti[self.giocatore].id;
+        let elezioni = (self.legislatura.elezioni.iter())
+            .map(|el| ElezioneAlbo {
+                data: el.data,
+                affluenza: el.affluenza,
+                voti: (el.voti.iter())
+                    .map(|v| (nome_di(&v.partito), v.quota))
+                    .collect(),
+                seggi_giocatore: (el.voti.iter())
+                    .find(|v| &v.partito == mio)
+                    .map_or((0, 0), |v| (v.camera, v.senato)),
+            })
+            .collect();
+        Some(VoceAlbo {
+            formato_albo: FORMATO_ALBO,
+            nome: t.nome,
+            scenario: t.scenario,
+            inizio: self.serie.first().map_or(self.data, |s| s.data),
+            fine: self.data,
+            turni: self.turno,
+            esito: match e.fine {
+                Fine::SenzaSeggi => "Senza seggi",
+                Fine::Abbandono => "Abbandono",
+            }
+            .into(),
+            anni_al_governo: e.anni_al_governo,
+            leggi_in_vigore: e.leggi_in_vigore,
+            indicatori: e.indicatori.into_iter().map(Into::into).collect(),
+            serie: self.serie.clone(),
+            elezioni,
+            riavvolgimenti: e.riavvolgimenti,
+        })
     }
 
     /// Il guscio, dopo aver caricato il turno a cui il giocatore torna, riporta il contatore
