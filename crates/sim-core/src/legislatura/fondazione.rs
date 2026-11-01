@@ -6,7 +6,7 @@ use crate::elettorato::{PUNTI, media_pesata};
 use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::partita::Partita;
-use crate::partiti::{ID_GIOCATORE, Partito, Vocazione};
+use crate::partiti::{ID_GIOCATORE, Partito, Regola, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -52,8 +52,9 @@ pub fn posizioni(dati: &DatiGioco) -> Vec<f64> {
 }
 
 /// Il partito del giocatore: la luna di miele del leader al primo mandato sta in `valence` e non
-/// in `valence_base`, così si spegne col ritorno della valence.
-fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
+/// in `valence_base`, così si spegne col ritorno della valence. Anche il partito di protesta nasce
+/// da qui.
+pub(crate) fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
     let base = dati.manopola("valence_partito_nuovo");
     Partito {
         id: ID_GIOCATORE.into(),
@@ -64,6 +65,16 @@ fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Partito {
         valence_base: base,
         vocazione: Vocazione::Mista,
         leader: String::new(),
+        regola: Regola::Sticker,
+        sciolto: false,
+        cassa: dati.manopola("dote_partito_nuovo").round() as i64,
+        senza_seggi: 0,
+        ultimo_passo: 0.0,
+        minaccia: false,
+        campagna: Vec::new(),
+        promesse_campagna: Vec::new(),
+        promesse: Vec::new(),
+        turni_da_presidente: 0,
     }
 }
 

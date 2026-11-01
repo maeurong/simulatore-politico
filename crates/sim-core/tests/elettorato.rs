@@ -770,7 +770,7 @@ fn intenzione(f: &FileDati, i: usize, ritocca: impl Fn(&mut Gr)) -> Vec<f64> {
     let p = Partita::nuova(d.clone(), 1);
     let mut el = p.elettorato().clone();
     ritocca(&mut el.gruppi[i]);
-    intenzioni(&d, &el, p.partiti(), p.governo()).swap_remove(i)
+    intenzioni(&d, &el, p.partiti(), p.governo(), None).swap_remove(i)
 }
 
 fn uno_in(n: usize, k: usize) -> Vec<f64> {
@@ -848,7 +848,7 @@ fn l_astensione_segue_fascia_e_condizione() {
         g.posizione = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0];
         g.voto_precedente = vec![1.0 / 8.0; 8];
     }
-    let i = intenzioni(&d, &el, p.partiti(), p.governo());
+    let i = intenzioni(&d, &el, p.partiti(), p.governo(), None);
     let ast = |c, fa| i[indice_gruppo(0, c, fa)][7];
     use Condizione::{DipendentePrivato as Priv, Studente};
     assert!(ast(Priv, Fascia::Bassa) > ast(Priv, Fascia::Media));

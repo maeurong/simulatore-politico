@@ -21,6 +21,7 @@ pub use redditi::{Indici, Reddito};
 pub use referendum::{Affluenza, Quesito};
 pub(crate) use referendum::{stima, toccati};
 pub use voto::{Intenzioni, intenzioni};
+pub(crate) use voto::{softmax, utilita};
 
 /// Punti dell'istogramma di posizione.
 pub const PUNTI: usize = 7;
@@ -405,6 +406,15 @@ impl Elettorato {
         el.aggiorna_redditi(dati, e, &neutre);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
         el
+    }
+
+    /// Un partito in coda: giudizio zero e voto precedente zero, prima dell'astensione.
+    pub(crate) fn aggiungi_partito(&mut self) {
+        for g in &mut self.gruppi {
+            g.giudizio.push(0.0);
+            let astensione = g.voto_precedente.len().saturating_sub(1);
+            g.voto_precedente.insert(astensione, 0.0);
+        }
     }
 
     /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti senza le leve di

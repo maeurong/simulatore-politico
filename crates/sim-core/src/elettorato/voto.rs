@@ -3,6 +3,7 @@
 use super::{Elettorato, PER_REGIONE, condizione_di, fascia_di};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
+use crate::legislatura::Spinte;
 use crate::partiti::{Governo, Partito};
 use serde::Serialize;
 
@@ -15,14 +16,15 @@ pub struct Intenzioni {
 }
 
 impl Intenzioni {
-    /// Intenzioni vere per gruppo e nazionali.
+    /// Intenzioni vere per gruppo e nazionali, con le `spinte` della campagna se ci sono.
     pub fn calcola(
         dati: &DatiGioco,
         el: &Elettorato,
         partiti: &[Partito],
         governo: &Governo,
+        spinte: Option<&Spinte>,
     ) -> Intenzioni {
-        let per_gruppo = intenzioni(dati, el, partiti, governo);
+        let per_gruppo = intenzioni(dati, el, partiti, governo, spinte);
         let d = dati.elettorato();
         let mut nazionali = vec![0.0; partiti.len() + 1];
         let mut totale = 0.0;
@@ -42,21 +44,25 @@ impl Intenzioni {
 }
 
 /// Softmax con lo shift del massimo.
-pub(super) fn softmax(u: &[f64]) -> Vec<f64> {
+pub(crate) fn softmax(u: &[f64]) -> Vec<f64> {
     let max = u.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let e: Vec<f64> = u.iter().map(|x| (x - max).exp()).collect();
     let somma: f64 = e.iter().sum();
     e.into_iter().map(|x| x / somma).collect()
 }
 
-/// Utilità del gruppo `i` al punto `x` (1..=7): un valore per partito, poi l'astensione.
-fn utilita(
+/// Utilità del gruppo `i` al punto `x` (1..=7): un valore per partito, poi l'astensione. Uno
+/// sciolto vale −∞: l'astensione è sempre finita, quindi il softmax gli dà zero senza NaN. Le
+/// `spinte` della campagna (scelta 13 del piano 8b): la valence di ogni partito in più, e
+/// l'astensione in meno per ogni partito con la dichiarata entro 1 da `x`.
+pub(crate) fn utilita(
     dati: &DatiGioco,
     el: &Elettorato,
     partiti: &[Partito],
     governo: &Governo,
     i: usize,
     x: f64,
+    spinte: Option<&Spinte>,
 ) -> Vec<f64> {
     let (beta, gamma) = (
         dati.manopola("beta_distanza"),
@@ -67,6 +73,9 @@ fn utilita(
         .iter()
         .enumerate()
         .map(|(j, p)| {
+            if p.sciolto {
+                return f64::NEG_INFINITY;
+            }
             let giudizio = if governo.al_governo(j) {
                 g.giudizio[j]
             } else {
@@ -75,7 +84,16 @@ fn utilita(
             -beta * (x - p.posizione_percepita).powi(2) + p.valence + gamma * giudizio
         })
         .collect();
-    u.push(astensione(dati, i));
+    let mut a = astensione(dati, i);
+    if let Some(s) = spinte {
+        for (j, p) in partiti.iter().enumerate() {
+            u[j] += s.valence[i][j];
+            if (x - p.posizione_dichiarata).abs() <= 1.0 {
+                a -= s.mobilita[i][j];
+            }
+        }
+    }
+    u.push(a);
     u
 }
 
@@ -95,12 +113,13 @@ fn transizione(
     partiti: &[Partito],
     governo: &Governo,
     i: usize,
+    spinte: Option<&Spinte>,
 ) -> Vec<Vec<f64>> {
     let phi = dati.manopola("fedelta");
     let n = partiti.len() + 1;
     let mut t = vec![vec![0.0; n]; n];
     for (k, h) in el.gruppi[i].posizione.iter().enumerate() {
-        let u = utilita(dati, el, partiti, governo, i, (k + 1) as f64);
+        let u = utilita(dati, el, partiti, governo, i, (k + 1) as f64, spinte);
         for (m, riga) in t.iter_mut().enumerate() {
             let mut um = u.clone();
             um[m] += phi;
@@ -112,16 +131,18 @@ fn transizione(
     t
 }
 
-/// Intenzioni per gruppo: partiti e astensione, somma 1.
+/// Intenzioni per gruppo: partiti e astensione, somma 1; con le `spinte` della campagna se ci
+/// sono.
 pub fn intenzioni(
     dati: &DatiGioco,
     el: &Elettorato,
     partiti: &[Partito],
     governo: &Governo,
+    spinte: Option<&Spinte>,
 ) -> Vec<Vec<f64>> {
     (0..el.gruppi.len())
         .map(|i| {
-            let t = transizione(dati, el, partiti, governo, i);
+            let t = transizione(dati, el, partiti, governo, i, spinte);
             (0..t.len())
                 .map(|k| {
                     el.gruppi[i]
@@ -180,10 +201,27 @@ impl Elettorato {
     /// coincide col voto precedente.
     pub fn avvia_voto(&mut self, dati: &DatiGioco, partiti: &[Partito], governo: &Governo) {
         let iniziali: Vec<Vec<f64>> = (0..self.gruppi.len())
-            .map(|i| stazionaria(&transizione(dati, self, partiti, governo, i)))
+            .map(|i| stazionaria(&transizione(dati, self, partiti, governo, i, None)))
             .collect();
         for (g, pi) in self.gruppi.iter_mut().zip(iniziali) {
             g.voto_precedente = pi;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Lo sciolto (−∞) prende zero, gli altri sommano a 1, nessun NaN; anche col voto precedente
+    /// allo sciolto (la fedeltà φ sommata a −∞ resta −∞).
+    #[test]
+    fn lo_sciolto_vale_zero_nel_softmax() {
+        let q = softmax(&[f64::NEG_INFINITY, 0.3, -1.0]);
+        assert_eq!(q[0], 0.0);
+        assert!(q.iter().all(|x| x.is_finite()));
+        assert!((q.iter().sum::<f64>() - 1.0).abs() < 1e-12);
+        let q = softmax(&[f64::NEG_INFINITY + 2.0, 0.3, -1.0]);
+        assert_eq!(q[0], 0.0);
     }
 }

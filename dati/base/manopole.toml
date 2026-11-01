@@ -1250,3 +1250,150 @@ valore = 0.5
 min = 0.0
 max = 2.0
 ticket = "18"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:82 (il montante del 2 per mille è 32.584.199 € l'anno: un quarto a turno)
+[due_per_mille_turno]
+valore = 8146050.0
+min = 2000000.0
+max = 12000000.0
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:89 (donazioni detratte, circa 22 milioni l'anno: un quarto a turno)
+[donazioni_turno]
+valore = 5500000.0
+min = 1000000.0
+max = 10000000.0
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:90-92, :95 (la parte delle entrate che resta dopo il funzionamento: una legislatura di entrate vale dieci volte la campagna)
+[quota_libera_entrate]
+valore = 0.1
+min = 0.02
+max = 0.3
+ticket = "25"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:91 (dote di un partito nuovo: 0,5-1,5 milioni)
+[dote_partito_nuovo]
+valore = 1000000.0
+min = 500000.0
+max = 1500000.0
+ticket = "25"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca (quanti turni d'entrate del turno zero hanno in cassa i partiti dello scenario)
+[turni_cassa_iniziale]
+valore = 20.0
+min = 4.0
+max = 40.0
+ticket = "25"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:122 (passo massimo della dichiarata: 0,5 a legislatura; CHES, 90° percentile 0,98)
+[passo_movimento]
+valore = 0.5
+min = 0.25
+max = 1.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:111 (quota nazionale di elettori del punto scoperto dove nasce la protesta: 10%, intervallo di prova 7,5-15%, Laver-Schilperoord)
+[soglia_protesta]
+valore = 0.1
+min = 0.075
+max = 0.15
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:112 (distanza minima del punto scoperto dalla dichiarata attiva più vicina: 1 punto, come in spec; intervallo 0,5-2 assunzione del piano 8b)
+[distanza_protesta]
+valore = 1.0
+min = 0.5
+max = 2.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:119 (distanza fra percepita e dichiarata a cui il partito si scinde: 1 punto, come in spec; nessuna fonte usa questa misura, astrazione di gioco; intervallo 0,5-2 assunzione del piano 8b)
+[soglia_scissione]
+valore = 1.0
+min = 0.5
+max = 2.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:119 (distanza fra percepita e dichiarata a cui il partito minaccia la scissione: 0,5, come in spec; astrazione di gioco; intervallo 0,25-1 assunzione del piano 8b)
+[minaccia_scissione]
+valore = 0.5
+min = 0.25
+max = 1.0
+ticket = "18"
+
+# docs/ricerca/modelli/vita-dei-partiti.md:117 (quota dei seggi che segue la scissione: 12%, mediana delle scissioni alla Camera 2010-2026, intervallo 5-30%); :118 (la cassa segue nella stessa proporzione) e il voto precedente dei gruppi anche, assunzione del piano 8b
+[quota_scissione]
+valore = 0.12
+min = 0.05
+max = 0.3
+ticket = "18"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca (di quanto il valore atteso di una mossa deve superare quello dello stare perché un partito IA cambi coalizione nella campagna)
+[margine_coalizione]
+valore = 0.01
+min = 0.0
+max = 0.1
+ticket = "18"
+
+# docs/ricerca/modelli/finanziamento-dei-partiti.md:92 (spesa di campagna di un grande partito: 2-3,5 milioni); la forza di ogni leva è forza_<leva> × √(euro / (spesa_riferimento × s_b)), con s_b la quota degli elettori nel bersaglio: la spinta per elettore, effetti-della-campagna-e-promesse.md:52
+[spesa_riferimento]
+valore = 3000000.0
+min = 2000000.0
+max = 3500000.0
+ticket = "26"
+
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:51, :54 (valence in più nei gruppi del bersaglio; tarata col test di scala, seme 1: a cassa piena, un terzo su ciascuna delle tre regioni più popolose, 0,21 vale 1,0 punti nazionali; il guadagno è quasi lineare nella forza, 0,105-0,315 tiene 0,5-1,5 punti)
+[forza_persuadere]
+valore = 0.21
+min = 0.105
+max = 0.315
+ticket = "26"
+
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:53, :55 (utilità dell'astensione in meno ai punti entro 1 dalla dichiarata; tarata sul rapporto con persuadere al test di scala: 0,04 vale 0,020 punti nazionali, contro 1,0 di persuadere; a cassa piena sulla Lombardia la spinta resta circa 0,1, che toglie 1,7 punti d'astensione fra i vicini della destra, seme 1, dentro l'effetto massimo di 1-2 punti; intervallo da metà a due volte e mezzo il valore)
+[forza_mobilitare]
+valore = 0.04
+min = 0.02
+max = 0.1
+ticket = "26"
+
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:55-57 (quota dell'istogramma di ogni gruppo del bersaglio spostata sul punto della dichiarata, che l'ancora riassorbe; le posizioni si muovono poco, la più debole a pari spesa: tarata sul rapporto con persuadere al test di scala: 0,00175 vale 0,008 punti nazionali, sotto mobilitare; intervallo da zero al doppio del valore)
+[forza_convincere]
+valore = 0.00175
+min = 0.0
+max = 0.0035
+ticket = "26"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca: l'effetto immediato di una promessa in campagna non ha stime (effetti-della-campagna-e-promesse.md:45) (valence in più per promessa nei gruppi la cui posizione media è più vicina al gradino promesso che al vigente, solo nel turno del voto; circa un quarto di forza_persuadere, che è la spinta di una spesa di riferimento)
+[persuasione_promessa]
+valore = 0.05
+min = 0.0
+max = 0.2
+ticket = "26"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca (intesa persa per promessa dall'alleato la cui linea sulla promessa sarebbe no, per il peso delle politiche; come costo_emendamento_respinto)
+[intesa_promessa]
+valore = 5.0
+min = 0.0
+max = 20.0
+ticket = "26"
+
+# assunzione del piano 8b, nessuna fonte in docs/ricerca per il valore (valence in più al voto dopo per la promessa mantenuta); ordine di grandezza da effetti-della-campagna-e-promesse.md:60: 30 punti di promesse mantenute valgono il 5% dei propri voti, e con 2 promesse una vale 50 punti, circa l'8%, che per un partito al 25% è Δv · (1 − q) ≈ 0,08, arrotondato a 0,1
+[valence_promessa_mantenuta]
+valore = 0.1
+min = 0.0
+max = 0.5
+ticket = "26"
+
+# docs/ricerca/modelli/effetti-della-campagna-e-promesse.md:61 (la promessa mancata pesa 1,5-2 volte la mantenuta; il doppio di valence_promessa_mantenuta, valence persa al voto dopo)
+[valence_promessa_mancata]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "26"
+
+# spec riga 379 e decisione 3 del piano 8b (turni da presidente del governo nella legislatura, chiusura del voto compresa, perché le promesse si verifichino; Markwat 2023 in effetti-della-campagna-e-promesse.md:44: niente aspettativa)
+[turni_promessa]
+valore = 4.0
+min = 1.0
+max = 20.0
+ticket = "26"

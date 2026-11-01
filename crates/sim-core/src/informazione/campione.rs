@@ -113,7 +113,9 @@ pub fn genera(
     let appr = ic.approvazione + ir.approvazione + i_f.approvazione - 2.0 * appr_n;
 
     let beta = dati.manopola("beta_distanza");
-    let n_p = partiti.len() as f64;
+    // Le medie del motivo sui soli partiti attivi: lo sciolto non è un termine di paragone.
+    let attivi = || partiti.iter().filter(|q| !q.sciolto);
+    let n_p = attivi().count() as f64;
     let (eta_da, eta_a) = match c {
         Condizione::Studente => (18, 25),
         Condizione::Pensionato => (65, 90),
@@ -142,13 +144,12 @@ pub fn genera(
                     let x = x as f64;
                     let distanza = |m: f64| (x - m).powi(2);
                     let vicinanza = beta
-                        * (partiti
-                            .iter()
+                        * (attivi()
                             .map(|q| distanza(q.posizione_percepita))
                             .sum::<f64>()
                             / n_p
                             - distanza(v.posizione_percepita));
-                    let leader = v.valence - partiti.iter().map(|q| q.valence).sum::<f64>() / n_p;
+                    let leader = v.valence - attivi().map(|q| q.valence).sum::<f64>() / n_p;
                     let governo = if v.al_governo { appr } else { -appr };
                     let (mut motivo, mut max) = (Motivo::Vicinanza, vicinanza);
                     for (m, g) in [(Motivo::Leader, leader), (Motivo::Governo, governo)] {

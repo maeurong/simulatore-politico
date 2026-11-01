@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://api.openalex.org/works?search=Is%20door-to-door%20canvassing%20effective%20in%20Europe%20meta-study%20six%20European%20countries&per_page=3", "sha256": "47b192de4040275f55a534976fb11610bb3ef5fc8138110666beaacca73cefe2", "bytes": 1668}, "tool": "curl+python3 (abstract OpenAlex)", "tool_version": "n/d", "extracted": "2026-10-29"}

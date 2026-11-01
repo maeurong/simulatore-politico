@@ -24,6 +24,7 @@ pub enum CausaIntesa {
     SondaggiInCalo,
     RotturaImpegno,
     SfiduciaRespinta,
+    Promessa,
 }
 
 impl fmt::Display for CausaIntesa {
@@ -40,6 +41,7 @@ impl fmt::Display for CausaIntesa {
             Self::SondaggiInCalo => "calo nei sondaggi al governo",
             Self::RotturaImpegno => "rottura dell'impegno pre-elettorale",
             Self::SfiduciaRespinta => "sfiducia respinta",
+            Self::Promessa => "promessa che non condivide",
         })
     }
 }
@@ -55,7 +57,7 @@ pub struct VariazioneIntesa {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Intesa {
-    /// Una voce per partito, nell'ordine dello scenario.
+    /// Una voce per partito.
     pub valori: Vec<f64>,
     pub variazioni: Vec<VariazioneIntesa>,
     /// Una voce per partito: l'ultimatum in corso, con la sua causa.

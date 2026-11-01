@@ -3,14 +3,14 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
-use crate::legislatura::{Eredita, EsitoElezioni, Fase, VoceDisponibilita, VoceRichiesta};
+use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
     CausaIntesa, EsitoReferendum, EsitoVoto, FormaMisura, StatoEmendamento, TipoReferendum,
     ValoreProposto, VariazioneIntesa, VoceLinea,
 };
 use crate::partita::Trimestre;
-use crate::partiti::Vocazione;
+use crate::partiti::{Regola, Vocazione};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -90,6 +90,17 @@ pub struct Vista {
     /// Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
     /// giocatore Presidente del Consiglio.
     pub programma: Vec<VoceProgramma>,
+    /// La campagna del giocatore: spese scelte e se il comando è ammesso.
+    pub campagna: VistaCampagna,
+}
+
+/// La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
+/// `spese` quella scelta, che la chiusura paga.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaCampagna {
+    pub attiva: bool,
+    pub spese: Vec<Spesa>,
 }
 
 /// Una voce del programma del governo IA: disposizione e gradino, con id e nomi dai dati.
@@ -376,6 +387,22 @@ pub struct VocePartito {
     pub vocazione: Vocazione,
     /// Vuoto per il partito del giocatore.
     pub leader: String,
+    pub regola: Regola,
+    pub sciolto: bool,
+    /// Euro: pubblica.
+    pub cassa: i64,
+    /// Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
+    pub promesse: Vec<VocePromessa>,
+}
+
+/// Una promessa di campagna coi nomi del catalogo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VocePromessa {
+    pub disposizione: String,
+    pub gradino: String,
+    /// Fatta al voto prima, si verifica al prossimo.
+    pub in_sospeso: bool,
 }
 
 /// La statistica senza `vera`.

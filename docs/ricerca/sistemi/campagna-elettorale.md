@@ -34,3 +34,5 @@ Come i giochi trasformano il periodo prima del voto in decisioni. Ci sono due sc
 - [[political-machine-2024]], [[the-political-process]], [[democracy-4]].
 - [[sondaggi-ed-errore]]: come generare i sondaggi che guidano la campagna, con l'errore reale.
 - [[media-informazione-e-propaganda]]: la campagna sposta la salienza dei temi.
+- [[effetti-della-campagna-e-promesse]]: quanto spostano mobilitazione, persuasione e promesse nei dati sperimentali, e con che rendimento della spesa.
+- [[finanziamento-dei-partiti]]: 2 per mille, donazioni e spesa di campagna reali, per tarare la cassa.

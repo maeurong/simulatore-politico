@@ -77,7 +77,7 @@ impl Elettorato {
         );
         let mobilitazione = dati.manopola("mobilitazione_toccati");
         let distanza = |x: f64, p: Option<f64>| p.map_or(0.0, |p| -beta * (x - p).powi(2));
-        let intenzioni = intenzioni(dati, self, partiti, governo);
+        let intenzioni = intenzioni(dati, self, partiti, governo, None);
         let mut a = Affluenza {
             si: 0.0,
             no: 0.0,

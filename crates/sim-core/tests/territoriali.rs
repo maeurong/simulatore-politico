@@ -17,6 +17,10 @@ fn coppia(f: FileDati, g: FileDati, turni: usize, mut ogni: impl FnMut(&Partita,
     for _ in 0..turni {
         ferma_tutti(&mut a);
         ferma_tutti(&mut b);
+        // Casse IA vuote al voto: senza campagne IA il voto del turno 19 ridà il governo al
+        // giocatore e nessun governo IA muove la ZES; qui non si misura la campagna.
+        casse_ia_vuote_al_voto(&mut a);
+        casse_ia_vuote_al_voto(&mut b);
         // Col bilancio il giocatore non cade: nessun governo IA a muovere le disposizioni; senza
         // le proposte dell'opposizione IA nemmeno lei.
         chiudi_col_bilancio(&mut a);
@@ -25,6 +29,19 @@ fn coppia(f: FileDati, g: FileDati, turni: usize, mut ogni: impl FnMut(&Partita,
         togli_opposizione_ia(&mut b);
         ogni(&a, &b);
     }
+}
+
+fn casse_ia_vuote_al_voto(p: &mut Partita) {
+    if !p.legislatura().turno_di_voto(p.vista().turno) {
+        return;
+    }
+    let g = p.giocatore();
+    *p = comune::edita(p, |j| {
+        for k in (0..p.partiti().len()).filter(|&k| k != g) {
+            j["partiti"][k]["cassa"] = 0.into();
+        }
+    })
+    .unwrap();
 }
 
 fn u(p: &Partita, id: &str) -> f64 {

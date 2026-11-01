@@ -115,7 +115,7 @@ pub struct ValoreProposto {
     pub gradino: String,
 }
 
-/// Seggi per partito nell'ordine dello scenario. `respinte` = disposizione e turno da cui si
+/// Seggi, una voce per partito. `respinte` = disposizione e turno da cui si
 /// ripresenta; `prossima` = id della prossima misura; `referendum` = l'abrogativo in corso,
 /// uno alla volta; `confermativi` = i referendum confermativi in attesa del voto; `decaduti` =
 /// le firme dei decreti decaduti, che non si ripetono; `sfiducia` = la mozione del giocatore o

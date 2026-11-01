@@ -4,21 +4,25 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod campagna;
+pub(crate) mod cassa;
 mod coalizione;
 mod crisi;
 mod eredita;
 mod fondazione;
+pub(crate) mod movimento;
 mod programma;
 mod spartizione;
 mod voto;
+pub use campagna::{Bersaglio, Intensita, Leva, Spesa, Spinte, VoceAnteprimaCampagna};
 #[cfg(test)]
 pub(crate) use coalizione::CausaDisponibilita;
 pub use coalizione::{Cessione, Dichiarazione, VoceDisponibilita};
 pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rotture};
 pub(crate) use crisi::{linea_sfiducia, valore_al_governo, vota_la_caduta};
 pub use eredita::{ConfrontoIndicatore, Eredita};
-pub(crate) use fondazione::quota_fra_i_votanti;
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
+pub(crate) use fondazione::{partito_nuovo, quota_fra_i_votanti};
 pub(crate) use programma::programma;
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
@@ -49,6 +53,12 @@ pub enum Fase {
 /// sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in corso, dopo
 /// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura. `voto_anticipato`: le
 /// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
+/// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
+/// `protesta`: in questa legislatura è già nato un partito di protesta; azzerata al voto.
+/// `frange`: i partiti nati da una scissione in questa legislatura; azzerate al voto.
+/// `coalizioni_ia`: nel turno del voto, la coalizione del giocatore dell'ultimo voto (se c'è) e
+/// quelle ricomposte dai partiti IA in apertura; al voto prendono il posto di `coalizioni`, che
+/// resta il patto dell'ultimo voto per le rotture d'impegno. Azzerate al voto.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Legislatura {
     pub inizio: u32,
@@ -65,6 +75,10 @@ pub struct Legislatura {
     pub maggioranza: Option<Vec<usize>>,
     pub crisi: Option<u32>,
     pub voto_anticipato: bool,
+    pub riposizionato: bool,
+    pub protesta: bool,
+    pub frange: Vec<usize>,
+    pub coalizioni_ia: Option<Vec<Vec<usize>>>,
 }
 
 impl Legislatura {
