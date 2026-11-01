@@ -166,6 +166,33 @@ fn la_disoccupazione_sposta_naspi_e_gruppi() {
 }
 
 #[test]
+fn la_disoccupazione_in_calo_sposta_verso_il_lavoro() {
+    use sim_core::economia::Economia;
+    use sim_core::elettorato::{Condizione, DatoGruppo, Fascia, indice_gruppo};
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.disoccupazione = 4.7;
+    let d = base.con_su_misura(&s).unwrap();
+    let dis = |g: &[DatoGruppo], r| -> f64 {
+        Fascia::TUTTE
+            .iter()
+            .map(|&f| g[indice_gruppo(r, Condizione::DisoccupatoInattivo, f)].quota)
+            .sum()
+    };
+    let somma = |g: &[DatoGruppo], r: usize| -> f64 {
+        g[r * 18..(r + 1) * 18].iter().map(|g| g.quota).sum()
+    };
+    let (gb, gd) = (&base.elettorato().gruppi, &d.elettorato().gruppi);
+    for r in 0..base.regioni().len() {
+        assert!(dis(gd, r) < dis(gb, r), "regione {r}");
+        assert!((somma(gd, r) - somma(gb, r)).abs() < 1e-9, "regione {r}");
+    }
+    for e in &Economia::iniziale(&d).regioni {
+        assert!(e.disoccupazione >= 0.5, "{}: {}", e.id, e.disoccupazione);
+    }
+}
+
+#[test]
 fn l_inflazione_sposta_il_tasso_bce() {
     let base = comune::dati_base();
     let mut s = SuMisura::base(&base);
