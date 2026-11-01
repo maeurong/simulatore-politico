@@ -11,7 +11,7 @@ use crate::elettorato::{
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
 use crate::grandezze::{EffettoAttivo, Grandezze};
-use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
     Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
@@ -118,7 +118,7 @@ pub struct Partita {
 
 /// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
 /// zero a tutti se nessuno vota.
-fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
+pub(crate) fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
     let (astensione, quote) = vero.nazionali.split_last().unwrap_or((&0.0, &[]));
     let votanti = 1.0 - astensione;
     let quota = |q: &f64| if votanti > 0.0 { q / votanti } else { 0.0 };
@@ -2344,6 +2344,14 @@ impl Partita {
         let pl = &self.parlamento;
         Quadro {
             seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        }
+    }
+
+    /// Il `Quadro` su `sondaggio` al posto di quello pubblico.
+    pub(crate) fn quadro_su<'a>(&'a self, sondaggio: &'a Sondaggio) -> Quadro<'a> {
+        Quadro {
+            sondaggio,
             ..self.quadro()
         }
     }

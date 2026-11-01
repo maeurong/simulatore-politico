@@ -22,7 +22,7 @@ pub(crate) use coalizione::{Quadro, cedi, coalizioni_al_voto, dichiarazione, rot
 pub(crate) use crisi::{linea_sfiducia, valore_al_governo, vota_la_caduta};
 pub use eredita::{ConfrontoIndicatore, Eredita};
 pub use fondazione::{AnteprimaFondazione, Fondazione, VocePosizione, posizioni};
-pub(crate) use fondazione::{partito_nuovo, quota_fra_i_votanti};
+pub(crate) use fondazione::{SEGNAPOSTO, partito_nuovo, quota_fra_i_votanti};
 pub(crate) use programma::programma;
 pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
