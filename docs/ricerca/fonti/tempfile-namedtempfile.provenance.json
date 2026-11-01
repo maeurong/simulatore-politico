@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://docs.rs/tempfile/latest/tempfile/struct.NamedTempFile.html", "sha256": "84ad402bf50c983f7b9991ab64bc60901f61338849f47a1aca871625099559cc", "bytes": 28626}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}
