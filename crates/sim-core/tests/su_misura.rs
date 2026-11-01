@@ -99,7 +99,7 @@ fn su_misura_ostile_rifiutato_col_nome() {
         ),
         (
             "[disposizioni]\nnumero_parlamentari = \"400_200\"",
-            "numero_parlamentari",
+            "numero_parlamentari: le disposizioni costituzionali",
         ),
         ("[disposizioni]\ncuneo_fiscale = \"99\"", "cuneo_fiscale"),
         ("[disposizioni]\ninesistente = \"0\"", "inesistente"),
@@ -110,6 +110,11 @@ fn su_misura_ostile_rifiutato_col_nome() {
         let e = SuMisura::da_toml(&testo, &base).unwrap_err().to_string();
         assert!(e.contains(colpevole), "{corpo} -> {e}");
     }
+    let costituzionale = &base.disposizioni()[base.disposizione("numero_parlamentari").unwrap()];
+    assert!(
+        costituzionale.gradino("400_200").is_some(),
+        "il caso costituzionale deve usare un gradino vero"
+    );
     let e = SuMisura::da_toml("[cursori]\n", &base)
         .unwrap_err()
         .to_string();
@@ -120,4 +125,15 @@ fn su_misura_ostile_rifiutato_col_nome() {
 fn errore_su_misura_si_stampa_col_prefisso() {
     let e = sim_core::Errore::SuMisura("x".into());
     assert_eq!(e.to_string(), "scenario su misura non valido: x");
+}
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "solo dati di base")]
+fn la_base_da_dati_gia_su_misura_e_un_errore_di_programma() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.debito_pil = 150.0;
+    let derivati = base.con_su_misura(&s).unwrap();
+    SuMisura::base(&derivati);
 }

@@ -108,8 +108,10 @@ fn nell_intervallo(nome: &str, valore: f64, i: &Ingresso) -> Result<(), Errore> 
 }
 
 impl SuMisura {
-    /// Lo scenario di base, coi valori dei dati: nessuna differenza.
+    /// Lo scenario di base, coi valori dei dati: nessuna differenza. Solo dati di base: da dati
+    /// già su misura darebbe «Italia di oggi» coi valori derivati.
     pub fn base(dati: &DatiGioco) -> SuMisura {
+        debug_assert!(dati.su_misura().is_none(), "solo dati di base");
         let s = dati.scenario();
         let c = &s.cursori;
         SuMisura {
@@ -128,7 +130,8 @@ impl SuMisura {
         }
     }
 
-    /// Legge un file di differenze, riempie dalla base ciò che manca e lo valida come
+    /// Legge un file di differenze, riempie dalla base (solo dati di base) ciò che manca e lo
+    /// valida come
     /// [`DatiGioco::con_su_misura`].
     ///
     /// # Errors
@@ -156,7 +159,8 @@ impl SuMisura {
         Ok(s)
     }
 
-    /// Il file di differenze: solo i cursori diversi dalla base, e `da_toml` lo rilegge uguale.
+    /// Il file di differenze: solo i cursori diversi dalla base (solo dati di base), e `da_toml`
+    /// lo rilegge uguale.
     #[expect(
         clippy::expect_used,
         reason = "il file ha solo stringhe, f64 e mappe a chiave stringa, che toml scrive sempre"

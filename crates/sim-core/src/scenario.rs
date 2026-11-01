@@ -194,6 +194,16 @@ impl Scenario {
                 });
             }
         }
+        let c = &self.cursori;
+        let [r, e, o] = NOMI_CURSORI_SINTETICI;
+        for (nome, i) in [(r, &c.ricchezza), (e, &c.eta_mediana), (o, &c.orientamento)] {
+            if i.valore != 0.0 {
+                return Err(Errore::StrutturaIncoerente(format!(
+                    "scenario.toml [cursori.{nome}]: nella base il valore è 0, trovato {}",
+                    i.valore
+                )));
+            }
+        }
         if self.tetti_spesa_netta.is_empty()
             || self.tetti_spesa_netta.values().any(|t| !t.is_finite())
         {
@@ -221,5 +231,18 @@ impl Scenario {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::dati::dati_base;
+
+    #[test]
+    fn ingressi_e_ingressi_mut_hanno_gli_stessi_nomi() {
+        let mut s = dati_base().scenario().clone();
+        let nomi: Vec<String> = s.ingressi().into_iter().map(|(n, _)| n).collect();
+        let nomi_mut: Vec<String> = s.ingressi_mut().into_iter().map(|(n, _)| n).collect();
+        assert_eq!(nomi, nomi_mut);
     }
 }
