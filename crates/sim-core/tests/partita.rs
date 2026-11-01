@@ -479,7 +479,10 @@ fn la_valence_persa_torna_verso_la_base() {
     let dati = dati_base();
     let ritorno = dati.manopola("ritorno_valence");
     let mut p = Partita::nuova(dati, 3);
-    let base = p.partiti()[p.governo().presidente].valence_base;
+    // Il partito del primo Presidente del Consiglio: dopo 40 turni la presidenza può essere
+    // passata a un altro (anche a una frangia, dal piano 8b).
+    let pdc = p.governo().presidente;
+    let base = p.partiti()[pdc].valence_base;
     let colpita = edita(&p, |j| {
         let pdc = j["governo"]["presidente"].as_u64().unwrap() as usize;
         j["partiti"][pdc]["valence"] = serde_json::json!(base - 1.0);
@@ -487,11 +490,11 @@ fn la_valence_persa_torna_verso_la_base() {
     .unwrap();
     p = colpita;
     p.chiudi_turno();
-    let v = p.partiti()[p.governo().presidente].valence;
+    let v = p.partiti()[pdc].valence;
     assert!((v - (base - 1.0 + ritorno)).abs() < 1e-9, "{v}");
     for _ in 0..40 {
         p.chiudi_turno();
     }
-    let v = p.partiti()[p.governo().presidente].valence;
+    let v = p.partiti()[pdc].valence;
     assert!((v - base).abs() < 0.05, "{v}");
 }

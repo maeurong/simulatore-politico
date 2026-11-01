@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://github.com/chesdata/chesdata.github.io/releases/download/ches-trend/1999-2024_CHES_dataset_meansV2.csv", "sha256": "75b503f15912987d9159e97dab34ae3e1503c2a90cd6ee1aba72c7386f0b5067", "bytes": 634898}, "tool": "curl", "tool_version": "8.7.1", "extracted": "2026-10-29"}

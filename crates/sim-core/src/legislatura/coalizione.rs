@@ -239,9 +239,11 @@ impl Quadro<'_> {
         ]
     }
 
-    /// Una voce per partito IA: `voci` su tutti.
+    /// Una voce per partito IA non sciolto: `voci` su tutti.
     pub(crate) fn disponibilita(&self, d: &Dichiarazione) -> Vec<VoceDisponibilita> {
-        self.voci(d, (0..self.partiti.len()).filter(|&j| j != self.giocatore))
+        let ia =
+            |j: &usize| *j != self.giocatore && self.partiti.get(*j).is_some_and(|p| !p.sciolto);
+        self.voci(d, (0..self.partiti.len()).filter(ia))
     }
 
     /// Una voce per partito di `quali`: disponibile se il valore atteso nella coalizione del
@@ -342,8 +344,8 @@ pub(super) fn distanza(partiti: &[Partito], k: &[usize], j: usize) -> f64 {
 /// La dichiarazione del comando `DichiaraCoalizione`, validata su `q`.
 ///
 /// # Errors
-/// `Comando` col nome del partito in causa (l'id se sconosciuto): sconosciuto, ripetuto, il
-/// giocatore stesso, cessione a un partito fuori dalla coalizione o ripetuta, cessioni pari o
+/// `Comando` col nome del partito in causa (l'id se sconosciuto): sconosciuto, sciolto, ripetuto,
+/// il giocatore stesso, cessione a un partito fuori dalla coalizione o ripetuta, cessioni pari o
 /// oltre i seggi attesi del giocatore in un ramo, ogni membro non disponibile con la coalizione
 /// intera.
 pub(crate) fn dichiarazione(
@@ -365,6 +367,9 @@ pub(crate) fn dichiarazione(
                 "non puoi inserire il tuo partito ({}) fra i membri: la coalizione la guidi tu",
                 nome(j)
             ));
+        }
+        if q.partiti.get(j).is_some_and(|p| p.sciolto) {
+            return ko(format!("{} si è sciolto", nome(j)));
         }
         if d.partiti.contains(&j) {
             return ko(format!("{} ripetuto nella coalizione", nome(j)));

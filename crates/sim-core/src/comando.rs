@@ -2,7 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
-use crate::legislatura::{Assegnazione, Cessione, Fase};
+use crate::legislatura::{Assegnazione, Cessione, Fase, Spesa};
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
 use crate::partita::Partita;
@@ -119,6 +119,23 @@ pub enum Comando {
         misura: u32,
         chiedi: bool,
     },
+    /// In campagna elettorale, una volta, sposta la dichiarata del suo partito su `posizione`:
+    /// al più `passo_movimento` di distanza, senza cambiare il suo rango nella fila per (dichiarata,
+    /// indice).
+    Riposiziona {
+        posizione: f64,
+    },
+    /// Nel turno del voto, la campagna del suo partito: fino a 3 bersagli distinti, una leva
+    /// ciascuno, euro positivi entro la cassa. Sostituisce quella già scelta; si paga in
+    /// chiusura, prima del voto.
+    Campagna {
+        spese: Vec<Spesa>,
+    },
+    /// In campagna elettorale, una volta, fino a 2 promesse (disposizione, gradino), id del
+    /// catalogo, su gradini diversi dal vigente: si verificano al voto dopo.
+    Prometti {
+        promesse: Vec<(String, String)>,
+    },
 }
 
 impl Partita {
@@ -179,7 +196,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -217,6 +234,9 @@ impl Partita {
                 self.all_opposizione()?;
                 return self.confermativo(*misura, *chiedi);
             }
+            Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
+            Comando::Campagna { spese } => return self.campagna(spese),
+            Comando::Prometti { promesse } => return self.prometti(promesse),
             _ => {}
         }
         self.di_governo()?;
