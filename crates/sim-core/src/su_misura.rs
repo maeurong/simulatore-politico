@@ -1,9 +1,12 @@
 //! Scenario su misura: le differenze dallo scenario di base, controllate sui suoi intervalli.
 
 use crate::dati::DatiGioco;
-use crate::disposizioni::Norma;
+use crate::disposizioni::{Leve, Norma};
 use crate::economia::Economia;
-use crate::elettorato::{Elettorato, Fascia, PUNTI, fascia_di, spostamenti_lavoro};
+use crate::elettorato::{
+    Condizione, Elettorato, Fascia, PUNTI, fascia_di, indice_gruppo, spostamenti_lavoro,
+    spostamenti_pensione,
+};
 use crate::errore::Errore;
 use crate::scenario::Ingresso;
 use serde::{Deserialize, Serialize};
@@ -255,8 +258,8 @@ impl DatiGioco {
     /// Una copia di questi dati con lo scenario su misura applicato, poi validata.
     ///
     /// Applica i tre cursori assoluti coi loro derivati (disoccupazione: spesa NASpI e quote dei
-    /// gruppi; inflazione: tasso BCE), ricchezza e orientamento, il nome della legge elettorale
-    /// e le sostituzioni, per ultime. L'età e le disposizioni si validano soltanto.
+    /// gruppi; inflazione: tasso BCE), ricchezza, età e orientamento, il nome della legge
+    /// elettorale e le sostituzioni, per ultime. Le disposizioni si validano soltanto.
     ///
     /// # Errors
     /// `ScenarioFuoriIntervallo` per un cursore fuori dall'intervallo della base, `SuMisura`
@@ -289,7 +292,7 @@ impl DatiGioco {
         }
         // Sintetici come scarti: `Scenario::valida` (scenario.rs:200) vuole 0 nella base.
         ricchezza(&mut d, 1.0 + c.ricchezza / 100.0);
-        // Qui l'età (Task 3).
+        eta(&mut d, c.eta_mediana);
         orientamento(&mut d, c.orientamento);
         // Poi legge, gradini elettorali e sostituzioni, che vincono.
         let sc = &mut d.scenario;
@@ -335,6 +338,91 @@ fn ricchezza(d: &mut DatiGioco, k: f64) {
         debug_assert!(b > 0.0, "aliquota media IRPEF nulla nella fascia {f}");
         if let Some(x) = d.elettorato.aliquote.get_mut(f) {
             *x *= a / b;
+        }
+    }
+}
+
+/// Età mediana interpolata nell'anno d'età.
+fn mediana(p: &[f64]) -> f64 {
+    let meta = p.iter().sum::<f64>() / 2.0;
+    let mut cumulata = 0.0;
+    for (a, &x) in p.iter().enumerate() {
+        if cumulata + x >= meta {
+            return a as f64 + (meta - cumulata) / x;
+        }
+        cumulata += x;
+    }
+    p.len() as f64
+}
+
+/// Popolazione stabile: la piramide diventa c(a)·e^(−k·a) a totale fermo, con k per bisezione
+/// finché la mediana vale la base + `anni`. Pensionati e spesa seguono `r`, la quota oltre l'età
+/// di pensione nuova sulla base (importo medio fermo); la quota dei pensionati di ogni regione
+/// pure, col flusso verso la pensione (o il suo inverso, se `r` < 1).
+fn eta(d: &mut DatiGioco, anni: f64) {
+    if anni == 0.0 {
+        return;
+    }
+    let base: Vec<f64> = d.struttura.piramide.iter().map(|&x| f64::from(x)).collect();
+    let totale: f64 = base.iter().sum();
+    let inclinata = |k: f64| -> Vec<f64> {
+        let w: Vec<f64> = (base.iter().enumerate())
+            .map(|(a, x)| x * (-k * a as f64).exp())
+            .collect();
+        let s: f64 = w.iter().sum();
+        w.iter().map(|x| x * totale / s).collect()
+    };
+    let obiettivo = mediana(&base) + anni;
+    let (mut basso, mut alto) = (-0.02, 0.02);
+    // ponytail: 50 dimezzamenti portano k a 4e-17, ben sotto lo 0,01 d'anno chiesto.
+    for _ in 0..50 {
+        let k = (basso + alto) / 2.0;
+        if mediana(&inclinata(k)) > obiettivo {
+            basso = k;
+        } else {
+            alto = k;
+        }
+    }
+    // Arrotondata sulle cumulate: il totale resta quello di base.
+    let (mut cumulata, mut prima) = (0.0, 0.0);
+    for (x, c) in d.struttura.piramide.iter_mut().zip(inclinata(basso)) {
+        cumulata += c;
+        let ora: f64 = cumulata.round();
+        *x = (ora - prima) as u32;
+        prima = ora;
+    }
+    let pensione = (Leve::partenza(d).eta_pensione as usize).min(base.len() - 1);
+    let oltre: f64 = base[pensione..].iter().sum();
+    debug_assert!(oltre > 0.0, "nessuno oltre l'età di pensione");
+    let r = d.struttura.piramide[pensione..]
+        .iter()
+        .map(|&x| f64::from(x))
+        .sum::<f64>()
+        / oltre;
+    let sc = &mut d.scenario;
+    sc.pensionati.valore *= r;
+    sc.spesa_pensioni.valore *= r;
+    let el = &mut d.elettorato;
+    let quote: Vec<f64> = el.gruppi.iter().map(|g| g.quota).collect();
+    for reg in 0..el.regioni.len() {
+        let pensionati: f64 = Fascia::TUTTE
+            .map(|f| quote[indice_gruppo(reg, Condizione::Pensionato, f)])
+            .iter()
+            .sum();
+        let flusso = spostamenti_pensione(&quote, reg, 1.0);
+        let attivi: f64 = flusso.iter().map(|s| s.2).sum();
+        if attivi <= 0.0 {
+            continue;
+        }
+        // Verso inverso: ogni pensionato restituisce agli attivi della sua fascia in proporzione
+        // alle loro quote, così la somma della regione resta ferma.
+        let tasso = pensionati * (r - 1.0).abs() / attivi;
+        for (da, pens, m) in flusso {
+            if r >= 1.0 {
+                el.sposta(da, pens, tasso * m);
+            } else {
+                el.sposta(pens, da, tasso * m);
+            }
         }
     }
 }

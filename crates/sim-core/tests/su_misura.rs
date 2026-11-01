@@ -315,3 +315,102 @@ fn orientamento(x: f64, atteso: f64) {
     let spostamento = media(&d) - media(&base);
     assert!((spostamento - atteso).abs() <= 0.005, "{x}: {spostamento}");
 }
+
+/// Età mediana interpolata nell'anno: `a + (metà − cumulata prima di a) / c(a)`.
+fn mediana(p: &[u32]) -> f64 {
+    let meta = p.iter().map(|&x| f64::from(x)).sum::<f64>() / 2.0;
+    let mut cumulata = 0.0;
+    for (a, &x) in p.iter().enumerate() {
+        let x = f64::from(x);
+        if cumulata + x >= meta {
+            return a as f64 + (meta - cumulata) / x;
+        }
+        cumulata += x;
+    }
+    p.len() as f64
+}
+
+fn con_eta(eta: f64, ricchezza: f64) -> sim_core::DatiGioco {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.eta_mediana = eta;
+    s.cursori.ricchezza = ricchezza;
+    base.con_su_misura(&s).unwrap()
+}
+
+#[test]
+fn l_eta_centra_la_mediana_e_conserva_il_totale() {
+    use sim_core::elettorato::{Condizione, DatoGruppo, Fascia, indice_gruppo};
+    let base = comune::dati_base();
+    let d = con_eta(2.0, 0.0);
+    let (p0, p1) = (&base.struttura().piramide, &d.struttura().piramide);
+    let totale = |p: &[u32]| p.iter().map(|&x| i64::from(x)).sum::<i64>();
+    assert!((totale(p1) - totale(p0)).abs() <= 1);
+    let m = mediana(p1);
+    assert!((m - 51.34).abs() <= 0.01, "mediana {m}");
+    let oltre_67 = |p: &[u32]| totale(&p[67..]) as f64 / totale(p) as f64;
+    assert!(
+        (oltre_67(p1) - 0.246).abs() <= 0.002,
+        "67+ {}",
+        oltre_67(p1)
+    );
+    let r = oltre_67(p1) / oltre_67(p0);
+    let (b, n) = (base.scenario(), d.scenario());
+    assert!((n.pensionati.valore / b.pensionati.valore - r).abs() < 1e-9);
+    assert!((n.spesa_pensioni.valore / b.spesa_pensioni.valore - r).abs() < 1e-9);
+    let pens = |g: &[DatoGruppo], reg| -> f64 {
+        Fascia::TUTTE
+            .iter()
+            .map(|&f| g[indice_gruppo(reg, Condizione::Pensionato, f)].quota)
+            .sum()
+    };
+    let somma = |g: &[DatoGruppo], reg: usize| -> f64 {
+        g[reg * 18..(reg + 1) * 18].iter().map(|g| g.quota).sum()
+    };
+    let (gb, gd) = (&base.elettorato().gruppi, &d.elettorato().gruppi);
+    for reg in 0..base.regioni().len() {
+        let atteso = pens(gb, reg) * r;
+        assert!((pens(gd, reg) - atteso).abs() < 1e-9, "regione {reg}");
+        assert!(
+            (somma(gd, reg) - somma(gb, reg)).abs() < 1e-9,
+            "regione {reg}"
+        );
+    }
+}
+
+#[test]
+fn l_eta_piu_giovane_toglie_pensionati_e_conserva_le_quote() {
+    use sim_core::elettorato::{Condizione, DatoGruppo, Fascia, indice_gruppo};
+    let base = comune::dati_base();
+    let d = con_eta(-5.0, 0.0);
+    let m = mediana(&d.struttura().piramide);
+    assert!((m - 44.34).abs() <= 0.01, "mediana {m}");
+    let r = d.scenario().pensionati.valore / base.scenario().pensionati.valore;
+    assert!(r < 1.0);
+    let pens = |g: &[DatoGruppo], reg| -> f64 {
+        Fascia::TUTTE
+            .iter()
+            .map(|&f| g[indice_gruppo(reg, Condizione::Pensionato, f)].quota)
+            .sum()
+    };
+    let (gb, gd) = (&base.elettorato().gruppi, &d.elettorato().gruppi);
+    for reg in 0..base.regioni().len() {
+        assert!(
+            (pens(gd, reg) - pens(gb, reg) * r).abs() < 1e-9,
+            "regione {reg}"
+        );
+        let somma =
+            |g: &[DatoGruppo]| -> f64 { g[reg * 18..(reg + 1) * 18].iter().map(|g| g.quota).sum() };
+        assert!((somma(gd) - somma(gb)).abs() < 1e-9, "regione {reg}");
+    }
+}
+
+#[test]
+fn eta_e_ricchezza_commutano() {
+    let base = comune::dati_base().scenario().spesa_pensioni.valore;
+    let spesa = |eta, ricchezza| con_eta(eta, ricchezza).scenario().spesa_pensioni.valore;
+    let insieme = spesa(2.0, 10.0);
+    assert!(insieme > spesa(0.0, 10.0), "l'età deve contare");
+    let in_fila = base * (spesa(2.0, 0.0) / base) * (spesa(0.0, 10.0) / base);
+    assert!((insieme - in_fila).abs() < 1e-6, "{insieme} != {in_fila}");
+}

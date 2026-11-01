@@ -42,6 +42,32 @@ pub(crate) fn spostamenti_lavoro(
     v
 }
 
+/// Chi può andare in pensione: anche i disoccupati o inattivi, che altrimenti non escono mai.
+const ATTIVI: [Condizione; 4] = [
+    Condizione::DipendentePrivato,
+    Condizione::DipendentePubblico,
+    Condizione::Autonomo,
+    Condizione::DisoccupatoInattivo,
+];
+
+/// Le masse `(da, a, massa)` del flusso verso la pensione nella regione: ogni attivo passa
+/// `tasso` della sua quota in `quote` al pensionato della sua fascia. Non le applica.
+pub(crate) fn spostamenti_pensione(
+    quote: &[f64],
+    regione: usize,
+    tasso: f64,
+) -> Vec<(usize, usize, f64)> {
+    let mut v = Vec::new();
+    for f in Fascia::TUTTE {
+        let pens = indice_gruppo(regione, Condizione::Pensionato, f);
+        for c in ATTIVI {
+            let da = indice_gruppo(regione, c, f);
+            v.push((da, pens, tasso * quote[da]));
+        }
+    }
+    v
+}
+
 impl DatiElettorato {
     /// Come [`Elettorato::sposta`], sui dati: c'è solo la posizione, il resto nasce da lì in
     /// [`Elettorato::iniziale`].
@@ -197,10 +223,8 @@ impl Elettorato {
             .filter(|a| a.anno == data.anno)
             .map(|a| a.pensionati)
             .sum();
-        // Chi può andare in pensione: anche i disoccupati o inattivi, che altrimenti non escono mai.
-        let attivi = [Priv, Pub, Autonomo, Dis];
         let in_eta: f64 = (0..self.gruppi.len())
-            .filter(|&i| attivi.contains(&condizione_di(i)))
+            .filter(|&i| ATTIVI.contains(&condizione_di(i)))
             .map(|i| self.elettori(d, i))
             .sum();
         let tasso = if in_eta > 0.0 {
@@ -210,14 +234,15 @@ impl Elettorato {
         };
         let uscite = dati.manopola("uscite_pensionati");
         let studenti = dati.manopola("uscita_studenti");
+        // Le fasce non si toccano fra loro: le quote d'inizio bastano, bit a bit, per tutte.
+        let quote: Vec<f64> = self.gruppi.iter().map(|g| g.quota).collect();
         for r in 0..d.regioni.len() {
+            for (da, a, m) in spostamenti_pensione(&quote, r, tasso) {
+                self.sposta(da, a, m);
+            }
             let u = (e.regioni[r].disoccupazione / 100.0).clamp(0.0, 1.0);
             for f in Fascia::TUTTE {
                 let pens = indice_gruppo(r, Pensionato, f);
-                for c in attivi {
-                    let da = indice_gruppo(r, c, f);
-                    self.sposta(da, pens, tasso * self.gruppi[da].quota);
-                }
                 let stud = indice_gruppo(r, Studente, f);
                 self.rinnova(pens, stud, uscite * self.gruppi[pens].quota);
                 let massa = studenti * self.gruppi[stud].quota;
