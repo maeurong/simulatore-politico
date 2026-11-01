@@ -177,6 +177,22 @@ fn l_inflazione_sposta_il_tasso_bce() {
 }
 
 #[test]
+fn gli_estremi_dell_inflazione_sono_giocabili() {
+    let base = comune::dati_base();
+    let i = &base.scenario().tasso_bce;
+    for (inflazione, tasso) in [(0.0, i.min), (8.0, i.max)] {
+        let mut s = SuMisura::base(&base);
+        s.cursori.inflazione = inflazione;
+        let d = base.con_su_misura(&s).unwrap();
+        assert_eq!(
+            d.scenario().tasso_bce.valore,
+            tasso,
+            "inflazione {inflazione}"
+        );
+    }
+}
+
+#[test]
 fn il_debito_muove_interessi_e_spread() {
     use sim_core::economia::Economia;
     let base = comune::dati_base();

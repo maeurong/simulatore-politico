@@ -275,7 +275,10 @@ impl DatiGioco {
         sc.spesa_sussidi.valore *= c.disoccupazione / u0;
         // Spostamento dell'obiettivo di Taylor, senza la quota italiana: anche `inflazione_resto`
         // segue il cursore, quindi l'inflazione d'area si sposta di Δπ intero.
-        sc.tasso_bce.valore += (1.0 + self.manopola("taylor_inflazione")) * (c.inflazione - pi0);
+        // −0,5 è il pavimento storico della BCE; dal primo turno la Taylor muove comunque il tasso.
+        let t = &mut sc.tasso_bce;
+        t.valore = (t.valore + (1.0 + self.manopola("taylor_inflazione")) * (c.inflazione - pi0))
+            .clamp(t.min, t.max);
         let el = &mut d.elettorato;
         let quote: Vec<f64> = el.gruppi.iter().map(|g| g.quota).collect();
         for r in 0..el.regioni.len() {
