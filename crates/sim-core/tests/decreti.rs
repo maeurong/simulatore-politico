@@ -1,5 +1,5 @@
 mod comune;
-use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta};
+use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::ministri::{Causa, TipoProposta};
 use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
@@ -285,7 +285,10 @@ fn decreti_non_ammessi_rifiutati_col_nome() {
             disp("numero_parlamentari", "630_315"),
             "materia esclusa dal decreto: Numero dei parlamentari",
         ),
-        (disp("eta_pensionabile", "68"), "decreto senza innesco"),
+        (
+            disp("eta_pensionabile", "68"),
+            "decreto senza innesco: nessun evento aperto per",
+        ),
         (sposta("sanita", "sanita", 1), "stesso dicastero: Sanità"),
         (sposta("sanita", "giustizia", 0), "importo non ammesso: 0"),
         (
@@ -626,4 +629,106 @@ fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
     assert_eq!(p.salva().unwrap(), prima);
     let (accolta, _) = accolta(sanita_cara());
     assert_eq!(accolta.vista().calendario.last().unwrap().nome, a.nome);
+}
+
+/// La partita con l'evento `criminalita` (dicastero Interno, decreto ammesso) aperto.
+fn con_evento_interno(p: &Partita) -> Partita {
+    let evento = dati_base().evento("criminalita").unwrap();
+    edita(p, |j| {
+        j["eventi"]["aperti"] = serde_json::json!([{
+            "evento": evento,
+            "turno": p.vista().turno,
+            "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
+            "regione": null,
+            "bersaglio": null,
+            "tono": "ordinario",
+            "costo": 0,
+            "scelta": null,
+        }]);
+    })
+    .unwrap()
+}
+
+fn decreto_su(disposizione: &str, gradino: &str) -> Decreto {
+    Decreto::Disposizioni {
+        valori: vec![ValoreProposto {
+            disposizione: disposizione.into(),
+            gradino: gradino.into(),
+        }],
+    }
+}
+
+fn emana(decreto: Decreto) -> Comando {
+    Comando::EmanaDecreto { decreto }
+}
+
+#[test]
+fn decreto_su_disposizione_ammesso_con_evento_aperto() {
+    let mut p = con_evento_interno(&Partita::nuova(dati_base(), 1));
+    let d = decreto_su("decreto_flussi", "alti");
+    assert!(p.anteprima_decreto(&d).is_ok());
+    p.comanda(emana(d)).unwrap();
+    let flussi = dati_base().disposizione("decreto_flussi").unwrap();
+    let alti = dati_base().disposizioni()[flussi].gradino("alti").unwrap();
+    let sul_calendario = p
+        .parlamento()
+        .misure
+        .iter()
+        .find(|m| m.forma == FormaMisura::Conversione);
+    let m = sul_calendario.unwrap();
+    assert_eq!(m.valori, vec![(flussi, alti)]);
+    assert!(m.fondi.is_none());
+    assert_eq!(m.proponente, Some(indice("interno")));
+    // Il decreto entra in vigore alla conversione, a fine turno.
+    p.chiudi_turno();
+    assert!(
+        (p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Conversione && e.approvata),
+        "{:?}",
+        p.vista().esiti
+    );
+}
+
+#[test]
+fn decreto_fuori_dai_dicasteri_dell_evento_rifiutato() {
+    let mut p = con_evento_interno(&Partita::nuova(dati_base(), 1));
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(emana(decreto_su("ticket", "nessuno")))
+        .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("decreto senza innesco: nessun evento aperto per Ticket sanitario"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn decreto_su_disposizione_senza_evento_rifiutato() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let e = p
+        .comanda(emana(decreto_su("decreto_flussi", "alti")))
+        .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("decreto senza innesco: nessun evento aperto per Ingressi per lavoro"),
+        "{e}"
+    );
+}
+
+/// La conversione respinta blocca la disposizione come una legge respinta: il decreto non si
+/// ripete (iter-legislativo-italiano:20), e la disposizione non è cambiata.
+#[test]
+fn conversione_respinta_di_un_decreto_su_disposizione_non_si_ripete() {
+    let f = respinte(file_base());
+    let mut p = con_evento_interno(&Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1));
+    p.comanda(emana(decreto_su("decreto_flussi", "alti")))
+        .unwrap();
+    p.chiudi_turno();
+    assert!(conversione_respinta(&p));
+    let q = con_evento_interno(&p);
+    let e = q
+        .anteprima_decreto(&decreto_su("decreto_flussi", "alti"))
+        .unwrap_err();
+    assert!(e.to_string().contains("legge respinta"), "{e}");
 }

@@ -22,8 +22,8 @@ mod regole;
 pub mod voto;
 
 pub(crate) use anteprima::anteprima;
-pub(crate) use decreti::ammetti;
 pub use decreti::{Decreto, FondiDecreto};
+pub(crate) use decreti::{ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
@@ -800,6 +800,11 @@ impl Parlamento {
     /// La conversione del decreto `fondi`, votata a fine turno.
     pub(crate) fn apri_conversione(&mut self, turno: u32, fondi: FondiDecreto) {
         let m = self.conversione(turno, fondi);
+        self.metti_in_calendario(m);
+    }
+
+    /// Mette in calendario la misura `m` costruita con `prossima` come id.
+    pub(crate) fn metti_in_calendario(&mut self, m: Misura) {
         self.misure.push(m);
         self.prossima = self.prossima.saturating_add(1);
     }

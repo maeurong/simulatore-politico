@@ -195,7 +195,27 @@ pub struct Eventi {
     pub contatori: Vec<u8>,
 }
 
+/// Cosa innesca il decreto su disposizioni: i dicasteri (indici) degli eventi aperti che lo
+/// ammettono; `tutte` ammette ogni disposizione ordinaria (la crisi del debito, task 9).
+pub(crate) struct Inneschi {
+    pub dicasteri: Vec<usize>,
+    pub tutte: bool,
+}
+
 impl Eventi {
+    pub(crate) fn inneschi(&self, dati: &DatiGioco) -> Inneschi {
+        let dicasteri = (self.aperti.iter())
+            .filter_map(|a| dati.eventi().get(a.evento))
+            .filter(|e| e.decreto)
+            .flat_map(|e| &e.dicasteri)
+            .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
+            .collect();
+        Inneschi {
+            dicasteri,
+            tutte: false,
+        }
+    }
+
     pub fn iniziali(dati: &DatiGioco) -> Eventi {
         let n = dati.situazioni().len();
         Eventi {

@@ -853,7 +853,9 @@ impl Partita {
     fn entra_in_vigore(&mut self, m: &Misura) {
         let (turno, anno) = (self.turno, self.data.anno);
         let legge = etichetta_legge(m.id, anno);
-        // Bilancio e conversioni non hanno valori: non sono leggi dell'eredità.
+        // Il bilancio e la conversione di un decreto sui fondi non hanno valori: non sono leggi
+        // dell'eredità. Il decreto su disposizioni convertito sì, e se il governo è del giocatore
+        // conta come sua legge.
         if !m.valori.is_empty() && self.del_giocatore(m) {
             self.leggi_del_giocatore.push((m.id, anno));
         }
@@ -1559,6 +1561,10 @@ impl Partita {
     pub fn anteprima_decreto(&self, decreto: &Decreto) -> Result<Anteprima, Errore> {
         self.di_governo()?;
         self.fuori_dalla_crisi()?;
+        if let Decreto::Disposizioni { valori } = decreto {
+            let m = self.conversione_disposizioni(valori)?;
+            return Ok(self.anteprima_conversione(&m, m.proponente.unwrap_or(usize::MAX)));
+        }
         let (da, a, importo) = parlamento::ammetti(
             &self.dati,
             &self.parlamento.decaduti,
@@ -1749,6 +1755,11 @@ impl Partita {
     /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
     /// Spostabile: vedi `spostabili`.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
+        if let Decreto::Disposizioni { valori } = decreto {
+            let m = self.conversione_disposizioni(valori)?;
+            self.parlamento.metti_in_calendario(m);
+            return Ok(());
+        }
         let b = self.economia.bilancio_in_vigore(self.data);
         let spostabili = self.spostabili();
         let decaduti = &self.parlamento.decaduti;
@@ -1763,6 +1774,24 @@ impl Partita {
         let fondi = FondiDecreto::Spostati { da, a, importo };
         self.parlamento.apri_conversione(self.turno, fondi);
         Ok(())
+    }
+
+    /// La conversione del decreto su disposizioni `valori`, innescato dagli eventi aperti: una
+    /// legge ordinaria dei dicasteri innescati, che per il resto passa i controlli di
+    /// `PresentaLegge` (già in vigore, bloccata, in esame, respinta da poco), votata a fine turno.
+    /// Entra in vigore se convertita (`entra_in_vigore`); decaduta non applica nulla, e il blocco
+    /// delle respinte è la non reiterazione (iter-legislativo-italiano:20).
+    fn conversione_disposizioni(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
+        let inneschi = self.eventi.inneschi(&self.dati);
+        parlamento::ammetti_disposizioni(&self.dati, &inneschi, valori)?;
+        let bozza = self
+            .parlamento
+            .bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        Ok(Misura {
+            forma: FormaMisura::Conversione,
+            voto: self.turno,
+            ..bozza
+        })
     }
 
     /// `importo` passa da margine e spesa di `da` a quelli di `a` nel bilancio in vigore, e fra i
