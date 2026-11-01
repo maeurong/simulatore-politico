@@ -186,6 +186,32 @@ fn l_albo_porta_elezioni_e_serie() {
 }
 
 #[test]
+fn l_albo_di_una_partita_senza_seggi_non_ha_il_punto_della_chiusura() {
+    // Stessa fondazione di `eredita_di_chi_non_ha_mai_governato` (tests/eredita.rs).
+    let f = comune::imposta(
+        comune::file_base(),
+        "manopole",
+        "[valence_partito_nuovo]\nvalore = ",
+        "-3.0",
+    );
+    let f = comune::imposta(f, "manopole", "[luna_di_miele]\nvalore = ", "0.0");
+    let mut p = Partita::fonda(
+        sim_core::dati::DatiGioco::da_testi(&f).unwrap(),
+        7,
+        &sim_core::legislatura::Fondazione {
+            nome: "Partito nuovo".into(),
+            posizione: 1.5,
+        },
+    )
+    .unwrap();
+    p.chiudi_turno();
+    let v = p.voce_albo().unwrap();
+    assert_eq!(v.esito, "Senza seggi");
+    assert_eq!(v.turni, 1);
+    assert_eq!(v.serie.len(), v.turni as usize);
+}
+
+#[test]
 fn nessuna_voce_a_partita_in_corso() {
     assert!(fondata(3.5).voce_albo().is_none());
 }

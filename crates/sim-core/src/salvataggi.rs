@@ -74,7 +74,8 @@ pub struct ElezioneAlbo {
 
 /// La partita finita, come l'albo la elenca da sola. `nome` e `scenario` come nella `Testata`;
 /// `turni` = le chiusure fatte; `esito` = «Senza seggi» o «Abbandono»; `elezioni` nell'ordine della
-/// legislatura, la più recente per prima.
+/// legislatura, la più recente per prima. Con «Senza seggi» la serie ha `turni` punti (la chiusura
+/// che finisce la partita non apre un turno), con «Abbandono» ne ha `turni + 1`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceAlbo {
