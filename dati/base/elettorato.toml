@@ -8,8 +8,8 @@
 aliquote = { bassa = 0.15, media = 0.25, alta = 0.33 }
 astensione_condizione = { dipendente_privato = 0.0, dipendente_pubblico = 0.0, autonomo = 0.0, pensionato = 0.0, disoccupato_inattivo = 0.0, studente = 0.0 }
 astensione_fascia = { bassa = 0.3, media = 0.0, alta = -0.2 }
-nomi = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Andrea", "Sara", "Matteo", "Elena", "Davide", "Anna", "Paolo"]
-cognomi = ["Rossi", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca"]
+nomi = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Simone", "Sara", "Filippo", "Elena", "Davide", "Anna", "Fabio"]
+cognomi = ["Rossi", "Esposito", "Bianchi", "Romano", "Barbieri", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Ferraro", "Caruso"]
 
 [paniere]
 bassa = [0.020829, 0.165226, 0.012306, 0.379461, 0.017174, 0.043024, 0.216184, 0.022975, 0.050560, 0.072261]
