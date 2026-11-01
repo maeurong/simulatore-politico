@@ -20,6 +20,8 @@ Non prima che il piano 8b (PR #36, #37 e la PR C su `feat/v1-piano-8b-campagna`)
 2. ricontrolla ogni `file:riga` citato in **Files**, **Architect** e nelle scelte: dove una riga si è spostata, correggi il piano nello stesso commit del Task 1; dove una premessa non regge più, fermati e chiedi a Mario;
 3. leggi `VERSIONE_SCHEMA` su `main` e usa quel valore + 1 (11 se il piano 10 non è ancora fuso, 12 se lo è).
 
+**Piani 10 e 11 in parallelo.** Il piano 10 si esegue insieme a questo su `feat/v1-piano-10-scenario`, già a schema 11, e tocca `partita.rs`, `dati.rs` e `scenario.rs`. Regola di Mario: chi mergia per secondo alza `VERSIONE_SCHEMA`. Se il 10 o l'11 arriva su `main` prima di questa PR, il riallineamento (merge da `origin/main`, mai rebase né force-push) la porta a 12 e lo dichiara nella PR.
+
 **Architect (01/11):** la condizione è già vera. `origin/main` è a `c56787d` (PR C dell'8b, #38) e il suo albero coincide con `feat/v1-piano-8b-campagna`, oggi a `c95ad57`, non più a `d1b6f62` (`git diff --stat origin/main feat/v1-piano-8b-campagna` vuoto). `VERSIONE_SCHEMA` su `main` = 10 (`partita.rs:41`), quindi 11. Le righe citate sotto sono rilette su quell'albero; dove erano sbagliate, la correzione sta nella riga **Architect** del task.
 
 ## Quattro PR
