@@ -7,7 +7,7 @@ use super::agenda::{
 };
 use super::{Causa, Contesto, Ministri, Ministro, StatoDicastero};
 use crate::dati::DatiGioco;
-use crate::disposizioni::Norma;
+use crate::disposizioni::{Norma, variazioni};
 use crate::errore::Errore;
 use crate::parlamento;
 use crate::partita::LIMITE_EURO;
@@ -29,11 +29,13 @@ pub enum TipoProposta {
     /// `importo`: euro che mancano al margine perché l'atto sia pagabile.
     Fondi { atto: usize, importo: i64 },
     /// La legge che porta la disposizione al gradino; `sblocca`: l'atto il cui prerequisito
-    /// soddisfa (innesco 2), `None` per l'innesco 3.
+    /// soddisfa (innesco 2); `evento`: l'evento (indice del catalogo, non di `aperti`, che si
+    /// svuota a ogni chiusura) aperto nel dicastero (innesco 4); entrambi `None` per l'innesco 3.
     Riforma {
         disposizione: usize,
         gradino: usize,
         sblocca: Option<usize>,
+        evento: Option<usize>,
     },
 }
 
@@ -61,15 +63,18 @@ fn tiene(cx: &Contesto, m: &Ministro, tipo: TipoProposta) -> bool {
         disposizione: d,
         gradino,
         sblocca,
+        evento,
     } = tipo
     else {
         return true;
     };
     let dati = cx.dati;
     aperta(cx, d, gradino)
-        && match sblocca {
-            Some(k) => (dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni)).is_some(),
-            None => (dati.disposizioni()[d].posizione(cx.disposizioni.voci[d].in_vigore))
+        && match (sblocca, evento) {
+            (Some(k), _) => (dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni)).is_some(),
+            // L'evento si chiude a fine turno, la proposta può restare: vale finché è [`aperta`].
+            (None, Some(_)) => true,
+            (None, None) => (dati.disposizioni()[d].posizione(cx.disposizioni.voci[d].in_vigore))
                 .is_some_and(|v| (v - m.posizione).abs() >= dati.manopola("distanza_alleato")),
         }
 }
@@ -114,6 +119,60 @@ fn sblocco(cx: &Contesto, i: usize, m: &Ministro, st: &StatoDicastero) -> Option
         disposizione: d,
         gradino: g,
         sblocca: Some(k),
+        evento: None,
+    })
+}
+
+/// Innesco 4: un evento aperto nel dicastero che ammette il decreto, la cui situazione misura
+/// una grandezza: fra le disposizioni ordinarie del dicastero, il gradino [`aperta`] che la
+/// migliora (`Δ · verso > 0`) più vicino alla posizione del ministro (a parità il più vicino al
+/// vigente, poi il primo). Come [`distanza`], ma ristretta al verso utile.
+fn evento_aperto(cx: &Contesto, i: usize, m: &Ministro) -> Option<TipoProposta> {
+    let (dati, id) = (cx.dati, &cx.dati.dicasteri()[i].id);
+    let mut migliore: Option<(usize, usize, usize, f64, usize)> = None;
+    for e in cx
+        .eventi
+        .nel_dicastero(dati, id)
+        .filter(|&e| dati.eventi()[e].decreto)
+    {
+        let evento = &dati.eventi()[e].id;
+        let Some(k) = (dati.situazioni().iter())
+            .find(|s| &s.evento == evento)
+            .and_then(|s| dati.grandezza(&s.misura))
+        else {
+            continue;
+        };
+        for (d, x) in dati.disposizioni().iter().enumerate() {
+            let vigore = cx.disposizioni.voci[d].in_vigore;
+            if x.dicastero.as_ref() != Some(id) || x.norma != Norma::Ordinaria {
+                continue;
+            }
+            for g in (0..x.gradini.len()).filter(|&g| aperta(cx, d, g)) {
+                let migliora = variazioni(&x.gradini[vigore], &x.gradini[g]).iter().any(
+                    |&(grandezza, delta, _)| {
+                        dati.grandezza(grandezza) == Some(k)
+                            && delta * dati.grandezze()[k].verso.segno() > 0.0
+                    },
+                );
+                let Some(vicinanza) = x.posizione(g).map(|v| (v - m.posizione).abs()) else {
+                    continue;
+                };
+                let scarto = g.abs_diff(vigore);
+                let meglio = migliore.is_none_or(|(_, _, _, v, s)| {
+                    vicinanza.total_cmp(&v).then(scarto.cmp(&s)).is_lt()
+                });
+                if migliora && meglio {
+                    migliore = Some((d, g, e, vicinanza, scarto));
+                }
+            }
+        }
+    }
+    let (disposizione, gradino, e, _, _) = migliore?;
+    Some(TipoProposta::Riforma {
+        disposizione,
+        gradino,
+        sblocca: None,
+        evento: Some(e),
     })
 }
 
@@ -152,11 +211,13 @@ fn distanza(cx: &Contesto, i: usize, m: &Ministro) -> Option<TipoProposta> {
         disposizione: d,
         gradino: g,
         sblocca: None,
+        evento: None,
     })
 }
 
 impl Ministri {
     /// Apertura, dopo le agende, per chi è in carica senza proposta, nell'ordine:
+    /// 0. [`evento_aperto`], anche con un'agenda;
     /// 1. fondi: senza agenda (nessun atto pagabile), il suo atto più sentito (`o > 0`, a parità
     ///    il primo, mai uno già in cantiere) non pagabile: chiede la differenza;
     /// 2. [`sblocco`] e 3. [`distanza`], anche con un'agenda.
@@ -192,10 +253,13 @@ impl Ministri {
                     TipoProposta::Riforma { .. } => tiene(cx, m, p.tipo).then_some(p.tipo),
                 }
                 .map(|tipo| Proposta { tipo, ..p }),
-                None => senza_agenda
-                    .then(|| piu_sentito(cx, i, m, st, |k| ammesso(i, k)))
-                    .flatten()
-                    .and_then(|k| fondi(i, k, mancano(cx, &rif, i, st, k)))
+                None => evento_aperto(cx, i, m)
+                    .or_else(|| {
+                        senza_agenda
+                            .then(|| piu_sentito(cx, i, m, st, |k| ammesso(i, k)))
+                            .flatten()
+                            .and_then(|k| fondi(i, k, mancano(cx, &rif, i, st, k)))
+                    })
                     .or_else(|| sblocco(cx, i, m, st))
                     .or_else(|| distanza(cx, i, m))
                     .map(|tipo| Proposta {
@@ -321,9 +385,11 @@ impl Ministri {
                         disposizione,
                         gradino,
                         sblocca,
+                        evento,
                     } => {
                         (dati.disposizioni().get(disposizione))
                             .is_some_and(|x| gradino < x.gradini.len())
+                            && evento.is_none_or(|e| dati.eventi().get(e).is_some())
                             && sblocca.is_none_or(|k| {
                                 dati.atti().get(k).is_some_and(|a| a.dicastero == d.id)
                             })
@@ -357,16 +423,20 @@ impl Ministri {
                 disposizione,
                 gradino,
                 sblocca,
+                evento,
             } => {
                 let x = &dati.disposizioni()[disposizione];
                 VoceProposta {
                     atto: None,
                     nome: parlamento::nome(dati, &[(disposizione, gradino)]),
                     importo: 0,
-                    motivo: sblocca.map_or_else(
-                        || format!("{}: lontana dalla sua posizione", x.nome),
-                        |k| format!("sblocca {}", dati.atti()[k].nome),
-                    ),
+                    motivo: match (sblocca, evento) {
+                        (Some(k), _) => format!("sblocca {}", dati.atti()[k].nome),
+                        (None, Some(e)) => {
+                            format!("{}: risposta a {}", x.nome, dati.eventi()[e].nome)
+                        }
+                        (None, None) => format!("{}: lontana dalla sua posizione", x.nome),
+                    },
                     rinviata: p.rinviata,
                     disposizione: Some(x.id.clone()),
                     gradino: Some(x.gradini[gradino].id.clone()),

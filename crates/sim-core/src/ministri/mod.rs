@@ -7,6 +7,7 @@ use crate::dati::DatiGioco;
 use crate::disposizioni::Disposizioni;
 use crate::economia::Economia;
 use crate::errore::Errore;
+use crate::eventi::Eventi;
 use crate::grandezze::Grandezze;
 use crate::informazione::{Sondaggio, indice};
 use crate::parlamento::Parlamento;
@@ -163,6 +164,8 @@ pub(crate) struct Contesto<'a> {
     pub economia: &'a Economia,
     pub sondaggio: &'a Sondaggio,
     pub disposizioni: &'a Disposizioni,
+    /// Gli eventi aperti, per i dicasteri che toccano.
+    pub eventi: &'a Eventi,
     /// Per le disposizioni già in esame.
     pub parlamento: &'a Parlamento,
     /// L'indice dei prezzi pubblicato, non il livello vero.

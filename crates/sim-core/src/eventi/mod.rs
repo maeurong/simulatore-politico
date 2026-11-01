@@ -203,6 +203,17 @@ pub(crate) struct Inneschi {
 }
 
 impl Eventi {
+    /// Gli eventi aperti con un dicastero `id` fra i loro, come indici del catalogo.
+    pub(crate) fn nel_dicastero<'a>(
+        &'a self,
+        dati: &'a DatiGioco,
+        id: &'a str,
+    ) -> impl Iterator<Item = usize> + 'a {
+        (self.aperti.iter().map(|a| a.evento)).filter(move |&e| {
+            (dati.eventi().get(e)).is_some_and(|x| x.dicasteri.iter().any(|d| d == id))
+        })
+    }
+
     pub(crate) fn inneschi(&self, dati: &DatiGioco) -> Inneschi {
         let dicasteri = (self.aperti.iter())
             .filter_map(|a| dati.eventi().get(a.evento))

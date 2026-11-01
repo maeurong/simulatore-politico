@@ -232,6 +232,7 @@ impl Partita {
             };
             (uscente, governo.presidente, legislatura)
         };
+        let eventi = Eventi::iniziali(&dati);
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -241,6 +242,7 @@ impl Partita {
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
                 disposizioni: &disposizioni,
+                eventi: &eventi,
                 parlamento: &parlamento,
                 indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
@@ -251,7 +253,7 @@ impl Partita {
         let mut p = Partita {
             parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
-            eventi: Eventi::iniziali(&dati),
+            eventi,
             misure: Misure::neutre(&dati),
             disposizioni,
             versione_schema: VERSIONE_SCHEMA,
@@ -510,6 +512,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -552,6 +555,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -573,6 +577,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -4293,6 +4298,61 @@ mod tests {
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
         p
+    }
+
+    /// Innesco 4: con un evento aperto nel suo dicastero che ammette il decreto, il ministro
+    /// propone la disposizione che migliora la misura dell'evento. Gli eventi non nascono ancora
+    /// prima dell'apertura (task 3): qui li si apre a mano e si rifà l'apertura.
+    #[test]
+    fn evento_nel_dicastero_da_una_proposta() {
+        let dati = dati_base();
+        let i = dati
+            .dicasteri()
+            .iter()
+            .position(|d| d.id == "interno")
+            .unwrap();
+        let evento = dati.evento("criminalita").unwrap();
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.ministri.dicasteri[i].proposta = None;
+        p.eventi.aperti.push(crate::eventi::EventoAperto {
+            evento,
+            turno: p.turno,
+            causa: crate::eventi::Causa::Soglia {
+                misura: "sicurezza".into(),
+                valore: 80.0,
+                soglia: 85.0,
+            },
+            regione: None,
+            bersaglio: None,
+            tono: crate::eventi::Tono::Ordinario,
+            costo: 0,
+            scelta: None,
+        });
+        let mut senza = Partita::carica(&p.salva().unwrap()).unwrap();
+        senza.eventi.aperti.clear();
+        p.con_contesto(|m, cx, caso| m.apri(cx, caso));
+        let prop = p.ministri.dicasteri[i].proposta.unwrap();
+        let diffusa = dati.disposizione("accoglienza").unwrap();
+        let g = dati.disposizioni()[diffusa].gradino("diffusa").unwrap();
+        let crate::ministri::TipoProposta::Riforma {
+            disposizione,
+            gradino,
+            sblocca,
+            evento: e,
+        } = prop.tipo
+        else {
+            panic!("{prop:?}")
+        };
+        assert_eq!(
+            (disposizione, gradino, sblocca, e),
+            (diffusa, g, None, Some(evento))
+        );
+        // Senza l'evento la stessa apertura non propone quella riforma.
+        senza.con_contesto(|m, cx, caso| m.apri(cx, caso));
+        assert_ne!(
+            senza.ministri.dicasteri[i].proposta.map(|x| x.tipo),
+            Some(prop.tipo)
+        );
     }
 
     /// La riforma dell'età pensionabile a 70 anni, presentata ma non in calendario.

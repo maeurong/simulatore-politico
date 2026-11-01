@@ -235,3 +235,59 @@ fn i_messaggi_dei_ministri_nominano_il_dicastero() {
         "{e}"
     );
 }
+
+/// La partita con l'evento `id` (nel catalogo) aperto.
+fn con_evento_aperto(p: &Partita, id: &str) -> Partita {
+    let evento = dati_base().evento(id).unwrap();
+    comune::edita(p, |j| {
+        j["eventi"]["aperti"] = serde_json::json!([{
+            "evento": evento,
+            "turno": p.vista().turno,
+            "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
+            "regione": null,
+            "bersaglio": null,
+            "tono": "ordinario",
+            "costo": 0,
+            "scelta": null,
+        }]);
+    })
+    .unwrap()
+}
+
+#[test]
+fn evento_nel_dicastero_mette_in_evidenza() {
+    // L'agenda del dicastero e' in evidenza solo per l'evento aperto nel suo dicastero.
+    let evidenza = |p: &Partita, dicastero: &str| {
+        let v = p.vista();
+        ministero(&v, dicastero)
+            .agenda
+            .as_ref()
+            .map(|a| a.in_evidenza)
+    };
+    let coppie = [
+        ("criminalita", "interno"),
+        ("liste_attesa", "sanita"),
+        ("carceri", "giustizia"),
+        ("crisi_energetica", "ambiente_energia"),
+    ];
+    let mut provate = 0;
+    for (evento, dicastero) in coppie {
+        for seme in 1..=20 {
+            let p = Partita::nuova(dati_base(), seme);
+            if evidenza(&p, dicastero) != Some(false) {
+                continue;
+            }
+            assert_eq!(
+                evidenza(&con_evento_aperto(&p, evento), dicastero),
+                Some(true)
+            );
+            let altro = coppie.iter().find(|c| c.1 != dicastero).unwrap().0;
+            assert_eq!(
+                evidenza(&con_evento_aperto(&p, altro), dicastero),
+                Some(false)
+            );
+            provate += 1;
+        }
+    }
+    assert!(provate > 0);
+}
