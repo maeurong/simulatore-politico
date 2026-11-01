@@ -686,6 +686,7 @@ fn decreto_su_disposizione_ammesso_con_evento_aperto() {
         "{:?}",
         p.vista().esiti
     );
+    assert_eq!(p.in_vigore("decreto_flussi"), Some("alti"));
 }
 
 #[test]
@@ -726,9 +727,23 @@ fn conversione_respinta_di_un_decreto_su_disposizione_non_si_ripete() {
         .unwrap();
     p.chiudi_turno();
     assert!(conversione_respinta(&p));
+    assert_eq!(p.in_vigore("decreto_flussi"), Some("attuali"));
     let q = con_evento_interno(&p);
     let e = q
         .anteprima_decreto(&decreto_su("decreto_flussi", "alti"))
         .unwrap_err();
     assert!(e.to_string().contains("legge respinta"), "{e}");
+}
+
+#[test]
+fn secondo_decreto_sulla_stessa_disposizione_e_rifiutato() {
+    let mut p = con_evento_interno(&Partita::nuova(dati_base(), 1));
+    p.comanda(emana(decreto_su("decreto_flussi", "alti")))
+        .unwrap();
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(emana(decreto_su("decreto_flussi", "bassi")))
+        .unwrap_err();
+    assert!(e.to_string().contains("è già in esame"), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
 }

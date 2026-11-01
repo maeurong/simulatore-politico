@@ -1,4 +1,5 @@
-//! Decreti: valgono subito, a fine turno sono convertiti o decadono; materie escluse e niente
+//! Decreti: a fine turno sono convertiti o decadono (i fondi valgono subito, le disposizioni
+//! entrano alla conversione); materie escluse e niente
 //! reiterazione di un decreto decaduto (iter-legislativo-italiano:12-15, 20-23, 67).
 
 use super::{ValoreProposto, ko};
@@ -104,18 +105,18 @@ impl FondiDecreto {
     }
 }
 
-/// Il decreto su disposizioni: rende `(disposizione, gradino)` di ogni valore. Ammesso se ogni
-/// disposizione è ordinaria e il suo dicastero sta negli `inneschi` (o `tutte`).
+/// Il decreto su disposizioni è ammesso se ogni disposizione è ordinaria e il suo dicastero sta
+/// negli `inneschi` (o `tutte`). Il resto (legge vuota, ripetuta, gradino sconosciuto, già in
+/// vigore o bloccato, in esame, respinta da poco) lo controlla `Parlamento::bozza`, dopo questo.
 ///
 /// # Errors
 /// `Comando`, nell'ordine per valore: disposizione sconosciuta, materia esclusa (elettorale e
-/// costituzionale), decreto senza innesco, gradino sconosciuto.
+/// costituzionale), decreto senza innesco.
 pub(crate) fn ammetti_disposizioni(
     dati: &DatiGioco,
     inneschi: &Inneschi,
     valori: &[ValoreProposto],
-) -> Result<Vec<(usize, usize)>, Errore> {
-    let mut scelti = Vec::with_capacity(valori.len());
+) -> Result<(), Errore> {
     for v in valori {
         let Some(k) = dati.disposizione(&v.disposizione) else {
             return ko(format!("disposizione sconosciuta: {}", v.disposizione));
@@ -132,12 +133,8 @@ pub(crate) fn ammetti_disposizioni(
                 x.nome
             ));
         }
-        let Some(g) = x.gradino(&v.gradino) else {
-            return ko(format!("{}: gradino sconosciuto «{}»", x.nome, v.gradino));
-        };
-        scelti.push((k, g));
     }
-    Ok(scelti)
+    Ok(())
 }
 
 /// `EmanaDecreto` sui fondi: rende `(da, a, importo)` dei fondi spostati, con `spostabili` il

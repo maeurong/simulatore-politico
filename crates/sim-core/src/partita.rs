@@ -1563,7 +1563,7 @@ impl Partita {
         self.fuori_dalla_crisi()?;
         if let Decreto::Disposizioni { valori } = decreto {
             let m = self.conversione_disposizioni(valori)?;
-            return Ok(self.anteprima_conversione(&m, m.proponente.unwrap_or(usize::MAX)));
+            return Ok(self.anteprima_conversione(&m, m.proponente));
         }
         let (da, a, importo) = parlamento::ammetti(
             &self.dati,
@@ -1572,7 +1572,7 @@ impl Partita {
             decreto,
         )?;
         let fondi = FondiDecreto::Spostati { da, a, importo };
-        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), a))
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), Some(a)))
     }
 
     /// L'anteprima del decreto che `Accogli` produrrebbe per la proposta di fondi del
@@ -1604,12 +1604,12 @@ impl Partita {
             atto,
             importo,
         };
-        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), i))
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), Some(i)))
     }
 
     /// L'anteprima della conversione `m`, con la capacità del ministro del dicastero `proponente`.
-    fn anteprima_conversione(&self, m: &Misura, proponente: usize) -> Anteprima {
-        let capacita = (self.ministri.dicasteri.get(proponente))
+    fn anteprima_conversione(&self, m: &Misura, proponente: Option<usize>) -> Anteprima {
+        let capacita = (proponente.and_then(|i| self.ministri.dicasteri.get(i)))
             .and_then(|st| st.ministro.as_ref())
             .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
         parlamento::anteprima(
@@ -1753,7 +1753,8 @@ impl Partita {
     /// `EmanaDecreto` (storia 46): sposta `importo` da margine e spesa di `da` a quelli di `a`,
     /// nel bilancio in vigore e nei margini residui, anche nell'esercizio provvisorio (scelta 12).
     /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
-    /// Spostabile: vedi `spostabili`.
+    /// Spostabile: vedi `spostabili`. Un decreto su disposizioni non muove fondi: apre la
+    /// conversione (`conversione_disposizioni`), e le disposizioni entrano in vigore se convertita.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
         if let Decreto::Disposizioni { valori } = decreto {
             let m = self.conversione_disposizioni(valori)?;
