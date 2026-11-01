@@ -1,0 +1,241 @@
+# Eventi e situazioni nazionali (piano 9).
+# Alias nelle fonti: situazioni = docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md; "scelta N" = piano 9 (docs/superpowers/plans/2026-11-01-v1-piano-9-eventi-e-informazione.md).
+#
+# Situazione: `verso` e' il verso in cui si ACCENDE, non quello in cui la grandezza migliora:
+# `sale` accende sopra `accensione` e spegne sotto `spegnimento`, `scende` il contrario.
+# Le soglie sono provvisorie, al bilanciamento (scelta 5).
+# Intensita' degli effetti: assunzione del piano 9, nessuna fonte in docs/ricerca.
+
+# situazioni:78-89 (oggi +0,2% t/t); scelta 4: due trimestri di fila sotto zero accendono, due sopra spengono.
+[[situazione]]
+id = "recessione"
+nome = "Recessione"
+misura = "crescita_pil"
+verso = "scende"
+accensione = 0.0
+spegnimento = 0.0
+evento = "recessione"
+spinta = false
+
+# situazioni:83 (il 2007 a ~124 delitti su 100 di oggi).
+[[situazione]]
+id = "criminalita"
+nome = "Criminalità"
+misura = "sicurezza"
+verso = "scende"
+accensione = 85.0
+spegnimento = 92.0
+evento = "criminalita"
+spinta = true
+
+# situazioni:84 (oggi e' il massimo letto delle rinunce).
+[[situazione]]
+id = "liste_attesa"
+nome = "Liste d'attesa"
+misura = "qualita_servizio_sanitario"
+verso = "scende"
+accensione = 90.0
+spegnimento = 95.0
+evento = "liste_attesa"
+spinta = false
+
+# situazioni:85 (Torreggiani: 151% su 128,7% = ~117).
+[[situazione]]
+id = "carceri"
+nome = "Sovraffollamento delle carceri"
+misura = "sovraffollamento_carceri"
+verso = "sale"
+accensione = 117.0
+spegnimento = 110.0
+evento = "carceri"
+spinta = false
+
+# situazioni:86; unita' del motore (scelta 9).
+[[situazione]]
+id = "energia"
+nome = "Crisi energetica"
+misura = "energia"
+verso = "sale"
+accensione = 10.0
+spegnimento = 5.0
+evento = "crisi_energetica"
+spinta = false
+
+# situazioni:87 (le ondate del 2016 e del 2023 stanno oltre il max di oggi: lo alza il Task 5).
+[[situazione]]
+id = "sbarchi"
+nome = "Ondata di sbarchi"
+misura = "immigrazione_irregolare"
+verso = "sale"
+accensione = 250.0
+spegnimento = 175.0
+evento = "sbarchi"
+spinta = true
+
+[[evento]]
+id = "recessione"
+famiglia = "situazione"
+nome = "Recessione"
+gravita = 3
+dicasteri = ["economia_finanze", "sviluppo_economico"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "sostegno"
+nome = "Misure di sostegno alle imprese"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "sostegno_imprese"
+intensita = 8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0
+
+[[evento]]
+id = "criminalita"
+famiglia = "situazione"
+nome = "Ondata di criminalità"
+gravita = 2
+dicasteri = ["interno"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "presidi"
+nome = "Rafforzare i presìdi sul territorio"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "sicurezza"
+intensita = 8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0
+
+[[evento]]
+id = "liste_attesa"
+famiglia = "situazione"
+nome = "Liste d'attesa fuori controllo"
+gravita = 2
+dicasteri = ["sanita"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "piano_visite"
+nome = "Piano straordinario per visite ed esami"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "qualita_servizio_sanitario"
+intensita = 8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0
+
+[[evento]]
+id = "carceri"
+famiglia = "situazione"
+nome = "Emergenza carceri"
+gravita = 2
+dicasteri = ["giustizia"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "piano_carceri"
+nome = "Piano per le carceri e le pene alternative"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "sovraffollamento_carceri"
+intensita = -8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0
+
+[[evento]]
+id = "crisi_energetica"
+famiglia = "situazione"
+nome = "Crisi energetica"
+gravita = 3
+dicasteri = ["ambiente_energia"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "calmiere"
+nome = "Interventi sul mercato dell'energia"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "prezzo_energia"
+intensita = -8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0
+
+[[evento]]
+id = "sbarchi"
+famiglia = "situazione"
+nome = "Ondata di sbarchi"
+gravita = 2
+dicasteri = ["interno"]
+decreto = true
+debito = false
+
+[[evento.opzioni]]
+id = "ordinaria"
+nome = "Ordinaria amministrazione"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "accoglienza"
+nome = "Rafforzare accoglienza e controlli"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "immigrazione_irregolare"
+intensita = -8.0
+ritardo = 1
+forma = "impulso"
+durata = 4.0

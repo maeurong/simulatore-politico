@@ -4,6 +4,7 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
+use crate::eventi::{DatoEvento, DatoSituazione};
 use crate::grandezze::{DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
@@ -25,10 +26,11 @@ pub struct FileDati {
     pub grandezze: String,
     pub atti: String,
     pub disposizioni: String,
+    pub eventi: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 10] = [
+    pub const NOMI: [&str; 11] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -39,6 +41,7 @@ impl FileDati {
         "grandezze.toml",
         "atti.toml",
         "disposizioni.toml",
+        "eventi.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -57,6 +60,7 @@ impl FileDati {
             grandezze: leggi(Self::NOMI[7])?,
             atti: leggi(Self::NOMI[8])?,
             disposizioni: leggi(Self::NOMI[9])?,
+            eventi: leggi(Self::NOMI[10])?,
         })
     }
 }
@@ -343,6 +347,14 @@ pub struct DatiGioco {
     grandezze: Vec<DatoGrandezza>,
     atti: Vec<Atto>,
     disposizioni: Vec<DatoDisposizione>,
+    eventi: Vec<DatoEvento>,
+    situazioni: Vec<DatoSituazione>,
+}
+
+#[derive(Deserialize)]
+struct FileEventi {
+    evento: Vec<DatoEvento>,
+    situazione: Vec<DatoSituazione>,
 }
 
 #[derive(Deserialize)]
@@ -383,6 +395,7 @@ pub(crate) fn dati_base() -> DatiGioco {
         grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
         atti: include_str!("../../../dati/base/atti.toml").into(),
         disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
+        eventi: include_str!("../../../dati/base/eventi.toml").into(),
     };
     DatiGioco::da_testi(&file).unwrap()
 }
@@ -446,6 +459,19 @@ impl DatiGioco {
     /// Le disposizioni del file nel loro ordine, poi le nove elettorali.
     pub fn disposizioni(&self) -> &[DatoDisposizione] {
         &self.disposizioni
+    }
+
+    pub fn eventi(&self) -> &[DatoEvento] {
+        &self.eventi
+    }
+
+    pub fn situazioni(&self) -> &[DatoSituazione] {
+        &self.situazioni
+    }
+
+    /// Posizione di un evento per id.
+    pub fn evento(&self, id: &str) -> Option<usize> {
+        self.eventi.iter().position(|e| e.id == id)
     }
 
     /// Posizione di una disposizione per id.
@@ -552,6 +578,11 @@ impl DatiGioco {
         let mut disposizioni = toml::from_str::<FileDisposizioni>(&file.disposizioni)
             .map_err(|e| errore_toml("disposizioni.toml", e))?
             .disposizione;
+        let FileEventi {
+            evento: eventi,
+            situazione: situazioni,
+        } = toml::from_str::<FileEventi>(&file.eventi)
+            .map_err(|e| errore_toml("eventi.toml", e))?;
         if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
             return Err(Errore::Disposizioni(format!(
                 "{}: norma elettorale solo dal menu",
@@ -577,6 +608,8 @@ impl DatiGioco {
             grandezze,
             atti,
             disposizioni,
+            eventi,
+            situazioni,
         };
         dati.valida()?;
         Ok(dati)
@@ -647,7 +680,8 @@ impl DatiGioco {
     /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste);
     /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze); `Disposizioni`
     /// (catalogo: id, gradini, leve, effetti, perimetro, arrivi); `LeggeElettorale` anche per la
-    /// legge elettorale precedente dello scenario.
+    /// legge elettorale precedente dello scenario; `Eventi` (catalogo degli eventi e delle
+    /// situazioni: id, opzioni e default, dicasteri, grandezze, soglie, evento della situazione).
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -689,6 +723,7 @@ impl DatiGioco {
             &self.regioni,
         )?;
         crate::atti::valida(self)?;
+        crate::eventi::valida(self)?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
             if !(finite && m.min <= m.valore && m.valore <= m.max) {

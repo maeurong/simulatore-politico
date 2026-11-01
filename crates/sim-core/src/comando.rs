@@ -136,6 +136,12 @@ pub enum Comando {
     Prometti {
         promesse: Vec<(String, String)>,
     },
+    /// Al governo, la risposta a un evento aperto: `evento` è l'indice in `Vista.eventi`,
+    /// `opzione` l'id. Si può cambiare fino alla chiusura.
+    RispondiEvento {
+        evento: usize,
+        opzione: String,
+    },
 }
 
 impl Partita {
@@ -196,7 +202,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti`, `RispondiEvento` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -237,6 +243,9 @@ impl Partita {
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
             Comando::Campagna { spese } => return self.campagna(spese),
             Comando::Prometti { promesse } => return self.prometti(promesse),
+            Comando::RispondiEvento { evento, opzione } => {
+                return self.rispondi_evento(*evento, opzione);
+            }
             _ => {}
         }
         self.di_governo()?;

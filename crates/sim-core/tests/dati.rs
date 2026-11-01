@@ -270,3 +270,53 @@ fn coalizione_di_un_partito_solo_rifiutata() {
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(e.to_string().contains("sinistra"), "{e}");
 }
+
+#[test]
+fn evento_senza_default_rifiutato_col_nome() {
+    let f = sostituisci(file_base(), "eventi", "default = true", "default = false");
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Recessione"),
+        "{e}"
+    );
+}
+
+#[test]
+fn evento_con_due_default_rifiutato_col_nome() {
+    let f = sostituisci(file_base(), "eventi", "default = false", "default = true");
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Recessione"),
+        "{e}"
+    );
+}
+
+#[test]
+fn situazione_con_soglie_rovesciate_rifiutata_col_nome() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "accensione = 85.0",
+        "accensione = 95.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Criminalità"),
+        "{e}"
+    );
+}
+
+#[test]
+fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
+        "tipo = \"fondo_riserva\"",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Ondata di criminalità"),
+        "{e}"
+    );
+}

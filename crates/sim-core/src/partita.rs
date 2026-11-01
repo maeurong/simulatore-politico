@@ -10,7 +10,8 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
-use crate::grandezze::Grandezze;
+use crate::eventi::{Bersaglio, EffettoOpzione, Eventi};
+use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
@@ -28,8 +29,8 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
-    VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
-    VocePromessa,
+    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione, VocePartito,
+    VoceProgramma, VocePromessa,
 };
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +39,7 @@ mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 10;
+pub const VERSIONE_SCHEMA: u32 = 11;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,6 +102,7 @@ pub struct Partita {
     disposizioni: Disposizioni,
     parlamento: Parlamento,
     intesa: Intesa,
+    eventi: Eventi,
     /// Indice del partito del giocatore.
     giocatore: usize,
     legislatura: Legislatura,
@@ -249,6 +251,7 @@ impl Partita {
         let mut p = Partita {
             parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
+            eventi: Eventi::iniziali(&dati),
             misure: Misure::neutre(&dati),
             disposizioni,
             versione_schema: VERSIONE_SCHEMA,
@@ -320,7 +323,8 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → turni da presidente, in fase ordinaria →
+    // svuotamento delle mosse IA del turno prima → eventi aperti risolti (opzione scelta o default,
+    // senza estrazioni) → turni da presidente, in fase ordinaria →
     // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
@@ -348,6 +352,7 @@ impl Partita {
             return;
         }
         self.mosse.clear();
+        self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
@@ -3478,7 +3483,125 @@ impl Partita {
                     .map(|p| p.campagna.clone())
                     .unwrap_or_default(),
             },
+            eventi: self.voci_eventi(),
         }
+    }
+
+    fn voci_eventi(&self) -> Vec<VoceEvento> {
+        (self.eventi.aperti.iter())
+            .filter_map(|a| {
+                let e = self.dati.eventi().get(a.evento)?;
+                let bersaglio = a.bersaglio.and_then(|b| match b {
+                    Bersaglio::Leader { partito } => {
+                        self.partiti.get(partito).map(|p| p.leader.clone())
+                    }
+                    Bersaglio::Ministro { dicastero } => (self.ministri.dicasteri.get(dicastero))
+                        .and_then(|st| st.ministro.as_ref())
+                        .map(|m| m.nome.clone()),
+                });
+                Some(VoceEvento {
+                    nome: e.nome.clone(),
+                    famiglia: e.famiglia,
+                    causa: a.causa.testo(&self.dati),
+                    tono: a.tono,
+                    regione: a
+                        .regione
+                        .and_then(|r| self.dati.regioni().get(r))
+                        .map(|r| r.nome.clone()),
+                    bersaglio,
+                    opzioni: (e.opzioni.iter())
+                        .map(|o| VoceOpzione {
+                            id: o.id.clone(),
+                            nome: o.nome.clone(),
+                            default: o.default,
+                        })
+                        .collect(),
+                    scelta: a.scelta,
+                })
+            })
+            .collect()
+    }
+
+    /// Alla chiusura: ogni evento aperto vale con l'opzione scelta o col default. Le grandezze
+    /// entrano negli effetti, come quelli degli atti ma senza capacità del ministro.
+    fn risolvi_eventi(&mut self) {
+        for (aperto, opzione) in self.eventi.risolvi(&self.dati) {
+            for effetto in &opzione.effetti {
+                match effetto {
+                    EffettoOpzione::Grandezza {
+                        grandezza,
+                        intensita,
+                        ritardo,
+                        forma,
+                        durata,
+                    } => {
+                        let Some(k) = self.dati.grandezza(grandezza) else {
+                            continue;
+                        };
+                        self.grandezze.effetti.push(EffettoAttivo {
+                            grandezza: k,
+                            regione: aperto
+                                .regione
+                                .filter(|_| self.dati.grandezze()[k].regionale),
+                            dicastero: None,
+                            disposizione: None,
+                            intensita: *intensita,
+                            inizio: self.turno.saturating_add(*ritardo),
+                            forma: *forma,
+                            durata: *durata,
+                        });
+                    }
+                    EffettoOpzione::Valence { delta } => {
+                        let del_ministro = |d: usize| {
+                            (self.ministri.dicasteri.get(d))
+                                .and_then(|st| st.ministro.as_ref())
+                                .map(|m| m.partito)
+                        };
+                        let partito = match aperto.bersaglio {
+                            Some(Bersaglio::Leader { partito }) => Some(partito),
+                            Some(Bersaglio::Ministro { dicastero }) => del_ministro(dicastero),
+                            None => None,
+                        }
+                        .unwrap_or(self.governo.presidente);
+                        if let Some(p) = self.partiti.get_mut(partito) {
+                            p.valence += delta;
+                        }
+                    }
+                    // Gli altri effetti li applicano i task che li introducono; `valida` li
+                    // rifiuta nei dati finché non ci sono.
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    /// Il giocatore risponde a un evento aperto con l'opzione `opzione` (id); la risposta si può
+    /// cambiare fino alla chiusura.
+    ///
+    /// # Errors
+    /// `Comando` a partita finita, se il giocatore non governa, per un indice che non è in
+    /// `aperti` o un'opzione che l'evento non ha; la partita resta identica.
+    pub(crate) fn rispondi_evento(&mut self, evento: usize, opzione: &str) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        if self.finita() {
+            return ko("La partita è finita".into());
+        }
+        if !self.governa() {
+            return ko("solo il governo risponde agli eventi".into());
+        }
+        let Some(aperto) = self.eventi.aperti.get(evento) else {
+            return ko(format!("nessun evento aperto con indice {evento}"));
+        };
+        let Some(dato) = self.dati.eventi().get(aperto.evento) else {
+            return ko(format!("nessun evento aperto con indice {evento}"));
+        };
+        let Some(k) = dato.opzioni.iter().position(|o| o.id == opzione) else {
+            return ko(format!("opzione sconosciuta per {}: {opzione}", dato.nome));
+        };
+        if let Some(a) = self.eventi.aperti.get_mut(evento) {
+            a.scelta = Some(k);
+        }
+        Ok(())
     }
 
     /// Sotto un governo IA nessuna: l'intesa è quella col giocatore, come in `quadro()`.
@@ -3612,6 +3735,7 @@ impl Partita {
             partita.legislatura.totali,
         )?;
         partita.intesa.controlla(n, partita.turno)?;
+        partita.eventi.controlla(&partita.dati, n, partita.turno)?;
         partita.controlla_partiti()?;
         partita
             .ministri

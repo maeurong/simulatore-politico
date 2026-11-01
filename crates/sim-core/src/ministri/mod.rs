@@ -492,7 +492,8 @@ impl Ministri {
             | Comando::Confermativo { .. }
             | Comando::Riposiziona { .. }
             | Comando::Campagna { .. }
-            | Comando::Prometti { .. } => {}
+            | Comando::Prometti { .. }
+            | Comando::RispondiEvento { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }
