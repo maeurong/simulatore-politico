@@ -231,13 +231,13 @@ fn il_debito_muove_interessi_e_spread() {
     assert!(e1.conti.spese.interessi > e0.conti.spese.interessi);
 }
 
-#[test]
-fn la_ricchezza_scala_le_spese_in_euro_e_fa_mordere_gli_scaglioni() {
-    use sim_core::elettorato::Fascia;
+/// Con ricchezza `x`: spese in euro e redditi dei gruppi × (1 + x/100). Torna base e derivati.
+fn con_ricchezza(x: f64) -> (sim_core::DatiGioco, sim_core::DatiGioco) {
     let base = comune::dati_base();
     let mut s = SuMisura::base(&base);
-    s.cursori.ricchezza = 10.0;
+    s.cursori.ricchezza = x;
     let d = base.con_su_misura(&s).unwrap();
+    let k = 1.0 + x / 100.0;
     let (b, n) = (base.scenario(), d.scenario());
     for (nome, prima, dopo) in [
         ("pil", b.pil_trimestrale.valore, n.pil_trimestrale.valore),
@@ -250,30 +250,52 @@ fn la_ricchezza_scala_le_spese_in_euro_e_fa_mordere_gli_scaglioni() {
         ),
     ] {
         assert!(
-            (dopo - prima * 1.1).abs() < 1e-9,
-            "{nome}: {dopo} != {prima} x 1,1"
+            (dopo - prima * k).abs() < 1e-9,
+            "{nome}: {dopo} != {prima} x {k}"
         );
     }
     for (g0, g1) in base.elettorato().gruppi.iter().zip(&d.elettorato().gruppi) {
-        assert!((g1.primario - g0.primario * 1.1).abs() < 1e-9);
-        assert!((g1.trasferimenti - g0.trasferimenti * 1.1).abs() < 1e-9);
+        assert!((g1.primario - g0.primario * k).abs() < 1e-9);
+        assert!((g1.trasferimenti - g0.trasferimenti * k).abs() < 1e-9);
     }
+    (base, d)
+}
+
+#[test]
+fn la_ricchezza_scala_le_spese_in_euro_e_fa_mordere_gli_scaglioni() {
+    use sim_core::elettorato::Fascia;
+    let (base, d) = con_ricchezza(10.0);
+    let (b, n) = (base.scenario(), d.scenario());
     assert_eq!(n.aliquote, b.aliquote);
     assert_eq!(n.pensione_minima, b.pensione_minima);
+    assert_eq!(d.manopole(), base.manopole());
+    assert_eq!(d.disposizioni(), base.disposizioni());
     assert!(n.irpef_pil.valore > b.irpef_pil.valore + 0.1);
     // Bassa e media restano nel primo scaglione anche scalate: morde solo l'alta.
     let (a0, a1) = (&base.elettorato().aliquote, &d.elettorato().aliquote);
-    for (f, a) in a1 {
-        assert!(*a >= a0[f] - 1e-12, "fascia {f}: {a} < {}", a0[f]);
+    for f in [Fascia::Bassa, Fascia::Media] {
+        assert!((a1[&f] - a0[&f]).abs() < 1e-12, "fascia {f}");
     }
     assert!(a1[&Fascia::Alta] > a0[&Fascia::Alta] + 0.005);
 }
 
 #[test]
+fn la_ricchezza_al_minimo_abbassa_l_irpef() {
+    let (base, d) = con_ricchezza(-20.0);
+    assert!(d.scenario().irpef_pil.valore < base.scenario().irpef_pil.valore);
+}
+
+#[test]
 fn l_orientamento_sposta_la_media_e_conserva_la_massa() {
+    for (x, atteso) in [(0.5, 0.473), (-0.5, -0.473)] {
+        orientamento(x, atteso);
+    }
+}
+
+fn orientamento(x: f64, atteso: f64) {
     let base = comune::dati_base();
     let mut s = SuMisura::base(&base);
-    s.cursori.orientamento = 0.5;
+    s.cursori.orientamento = x;
     let d = base.con_su_misura(&s).unwrap();
     let media = |d: &sim_core::DatiGioco| -> f64 {
         let el = d.elettorato();
@@ -288,8 +310,8 @@ fn l_orientamento_sposta_la_media_e_conserva_la_massa() {
         somma / peso
     };
     for g in &d.elettorato().gruppi {
-        assert!((g.posizione.iter().sum::<f64>() - 1.0).abs() < 1e-12);
+        assert!((g.posizione.iter().sum::<f64>() - 1.0).abs() < 1e-12, "{x}");
     }
     let spostamento = media(&d) - media(&base);
-    assert!((spostamento - 0.473).abs() <= 0.005, "{spostamento}");
+    assert!((spostamento - atteso).abs() <= 0.005, "{x}: {spostamento}");
 }

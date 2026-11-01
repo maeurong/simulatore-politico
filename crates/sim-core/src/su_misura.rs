@@ -287,6 +287,7 @@ impl DatiGioco {
                 el.sposta(da, a, m);
             }
         }
+        // Sintetici come scarti: `Scenario::valida` (scenario.rs:200) vuole 0 nella base.
         ricchezza(&mut d, 1.0 + c.ricchezza / 100.0);
         // Qui l'età (Task 3).
         orientamento(&mut d, c.orientamento);
@@ -328,8 +329,10 @@ fn ricchezza(d: &mut DatiGioco, k: f64) {
         g.trasferimenti *= k;
     }
     let (tk, fk) = aliquote(d);
+    debug_assert!(t1 > 0.0, "aliquota media IRPEF nulla");
     d.scenario.irpef_pil.valore *= tk / t1;
     for ((f, a), b) in Fascia::TUTTE.iter().zip(fk).zip(f1) {
+        debug_assert!(b > 0.0, "aliquota media IRPEF nulla nella fascia {f}");
         if let Some(x) = d.elettorato.aliquote.get_mut(f) {
             *x *= a / b;
         }
