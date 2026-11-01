@@ -10,6 +10,60 @@ fn mescola(a: f64, qa: f64, b: f64, m: f64) -> f64 {
     (qa * a + m * b) / (qa + m)
 }
 
+/// Le masse `(da, a, massa)` che `delta` punti di disoccupazione spostano nella regione: se sale,
+/// da privati e autonomi ai disoccupati; se scende, dai disoccupati agli occupati, ripartite con
+/// le quote di `dati`. Non le applica.
+pub(crate) fn spostamenti_lavoro(
+    quote: &[f64],
+    dati: &DatiElettorato,
+    regione: usize,
+    delta: f64,
+) -> Vec<(usize, usize, f64)> {
+    use Condizione::{Autonomo, DipendentePrivato as Priv, DisoccupatoInattivo as Dis};
+    let mut v = Vec::new();
+    for f in Fascia::TUTTE {
+        let (p, a, d) = (
+            indice_gruppo(regione, Priv, f),
+            indice_gruppo(regione, Autonomo, f),
+            indice_gruppo(regione, Dis, f),
+        );
+        if delta > 0.0 {
+            let frazione = (delta / 100.0).min(1.0);
+            v.push((p, d, frazione * quote[p]));
+            v.push((a, d, frazione * quote[a]));
+        } else if delta < 0.0 {
+            let massa = -delta / 100.0 * (quote[p] + quote[a]);
+            let tot = dati.gruppi[p].quota + dati.gruppi[a].quota;
+            if tot > 0.0 {
+                v.extend([p, a].map(|i| (d, i, massa * dati.gruppi[i].quota / tot)));
+            }
+        }
+    }
+    v
+}
+
+impl DatiElettorato {
+    /// Come [`Elettorato::sposta`], sui dati: c'è solo la posizione, il resto nasce da lì in
+    /// [`Elettorato::iniziale`].
+    pub(crate) fn sposta(&mut self, da: usize, a: usize, massa: f64) {
+        let m = if massa > 0.0 {
+            massa.min(self.gruppi[da].quota)
+        } else {
+            0.0
+        };
+        if m <= 0.0 || da == a {
+            return;
+        }
+        let (posizione, qa) = (self.gruppi[da].posizione, self.gruppi[a].quota);
+        let dest = &mut self.gruppi[a];
+        for (x, y) in dest.posizione.iter_mut().zip(posizione) {
+            *x = mescola(*x, qa, y, m);
+        }
+        dest.quota += m;
+        self.gruppi[da].quota -= m;
+    }
+}
+
 impl Elettorato {
     /// Sposta `massa` di quota (fermata a `quota[da]`) da `da` a `a`: il destinatario diventa la
     /// media pesata per massa di posizione, ancora, giudizio e voto precedente.
@@ -74,27 +128,12 @@ impl Elettorato {
     }
 
     fn lavoro(&mut self, dati: &DatiElettorato, e: &Economia) {
-        use Condizione::{Autonomo, DipendentePrivato as Priv, DisoccupatoInattivo as Dis};
+        // Le regioni non si toccano fra loro: le quote d'inizio bastano per tutte.
+        let quote: Vec<f64> = self.gruppi.iter().map(|g| g.quota).collect();
         for r in 0..dati.regioni.len() {
             let delta = e.regioni[r].disoccupazione - self.ultima_disoccupazione[r];
-            for f in Fascia::TUTTE {
-                let (p, a, d) = (
-                    indice_gruppo(r, Priv, f),
-                    indice_gruppo(r, Autonomo, f),
-                    indice_gruppo(r, Dis, f),
-                );
-                if delta > 0.0 {
-                    let frazione = (delta / 100.0).min(1.0);
-                    let (mp, ma) = (
-                        frazione * self.gruppi[p].quota,
-                        frazione * self.gruppi[a].quota,
-                    );
-                    self.sposta(p, d, mp);
-                    self.sposta(a, d, ma);
-                } else if delta < 0.0 {
-                    let occupati = self.gruppi[p].quota + self.gruppi[a].quota;
-                    self.ripartisci(dati, d, &[p, a], -delta / 100.0 * occupati);
-                }
+            for (da, a, m) in spostamenti_lavoro(&quote, dati, r, delta) {
+                self.sposta(da, a, m);
             }
         }
     }
@@ -254,6 +293,21 @@ mod test {
         assert_eq!(e.gruppi[1].posizione, prima);
         assert!((e.gruppi[1].quota - 0.4).abs() < 1e-12);
         assert!((e.gruppi[0].quota - 0.3).abs() < 1e-12);
+    }
+
+    #[test]
+    fn sposta_sui_dati_mescola_la_posizione_e_conserva_la_quota() {
+        let mut d = crate::dati::dati_base().elettorato;
+        let (g0, g1) = (d.gruppi[0].clone(), d.gruppi[1].clone());
+        let m = g0.quota / 2.0;
+        d.sposta(0, 1, m);
+        assert!((d.gruppi[0].quota + d.gruppi[1].quota - g0.quota - g1.quota).abs() < 1e-12);
+        assert!((d.gruppi[1].quota - g1.quota - m).abs() < 1e-12);
+        for k in 0..PUNTI {
+            let attesa = (g1.quota * g1.posizione[k] + m * g0.posizione[k]) / (g1.quota + m);
+            assert!((d.gruppi[1].posizione[k] - attesa).abs() < 1e-12);
+        }
+        assert_eq!(d.gruppi[0].posizione, g0.posizione);
     }
 
     #[test]

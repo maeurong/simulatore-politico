@@ -137,3 +137,55 @@ fn la_base_da_dati_gia_su_misura_e_un_errore_di_programma() {
     let derivati = base.con_su_misura(&s).unwrap();
     SuMisura::base(&derivati);
 }
+
+#[test]
+fn la_disoccupazione_sposta_naspi_e_gruppi() {
+    use sim_core::Partita;
+    use sim_core::elettorato::{Condizione, DatoGruppo, Fascia, indice_gruppo};
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.disoccupazione = 8.0;
+    let d = base.con_su_misura(&s).unwrap();
+    let attesa = base.scenario().spesa_sussidi.valore * 8.0 / 5.6;
+    assert!((d.scenario().spesa_sussidi.valore - attesa).abs() < 1e-9);
+    let sussidio = |d| Partita::nuova(d, 1).economia().sussidio_per_disoccupato;
+    assert!((sussidio(d.clone()) - sussidio(base.clone())).abs() <= 1);
+    let dis = |g: &[DatoGruppo], r| -> f64 {
+        Fascia::TUTTE
+            .iter()
+            .map(|&f| g[indice_gruppo(r, Condizione::DisoccupatoInattivo, f)].quota)
+            .sum()
+    };
+    for r in 0..base.regioni().len() {
+        let (prima, dopo) = (
+            dis(&base.elettorato().gruppi, r),
+            dis(&d.elettorato().gruppi, r),
+        );
+        assert!(dopo > prima, "regione {r}: {dopo} <= {prima}");
+    }
+}
+
+#[test]
+fn l_inflazione_sposta_il_tasso_bce() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.inflazione = 6.0;
+    let d = base.con_su_misura(&s).unwrap();
+    let attesa = base.scenario().tasso_bce.valore
+        + (1.0 + base.manopola("taylor_inflazione"))
+            * base.manopola("quota_italia_area_euro")
+            * 1.8;
+    assert!((d.scenario().tasso_bce.valore - attesa).abs() < 1e-9);
+}
+
+#[test]
+fn il_debito_muove_interessi_e_spread() {
+    use sim_core::economia::Economia;
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.debito_pil = 150.0;
+    let d = base.con_su_misura(&s).unwrap();
+    let (e0, e1) = (Economia::iniziale(&base), Economia::iniziale(&d));
+    assert!(e1.spread > e0.spread);
+    assert!(e1.conti.spese.interessi > e0.conti.spese.interessi);
+}

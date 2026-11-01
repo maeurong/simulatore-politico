@@ -2,6 +2,7 @@
 
 use crate::dati::DatiGioco;
 use crate::disposizioni::Norma;
+use crate::elettorato::spostamenti_lavoro;
 use crate::errore::Errore;
 use crate::scenario::Ingresso;
 use serde::{Deserialize, Serialize};
@@ -252,8 +253,9 @@ impl SuMisura {
 impl DatiGioco {
     /// Una copia di questi dati con lo scenario su misura applicato, poi validata.
     ///
-    /// Applica i tre cursori assoluti (solo l'ingresso), il nome della legge elettorale e le
-    /// sostituzioni, per ultime. I cursori sintetici e le disposizioni si validano soltanto.
+    /// Applica i tre cursori assoluti coi loro derivati (disoccupazione: spesa NASpI e quote dei
+    /// gruppi; inflazione: tasso BCE), il nome della legge elettorale e le sostituzioni, per
+    /// ultime. I cursori sintetici e le disposizioni si validano soltanto.
     ///
     /// # Errors
     /// `ScenarioFuoriIntervallo` per un cursore fuori dall'intervallo della base, `SuMisura`
@@ -264,9 +266,25 @@ impl DatiGioco {
         let mut d = self.clone();
         let c = &s.cursori;
         let sc = &mut d.scenario;
+        let (u0, pi0) = (sc.disoccupazione.valore, sc.inflazione.valore);
         sc.debito_pil.valore = c.debito_pil;
         sc.disoccupazione.valore = c.disoccupazione;
         sc.inflazione.valore = c.inflazione;
+        // Sussidio a testa fermo: la NASpI segue i disoccupati.
+        sc.spesa_sussidi.valore *= c.disoccupazione / u0;
+        // Lo spostamento dell'obiettivo della regola di Taylor.
+        sc.tasso_bce.valore += (1.0 + self.manopola("taylor_inflazione"))
+            * self.manopola("quota_italia_area_euro")
+            * (c.inflazione - pi0);
+        let el = &mut d.elettorato;
+        let quote: Vec<f64> = el.gruppi.iter().map(|g| g.quota).collect();
+        for r in 0..el.regioni.len() {
+            for (da, a, m) in spostamenti_lavoro(&quote, el, r, c.disoccupazione - u0) {
+                el.sposta(da, a, m);
+            }
+        }
+        // Qui i cursori sintetici (Task 2-3), poi legge, gradini elettorali e sostituzioni.
+        let sc = &mut d.scenario;
         sc.legge_elettorale.clone_from(&c.legge_elettorale);
         for (nome, valore) in &s.sostituzioni {
             if let Some((_, i)) = sc.ingressi_mut().into_iter().find(|(n, _)| n == nome) {

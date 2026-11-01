@@ -17,6 +17,7 @@ mod giudizio;
 mod redditi;
 mod referendum;
 mod voto;
+pub(crate) use composizione::spostamenti_lavoro;
 pub use redditi::{Indici, Reddito};
 pub use referendum::{Affluenza, Quesito};
 pub(crate) use referendum::{stima, toccati};
