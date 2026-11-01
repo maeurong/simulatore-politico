@@ -4,7 +4,11 @@
 )]
 
 mod comune;
-use sim_core::su_misura::SuMisura;
+use sim_core::Partita;
+use sim_core::disposizioni::Norma;
+use sim_core::legislatura::Fondazione;
+use sim_core::su_misura::{ETICHETTA_GOVERNO_USCENTE, SuMisura};
+use sim_core::vista::VoceDisposizione;
 
 #[test]
 fn la_base_non_cambia_i_dati() {
@@ -413,4 +417,93 @@ fn eta_e_ricchezza_commutano() {
     assert!(insieme > spesa(0.0, 10.0), "l'età deve contare");
     let in_fila = base * (spesa(2.0, 0.0) / base) * (spesa(0.0, 10.0) / base);
     assert!((insieme - in_fila).abs() < 1e-6, "{insieme} != {in_fila}");
+}
+
+fn voce(p: &Partita, id: &str) -> VoceDisposizione {
+    p.vista()
+        .disposizioni
+        .into_iter()
+        .find(|d| d.id == id)
+        .unwrap()
+}
+
+#[test]
+fn il_proporzionale_dell_editor_ha_la_180_come_precedente() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.cursori.legge_elettorale = "proporzionale_3".into();
+    let d = base.con_su_misura(&s).unwrap();
+    let impostazione = |n: &str| base.elezioni().impostazioni[n].clone();
+    assert_eq!(
+        d.scenario().legge_elettorale_precedente,
+        impostazione("legge_180")
+    );
+    let p = Partita::nuova(d, 1);
+    assert_eq!(p.legge_elettorale(), impostazione("proporzionale_3"));
+    // Premio: nessuno nel proporzionale, alla coalizione nella 180, nessuno nel Rosatellum.
+    let premio = voce(&p, "premio");
+    assert_eq!(premio.in_vigore, "nessuno");
+    assert_eq!(premio.precedente, "coalizione");
+    let voci = p.vista().disposizioni;
+    for v in voci.iter().filter(|v| v.norma == Norma::Elettorale) {
+        assert_eq!(v.legge, ETICHETTA_GOVERNO_USCENTE, "{}", v.id);
+    }
+}
+
+#[test]
+fn il_gradino_elettorale_dell_editor_e_la_partenza() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.disposizioni.insert("soglia_lista".into(), "300".into());
+    let uguale = base.con_su_misura(&s).unwrap();
+    assert_eq!(
+        uguale.disposizioni(),
+        base.disposizioni(),
+        "uguale alla base"
+    );
+    s.disposizioni.insert("soglia_lista".into(), "500".into());
+    let p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+    assert_eq!(p.legge_elettorale().soglia_lista_pb, 500);
+    let v = voce(&p, "soglia_lista");
+    assert_eq!(
+        (v.in_vigore.as_str(), v.precedente.as_str()),
+        ("500", "300")
+    );
+    assert_eq!(v.legge, ETICHETTA_GOVERNO_USCENTE);
+}
+
+#[test]
+fn gradini_elettorali_incoerenti_rifiutati() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    // La 180 dà il premio alla coalizione: senza coalizioni non c'è a chi darlo.
+    s.disposizioni.insert("coalizioni".into(), "no".into());
+    let e = base.con_su_misura(&s).unwrap_err().to_string();
+    assert_eq!(
+        e,
+        "scenario su misura non valido: legge elettorale: premio alla coalizione senza coalizioni"
+    );
+    s.disposizioni.insert("premio".into(), "nessuno".into());
+    assert!(base.con_su_misura(&s).is_ok());
+}
+
+#[test]
+fn la_disposizione_dell_editor_ha_effetto() {
+    let base = comune::dati_base();
+    let mut s = SuMisura::base(&base);
+    s.disposizioni.insert("cuneo_fiscale".into(), "0".into());
+    let d = base.con_su_misura(&s).unwrap();
+    let f = Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 4.5,
+    };
+    let p = Partita::fonda(d.clone(), 7, &f).unwrap();
+    let v = voce(&p, "cuneo_fiscale");
+    assert_eq!((v.in_vigore.as_str(), v.precedente.as_str()), ("0", "7"));
+    assert_eq!(v.legge, ETICHETTA_GOVERNO_USCENTE);
+    // Gradino «0»: saldo −0,6 contro lo 0 della partenza «7».
+    assert!((p.disposizioni().saldo(&d) + 0.6).abs() < 1e-12);
+    assert_eq!(p.disposizioni().leve(&d).cuneo, 0.0);
+    let nella_base = Partita::fonda(base, 7, &f).unwrap();
+    assert_eq!(voce(&nella_base, "cuneo_fiscale").in_vigore, "7");
 }

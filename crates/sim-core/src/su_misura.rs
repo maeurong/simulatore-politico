@@ -1,7 +1,7 @@
 //! Scenario su misura: le differenze dallo scenario di base, controllate sui suoi intervalli.
 
 use crate::dati::DatiGioco;
-use crate::disposizioni::{Leve, Norma};
+use crate::disposizioni::{self, Disposizioni, Leve, Norma};
 use crate::economia::Economia;
 use crate::elettorato::{
     Condizione, Elettorato, Fascia, PUNTI, fascia_di, indice_gruppo, spostamenti_lavoro,
@@ -16,6 +16,10 @@ use ts_rs::TS;
 
 /// Il nome dello scenario di base.
 pub const NOME_BASE: &str = "Italia di oggi";
+
+/// La legge delle disposizioni che lo scenario su misura cambia: mai della forma «L. n/anno»
+/// delle leggi del giocatore, così l'eredità non le scambia per sue.
+pub const ETICHETTA_GOVERNO_USCENTE: &str = "Legge del governo uscente (2026)";
 
 /// Gli ingressi che i tre cursori assoluti scrivono: le sostituzioni non li nominano (scelta 9).
 pub(crate) const NOMI_CURSORI_ASSOLUTI: [&str; 3] = ["debito_pil", "disoccupazione", "inflazione"];
@@ -258,13 +262,15 @@ impl DatiGioco {
     /// Una copia di questi dati con lo scenario su misura applicato, poi validata.
     ///
     /// Applica i tre cursori assoluti coi loro derivati (disoccupazione: spesa NASpI e quote dei
-    /// gruppi; inflazione: tasso BCE), ricchezza, età e orientamento, il nome della legge
-    /// elettorale e le sostituzioni, per ultime. Le disposizioni si validano soltanto.
+    /// gruppi; inflazione: tasso BCE), ricchezza, età e orientamento, la legge e i gradini
+    /// elettorali e le sostituzioni, per ultime. Le disposizioni ordinarie si validano soltanto:
+    /// le applica `Partita::costruisci` come leggi del turno zero.
     ///
     /// # Errors
     /// `ScenarioFuoriIntervallo` per un cursore fuori dall'intervallo della base, `SuMisura`
-    /// per una legge, una disposizione, un gradino o una sostituzione che la base non ha, poi
-    /// gli errori di [`DatiGioco::valida`].
+    /// per una legge, una disposizione, un gradino o una sostituzione che la base non ha, o per
+    /// gradini elettorali che insieme non fanno una legge valida, poi gli errori di
+    /// [`DatiGioco::valida`].
     pub fn con_su_misura(&self, s: &SuMisura) -> Result<DatiGioco, Errore> {
         debug_assert!(self.su_misura().is_none(), "solo dati di base");
         s.valida(self)?;
@@ -295,8 +301,9 @@ impl DatiGioco {
         eta(&mut d, c.eta_mediana);
         orientamento(&mut d, c.orientamento);
         // Poi legge, gradini elettorali e sostituzioni, che vincono.
+        d.scenario.legge_elettorale.clone_from(&c.legge_elettorale);
+        legge_elettorale(&mut d, self, s)?;
         let sc = &mut d.scenario;
-        sc.legge_elettorale.clone_from(&c.legge_elettorale);
         for (nome, valore) in &s.sostituzioni {
             if let Some((_, i)) = sc.ingressi_mut().into_iter().find(|(n, _)| n == nome) {
                 i.valore = *valore;
@@ -306,6 +313,41 @@ impl DatiGioco {
         d.valida()?;
         Ok(d)
     }
+}
+
+/// Legge o gradini elettorali diversi dalla base: le nove elettorali rinascono con la legge del
+/// governo uscente, i gradini dell'editor come partenza e la legge di base come precedente (spec
+/// riga 281). Riscrivere la partenza qui è sicuro: le elettorali non hanno saldo, leve né effetti.
+/// I gradini insieme devono fare una legge valida, come per un voto (`Disposizioni::valida`).
+fn legge_elettorale(d: &mut DatiGioco, base: &DatiGioco, s: &SuMisura) -> Result<(), Errore> {
+    let prima = base.legge_elettorale_iniziale();
+    let mut nuove = disposizioni::elettorali(
+        &d.elezioni.menu,
+        d.legge_elettorale_iniziale(),
+        prima,
+        ETICHETTA_GOVERNO_USCENTE,
+    );
+    for e in &mut nuove {
+        if let Some(g) = s.disposizioni.get(&e.id) {
+            e.partenza.clone_from(g);
+        }
+    }
+    let vecchie = d
+        .disposizioni
+        .iter()
+        .filter(|x| x.norma == Norma::Elettorale);
+    if vecchie.zip(&nuove).all(|(a, b)| a.partenza == b.partenza) {
+        return Ok(());
+    }
+    d.scenario.legge_elettorale_precedente = prima.clone();
+    d.disposizioni.retain(|x| x.norma != Norma::Elettorale);
+    d.disposizioni.extend(nuove);
+    (Disposizioni::iniziali(d).legge_elettorale(d))
+        .valida(&d.elezioni.menu)
+        .map_err(|e| match e {
+            Errore::LeggeElettorale(m) => Errore::SuMisura(format!("legge elettorale: {m}")),
+            altro => altro,
+        })
 }
 
 /// Spese in euro e redditi dei gruppi per `k`; soglie in euro ferme, quindi `irpef_pil` e le

@@ -581,6 +581,7 @@ impl DatiGioco {
             &elezioni.menu,
             iniziale,
             precedente,
+            disposizioni::LEGGE_ELETTORALE,
         ));
 
         let dati = DatiGioco {
