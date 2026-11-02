@@ -414,13 +414,13 @@ impl Archivio {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use sim_core::legislatura::Fondazione;
     use sim_core::salvataggi::FORMATO_ALBO;
 
     /// Cartella temporanea del test, cancellata anche se il test fallisce.
-    struct Cartella(PathBuf);
+    pub(crate) struct Cartella(pub(crate) PathBuf);
 
     impl Drop for Cartella {
         fn drop(&mut self) {
@@ -428,7 +428,7 @@ mod tests {
         }
     }
 
-    fn cartella(test: &str) -> Cartella {
+    pub(crate) fn cartella(test: &str) -> Cartella {
         let c = std::env::temp_dir().join(format!("sim-{test}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&c);
         Cartella(c)
