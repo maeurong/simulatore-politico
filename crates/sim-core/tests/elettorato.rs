@@ -104,6 +104,73 @@ fn nomi_vuoti_rifiutati() {
     assert!(m.contains("nomi"), "{m}");
 }
 
+/// Politici reali, anche col secondo nome taciuto, che coincidono con una coppia nome-cognome
+/// di nomi comuni: parlamentari, europarlamentari, ministri e sindaci trovati il 01/11/2026 su
+/// dati.camera.it e Wikidata.
+const POLITICI_REALI: &[&str] = &[
+    // Uscivano dal bacino di prima.
+    "Andrea Bianchi",
+    "Andrea Colombo",
+    "Andrea Ricci",
+    "Andrea Romano",
+    "Andrea Rossi",
+    "Anna De Luca",
+    "Luca De Luca",
+    "Marco Colombo",
+    "Marco Conti",
+    "Matteo Bianchi",
+    "Matteo Ricci",
+    "Matteo Rossi",
+    "Paolo Bruno",
+    "Paolo Colombo",
+    "Paolo De Luca",
+    "Paolo Greco",
+    "Paolo Ricci",
+    "Paolo Romano",
+    "Paolo Rossi",
+    // Candidati sostituti scartati.
+    "Alberto Rossi",
+    "Anna Leone",
+    "Daniele Galli",
+    "Elena Gentile",
+    "Federico Ricci",
+    "Federico Rossi",
+    "Francesca Martini",
+    "Ilaria Fontana",
+    "Laura Marchetti",
+    "Lorenzo Fontana",
+    "Marco Marchetti",
+    "Marco Rizzo",
+    "Michele Conti",
+    "Michele Santoro",
+    "Nicola Bianchi",
+    "Nicola Rossi",
+    "Riccardo Conti",
+    "Riccardo Gallo",
+    "Riccardo Marchetti",
+    "Riccardo Rossi",
+    "Silvia Costa",
+    "Silvia Giordano",
+    "Stefano Esposito",
+    "Tommaso Rossi",
+];
+
+/// Storia 159 della spec: nessun personaggio è un politico reale. Copre le coppie del bacino, da
+/// cui escono ministri, tecnici, leader IA e intervistati, e i leader scritti nello scenario.
+#[test]
+fn nessun_personaggio_e_un_politico_reale() {
+    let d = dati_base();
+    let e = d.elettorato();
+    let bacino = (e.nomi.iter()).flat_map(|n| e.cognomi.iter().map(move |c| format!("{n} {c}")));
+    let leader = d.scenario().partiti.iter().map(|p| p.leader.clone());
+    for nome in bacino.chain(leader) {
+        assert!(
+            !POLITICI_REALI.contains(&nome.as_str()),
+            "{nome} è un politico reale"
+        );
+    }
+}
+
 #[test]
 fn regione_senza_elettori_rifiutata_col_nome() {
     let m = elettorato(imposta(file_base(), "elettorato", "elettori = ", "0"));
