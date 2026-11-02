@@ -25,6 +25,7 @@ use crate::parlamento::{
     TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
+use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
@@ -114,6 +115,11 @@ pub struct Partita {
     partenza: [f64; 4],
     /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
     mosse: Vec<MossaIa>,
+    /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
+    serie: Vec<PuntoSerie>,
+    /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
+    /// il turno a cui torna.
+    riavvolgimenti: u32,
 }
 
 /// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
@@ -297,6 +303,8 @@ impl Partita {
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
             mosse: Vec::new(),
+            serie: Vec::new(),
+            riavvolgimenti: 0,
         };
         // Il partito del giocatore non segue una regola IA (scelta 4 del piano 8b), nemmeno quando
         // viene dallo scenario: le sue frange nascono Sticker.
@@ -304,6 +312,7 @@ impl Partita {
             x.regola = Regola::Sticker;
         }
         p.partenza = p.indicatori();
+        p.registra_punto();
         p
     }
 
@@ -344,6 +353,50 @@ impl Partita {
             e.disoccupazione_nazionale(&self.dati),
             e.inflazione[0],
         ]
+    }
+
+    /// Aggiunge alla serie gli indicatori dell'apertura del turno. La metà più uno è quella delle
+    /// Camere in carica (`legislatura.totali`), anche sciolte e in prorogatio: una
+    /// `numero_parlamentari` cambiata a metà legislatura vale dal voto. Le Leve si usano solo coi
+    /// totali a zero, cioè alla fondazione, prima del primo voto. I seggi della coalizione sono
+    /// quelli veri del parlamento.
+    fn registra_punto(&mut self) {
+        let mut c = self.coalizione_del_giocatore();
+        c.sort_unstable();
+        c.dedup();
+        c.retain(|&j| j < self.partiti.len());
+        let s = &self.informazione.sondaggio;
+        let consenso: f64 = (c.iter())
+            .map(|&j| legislatura::quota_fra_i_votanti(s, j))
+            .sum();
+        // ponytail: non finito solo con un sondaggio degenere (nessun istituto, o astensione a 1
+        // in un istituto); a zero, così `salva` non rifiuta la partita.
+        let consenso = if consenso.is_finite() { consenso } else { 0.0 };
+        let (camera, senato) = match self.legislatura.totali {
+            (0, 0) => {
+                let leve = self.disposizioni.leve(&self.dati);
+                // Cast: i seggi delle Leve vengono da dati validati e sono interi positivi.
+                (
+                    leve.seggi_camera.round() as u32,
+                    leve.seggi_senato.round() as u32,
+                )
+            }
+            totali => totali,
+        };
+        let margine = |seggi: &[u32], totale: u32| {
+            let della_coalizione: u32 = c.iter().filter_map(|&j| seggi.get(j)).sum();
+            della_coalizione as i32 - voto::maggioranza(totale) as i32
+        };
+        let punto = PuntoSerie {
+            turno: self.turno,
+            data: self.data,
+            consenso,
+            margine_camera: margine(&self.parlamento.seggi_camera, camera),
+            margine_senato: margine(&self.parlamento.seggi_senato, senato),
+            // Cast: lo spread è limitato da `spread_massimo` (economia/spread.rs:34) e non è mai NaN.
+            spread_pb: self.economia.spread.round() as i32,
+        };
+        self.serie.push(punto);
     }
 
     // Ordine della chiusura:
@@ -544,6 +597,9 @@ impl Partita {
             self.costo_taglio(&perdite);
         }
         self.apertura_ia();
+        if !self.finita() {
+            self.registra_punto();
+        }
     }
 
     /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
@@ -2100,6 +2156,81 @@ impl Partita {
         self.fine.is_some()
     }
 
+    /// Gli indicatori a ogni apertura di turno, dal turno zero.
+    pub fn serie(&self) -> &[PuntoSerie] {
+        &self.serie
+    }
+
+    /// Ciò che l'elenco delle partite mostra di questa.
+    pub fn testata(&self) -> Testata {
+        Testata {
+            nome: self.partiti[self.giocatore].nome.clone(),
+            scenario: self.dati.nome_scenario().into(),
+            turno: self.turno,
+            data: self.data,
+            versione_schema: self.versione_schema,
+            finita: self.finita(),
+        }
+    }
+
+    /// La voce dell'albo; nessuna a partita in corso. Eredità e testata non si ricalcolano.
+    pub fn voce_albo(&self) -> Option<VoceAlbo> {
+        let e = self.eredita()?;
+        let t = self.testata();
+        let nome_di = |id: &str| {
+            (self.partiti.iter())
+                .find(|p| p.id == id)
+                .map_or_else(|| id.to_owned(), |p| p.nome.clone())
+        };
+        let mio = &self.partiti[self.giocatore].id;
+        let elezioni = (self.legislatura.elezioni.iter())
+            .map(|el| ElezioneAlbo {
+                data: el.data,
+                affluenza: el.affluenza,
+                voti: (el.voti.iter())
+                    .map(|v| (nome_di(&v.partito), v.quota))
+                    .collect(),
+                seggi_giocatore: (el.voti.iter())
+                    .find(|v| &v.partito == mio)
+                    .map_or((0, 0), |v| (v.camera, v.senato)),
+            })
+            .collect();
+        Some(VoceAlbo {
+            formato_albo: FORMATO_ALBO,
+            nome: t.nome,
+            scenario: t.scenario,
+            inizio: self.serie.first().map_or(Trimestre::TURNO_ZERO, |s| s.data),
+            fine: t.data,
+            turni: t.turno,
+            esito: match e.fine {
+                Fine::SenzaSeggi => "Senza seggi",
+                Fine::Abbandono => "Abbandono",
+            }
+            .into(),
+            anni_al_governo: e.anni_al_governo,
+            leggi_in_vigore: e.leggi_in_vigore,
+            indicatori: e.indicatori.into_iter().map(Into::into).collect(),
+            serie: self.serie.clone(),
+            elezioni,
+            riavvolgimenti: e.riavvolgimenti,
+        })
+    }
+
+    /// Il guscio, dopo aver caricato il turno a cui il giocatore torna, riporta il contatore
+    /// dei riavvolgimenti, che nello snapshot di quel turno è rimasto indietro. Il valore nello
+    /// snapshot è modificabile a mano: il contatore vero lo tiene il guscio fuori dallo snapshot e
+    /// lo reimposta all'apertura (ricerca persistenza:129).
+    pub fn imposta_riavvolgimenti(&mut self, n: u32) {
+        self.riavvolgimenti = n;
+    }
+
+    /// I riavvolgimenti fatti, come li porta lo snapshot: non è un'attestazione, perché il valore
+    /// nello snapshot è modificabile a mano. Il contatore vero lo tiene il guscio fuori dallo
+    /// snapshot e lo reimposta all'apertura (ricerca persistenza:129).
+    pub fn riavvolgimenti(&self) -> u32 {
+        self.riavvolgimenti
+    }
+
     /// Ciò che il giocatore lascia, a partita finita.
     pub fn eredita(&self) -> Option<Eredita> {
         self.fine.map(|fine| self.eredita_di(fine))
@@ -2124,6 +2255,7 @@ impl Partita {
             fine,
             bozza: fine == Fine::SenzaSeggi,
             anni_al_governo: f64::from(self.turni_al_governo) / 4.0,
+            riavvolgimenti: self.riavvolgimenti,
             leggi_in_vigore: nomi.collect(),
             indicatori: (voci.iter().zip(self.partenza).zip(fine_partita))
                 .map(|((&(id, nome), turno_zero), fine)| ConfrontoIndicatore {
@@ -3565,13 +3697,15 @@ impl Partita {
     /// Ricostruisce una partita da uno snapshot JSON, validandolo.
     ///
     /// # Errors
-    /// JSON illeggibile, schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
+    /// JSON illeggibile, versione dello schema mancante o non intera (`SalvataggioIlleggibile`; la
+    /// versione 0 resta `SchemaDiverso`), schema diverso da `VERSIONE_SCHEMA`, trimestre fuori
     /// da 1-4, dati che non passano `DatiGioco::valida`, o `economia` che non combacia coi dati
     /// (regioni diverse o in altro ordine, `prezzi_settori`/`gap_settori` di lunghezza sbagliata,
     /// conti incoerenti, importi o pensioni oltre 1e15), o partiti, governo, elettorato e
     /// informazione che non combaciano coi dati (`Elettorato::controlla`, `Informazione::controlla`),
     /// o disposizioni, parlamento e intesa che non combaciano coi dati (`Disposizioni::controlla`,
-    /// `Parlamento::controlla`, `Intesa::controlla`).
+    /// `Parlamento::controlla`, `Intesa::controlla`), o serie degli indicatori che non arriva al
+    /// turno (`controlla_serie`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
         let valore: serde_json::Value = serde_json::from_str(json)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
@@ -3579,7 +3713,9 @@ impl Partita {
             .get("versione_schema")
             .and_then(serde_json::Value::as_u64)
             .and_then(|v| u32::try_from(v).ok())
-            .unwrap_or(0);
+            .ok_or_else(|| {
+                Errore::SalvataggioIlleggibile("versione dello schema mancante o non intera".into())
+            })?;
         if trovata != VERSIONE_SCHEMA {
             return Err(Errore::SchemaDiverso {
                 trovata,
@@ -3652,6 +3788,7 @@ impl Partita {
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
         partita.controlla_decreti()?;
+        partita.controlla_serie()?;
         let in_aula = (partita.parlamento.misure.iter())
             .filter(|m| m.forma == FormaMisura::Bilancio)
             .count();
@@ -3665,6 +3802,38 @@ impl Partita {
 }
 
 impl Partita {
+    /// La serie: un punto per apertura, coi turni da 0 al turno corrente (al precedente se la
+    /// partita è finita senza seggi nella chiusura, che non apre il turno; l'abbandono non tocca
+    /// il turno), date che partono dal turno zero e si susseguono, e consenso finito.
+    fn controlla_serie(&self) -> Result<(), Errore> {
+        let senza_seggi = self.fine == Some(Fine::SenzaSeggi);
+        let contigui = (self.serie.iter().zip(0u32..)).all(|(s, k)| s.turno == k);
+        let arriva = self.serie.last().is_some_and(|s| {
+            if senza_seggi {
+                s.turno.checked_add(1) == Some(self.turno)
+            } else {
+                s.turno == self.turno
+            }
+        });
+        ok(
+            contigui && arriva,
+            &format!(
+                "serie degli indicatori che non copre i turni da 0 a {}",
+                self.turno
+            ),
+        )?;
+        let date = (self.serie.first()).is_some_and(|s| s.data == Trimestre::TURNO_ZERO)
+            && (self.serie.windows(2)).all(|w| w[1].data == w[0].data.successivo());
+        ok(
+            date,
+            "serie degli indicatori con le date che non seguono dal turno zero",
+        )?;
+        ok(
+            self.serie.iter().all(|s| s.consenso.is_finite()),
+            "serie degli indicatori con un consenso non finito",
+        )
+    }
+
     /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
     /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
     /// conversione.
@@ -4155,6 +4324,69 @@ mod tests {
             posizione: 5.5,
         };
         Partita::fonda(dati_base(), 7, &f).unwrap()
+    }
+
+    /// A metà legislatura una `numero_parlamentari` cambiata non sposta la maggioranza delle
+    /// Camere che siedono.
+    #[test]
+    fn la_maggioranza_e_delle_camere_che_siedono() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let prima = p.serie[0].clone();
+        let k = p.dati.disposizione("numero_parlamentari").unwrap();
+        p.disposizioni.voci[k].in_vigore = p.dati.disposizioni()[k].gradino("630_315").unwrap();
+        assert_eq!(p.disposizioni.leve(&p.dati).seggi_camera, 630.0);
+        p.registra_punto();
+        let dopo = p.serie.last().unwrap();
+        assert_eq!(
+            (dopo.margine_camera, dopo.margine_senato),
+            (prima.margine_camera, prima.margine_senato)
+        );
+        let c = p.coalizione_del_giocatore();
+        let della_coalizione: u32 = c.iter().map(|&j| p.parlamento.seggi_camera[j]).sum();
+        let attesa = della_coalizione as i32 - (p.legislatura.totali.0 / 2 + 1) as i32;
+        assert_eq!(dopo.margine_camera, attesa);
+    }
+
+    /// Il consenso somma la coalizione una volta sola: l'alleato anche fra gli allargati conta
+    /// una volta, lo sciolto vale la sua quota zero, l'indice fuori dai partiti si salta.
+    #[test]
+    fn il_consenso_somma_la_coalizione_una_volta_sola() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let g = p.giocatore;
+        let mut altri = (0..p.partiti.len()).filter(|&j| j != g);
+        let (a, b) = (altri.next().unwrap(), altri.next().unwrap());
+        p.partiti[b].sciolto = true;
+        for r in &mut p.informazione.sondaggio.istituti {
+            r.quote[b] = 0.0;
+        }
+        p.legislatura.maggioranza = Some(vec![g, a, b]);
+        p.legislatura.allargati = vec![a, p.partiti.len()];
+        p.registra_punto();
+        let q = |j| legislatura::quota_fra_i_votanti(&p.informazione.sondaggio, j);
+        assert!(q(a) > 0.0 && q(g) > 0.0);
+        let consenso = p.serie.last().unwrap().consenso;
+        assert!((consenso - (q(g) + q(a))).abs() < 1e-12, "{consenso}");
+    }
+
+    /// Al turno `u32::MAX` la chiusura satura senza panico. Da un salvataggio lì non si arriva
+    /// (la serie avrebbe un punto per turno), quindi i campi si scrivono a mano.
+    #[test]
+    fn contatori_al_limite_non_vanno_in_panico() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.chiudi_turno();
+        p.turno = u32::MAX;
+        // Fuori dalle Camere sciolte il turno non passa la scadenza.
+        p.legislatura.scadenza = u32::MAX;
+        p.data = Trimestre {
+            anno: 2200,
+            trimestre: 4,
+        };
+        // A quel turno ogni valore in arrivo dei dati sarebbe già scaduto.
+        for v in &mut p.disposizioni.voci {
+            v.in_arrivo.clear();
+        }
+        p.chiudi_turno();
+        assert_eq!(p.turno, u32::MAX);
     }
 
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
