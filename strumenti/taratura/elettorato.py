@@ -95,8 +95,8 @@ INTERESSI = {
 ALIQUOTE = {"bassa": 0.15, "media": 0.25, "alta": 0.33}  # assunzione: aliquote medie per fascia
 ASTENSIONE_FASCIA = {"bassa": 0.3, "media": 0.0, "alta": -0.2}  # assunzione: la fascia bassa vota meno
 ISTITUTI = (("Istituto A", 1000), ("Istituto B", 800), ("Istituto C", 1200), ("Istituto D", 1500))  # segnaposto
-NOMI = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Andrea", "Sara", "Matteo", "Elena", "Davide", "Anna", "Paolo"]
-COGNOMI = ["Rossi", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca"]
+NOMI = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Simone", "Sara", "Filippo", "Elena", "Davide", "Anna", "Fabio"]
+COGNOMI = ["Rossi", "Esposito", "Bianchi", "Romano", "Barbieri", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Ferraro", "Caruso"]
 
 
 def leggi(nome):
