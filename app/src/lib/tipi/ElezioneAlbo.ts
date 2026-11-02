@@ -3,6 +3,7 @@ import type { Trimestre } from "./Trimestre";
 
 /**
  * Un voto nell'albo: `voti` = (nome del partito, quota fra i votanti), `seggi_giocatore` =
- * (Camera, Senato) del giocatore, (0, 0) se non c'era a quel voto.
+ * (Camera, Senato) del giocatore. (0, 0) vale sia per un giocatore assente al voto sia per zero
+ * seggi: se era presente lo si legge da `voti`.
  */
 export type ElezioneAlbo = { data: Trimestre, affluenza: number, voti: Array<[string, number]>, seggi_giocatore: [number, number], };

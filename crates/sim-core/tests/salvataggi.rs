@@ -87,8 +87,8 @@ fn a_camere_sciolte_manca_tutta_la_maggioranza() {
     let leve = p.disposizioni().leve(&dati_base());
     let meta_piu_uno = |seggi: f64| -(seggi.round() as i32 / 2 + 1);
     let s = &p.serie()[0];
-    assert_eq!(s.maggioranza_camera, meta_piu_uno(leve.seggi_camera));
-    assert_eq!(s.maggioranza_senato, meta_piu_uno(leve.seggi_senato));
+    assert_eq!(s.margine_camera, meta_piu_uno(leve.seggi_camera));
+    assert_eq!(s.margine_senato, meta_piu_uno(leve.seggi_senato));
     assert_eq!(s.spread_pb, p.economia().spread.round() as i32);
 }
 
@@ -112,12 +112,15 @@ fn la_serie_si_controlla_al_caricamento() {
     let mut p = fondata(3.5);
     p.chiudi_turno();
     p.chiudi_turno();
-    let guasti: [(&str, Guasto); 3] = [
+    let guasti: [(&str, Guasto); 4] = [
         ("vuota", |j| j["serie"] = serde_json::json!([])),
         ("buco", |j| {
             j["serie"].as_array_mut().unwrap().remove(1);
         }),
         ("ripetuto", |j| j["serie"][2]["turno"] = 1.into()),
+        ("data manomessa", |j| {
+            j["serie"][1]["data"]["anno"] = 1999.into()
+        }),
     ];
     for (caso, f) in guasti {
         let e = edita(&p, f).unwrap_err();
@@ -238,7 +241,7 @@ fn fondata_col_seme(seme: u64) -> Partita {
     Partita::fonda(dati_base(), seme, &f).unwrap()
 }
 
-/// Ricerca, salvataggi-e-riavvolgimento.md:63: lo stato fuori da `Partita` o saltato da serde
+/// Ricerca, `docs/ricerca/sistemi/salvataggi-e-riavvolgimento.md:63` (punto 3): lo stato fuori da `Partita` o saltato da serde
 /// fa divergere B, ricaricata a ogni apertura, da A, giocata di fila.
 #[test]
 fn ricaricare_a_ogni_apertura_non_cambia_la_partita() {
@@ -293,7 +296,7 @@ fn legge_e_decreto(mut p: Partita) -> Partita {
     p
 }
 
-/// Ricerca, salvataggi-e-riavvolgimento.md:62: stessa azione, stesso esito.
+/// Ricerca, `docs/ricerca/sistemi/salvataggi-e-riavvolgimento.md:62` (punto 2): stessa azione, stesso esito.
 #[test]
 fn stesse_scelte_stesso_esito_dopo_il_ricaricamento() {
     let p = al_governo();

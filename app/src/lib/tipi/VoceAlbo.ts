@@ -6,8 +6,13 @@ import type { Trimestre } from "./Trimestre";
 
 /**
  * La partita finita, come l'albo la elenca da sola. `nome` e `scenario` come nella `Testata`;
- * `turni` = le chiusure fatte; `esito` = «Senza seggi» o «Abbandono»; `elezioni` nell'ordine della
+ * `turni` = le chiusure fatte; `esito` = soltanto «Senza seggi» o «Abbandono», testo stabile del formato v1; `elezioni` nell'ordine della
  * legislatura, la più recente per prima. Con «Senza seggi» la serie ha `turni` punti (la chiusura
  * che finisce la partita non apre un turno), con «Abbandono» ne ha `turni + 1`.
  */
-export type VoceAlbo = { formato_albo: number, nome: string, scenario: string, inizio: Trimestre, fine: Trimestre, turni: number, esito: string, anni_al_governo: number, leggi_in_vigore: Array<string>, indicatori: Array<IndicatoreAlbo>, serie: Array<PuntoSerie>, elezioni: Array<ElezioneAlbo>, riavvolgimenti: number, };
+export type VoceAlbo = { formato_albo: number, nome: string, scenario: string, inizio: Trimestre, fine: Trimestre, turni: number, esito: string, anni_al_governo: number, leggi_in_vigore: Array<string>, indicatori: Array<IndicatoreAlbo>, serie: Array<PuntoSerie>, elezioni: Array<ElezioneAlbo>, 
+/**
+ * Il valore dello snapshot, modificabile a mano: il contatore vero lo tiene il guscio fuori
+ * dallo snapshot e lo reimposta all'apertura (ricerca persistenza:129).
+ */
+riavvolgimenti: number, };

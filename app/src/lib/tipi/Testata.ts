@@ -3,6 +3,8 @@ import type { Trimestre } from "./Trimestre";
 
 /**
  * Ciò che l'elenco delle partite mostra: `nome` è il nome del partito del giocatore, `scenario`
- * quello dello scenario.
+ * quello dello scenario. Regole del formato come per `FORMATO_ALBO`: i campi aggiunti dopo la v1
+ * sono `Option<T>`, mai `serde(default)`; non si rinomina, non si toglie, non si cambia tipo
+ * (ricerca salvataggi-e-riavvolgimento:65).
  */
 export type Testata = { nome: string, scenario: string, turno: number, data: Trimestre, versione_schema: number, finita: boolean, };
