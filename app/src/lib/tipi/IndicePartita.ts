@@ -7,4 +7,8 @@ import type { Testata } from "./Testata";
  * `riavvolgimenti` è il contatore che fa testo: il guscio lo reimpone alla partita a ogni
  * apertura, perché lo snapshot di un turno passato ne porta il valore vecchio.
  */
-export type IndicePartita = { formato_indice: number, id: string, testata: Testata, ultimo_salvataggio: bigint, riavvolgimenti: number, };
+export type IndicePartita = { formato_indice: number, id: string, testata: Testata, 
+/**
+ * `number` in TS: l'IPC lo consegna come numero JSON, e i secondi Unix stanno in 2^53.
+ */
+ultimo_salvataggio: number, riavvolgimenti: number, };

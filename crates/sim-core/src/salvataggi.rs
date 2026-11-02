@@ -117,6 +117,8 @@ pub struct IndicePartita {
     pub formato_indice: u32,
     pub id: String,
     pub testata: Testata,
+    /// `number` in TS: l'IPC lo consegna come numero JSON, e i secondi Unix stanno in 2^53.
+    #[cfg_attr(test, ts(type = "number"))]
     pub ultimo_salvataggio: u64,
     pub riavvolgimenti: u32,
 }

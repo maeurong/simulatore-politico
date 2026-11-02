@@ -108,10 +108,27 @@ fn leggi_partita(percorso: &Path) -> Result<Partita, String> {
     Partita::carica(&json).map_err(|e| format!("impossibile aprire {}: {e}", percorso.display()))
 }
 
+/// L'indice, solo del formato di questa versione: uno d'altro formato non si riscrive come
+/// `FORMATO_INDICE`.
 fn leggi_indice(cartella: &Path) -> Result<IndicePartita, String> {
     let percorso = cartella.join(INDICE);
-    serde_json::from_str(&leggi(&percorso)?)
-        .map_err(|e| format!("indice illeggibile {}: {e}", percorso.display()))
+    let indice: IndicePartita = serde_json::from_str(&leggi(&percorso)?)
+        .map_err(|e| format!("indice illeggibile {}: {e}", percorso.display()))?;
+    if indice.formato_indice != FORMATO_INDICE {
+        return Err(format!(
+            "{}: indice di formato {}, questa versione legge il formato {FORMATO_INDICE}",
+            percorso.display(),
+            indice.formato_indice
+        ));
+    }
+    Ok(indice)
+}
+
+/// `fsync` della cartella, perché una voce creata o cancellata resti su disco.
+fn sincronizza(cartella: &Path) -> Result<(), String> {
+    File::open(cartella)
+        .and_then(|c| c.sync_all())
+        .map_err(|e| format!("impossibile sincronizzare {}: {e}", cartella.display()))
 }
 
 fn motivo(trovata: u32) -> String {
@@ -228,6 +245,7 @@ impl Archivio {
         let cartella = self.cartella(id)?;
         fs::create_dir(&cartella)
             .map_err(|e| format!("impossibile creare {}: {e}", cartella.display()))?;
+        sincronizza(&self.radice.join("partite"))?;
         scrivi_partita(&cartella.join(nome_turno(p.testata().turno)), p)?;
         scrivi_indice(&cartella, id, p, p.riavvolgimenti())
     }
@@ -247,8 +265,10 @@ impl Archivio {
     }
 
     /// La bozza, se si legge e il suo turno è quello dell'ultimo snapshot leggibile; altrimenti
-    /// quello snapshot, e la bozza si cancella (ricerca persistenza-dei-salvataggi:115). Il
-    /// contatore dei riavvolgimenti è sempre quello dell'indice.
+    /// quello snapshot (ricerca persistenza-dei-salvataggi:115). Si cancella solo la bozza che si
+    /// legge ed è d'un altro turno. Deviazione voluta dalla ricerca: la bozza illeggibile resta,
+    /// così un errore di I/O passeggero non cancella le scelte, e la sostituiranno `snapshot` o
+    /// `bozza`. Il contatore dei riavvolgimenti è sempre quello dell'indice.
     pub(crate) fn riprendi(&self, id: &str) -> Result<Partita, String> {
         let cartella = self.cartella(id)?;
         let indice = indice_apribile(&cartella)?;
@@ -258,10 +278,11 @@ impl Archivio {
         let bozza = cartella.join(BOZZA);
         let mut p = match leggi_partita(&bozza) {
             Ok(b) if b.testata().turno == snapshot.testata().turno => b,
-            _ => {
+            Ok(_) => {
                 togli(&bozza)?;
                 snapshot
             }
+            Err(_) => snapshot,
         };
         p.imposta_riavvolgimenti(indice.riavvolgimenti);
         Ok(p)
@@ -269,7 +290,9 @@ impl Archivio {
 
     /// Torna all'apertura del turno `turno`: via la bozza e gli snapshot successivi, dal più
     /// recente, poi il contatore cresce di uno nell'indice. Un crash a metà riapre la partita a
-    /// un turno fra `turno` e quello di prima, e si può ripetere.
+    /// un turno fra `turno` e quello di prima, e si può ripetere. Limite: se cade fra le
+    /// cancellazioni e la scrittura dell'indice, il riavvolgimento non si conta e l'indice resta
+    /// al turno vecchio fino al prossimo snapshot.
     pub(crate) fn riavvolgi(&self, id: &str, turno: u32) -> Result<Partita, String> {
         let cartella = self.cartella(id)?;
         let indice = indice_apribile(&cartella)?;
@@ -293,14 +316,18 @@ impl Archivio {
     }
 
     /// Le partite in corso, dalla più recente: legge solo gli indici. Salta senza fermarsi le
-    /// cartelle senza indice o con un indice illeggibile o d'altro formato.
+    /// cartelle senza indice, con un indice illeggibile o d'altro formato, o con un `id` che non
+    /// è il nome della cartella o non passa `valida_nome`.
     pub(crate) fn elenca(&self) -> Vec<VocePartita> {
         let Ok(voci) = fs::read_dir(self.radice.join("partite")) else {
             return Vec::new();
         };
         let mut elenco: Vec<VocePartita> = (voci.filter_map(Result::ok))
-            .filter_map(|v| leggi_indice(&v.path()).ok())
-            .filter(|i| i.formato_indice == FORMATO_INDICE)
+            .filter_map(|v| {
+                let indice = leggi_indice(&v.path()).ok()?;
+                let coincide = v.file_name() == indice.id.as_str();
+                (coincide && Self::valida_nome(&indice.id).is_ok()).then_some(indice)
+            })
             .map(|indice| {
                 let trovata = indice.testata.versione_schema;
                 VocePartita {
@@ -314,15 +341,31 @@ impl Archivio {
         elenco
     }
 
-    /// `albo/<id>.json` in chiaro, poi la cartella della partita si cancella.
+    /// `albo/<id>.json` in chiaro, poi la cartella della partita si cancella. Ripetibile dopo un
+    /// crash fra i due passi: la cartella che manca nel frattempo va bene. Senza la cartella
+    /// all'inizio, invece, è un errore e l'albo non si scrive.
     pub(crate) fn chiudi_nell_albo(&self, id: &str, v: &VoceAlbo) -> Result<(), String> {
         let cartella = self.cartella(id)?;
+        if !cartella.is_dir() {
+            return Err(format!(
+                "impossibile chiudere nell'albo: {} non esiste",
+                cartella.display()
+            ));
+        }
         let percorso = self.radice.join("albo").join(format!("{id}.json"));
         let json = serde_json::to_string_pretty(v)
             .map_err(|e| format!("impossibile scrivere {}: {e}", percorso.display()))?;
         scrivi(&percorso, json.as_bytes())?;
-        fs::remove_dir_all(&cartella)
-            .map_err(|e| format!("impossibile cancellare {}: {e}", cartella.display()))
+        match fs::remove_dir_all(&cartella) {
+            Err(e) if e.kind() != ErrorKind::NotFound => {
+                return Err(format!(
+                    "impossibile cancellare {}: {e}",
+                    cartella.display()
+                ));
+            }
+            _ => {}
+        }
+        sincronizza(&self.radice.join("partite"))
     }
 
     /// Le voci dell'albo, in ordine di id. Salta senza fermarsi i file che non si leggono e
@@ -346,12 +389,21 @@ impl Archivio {
         Ok(self.radice.join("scenari").join(format!("{nome}.toml")))
     }
 
-    /// `scenari/<nome>.toml` col file di differenze dalla base.
+    /// `scenari/<nome>.toml` col file di differenze dalla base. Lo stesso nome lo sovrascrive;
+    /// un nome che differisce da uno presente solo per le maiuscole si rifiuta, perché su APFS
+    /// sarebbe lo stesso file.
     pub(crate) fn salva_scenario(&self, s: &SuMisura, base: &DatiGioco) -> Result<(), String> {
-        scrivi(
-            &self.percorso_scenario(&s.nome)?,
-            s.in_toml(base).as_bytes(),
-        )
+        let percorso = self.percorso_scenario(&s.nome)?;
+        let minuscolo = s.nome.to_lowercase();
+        if let Some(altro) =
+            (self.scenari().into_iter()).find(|n| *n != s.nome && n.to_lowercase() == minuscolo)
+        {
+            return Err(format!(
+                "impossibile salvare {}: c'è già lo scenario «{altro}», che differisce solo per le maiuscole",
+                percorso.display()
+            ));
+        }
+        scrivi(&percorso, s.in_toml(base).as_bytes())
     }
 
     pub(crate) fn carica_scenario(&self, nome: &str, base: &DatiGioco) -> Result<SuMisura, String> {
@@ -485,7 +537,11 @@ mod tests {
         fs::write(file(&c, "bozza.json.gz"), &bozza[..bozza.len() / 2]).unwrap();
         fs::write(file(&c, "turno-002.json.gz.tmp"), b"mezzo file").unwrap();
         assert_eq!(a.riprendi(ID).unwrap(), p);
-        assert!(!file(&c, "bozza.json.gz").exists());
+        // La bozza illeggibile resta: la sostituiranno `snapshot` o `bozza`.
+        assert_eq!(
+            fs::read(file(&c, "bozza.json.gz")).unwrap(),
+            &bozza[..bozza.len() / 2]
+        );
         assert_eq!(a.elenca().len(), 1);
 
         // Bozza vecchia accanto a uno snapshot più nuovo: crash fra la scrittura di
@@ -511,12 +567,23 @@ mod tests {
         i.testata.versione_schema = 10;
         fs::write(file(&c, "indice.json"), serde_json::to_string(&i).unwrap()).unwrap();
 
-        // Una cartella senza indice e una con un indice d'altro formato: non si elencano.
+        // Non si elencano: una cartella senza indice, un indice d'altro formato, un `id` che non
+        // è il nome della cartella, un `id` che `valida_nome` rifiuta.
         fs::create_dir_all(c.0.join("partite/senza-indice")).unwrap();
-        fs::create_dir_all(c.0.join("partite/futuro")).unwrap();
-        let mut futuro = serde_json::to_value(&i).unwrap();
-        futuro["formato_indice"] = 2.into();
-        fs::write(c.0.join("partite/futuro/indice.json"), futuro.to_string()).unwrap();
+        let altro = |cartella: &str, id: &str, formato: u32| {
+            let mut j = serde_json::to_value(&i).unwrap();
+            j["id"] = id.into();
+            j["formato_indice"] = formato.into();
+            fs::create_dir_all(c.0.join("partite").join(cartella)).unwrap();
+            fs::write(
+                c.0.join("partite").join(cartella).join(INDICE),
+                j.to_string(),
+            )
+            .unwrap();
+        };
+        altro("futuro", "futuro", FORMATO_INDICE + 1);
+        altro("cartella", "altro-id", FORMATO_INDICE);
+        altro(".nascosta", ".nascosta", FORMATO_INDICE);
 
         let prima: Vec<(String, Vec<u8>)> = nomi(&c)
             .into_iter()
@@ -534,6 +601,28 @@ mod tests {
             .map(|n| (n.clone(), fs::read(file(&c, &n)).unwrap()))
             .collect();
         assert_eq!(prima, dopo);
+    }
+
+    #[test]
+    fn indice_d_altro_formato_non_si_riscrive() {
+        let c = cartella("indice_d_altro_formato_non_si_riscrive");
+        let (a, mut p) = con_partita(&c);
+        let mut j: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(file(&c, INDICE)).unwrap()).unwrap();
+        j["formato_indice"] = 2.into();
+        fs::write(file(&c, INDICE), j.to_string()).unwrap();
+        let prima = fs::read(file(&c, INDICE)).unwrap();
+
+        p.chiudi_turno();
+        let e = a.snapshot(ID, &p).unwrap_err();
+        assert!(
+            e.contains("indice.json") && e.contains("formato 2") && e.contains("formato 1"),
+            "{e}"
+        );
+        assert!(a.riprendi(ID).is_err());
+        assert!(a.riavvolgi(ID, 0).is_err());
+        assert_eq!(fs::read(file(&c, INDICE)).unwrap(), prima);
+        assert!(!file(&c, "turno-001.json.gz").exists());
     }
 
     #[test]
@@ -564,8 +653,19 @@ mod tests {
         assert!(!c.0.join("partite").join(ID).exists());
         assert!(a.elenca().is_empty());
 
-        // Un file rotto e uno d'altro formato si saltano.
+        // Ripetibile: una cartella rimasta a metà cancellazione si chiude di nuovo.
+        fs::create_dir_all(c.0.join("partite").join(ID)).unwrap();
+        fs::write(file(&c, "turno-000.json.gz"), b"resto").unwrap();
+        a.chiudi_nell_albo(ID, &v).unwrap();
+        assert!(!c.0.join("partite").join(ID).exists());
+        // Senza cartella è un errore, e l'albo non si scrive.
+        let e = a.chiudi_nell_albo("00000000000000b2", &v).unwrap_err();
+        assert!(e.contains("00000000000000b2"), "{e}");
+        assert!(!c.0.join("albo/00000000000000b2.json").exists());
+
+        // Un file rotto, uno d'altro formato e un `.tmp` orfano si saltano.
         fs::write(c.0.join("albo/rotto.json"), "{").unwrap();
+        fs::write(c.0.join("albo/orfano.json.tmp"), "{").unwrap();
         let mut futura = serde_json::to_value(&v).unwrap();
         futura["formato_albo"] = (FORMATO_ALBO + 1).into();
         fs::write(c.0.join("albo/futura.json"), futura.to_string()).unwrap();
@@ -581,8 +681,15 @@ mod tests {
         s.nome = "Più debito".into();
         s.cursori.debito_pil += 10.0;
         a.salva_scenario(&s, &base).unwrap();
+        fs::write(c.0.join("scenari/orfano.toml.tmp"), "nome = ").unwrap();
         assert_eq!(a.scenari(), ["Più debito"]);
         assert_eq!(a.carica_scenario("Più debito", &base).unwrap(), s);
+        // Lo stesso nome si sovrascrive; uno che differisce solo per le maiuscole no.
+        a.salva_scenario(&s, &base).unwrap();
+        s.nome = "più DEBITO".into();
+        let e = a.salva_scenario(&s, &base).unwrap_err();
+        assert!(e.contains("Più debito"), "{e}");
+        assert_eq!(a.scenari(), ["Più debito"]);
 
         s.nome = "../fuori".into();
         assert!(a.salva_scenario(&s, &base).is_err());
