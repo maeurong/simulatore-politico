@@ -104,7 +104,8 @@ pub struct VoceAlbo {
 }
 
 /// Versione del formato dell'indice di una partita. Stesse regole di `FORMATO_ALBO`, che valgono
-/// anche per la `Testata` che l'indice contiene: chi legge salta gli indici d'altro formato.
+/// anche per la `Testata` che l'indice contiene: l'elenco mostra gli indici d'altro formato come non
+/// apribili, le scritture li rifiutano.
 pub const FORMATO_INDICE: u32 = 1;
 
 /// L'indice di una partita in corso, in chiaro accanto agli snapshot: l'elenco lo legge senza
@@ -123,8 +124,8 @@ pub struct IndicePartita {
     pub riavvolgimenti: u32,
 }
 
-/// Una partita dell'elenco: `apribile` se lo schema è quello di questa versione, altrimenti
-/// `motivo` nomina le due versioni.
+/// Una partita dell'elenco: `apribile` se il formato dell'indice e lo schema sono quelli di questa
+/// versione, altrimenti `motivo` nomina il valore trovato e quello atteso.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VocePartita {

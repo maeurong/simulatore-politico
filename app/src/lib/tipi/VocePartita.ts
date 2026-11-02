@@ -2,7 +2,7 @@
 import type { IndicePartita } from "./IndicePartita";
 
 /**
- * Una partita dell'elenco: `apribile` se lo schema è quello di questa versione, altrimenti
- * `motivo` nomina le due versioni.
+ * Una partita dell'elenco: `apribile` se il formato dell'indice e lo schema sono quelli di questa
+ * versione, altrimenti `motivo` nomina il valore trovato e quello atteso.
  */
 export type VocePartita = { indice: IndicePartita, apribile: boolean, motivo: string | null, };

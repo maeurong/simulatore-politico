@@ -28,6 +28,8 @@ type Stato = Mutex<Option<InCorso>>;
 
 const ERRORE_STATO: &str = "stato della partita non disponibile";
 const NESSUNA: &str = "nessuna partita in corso";
+const SENZA_SEGGI: &str =
+    "la partita è finita senza seggi: conferma l'eredità per chiuderla nell'albo";
 
 fn leggi(cartella: &Path, nome: &str) -> Result<String, String> {
     let percorso = cartella.join(nome);
@@ -52,8 +54,8 @@ fn blocca(stato: &Stato) -> Result<MutexGuard<'_, Option<InCorso>>, String> {
     stato.lock().map_err(|_| ERRORE_STATO.to_owned())
 }
 
-/// Lo stato da sostituire per intero: un lock avvelenato si recupera.
-fn sostituisci(stato: &Stato) -> MutexGuard<'_, Option<InCorso>> {
+/// Il lock anche avvelenato, per chi tocca solo il disco o sostituisce lo stato per intero.
+fn blocca_comunque(stato: &Stato) -> MutexGuard<'_, Option<InCorso>> {
     stato.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
@@ -69,7 +71,8 @@ fn dati_di(base: &DatiGioco, scenario: Option<&SuMisura>) -> Result<DatiGioco, S
 fn avvia(stato: &Stato, dati: DatiGioco, seme: u64) -> Result<Vista, String> {
     let partita = Partita::nuova(dati, seme);
     let vista = partita.vista();
-    *sostituisci(stato) = Some(InCorso { id: None, partita });
+    *blocca_comunque(stato) = Some(InCorso { id: None, partita });
+    stato.clear_poison();
     Ok(vista)
 }
 
@@ -86,32 +89,33 @@ fn fonda(
         Partita::fonda(dati_di(base, scenario)?, seme, fondazione).map_err(|e| e.to_string())?;
     let id = format!("{seme:016x}");
     let vista = partita.vista();
-    let mut guardia = sostituisci(stato);
+    let mut guardia = blocca_comunque(stato);
     archivio.crea(&partita, &id)?;
     *guardia = Some(InCorso {
         id: Some(id),
         partita,
     });
+    stato.clear_poison();
     Ok(vista)
 }
 
-fn apri(stato: &Stato, archivio: &Archivio, id: String) -> Result<Vista, String> {
-    let mut guardia = sostituisci(stato);
+fn apri_partita(stato: &Stato, archivio: &Archivio, id: String) -> Result<Vista, String> {
+    let mut guardia = blocca_comunque(stato);
     let partita = archivio.riprendi(&id)?;
     let vista = partita.vista();
     *guardia = Some(InCorso {
         id: Some(id),
         partita,
     });
+    stato.clear_poison();
     Ok(vista)
 }
 
-/// Chiude il turno; con un id, lo snapshot della nuova apertura, anche quando la chiusura finisce
-/// la partita senza seggi: così l'eredità in bozza si riapre e si può riavvolgere.
+/// Chiude il turno; con un id, lo snapshot della nuova apertura. Lo snapshot si scrive anche se la
+/// chiusura finisce la partita; se era già finita, no.
 fn chiudi(stato: &Stato, archivio: &Archivio) -> Result<Vista, String> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
-    // A partita finita la chiusura non fa nulla: lo snapshot di quel turno c'è già.
     let gia_finita = c.partita.finita();
     c.partita.chiudi_turno();
     if let Some(id) = &c.id
@@ -133,13 +137,22 @@ fn esegui(stato: &Stato, archivio: &Archivio, comando: Comando) -> Result<Vista,
     Ok(c.partita.vista())
 }
 
+/// Se il riavvolgimento fallisce, la partita in memoria torna quella su disco, se si riapre.
 fn torna_a(stato: &Stato, archivio: &Archivio, turno: u32) -> Result<Vista, String> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
     let id =
         c.id.as_deref()
             .ok_or("la partita di prova non ha salvataggi a cui tornare")?;
-    c.partita = archivio.riavvolgi(id, turno)?;
+    match archivio.riavvolgi(id, turno) {
+        Ok(p) => c.partita = p,
+        Err(e) => {
+            if let Ok(p) = archivio.riprendi(id) {
+                c.partita = p;
+            }
+            return Err(e);
+        }
+    }
     Ok(c.partita.vista())
 }
 
@@ -158,12 +171,14 @@ fn lascia(stato: &Stato, archivio: &Archivio) -> Result<Eredita, String> {
     let c = guardia.as_mut().ok_or(NESSUNA)?;
     let eredita = match c.partita.eredita() {
         Some(e) if e.fine == Fine::Abbandono => e,
-        _ => c.partita.abbandona().map_err(|e| e.to_string())?,
+        Some(_) => return Err(SENZA_SEGGI.into()),
+        None => c.partita.abbandona().map_err(|e| e.to_string())?,
     };
     if let Some(id) = &c.id {
         nell_albo(archivio, id, &c.partita)?;
     }
     *guardia = None;
+    stato.clear_poison();
     Ok(eredita)
 }
 
@@ -179,13 +194,20 @@ fn conferma(stato: &Stato, archivio: &Archivio) -> Result<(), String> {
         nell_albo(archivio, id, &c.partita)?;
     }
     *guardia = None;
+    stato.clear_poison();
     Ok(())
 }
 
-/// All'uscita, la bozza della partita in corso, se ha un id e non è finita. Il lock si prende
-/// anche avvelenato, e un errore non blocca l'uscita.
+/// All'uscita, la bozza della partita in corso, se ha un id e non è finita. Col lock avvelenato
+/// niente bozza: dopo un panic lo stato può essere a metà, e ogni comando accettato ha già scritto
+/// la sua. Un errore non blocca l'uscita.
 fn alla_chiusura(stato: &Stato, archivio: &Archivio) {
-    let guardia = sostituisci(stato);
+    let Ok(guardia) = stato.lock() else {
+        eprintln!(
+            "bozza non salvata all'uscita: lo stato della partita è rimasto a metà dopo un errore interno"
+        );
+        return;
+    };
     if let Some(InCorso {
         id: Some(id),
         partita,
@@ -220,7 +242,7 @@ async fn partite(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<Vec<VocePartita>, String> {
-    let _guardia = blocca(&stato)?;
+    let _guardia = blocca_comunque(&stato);
     Ok(archivio.elenca())
 }
 
@@ -249,7 +271,7 @@ async fn riprendi(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<Vista, String> {
-    apri(&stato, &archivio, id)
+    apri_partita(&stato, &archivio, id)
 }
 
 #[tauri::command]
@@ -291,7 +313,7 @@ async fn albo(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<Vec<VoceAlbo>, String> {
-    let _guardia = blocca(&stato)?;
+    let _guardia = blocca_comunque(&stato);
     Ok(archivio.albo())
 }
 
@@ -300,7 +322,7 @@ async fn scenari(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<Vec<String>, String> {
-    let _guardia = blocca(&stato)?;
+    let _guardia = blocca_comunque(&stato);
     Ok(archivio.scenari())
 }
 
@@ -311,7 +333,7 @@ async fn salva_scenario(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<(), String> {
-    let _guardia = blocca(&stato)?;
+    let _guardia = blocca_comunque(&stato);
     archivio.salva_scenario(&scenario, &base)
 }
 
@@ -322,7 +344,7 @@ async fn carica_scenario(
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
 ) -> Result<SuMisura, String> {
-    let _guardia = blocca(&stato)?;
+    let _guardia = blocca_comunque(&stato);
     archivio.carica_scenario(&nome, &base)
 }
 
@@ -336,7 +358,7 @@ async fn riepilogo_scenario(
 }
 
 /// Esegue `f` sulla partita in corso, in sola lettura.
-fn leggi_partita<T>(
+fn sulla_partita<T>(
     stato: &Stato,
     f: impl FnOnce(&Partita) -> Result<T, sim_core::Errore>,
 ) -> Result<T, String> {
@@ -351,12 +373,12 @@ async fn anteprima(
     valori: Vec<ValoreProposto>,
     stato: State<'_, Stato>,
 ) -> Result<Anteprima, String> {
-    leggi_partita(&stato, |p| p.anteprima(&valori))
+    sulla_partita(&stato, |p| p.anteprima(&valori))
 }
 
 #[tauri::command]
 async fn anteprima_decreto(decreto: Decreto, stato: State<'_, Stato>) -> Result<Anteprima, String> {
-    leggi_partita(&stato, |p| p.anteprima_decreto(&decreto))
+    sulla_partita(&stato, |p| p.anteprima_decreto(&decreto))
 }
 
 #[tauri::command]
@@ -364,7 +386,7 @@ async fn anteprima_accogli(
     dicastero: String,
     stato: State<'_, Stato>,
 ) -> Result<Anteprima, String> {
-    leggi_partita(&stato, |p| p.anteprima_accogli(&dicastero))
+    sulla_partita(&stato, |p| p.anteprima_accogli(&dicastero))
 }
 
 pub fn run() -> tauri::Result<()> {
@@ -400,7 +422,8 @@ pub fn run() -> tauri::Result<()> {
             anteprima_accogli
         ])
         .build(tauri::generate_context!())?
-        // Cmd+Q dà solo `RunEvent::Exit` (ricerca persistenza-dei-salvataggi:40).
+        // Cmd+Q dà solo `RunEvent::Exit` (ricerca `persistenza-dei-salvataggi`, «Chiusura
+        // dell'app e bozza del turno»).
         .run(|app, evento| {
             if let RunEvent::Exit = evento
                 && let (Some(stato), Some(archivio)) =
@@ -415,22 +438,11 @@ pub fn run() -> tauri::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::archivio::tests::cartella;
+    use crate::archivio::tests::{ID, cartella, dati, fondazione};
     use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 
-    fn dati_base() -> Result<DatiGioco, String> {
-        carica_dati(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../dati/base"))
-    }
-
+    /// Il seme che dà `ID`.
     const SEME: u64 = 0xa1;
-    const ID: &str = "00000000000000a1";
-
-    fn fondazione() -> Fondazione {
-        Fondazione {
-            nome: "Partito nuovo".into(),
-            posizione: 3.5,
-        }
-    }
 
     fn campagna(bersagli: usize) -> Comando {
         let spese = (0..bersagli)
@@ -447,13 +459,70 @@ mod tests {
     fn con_partita(cartella: &Path) -> Result<(Stato, Archivio), String> {
         let stato = Stato::default();
         let archivio = Archivio::nuovo(cartella.to_path_buf())?;
-        fonda(&stato, &archivio, &dati_base()?, None, &fondazione(), SEME)?;
+        fonda(&stato, &archivio, &dati(), None, &fondazione(), SEME)?;
         Ok((stato, archivio))
     }
 
     fn nella_partita(stato: &Stato, f: impl FnOnce(&mut Partita)) -> Result<(), String> {
-        let mut guardia = sostituisci(stato);
+        let mut guardia = blocca_comunque(stato);
         f(&mut guardia.as_mut().ok_or(NESSUNA)?.partita);
+        Ok(())
+    }
+
+    /// Avvelena il lock con un panic in un altro thread.
+    fn avvelena(stato: &Stato) {
+        let _ = std::thread::scope(|s| {
+            s.spawn(|| {
+                let _guardia = stato.lock();
+                panic!("lock avvelenato apposta");
+            })
+            .join()
+        });
+        assert!(stato.is_poisoned());
+    }
+
+    #[test]
+    fn lock_avvelenato_ripulito_da_una_partita_nuova() -> Result<(), String> {
+        let c = cartella("lib-lock-avvelenato");
+        let (stato, archivio) = con_partita(&c.0)?;
+        avvelena(&stato);
+        assert_eq!(chiudi(&stato, &archivio), Err(ERRORE_STATO.to_string()));
+        // I comandi che toccano solo il disco prendono il lock anche avvelenato.
+        assert!(blocca_comunque(&stato).is_some());
+
+        avvia(&stato, dati(), 1)?;
+        assert!(!stato.is_poisoned());
+        assert_eq!(chiudi(&stato, &archivio)?.turno, 1);
+
+        // Anche riprendere una partita salvata ripulisce il lock.
+        avvelena(&stato);
+        apri_partita(&stato, &archivio, ID.into())?;
+        assert!(!stato.is_poisoned());
+        assert_eq!(chiudi(&stato, &archivio)?.turno, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn riavvolgi_fallito_riallinea_la_memoria_al_disco() -> Result<(), String> {
+        let c = cartella("lib-riavvolgi-fallito");
+        let (stato, archivio) = con_partita(&c.0)?;
+        chiudi(&stato, &archivio)?;
+        chiudi(&stato, &archivio)?;
+        // `turno-002` diventa una cartella: la sua cancellazione fallisce dopo quella della bozza.
+        let turno_due = c.0.join("partite").join(ID).join("turno-002.json.gz");
+        std::fs::remove_file(&turno_due).map_err(|e| e.to_string())?;
+        std::fs::create_dir(&turno_due).map_err(|e| e.to_string())?;
+        std::fs::write(turno_due.join("dentro"), "x").map_err(|e| e.to_string())?;
+
+        let e = torna_a(&stato, &archivio, 0).err().unwrap_or_default();
+        assert!(
+            e.starts_with(&format!(
+                "impossibile cancellare partite/{ID}/turno-002.json.gz"
+            )),
+            "{e}"
+        );
+        // In memoria c'è ora l'ultimo snapshot leggibile, il turno 1.
+        assert_eq!(sulla_partita(&stato, |p| Ok(p.vista()))?.turno, 1);
         Ok(())
     }
 
@@ -469,15 +538,15 @@ mod tests {
     #[test]
     fn anteprima_senza_partita_da_errore() {
         let stato = Stato::default();
-        let r = leggi_partita(&stato, |p| p.anteprima_accogli("sanita"));
+        let r = sulla_partita(&stato, |p| p.anteprima_accogli("sanita"));
         assert_eq!(r.err(), Some(NESSUNA.to_string()));
     }
 
     #[test]
     fn anteprima_rifiutata_porta_il_nome_del_dicastero() -> Result<(), String> {
         let stato = Stato::default();
-        avvia(&stato, dati_base()?, 1)?;
-        let errore = leggi_partita(&stato, |p| p.anteprima_accogli("giustizia"))
+        avvia(&stato, dati(), 1)?;
+        let errore = sulla_partita(&stato, |p| p.anteprima_accogli("giustizia"))
             .err()
             .unwrap_or_default();
         assert!(errore.contains("Giustizia"), "{errore}");
@@ -489,7 +558,7 @@ mod tests {
         let c = cartella("lib-avvia-e-chiudi");
         let archivio = Archivio::nuovo(c.0.clone())?;
         let stato = Stato::default();
-        assert_eq!(avvia(&stato, dati_base()?, 1)?.turno, 0);
+        assert_eq!(avvia(&stato, dati(), 1)?.turno, 0);
         let vista = chiudi(&stato, &archivio)?;
         assert_eq!(
             (vista.turno, vista.data.trimestre, vista.data.anno),
@@ -526,13 +595,13 @@ mod tests {
         assert!(!file("bozza.json.gz").exists());
         let vista = esegui(&stato, &archivio, campagna(1))?;
         assert!(file("bozza.json.gz").exists());
-        assert_eq!(apri(&stato, &archivio, ID.into())?, vista);
+        assert_eq!(apri_partita(&stato, &archivio, ID.into())?, vista);
 
         let vista = chiudi(&stato, &archivio)?;
         assert_eq!(vista.turno, 1);
         assert!(!file("bozza.json.gz").exists());
         assert!(file("turno-001.json.gz").exists());
-        assert_eq!(apri(&stato, &archivio, ID.into())?, vista);
+        assert_eq!(apri_partita(&stato, &archivio, ID.into())?, vista);
         assert_eq!(archivio.elenca().len(), 1);
 
         // Il riavvolgimento torna al turno zero e conta.
@@ -546,7 +615,7 @@ mod tests {
         let c = cartella("lib-scenario-fuori-intervallo");
         let stato = Stato::default();
         let archivio = Archivio::nuovo(c.0.clone())?;
-        let base = dati_base()?;
+        let base = dati();
         let mut s = SuMisura::base(&base);
         s.cursori.debito_pil = 1e6;
         let e = fonda(&stato, &archivio, &base, Some(&s), &fondazione(), SEME)
@@ -574,7 +643,7 @@ mod tests {
         assert_eq!(conferma(&stato, &archivio), Err(NESSUNA.to_string()));
 
         // La partita di prova si abbandona senza albo.
-        avvia(&stato, dati_base()?, 1)?;
+        avvia(&stato, dati(), 1)?;
         lascia(&stato, &archivio)?;
         assert_eq!(archivio.albo().len(), 1);
         assert!(blocca(&stato)?.is_none());
@@ -613,6 +682,8 @@ mod tests {
         corrente.partita = Partita::carica(&j.to_string()).map_err(|e| e.to_string())?;
         drop(guardia);
 
+        // L'abbandono rimanda alla conferma.
+        assert_eq!(lascia(&stato, &archivio), Err(SENZA_SEGGI.to_string()));
         conferma(&stato, &archivio)?;
         let albo = archivio.albo();
         assert_eq!(albo.len(), 1);
@@ -646,30 +717,27 @@ mod tests {
         // La partita di prova non si salva.
         let stato = Stato::default();
         let archivio = Archivio::nuovo(c.0.clone())?;
-        avvia(&stato, dati_base()?, 1)?;
+        avvia(&stato, dati(), 1)?;
         alla_chiusura(&stato, &archivio);
         assert!(archivio.elenca().is_empty());
 
-        // Una scelta fuori dai comandi del guscio, poi l'uscita col lock avvelenato.
+        // Una scelta fuori dai comandi del guscio: l'uscita la salva.
         let (stato, archivio) = con_partita(&c.0)?;
         nella_partita(&stato, |p| {
             let _ = p.comanda(campagna(1));
         })?;
-        let attesa = leggi_partita(&stato, |p| Ok(p.vista()))?;
-        let _ = std::thread::scope(|s| {
-            s.spawn(|| {
-                let _guardia = stato.lock();
-                panic!("lock avvelenato apposta");
-            })
-            .join()
-        });
-        assert!(stato.is_poisoned());
+        let attesa = sulla_partita(&stato, |p| Ok(p.vista()))?;
         alla_chiusura(&stato, &archivio);
-        assert!(bozza.exists());
         assert_eq!(archivio.riprendi(ID)?.vista(), attesa);
 
-        // A partita finita la bozza non si scrive.
+        // Col lock avvelenato lo stato può essere a metà: niente bozza.
         std::fs::remove_file(&bozza).map_err(|e| e.to_string())?;
+        avvelena(&stato);
+        alla_chiusura(&stato, &archivio);
+        assert!(!bozza.exists());
+
+        // A partita finita la bozza non si scrive.
+        stato.clear_poison();
         nella_partita(&stato, |p| {
             let _ = p.abbandona();
         })?;
@@ -680,7 +748,7 @@ mod tests {
 
     #[test]
     fn riepilogo_della_base_senza_scenario() -> Result<(), String> {
-        let base = dati_base()?;
+        let base = dati();
         assert_eq!(riepilogo(&dati_di(&base, None)?).posizioni.len(), 6);
         Ok(())
     }

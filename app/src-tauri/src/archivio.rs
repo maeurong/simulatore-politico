@@ -1,9 +1,11 @@
 //! L'archivio su disco: una cartella per partita (`partite/<id>/`) con l'indice in chiaro, uno
 //! snapshot gzip per apertura di turno, mai riscritto, e la bozza del turno in corso; l'albo delle
 //! partite finite (`albo/<id>.json`) e gli scenari su misura (`scenari/<nome>.toml`). Ogni file si
-//! scrive in modo atomico (ricerca persistenza-dei-salvataggi:51).
+//! scrive in modo atomico (ricerca `persistenza-dei-salvataggi`, «Scrittura atomica su APFS»).
+//! I percorsi negli errori sono relativi alla radice dell'archivio.
 
 use std::cmp::Reverse;
+use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
@@ -12,7 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
-use sim_core::salvataggi::{FORMATO_ALBO, FORMATO_INDICE, IndicePartita, VoceAlbo, VocePartita};
+use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VoceAlbo, VocePartita};
 use sim_core::{DatiGioco, Errore, Partita, SuMisura, VERSIONE_SCHEMA};
 
 /// Tetto di ogni lettura da disco, dopo la decompressione.
@@ -41,94 +43,56 @@ fn adesso() -> Result<u64, String> {
         .map_err(|e| format!("orologio di sistema non valido: {e}"))
 }
 
-fn errore_lettura(percorso: &Path, e: &std::io::Error) -> String {
-    format!("impossibile leggere {}: {e}", percorso.display())
+/// Caratteri di formato invisibili (categoria Unicode Cf) che girano o nascondono il testo.
+// ponytail: intervalli noti scritti a mano, niente tabelle Unicode; una crate se ne servono altri.
+fn invisibile(c: char) -> bool {
+    matches!(
+        c,
+        '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2060}'..='\u{206F}' | '\u{FEFF}'
+    )
 }
 
-/// Al più `TETTO` byte da `lettore`, che legge `percorso`.
-fn leggi_da(lettore: impl Read, percorso: &Path) -> Result<String, String> {
-    let mut byte = Vec::new();
-    (lettore.take(TETTO + 1).read_to_end(&mut byte)).map_err(|e| errore_lettura(percorso, &e))?;
-    if byte.len() as u64 > TETTO {
-        return Err(format!("{} supera 64 MiB", percorso.display()));
+/// Il nome fra «», coi caratteri non stampabili resi visibili da `escape_debug`.
+fn citato(nome: &str) -> String {
+    let mut s = String::from("«");
+    for c in nome.chars() {
+        if c.is_control() || invisibile(c) {
+            s.extend(c.escape_debug());
+        } else {
+            s.push(c);
+        }
     }
-    String::from_utf8(byte).map_err(|e| format!("{} non è testo UTF-8: {e}", percorso.display()))
+    s.push('»');
+    s
 }
 
-fn apri(percorso: &Path) -> Result<File, String> {
-    File::open(percorso).map_err(|e| errore_lettura(percorso, &e))
-}
-
-fn leggi(percorso: &Path) -> Result<String, String> {
-    leggi_da(apri(percorso)?, percorso)
-}
-
-/// Scrittura atomica: temporaneo nella stessa cartella, `sync_all`, `rename`, `sync_all` della
-/// cartella. A un crash resta il file vecchio o quello nuovo, più al massimo un `.tmp` orfano.
-fn scrivi(percorso: &Path, byte: &[u8]) -> Result<(), String> {
-    let errore = |e: std::io::Error| format!("impossibile scrivere {}: {e}", percorso.display());
-    let mut tmp = percorso.as_os_str().to_owned();
-    tmp.push(".tmp");
-    let tmp = PathBuf::from(tmp);
-    let mut f = File::create(&tmp).map_err(errore)?;
-    f.write_all(byte).map_err(errore)?;
-    f.sync_all().map_err(errore)?;
-    fs::rename(&tmp, percorso).map_err(errore)?;
-    match percorso.parent() {
-        Some(cartella) => File::open(cartella)
-            .and_then(|c| c.sync_all())
-            .map_err(errore),
-        None => Ok(()),
-    }
-}
-
-/// Cancella `percorso`; un file che già manca va bene.
-fn togli(percorso: &Path) -> Result<(), String> {
-    match fs::remove_file(percorso) {
-        Err(e) if e.kind() != ErrorKind::NotFound => Err(format!(
-            "impossibile cancellare {}: {e}",
-            percorso.display()
-        )),
-        _ => Ok(()),
-    }
-}
-
-fn scrivi_partita(percorso: &Path, p: &Partita) -> Result<(), String> {
-    let errore =
-        |e: &dyn std::fmt::Display| format!("impossibile salvare {}: {e}", percorso.display());
-    let json = p.salva().map_err(|e| errore(&e))?;
-    let mut gz = GzEncoder::new(Vec::new(), Compression::default());
-    gz.write_all(json.as_bytes()).map_err(|e| errore(&e))?;
-    let byte = gz.finish().map_err(|e| errore(&e))?;
-    scrivi(percorso, &byte)
-}
-
-fn leggi_partita(percorso: &Path) -> Result<Partita, String> {
-    let json = leggi_da(GzDecoder::new(apri(percorso)?), percorso)?;
-    Partita::carica(&json).map_err(|e| format!("impossibile aprire {}: {e}", percorso.display()))
-}
-
-/// L'indice, solo del formato di questa versione: uno d'altro formato non si riscrive come
-/// `FORMATO_INDICE`.
-fn leggi_indice(cartella: &Path) -> Result<IndicePartita, String> {
-    let percorso = cartella.join(INDICE);
-    let indice: IndicePartita = serde_json::from_str(&leggi(&percorso)?)
-        .map_err(|e| format!("indice illeggibile {}: {e}", percorso.display()))?;
-    if indice.formato_indice != FORMATO_INDICE {
+/// Un nome che resta un solo file dentro la sua cartella e si legge com'è: 1-60 caratteri,
+/// niente `/`, `\`, `..`, punto iniziale, spazi in testa o in coda, caratteri di controllo o
+/// invisibili.
+fn valida_nome(nome: &str) -> Result<(), String> {
+    let lunghezza = nome.chars().count();
+    if !(1..=60).contains(&lunghezza) {
         return Err(format!(
-            "{}: indice di formato {}, questa versione legge il formato {FORMATO_INDICE}",
-            percorso.display(),
-            indice.formato_indice
+            "nome {} di {lunghezza} caratteri: ne servono da 1 a 60",
+            citato(nome)
         ));
     }
-    Ok(indice)
+    if nome.starts_with('.')
+        || nome.trim() != nome
+        || nome.contains(['/', '\\'])
+        || nome.contains("..")
+        || nome.chars().any(|c| c.is_control() || invisibile(c))
+    {
+        return Err(format!(
+            "nome {} non valido: niente «/», «\\», «..», punto iniziale, spazi in testa o in coda, caratteri di controllo o invisibili",
+            citato(nome)
+        ));
+    }
+    Ok(())
 }
 
-/// `fsync` della cartella, perché una voce creata o cancellata resti su disco.
-fn sincronizza(cartella: &Path) -> Result<(), String> {
-    File::open(cartella)
-        .and_then(|c| c.sync_all())
-        .map_err(|e| format!("impossibile sincronizzare {}: {e}", cartella.display()))
+fn formato_diverso(trovato: u32) -> String {
+    format!("indice di formato {trovato}, questa versione legge il formato {FORMATO_INDICE}")
 }
 
 fn motivo(trovata: u32) -> String {
@@ -139,54 +103,170 @@ fn motivo(trovata: u32) -> String {
     .to_string()
 }
 
-/// L'indice, se lo schema è quello di questa versione: un salvataggio d'altro schema non si apre
-/// e nessuno dei suoi file si tocca.
-fn indice_apribile(cartella: &Path) -> Result<IndicePartita, String> {
-    let indice = leggi_indice(cartella)?;
-    match indice.testata.versione_schema {
-        VERSIONE_SCHEMA => Ok(indice),
-        trovata => Err(format!(
-            "{}: {}",
-            cartella.join(INDICE).display(),
-            motivo(trovata)
-        )),
-    }
-}
-
-fn scrivi_indice(
-    cartella: &Path,
-    id: &str,
-    p: &Partita,
-    riavvolgimenti: u32,
-) -> Result<(), String> {
-    let percorso = cartella.join(INDICE);
-    let indice = IndicePartita {
-        formato_indice: FORMATO_INDICE,
-        id: id.into(),
-        testata: p.testata(),
-        ultimo_salvataggio: adesso()?,
-        riavvolgimenti,
-    };
-    let json = serde_json::to_string_pretty(&indice)
-        .map_err(|e| format!("impossibile scrivere {}: {e}", percorso.display()))?;
-    scrivi(&percorso, json.as_bytes())
-}
-
-/// I turni degli snapshot di `cartella`, dal più recente.
-fn turni(cartella: &Path) -> Result<Vec<u32>, String> {
-    let voci = fs::read_dir(cartella).map_err(|e| errore_lettura(cartella, &e))?;
-    let mut turni: Vec<u32> = (voci.filter_map(Result::ok))
-        .filter_map(|v| turno_del_nome(&v.file_name().to_string_lossy()))
-        .collect();
-    turni.sort_unstable_by_key(|&t| Reverse(t));
-    Ok(turni)
-}
-
 pub(crate) struct Archivio {
     radice: PathBuf,
 }
 
+/// I passi su disco: ogni errore nomina il percorso relativo alla radice.
 impl Archivio {
+    fn mostra<'a>(&self, percorso: &'a Path) -> std::path::Display<'a> {
+        percorso
+            .strip_prefix(&self.radice)
+            .unwrap_or(percorso)
+            .display()
+    }
+
+    fn errore_lettura(&self, percorso: &Path, e: &std::io::Error) -> String {
+        format!("impossibile leggere {}: {e}", self.mostra(percorso))
+    }
+
+    /// Al più `TETTO` byte da `lettore`, che legge `percorso`.
+    fn leggi_da(&self, lettore: impl Read, percorso: &Path) -> Result<String, String> {
+        let mut byte = Vec::new();
+        (lettore.take(TETTO + 1).read_to_end(&mut byte))
+            .map_err(|e| self.errore_lettura(percorso, &e))?;
+        if byte.len() as u64 > TETTO {
+            return Err(format!("{} supera 64 MiB", self.mostra(percorso)));
+        }
+        String::from_utf8(byte)
+            .map_err(|e| format!("{} non è testo UTF-8: {e}", self.mostra(percorso)))
+    }
+
+    fn apri(&self, percorso: &Path) -> Result<File, String> {
+        File::open(percorso).map_err(|e| self.errore_lettura(percorso, &e))
+    }
+
+    fn leggi(&self, percorso: &Path) -> Result<String, String> {
+        self.leggi_da(self.apri(percorso)?, percorso)
+    }
+
+    /// `fsync` della cartella, perché una voce creata o cancellata resti su disco.
+    fn sincronizza(&self, cartella: &Path) -> Result<(), String> {
+        File::open(cartella)
+            .and_then(|c| c.sync_all())
+            .map_err(|e| {
+                format!(
+                    "impossibile completare il salvataggio di {}: {e}",
+                    self.mostra(cartella)
+                )
+            })
+    }
+
+    /// Scrittura atomica: temporaneo nella stessa cartella, `sync_all`, `rename`, `sync_all` della
+    /// cartella. A un crash resta il file vecchio o quello nuovo, più al massimo un `.tmp` orfano.
+    fn scrivi(&self, percorso: &Path, byte: &[u8]) -> Result<(), String> {
+        let errore =
+            |e: std::io::Error| format!("impossibile scrivere {}: {e}", self.mostra(percorso));
+        let mut tmp = percorso.as_os_str().to_owned();
+        tmp.push(".tmp");
+        let tmp = PathBuf::from(tmp);
+        let mut f = File::create(&tmp).map_err(errore)?;
+        f.write_all(byte).map_err(errore)?;
+        f.sync_all().map_err(errore)?;
+        drop(f);
+        fs::rename(&tmp, percorso).map_err(errore)?;
+        match percorso.parent() {
+            Some(cartella) => self.sincronizza(cartella),
+            None => Ok(()),
+        }
+    }
+
+    /// Cancella `percorso`; un file che già manca va bene.
+    fn togli(&self, percorso: &Path) -> Result<(), String> {
+        match fs::remove_file(percorso) {
+            Err(e) if e.kind() != ErrorKind::NotFound => Err(format!(
+                "impossibile cancellare {}: {e}",
+                self.mostra(percorso)
+            )),
+            _ => Ok(()),
+        }
+    }
+
+    fn scrivi_partita(&self, percorso: &Path, p: &Partita) -> Result<(), String> {
+        let errore =
+            |e: &dyn Display| format!("impossibile salvare {}: {e}", self.mostra(percorso));
+        let json = p.salva().map_err(|e| errore(&e))?;
+        let mut gz = GzEncoder::new(Vec::new(), Compression::default());
+        gz.write_all(json.as_bytes()).map_err(|e| errore(&e))?;
+        let byte = gz.finish().map_err(|e| errore(&e))?;
+        self.scrivi(percorso, &byte)
+    }
+
+    fn leggi_partita(&self, percorso: &Path) -> Result<Partita, String> {
+        let json = self.leggi_da(GzDecoder::new(self.apri(percorso)?), percorso)?;
+        Partita::carica(&json)
+            .map_err(|e| format!("impossibile aprire {}: {e}", self.mostra(percorso)))
+    }
+
+    /// L'indice di qualsiasi formato, per l'elenco.
+    fn leggi_indice_qualsiasi(&self, cartella: &Path) -> Result<IndicePartita, String> {
+        let percorso = cartella.join(INDICE);
+        serde_json::from_str(&self.leggi(&percorso)?)
+            .map_err(|e| format!("indice illeggibile {}: {e}", self.mostra(&percorso)))
+    }
+
+    /// L'indice, solo del formato di questa versione: uno d'altro formato non si riscrive come
+    /// `FORMATO_INDICE`.
+    fn leggi_indice(&self, cartella: &Path) -> Result<IndicePartita, String> {
+        let indice = self.leggi_indice_qualsiasi(cartella)?;
+        if indice.formato_indice != FORMATO_INDICE {
+            return Err(format!(
+                "{}: {}",
+                self.mostra(&cartella.join(INDICE)),
+                formato_diverso(indice.formato_indice)
+            ));
+        }
+        Ok(indice)
+    }
+
+    /// L'indice, se lo schema è quello di questa versione: un salvataggio d'altro schema non si
+    /// apre e nessuno dei suoi file si tocca.
+    fn indice_apribile(&self, cartella: &Path) -> Result<IndicePartita, String> {
+        let indice = self.leggi_indice(cartella)?;
+        match indice.testata.versione_schema {
+            VERSIONE_SCHEMA => Ok(indice),
+            trovata => Err(format!(
+                "{}: {}",
+                self.mostra(&cartella.join(INDICE)),
+                motivo(trovata)
+            )),
+        }
+    }
+
+    fn scrivi_indice(
+        &self,
+        cartella: &Path,
+        id: &str,
+        p: &Partita,
+        riavvolgimenti: u32,
+    ) -> Result<(), String> {
+        let percorso = cartella.join(INDICE);
+        let indice = IndicePartita {
+            formato_indice: FORMATO_INDICE,
+            id: id.into(),
+            testata: p.testata(),
+            ultimo_salvataggio: adesso()?,
+            riavvolgimenti,
+        };
+        let json = serde_json::to_string_pretty(&indice)
+            .map_err(|e| format!("impossibile scrivere {}: {e}", self.mostra(&percorso)))?;
+        self.scrivi(&percorso, json.as_bytes())
+    }
+
+    /// I turni degli snapshot di `cartella`, dal più recente.
+    fn turni(&self, cartella: &Path) -> Result<Vec<u32>, String> {
+        let voci = fs::read_dir(cartella).map_err(|e| self.errore_lettura(cartella, &e))?;
+        let mut turni: Vec<u32> = (voci.filter_map(Result::ok))
+            .filter_map(|v| turno_del_nome(&v.file_name().to_string_lossy()))
+            .collect();
+        turni.sort_unstable_by_key(|&t| Reverse(t));
+        Ok(turni)
+    }
+}
+
+impl Archivio {
+    /// La radice e le sue tre cartelle. L'errore porta il percorso intero: l'archivio non c'è
+    /// ancora.
     pub(crate) fn nuovo(radice: PathBuf) -> Result<Archivio, String> {
         for sotto in ["partite", "albo", "scenari"] {
             let c = radice.join(sotto);
@@ -196,29 +276,8 @@ impl Archivio {
         Ok(Archivio { radice })
     }
 
-    /// Un nome che resta un solo file dentro la sua cartella: 1-60 caratteri, niente `/`, `\`,
-    /// `..`, punto iniziale, caratteri di controllo.
-    pub(crate) fn valida_nome(nome: &str) -> Result<(), String> {
-        let lunghezza = nome.chars().count();
-        if !(1..=60).contains(&lunghezza) {
-            return Err(format!(
-                "nome {nome:?} di {lunghezza} caratteri: ne servono da 1 a 60"
-            ));
-        }
-        if nome.starts_with('.')
-            || nome.contains(['/', '\\'])
-            || nome.contains("..")
-            || nome.chars().any(char::is_control)
-        {
-            return Err(format!(
-                "nome {nome:?} non valido: niente «/», «\\», «..», punto iniziale o caratteri di controllo"
-            ));
-        }
-        Ok(())
-    }
-
     fn cartella(&self, id: &str) -> Result<PathBuf, String> {
-        Self::valida_nome(id)?;
+        valida_nome(id)?;
         Ok(self.radice.join("partite").join(id))
     }
 
@@ -233,53 +292,57 @@ impl Archivio {
                 let nome = v.file_name().to_string_lossy().into_owned();
                 nome.strip_suffix(estensione).map(str::to_owned)
             })
-            .filter(|n| Self::valida_nome(n).is_ok())
+            .filter(|n| valida_nome(n).is_ok())
             .collect();
         nomi.sort();
         nomi
     }
 
     /// La cartella della partita, il suo primo snapshot e l'indice. Una cartella che esiste già
-    /// è un errore: nessuna partita si sovrascrive.
+    /// è un errore: nessuna partita si sovrascrive. Se un passo dopo la creazione fallisce, la
+    /// cartella si toglie, senza garanzie.
     pub(crate) fn crea(&self, p: &Partita, id: &str) -> Result<(), String> {
         let cartella = self.cartella(id)?;
         fs::create_dir(&cartella)
-            .map_err(|e| format!("impossibile creare {}: {e}", cartella.display()))?;
-        sincronizza(&self.radice.join("partite"))?;
-        scrivi_partita(&cartella.join(nome_turno(p.testata().turno)), p)?;
-        scrivi_indice(&cartella, id, p, p.riavvolgimenti())
+            .map_err(|e| format!("impossibile creare {}: {e}", self.mostra(&cartella)))?;
+        let scritta = self
+            .sincronizza(&self.radice.join("partite"))
+            .and_then(|()| self.scrivi_partita(&cartella.join(nome_turno(p.testata().turno)), p))
+            .and_then(|()| self.scrivi_indice(&cartella, id, p, p.riavvolgimenti()));
+        if scritta.is_err() {
+            let _ = fs::remove_dir_all(&cartella);
+        }
+        scritta
     }
 
     /// Lo snapshot dell'apertura del turno, poi via la bozza e l'indice aggiornato. Il contatore
     /// dei riavvolgimenti resta quello dell'indice.
     pub(crate) fn snapshot(&self, id: &str, p: &Partita) -> Result<(), String> {
         let cartella = self.cartella(id)?;
-        let indice = leggi_indice(&cartella)?;
-        scrivi_partita(&cartella.join(nome_turno(p.testata().turno)), p)?;
-        togli(&cartella.join(BOZZA))?;
-        scrivi_indice(&cartella, id, p, indice.riavvolgimenti)
+        let indice = self.leggi_indice(&cartella)?;
+        self.scrivi_partita(&cartella.join(nome_turno(p.testata().turno)), p)?;
+        self.togli(&cartella.join(BOZZA))?;
+        self.scrivi_indice(&cartella, id, p, indice.riavvolgimenti)
     }
 
     pub(crate) fn bozza(&self, id: &str, p: &Partita) -> Result<(), String> {
-        scrivi_partita(&self.cartella(id)?.join(BOZZA), p)
+        self.scrivi_partita(&self.cartella(id)?.join(BOZZA), p)
     }
 
-    /// La bozza, se si legge e il suo turno è quello dell'ultimo snapshot leggibile; altrimenti
-    /// quello snapshot (ricerca persistenza-dei-salvataggi:115). Si cancella solo la bozza che si
-    /// legge ed è d'un altro turno. Deviazione voluta dalla ricerca: la bozza illeggibile resta,
-    /// così un errore di I/O passeggero non cancella le scelte, e la sostituiranno `snapshot` o
-    /// `bozza`. Il contatore dei riavvolgimenti è sempre quello dell'indice.
+    /// La bozza se si legge ed è del turno dell'ultimo snapshot leggibile, altrimenti quello
+    /// snapshot; si cancella solo la bozza leggibile d'altro turno, quella illeggibile resta
+    /// (deviazione dalla ricerca `persistenza-dei-salvataggi`, «Regola di ripresa»).
     pub(crate) fn riprendi(&self, id: &str) -> Result<Partita, String> {
         let cartella = self.cartella(id)?;
-        let indice = indice_apribile(&cartella)?;
-        let snapshot = (turni(&cartella)?.into_iter())
-            .find_map(|t| leggi_partita(&cartella.join(nome_turno(t))).ok())
-            .ok_or_else(|| format!("nessuno snapshot leggibile in {}", cartella.display()))?;
+        let indice = self.indice_apribile(&cartella)?;
+        let snapshot = (self.turni(&cartella)?.into_iter())
+            .find_map(|t| self.leggi_partita(&cartella.join(nome_turno(t))).ok())
+            .ok_or_else(|| format!("nessuno snapshot leggibile in {}", self.mostra(&cartella)))?;
         let bozza = cartella.join(BOZZA);
-        let mut p = match leggi_partita(&bozza) {
+        let mut p = match self.leggi_partita(&bozza) {
             Ok(b) if b.testata().turno == snapshot.testata().turno => b,
             Ok(_) => {
-                togli(&bozza)?;
+                self.togli(&bozza)?;
                 snapshot
             }
             Err(_) => snapshot,
@@ -295,44 +358,56 @@ impl Archivio {
     /// al turno vecchio fino al prossimo snapshot.
     pub(crate) fn riavvolgi(&self, id: &str, turno: u32) -> Result<Partita, String> {
         let cartella = self.cartella(id)?;
-        let indice = indice_apribile(&cartella)?;
-        let percorso = cartella.join(nome_turno(turno));
+        let indice = self.indice_apribile(&cartella)?;
         if turno > indice.testata.turno {
             return Err(format!(
-                "impossibile riavvolgere a {}: la partita è al turno {}",
-                percorso.display(),
+                "impossibile riavvolgere al turno {turno}: la partita è al turno {}",
                 indice.testata.turno
             ));
         }
-        let mut p = leggi_partita(&percorso)?;
-        togli(&cartella.join(BOZZA))?;
-        for m in turni(&cartella)?.into_iter().filter(|&m| m > turno) {
-            togli(&cartella.join(nome_turno(m)))?;
+        let percorso = cartella.join(nome_turno(turno));
+        let mut p = self.leggi_partita(&percorso)?;
+        let trovato = p.testata().turno;
+        if trovato != turno {
+            return Err(format!(
+                "impossibile riavvolgere al turno {turno}: {} è del turno {trovato}",
+                self.mostra(&percorso)
+            ));
+        }
+        self.togli(&cartella.join(BOZZA))?;
+        for m in self.turni(&cartella)?.into_iter().filter(|&m| m > turno) {
+            self.togli(&cartella.join(nome_turno(m)))?;
         }
         let riavvolgimenti = indice.riavvolgimenti.saturating_add(1);
         p.imposta_riavvolgimenti(riavvolgimenti);
-        scrivi_indice(&cartella, id, &p, riavvolgimenti)?;
+        self.scrivi_indice(&cartella, id, &p, riavvolgimenti)?;
         Ok(p)
     }
 
-    /// Le partite in corso, dalla più recente: legge solo gli indici. Salta senza fermarsi le
-    /// cartelle senza indice, con un indice illeggibile o d'altro formato, o con un `id` che non
-    /// è il nome della cartella o non passa `valida_nome`.
+    /// Le partite in corso, dalla più recente: legge solo gli indici. Un indice d'altro formato o
+    /// d'altro schema compare non apribile, col motivo. Salta senza fermarsi le cartelle senza
+    /// indice, con un indice illeggibile, o con un `id` che non è il nome della cartella o non
+    /// passa `valida_nome`.
     pub(crate) fn elenca(&self) -> Vec<VocePartita> {
         let Ok(voci) = fs::read_dir(self.radice.join("partite")) else {
             return Vec::new();
         };
         let mut elenco: Vec<VocePartita> = (voci.filter_map(Result::ok))
             .filter_map(|v| {
-                let indice = leggi_indice(&v.path()).ok()?;
+                let indice = self.leggi_indice_qualsiasi(&v.path()).ok()?;
                 let coincide = v.file_name() == indice.id.as_str();
-                (coincide && Self::valida_nome(&indice.id).is_ok()).then_some(indice)
+                (coincide && valida_nome(&indice.id).is_ok()).then_some(indice)
             })
             .map(|indice| {
-                let trovata = indice.testata.versione_schema;
+                let motivo = if indice.formato_indice != FORMATO_INDICE {
+                    Some(formato_diverso(indice.formato_indice))
+                } else {
+                    let trovata = indice.testata.versione_schema;
+                    (trovata != VERSIONE_SCHEMA).then(|| motivo(trovata))
+                };
                 VocePartita {
-                    apribile: trovata == VERSIONE_SCHEMA,
-                    motivo: (trovata != VERSIONE_SCHEMA).then(|| motivo(trovata)),
+                    apribile: motivo.is_none(),
+                    motivo,
                     indice,
                 }
             })
@@ -349,33 +424,32 @@ impl Archivio {
         if !cartella.is_dir() {
             return Err(format!(
                 "impossibile chiudere nell'albo: {} non esiste",
-                cartella.display()
+                self.mostra(&cartella)
             ));
         }
         let percorso = self.radice.join("albo").join(format!("{id}.json"));
         let json = serde_json::to_string_pretty(v)
-            .map_err(|e| format!("impossibile scrivere {}: {e}", percorso.display()))?;
-        scrivi(&percorso, json.as_bytes())?;
+            .map_err(|e| format!("impossibile scrivere {}: {e}", self.mostra(&percorso)))?;
+        self.scrivi(&percorso, json.as_bytes())?;
         match fs::remove_dir_all(&cartella) {
             Err(e) if e.kind() != ErrorKind::NotFound => {
                 return Err(format!(
                     "impossibile cancellare {}: {e}",
-                    cartella.display()
+                    self.mostra(&cartella)
                 ));
             }
             _ => {}
         }
-        sincronizza(&self.radice.join("partite"))
+        self.sincronizza(&self.radice.join("partite"))
     }
 
-    /// Le voci dell'albo, in ordine di id. Salta senza fermarsi i file che non si leggono e
-    /// quelli d'altro formato.
+    /// Le voci dell'albo, in ordine di id: ogni file che si deserializza, di qualsiasi
+    /// `formato_albo`, coi campi aggiunti dopo ignorati. Salta senza fermarsi gli altri.
     pub(crate) fn albo(&self) -> Vec<VoceAlbo> {
         let cartella = self.radice.join("albo");
         (self.nomi("albo", ".json").into_iter())
-            .filter_map(|id| leggi(&cartella.join(format!("{id}.json"))).ok())
+            .filter_map(|id| self.leggi(&cartella.join(format!("{id}.json"))).ok())
             .filter_map(|testo| serde_json::from_str::<VoceAlbo>(&testo).ok())
-            .filter(|v| v.formato_albo == FORMATO_ALBO)
             .collect()
     }
 
@@ -385,7 +459,7 @@ impl Archivio {
     }
 
     fn percorso_scenario(&self, nome: &str) -> Result<PathBuf, String> {
-        Self::valida_nome(nome)?;
+        valida_nome(nome)?;
         Ok(self.radice.join("scenari").join(format!("{nome}.toml")))
     }
 
@@ -399,17 +473,20 @@ impl Archivio {
             (self.scenari().into_iter()).find(|n| *n != s.nome && n.to_lowercase() == minuscolo)
         {
             return Err(format!(
-                "impossibile salvare {}: c'è già lo scenario «{altro}», che differisce solo per le maiuscole",
-                percorso.display()
+                "impossibile salvare {}: c'è già lo scenario {}, che differisce solo per le maiuscole",
+                self.mostra(&percorso),
+                citato(&altro)
             ));
         }
-        scrivi(&percorso, s.in_toml(base).as_bytes())
+        self.scrivi(&percorso, s.in_toml(base).as_bytes())
     }
 
     pub(crate) fn carica_scenario(&self, nome: &str, base: &DatiGioco) -> Result<SuMisura, String> {
         let percorso = self.percorso_scenario(nome)?;
-        SuMisura::da_toml(&leggi(&percorso)?, base)
-            .map_err(|e| format!("{}: {e}", percorso.display()))
+        let errore =
+            |e: &dyn Display| format!("impossibile caricare lo scenario {}: {e}", citato(nome));
+        let testo = self.leggi(&percorso).map_err(|e| errore(&e))?;
+        SuMisura::da_toml(&testo, base).map_err(|e| errore(&e))
     }
 }
 
@@ -434,18 +511,22 @@ pub(crate) mod tests {
         Cartella(c)
     }
 
-    fn dati() -> DatiGioco {
+    pub(crate) fn dati() -> DatiGioco {
         crate::carica_dati(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../dati/base")).unwrap()
     }
 
-    const ID: &str = "00000000000000a1";
+    /// L'id di una partita fondata col seme `0xa1`.
+    pub(crate) const ID: &str = "00000000000000a1";
 
-    fn fondata(seme: u64) -> Partita {
-        let f = Fondazione {
+    pub(crate) fn fondazione() -> Fondazione {
+        Fondazione {
             nome: "Partito nuovo".into(),
             posizione: 3.5,
-        };
-        Partita::fonda(dati(), seme, &f).unwrap()
+        }
+    }
+
+    fn fondata(seme: u64) -> Partita {
+        Partita::fonda(dati(), seme, &fondazione()).unwrap()
     }
 
     /// Archivio con una partita fondata e il suo `turno-000`.
@@ -521,8 +602,31 @@ pub(crate) mod tests {
         assert_eq!(a.riprendi(ID).unwrap().riavvolgimenti(), 1);
 
         let e = a.riavvolgi(ID, 5).unwrap_err();
-        assert!(e.contains("turno-005.json.gz"), "{e}");
+        assert_eq!(
+            e,
+            "impossibile riavvolgere al turno 5: la partita è al turno 1"
+        );
         assert_eq!(indice(&c).riavvolgimenti, 1);
+    }
+
+    #[test]
+    fn riavvolgi_rifiuta_lo_snapshot_d_altro_turno() {
+        let c = cartella("riavvolgi_rifiuta_lo_snapshot_d_altro_turno");
+        let (a, mut p) = con_partita(&c);
+        chiudi(&a, &mut p);
+        chiudi(&a, &mut p);
+        // `turno-001` col contenuto del turno 2: niente si cancella.
+        fs::copy(file(&c, "turno-002.json.gz"), file(&c, "turno-001.json.gz")).unwrap();
+        let prima = nomi(&c);
+        let e = a.riavvolgi(ID, 1).unwrap_err();
+        assert_eq!(
+            e,
+            format!(
+                "impossibile riavvolgere al turno 1: partite/{ID}/turno-001.json.gz è del turno 2"
+            )
+        );
+        assert_eq!(nomi(&c), prima);
+        assert_eq!(indice(&c).riavvolgimenti, 0);
     }
 
     #[test]
@@ -567,8 +671,8 @@ pub(crate) mod tests {
         i.testata.versione_schema = 10;
         fs::write(file(&c, "indice.json"), serde_json::to_string(&i).unwrap()).unwrap();
 
-        // Non si elencano: una cartella senza indice, un indice d'altro formato, un `id` che non
-        // è il nome della cartella, un `id` che `valida_nome` rifiuta.
+        // Non si elencano: una cartella senza indice, un `id` che non è il nome della cartella, un
+        // `id` che `valida_nome` rifiuta. Un indice d'altro formato sì, non apribile.
         fs::create_dir_all(c.0.join("partite/senza-indice")).unwrap();
         let altro = |cartella: &str, id: &str, formato: u32| {
             let mut j = serde_json::to_value(&i).unwrap();
@@ -590,10 +694,16 @@ pub(crate) mod tests {
             .map(|n| (n.clone(), fs::read(file(&c, &n)).unwrap()))
             .collect();
         let elenco = a.elenca();
-        assert_eq!(elenco.len(), 1);
-        assert!(!elenco[0].apribile);
-        let motivo = elenco[0].motivo.clone().unwrap();
+        assert_eq!(elenco.len(), 2);
+        let voce = |id: &str| elenco.iter().find(|v| v.indice.id == id).unwrap();
+        assert!(!voce(ID).apribile);
+        let motivo = voce(ID).motivo.clone().unwrap();
         assert!(motivo.contains("10") && motivo.contains("11"), "{motivo}");
+        assert!(!voce("futuro").apribile);
+        assert_eq!(
+            voce("futuro").motivo.as_deref(),
+            Some("indice di formato 2, questa versione legge il formato 1")
+        );
         assert!(a.riprendi(ID).is_err());
         assert!(a.riavvolgi(ID, 0).is_err());
         let dopo: Vec<(String, Vec<u8>)> = nomi(&c)
@@ -615,9 +725,12 @@ pub(crate) mod tests {
 
         p.chiudi_turno();
         let e = a.snapshot(ID, &p).unwrap_err();
-        assert!(
-            e.contains("indice.json") && e.contains("formato 2") && e.contains("formato 1"),
-            "{e}"
+        // Il percorso è relativo alla radice dell'archivio.
+        assert_eq!(
+            e,
+            format!(
+                "partite/{ID}/indice.json: indice di formato 2, questa versione legge il formato 1"
+            )
         );
         assert!(a.riprendi(ID).is_err());
         assert!(a.riavvolgi(ID, 0).is_err());
@@ -635,12 +748,28 @@ pub(crate) mod tests {
             "",
             &"x".repeat(61),
             "a\u{7}b",
+            "oiggo\u{202E}di",
+            "a\u{200B}b",
+            "a\u{2066}b",
+            "\u{FEFF}a",
+            " davanti",
+            "dietro ",
         ] {
-            assert!(Archivio::valida_nome(n).is_err(), "{n:?}");
+            assert!(valida_nome(n).is_err(), "{n:?}");
         }
-        for n in [ID, "Riforma è già qui", &"è".repeat(60)] {
-            assert_eq!(Archivio::valida_nome(n), Ok(()), "{n:?}");
+        for n in [
+            ID,
+            "Riforma è già qui",
+            "Riforma dell'Italia",
+            &"è".repeat(60),
+        ] {
+            assert_eq!(valida_nome(n), Ok(()), "{n:?}");
         }
+        // Il nome si cita fra «», coi caratteri invisibili resi visibili.
+        let e = valida_nome("oiggo\u{202E}di").unwrap_err();
+        assert!(e.starts_with("nome «oiggo\\u{202e}di» non valido"), "{e}");
+        let e = valida_nome("").unwrap_err();
+        assert_eq!(e, "nome «» di 0 caratteri: ne servono da 1 a 60");
     }
 
     #[test]
@@ -663,13 +792,19 @@ pub(crate) mod tests {
         assert!(e.contains("00000000000000b2"), "{e}");
         assert!(!c.0.join("albo/00000000000000b2.json").exists());
 
-        // Un file rotto, uno d'altro formato e un `.tmp` orfano si saltano.
+        // Un file rotto e un `.tmp` orfano si saltano; una voce d'altro formato con un campo in
+        // più si mostra, senza il campo.
         fs::write(c.0.join("albo/rotto.json"), "{").unwrap();
         fs::write(c.0.join("albo/orfano.json.tmp"), "{").unwrap();
         let mut futura = serde_json::to_value(&v).unwrap();
         futura["formato_albo"] = (FORMATO_ALBO + 1).into();
+        futura["campo_nuovo"] = "dopo la v1".into();
         fs::write(c.0.join("albo/futura.json"), futura.to_string()).unwrap();
-        assert_eq!(a.albo(), [v]);
+        let attesa = VoceAlbo {
+            formato_albo: FORMATO_ALBO + 1,
+            ..v.clone()
+        };
+        assert_eq!(a.albo(), [v, attesa]);
     }
 
     #[test]
@@ -719,6 +854,9 @@ pub(crate) mod tests {
         let grande = vec![b'#'; usize::try_from(TETTO).unwrap() + 1];
         fs::write(c.0.join("scenari/grande.toml"), grande).unwrap();
         let e = a.carica_scenario("grande", &dati()).unwrap_err();
-        assert!(e.contains("grande.toml") && e.contains("64 MiB"), "{e}");
+        assert_eq!(
+            e,
+            "impossibile caricare lo scenario «grande»: scenari/grande.toml supera 64 MiB"
+        );
     }
 }
