@@ -1,7 +1,8 @@
 mod comune;
-use comune::{dati_base, edita, fondata};
+use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, fondata, presenta};
+use sim_core::parlamento::Decreto;
 use sim_core::salvataggi::{FORMATO_ALBO, VoceAlbo};
-use sim_core::{Errore, Partita, SuMisura, VERSIONE_SCHEMA};
+use sim_core::{Comando, Errore, Partita, SuMisura, VERSIONE_SCHEMA};
 
 #[test]
 fn un_punto_per_apertura() {
@@ -227,4 +228,104 @@ fn i_riavvolgimenti_reggono_un_salvataggio() {
             .riavvolgimenti(),
         2
     );
+}
+
+fn fondata_col_seme(seme: u64) -> Partita {
+    let f = sim_core::legislatura::Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 3.5,
+    };
+    Partita::fonda(dati_base(), seme, &f).unwrap()
+}
+
+/// Ricerca, salvataggi-e-riavvolgimento.md:63: lo stato fuori da `Partita` o saltato da serde
+/// fa divergere B, ricaricata a ogni apertura, da A, giocata di fila.
+#[test]
+fn ricaricare_a_ogni_apertura_non_cambia_la_partita() {
+    let mut partiti_cambiati = false;
+    for seme in 1..=5 {
+        let mut a = fondata_col_seme(seme);
+        let mut b = Partita::carica(&a.salva().unwrap()).unwrap();
+        let partiti = a.partiti().len();
+        for turno in 1..=40 {
+            if a.finita() {
+                break;
+            }
+            chiudi_col_bilancio(&mut a);
+            chiudi_col_bilancio(&mut b);
+            let (sa, sb) = (a.salva().unwrap(), b.salva().unwrap());
+            assert!(sa == sb, "seme {seme}, turno {turno}");
+            b = Partita::carica(&sb).unwrap();
+            partiti_cambiati |= a.partiti().len() != partiti;
+        }
+    }
+    // Le scissioni e le proteste del piano 8b cambiano `partiti.len()`: almeno un seme ci passa.
+    assert!(partiti_cambiati);
+}
+
+fn decreto() -> Comando {
+    Comando::EmanaDecreto {
+        decreto: Decreto::Fondi {
+            da: "giustizia".into(),
+            a: "sanita".into(),
+            importo: 1_000_000,
+        },
+    }
+}
+
+/// Legge e decreto del primo turno di governo, poi le chiusure fino al voto della legge.
+fn legge_e_decreto(mut p: Partita) -> Partita {
+    presenta(&mut p, &[("ticket", "alto")]).unwrap();
+    let legge = p.parlamento().misure.last().unwrap().id;
+    p.comanda(decreto()).unwrap();
+    for _ in 0..4 {
+        if p.parlamento().esiti.iter().any(|e| e.misura == legge) {
+            break;
+        }
+        chiudi_col_bilancio(&mut p);
+    }
+    let esito = (p.parlamento().esiti.iter()).find(|e| e.misura == legge);
+    // Fuori dalla fiducia ogni seggio tira i suoi franchi tiratori (`ft_base`).
+    assert!(
+        esito.is_some_and(|e| !e.fiducia && e.decaduta.is_none()),
+        "{esito:?}"
+    );
+    p
+}
+
+/// Ricerca, salvataggi-e-riavvolgimento.md:62: stessa azione, stesso esito.
+#[test]
+fn stesse_scelte_stesso_esito_dopo_il_ricaricamento() {
+    let p = al_governo();
+    let s = p.salva().unwrap();
+    let giocata = legge_e_decreto(p).salva().unwrap();
+    let ripresa = legge_e_decreto(Partita::carica(&s).unwrap())
+        .salva()
+        .unwrap();
+    assert!(giocata == ripresa);
+}
+
+#[test]
+fn la_bozza_a_meta_turno_riprende_le_scelte() {
+    let mut p = al_governo();
+    for _ in 0..4 {
+        if p.bozza_bilancio().is_some() {
+            break;
+        }
+        chiudi_col_bilancio(&mut p);
+    }
+    let bilancio = p.bozza_bilancio().unwrap();
+    p.comanda(Comando::PresentaBilancio { bilancio }).unwrap();
+    presenta(&mut p, &[("ticket", "alto")]).unwrap();
+    p.comanda(decreto()).unwrap();
+    let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(q.vista().calendario, p.vista().calendario);
+    assert!(q.economia().bilancio_presentato.is_some());
+    assert_eq!(
+        q.economia().bilancio_presentato,
+        p.economia().bilancio_presentato
+    );
+    p.chiudi_turno();
+    q.chiudi_turno();
+    assert!(p.salva().unwrap() == q.salva().unwrap());
 }
