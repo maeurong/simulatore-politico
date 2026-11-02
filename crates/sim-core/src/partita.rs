@@ -413,7 +413,7 @@ impl Partita {
         self.economia
             .passo(&self.dati, &mut self.caso, self.data, &self.misure);
         self.grandezze
-            .avanza(&self.dati, &self.economia, self.turno);
+            .avanza(&self.dati, Some(&mut self.caso), &self.economia, self.turno);
         self.elettorato
             .aggiorna_redditi(&self.dati, &self.economia, &self.misure);
         self.elettorato.giudizio(

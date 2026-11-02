@@ -5,7 +5,7 @@ use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
 use crate::eventi::{DatoEvento, DatoSituazione};
-use crate::grandezze::{DatoGrandezza, Dinamica};
+use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
@@ -345,6 +345,7 @@ pub struct DatiGioco {
     elezioni: DatiElezioni,
     elettorato: DatiElettorato,
     grandezze: Vec<DatoGrandezza>,
+    derive: Vec<DatoDeriva>,
     atti: Vec<Atto>,
     disposizioni: Vec<DatoDisposizione>,
     eventi: Vec<DatoEvento>,
@@ -375,6 +376,7 @@ struct FileDicasteri {
 #[derive(Deserialize)]
 struct FileGrandezze {
     grandezza: Vec<DatoGrandezza>,
+    deriva: Vec<DatoDeriva>,
 }
 
 /// I dati di base, per i test d'unità.
@@ -397,7 +399,10 @@ pub(crate) fn dati_base() -> DatiGioco {
         disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
         eventi: include_str!("../../../dati/base/eventi.toml").into(),
     };
-    DatiGioco::da_testi(&file).unwrap()
+    let mut dati = DatiGioco::da_testi(&file).unwrap();
+    // Economia a riposo al turno zero: i test d'unità non misurano lo scarto dell'energia.
+    dati.scenario.energia.valore = 0.0;
+    dati
 }
 
 #[cfg(test)]
@@ -450,6 +455,10 @@ impl DatiGioco {
 
     pub fn grandezze(&self) -> &[DatoGrandezza] {
         &self.grandezze
+    }
+
+    pub fn derive(&self) -> &[DatoDeriva] {
+        &self.derive
     }
 
     pub fn atti(&self) -> &[Atto] {
@@ -569,9 +578,11 @@ impl DatiGioco {
             .map_err(|e| errore_toml("elezioni.toml", e))?;
         let elettorato = toml::from_str::<DatiElettorato>(&file.elettorato)
             .map_err(|e| errore_toml("elettorato.toml", e))?;
-        let grandezze = toml::from_str::<FileGrandezze>(&file.grandezze)
-            .map_err(|e| errore_toml("grandezze.toml", e))?
-            .grandezza;
+        let FileGrandezze {
+            grandezza: grandezze,
+            deriva: derive,
+        } = toml::from_str::<FileGrandezze>(&file.grandezze)
+            .map_err(|e| errore_toml("grandezze.toml", e))?;
         let atti = toml::from_str::<FileAtti>(&file.atti)
             .map_err(|e| errore_toml("atti.toml", e))?
             .atto;
@@ -606,6 +617,7 @@ impl DatiGioco {
             elezioni,
             elettorato,
             grandezze,
+            derive,
             atti,
             disposizioni,
             eventi,
@@ -636,6 +648,21 @@ impl DatiGioco {
                         g.id
                     ));
                 }
+            }
+        }
+        for d in &self.derive {
+            let id = &d.grandezza;
+            let Some(g) = grandezze.iter().find(|g| &g.id == id) else {
+                return ko(format!("deriva su una grandezza sconosciuta: {id}"));
+            };
+            if g.dinamica != Dinamica::Fissa {
+                return ko(format!("deriva su {id}: la grandezza non è fissa"));
+            }
+            if !(d.tasso.is_finite() && d.sigma.is_finite() && d.sigma >= 0.0) {
+                return ko(format!("deriva su {id}: tasso non finito o sigma negativa"));
+            }
+            if !(0.0..=1.0).contains(&d.ritorno) {
+                return ko(format!("deriva su {id}: ritorno fuori da 0-1"));
             }
         }
         for d in &self.dicasteri {
