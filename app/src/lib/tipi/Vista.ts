@@ -25,6 +25,7 @@ import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
 import type { VoceRichiesta } from "./VoceRichiesta";
+import type { VoceSituazione } from "./VoceSituazione";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -147,4 +148,8 @@ campagna: VistaCampagna,
 /**
  * Gli eventi aperti: si risolvono alla chiusura, con la `scelta` o il default.
  */
-eventi: Array<VoceEvento>, };
+eventi: Array<VoceEvento>, 
+/**
+ * Le situazioni a soglia, accese o no.
+ */
+situazioni: Array<VoceSituazione>, };

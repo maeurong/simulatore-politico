@@ -10,7 +10,7 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
-use crate::eventi::{Bersaglio, EffettoOpzione, Eventi};
+use crate::eventi::{Bersaglio, EffettoOpzione, Eventi, situazioni};
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, genera};
 use crate::legislatura::{
@@ -30,7 +30,7 @@ use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
     VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione, VocePartito,
-    VoceProgramma, VocePromessa,
+    VoceProgramma, VocePromessa, VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
@@ -282,7 +282,20 @@ impl Partita {
             x.regola = Regola::Sticker;
         }
         p.partenza = p.indicatori();
+        // Accese al turno zero senza evento: sono lo stato del paese, non una novità.
+        let misure = p.misure_situazioni(false);
+        situazioni::aggiorna(&p.dati, &mut p.eventi, &misure);
         p
+    }
+
+    fn misure_situazioni(&self, ufficiale: bool) -> Vec<f64> {
+        situazioni::misure(
+            &self.dati,
+            &self.grandezze,
+            &self.economia,
+            &self.informazione.statistica,
+            ufficiale,
+        )
     }
 
     /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
@@ -334,7 +347,10 @@ impl Partita {
     // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
     // dimissioni → verifica delle promesse, campagna e promesse IA, spesa, nel turno del voto →
     // motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
-    // convincere della campagna, posizioni, sondaggio, statistica) → voto,
+    // convincere della campagna, spinta delle situazioni accese [legge le accese della chiusura
+    // PRECEDENTE: voluto], posizioni, sondaggio, statistica, aggiornamento delle situazioni e
+    // nascita degli eventi [subito dopo la statistica e prima del `Contesto` di `ministri.apri`,
+    // perché l'innesco «evento nel dicastero» delle proposte li veda]) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
     // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
@@ -427,6 +443,13 @@ impl Partita {
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
+        let spinte = (self.dati.situazioni().iter().zip(&self.eventi.accese))
+            .filter(|(s, accesa)| s.spinta && **accesa)
+            .count();
+        for _ in 0..spinte {
+            self.elettorato
+                .spingi_a_destra(self.dati.manopola("spinta_situazione"));
+        }
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
         self.informazione.rileva(
@@ -442,6 +465,15 @@ impl Partita {
             &self.economia,
             reale_prima,
             self.data,
+        );
+        let misure = self.misure_situazioni(false);
+        let nuove = situazioni::aggiorna(&self.dati, &mut self.eventi, &misure);
+        situazioni::apri(
+            &self.dati,
+            &mut self.eventi,
+            &nuove,
+            &misure,
+            self.turno.saturating_add(1),
         );
         self.incassa(&vero);
         if di_voto {
@@ -3519,7 +3551,24 @@ impl Partita {
                     .unwrap_or_default(),
             },
             eventi: self.voci_eventi(),
+            situazioni: self.situazioni(),
         }
+    }
+
+    /// Le sei situazioni coi valori ufficiali e le soglie, mai la probabilità.
+    pub fn situazioni(&self) -> Vec<VoceSituazione> {
+        let valori = self.misure_situazioni(true);
+        (self.dati.situazioni().iter().zip(valori))
+            .zip(&self.eventi.accese)
+            .map(|((s, valore), &accesa)| VoceSituazione {
+                nome: s.nome.clone(),
+                misura: s.misura.clone(),
+                valore,
+                accensione: s.accensione,
+                spegnimento: s.spegnimento,
+                accesa,
+            })
+            .collect()
     }
 
     fn voci_eventi(&self) -> Vec<VoceEvento> {

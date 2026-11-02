@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod situazioni;
+
 /// Le misure che non sono grandezze ma che il motore calcola: variazione trimestrale vera del PIL
 /// reale ed `Economia.energia`.
 const MISURE_DEL_MOTORE: [&str; 2] = ["crescita_pil", "energia"];
@@ -136,9 +138,13 @@ impl Causa {
                 valore,
                 soglia,
             } => {
-                let nome = (dati.grandezza(misura))
-                    .and_then(|k| dati.grandezze().get(k))
-                    .map_or(misura.as_str(), |g| g.nome.as_str());
+                let nome = match misura.as_str() {
+                    "crescita_pil" => "crescita del PIL",
+                    "energia" => "shock energetico",
+                    _ => (dati.grandezza(misura))
+                        .and_then(|k| dati.grandezze().get(k))
+                        .map_or(misura.as_str(), |g| g.nome.as_str()),
+                };
                 format!("{nome}: {valore:.1} (soglia {soglia:.1})")
             }
             Causa::Rischio { livello } => format!(
@@ -428,6 +434,26 @@ mod tests {
         assert!(e.aperti.is_empty());
         let id: Vec<&str> = risolti.iter().map(|(_, o)| o.id.as_str()).collect();
         assert_eq!(id, ["ordinaria", "presidi"]);
+    }
+
+    #[test]
+    fn la_causa_nomina_anche_le_misure_del_motore() {
+        let dati = dati_base();
+        let soglia = |misura: &str| Causa::Soglia {
+            misura: misura.into(),
+            valore: -0.2,
+            soglia: 0.0,
+        };
+        assert!(
+            soglia("crescita_pil")
+                .testo(&dati)
+                .starts_with("crescita del PIL")
+        );
+        assert!(
+            soglia("energia")
+                .testo(&dati)
+                .starts_with("shock energetico")
+        );
     }
 
     #[test]

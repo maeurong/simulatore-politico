@@ -67,6 +67,7 @@ impl FileDati {
 
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
+    "spinta_situazione",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",

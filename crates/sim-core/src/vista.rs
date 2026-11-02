@@ -95,6 +95,22 @@ pub struct Vista {
     pub campagna: VistaCampagna,
     /// Gli eventi aperti: si risolvono alla chiusura, con la `scelta` o il default.
     pub eventi: Vec<VoceEvento>,
+    /// Le situazioni a soglia, accese o no.
+    pub situazioni: Vec<VoceSituazione>,
+}
+
+/// Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello
+/// ufficiale (grandezze alla chiusura precedente, prima stima della crescita); `accensione` e
+/// `spegnimento` le due soglie dell'isteresi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSituazione {
+    pub nome: String,
+    pub misura: String,
+    pub valore: f64,
+    pub accensione: f64,
+    pub spegnimento: f64,
+    pub accesa: bool,
 }
 
 /// Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`
