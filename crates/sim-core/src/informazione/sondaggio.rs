@@ -83,6 +83,35 @@ pub(super) fn rileva(
     bias: &[f64],
     effetti: &[Vec<f64>],
 ) -> Sondaggio {
+    let mut z = || caso.normale(Flusso::Sondaggi);
+    rileva_con(dati, el, vero, presidente, bias, effetti, &mut z)
+}
+
+impl Sondaggio {
+    /// Il sondaggio senza rumore: un istituto, quote e incroci uguali alle intenzioni vere,
+    /// nessun bias, nessuna estrazione (approvazione compresa).
+    pub(crate) fn atteso(
+        dati: &DatiGioco,
+        el: &Elettorato,
+        vero: &Intenzioni,
+        presidente: usize,
+    ) -> Sondaggio {
+        let nulli = vec![0.0; vero.nazionali.len()];
+        let effetti = [nulli.clone()];
+        rileva_con(dati, el, vero, presidente, &nulli, &effetti, &mut || 0.0)
+    }
+}
+
+/// `rileva` con le normali di `z`: un istituto per riga di `effetti`.
+fn rileva_con(
+    dati: &DatiGioco,
+    el: &Elettorato,
+    vero: &Intenzioni,
+    presidente: usize,
+    bias: &[f64],
+    effetti: &[Vec<f64>],
+    z: &mut impl FnMut() -> f64,
+) -> Sondaggio {
     let d = dati.elettorato();
     let (disegno, gamma, err_appr) = (
         dati.manopola("effetto_disegno"),
@@ -90,7 +119,6 @@ pub(super) fn rileva(
         dati.manopola("errore_approvazione"),
     );
     let alt = bias.len();
-    let mut z = || caso.normale(Flusso::Sondaggi);
 
     let istituti: Vec<Rilevazione> = d
         .istituti
@@ -106,7 +134,7 @@ pub(super) fn rileva(
                     &sposta,
                     f64::from(ist.campione),
                     disegno,
-                    &mut z,
+                    z,
                 ),
             }
         })
@@ -131,9 +159,9 @@ pub(super) fn rileva(
             indici.iter().map(|&i| &el.gruppi[i].posizione[..]),
             PUNTI,
         );
-        let quote = campiona(&p_s, &sposta, n_s, disegno, &mut z);
+        let quote = campiona(&p_s, &sposta, n_s, disegno, z);
         let nulli = vec![0.0; h_s.len()];
-        let posizione = campiona(&h_s, &nulli, n_s, disegno, &mut z);
+        let posizione = campiona(&h_s, &nulli, n_s, disegno, z);
         let giudizio = indici
             .iter()
             .zip(&pesi)

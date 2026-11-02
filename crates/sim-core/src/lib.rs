@@ -16,12 +16,16 @@ pub mod misure;
 pub mod parlamento;
 pub mod partita;
 pub mod partiti;
+pub mod riepilogo;
+pub mod salvataggi;
 pub mod scenario;
 pub mod struttura;
+pub mod su_misura;
 pub mod vista;
 
 pub use comando::Comando;
 pub use dati::{DatiGioco, FileDati};
 pub use errore::Errore;
 pub use partita::{Partita, Trimestre, VERSIONE_SCHEMA};
+pub use su_misura::SuMisura;
 pub use vista::Vista;

@@ -73,6 +73,7 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[parlamento-e-legislazione]]: dalle policy comprate con capitale politico all'iter completo; il voto in aula resta deterministico.
 - [[campagna-elettorale]]: promesse, tema e tono, allocazione territoriale, regole elettorali trattate come leggi.
 - [[ministri-e-gabinetto]]: ministro come moltiplicatore di competenza e lealtà; gabinetto come raccordo fra i ministeri.
+- [[salvataggi-e-riavvolgimento]]: riavvolgimento a turni passati (Into the Breach, Fire Emblem, ironman), stesso caso col seme salvato (XCOM, Slay the Spire), ripresa a metà turno e crash (FTL, StS2), elenco delle partite, albo (Hall of Fame di Civ), rifiuto delle versioni incompatibili (Stellaris, Factorio).
 
 ## modelli
 
@@ -173,6 +174,7 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[unity]]: Unity 6.3, gratis fino a 200.000 $ di ricavi, proprietario; Linux supportato ufficialmente solo su Ubuntu 22.04/24.04.
 - [[altre-opzioni]]: raylib, Defold, LÖVE, Flutter, Slint, egui. Nessuna batte Godot o Tauri; egui va bene per il debug.
 - [[architettura-simulazione]]: tick fisso separato dal rendering, PRNG nominato e versionato, interi per l'economia, tabelle al posto dell'ECS, snapshot versionati.
+- [[persistenza-dei-salvataggi]]: come il guscio Tauri 2.12 scrive i salvataggi su macOS (app_data_dir, std::fs senza plugin, RunEvent::Exit unico evento a Cmd+Q, rename + F_FULLFSYNC, flate2 nel guscio, cartella per partita, albo tollerante) e quanto pesano (~165 KB gzip a snapshot, 16,7 MB per 100 turni).
 - [[core-rust-e-ui-separata]]: core in Rust con frontend Godot (via gdext), Tauri o Bevy, con il trade-off. Decisione del 17/10: Tauri + core Rust ([[decisioni]]).
 - [[modding-e-dati-esterni]]: tre livelli: dati testuali come Democracy, scripting in sandbox (Rhai/Lua), niente codice nativo. Un PCK Godot equivale a codice arbitrario.
 - [[distribuzione-e-aggiornamenti]]: Steam (100 $, notarizzazione macOS obbligatoria, testo di almeno 9 px su Deck), itch con butler, GitHub Releases, Flathub; firma Apple a 99 USD l'anno.
@@ -207,3 +209,4 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[disposizioni-al-turno-zero]]: valore vigente a ottobre 2026, legge d'origine e valore precedente delle 32 disposizioni del catalogo; 4 gradini da correggere; cosa produce davvero un'abrogazione referendaria.
 - [[disposizioni-territoriali-al-turno-zero]]: valori a ottobre 2026 di decontribuzione per il Mezzogiorno (20%, 125 €/mese, in calo fino al 2029), credito ZES unica (2,3 miliardi, 10 regioni con Marche e Umbria) e autonomia differenziata (non attuata, intese definitive del Consiglio dei ministri con Liguria, Lombardia, Piemonte e Veneto al 13/10/2026), più il residuo fiscale CPT 2023 per regione.
 - [[situazioni-ed-eventi-al-turno-zero]]: numeri reali per tarare le sei situazioni (oggi, picchi, indice a 100 = oggi, variabilità trimestrale), scandali 2008-2026 e sfiducia individuale, siccità come emergenza regionale, usi del Fondo emergenze, aste 2011, MES e PSI greco, conto degli shock oltre 2σ. Carceri ed energia toccano la soglia già al turno zero.
+- [[cursori-dello-scenario]]: come si cablano i sei cursori e i due menu dell'editor su sim-core (ingressi, letture, derivati, cosa manca), intervalli proposti, disposizioni dell'editor via Disposizioni::cambia, file di differenze, costo misurato del riepilogo (~14-31 ms release), confronto con Civ VII, Frostpunk 2, Terra Invicta e Democracy.

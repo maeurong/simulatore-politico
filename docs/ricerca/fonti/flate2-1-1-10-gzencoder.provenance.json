@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://docs.rs/flate2/1.1.10/flate2/write/struct.GzEncoder.html", "sha256": "668f7488379729d36fc6648a67dfad1763780d5129a50678cd749d568d4ff5e4", "bytes": 11774}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}

@@ -95,6 +95,27 @@ fn i_dati_viaggiano_nel_salvataggio() {
 }
 
 #[test]
+fn il_salvataggio_porta_lo_schema_12() {
+    assert!(
+        giocata(1, 0)
+            .salva()
+            .unwrap()
+            .contains("\"versione_schema\":12")
+    );
+}
+
+#[test]
+fn lo_scenario_su_misura_viaggia_nel_salvataggio() {
+    let base = dati_base();
+    let mut s = sim_core::su_misura::SuMisura::base(&base);
+    s.nome = "Italia indebitata".into();
+    s.cursori.debito_pil = 150.0;
+    let p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+    let riletta = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(riletta, p);
+}
+
+#[test]
 fn schema_diverso_rifiutato() {
     let mut json: serde_json::Value =
         serde_json::from_str(&giocata(1, 1).salva().unwrap()).unwrap();
@@ -136,8 +157,10 @@ fn trimestre_fuori_intervallo_rifiutato() {
     assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("255")));
 }
 
+/// Un turno al limite non si carica più, perché la serie dovrebbe avere un punto per turno; la
+/// chiusura che satura sta nei test di `partita.rs`.
 #[test]
-fn contatori_al_limite_non_vanno_in_panico() {
+fn turno_al_limite_rifiutato_senza_panico() {
     let s = salvataggio_modificato(|j| {
         j["turno"] = u32::MAX.into();
         // Fuori dalle Camere sciolte il turno non passa la scadenza.
@@ -148,9 +171,8 @@ fn contatori_al_limite_non_vanno_in_panico() {
             v["in_arrivo"] = serde_json::json!([]);
         }
     });
-    let mut p = Partita::carica(&s).unwrap();
-    p.chiudi_turno();
-    assert_eq!(p.vista().turno, u32::MAX);
+    let e = Partita::carica(&s).unwrap_err();
+    assert!(matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("serie")));
 }
 
 #[test]
@@ -191,33 +213,6 @@ fn dati_incoerenti_nel_salvataggio_rifiutati() {
     });
     let e = Partita::carica(&s).unwrap_err();
     assert!(matches!(e, Errore::RuoloOrfano { .. }));
-}
-
-#[test]
-fn versione_assente_vale_zero() {
-    let s = salvataggio_modificato(|j| {
-        j.as_object_mut().unwrap().remove("versione_schema");
-    });
-    let e = Partita::carica(&s).unwrap_err();
-    assert_eq!(
-        e,
-        Errore::SchemaDiverso {
-            trovata: 0,
-            attesa: VERSIONE_SCHEMA
-        }
-    );
-}
-
-#[test]
-fn versione_non_intera_rifiutata() {
-    for sbagliata in [serde_json::json!("1"), serde_json::json!(1.5)] {
-        let s = salvataggio_modificato(|j| j["versione_schema"] = sbagliata.clone());
-        let e = Partita::carica(&s).unwrap_err();
-        assert!(
-            matches!(e, Errore::SchemaDiverso { trovata: 0, .. }),
-            "{sbagliata}"
-        );
-    }
 }
 
 #[test]

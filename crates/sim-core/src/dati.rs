@@ -9,6 +9,7 @@ use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
+use crate::su_misura::{NOME_BASE, SuMisura};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -336,21 +337,25 @@ pub struct Manopola {
     pub ticket: String,
 }
 
+// ponytail: campi pub(crate) invece di accessori mutabili, così `su_misura.rs` applica i cursori
+// dei Task 1-4 senza riaprire questo file; fuori dal crate restano privati.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DatiGioco {
-    dicasteri: Vec<Dicastero>,
-    manopole: BTreeMap<String, Manopola>,
-    struttura: Struttura,
-    regioni: Vec<Regione>,
-    scenario: Scenario,
-    elezioni: DatiElezioni,
-    elettorato: DatiElettorato,
-    grandezze: Vec<DatoGrandezza>,
-    derive: Vec<DatoDeriva>,
-    atti: Vec<Atto>,
-    disposizioni: Vec<DatoDisposizione>,
-    eventi: Vec<DatoEvento>,
-    situazioni: Vec<DatoSituazione>,
+    pub(crate) dicasteri: Vec<Dicastero>,
+    pub(crate) manopole: BTreeMap<String, Manopola>,
+    pub(crate) struttura: Struttura,
+    pub(crate) regioni: Vec<Regione>,
+    pub(crate) scenario: Scenario,
+    pub(crate) elezioni: DatiElezioni,
+    pub(crate) elettorato: DatiElettorato,
+    pub(crate) grandezze: Vec<DatoGrandezza>,
+    pub(crate) derive: Vec<DatoDeriva>,
+    pub(crate) atti: Vec<Atto>,
+    pub(crate) disposizioni: Vec<DatoDisposizione>,
+    pub(crate) eventi: Vec<DatoEvento>,
+    pub(crate) situazioni: Vec<DatoSituazione>,
+    /// Le differenze dalla base da cui vengono questi dati; `None` per lo scenario di base.
+    pub(crate) su_misura: Option<SuMisura>,
 }
 
 #[derive(Deserialize)]
@@ -527,6 +532,18 @@ impl DatiGioco {
         &self.elettorato
     }
 
+    /// Le differenze dalla base, se i dati vengono da uno scenario su misura.
+    pub fn su_misura(&self) -> Option<&SuMisura> {
+        self.su_misura.as_ref()
+    }
+
+    /// Il nome dello scenario: quello su misura, o «Italia di oggi».
+    pub fn nome_scenario(&self) -> &str {
+        self.su_misura
+            .as_ref()
+            .map_or(NOME_BASE, |s| s.nome.as_str())
+    }
+
     /// Impostazione elettorale scelta dallo scenario.
     ///
     /// # Panics
@@ -607,6 +624,7 @@ impl DatiGioco {
             &elezioni.menu,
             iniziale,
             precedente,
+            disposizioni::LEGGE_ELETTORALE,
         ));
 
         let dati = DatiGioco {
@@ -623,6 +641,7 @@ impl DatiGioco {
             disposizioni,
             eventi,
             situazioni,
+            su_misura: None,
         };
         dati.valida()?;
         Ok(dati)

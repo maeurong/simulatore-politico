@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://docs.rs/tauri/2.12.3/tauri/enum.WindowEvent.html", "sha256": "fa12cd6a6f9a61764c5cefdf7198b982a8339d6fe73aa2b0c4786ced90213c6a", "bytes": 7142}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}

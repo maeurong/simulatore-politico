@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://docs.rs/tauri/2.12.3/tauri/enum.RunEvent.html", "sha256": "811daac23fbe3497534faf3e28cdf994c8e06871a3c526df34ef0487fb26da7a", "bytes": 6230}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}

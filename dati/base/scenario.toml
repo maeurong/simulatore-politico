@@ -1,5 +1,5 @@
 # Scenario di base: solo ingressi. Intervalli provvisori, al bilanciamento.
-# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue = docs/ricerca/modelli/<alias>.md; "alias:N" = riga N.
+# Alias nelle fonti: spec = docs/superpowers/specs/2026-10-21-v1-giocabile.md; stato-del-paese = docs/ricerca/sintesi/stato-del-paese-al-turno-zero.md; economia-italiana-parametri, banca-centrale-e-inflazione, regole-fiscali-ue = docs/ricerca/modelli/<alias>.md; cursori-dello-scenario = docs/ricerca/sintesi/cursori-dello-scenario.md; "alias:N" = riga N.
 
 pde = "sospesa"
 # regole-fiscali-ue:46; dopo il 2029 vale l'ultimo
@@ -45,10 +45,11 @@ min = 400.0
 max = 800.0
 fonte = "stato-del-paese:18, PIL 2026T2 destagionalizzato; mld €"
 
+# intervallo del cursore: cursori-dello-scenario:87
 [debito_pil]
 valore = 136.7
-min = 60.0
-max = 200.0
+min = 110.0
+max = 160.0
 fonte = "stato-del-paese:23; %"
 
 [costo_medio_debito]
@@ -69,10 +70,11 @@ min = -0.5
 max = 6.0
 fonte = "stato-del-paese:35; %"
 
+# intervallo del cursore: cursori-dello-scenario:90
 [inflazione]
 valore = 4.2
-min = -2.0
-max = 12.0
+min = 0.0
+max = 8.0
 fonte = "stato-del-paese:36, settembre; %"
 
 [inflazione_t3]
@@ -93,10 +95,11 @@ min = -5.0
 max = 5.0
 fonte = "assunzione del piano 3, nessuna fonte in docs/ricerca; %"
 
+# intervallo del cursore: cursori-dello-scenario:89
 [disoccupazione]
 valore = 5.6
-min = 3.0
-max = 15.0
+min = 4.7
+max = 11.6
 fonte = "stato-del-paese:37, T2 2026; %"
 
 [consumi_famiglie_pil]
@@ -218,6 +221,25 @@ valore = 0.0
 min = -30.0
 max = 30.0
 fonte = "nessuno scostamento al turno zero; scostamento %"
+
+# Cursori sintetici dello scenario su misura: scarti dalla base, 0 nella base. cursori-dello-scenario:88-92
+[cursori.ricchezza]
+valore = 0.0
+min = -20.0
+max = 20.0
+fonte = "cursori-dello-scenario:88; ± % sul PIL pro capite di base"
+
+[cursori.eta_mediana]
+valore = 0.0
+min = -5.0
+max = 3.0
+fonte = "cursori-dello-scenario:91; ± anni sull'età mediana di base"
+
+[cursori.orientamento]
+valore = 0.0
+min = -1.0
+max = 1.0
+fonte = "cursori-dello-scenario:92; ± punti sull'asse 1-7"
 
 # regola di movimento: spec riga 350 (ticket 18), regole da abm-elettorali:14-18
 [[partito]]
