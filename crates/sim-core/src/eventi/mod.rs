@@ -6,7 +6,7 @@ use crate::atti::Forma;
 use crate::dati::DatiGioco;
 use crate::errore::Errore;
 use crate::grandezze::Verso;
-use crate::partita::LIMITE_EURO;
+use crate::partita::{LIMITE_EURO, vita::virgola};
 use crate::vista::Fascia3;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -14,7 +14,7 @@ use ts_rs::TS;
 
 pub(crate) mod situazioni;
 
-/// Le misure che non sono grandezze ma che il motore calcola: variazione trimestrale vera del PIL
+/// Le misure che non sono grandezze ma che il motore calcola: crescita annualizzata vera del PIL
 /// reale ed `Economia.energia`.
 const MISURE_DEL_MOTORE: [&str; 2] = ["crescita_pil", "energia"];
 
@@ -138,14 +138,17 @@ impl Causa {
                 valore,
                 soglia,
             } => {
-                let nome = match misura.as_str() {
-                    "crescita_pil" => "crescita del PIL",
-                    "energia" => "shock energetico",
-                    _ => (dati.grandezza(misura))
-                        .and_then(|k| dati.grandezze().get(k))
-                        .map_or(misura.as_str(), |g| g.nome.as_str()),
-                };
-                format!("{nome}: {valore:.1} (soglia {soglia:.1})")
+                let (v, s) = (virgola(*valore), virgola(*soglia));
+                match misura.as_str() {
+                    "crescita_pil" => format!("crescita del PIL: {v}% annuo (soglia {s}%)"),
+                    "energia" => format!("scarto dei prezzi dell'energia: {v} (soglia {s})"),
+                    _ => {
+                        let nome = (dati.grandezza(misura))
+                            .and_then(|k| dati.grandezze().get(k))
+                            .map_or(misura.as_str(), |g| g.nome.as_str());
+                        format!("{nome}: {v} (soglia {s})")
+                    }
+                }
             }
             Causa::Rischio { livello } => format!(
                 "rischio {}",
@@ -155,7 +158,7 @@ impl Causa {
                     Fascia3::Molto => "alto",
                 }
             ),
-            Causa::Shock { serie, sigma } => format!("{serie}: shock di {sigma:.1} sigma"),
+            Causa::Shock { serie, sigma } => format!("{serie}: shock di {} sigma", virgola(*sigma)),
             Causa::Spread { pb, soglia } => format!("spread a {pb} pb (soglia {soglia} pb)"),
         }
     }
@@ -202,10 +205,9 @@ pub struct Eventi {
 }
 
 /// Cosa innesca il decreto su disposizioni: i dicasteri (indici) degli eventi aperti che lo
-/// ammettono; `tutte` ammette ogni disposizione ordinaria (la crisi del debito, task 9).
+/// ammettono.
 pub(crate) struct Inneschi {
     pub dicasteri: Vec<usize>,
-    pub tutte: bool,
 }
 
 impl Eventi {
@@ -227,10 +229,7 @@ impl Eventi {
             .flat_map(|e| &e.dicasteri)
             .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
             .collect();
-        Inneschi {
-            dicasteri,
-            tutte: false,
-        }
+        Inneschi { dicasteri }
     }
 
     pub fn iniziali(dati: &DatiGioco) -> Eventi {
@@ -349,12 +348,12 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             return ko(format!("{nome}: misura sconosciuta {}", s.misura));
         }
         let giuste = match s.verso {
-            Verso::Sale => s.accensione >= s.spegnimento,
-            Verso::Scende => s.accensione <= s.spegnimento,
+            Verso::Sale => s.accensione > s.spegnimento,
+            Verso::Scende => s.accensione < s.spegnimento,
         };
         if !(s.accensione.is_finite() && s.spegnimento.is_finite() && giuste) {
             return ko(format!(
-                "{nome}: accensione {} e spegnimento {} rovesciati rispetto al verso",
+                "{nome}: l'accensione {} deve stare oltre lo spegnimento {}, nel verso",
                 s.accensione, s.spegnimento
             ));
         }
@@ -403,7 +402,7 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
-    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+    reason = "nei test un unwrap che fallisce è il fallimento voluto"
 )]
 mod tests {
     use super::*;
@@ -444,15 +443,13 @@ mod tests {
             valore: -0.2,
             soglia: 0.0,
         };
-        assert!(
-            soglia("crescita_pil")
-                .testo(&dati)
-                .starts_with("crescita del PIL")
+        assert_eq!(
+            soglia("crescita_pil").testo(&dati),
+            "crescita del PIL: -0,2% annuo (soglia 0,0%)"
         );
-        assert!(
-            soglia("energia")
-                .testo(&dati)
-                .starts_with("shock energetico")
+        assert_eq!(
+            soglia("energia").testo(&dati),
+            "scarto dei prezzi dell'energia: -0,2 (soglia 0,0)"
         );
     }
 

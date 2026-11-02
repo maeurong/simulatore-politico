@@ -1,10 +1,10 @@
 # Eventi e situazioni nazionali (piano 9).
-# Alias nelle fonti: situazioni = docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md; "scelta N" = piano 9 (docs/superpowers/plans/2026-11-01-v1-piano-9-eventi-e-informazione.md).
+# Alias nelle fonti: situazioni = docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md.
 #
-# Situazione: `verso` e' il verso in cui si ACCENDE, non quello in cui la grandezza migliora:
+# Situazione: `verso` è il verso in cui si ACCENDE, non quello in cui la grandezza migliora:
 # `sale` accende sopra `accensione` e spegne sotto `spegnimento`, `scende` il contrario.
-# Le soglie sono provvisorie, al bilanciamento (scelta 5).
-# Intensita' degli effetti: assunzione del piano 9, nessuna fonte in docs/ricerca.
+# Le soglie sono provvisorie, al bilanciamento.
+# Intensità degli effetti: assunzione del piano 9, nessuna fonte in docs/ricerca.
 
 # situazioni:21-37 e :36 (6 episodi dal 2000; sigma 0,49 t/t nel 2010-19, circa 1,96 annualizzata); crescita
 # vera annualizzata. Due trimestri di fila sotto -1,0 accendono, due a 0,0 o sopra spengono. Misura del 02/11
@@ -31,7 +31,7 @@ spegnimento = 92.0
 evento = "criminalita"
 spinta = true
 
-# situazioni:84 (oggi e' il massimo letto delle rinunce).
+# situazioni:84 (oggi è il massimo letto delle rinunce).
 [[situazione]]
 id = "liste_attesa"
 nome = "Liste d'attesa"
@@ -53,10 +53,10 @@ spegnimento = 110.0
 evento = "carceri"
 spinta = false
 
-# situazioni:86; unita' del motore (scelta 9).
+# situazioni:86; unità del motore.
 [[situazione]]
 id = "energia"
-nome = "Crisi energetica"
+nome = "Caro energia"
 misura = "energia"
 verso = "sale"
 accensione = 10.0
@@ -64,7 +64,7 @@ spegnimento = 5.0
 evento = "crisi_energetica"
 spinta = false
 
-# situazioni:87 (le ondate del 2016 e del 2023 stanno oltre il max di oggi: lo alza il Task 5).
+# situazioni:87 (le ondate del 2016 e del 2023 stanno oltre il max di oggi).
 [[situazione]]
 id = "sbarchi"
 nome = "Ondata di sbarchi"
@@ -86,13 +86,13 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 
 [[evento.opzioni]]
 id = "sostegno"
-nome = "Misure di sostegno alle imprese"
+nome = "Sostenere le imprese"
 default = false
 
 [[evento.opzioni.effetti]]
@@ -114,7 +114,7 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 
@@ -142,13 +142,13 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 
 [[evento.opzioni]]
 id = "piano_visite"
-nome = "Piano straordinario per visite ed esami"
+nome = "Potenziare visite ed esami"
 default = false
 
 [[evento.opzioni.effetti]]
@@ -170,13 +170,13 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 
 [[evento.opzioni]]
 id = "piano_carceri"
-nome = "Piano per le carceri e le pene alternative"
+nome = "Alleggerire le carceri con le pene alternative"
 default = false
 
 [[evento.opzioni.effetti]]
@@ -190,7 +190,7 @@ durata = 4.0
 [[evento]]
 id = "crisi_energetica"
 famiglia = "situazione"
-nome = "Crisi energetica"
+nome = "Rincari dell'energia"
 gravita = 3
 dicasteri = ["ambiente_energia"]
 decreto = true
@@ -198,13 +198,13 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 
 [[evento.opzioni]]
 id = "calmiere"
-nome = "Interventi sul mercato dell'energia"
+nome = "Intervenire sul mercato dell'energia"
 default = false
 
 [[evento.opzioni.effetti]]
@@ -226,7 +226,7 @@ debito = false
 
 [[evento.opzioni]]
 id = "ordinaria"
-nome = "Ordinaria amministrazione"
+nome = "Non intervenire"
 default = true
 effetti = []
 

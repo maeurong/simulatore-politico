@@ -698,7 +698,7 @@ fn decreto_fuori_dai_dicasteri_dell_evento_rifiutato() {
         .unwrap_err();
     assert!(
         e.to_string()
-            .contains("decreto senza innesco: nessun evento aperto per Ticket sanitario"),
+            .contains("decreto senza innesco: nessun evento aperto per «Ticket sanitario»"),
         "{e}"
     );
     assert_eq!(p.salva().unwrap(), prima);
@@ -712,7 +712,7 @@ fn decreto_su_disposizione_senza_evento_rifiutato() {
         .unwrap_err();
     assert!(
         e.to_string()
-            .contains("decreto senza innesco: nessun evento aperto per Ingressi per lavoro"),
+            .contains("decreto senza innesco: nessun evento aperto per «Ingressi per lavoro»"),
         "{e}"
     );
 }

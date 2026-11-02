@@ -4,7 +4,7 @@
 
 mod comune;
 
-use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, file_vero};
+use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, file_vero, sostituisci};
 use serde_json::json;
 use sim_core::{DatiGioco, Partita};
 
@@ -61,7 +61,7 @@ fn le_carceri_oltre_la_soglia_aprono_un_evento() {
     let v = p.vista();
     let e = (v.eventi.iter().find(|e| e.nome == "Emergenza carceri")).unwrap();
     assert!(e.causa.starts_with("Sovraffollamento"), "{}", e.causa);
-    assert!(e.causa.ends_with("(soglia 117.0)"));
+    assert!(e.causa.ends_with("(soglia 117,0)"));
 }
 
 #[test]
@@ -78,11 +78,8 @@ fn la_causa_porta_il_valore_ufficiale_non_il_vero() {
     assert_ne!(format!("{ufficiale:.1}"), format!("{vero:.1}"));
     let v = p.vista();
     let e = (v.eventi.iter().find(|e| e.nome == "Emergenza carceri")).unwrap();
-    assert!(
-        e.causa.contains(&format!(": {ufficiale:.1} ")),
-        "{}",
-        e.causa
-    );
+    let testo = format!("{ufficiale:.1}").replace('.', ",");
+    assert!(e.causa.contains(&format!(": {testo} ")), "{}", e.causa);
 }
 
 #[test]
@@ -163,4 +160,70 @@ fn la_spinta_conserva_la_massa() {
     for (g, p) in e.gruppi.iter().zip(prima) {
         assert!((g.posizione.iter().sum::<f64>() - p).abs() < 1e-12);
     }
+}
+
+#[test]
+fn la_spinta_non_fa_due_passi() {
+    let mut e = al_governo().elettorato().clone();
+    for g in &mut e.gruppi {
+        g.posizione = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    }
+    e.spingi_a_destra(0.1);
+    for g in &e.gruppi {
+        assert!((g.posizione[1] - 0.9).abs() < 1e-12);
+        assert!((g.posizione[2] - 0.1).abs() < 1e-12);
+        assert!(g.posizione[3].abs() < 1e-12);
+    }
+}
+
+#[test]
+fn la_spinta_di_due_situazioni_si_somma() {
+    let d = dati_base();
+    let k = |id: &str| d.situazioni().iter().position(|s| s.id == id).unwrap();
+    let (sbarchi, criminalita) = (k("sbarchi"), k("criminalita"));
+    let base = al_governo();
+    let mut una = edita(&base, |j| {
+        j["dati"]["manopole"]["spinta_situazione"]["valore"] = json!(0.004);
+        j["eventi"]["accese"][sbarchi] = json!(true);
+    })
+    .unwrap();
+    let mut due = edita(&base, |j| {
+        j["dati"]["manopole"]["spinta_situazione"]["valore"] = json!(0.002);
+        j["eventi"]["accese"][sbarchi] = json!(true);
+        j["eventi"]["accese"][criminalita] = json!(true);
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut una);
+    chiudi_col_bilancio(&mut due);
+    for (a, b) in una.elettorato().gruppi.iter().zip(&due.elettorato().gruppi) {
+        for (x, y) in a.posizione.iter().zip(&b.posizione) {
+            assert!((x - y).abs() < 1e-12, "{x} {y}");
+        }
+    }
+}
+
+#[test]
+fn l_energia_accesa_al_turno_zero_non_apre_evento_alla_prima_chiusura() {
+    let mut p = Partita::nuova(DatiGioco::da_testi(&file_vero()).unwrap(), 1);
+    chiudi_col_bilancio(&mut p);
+    let aperti: Vec<_> = p.vista().eventi.into_iter().map(|e| e.nome).collect();
+    assert!(
+        !aperti.contains(&"Rincari dell'energia".to_string()),
+        "{aperti:?}"
+    );
+}
+
+#[test]
+fn accensione_e_spegnimento_uguali_sono_rifiutati() {
+    let f = sostituisci(
+        file_vero(),
+        "eventi",
+        "accensione = 117.0\nspegnimento = 110.0",
+        "accensione = 117.0\nspegnimento = 117.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        e.to_string().contains("Sovraffollamento delle carceri"),
+        "{e}"
+    );
 }

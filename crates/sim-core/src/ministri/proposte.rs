@@ -217,7 +217,8 @@ fn distanza(cx: &Contesto, i: usize, m: &Ministro) -> Option<TipoProposta> {
 
 impl Ministri {
     /// Apertura, dopo le agende, per chi è in carica senza proposta, nell'ordine:
-    /// 0. [`evento_aperto`], anche con un'agenda;
+    /// 0. [`evento_aperto`], anche con un'agenda: viene prima di fondi e posizione perché è
+    ///    l'urgenza del dicastero;
     /// 1. fondi: senza agenda (nessun atto pagabile), il suo atto più sentito (`o > 0`, a parità
     ///    il primo, mai uno già in cantiere) non pagabile: chiede la differenza;
     /// 2. [`sblocco`] e 3. [`distanza`], anche con un'agenda.
@@ -390,6 +391,7 @@ impl Ministri {
                         (dati.disposizioni().get(disposizione))
                             .is_some_and(|x| gradino < x.gradini.len())
                             && evento.is_none_or(|e| dati.eventi().get(e).is_some())
+                            && (sblocca.is_none() || evento.is_none())
                             && sblocca.is_none_or(|k| {
                                 dati.atti().get(k).is_some_and(|a| a.dicastero == d.id)
                             })

@@ -231,6 +231,8 @@ fn l_energia_rientra() {
     }
     let ipca = p.economia().inflazione[..4].iter().sum::<f64>() / 4.0;
     assert!(energia[4] < 5.0, "{energia:?}");
+    let accesa = (p.situazioni().iter()).any(|s| s.misura == "energia" && s.accesa);
+    assert!(!accesa, "la situazione dell'energia resta accesa");
     assert!(ipca > 0.0 && ipca < 4.2, "{ipca}");
 }
 

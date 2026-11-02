@@ -37,7 +37,7 @@ use crate::vista::{
 use serde::{Deserialize, Serialize};
 
 mod ia;
-mod vita;
+pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -427,10 +427,8 @@ impl Partita {
     // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
     // dimissioni → verifica delle promesse, campagna e promesse IA, spesa, nel turno del voto →
     // motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
-    // convincere della campagna, spinta delle situazioni accese [legge le accese della chiusura
-    // PRECEDENTE: voluto], posizioni, sondaggio, statistica, aggiornamento delle situazioni e
-    // nascita degli eventi [subito dopo la statistica e prima del `Contesto` di `ministri.apri`,
-    // perché l'innesco «evento nel dicastero» delle proposte li veda]) → voto,
+    // convincere della campagna, spinta delle situazioni accese, posizioni, sondaggio,
+    // statistica, situazioni e nascita degli eventi) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
     // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
@@ -523,14 +521,14 @@ impl Partita {
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
-        // Additiva: una spinta per ogni situazione accesa con `spinta` (Ruling 13 del piano 9).
+        // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
+        // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
+        // `situazioni::aggiorna` le cambia dopo la statistica, più sotto.
         let spinte = (self.dati.situazioni().iter().zip(&self.eventi.accese))
             .filter(|(s, accesa)| s.spinta && **accesa)
             .count();
-        for _ in 0..spinte {
-            self.elettorato
-                .spingi_a_destra(self.dati.manopola("spinta_situazione"));
-        }
+        self.elettorato
+            .spingi_a_destra(spinte as f64 * self.dati.manopola("spinta_situazione"));
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
         self.informazione.rileva(
@@ -547,6 +545,8 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        // Subito dopo la statistica e prima del `Contesto` di `ministri.apri`: l'innesco «evento
+        // nel dicastero» delle proposte deve vedere gli eventi appena nati.
         let misure = self.misure_situazioni(false);
         let nuove = situazioni::aggiorna(&self.dati, &mut self.eventi, &misure);
         // L'innesco legge il vero, la causa mostrata il valore ufficiale (come `situazioni()`).
@@ -3742,9 +3742,13 @@ impl Partita {
     }
 
     fn voci_eventi(&self) -> Vec<VoceEvento> {
+        if self.finita() {
+            return Vec::new();
+        }
         (self.eventi.aperti.iter())
-            .filter_map(|a| {
-                let e = self.dati.eventi().get(a.evento)?;
+            .map(|a| {
+                // `Eventi::controlla` garantisce che l'evento aperto stia nel catalogo.
+                let e = &self.dati.eventi()[a.evento];
                 let bersaglio = a.bersaglio.and_then(|b| match b {
                     Bersaglio::Leader { partito } => {
                         self.partiti.get(partito).map(|p| p.leader.clone())
@@ -3753,7 +3757,7 @@ impl Partita {
                         .and_then(|st| st.ministro.as_ref())
                         .map(|m| m.nome.clone()),
                 });
-                Some(VoceEvento {
+                VoceEvento {
                     nome: e.nome.clone(),
                     famiglia: e.famiglia,
                     causa: a.causa.testo(&self.dati),
@@ -3771,7 +3775,7 @@ impl Partita {
                         })
                         .collect(),
                     scelta: a.scelta,
-                })
+                }
             })
             .collect()
     }
@@ -3841,20 +3845,20 @@ impl Partita {
             return ko("La partita è finita".into());
         }
         if !self.governa() {
-            return ko("solo il governo risponde agli eventi".into());
+            return ko("Solo il governo risponde agli eventi".into());
         }
-        let Some(aperto) = self.eventi.aperti.get(evento) else {
-            return ko(format!("nessun evento aperto con indice {evento}"));
+        let Some(aperto) = self.eventi.aperti.get_mut(evento) else {
+            return ko(format!("Nessun evento aperto con numero {evento}"));
         };
-        let Some(dato) = self.dati.eventi().get(aperto.evento) else {
-            return ko(format!("nessun evento aperto con indice {evento}"));
-        };
+        // `Eventi::controlla` garantisce che l'evento aperto stia nel catalogo.
+        let dato = &self.dati.eventi()[aperto.evento];
         let Some(k) = dato.opzioni.iter().position(|o| o.id == opzione) else {
-            return ko(format!("opzione sconosciuta per {}: {opzione}", dato.nome));
+            return ko(format!(
+                "Opzione sconosciuta per «{}»: «{opzione}»",
+                dato.nome
+            ));
         };
-        if let Some(a) = self.eventi.aperti.get_mut(evento) {
-            a.scelta = Some(k);
-        }
+        aperto.scelta = Some(k);
         Ok(())
     }
 

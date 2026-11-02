@@ -979,7 +979,7 @@ fn il_governo_ia_prende_il_default() {
         .unwrap_err();
     assert!(
         e.to_string()
-            .contains("solo il governo risponde agli eventi"),
+            .contains("Solo il governo risponde agli eventi"),
         "{e}"
     );
     assert_eq!(p.salva().unwrap(), prima);

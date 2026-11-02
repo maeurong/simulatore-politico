@@ -86,11 +86,11 @@ fn risposta_rifiutata_non_cambia_nulla() {
     let mut p = con_evento_di_prova();
     let prima = p.salva().unwrap();
     for (evento, opzione, messaggio) in [
-        (9, "ordinaria", "nessun evento aperto con indice 9"),
+        (9, "ordinaria", "Nessun evento aperto con numero 9"),
         (
             0,
             "boh",
-            "opzione sconosciuta per Ondata di criminalità: boh",
+            "Opzione sconosciuta per «Ondata di criminalità»: «boh»",
         ),
     ] {
         let e = rispondi(&mut p, evento, opzione).unwrap_err();
@@ -103,7 +103,7 @@ fn risposta_rifiutata_non_cambia_nulla() {
     let e = rispondi(&mut o, 0, "presidi").unwrap_err();
     assert!(
         e.to_string()
-            .contains("solo il governo risponde agli eventi"),
+            .contains("Solo il governo risponde agli eventi"),
         "{e}"
     );
     assert_eq!(o.salva().unwrap(), prima);

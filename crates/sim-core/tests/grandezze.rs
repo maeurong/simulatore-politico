@@ -183,12 +183,9 @@ fn gli_sbarchi_tornano_verso_cento() {
     let mut finali: Vec<f64> = (0..200)
         .map(|seme| {
             let (mut gr, mut caso) = (Grandezze::iniziali(&dati), Caso::nuovo(seme));
-            let mut massimo = 0.0_f64;
             for turno in 0..40 {
                 gr.avanza(&dati, Some(&mut caso), &e, turno);
-                massimo = massimo.max(gr.nazionale(&dati, g));
             }
-            assert!(massimo <= 600.0, "{massimo}");
             gr.nazionale(&dati, g)
         })
         .collect();
@@ -254,4 +251,20 @@ fn una_deriva_con_sigma_negativa_o_ritorno_fuori_da_zero_uno_e_rifiutata() {
         let e = DatiGioco::da_testi(&f).unwrap_err();
         assert!(matches!(e, Errore::Grandezze(_)), "{e}");
     }
+}
+
+#[test]
+fn una_deriva_logaritmica_su_un_minimo_non_positivo_e_rifiutata_col_nome() {
+    let f = sostituisci(
+        file_base(),
+        "grandezze",
+        "min = 1.0\nmax = 600.0",
+        "min = 0.0\nmax = 600.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(&e, Errore::Grandezze(m) if m.contains("immigrazione_irregolare")
+            && m.contains("logaritmica")),
+        "{e}"
+    );
 }

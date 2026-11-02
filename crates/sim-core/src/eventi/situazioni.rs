@@ -1,4 +1,4 @@
-//! Le sei situazioni a soglia con isteresi (piano 9, scelta 4): si accendono oltre `accensione`
+//! Le sei situazioni a soglia con isteresi (piano 9): si accendono oltre `accensione`
 //! e si spengono a `spegnimento` o oltre, dall'altra parte. La recessione chiede due trimestri
 //! di fila da quella parte, le altre uno.
 
@@ -97,7 +97,7 @@ pub(crate) fn apri(
 #[cfg(test)]
 #[expect(
     clippy::unwrap_used,
-    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+    reason = "nei test un unwrap che fallisce è il fallimento voluto"
 )]
 mod tests {
     use super::*;
@@ -120,12 +120,12 @@ mod tests {
         let r = (dati.situazioni().iter())
             .position(|s| s.id == "recessione")
             .unwrap();
-        // Due trimestri a -0,5 non bastano: la soglia e' -1,0.
+        // Due trimestri a -0,5 non bastano: la soglia è -1,0.
         for _ in 0..2 {
             assert!(aggiorna(&dati, &mut e, &misure_di(&dati, -0.5)).is_empty());
         }
         assert!(!e.accese[r]);
-        // Due a -1,5 si', e solo al secondo.
+        // Due a -1,5 sì, e solo al secondo.
         assert!(aggiorna(&dati, &mut e, &misure_di(&dati, -1.5)).is_empty());
         assert!(!e.accese[r]);
         assert_eq!(aggiorna(&dati, &mut e, &misure_di(&dati, -1.5)), [r]);
@@ -135,7 +135,7 @@ mod tests {
             aggiorna(&dati, &mut e, &misure_di(&dati, -0.5));
         }
         assert!(e.accese[r]);
-        // A 0,0 un trimestre non la spegne, il secondo si'.
+        // A 0,0 un trimestre non la spegne, il secondo sì.
         aggiorna(&dati, &mut e, &misure_di(&dati, 0.0));
         assert!(e.accese[r]);
         aggiorna(&dati, &mut e, &misure_di(&dati, 0.0));
@@ -150,5 +150,33 @@ mod tests {
             aggiorna(&dati, &mut e, &misure_di(&dati, crescita));
         }
         assert!(e.accese.iter().all(|a| !a));
+    }
+
+    /// `m` sulla misura della situazione `id`, tutte le altre a riposo: se `acceso`, parte accesa.
+    fn con(dati: &DatiGioco, id: &str, acceso: bool, m: f64) -> bool {
+        let mut e = Eventi::iniziali(dati);
+        let i = (dati.situazioni().iter()).position(|s| s.id == id).unwrap();
+        e.accese[i] = acceso;
+        let misure: Vec<f64> = (misure_di(dati, 0.0).into_iter())
+            .enumerate()
+            .map(|(k, x)| if k == i { m } else { x })
+            .collect();
+        aggiorna(dati, &mut e, &misure);
+        e.accese[i]
+    }
+
+    #[test]
+    fn le_soglie_sono_strette_all_accensione_larghe_allo_spegnimento() {
+        let dati = dati_base();
+        // Verso `sale`: carceri, accensione 117, spegnimento 110.
+        assert!(!con(&dati, "carceri", false, 117.0));
+        assert!(con(&dati, "carceri", false, 117.0001));
+        assert!(!con(&dati, "carceri", true, 110.0));
+        assert!(con(&dati, "carceri", true, 110.0001));
+        // Verso `scende`: criminalità, accensione 85, spegnimento 92.
+        assert!(!con(&dati, "criminalita", false, 85.0));
+        assert!(con(&dati, "criminalita", false, 84.9999));
+        assert!(!con(&dati, "criminalita", true, 92.0));
+        assert!(con(&dati, "criminalita", true, 91.9999));
     }
 }

@@ -174,7 +174,7 @@ impl Grandezze {
         self.prima.clone_from(&self.valori);
         for d in dati.derive() {
             let z = caso.as_mut().map_or(0.0, |c| c.normale(Flusso::Eventi));
-            // `valida` garantisce che la grandezza c'e'.
+            // `valida` garantisce che la grandezza c'è.
             if let Some(k) = dati.grandezze().iter().position(|g| g.id == d.grandezza) {
                 let g = &dati.grandezze()[k];
                 for b in &mut self.basi[k] {

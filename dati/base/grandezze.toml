@@ -207,7 +207,7 @@ dinamica = "fissa"
 verso = "scende"
 regionale = false
 iniziale = 100.0
-min = 0.0
+min = 1.0
 max = 600.0
 dicasteri = ["interno"]
 
@@ -255,11 +255,11 @@ sigma = 0.5
 ritorno = 0.2
 logaritmica = true
 
-# situazioni-ed-eventi-al-turno-zero:95, rumore trimestrale ≤1% e deriva lenta; il tasso (-0,1%
-# a trimestre: CPI in salita, corruzione in calo) è un'assunzione del piano 9.
+# situazioni-ed-eventi-al-turno-zero:95, rumore trimestrale ≤1%; il tasso è nullo perché la
+# ricerca non dà una fonte per una deriva.
 [[deriva]]
 grandezza = "corruzione"
-tasso = -0.001
+tasso = 0.0
 sigma = 0.005
 ritorno = 0.0
 logaritmica = false

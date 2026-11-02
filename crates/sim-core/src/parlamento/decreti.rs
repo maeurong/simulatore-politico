@@ -106,7 +106,7 @@ impl FondiDecreto {
 }
 
 /// Il decreto su disposizioni è ammesso se ogni disposizione è ordinaria e il suo dicastero sta
-/// negli `inneschi` (o `tutte`). Il resto (legge vuota, ripetuta, gradino sconosciuto, già in
+/// negli `inneschi`. Il resto (legge vuota, ripetuta, gradino sconosciuto, già in
 /// vigore o bloccato, in esame, respinta da poco) lo controlla `Parlamento::bozza`, dopo questo.
 ///
 /// # Errors
@@ -127,9 +127,9 @@ pub(crate) fn ammetti_disposizioni(
         }
         let dicastero =
             (x.dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|d| &d.id == id));
-        if !inneschi.tutte && dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i)) {
+        if dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i)) {
             return ko(format!(
-                "decreto senza innesco: nessun evento aperto per {}",
+                "decreto senza innesco: nessun evento aperto per «{}»",
                 x.nome
             ));
         }

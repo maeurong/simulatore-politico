@@ -136,8 +136,8 @@ pub enum Comando {
     Prometti {
         promesse: Vec<(String, String)>,
     },
-    /// Al governo, la risposta a un evento aperto: `evento` è l'indice in `Vista.eventi`,
-    /// `opzione` l'id. Si può cambiare fino alla chiusura.
+    /// Al governo, la risposta a un evento aperto: `evento` è l'indice in `Vista.eventi`, lo stesso
+    /// di `aperti`; `opzione` l'id. Si può cambiare fino alla chiusura.
     RispondiEvento {
         evento: usize,
         opzione: String,

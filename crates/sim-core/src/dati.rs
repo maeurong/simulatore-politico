@@ -684,6 +684,11 @@ impl DatiGioco {
             if !(0.0..=1.0).contains(&d.ritorno) {
                 return ko(format!("deriva su {id}: ritorno fuori da 0-1"));
             }
+            if d.logaritmica && g.min <= 0.0 {
+                return ko(format!(
+                    "deriva su {id}: logaritmica, ma il minimo non è positivo"
+                ));
+            }
         }
         for d in &self.dicasteri {
             let ind = &d.indicatore_servizio;
