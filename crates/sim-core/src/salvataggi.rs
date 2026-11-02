@@ -102,3 +102,34 @@ pub struct VoceAlbo {
     /// dallo snapshot e lo reimposta all'apertura (ricerca persistenza:129).
     pub riavvolgimenti: u32,
 }
+
+/// Versione del formato dell'indice di una partita. Stesse regole di `FORMATO_ALBO`, che valgono
+/// anche per la `Testata` che l'indice contiene: l'elenco mostra gli indici d'altro formato come non
+/// apribili, le scritture li rifiutano.
+pub const FORMATO_INDICE: u32 = 1;
+
+/// L'indice di una partita in corso, in chiaro accanto agli snapshot: l'elenco lo legge senza
+/// aprire la partita, anche con uno schema diverso. `ultimo_salvataggio` in secondi Unix.
+/// `riavvolgimenti` è il contatore che fa testo: il guscio lo reimpone alla partita a ogni
+/// apertura, perché lo snapshot di un turno passato ne porta il valore vecchio.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct IndicePartita {
+    pub formato_indice: u32,
+    pub id: String,
+    pub testata: Testata,
+    /// `number` in TS: l'IPC lo consegna come numero JSON, e i secondi Unix stanno in 2^53.
+    #[cfg_attr(test, ts(type = "number"))]
+    pub ultimo_salvataggio: u64,
+    pub riavvolgimenti: u32,
+}
+
+/// Una partita dell'elenco: `apribile` se il formato dell'indice e lo schema sono quelli di questa
+/// versione, altrimenti `motivo` nomina il valore trovato e quello atteso.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VocePartita {
+    pub indice: IndicePartita,
+    pub apribile: bool,
+    pub motivo: Option<String>,
+}
