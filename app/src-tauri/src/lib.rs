@@ -1,5 +1,11 @@
 //! Guscio Tauri: legge i file di dati, sceglie il seme dall'orologio e passa la `Vista` alla UI.
 
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "l'archivio lo chiamano i comandi del Task 10")
+)]
+mod archivio;
+
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
