@@ -1,5 +1,5 @@
 //! Le sei situazioni a soglia con isteresi (piano 9, scelta 4): si accendono oltre `accensione`
-//! e si spengono solo oltre `spegnimento`, dall'altra parte. La recessione chiede due trimestri
+//! e si spengono a `spegnimento` o oltre, dall'altra parte. La recessione chiede due trimestri
 //! di fila da quella parte, le altre uno.
 
 use super::{Causa, Eventi, EventoAperto, Tono};
@@ -42,7 +42,7 @@ pub(crate) fn aggiorna(dati: &DatiGioco, eventi: &mut Eventi, misure: &[f64]) ->
         // Oltre `soglia` nel verso in cui la situazione si accende.
         let oltre = |soglia: f64| s.verso.segno() * (m - soglia) > 0.0;
         let verso_il_cambio = if *acceso {
-            s.verso.segno() * (s.spegnimento - m) > 0.0
+            s.verso.segno() * (s.spegnimento - m) >= 0.0
         } else {
             oltre(s.accensione)
         };
@@ -120,14 +120,25 @@ mod tests {
         let r = (dati.situazioni().iter())
             .position(|s| s.id == "recessione")
             .unwrap();
-        assert!(aggiorna(&dati, &mut e, &misure_di(&dati, -0.5)).is_empty());
+        // Due trimestri a -0,5 non bastano: la soglia e' -1,0.
+        for _ in 0..2 {
+            assert!(aggiorna(&dati, &mut e, &misure_di(&dati, -0.5)).is_empty());
+        }
         assert!(!e.accese[r]);
-        assert_eq!(aggiorna(&dati, &mut e, &misure_di(&dati, -0.5)), [r]);
+        // Due a -1,5 si', e solo al secondo.
+        assert!(aggiorna(&dati, &mut e, &misure_di(&dati, -1.5)).is_empty());
+        assert!(!e.accese[r]);
+        assert_eq!(aggiorna(&dati, &mut e, &misure_di(&dati, -1.5)), [r]);
         assert!(e.accese[r]);
-        // Un trimestre sopra zero non la spegne, il secondo sì.
-        assert!(aggiorna(&dati, &mut e, &misure_di(&dati, 0.3)).is_empty());
+        // A -0,5 resta accesa, per quanto duri.
+        for _ in 0..3 {
+            aggiorna(&dati, &mut e, &misure_di(&dati, -0.5));
+        }
         assert!(e.accese[r]);
-        aggiorna(&dati, &mut e, &misure_di(&dati, 0.3));
+        // A 0,0 un trimestre non la spegne, il secondo si'.
+        aggiorna(&dati, &mut e, &misure_di(&dati, 0.0));
+        assert!(e.accese[r]);
+        aggiorna(&dati, &mut e, &misure_di(&dati, 0.0));
         assert!(!e.accese[r]);
     }
 
@@ -135,7 +146,7 @@ mod tests {
     fn un_trimestre_in_calo_isolato_non_conta() {
         let dati = dati_base();
         let mut e = Eventi::iniziali(&dati);
-        for crescita in [-0.5, 0.3, -0.5, 0.3] {
+        for crescita in [-1.5, 0.3, -1.5, 0.3] {
             aggiorna(&dati, &mut e, &misure_di(&dati, crescita));
         }
         assert!(e.accese.iter().all(|a| !a));

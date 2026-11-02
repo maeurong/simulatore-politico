@@ -6,13 +6,16 @@
 # Le soglie sono provvisorie, al bilanciamento (scelta 5).
 # Intensita' degli effetti: assunzione del piano 9, nessuna fonte in docs/ricerca.
 
-# situazioni:78-89 (oggi +0,2% t/t); scelta 4: due trimestri di fila sotto zero accendono, due sopra spengono.
+# situazioni:21-37 e :36 (6 episodi dal 2000; sigma 0,49 t/t nel 2010-19, circa 1,96 annualizzata); crescita
+# vera annualizzata. Due trimestri di fila sotto -1,0 accendono, due a 0,0 o sopra spengono. Misura del 02/11
+# (semi 1-200, 20 chiusure): circa 0,9 recessioni per partita contro circa 1,15 reali in 5 anni; il solo
+# segno ne dava 1,7. Scelta di Mario.
 [[situazione]]
 id = "recessione"
 nome = "Recessione"
 misura = "crescita_pil"
 verso = "scende"
-accensione = 0.0
+accensione = -1.0
 spegnimento = 0.0
 evento = "recessione"
 spinta = false
