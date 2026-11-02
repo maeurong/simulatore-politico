@@ -697,6 +697,22 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn snapshot_gzip_oltre_il_tetto_rifiutato() {
+        let c = cartella("snapshot_gzip_oltre_il_tetto_rifiutato");
+        let (a, _) = con_partita(&c);
+        // Pochi byte compressi, oltre 64 MiB una volta aperti.
+        let mut gz = GzEncoder::new(Vec::new(), Compression::default());
+        gz.write_all(&vec![b' '; usize::try_from(TETTO).unwrap() + 1])
+            .unwrap();
+        fs::write(file(&c, "turno-000.json.gz"), gz.finish().unwrap()).unwrap();
+        let e = a.riavvolgi(ID, 0).unwrap_err();
+        assert!(
+            e.contains("turno-000.json.gz") && e.contains("64 MiB"),
+            "{e}"
+        );
+    }
+
+    #[test]
     fn file_oltre_il_tetto_rifiutato() {
         let c = cartella("file_oltre_il_tetto_rifiutato");
         let a = Archivio::nuovo(c.0.clone()).unwrap();

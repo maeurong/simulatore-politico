@@ -623,6 +623,22 @@ mod tests {
     }
 
     #[test]
+    fn conferma_rifiuta_la_partita_abbandonata() -> Result<(), String> {
+        let c = cartella("lib-conferma-abbandonata");
+        let (stato, archivio) = con_partita(&c.0)?;
+        // Finita ma con eredità già definitiva: niente da confermare, niente albo.
+        nella_partita(&stato, |p| {
+            let _ = p.abbandona();
+        })?;
+        let e = conferma(&stato, &archivio).err().unwrap_or_default();
+        assert_eq!(e, "nessuna eredità in bozza da confermare");
+        assert!(archivio.albo().is_empty());
+        assert_eq!(archivio.elenca().len(), 1);
+        assert!(blocca(&stato)?.is_some());
+        Ok(())
+    }
+
+    #[test]
     fn alla_chiusura_scrive_la_bozza_solo_se_serve() -> Result<(), String> {
         let c = cartella("lib-alla-chiusura");
         let bozza = c.0.join("partite").join(ID).join("bozza.json.gz");
