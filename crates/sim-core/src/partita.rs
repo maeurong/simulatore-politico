@@ -443,6 +443,7 @@ impl Partita {
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
+        // Additiva: una spinta per ogni situazione accesa con `spinta` (Ruling 13 del piano 9).
         let spinte = (self.dati.situazioni().iter().zip(&self.eventi.accese))
             .filter(|(s, accesa)| s.spinta && **accesa)
             .count();
@@ -468,11 +469,13 @@ impl Partita {
         );
         let misure = self.misure_situazioni(false);
         let nuove = situazioni::aggiorna(&self.dati, &mut self.eventi, &misure);
+        // L'innesco legge il vero, la causa mostrata il valore ufficiale (come `situazioni()`).
+        let ufficiali = self.misure_situazioni(true);
         situazioni::apri(
             &self.dati,
             &mut self.eventi,
             &nuove,
-            &misure,
+            &ufficiali,
             self.turno.saturating_add(1),
         );
         self.incassa(&vero);

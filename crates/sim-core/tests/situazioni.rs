@@ -65,6 +65,27 @@ fn le_carceri_oltre_la_soglia_aprono_un_evento() {
 }
 
 #[test]
+fn la_causa_porta_il_valore_ufficiale_non_il_vero() {
+    let mut p = con_valore(&al_governo(), "sovraffollamento_carceri", 118.0);
+    chiudi_col_bilancio(&mut p);
+    let ufficiale = (p.situazioni().into_iter())
+        .find(|s| s.misura == "sovraffollamento_carceri")
+        .unwrap()
+        .valore;
+    let k = indice("sovraffollamento_carceri");
+    let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    let vero = j["grandezze"]["valori"][k][0].as_f64().unwrap();
+    assert_ne!(format!("{ufficiale:.1}"), format!("{vero:.1}"));
+    let v = p.vista();
+    let e = (v.eventi.iter().find(|e| e.nome == "Emergenza carceri")).unwrap();
+    assert!(
+        e.causa.contains(&format!(": {ufficiale:.1} ")),
+        "{}",
+        e.causa
+    );
+}
+
+#[test]
 fn l_evento_aperto_dalla_situazione_innesca_la_proposta_del_ministro() {
     let d = dati_base();
     let i = d
