@@ -10,8 +10,8 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
-use crate::grandezze::Grandezze;
-use crate::informazione::{ElettoreCampione, Informazione, genera};
+use crate::grandezze::{EffettoAttivo, Grandezze};
+use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
     Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
@@ -25,6 +25,7 @@ use crate::parlamento::{
     TipoReferendum, ValoreProposto, voto,
 };
 use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
+use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
@@ -38,7 +39,7 @@ mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 10;
+pub const VERSIONE_SCHEMA: u32 = 11;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,7 +118,7 @@ pub struct Partita {
 
 /// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
 /// zero a tutti se nessuno vota.
-fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
+pub(crate) fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
     let (astensione, quote) = vero.nazionali.split_last().unwrap_or((&0.0, &[]));
     let votanti = 1.0 - astensione;
     let quota = |q: &f64| if votanti > 0.0 { q / votanti } else { 0.0 };
@@ -128,6 +129,31 @@ fn quote_fra_i_votanti(vero: &Intenzioni) -> Vec<f64> {
 /// le disposizioni in vigore alle leggi del giocatore nell'eredità.
 fn etichetta_legge(id: u32, anno: u16) -> String {
     format!("L. {id}/{anno}")
+}
+
+/// Le disposizioni ordinarie dello scenario su misura entrano come leggi del governo uscente al
+/// turno zero: la partenza dei dati resta il riferimento di saldo, leve ed effetti. Le elettorali
+/// hanno già i gradini dell'editor come partenza.
+#[expect(
+    clippy::expect_used,
+    reason = "SuMisura::valida ferma id e gradini che i dati non hanno, prima di questi dati"
+)]
+fn leggi_dello_scenario(
+    dati: &DatiGioco,
+    disposizioni: &mut Disposizioni,
+    effetti: &mut Vec<EffettoAttivo>,
+) {
+    let Some(s) = dati.su_misura() else {
+        return;
+    };
+    for (id, gradino) in &s.disposizioni {
+        let d = dati.disposizione(id).expect("disposizione validata");
+        let dato = &dati.disposizioni()[d];
+        let g = dato.gradino(gradino).expect("gradino validato");
+        if dato.norma != Norma::Elettorale && g != disposizioni.voci[d].in_vigore {
+            disposizioni.cambia(dati, d, g, 0, ETICHETTA_GOVERNO_USCENTE, effetti);
+        }
+    }
 }
 
 impl Partita {
@@ -142,7 +168,7 @@ impl Partita {
     /// partito nasce della misura giusta, e le Camere sono sciolte, senza seggi.
     pub(crate) fn costruisci(dati: DatiGioco, seme: u64, nuovo: Option<Partito>) -> Partita {
         let economia = Economia::iniziale(&dati);
-        let grandezze = Grandezze::iniziali(&dati);
+        let mut grandezze = Grandezze::iniziali(&dati);
         let (mut partiti, governo) = partiti::iniziali(&dati);
         let coalizioni = (dati.scenario().coalizioni.iter())
             .map(|c| {
@@ -173,7 +199,8 @@ impl Partita {
         let mut caso = Caso::nuovo(seme);
         let informazione =
             Informazione::nuova(&dati, &mut caso, &elettorato, &partiti, &governo, &economia);
-        let disposizioni = Disposizioni::iniziali(&dati);
+        let mut disposizioni = Disposizioni::iniziali(&dati);
+        leggi_dello_scenario(&dati, &mut disposizioni, &mut grandezze.effetti);
         let n = partiti.len();
         let (parlamento, giocatore, legislatura) = if fondata {
             let sciolte = Parlamento {
@@ -2317,6 +2344,14 @@ impl Partita {
         let pl = &self.parlamento;
         Quadro {
             seggi_veri: Some((pl.seggi_camera.clone(), pl.seggi_senato.clone())),
+            ..self.quadro()
+        }
+    }
+
+    /// Il `Quadro` su `sondaggio` al posto di quello pubblico.
+    pub(crate) fn quadro_su<'a>(&'a self, sondaggio: &'a Sondaggio) -> Quadro<'a> {
+        Quadro {
+            sondaggio,
             ..self.quadro()
         }
     }

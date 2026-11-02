@@ -95,6 +95,27 @@ fn i_dati_viaggiano_nel_salvataggio() {
 }
 
 #[test]
+fn il_salvataggio_porta_lo_schema_11() {
+    assert!(
+        giocata(1, 0)
+            .salva()
+            .unwrap()
+            .contains("\"versione_schema\":11")
+    );
+}
+
+#[test]
+fn lo_scenario_su_misura_viaggia_nel_salvataggio() {
+    let base = dati_base();
+    let mut s = sim_core::su_misura::SuMisura::base(&base);
+    s.nome = "Italia indebitata".into();
+    s.cursori.debito_pil = 150.0;
+    let p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+    let riletta = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(riletta, p);
+}
+
+#[test]
 fn schema_diverso_rifiutato() {
     let mut json: serde_json::Value =
         serde_json::from_str(&giocata(1, 1).salva().unwrap()).unwrap();

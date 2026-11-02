@@ -1,7 +1,7 @@
 ---
 tipo: tecnica
-fonti: [fonti/tauri-releases.md, fonti/tauri-what-is.md, fonti/tauri-webview-versions.md, fonti/tauri-app-size.md, fonti/tauri-sign-macos.md, fonti/tauri-prerequisites.md, fonti/tauri-linux-graphics.md, fonti/webkit-safari-26-webgpu.md, fonti/webkitgtk-2-52-highlights.md, fonti/webkitgtk-2-54-highlights.md, fonti/steamworks-linux-runtime.md]
-aggiornato: 2026-10-16
+fonti: [fonti/tauri-releases.md, fonti/tauri-what-is.md, fonti/tauri-webview-versions.md, fonti/tauri-app-size.md, fonti/tauri-sign-macos.md, fonti/tauri-prerequisites.md, fonti/tauri-linux-graphics.md, fonti/webkit-safari-26-webgpu.md, fonti/webkitgtk-2-52-highlights.md, fonti/webkitgtk-2-54-highlights.md, fonti/steamworks-linux-runtime.md, fonti/tauri-2-12-pathresolver.md, fonti/tauri-capabilities.md, fonti/tauri-plugin-fs.md, fonti/tauri-2-12-runevent.md, fonti/tauri-2-12-3-uscita-sorgente.md, fonti/tao-0-37-1-macos-terminate.md]
+aggiornato: 2026-10-29
 ---
 # Tauri 2 (core Rust + UI web)
 
@@ -32,6 +32,12 @@ Applicazione desktop con backend Rust e interfaccia HTML/CSS/JS disegnata dalla 
 
 - Lo Steam Linux Runtime include SDL, OpenAL, FreeType, Fontconfig; le altre dipendenze vanno ridistribuite con il gioco (fonti/steamworks-linux-runtime.md) [V]. WebKitGTK non e' nell'elenco: va impacchettato oppure si usa la build Windows sotto Proton, con WebView2 da far funzionare sotto Proton [INF, non verificato].
 
+## Cartelle dati, permessi e uscita
+
+- `app.path().app_data_dir()` = `data_dir/${identifier}`, su macOS `~/Library/Application Support/<identifier>`; non crea la cartella (fonti/tauri-2-12-pathresolver.md, fonti/tauri-2-12-3-app-data-dir-sorgente.md) [V].
+- I comandi registrati dall'app sono consentiti di default a tutte le finestre; `tauri-plugin-fs` serve solo a dare il file system al JS, con scope e permessi (fonti/tauri-capabilities.md, fonti/tauri-plugin-fs.md) [V]. Dal lato Rust basta `std::fs` [INF].
+- Su macOS Cmd+Q passa da `terminate:` e `applicationWillTerminate:` di tao e arriva solo come `RunEvent::Exit`, senza `CloseRequested` né `ExitRequested` (fonti/tauri-2-12-3-uscita-sorgente.md, fonti/tao-0-37-1-macos-terminate.md) [V sul sorgente]. Dettagli e salvataggi in [[persistenza-dei-salvataggi]].
+
 ## Firma e notarizzazione macOS
 
 - Certificato Developer ID dall'account Apple; notarizzazione con credenziali App Store Connect API o Apple ID tramite variabili d'ambiente durante `tauri build`; disponibile anche la firma ad-hoc, senza identita' Apple (fonti/tauri-sign-macos.md) [V].
@@ -57,6 +63,7 @@ Applicazione desktop con backend Rust e interfaccia HTML/CSS/JS disegnata dalla 
 - [[godot]]: alternativa con renderer proprio uguale su tutti gli OS.
 - [[prestazioni-su-hardware-modesto]]: Steam Deck e integrate.
 - [[confronto-stack]].
+- [[persistenza-dei-salvataggi]]: dove e come il guscio scrive i salvataggi, eventi di uscita.
 
 ## Fonti
 
@@ -93,3 +100,18 @@ Applicazione desktop con backend Rust e interfaccia HTML/CSS/JS disegnata dalla 
 - **URL** https://partner.steamgames.com/doc/store/application/platforms/linux · [V]
   **perche' conta qui** cosa c'e' nel runtime Steam su Linux e Deck
   **cosa se ne prende** solo SDL, OpenAL, FreeType, Fontconfig inclusi; il resto si ridistribuisce
+- **URL** https://docs.rs/tauri/2.12.3/tauri/path/struct.PathResolver.html · [V]
+  **perche' conta qui** cartella dei salvataggi
+  **cosa se ne prende** `app_data_dir` = `~/Library/Application Support/<identifier>` su macOS
+- **URL** https://v2.tauri.app/security/capabilities/ · [V]
+  **perche' conta qui** permessi dei comandi del guscio
+  **cosa se ne prende** comandi dell'app consentiti di default a tutte le finestre
+- **URL** https://v2.tauri.app/plugin/file-system/ · [V]
+  **perche' conta qui** se serve il plugin fs
+  **cosa se ne prende** serve al JS con scope; dal Rust no
+- **URL** https://docs.rs/tauri/2.12.3/tauri/enum.RunEvent.html · [V]
+  **perche' conta qui** eventi di uscita dell'app
+  **cosa se ne prende** `Exit` ed `ExitRequested { code, api }`
+- **URL** `~/.cargo/registry/.../tauri-runtime-wry-2.12.3/src/lib.rs`, `tao-0.37.1/src/platform_impl/macos/` · [V]
+  **perche' conta qui** cosa arriva davvero a Cmd+Q su macOS
+  **cosa se ne prende** solo `RunEvent::Exit`, sincrono, da `applicationWillTerminate:`

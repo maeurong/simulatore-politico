@@ -1,3 +1,6 @@
 [workspace]
 members = ["crates/sim-core", "crates/sim-cli", "app/src-tauri"]
 resolver = "3"
+
+[profile.dev.package.sim-core]
+opt-level = 2

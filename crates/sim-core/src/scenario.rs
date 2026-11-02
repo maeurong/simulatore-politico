@@ -4,6 +4,7 @@ use crate::economia::Aliquote;
 use crate::elezioni::LeggeElettorale;
 use crate::errore::Errore;
 use crate::partiti::{DatoGoverno, DatoPartito};
+use crate::su_misura::NOMI_CURSORI_SINTETICI;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -63,6 +64,14 @@ pub struct ParlamentoUscente {
     pub senato: BTreeMap<String, i64>,
 }
 
+/// I tre cursori sintetici dello scenario su misura: scarti dalla base, con `valore = 0`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CursoriBase {
+    pub ricchezza: Ingresso,
+    pub eta_mediana: Ingresso,
+    pub orientamento: Ingresso,
+}
+
 macro_rules! scenario {
     ($($campo:ident),* $(,)?) => {
         #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -79,6 +88,7 @@ macro_rules! scenario {
             /// Valori precedenti al turno zero, per i gradini «precedente» delle elettorali.
             pub legge_elettorale_precedente: LeggeElettorale,
             pub parlamento_uscente: ParlamentoUscente,
+            pub cursori: CursoriBase,
             #[serde(rename = "partito")]
             pub partiti: Vec<DatoPartito>,
             pub governo: DatoGoverno,
@@ -89,9 +99,35 @@ macro_rules! scenario {
         }
 
         impl Scenario {
-            fn ingressi(&self) -> Vec<(String, &Ingresso)> {
+            /// Gli ingressi per nome: i campi, i tre cursori sintetici, la valence di ogni partito.
+            pub(crate) fn ingressi(&self) -> Vec<(String, &Ingresso)> {
+                let c = &self.cursori;
+                let [r, e, o] = NOMI_CURSORI_SINTETICI.map(String::from);
                 let mut v = vec![$((stringify!($campo).to_string(), &self.$campo)),*];
+                v.extend([
+                    (r, &c.ricchezza),
+                    (e, &c.eta_mediana),
+                    (o, &c.orientamento),
+                ]);
                 v.extend(self.partiti.iter().map(|p| (format!("valence di {}", p.id), &p.valence)));
+                v
+            }
+
+            /// Come [`Scenario::ingressi`], da ritoccare.
+            pub(crate) fn ingressi_mut(&mut self) -> Vec<(String, &mut Ingresso)> {
+                let c = &mut self.cursori;
+                let [r, e, o] = NOMI_CURSORI_SINTETICI.map(String::from);
+                let mut v = vec![$((stringify!($campo).to_string(), &mut self.$campo)),*];
+                v.extend([
+                    (r, &mut c.ricchezza),
+                    (e, &mut c.eta_mediana),
+                    (o, &mut c.orientamento),
+                ]);
+                v.extend(
+                    self.partiti
+                        .iter_mut()
+                        .map(|p| (format!("valence di {}", p.id), &mut p.valence)),
+                );
                 v
             }
         }
@@ -158,6 +194,16 @@ impl Scenario {
                 });
             }
         }
+        let c = &self.cursori;
+        let [r, e, o] = NOMI_CURSORI_SINTETICI;
+        for (nome, i) in [(r, &c.ricchezza), (e, &c.eta_mediana), (o, &c.orientamento)] {
+            if i.valore != 0.0 {
+                return Err(Errore::StrutturaIncoerente(format!(
+                    "scenario.toml [cursori.{nome}]: nella base il valore è 0, trovato {}",
+                    i.valore
+                )));
+            }
+        }
         if self.tetti_spesa_netta.is_empty()
             || self.tetti_spesa_netta.values().any(|t| !t.is_finite())
         {
@@ -185,5 +231,18 @@ impl Scenario {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::dati::dati_base;
+
+    #[test]
+    fn ingressi_e_ingressi_mut_hanno_gli_stessi_nomi() {
+        let mut s = dati_base().scenario().clone();
+        let nomi: Vec<String> = s.ingressi().into_iter().map(|(n, _)| n).collect();
+        let nomi_mut: Vec<String> = s.ingressi_mut().into_iter().map(|(n, _)| n).collect();
+        assert_eq!(nomi, nomi_mut);
     }
 }

@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://v2.tauri.app/security/capabilities/", "sha256": "bf7bf10c2765a39f9c4a4af18ed27a7536bd7f90d565cabf7913377938ae986f", "bytes": 6965}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}

@@ -17,6 +17,7 @@ mod giudizio;
 mod redditi;
 mod referendum;
 mod voto;
+pub(crate) use composizione::{spostamenti_lavoro, spostamenti_pensione};
 pub use redditi::{Indici, Reddito};
 pub use referendum::{Affluenza, Quesito};
 pub(crate) use referendum::{stima, toccati};
@@ -420,9 +421,19 @@ impl Elettorato {
     /// `Σ elettori·irpef(lordo) / Σ elettori·lordo` sui redditi correnti senza le leve di
     /// reddito (`lordo_irpef`), con gli scaglioni `s`.
     pub(crate) fn aliquota_media_irpef(&self, dati: &DatiGioco, s: &[Scaglione]) -> f64 {
+        self.aliquota_media_irpef_se(dati, s, |_| true)
+    }
+
+    /// Come [`Elettorato::aliquota_media_irpef`], sui soli gruppi `k` con `tieni(k)`.
+    pub(crate) fn aliquota_media_irpef_se(
+        &self,
+        dati: &DatiGioco,
+        s: &[Scaglione],
+        tieni: impl Fn(usize) -> bool,
+    ) -> f64 {
         let d = dati.elettorato();
         let (mut imposta, mut lordo) = (0.0, 0.0);
-        for (k, g) in self.gruppi.iter().enumerate() {
+        for (k, g) in self.gruppi.iter().enumerate().filter(|(k, _)| tieni(*k)) {
             let (n, l) = (self.elettori(d, k), g.lordo_irpef);
             imposta += n * irpef(s, l);
             lordo += n * l;

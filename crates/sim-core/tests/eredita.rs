@@ -1,6 +1,7 @@
 mod comune;
 use comune::{dati_base, edita, fondata, presenta};
 use sim_core::legislatura::Fine;
+use sim_core::su_misura::{ETICHETTA_GOVERNO_USCENTE, SuMisura};
 use sim_core::{Comando, Partita};
 
 #[test]
@@ -46,6 +47,28 @@ fn le_leggi_del_giocatore_in_vigore() {
         .nome
         .clone();
     assert_eq!(p.abbandona().unwrap().leggi_in_vigore, vec![nome]);
+}
+
+#[test]
+fn la_legge_del_governo_uscente_non_e_del_giocatore() {
+    let base = dati_base();
+    let mut s = SuMisura::base(&base);
+    s.disposizioni.insert("cuneo_fiscale".into(), "0".into());
+    let mut p = Partita::nuova(base.con_su_misura(&s).unwrap(), 1);
+    // Una legge del giocatore nel 2026, l'anno dell'etichetta del governo uscente.
+    presenta(&mut p, &[("tetto_contante", "1000")]).unwrap();
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.chiudi_turno();
+    let voce = |p: &Partita, id: &str| {
+        (p.vista().disposizioni.into_iter())
+            .find(|d| d.id == id)
+            .unwrap()
+    };
+    let cuneo = voce(&p, "cuneo_fiscale");
+    assert_eq!(cuneo.legge, ETICHETTA_GOVERNO_USCENTE);
+    let tetto = voce(&p, "tetto_contante").nome;
+    assert_eq!(p.abbandona().unwrap().leggi_in_vigore, vec![tetto]);
 }
 
 #[test]

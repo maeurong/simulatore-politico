@@ -43,7 +43,8 @@ pub const LEVE: [(&str, f64, f64); 15] = [
 /// Leva che vale un regime per indice: un valore fra due interi non è nessun regime.
 const LEVA_INTERA: &str = "regime_pensioni";
 
-const LEGGE_ELETTORALE: &str = "L. 180/2026";
+/// La legge delle nove disposizioni elettorali nello scenario di base.
+pub(crate) const LEGGE_ELETTORALE: &str = "L. 180/2026";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -174,11 +175,13 @@ fn id_valori(l: &LeggeElettorale) -> [String; 9] {
     ]
 }
 
-/// Le nove disposizioni elettorali dal menu, con i valori dello scenario e quelli precedenti.
+/// Le nove disposizioni elettorali dal menu, con i valori dello scenario e quelli precedenti,
+/// tutte con la legge `legge`.
 pub(crate) fn elettorali(
     menu: &Menu,
     partenza: &LeggeElettorale,
     precedente: &LeggeElettorale,
+    legge: &str,
 ) -> Vec<DatoDisposizione> {
     let da_pb = |v: &[u16]| -> Vec<(String, String)> {
         v.iter().map(|&x| (x.to_string(), percento(x))).collect()
@@ -278,7 +281,7 @@ pub(crate) fn elettorali(
                 gruppi: Vec::new(),
                 perimetro: BTreeMap::new(),
                 partenza,
-                legge: LEGGE_ELETTORALE.into(),
+                legge: legge.into(),
                 precedente,
                 dopo_abrogazione: None,
                 in_arrivo: Vec::new(),

@@ -92,6 +92,16 @@ fn ingresso_dello_scenario_fuori_intervallo_rifiutato_col_nome() {
 }
 
 #[test]
+fn cursore_della_base_diverso_da_zero_rifiutato_col_nome() {
+    for nome in ["ricchezza", "eta_mediana", "orientamento"] {
+        let da = format!("[cursori.{nome}]\nvalore = 0.0");
+        let a = format!("[cursori.{nome}]\nvalore = 0.5");
+        let e = errore(sostituisci(file_base(), "scenario", &da, &a)).to_string();
+        assert!(e.contains(nome) && e.contains("0"), "{nome}: {e}");
+    }
+}
+
+#[test]
 fn manopola_mancante_rifiutata_col_nome() {
     let e = errore(sostituisci(
         file_base(),

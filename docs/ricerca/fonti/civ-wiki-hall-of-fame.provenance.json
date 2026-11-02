@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://civilization.fandom.com/api.php?action=parse&page=Hall_of_Fame&format=json&prop=text&formatversion=2&redirects=1", "sha256": "0010cb54d750071096aa92d2a541cc8a2d01e2d4006e0bb0c0911f9675b68d0f", "bytes": 3678}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}
