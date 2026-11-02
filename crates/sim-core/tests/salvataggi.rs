@@ -329,3 +329,58 @@ fn la_bozza_a_meta_turno_riprende_le_scelte() {
     q.chiudi_turno();
     assert!(p.salva().unwrap() == q.salva().unwrap());
 }
+
+#[test]
+fn la_testata_di_una_partita_finita_regge_un_salvataggio() {
+    let mut p = fondata(3.5);
+    p.chiudi_turno();
+    p.abbandona().unwrap();
+    let t = p.testata();
+    assert!(t.finita);
+    assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap().testata(), t);
+}
+
+#[test]
+fn la_serie_deve_arrivare_al_turno_corrente() {
+    let mut p = fondata(3.5);
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let guasti: [(&str, Guasto); 2] = [
+        ("troncata", |j| {
+            j["serie"].as_array_mut().unwrap().pop();
+        }),
+        ("oltre il turno", |j| {
+            let mut oltre = j["serie"][2].clone();
+            oltre["turno"] = 3.into();
+            j["serie"].as_array_mut().unwrap().push(oltre);
+        }),
+    ];
+    for (caso, f) in guasti {
+        let e = edita(&p, f).unwrap_err();
+        assert!(
+            matches!(&e, Errore::SalvataggioIlleggibile(m) if m.contains("serie")),
+            "{caso}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn l_albo_elenca_tutte_le_elezioni_la_piu_recente_per_prima() {
+    let mut p = fondata(3.5);
+    for _ in 0..400 {
+        if p.legislatura().elezioni.len() >= 2 || p.finita() {
+            break;
+        }
+        p.chiudi_turno();
+    }
+    assert!(p.legislatura().elezioni.len() >= 2, "meno di due elezioni");
+    if !p.finita() {
+        p.abbandona().unwrap();
+    }
+    let v = p.voce_albo().unwrap();
+    let date: Vec<_> = v.elezioni.iter().map(|e| e.data).collect();
+    let attese: Vec<_> = p.legislatura().elezioni.iter().map(|e| e.data).collect();
+    assert_eq!(date, attese);
+    let chiave = |t: &sim_core::Trimestre| (t.anno, t.trimestre);
+    assert!(date.windows(2).all(|w| chiave(&w[0]) > chiave(&w[1])));
+}
