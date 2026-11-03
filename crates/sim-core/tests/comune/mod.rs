@@ -8,6 +8,15 @@ use sim_core::{Comando, Errore, Partita};
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn file_base() -> FileDati {
+    a_riposo(file_vero())
+}
+
+/// I dati veri, con lo scarto dell'energia dello scenario (piano 9).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn file_vero() -> FileDati {
     FileDati {
         dicasteri: include_str!("../../../../dati/base/dicasteri.toml").into(),
         manopole: include_str!("../../../../dati/base/manopole.toml").into(),
@@ -19,7 +28,18 @@ pub fn file_base() -> FileDati {
         grandezze: include_str!("../../../../dati/base/grandezze.toml").into(),
         atti: include_str!("../../../../dati/base/atti.toml").into(),
         disposizioni: include_str!("../../../../dati/base/disposizioni.toml").into(),
+        eventi: include_str!("../../../../dati/base/eventi.toml").into(),
     }
+}
+
+/// `f` con lo scarto dell'energia dello scenario a 0: economia a riposo al turno zero, come i test
+/// che non misurano l'energia la presuppongono (piano 9, Task 3).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn a_riposo(f: FileDati) -> FileDati {
+    con_ingresso(f, "energia", 0.0)
 }
 
 #[allow(
@@ -30,13 +50,23 @@ pub fn dati_base() -> DatiGioco {
     DatiGioco::da_testi(&file_base()).expect("i dati di base devono essere validi")
 }
 
-/// Come `file_base()`, con `valore = 0.0` in ogni sezione `sigma_*` delle manopole.
+/// Come `file_base()`, con `valore = 0.0` in ogni sezione `sigma_*` delle manopole e `sigma = 0.0`
+/// in ogni `[[deriva]]`.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
 )]
 pub fn senza_shock() -> FileDati {
-    let mut f = file_base();
+    a_riposo(senza_shock_vero())
+}
+
+/// `senza_shock()` con lo scarto dell'energia dello scenario vero.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn senza_shock_vero() -> FileDati {
+    let mut f = file_vero();
     let mut dentro = false;
     let mut azzerate = 0;
     f.manopole = f
@@ -57,6 +87,8 @@ pub fn senza_shock() -> FileDati {
         .join("\n")
         + "\n";
     assert!(azzerate > 0, "nessuna manopola sigma_ azzerata");
+    // Anche il rumore delle `[[deriva]]` di grandezze.toml.
+    f = riscrivi(f, "grandezze", "sigma = ", "sigma = 0.0");
     f
 }
 
@@ -128,6 +160,7 @@ fn testo_di<'a>(f: &'a mut FileDati, file: &str) -> &'a mut String {
         "grandezze" => &mut f.grandezze,
         "atti" => &mut f.atti,
         "disposizioni" => &mut f.disposizioni,
+        "eventi" => &mut f.eventi,
         _ => panic!("file di dati sconosciuto: {file}"),
     }
 }

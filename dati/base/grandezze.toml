@@ -207,8 +207,8 @@ dinamica = "fissa"
 verso = "scende"
 regionale = false
 iniziale = 100.0
-min = 0.0
-max = 200.0
+min = 1.0
+max = 600.0
 dicasteri = ["interno"]
 
 [[grandezza]]
@@ -232,3 +232,34 @@ iniziale = 0.0
 min = -5.0
 max = 5.0
 dicasteri = ["lavoro_welfare"]
+
+# Deriva e rumore delle grandezze fisse (piano 9). Per trimestre; `tasso` e `sigma` sono frazioni.
+# Lineare: base ← base·(1 + tasso + sigma·z) + ritorno·(iniziale − base).
+# Logaritmica: ln(base/iniziale) ← (1 − ritorno)·ln(base/iniziale) + tasso + sigma·z.
+# Dopo il passo la base sta in min-max. Una normale dal flusso Eventi per riga, nell'ordine.
+
+# situazioni-ed-eventi-al-turno-zero:58 e :93, +0,9% a trimestre, σ ~0,75%.
+[[deriva]]
+grandezza = "sovraffollamento_carceri"
+tasso = 0.009
+sigma = 0.0075
+ritorno = 0.0
+logaritmica = false
+
+# situazioni-ed-eventi-al-turno-zero:75 e :94, σ log 0,50 a trimestre, deriva nulla; ritorno 0,2
+# assunzione del piano 9: la σ stazionaria (0,83) sta fra la trimestrale (0,50) e l'annua (0,74).
+[[deriva]]
+grandezza = "immigrazione_irregolare"
+tasso = 0.0
+sigma = 0.5
+ritorno = 0.2
+logaritmica = true
+
+# situazioni-ed-eventi-al-turno-zero:95, rumore trimestrale ≤1%; la ricerca dà solo una deriva
+# lenta [INF], senza tasso: assunto nullo.
+[[deriva]]
+grandezza = "corruzione"
+tasso = 0.0
+sigma = 0.005
+ritorno = 0.0
+logaritmica = false

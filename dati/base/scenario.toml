@@ -211,10 +211,10 @@ max = 400.0
 fonte = "economia-italiana-parametri:117, nessun evento al turno zero; pb"
 
 [energia]
-valore = 0.0
+valore = 11.0
 min = -50.0
 max = 100.0
-fonte = "nessuno scostamento al turno zero: lo shock in corso sta già nell'inflazione; scostamento %"
+fonte = "situazioni-ed-eventi-al-turno-zero:62-68, scarto 11: l'energia +80% per la quota dell'energia nelle importazioni (0,15-0,2) dà 12-16, e con 14 il rientro porta l'IPCA del primo anno a -0,5 (misura del 02/11), con 11 a +0,39; assunzione del piano 9; scostamento % del costo delle importazioni"
 
 [domanda_estera]
 valore = 0.0

@@ -12,7 +12,7 @@ use crate::partiti::{MASSIMO_PARTITI, Regola, Vocazione};
 pub(super) const ELEZIONI_SENZA_SEGGI: u8 = 2;
 
 /// `x` con un decimale e la virgola.
-pub(super) fn virgola(x: f64) -> String {
+pub(crate) fn virgola(x: f64) -> String {
     format!("{x:.1}").replace('.', ",")
 }
 

@@ -1,6 +1,6 @@
 //! Posizioni che tornano all'ancora e voto logit con astensione e fedeltà al voto precedente.
 
-use super::{Elettorato, PER_REGIONE, condizione_di, fascia_di};
+use super::{Elettorato, PER_REGIONE, PUNTI, condizione_di, fascia_di};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::legislatura::Spinte;
@@ -179,6 +179,19 @@ fn stazionaria(t: &[Vec<f64>]) -> Vec<f64> {
 }
 
 impl Elettorato {
+    /// Una situazione che spinge a destra (sbarchi, criminalità): in ogni gruppo `quota` della
+    /// massa di ogni punto passa al successivo, dal sesto al primo, così nessuna massa fa due
+    /// passi. Prima dell'ancora, che la riporta indietro.
+    pub fn spingi_a_destra(&mut self, quota: f64) {
+        for g in &mut self.gruppi {
+            for k in (0..PUNTI - 1).rev() {
+                let passa = quota * g.posizione[k];
+                g.posizione[k] -= passa;
+                g.posizione[k + 1] += passa;
+            }
+        }
+    }
+
     /// Ancora di Friedkin-Johnsen senza influenza fra gruppi, poi rumore: sette normali per
     /// gruppo anche con rumore zero, così il flusso avanza sempre dello stesso numero.
     pub fn posizioni(&mut self, dati: &DatiGioco, caso: &mut Caso) {

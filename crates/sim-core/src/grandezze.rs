@@ -3,6 +3,7 @@
 //! verso l'obiettivo; la vista le mostra con un turno di ritardo.
 
 use crate::atti::Forma;
+use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::economia::{Bilancio, Economia};
 use crate::errore::Errore;
@@ -17,7 +18,7 @@ pub enum Dinamica {
     Servizio,
     /// La base segue i salari di tutti i dicasteri.
     Turnover,
-    /// La base resta all'iniziale: la muovono solo gli effetti.
+    /// La base resta all'iniziale (o segue la sua `[[deriva]]`): la muovono gli effetti.
     Fissa,
 }
 
@@ -51,6 +52,30 @@ pub struct DatoGrandezza {
     pub max: f64,
     /// Dicasteri i cui atti possono muoverla.
     pub dicasteri: Vec<String>,
+}
+
+/// Deriva e rumore di una grandezza `fissa`, per trimestre (vedi `grandezze.toml`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DatoDeriva {
+    pub grandezza: String,
+    pub tasso: f64,
+    pub sigma: f64,
+    /// Quota dello scarto dall'iniziale che rientra a ogni passo, in 0-1.
+    pub ritorno: f64,
+    /// Passo aleatorio in logaritmo invece che relativo.
+    pub logaritmica: bool,
+}
+
+impl DatoDeriva {
+    /// La base dopo un passo con la normale `z`, ancora da limitare a min-max.
+    fn passo(&self, base: f64, iniziale: f64, z: f64) -> f64 {
+        let spinta = self.tasso + self.sigma * z;
+        if self.logaritmica {
+            iniziale * ((1.0 - self.ritorno) * (base / iniziale).ln() + spinta).exp()
+        } else {
+            base * (1.0 + spinta) + self.ritorno * (iniziale - base)
+        }
+    }
 }
 
 /// Effetto di un atto o di una disposizione già registrato: `intensita` è quella corretta per
@@ -137,9 +162,26 @@ impl Grandezze {
         }
     }
 
-    /// Un passo: `prima ← valori`, poi la base verso l'obiettivo, poi i valori.
-    pub fn avanza(&mut self, dati: &DatiGioco, e: &Economia, turno: u32) {
+    /// Un passo: `prima ← valori`, poi la deriva delle fisse e la base verso l'obiettivo, poi i
+    /// valori. Una normale da `Flusso::Eventi` per deriva, nell'ordine; senza `caso` niente rumore.
+    pub fn avanza(
+        &mut self,
+        dati: &DatiGioco,
+        mut caso: Option<&mut Caso>,
+        e: &Economia,
+        turno: u32,
+    ) {
         self.prima.clone_from(&self.valori);
+        for d in dati.derive() {
+            let z = caso.as_mut().map_or(0.0, |c| c.normale(Flusso::Eventi));
+            // `valida` garantisce che la grandezza c'è.
+            if let Some(k) = dati.grandezze().iter().position(|g| g.id == d.grandezza) {
+                let g = &dati.grandezze()[k];
+                for b in &mut self.basi[k] {
+                    *b = d.passo(*b, g.iniziale, z).clamp(g.min, g.max);
+                }
+            }
+        }
         let (v_serv, v_turn, elast) = (
             dati.manopola("velocita_servizio"),
             dati.manopola("velocita_turnover"),
@@ -150,7 +192,9 @@ impl Grandezze {
         for (k, g) in dati.grandezze().iter().enumerate() {
             let (rapporto, velocita) = match g.dinamica {
                 Dinamica::Fissa => {
-                    self.basi[k].fill(g.iniziale);
+                    if !dati.derive().iter().any(|d| d.grandezza == g.id) {
+                        self.basi[k].fill(g.iniziale);
+                    }
                     continue;
                 }
                 Dinamica::Turnover => (s / s0, v_turn),
@@ -333,7 +377,7 @@ mod test {
             d.acquisti /= 2;
         }
         let mut g = Grandezze::iniziali(&dati);
-        g.avanza(&dati, &e, 0);
+        g.avanza(&dati, None, &e, 0);
         let valore = |id: &str| g.nazionale(&dati, dati.grandezza(id).unwrap());
         assert!(valore("durata_processi") > 100.0);
         assert!(valore("qualita_servizio_sanitario") < 100.0);

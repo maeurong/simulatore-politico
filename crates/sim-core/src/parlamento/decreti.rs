@@ -1,10 +1,12 @@
-//! Decreti: valgono subito, a fine turno sono convertiti o decadono; materie escluse e niente
+//! Decreti: a fine turno sono convertiti o decadono (i fondi valgono subito, le disposizioni
+//! entrano alla conversione); materie escluse e niente
 //! reiterazione di un decreto decaduto (iter-legislativo-italiano:12-15, 20-23, 67).
 
 use super::{ValoreProposto, ko};
 use crate::dati::DatiGioco;
 use crate::disposizioni::Norma;
 use crate::errore::Errore;
+use crate::eventi::Inneschi;
 use crate::partita::LIMITE_EURO;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -103,13 +105,45 @@ impl FondiDecreto {
     }
 }
 
-/// `EmanaDecreto`: rende `(da, a, importo)` dei fondi spostati, con `spostabili` il massimo
-/// spostabile da ogni dicastero. Un decreto su disposizioni non ha mai un innesco: non ci sono eventi aperti.
+/// Il decreto su disposizioni è ammesso se ogni disposizione è ordinaria e il suo dicastero sta
+/// negli `inneschi`. Il resto (legge vuota, ripetuta, gradino sconosciuto, già in
+/// vigore o bloccato, in esame, respinta da poco) lo controlla `Parlamento::bozza`, dopo questo.
 ///
 /// # Errors
-/// `Comando`, nell'ordine: disposizione sconosciuta, materia esclusa (elettorale e
-/// costituzionale), decreto senza innesco; dicastero sconosciuto, stesso dicastero, importo non
-/// positivo, margine insufficiente, decreto decaduto con la stessa firma.
+/// `Comando`, nell'ordine per valore: disposizione sconosciuta, materia esclusa (elettorale e
+/// costituzionale), decreto senza innesco.
+pub(crate) fn ammetti_disposizioni(
+    dati: &DatiGioco,
+    inneschi: &Inneschi,
+    valori: &[ValoreProposto],
+) -> Result<(), Errore> {
+    for v in valori {
+        let Some(k) = dati.disposizione(&v.disposizione) else {
+            return ko(format!("disposizione sconosciuta: {}", v.disposizione));
+        };
+        let x = &dati.disposizioni()[k];
+        if x.norma != Norma::Ordinaria {
+            return ko(format!("materia esclusa dal decreto: {}", x.nome));
+        }
+        let dicastero =
+            (x.dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|d| &d.id == id));
+        if dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i)) {
+            return ko(format!(
+                "decreto senza innesco: nessun evento aperto per «{}»",
+                x.nome
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// `EmanaDecreto` sui fondi: rende `(da, a, importo)` dei fondi spostati, con `spostabili` il
+/// massimo spostabile da ogni dicastero. Il decreto su disposizioni è `ammetti_disposizioni`.
+///
+/// # Errors
+/// `Comando`, nell'ordine: dicastero sconosciuto, stesso dicastero, importo non positivo, margine
+/// insufficiente, decreto decaduto con la stessa firma; un decreto su disposizioni non è dei
+/// fondi.
 pub(crate) fn ammetti(
     dati: &DatiGioco,
     decaduti: &[FondiDecreto],
@@ -117,18 +151,7 @@ pub(crate) fn ammetti(
     decreto: &Decreto,
 ) -> Result<(usize, usize, i64), Errore> {
     let (da, a, importo) = match decreto {
-        Decreto::Disposizioni { valori } => {
-            for v in valori {
-                let Some(k) = dati.disposizione(&v.disposizione) else {
-                    return ko(format!("disposizione sconosciuta: {}", v.disposizione));
-                };
-                let x = &dati.disposizioni()[k];
-                if x.norma != Norma::Ordinaria {
-                    return ko(format!("materia esclusa dal decreto: {}", x.nome));
-                }
-            }
-            return ko("decreto senza innesco: serve un evento aperto".into());
-        }
+        Decreto::Disposizioni { .. } => return ko("decreto su disposizioni, non sui fondi".into()),
         Decreto::Fondi { da, a, importo } => (da, a, *importo),
     };
     let indice = |id: &str| {

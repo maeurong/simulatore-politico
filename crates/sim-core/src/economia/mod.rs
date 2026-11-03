@@ -147,7 +147,7 @@ impl Economia {
                 .collect(),
             energia: s.energia.valore,
             domanda_estera: s.domanda_estera.valore,
-            prezzi_settori: prezzi_settori(dati, 0.0),
+            prezzi_settori: prezzi_settori(dati, s.energia.valore),
             gap_settori: vec![gap; dati.struttura().settori.len()],
             inflazione_importata: 0.0,
             area_euro: AreaEuro {

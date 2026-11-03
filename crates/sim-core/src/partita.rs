@@ -10,6 +10,7 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
+use crate::eventi::{Bersaglio, EffettoOpzione, Eventi, situazioni};
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
 use crate::legislatura::{
@@ -30,17 +31,17 @@ use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
     VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
-    VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VocePartito, VoceProgramma,
-    VocePromessa,
+    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione, VocePartito,
+    VoceProgramma, VocePromessa, VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
 mod ia;
-mod vita;
+pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 11;
+pub const VERSIONE_SCHEMA: u32 = 12;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,6 +104,7 @@ pub struct Partita {
     disposizioni: Disposizioni,
     parlamento: Parlamento,
     intesa: Intesa,
+    eventi: Eventi,
     /// Indice del partito del giocatore.
     giocatore: usize,
     legislatura: Legislatura,
@@ -263,6 +265,7 @@ impl Partita {
             };
             (uscente, governo.presidente, legislatura)
         };
+        let eventi = Eventi::iniziali(&dati);
         let ministri = Ministri::iniziali(
             &Contesto {
                 dati: &dati,
@@ -272,6 +275,7 @@ impl Partita {
                 economia: &economia,
                 sondaggio: &informazione.sondaggio,
                 disposizioni: &disposizioni,
+                eventi: &eventi,
                 parlamento: &parlamento,
                 indice_prezzi: informazione.statistica.indice_prezzi,
                 turno: 0,
@@ -282,6 +286,7 @@ impl Partita {
         let mut p = Partita {
             parlamento,
             intesa: Intesa::iniziale(&dati, partiti.len()),
+            eventi,
             misure: Misure::neutre(&dati),
             disposizioni,
             versione_schema: VERSIONE_SCHEMA,
@@ -312,8 +317,21 @@ impl Partita {
             x.regola = Regola::Sticker;
         }
         p.partenza = p.indicatori();
+        // Accese al turno zero senza evento: sono lo stato del paese, non una novità.
+        let misure = p.misure_situazioni(false);
+        situazioni::aggiorna(&p.dati, &mut p.eventi, &misure);
         p.registra_punto();
         p
+    }
+
+    fn misure_situazioni(&self, ufficiale: bool) -> Vec<f64> {
+        situazioni::misure(
+            &self.dati,
+            &self.grandezze,
+            &self.economia,
+            &self.informazione.statistica,
+            ufficiale,
+        )
     }
 
     /// Il partito `p` in coda con l'id `nuovo_<indice>` (quello di `p` non conta), coi vettori per
@@ -400,7 +418,8 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → turni da presidente, in fase ordinaria →
+    // svuotamento delle mosse IA del turno prima → eventi aperti risolti (opzione scelta o default,
+    // senza estrazioni) → turni da presidente, in fase ordinaria →
     // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
     // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
@@ -408,7 +427,8 @@ impl Partita {
     // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
     // dimissioni → verifica delle promesse, campagna e promesse IA, spesa, nel turno del voto →
     // motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
-    // convincere della campagna, posizioni, sondaggio, statistica) → voto,
+    // convincere della campagna, spinta delle situazioni accese, posizioni, sondaggio,
+    // statistica, situazioni e nascita degli eventi) → voto,
     // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
     // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
     // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
@@ -428,6 +448,7 @@ impl Partita {
             return;
         }
         self.mosse.clear();
+        self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
@@ -486,7 +507,7 @@ impl Partita {
         self.economia
             .passo(&self.dati, &mut self.caso, self.data, &self.misure);
         self.grandezze
-            .avanza(&self.dati, &self.economia, self.turno);
+            .avanza(&self.dati, Some(&mut self.caso), &self.economia, self.turno);
         self.elettorato
             .aggiorna_redditi(&self.dati, &self.economia, &self.misure);
         self.elettorato.giudizio(
@@ -500,6 +521,14 @@ impl Partita {
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
+        // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
+        // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
+        // `situazioni::aggiorna` le cambia dopo la statistica, più sotto.
+        let spinte = (self.dati.situazioni().iter().zip(&self.eventi.accese))
+            .filter(|(s, accesa)| s.spinta && **accesa)
+            .count();
+        self.elettorato
+            .spingi_a_destra(spinte as f64 * self.dati.manopola("spinta_situazione"));
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
         self.informazione.rileva(
@@ -515,6 +544,19 @@ impl Partita {
             &self.economia,
             reale_prima,
             self.data,
+        );
+        // Subito dopo la statistica e prima del `Contesto` di `ministri.apri`: l'innesco «evento
+        // nel dicastero» delle proposte deve vedere gli eventi appena nati.
+        let misure = self.misure_situazioni(false);
+        let nuove = situazioni::aggiorna(&self.dati, &mut self.eventi, &misure);
+        // L'innesco legge il vero, la causa mostrata il valore ufficiale (come `situazioni()`).
+        let ufficiali = self.misure_situazioni(true);
+        situazioni::apri(
+            &self.dati,
+            &mut self.eventi,
+            &nuove,
+            &ufficiali,
+            self.turno.saturating_add(1),
         );
         self.incassa(&vero);
         if di_voto {
@@ -585,6 +627,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -630,6 +673,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -651,6 +695,7 @@ impl Partita {
             economia: &self.economia,
             sondaggio: &self.informazione.sondaggio,
             disposizioni: &self.disposizioni,
+            eventi: &self.eventi,
             parlamento: &self.parlamento,
             indice_prezzi: self.informazione.statistica.indice_prezzi,
             turno: self.turno,
@@ -931,7 +976,9 @@ impl Partita {
     fn entra_in_vigore(&mut self, m: &Misura) {
         let (turno, anno) = (self.turno, self.data.anno);
         let legge = etichetta_legge(m.id, anno);
-        // Bilancio e conversioni non hanno valori: non sono leggi dell'eredità.
+        // Il bilancio e la conversione di un decreto sui fondi non hanno valori: non sono leggi
+        // dell'eredità. Il decreto su disposizioni convertito sì, e se il governo è del giocatore
+        // conta come sua legge.
         if !m.valori.is_empty() && self.del_giocatore(m) {
             self.leggi_del_giocatore.push((m.id, anno));
         }
@@ -1637,6 +1684,10 @@ impl Partita {
     pub fn anteprima_decreto(&self, decreto: &Decreto) -> Result<Anteprima, Errore> {
         self.di_governo()?;
         self.fuori_dalla_crisi()?;
+        if let Decreto::Disposizioni { valori } = decreto {
+            let m = self.conversione_disposizioni(valori)?;
+            return Ok(self.anteprima_conversione(&m, m.proponente));
+        }
         let (da, a, importo) = parlamento::ammetti(
             &self.dati,
             &self.parlamento.decaduti,
@@ -1644,7 +1695,7 @@ impl Partita {
             decreto,
         )?;
         let fondi = FondiDecreto::Spostati { da, a, importo };
-        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), a))
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), Some(a)))
     }
 
     /// L'anteprima del decreto che `Accogli` produrrebbe per la proposta di fondi del
@@ -1676,12 +1727,12 @@ impl Partita {
             atto,
             importo,
         };
-        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), i))
+        Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), Some(i)))
     }
 
     /// L'anteprima della conversione `m`, con la capacità del ministro del dicastero `proponente`.
-    fn anteprima_conversione(&self, m: &Misura, proponente: usize) -> Anteprima {
-        let capacita = (self.ministri.dicasteri.get(proponente))
+    fn anteprima_conversione(&self, m: &Misura, proponente: Option<usize>) -> Anteprima {
+        let capacita = (proponente.and_then(|i| self.ministri.dicasteri.get(i)))
             .and_then(|st| st.ministro.as_ref())
             .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
         parlamento::anteprima(
@@ -1825,8 +1876,14 @@ impl Partita {
     /// `EmanaDecreto` (storia 46): sposta `importo` da margine e spesa di `da` a quelli di `a`,
     /// nel bilancio in vigore e nei margini residui, anche nell'esercizio provvisorio (scelta 12).
     /// Il ministro di `da` paga `FondiTolti` come un taglio di `100 · importo / spesa` punti.
-    /// Spostabile: vedi `spostabili`.
+    /// Spostabile: vedi `spostabili`. Un decreto su disposizioni non muove fondi: apre la
+    /// conversione (`conversione_disposizioni`), e le disposizioni entrano in vigore se convertita.
     pub(crate) fn emana_decreto(&mut self, decreto: &Decreto) -> Result<(), Errore> {
+        if let Decreto::Disposizioni { valori } = decreto {
+            let m = self.conversione_disposizioni(valori)?;
+            self.parlamento.metti_in_calendario(m);
+            return Ok(());
+        }
         let b = self.economia.bilancio_in_vigore(self.data);
         let spostabili = self.spostabili();
         let decaduti = &self.parlamento.decaduti;
@@ -1841,6 +1898,24 @@ impl Partita {
         let fondi = FondiDecreto::Spostati { da, a, importo };
         self.parlamento.apri_conversione(self.turno, fondi);
         Ok(())
+    }
+
+    /// La conversione del decreto su disposizioni `valori`, innescato dagli eventi aperti: una
+    /// legge ordinaria dei dicasteri innescati, che per il resto passa i controlli di
+    /// `PresentaLegge` (già in vigore, bloccata, in esame, respinta da poco), votata a fine turno.
+    /// Entra in vigore se convertita (`entra_in_vigore`); decaduta non applica nulla, e il blocco
+    /// delle respinte è la non reiterazione (iter-legislativo-italiano:20).
+    fn conversione_disposizioni(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
+        let inneschi = self.eventi.inneschi(&self.dati);
+        parlamento::ammetti_disposizioni(&self.dati, &inneschi, valori)?;
+        let bozza = self
+            .parlamento
+            .bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        Ok(Misura {
+            forma: FormaMisura::Conversione,
+            voto: self.turno,
+            ..bozza
+        })
     }
 
     /// `importo` passa da margine e spesa di `da` a quelli di `a` nel bilancio in vigore, e fra i
@@ -3645,7 +3720,146 @@ impl Partita {
                     .map(|p| p.campagna.clone())
                     .unwrap_or_default(),
             },
+            eventi: self.voci_eventi(),
+            situazioni: self.situazioni(),
         }
+    }
+
+    /// Le sei situazioni coi valori ufficiali e le soglie, mai la probabilità.
+    pub fn situazioni(&self) -> Vec<VoceSituazione> {
+        let valori = self.misure_situazioni(true);
+        (self.dati.situazioni().iter().zip(valori))
+            .zip(&self.eventi.accese)
+            .map(|((s, valore), &accesa)| VoceSituazione {
+                nome: s.nome.clone(),
+                misura: s.misura.clone(),
+                valore,
+                accensione: s.accensione,
+                spegnimento: s.spegnimento,
+                accesa,
+            })
+            .collect()
+    }
+
+    fn voci_eventi(&self) -> Vec<VoceEvento> {
+        if self.finita() {
+            return Vec::new();
+        }
+        (self.eventi.aperti.iter())
+            .map(|a| {
+                // `Eventi::controlla` garantisce che l'evento aperto stia nel catalogo.
+                let e = &self.dati.eventi()[a.evento];
+                let bersaglio = a.bersaglio.and_then(|b| match b {
+                    Bersaglio::Leader { partito } => {
+                        self.partiti.get(partito).map(|p| p.leader.clone())
+                    }
+                    Bersaglio::Ministro { dicastero } => (self.ministri.dicasteri.get(dicastero))
+                        .and_then(|st| st.ministro.as_ref())
+                        .map(|m| m.nome.clone()),
+                });
+                VoceEvento {
+                    nome: e.nome.clone(),
+                    famiglia: e.famiglia,
+                    causa: a.causa.testo(&self.dati),
+                    tono: a.tono,
+                    regione: a
+                        .regione
+                        .and_then(|r| self.dati.regioni().get(r))
+                        .map(|r| r.nome.clone()),
+                    bersaglio,
+                    opzioni: (e.opzioni.iter())
+                        .map(|o| VoceOpzione {
+                            id: o.id.clone(),
+                            nome: o.nome.clone(),
+                            default: o.default,
+                        })
+                        .collect(),
+                    scelta: a.scelta,
+                }
+            })
+            .collect()
+    }
+
+    /// Alla chiusura: ogni evento aperto vale con l'opzione scelta o col default. Le grandezze
+    /// entrano negli effetti, come quelli degli atti ma senza capacità del ministro.
+    fn risolvi_eventi(&mut self) {
+        for (aperto, opzione) in self.eventi.risolvi(&self.dati) {
+            for effetto in &opzione.effetti {
+                match effetto {
+                    EffettoOpzione::Grandezza {
+                        grandezza,
+                        intensita,
+                        ritardo,
+                        forma,
+                        durata,
+                    } => {
+                        let Some(k) = self.dati.grandezza(grandezza) else {
+                            continue;
+                        };
+                        self.grandezze.effetti.push(EffettoAttivo {
+                            grandezza: k,
+                            regione: aperto
+                                .regione
+                                .filter(|_| self.dati.grandezze()[k].regionale),
+                            dicastero: None,
+                            disposizione: None,
+                            intensita: *intensita,
+                            inizio: self.turno.saturating_add(*ritardo),
+                            forma: *forma,
+                            durata: *durata,
+                        });
+                    }
+                    EffettoOpzione::Valence { delta } => {
+                        let del_ministro = |d: usize| {
+                            (self.ministri.dicasteri.get(d))
+                                .and_then(|st| st.ministro.as_ref())
+                                .map(|m| m.partito)
+                        };
+                        let partito = match aperto.bersaglio {
+                            Some(Bersaglio::Leader { partito }) => Some(partito),
+                            Some(Bersaglio::Ministro { dicastero }) => del_ministro(dicastero),
+                            None => None,
+                        }
+                        .unwrap_or(self.governo.presidente);
+                        if let Some(p) = self.partiti.get_mut(partito) {
+                            p.valence += delta;
+                        }
+                    }
+                    // Gli altri effetti li applicano i task che li introducono; `valida` li
+                    // rifiuta nei dati finché non ci sono.
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    /// Il giocatore risponde a un evento aperto con l'opzione `opzione` (id); la risposta si può
+    /// cambiare fino alla chiusura.
+    ///
+    /// # Errors
+    /// `Comando` a partita finita, se il giocatore non governa, per un indice che non è in
+    /// `aperti` o un'opzione che l'evento non ha; la partita resta identica.
+    pub(crate) fn rispondi_evento(&mut self, evento: usize, opzione: &str) -> Result<(), Errore> {
+        let ko = |m: String| Err(Errore::Comando(m));
+        if self.finita() {
+            return ko("La partita è finita".into());
+        }
+        if !self.governa() {
+            return ko("Solo il governo risponde agli eventi".into());
+        }
+        let Some(aperto) = self.eventi.aperti.get_mut(evento) else {
+            return ko(format!("Nessun evento aperto con numero {evento}"));
+        };
+        // `Eventi::controlla` garantisce che l'evento aperto stia nel catalogo.
+        let dato = &self.dati.eventi()[aperto.evento];
+        let Some(k) = dato.opzioni.iter().position(|o| o.id == opzione) else {
+            return ko(format!(
+                "Opzione sconosciuta per «{}»: «{opzione}»",
+                dato.nome
+            ));
+        };
+        aperto.scelta = Some(k);
+        Ok(())
     }
 
     /// Sotto un governo IA nessuna: l'intesa è quella col giocatore, come in `quadro()`.
@@ -3783,6 +3997,7 @@ impl Partita {
             partita.legislatura.totali,
         )?;
         partita.intesa.controlla(n, partita.turno)?;
+        partita.eventi.controlla(&partita.dati, n, partita.turno)?;
         partita.controlla_partiti()?;
         partita
             .ministri
@@ -4406,6 +4621,61 @@ mod tests {
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
         p
+    }
+
+    /// Innesco 4: con un evento aperto nel suo dicastero che ammette il decreto, il ministro
+    /// propone la disposizione che migliora la misura dell'evento. Gli eventi non nascono ancora
+    /// prima dell'apertura (task 3): qui li si apre a mano e si rifà l'apertura.
+    #[test]
+    fn evento_nel_dicastero_da_una_proposta() {
+        let dati = dati_base();
+        let i = dati
+            .dicasteri()
+            .iter()
+            .position(|d| d.id == "interno")
+            .unwrap();
+        let evento = dati.evento("criminalita").unwrap();
+        let mut p = Partita::nuova(dati_base(), 1);
+        p.ministri.dicasteri[i].proposta = None;
+        p.eventi.aperti.push(crate::eventi::EventoAperto {
+            evento,
+            turno: p.turno,
+            causa: crate::eventi::Causa::Soglia {
+                misura: "sicurezza".into(),
+                valore: 80.0,
+                soglia: 85.0,
+            },
+            regione: None,
+            bersaglio: None,
+            tono: crate::eventi::Tono::Ordinario,
+            costo: 0,
+            scelta: None,
+        });
+        let mut senza = Partita::carica(&p.salva().unwrap()).unwrap();
+        senza.eventi.aperti.clear();
+        p.con_contesto(|m, cx, caso| m.apri(cx, caso));
+        let prop = p.ministri.dicasteri[i].proposta.unwrap();
+        let diffusa = dati.disposizione("accoglienza").unwrap();
+        let g = dati.disposizioni()[diffusa].gradino("diffusa").unwrap();
+        let crate::ministri::TipoProposta::Riforma {
+            disposizione,
+            gradino,
+            sblocca,
+            evento: e,
+        } = prop.tipo
+        else {
+            panic!("{prop:?}")
+        };
+        assert_eq!(
+            (disposizione, gradino, sblocca, e),
+            (diffusa, g, None, Some(evento))
+        );
+        // Senza l'evento la stessa apertura non propone quella riforma.
+        senza.con_contesto(|m, cx, caso| m.apri(cx, caso));
+        assert_ne!(
+            senza.ministri.dicasteri[i].proposta.map(|x| x.tipo),
+            Some(prop.tipo)
+        );
     }
 
     /// La riforma dell'età pensionabile a 70 anni, presentata ma non in calendario.
