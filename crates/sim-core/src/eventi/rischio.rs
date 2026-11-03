@@ -18,10 +18,6 @@ pub(crate) struct Candidato {
 }
 
 /// Il livello di rischio per la causa: la vista non mostra mai la probabilità in cifre.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "lo usano le famiglie dei task 6-8")
-)]
 pub(crate) fn livello(p: f64) -> Fascia3 {
     if p < 0.05 {
         Fascia3::Poco
@@ -34,7 +30,8 @@ pub(crate) fn livello(p: f64) -> Fascia3 {
 
 /// Una uniforme da `Flusso::Eventi` per candidato, nell'ordine, a prescindere dagli esiti: esce chi
 /// ha `u < p`. Restituisce l'indice del vincitore (gravità più alta, a parità il primo) e quelli
-/// degli altri usciti.
+/// degli altri usciti. Una `p` non finita non è difesa qui: con NaN `u < p` è falso e il candidato
+/// non esce mai, `p >= 1` esce sempre, `p <= 0` mai; i candidati nascono dai dati validati, con `p` in 0-1.
 pub(crate) fn estrai(caso: &mut Caso, candidati: &[Candidato]) -> (Option<usize>, Vec<usize>) {
     let usciti: Vec<usize> = (candidati.iter().enumerate())
         .filter_map(|(i, c)| (caso.uniforme(Flusso::Eventi) < c.p).then_some(i))

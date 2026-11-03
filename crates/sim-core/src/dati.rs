@@ -268,6 +268,18 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valence_sfiducia_respinta",
     "soglia_incrinata",
     "soglia_emendamento_bilancio",
+    "sisma_minimo",
+    "emergenze_idro_anno",
+    "siccita_anno",
+    "k_prevenzione_sisma",
+    "k_prevenzione_altre",
+    "costo_emergenza_lieve",
+    "costo_emergenza_grave",
+    "costo_emergenza_vittime",
+    "valence_emergenza_risposta",
+    "valence_emergenza_ignorata",
+    "danno_stock_per_miliardo",
+    "emivita_danno",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.

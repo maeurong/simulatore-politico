@@ -23,6 +23,17 @@ pub enum Macroarea {
     Mezzogiorno,
 }
 
+/// Pericolosità naturale della regione (piano 9), da `docs/ricerca/dati/pericolosita-naturale-regioni.md`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Pericolosita {
+    /// Probabilità trimestrale di un sisma Mw >= 5,5; zero vuol dire «solo il minimo».
+    pub sisma: f64,
+    /// Quota nazionale delle emergenze idrogeologiche: sommano a 1 (entro 0,01) fra le regioni.
+    pub idro: f64,
+    /// Quota dei trimestri con un incendio grande; il terzo la moltiplica per 3,5.
+    pub incendi: f64,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Regione {
     pub id: String,
@@ -34,6 +45,7 @@ pub struct Regione {
     pub okun: f64,
     /// Quota di ogni settore nel valore aggiunto della regione.
     pub mix: BTreeMap<String, f64>,
+    pub pericolosita: Pericolosita,
 }
 
 #[derive(Deserialize)]
@@ -138,6 +150,18 @@ impl Struttura {
             for (s, &q) in &r.mix {
                 non_negativo(q, || format!("mix di {} per il settore {s}", r.id))?;
             }
+            let h = &r.pericolosita;
+            for (nome, x) in [("sisma", h.sisma), ("idro", h.idro), ("incendi", h.incendi)] {
+                controlla(x, (0.0..=1.0).contains(&x), "finito in [0, 1]", || {
+                    format!("pericolosita.{nome} di {}", r.id)
+                })?;
+            }
+        }
+        let idro: f64 = regioni.iter().map(|r| r.pericolosita.idro).sum();
+        if (idro - 1.0).abs() > 0.01 {
+            return incoerente(&format!(
+                "i pesi pericolosita.idro delle regioni sommano {idro}: devono sommare 1 entro 0,01"
+            ));
         }
         for d in dicasteri {
             let spese = [

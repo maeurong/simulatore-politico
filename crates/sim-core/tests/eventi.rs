@@ -15,7 +15,8 @@ fn con_evento_di_prova() -> Partita {
 fn con_evento(p: Partita) -> Partita {
     let evento = dati_base().evento("criminalita").unwrap();
     edita(&p, |j| {
-        j["eventi"]["aperti"] = json!([{
+        // In testa (indice 0), davanti a quelli che il caso ha gia' aperto (le emergenze).
+        let prova = json!({
             "evento": evento,
             "turno": p.vista().turno,
             "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
@@ -24,7 +25,11 @@ fn con_evento(p: Partita) -> Partita {
             "tono": "ordinario",
             "costo": 0,
             "scelta": null,
-        }]);
+        });
+        j["eventi"]["aperti"]
+            .as_array_mut()
+            .unwrap()
+            .insert(0, prova);
     })
     .unwrap()
 }
@@ -49,10 +54,11 @@ fn sicurezza(p: &Partita) -> f64 {
 fn senza_scelta_vale_il_default() {
     let mut p = con_evento_di_prova();
     let mut q = al_governo();
-    assert_eq!(p.vista().eventi.len(), 1);
+    assert_eq!(p.vista().eventi[0].nome, "Ondata di criminalità");
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut q);
-    assert!(p.vista().eventi.is_empty());
+    // L'evento di prova e' chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
+    assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
     // Il default non ha effetti: la partita e' identica a quella senza evento.
     assert_eq!(p, q);
 }
@@ -163,13 +169,18 @@ fn la_scelta_non_sposta_le_estrazioni() {
     let mut q = con_evento_di_prova();
     rispondi(&mut p, 0, "presidi").unwrap();
     rispondi(&mut q, 0, "ordinaria").unwrap();
-    chiudi_col_bilancio(&mut p);
-    chiudi_col_bilancio(&mut q);
+    // «presidi» ha ritardo 1: serve piu' di una chiusura perche' la scelta cambi lo stato, e solo
+    // allora un'estrazione che dipendesse dagli esiti si vedrebbe (i candidati delle emergenze
+    // leggono lo stato).
+    for _ in 0..3 {
+        chiudi_col_bilancio(&mut p);
+        chiudi_col_bilancio(&mut q);
+    }
+    assert!(sicurezza(&p) > sicurezza(&q));
     let (j, k): (serde_json::Value, serde_json::Value) = (
         serde_json::from_str(&p.salva().unwrap()).unwrap(),
         serde_json::from_str(&q.salva().unwrap()).unwrap(),
     );
-    assert_eq!(p.vista().sondaggio, q.vista().sondaggio);
     assert_eq!(j["caso"], k["caso"]);
     assert_eq!(j["eventi"], k["eventi"]);
 }

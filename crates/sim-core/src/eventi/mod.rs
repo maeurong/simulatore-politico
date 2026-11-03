@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod emergenze;
 pub(crate) mod rischio;
 pub(crate) mod situazioni;
 
@@ -39,8 +40,8 @@ pub enum Tono {
     Grave,
 }
 
-/// Cosa fa un'opzione. `Grandezza` e `Valence` sono gli unici che `valida` ammette finora: gli
-/// altri li applicano i task che li introducono.
+/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva` e `Debito` sono gli unici che
+/// `valida` ammette finora: gli altri li applicano i task che li introducono.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum EffettoOpzione {
@@ -58,7 +59,11 @@ pub enum EffettoOpzione {
     Valence {
         delta: f64,
     },
+    /// Spende il costo dell'evento dal fondo di riserva (fino al residuo dell'anno) sul primo
+    /// dicastero dell'evento, nel turno. Le `Grandezza` che seguono in elenco valgono per la quota
+    /// pagata; l'emergenza ripristina in proporzione il suo danno.
     FondoRiserva,
+    /// Come `FondoRiserva`, ma per intero e a disavanzo.
     Debito,
     Dimissioni,
     ClausolaEnergia,
@@ -335,9 +340,27 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             if e.opzioni[..k].iter().any(|p| p.id == o.id) {
                 return ko(format!("{nome}: opzione ripetuta {}", o.id));
             }
+            let spende = |x: &EffettoOpzione| {
+                matches!(x, EffettoOpzione::FondoRiserva | EffettoOpzione::Debito)
+            };
+            if o.effetti.iter().any(spende) && e.dicasteri.is_empty() {
+                return ko(format!(
+                    "{nome}: l'opzione {} spende dal primo dicastero e l'evento non ne ha",
+                    o.id
+                ));
+            }
             for effetto in &o.effetti {
                 valida_effetto(dati, nome, effetto)?;
             }
+        }
+    }
+    for id in emergenze::EVENTI {
+        match dati.evento(id).and_then(|k| eventi.get(k)) {
+            None => return ko(format!("evento richiesto dal motore mancante: {id}")),
+            Some(e) if e.famiglia != Famiglia::Emergenza => {
+                return ko(format!("{}: serve la famiglia emergenza", e.nome));
+            }
+            Some(_) => {}
         }
     }
     for (i, s) in dati.situazioni().iter().enumerate() {
@@ -396,6 +419,7 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
         }
         EffettoOpzione::Valence { delta } if delta.is_finite() => Ok(()),
         EffettoOpzione::Valence { .. } => ko("valence non finita".into()),
+        EffettoOpzione::FondoRiserva | EffettoOpzione::Debito => Ok(()),
         _ => ko("effetto non ancora ammesso nei dati".into()),
     }
 }

@@ -1,0 +1,259 @@
+//! Emergenze naturali (piano 9, task 6): rischio per regione, prevenzione, fondo di riserva e
+//! decreto a debito.
+
+mod comune;
+
+use comune::{chiudi_col_bilancio, edita, file_base, file_vero, imposta, riscrivi};
+use serde_json::{Value, json};
+use sim_core::Partita;
+use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::eventi::{Famiglia, Tono};
+
+const SISMICA: &str = "Emergenza sismica";
+
+/// I dati senza alcun rischio: nessun sisma (nemmeno il minimo), idro e siccità a zero.
+fn senza_rischio() -> FileDati {
+    let mut f = file_base();
+    f = riscrivi(
+        f,
+        "regioni",
+        "pericolosita = ",
+        "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
+    );
+    for nome in ["sisma_minimo", "emergenze_idro_anno", "siccita_anno"] {
+        f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
+    }
+    f
+}
+
+/// I dati dove ogni regione ha un sisma certo a ogni trimestre.
+fn sisma_certo() -> FileDati {
+    riscrivi(
+        senza_rischio(),
+        "regioni",
+        "pericolosita = ",
+        "pericolosita = { sisma = 1.0, idro = 0.05, incendi = 0.0 }",
+    )
+}
+
+fn nuova(f: &FileDati, seme: u64) -> Partita {
+    Partita::nuova(DatiGioco::da_testi(f).unwrap(), seme)
+}
+
+fn json_di(p: &Partita) -> Value {
+    serde_json::from_str(&p.salva().unwrap()).unwrap()
+}
+
+fn indice_evento(id: &str) -> usize {
+    DatiGioco::da_testi(&file_base())
+        .unwrap()
+        .evento(id)
+        .unwrap()
+}
+
+fn stock() -> usize {
+    DatiGioco::da_testi(&file_base())
+        .unwrap()
+        .grandezza("stock_infrastrutture")
+        .unwrap()
+}
+
+/// Gli effetti sullo stock di infrastrutture, nel salvataggio.
+fn effetti_sullo_stock(j: &Value) -> Vec<Value> {
+    let k = stock();
+    j["grandezze"]["effetti"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["grandezza"] == k)
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn gli_incendi_cadono_d_estate() {
+    let f = file_vero();
+    let mut visti = 0;
+    for seme in 1..=300 {
+        let mut p = nuova(&f, seme);
+        for _ in 0..8 {
+            chiudi_col_bilancio(&mut p);
+            let v = p.vista();
+            for e in v.eventi.iter().filter(|e| e.nome == "Emergenza incendi") {
+                visti += 1;
+                assert_eq!(v.data.trimestre, 3, "seme {seme}: {e:?}");
+            }
+        }
+    }
+    assert!(visti > 0, "nessun incendio in 300 partite");
+}
+
+/// Il danno sullo stock della prima emergenza nata alla prima chiusura, con lo stock di ogni
+/// regione portato a `punti` sopra il livello iniziale.
+fn danno_con_stock_piu(punti: f64) -> f64 {
+    let p = nuova(&sisma_certo(), 3);
+    let mut p = edita(&p, |j| {
+        if punti > 0.0 {
+            j["grandezze"]["effetti"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({
+                    "grandezza": stock(),
+                    "regione": null,
+                    "dicastero": null,
+                    "disposizione": null,
+                    "intensita": punti,
+                    "inizio": 0,
+                    "forma": "livello",
+                    "durata": 1.0,
+                }));
+        }
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    let nuovi: Vec<f64> = effetti_sullo_stock(&json_di(&p))
+        .iter()
+        .filter_map(|e| e["intensita"].as_f64())
+        .filter(|x| *x < 0.0)
+        .collect();
+    assert_eq!(nuovi.len(), 1, "{nuovi:?}");
+    nuovi[0]
+}
+
+#[test]
+fn la_prevenzione_riduce_il_danno() {
+    let senza = danno_con_stock_piu(0.0);
+    let con = danno_con_stock_piu(100.0);
+    assert!(senza < 0.0);
+    // Stock a 100 = nessuna prevenzione, a 200 = piena: il sisma tiene il (1 - 0,85) del danno.
+    assert!((con - senza * 0.15).abs() < 1e-9, "{con} contro {senza}");
+}
+
+/// La partita dopo una chiusura (fuori dal quarto trimestre, dove il fondo si azzera), con
+/// `n` emergenze sismiche aperte nella regione 0, scelta `scelta` e fondo di `fondo` euro.
+fn con_emergenze(n: usize, scelta: Option<usize>, fondo: i64) -> Partita {
+    let mut p = nuova(&senza_rischio(), 5);
+    chiudi_col_bilancio(&mut p);
+    let evento = indice_evento("emergenza_sismica");
+    let turno = p.vista().turno;
+    edita(&p, |j| {
+        j["economia"]["bilancio"]["fondo_riserva"] = fondo.into();
+        if !j["economia"]["bilancio_approvato"].is_null() {
+            j["economia"]["bilancio_approvato"]["fondo_riserva"] = fondo.into();
+        }
+        j["eventi"]["aperti"] = Value::Array(
+            (0..n)
+                .map(|_| {
+                    json!({
+                        "evento": evento,
+                        "turno": turno,
+                        "causa": { "tipo": "rischio", "livello": "molto" },
+                        "regione": 0,
+                        "bersaglio": null,
+                        "tono": "ordinario",
+                        "costo": 1_000_000_000_i64,
+                        "scelta": scelta,
+                    })
+                })
+                .collect(),
+        );
+    })
+    .unwrap()
+}
+
+#[test]
+fn il_fondo_paga_e_non_va_sotto_zero() {
+    let mut p = con_emergenze(2, None, 50_000_000);
+    chiudi_col_bilancio(&mut p);
+    let j = json_di(&p);
+    // Il fondo ha pagato il residuo, e la seconda emergenza non ha trovato niente.
+    assert_eq!(j["economia"]["fondo_speso"], 50_000_000);
+    // Ripristino del 5% (50 milioni su 1 miliardo) della sola prima: 0,05 * 1 mld * 2 punti.
+    let ripristino: f64 = effetti_sullo_stock(&j)
+        .iter()
+        .filter_map(|e| e["intensita"].as_f64())
+        .sum();
+    assert!((ripristino - 0.1).abs() < 1e-9, "{ripristino}");
+}
+
+#[test]
+fn il_fondo_di_un_anno_nuovo_riparte() {
+    let mut p = con_emergenze(1, None, 50_000_000);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(json_di(&p)["economia"]["fondo_speso"], 50_000_000);
+    // Il turno dopo e' il quarto trimestre: la sua chiusura azzera l'anno.
+    while p.vista().data.trimestre != 4 {
+        chiudi_col_bilancio(&mut p);
+    }
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(json_di(&p)["economia"]["fondo_speso"], 0);
+}
+
+#[test]
+fn il_decreto_a_debito_alza_il_disavanzo() {
+    let costo = 1_000_000_000_i64;
+    let disavanzo = |mut p: Partita| {
+        chiudi_col_bilancio(&mut p);
+        let j = json_di(&p);
+        (
+            j["economia"]["disavanzo_trimestre"].as_i64().unwrap(),
+            j["economia"]["fondo_speso"].as_i64().unwrap(),
+        )
+    };
+    let (senza, _) = disavanzo(con_emergenze(0, None, 300_000_000));
+    // L'opzione 1 e' «Decreto a debito».
+    let (con, speso) = disavanzo(con_emergenze(1, Some(1), 300_000_000));
+    assert!(
+        (con - senza - costo).abs() <= 1,
+        "{con} contro {senza} + {costo}"
+    );
+    assert_eq!(speso, 0, "il fondo non si tocca");
+}
+
+#[test]
+fn con_vittime_il_tono_e_grave() {
+    let (mut gravi, mut ordinarie) = (0, 0);
+    for seme in 1..=100 {
+        let mut p = nuova(&sisma_certo(), seme);
+        chiudi_col_bilancio(&mut p);
+        let sismica = indice_evento("emergenza_sismica");
+        let costo = json_di(&p)["eventi"]["aperti"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|a| a["evento"] == sismica)
+            .unwrap()["costo"]
+            .as_i64()
+            .unwrap();
+        let v = p.vista();
+        let e = v
+            .eventi
+            .iter()
+            .find(|e| e.famiglia == Famiglia::Emergenza)
+            .unwrap();
+        assert_eq!(e.nome, SISMICA);
+        // Lo stock e' a 100: nessuna prevenzione, 5 miliardi sono il livello con vittime.
+        assert_eq!(e.tono == Tono::Grave, costo == 5_000_000_000, "seme {seme}");
+        if e.tono == Tono::Grave {
+            gravi += 1;
+        } else {
+            ordinarie += 1;
+        }
+    }
+    assert!(gravi > 0 && ordinarie > 0, "{gravi} gravi, {ordinarie} no");
+}
+
+#[test]
+fn al_massimo_un_puntuale_per_turno() {
+    let f = sisma_certo();
+    for seme in 1..=100 {
+        let mut p = nuova(&f, seme);
+        for turno in 0..20 {
+            chiudi_col_bilancio(&mut p);
+            let emergenze = (p.vista().eventi.iter())
+                .filter(|e| e.famiglia == Famiglia::Emergenza)
+                .count();
+            assert_eq!(emergenze, 1, "seme {seme}, turno {turno}");
+        }
+    }
+}

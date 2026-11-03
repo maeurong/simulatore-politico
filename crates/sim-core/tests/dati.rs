@@ -312,11 +312,62 @@ fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
         file_base(),
         "eventi",
         "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
-        "tipo = \"fondo_riserva\"",
+        "tipo = \"dimissioni\"",
     );
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(
         matches!(e, Errore::Eventi(_)) && e.to_string().contains("Ondata di criminalità"),
+        "{e}"
+    );
+}
+
+#[test]
+fn pericolosita_fuori_da_zero_uno_rifiutata_col_nome_della_regione() {
+    let f = sostituisci(file_base(), "regioni", "sisma = 0.0,", "sisma = 1.5,");
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::StrutturaIncoerente(_))
+            && e.to_string().contains("pericolosita.sisma di piemonte"),
+        "{e}"
+    );
+}
+
+#[test]
+fn pesi_idro_che_non_sommano_a_uno_rifiutati() {
+    let f = sostituisci(file_base(), "regioni", "idro = 0.046,", "idro = 0.2,");
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::StrutturaIncoerente(_)) && e.to_string().contains("pericolosita.idro"),
+        "{e}"
+    );
+}
+
+#[test]
+fn emergenza_richiesta_dal_motore_e_mancante_rifiutata_col_nome() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "id = \"emergenza_siccita\"",
+        "id = \"altra_siccita\"",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("emergenza_siccita"),
+        "{e}"
+    );
+}
+
+#[test]
+fn opzione_che_spende_senza_dicasteri_rifiutata() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "dicasteri = [\"infrastrutture_trasporti\", \"interno\"]",
+        "dicasteri = []",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Emergenza sismica"),
         "{e}"
     );
 }

@@ -242,3 +242,201 @@ intensita = -8.0
 ritardo = 1
 forma = "impulso"
 durata = 4.0
+
+# Emergenze naturali (piano 9, task 6): nascono dal rischio per regione (`eventi/emergenze.rs`), con costo e tono
+# dal livello estratto. Fonti: docs/ricerca/dati/pericolosita-naturale-regioni.md e
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:116-134 (siccità come emergenza regionale).
+# Il fondo e il debito spendono dal primo dicastero dell'evento; la quota di domanda regionale, la gravità
+# (che ordina le emergenze nello stesso turno) e l'intensità sono assunzioni del piano 9, nessuna fonte in docs/ricerca.
+
+# pericolosita-naturale-regioni.md:22-25 e :121-122
+[[evento]]
+id = "emergenza_sismica"
+famiglia = "emergenza"
+nome = "Emergenza sismica"
+gravita = 5
+dicasteri = ["infrastrutture_trasporti", "interno"]
+decreto = true
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# pericolosita-naturale-regioni.md:28-32 e :123
+[[evento]]
+id = "emergenza_idro"
+famiglia = "emergenza"
+nome = "Emergenza idrogeologica"
+gravita = 4
+dicasteri = ["ambiente_energia", "infrastrutture_trasporti"]
+decreto = true
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# pericolosita-naturale-regioni.md:36-39 e :124
+[[evento]]
+id = "emergenza_incendi"
+famiglia = "emergenza"
+nome = "Emergenza incendi"
+gravita = 3
+dicasteri = ["interno", "ambiente_energia"]
+decreto = true
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# situazioni-ed-eventi-al-turno-zero.md:116-134
+[[evento]]
+id = "emergenza_siccita"
+famiglia = "emergenza"
+nome = "Emergenza siccità"
+gravita = 2
+dicasteri = ["ambiente_energia", "infrastrutture_trasporti"]
+decreto = true
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []

@@ -100,7 +100,7 @@ fn il_salvataggio_porta_lo_schema_12() {
         giocata(1, 0)
             .salva()
             .unwrap()
-            .contains("\"versione_schema\":12")
+            .contains("\"versione_schema\":13")
     );
 }
 

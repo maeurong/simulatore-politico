@@ -78,6 +78,9 @@ pub struct Economia {
     /// Euro dei decreti (fondi accolti) del turno per dicastero: spesi per intero nel trimestre
     /// che si chiude, fuori dal bilancio annuo.
     pub decreti: Vec<i64>,
+    /// Euro già spesi dal fondo di riserva nell'anno; il residuo è `fondo_riserva` meno questo.
+    /// Si azzera alla chiusura del quarto trimestre.
+    pub fondo_speso: i64,
     /// Euro.
     pub debito: i64,
     /// % annuo.
@@ -162,6 +165,7 @@ impl Economia {
             bilancio,
             bilancio_presentato: None,
             decreti: vec![0; dati.dicasteri().len()],
+            fondo_speso: 0,
             debito,
             tasso_medio_debito: s.costo_medio_debito.valore,
             conti: ContiTrimestre::default(),
@@ -248,6 +252,9 @@ impl Economia {
             }
         }
         self.decreti.fill(0);
+        if data.trimestre == 4 {
+            self.fondo_speso = 0;
+        }
         let x = leontief::produzione(&st.a, &d);
         let x0 = produzione_riferimento(dati);
         let (tot, tot0) = (x.iter().sum::<f64>(), x0.iter().sum::<f64>());

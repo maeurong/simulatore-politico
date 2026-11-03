@@ -10,7 +10,9 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
-use crate::eventi::{Bersaglio, EffettoOpzione, Eventi, EventoAperto, rischio, situazioni};
+use crate::eventi::{
+    Bersaglio, EffettoOpzione, Eventi, EventoAperto, Famiglia, emergenze, rischio, situazioni,
+};
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
 use crate::legislatura::{
@@ -41,7 +43,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 12;
+pub const VERSIONE_SCHEMA: u32 = 13;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -325,15 +327,20 @@ impl Partita {
     }
 
     /// Gli eventi puntuali del turno: fuori dal tetto stanno quelli delle situazioni. Ne nasce uno
-    /// solo, il più grave. I candidati li aggiungono le famiglie dei task 6-8: finché la lista è
-    /// vuota non si estrae nulla.
+    /// solo, il più grave. I candidati delle emergenze sono i primi; scandali e shock (task 7-8)
+    /// si aggiungono in coda. Un'emergenza fa il suo danno alla nascita.
     fn nascono_i_puntuali(&mut self) {
-        let candidati: Vec<rischio::Candidato> = Vec::new();
+        let candidati = emergenze::candidati(
+            &self.dati,
+            self.data.successivo(),
+            &self.grandezze,
+            &mut self.caso,
+        );
         let (Some(i), _) = rischio::estrai(&mut self.caso, &candidati) else {
             return;
         };
         let c = &candidati[i];
-        self.eventi.aperti.push(EventoAperto {
+        let aperto = EventoAperto {
             evento: c.evento,
             turno: self.turno.saturating_add(1),
             causa: c.causa.clone(),
@@ -342,7 +349,11 @@ impl Partita {
             tono: c.tono,
             costo: c.costo,
             scelta: None,
-        });
+        };
+        self.grandezze
+            .effetti
+            .extend(emergenze::danno(&self.dati, &aperto, self.turno, 1.0));
+        self.eventi.aperti.push(aperto);
     }
 
     fn misure_situazioni(&self, ufficiale: bool) -> Vec<f64> {
@@ -3805,7 +3816,13 @@ impl Partita {
     /// Alla chiusura: ogni evento aperto vale con l'opzione scelta o col default. Le grandezze
     /// entrano negli effetti, come quelli degli atti ma senza capacità del ministro.
     fn risolvi_eventi(&mut self) {
-        for (aperto, opzione) in self.eventi.risolvi(&self.dati) {
+        // ponytail: le opzioni si clonano per liberare `self.dati` ai metodi `&mut self`.
+        let risolti: Vec<_> = (self.eventi.risolvi(&self.dati).into_iter())
+            .map(|(a, o)| (a, o.clone()))
+            .collect();
+        for (aperto, opzione) in risolti {
+            // La quota del costo pagata da `FondoRiserva`/`Debito`: scala le grandezze che seguono.
+            let mut quota = 1.0;
             for effetto in &opzione.effetti {
                 match effetto {
                     EffettoOpzione::Grandezza {
@@ -3825,33 +3842,83 @@ impl Partita {
                                 .filter(|_| self.dati.grandezze()[k].regionale),
                             dicastero: None,
                             disposizione: None,
-                            intensita: *intensita,
+                            intensita: *intensita * quota,
                             inizio: self.turno.saturating_add(*ritardo),
                             forma: *forma,
                             durata: *durata,
                         });
                     }
-                    EffettoOpzione::Valence { delta } => {
-                        let del_ministro = |d: usize| {
-                            (self.ministri.dicasteri.get(d))
-                                .and_then(|st| st.ministro.as_ref())
-                                .map(|m| m.partito)
-                        };
-                        let partito = match aperto.bersaglio {
-                            Some(Bersaglio::Leader { partito }) => Some(partito),
-                            Some(Bersaglio::Ministro { dicastero }) => del_ministro(dicastero),
-                            None => None,
-                        }
-                        .unwrap_or(self.governo.presidente);
-                        if let Some(p) = self.partiti.get_mut(partito) {
-                            p.valence += delta;
-                        }
+                    EffettoOpzione::Valence { delta } => self.valence_evento(&aperto, *delta),
+                    EffettoOpzione::FondoRiserva | EffettoOpzione::Debito => {
+                        quota = self.spendi(&aperto, *effetto == EffettoOpzione::FondoRiserva);
+                        // Il ripristino toglie al danno nato con l'evento la quota pagata.
+                        let inizio = aperto.turno.saturating_sub(1);
+                        self.grandezze
+                            .effetti
+                            .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
                     }
                     // Gli altri effetti li applicano i task che li introducono; `valida` li
                     // rifiuta nei dati finché non ci sono.
                     _ => {}
                 }
             }
+            if self.dati.eventi()[aperto.evento].famiglia == Famiglia::Emergenza {
+                let risposta = opzione
+                    .effetti
+                    .iter()
+                    .any(|x| matches!(x, EffettoOpzione::FondoRiserva | EffettoOpzione::Debito));
+                let delta = if risposta {
+                    self.dati.manopola("valence_emergenza_risposta")
+                } else {
+                    -self.dati.manopola("valence_emergenza_ignorata")
+                };
+                self.valence_evento(&aperto, delta);
+            }
+        }
+    }
+
+    /// `delta` di valence al partito del bersaglio dell'evento, o a quello del Presidente del
+    /// Consiglio.
+    fn valence_evento(&mut self, aperto: &EventoAperto, delta: f64) {
+        let del_ministro = |d: usize| {
+            (self.ministri.dicasteri.get(d))
+                .and_then(|st| st.ministro.as_ref())
+                .map(|m| m.partito)
+        };
+        let partito = match aperto.bersaglio {
+            Some(Bersaglio::Leader { partito }) => Some(partito),
+            Some(Bersaglio::Ministro { dicastero }) => del_ministro(dicastero),
+            None => None,
+        }
+        .unwrap_or(self.governo.presidente);
+        if let Some(p) = self.partiti.get_mut(partito) {
+            p.valence += delta;
+        }
+    }
+
+    /// Spende il costo dell'evento sul suo primo dicastero, nel trimestre che si chiude: dal fondo
+    /// di riserva fino al residuo dell'anno (mai sotto zero), o per intero a debito. Restituisce
+    /// la quota del costo pagata.
+    fn spendi(&mut self, aperto: &EventoAperto, dal_fondo: bool) -> f64 {
+        let dicastero = (self.dati.eventi().get(aperto.evento))
+            .and_then(|e| e.dicasteri.first())
+            .and_then(|id| self.dati.dicasteri().iter().position(|d| &d.id == id));
+        let Some(d) = dicastero.filter(|&d| d < self.economia.decreti.len()) else {
+            return 0.0;
+        };
+        let pagato = if dal_fondo {
+            let fondo = self.economia.bilancio_in_vigore(self.data).fondo_riserva;
+            let pagato = aperto.costo.min((fondo - self.economia.fondo_speso).max(0));
+            self.economia.fondo_speso += pagato;
+            pagato
+        } else {
+            aperto.costo
+        };
+        self.economia.decreti[d] = self.economia.decreti[d].saturating_add(pagato);
+        if aperto.costo > 0 {
+            pagato as f64 / aperto.costo as f64
+        } else {
+            1.0
         }
     }
 
@@ -4479,6 +4546,10 @@ impl Economia {
             self.decreti.iter().all(|x| (0..=LIMITE_EURO).contains(x))
                 && self.decreti.iter().sum::<i64>() <= LIMITE_EURO,
             "economia.decreti fuori da 0-1e15",
+        )?;
+        ok(
+            (0..=LIMITE_EURO).contains(&self.fondo_speso),
+            "economia.fondo_speso fuori da 0-1e15",
         )?;
         ok(
             self.sussidio_per_disoccupato >= 0,
