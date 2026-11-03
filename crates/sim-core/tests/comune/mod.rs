@@ -92,6 +92,25 @@ pub fn senza_shock_vero() -> FileDati {
     f
 }
 
+/// `f` senza emergenze naturali: nessun sisma (nemmeno il minimo), idro e siccita' a zero, cosi'
+/// i test che misurano valence, elettorato o grandezze non trovano emergenze per caso.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn senza_emergenze(mut f: FileDati) -> FileDati {
+    f = riscrivi(
+        f,
+        "regioni",
+        "pericolosita = ",
+        "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
+    );
+    for nome in ["sisma_minimo", "emergenze_idro_anno", "siccita_anno"] {
+        f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
+    }
+    f
+}
+
 /// Sostituisce la riga `valore = ...` subito sotto `[nome]` nello scenario.
 #[allow(
     dead_code,

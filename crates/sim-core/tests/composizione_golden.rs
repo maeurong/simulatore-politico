@@ -37,6 +37,6 @@ fn dopo(turni: usize) -> Partita {
 fn lavoro_ed_eta_identici_a_prima_dell_estrazione() {
     assert_eq!(
         (impronta(&dopo(2)), impronta(&dopo(14))),
-        (10_129_470_773_385_014_276, 442_330_692_398_607_976)
+        (10_129_470_773_385_014_276, 4_452_738_675_040_110_957)
     );
 }

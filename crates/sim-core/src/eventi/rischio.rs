@@ -15,6 +15,8 @@ pub(crate) struct Candidato {
     pub causa: Causa,
     pub costo: i64,
     pub tono: Tono,
+    /// Un'emergenza lieve: non apre un evento, la paga il fondo alla nascita.
+    pub lieve: bool,
 }
 
 /// Il livello di rischio per la causa: la vista non mostra mai la probabilità in cifre.
@@ -66,6 +68,7 @@ mod tests {
             },
             costo: 0,
             tono: Tono::Ordinario,
+            lieve: false,
         }
     }
 

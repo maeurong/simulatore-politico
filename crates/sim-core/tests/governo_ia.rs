@@ -958,7 +958,9 @@ fn il_governo_ia_prende_il_default() {
     let evento = comune::dati_base().evento("criminalita").unwrap();
     let mut q = all_opposizione();
     let mut p = edita(&q, |j| {
-        j["eventi"]["aperti"] = json!([{
+        // In testa, davanti a quelli che il caso ha gia' aperto (le emergenze): p e q devono
+        // chiudere gli stessi.
+        let prova = json!({
             "evento": evento,
             "turno": q.vista().turno,
             "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
@@ -967,7 +969,11 @@ fn il_governo_ia_prende_il_default() {
             "tono": "ordinario",
             "costo": 0,
             "scelta": null,
-        }]);
+        });
+        j["eventi"]["aperti"]
+            .as_array_mut()
+            .unwrap()
+            .insert(0, prova);
     })
     .unwrap();
     let prima = p.salva().unwrap();
@@ -986,6 +992,6 @@ fn il_governo_ia_prende_il_default() {
     // Alla chiusura vale il default: l'evento si chiude senza effetti.
     p.chiudi_turno();
     q.chiudi_turno();
-    assert!(p.vista().eventi.is_empty());
+    assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
     assert_eq!(p, q);
 }

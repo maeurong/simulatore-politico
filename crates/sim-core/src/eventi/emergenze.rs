@@ -42,6 +42,8 @@ fn probabilita(dati: &DatiGioco, data: Trimestre, tipo: usize, r: usize) -> f64 
         return 0.0;
     };
     let p = match tipo {
+        // Il minimo vale per ogni regione, Sardegna compresa (la ricerca la dà a 0, :122): i dati
+        // non distinguono uno zero vero da uno zero «solo il minimo».
         0 => h.sisma.max(dati.manopola("sisma_minimo")),
         1 => 1.0 - (-dati.manopola("emergenze_idro_anno") * h.idro / 4.0).exp(),
         2 if data.trimestre == 3 => FATTORE_INCENDI * h.incendi,
@@ -52,6 +54,8 @@ fn probabilita(dati: &DatiGioco, data: Trimestre, tipo: usize, r: usize) -> f64 
         }
         _ => 0.0,
     };
+    // Il clamp tiene `p` in 0-1 per `estrai`. La Sicilia a p = 1 nel terzo trimestre (3,5 × 0,35) è
+    // voluta: è la formula della ricerca, `pericolosita-naturale-regioni.md:124`.
     p.clamp(0.0, 1.0)
 }
 
@@ -115,6 +119,7 @@ pub(crate) fn candidati(
                 } else {
                     Tono::Ordinario
                 },
+                lieve: liv == 0,
             }
         })
         .collect()

@@ -3,7 +3,9 @@
 
 mod comune;
 
-use comune::{chiudi_col_bilancio, edita, file_base, file_vero, imposta, riscrivi};
+use comune::{
+    chiudi_col_bilancio, edita, file_base, file_vero, riscrivi, senza_emergenze, sostituisci,
+};
 use serde_json::{Value, json};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
@@ -13,17 +15,7 @@ const SISMICA: &str = "Emergenza sismica";
 
 /// I dati senza alcun rischio: nessun sisma (nemmeno il minimo), idro e siccità a zero.
 fn senza_rischio() -> FileDati {
-    let mut f = file_base();
-    f = riscrivi(
-        f,
-        "regioni",
-        "pericolosita = ",
-        "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
-    );
-    for nome in ["sisma_minimo", "emergenze_idro_anno", "siccita_anno"] {
-        f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
-    }
-    f
+    senza_emergenze(file_base())
 }
 
 /// I dati dove ogni regione ha un sisma certo a ogni trimestre.
@@ -256,4 +248,102 @@ fn al_massimo_un_puntuale_per_turno() {
             assert_eq!(emergenze, 1, "seme {seme}, turno {turno}");
         }
     }
+}
+
+/// Solo il Piemonte ha un sisma certo; il resto del paese non rischia nulla.
+fn un_sisma_certo() -> FileDati {
+    sostituisci(
+        senza_rischio(),
+        "regioni",
+        "pericolosita = { sisma = 0.0,",
+        "pericolosita = { sisma = 1.0,",
+    )
+}
+
+fn emergenze_aperte(p: &Partita) -> usize {
+    (p.vista().eventi.iter())
+        .filter(|e| e.famiglia == Famiglia::Emergenza)
+        .count()
+}
+
+#[test]
+fn una_lieve_non_apre_evento_la_paga_il_fondo_e_non_va_sotto_zero() {
+    let fondo = 50_000_000_i64;
+    let con_fondo = |p: &Partita, fondo: i64| {
+        edita(p, |j| {
+            j["economia"]["bilancio"]["fondo_riserva"] = fondo.into();
+            if !j["economia"]["bilancio_approvato"].is_null() {
+                j["economia"]["bilancio_approvato"]["fondo_riserva"] = fondo.into();
+            }
+        })
+        .unwrap()
+    };
+    let speso = |p: &Partita| json_di(p)["economia"]["fondo_speso"].as_i64().unwrap();
+    for seme in 1..=60 {
+        let mut p = con_fondo(&nuova(&un_sisma_certo(), seme), fondo);
+        chiudi_col_bilancio(&mut p);
+        // Un solo candidato, certo: senza evento aperto ha vinto una lieve.
+        if emergenze_aperte(&p) != 0 {
+            continue;
+        }
+        // La lieve paga alla chiusura dopo (la spesa cade li'): il fondo paga il residuo, non il costo.
+        assert_eq!(speso(&p), 0);
+        chiudi_col_bilancio(&mut p);
+        assert_eq!(speso(&p), fondo);
+        // Nello stesso anno le altre emergenze non trovano piu' nulla.
+        chiudi_col_bilancio(&mut p);
+        assert_eq!(speso(&p), fondo, "seme {seme}");
+        // Con il fondo pieno la lieve costa 100 milioni, interi.
+        let mut q = nuova(&un_sisma_certo(), seme);
+        chiudi_col_bilancio(&mut q);
+        chiudi_col_bilancio(&mut q);
+        assert_eq!(speso(&q), 100_000_000);
+        return;
+    }
+    panic!("nessuna lieve in 60 semi");
+}
+
+#[test]
+fn senza_fondo_la_risposta_non_da_valence() {
+    let valence = |mut p: Partita| {
+        chiudi_col_bilancio(&mut p);
+        let j = json_di(&p);
+        let g = usize::try_from(j["governo"]["presidente"].as_u64().unwrap()).unwrap();
+        j["partiti"][g]["valence"].as_f64().unwrap()
+    };
+    let senza_evento = valence(con_emergenze(0, None, 300_000_000));
+    let fondo_vuoto = valence(con_emergenze(1, None, 0));
+    let fondo_pieno = valence(con_emergenze(1, None, 5_000_000_000));
+    assert_eq!(fondo_vuoto, senza_evento);
+    assert!(fondo_pieno > senza_evento, "{fondo_pieno} {senza_evento}");
+}
+
+#[test]
+fn il_decreto_a_debito_elide_il_danno_anche_dopo_il_salvataggio() {
+    let sismica = indice_evento("emergenza_sismica");
+    for seme in 1..=50 {
+        let mut p = nuova(&sisma_certo(), seme);
+        chiudi_col_bilancio(&mut p);
+        let aperti = json_di(&p)["eventi"]["aperti"].as_array().unwrap().clone();
+        // Grave o con vittime: le lievi non sono eventi.
+        let Some(i) = aperti
+            .iter()
+            .position(|a| a["evento"] == sismica && a["costo"].as_i64().unwrap() >= 500_000_000)
+        else {
+            continue;
+        };
+        let p = edita(&p, |j| j["eventi"]["aperti"][i]["scelta"] = 1.into()).unwrap();
+        // Salvataggio e caricamento fra la nascita e la risoluzione.
+        let mut p = Partita::carica(&p.salva().unwrap()).unwrap();
+        chiudi_col_bilancio(&mut p);
+        let nati: Vec<f64> = effetti_sullo_stock(&json_di(&p))
+            .iter()
+            .filter(|e| e["inizio"] == 0)
+            .filter_map(|e| e["intensita"].as_f64())
+            .collect();
+        assert_eq!(nati.len(), 2, "danno e ripristino: {nati:?}");
+        assert!(nati.iter().sum::<f64>().abs() < 1e-9, "{nati:?}");
+        return;
+    }
+    panic!("nessuna emergenza grave in 50 semi");
 }

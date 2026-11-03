@@ -353,6 +353,14 @@ impl Partita {
         self.grandezze
             .effetti
             .extend(emergenze::danno(&self.dati, &aperto, self.turno, 1.0));
+        if c.lieve {
+            // Scelta di Mario (03/11): una lieve non è un evento, la paga il fondo (come «Fondo di
+            // riserva» risolto subito), senza valence. Non si paga qui: `economia.decreti` fuori da
+            // una chiusura deve restare quello delle agende (`controlla_decreti`), quindi la spesa
+            // e il ripristino aspettano la chiusura dopo, come per un evento col default.
+            self.eventi.lievi.push(aperto);
+            return;
+        }
         self.eventi.aperti.push(aperto);
     }
 
@@ -3816,6 +3824,13 @@ impl Partita {
     /// Alla chiusura: ogni evento aperto vale con l'opzione scelta o col default. Le grandezze
     /// entrano negli effetti, come quelli degli atti ma senza capacità del ministro.
     fn risolvi_eventi(&mut self) {
+        for aperto in std::mem::take(&mut self.eventi.lievi) {
+            let quota = self.spendi(&aperto, true);
+            let inizio = aperto.turno.saturating_sub(1);
+            self.grandezze
+                .effetti
+                .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
+        }
         // ponytail: le opzioni si clonano per liberare `self.dati` ai metodi `&mut self`.
         let risolti: Vec<_> = (self.eventi.risolvi(&self.dati).into_iter())
             .map(|(a, o)| (a, o.clone()))
@@ -3868,7 +3883,8 @@ impl Partita {
                     .iter()
                     .any(|x| matches!(x, EffettoOpzione::FondoRiserva | EffettoOpzione::Debito));
                 let delta = if risposta {
-                    self.dati.manopola("valence_emergenza_risposta")
+                    // Scalata per la quota pagata: a fondo esaurito la risposta non vale.
+                    self.dati.manopola("valence_emergenza_risposta") * quota
                 } else {
                     -self.dati.manopola("valence_emergenza_ignorata")
                 };

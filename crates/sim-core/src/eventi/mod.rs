@@ -205,6 +205,9 @@ impl EventoAperto {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Eventi {
     pub aperti: Vec<EventoAperto>,
+    /// Emergenze lievi nate in questa chiusura: non sono eventi (il giocatore non le vede), le
+    /// paga il fondo alla chiusura dopo, nel trimestre in cui la spesa cade.
+    pub lievi: Vec<EventoAperto>,
     pub accese: Vec<bool>,
     /// Trimestri consecutivi dalla parte giusta della soglia (la recessione ne conta due).
     pub contatori: Vec<u8>,
@@ -242,6 +245,7 @@ impl Eventi {
         let n = dati.situazioni().len();
         Eventi {
             aperti: Vec::new(),
+            lievi: Vec::new(),
             accese: vec![false; n],
             contatori: vec![0; n],
         }
@@ -276,7 +280,7 @@ impl Eventi {
         if self.accese.len() != n || self.contatori.len() != n {
             return ko("accese e contatori non combaciano con le situazioni dei dati");
         }
-        for a in &self.aperti {
+        for a in self.aperti.iter().chain(&self.lievi) {
             let Some(e) = dati.eventi().get(a.evento) else {
                 return ko("evento aperto fuori dal catalogo");
             };
