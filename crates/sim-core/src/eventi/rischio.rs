@@ -108,6 +108,10 @@ pub(crate) fn estrai(caso: &mut Caso, candidati: &[Candidato]) -> (Option<usize>
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce è il fallimento voluto"
+)]
 mod tests {
     use super::*;
 
@@ -151,6 +155,36 @@ mod tests {
             b.uniforme(Flusso::Eventi);
         }
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn lo_scandalo_non_ha_mai_il_giocatore_per_bersaglio() {
+        let dati = crate::dati::dati_base();
+        let p = crate::partita::Partita::nuova(crate::dati::dati_base(), 1);
+        let grandezze = Grandezze::iniziali(&dati);
+        let (mut ministri, mut leader) = (0, 0);
+        for seme in 1..=1000 {
+            let mut caso = Caso::nuovo(seme);
+            let c = candidato_scandalo(
+                &dati,
+                &grandezze,
+                p.ministri(),
+                p.partiti(),
+                p.giocatore(),
+                &mut caso,
+            )
+            .unwrap();
+            match c.bersaglio {
+                Some(Bersaglio::Leader { partito }) => {
+                    assert_ne!(partito, p.giocatore(), "seme {seme}");
+                    assert!(!p.partiti()[partito].sciolto);
+                    leader += 1;
+                }
+                Some(Bersaglio::Ministro { .. }) => ministri += 1,
+                None => unreachable!("seme {seme}: nessun bersaglio"),
+            }
+        }
+        assert!(ministri > 0 && leader > 0, "{ministri} e {leader}");
     }
 
     #[test]

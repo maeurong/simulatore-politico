@@ -322,6 +322,50 @@ fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
 }
 
 #[test]
+fn uno_scandalo_ammette_solo_le_dimissioni_del_ministro() {
+    // Un effetto di spesa sull'opzione «Difenderlo» sarebbe ignorato in silenzio.
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "id = \"difenderlo\"\nnome = \"Difenderlo\"\ndefault = true\neffetti = []",
+        "id = \"difenderlo\"\nnome = \"Difenderlo\"\ndefault = true\n\n[[evento.opzioni.effetti]]\ntipo = \"valence\"\ndelta = 0.1",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_))
+            && e.to_string()
+                .contains("Scandalo su un ministro: lo scandalo ammette solo"),
+        "{e}"
+    );
+    // Le dimissioni non hanno senso sul leader.
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "id = \"prendere_atto\"\nnome = \"Prendere atto\"\ndefault = true\neffetti = []",
+        "id = \"prendere_atto\"\nnome = \"Prendere atto\"\ndefault = true\n\n[[evento.opzioni.effetti]]\ntipo = \"dimissioni\"",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_))
+            && e.to_string()
+                .contains("Scandalo su un leader: lo scandalo ammette solo"),
+        "{e}"
+    );
+}
+
+#[test]
+fn evento_richiesto_di_un_altra_famiglia_nomina_quella_attesa() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "id = \"scandalo_leader\"\nfamiglia = \"scandalo\"",
+        "id = \"scandalo_leader\"\nfamiglia = \"shock\"",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(e.to_string().contains("serve la famiglia scandalo"), "{e}");
+}
+
+#[test]
 fn pericolosita_fuori_da_zero_uno_rifiutata_col_nome_della_regione() {
     let f = sostituisci(file_base(), "regioni", "sisma = 0.0,", "sisma = 1.5,");
     let e = DatiGioco::da_testi(&f).unwrap_err();

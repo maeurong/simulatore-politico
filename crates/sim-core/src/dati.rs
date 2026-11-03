@@ -280,6 +280,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valence_emergenza_ignorata",
     "scandalo_base",
     "valence_scandalo",
+    "valence_dimissioni_scandalo",
     "turni_scandalo",
     "danno_stock_per_miliardo",
     "emivita_danno",

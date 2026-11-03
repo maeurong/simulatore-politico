@@ -156,33 +156,58 @@ fn la_sfiducia_ia_presentata_passa_se_nulla_cambia() {
     }
 }
 
-/// Con la sfiducia che passerebbe su ogni ministro non in ultimatum, l'IA prende quello sotto
-/// scandalo anche se non ha il giudizio peggiore.
+/// L'IA prende il ministro sotto scandalo anche se un altro, di un partito diverso, ha il giudizio
+/// peggiore: la chiave scandalo viene prima del giudizio (che è per partito, quindi lo stesso partito
+/// pareggerebbe).
 #[test]
 fn la_sfiducia_individuale_va_al_ministro_sotto_scandalo() {
-    let mut p = al_governo_coi_seggi(true);
+    let base = al_governo_coi_seggi(true);
+    let giudizio = |p: &Partita, j: usize| -> f64 {
+        let el = p.elettorato();
+        (el.gruppi.iter().enumerate())
+            .map(|(i, g)| el.elettori(dati_base().elettorato(), i) * g.giudizio[j])
+            .sum()
+    };
+    let mut p = edita(&base, |_| {}).unwrap();
     chiudi_col_bilancio(&mut p);
     let (Some(peggiore), _) = p.parlamento().sfiducia.expect("l'individuale passa") else {
         panic!("la sfiducia al governo passerebbe: il test misura l'individuale");
     };
-    let destra = partito("destra");
-    let altri: Vec<usize> = (p.ministri().dicasteri.iter().enumerate())
-        .filter(|(i, st)| {
-            *i != peggiore && st.ministro.as_ref().is_some_and(|m| m.partito == destra)
-        })
-        .map(|(i, _)| i)
-        .collect();
-    assert!(!altri.is_empty());
-    for k in altri {
-        let base = al_governo_coi_seggi(true);
-        let mut p = edita(&base, |j| {
+    // Il giudizio che ha deciso è quello a fine chiusura, in `p`.
+    let cd = partito("centrodestra");
+    let pp = p.ministri().dicasteri[peggiore]
+        .ministro
+        .as_ref()
+        .unwrap()
+        .partito;
+    let mut presi = 0;
+    for (k, st) in p.ministri().dicasteri.iter().enumerate() {
+        let Some(m) = st
+            .ministro
+            .as_ref()
+            .filter(|m| m.partito != cd && m.partito != pp)
+        else {
+            continue;
+        };
+        if giudizio(&p, m.partito) <= giudizio(&p, pp) {
+            continue;
+        }
+        let mut q = edita(&base, |j| {
             j["ministri"]["dicasteri"][k]["ministro"]["sotto_scandalo"] = 4.into();
         })
         .unwrap();
-        chiudi_col_bilancio(&mut p);
-        let scelto = p.parlamento().sfiducia.map(|(d, _)| d);
-        assert_eq!(scelto, Some(Some(k)), "peggiore {peggiore}, scandalo {k}");
+        chiudi_col_bilancio(&mut q);
+        // Se la sfiducia su di lui non passerebbe non si presenta: conta solo quando c'è.
+        if let Some(scelto) = q.parlamento().sfiducia.map(|(d, _)| d) {
+            assert_eq!(scelto, Some(k), "peggiore {peggiore}, scandalo {k}");
+            presi += 1;
+            break;
+        }
     }
+    assert!(
+        presi > 0,
+        "nessun ministro di un altro partito col giudizio migliore"
+    );
 }
 
 #[test]

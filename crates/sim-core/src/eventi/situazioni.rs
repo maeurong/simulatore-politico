@@ -87,6 +87,7 @@ pub(crate) fn apri(
             },
             regione: None,
             bersaglio: None,
+            persona: None,
             tono: Tono::Ordinario,
             costo: 0,
             scelta: None,

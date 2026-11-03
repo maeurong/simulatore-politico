@@ -5,20 +5,40 @@ mod comune;
 
 use comune::{
     al_governo, chiudi_col_bilancio, dati_base, edita, file_base, indice, partito, senza_emergenze,
-    sostituisci,
 };
 use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
 use sim_core::eventi::Famiglia;
 use sim_core::parlamento::CausaIntesa;
-use sim_core::{Comando, Partita};
+use sim_core::{Comando, Errore, Partita};
 
 const MINISTRO: &str = "scandalo_ministro";
 const LEADER: &str = "scandalo_leader";
 
 /// `p` con uno scandalo `evento` aperto in testa, sul `bersaglio`, con la `scelta` data.
 fn con_scandalo(p: &Partita, evento: &str, bersaglio: Value, scelta: Option<usize>) -> Partita {
+    prova_scandalo(p, evento, bersaglio, scelta).unwrap()
+}
+
+fn prova_scandalo(
+    p: &Partita,
+    evento: &str,
+    bersaglio: Value,
+    scelta: Option<usize>,
+) -> Result<Partita, Errore> {
     let k = dati_base().evento(evento).unwrap();
+    // Chi occupa il posto alla nascita, come lo scrive il motore.
+    let persona = match (
+        bersaglio["tipo"].as_str(),
+        bersaglio["dicastero"].as_u64(),
+        bersaglio["partito"].as_u64(),
+    ) {
+        (Some("ministro"), Some(d), _) => (p.ministri().dicasteri.get(d as usize))
+            .and_then(|st| st.ministro.as_ref())
+            .map(|m| m.nome.clone()),
+        (Some("leader"), _, Some(j)) => p.partiti().get(j as usize).map(|x| x.leader.clone()),
+        _ => None,
+    };
     edita(p, |j| {
         let prova = json!({
             "evento": k,
@@ -26,6 +46,7 @@ fn con_scandalo(p: &Partita, evento: &str, bersaglio: Value, scelta: Option<usiz
             "causa": { "tipo": "rischio", "livello": "medio" },
             "regione": null,
             "bersaglio": bersaglio,
+            "persona": persona,
             "tono": "ordinario",
             "costo": 0,
             "scelta": scelta,
@@ -35,7 +56,6 @@ fn con_scandalo(p: &Partita, evento: &str, bersaglio: Value, scelta: Option<usiz
             .unwrap()
             .insert(0, prova);
     })
-    .unwrap()
 }
 
 fn copia(p: &Partita) -> Partita {
@@ -82,6 +102,29 @@ fn difenderlo_costa_valence() {
 }
 
 #[test]
+fn le_dimissioni_costano_meta_della_difesa() {
+    let p = Partita::nuova(dati_base(), 1);
+    let d = indice("ambiente_energia");
+    let j = p.ministri().dicasteri[d].ministro.as_ref().unwrap().partito;
+    let valence = |scelta: Option<usize>| {
+        let mut x = con_scandalo(&p, MINISTRO, ministro(d), scelta);
+        x.chiudi_turno();
+        x.partiti()[j].valence
+    };
+    let mut senza = copia(&p);
+    senza.chiudi_turno();
+    let base = senza.partiti()[j].valence;
+    // Il costo cade prima del ritorno della valence verso la base.
+    let r = 1.0 - dati_base().manopola("ritorno_valence");
+    let (difesa, dimissioni) = (valence(None), valence(Some(1)));
+    assert!((base - difesa - 0.05 * r).abs() < 1e-9, "{base} {difesa}");
+    assert!(
+        (base - dimissioni - 0.025 * r).abs() < 1e-9,
+        "{base} {dimissioni}"
+    );
+}
+
+#[test]
 fn le_dimissioni_seguono_la_regola_del_piano_5() {
     let cd = partito("centrodestra");
     let d = indice("ambiente_energia");
@@ -112,51 +155,6 @@ fn le_dimissioni_seguono_la_regola_del_piano_5() {
     };
     assert_eq!(variazioni(&chiuso(false), cd), 1);
     assert_eq!(variazioni(&chiuso(true), cd), 0);
-}
-
-#[test]
-fn mai_il_giocatore() {
-    // Corruzione a 200 e scandalo_base a 1: a ogni chiusura nasce uno scandalo.
-    let f = sostituisci(
-        senza_emergenze(file_base()),
-        "grandezze",
-        "nome = \"Corruzione\"\ndinamica = \"fissa\"\nverso = \"scende\"\nregionale = false\niniziale = 100.0",
-        "nome = \"Corruzione\"\ndinamica = \"fissa\"\nverso = \"scende\"\nregionale = false\niniziale = 200.0",
-    );
-    let f = sostituisci(
-        f,
-        "manopole",
-        "[scandalo_base]\nvalore = 0.0",
-        "[scandalo_base]\nvalore = 1.0",
-    );
-    let (mut ministri, mut leader_visti) = (0, 0);
-    for seme in 1..=500 {
-        let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), seme);
-        chiudi_col_bilancio(&mut p);
-        let j: Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
-        let nati: Vec<&Value> = j["eventi"]["aperti"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|a| a["bersaglio"].is_object())
-            .collect();
-        assert_eq!(nati.len(), 1, "seme {seme}: uno scandalo a turno");
-        match nati[0]["bersaglio"]["tipo"].as_str().unwrap() {
-            "leader" => {
-                leader_visti += 1;
-                assert_ne!(
-                    nati[0]["bersaglio"]["partito"],
-                    p.giocatore(),
-                    "seme {seme}"
-                );
-            }
-            _ => ministri += 1,
-        }
-    }
-    assert!(
-        ministri > 0 && leader_visti > 0,
-        "{ministri} e {leader_visti}"
-    );
 }
 
 #[test]
@@ -219,5 +217,46 @@ fn senza_scandalo_base_nessuno_scandalo() {
         let eventi = p.vista().eventi;
         let scandali = eventi.iter().filter(|e| e.famiglia == Famiglia::Scandalo);
         assert_eq!(scandali.count(), 0, "seme {seme}");
+    }
+}
+
+#[test]
+fn ministro_sostituito_fra_nascita_e_chiusura_nessun_effetto() {
+    let p = Partita::nuova(dati_base(), 1);
+    let d = indice("ambiente_energia");
+    let j = p.ministri().dicasteri[d].ministro.as_ref().unwrap().partito;
+    let cambia = |x: &mut Value| {
+        x["ministri"]["dicasteri"][d]["ministro"]["nome"] = json!("Nuovo Arrivato");
+    };
+    let mut con = edita(&con_scandalo(&p, MINISTRO, ministro(d), None), cambia).unwrap();
+    let mut senza = edita(&p, cambia).unwrap();
+    con.chiudi_turno();
+    senza.chiudi_turno();
+    assert!((con.partiti()[j].valence - senza.partiti()[j].valence).abs() < 1e-9);
+    let m = con.ministri().dicasteri[d].ministro.as_ref().unwrap();
+    assert_eq!(m.sotto_scandalo, 0);
+}
+
+#[test]
+fn un_salvataggio_con_bersaglio_o_evento_fuori_dai_dati_e_rifiutato() {
+    let p = Partita::nuova(dati_base(), 1);
+    let troppo = 1000;
+    assert!(prova_scandalo(&p, MINISTRO, ministro(troppo), None).is_err());
+    assert!(prova_scandalo(&p, LEADER, leader(troppo), None).is_err());
+    assert!(prova_scandalo(&p, MINISTRO, ministro(0), None).is_ok());
+    for coda in ["aperti", "lievi"] {
+        let rotto = edita(&p, |j| {
+            j["eventi"][coda].as_array_mut().unwrap().push(json!({
+                "evento": 10_000,
+                "turno": 0,
+                "causa": { "tipo": "rischio", "livello": "medio" },
+                "regione": null,
+                "bersaglio": null,
+                "tono": "ordinario",
+                "costo": 0,
+                "scelta": null,
+            }));
+        });
+        assert!(rotto.is_err(), "{coda}");
     }
 }

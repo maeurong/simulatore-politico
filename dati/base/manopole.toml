@@ -1489,7 +1489,7 @@ min = 1.0
 max = 40.0
 ticket = "19"
 
-# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:97-114 (otto ministri dimessi in 2008-2026, 0,11 a trimestre; legame col CPI non trovato: qui scala con la corruzione, 100 = 0,11)
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:110-112 (otto ministri dimessi in 2008-2026, 0,11 a trimestre: è il tasso delle dimissioni, usato qui come tasso degli scandali, che sono più delle dimissioni; assunzione del piano 9). Legame col CPI non trovato (:97-114): scala con la corruzione, 100 = 0,11
 [scandalo_base]
 valore = 0.11
 min = 0.0
@@ -1499,6 +1499,13 @@ ticket = "15"
 # assunzione del piano 9, nessuna fonte in docs/ricerca (valence persa dal partito del ministro o del leader sotto scandalo, se non si dimette)
 [valence_scandalo]
 valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "15"
+
+# assunzione del piano 9, scelta di Mario: metà di valence_scandalo (valence persa dal partito del ministro che si dimette per scandalo, anche alleato)
+[valence_dimissioni_scandalo]
+valore = 0.025
 min = 0.0
 max = 0.5
 ticket = "15"

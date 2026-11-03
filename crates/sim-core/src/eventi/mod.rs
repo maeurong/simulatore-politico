@@ -185,6 +185,10 @@ pub struct EventoAperto {
     pub causa: Causa,
     pub regione: Option<usize>,
     pub bersaglio: Option<Bersaglio>,
+    /// Il nome di chi era il bersaglio alla nascita (ministro o leader): se alla chiusura il posto è
+    /// di un altro, lo scandalo si chiude senza effetti. `None` = non verificato.
+    #[serde(default)]
+    pub persona: Option<String>,
     pub tono: Tono,
     /// Euro.
     pub costo: i64,
@@ -355,16 +359,30 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             }
             for effetto in &o.effetti {
                 valida_effetto(dati, nome, effetto)?;
+                // Lo scandalo lo risolve `risolvi_scandalo`: ammette solo le dimissioni del ministro.
+                let ammesso =
+                    *effetto == EffettoOpzione::Dimissioni && e.id != rischio::SCANDALI[1];
+                if e.famiglia == Famiglia::Scandalo && !ammesso {
+                    return ko(format!(
+                        "{nome}: lo scandalo ammette solo le dimissioni, e solo sul ministro"
+                    ));
+                }
             }
         }
     }
-    let richiesti = (emergenze::EVENTI.iter().map(|id| (id, Famiglia::Emergenza)))
-        .chain(rischio::SCANDALI.iter().map(|id| (id, Famiglia::Scandalo)));
-    for (id, famiglia) in richiesti {
+    let richiesti = (emergenze::EVENTI
+        .iter()
+        .map(|id| (id, Famiglia::Emergenza, "emergenza")))
+    .chain(
+        rischio::SCANDALI
+            .iter()
+            .map(|id| (id, Famiglia::Scandalo, "scandalo")),
+    );
+    for (id, famiglia, nome_famiglia) in richiesti {
         match dati.evento(id).and_then(|k| eventi.get(k)) {
             None => return ko(format!("evento richiesto dal motore mancante: {id}")),
             Some(e) if e.famiglia != famiglia => {
-                return ko(format!("{}: serve un'altra famiglia", e.nome));
+                return ko(format!("{}: serve la famiglia {nome_famiglia}", e.nome));
             }
             Some(_) => {}
         }
@@ -450,6 +468,7 @@ mod tests {
             },
             regione: None,
             bersaglio: None,
+            persona: None,
             tono: Tono::Ordinario,
             costo: 0,
             scelta,

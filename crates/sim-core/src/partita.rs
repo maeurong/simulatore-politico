@@ -356,6 +356,7 @@ impl Partita {
             causa: c.causa.clone(),
             regione: c.regione,
             bersaglio: c.bersaglio,
+            persona: self.persona_di(c.bersaglio),
             tono: c.tono,
             costo: c.costo,
             scelta: None,
@@ -3800,14 +3801,8 @@ impl Partita {
             .map(|a| {
                 // `Eventi::controlla` garantisce che l'evento aperto stia nel catalogo.
                 let e = &self.dati.eventi()[a.evento];
-                let bersaglio = a.bersaglio.and_then(|b| match b {
-                    Bersaglio::Leader { partito } => {
-                        self.partiti.get(partito).map(|p| p.leader.clone())
-                    }
-                    Bersaglio::Ministro { dicastero } => (self.ministri.dicasteri.get(dicastero))
-                        .and_then(|st| st.ministro.as_ref())
-                        .map(|m| m.nome.clone()),
-                });
+                let bersaglio =
+                    (a.persona.clone()).or_else(|| a.bersaglio.and_then(|b| self.nome_del(b)));
                 VoceEvento {
                     nome: e.nome.clone(),
                     famiglia: e.famiglia,
@@ -3911,20 +3906,33 @@ impl Partita {
         }
     }
 
+    /// Chi occupa oggi il posto del bersaglio: il leader del partito o il ministro del dicastero.
+    fn nome_del(&self, b: Bersaglio) -> Option<String> {
+        match b {
+            Bersaglio::Leader { partito } => self.partiti.get(partito).map(|p| p.leader.clone()),
+            Bersaglio::Ministro { dicastero } => (self.ministri.dicasteri.get(dicastero))
+                .and_then(|st| st.ministro.as_ref())
+                .map(|m| m.nome.clone()),
+        }
+    }
+
+    fn persona_di(&self, b: Option<Bersaglio>) -> Option<String> {
+        b.and_then(|b| self.nome_del(b))
+    }
+
     /// Lo scandalo si chiude: le dimissioni seguono la regola di `ChiediDimissioni`, il resto (difendere,
     /// o l'unica opzione del leader) costa `valence_scandalo` al partito del bersaglio e, per un
-    /// ministro, lo tiene `turni_scandalo` sotto la sfiducia IA. Un bersaglio che non c'è più, o un
-    /// rifiuto di `applica`, chiudono l'evento in silenzio.
+    /// ministro, lo tiene `turni_scandalo` sotto la sfiducia IA. Un bersaglio che non c'è più o ha
+    /// cambiato persona, o un rifiuto di `applica`, chiudono l'evento in silenzio.
     fn risolvi_scandalo(&mut self, aperto: &EventoAperto, opzione: &DatoOpzione) {
-        let presente = match aperto.bersaglio {
-            Some(Bersaglio::Ministro { dicastero }) => {
-                (self.ministri.dicasteri.get(dicastero)).is_some_and(|st| st.ministro.is_some())
+        let attuale = match aperto.bersaglio {
+            Some(b @ Bersaglio::Ministro { .. }) => self.nome_del(b),
+            Some(b @ Bersaglio::Leader { partito }) => {
+                (self.partiti.get(partito).filter(|p| !p.sciolto)).and_then(|_| self.nome_del(b))
             }
-            Some(Bersaglio::Leader { partito }) => {
-                self.partiti.get(partito).is_some_and(|p| !p.sciolto)
-            }
-            None => false,
+            None => None,
         };
+        let presente = attuale.is_some_and(|n| aperto.persona.as_ref().is_none_or(|p| *p == n));
         if !presente {
             return;
         }
@@ -3933,8 +3941,15 @@ impl Partita {
                 && let Some(d) = self.dati.dicasteri().get(dicastero)
             {
                 let dicastero = d.id.clone();
-                // ponytail: un rifiuto (dimissioni già chieste) lascia il ministro com'è, senza riga.
-                let _ = self.applica(Comando::ChiediDimissioni { dicastero });
+                // ponytail: un rifiuto (dimissioni già chieste) lascia il ministro com'è, senza riga
+                // e senza valence.
+                if self
+                    .applica(Comando::ChiediDimissioni { dicastero })
+                    .is_ok()
+                {
+                    let costo = self.dati.manopola("valence_dimissioni_scandalo");
+                    self.valence_evento(aperto, -costo);
+                }
             }
             return;
         }
@@ -4804,13 +4819,19 @@ mod tests {
             },
             regione: None,
             bersaglio: Some(Bersaglio::Leader { partito: j }),
+            persona: None,
             tono: crate::eventi::Tono::Ordinario,
             costo: 0,
             scelta: None,
         };
         p.risolvi_scandalo(&aperto, &dati.eventi()[evento].opzioni[0]);
         assert_eq!(p.partiti[j].valence, prima);
-        assert!(p.mosse.is_empty());
+        assert!(
+            p.ministri
+                .dicasteri
+                .iter()
+                .all(|st| st.ministro.as_ref().is_none_or(|m| m.sotto_scandalo == 0))
+        );
     }
 
     /// Innesco 4: con un evento aperto nel suo dicastero che ammette il decreto, il ministro
@@ -4837,6 +4858,7 @@ mod tests {
             },
             regione: None,
             bersaglio: None,
+            persona: None,
             tono: crate::eventi::Tono::Ordinario,
             costo: 0,
             scelta: None,
