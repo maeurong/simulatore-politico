@@ -1,10 +1,11 @@
-//! Emergenze naturali (piano 9, task 6): rischio per regione, prevenzione, fondo di riserva e
+//! Emergenze naturali: rischio per regione, prevenzione, fondo di riserva e
 //! decreto a debito.
 
 mod comune;
 
 use comune::{
-    chiudi_col_bilancio, edita, file_base, file_vero, riscrivi, senza_emergenze, sostituisci,
+    chiudi_col_bilancio, edita, file_base, file_vero, riscrivi, scandalo_certo, senza_emergenze,
+    sostituisci,
 };
 use serde_json::{Value, json};
 use sim_core::Partita;
@@ -173,7 +174,7 @@ fn il_fondo_di_un_anno_nuovo_riparte() {
     let mut p = con_emergenze(1, None, 50_000_000);
     chiudi_col_bilancio(&mut p);
     assert_eq!(json_di(&p)["economia"]["fondo_speso"], 50_000_000);
-    // Il turno dopo e' il quarto trimestre: la sua chiusura azzera l'anno.
+    // Il turno dopo è il quarto trimestre: la sua chiusura azzera l'anno.
     while p.vista().data.trimestre != 4 {
         chiudi_col_bilancio(&mut p);
     }
@@ -193,7 +194,7 @@ fn il_decreto_a_debito_alza_il_disavanzo() {
         )
     };
     let (senza, _) = disavanzo(con_emergenze(0, None, 300_000_000));
-    // L'opzione 1 e' «Decreto a debito».
+    // L'opzione 1 è «Finanziare con un decreto a debito».
     let (con, speso) = disavanzo(con_emergenze(1, Some(1), 300_000_000));
     assert!(
         (con - senza - costo).abs() <= 1,
@@ -224,7 +225,7 @@ fn con_vittime_il_tono_e_grave() {
             .find(|e| e.famiglia == Famiglia::Emergenza)
             .unwrap();
         assert_eq!(e.nome, SISMICA);
-        // Lo stock e' a 100: nessuna prevenzione, 5 miliardi sono il livello con vittime.
+        // Lo stock è a 100: nessuna prevenzione, 5 miliardi sono il livello con vittime.
         assert_eq!(e.tono == Tono::Grave, costo == 5_000_000_000, "seme {seme}");
         if e.tono == Tono::Grave {
             gravi += 1;
@@ -268,18 +269,19 @@ fn emergenze_aperte(p: &Partita) -> usize {
         .count()
 }
 
+fn con_fondo(p: &Partita, fondo: i64) -> Partita {
+    edita(p, |j| {
+        j["economia"]["bilancio"]["fondo_riserva"] = fondo.into();
+        if !j["economia"]["bilancio_approvato"].is_null() {
+            j["economia"]["bilancio_approvato"]["fondo_riserva"] = fondo.into();
+        }
+    })
+    .unwrap()
+}
+
 #[test]
 fn una_lieve_non_apre_evento_la_paga_il_fondo_e_non_va_sotto_zero() {
     let fondo = 50_000_000_i64;
-    let con_fondo = |p: &Partita, fondo: i64| {
-        edita(p, |j| {
-            j["economia"]["bilancio"]["fondo_riserva"] = fondo.into();
-            if !j["economia"]["bilancio_approvato"].is_null() {
-                j["economia"]["bilancio_approvato"]["fondo_riserva"] = fondo.into();
-            }
-        })
-        .unwrap()
-    };
     let speso = |p: &Partita| json_di(p)["economia"]["fondo_speso"].as_i64().unwrap();
     for seme in 1..=60 {
         let mut p = con_fondo(&nuova(&un_sisma_certo(), seme), fondo);
@@ -288,11 +290,11 @@ fn una_lieve_non_apre_evento_la_paga_il_fondo_e_non_va_sotto_zero() {
         if emergenze_aperte(&p) != 0 {
             continue;
         }
-        // La lieve paga alla chiusura dopo (la spesa cade li'): il fondo paga il residuo, non il costo.
+        // La lieve paga alla chiusura dopo (la spesa cade lì): il fondo paga il residuo, non il costo.
         assert_eq!(speso(&p), 0);
         chiudi_col_bilancio(&mut p);
         assert_eq!(speso(&p), fondo);
-        // Nello stesso anno le altre emergenze non trovano piu' nulla.
+        // Nello stesso anno le altre emergenze non trovano più nulla.
         chiudi_col_bilancio(&mut p);
         assert_eq!(speso(&p), fondo, "seme {seme}");
         // Con il fondo pieno la lieve costa 100 milioni, interi.
@@ -303,6 +305,75 @@ fn una_lieve_non_apre_evento_la_paga_il_fondo_e_non_va_sotto_zero() {
         return;
     }
     panic!("nessuna lieve in 60 semi");
+}
+
+#[test]
+fn una_lieve_elide_il_danno_anche_dopo_il_salvataggio() {
+    for seme in 1..=60 {
+        let mut p = con_fondo(&nuova(&un_sisma_certo(), seme), 5_000_000_000);
+        chiudi_col_bilancio(&mut p);
+        // Un solo candidato, certo: senza evento aperto ha vinto una lieve, in attesa nel fondo.
+        if emergenze_aperte(&p) != 0 {
+            continue;
+        }
+        let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+        assert_eq!(p, q);
+        chiudi_col_bilancio(&mut p);
+        chiudi_col_bilancio(&mut q);
+        assert_eq!(p, q);
+        let nati: Vec<f64> = effetti_sullo_stock(&json_di(&p))
+            .iter()
+            .filter(|e| e["inizio"] == 0)
+            .filter_map(|e| e["intensita"].as_f64())
+            .collect();
+        assert_eq!(nati.len(), 2, "danno e ripristino: {nati:?}");
+        assert!(nati.iter().sum::<f64>().abs() < 1e-9, "{nati:?}");
+        return;
+    }
+    panic!("nessuna lieve in 60 semi");
+}
+
+#[test]
+fn il_fondo_parziale_scala_la_valence() {
+    let valence = |mut p: Partita| {
+        chiudi_col_bilancio(&mut p);
+        let j = json_di(&p);
+        let g = usize::try_from(j["governo"]["presidente"].as_u64().unwrap()).unwrap();
+        j["partiti"][g]["valence"].as_f64().unwrap()
+    };
+    let senza = valence(con_emergenze(0, None, 300_000_000));
+    // Costo di un miliardo: con mezzo miliardo di fondo la risposta vale la metà.
+    let pieno = valence(con_emergenze(1, None, 5_000_000_000)) - senza;
+    let meta = valence(con_emergenze(1, None, 500_000_000)) - senza;
+    assert!(pieno > 0.0, "{pieno}");
+    assert!((meta - pieno / 2.0).abs() < 1e-9, "{meta} contro {pieno}");
+}
+
+#[test]
+fn il_tetto_vale_tra_famiglie() {
+    // Un solo sisma certo (il Piemonte) contro uno scandalo certo: lo scandalo (gravità 6-7)
+    // batte la lieve (5), la grave e quella con vittime (10 e oltre) battono lo scandalo.
+    let f = sostituisci(
+        scandalo_certo(file_base()),
+        "regioni",
+        "pericolosita = { sisma = 0.0,",
+        "pericolosita = { sisma = 1.0,",
+    );
+    let (mut emergenza, mut scandalo) = (0, 0);
+    for seme in 1..=40 {
+        let mut p = nuova(&f, seme);
+        for turno in 0..6 {
+            chiudi_col_bilancio(&mut p);
+            let eventi = p.vista().eventi;
+            let conta = |fam: Famiglia| eventi.iter().filter(|e| e.famiglia == fam).count();
+            let lievi = json_di(&p)["eventi"]["lievi"].as_array().unwrap().len();
+            let (e, s) = (conta(Famiglia::Emergenza), conta(Famiglia::Scandalo));
+            assert_eq!(e + s + lievi, 1, "seme {seme}, turno {turno}");
+            emergenza += e;
+            scandalo += s;
+        }
+    }
+    assert!(emergenza > 0 && scandalo > 0, "{emergenza} e {scandalo}");
 }
 
 #[test]

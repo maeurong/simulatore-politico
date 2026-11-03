@@ -171,9 +171,10 @@ fn le_carceri_crescono_da_sole() {
         chiudi_col_bilancio(&mut p);
     }
     let v = p.grandezza("sovraffollamento_carceri").unwrap();
-    // 1,009^20 ~ 1,196 (senza rumore: con il rumore la banda dipende da dove cade il flusso degli
+    // 1,009^20 ~ 1,196 (senza rumore, quindi la banda non dipende da dove cade il flusso degli
     // eventi, che le emergenze consumano).
-    assert!(v > 112.0 && v < 125.0, "{v}");
+    let atteso = 100.0 * 1.009_f64.powi(20);
+    assert!((v - atteso).abs() < 1.0, "{v} contro {atteso}");
 }
 
 #[test]

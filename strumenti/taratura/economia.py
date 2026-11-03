@@ -5,6 +5,8 @@ Uso: python3 -I strumenti/taratura/economia.py
 Scarica da Eurostat e ISTAT, aggrega e scrive dati/base/economia.toml,
 dati/base/regioni.toml e i campi di spesa in dati/base/dicasteri.toml.
 Le risposte delle API si leggono come dati (json, csv), mai si eseguono.
+La pericolosità naturale delle regioni è copiata a mano da
+docs/ricerca/dati/pericolosita-naturale-regioni.md.
 Fonti, licenze e modifiche ai dati: strumenti/taratura/README.md.
 """
 
@@ -302,9 +304,13 @@ def scrivi_economia(a, importazioni, valore_aggiunto, vettori, eta):
 # Pericolosità naturale: episodi sismici Mw >= 5,5 nel 1900-2020, peso idro in % e quota dei trimestri
 # con un incendio >= 500 ha. Copiati a mano (nessuna API) da
 # docs/ricerca/dati/pericolosita-naturale-regioni.md:46-67, colonne (b), (f) e (h).
+# MINIMO: le cinque regioni a zero episodi ma con comuni in zona sismica 1-3 (Piemonte, Valle
+# d'Aosta, Lombardia, Trentino-Alto Adige, Liguria) valgono 0,5 episodi, cioè p ~ 0,001 a trimestre
+# (:122); la Sardegna resta a 0.
+MINIMO = 0.5
 PERICOLOSITA = {
-    "piemonte": (0, 4.6, 0.025), "valle_d_aosta": (0, 0.6, 0.0), "liguria": (0, 6.1, 0.037),
-    "lombardia": (0, 4.8, 0.013), "trentino_alto_adige": (0, 2.4, 0.0), "veneto": (1, 4.4, 0.025),
+    "piemonte": (MINIMO, 4.6, 0.025), "valle_d_aosta": (MINIMO, 0.6, 0.0), "liguria": (MINIMO, 6.1, 0.037),
+    "lombardia": (MINIMO, 4.8, 0.013), "trentino_alto_adige": (MINIMO, 2.4, 0.0), "veneto": (1, 4.4, 0.025),
     "friuli_venezia_giulia": (2, 1.0, 0.025), "emilia_romagna": (4, 23.1, 0.0), "toscana": (4, 13.9, 0.037),
     "umbria": (4, 1.2, 0.0), "marche": (3, 1.7, 0.013), "lazio": (2, 4.6, 0.062),
     "abruzzo": (7, 3.2, 0.037), "molise": (1, 0.7, 0.013), "campania": (4, 12.4, 0.075),
@@ -314,7 +320,8 @@ PERICOLOSITA = {
 
 
 def pericolosita(rid):
-    """Probabilità trimestrale di sisma (:121), quota nazionale idro (:31) e incendi (h)."""
+    """Probabilità trimestrale di sisma (:121), quota nazionale idro (:31) e incendi (h): tre colonne
+    di docs/ricerca/dati/pericolosita-naturale-regioni.md."""
     episodi, peso, incendi = PERICOLOSITA[rid]
     return round(1 - math.exp(-episodi / 121 / 4), 6), round(peso / 100, 4), incendi
 

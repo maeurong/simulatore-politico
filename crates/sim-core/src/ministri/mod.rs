@@ -116,7 +116,6 @@ pub struct Ministro {
     pub tecnico: bool,
     /// Turni che restano sotto scandalo (0 = no); cala a ogni chiusura. La sfiducia IA prende di
     /// mira chi ne ha.
-    #[serde(default)]
     pub sotto_scandalo: u32,
 }
 
@@ -355,6 +354,10 @@ impl Ministri {
             }
             if st.scelta.is_some_and(|s| usize::from(s) >= st.rosa.len()) {
                 return ko(format!("{}: scelta fuori dalla rosa", d.id));
+            }
+            let tetto = (dati.manopole().get("turni_scandalo")).map_or(0.0, |m| m.max);
+            if (st.ministro.iter()).any(|m| f64::from(m.sotto_scandalo) > tetto) {
+                return ko(format!("{}: sotto_scandalo oltre turni_scandalo", d.id));
             }
             for x in st.ministro.iter().chain(&st.rosa) {
                 let buono = x.partito < n_partiti

@@ -268,7 +268,6 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valence_sfiducia_respinta",
     "soglia_incrinata",
     "soglia_emendamento_bilancio",
-    "sisma_minimo",
     "emergenze_idro_anno",
     "siccita_anno",
     "k_prevenzione_sisma",
@@ -824,6 +823,12 @@ impl DatiGioco {
         if scala <= 0.0 {
             return Err(Errore::Grandezze(format!(
                 "manopola scala_servizio non positiva: {scala}"
+            )));
+        }
+        let emivita = self.manopola("emivita_danno");
+        if emivita <= 0.0 {
+            return Err(Errore::Eventi(format!(
+                "manopola emivita_danno non positiva: {emivita}"
             )));
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;

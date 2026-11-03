@@ -114,7 +114,7 @@ pub struct VoceSituazione {
 }
 
 /// Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`
-/// (`None` = vale il default), `regione` e `bersaglio` i nomi.
+/// (`None` = vale il default), `regione` e `bersaglio` i nomi, `costo` in euro.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceEvento {
@@ -124,6 +124,7 @@ pub struct VoceEvento {
     pub tono: Tono,
     pub regione: Option<String>,
     pub bersaglio: Option<String>,
+    pub costo: i64,
     pub opzioni: Vec<VoceOpzione>,
     pub scelta: Option<usize>,
 }
@@ -388,6 +389,8 @@ pub struct VistaBilancio {
     pub perdita_reale_scaglioni: Vec<f64>,
     /// Euro annui.
     pub fondo_riserva: i64,
+    /// Euro annui: il fondo di riserva non ancora speso, mai sotto zero.
+    pub fondo_residuo: i64,
     /// C'è una bozza: si può presentare la legge di bilancio.
     pub presentabile: bool,
     /// Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.

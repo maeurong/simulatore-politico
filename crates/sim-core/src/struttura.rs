@@ -26,7 +26,7 @@ pub enum Macroarea {
 /// Pericolosità naturale della regione (piano 9), da `docs/ricerca/dati/pericolosita-naturale-regioni.md`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pericolosita {
-    /// Probabilità trimestrale di un sisma Mw >= 5,5; zero vuol dire «solo il minimo».
+    /// Probabilità trimestrale di un sisma Mw >= 5,5; il minimo per le regioni con comuni in zona 1-3 sta già nel dato.
     pub sisma: f64,
     /// Quota nazionale delle emergenze idrogeologiche: sommano a 1 (entro 0,01) fra le regioni.
     pub idro: f64,

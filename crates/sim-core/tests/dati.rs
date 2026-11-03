@@ -367,7 +367,7 @@ fn evento_richiesto_di_un_altra_famiglia_nomina_quella_attesa() {
 
 #[test]
 fn pericolosita_fuori_da_zero_uno_rifiutata_col_nome_della_regione() {
-    let f = sostituisci(file_base(), "regioni", "sisma = 0.0,", "sisma = 1.5,");
+    let f = sostituisci(file_base(), "regioni", "sisma = 0.001033,", "sisma = 1.5,");
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(
         matches!(e, Errore::StrutturaIncoerente(_))
@@ -412,6 +412,62 @@ fn opzione_che_spende_senza_dicasteri_rifiutata() {
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(
         matches!(e, Errore::Eventi(_)) && e.to_string().contains("Emergenza sismica"),
+        "{e}"
+    );
+}
+
+#[test]
+fn emivita_del_danno_a_zero_rifiutata() {
+    let f = sostituisci(
+        file_base(),
+        "manopole",
+        "[emivita_danno]\nvalore = 8.0\nmin = 1.0",
+        "[emivita_danno]\nvalore = 0.0\nmin = 0.0",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_))
+            && e.to_string()
+                .contains("manopola emivita_danno non positiva: 0"),
+        "{e}"
+    );
+}
+
+#[test]
+fn gravita_da_dieci_in_su_per_emergenze_e_scandali_rifiutata() {
+    for (nome, da) in [
+        ("Emergenza sismica", "gravita = 5"),
+        ("Scandalo su un leader", "gravita = 6"),
+    ] {
+        let riga = format!("nome = \"{nome}\"\n{da}");
+        let f = sostituisci(
+            file_base(),
+            "eventi",
+            &riga,
+            &riga.replace(da, "gravita = 10"),
+        );
+        let e = DatiGioco::da_testi(&f).unwrap_err();
+        let atteso = format!("{nome}: la gravità di emergenze e scandali sta sotto 10, è 10");
+        assert!(
+            matches!(e, Errore::Eventi(_)) && e.to_string().contains(&atteso),
+            "{e}"
+        );
+    }
+}
+
+#[test]
+fn due_effetti_di_spesa_nella_stessa_opzione_rifiutati() {
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "[[evento.opzioni.effetti]]\ntipo = \"fondo_riserva\"\n",
+        "[[evento.opzioni.effetti]]\ntipo = \"fondo_riserva\"\n\n[[evento.opzioni.effetti]]\ntipo = \"debito\"\n",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_))
+            && e.to_string()
+                .contains("l'opzione fondo ha più di un effetto di spesa"),
         "{e}"
     );
 }

@@ -40,8 +40,9 @@ pub enum Tono {
     Grave,
 }
 
-/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva` e `Debito` sono gli unici che
-/// `valida` ammette finora: gli altri li applicano i task che li introducono.
+/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva`, `Debito` e `Dimissioni` sono gli
+/// unici che `valida` ammette finora (`Dimissioni` solo per lo scandalo sul ministro, `FondoRiserva`
+/// e `Debito` al più uno per opzione): gli altri li applicano i task che li introducono.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum EffettoOpzione {
@@ -187,7 +188,6 @@ pub struct EventoAperto {
     pub bersaglio: Option<Bersaglio>,
     /// Il nome di chi era il bersaglio alla nascita (ministro o leader): se alla chiusura il posto è
     /// di un altro, lo scandalo si chiude senza effetti. `None` = non verificato.
-    #[serde(default)]
     pub persona: Option<String>,
     pub tono: Tono,
     /// Euro.
@@ -284,12 +284,20 @@ impl Eventi {
         if self.accese.len() != n || self.contatori.len() != n {
             return ko("accese e contatori non combaciano con le situazioni dei dati");
         }
+        if self.aperti.len() > dati.eventi().len() || self.lievi.len() > dati.regioni().len() * 4 {
+            return ko(
+                "più eventi aperti di quanti il catalogo e le regioni ne possano far nascere",
+            );
+        }
         for a in self.aperti.iter().chain(&self.lievi) {
             let Some(e) = dati.eventi().get(a.evento) else {
                 return ko("evento aperto fuori dal catalogo");
             };
             if a.scelta.is_some_and(|k| k >= e.opzioni.len()) {
                 return ko("scelta fuori dalle opzioni dell'evento");
+            }
+            if a.persona.is_some() && a.bersaglio.is_none() {
+                return ko("persona senza bersaglio");
             }
             if a.regione.is_some_and(|r| r >= dati.regioni().len()) {
                 return ko("regione fuori dai dati");
@@ -331,6 +339,12 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                 e.opzioni.len()
             ));
         }
+        if matches!(e.famiglia, Famiglia::Emergenza | Famiglia::Scandalo) && e.gravita >= 10 {
+            return ko(format!(
+                "{nome}: la gravità di emergenze e scandali sta sotto 10, è {}",
+                e.gravita
+            ));
+        }
         let default = e.opzioni.iter().filter(|o| o.default).count();
         if default != 1 {
             return ko(format!(
@@ -351,6 +365,12 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             let spende = |x: &EffettoOpzione| {
                 matches!(x, EffettoOpzione::FondoRiserva | EffettoOpzione::Debito)
             };
+            if o.effetti.iter().filter(|x| spende(x)).count() > 1 {
+                return ko(format!(
+                    "{nome}: l'opzione {} ha più di un effetto di spesa",
+                    o.id
+                ));
+            }
             if o.effetti.iter().any(spende) && e.dicasteri.is_empty() {
                 return ko(format!(
                     "{nome}: l'opzione {} spende dal primo dicastero e l'evento non ne ha",

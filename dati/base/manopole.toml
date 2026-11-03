@@ -1405,13 +1405,6 @@ min = 0.0
 max = 0.01
 ticket = "15"
 
-# docs/ricerca/dati/pericolosita-naturale-regioni.md:122 (minimo per le regioni senza episodi, p ~ 0,001 a trimestre)
-[sisma_minimo]
-valore = 0.001
-min = 0.0
-max = 0.05
-ticket = "19"
-
 # docs/ricerca/dati/pericolosita-naturale-regioni.md:123, valore iniziale proposto; DA TARARE: la frequenza vera è [NON TROVATO] a :32 (la perdita media simulata deve tornare intorno a 1-5 miliardi l'anno)
 [emergenze_idro_anno]
 valore = 4.0
@@ -1503,7 +1496,7 @@ min = 0.0
 max = 0.5
 ticket = "15"
 
-# assunzione del piano 9, scelta di Mario: metà di valence_scandalo (valence persa dal partito del ministro che si dimette per scandalo, anche alleato)
+# assunzione del piano 9: metà di valence_scandalo (valence persa dal partito del ministro che si dimette per scandalo, anche alleato)
 [valence_dimissioni_scandalo]
 valore = 0.025
 min = 0.0

@@ -958,7 +958,7 @@ fn il_governo_ia_prende_il_default() {
     let evento = comune::dati_base().evento("criminalita").unwrap();
     let mut q = all_opposizione();
     let mut p = edita(&q, |j| {
-        // In testa, davanti a quelli che il caso ha gia' aperto (le emergenze): p e q devono
+        // In testa, davanti a quelli che il caso ha già aperto (le emergenze): p e q devono
         // chiudere gli stessi.
         let prova = json!({
             "evento": evento,

@@ -87,8 +87,8 @@ fn estrazioni_fisse_per_turno() {
         // Nascita: bias e effetti d'istituto; poi a ogni rilevazione istituti × alternative,
         // incroci (condizioni + fasce + regioni) × (alternative + punti + approvazione), 4 stime.
         let d = DatiGioco::da_testi(&f).unwrap();
-        // A ogni chiusura: una normale per riga `[[deriva]]` (piano 9, Task 3), poi due uniformi per
-        // candidato delle emergenze (livello ed estrazione; uno per regione e tipo, piu' la siccita'),
+        // A ogni chiusura: una normale per riga `[[deriva]]`, poi due uniformi per
+        // candidato delle emergenze (livello ed estrazione; uno per regione e tipo, più la siccità),
         // poi due dello scandalo (bersaglio ed estrazione).
         for _ in 0..turni {
             for _ in 0..d.derive().len() {

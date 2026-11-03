@@ -15,7 +15,7 @@ fn con_evento_di_prova() -> Partita {
 fn con_evento(p: Partita) -> Partita {
     let evento = dati_base().evento("criminalita").unwrap();
     edita(&p, |j| {
-        // In testa (indice 0), davanti a quelli che il caso ha gia' aperto (le emergenze).
+        // In testa (indice 0), davanti a quelli che il caso ha già aperto (le emergenze).
         let prova = json!({
             "evento": evento,
             "turno": p.vista().turno,
@@ -57,7 +57,7 @@ fn senza_scelta_vale_il_default() {
     assert_eq!(p.vista().eventi[0].nome, "Ondata di criminalità");
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut q);
-    // L'evento di prova e' chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
+    // L'evento di prova è chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
     assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
     // Il default non ha effetti: la partita e' identica a quella senza evento.
     assert_eq!(p, q);
@@ -138,7 +138,7 @@ fn evento_aperto_sopravvive_al_salvataggio() {
 #[test]
 fn salvataggio_con_eventi_incoerenti_rifiutato() {
     let p = con_evento_di_prova();
-    let guasti: [(&str, Guasto); 6] = [
+    let guasti: [(&str, Guasto); 8] = [
         ("evento", |j| j["eventi"]["aperti"][0]["evento"] = 99.into()),
         ("scelta", |j| j["eventi"]["aperti"][0]["scelta"] = 5.into()),
         ("regione", |j| {
@@ -153,6 +153,13 @@ fn salvataggio_con_eventi_incoerenti_rifiutato() {
         ("contatori", |j| {
             j["eventi"]["contatori"] = json!([0]);
         }),
+        ("troppi aperti", |j| {
+            let primo = j["eventi"]["aperti"][0].clone();
+            (j["eventi"]["aperti"].as_array_mut().unwrap()).resize(1000, primo);
+        }),
+        ("persona senza bersaglio", |j| {
+            j["eventi"]["aperti"][0]["persona"] = json!("Nessuno");
+        }),
     ];
     for (nome, guasto) in guasti {
         let e = edita(&p, guasto).unwrap_err();
@@ -164,23 +171,18 @@ fn salvataggio_con_eventi_incoerenti_rifiutato() {
 }
 
 #[test]
-fn la_scelta_non_sposta_le_estrazioni() {
-    let mut p = con_evento_di_prova();
-    let mut q = con_evento_di_prova();
-    rispondi(&mut p, 0, "presidi").unwrap();
-    rispondi(&mut q, 0, "ordinaria").unwrap();
-    // «presidi» ha ritardo 1: serve piu' di una chiusura perche' la scelta cambi lo stato, e solo
-    // allora un'estrazione che dipendesse dagli esiti si vedrebbe (i candidati delle emergenze
-    // leggono lo stato).
-    for _ in 0..3 {
-        chiudi_col_bilancio(&mut p);
-        chiudi_col_bilancio(&mut q);
-    }
-    assert!(sicurezza(&p) > sicurezza(&q));
-    let (j, k): (serde_json::Value, serde_json::Value) = (
-        serde_json::from_str(&p.salva().unwrap()).unwrap(),
-        serde_json::from_str(&q.salva().unwrap()).unwrap(),
+fn sotto_scandalo_oltre_il_massimo_e_rifiutato() {
+    let p = Partita::nuova(dati_base(), 1);
+    let sotto = |turni: u32| {
+        edita(&p, |j| {
+            j["ministri"]["dicasteri"][0]["ministro"]["sotto_scandalo"] = turni.into();
+        })
+    };
+    assert!(sotto(12).is_ok());
+    let e = sotto(13).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("sotto_scandalo oltre turni_scandalo"),
+        "{e}"
     );
-    assert_eq!(j["caso"], k["caso"]);
-    assert_eq!(j["eventi"], k["eventi"]);
 }

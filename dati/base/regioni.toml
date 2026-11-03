@@ -17,7 +17,7 @@ forze_lavoro = 1975.6
 disoccupazione_2025 = 6.0
 okun = -0.239
 mix = { A = 0.014219, BTE = 0.257791, F = 0.060530, GTI = 0.177667, J = 0.033766, K = 0.051218, L = 0.132140, MN = 0.105641, OTQ = 0.134115, RTU = 0.032913 }
-pericolosita = { sisma = 0.0, idro = 0.046, incendi = 0.025 }
+pericolosita = { sisma = 0.001033, idro = 0.046, incendi = 0.025 }
 
 [[regione]]
 id = "valle_d_aosta"
@@ -27,7 +27,7 @@ forze_lavoro = 59.3
 disoccupazione_2025 = 3.9
 okun = -0.059
 mix = { A = 0.013794, BTE = 0.154341, F = 0.073477, GTI = 0.208096, J = 0.017209, K = 0.047041, L = 0.162705, MN = 0.066954, OTQ = 0.212739, RTU = 0.043644 }
-pericolosita = { sisma = 0.0, idro = 0.006, incendi = 0.0 }
+pericolosita = { sisma = 0.001033, idro = 0.006, incendi = 0.0 }
 
 [[regione]]
 id = "liguria"
@@ -37,7 +37,7 @@ forze_lavoro = 679.8
 disoccupazione_2025 = 4.7
 okun = -0.262
 mix = { A = 0.009887, BTE = 0.159531, F = 0.063369, GTI = 0.247538, J = 0.018541, K = 0.039494, L = 0.161712, MN = 0.093033, OTQ = 0.170352, RTU = 0.036543 }
-pericolosita = { sisma = 0.0, idro = 0.061, incendi = 0.037 }
+pericolosita = { sisma = 0.001033, idro = 0.061, incendi = 0.037 }
 
 [[regione]]
 id = "lombardia"
@@ -47,7 +47,7 @@ forze_lavoro = 4691.6
 disoccupazione_2025 = 3.0
 okun = -0.22
 mix = { A = 0.010872, BTE = 0.227544, F = 0.054681, GTI = 0.198573, J = 0.049784, K = 0.080303, L = 0.119444, MN = 0.130957, OTQ = 0.097045, RTU = 0.030797 }
-pericolosita = { sisma = 0.0, idro = 0.048, incendi = 0.013 }
+pericolosita = { sisma = 0.001033, idro = 0.048, incendi = 0.013 }
 
 [[regione]]
 id = "trentino_alto_adige"
@@ -57,7 +57,7 @@ forze_lavoro = 523.7
 disoccupazione_2025 = 2.0
 okun = -0.141
 mix = { A = 0.043972, BTE = 0.168216, F = 0.065309, GTI = 0.242506, J = 0.018116, K = 0.066051, L = 0.103509, MN = 0.089406, OTQ = 0.178512, RTU = 0.024403 }
-pericolosita = { sisma = 0.0, idro = 0.024, incendi = 0.0 }
+pericolosita = { sisma = 0.001033, idro = 0.024, incendi = 0.0 }
 
 [[regione]]
 id = "veneto"

@@ -9,7 +9,7 @@ use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::economia::euro;
 use crate::grandezze::{EffettoAttivo, Grandezze};
-use crate::partita::Trimestre;
+use crate::partita::{LIMITE_EURO, Trimestre};
 
 /// Gli eventi del catalogo che questo modulo fa nascere: sisma, idro, incendi, siccità.
 pub(crate) const EVENTI: [&str; 4] = [
@@ -42,9 +42,9 @@ fn probabilita(dati: &DatiGioco, data: Trimestre, tipo: usize, r: usize) -> f64 
         return 0.0;
     };
     let p = match tipo {
-        // Il minimo vale per ogni regione, Sardegna compresa (la ricerca la dà a 0, :122): i dati
-        // non distinguono uno zero vero da uno zero «solo il minimo».
-        0 => h.sisma.max(dati.manopola("sisma_minimo")),
+        // Il minimo di p ~ 0,001 delle cinque regioni nominate in `pericolosita-naturale-regioni.md:122`
+        // sta già nei dati (`strumenti/taratura/economia.py`); la Sardegna resta a 0.
+        0 => h.sisma,
         1 => 1.0 - (-dati.manopola("emergenze_idro_anno") * h.idro / 4.0).exp(),
         2 if data.trimestre == 3 => FATTORE_INCENDI * h.incendi,
         // La siccità: il rischio dell'anno cade sul secondo e sul terzo trimestre, uguale per regione.
@@ -100,7 +100,7 @@ pub(crate) fn candidati(
             } else {
                 "k_prevenzione_altre"
             });
-            let costo = euro(dati.manopola(COSTI[liv]) * (1.0 - k * prevenzione));
+            let costo = euro(dati.manopola(COSTI[liv]) * (1.0 - k * prevenzione)).min(LIMITE_EURO);
             let evento = eventi[tipo];
             let gravita = (dati.eventi().get(evento)).map_or(0, |e| e.gravita);
             Candidato {
@@ -141,7 +141,15 @@ pub(crate) fn danno(
         return None;
     }
     let grandezza = dati.grandezza("stock_infrastrutture")?;
-    let intensita = -quota * aperto.costo as f64 / MLD * dati.manopola("danno_stock_per_miliardo");
+    let durata = dati.manopola("emivita_danno");
+    if !(durata.is_finite() && durata > 0.0) {
+        return None;
+    }
+    let g = &dati.grandezze()[grandezza];
+    let massimo = g.max - g.min;
+    let intensita = (-quota * aperto.costo as f64 / MLD
+        * dati.manopola("danno_stock_per_miliardo"))
+    .clamp(-massimo, massimo);
     (intensita != 0.0).then_some(EffettoAttivo {
         grandezza,
         regione: Some(regione),
@@ -150,6 +158,84 @@ pub(crate) fn danno(
         intensita,
         inizio,
         forma: Forma::Impulso,
-        durata: dati.manopola("emivita_danno"),
+        durata,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    fn trimestre(trimestre: u8) -> Trimestre {
+        Trimestre {
+            anno: 2027,
+            trimestre,
+        }
+    }
+
+    #[test]
+    fn probabilita_per_tipo_e_trimestre() {
+        let dati = dati_base();
+        let n = dati.regioni().len() as f64;
+        for (r, regione) in dati.regioni().iter().enumerate() {
+            let h = &regione.pericolosita;
+            for q in 1..=4 {
+                let data = trimestre(q);
+                assert_eq!(probabilita(&dati, data, 0, r), h.sisma.clamp(0.0, 1.0));
+                let idro = 1.0 - (-dati.manopola("emergenze_idro_anno") * h.idro / 4.0).exp();
+                assert_eq!(probabilita(&dati, data, 1, r), idro, "{} Q{q}", regione.id);
+                let incendi = if q == 3 {
+                    (FATTORE_INCENDI * h.incendi).min(1.0)
+                } else {
+                    0.0
+                };
+                assert_eq!(
+                    probabilita(&dati, data, 2, r),
+                    incendi,
+                    "{} Q{q}",
+                    regione.id
+                );
+                let siccita = if matches!(q, 2 | 3) {
+                    1.0 - (-dati.manopola("siccita_anno") / 2.0 / n).exp()
+                } else {
+                    0.0
+                };
+                assert_eq!(
+                    probabilita(&dati, data, 3, r),
+                    siccita,
+                    "{} Q{q}",
+                    regione.id
+                );
+            }
+        }
+        // Il minimo c'è per le regioni nominate dalla ricerca e non per la Sardegna.
+        let sisma = |id: &str| {
+            let r = dati.regioni().iter().position(|x| x.id == id).unwrap();
+            probabilita(&dati, trimestre(1), 0, r)
+        };
+        assert!(sisma("piemonte") > 0.0);
+        assert_eq!(sisma("sardegna"), 0.0);
+    }
+
+    #[test]
+    fn i_candidati_consumano_sempre_lo_stesso() {
+        let dati = dati_base();
+        let stock = dati.grandezza("stock_infrastrutture").unwrap();
+        let g = &dati.grandezze()[stock];
+        let vuoto = Grandezze::iniziali(&dati);
+        let mut pieno = vuoto.clone();
+        pieno.valori[stock].iter_mut().for_each(|v| *v = g.max);
+        let (mut a, mut b) = (Caso::nuovo(11), Caso::nuovo(11));
+        let ca = candidati(&dati, trimestre(1), &vuoto, &mut a);
+        let cb = candidati(&dati, trimestre(3), &pieno, &mut b);
+        // Stato e trimestre diversi cambiano le probabilità e i costi, non le estrazioni.
+        let (pa, pb): (Vec<f64>, Vec<f64>) = (
+            ca.iter().map(|c| c.p).collect(),
+            cb.iter().map(|c| c.p).collect(),
+        );
+        assert_ne!(pa, pb);
+        assert!(ca.iter().zip(&cb).any(|(x, y)| x.costo != y.costo));
+        assert_eq!(a, b);
+    }
 }

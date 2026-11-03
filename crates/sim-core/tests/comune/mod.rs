@@ -92,8 +92,8 @@ pub fn senza_shock_vero() -> FileDati {
     f
 }
 
-/// `f` senza emergenze naturali: nessun sisma (nemmeno il minimo), idro e siccita' a zero, cosi'
-/// i test che misurano valence, elettorato o grandezze non trovano emergenze per caso.
+/// `f` senza emergenze naturali né scandali: nessun sisma, idro, siccità e `scandalo_base` a zero,
+/// così i test che misurano valence, elettorato o grandezze non trovano eventi per caso.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -105,15 +105,25 @@ pub fn senza_emergenze(mut f: FileDati) -> FileDati {
         "pericolosita = ",
         "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
     );
-    for nome in [
-        "sisma_minimo",
-        "emergenze_idro_anno",
-        "siccita_anno",
-        "scandalo_base",
-    ] {
+    for nome in ["emergenze_idro_anno", "siccita_anno", "scandalo_base"] {
         f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
     }
     f
+}
+
+/// `senza_emergenze(f)` con lo scandalo che nasce a ogni chiusura (`p` = 1).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn scandalo_certo(f: FileDati) -> FileDati {
+    let f = imposta(
+        senza_emergenze(f),
+        "manopole",
+        "[scandalo_base]\nvalore = 0.0\nmin = 0.0\nmax = ",
+        "1000.0",
+    );
+    imposta(f, "manopole", "[scandalo_base]\nvalore = ", "1000.0")
 }
 
 /// Sostituisce la riga `valore = ...` subito sotto `[nome]` nello scenario.

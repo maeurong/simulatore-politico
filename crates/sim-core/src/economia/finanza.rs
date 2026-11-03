@@ -239,7 +239,8 @@ pub(crate) fn conti_del_trimestre(
             ),
         },
         spese: Spese {
-            dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0) + e.decreti.iter().sum::<i64>(),
+            dicasteri: euro(bilancio.spesa_totale() as f64 / 4.0)
+                + e.decreti.iter().copied().fold(0, i64::saturating_add),
             pensioni: e.spesa_pensioni(),
             sussidi: e.spesa_sussidi(dati, &misure.leve),
             altre_prestazioni: trimestre(s.altre_prestazioni.valore),

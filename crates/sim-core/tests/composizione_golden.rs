@@ -1,10 +1,9 @@
 //! Golden bit a bit di lavoro ed età dell'elettorato: i valori sono stati misurati su c56787d
 //! (prima dell'estrazione di `spostamenti_lavoro` e del refactor di `Elettorato::eta`). Il valore a
 //! 14 turni è stato rimisurato su 5e7e867 (piano 9: deriva, situazioni, eventi consumano estrazioni
-//! e muovono le grandezze); quello a 2 turni è rimasto uguale. Entrambi rimisurati su 52495cd più il
-//! task 7 del piano 9: lo scandalo consuma due uniformi di `Flusso::Eventi` a chiusura, e la deriva
-//! del turno dopo (stesso flusso) pesca valori diversi, quindi anche il valore a 2 turni si sposta;
-//! a 14 turni pesano in più gli scandali risolti (valence, dimissioni).
+//! e muovono le grandezze) e di nuovo con gli scandali (due uniformi di `Flusso::Eventi` a chiusura,
+//! poi valence e dimissioni degli scandali risolti); quello a 2 turni è rimasto uguale in entrambi i
+//! casi.
 
 mod comune;
 use sim_core::Partita;
