@@ -10,7 +10,7 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
-use crate::eventi::{Bersaglio, EffettoOpzione, Eventi, situazioni};
+use crate::eventi::{Bersaglio, EffettoOpzione, Eventi, EventoAperto, rischio, situazioni};
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
 use crate::legislatura::{
@@ -324,6 +324,27 @@ impl Partita {
         p
     }
 
+    /// Gli eventi puntuali del turno: fuori dal tetto stanno quelli delle situazioni. Ne nasce uno
+    /// solo, il più grave. I candidati li aggiungono le famiglie dei task 6-8: finché la lista è
+    /// vuota non si estrae nulla.
+    fn nascono_i_puntuali(&mut self) {
+        let candidati: Vec<rischio::Candidato> = Vec::new();
+        let (Some(i), _) = rischio::estrai(&mut self.caso, &candidati) else {
+            return;
+        };
+        let c = &candidati[i];
+        self.eventi.aperti.push(EventoAperto {
+            evento: c.evento,
+            turno: self.turno.saturating_add(1),
+            causa: c.causa.clone(),
+            regione: c.regione,
+            bersaglio: c.bersaglio,
+            tono: c.tono,
+            costo: c.costo,
+            scelta: None,
+        });
+    }
+
     fn misure_situazioni(&self, ufficiale: bool) -> Vec<f64> {
         situazioni::misure(
             &self.dati,
@@ -558,6 +579,7 @@ impl Partita {
             &ufficiali,
             self.turno.saturating_add(1),
         );
+        self.nascono_i_puntuali();
         self.incassa(&vero);
         if di_voto {
             self.vota_parlamento(&vero);

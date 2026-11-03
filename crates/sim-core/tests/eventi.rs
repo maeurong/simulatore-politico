@@ -156,3 +156,20 @@ fn salvataggio_con_eventi_incoerenti_rifiutato() {
         );
     }
 }
+
+#[test]
+fn la_scelta_non_sposta_le_estrazioni() {
+    let mut p = con_evento_di_prova();
+    let mut q = con_evento_di_prova();
+    rispondi(&mut p, 0, "presidi").unwrap();
+    rispondi(&mut q, 0, "ordinaria").unwrap();
+    chiudi_col_bilancio(&mut p);
+    chiudi_col_bilancio(&mut q);
+    let (j, k): (serde_json::Value, serde_json::Value) = (
+        serde_json::from_str(&p.salva().unwrap()).unwrap(),
+        serde_json::from_str(&q.salva().unwrap()).unwrap(),
+    );
+    assert_eq!(p.vista().sondaggio, q.vista().sondaggio);
+    assert_eq!(j["caso"], k["caso"]);
+    assert_eq!(j["eventi"], k["eventi"]);
+}

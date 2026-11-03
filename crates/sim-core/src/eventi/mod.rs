@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod rischio;
 pub(crate) mod situazioni;
 
 /// Le misure che non sono grandezze ma che il motore calcola: crescita annualizzata vera del PIL
