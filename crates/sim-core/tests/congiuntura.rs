@@ -88,12 +88,16 @@ fn estrazioni_fisse_per_turno() {
         // incroci (condizioni + fasce + regioni) × (alternative + punti + approvazione), 4 stime.
         let d = DatiGioco::da_testi(&f).unwrap();
         // A ogni chiusura: una normale per riga `[[deriva]]` (piano 9, Task 3), poi due uniformi per
-        // candidato delle emergenze (livello ed estrazione; uno per regione e tipo, piu' la siccita').
+        // candidato delle emergenze (livello ed estrazione; uno per regione e tipo, piu' la siccita'),
+        // poi due dello scandalo (bersaglio ed estrazione).
         for _ in 0..turni {
             for _ in 0..d.derive().len() {
                 atteso.normale(Flusso::Eventi);
             }
             for _ in 0..2 * 4 * d.regioni().len() {
+                atteso.uniforme(Flusso::Eventi);
+            }
+            for _ in 0..2 {
                 atteso.uniforme(Flusso::Eventi);
             }
         }

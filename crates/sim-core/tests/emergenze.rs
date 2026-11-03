@@ -245,7 +245,9 @@ fn al_massimo_un_puntuale_per_turno() {
             let emergenze = (p.vista().eventi.iter())
                 .filter(|e| e.famiglia == Famiglia::Emergenza)
                 .count();
-            assert_eq!(emergenze, 1, "seme {seme}, turno {turno}");
+            // Zero solo se tutte le estrazioni sono uscite lievi: la lieve non apre un evento.
+            let lievi = json_di(&p)["eventi"]["lievi"].as_array().unwrap().len();
+            assert_eq!(emergenze + lievi, 1, "seme {seme}, turno {turno}");
         }
     }
 }

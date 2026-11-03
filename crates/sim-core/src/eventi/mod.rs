@@ -358,11 +358,13 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             }
         }
     }
-    for id in emergenze::EVENTI {
+    let richiesti = (emergenze::EVENTI.iter().map(|id| (id, Famiglia::Emergenza)))
+        .chain(rischio::SCANDALI.iter().map(|id| (id, Famiglia::Scandalo)));
+    for (id, famiglia) in richiesti {
         match dati.evento(id).and_then(|k| eventi.get(k)) {
             None => return ko(format!("evento richiesto dal motore mancante: {id}")),
-            Some(e) if e.famiglia != Famiglia::Emergenza => {
-                return ko(format!("{}: serve la famiglia emergenza", e.nome));
+            Some(e) if e.famiglia != famiglia => {
+                return ko(format!("{}: serve un'altra famiglia", e.nome));
             }
             Some(_) => {}
         }
@@ -423,7 +425,9 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
         }
         EffettoOpzione::Valence { delta } if delta.is_finite() => Ok(()),
         EffettoOpzione::Valence { .. } => ko("valence non finita".into()),
-        EffettoOpzione::FondoRiserva | EffettoOpzione::Debito => Ok(()),
+        EffettoOpzione::FondoRiserva | EffettoOpzione::Debito | EffettoOpzione::Dimissioni => {
+            Ok(())
+        }
         _ => ko("effetto non ancora ammesso nei dati".into()),
     }
 }

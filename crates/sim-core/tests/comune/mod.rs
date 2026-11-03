@@ -105,7 +105,12 @@ pub fn senza_emergenze(mut f: FileDati) -> FileDati {
         "pericolosita = ",
         "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
     );
-    for nome in ["sisma_minimo", "emergenze_idro_anno", "siccita_anno"] {
+    for nome in [
+        "sisma_minimo",
+        "emergenze_idro_anno",
+        "siccita_anno",
+        "scandalo_base",
+    ] {
         f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
     }
     f
@@ -506,6 +511,19 @@ pub fn chiudi_col_bilancio(p: &mut Partita) {
 pub fn chiudi_senza_opposizione_ia(p: &mut Partita) {
     p.chiudi_turno();
     togli_opposizione_ia(p);
+}
+
+/// Toglie gli eventi aperti nati in questa chiusura (emergenze, scandali): chiusi al turno dopo
+/// muoverebbero la valence, per le prove che la misurano senza modellarli.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn togli_eventi_nati(p: &mut Partita) {
+    *p = edita(p, |j| {
+        j["eventi"]["aperti"].as_array_mut().unwrap().clear();
+    })
+    .unwrap();
 }
 
 /// Toglie quello che l'opposizione IA ha presentato in apertura: la sfiducia e le proposte nel

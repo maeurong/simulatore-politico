@@ -1,4 +1,5 @@
 use crate::caso::Caso;
+use crate::comando::Comando;
 use crate::dati::DatiGioco;
 use crate::disposizioni::{Disposizioni, Norma, data_di};
 use crate::economia::{
@@ -11,7 +12,8 @@ use crate::elettorato::{
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
 use crate::eventi::{
-    Bersaglio, EffettoOpzione, Eventi, EventoAperto, Famiglia, emergenze, rischio, situazioni,
+    Bersaglio, DatoOpzione, EffettoOpzione, Eventi, EventoAperto, Famiglia, emergenze, rischio,
+    situazioni,
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
@@ -327,15 +329,23 @@ impl Partita {
     }
 
     /// Gli eventi puntuali del turno: fuori dal tetto stanno quelli delle situazioni. Ne nasce uno
-    /// solo, il più grave. I candidati delle emergenze sono i primi; scandali e shock (task 7-8)
-    /// si aggiungono in coda. Un'emergenza fa il suo danno alla nascita.
+    /// solo, il più grave. I candidati delle emergenze sono i primi, poi lo scandalo; gli shock
+    /// (task 8) si aggiungono in coda. Un'emergenza fa il suo danno alla nascita.
     fn nascono_i_puntuali(&mut self) {
-        let candidati = emergenze::candidati(
+        let mut candidati = emergenze::candidati(
             &self.dati,
             self.data.successivo(),
             &self.grandezze,
             &mut self.caso,
         );
+        candidati.extend(rischio::candidato_scandalo(
+            &self.dati,
+            &self.grandezze,
+            &self.ministri,
+            &self.partiti,
+            self.giocatore,
+            &mut self.caso,
+        ));
         let (Some(i), _) = rischio::estrai(&mut self.caso, &candidati) else {
             return;
         };
@@ -3824,6 +3834,10 @@ impl Partita {
     /// Alla chiusura: ogni evento aperto vale con l'opzione scelta o col default. Le grandezze
     /// entrano negli effetti, come quelli degli atti ma senza capacità del ministro.
     fn risolvi_eventi(&mut self) {
+        // Prima di tutto: uno scandalo che si chiude ora riparte da `turni_scandalo` pieni.
+        for m in (self.ministri.dicasteri.iter_mut()).filter_map(|st| st.ministro.as_mut()) {
+            m.sotto_scandalo = m.sotto_scandalo.saturating_sub(1);
+        }
         for aperto in std::mem::take(&mut self.eventi.lievi) {
             let quota = self.spendi(&aperto, true);
             let inizio = aperto.turno.saturating_sub(1);
@@ -3836,6 +3850,10 @@ impl Partita {
             .map(|(a, o)| (a, o.clone()))
             .collect();
         for (aperto, opzione) in risolti {
+            if self.dati.eventi()[aperto.evento].famiglia == Famiglia::Scandalo {
+                self.risolvi_scandalo(&aperto, &opzione);
+                continue;
+            }
             // La quota del costo pagata da `FondoRiserva`/`Debito`: scala le grandezze che seguono.
             let mut quota = 1.0;
             for effetto in &opzione.effetti {
@@ -3890,6 +3908,43 @@ impl Partita {
                 };
                 self.valence_evento(&aperto, delta);
             }
+        }
+    }
+
+    /// Lo scandalo si chiude: le dimissioni seguono la regola di `ChiediDimissioni`, il resto (difendere,
+    /// o l'unica opzione del leader) costa `valence_scandalo` al partito del bersaglio e, per un
+    /// ministro, lo tiene `turni_scandalo` sotto la sfiducia IA. Un bersaglio che non c'è più, o un
+    /// rifiuto di `applica`, chiudono l'evento in silenzio.
+    fn risolvi_scandalo(&mut self, aperto: &EventoAperto, opzione: &DatoOpzione) {
+        let presente = match aperto.bersaglio {
+            Some(Bersaglio::Ministro { dicastero }) => {
+                (self.ministri.dicasteri.get(dicastero)).is_some_and(|st| st.ministro.is_some())
+            }
+            Some(Bersaglio::Leader { partito }) => {
+                self.partiti.get(partito).is_some_and(|p| !p.sciolto)
+            }
+            None => false,
+        };
+        if !presente {
+            return;
+        }
+        if opzione.effetti.contains(&EffettoOpzione::Dimissioni) {
+            if let Some(Bersaglio::Ministro { dicastero }) = aperto.bersaglio
+                && let Some(d) = self.dati.dicasteri().get(dicastero)
+            {
+                let dicastero = d.id.clone();
+                // ponytail: un rifiuto (dimissioni già chieste) lascia il ministro com'è, senza riga.
+                let _ = self.applica(Comando::ChiediDimissioni { dicastero });
+            }
+            return;
+        }
+        self.valence_evento(aperto, -self.dati.manopola("valence_scandalo"));
+        let turni = self.dati.manopola("turni_scandalo").round() as u32;
+        if let Some(Bersaglio::Ministro { dicastero }) = aperto.bersaglio
+            && let Some(m) =
+                (self.ministri.dicasteri.get_mut(dicastero)).and_then(|st| st.ministro.as_mut())
+        {
+            m.sotto_scandalo = turni;
         }
     }
 
@@ -4730,6 +4785,32 @@ mod tests {
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
         p
+    }
+
+    /// Lo scandalo di un leader il cui partito si è sciolto nel frattempo si chiude senza effetti.
+    #[test]
+    fn scandalo_su_un_partito_sciolto_si_chiude_in_silenzio() {
+        let dati = dati_base();
+        let evento = dati.evento("scandalo_leader").unwrap();
+        let mut p = Partita::nuova(dati_base(), 1);
+        let j = (0..p.partiti.len()).find(|&k| k != p.giocatore).unwrap();
+        p.partiti[j].sciolto = true;
+        let prima = p.partiti[j].valence;
+        let aperto = crate::eventi::EventoAperto {
+            evento,
+            turno: p.turno,
+            causa: crate::eventi::Causa::Rischio {
+                livello: crate::vista::Fascia3::Medio,
+            },
+            regione: None,
+            bersaglio: Some(Bersaglio::Leader { partito: j }),
+            tono: crate::eventi::Tono::Ordinario,
+            costo: 0,
+            scelta: None,
+        };
+        p.risolvi_scandalo(&aperto, &dati.eventi()[evento].opzioni[0]);
+        assert_eq!(p.partiti[j].valence, prima);
+        assert!(p.mosse.is_empty());
     }
 
     /// Innesco 4: con un evento aperto nel suo dicastero che ammette il decreto, il ministro

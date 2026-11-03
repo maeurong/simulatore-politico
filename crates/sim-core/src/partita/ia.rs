@@ -580,7 +580,9 @@ impl Partita {
                 .filter_map(|(i, st)| Some((i, st.ministro.as_ref()?)))
                 .filter(|(_, m)| !in_ultimatum.contains(&m.partito))
                 .min_by(|&(a, x), &(b, y)| {
-                    (giudizio(x.partito).total_cmp(&giudizio(y.partito)))
+                    // Prima chi è sotto scandalo, poi il giudizio peggiore.
+                    ((y.sotto_scandalo > 0).cmp(&(x.sotto_scandalo > 0)))
+                        .then(giudizio(x.partito).total_cmp(&giudizio(y.partito)))
                         .then(peso(b).cmp(&peso(a)))
                 })?;
             let nome = &self.dati.dicasteri().get(i)?.nome;

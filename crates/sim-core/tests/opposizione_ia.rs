@@ -156,6 +156,35 @@ fn la_sfiducia_ia_presentata_passa_se_nulla_cambia() {
     }
 }
 
+/// Con la sfiducia che passerebbe su ogni ministro non in ultimatum, l'IA prende quello sotto
+/// scandalo anche se non ha il giudizio peggiore.
+#[test]
+fn la_sfiducia_individuale_va_al_ministro_sotto_scandalo() {
+    let mut p = al_governo_coi_seggi(true);
+    chiudi_col_bilancio(&mut p);
+    let (Some(peggiore), _) = p.parlamento().sfiducia.expect("l'individuale passa") else {
+        panic!("la sfiducia al governo passerebbe: il test misura l'individuale");
+    };
+    let destra = partito("destra");
+    let altri: Vec<usize> = (p.ministri().dicasteri.iter().enumerate())
+        .filter(|(i, st)| {
+            *i != peggiore && st.ministro.as_ref().is_some_and(|m| m.partito == destra)
+        })
+        .map(|(i, _)| i)
+        .collect();
+    assert!(!altri.is_empty());
+    for k in altri {
+        let base = al_governo_coi_seggi(true);
+        let mut p = edita(&base, |j| {
+            j["ministri"]["dicasteri"][k]["ministro"]["sotto_scandalo"] = 4.into();
+        })
+        .unwrap();
+        chiudi_col_bilancio(&mut p);
+        let scelto = p.parlamento().sfiducia.map(|(d, _)| d);
+        assert_eq!(scelto, Some(Some(k)), "peggiore {peggiore}, scandalo {k}");
+    }
+}
+
 #[test]
 fn sotto_un_governo_ia_l_opposizione_ia_sfiducia() {
     // Governo 1-5: 220 su 400 e 110 su 200; opposizione 180 e 90, firme IA (0 e 6) 100. Col

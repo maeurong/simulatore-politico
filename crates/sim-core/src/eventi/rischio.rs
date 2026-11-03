@@ -3,7 +3,14 @@
 
 use super::{Bersaglio, Causa, Tono};
 use crate::caso::{Caso, Flusso};
+use crate::dati::DatiGioco;
+use crate::grandezze::Grandezze;
+use crate::ministri::Ministri;
+use crate::partiti::Partito;
 use crate::vista::Fascia3;
+
+/// Gli eventi che nascono dallo scandalo: sul ministro, sul leader.
+pub(crate) const SCANDALI: [&str; 2] = ["scandalo_ministro", "scandalo_leader"];
 
 /// Un evento che può nascere in questo turno con probabilità `p`.
 pub(crate) struct Candidato {
@@ -17,6 +24,54 @@ pub(crate) struct Candidato {
     pub tono: Tono,
     /// Un'emergenza lieve: non apre un evento, la paga il fondo alla nascita.
     pub lieve: bool,
+}
+
+/// Lo scandalo del turno (scelta 18): `p = scandalo_base × corruzione / 100`. Il bersaglio si estrae
+/// sempre, anche a `p` zero o senza bersagli, fra i ministri in carica (in ordine di dicastero) e
+/// i leader dei partiti IA non sciolti (in ordine d'indice): il giocatore non è mai fra loro.
+pub(crate) fn candidato_scandalo(
+    dati: &DatiGioco,
+    grandezze: &Grandezze,
+    ministri: &Ministri,
+    partiti: &[Partito],
+    giocatore: usize,
+    caso: &mut Caso,
+) -> Option<Candidato> {
+    let corruzione = grandezze.nazionale(dati, dati.grandezza("corruzione")?);
+    let (del_ministro, del_leader) = (dati.evento(SCANDALI[0])?, dati.evento(SCANDALI[1])?);
+    let bersagli: Vec<Bersaglio> = (ministri.dicasteri.iter().enumerate())
+        .filter(|(_, st)| st.ministro.is_some())
+        .map(|(dicastero, _)| Bersaglio::Ministro { dicastero })
+        .chain(
+            (partiti.iter().enumerate())
+                .filter(|&(j, p)| j != giocatore && !p.sciolto)
+                .map(|(partito, _)| Bersaglio::Leader { partito }),
+        )
+        .collect();
+    let u = caso.uniforme(Flusso::Eventi);
+    let bersaglio = bersagli.get((u * bersagli.len() as f64) as usize).copied();
+    let p = if bersaglio.is_some() {
+        (dati.manopola("scandalo_base") * corruzione / 100.0).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let evento = match bersaglio {
+        Some(Bersaglio::Leader { .. }) => del_leader,
+        _ => del_ministro,
+    };
+    Some(Candidato {
+        evento,
+        p,
+        gravita: (dati.eventi().get(evento)).map_or(0, |e| e.gravita),
+        regione: None,
+        bersaglio,
+        causa: Causa::Rischio {
+            livello: livello(p),
+        },
+        costo: 0,
+        tono: Tono::Ordinario,
+        lieve: false,
+    })
 }
 
 /// Il livello di rischio per la causa: la vista non mostra mai la probabilità in cifre.

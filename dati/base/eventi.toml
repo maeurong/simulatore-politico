@@ -440,3 +440,45 @@ id = "nessun_intervento"
 nome = "Non intervenire"
 default = false
 effetti = []
+
+# situazioni-ed-eventi-al-turno-zero.md:97-114 (otto ministri dimessi in 2008-2026; la sfiducia individuale
+# passa 1 volta su 39). Il costo in valence sta nella manopola `valence_scandalo`, non nell'opzione:
+# l'opzione che non si dimette lo paga, le dimissioni seguono la regola di `ChiediDimissioni`.
+[[evento]]
+id = "scandalo_ministro"
+famiglia = "scandalo"
+nome = "Scandalo su un ministro"
+gravita = 7
+dicasteri = []
+decreto = false
+debito = false
+
+[[evento.opzioni]]
+id = "difenderlo"
+nome = "Difenderlo"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "dimissioni"
+nome = "Chiedere le dimissioni"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "dimissioni"
+
+# Nessuna scelta: l'unica opzione è il default (R21).
+[[evento]]
+id = "scandalo_leader"
+famiglia = "scandalo"
+nome = "Scandalo su un leader"
+gravita = 6
+dicasteri = []
+decreto = false
+debito = false
+
+[[evento.opzioni]]
+id = "prendere_atto"
+nome = "Prendere atto"
+default = true
+effetti = []

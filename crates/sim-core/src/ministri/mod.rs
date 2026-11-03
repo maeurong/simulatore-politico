@@ -114,6 +114,10 @@ pub struct Ministro {
     pub soddisfazione: f64,
     pub turni_in_carica: u32,
     pub tecnico: bool,
+    /// Turni che restano sotto scandalo (0 = no); cala a ogni chiusura. La sfiducia IA prende di
+    /// mira chi ne ha.
+    #[serde(default)]
+    pub sotto_scandalo: u32,
 }
 
 impl Ministro {
@@ -258,6 +262,7 @@ impl Ministri {
             soddisfazione: cx.dati.manopola("soddisfazione_base"),
             turni_in_carica: 0,
             tecnico,
+            sotto_scandalo: 0,
         }
     }
 
