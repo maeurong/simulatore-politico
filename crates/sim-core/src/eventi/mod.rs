@@ -4,6 +4,7 @@
 
 use crate::atti::Forma;
 use crate::dati::DatiGioco;
+use crate::disposizioni::Norma;
 use crate::errore::Errore;
 use crate::grandezze::Verso;
 use crate::partita::{LIMITE_EURO, vita::virgola};
@@ -88,8 +89,12 @@ pub struct DatoEvento {
     pub nome: String,
     /// Nel tetto di un evento a turno vince la gravità più alta.
     pub gravita: u8,
-    /// Dicasteri (id) le cui disposizioni ordinarie il decreto innescato ammette.
+    /// Dicasteri (id): il decreto innescato ne ammette le disposizioni ordinarie solo se `norme`
+    /// è vuota.
     pub dicasteri: Vec<String>,
+    /// Disposizioni (id) che il decreto innescato ammette; vuota = tutte le ordinarie dei
+    /// `dicasteri`.
+    pub norme: Vec<String>,
     pub decreto: bool,
     /// Fra le opzioni c'è il decreto a debito.
     pub debito: bool,
@@ -217,10 +222,11 @@ pub struct Eventi {
     pub contatori: Vec<u8>,
 }
 
-/// Cosa innesca il decreto su disposizioni: i dicasteri (indici) degli eventi aperti che lo
-/// ammettono.
+/// Cosa innesca il decreto su disposizioni: i dicasteri (indici) e le disposizioni (indici di
+/// catalogo) degli eventi aperti che lo ammettono.
 pub(crate) struct Inneschi {
     pub dicasteri: Vec<usize>,
+    pub disposizioni: Vec<usize>,
 }
 
 impl Eventi {
@@ -236,13 +242,22 @@ impl Eventi {
     }
 
     pub(crate) fn inneschi(&self, dati: &DatiGioco) -> Inneschi {
-        let dicasteri = (self.aperti.iter())
-            .filter_map(|a| dati.eventi().get(a.evento))
-            .filter(|e| e.decreto)
+        let aperti = || {
+            (self.aperti.iter())
+                .filter_map(|a| dati.eventi().get(a.evento))
+                .filter(|e| e.decreto)
+        };
+        let dicasteri = (aperti().filter(|e| e.norme.is_empty()))
             .flat_map(|e| &e.dicasteri)
             .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
             .collect();
-        Inneschi { dicasteri }
+        let disposizioni = (aperti().flat_map(|e| &e.norme))
+            .filter_map(|id| dati.disposizione(id))
+            .collect();
+        Inneschi {
+            dicasteri,
+            disposizioni,
+        }
     }
 
     pub fn iniziali(dati: &DatiGioco) -> Eventi {
@@ -357,6 +372,25 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
             .find(|id| !dati.dicasteri().iter().any(|d| &d.id == *id))
         {
             return ko(format!("{nome}: dicastero sconosciuto {id}"));
+        }
+        if !e.norme.is_empty() && !e.decreto {
+            return ko(format!("{nome}: norme per il decreto senza decreto"));
+        }
+        for (k, id) in e.norme.iter().enumerate() {
+            if e.norme[..k].contains(id) {
+                return ko(format!("{nome}: norma ripetuta: {id}"));
+            }
+            let Some(d) = dati
+                .disposizione(id)
+                .and_then(|j| dati.disposizioni().get(j))
+            else {
+                return ko(format!("{nome}: norma sconosciuta per il decreto: {id}"));
+            };
+            if d.norma != Norma::Ordinaria {
+                return ko(format!(
+                    "{nome}: la norma {id} non è ordinaria, il decreto non la ammette"
+                ));
+            }
         }
         for (k, o) in e.opzioni.iter().enumerate() {
             if e.opzioni[..k].iter().any(|p| p.id == o.id) {

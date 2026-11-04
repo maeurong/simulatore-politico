@@ -633,7 +633,12 @@ fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
 
 /// La partita con l'evento `criminalita` (dicastero Interno, decreto ammesso) aperto.
 fn con_evento_interno(p: &Partita) -> Partita {
-    let evento = dati_base().evento("criminalita").unwrap();
+    con_evento_aperto(p, "criminalita")
+}
+
+/// La partita con l'evento `id` aperto, senza scelta.
+fn con_evento_aperto(p: &Partita, id: &str) -> Partita {
+    let evento = dati_base().evento(id).unwrap();
     edita(p, |j| {
         j["eventi"]["aperti"] = serde_json::json!([{
             "evento": evento,
@@ -715,6 +720,39 @@ fn decreto_su_disposizione_senza_evento_rifiutato() {
             .contains("decreto senza innesco: nessun evento aperto per «Ingressi per lavoro»"),
         "{e}"
     );
+}
+
+/// Un'emergenza elenca le sue norme: il decreto passa su quelle, anche fuori dai suoi dicasteri,
+/// e non sul resto del ministero (cittadinanza è dell'Interno, dicastero dell'evento).
+#[test]
+fn il_sisma_ammette_solo_le_sue_norme() {
+    let mut p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_sismica");
+    for (d, g) in [
+        ("codice_appalti", "deroga_generale"),
+        ("detrazione_edilizia", "110"),
+    ] {
+        assert!(p.anteprima_decreto(&decreto_su(d, g)).is_ok(), "{d}");
+    }
+    let e = p
+        .comanda(emana(decreto_su("cittadinanza", "ius_soli_temperato")))
+        .unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn gli_incendi_non_aprono_il_decreto() {
+    let mut p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_incendi");
+    let e = p
+        .comanda(emana(decreto_su("codice_appalti", "deroga_generale")))
+        .unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn la_situazione_apre_ancora_il_ministero() {
+    let p = con_evento_interno(&Partita::nuova(dati_base(), 1));
+    let d = decreto_su("cittadinanza", "ius_soli_temperato");
+    assert!(p.anteprima_decreto(&d).is_ok());
 }
 
 /// La conversione respinta blocca la disposizione come una legge respinta: il decreto non si

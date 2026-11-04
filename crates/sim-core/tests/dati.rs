@@ -417,6 +417,44 @@ fn opzione_che_spende_senza_dicasteri_rifiutata() {
 }
 
 #[test]
+fn norme_del_decreto_rifiutate_col_messaggio() {
+    let sismica = "norme = [\"codice_appalti\", \"detrazione_edilizia\", \"accise\"]";
+    for (nuove, messaggio) in [
+        (
+            "norme = [\"codice_appalti\", \"non_esiste\"]",
+            "Emergenza sismica: norma sconosciuta per il decreto: non_esiste",
+        ),
+        (
+            "norme = [\"numero_parlamentari\"]",
+            "Emergenza sismica: la norma numero_parlamentari non è ordinaria, il decreto non la ammette",
+        ),
+        (
+            "norme = [\"accise\", \"accise\"]",
+            "Emergenza sismica: norma ripetuta: accise",
+        ),
+    ] {
+        let e =
+            DatiGioco::da_testi(&sostituisci(file_base(), "eventi", sismica, nuove)).unwrap_err();
+        assert!(
+            matches!(e, Errore::Eventi(_)) && e.to_string().contains(messaggio),
+            "{e}"
+        );
+    }
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "decreto = false\nnorme = []",
+        "decreto = false\nnorme = [\"accise\"]",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("Emergenza incendi: norme per il decreto senza decreto"),
+        "{e}"
+    );
+}
+
+#[test]
 fn emivita_del_danno_a_zero_rifiutata() {
     let f = sostituisci(
         file_base(),
