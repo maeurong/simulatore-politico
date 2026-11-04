@@ -376,6 +376,16 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
         if !e.norme.is_empty() && !e.decreto {
             return ko(format!("{nome}: norme per il decreto senza decreto"));
         }
+        if e.famiglia == Famiglia::Emergenza && e.decreto && e.norme.is_empty() {
+            return ko(format!(
+                "{nome}: un'emergenza con decreto deve elencare le sue norme"
+            ));
+        }
+        if !e.norme.is_empty() && dati.situazioni().iter().any(|s| s.evento == e.id) {
+            return ko(format!(
+                "{nome}: un evento di situazione apre il suo ministero, niente norme per il decreto"
+            ));
+        }
         for (k, id) in e.norme.iter().enumerate() {
             if e.norme[..k].contains(id) {
                 return ko(format!("{nome}: norma ripetuta: {id}"));

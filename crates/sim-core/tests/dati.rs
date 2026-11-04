@@ -455,6 +455,31 @@ fn norme_del_decreto_rifiutate_col_messaggio() {
 }
 
 #[test]
+fn norme_e_famiglia_del_decreto_rifiutate_col_messaggio() {
+    let sismica = "norme = [\"codice_appalti\", \"detrazione_edilizia\", \"accise\"]";
+    let f = sostituisci(file_base(), "eventi", sismica, "norme = []");
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("Emergenza sismica: un'emergenza con decreto deve elencare le sue norme"),
+        "{e}"
+    );
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "dicasteri = [\"economia_finanze\", \"sviluppo_economico\"]\ndecreto = true\nnorme = []",
+        "dicasteri = [\"economia_finanze\", \"sviluppo_economico\"]\ndecreto = true\nnorme = [\"accise\"]",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        e.to_string().contains(
+            "Recessione: un evento di situazione apre il suo ministero, niente norme per il decreto"
+        ),
+        "{e}"
+    );
+}
+
+#[test]
 fn emivita_del_danno_a_zero_rifiutata() {
     let f = sostituisci(
         file_base(),

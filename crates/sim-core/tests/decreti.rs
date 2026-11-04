@@ -730,6 +730,7 @@ fn il_sisma_ammette_solo_le_sue_norme() {
     for (d, g) in [
         ("codice_appalti", "deroga_generale"),
         ("detrazione_edilizia", "110"),
+        ("accise", "alte"),
     ] {
         assert!(p.anteprima_decreto(&decreto_su(d, g)).is_ok(), "{d}");
     }
@@ -742,9 +743,25 @@ fn il_sisma_ammette_solo_le_sue_norme() {
 #[test]
 fn gli_incendi_non_aprono_il_decreto() {
     let mut p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_incendi");
-    let e = p
-        .comanda(emana(decreto_su("codice_appalti", "deroga_generale")))
-        .unwrap_err();
+    // Accise è di ambiente_energia, dicastero degli incendi: col vecchio criterio passava.
+    let e = p.comanda(emana(decreto_su("accise", "alte"))).unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn l_idro_ammette_le_accise_non_le_rinnovabili() {
+    let p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_idro");
+    assert!(p.anteprima_decreto(&decreto_su("accise", "alte")).is_ok());
+    let e = (p.anteprima_decreto(&decreto_su("rinnovabili", "accelerate"))).unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn la_siccita_ammette_gli_appalti_non_le_accise() {
+    let p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_siccita");
+    let appalti = decreto_su("codice_appalti", "deroga_generale");
+    assert!(p.anteprima_decreto(&appalti).is_ok());
+    let e = (p.anteprima_decreto(&decreto_su("accise", "alte"))).unwrap_err();
     assert!(e.to_string().contains("decreto senza innesco"), "{e}");
 }
 
