@@ -1,6 +1,7 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
+use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima};
 use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
@@ -92,6 +93,47 @@ pub struct Vista {
     pub programma: Vec<VoceProgramma>,
     /// La campagna del giocatore: spese scelte e se il comando è ammesso.
     pub campagna: VistaCampagna,
+    /// Gli eventi aperti: si risolvono alla chiusura, con la `scelta` o il default.
+    pub eventi: Vec<VoceEvento>,
+    /// Le situazioni a soglia, accese o no.
+    pub situazioni: Vec<VoceSituazione>,
+}
+
+/// Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello
+/// ufficiale (grandezze alla chiusura precedente, prima stima della crescita); `accensione` e
+/// `spegnimento` le due soglie dell'isteresi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSituazione {
+    pub nome: String,
+    pub misura: String,
+    pub valore: f64,
+    pub accensione: f64,
+    pub spegnimento: f64,
+    pub accesa: bool,
+}
+
+/// Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`
+/// (`None` = vale il default), `regione` e `bersaglio` i nomi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceEvento {
+    pub nome: String,
+    pub famiglia: Famiglia,
+    pub causa: String,
+    pub tono: Tono,
+    pub regione: Option<String>,
+    pub bersaglio: Option<String>,
+    pub opzioni: Vec<VoceOpzione>,
+    pub scelta: Option<usize>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceOpzione {
+    pub id: String,
+    pub nome: String,
+    pub default: bool,
 }
 
 /// La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
@@ -247,7 +289,7 @@ pub struct Anteprima {
     pub seggi: Vec<VariazioneSeggi>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub enum Fascia3 {

@@ -1,5 +1,7 @@
 mod comune;
-use comune::{con_ingresso, dati_base, ferma_tutti, imposta, senza_shock};
+use comune::{
+    con_ingresso, dati_base, ferma_tutti, file_vero, imposta, senza_shock, senza_shock_vero,
+};
 use sim_core::{DatiGioco, FileDati, Partita};
 
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
@@ -21,7 +23,15 @@ fn senza_shock_i_prezzi_dei_settori_restano_a_uno() {
 
 #[test]
 fn uno_shock_energetico_alza_di_piu_i_prezzi_dell_industria() {
-    let p = giocata(&con_ingresso(senza_shock(), "energia", 20.0), 1, 1);
+    // Lo scarto di scenario sta già nei prezzi del turno zero: lo shock arriva dal passo (seme 3:
+    // il primo scarto di sigma_energia è positivo).
+    let f = imposta(
+        senza_shock(),
+        "manopole",
+        "[sigma_energia]\nvalore = ",
+        "15.0",
+    );
+    let p = giocata(&f, 3, 1);
     let e = p.economia();
     let (bte, l) = (e.prezzi_settori[1], e.prezzi_settori[6]);
     assert!(bte > l && l >= 1.0, "BTE {bte}, L {l}");
@@ -205,4 +215,30 @@ fn piu_esportazioni_aiutano_di_piu_le_regioni_industriali() {
         gap("veneto"),
         gap("lazio")
     );
+}
+
+/// Lo scarto di partenza (11) sta già nei prezzi del turno zero: il primo passo li riporta giù e
+/// l'inflazione importata è negativa; nel primo anno l'IPCA sta fra 0 e il 4,2% di partenza.
+#[test]
+fn l_energia_rientra() {
+    // Scenario vero: senza_shock azzera i rumori, non lo scarto di partenza.
+    let f = senza_shock_vero();
+    let mut p = giocata(&f, 1, 0);
+    let mut energia = vec![p.economia().energia];
+    for _ in 0..4 {
+        p.chiudi_turno();
+        energia.push(p.economia().energia);
+    }
+    let ipca = p.economia().inflazione[..4].iter().sum::<f64>() / 4.0;
+    assert!(energia[4] < 5.0, "{energia:?}");
+    let accesa = (p.situazioni().iter()).any(|s| s.misura == "energia" && s.accesa);
+    assert!(!accesa, "la situazione dell'energia resta accesa");
+    assert!(ipca > 0.0 && ipca < 4.2, "{ipca}");
+}
+
+#[test]
+fn il_turno_zero_ha_l_energia_nei_prezzi() {
+    let p = Partita::nuova(DatiGioco::da_testi(&file_vero()).unwrap(), 1);
+    assert_eq!(p.economia().energia, 11.0);
+    assert!(p.economia().prezzi_settori.iter().all(|&x| x > 1.0));
 }

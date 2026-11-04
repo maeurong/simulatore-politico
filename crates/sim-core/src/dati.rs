@@ -4,10 +4,12 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
-use crate::grandezze::{DatoGrandezza, Dinamica};
+use crate::eventi::{DatoEvento, DatoSituazione};
+use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
 use crate::struttura::{FileRegioni, Regione, Struttura};
+use crate::su_misura::{NOME_BASE, SuMisura};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -25,10 +27,11 @@ pub struct FileDati {
     pub grandezze: String,
     pub atti: String,
     pub disposizioni: String,
+    pub eventi: String,
 }
 
 impl FileDati {
-    pub const NOMI: [&str; 10] = [
+    pub const NOMI: [&str; 11] = [
         "dicasteri.toml",
         "manopole.toml",
         "economia.toml",
@@ -39,6 +42,7 @@ impl FileDati {
         "grandezze.toml",
         "atti.toml",
         "disposizioni.toml",
+        "eventi.toml",
     ];
 
     /// Legge i file per nome con la lettura di chi fa I/O.
@@ -57,12 +61,14 @@ impl FileDati {
             grandezze: leggi(Self::NOMI[7])?,
             atti: leggi(Self::NOMI[8])?,
             disposizioni: leggi(Self::NOMI[9])?,
+            eventi: leggi(Self::NOMI[10])?,
         })
     }
 }
 
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
+    "spinta_situazione",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",
@@ -331,18 +337,31 @@ pub struct Manopola {
     pub ticket: String,
 }
 
+// ponytail: campi pub(crate) invece di accessori mutabili, così `su_misura.rs` applica i cursori
+// dei Task 1-4 senza riaprire questo file; fuori dal crate restano privati.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DatiGioco {
-    dicasteri: Vec<Dicastero>,
-    manopole: BTreeMap<String, Manopola>,
-    struttura: Struttura,
-    regioni: Vec<Regione>,
-    scenario: Scenario,
-    elezioni: DatiElezioni,
-    elettorato: DatiElettorato,
-    grandezze: Vec<DatoGrandezza>,
-    atti: Vec<Atto>,
-    disposizioni: Vec<DatoDisposizione>,
+    pub(crate) dicasteri: Vec<Dicastero>,
+    pub(crate) manopole: BTreeMap<String, Manopola>,
+    pub(crate) struttura: Struttura,
+    pub(crate) regioni: Vec<Regione>,
+    pub(crate) scenario: Scenario,
+    pub(crate) elezioni: DatiElezioni,
+    pub(crate) elettorato: DatiElettorato,
+    pub(crate) grandezze: Vec<DatoGrandezza>,
+    pub(crate) derive: Vec<DatoDeriva>,
+    pub(crate) atti: Vec<Atto>,
+    pub(crate) disposizioni: Vec<DatoDisposizione>,
+    pub(crate) eventi: Vec<DatoEvento>,
+    pub(crate) situazioni: Vec<DatoSituazione>,
+    /// Le differenze dalla base da cui vengono questi dati; `None` per lo scenario di base.
+    pub(crate) su_misura: Option<SuMisura>,
+}
+
+#[derive(Deserialize)]
+struct FileEventi {
+    evento: Vec<DatoEvento>,
+    situazione: Vec<DatoSituazione>,
 }
 
 #[derive(Deserialize)]
@@ -363,6 +382,7 @@ struct FileDicasteri {
 #[derive(Deserialize)]
 struct FileGrandezze {
     grandezza: Vec<DatoGrandezza>,
+    deriva: Vec<DatoDeriva>,
 }
 
 /// I dati di base, per i test d'unità.
@@ -383,8 +403,12 @@ pub(crate) fn dati_base() -> DatiGioco {
         grandezze: include_str!("../../../dati/base/grandezze.toml").into(),
         atti: include_str!("../../../dati/base/atti.toml").into(),
         disposizioni: include_str!("../../../dati/base/disposizioni.toml").into(),
+        eventi: include_str!("../../../dati/base/eventi.toml").into(),
     };
-    DatiGioco::da_testi(&file).unwrap()
+    let mut dati = DatiGioco::da_testi(&file).unwrap();
+    // Economia a riposo al turno zero: i test d'unità non misurano lo scarto dell'energia.
+    dati.scenario.energia.valore = 0.0;
+    dati
 }
 
 #[cfg(test)]
@@ -439,6 +463,10 @@ impl DatiGioco {
         &self.grandezze
     }
 
+    pub fn derive(&self) -> &[DatoDeriva] {
+        &self.derive
+    }
+
     pub fn atti(&self) -> &[Atto] {
         &self.atti
     }
@@ -446,6 +474,19 @@ impl DatiGioco {
     /// Le disposizioni del file nel loro ordine, poi le nove elettorali.
     pub fn disposizioni(&self) -> &[DatoDisposizione] {
         &self.disposizioni
+    }
+
+    pub fn eventi(&self) -> &[DatoEvento] {
+        &self.eventi
+    }
+
+    pub fn situazioni(&self) -> &[DatoSituazione] {
+        &self.situazioni
+    }
+
+    /// Posizione di un evento per id.
+    pub fn evento(&self, id: &str) -> Option<usize> {
+        self.eventi.iter().position(|e| e.id == id)
     }
 
     /// Posizione di una disposizione per id.
@@ -489,6 +530,18 @@ impl DatiGioco {
 
     pub fn elettorato(&self) -> &DatiElettorato {
         &self.elettorato
+    }
+
+    /// Le differenze dalla base, se i dati vengono da uno scenario su misura.
+    pub fn su_misura(&self) -> Option<&SuMisura> {
+        self.su_misura.as_ref()
+    }
+
+    /// Il nome dello scenario: quello su misura, o «Italia di oggi».
+    pub fn nome_scenario(&self) -> &str {
+        self.su_misura
+            .as_ref()
+            .map_or(NOME_BASE, |s| s.nome.as_str())
     }
 
     /// Impostazione elettorale scelta dallo scenario.
@@ -543,15 +596,22 @@ impl DatiGioco {
             .map_err(|e| errore_toml("elezioni.toml", e))?;
         let elettorato = toml::from_str::<DatiElettorato>(&file.elettorato)
             .map_err(|e| errore_toml("elettorato.toml", e))?;
-        let grandezze = toml::from_str::<FileGrandezze>(&file.grandezze)
-            .map_err(|e| errore_toml("grandezze.toml", e))?
-            .grandezza;
+        let FileGrandezze {
+            grandezza: grandezze,
+            deriva: derive,
+        } = toml::from_str::<FileGrandezze>(&file.grandezze)
+            .map_err(|e| errore_toml("grandezze.toml", e))?;
         let atti = toml::from_str::<FileAtti>(&file.atti)
             .map_err(|e| errore_toml("atti.toml", e))?
             .atto;
         let mut disposizioni = toml::from_str::<FileDisposizioni>(&file.disposizioni)
             .map_err(|e| errore_toml("disposizioni.toml", e))?
             .disposizione;
+        let FileEventi {
+            evento: eventi,
+            situazione: situazioni,
+        } = toml::from_str::<FileEventi>(&file.eventi)
+            .map_err(|e| errore_toml("eventi.toml", e))?;
         if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
             return Err(Errore::Disposizioni(format!(
                 "{}: norma elettorale solo dal menu",
@@ -564,6 +624,7 @@ impl DatiGioco {
             &elezioni.menu,
             iniziale,
             precedente,
+            disposizioni::LEGGE_ELETTORALE,
         ));
 
         let dati = DatiGioco {
@@ -575,8 +636,12 @@ impl DatiGioco {
             elezioni,
             elettorato,
             grandezze,
+            derive,
             atti,
             disposizioni,
+            eventi,
+            situazioni,
+            su_misura: None,
         };
         dati.valida()?;
         Ok(dati)
@@ -603,6 +668,26 @@ impl DatiGioco {
                         g.id
                     ));
                 }
+            }
+        }
+        for d in &self.derive {
+            let id = &d.grandezza;
+            let Some(g) = grandezze.iter().find(|g| &g.id == id) else {
+                return ko(format!("deriva su una grandezza sconosciuta: {id}"));
+            };
+            if g.dinamica != Dinamica::Fissa {
+                return ko(format!("deriva su {id}: la grandezza non è fissa"));
+            }
+            if !(d.tasso.is_finite() && d.sigma.is_finite() && d.sigma >= 0.0) {
+                return ko(format!("deriva su {id}: tasso non finito o sigma negativa"));
+            }
+            if !(0.0..=1.0).contains(&d.ritorno) {
+                return ko(format!("deriva su {id}: ritorno fuori da 0-1"));
+            }
+            if d.logaritmica && g.min <= 0.0 {
+                return ko(format!(
+                    "deriva su {id}: logaritmica, ma il minimo non è positivo"
+                ));
             }
         }
         for d in &self.dicasteri {
@@ -647,7 +732,8 @@ impl DatiGioco {
     /// `Grandezze` (id ripetuti, intervalli, dicasteri, indicatori di servizio, grandezze richieste);
     /// `Atti` (catalogo: id, caselle, posizioni, effetti contro le grandezze); `Disposizioni`
     /// (catalogo: id, gradini, leve, effetti, perimetro, arrivi); `LeggeElettorale` anche per la
-    /// legge elettorale precedente dello scenario.
+    /// legge elettorale precedente dello scenario; `Eventi` (catalogo degli eventi e delle
+    /// situazioni: id, opzioni e default, dicasteri, grandezze, soglie, evento della situazione).
     pub fn valida(&self) -> Result<(), Errore> {
         let dicasteri = &self.dicasteri;
         for (i, d) in dicasteri.iter().enumerate() {
@@ -689,6 +775,7 @@ impl DatiGioco {
             &self.regioni,
         )?;
         crate::atti::valida(self)?;
+        crate::eventi::valida(self)?;
         for (nome, m) in &self.manopole {
             let finite = m.valore.is_finite() && m.min.is_finite() && m.max.is_finite();
             if !(finite && m.min <= m.valore && m.valore <= m.max) {

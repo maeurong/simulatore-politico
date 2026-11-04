@@ -87,6 +87,10 @@ fn estrazioni_fisse_per_turno() {
         // Nascita: bias e effetti d'istituto; poi a ogni rilevazione istituti × alternative,
         // incroci (condizioni + fasce + regioni) × (alternative + punti + approvazione), 4 stime.
         let d = DatiGioco::da_testi(&f).unwrap();
+        // Una normale per riga `[[deriva]]` a ogni chiusura (piano 9, Task 3).
+        for _ in 0..d.derive().len() * turni as usize {
+            atteso.normale(Flusso::Eventi);
+        }
         let alt = p.partiti().len() + 1;
         let istituti = d.elettorato().istituti.len();
         let incroci = Condizione::TUTTE.len() + Fascia::TUTTE.len() + d.regioni().len();

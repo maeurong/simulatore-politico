@@ -16,6 +16,7 @@ import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
+import type { VoceEvento } from "./VoceEvento";
 import type { VoceFascia } from "./VoceFascia";
 import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceIncarico } from "./VoceIncarico";
@@ -24,6 +25,7 @@ import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
 import type { VoceRichiesta } from "./VoceRichiesta";
+import type { VoceSituazione } from "./VoceSituazione";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -142,4 +144,12 @@ programma: Array<VoceProgramma>,
 /**
  * La campagna del giocatore: spese scelte e se il comando è ammesso.
  */
-campagna: VistaCampagna, };
+campagna: VistaCampagna, 
+/**
+ * Gli eventi aperti: si risolvono alla chiusura, con la `scelta` o il default.
+ */
+eventi: Array<VoceEvento>, 
+/**
+ * Le situazioni a soglia, accese o no.
+ */
+situazioni: Array<VoceSituazione>, };

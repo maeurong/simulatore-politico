@@ -952,3 +952,40 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
         assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     }
 }
+
+#[test]
+fn il_governo_ia_prende_il_default() {
+    let evento = comune::dati_base().evento("criminalita").unwrap();
+    let mut q = all_opposizione();
+    let mut p = edita(&q, |j| {
+        j["eventi"]["aperti"] = json!([{
+            "evento": evento,
+            "turno": q.vista().turno,
+            "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
+            "regione": null,
+            "bersaglio": null,
+            "tono": "ordinario",
+            "costo": 0,
+            "scelta": null,
+        }]);
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let e = p
+        .comanda(Comando::RispondiEvento {
+            evento: 0,
+            opzione: "presidi".into(),
+        })
+        .unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("Solo il governo risponde agli eventi"),
+        "{e}"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+    // Alla chiusura vale il default: l'evento si chiude senza effetti.
+    p.chiudi_turno();
+    q.chiudi_turno();
+    assert!(p.vista().eventi.is_empty());
+    assert_eq!(p, q);
+}

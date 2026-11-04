@@ -327,8 +327,7 @@ fn salvataggi_con_proposte_corrotte_rifiutati() {
     assert!(edita(&p, |_| ()).is_ok());
     let ticket = dati_base().disposizione("ticket").unwrap();
     let riforma = move |j: &mut Value, gradino: usize, sblocca: Value| {
-        j["ministri"]["dicasteri"][s]["proposta"]["tipo"] =
-            json!({"riforma": {"disposizione": ticket, "gradino": gradino, "sblocca": sblocca}});
+        j["ministri"]["dicasteri"][s]["proposta"]["tipo"] = json!({"riforma": {"disposizione": ticket, "gradino": gradino, "sblocca": sblocca, "evento": null}});
     };
     assert!(edita(&p, |j| riforma(j, 0, Value::Null)).is_ok());
     let righe: Vec<(&str, Modifica)> = vec![

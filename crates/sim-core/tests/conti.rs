@@ -205,6 +205,18 @@ fn il_saldo_dello_stato_e_meno_il_disavanzo() {
     );
 }
 
+/// Gli intervalli di debito, inflazione e disoccupazione di prima dei cursori dello scenario (piano
+/// 10): i test che seguono guardano il motore oltre i valori ammessi dall'editor.
+fn intervalli_larghi(f: FileDati) -> FileDati {
+    [
+        ("min = 110.0\nmax = 160.0", "min = 60.0\nmax = 200.0"),
+        ("min = 0.0\nmax = 8.0", "min = -2.0\nmax = 12.0"),
+        ("min = 4.7\nmax = 11.6", "min = 3.0\nmax = 15.0"),
+    ]
+    .into_iter()
+    .fold(f, |f, (da, a)| sostituisci(f, "scenario", da, a))
+}
+
 fn dati(f: FileDati) -> DatiGioco {
     DatiGioco::da_testi(&f).unwrap()
 }
@@ -367,7 +379,7 @@ fn la_catena_delle_sanzioni_si_attraversa() {
 fn scenario_estremo_resta_finito() {
     let f = con_ingresso(
         con_ingresso(
-            con_ingresso(file_base(), "debito_pil", 200.0),
+            con_ingresso(intervalli_larghi(file_base()), "debito_pil", 200.0),
             "inflazione",
             12.0,
         ),
@@ -546,7 +558,7 @@ fn oltre_il_3_di_disavanzo_lo_spread_sale_di_2_4_pb_per_punto() {
 #[test]
 fn lo_spread_non_supera_il_massimo() {
     let f = inadempiente(con_ingresso(
-        con_ingresso(senza_shock(), "debito_pil", 200.0),
+        con_ingresso(intervalli_larghi(senza_shock()), "debito_pil", 200.0),
         "premio_sfiducia",
         400.0,
     ));

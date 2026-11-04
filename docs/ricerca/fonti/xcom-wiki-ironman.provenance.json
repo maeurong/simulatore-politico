@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://xcom.fandom.com/api.php?action=parse&page=Ironman&format=json&prop=text&formatversion=2&redirects=1", "sha256": "3a71f50cd5c7fe98a8f38bf203fc59a3fe45a48ea11975c9f337c5b741253bd6", "bytes": 3405}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-10-29"}

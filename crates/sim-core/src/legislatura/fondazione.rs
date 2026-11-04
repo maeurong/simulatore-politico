@@ -13,6 +13,7 @@ use ts_rs::TS;
 
 /// Il nome del partito e la posizione scelta, una di `posizioni`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub struct Fondazione {
     pub nome: String,
     pub posizione: f64,
@@ -38,7 +39,7 @@ pub struct AnteprimaFondazione {
 }
 
 const LUNGHEZZA_NOME: usize = 40;
-const SEGNAPOSTO: &str = "Partito nuovo";
+pub(crate) const SEGNAPOSTO: &str = "Partito nuovo";
 
 /// I punti medi fra due partiti consecutivi sull'asse, in ordine crescente: nessuno coincide con un
 /// partito.

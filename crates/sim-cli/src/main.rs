@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use sim_core::legislatura::Fondazione;
-use sim_core::{DatiGioco, FileDati, Partita};
+use sim_core::{DatiGioco, FileDati, Partita, SuMisura};
 
 mod tara;
 
@@ -14,10 +14,13 @@ struct Argomenti {
     turni: u32,
     /// Con una posizione, la partita vera fondata lì; senza, la partita di prova dal governo uscente.
     posizione: Option<f64>,
+    /// File di differenze dello scenario su misura, applicato ai dati prima di giocare.
+    scenario: Option<String>,
 }
 
 fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, String> {
-    let (mut dati, mut seme, mut turni, mut posizione) = (None, None, None, None);
+    let (mut dati, mut seme, mut turni, mut posizione, mut scenario) =
+        (None, None, None, None, None);
     while let Some(nome) = args.next() {
         let valore = args
             .next()
@@ -45,6 +48,7 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
                         .map_err(|_| format!("posizione non valida: {valore}"))?,
                 );
             }
+            "--scenario" => scenario = Some(valore),
             _ => return Err(format!("argomento sconosciuto: {nome}")),
         }
     }
@@ -53,6 +57,7 @@ fn leggi_argomenti(mut args: impl Iterator<Item = String>) -> Result<Argomenti, 
         seme: seme.ok_or("manca --seme <u64>")?,
         turni: turni.ok_or("manca --turni <u32>")?,
         posizione,
+        scenario,
     })
 }
 
@@ -70,7 +75,13 @@ fn esegui() -> Result<String, String> {
     let argomenti = leggi_argomenti(args)?;
     let cartella = Path::new(&argomenti.dati);
     let file = FileDati::leggi(|nome| leggi(cartella, nome))?;
-    let dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
+    let mut dati = DatiGioco::da_testi(&file).map_err(|e| e.to_string())?;
+    if let Some(percorso) = &argomenti.scenario {
+        let testo = std::fs::read_to_string(percorso)
+            .map_err(|e| format!("impossibile leggere lo scenario {percorso}: {e}"))?;
+        let s = SuMisura::da_toml(&testo, &dati).map_err(|e| e.to_string())?;
+        dati = dati.con_su_misura(&s).map_err(|e| e.to_string())?;
+    }
     let mut partita = match argomenti.posizione {
         Some(posizione) => {
             let f = Fondazione {

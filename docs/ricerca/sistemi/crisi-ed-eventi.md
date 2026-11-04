@@ -1,7 +1,7 @@
 ---
 tipo: sistema
 fonti: [fonti/democracy4-mod-situations.md, fonti/democracy3-modding.md, fonti/hoi4-wiki-event-modding.md, fonti/rimworld-wiki-ai-storytellers.md, fonti/democracy4-faq.md, fonti/wikipedia-plague-inc.md, fonti/wikipedia-papers-please.md]
-aggiornato: 2026-10-17
+aggiornato: 2026-10-29
 ---
 # Crisi ed eventi: scriptati o emergenti
 
@@ -45,3 +45,4 @@ Decisione del 17/10/2026 ([[decisioni]], ticket wayfinder 15): nella v1 entrano 
 - [[ritardi-e-inerzia-delle-politiche]]: decadimento dei grudges.
 - [[media-informazione-e-propaganda]]: gli eventi spostano la salienza.
 - [[deterrenza-ed-escalation]]: la crisi internazionale come scala di escalation.
+- [[situazioni-ed-eventi-al-turno-zero]]: valori reali, picchi e variabilità delle sei situazioni; frequenza degli scandali; conto degli shock oltre 2σ.

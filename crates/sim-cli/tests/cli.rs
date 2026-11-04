@@ -125,6 +125,39 @@ fn flag_senza_valore_esce_con_errore() {
     );
 }
 
+fn scenario(nome: &str, testo: &str) -> String {
+    let file = std::env::temp_dir().join(format!("scenario-{}-{nome}.toml", std::process::id()));
+    std::fs::write(&file, testo).unwrap();
+    file.to_str().unwrap().into()
+}
+
+#[test]
+fn scenario_ostile_esce_con_errore() {
+    let file = scenario("ostile", "nome = \"Ostile\"\n[cursori]\npil = 1\n");
+    let args = ["--dati", DATI, "--seme", "1", "--turni", "1"];
+    rifiuta(&[&args[..], &["--scenario", &file]].concat(), "pil");
+}
+
+#[test]
+fn lo_scenario_cambia_la_partita() {
+    let file = scenario(
+        "debito",
+        "nome = \"Debito\"\n[cursori]\ndebito_pil = 150.0\n",
+    );
+    let args = ["--dati", DATI, "--seme", "1", "--turni", "0"];
+    let spread = |extra: &[&str]| {
+        let out = sim(&[&args[..], extra].concat());
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        v["vista"]["spread_pb"].as_i64().unwrap()
+    };
+    assert!(spread(&["--scenario", &file]) > spread(&[]));
+}
+
 #[test]
 fn l_uscita_contiene_le_intenzioni_vere() {
     let out = sim(&["--dati", DATI, "--seme", "42", "--turni", "2"]);

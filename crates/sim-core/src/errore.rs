@@ -54,9 +54,11 @@ pub enum Errore {
     Grandezze(String),
     Atti(String),
     Disposizioni(String),
+    Eventi(String),
     Comando(String),
     Bilancio(String),
     Fondazione(String),
+    SuMisura(String),
     Toml {
         file: String,
         messaggio: String,
@@ -125,9 +127,11 @@ impl fmt::Display for Errore {
             Self::Grandezze(m) => write!(f, "grandezze dei dicasteri non valide: {m}"),
             Self::Atti(m) => write!(f, "catalogo degli atti non valido: {m}"),
             Self::Disposizioni(m) => write!(f, "disposizioni non valide: {m}"),
+            Self::Eventi(m) => write!(f, "eventi e situazioni non validi: {m}"),
             Self::Comando(m) => write!(f, "comando non ammesso: {m}"),
             Self::Bilancio(m) => write!(f, "legge di bilancio non ammessa: {m}"),
             Self::Fondazione(m) => write!(f, "fondazione del partito non valida: {m}"),
+            Self::SuMisura(m) => write!(f, "scenario su misura non valido: {m}"),
             Self::Toml { file, messaggio } => write!(f, "{file}: {messaggio}"),
             Self::SchemaDiverso { trovata, attesa } => write!(
                 f,

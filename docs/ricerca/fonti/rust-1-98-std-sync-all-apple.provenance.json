@@ -1,0 +1,1 @@
+{"derived_from": {"path": "/opt/homebrew/opt/rust/lib/rustlib/src/rust/library/std/src/sys/fs/unix.rs", "sha256": "f960050a4ec6de2e26eb4e4a479ef63a023dbb9b1622b65c20212a51476492a1", "bytes": 1816}, "tool": "sed", "tool_version": "n/d", "extracted": "2026-10-29"}

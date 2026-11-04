@@ -568,7 +568,12 @@ impl Ministri {
                 motivo: ag.motivo.clone(),
                 stato: ag.stato,
                 in_evidenza: minaccia
-                    || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza"),
+                    || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza")
+                    || cx
+                        .eventi
+                        .nel_dicastero(dati, &dati.dicasteri()[i].id)
+                        .next()
+                        .is_some(),
             }
         });
         let provvisorio = cx.economia.esercizio_provvisorio(cx.data);
