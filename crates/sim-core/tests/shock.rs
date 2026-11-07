@@ -1,9 +1,12 @@
-//! Il margine UE per l'energia (shock energetico): vale solo dopo `clausola_nazionale_fino_a`.
+//! Il margine UE per l'energia (shock energetico): vale solo dopo `clausola_nazionale_fino_a`; e uno
+//! shock vero sulla partita.
 //! Candidati e frequenza degli shock stanno in `eventi/rischio.rs`: `candidati_shock` è interna.
 
 mod comune;
 
-use comune::{edita, senza_shock, sostituisci};
+use comune::{
+    chiudi_col_bilancio, edita, file_base, imposta, senza_emergenze, senza_shock, sostituisci,
+};
 use serde_json::json;
 use sim_core::{Comando, DatiGioco, Partita};
 
@@ -94,4 +97,52 @@ fn rifiutato(guasto: impl FnOnce(&mut serde_json::Value)) -> String {
 fn un_salvataggio_con_la_clausola_nel_futuro_e_rifiutato() {
     let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(65535));
     assert!(m.contains("clausola_energia_fino_a"), "{m}");
+}
+
+/// Con la soglia a 1 sigma, senza emergenze né scandali, uno shock nasce presto: la causa nomina
+/// la soglia, il costo è `aiuti_shock` del PIL potenziale annuo, e gli aiuti lo spendono.
+#[test]
+fn uno_shock_vero_apre_l_evento_con_costo_e_causa() {
+    let f = imposta(
+        senza_emergenze(file_base()),
+        "manopole",
+        "[soglia_shock]\nvalore = ",
+        "1.0",
+    );
+    let dati = DatiGioco::da_testi(&f).unwrap();
+    let mut p = Partita::nuova(dati.clone(), 1);
+    let shock = |p: &Partita| {
+        let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        (j["eventi"]["aperti"].as_array().unwrap().iter())
+            .position(|a| a["causa"]["tipo"] == "shock")
+            .map(|k| (k, j["eventi"]["aperti"][k]["costo"].as_i64().unwrap()))
+    };
+    let mut trovato = None;
+    for _ in 0..20 {
+        chiudi_col_bilancio(&mut p);
+        trovato = shock(&p);
+        if trovato.is_some() {
+            break;
+        }
+    }
+    let (k, costo) = trovato.expect("uno shock in 20 chiusure");
+    let e = p.economia();
+    let atteso = dati.manopola("aiuti_shock") * e.pil_potenziale_reale * e.livello_prezzi * 4e9;
+    assert!((costo as f64 - atteso).abs() <= 1.0, "{costo} {atteso}");
+    let causa = &p.vista().eventi[k].causa;
+    assert!(causa.contains("(soglia 1,0 sigma)"), "{causa}");
+    let mut senza = Partita::carica(&p.salva().unwrap()).unwrap();
+    p.comanda(Comando::RispondiEvento {
+        evento: k,
+        opzione: "aiuti".into(),
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    chiudi_col_bilancio(&mut senza);
+    let (con, senza) = (p.economia(), senza.economia());
+    assert_eq!(
+        con.conti.spese.dicasteri - senza.conti.spese.dicasteri,
+        costo
+    );
+    assert!(con.debito > senza.debito);
 }

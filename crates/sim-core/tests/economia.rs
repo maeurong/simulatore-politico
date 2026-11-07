@@ -46,6 +46,37 @@ fn uno_shock_energetico_alza_di_piu_i_prezzi_dell_industria() {
     assert!(e.inflazione_importata > 0.0);
 }
 
+/// L'indice `k` delle normali di `passo_con` muove la sua serie: domanda il gap, produttività il
+/// potenziale, energia ed estera i loro scarti, BCE il tasso. Potenziale, energia ed estera
+/// dipendono solo dalla loro innovazione: le altre quattro non li toccano.
+#[test]
+fn ogni_innovazione_muove_la_sua_serie() {
+    let dati = dati_base();
+    let dopo = |k: Option<usize>| {
+        let z = std::array::from_fn(|i| if Some(i) == k { 1.0 } else { 0.0 });
+        let mut e = Economia::iniziale(&dati);
+        e.passo_con(&dati, Trimestre::TURNO_ZERO, &Misure::neutre(&dati), z);
+        [
+            e.output_gap[0],
+            e.pil_potenziale_reale,
+            e.energia,
+            e.domanda_estera,
+            e.tasso_bce,
+        ]
+    };
+    let zero = dopo(None);
+    for k in 0..5 {
+        let x = dopo(Some(k));
+        for (j, (a, b)) in x.iter().zip(&zero).enumerate() {
+            if j == k {
+                assert_ne!(a, b, "l'innovazione {k} non muove la sua serie");
+            } else if (1..=3).contains(&j) {
+                assert_eq!(a, b, "l'innovazione {k} muove la serie {j}");
+            }
+        }
+    }
+}
+
 /// Senza shock e senza atti dei ministri: un atto sull'energia è uno shock di prezzo. Senza la
 /// persuasione delle promesse IA: il test non misura la campagna, e col seme 1 le promesse al voto
 /// del turno 19 portano un altro governo, con le sue leggi (R24).

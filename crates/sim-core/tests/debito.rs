@@ -501,3 +501,313 @@ fn un_salvataggio_con_ristrutturazione_e_aste_aperte_e_rifiutato() {
         "Aste scoperte aperte con una ristrutturazione in corso",
     );
 }
+
+#[test]
+fn il_memorandum_vincola_anche_l_anteprima_e_non_copre_i_gradini_sconosciuti() {
+    let mut p = col_mes();
+    let valori = |g: &str| {
+        vec![ValoreProposto {
+            disposizione: "eta_pensionabile".into(),
+            gradino: g.into(),
+        }]
+    };
+    let e = p.anteprima(&valori("67")).unwrap_err();
+    assert!(e.to_string().contains("vincolo del memorandum"), "{e}");
+    let e = presenta(&mut p, &[("eta_pensionabile", "inesistente")]).unwrap_err();
+    assert!(!e.to_string().contains("memorandum"), "{e}");
+    assert!(
+        e.to_string()
+            .contains("Età pensionabile: gradino sconosciuto «inesistente»"),
+        "{e}"
+    );
+}
+
+#[test]
+fn il_programma_dura_durata_mes_chiusure() {
+    let mut p = col_mes();
+    let fine = p.economia().programma_mes.unwrap();
+    for _ in 1..durata() {
+        chiudi_col_bilancio(&mut p);
+        assert_eq!(p.economia().programma_mes, Some(fine));
+    }
+    // Al turno `fine` il programma non è più in corso: il memorandum non vincola più (la legge
+    // può cadere per altro, per esempio un'altra già in esame).
+    assert_eq!(p.vista().turno, fine);
+    if let Err(e) = presenta(&mut p, &[("eta_pensionabile", "67")]) {
+        assert!(!e.to_string().contains("memorandum"), "{e}");
+    }
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.economia().programma_mes, None);
+}
+
+fn eta_pensionabile() -> (usize, usize) {
+    let d = dati_base();
+    let k = d.disposizione("eta_pensionabile").unwrap();
+    let g = (d.disposizioni()[k].gradini.iter())
+        .position(|g| g.id == "67")
+        .unwrap();
+    (k, g)
+}
+
+#[test]
+fn l_abrogativo_sulla_condizionalita_decade_col_mes() {
+    let p = col_mes();
+    let (k, g) = eta_pensionabile();
+    let promotore = comune::partito("estrema_destra");
+    let mut p = edita(&p, |j| {
+        let voto = j["turno"].as_u64().unwrap() + 1;
+        j["parlamento"]["referendum"] = json!({
+            "tipo": "abrogativo", "misura": null, "valori": [[k, g]], "promotore": promotore,
+            "del_giocatore": false, "voto": voto, "firme": true, "invito_astensione": false,
+            "richiesto": true,
+        });
+    })
+    .unwrap();
+    let fine = p.economia().programma_mes.unwrap();
+    chiudi_col_bilancio(&mut p);
+    chiudi_col_bilancio(&mut p);
+    let esito = &p.parlamento().esiti_referendum[0];
+    assert_eq!(
+        esito.decaduto.as_deref(),
+        Some(
+            format!(
+                "Decaduto senza voto: la disposizione è vincolata dal memorandum del MES fino al \
+                 turno {fine}"
+            )
+            .as_str()
+        )
+    );
+    assert_eq!(p.in_vigore("eta_pensionabile"), Some("70"));
+}
+
+/// Il bilancio della partita col seme 7 al quarto trimestre del 2027, con gli acquisti dei
+/// dicasteri raddoppiati: oltre il tetto.
+fn al_bilancio_oltre_il_tetto() -> (Partita, sim_core::economia::Bilancio) {
+    let mut p = Partita::nuova(dati_base(), 7);
+    for _ in 0..4 {
+        p.chiudi_turno();
+    }
+    let mut b = p.bozza_bilancio().unwrap();
+    for d in &mut b.dicasteri {
+        d.acquisti += d.spesa;
+    }
+    (p, b)
+}
+
+#[test]
+fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
+    let (p, b) = al_bilancio_oltre_il_tetto();
+    let turno = p.vista().turno;
+    // La sonda: il limite del programma e il riepilogo di un bilancio, sullo stesso stato.
+    let sonda = con_mes(&p, turno + durata());
+    let bozza = sonda
+        .riepilogo_bilancio(&sonda.bozza_bilancio().unwrap())
+        .unwrap();
+    let limite = bozza.tetto.max(bozza.crescita_spesa_netta);
+    assert!(sonda.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta > limite);
+    let mut p = p;
+    p.comanda(Comando::PresentaBilancio { bilancio: b })
+        .unwrap();
+    let presentato = p.economia().bilancio_presentato.clone().unwrap();
+    // Le Aste aperte: alla chiusura il default chiede il MES, prima dell'aula.
+    let k = dati_base().evento("aste_scoperte").unwrap();
+    let mut p = edita(&p, |j| {
+        j["eventi"]["aperti"] = json!([{
+            "evento": k, "turno": turno,
+            "causa": { "tipo": "spread", "pb": 600, "soglia": 550 },
+            "regione": null, "bersaglio": null, "tono": "grave", "costo": 0, "scelta": null,
+        }]);
+    })
+    .unwrap();
+    let presidente = p.governo().presidente;
+    p.chiudi_turno();
+    assert!(p.economia().programma_mes.is_some());
+    let approvato = p.economia().bilancio_approvato.clone().unwrap();
+    assert_ne!(approvato, presentato);
+    let r = sonda.riepilogo_bilancio(&approvato).unwrap();
+    assert!(r.crescita_spesa_netta <= limite + 1e-6, "{r:?} {limite}");
+    assert!(!p.vista().bilancio.esercizio_provvisorio);
+    assert_eq!(p.governo().presidente, presidente);
+}
+
+#[test]
+fn un_bilancio_al_tetto_esatto_passa() {
+    let mut sonda = al_bilancio_2028(None);
+    emenda(&mut sonda).unwrap();
+    let c1 = sonda.riepilogo_presentato().unwrap().crescita_spesa_netta;
+    let p = al_bilancio_2028(Some(c1));
+    let turno = p.vista().turno;
+    let mut p = con_mes(&p, turno + 5);
+    emenda(&mut p).unwrap();
+    let r = p.riepilogo_presentato().unwrap();
+    assert_eq!(r.crescita_spesa_netta, r.tetto);
+}
+
+#[test]
+fn il_governo_ia_col_mes_e_un_ultimatum_approva_il_bilancio() {
+    // Tetto del 2028 sotto la crescita della bozza: il limite del programma è la bozza stessa. I
+    // budget dell'alleato in ultimatum fermi a metà dei prezzi di oggi: indicizzarli lo
+    // sforerebbe.
+    let f = sostituisci(file_base(), "scenario", "2028 = 1.7", "2028 = -5.0");
+    let fondazione = sim_core::legislatura::Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 1.5,
+    };
+    let mut p = Partita::fonda(DatiGioco::da_testi(&f).unwrap(), 7, &fondazione).unwrap();
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert!(!p.governa());
+    while p.vista().data.trimestre != 3 {
+        p.chiudi_turno();
+    }
+    let g = p.governo().clone();
+    let alleato = (g.coalizione.iter().copied())
+        .find(|&j| j != g.presidente && g.dicasteri.contains(&j))
+        .expect("un alleato con dicasteri");
+    let n = p.partiti().len();
+    let turno = p.vista().turno;
+    let p = con_mes(&p, turno + 5);
+    let mut p = edita(&p, |j| {
+        let mut ultimatum = vec![Value::Null; n];
+        ultimatum[alleato] = json!("norma_lontana");
+        let mut valori = vec![json!(100.0); n];
+        valori[alleato] = json!(35.0);
+        j["intesa"]["ultimatum"] = json!(ultimatum);
+        j["intesa"]["valori"] = json!(valori);
+        for (k, _) in g
+            .dicasteri
+            .iter()
+            .enumerate()
+            .filter(|&(_, &x)| x == alleato)
+        {
+            j["economia"]["bilancio"]["dicasteri"][k]["livello_prezzi"] = json!(0.5);
+        }
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.vista().data.trimestre, 4);
+    assert!(p.intesa().ultimatum[alleato].is_some());
+    assert!(
+        p.economia().bilancio_presentato.is_some(),
+        "{:?}",
+        p.vista().mosse
+    );
+    p.chiudi_turno();
+    assert!(p.economia().bilancio_approvato.is_some());
+    assert!(!p.vista().bilancio.esercizio_provvisorio);
+    assert_eq!(p.governo().presidente, g.presidente);
+}
+
+#[test]
+fn salva_e_ricarica_non_cambiano_l_esito() {
+    let mut in_crisi_risposta = in_crisi();
+    let k = (in_crisi_risposta.vista().eventi.iter())
+        .position(|e| e.nome == "Aste scoperte")
+        .unwrap();
+    in_crisi_risposta
+        .comanda(Comando::RispondiEvento {
+            evento: k,
+            opzione: "ristrutturazione".into(),
+        })
+        .unwrap();
+    let nuova = Partita::nuova(dati_base(), 3);
+    let turno = nuova.vista().turno;
+    // Il bordo del controllo: il programma finisce a turno più `durata_mes`.
+    let mes_al_bordo = con_mes(&nuova, turno + durata());
+    let mut con_shock = Partita::nuova(dati_base(), 3);
+    chiudi_col_bilancio(&mut con_shock);
+    chiudi_col_bilancio(&mut con_shock);
+    for p in [
+        in_crisi_risposta,
+        col_mes(),
+        ristrutturata(),
+        mes_al_bordo,
+        con_shock,
+    ] {
+        let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
+        let mut p = p;
+        for _ in 0..3 {
+            chiudi_col_bilancio(&mut p);
+            chiudi_col_bilancio(&mut q);
+        }
+        assert_eq!(p.salva().unwrap(), q.salva().unwrap());
+    }
+}
+
+#[test]
+fn il_premio_della_ristrutturazione_entra_nello_spread() {
+    let p = Partita::nuova(dati_base(), 1);
+    let mut con = edita(&p, |j| {
+        j["economia"]["ristrutturazione"] = json!({ "turno": 0, "premio": 200.0 })
+    })
+    .unwrap();
+    let mut senza = p;
+    chiudi_col_bilancio(&mut con);
+    chiudi_col_bilancio(&mut senza);
+    let d = con.economia().spread - senza.economia().spread;
+    assert!((d - 200.0).abs() < 1e-6, "{d}");
+}
+
+#[test]
+fn dopo_la_ristrutturazione_la_crisi_non_si_riapre() {
+    // Soglia bassa: lo spread resta oltre anche col debito tagliato.
+    let f = imposta(
+        dati_con_premio(),
+        "manopole",
+        "[soglia_crisi_debito]\nvalore = ",
+        "300.0",
+    );
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    chiudi_col_bilancio(&mut p);
+    let k = (p.vista().eventi.iter())
+        .position(|e| e.nome == "Aste scoperte")
+        .unwrap();
+    p.comanda(Comando::RispondiEvento {
+        evento: k,
+        opzione: "ristrutturazione".into(),
+    })
+    .unwrap();
+    for _ in 0..2 {
+        chiudi_col_bilancio(&mut p);
+        assert!(p.economia().ristrutturazione.is_some());
+        assert!(p.economia().spread >= 300.0, "{}", p.economia().spread);
+        assert!(aste(&p).is_empty());
+    }
+}
+
+/// Col premio a 1 pb, sotto la soglia dopo il primo dimezzamento, la ristrutturazione resta per
+/// tutta la perdita dei redditi: le fasce media e alta perdono `perdita_ristrutturazione` per
+/// `turni_ristrutturazione` chiusure, poi non più.
+#[test]
+fn la_perdita_di_reddito_finisce_dentro_la_partita() {
+    let d = dati_base();
+    let f = comune::senza_emergenze(comune::senza_shock());
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    chiudi_col_bilancio(&mut p);
+    let turno = p.vista().turno;
+    let mut con = edita(&p, |j| {
+        j["economia"]["ristrutturazione"] = json!({ "turno": turno, "premio": 1.0 })
+    })
+    .unwrap();
+    let mut senza = p;
+    let (perdita, turni) = (
+        d.manopola("perdita_ristrutturazione"),
+        d.manopola("turni_ristrutturazione") as u32,
+    );
+    let alta = (d.elettorato().gruppi.iter())
+        .position(|g| g.fascia != sim_core::elettorato::Fascia::Bassa)
+        .unwrap();
+    for i in 0..turni + 2 {
+        chiudi_col_bilancio(&mut con);
+        chiudi_col_bilancio(&mut senza);
+        let primario = |p: &Partita| p.elettorato().gruppi[alta].reddito.primario;
+        let rapporto = primario(&con) / primario(&senza);
+        let atteso = if i < turni { 1.0 - perdita } else { 1.0 };
+        assert!((rapporto - atteso).abs() < 0.005, "{i}: {rapporto}");
+        assert_eq!(
+            con.economia().ristrutturazione.is_some(),
+            i + 1 < turni,
+            "{i}"
+        );
+    }
+}
