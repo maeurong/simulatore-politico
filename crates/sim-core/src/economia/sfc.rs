@@ -143,3 +143,42 @@ impl Economia {
         self.sfc.saldi = saldi;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    fn ristrutturata(debito: i64, f: i64, i: i64, e: i64) -> Economia {
+        let mut x = Economia::iniziale(&dati_base());
+        x.debito = debito;
+        x.sfc.stock = Settori {
+            famiglie: f,
+            imprese: i,
+            stato: -debito,
+            estero: e,
+        };
+        x.ristruttura(3, 0.5, 300.0);
+        x
+    }
+
+    #[test]
+    fn il_taglio_tiene_gli_stock_a_somma_zero() {
+        // Estero negativo (esclusa dal taglio), imprese positive, un arrotondamento dispari,
+        // e il debito zero.
+        for (debito, f, i, e) in [
+            (1001, 1500, 500, -999),
+            (1001, 1001, 0, 0),
+            (7, 1, 1, 5),
+            (0, 0, 0, 0),
+        ] {
+            let x = ristrutturata(debito, f, i, e);
+            assert_eq!(x.sfc.stock.stato, -x.debito, "{debito}");
+            assert_eq!(x.residuo_stock(), 0, "{debito}");
+            assert_eq!(x.debito, debito - (debito as f64 * 0.5).round() as i64);
+            if e < 0 {
+                assert_eq!(x.sfc.stock.estero, e, "lo stock negativo non paga");
+            }
+        }
+    }
+}

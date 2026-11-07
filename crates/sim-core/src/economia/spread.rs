@@ -8,8 +8,13 @@ use crate::misure::CAPACITA_NEUTRA;
 /// Trimestri dell'anno mobile su cui si misurano debito e disavanzo.
 const ANNO_MOBILE: usize = 4;
 
+// assunzione del piano 9, nessuna fonte in docs/ricerca
 /// Premio della ristrutturazione, in pb, oltre il quale il TPI non vale.
 const SOGLIA_TPI: f64 = 50.0;
+
+// assunzione del piano 9, nessuna fonte in docs/ricerca
+/// Turni in cui il premio della ristrutturazione si dimezza.
+const EMIVITA_RISTRUTTURAZIONE: f64 = 8.0;
 
 impl Economia {
     /// Debito e disavanzo in % del PIL degli ultimi 4 trimestri.
@@ -57,7 +62,7 @@ impl Economia {
         self.ristrutturazione = self
             .ristrutturazione
             .map(|r| Ristrutturazione {
-                premio: r.premio * 0.5_f64.powf(1.0 / 8.0),
+                premio: r.premio * 0.5_f64.powf(1.0 / EMIVITA_RISTRUTTURAZIONE),
                 ..r
             })
             .filter(|r| r.premio >= 1.0);

@@ -4783,6 +4783,10 @@ impl Economia {
             "economia.ristrutturazione.turno: oltre il turno corrente",
         )?;
         ok(
+            !(self.ristrutturazione.is_some() && aste_aperte),
+            "eventi: Aste scoperte aperte con una ristrutturazione in corso",
+        )?;
+        ok(
             !(self.programma_mes.is_some() && self.ristrutturazione.is_some()),
             "economia: programma del MES e ristrutturazione insieme",
         )?;

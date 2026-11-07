@@ -339,23 +339,13 @@ fn premio_dopo(p: &Partita) -> f64 {
 #[test]
 fn la_ristrutturazione_taglia_il_debito() {
     let prima = in_crisi().economia().debito as f64;
-    let (r, mes) = (ristrutturata(), col_mes());
+    let r = ristrutturata();
     let e = r.economia();
     let rapporto = e.debito as f64 / prima;
     assert!((0.45..0.55).contains(&rapporto), "{rapporto}");
     // Il premio entra intero nello spread del turno, poi decade di un passo.
     assert!(e.spread >= 300.0, "{}", e.spread);
     assert!((premio_dopo(&r) - 300.0 * 0.5_f64.powf(0.125)).abs() < 1e-9);
-    let alta = |p: &Partita| {
-        let d = dati_base();
-        (p.elettorato().gruppi.iter().zip(&d.elettorato().gruppi))
-            .filter(|(_, d)| d.fascia == sim_core::elettorato::Fascia::Alta)
-            .map(|(g, _)| g.reddito.primario)
-            .sum::<f64>()
-    };
-    let perdita = dati_base().manopola("perdita_ristrutturazione");
-    let (con, senza) = (alta(&r), alta(&mes));
-    assert!(con < senza * (1.0 - perdita / 2.0), "{con} {senza}");
 }
 
 #[test]
@@ -440,5 +430,55 @@ fn un_salvataggio_con_la_ristrutturazione_manomessa_e_rifiutato() {
         &p,
         |j| j["economia"]["programma_mes"] = json!(turno + 1),
         "programma del MES e ristrutturazione insieme",
+    );
+}
+
+#[test]
+fn la_ristrutturazione_taglia_il_reddito_dei_detentori() {
+    let d = dati_base();
+    let p = ristrutturata();
+    let senza = p.economia().clone();
+    let r = senza.ristrutturazione.unwrap();
+    let con = senza.clone();
+    let senza = sim_core::economia::Economia {
+        ristrutturazione: None,
+        ..senza
+    };
+    let (perdita, turni) = (
+        d.manopola("perdita_ristrutturazione"),
+        d.manopola("turni_ristrutturazione") as u32,
+    );
+    let primari = |e: &sim_core::economia::Economia, turno: u32| {
+        let mut el = p.elettorato().clone();
+        el.aggiorna_redditi(&d, e, p.misure(), turno);
+        el.gruppi
+            .iter()
+            .map(|g| g.reddito.primario)
+            .collect::<Vec<_>>()
+    };
+    let base = primari(&senza, r.turno);
+    let dentro = primari(&con, r.turno);
+    let fuori = primari(&con, r.turno + turni);
+    for (k, g) in d.elettorato().gruppi.iter().enumerate() {
+        let k_atteso = if g.fascia == sim_core::elettorato::Fascia::Bassa {
+            1.0
+        } else {
+            1.0 - perdita
+        };
+        assert!(
+            (dentro[k] - base[k] * k_atteso).abs() < 1e-6 * base[k].max(1.0),
+            "{k}"
+        );
+        assert_eq!(fuori[k], base[k], "{k}");
+    }
+}
+
+#[test]
+fn un_salvataggio_con_ristrutturazione_e_aste_aperte_e_rifiutato() {
+    let p = in_crisi();
+    rifiutato(
+        &p,
+        |j| j["economia"]["ristrutturazione"] = json!({ "turno": 0, "premio": 100.0 }),
+        "Aste scoperte aperte con una ristrutturazione in corso",
     );
 }

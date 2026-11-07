@@ -1576,6 +1576,6 @@ ticket = "07"
 # assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza ogni 8 turni)
 [premio_ristrutturazione]
 valore = 300.0
-min = 0.0
+min = 1.0
 max = 1000.0
 ticket = "07"
