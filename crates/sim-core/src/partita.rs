@@ -1083,7 +1083,16 @@ impl Partita {
             self.leggi_del_giocatore.push((m.id, anno));
         }
         let rinvio = self.dati.manopola("turni_rinvio_regime") as u32;
+        // Ruling 46: col programma del MES in corso nessuna legge muove la condizionalità, nemmeno
+        // una già in esame o dell'opposizione; il resto della legge entra.
+        let vincolate: Vec<usize> = match self.economia.programma_mes {
+            Some(fine) if turno < fine => self.condizionalita().into_iter().map(|c| c.0).collect(),
+            _ => Vec::new(),
+        };
         for &(d, g) in &m.valori {
+            if vincolate.contains(&d) {
+                continue;
+            }
             if parlamento::rinviata(&m.emendamenti, d) {
                 let arrivo = turno.saturating_add(rinvio);
                 // `controlla` e `presenta` garantiscono `d` e `g`: non fallisce.
@@ -1401,7 +1410,9 @@ impl Partita {
             return Ok(None);
         };
         let k: Vec<usize> = e.proposta.iter().map(|p| p.0).collect();
-        self.indicizza_dicasteri(b, &k).map(Some)
+        let emendato = self.indicizza_dicasteri(b, &k)?;
+        self.tetto_mes(&emendato)?;
+        Ok(Some(emendato))
     }
 
     /// `EmendamentoRespinto`: `−costo_emendamento_respinto` a ogni alleato.
@@ -1594,16 +1605,6 @@ impl Partita {
     /// reale (`emendamenti_bilancio`); gli emendamenti accolti si riapplicano al bilancio nuovo.
     pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
         let (_, mut b) = self.bilancio_ammesso(b)?;
-        if let Some(fine) = self.economia.programma_mes {
-            let r = self.riepilogo_ammesso(&b)?;
-            if r.crescita_spesa_netta > r.tetto {
-                return Err(Errore::Comando(format!(
-                    "programma del MES fino al turno {fine}: la spesa netta non può crescere oltre il tetto di {}% (proposta {}%)",
-                    vita::virgola(r.tetto),
-                    vita::virgola(r.crescita_spesa_netta)
-                )));
-            }
-        }
         let turno = self.turno;
         let accolti: Vec<usize> = (self.parlamento.misure.iter())
             .filter(|m| parlamento::bilancio_del_turno(m, turno))
@@ -1614,11 +1615,28 @@ impl Partita {
         if !accolti.is_empty() {
             b = self.indicizza_dicasteri(&b, &accolti)?;
         }
+        self.tetto_mes(&b)?;
         self.economia.bilancio_presentato = Some(b);
         self.parlamento.apri_bilancio(turno);
         if self.governa() {
             let nuovi = self.richieste_di_indicizzazione();
             self.parlamento.emendamenti_bilancio(turno, nuovi);
+        }
+        Ok(())
+    }
+
+    /// Ruling 43: col programma del MES in corso il bilancio non cresce oltre il tetto UE.
+    fn tetto_mes(&self, b: &Bilancio) -> Result<(), Errore> {
+        let Some(fine) = self.economia.programma_mes else {
+            return Ok(());
+        };
+        let r = self.riepilogo_ammesso(b)?;
+        if r.crescita_spesa_netta > r.tetto {
+            return Err(Errore::Comando(format!(
+                "programma del MES fino al turno {fine}: la spesa netta non può crescere oltre il tetto di {}% (proposta {}%)",
+                vita::virgola(r.tetto),
+                vita::virgola(r.crescita_spesa_netta)
+            )));
         }
         Ok(())
     }
@@ -4275,10 +4293,17 @@ impl Partita {
                 )));
             }
         }
-        let durata_mes = partita.dati.manopola("durata_mes") as u32;
-        partita
-            .economia
-            .controlla_coerenza(partita.data, partita.turno, durata_mes)?;
+        let aste_aperte = partita
+            .dati
+            .evento(ASTE_SCOPERTE)
+            .is_some_and(|k| partita.eventi.aperti.iter().any(|a| a.evento == k));
+        let durata_mes = partita.dati.manopola("durata_mes").round() as u32;
+        partita.economia.controlla_coerenza(
+            partita.data,
+            partita.turno,
+            durata_mes,
+            aste_aperte,
+        )?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
         partita
@@ -4714,6 +4739,7 @@ impl Economia {
         data: Trimestre,
         turno: u32,
         durata_mes: u32,
+        aste_aperte: bool,
     ) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
         let (c, st) = (&self.conti, &self.sfc.stock);
@@ -4725,6 +4751,10 @@ impl Economia {
         ok(
             self.regole_ue.clausola_energia_fino_a <= data.anno,
             "economia.regole_ue.clausola_energia_fino_a: oltre l'anno della data corrente",
+        )?;
+        ok(
+            !(self.programma_mes.is_some() && aste_aperte),
+            "eventi: Aste scoperte aperte con un programma del MES in corso",
         )?;
         ok(
             self.programma_mes
