@@ -268,6 +268,21 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valence_sfiducia_respinta",
     "soglia_incrinata",
     "soglia_emendamento_bilancio",
+    "emergenze_idro_anno",
+    "siccita_anno",
+    "k_prevenzione_sisma",
+    "k_prevenzione_altre",
+    "costo_emergenza_lieve",
+    "costo_emergenza_grave",
+    "costo_emergenza_vittime",
+    "valence_emergenza_risposta",
+    "valence_emergenza_ignorata",
+    "scandalo_base",
+    "valence_scandalo",
+    "valence_dimissioni_scandalo",
+    "turni_scandalo",
+    "danno_stock_per_miliardo",
+    "emivita_danno",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -282,6 +297,7 @@ const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
     ("efficienza_riscossione", false),
     ("durata_processi", false),
     ("regole_lavoro", false),
+    ("corruzione", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -807,6 +823,12 @@ impl DatiGioco {
         if scala <= 0.0 {
             return Err(Errore::Grandezze(format!(
                 "manopola scala_servizio non positiva: {scala}"
+            )));
+        }
+        let emivita = self.manopola("emivita_danno");
+        if emivita <= 0.0 {
+            return Err(Errore::Eventi(format!(
+                "manopola emivita_danno non positiva: {emivita}"
             )));
         }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;

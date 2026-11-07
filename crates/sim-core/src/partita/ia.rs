@@ -575,12 +575,14 @@ impl Partita {
                 .get(i)
                 .map_or(0, |d| d.peso_spartizione)
         };
-        let individuale = || {
+        let individuale = |scandalo: bool| {
             let (i, m) = (self.ministri.dicasteri.iter().enumerate())
                 .filter_map(|(i, st)| Some((i, st.ministro.as_ref()?)))
                 .filter(|(_, m)| !in_ultimatum.contains(&m.partito))
                 .min_by(|&(a, x), &(b, y)| {
-                    (giudizio(x.partito).total_cmp(&giudizio(y.partito)))
+                    // Prima chi è sotto scandalo (se `scandalo`), poi il giudizio peggiore.
+                    ((scandalo && y.sotto_scandalo > 0).cmp(&(scandalo && x.sotto_scandalo > 0)))
+                        .then(giudizio(x.partito).total_cmp(&giudizio(y.partito)))
                         .then(peso(b).cmp(&peso(a)))
                 })?;
             let nome = &self.dati.dicasteri().get(i)?.nome;
@@ -593,7 +595,8 @@ impl Partita {
         };
         let scelta = match motivo(None).filter(|_| !self.rinascerebbe_uguale()) {
             Some(m) => Some((None, format!("Presenta la sfiducia al governo: {m}"))),
-            None => individuale(),
+            // Se la sfiducia sul ministro sotto scandalo non passa, ripiega sul giudizio peggiore.
+            None => individuale(true).or_else(|| individuale(false)),
         };
         if let Some((dicastero, testo)) = scelta {
             self.parlamento.sfiducia = Some((dicastero, promotore));

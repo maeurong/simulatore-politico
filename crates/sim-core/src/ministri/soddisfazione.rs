@@ -83,6 +83,7 @@ mod test {
                 soddisfazione: 60.0,
                 turni_in_carica: 1,
                 tecnico: false,
+                sotto_scandalo: 0,
             }),
             ..StatoDicastero::default()
         }

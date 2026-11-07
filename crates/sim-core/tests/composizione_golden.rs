@@ -1,7 +1,9 @@
 //! Golden bit a bit di lavoro ed età dell'elettorato: i valori sono stati misurati su c56787d
 //! (prima dell'estrazione di `spostamenti_lavoro` e del refactor di `Elettorato::eta`). Il valore a
 //! 14 turni è stato rimisurato su 5e7e867 (piano 9: deriva, situazioni, eventi consumano estrazioni
-//! e muovono le grandezze); quello a 2 turni è rimasto uguale.
+//! e muovono le grandezze) e di nuovo con gli scandali (due uniformi di `Flusso::Eventi` a chiusura,
+//! poi valence e dimissioni degli scandali risolti); quello a 2 turni è rimasto uguale in entrambi i
+//! casi.
 
 mod comune;
 use sim_core::Partita;
@@ -37,6 +39,6 @@ fn dopo(turni: usize) -> Partita {
 fn lavoro_ed_eta_identici_a_prima_dell_estrazione() {
     assert_eq!(
         (impronta(&dopo(2)), impronta(&dopo(14))),
-        (9_863_557_225_151_097_556, 14_069_448_644_041_155_314)
+        (9_863_557_225_151_097_556, 12_994_607_674_514_995_355)
     );
 }

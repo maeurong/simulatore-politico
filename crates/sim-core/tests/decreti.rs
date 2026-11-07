@@ -633,7 +633,12 @@ fn anteprima_dell_accogli_mostra_l_atto_e_il_costo() {
 
 /// La partita con l'evento `criminalita` (dicastero Interno, decreto ammesso) aperto.
 fn con_evento_interno(p: &Partita) -> Partita {
-    let evento = dati_base().evento("criminalita").unwrap();
+    con_evento_aperto(p, "criminalita")
+}
+
+/// La partita con l'evento `id` aperto, senza scelta.
+fn con_evento_aperto(p: &Partita, id: &str) -> Partita {
+    let evento = dati_base().evento(id).unwrap();
     edita(p, |j| {
         j["eventi"]["aperti"] = serde_json::json!([{
             "evento": evento,
@@ -715,6 +720,56 @@ fn decreto_su_disposizione_senza_evento_rifiutato() {
             .contains("decreto senza innesco: nessun evento aperto per «Ingressi per lavoro»"),
         "{e}"
     );
+}
+
+/// Un'emergenza elenca le sue norme: il decreto passa su quelle, anche fuori dai suoi dicasteri,
+/// e non sul resto del ministero (cittadinanza è dell'Interno, dicastero dell'evento).
+#[test]
+fn il_sisma_ammette_solo_le_sue_norme() {
+    let mut p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_sismica");
+    for (d, g) in [
+        ("codice_appalti", "deroga_generale"),
+        ("detrazione_edilizia", "110"),
+        ("accise", "alte"),
+    ] {
+        assert!(p.anteprima_decreto(&decreto_su(d, g)).is_ok(), "{d}");
+    }
+    let e = p
+        .comanda(emana(decreto_su("cittadinanza", "ius_soli_temperato")))
+        .unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn gli_incendi_non_aprono_il_decreto() {
+    let mut p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_incendi");
+    // Accise è di ambiente_energia, dicastero degli incendi: col vecchio criterio passava.
+    let e = p.comanda(emana(decreto_su("accise", "alte"))).unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn l_idro_ammette_le_accise_non_le_rinnovabili() {
+    let p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_idro");
+    assert!(p.anteprima_decreto(&decreto_su("accise", "alte")).is_ok());
+    let e = (p.anteprima_decreto(&decreto_su("rinnovabili", "accelerate"))).unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn la_siccita_ammette_gli_appalti_non_le_accise() {
+    let p = con_evento_aperto(&Partita::nuova(dati_base(), 1), "emergenza_siccita");
+    let appalti = decreto_su("codice_appalti", "deroga_generale");
+    assert!(p.anteprima_decreto(&appalti).is_ok());
+    let e = (p.anteprima_decreto(&decreto_su("accise", "alte"))).unwrap_err();
+    assert!(e.to_string().contains("decreto senza innesco"), "{e}");
+}
+
+#[test]
+fn la_situazione_apre_ancora_il_ministero() {
+    let p = con_evento_interno(&Partita::nuova(dati_base(), 1));
+    let d = decreto_su("cittadinanza", "ius_soli_temperato");
+    assert!(p.anteprima_decreto(&d).is_ok());
 }
 
 /// La conversione respinta blocca la disposizione come una legge respinta: il decreto non si

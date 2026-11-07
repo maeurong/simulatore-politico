@@ -166,13 +166,15 @@ fn grandezze_restano_nei_limiti_dopo_200_turni() {
 
 #[test]
 fn le_carceri_crescono_da_sole() {
-    let mut p = Partita::nuova(dati_base(), 1);
+    let mut p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
     for _ in 0..20 {
         chiudi_col_bilancio(&mut p);
     }
     let v = p.grandezza("sovraffollamento_carceri").unwrap();
-    // 1,009^20 ~ 1,196, meno il rumore.
-    assert!(v > 112.0 && v < 125.0, "{v}");
+    // 1,009^20 ~ 1,196 (senza rumore, quindi la banda non dipende da dove cade il flusso degli
+    // eventi, che le emergenze consumano).
+    let atteso = 100.0 * 1.009_f64.powi(20);
+    assert!((v - atteso).abs() < 1.0, "{v} contro {atteso}");
 }
 
 #[test]

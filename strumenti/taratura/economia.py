@@ -5,6 +5,8 @@ Uso: python3 -I strumenti/taratura/economia.py
 Scarica da Eurostat e ISTAT, aggrega e scrive dati/base/economia.toml,
 dati/base/regioni.toml e i campi di spesa in dati/base/dicasteri.toml.
 Le risposte delle API si leggono come dati (json, csv), mai si eseguono.
+La pericolosità naturale delle regioni è copiata a mano da
+docs/ricerca/dati/pericolosita-naturale-regioni.md.
 Fonti, licenze e modifiche ai dati: strumenti/taratura/README.md.
 """
 
@@ -12,6 +14,7 @@ import csv
 import datetime
 import io
 import json
+import math
 import pathlib
 import time
 import urllib.error
@@ -298,17 +301,46 @@ def scrivi_economia(a, importazioni, valore_aggiunto, vettori, eta):
     return t
 
 
+# Pericolosità naturale: episodi sismici Mw >= 5,5 nel 1900-2020, peso idro in % e quota dei trimestri
+# con un incendio >= 500 ha. Copiati a mano (nessuna API) da
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:46-67, colonne (b), (f) e (h).
+# MINIMO: le cinque regioni a zero episodi ma con comuni in zona sismica 1-3 (Piemonte, Valle
+# d'Aosta, Lombardia, Trentino-Alto Adige, Liguria) valgono 0,5 episodi, cioè p ~ 0,001 a trimestre
+# (:122); la Sardegna resta a 0.
+MINIMO = 0.5
+PERICOLOSITA = {
+    "piemonte": (MINIMO, 4.6, 0.025), "valle_d_aosta": (MINIMO, 0.6, 0.0), "liguria": (MINIMO, 6.1, 0.037),
+    "lombardia": (MINIMO, 4.8, 0.013), "trentino_alto_adige": (MINIMO, 2.4, 0.0), "veneto": (1, 4.4, 0.025),
+    "friuli_venezia_giulia": (2, 1.0, 0.025), "emilia_romagna": (4, 23.1, 0.0), "toscana": (4, 13.9, 0.037),
+    "umbria": (4, 1.2, 0.0), "marche": (3, 1.7, 0.013), "lazio": (2, 4.6, 0.062),
+    "abruzzo": (7, 3.2, 0.037), "molise": (1, 0.7, 0.013), "campania": (4, 12.4, 0.075),
+    "puglia": (1, 3.4, 0.125), "basilicata": (2, 1.5, 0.037), "calabria": (6, 3.8, 0.150),
+    "sicilia": (4, 4.6, 0.350), "sardegna": (0, 1.7, 0.263),
+}
+
+
+def pericolosita(rid):
+    """Probabilità trimestrale di sisma (:121), quota nazionale idro (:31) e incendi (h): tre colonne
+    di docs/ricerca/dati/pericolosita-naturale-regioni.md."""
+    episodi, peso, incendi = PERICOLOSITA[rid]
+    return round(1 - math.exp(-episodi / 121 / 4), 6), round(peso / 100, 4), incendi
+
+
 def scrivi_regioni(righe):
     t = intestazione([
         f"Eurostat lfst_r_lfu3rt e lfst_r_lfp2act, {ANNO_LAVORO}, 15-74 anni",
         f"ISTAT 93_1227_DF_DCCN_TNA1_1, valore aggiunto ai prezzi correnti {ANNO_MIX}, edizione {EDIZIONE_CET}",
         "Okun: Bonaventura (2020), Economic Bulletin, tab. 2 (b della forma in differenze); se ne riportano solo i coefficienti, citati",
+        "Pericolosità: docs/ricerca/dati/pericolosita-naturale-regioni.md:46-67 (DPC, INGV CPTI15, ISPRA IdroGEO, EFFIS)",
     ])
+    t += "# pericolosita: sisma = probabilità trimestrale, idro = quota nazionale delle emergenze idrogeologiche (somma 1), incendi = quota dei trimestri con un incendio grande.\n"
     t += "# forze_lavoro in migliaia; disoccupazione_2025 in %; okun in punti di disoccupazione per punto di output gap (negativo); mix = quote del valore aggiunto 2023.\n"
     for rid, nome, macro, fl, u, okun, mix in righe:
         t += f"\n[[regione]]\nid = {stringa(rid)}\nnome = {stringa(nome)}\nmacroarea = {stringa(macro)}\n"
         t += f"forze_lavoro = {fl}\ndisoccupazione_2025 = {u}\nokun = {okun}\n"
         t += "mix = { " + ", ".join(f"{s} = {q:.6f}" for s, q in zip(IDS, mix)) + " }\n"
+        sisma, idro, incendi = pericolosita(rid)
+        t += f"pericolosita = {{ sisma = {sisma}, idro = {idro}, incendi = {incendi} }}\n"
     return t
 
 
@@ -358,6 +390,8 @@ def main():
     assert len(righe_regioni) == 20, f"{len(righe_regioni)} regioni, attese 20"
     for r in righe_regioni:
         assert abs(sum(r[6]) - 1) < 1e-9, f"{r[0]}: mix somma {sum(r[6]):.12f}, oltre 1e-9 da 1"
+    idro = sum(pericolosita(r[0])[1] for r in righe_regioni)
+    assert abs(idro - 1) <= 0.01, f"pesi idro sommano {idro:.4f}, attesi 1 entro 0.01"
     print(f"  20 regioni, ogni mix somma 1 entro 1e-9 (max scarto {max(abs(sum(r[6]) - 1) for r in righe_regioni):.1e})")
     print(f"  disoccupazione nazionale 2025 pesata: {disoccupazione_naz:.3f}%")
     assert 6.0 <= disoccupazione_naz <= 6.2, f"disoccupazione nazionale {disoccupazione_naz:.3f}% fuori da 6.0-6.2"

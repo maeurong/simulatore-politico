@@ -5,6 +5,9 @@
 # `sale` accende sopra `accensione` e spegne sotto `spegnimento`, `scende` il contrario.
 # Le soglie sono provvisorie, al bilanciamento.
 # Intensità degli effetti: assunzione del piano 9, nessuna fonte in docs/ricerca.
+#
+# Gravità: nel tetto di un evento a turno vince la più alta. Emergenza = livello × 10 + gravità
+# (lieve 0, grave 1, con vittime 2); scandalo 6-7. `valida` vuole la gravità sotto 10.
 
 # situazioni:21-37 e :36 (6 episodi dal 2000; sigma 0,49 t/t nel 2010-19, circa 1,96 annualizzata); crescita
 # vera annualizzata. Due trimestri di fila sotto -1,0 accendono, due a 0,0 o sopra spengono. Misura del 02/11
@@ -82,6 +85,7 @@ nome = "Recessione"
 gravita = 3
 dicasteri = ["economia_finanze", "sviluppo_economico"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -110,6 +114,7 @@ nome = "Ondata di criminalità"
 gravita = 2
 dicasteri = ["interno"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -138,6 +143,7 @@ nome = "Liste d'attesa fuori controllo"
 gravita = 2
 dicasteri = ["sanita"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -166,6 +172,7 @@ nome = "Emergenza carceri"
 gravita = 2
 dicasteri = ["giustizia"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -194,6 +201,7 @@ nome = "Rincari dell'energia"
 gravita = 3
 dicasteri = ["ambiente_energia"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -222,6 +230,7 @@ nome = "Ondata di sbarchi"
 gravita = 2
 dicasteri = ["interno"]
 decreto = true
+norme = []
 debito = false
 
 [[evento.opzioni]]
@@ -242,3 +251,253 @@ intensita = -8.0
 ritardo = 1
 forma = "impulso"
 durata = 4.0
+
+# Emergenze naturali: nascono dal rischio per regione (`eventi/emergenze.rs`), con costo e tono
+# dal livello estratto. Fonti: docs/ricerca/dati/pericolosita-naturale-regioni.md e
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:116-134 (siccità come emergenza regionale).
+# Il fondo e il debito spendono dal primo dicastero dell'evento; la quota di domanda regionale, la gravità
+# (che ordina le emergenze nello stesso turno) e l'intensità sono assunzioni del piano 9, nessuna fonte in docs/ricerca.
+
+# Il decreto di un'emergenza ammette solo le sue `norme` (contenuto specifico e omogeneo:
+# docs/ricerca/modelli/iter-legislativo-italiano.md:22); vuota = tutto il ministero, come le situazioni.
+# `detrazione_edilizia` è il Sismabonus (docs/ricerca/dati/pericolosita-naturale-regioni.md:108);
+# accise e appalti sono scelte di progetto, nessuna fonte in docs/ricerca. Gli incendi non hanno decreto.
+# pericolosita-naturale-regioni.md:22-25 e :121-122
+[[evento]]
+id = "emergenza_sismica"
+famiglia = "emergenza"
+nome = "Emergenza sismica"
+gravita = 5
+dicasteri = ["infrastrutture_trasporti", "interno"]
+decreto = true
+norme = ["codice_appalti", "detrazione_edilizia", "accise"]
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# pericolosita-naturale-regioni.md:28-32 e :123
+[[evento]]
+id = "emergenza_idro"
+famiglia = "emergenza"
+nome = "Emergenza idrogeologica"
+gravita = 4
+dicasteri = ["ambiente_energia", "infrastrutture_trasporti"]
+decreto = true
+norme = ["codice_appalti", "accise"]
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# pericolosita-naturale-regioni.md:36-39 e :124
+[[evento]]
+id = "emergenza_incendi"
+famiglia = "emergenza"
+nome = "Emergenza incendi"
+gravita = 3
+dicasteri = ["interno", "ambiente_energia"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# situazioni-ed-eventi-al-turno-zero.md:116-134
+[[evento]]
+id = "emergenza_siccita"
+famiglia = "emergenza"
+nome = "Emergenza siccità"
+gravita = 2
+dicasteri = ["ambiente_energia", "infrastrutture_trasporti"]
+decreto = true
+norme = ["codice_appalti"]
+debito = true
+
+[[evento.opzioni]]
+id = "fondo"
+nome = "Attingere al fondo di riserva"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "fondo_riserva"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "debito"
+nome = "Finanziare con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni.effetti]]
+tipo = "grandezza"
+grandezza = "domanda_regionale"
+intensita = 0.5
+ritardo = 0
+forma = "impulso"
+durata = 2.0
+
+[[evento.opzioni]]
+id = "nessun_intervento"
+nome = "Non intervenire"
+default = false
+effetti = []
+
+# situazioni-ed-eventi-al-turno-zero.md:97-114 (otto ministri dimessi in 2008-2026; la sfiducia individuale
+# passa 1 volta su 39). Il costo in valence sta nelle manopole, non nell'opzione: difenderlo paga
+# `valence_scandalo`, le dimissioni `valence_dimissioni_scandalo` più la regola di `ChiediDimissioni`.
+[[evento]]
+id = "scandalo_ministro"
+famiglia = "scandalo"
+nome = "Scandalo su un ministro"
+gravita = 7
+dicasteri = []
+decreto = false
+norme = []
+debito = false
+
+[[evento.opzioni]]
+id = "difenderlo"
+nome = "Difenderlo"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "dimissioni"
+nome = "Chiedere le dimissioni"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "dimissioni"
+
+# Nessuna scelta: l'unica opzione è il default.
+[[evento]]
+id = "scandalo_leader"
+famiglia = "scandalo"
+nome = "Scandalo su un leader"
+gravita = 6
+dicasteri = []
+decreto = false
+norme = []
+debito = false
+
+[[evento.opzioni]]
+id = "prendere_atto"
+nome = "Prendere atto"
+default = true
+effetti = []

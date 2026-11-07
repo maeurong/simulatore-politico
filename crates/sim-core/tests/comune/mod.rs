@@ -92,6 +92,40 @@ pub fn senza_shock_vero() -> FileDati {
     f
 }
 
+/// `f` senza emergenze naturali né scandali: nessun sisma, idro, siccità e `scandalo_base` a zero,
+/// così i test che misurano valence, elettorato o grandezze non trovano eventi per caso.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn senza_emergenze(mut f: FileDati) -> FileDati {
+    f = riscrivi(
+        f,
+        "regioni",
+        "pericolosita = ",
+        "pericolosita = { sisma = 0.0, idro = 0.05, incendi = 0.0 }",
+    );
+    for nome in ["emergenze_idro_anno", "siccita_anno", "scandalo_base"] {
+        f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
+    }
+    f
+}
+
+/// `senza_emergenze(f)` con lo scandalo che nasce a ogni chiusura (`p` = 1).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn scandalo_certo(f: FileDati) -> FileDati {
+    let f = imposta(
+        senza_emergenze(f),
+        "manopole",
+        "[scandalo_base]\nvalore = 0.0\nmin = 0.0\nmax = ",
+        "1000.0",
+    );
+    imposta(f, "manopole", "[scandalo_base]\nvalore = ", "1000.0")
+}
+
 /// Sostituisce la riga `valore = ...` subito sotto `[nome]` nello scenario.
 #[allow(
     dead_code,
@@ -487,6 +521,19 @@ pub fn chiudi_col_bilancio(p: &mut Partita) {
 pub fn chiudi_senza_opposizione_ia(p: &mut Partita) {
     p.chiudi_turno();
     togli_opposizione_ia(p);
+}
+
+/// Toglie gli eventi aperti nati in questa chiusura (emergenze, scandali): chiusi al turno dopo
+/// muoverebbero la valence, per le prove che la misurano senza modellarli.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn togli_eventi_nati(p: &mut Partita) {
+    *p = edita(p, |j| {
+        j["eventi"]["aperti"].as_array_mut().unwrap().clear();
+    })
+    .unwrap();
 }
 
 /// Toglie quello che l'opposizione IA ha presentato in apertura: la sfiducia e le proposte nel

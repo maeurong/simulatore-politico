@@ -1404,3 +1404,108 @@ valore = 0.002
 min = 0.0
 max = 0.01
 ticket = "15"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:123, valore iniziale proposto; DA TARARE: la frequenza vera è [NON TROVATO] a :32 (la perdita media simulata deve tornare intorno a 1-5 miliardi l'anno)
+[emergenze_idro_anno]
+valore = 4.0
+min = 0.0
+max = 20.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (siccità regionali con stato di emergenza: 2017, 2022 e 2024 in situazioni-ed-eventi-al-turno-zero.md:119-121, circa una ogni tre anni)
+[siccita_anno]
+valore = 0.4
+min = 0.0
+max = 2.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:108 e :133 (DM 58/2017, da G a B: 1 - 1,13/7,5)
+[k_prevenzione_sisma]
+valore = 0.85
+min = 0.0
+max = 1.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (pericolosita-naturale-regioni.md:134: per idro e incendi k è una scelta di design)
+[k_prevenzione_altre]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (euro; ordine di grandezza dei costi in pericolosita-naturale-regioni.md:87-97)
+[costo_emergenza_lieve]
+valore = 100000000.0
+min = 0.0
+max = 10000000000.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:129 (euro; l'ordine dell'alluvione dell'Emilia-Romagna 2023, 8,5 miliardi, scalato a 1)
+[costo_emergenza_grave]
+valore = 1000000000.0
+min = 0.0
+max = 20000000000.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:91 e :128 (euro; circa 10 miliardi per episodio sismico, qui 5 perché la media dei tre livelli sia sotto)
+[costo_emergenza_vittime]
+valore = 5000000000.0
+min = 0.0
+max = 40000000000.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence in più al partito del governo che risponde a un'emergenza)
+[valence_emergenza_risposta]
+valore = 0.02
+min = 0.0
+max = 0.5
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence in meno al partito del governo che lascia un'emergenza senza risposta)
+[valence_emergenza_ignorata]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (punti di stock_infrastrutture persi per miliardo di danno, nella regione colpita)
+[danno_stock_per_miliardo]
+valore = 2.0
+min = 0.0
+max = 20.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (emivita in turni del danno non ripristinato: due anni)
+[emivita_danno]
+valore = 8.0
+min = 1.0
+max = 40.0
+ticket = "19"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:110-112 (otto ministri dimessi in 2008-2026, 0,11 a trimestre: è il tasso delle dimissioni, usato qui come tasso degli scandali, che sono più delle dimissioni; assunzione del piano 9). Legame col CPI non trovato (:97-114): scala con la corruzione, 100 = 0,11
+[scandalo_base]
+valore = 0.11
+min = 0.0
+max = 1.0
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence persa dal partito del ministro o del leader sotto scandalo, se non si dimette)
+[valence_scandalo]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "15"
+
+# assunzione del piano 9: metà di valence_scandalo (valence persa dal partito del ministro che si dimette per scandalo, anche alleato)
+[valence_dimissioni_scandalo]
+valore = 0.025
+min = 0.0
+max = 0.5
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (turni in cui il ministro difeso resta sotto scandalo: la sfiducia IA lo prende di mira)
+[turni_scandalo]
+valore = 4.0
+min = 1.0
+max = 12.0
+ticket = "15"
