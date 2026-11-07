@@ -1509,3 +1509,73 @@ valore = 4.0
 min = 1.0
 max = 12.0
 ticket = "15"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:146-154 (2,5 sigma: P(|z| > 2,5) = 0,0124, circa 1,2 eventi a legislatura sulle cinque serie, 0,6 sul lato sfavorevole; decisione 3 del piano 9)
+[soglia_shock]
+valore = 2.5
+min = 1.0
+max = 4.0
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota del PIL annuo del decreto a debito per gli shock)
+[aiuti_shock]
+valore = 0.003
+min = 0.0
+max = 0.02
+ticket = "15"
+
+# regole-fiscali-ue:49 (la clausola nazionale vale 0,3 difesa + 0,3 energia, % del PIL); per l'anno in corso, conta solo dopo `clausola_nazionale_fino_a`, che l'energia la copre già
+[clausola_energia_margine]
+valore = 0.3
+min = 0.0
+max = 1.5
+ticket = "15"
+
+# docs/ricerca/modelli/economia-italiana-parametri.md:27 (massimo di novembre 2011, 5,5 punti; pb di spread oltre cui si aprono le aste scoperte)
+[soglia_crisi_debito]
+valore = 550.0
+min = 300.0
+max = 1000.0
+ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (turni del programma del MES: un anno di ECCL, rinnovabile; 8 turni = 2 anni)
+[durata_mes]
+valore = 8.0
+min = 2.0
+max = 20.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (intesa persa da ogni alleato quando il governo chiede il MES)
+[intesa_mes]
+valore = 10.0
+min = 0.0
+max = 50.0
+ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (PSI greco 2012: taglio nominale del 53,5%)
+[taglio_ristrutturazione]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota di reddito primario persa dalle fasce media e alta, i detentori)
+[perdita_ristrutturazione]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (turni di perdita di reddito dopo il taglio)
+[turni_ristrutturazione]
+valore = 8.0
+min = 1.0
+max = 40.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza con l'emivita della ristrutturazione)
+[premio_ristrutturazione]
+valore = 300.0
+min = 1.0
+max = 1000.0
+ticket = "07"

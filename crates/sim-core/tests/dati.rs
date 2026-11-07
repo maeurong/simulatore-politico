@@ -307,21 +307,6 @@ fn situazione_con_soglie_rovesciate_rifiutata_col_nome() {
 }
 
 #[test]
-fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
-    let f = sostituisci(
-        file_base(),
-        "eventi",
-        "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
-        "tipo = \"clausola_energia\"",
-    );
-    let e = DatiGioco::da_testi(&f).unwrap_err();
-    assert!(
-        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Ondata di criminalità"),
-        "{e}"
-    );
-}
-
-#[test]
 fn uno_scandalo_ammette_solo_le_dimissioni_del_ministro() {
     // Un effetto di spesa sull'opzione «Difenderlo» sarebbe ignorato in silenzio.
     let f = sostituisci(
@@ -533,4 +518,89 @@ fn due_effetti_di_spesa_nella_stessa_opzione_rifiutati() {
                 .contains("l'opzione fondo ha più di un effetto di spesa"),
         "{e}"
     );
+}
+
+#[test]
+fn condizionalita_con_disposizione_o_gradino_sconosciuti_rifiutata_col_messaggio() {
+    let da = "disposizione = \"eta_pensionabile\"\ngradino = \"70\"";
+    for (nuova, messaggio) in [
+        (
+            "disposizione = \"inesistente\"\ngradino = \"70\"",
+            "condizionalità: disposizione sconosciuta inesistente",
+        ),
+        (
+            "disposizione = \"eta_pensionabile\"\ngradino = \"99\"",
+            "condizionalità: gradino sconosciuto «99» per eta_pensionabile",
+        ),
+    ] {
+        let f = sostituisci(file_base(), "eventi", da, nuova);
+        let e = DatiGioco::da_testi(&f).unwrap_err();
+        assert!(
+            matches!(e, Errore::Eventi(_)) && e.to_string().contains(messaggio),
+            "{e}"
+        );
+    }
+}
+
+#[test]
+fn mes_ristrutturazione_e_clausola_fuori_dalla_loro_famiglia_rifiutati_col_messaggio() {
+    let aiuti = "id = \"aiuti\"\nnome = \"Aiuti con un decreto a debito\"\ndefault = false\n\n\
+                 [[evento.opzioni.effetti]]\ntipo = \"debito\"";
+    for (da, a, messaggio) in [
+        (
+            aiuti,
+            aiuti.replace("tipo = \"debito\"", "tipo = \"mes\""),
+            "Crollo della domanda interna: il MES e la ristrutturazione stanno solo sugli eventi del debito",
+        ),
+        (
+            aiuti,
+            aiuti.replace("tipo = \"debito\"", "tipo = \"ristrutturazione\""),
+            "Crollo della domanda interna: il MES e la ristrutturazione stanno solo sugli eventi del debito",
+        ),
+        (
+            "tipo = \"ristrutturazione\"",
+            "tipo = \"clausola_energia\"".to_string(),
+            "Aste scoperte: la clausola per l'energia sta solo sugli shock",
+        ),
+    ] {
+        let f = sostituisci(file_base(), "eventi", da, &a);
+        let e = DatiGioco::da_testi(&f).unwrap_err();
+        assert!(e.to_string().contains(messaggio), "{e}");
+    }
+}
+
+#[test]
+fn evento_del_debito_con_decreto_e_norme_rifiutato_col_messaggio() {
+    let da = "nome = \"Aste scoperte\"\ngravita = 10\ndicasteri = []\ndecreto = true\nnorme = []";
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        da,
+        &da.replace("norme = []", "norme = [\"eta_pensionabile\"]"),
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        e.to_string().contains(
+            "Aste scoperte: un evento del debito apre ogni riforma, niente norme per il decreto"
+        ),
+        "{e}"
+    );
+}
+
+#[test]
+fn evento_del_debito_o_shock_mancante_rifiutato_col_nome() {
+    for id in ["aste_scoperte", "shock_bce"] {
+        let f = sostituisci(
+            file_base(),
+            "eventi",
+            &format!("id = \"{id}\""),
+            "id = \"altro\"",
+        );
+        let e = DatiGioco::da_testi(&f).unwrap_err();
+        assert!(
+            e.to_string()
+                .contains(&format!("evento richiesto dal motore mancante: {id}")),
+            "{e}"
+        );
+    }
 }

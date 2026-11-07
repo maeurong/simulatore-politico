@@ -25,6 +25,10 @@ pub struct RegoleUe {
     pub pil_annuo: BTreeMap<u16, i64>,
     /// Euro, per anno solare.
     pub disavanzo_annuo: BTreeMap<u16, i64>,
+    /// Ultimo anno solare per cui il giocatore ha chiesto il margine UE per l'energia (controllo
+    /// annuale successivo), 0 se mai. Conta solo dopo `clausola_nazionale_fino_a`, che l'energia
+    /// la copre già.
+    pub clausola_energia_fino_a: u16,
 }
 
 impl RegoleUe {
@@ -37,6 +41,7 @@ impl RegoleUe {
             spesa_netta: BTreeMap::new(),
             pil_annuo: BTreeMap::new(),
             disavanzo_annuo: BTreeMap::new(),
+            clausola_energia_fino_a: 0,
         }
     }
 
@@ -149,6 +154,8 @@ impl Economia {
         };
         let clausola = if a1 <= s.clausola_nazionale_fino_a {
             s.clausola_nazionale_margine.valore
+        } else if a1 <= r.clausola_energia_fino_a {
+            dati.manopola("clausola_energia_margine")
         } else {
             0.0
         };
