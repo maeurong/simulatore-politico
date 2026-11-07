@@ -307,21 +307,6 @@ fn situazione_con_soglie_rovesciate_rifiutata_col_nome() {
 }
 
 #[test]
-fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
-    let f = sostituisci(
-        file_base(),
-        "eventi",
-        "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
-        "tipo = \"ristrutturazione\"",
-    );
-    let e = DatiGioco::da_testi(&f).unwrap_err();
-    assert!(
-        matches!(e, Errore::Eventi(_)) && e.to_string().contains("Ondata di criminalità"),
-        "{e}"
-    );
-}
-
-#[test]
 fn uno_scandalo_ammette_solo_le_dimissioni_del_ministro() {
     // Un effetto di spesa sull'opzione «Difenderlo» sarebbe ignorato in silenzio.
     let f = sostituisci(

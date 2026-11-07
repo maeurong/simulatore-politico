@@ -655,6 +655,14 @@ default = true
 [[evento.opzioni.effetti]]
 tipo = "mes"
 
+[[evento.opzioni]]
+id = "ristrutturazione"
+nome = "Ristrutturare il debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "ristrutturazione"
+
 [[condizionalita]]
 disposizione = "eta_pensionabile"
 gradino = "70"

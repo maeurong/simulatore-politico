@@ -108,6 +108,16 @@ pub struct Economia {
     pub innovazioni: [f64; 5],
     /// Il turno in cui finisce il programma del MES, se ce n'è uno in corso.
     pub programma_mes: Option<u32>,
+    /// La ristrutturazione del debito, finché il suo premio sullo spread non scende sotto 1 pb.
+    pub ristrutturazione: Option<Ristrutturazione>,
+}
+
+/// Il turno in cui il debito è stato tagliato (i redditi dei detentori calano da allora) e il
+/// premio sullo spread di quel turno, che si dimezza ogni 8 turni.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Ristrutturazione {
+    pub turno: u32,
+    pub premio: f64,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -184,6 +194,7 @@ impl Economia {
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
             innovazioni: [0.0; 5],
             programma_mes: None,
+            ristrutturazione: None,
         };
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, &e.bilancio, dati, &Misure::neutre(dati));

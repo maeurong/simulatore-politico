@@ -222,7 +222,7 @@ fn trasferimenti_seguono_pensione_e_sussidio() {
     let mut el = p.elettorato().clone();
     el.base.pensione *= 0.5;
     el.base.sussidio *= 0.25;
-    el.aggiorna_redditi(&d, p.economia(), p.misure());
+    el.aggiorna_redditi(&d, p.economia(), p.misure(), 0);
     for (c, k) in [
         (Condizione::Pensionato, 2.0),
         (Condizione::DisoccupatoInattivo, 4.0),
@@ -343,7 +343,7 @@ fn base_nulla_lascia_redditi_finiti_e_non_negativi() {
     let mut el = p.elettorato().clone();
     el.base.salari_pubblici = 0.0;
     el.base.pensione = 0.0;
-    el.aggiorna_redditi(&d, p.economia(), p.misure());
+    el.aggiorna_redditi(&d, p.economia(), p.misure(), 0);
     for g in &el.gruppi {
         assert!(g.reddito.reale().is_finite() && g.reddito.netto() >= 0.0);
     }

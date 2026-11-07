@@ -397,7 +397,13 @@ impl Partita {
         let Some(evento) = self.dati.evento(ASTE_SCOPERTE) else {
             return;
         };
-        if self.economia.spread < soglia || aperta || self.economia.programma_mes.is_some() {
+        if self.economia.spread < soglia
+            || aperta
+            || self.economia.programma_mes.is_some()
+            // Ruling 48: con la ristrutturazione in corso la crisi non si riapre, anche se il
+            // suo premio tiene lo spread sopra la soglia.
+            || self.economia.ristrutturazione.is_some()
+        {
             return;
         }
         self.eventi.aperti.push(EventoAperto {
@@ -605,7 +611,7 @@ impl Partita {
         self.grandezze
             .avanza(&self.dati, Some(&mut self.caso), &self.economia, self.turno);
         self.elettorato
-            .aggiorna_redditi(&self.dati, &self.economia, &self.misure);
+            .aggiorna_redditi(&self.dati, &self.economia, &self.misure, self.turno);
         self.elettorato.giudizio(
             &self.dati,
             &self.economia,
@@ -3968,13 +3974,17 @@ impl Partita {
                             .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
                     }
                     EffettoOpzione::Mes => self.programma_del_mes(),
+                    EffettoOpzione::Ristrutturazione => self.economia.ristruttura(
+                        self.turno,
+                        self.dati.manopola("taglio_ristrutturazione"),
+                        self.dati.manopola("premio_ristrutturazione"),
+                    ),
                     EffettoOpzione::ClausolaEnergia => {
                         let r = &mut self.economia.regole_ue;
                         r.clausola_energia_fino_a = r.clausola_energia_fino_a.max(self.data.anno);
                     }
-                    // Gli altri effetti li applicano i task che li introducono; `valida` li
-                    // rifiuta nei dati finché non ci sono.
-                    _ => {}
+                    // Le dimissioni le applica `risolvi_scandalo`.
+                    EffettoOpzione::Dimissioni => {}
                 }
             }
             if self.dati.eventi()[aperto.evento].famiglia == Famiglia::Emergenza {
@@ -4303,6 +4313,7 @@ impl Partita {
             partita.turno,
             durata_mes,
             aste_aperte,
+            partita.dati.manopola("premio_ristrutturazione"),
         )?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
@@ -4740,6 +4751,7 @@ impl Economia {
         turno: u32,
         durata_mes: u32,
         aste_aperte: bool,
+        premio_ristrutturazione: f64,
     ) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
         let (c, st) = (&self.conti, &self.sfc.stock);
@@ -4760,6 +4772,19 @@ impl Economia {
             self.programma_mes
                 .is_none_or(|f| f <= turno.saturating_add(durata_mes)),
             "economia.programma_mes: finisce oltre turno più durata_mes",
+        )?;
+        ok(
+            (self.ristrutturazione)
+                .is_none_or(|r| (0.0..=premio_ristrutturazione).contains(&r.premio)),
+            "economia.ristrutturazione.premio: non finito o oltre premio_ristrutturazione",
+        )?;
+        ok(
+            self.ristrutturazione.is_none_or(|r| r.turno <= turno),
+            "economia.ristrutturazione.turno: oltre il turno corrente",
+        )?;
+        ok(
+            !(self.programma_mes.is_some() && self.ristrutturazione.is_some()),
+            "economia: programma del MES e ristrutturazione insieme",
         )?;
         ok(
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),

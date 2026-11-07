@@ -1551,3 +1551,31 @@ valore = 10.0
 min = 0.0
 max = 50.0
 ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (PSI greco 2012: taglio nominale del 53,5%)
+[taglio_ristrutturazione]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota di reddito primario persa dalle fasce media e alta, i detentori)
+[perdita_ristrutturazione]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (turni di perdita di reddito dopo il taglio)
+[turni_ristrutturazione]
+valore = 8.0
+min = 1.0
+max = 40.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza ogni 8 turni)
+[premio_ristrutturazione]
+valore = 300.0
+min = 0.0
+max = 1000.0
+ticket = "07"

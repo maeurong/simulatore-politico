@@ -78,6 +78,8 @@ pub enum EffettoOpzione {
     /// Il programma del MES: dura `durata_mes` turni, mette in vigore la condizionalità e costa
     /// `intesa_mes` a ogni alleato.
     Mes,
+    /// Taglia il debito di `taglio_ristrutturazione`, con perdita di reddito ai detentori e un
+    /// premio sullo spread che si dimezza ogni 8 turni.
     Ristrutturazione,
 }
 
@@ -574,8 +576,8 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
         | EffettoOpzione::Debito
         | EffettoOpzione::Dimissioni
         | EffettoOpzione::ClausolaEnergia
-        | EffettoOpzione::Mes => Ok(()),
-        _ => ko("effetto non ancora ammesso nei dati".into()),
+        | EffettoOpzione::Mes
+        | EffettoOpzione::Ristrutturazione => Ok(()),
     }
 }
 

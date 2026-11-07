@@ -1,8 +1,8 @@
 //! Conti a quattro settori (famiglie, imprese, Stato, estero), senza banche. Ogni flusso compare
 //! con segni opposti in due settori, perciò la somma dei saldi fa zero: è il controllo di chiusura.
 
-use super::Economia;
 use super::finanza::{MLD, euro};
+use super::{Economia, Ristrutturazione};
 use crate::dati::DatiGioco;
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +46,27 @@ impl Sfc {
 }
 
 impl Economia {
+    /// Taglia il debito di `taglio` (quota): lo Stato guadagna lo stesso importo, che esce dagli
+    /// stock positivi di famiglie, estero e imprese in proporzione; il resto dell'arrotondamento
+    /// alle famiglie. Gli stock restano a somma zero e lo Stato a `−debito`.
+    pub(crate) fn ristruttura(&mut self, turno: u32, taglio: f64, premio: f64) {
+        let t = euro(self.debito as f64 * taglio).max(0);
+        let s = &mut self.sfc.stock;
+        let positivi = [s.famiglie, s.estero, s.imprese].map(|x| x.max(0));
+        let totale = i128::from(positivi.iter().sum::<i64>());
+        let quote = positivi.map(|x| {
+            (i128::from(t) * i128::from(x))
+                .checked_div(totale)
+                .map_or(0, |q| q as i64)
+        });
+        s.famiglie -= quote[0] + (t - quote.iter().sum::<i64>());
+        s.estero -= quote[1];
+        s.imprese -= quote[2];
+        s.stato += t;
+        self.debito -= t;
+        self.ristrutturazione = Some(Ristrutturazione { turno, premio });
+    }
+
     /// Somma dei quattro saldi del turno: zero se la contabilità è chiusa.
     pub fn residuo_sfc(&self) -> i64 {
         self.sfc.saldi.somma()

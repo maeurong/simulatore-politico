@@ -316,3 +316,129 @@ fn il_mes_limita_anche_l_emendamento_al_bilancio() {
     assert!(e.to_string().contains("programma del MES"), "{e}");
     assert_eq!(p.salva().unwrap(), prima);
 }
+
+/// Le Aste scoperte risolte con la ristrutturazione: la chiusura che le applica.
+fn ristrutturata() -> Partita {
+    let mut p = in_crisi();
+    let k = (p.vista().eventi.iter())
+        .position(|e| e.nome == "Aste scoperte")
+        .unwrap();
+    p.comanda(Comando::RispondiEvento {
+        evento: k,
+        opzione: "ristrutturazione".into(),
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    p
+}
+
+fn premio_dopo(p: &Partita) -> f64 {
+    p.economia().ristrutturazione.unwrap().premio
+}
+
+#[test]
+fn la_ristrutturazione_taglia_il_debito() {
+    let prima = in_crisi().economia().debito as f64;
+    let (r, mes) = (ristrutturata(), col_mes());
+    let e = r.economia();
+    let rapporto = e.debito as f64 / prima;
+    assert!((0.45..0.55).contains(&rapporto), "{rapporto}");
+    // Il premio entra intero nello spread del turno, poi decade di un passo.
+    assert!(e.spread >= 300.0, "{}", e.spread);
+    assert!((premio_dopo(&r) - 300.0 * 0.5_f64.powf(0.125)).abs() < 1e-9);
+    let alta = |p: &Partita| {
+        let d = dati_base();
+        (p.elettorato().gruppi.iter().zip(&d.elettorato().gruppi))
+            .filter(|(_, d)| d.fascia == sim_core::elettorato::Fascia::Alta)
+            .map(|(g, _)| g.reddito.primario)
+            .sum::<f64>()
+    };
+    let perdita = dati_base().manopola("perdita_ristrutturazione");
+    let (con, senza) = (alta(&r), alta(&mes));
+    assert!(con < senza * (1.0 - perdita / 2.0), "{con} {senza}");
+}
+
+#[test]
+fn la_ristrutturazione_tiene_i_conti() {
+    let p = ristrutturata();
+    let e = p.economia();
+    assert_eq!(e.sfc.stock.stato, -e.debito);
+    assert_eq!(e.residuo_stock(), 0);
+    let r = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(r.economia().sfc.stock.stato, -r.economia().debito);
+}
+
+#[test]
+fn il_premio_si_dimezza() {
+    let mut p = ristrutturata();
+    let inizio = premio_dopo(&p);
+    for _ in 0..8 {
+        chiudi_col_bilancio(&mut p);
+    }
+    assert!((premio_dopo(&p) - inizio / 2.0).abs() < 1e-9);
+}
+
+/// Una partita ordinaria (PDE in regola, il TPI vale) con un premio di sfiducia di 400 pb e,
+/// se `premio`, una ristrutturazione di quel premio: dopo una chiusura, il premio di sfiducia.
+fn sfiducia_con(premio: Option<f64>) -> f64 {
+    let p = Partita::nuova(dati_base(), 1);
+    let mut p = edita(&p, |j| {
+        j["economia"]["premio_sfiducia"] = json!(400.0);
+        if let Some(premio) = premio {
+            j["economia"]["ristrutturazione"] = json!({ "turno": 0, "premio": premio });
+        }
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    p.economia().premio_sfiducia
+}
+
+#[test]
+fn la_ristrutturazione_esce_dal_tpi() {
+    assert_eq!(sfiducia_con(None), 0.0);
+    assert_eq!(sfiducia_con(Some(40.0)), 0.0);
+    assert!(sfiducia_con(Some(100.0)) > 100.0);
+}
+
+#[test]
+fn niente_crisi_durante_la_ristrutturazione() {
+    let p = con_premio();
+    let mut p = edita(&p, |j| {
+        j["economia"]["ristrutturazione"] = json!({ "turno": 0, "premio": 100.0 })
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert!(p.economia().spread >= 550.0, "{}", p.economia().spread);
+    assert!(aste(&p).is_empty());
+}
+
+fn rifiutato(p: &Partita, f: impl FnOnce(&mut Value), messaggio: &str) {
+    let e = edita(p, f).unwrap_err();
+    assert!(e.to_string().contains(messaggio), "{e}");
+}
+
+#[test]
+fn un_salvataggio_con_la_ristrutturazione_manomessa_e_rifiutato() {
+    let p = ristrutturata();
+    let turno = p.vista().turno;
+    rifiutato(
+        &p,
+        |j| j["economia"]["ristrutturazione"]["premio"] = json!(-1.0),
+        "economia.ristrutturazione.premio",
+    );
+    rifiutato(
+        &p,
+        |j| j["economia"]["ristrutturazione"]["premio"] = json!(300.5),
+        "economia.ristrutturazione.premio",
+    );
+    rifiutato(
+        &p,
+        |j| j["economia"]["ristrutturazione"]["turno"] = json!(turno + 1),
+        "economia.ristrutturazione.turno",
+    );
+    rifiutato(
+        &p,
+        |j| j["economia"]["programma_mes"] = json!(turno + 1),
+        "programma del MES e ristrutturazione insieme",
+    );
+}
