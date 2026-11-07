@@ -45,7 +45,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 13;
+pub const VERSIONE_SCHEMA: u32 = 14;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -345,6 +345,11 @@ impl Partita {
             &self.partiti,
             self.giocatore,
             &mut self.caso,
+        ));
+        candidati.extend(rischio::candidati_shock(
+            &self.dati,
+            &self.economia.innovazioni,
+            self.economia.pil_potenziale_annuo(),
         ));
         let Some(i) = rischio::estrai(&mut self.caso, &candidati) else {
             return;
@@ -3892,6 +3897,10 @@ impl Partita {
                             .effetti
                             .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
                     }
+                    EffettoOpzione::ClausolaEnergia => {
+                        let r = &mut self.economia.regole_ue;
+                        r.clausola_energia_fino_a = r.clausola_energia_fino_a.max(self.data.anno);
+                    }
                     // Gli altri effetti li applicano i task che li introducono; `valida` li
                     // rifiuta nei dati finché non ci sono.
                     _ => {}
@@ -3926,10 +3935,11 @@ impl Partita {
         }
     }
 
-    /// Lo scandalo si chiude: le dimissioni (date ora o già chieste) costano `valence_dimissioni_scandalo`, il resto (difendere,
-    /// o l'unica opzione del leader) costa `valence_scandalo` al partito del bersaglio e, per un
-    /// ministro, lo tiene `turni_scandalo` sotto la sfiducia IA. Un bersaglio che non c'è più o ha
-    /// cambiato persona, o un rifiuto di `applica`, chiudono l'evento in silenzio.
+    /// Lo scandalo si chiude: le dimissioni (date ora o già chieste) costano
+    /// `valence_dimissioni_scandalo`, il resto (difendere, o l'unica opzione del leader) costa
+    /// `valence_scandalo` al partito del bersaglio e, per un ministro, lo tiene `turni_scandalo`
+    /// sotto la sfiducia IA. Un bersaglio che non c'è più o ha cambiato persona, o un rifiuto di
+    /// `applica`, chiudono l'evento in silenzio.
     fn risolvi_scandalo(&mut self, aperto: &EventoAperto, opzione: &DatoOpzione) {
         let attuale = aperto.bersaglio.and_then(|b| self.nome_del(b));
         let presente = attuale.is_some_and(|n| aperto.persona.as_ref().is_none_or(|p| *p == n));
@@ -4595,6 +4605,10 @@ impl Economia {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
+        ok(
+            self.innovazioni.iter().all(|z| z.is_finite()),
+            "economia.innovazioni: valori non finiti",
+        )?;
         ok(
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),
             "economia.storico: servono da 1 a 8 voci con pil > 0",

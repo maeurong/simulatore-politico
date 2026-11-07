@@ -103,6 +103,9 @@ pub struct Economia {
     pub premio_sfiducia: f64,
     /// Spesa netta, conto di controllo, PDE.
     pub regole_ue: RegoleUe,
+    /// Le cinque normali dell'ultimo passo, prima della sigma: domanda, produttività, energia,
+    /// domanda estera, BCE.
+    pub innovazioni: [f64; 5],
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -177,6 +180,7 @@ impl Economia {
             spread: 0.0,
             premio_sfiducia: s.premio_sfiducia.valore,
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
+            innovazioni: [0.0; 5],
         };
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, &e.bilancio, dati, &Misure::neutre(dati));
@@ -218,14 +222,22 @@ impl Economia {
         data: Trimestre,
         misure: &Misure,
     ) {
-        let spesa_netta = self.finanza(dati, data, misure);
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
-        let mut shock = |sigma: &str| caso.normale(Flusso::Economia) * dati.manopola(sigma);
-        let shock_domanda = shock("sigma_domanda");
-        let shock_produttivita = shock("sigma_produttivita");
-        let shock_energia = shock("sigma_energia");
-        let shock_domanda_estera = shock("sigma_domanda_estera");
-        let shock_bce = shock("sigma_bce");
+        let z = std::array::from_fn(|_| caso.normale(Flusso::Economia));
+        self.passo_con(dati, data, misure, z);
+    }
+
+    /// Il passo con le cinque normali già estratte (domanda, produttività, energia, domanda
+    /// estera, BCE): le salva in `innovazioni`, poi le moltiplica per la sigma.
+    pub fn passo_con(&mut self, dati: &DatiGioco, data: Trimestre, misure: &Misure, z: [f64; 5]) {
+        let spesa_netta = self.finanza(dati, data, misure);
+        self.innovazioni = z;
+        let sigma = |k: usize, nome: &str| z[k] * dati.manopola(nome);
+        let shock_domanda = sigma(0, "sigma_domanda");
+        let shock_produttivita = sigma(1, "sigma_produttivita");
+        let shock_energia = sigma(2, "sigma_energia");
+        let shock_domanda_estera = sigma(3, "sigma_domanda_estera");
+        let shock_bce = sigma(4, "sigma_bce");
         let domanda_estera_prima = self.domanda_estera;
         self.energia = dati.manopola("persistenza_energia") * self.energia + shock_energia;
         self.domanda_estera = dati.manopola("persistenza_domanda_estera") * self.domanda_estera
@@ -325,6 +337,7 @@ impl Economia {
         scalari
             .iter()
             .chain(&self.output_gap)
+            .chain(&self.innovazioni)
             .chain(&self.inflazione)
             .chain(&self.prezzi_settori)
             .chain(&self.gap_settori)

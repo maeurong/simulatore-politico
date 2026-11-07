@@ -2,7 +2,9 @@ mod comune;
 use comune::{
     con_ingresso, dati_base, ferma_tutti, file_vero, imposta, senza_shock, senza_shock_vero,
 };
-use sim_core::{DatiGioco, FileDati, Partita};
+use sim_core::economia::Economia;
+use sim_core::misure::Misure;
+use sim_core::{DatiGioco, FileDati, Partita, Trimestre};
 
 fn giocata(f: &FileDati, seme: u64, turni: u32) -> Partita {
     let mut p = Partita::nuova(DatiGioco::da_testi(f).unwrap(), seme);
@@ -23,16 +25,22 @@ fn senza_shock_i_prezzi_dei_settori_restano_a_uno() {
 
 #[test]
 fn uno_shock_energetico_alza_di_piu_i_prezzi_dell_industria() {
-    // Lo scarto di scenario sta già nei prezzi del turno zero: lo shock arriva dal passo (seme 3:
-    // il primo scarto di sigma_energia è positivo).
+    // Lo scarto di scenario sta già nei prezzi del turno zero: lo shock è una normale positiva
+    // data al passo (sigma 15, z = 1), senza dipendere dal seme.
     let f = imposta(
         senza_shock(),
         "manopole",
         "[sigma_energia]\nvalore = ",
         "15.0",
     );
-    let p = giocata(&f, 3, 1);
-    let e = p.economia();
+    let dati = DatiGioco::da_testi(&f).unwrap();
+    let mut e = Economia::iniziale(&dati);
+    e.passo_con(
+        &dati,
+        Trimestre::TURNO_ZERO,
+        &Misure::neutre(&dati),
+        [0.0, 0.0, 1.0, 0.0, 0.0],
+    );
     let (bte, l) = (e.prezzi_settori[1], e.prezzi_settori[6]);
     assert!(bte > l && l >= 1.0, "BTE {bte}, L {l}");
     assert!(e.inflazione_importata > 0.0);

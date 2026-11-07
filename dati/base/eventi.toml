@@ -501,3 +501,135 @@ id = "prendere_atto"
 nome = "Prendere atto"
 default = true
 effetti = []
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:146-154 (soglia 2,5 sigma, solo il lato
+# sfavorevole: circa 0,6 eventi a legislatura sulle cinque serie). Gravità 8: sopra gli scandali
+# (6-7) e le emergenze lievi (2-5, che non sono eventi), sotto le emergenze gravi (12-15) e con
+# vittime (22-25). Nessun decreto sulle disposizioni: l'unica leva è il decreto a debito.
+[[evento]]
+id = "shock_domanda"
+famiglia = "shock"
+nome = "Crollo della domanda interna"
+gravita = 8
+dicasteri = ["sviluppo_economico"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "niente"
+nome = "Lasciare che passi"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "aiuti"
+nome = "Aiuti con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento]]
+id = "shock_produttivita"
+famiglia = "shock"
+nome = "Crollo della produttività"
+gravita = 8
+dicasteri = ["sviluppo_economico"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "niente"
+nome = "Lasciare che passi"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "aiuti"
+nome = "Aiuti con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento]]
+id = "shock_energia"
+famiglia = "shock"
+nome = "Shock dei prezzi dell'energia"
+gravita = 8
+dicasteri = ["ambiente_energia"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "niente"
+nome = "Lasciare che passi"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "aiuti"
+nome = "Aiuti con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento.opzioni]]
+id = "clausola"
+nome = "Attivare la clausola nazionale per l'energia"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "clausola_energia"
+
+[[evento]]
+id = "shock_domanda_estera"
+famiglia = "shock"
+nome = "Crollo della domanda estera"
+gravita = 8
+dicasteri = ["sviluppo_economico"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "niente"
+nome = "Lasciare che passi"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "aiuti"
+nome = "Aiuti con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"
+
+[[evento]]
+id = "shock_bce"
+famiglia = "shock"
+nome = "Stretta improvvisa della BCE"
+gravita = 8
+dicasteri = ["economia_finanze"]
+decreto = false
+norme = []
+debito = true
+
+[[evento.opzioni]]
+id = "niente"
+nome = "Lasciare che passi"
+default = true
+effetti = []
+
+[[evento.opzioni]]
+id = "aiuti"
+nome = "Aiuti con un decreto a debito"
+default = false
+
+[[evento.opzioni.effetti]]
+tipo = "debito"

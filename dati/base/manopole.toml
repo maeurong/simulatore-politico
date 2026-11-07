@@ -1509,3 +1509,24 @@ valore = 4.0
 min = 1.0
 max = 12.0
 ticket = "15"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:146-154 (2,5 sigma: P(|z| > 2,5) = 0,0124, circa 1,2 eventi a legislatura sulle cinque serie, 0,6 sul lato sfavorevole; decisione 3 del piano 9)
+[soglia_shock]
+valore = 2.5
+min = 1.0
+max = 4.0
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota del PIL annuo del decreto a debito per gli shock)
+[aiuti_shock]
+valore = 0.003
+min = 0.0
+max = 0.02
+ticket = "15"
+
+# regole-fiscali-ue:49 (la clausola nazionale vale 0,3 difesa + 0,3 energia, % del PIL); vale solo dopo `clausola_nazionale_fino_a`, che contiene già lo 0,3 dell'energia
+[clausola_energia_margine]
+valore = 0.3
+min = 0.0
+max = 1.5
+ticket = "15"

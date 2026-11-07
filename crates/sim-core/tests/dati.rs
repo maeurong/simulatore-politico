@@ -312,7 +312,7 @@ fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
         file_base(),
         "eventi",
         "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
-        "tipo = \"clausola_energia\"",
+        "tipo = \"mes\"",
     );
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(

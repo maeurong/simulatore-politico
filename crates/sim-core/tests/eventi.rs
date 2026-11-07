@@ -59,7 +59,7 @@ fn senza_scelta_vale_il_default() {
     chiudi_col_bilancio(&mut q);
     // L'evento di prova è chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
     assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
-    // Il default non ha effetti: la partita e' identica a quella senza evento.
+    // Il default non ha effetti: la partita è identica a quella senza evento.
     assert_eq!(p, q);
 }
 

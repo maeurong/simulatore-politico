@@ -41,9 +41,10 @@ pub enum Tono {
     Grave,
 }
 
-/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva`, `Debito` e `Dimissioni` sono gli
-/// unici che `valida` ammette finora (`Dimissioni` solo per lo scandalo sul ministro, `FondoRiserva`
-/// e `Debito` al più uno per opzione): gli altri li applicano i task che li introducono.
+/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva`, `Debito`, `Dimissioni` e
+/// `ClausolaEnergia` sono gli unici che `valida` ammette finora (`Dimissioni` solo per lo
+/// scandalo sul ministro, `FondoRiserva` e `Debito` al più uno per opzione): gli altri li
+/// applicano i task che li introducono.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum EffettoOpzione {
@@ -68,6 +69,8 @@ pub enum EffettoOpzione {
     /// Come `FondoRiserva`, ma per intero e a disavanzo.
     Debito,
     Dimissioni,
+    /// Dal prossimo controllo annuale, per l'anno in corso, il margine per l'energia; vale solo
+    /// dopo la clausola nazionale, che lo contiene già.
     ClausolaEnergia,
     Mes,
     Ristrutturazione,
@@ -438,6 +441,11 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
         .iter()
         .map(|id| (id, Famiglia::Emergenza, "emergenza")))
     .chain(
+        rischio::SHOCK
+            .iter()
+            .map(|id| (id, Famiglia::Shock, "shock")),
+    )
+    .chain(
         rischio::SCANDALI
             .iter()
             .map(|id| (id, Famiglia::Scandalo, "scandalo")),
@@ -507,9 +515,10 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
         }
         EffettoOpzione::Valence { delta } if delta.is_finite() => Ok(()),
         EffettoOpzione::Valence { .. } => ko("valence non finita".into()),
-        EffettoOpzione::FondoRiserva | EffettoOpzione::Debito | EffettoOpzione::Dimissioni => {
-            Ok(())
-        }
+        EffettoOpzione::FondoRiserva
+        | EffettoOpzione::Debito
+        | EffettoOpzione::Dimissioni
+        | EffettoOpzione::ClausolaEnergia => Ok(()),
         _ => ko("effetto non ancora ammesso nei dati".into()),
     }
 }

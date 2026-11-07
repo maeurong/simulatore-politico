@@ -4,13 +4,34 @@
 use super::{Bersaglio, Causa, Tono};
 use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
+use crate::economia::euro;
 use crate::grandezze::Grandezze;
 use crate::ministri::Ministri;
+use crate::partita::LIMITE_EURO;
 use crate::partiti::Partito;
 use crate::vista::Fascia3;
 
 /// Gli eventi che nascono dallo scandalo: sul ministro, sul leader.
 pub(crate) const SCANDALI: [&str; 2] = ["scandalo_ministro", "scandalo_leader"];
+
+/// Gli eventi degli shock, nell'ordine delle innovazioni: domanda, produttività, energia, domanda
+/// estera, BCE.
+pub(crate) const SHOCK: [&str; 5] = [
+    "shock_domanda",
+    "shock_produttivita",
+    "shock_energia",
+    "shock_domanda_estera",
+    "shock_bce",
+];
+
+/// Nome della serie nella causa, e il segno in cui l'innovazione è sfavorevole.
+const SERIE: [(&str, f64); 5] = [
+    ("domanda", -1.0),
+    ("produttività", -1.0),
+    ("prezzi dell'energia", 1.0),
+    ("domanda estera", -1.0),
+    ("tasso BCE", 1.0),
+];
 
 /// Un evento che può nascere in questo turno con probabilità `p`.
 pub(crate) struct Candidato {
@@ -72,6 +93,40 @@ pub(crate) fn candidato_scandalo(
         tono: Tono::Ordinario,
         lieve: false,
     })
+}
+
+/// Un candidato per serie, sempre cinque: `p = 1` se l'innovazione sfavorevole supera
+/// `soglia_shock` sigma, altrimenti 0 (lo shock favorevole non fa nascere nulla). Il costo degli
+/// aiuti è `aiuti_shock` del PIL annuo `pil_annuo`, in euro. Senza gli eventi nel catalogo, nessuno.
+pub(crate) fn candidati_shock(
+    dati: &DatiGioco,
+    innovazioni: &[f64; 5],
+    pil_annuo: f64,
+) -> Vec<Candidato> {
+    let costo = euro(dati.manopola("aiuti_shock") * pil_annuo).min(LIMITE_EURO);
+    let soglia = dati.manopola("soglia_shock");
+    let mut candidati = Vec::new();
+    for ((id, (serie, segno)), z) in SHOCK.iter().zip(SERIE).zip(innovazioni) {
+        let Some(evento) = dati.evento(id) else {
+            return Vec::new();
+        };
+        let sfavore = z * segno;
+        candidati.push(Candidato {
+            evento,
+            p: if sfavore > soglia { 1.0 } else { 0.0 },
+            gravita: (dati.eventi().get(evento)).map_or(0, |e| e.gravita),
+            regione: None,
+            bersaglio: None,
+            causa: Causa::Shock {
+                serie: serie.to_string(),
+                sigma: sfavore.max(0.0),
+            },
+            costo,
+            tono: Tono::Ordinario,
+            lieve: false,
+        });
+    }
+    candidati
 }
 
 /// Il livello di rischio per la causa: la vista non mostra mai la probabilità in cifre.
@@ -178,6 +233,57 @@ mod tests {
             }
         }
         assert!(ministri > 0 && leader > 0, "{ministri} e {leader}");
+    }
+
+    fn con_z(z: [f64; 5]) -> Vec<Candidato> {
+        candidati_shock(&crate::dati::dati_base(), &z, 1e12)
+    }
+
+    #[test]
+    fn shock_oltre_soglia_apre_un_evento() {
+        let c = con_z([-3.0, 0.0, 0.0, 0.0, 0.0]);
+        let mut caso = Caso::nuovo(1);
+        assert_eq!(estrai(&mut caso, &c), Some(0));
+        assert_eq!(
+            c[0].causa,
+            Causa::Shock {
+                serie: "domanda".into(),
+                sigma: 3.0
+            }
+        );
+        assert_eq!(c[0].costo, 3_000_000_000);
+    }
+
+    #[test]
+    fn shock_sotto_soglia_niente() {
+        let c = con_z([-2.4, -2.4, 2.4, -2.4, 2.4]);
+        assert_eq!(c.len(), 5);
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+    }
+
+    #[test]
+    fn shock_favorevole_niente_evento() {
+        // Innovazioni favorevoli oltre soglia: produttività su, energia giù, BCE giù.
+        let c = con_z([3.0, 3.0, -3.0, 3.0, -3.0]);
+        assert!(c.iter().all(|x| x.p == 0.0));
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+    }
+
+    /// Cinque normali da `Flusso::Economia` per chiusura, come nel passo; vale un evento per
+    /// chiusura in cui almeno una serie esce (il tetto ne lascia uno).
+    #[test]
+    fn frequenza_vicina_alla_storia() {
+        let dati = crate::dati::dati_base();
+        let mut eventi = 0;
+        for seme in 1..=500 {
+            let mut caso = Caso::nuovo(seme);
+            for _ in 0..20 {
+                let z = std::array::from_fn(|_| caso.normale(Flusso::Economia));
+                eventi += usize::from(candidati_shock(&dati, &z, 1e12).iter().any(|c| c.p > 0.0));
+            }
+        }
+        let media = eventi as f64 / 500.0;
+        assert!((0.3..1.0).contains(&media), "{media}");
     }
 
     #[test]
