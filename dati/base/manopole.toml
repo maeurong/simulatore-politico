@@ -1530,3 +1530,24 @@ valore = 0.3
 min = 0.0
 max = 1.5
 ticket = "15"
+
+# docs/ricerca/modelli/economia-italiana-parametri.md:27 (massimo di novembre 2011, 5,5 punti; pb di spread oltre cui si aprono le aste scoperte)
+[soglia_crisi_debito]
+valore = 550.0
+min = 300.0
+max = 1000.0
+ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (turni del programma del MES: un anno di ECCL, rinnovabile; 8 turni = 2 anni)
+[durata_mes]
+valore = 8.0
+min = 2.0
+max = 20.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (intesa persa da ogni alleato quando il governo chiede il MES)
+[intesa_mes]
+valore = 10.0
+min = 0.0
+max = 50.0
+ticket = "07"

@@ -12,8 +12,8 @@ use crate::elettorato::{
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
 use crate::eventi::{
-    Bersaglio, DatoOpzione, EffettoOpzione, Eventi, EventoAperto, Famiglia, emergenze, rischio,
-    situazioni,
+    ASTE_SCOPERTE, Bersaglio, DatoOpzione, EffettoOpzione, Eventi, EventoAperto, Famiglia, Tono,
+    emergenze, rischio, situazioni,
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
@@ -383,6 +383,40 @@ impl Partita {
         self.eventi.aperti.push(aperto);
     }
 
+    /// Le «Aste scoperte» nascono dallo spread, senza estrazioni e fuori dal tetto di un evento a
+    /// turno: con lo spread alla soglia, nessun evento del debito aperto e nessun programma del
+    /// MES in corso. Dopo `economia.passo`, che aggiorna lo spread, e dopo le situazioni.
+    fn crisi_del_debito(&mut self) {
+        let soglia = self.dati.manopola("soglia_crisi_debito");
+        let aperta = (self.eventi.aperti.iter()).any(|a| {
+            self.dati
+                .eventi()
+                .get(a.evento)
+                .is_some_and(|e| e.famiglia == Famiglia::Debito)
+        });
+        let Some(evento) = self.dati.evento(ASTE_SCOPERTE) else {
+            return;
+        };
+        if self.economia.spread < soglia || aperta || self.economia.programma_mes.is_some() {
+            return;
+        }
+        self.eventi.aperti.push(EventoAperto {
+            evento,
+            turno: self.turno.saturating_add(1),
+            // Cast: lo spread è limitato da `spread_massimo` e non è mai NaN.
+            causa: crate::eventi::Causa::Spread {
+                pb: self.economia.spread.round() as i32,
+                soglia: soglia.round() as i32,
+            },
+            regione: None,
+            bersaglio: None,
+            persona: None,
+            tono: Tono::Grave,
+            costo: 0,
+            scelta: None,
+        });
+    }
+
     fn misure_situazioni(&self, ufficiale: bool) -> Vec<f64> {
         situazioni::misure(
             &self.dati,
@@ -563,6 +597,9 @@ impl Partita {
             &self.disposizioni,
         );
         let prima = std::mem::replace(&mut self.misure, nuove);
+        if (self.economia.programma_mes).is_some_and(|fine| self.turno >= fine) {
+            self.economia.programma_mes = None;
+        }
         self.economia
             .passo(&self.dati, &mut self.caso, self.data, &self.misure);
         self.grandezze
@@ -617,6 +654,7 @@ impl Partita {
             &ufficiali,
             self.turno.saturating_add(1),
         );
+        self.crisi_del_debito();
         self.incassa(&vero);
         if di_voto {
             self.vota_parlamento(&vero);
@@ -1556,6 +1594,16 @@ impl Partita {
     /// reale (`emendamenti_bilancio`); gli emendamenti accolti si riapplicano al bilancio nuovo.
     pub(crate) fn presenta_bilancio(&mut self, b: &Bilancio) -> Result<(), Errore> {
         let (_, mut b) = self.bilancio_ammesso(b)?;
+        if let Some(fine) = self.economia.programma_mes {
+            let r = self.riepilogo_ammesso(&b)?;
+            if r.crescita_spesa_netta > r.tetto {
+                return Err(Errore::Comando(format!(
+                    "programma del MES fino al turno {fine}: la spesa netta non può crescere oltre il tetto di {}% (proposta {}%)",
+                    vita::virgola(r.tetto),
+                    vita::virgola(r.crescita_spesa_netta)
+                )));
+            }
+        }
         let turno = self.turno;
         let accolti: Vec<usize> = (self.parlamento.misure.iter())
             .filter(|m| parlamento::bilancio_del_turno(m, turno))
@@ -1610,6 +1658,7 @@ impl Partita {
 
     /// `PresentaLegge`: la misura entra in calendario.
     pub(crate) fn presenta_legge(&mut self, valori: &[ValoreProposto]) -> Result<(), Errore> {
+        self.vincolo_mes(valori)?;
         (self.parlamento).presenta(
             &self.dati,
             &self.disposizioni,
@@ -1712,6 +1761,7 @@ impl Partita {
     pub fn anteprima(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore> {
         self.di_governo()?;
         self.fuori_dalla_crisi()?;
+        self.vincolo_mes(valori)?;
         let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
         let capacita = (m.proponente)
             .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
@@ -1820,6 +1870,7 @@ impl Partita {
             disposizione: x.id.clone(),
             gradino: x.gradini[gradino].id.clone(),
         }];
+        self.vincolo_mes(&valori)?;
         (self.parlamento).presenta(
             &self.dati,
             &self.disposizioni,
@@ -1969,6 +2020,7 @@ impl Partita {
     /// Entra in vigore se convertita (`entra_in_vigore`); decaduta non applica nulla, e il blocco
     /// delle respinte è la non reiterazione (iter-legislativo-italiano:20).
     fn conversione_disposizioni(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
+        self.vincolo_mes(valori)?;
         let inneschi = self.eventi.inneschi(&self.dati);
         parlamento::ammetti_disposizioni(&self.dati, &inneschi, valori)?;
         let bozza = self
@@ -3897,6 +3949,7 @@ impl Partita {
                             .effetti
                             .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
                     }
+                    EffettoOpzione::Mes => self.programma_del_mes(),
                     EffettoOpzione::ClausolaEnergia => {
                         let r = &mut self.economia.regole_ue;
                         r.clausola_energia_fino_a = r.clausola_energia_fino_a.max(self.data.anno);
@@ -3920,6 +3973,58 @@ impl Partita {
                 self.valence_evento(&aperto, delta);
             }
         }
+    }
+
+    /// Il programma del MES: dura `durata_mes` turni, la condizionalità entra subito in vigore
+    /// con la legge «Memorandum del MES», ogni alleato perde `intesa_mes`.
+    fn programma_del_mes(&mut self) {
+        let durata = self.dati.manopola("durata_mes").round() as u32;
+        self.economia.programma_mes = Some(self.turno.saturating_add(durata));
+        for (d, g) in self.condizionalita() {
+            (self.disposizioni).cambia(
+                &self.dati,
+                d,
+                g,
+                self.turno,
+                "Memorandum del MES",
+                &mut self.grandezze.effetti,
+            );
+        }
+        let costo = self.dati.manopola("intesa_mes");
+        for j in self.alleati() {
+            (self.intesa).varia(j, CausaIntesa::ProgrammaMes, -costo, self.turno);
+        }
+    }
+
+    /// La condizionalità come (disposizione, gradino) per indice; `valida` ne garantisce gli id.
+    fn condizionalita(&self) -> Vec<(usize, usize)> {
+        (self.dati.condizionalita().iter())
+            .filter_map(|c| {
+                let d = self.dati.disposizione(&c.disposizione)?;
+                Some((d, self.dati.disposizioni().get(d)?.gradino(&c.gradino)?))
+            })
+            .collect()
+    }
+
+    /// Col programma del MES in corso, una legge o un decreto non porta la condizionalità a un
+    /// gradino diverso.
+    fn vincolo_mes(&self, valori: &[ValoreProposto]) -> Result<(), Errore> {
+        let Some(fine) = self.economia.programma_mes else {
+            return Ok(());
+        };
+        for (d, g) in self.condizionalita() {
+            let x = &self.dati.disposizioni()[d];
+            if valori
+                .iter()
+                .any(|v| v.disposizione == x.id && x.gradino(&v.gradino) != Some(g))
+            {
+                return Err(Errore::Comando(format!(
+                    "{}: vincolata dal memorandum del MES fino al turno {fine}",
+                    x.nome
+                )));
+            }
+        }
+        Ok(())
     }
 
     /// Chi occupa oggi il posto del bersaglio: il leader del partito (se non è sciolto) o il
@@ -4170,7 +4275,10 @@ impl Partita {
                 )));
             }
         }
-        partita.economia.controlla_coerenza(partita.data)?;
+        let durata_mes = partita.dati.manopola("durata_mes") as u32;
+        partita
+            .economia
+            .controlla_coerenza(partita.data, partita.turno, durata_mes)?;
         partita.grandezze.controlla(&partita.dati)?;
         partita.misure.controlla(&partita.dati)?;
         partita
@@ -4601,7 +4709,12 @@ impl Economia {
 
     /// Invarianti dei conti che un salvataggio manomesso potrebbe rompere. L'ordine conta:
     /// i limiti sugli importi vengono prima delle somme che li usano.
-    fn controlla_coerenza(&self, data: Trimestre) -> Result<(), Errore> {
+    fn controlla_coerenza(
+        &self,
+        data: Trimestre,
+        turno: u32,
+        durata_mes: u32,
+    ) -> Result<(), Errore> {
         let in_limite = |x: i64| x.abs() <= LIMITE_EURO;
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
@@ -4612,6 +4725,11 @@ impl Economia {
         ok(
             self.regole_ue.clausola_energia_fino_a <= data.anno,
             "economia.regole_ue.clausola_energia_fino_a: oltre l'anno della data corrente",
+        )?;
+        ok(
+            self.programma_mes
+                .is_none_or(|f| f <= turno.saturating_add(durata_mes)),
+            "economia.programma_mes: finisce oltre turno più durata_mes",
         )?;
         ok(
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),

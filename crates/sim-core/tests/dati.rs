@@ -312,7 +312,7 @@ fn evento_con_effetto_non_ancora_ammesso_rifiutato() {
         file_base(),
         "eventi",
         "tipo = \"grandezza\"\ngrandezza = \"sicurezza\"\nintensita = 8.0\nritardo = 1\nforma = \"impulso\"\ndurata = 4.0",
-        "tipo = \"mes\"",
+        "tipo = \"ristrutturazione\"",
     );
     let e = DatiGioco::da_testi(&f).unwrap_err();
     assert!(
@@ -533,4 +533,26 @@ fn due_effetti_di_spesa_nella_stessa_opzione_rifiutati() {
                 .contains("l'opzione fondo ha più di un effetto di spesa"),
         "{e}"
     );
+}
+
+#[test]
+fn condizionalita_con_disposizione_o_gradino_sconosciuti_rifiutata_col_messaggio() {
+    let da = "disposizione = \"eta_pensionabile\"\ngradino = \"70\"";
+    for (nuova, messaggio) in [
+        (
+            "disposizione = \"inesistente\"\ngradino = \"70\"",
+            "condizionalità: disposizione sconosciuta inesistente",
+        ),
+        (
+            "disposizione = \"eta_pensionabile\"\ngradino = \"99\"",
+            "condizionalità: gradino sconosciuto «99» per eta_pensionabile",
+        ),
+    ] {
+        let f = sostituisci(file_base(), "eventi", da, nuova);
+        let e = DatiGioco::da_testi(&f).unwrap_err();
+        assert!(
+            matches!(e, Errore::Eventi(_)) && e.to_string().contains(messaggio),
+            "{e}"
+        );
+    }
 }

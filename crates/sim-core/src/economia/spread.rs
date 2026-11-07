@@ -35,14 +35,16 @@ impl Economia {
     }
 
     /// Fine turno, dopo le regole UE: il TPI vale con la PDE `Nessuna`, `Aperta` o `Sospesa`
-    /// e azzera il premio; altrimenti il premio decade con la sua emivita. Solo il criterio 1
+    /// e azzera il premio, e così l'OMT, che copre anche fuori dai criteri del TPI, finché dura
+    /// il programma del MES; altrimenti il premio decade con la sua emivita. Solo il criterio 1
     /// del TPI è modellato [assunzione del piano 3: gli altri non hanno grandezze nella v1].
     pub(super) fn aggiorna_spread(&mut self, dati: &DatiGioco, capacita: f64) {
-        self.premio_sfiducia = if self.regole_ue.pde.e_inadempiente() {
-            self.premio_sfiducia * 0.5_f64.powf(1.0 / dati.manopola("emivita_premio_sfiducia"))
-        } else {
-            0.0
-        };
+        self.premio_sfiducia =
+            if self.regole_ue.pde.e_inadempiente() && self.programma_mes.is_none() {
+                self.premio_sfiducia * 0.5_f64.powf(1.0 / dati.manopola("emivita_premio_sfiducia"))
+            } else {
+                0.0
+            };
         self.spread = self.spread_dallo_stato(dati, capacita);
     }
 }

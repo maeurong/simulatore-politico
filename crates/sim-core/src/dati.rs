@@ -4,7 +4,7 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
-use crate::eventi::{DatoEvento, DatoSituazione};
+use crate::eventi::{DatoCondizionalita, DatoEvento, DatoSituazione};
 use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
@@ -69,6 +69,9 @@ impl FileDati {
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
     "spinta_situazione",
+    "soglia_crisi_debito",
+    "durata_mes",
+    "intesa_mes",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",
@@ -370,6 +373,7 @@ pub struct DatiGioco {
     pub(crate) disposizioni: Vec<DatoDisposizione>,
     pub(crate) eventi: Vec<DatoEvento>,
     pub(crate) situazioni: Vec<DatoSituazione>,
+    pub(crate) condizionalita: Vec<DatoCondizionalita>,
     /// Le differenze dalla base da cui vengono questi dati; `None` per lo scenario di base.
     pub(crate) su_misura: Option<SuMisura>,
 }
@@ -378,6 +382,7 @@ pub struct DatiGioco {
 struct FileEventi {
     evento: Vec<DatoEvento>,
     situazione: Vec<DatoSituazione>,
+    condizionalita: Vec<DatoCondizionalita>,
 }
 
 #[derive(Deserialize)]
@@ -498,6 +503,11 @@ impl DatiGioco {
 
     pub fn situazioni(&self) -> &[DatoSituazione] {
         &self.situazioni
+    }
+
+    /// Le disposizioni che il memorandum del MES vincola, coi gradini a cui le porta.
+    pub fn condizionalita(&self) -> &[DatoCondizionalita] {
+        &self.condizionalita
     }
 
     /// Posizione di un evento per id.
@@ -626,6 +636,7 @@ impl DatiGioco {
         let FileEventi {
             evento: eventi,
             situazione: situazioni,
+            condizionalita,
         } = toml::from_str::<FileEventi>(&file.eventi)
             .map_err(|e| errore_toml("eventi.toml", e))?;
         if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
@@ -657,6 +668,7 @@ impl DatiGioco {
             disposizioni,
             eventi,
             situazioni,
+            condizionalita,
             su_misura: None,
         };
         dati.valida()?;

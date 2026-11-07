@@ -106,6 +106,8 @@ pub struct Economia {
     /// Le cinque normali dell'ultimo passo, prima della sigma: domanda, produttività, energia,
     /// domanda estera, BCE.
     pub innovazioni: [f64; 5],
+    /// Il turno in cui finisce il programma del MES, se ce n'è uno in corso.
+    pub programma_mes: Option<u32>,
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -181,6 +183,7 @@ impl Economia {
             premio_sfiducia: s.premio_sfiducia.valore,
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
             innovazioni: [0.0; 5],
+            programma_mes: None,
         };
         e.avvia_previdenza(dati);
         e.conti = finanza::conti_del_trimestre(&e, &e.bilancio, dati, &Misure::neutre(dati));

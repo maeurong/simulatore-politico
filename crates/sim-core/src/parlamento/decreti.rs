@@ -127,7 +127,8 @@ pub(crate) fn ammetti_disposizioni(
         }
         let dicastero =
             (x.dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|d| &d.id == id));
-        if !inneschi.disposizioni.contains(&k)
+        if !inneschi.tutte
+            && !inneschi.disposizioni.contains(&k)
             && dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i))
         {
             return ko(format!(

@@ -633,3 +633,32 @@ default = false
 
 [[evento.opzioni.effetti]]
 tipo = "debito"
+
+# Crisi del debito: nasce dallo spread (`partita.rs`, `crisi_del_debito`), non dalle estrazioni.
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145. Il decreto ammette ogni
+# disposizione ordinaria (`Inneschi.tutte`). La condizionalità del MES è quella del memorandum.
+[[evento]]
+id = "aste_scoperte"
+famiglia = "debito"
+nome = "Aste scoperte"
+gravita = 10
+dicasteri = []
+decreto = true
+norme = []
+debito = false
+
+[[evento.opzioni]]
+id = "mes"
+nome = "Chiedere il programma del MES"
+default = true
+
+[[evento.opzioni.effetti]]
+tipo = "mes"
+
+[[condizionalita]]
+disposizione = "eta_pensionabile"
+gradino = "70"
+
+[[condizionalita]]
+disposizione = "indicizzazione_pensioni"
+gradino = "bloccata_sopra_soglia"
