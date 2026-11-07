@@ -518,7 +518,7 @@ debito = true
 
 [[evento.opzioni]]
 id = "niente"
-nome = "Lasciare che passi"
+nome = "Non intervenire"
 default = true
 effetti = []
 
@@ -542,7 +542,7 @@ debito = true
 
 [[evento.opzioni]]
 id = "niente"
-nome = "Lasciare che passi"
+nome = "Non intervenire"
 default = true
 effetti = []
 
@@ -557,7 +557,7 @@ tipo = "debito"
 [[evento]]
 id = "shock_energia"
 famiglia = "shock"
-nome = "Shock dei prezzi dell'energia"
+nome = "Rincaro improvviso dell'energia"
 gravita = 8
 dicasteri = ["ambiente_energia"]
 decreto = false
@@ -566,7 +566,7 @@ debito = true
 
 [[evento.opzioni]]
 id = "niente"
-nome = "Lasciare che passi"
+nome = "Non intervenire"
 default = true
 effetti = []
 
@@ -580,7 +580,7 @@ tipo = "debito"
 
 [[evento.opzioni]]
 id = "clausola"
-nome = "Attivare la clausola nazionale per l'energia, dal 2029"
+nome = "Chiedere il margine UE per l'energia per quest'anno, conta dal 2029"
 default = false
 
 [[evento.opzioni.effetti]]
@@ -598,7 +598,7 @@ debito = true
 
 [[evento.opzioni]]
 id = "niente"
-nome = "Lasciare che passi"
+nome = "Non intervenire"
 default = true
 effetti = []
 
@@ -622,7 +622,7 @@ debito = true
 
 [[evento.opzioni]]
 id = "niente"
-nome = "Lasciare che passi"
+nome = "Non intervenire"
 default = true
 effetti = []
 

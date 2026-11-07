@@ -103,21 +103,28 @@ pub struct Economia {
     pub premio_sfiducia: f64,
     /// Spesa netta, conto di controllo, PDE.
     pub regole_ue: RegoleUe,
-    /// Le cinque normali dell'ultimo passo, prima della sigma: domanda, produttività, energia,
-    /// domanda estera, BCE.
-    pub innovazioni: [f64; 5],
-    /// Il turno in cui finisce il programma del MES, se ce n'è uno in corso.
+    /// Il turno in cui finisce il programma del MES; in corso solo prima di quel turno
+    /// (`mes_in_corso`).
     pub programma_mes: Option<u32>,
-    /// La ristrutturazione del debito, finché il suo premio sullo spread non scende sotto 1 pb.
+    /// La ristrutturazione del debito, finché il suo premio sullo spread vale almeno 1 pb o la
+    /// perdita dei redditi è in corso.
     pub ristrutturazione: Option<Ristrutturazione>,
 }
 
 /// Il turno in cui il debito è stato tagliato (i redditi dei detentori calano da allora) e il
-/// premio sullo spread di quel turno, che si dimezza ogni 8 turni.
+/// premio sullo spread di quel turno, che si dimezza con l'emivita della ristrutturazione.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ristrutturazione {
     pub turno: u32,
     pub premio: f64,
+}
+
+impl Ristrutturazione {
+    /// A `turno` i redditi dei detentori calano ancora: per `turni_ristrutturazione` turni dal
+    /// taglio.
+    pub(crate) fn perdita_in_corso(&self, dati: &DatiGioco, turno: u32) -> bool {
+        f64::from(turno) < f64::from(self.turno) + dati.manopola("turni_ristrutturazione")
+    }
 }
 
 /// Obiettivo di inflazione della BCE; riempie anche la storia prima del T2 2026, di cui lo scenario non dà dati (assunzione).
@@ -192,7 +199,6 @@ impl Economia {
             spread: 0.0,
             premio_sfiducia: s.premio_sfiducia.valore,
             regole_ue: RegoleUe::nuove(s.pde, s.conto_controllo.valore),
-            innovazioni: [0.0; 5],
             programma_mes: None,
             ristrutturazione: None,
         };
@@ -218,6 +224,11 @@ impl Economia {
         e
     }
 
+    /// Il turno in cui finisce il programma del MES, se a `turno` è ancora in corso.
+    pub(crate) fn mes_in_corso(&self, turno: u32) -> Option<u32> {
+        self.programma_mes.filter(|&fine| turno < fine)
+    }
+
     /// PIL potenziale annuo nominale, in euro.
     pub(crate) fn pil_potenziale_annuo(&self) -> f64 {
         self.pil_potenziale_reale * self.livello_prezzi * 4.0 * MLD
@@ -235,17 +246,17 @@ impl Economia {
         caso: &mut Caso,
         data: Trimestre,
         misure: &Misure,
-    ) {
+    ) -> [f64; 5] {
         // Cinque estrazioni fisse ogni turno, anche con sigma 0.
         let z = std::array::from_fn(|_| caso.normale(Flusso::Economia));
         self.passo_con(dati, data, misure, z);
+        z
     }
 
     /// Il passo con le cinque normali già estratte (domanda, produttività, energia, domanda
-    /// estera, BCE): le salva in `innovazioni`, poi le moltiplica per la sigma.
+    /// estera, BCE), moltiplicate per la sigma.
     pub fn passo_con(&mut self, dati: &DatiGioco, data: Trimestre, misure: &Misure, z: [f64; 5]) {
         let spesa_netta = self.finanza(dati, data, misure);
-        self.innovazioni = z;
         let sigma = |k: usize, nome: &str| z[k] * dati.manopola(nome);
         let shock_domanda = sigma(0, "sigma_domanda");
         let shock_produttivita = sigma(1, "sigma_produttivita");
@@ -351,7 +362,6 @@ impl Economia {
         scalari
             .iter()
             .chain(&self.output_gap)
-            .chain(&self.innovazioni)
             .chain(&self.inflazione)
             .chain(&self.prezzi_settori)
             .chain(&self.gap_settori)

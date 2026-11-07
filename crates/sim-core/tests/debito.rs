@@ -63,6 +63,24 @@ fn durata() -> u32 {
     dati_base().manopola("durata_mes") as u32
 }
 
+/// `p` col programma del MES fino a `fine` e la condizionalità ai gradini del memorandum, come la
+/// mette la risposta all'evento.
+fn con_mes(p: &Partita, fine: u32) -> Partita {
+    let d = dati_base();
+    edita(p, |j| {
+        j["economia"]["programma_mes"] = json!(fine);
+        for c in d.condizionalita() {
+            let k = d.disposizione(&c.disposizione).unwrap();
+            let g = (d.disposizioni()[k].gradini.iter())
+                .position(|x| x.id == c.gradino)
+                .unwrap();
+            j["disposizioni"]["voci"][k]["in_vigore"] = json!(g);
+            j["disposizioni"]["voci"][k]["in_arrivo"] = json!([]);
+        }
+    })
+    .unwrap()
+}
+
 #[test]
 fn spread_oltre_soglia_apre_le_aste_scoperte() {
     let p = in_crisi();
@@ -104,7 +122,7 @@ fn il_mes_e_il_default() {
 }
 
 #[test]
-fn una_crisi_del_debito_alla_volta() {
+fn non_si_riapre_col_programma_in_corso() {
     // Soglia bassa: lo spread dei fondamentali sta oltre la soglia anche col premio a zero.
     let f = imposta(
         dati_con_premio(),
@@ -115,7 +133,8 @@ fn una_crisi_del_debito_alla_volta() {
     let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
     chiudi_col_bilancio(&mut p);
     assert_eq!(aste(&p).len(), 1);
-    // Evento ancora aperto, spread oltre la soglia: la chiusura che lo risolve non ne apre un altro.
+    // Spread oltre la soglia: la chiusura che risolve le Aste fa partire il programma, e non ne
+    // apre altre.
     chiudi_col_bilancio(&mut p);
     assert!(p.economia().programma_mes.is_some());
     assert!(p.economia().spread >= 300.0, "{}", p.economia().spread);
@@ -186,16 +205,16 @@ fn il_memorandum_vincola_le_pensioni() {
     let e = presenta(&mut p, &[("eta_pensionabile", "67")]).unwrap_err();
     assert!(
         e.to_string().contains(&format!(
-            "Età pensionabile: vincolata dal memorandum del MES fino al turno {fine}"
+            "Età pensionabile: vincolo del memorandum del MES, fino al turno {fine}"
         )),
         "{e}"
     );
-    // La stessa disposizione allo stesso gradino del memorandum non è toccata dal vincolo.
+    // La stessa disposizione allo stesso gradino del memorandum non è toccata dal vincolo: la
+    // rifiuta solo perché è già in vigore.
+    let e = presenta(&mut p, &[("eta_pensionabile", "70")]).unwrap_err();
     assert!(
-        !presenta(&mut p, &[("eta_pensionabile", "70")])
-            .unwrap_err()
-            .to_string()
-            .contains("memorandum")
+        e.to_string().ends_with("Età pensionabile è già a 70 anni"),
+        "{e}"
     );
     // Finito il programma si cambia come ogni altra.
     let turno = p.vista().turno;
@@ -203,7 +222,7 @@ fn il_memorandum_vincola_le_pensioni() {
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.economia().programma_mes, None);
-    // Una gradino che nessuna legge ha in esame: il memorandum non blocca più.
+    // Un gradino che nessuna legge ha in esame: il memorandum non blocca più.
     presenta(&mut p, &[("indicizzazione_pensioni", "piena")]).unwrap();
 }
 
@@ -213,10 +232,8 @@ fn il_mes_limita_la_legge_di_bilancio() {
     for _ in 0..4 {
         p.chiudi_turno();
     }
-    let mut p = edita(&p, |j| {
-        j["economia"]["programma_mes"] = json!(p.vista().turno + 5)
-    })
-    .unwrap();
+    let turno = p.vista().turno;
+    let mut p = con_mes(&p, turno + 5);
     let bozza = p.bozza_bilancio().unwrap();
     let mut b = bozza.clone();
     for d in &mut b.dicasteri {
@@ -310,7 +327,7 @@ fn il_mes_limita_anche_l_emendamento_al_bilancio() {
     emenda(&mut libero).unwrap();
     let p = al_bilancio_2028(Some(tetto));
     let turno = p.vista().turno;
-    let mut p = edita(&p, |j| j["economia"]["programma_mes"] = json!(turno + 5)).unwrap();
+    let mut p = con_mes(&p, turno + 5);
     let prima = p.salva().unwrap();
     let e = emenda(&mut p).unwrap_err();
     assert!(e.to_string().contains("programma del MES"), "{e}");
@@ -387,6 +404,8 @@ fn sfiducia_con(premio: Option<f64>) -> f64 {
 fn la_ristrutturazione_esce_dal_tpi() {
     assert_eq!(sfiducia_con(None), 0.0);
     assert_eq!(sfiducia_con(Some(40.0)), 0.0);
+    // A 50 esatti il TPI vale ancora: esce solo oltre.
+    assert_eq!(sfiducia_con(Some(50.0)), 0.0);
     assert!(sfiducia_con(Some(100.0)) > 100.0);
 }
 

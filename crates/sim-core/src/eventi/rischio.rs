@@ -14,24 +14,48 @@ use crate::vista::Fascia3;
 /// Gli eventi che nascono dallo scandalo: sul ministro, sul leader.
 pub(crate) const SCANDALI: [&str; 2] = ["scandalo_ministro", "scandalo_leader"];
 
-/// Gli eventi degli shock, nell'ordine delle innovazioni: domanda, produttività, energia, domanda
-/// estera, BCE.
-pub(crate) const SHOCK: [&str; 5] = [
-    "shock_domanda",
-    "shock_produttivita",
-    "shock_energia",
-    "shock_domanda_estera",
-    "shock_bce",
-];
+/// Uno shock: l'evento, il nome della serie nella causa, il segno in cui l'innovazione è
+/// sfavorevole e la manopola della sua sigma.
+pub(crate) struct Shock {
+    pub evento: &'static str,
+    serie: &'static str,
+    segno: f64,
+    sigma: &'static str,
+}
 
-/// Nome della serie nella causa, il segno in cui l'innovazione è sfavorevole e la manopola della
-/// sua sigma.
-const SERIE: [(&str, f64, &str); 5] = [
-    ("domanda", -1.0, "sigma_domanda"),
-    ("produttività", -1.0, "sigma_produttivita"),
-    ("prezzi dell'energia", 1.0, "sigma_energia"),
-    ("domanda estera", -1.0, "sigma_domanda_estera"),
-    ("tasso BCE", 1.0, "sigma_bce"),
+/// Gli shock, nell'ordine delle innovazioni di `Economia::passo`: domanda, produttività, energia,
+/// domanda estera, BCE.
+pub(crate) const SHOCK: [Shock; 5] = [
+    Shock {
+        evento: "shock_domanda",
+        serie: "domanda",
+        segno: -1.0,
+        sigma: "sigma_domanda",
+    },
+    Shock {
+        evento: "shock_produttivita",
+        serie: "produttività",
+        segno: -1.0,
+        sigma: "sigma_produttivita",
+    },
+    Shock {
+        evento: "shock_energia",
+        serie: "prezzi dell'energia",
+        segno: 1.0,
+        sigma: "sigma_energia",
+    },
+    Shock {
+        evento: "shock_domanda_estera",
+        serie: "domanda estera",
+        segno: -1.0,
+        sigma: "sigma_domanda_estera",
+    },
+    Shock {
+        evento: "shock_bce",
+        serie: "tasso BCE",
+        segno: 1.0,
+        sigma: "sigma_bce",
+    },
 ];
 
 /// Un evento che può nascere in questo turno con probabilità `p`.
@@ -104,18 +128,19 @@ pub(crate) fn candidati_shock(
     innovazioni: &[f64; 5],
     pil_annuo: f64,
 ) -> Vec<Candidato> {
-    let costo = euro(dati.manopola("aiuti_shock") * pil_annuo).min(LIMITE_EURO);
+    // Un salvataggio può allargare min e max della manopola: il costo non scende sotto zero.
+    let costo = euro(dati.manopola("aiuti_shock") * pil_annuo).clamp(0, LIMITE_EURO);
     let soglia = dati.manopola("soglia_shock");
     let mut candidati = Vec::new();
-    for ((id, (serie, segno, sigma)), z) in SHOCK.iter().zip(SERIE).zip(innovazioni) {
-        let Some(evento) = dati.evento(id) else {
+    for (s, z) in SHOCK.iter().zip(innovazioni) {
+        let Some(evento) = dati.evento(s.evento) else {
             return Vec::new();
         };
-        let sfavore = z * segno;
+        let sfavore = z * s.segno;
         candidati.push(Candidato {
             evento,
             // Con la sigma a zero la serie non si muove: niente evento (l'uniforme si consuma lo stesso).
-            p: if sfavore > soglia && dati.manopola(sigma) > 0.0 {
+            p: if sfavore > soglia && dati.manopola(s.sigma) > 0.0 {
                 1.0
             } else {
                 0.0
@@ -124,7 +149,7 @@ pub(crate) fn candidati_shock(
             regione: None,
             bersaglio: None,
             causa: Causa::Shock {
-                serie: serie.to_string(),
+                serie: s.serie.to_string(),
                 sigma: sfavore.max(0.0),
                 soglia,
             },
@@ -278,6 +303,12 @@ mod tests {
         let c = con_z([-2.4, -2.4, 2.4, -2.4, 2.4]);
         assert_eq!(c.len(), 5);
         assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+    }
+
+    #[test]
+    fn la_soglia_dello_shock_e_stretta() {
+        assert_eq!(con_z([-2.5, 0.0, 0.0, 0.0, 0.0])[0].p, 0.0);
+        assert_eq!(con_z([-2.500_001, 0.0, 0.0, 0.0, 0.0])[0].p, 1.0);
     }
 
     #[test]

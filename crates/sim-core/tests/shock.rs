@@ -1,4 +1,4 @@
-//! La clausola nazionale per l'energia (shock energetico): vale solo dopo `clausola_nazionale_fino_a`.
+//! Il margine UE per l'energia (shock energetico): vale solo dopo `clausola_nazionale_fino_a`.
 //! Candidati e frequenza degli shock stanno in `eventi/rischio.rs`: `candidati_shock` è interna.
 
 mod comune;
@@ -34,18 +34,17 @@ fn la_clausola_per_l_energia_allarga_il_margine() {
     assert!((senza - con - 0.3).abs() < 1e-9, "{senza} {con}");
 }
 
-#[test]
-fn dentro_la_clausola_nazionale_l_energia_non_conta_due_volte() {
-    let senza = deviazione_2027(2028, 0);
-    let con = deviazione_2027(2028, 2027);
-    assert_eq!(senza, con);
-}
-
-#[test]
-fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
-    let p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
-    let dati = comune::dati_base();
-    let evento = dati.evento("shock_energia").unwrap();
+/// Lo shock dell'energia aperto al turno zero (2026) con `clausola_nazionale_fino_a` a
+/// `fino_a_nazionale`, la risposta «clausola» e una chiusura.
+fn clausola_scelta(fino_a_nazionale: u16) -> Partita {
+    let f = sostituisci(
+        senza_shock(),
+        "scenario",
+        "clausola_nazionale_fino_a = 2028",
+        &format!("clausola_nazionale_fino_a = {fino_a_nazionale}"),
+    );
+    let p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let evento = comune::dati_base().evento("shock_energia").unwrap();
     let mut p = edita(&p, |j| {
         j["eventi"]["aperti"] = json!([{
             "evento": evento,
@@ -64,9 +63,24 @@ fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
         opzione: "clausola".into(),
     })
     .unwrap();
-    let anno = p.vista().data.anno;
     p.chiudi_turno();
-    assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, anno);
+    p
+}
+
+#[test]
+fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
+    let p = clausola_scelta(2025);
+    assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 2026);
+}
+
+/// Dentro la clausola nazionale l'energia è già coperta: l'opzione non segna nulla, e un
+/// salvataggio che la segna è rifiutato.
+#[test]
+fn dentro_la_clausola_nazionale_l_energia_non_conta_due_volte() {
+    let p = clausola_scelta(2028);
+    assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 0);
+    let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(2026));
+    assert!(m.contains("né 0 né dopo clausola_nazionale_fino_a"), "{m}");
 }
 
 fn rifiutato(guasto: impl FnOnce(&mut serde_json::Value)) -> String {
@@ -74,12 +88,6 @@ fn rifiutato(guasto: impl FnOnce(&mut serde_json::Value)) -> String {
     let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
     guasto(&mut j);
     Partita::carica(&j.to_string()).unwrap_err().to_string()
-}
-
-#[test]
-fn un_salvataggio_con_un_shock_enorme_e_rifiutato() {
-    let m = rifiutato(|j| j["economia"]["innovazioni"][2] = json!(1e300));
-    assert!(m.contains("economia.innovazioni"), "{m}");
 }
 
 #[test]

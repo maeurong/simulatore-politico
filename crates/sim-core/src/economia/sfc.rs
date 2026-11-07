@@ -50,20 +50,25 @@ impl Economia {
     /// stock positivi di famiglie, estero e imprese in proporzione; il resto dell'arrotondamento
     /// alle famiglie. Gli stock restano a somma zero e lo Stato a `−debito`.
     pub(crate) fn ristruttura(&mut self, turno: u32, taglio: f64, premio: f64) {
-        let t = euro(self.debito as f64 * taglio).max(0);
+        // Un salvataggio può allargare min e max della manopola: il taglio resta una quota.
+        let t = euro(self.debito as f64 * taglio.clamp(0.0, 1.0)).max(0);
         let s = &mut self.sfc.stock;
         let positivi = [s.famiglie, s.estero, s.imprese].map(|x| x.max(0));
-        let totale = i128::from(positivi.iter().sum::<i64>());
+        let totale: i128 = positivi.iter().map(|&x| i128::from(x)).sum();
+        // Cast senza perdita: `q ≤ t` perché `x ≤ totale`. E `t ≤ totale dei positivi` con stock
+        // coerenti: stato = −debito e somma zero danno famiglie + estero + imprese = debito, e i
+        // positivi sommano almeno il debito, che è almeno `t`.
         let quote = positivi.map(|x| {
             (i128::from(t) * i128::from(x))
                 .checked_div(totale)
                 .map_or(0, |q| q as i64)
         });
-        s.famiglie -= quote[0] + (t - quote.iter().sum::<i64>());
-        s.estero -= quote[1];
-        s.imprese -= quote[2];
-        s.stato += t;
-        self.debito -= t;
+        let resto = t.saturating_sub(quote.iter().fold(0, |a: i64, &q| a.saturating_add(q)));
+        s.famiglie = s.famiglie.saturating_sub(quote[0].saturating_add(resto));
+        s.estero = s.estero.saturating_sub(quote[1]);
+        s.imprese = s.imprese.saturating_sub(quote[2]);
+        s.stato = s.stato.saturating_add(t);
+        self.debito = self.debito.saturating_sub(t);
         self.ristrutturazione = Some(Ristrutturazione { turno, premio });
     }
 

@@ -1524,7 +1524,7 @@ min = 0.0
 max = 0.02
 ticket = "15"
 
-# regole-fiscali-ue:49 (la clausola nazionale vale 0,3 difesa + 0,3 energia, % del PIL); vale solo dopo `clausola_nazionale_fino_a`, che contiene già lo 0,3 dell'energia
+# regole-fiscali-ue:49 (la clausola nazionale vale 0,3 difesa + 0,3 energia, % del PIL); per l'anno in corso, conta solo dopo `clausola_nazionale_fino_a`, che l'energia la copre già
 [clausola_energia_margine]
 valore = 0.3
 min = 0.0
@@ -1573,7 +1573,7 @@ min = 1.0
 max = 40.0
 ticket = "07"
 
-# assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza ogni 8 turni)
+# assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza con l'emivita della ristrutturazione)
 [premio_ristrutturazione]
 valore = 300.0
 min = 1.0

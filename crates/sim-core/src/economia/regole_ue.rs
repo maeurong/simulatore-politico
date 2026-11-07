@@ -25,8 +25,9 @@ pub struct RegoleUe {
     pub pil_annuo: BTreeMap<u16, i64>,
     /// Euro, per anno solare.
     pub disavanzo_annuo: BTreeMap<u16, i64>,
-    /// Ultimo anno solare per cui il giocatore ha attivato la clausola per l'energia; conta solo
-    /// dopo `clausola_nazionale_fino_a`, che la contiene già.
+    /// Ultimo anno solare per cui il giocatore ha chiesto il margine UE per l'energia (controllo
+    /// annuale successivo), 0 se mai. Conta solo dopo `clausola_nazionale_fino_a`, che l'energia
+    /// la copre già.
     pub clausola_energia_fino_a: u16,
 }
 

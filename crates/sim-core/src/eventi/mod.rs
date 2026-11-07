@@ -17,11 +17,11 @@ pub(crate) mod emergenze;
 pub(crate) mod rischio;
 pub(crate) mod situazioni;
 
-/// Le misure che non sono grandezze ma che il motore calcola: crescita annualizzata vera del PIL
-/// reale ed `Economia.energia`.
 /// L'evento della crisi del debito, che il motore apre dallo spread.
 pub(crate) const ASTE_SCOPERTE: &str = "aste_scoperte";
 
+/// Le misure che non sono grandezze ma che il motore calcola: crescita annualizzata vera del PIL
+/// reale ed `Economia.energia`.
 const MISURE_DEL_MOTORE: [&str; 2] = ["crescita_pil", "energia"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,10 +44,9 @@ pub enum Tono {
     Grave,
 }
 
-/// Cosa fa un'opzione. `Grandezza`, `Valence`, `FondoRiserva`, `Debito`, `Dimissioni`,
-/// `ClausolaEnergia` e `Mes` sono gli unici che `valida` ammette finora (`Dimissioni` solo per lo
-/// scandalo sul ministro, `FondoRiserva` e `Debito` al più uno per opzione): gli altri li
-/// applicano i task che li introducono.
+/// Cosa fa un'opzione. `Dimissioni` solo per lo scandalo sul ministro; `FondoRiserva` e `Debito`
+/// al più uno per opzione; `Mes` e `Ristrutturazione` solo sugli eventi del debito,
+/// `ClausolaEnergia` solo sugli shock.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum EffettoOpzione {
@@ -72,14 +71,14 @@ pub enum EffettoOpzione {
     /// Come `FondoRiserva`, ma per intero e a disavanzo.
     Debito,
     Dimissioni,
-    /// Dal prossimo controllo annuale, per l'anno in corso, il margine per l'energia; vale solo
-    /// dopo la clausola nazionale, che lo contiene già.
+    /// Per l'anno in corso aggiunge il margine UE per l'energia (controllo annuale successivo).
+    /// Conta solo dopo `clausola_nazionale_fino_a`, che l'energia la copre già.
     ClausolaEnergia,
     /// Il programma del MES: dura `durata_mes` turni, mette in vigore la condizionalità e costa
     /// `intesa_mes` a ogni alleato.
     Mes,
     /// Taglia il debito di `taglio_ristrutturazione`, con perdita di reddito ai detentori e un
-    /// premio sullo spread che si dimezza ogni 8 turni.
+    /// premio sullo spread che si dimezza con l'emivita della ristrutturazione.
     Ristrutturazione,
 }
 
@@ -466,6 +465,20 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                         "{nome}: lo scandalo ammette solo le dimissioni, e solo sul ministro"
                     ));
                 }
+                let fuori_posto = match effetto {
+                    EffettoOpzione::Mes | EffettoOpzione::Ristrutturazione
+                        if e.famiglia != Famiglia::Debito =>
+                    {
+                        Some("il MES e la ristrutturazione stanno solo sugli eventi del debito")
+                    }
+                    EffettoOpzione::ClausolaEnergia if e.famiglia != Famiglia::Shock => {
+                        Some("la clausola per l'energia sta solo sugli shock")
+                    }
+                    _ => None,
+                };
+                if let Some(m) = fuori_posto {
+                    return ko(format!("{nome}: {m}"));
+                }
             }
         }
     }
@@ -475,7 +488,7 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
     .chain(
         rischio::SHOCK
             .iter()
-            .map(|id| (id, Famiglia::Shock, "shock")),
+            .map(|s| (&s.evento, Famiglia::Shock, "shock")),
     )
     .chain(
         rischio::SCANDALI

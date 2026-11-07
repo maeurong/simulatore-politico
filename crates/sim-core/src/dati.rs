@@ -69,6 +69,9 @@ impl FileDati {
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
     "spinta_situazione",
+    "soglia_shock",
+    "aiuti_shock",
+    "clausola_energia_margine",
     "soglia_crisi_debito",
     "durata_mes",
     "intesa_mes",
@@ -862,5 +865,39 @@ impl DatiGioco {
             ))),
             None => Ok(()),
         }
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::MANOPOLE_RICHIESTE;
+
+    /// Ogni lettura letterale di una manopola nei sorgenti del crate è fra le richieste: senza,
+    /// un salvataggio che non la porta passerebbe `valida` e la lettura andrebbe in panico.
+    #[test]
+    fn ogni_manopola_letta_e_richiesta() {
+        let mut da_leggere = vec![std::path::PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src"
+        ))];
+        let mut mancanti = Vec::new();
+        while let Some(p) = da_leggere.pop() {
+            if p.is_dir() {
+                da_leggere.extend(std::fs::read_dir(&p).unwrap().map(|e| e.unwrap().path()));
+                continue;
+            }
+            let testo = std::fs::read_to_string(&p).unwrap();
+            for pezzo in testo.split("manopola(\"").skip(1) {
+                let nome = pezzo.split('"').next().unwrap();
+                if !MANOPOLE_RICHIESTE.contains(&nome) {
+                    mancanti.push(format!("{}: {nome}", p.display()));
+                }
+            }
+        }
+        assert!(mancanti.is_empty(), "{mancanti:?}");
     }
 }

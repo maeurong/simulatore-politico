@@ -99,10 +99,8 @@ impl Elettorato {
         let rapporto = |oggi: f64, base: f64| if base > 0.0 { oggi / base } else { 1.0 };
         // I detentori del debito sono le fasce media e alta: per `turni_ristrutturazione` turni
         // dal taglio il loro reddito primario cala di `perdita_ristrutturazione`.
-        let perdita = e.ristrutturazione.is_some_and(|r| {
-            f64::from(turno) < f64::from(r.turno) + dati.manopola("turni_ristrutturazione")
-        });
-        let perdita = if perdita {
+        let in_corso = (e.ristrutturazione).is_some_and(|r| r.perdita_in_corso(dati, turno));
+        let fattore = if in_corso {
             1.0 - dati.manopola("perdita_ristrutturazione")
         } else {
             1.0
@@ -111,7 +109,7 @@ impl Elettorato {
             g.reddito_prima = g.reddito;
             let (c, bassa) = (dato.condizione, dato.fascia == Fascia::Bassa);
             let mut primario = dato.primario
-                * if bassa { 1.0 } else { perdita }
+                * if bassa { 1.0 } else { fattore }
                 * match dato.condizione {
                     Condizione::DipendentePubblico => {
                         rapporto(i.salari_pubblici, b.salari_pubblici)
