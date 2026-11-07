@@ -24,13 +24,14 @@ pub(crate) const SHOCK: [&str; 5] = [
     "shock_bce",
 ];
 
-/// Nome della serie nella causa, e il segno in cui l'innovazione è sfavorevole.
-const SERIE: [(&str, f64); 5] = [
-    ("domanda", -1.0),
-    ("produttività", -1.0),
-    ("prezzi dell'energia", 1.0),
-    ("domanda estera", -1.0),
-    ("tasso BCE", 1.0),
+/// Nome della serie nella causa, il segno in cui l'innovazione è sfavorevole e la manopola della
+/// sua sigma.
+const SERIE: [(&str, f64, &str); 5] = [
+    ("domanda", -1.0, "sigma_domanda"),
+    ("produttività", -1.0, "sigma_produttivita"),
+    ("prezzi dell'energia", 1.0, "sigma_energia"),
+    ("domanda estera", -1.0, "sigma_domanda_estera"),
+    ("tasso BCE", 1.0, "sigma_bce"),
 ];
 
 /// Un evento che può nascere in questo turno con probabilità `p`.
@@ -106,20 +107,26 @@ pub(crate) fn candidati_shock(
     let costo = euro(dati.manopola("aiuti_shock") * pil_annuo).min(LIMITE_EURO);
     let soglia = dati.manopola("soglia_shock");
     let mut candidati = Vec::new();
-    for ((id, (serie, segno)), z) in SHOCK.iter().zip(SERIE).zip(innovazioni) {
+    for ((id, (serie, segno, sigma)), z) in SHOCK.iter().zip(SERIE).zip(innovazioni) {
         let Some(evento) = dati.evento(id) else {
             return Vec::new();
         };
         let sfavore = z * segno;
         candidati.push(Candidato {
             evento,
-            p: if sfavore > soglia { 1.0 } else { 0.0 },
+            // Con la sigma a zero la serie non si muove: niente evento (l'uniforme si consuma lo stesso).
+            p: if sfavore > soglia && dati.manopola(sigma) > 0.0 {
+                1.0
+            } else {
+                0.0
+            },
             gravita: (dati.eventi().get(evento)).map_or(0, |e| e.gravita),
             regione: None,
             bersaglio: None,
             causa: Causa::Shock {
                 serie: serie.to_string(),
                 sigma: sfavore.max(0.0),
+                soglia,
             },
             costo,
             tono: Tono::Ordinario,
@@ -248,10 +255,22 @@ mod tests {
             c[0].causa,
             Causa::Shock {
                 serie: "domanda".into(),
-                sigma: 3.0
+                sigma: 3.0,
+                soglia: 2.5
             }
         );
         assert_eq!(c[0].costo, 3_000_000_000);
+    }
+
+    #[test]
+    fn con_sigma_zero_niente_shock() {
+        let mut dati = crate::dati::dati_base();
+        dati.imposta_manopola("sigma_domanda", 0.0);
+        let z = [-3.0, 0.0, 0.0, 0.0, 0.0];
+        let c = candidati_shock(&dati, &z, 1e12);
+        assert_eq!(c.len(), 5);
+        assert!(c.iter().all(|x| x.p == 0.0));
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
     }
 
     #[test]

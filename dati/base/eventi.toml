@@ -580,7 +580,7 @@ tipo = "debito"
 
 [[evento.opzioni]]
 id = "clausola"
-nome = "Attivare la clausola nazionale per l'energia"
+nome = "Attivare la clausola nazionale per l'energia, dal 2029"
 default = false
 
 [[evento.opzioni.effetti]]

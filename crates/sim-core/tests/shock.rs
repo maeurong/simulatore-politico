@@ -50,7 +50,7 @@ fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
         j["eventi"]["aperti"] = json!([{
             "evento": evento,
             "turno": 0,
-            "causa": { "tipo": "shock", "serie": "prezzi dell'energia", "sigma": 3.0 },
+            "causa": { "tipo": "shock", "serie": "prezzi dell'energia", "sigma": 3.0, "soglia": 2.5 },
             "regione": null,
             "bersaglio": null,
             "tono": "ordinario",
@@ -67,4 +67,23 @@ fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
     let anno = p.vista().data.anno;
     p.chiudi_turno();
     assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, anno);
+}
+
+fn rifiutato(guasto: impl FnOnce(&mut serde_json::Value)) -> String {
+    let p = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    guasto(&mut j);
+    Partita::carica(&j.to_string()).unwrap_err().to_string()
+}
+
+#[test]
+fn un_salvataggio_con_un_shock_enorme_e_rifiutato() {
+    let m = rifiutato(|j| j["economia"]["innovazioni"][2] = json!(1e300));
+    assert!(m.contains("economia.innovazioni"), "{m}");
+}
+
+#[test]
+fn un_salvataggio_con_la_clausola_nel_futuro_e_rifiutato() {
+    let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(65535));
+    assert!(m.contains("clausola_energia_fino_a"), "{m}");
 }

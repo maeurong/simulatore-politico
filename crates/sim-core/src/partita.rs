@@ -4606,8 +4606,12 @@ impl Economia {
         let (c, st) = (&self.conti, &self.sfc.stock);
         ok(data.anno <= 2200, "data.anno oltre il 2200")?;
         ok(
-            self.innovazioni.iter().all(|z| z.is_finite()),
-            "economia.innovazioni: valori non finiti",
+            self.innovazioni.iter().all(|z| z.abs() <= 50.0),
+            "economia.innovazioni: valore non finito o oltre 50 sigma",
+        )?;
+        ok(
+            self.regole_ue.clausola_energia_fino_a <= data.anno,
+            "economia.regole_ue.clausola_energia_fino_a: oltre l'anno della data corrente",
         )?;
         ok(
             (1..=8).contains(&self.storico.len()) && self.storico.iter().all(|t| t.pil > 0),

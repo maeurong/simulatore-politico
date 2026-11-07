@@ -137,6 +137,8 @@ pub enum Causa {
     Shock {
         serie: String,
         sigma: f64,
+        /// La `soglia_shock` letta alla nascita, in sigma.
+        soglia: f64,
     },
     Spread {
         pb: i32,
@@ -173,7 +175,15 @@ impl Causa {
                     Fascia3::Molto => "alto",
                 }
             ),
-            Causa::Shock { serie, sigma } => format!("{serie}: shock di {} sigma", virgola(*sigma)),
+            Causa::Shock {
+                serie,
+                sigma,
+                soglia,
+            } => format!(
+                "{serie}: shock di {} sigma (soglia {} sigma)",
+                virgola(*sigma),
+                virgola(*soglia)
+            ),
             Causa::Spread { pb, soglia } => format!("spread a {pb} pb (soglia {soglia} pb)"),
         }
     }
@@ -330,7 +340,7 @@ impl Eventi {
             }
             let causa_ok = match &a.causa {
                 Causa::Soglia { valore, soglia, .. } => valore.is_finite() && soglia.is_finite(),
-                Causa::Shock { sigma, .. } => sigma.is_finite(),
+                Causa::Shock { sigma, soglia, .. } => sigma.is_finite() && soglia.is_finite(),
                 Causa::Rischio { .. } | Causa::Spread { .. } => true,
             };
             if !causa_ok || a.turno > turno || !(0..=LIMITE_EURO).contains(&a.costo) {
