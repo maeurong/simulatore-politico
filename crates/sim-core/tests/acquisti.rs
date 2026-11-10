@@ -1,8 +1,12 @@
 mod comune;
-use comune::{all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_shock};
+use comune::{
+    all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_emergenze,
+    senza_shock,
+};
 use sim_core::dati::DatiGioco;
+use sim_core::economia::Economia;
 use sim_core::elettorato::{Condizione, condizione_di};
-use sim_core::informazione::Acquisto;
+use sim_core::informazione::{Acquisto, Stima, VistaCentroStudi};
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 use sim_core::parlamento::ValoreProposto;
 use sim_core::{Comando, Partita};
@@ -424,4 +428,145 @@ fn il_test_si_compra_anche_in_crisi() {
     assert!(p.anteprima(&valori).is_err());
     p.comanda(test_di(&valori)).unwrap();
     assert!(p.vista().acquisti.test_misura.is_some());
+}
+
+const PREZZO_CENTRO_STUDI: i64 = 150_000;
+const CENTRO_STUDI: Comando = Comando::Compra {
+    acquisto: Acquisto::CentroStudi,
+};
+
+fn centro_studi(p: &mut Partita) -> VistaCentroStudi {
+    let g = p.giocatore();
+    let cassa = p.partiti()[g].cassa;
+    p.comanda(CENTRO_STUDI).unwrap();
+    assert_eq!(p.partiti()[g].cassa, cassa - PREZZO_CENTRO_STUDI);
+    p.vista().acquisti.centro_studi.unwrap()
+}
+
+fn campi(s: &Stima) -> [f64; 4] {
+    [s.crescita_pil, s.disoccupazione, s.inflazione, s.disavanzo]
+}
+
+#[test]
+fn la_stima_del_centro_studi_e_piu_vicina() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    chiudi_col_bilancio(&mut p);
+    let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    let stima = |k: &str| -> Stima {
+        serde_json::from_value(j["informazione"]["statistica"][k].clone()).unwrap()
+    };
+    let (vera, prima) = (campi(&stima("vera")), campi(&stima("prima_stima")));
+    let centro = campi(&centro_studi(&mut p).stima);
+    for k in 0..4 {
+        let (errore, residuo) = (prima[k] - vera[k], centro[k] - vera[k]);
+        assert!(errore.abs() > 1e-6, "{k}: prima stima senza errore");
+        assert!(
+            (residuo - 0.6 * errore).abs() <= 1e-9,
+            "{k}: {residuo} contro {errore}"
+        );
+    }
+}
+
+#[test]
+fn la_forchetta_si_allarga() {
+    let dati = dati_base();
+    let mut p = all_opposizione();
+    let previsione = centro_studi(&mut p).previsione;
+    assert_eq!(previsione.len(), 4);
+    let sigme = |nome: &str, f: fn(&sim_core::informazione::VocePrevisione) -> f64| {
+        let s: Vec<f64> = previsione.iter().map(f).collect();
+        assert!(s.windows(2).all(|w| w[0] < w[1]), "{nome}: {s:?}");
+        assert_eq!(s[0], dati.manopola(&format!("rmse_{nome}_1")), "{nome}");
+        assert_eq!(s[3], dati.manopola(&format!("rmse_{nome}_4")), "{nome}");
+    };
+    sigme("pil", |v| v.pil.sigma);
+    sigme("disoccupazione", |v| v.disoccupazione.sigma);
+    sigme("inflazione", |v| v.inflazione.sigma);
+    sigme("debito", |v| v.debito.sigma);
+}
+
+#[test]
+fn la_previsione_non_tocca_la_partita() {
+    let json = |p: &Partita| -> serde_json::Value {
+        let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        j["acquisti"] = serde_json::Value::Null;
+        j["partiti"][p.giocatore()]["cassa"] = 0.into();
+        j
+    };
+    let chiusa = |compra: bool| {
+        let mut p = Partita::nuova(dati_base(), 1);
+        if compra {
+            let prima = json(&p);
+            centro_studi(&mut p);
+            assert_eq!(json(&p), prima);
+        }
+        chiudi_col_bilancio(&mut p);
+        json(&p)
+    };
+    assert_eq!(chiusa(false), chiusa(true));
+}
+
+/// I valori veri del trimestre appena chiuso, con le definizioni della previsione ricalcolate qui
+/// dalle serie dell'economia: PIL reale e prezzi sul trimestre dello stesso anno prima, debito sul
+/// PIL degli ultimi quattro trimestri.
+fn veri(dati: &DatiGioco, e: &Economia) -> [f64; 4] {
+    let n = e.storico.len();
+    let prezzi: f64 = e.inflazione[..4].iter().map(|i| 1.0 + i / 400.0).product();
+    let pil = e.storico[n - 1].pil as f64 / e.storico[n - 5].pil as f64 / prezzi;
+    let pil_anno: f64 = e.storico[n - 4..].iter().map(|t| t.pil as f64).sum();
+    [
+        100.0 * (pil - 1.0),
+        e.disoccupazione_nazionale(dati),
+        100.0 * (prezzi - 1.0),
+        100.0 * e.debito as f64 / pil_anno,
+    ]
+}
+
+/// L'oracolo della previsione: senza shock, derive, emergenze né atti dei ministri, il centro del
+/// primo turno è il valore della chiusura vera. Tolleranza 1e-9: stesse operazioni nello stesso
+/// ordine sullo stesso stato, la differenza attesa è zero.
+#[test]
+fn senza_shock_la_previsione_e_esatta() {
+    let dati = DatiGioco::da_testi(&senza_emergenze(senza_shock())).unwrap();
+    let mut p = Partita::nuova(dati.clone(), 1);
+    ferma_tutti(&mut p);
+    let voce = centro_studi(&mut p).previsione.remove(0);
+    let data = p.vista().data;
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(voce.data, data);
+    let centri = [
+        voce.pil.centro,
+        voce.disoccupazione.centro,
+        voce.inflazione.centro,
+        voce.debito.centro,
+    ];
+    let veri = veri(&dati, p.economia());
+    for (k, (c, v)) in centri.iter().zip(veri).enumerate() {
+        assert!((c - v).abs() <= 1e-9, "{k}: {centri:?} {veri:?}");
+    }
+}
+
+#[test]
+fn un_centro_studi_manomesso_nel_salvataggio_e_rifiutato() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    centro_studi(&mut p);
+    let rifiuto = |f: &dyn Fn(&mut serde_json::Value)| {
+        edita(&p, |j| f(&mut j["acquisti"][0]["CentroStudi"]))
+            .unwrap_err()
+            .to_string()
+    };
+    let e = rifiuto(&|c| {
+        c["previsione"].as_array_mut().unwrap().pop();
+    });
+    assert!(
+        e.contains("acquisti.centro_studi.previsione: servono 4 voci"),
+        "{e}"
+    );
+    let e = rifiuto(&|c| {
+        let prima = c["previsione"][0]["data"].clone();
+        c["previsione"][2]["data"] = prima;
+    });
+    assert!(e.contains("acquisti.centro_studi.date:"), "{e}");
+    let e = rifiuto(&|c| c["previsione"][1]["debito"]["sigma"] = (-0.1).into());
+    assert!(e.contains("acquisti.centro_studi.sigma: negativa"), "{e}");
 }

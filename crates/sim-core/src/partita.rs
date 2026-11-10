@@ -18,8 +18,8 @@ use crate::eventi::{
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{
-    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto, VistaTest,
-    genera,
+    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto,
+    VistaCentroStudi, VistaTest, VocePrevisione, genera,
 };
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
@@ -2362,6 +2362,22 @@ impl Partita {
                     self.reazioni(&m),
                 ))
             }
+            Acquisto::CentroStudi => {
+                // Ruling 71: la previsione è la catena delle copie di `avanza_copia`, un turno
+                // per volta.
+                let mut copia = self.clone();
+                let previsione = (1..=4)
+                    .map(|h| {
+                        copia = copia.avanza_copia(1, None);
+                        let data = copia.data.precedente();
+                        VocePrevisione::da(&self.dati, &copia.economia, data, h)
+                    })
+                    .collect();
+                Acquistato::CentroStudi(VistaCentroStudi {
+                    stima: VistaCentroStudi::stima(&self.dati, &self.informazione.statistica),
+                    previsione,
+                })
+            }
         };
         if let Some(p) = self.partiti.get_mut(self.giocatore) {
             p.cassa = p.cassa.saturating_sub(prezzo);
@@ -4058,11 +4074,15 @@ impl Partita {
             acquisti: VistaAcquisti {
                 sondaggio_privato: self.acquisti.iter().find_map(|a| match a {
                     Acquistato::SondaggioPrivato(s) => Some(s.clone()),
-                    Acquistato::TestMisura(_) => None,
+                    Acquistato::TestMisura(_) | Acquistato::CentroStudi(_) => None,
                 }),
                 test_misura: self.acquisti.iter().find_map(|a| match a {
                     Acquistato::TestMisura(t) => Some(t.clone()),
-                    Acquistato::SondaggioPrivato(_) => None,
+                    Acquistato::SondaggioPrivato(_) | Acquistato::CentroStudi(_) => None,
+                }),
+                centro_studi: self.acquisti.iter().find_map(|a| match a {
+                    Acquistato::CentroStudi(c) => Some(c.clone()),
+                    Acquistato::SondaggioPrivato(_) | Acquistato::TestMisura(_) => None,
                 }),
                 prezzi: TipoAcquisto::TUTTI
                     .iter()
@@ -4672,7 +4692,7 @@ impl Partita {
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
         for a in &self.acquisti {
-            a.controlla(&self.dati, self.partiti.len())?;
+            a.controlla(&self.dati, self.partiti.len(), self.data)?;
         }
         let doppio = (self.acquisti.iter().enumerate())
             .find(|(k, e)| self.acquisti[..*k].iter().any(|f| f.tipo() == e.tipo()));

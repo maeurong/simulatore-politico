@@ -1,12 +1,14 @@
 //! Informazione comprata con la cassa del partito del giocatore, al massimo una volta a turno
 //! per tipo.
 
-use super::{Sondaggio, controlla_sondaggio};
+use super::{Sondaggio, Statistica, Stima, controlla_sondaggio};
 use crate::caso::Estrattore;
 use crate::dati::DatiGioco;
+use crate::economia::Economia;
 use crate::elettorato::Condizione;
 use crate::errore::Errore;
 use crate::parlamento::ValoreProposto;
+use crate::partita::Trimestre;
 use crate::vista::Fascia3;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -21,6 +23,7 @@ pub enum Acquisto {
     TestMisura {
         valori: Vec<ValoreProposto>,
     },
+    CentroStudi,
 }
 
 impl Acquisto {
@@ -28,6 +31,7 @@ impl Acquisto {
         match self {
             Acquisto::SondaggioPrivato => TipoAcquisto::SondaggioPrivato,
             Acquisto::TestMisura { .. } => TipoAcquisto::TestMisura,
+            Acquisto::CentroStudi => TipoAcquisto::CentroStudi,
         }
     }
 }
@@ -39,15 +43,21 @@ impl Acquisto {
 pub enum TipoAcquisto {
     SondaggioPrivato,
     TestMisura,
+    CentroStudi,
 }
 
 impl TipoAcquisto {
-    pub const TUTTI: [TipoAcquisto; 2] = [TipoAcquisto::SondaggioPrivato, TipoAcquisto::TestMisura];
+    pub const TUTTI: [TipoAcquisto; 3] = [
+        TipoAcquisto::SondaggioPrivato,
+        TipoAcquisto::TestMisura,
+        TipoAcquisto::CentroStudi,
+    ];
 
     pub fn nome(self) -> &'static str {
         match self {
             TipoAcquisto::SondaggioPrivato => "sondaggio privato",
             TipoAcquisto::TestMisura => "test di una misura",
+            TipoAcquisto::CentroStudi => "centro studi",
         }
     }
 
@@ -56,6 +66,7 @@ impl TipoAcquisto {
         let nome = match self {
             TipoAcquisto::SondaggioPrivato => "prezzo_sondaggio_privato",
             TipoAcquisto::TestMisura => "prezzo_test_misura",
+            TipoAcquisto::CentroStudi => "prezzo_centro_studi",
         };
         dati.manopola(nome).round() as i64
     }
@@ -129,11 +140,89 @@ impl VistaTest {
     }
 }
 
+/// Simmetrica: `centro ± sigma` è l'intervallo di 1σ.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct Forchetta {
+    pub centro: f64,
+    pub sigma: f64,
+}
+
+/// Le grandezze previste del trimestre `data`, in percentuali.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VocePrevisione {
+    pub data: Trimestre,
+    /// Crescita del PIL reale sul trimestre dello stesso anno prima: le RMSE sono sulla crescita
+    /// annua, e `storico` tiene i PIL nominali di otto trimestri, `inflazione` i prezzi.
+    pub pil: Forchetta,
+    /// Tasso nazionale.
+    pub disoccupazione: Forchetta,
+    /// Prezzi sul trimestre dello stesso anno prima, dalle quattro inflazioni trimestrali.
+    pub inflazione: Forchetta,
+    /// In % del PIL degli ultimi quattro trimestri.
+    pub debito: Forchetta,
+}
+
+impl VocePrevisione {
+    /// L'economia `e` dopo `h` chiusure (1-4) della copia, `data` il trimestre chiuso per ultimo.
+    /// La sigma va da `rmse_<grandezza>_1` a `rmse_<grandezza>_4`, lineare in `h`.
+    pub(crate) fn da(dati: &DatiGioco, e: &Economia, data: Trimestre, h: u32) -> VocePrevisione {
+        let t = f64::from(h.saturating_sub(1)) / 3.0;
+        let forchetta = |nome: &str, centro: f64| Forchetta {
+            centro,
+            sigma: dati.manopola(&format!("rmse_{nome}_1")) * (1.0 - t)
+                + dati.manopola(&format!("rmse_{nome}_4")) * t,
+        };
+        let prezzi: f64 = (e.inflazione[..4].iter())
+            .map(|i| 1.0 + i / 400.0)
+            .product();
+        // ponytail: con meno di cinque trimestri in `storico` (solo da un salvataggio scritto a
+        // mano) la crescita vale 0, come al turno zero della statistica.
+        let pil = match (e.storico.last(), e.storico.iter().rev().nth(4)) {
+            (Some(ora), Some(prima)) => 100.0 * (ora.pil as f64 / prima.pil as f64 / prezzi - 1.0),
+            _ => 0.0,
+        };
+        VocePrevisione {
+            data,
+            pil: forchetta("pil", pil),
+            disoccupazione: forchetta("disoccupazione", e.disoccupazione_nazionale(dati)),
+            inflazione: forchetta("inflazione", 100.0 * (prezzi - 1.0)),
+            debito: forchetta("debito", e.debito_e_disavanzo_pil().0),
+        }
+    }
+}
+
+/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaCentroStudi {
+    pub stima: Stima,
+    pub previsione: Vec<VocePrevisione>,
+}
+
+impl VistaCentroStudi {
+    /// La stima è `vera + quota_errore_centro_studi · (prima_stima − vera)`, campo per campo:
+    /// nessuna estrazione, dalla stessa parte del vero della prima stima.
+    pub(crate) fn stima(dati: &DatiGioco, s: &Statistica) -> Stima {
+        let q = dati.manopola("quota_errore_centro_studi");
+        let (v, p) = (&s.vera, &s.prima_stima);
+        let verso = |vera: f64, prima: f64| vera + q * (prima - vera);
+        Stima {
+            crescita_pil: verso(v.crescita_pil, p.crescita_pil),
+            disoccupazione: verso(v.disoccupazione, p.disoccupazione),
+            inflazione: verso(v.inflazione, p.inflazione),
+            disavanzo: verso(v.disavanzo, p.disavanzo),
+        }
+    }
+}
+
 /// Un acquisto del turno col suo risultato.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Acquistato {
     SondaggioPrivato(Sondaggio),
     TestMisura(VistaTest),
+    CentroStudi(VistaCentroStudi),
 }
 
 impl Acquistato {
@@ -141,15 +230,22 @@ impl Acquistato {
         match self {
             Acquistato::SondaggioPrivato(_) => TipoAcquisto::SondaggioPrivato,
             Acquistato::TestMisura(_) => TipoAcquisto::TestMisura,
+            Acquistato::CentroStudi(_) => TipoAcquisto::CentroStudi,
         }
     }
 
     /// Forma e finitezza del risultato, per uno stato letto da un salvataggio: il privato ha
-    /// un solo istituto, il test una reazione per condizione in ordine col segno fra −1 e 1.
+    /// un solo istituto, il test una reazione per condizione in ordine col segno fra −1 e 1, il
+    /// centro studi quattro trimestri consecutivi da `data`, il corrente.
     ///
     /// # Errors
     /// `SalvataggioIlleggibile` col campo nel messaggio.
-    pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+    pub(crate) fn controlla(
+        &self,
+        dati: &DatiGioco,
+        n_partiti: usize,
+        data: Trimestre,
+    ) -> Result<(), Errore> {
         match self {
             Acquistato::SondaggioPrivato(s) => controlla_sondaggio(s, dati, n_partiti + 1, 1)
                 .map_err(|m| Errore::SalvataggioIlleggibile(format!("acquisti.privato.{m}"))),
@@ -162,6 +258,34 @@ impl Acquistato {
                 }
                 if t.reazioni.iter().any(|r| !(-1..=1).contains(&r.segno)) {
                     return ko("segno: fuori da −1, 0, 1");
+                }
+                Ok(())
+            }
+            Acquistato::CentroStudi(c) => {
+                let ko = |m: &str| {
+                    Err(Errore::SalvataggioIlleggibile(format!(
+                        "acquisti.centro_studi.{m}"
+                    )))
+                };
+                if c.previsione.len() != 4 {
+                    return ko("previsione: servono 4 voci");
+                }
+                let date = std::iter::successors(Some(data), |t| Some(t.successivo()));
+                if !c.previsione.iter().map(|v| v.data).eq(date.take(4)) {
+                    return ko("date: servono i 4 trimestri consecutivi dal corrente");
+                }
+                let forchette = (c.previsione.iter())
+                    .flat_map(|v| [v.pil, v.disoccupazione, v.inflazione, v.debito]);
+                for f in forchette {
+                    if !(f.centro.is_finite() && f.sigma.is_finite()) {
+                        return ko("previsione: valore non finito");
+                    }
+                    if f.sigma < 0.0 {
+                        return ko("sigma: negativa");
+                    }
+                }
+                if !c.stima.e_finita() {
+                    return ko("stima: valore non finito");
                 }
                 Ok(())
             }

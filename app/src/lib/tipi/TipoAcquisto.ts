@@ -3,4 +3,4 @@
 /**
  * Il tipo di un acquisto, senza i suoi campi: la chiave del prezzo e del limite di uno a turno.
  */
-export type TipoAcquisto = "sondaggio_privato" | "test_misura";
+export type TipoAcquisto = "sondaggio_privato" | "test_misura" | "centro_studi";

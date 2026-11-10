@@ -1635,3 +1635,73 @@ valore = 0.046
 min = 0.0
 max = 1.0
 ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:61-73 e :116-125 (centro studi di partito: 80.000-250.000 € a trimestre)
+[prezzo_centro_studi]
+valore = 150000.0
+min = 1000.0
+max = 1000000.0
+ticket = "25"
+
+# assunzione del piano 9, forchetta 50-70% da informazione-a-pagamento.md:123
+[quota_errore_centro_studi]
+valore = 0.6
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+[rmse_pil_1]
+valore = 1.15
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+[rmse_pil_4]
+valore = 1.84
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+[rmse_inflazione_1]
+valore = 0.86
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+[rmse_inflazione_4]
+valore = 2.28
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+[rmse_disoccupazione_1]
+valore = 1.06
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+[rmse_disoccupazione_4]
+valore = 1.47
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# [NON TROVATO] in fonte, informazione-a-pagamento.md:89, assunzione del piano 9
+[rmse_debito_1]
+valore = 1.0
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# [NON TROVATO] in fonte, informazione-a-pagamento.md:89, assunzione del piano 9 (circa 3 punti a un anno [INF])
+[rmse_debito_4]
+valore = 3.0
+min = 0.0
+max = 10.0
+ticket = "25"

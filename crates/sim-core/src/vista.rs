@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
-use crate::informazione::{Revisione, Sondaggio, Stima, TipoAcquisto, VistaTest};
+use crate::informazione::{Revisione, Sondaggio, Stima, TipoAcquisto, VistaCentroStudi, VistaTest};
 use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
@@ -106,6 +106,7 @@ pub struct Vista {
 pub struct VistaAcquisti {
     pub sondaggio_privato: Option<Sondaggio>,
     pub test_misura: Option<VistaTest>,
+    pub centro_studi: Option<VistaCentroStudi>,
     pub prezzi: Vec<PrezzoAcquisto>,
 }
 
