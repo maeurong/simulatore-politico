@@ -2370,11 +2370,16 @@ impl Partita {
                     .map(|h| {
                         copia = copia.avanza_copia(1, None);
                         let data = copia.data.precedente();
-                        VocePrevisione::da(&self.dati, &copia.economia, data, h, copia.turno)
+                        VocePrevisione::da(&self.dati, &copia.economia, data, h)
                     })
                     .collect();
                 Acquistato::CentroStudi(VistaCentroStudi {
-                    stima: VistaCentroStudi::stima(&self.dati, &self.informazione.statistica),
+                    stima: VistaCentroStudi::stima(
+                        &self.dati,
+                        &self.informazione.statistica,
+                        self.caso
+                            .estemporaneo(parlamento::chiave_centro_studi(self.turno)),
+                    ),
                     previsione,
                 })
             }

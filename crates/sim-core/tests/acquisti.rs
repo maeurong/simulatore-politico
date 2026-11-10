@@ -447,23 +447,49 @@ fn campi(s: &Stima) -> [f64; 4] {
     [s.crescita_pil, s.disoccupazione, s.inflazione, s.disavanzo]
 }
 
+fn media(x: &[f64]) -> f64 {
+    x.iter().sum::<f64>() / x.len() as f64
+}
+
+fn deviazione(x: &[f64]) -> f64 {
+    let m = media(x);
+    (x.iter().map(|v| (v - m).powi(2)).sum::<f64>() / x.len() as f64).sqrt()
+}
+
+fn correlazione(x: &[f64], y: &[f64]) -> f64 {
+    let (mx, my) = (media(x), media(y));
+    let c = (x.iter().zip(y))
+        .map(|(a, b)| (a - mx) * (b - my))
+        .sum::<f64>()
+        / x.len() as f64;
+    c / (deviazione(x) * deviazione(y))
+}
+
+/// Ruling 77: su 200 semi, per campo, l'errore della stima è fra 0,5 e 0,7 volte quello della prima
+/// stima, e non lo segue (|r| < 0,3). Con la stima presa come frazione dell'errore della prima,
+/// r = 1 e il vero si ricava da tutte e due.
 #[test]
 fn la_stima_del_centro_studi_e_piu_vicina() {
-    let mut p = Partita::nuova(dati_base(), 1);
-    chiudi_col_bilancio(&mut p);
-    let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
-    let stima = |k: &str| -> Stima {
-        serde_json::from_value(j["informazione"]["statistica"][k].clone()).unwrap()
-    };
-    let (vera, prima) = (campi(&stima("vera")), campi(&stima("prima_stima")));
-    let centro = campi(&centro_studi(&mut p).stima);
+    let (mut prima, mut centro) = (vec![Vec::new(); 4], vec![Vec::new(); 4]);
+    for seme in 0..200 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        chiudi_col_bilancio(&mut p);
+        let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        let stima = |k: &str| -> [f64; 4] {
+            campi(&serde_json::from_value(j["informazione"]["statistica"][k].clone()).unwrap())
+        };
+        let (vera, ps) = (stima("vera"), stima("prima_stima"));
+        let c = campi(&centro_studi(&mut p).stima);
+        for k in 0..4 {
+            prima[k].push(ps[k] - vera[k]);
+            centro[k].push(c[k] - vera[k]);
+        }
+    }
     for k in 0..4 {
-        let (errore, residuo) = (prima[k] - vera[k], centro[k] - vera[k]);
-        assert!(errore.abs() > 1e-6, "{k}: prima stima senza errore");
-        assert!(
-            (residuo - 0.6 * errore).abs() <= 1e-9,
-            "{k}: {residuo} contro {errore}"
-        );
+        let rapporto = deviazione(&centro[k]) / deviazione(&prima[k]);
+        let r = correlazione(&centro[k], &prima[k]);
+        assert!((0.5..=0.7).contains(&rapporto), "{k}: {rapporto}");
+        assert!(r.abs() < 0.3, "{k}: r = {r}");
     }
 }
 
@@ -476,8 +502,15 @@ fn la_forchetta_si_allarga() {
     let sigme = |nome: &str, f: fn(&sim_core::informazione::VocePrevisione) -> f64| {
         let s: Vec<f64> = previsione.iter().map(f).collect();
         assert!(s.windows(2).all(|w| w[0] < w[1]), "{nome}: {s:?}");
-        assert_eq!(s[0], dati.manopola(&format!("rmse_{nome}_1")), "{nome}");
-        assert_eq!(s[3], dati.manopola(&format!("rmse_{nome}_4")), "{nome}");
+        let (r1, r4) = (
+            dati.manopola(&format!("rmse_{nome}_1")),
+            dati.manopola(&format!("rmse_{nome}_4")),
+        );
+        assert_eq!((s[0], s[3]), (r1, r4), "{nome}");
+        for h in [2, 3] {
+            let retta = r1 + (r4 - r1) * f64::from(h - 1) / 3.0;
+            assert!((s[h as usize - 1] - retta).abs() <= 1e-12, "{nome}: {s:?}");
+        }
     };
     sigme("pil", |v| v.pil.sigma);
     sigme("disoccupazione", |v| v.disoccupazione.sigma);
@@ -511,48 +544,58 @@ fn reale(e: &Economia) -> f64 {
     e.pil_trimestrale / e.livello_prezzi
 }
 
-/// I valori veri del trimestre appena chiuso, al primo turno. PIL: il trimestre di un anno prima è
-/// uno dei quattro piatti al conto e ai prezzi del turno zero, quindi il reale di `zero`.
-/// Prezzi sullo stesso trimestre dell'anno prima, debito sul PIL degli ultimi quattro trimestri.
-fn veri(dati: &DatiGioco, zero: &Economia, e: &Economia) -> [f64; 4] {
+/// I valori veri del trimestre chiuso per ultimo, con `storia[c]` l'economia dopo `c` chiusure.
+/// Il trimestre di un anno prima è quello di quattro chiusure fa; prima del turno zero è uno dei
+/// quattro piatti al conto e ai prezzi del turno zero, con i prezzi della storia d'inflazione del
+/// turno zero. Debito sul PIL degli ultimi quattro trimestri.
+fn veri(dati: &DatiGioco, storia: &[Economia]) -> [f64; 4] {
+    let (c, e, zero) = (storia.len() - 1, &storia[storia.len() - 1], &storia[0]);
+    let prima = &storia[c.saturating_sub(4)];
+    let prezzi_prima = prima.livello_prezzi
+        / (zero.inflazione[..4usize.saturating_sub(c)].iter())
+            .map(|i| 1.0 + i / 400.0)
+            .product::<f64>();
     let n = e.storico.len();
-    let prezzi: f64 = e.inflazione[..4].iter().map(|i| 1.0 + i / 400.0).product();
     let pil_anno: f64 = e.storico[n - 4..].iter().map(|t| t.pil as f64).sum();
     [
-        100.0 * (reale(e) / reale(zero) - 1.0),
+        100.0 * (reale(e) / reale(prima) - 1.0),
         e.disoccupazione_nazionale(dati),
-        100.0 * (prezzi - 1.0),
+        100.0 * (e.livello_prezzi / prezzi_prima - 1.0),
         100.0 * e.debito as f64 / pil_anno,
     ]
 }
 
 /// L'oracolo della previsione: senza shock, derive, emergenze né atti dei ministri, il centro del
-/// primo turno è il valore della chiusura vera. Tolleranza 1e-9: sopra l'ordine delle operazioni
-/// del debito (2,8e-14) e l'arrotondamento a euro del PIL di `storico` (~1e-10 punti).
-/// La previsione del PIL sta anche entro una sigma dall'oracolo.
+/// primo turno è il valore della chiusura vera, con l'acquisto ai turni 0-4 (il trimestre di un
+/// anno prima prima del turno zero, poi dopo la prima chiusura). Tolleranza 1e-9: sopra l'ordine
+/// delle operazioni del debito (2,8e-14) e l'arrotondamento a euro del PIL di `storico` (~1e-10
+/// punti). La previsione del PIL sta anche entro una sigma dall'oracolo.
 #[test]
 fn senza_shock_la_previsione_e_esatta() {
     let dati = DatiGioco::da_testi(&senza_emergenze(senza_shock())).unwrap();
     let mut p = Partita::nuova(dati.clone(), 1);
-    let zero = p.economia().clone();
-    ferma_tutti(&mut p);
-    let voce = centro_studi(&mut p).previsione.remove(0);
-    let data = p.vista().data;
-    chiudi_col_bilancio(&mut p);
-    assert_eq!(voce.data, data);
-    let centri = [
-        voce.pil.centro,
-        voce.disoccupazione.centro,
-        voce.inflazione.centro,
-        voce.debito.centro,
-    ];
-    let veri = veri(&dati, &zero, p.economia());
-    assert!(
-        (voce.pil.centro - veri[0]).abs() <= voce.pil.sigma,
-        "{centri:?} {veri:?}"
-    );
-    for (k, (c, v)) in centri.iter().zip(veri).enumerate() {
-        assert!((c - v).abs() <= 1e-9, "{k}: {centri:?} {veri:?}");
+    let mut storia = vec![p.economia().clone()];
+    for k in 0..=4 {
+        ferma_tutti(&mut p);
+        let voce = centro_studi(&mut p).previsione.remove(0);
+        let data = p.vista().data;
+        chiudi_col_bilancio(&mut p);
+        storia.push(p.economia().clone());
+        assert_eq!(voce.data, data);
+        let centri = [
+            voce.pil.centro,
+            voce.disoccupazione.centro,
+            voce.inflazione.centro,
+            voce.debito.centro,
+        ];
+        let veri = veri(&dati, &storia);
+        assert!(
+            (voce.pil.centro - veri[0]).abs() <= voce.pil.sigma,
+            "turno {k}: {centri:?} {veri:?}"
+        );
+        for (i, (c, v)) in centri.iter().zip(veri).enumerate() {
+            assert!((c - v).abs() <= 1e-9, "turno {k}, {i}: {centri:?} {veri:?}");
+        }
     }
 }
 

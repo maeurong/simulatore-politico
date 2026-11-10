@@ -3,6 +3,8 @@ import type { Stima } from "./Stima";
 import type { VocePrevisione } from "./VocePrevisione";
 
 /**
- * La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente.
+ * La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. PIL e
+ * inflazione della `stima` sono annualizzati sul trimestre prima, come la prima stima; quelli
+ * della `previsione` sono sullo stesso trimestre dell'anno prima.
  */
 export type VistaCentroStudi = { stima: Stima, previsione: Array<VocePrevisione>, };

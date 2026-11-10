@@ -167,16 +167,9 @@ pub struct VocePrevisione {
 }
 
 impl VocePrevisione {
-    /// L'economia `e` dopo `h` chiusure (1-4) della copia e `passi` dal turno zero, `data` il
-    /// trimestre chiuso per ultimo. La sigma va da `rmse_<grandezza>_1` a `rmse_<grandezza>_4`,
-    /// lineare in `h`.
-    pub(crate) fn da(
-        dati: &DatiGioco,
-        e: &Economia,
-        data: Trimestre,
-        h: u32,
-        passi: u32,
-    ) -> VocePrevisione {
+    /// L'economia `e` dopo `h` chiusure (1-4) della copia, `data` il trimestre chiuso per ultimo.
+    /// La sigma va da `rmse_<grandezza>_1` a `rmse_<grandezza>_4`, lineare in `h`.
+    pub(crate) fn da(dati: &DatiGioco, e: &Economia, data: Trimestre, h: u32) -> VocePrevisione {
         let t = f64::from(h.saturating_sub(1)) / 3.0;
         let forchetta = |nome: &str, centro: f64| Forchetta {
             centro,
@@ -188,6 +181,9 @@ impl VocePrevisione {
                 .map(|i| 1.0 + i / 400.0)
                 .product()
         };
+        // Le chiusure dal turno zero a `data` compresa: la partita parte sempre da `TURNO_ZERO`.
+        let indice = |t: Trimestre| 4 * u32::from(t.anno) + u32::from(t.trimestre);
+        let passi = (indice(data) + 1).saturating_sub(indice(Trimestre::TURNO_ZERO));
         let deflatore = prezzi(passi.min(4) as usize);
         // ponytail: con meno di cinque trimestri in `storico` (solo da un salvataggio scritto a
         // mano) la crescita vale 0, come al turno zero della statistica.
@@ -207,7 +203,9 @@ impl VocePrevisione {
     }
 }
 
-/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente.
+/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. PIL e
+/// inflazione della `stima` sono annualizzati sul trimestre prima, come la prima stima; quelli
+/// della `previsione` sono sullo stesso trimestre dell'anno prima.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaCentroStudi {
@@ -216,17 +214,18 @@ pub struct VistaCentroStudi {
 }
 
 impl VistaCentroStudi {
-    /// La stima è `vera + quota_errore_centro_studi · (prima_stima − vera)`, campo per campo:
-    /// nessuna estrazione, dalla stessa parte del vero della prima stima.
-    pub(crate) fn stima(dati: &DatiGioco, s: &Statistica) -> Stima {
+    /// La stima è `vera + quota_errore_centro_studi · errore_stima_<campo> · z`, campo per campo,
+    /// con le `z` di `rng` nell'ordine dei campi (Ruling 77): un errore suo, così dalla prima
+    /// stima e dalla sua non si ricava il vero.
+    pub(crate) fn stima(dati: &DatiGioco, s: &Statistica, mut rng: Estrattore) -> Stima {
         let q = dati.manopola("quota_errore_centro_studi");
-        let (v, p) = (&s.vera, &s.prima_stima);
-        let verso = |vera: f64, prima: f64| vera + q * (prima - vera);
+        let v = &s.vera;
+        let mut errore = |nome: &str, vera: f64| vera + q * dati.manopola(nome) * rng.normale();
         Stima {
-            crescita_pil: verso(v.crescita_pil, p.crescita_pil),
-            disoccupazione: verso(v.disoccupazione, p.disoccupazione),
-            inflazione: verso(v.inflazione, p.inflazione),
-            disavanzo: verso(v.disavanzo, p.disavanzo),
+            crescita_pil: errore("errore_stima_pil", v.crescita_pil),
+            disoccupazione: errore("errore_stima_disoccupazione", v.disoccupazione),
+            inflazione: errore("errore_stima_inflazione", v.inflazione),
+            disavanzo: errore("errore_stima_disavanzo", v.disavanzo),
         }
     }
 }

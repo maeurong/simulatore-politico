@@ -21,7 +21,7 @@ mod intesa;
 mod regole;
 pub mod voto;
 
-pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_test};
+pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_centro_studi, chiave_test};
 pub use decreti::{Decreto, FondiDecreto};
 pub(crate) use decreti::{ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};

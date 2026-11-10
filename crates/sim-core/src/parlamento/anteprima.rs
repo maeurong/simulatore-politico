@@ -27,6 +27,15 @@ pub(crate) fn chiave_test(turno: u32) -> u64 {
     OFFSET_CHIAVE + u64::from(turno) * 1_000_003 + CHIAVE_TEST
 }
 
+/// La chiave della stima del centro studi, accanto a quella del test: non collide, perché c'è un
+/// solo acquisto per tipo e per turno e la base del turno dopo sta 1_000_003 più in là.
+const CHIAVE_CENTRO_STUDI: u64 = 900_001;
+
+/// La chiave del centro studi comprato al turno `turno`.
+pub(crate) fn chiave_centro_studi(turno: u32) -> u64 {
+    OFFSET_CHIAVE + u64::from(turno) * 1_000_003 + CHIAVE_CENTRO_STUDI
+}
+
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
 /// `soglia_fascia_medio`, altrimenti `Molto`.
 fn fascia_vera(dati: &DatiGioco, k: usize, delta: f64) -> Fascia3 {
