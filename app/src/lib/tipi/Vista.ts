@@ -8,6 +8,7 @@ import type { MossaIa } from "./MossaIa";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
+import type { VistaAcquisti } from "./VistaAcquisti";
 import type { VistaBilancio } from "./VistaBilancio";
 import type { VistaCampagna } from "./VistaCampagna";
 import type { VistaReferendum } from "./VistaReferendum";
@@ -152,4 +153,8 @@ eventi: Array<VoceEvento>,
 /**
  * Le situazioni a soglia, accese o no.
  */
-situazioni: Array<VoceSituazione>, };
+situazioni: Array<VoceSituazione>, 
+/**
+ * L'informazione comprata nel turno e i prezzi di quella comprabile.
+ */
+acquisti: VistaAcquisti, };

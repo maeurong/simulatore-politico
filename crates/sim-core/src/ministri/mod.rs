@@ -504,7 +504,8 @@ impl Ministri {
             | Comando::Riposiziona { .. }
             | Comando::Campagna { .. }
             | Comando::Prometti { .. }
-            | Comando::RispondiEvento { .. } => {}
+            | Comando::RispondiEvento { .. }
+            | Comando::Compra { .. } => {}
         }
         Ok(EffettoComando::Nessuno)
     }

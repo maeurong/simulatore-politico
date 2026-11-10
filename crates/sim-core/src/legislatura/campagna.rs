@@ -340,7 +340,7 @@ fn maiuscola(s: &str) -> String {
 }
 
 /// Euro col punto delle migliaia: 3.000.000.
-fn migliaia(euro: i64) -> String {
+pub(crate) fn migliaia(euro: i64) -> String {
     let cifre = euro.unsigned_abs().to_string();
     let mut s = String::new();
     for (n, c) in cifre.chars().enumerate() {

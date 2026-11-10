@@ -205,6 +205,70 @@ fn scala_servizio_nulla_rifiutata_anche_se_il_file_la_ammette() {
     assert!(e.to_string().contains("scala_servizio"), "{e}");
 }
 
+/// `nome` a `valore`, con `min` e `max` del file allargati perché passi il controllo generico.
+fn con_manopola(nome: &str, valore: &str) -> Result<DatiGioco, Errore> {
+    let f = imposta(
+        file_base(),
+        "manopole",
+        &format!("[{nome}]\nvalore = "),
+        valore,
+    );
+    let f = imposta(
+        f,
+        "manopole",
+        &format!("[{nome}]\nvalore = {valore}\nmin = "),
+        "-1.0",
+    );
+    let f = imposta(
+        f,
+        "manopole",
+        &format!("[{nome}]\nvalore = {valore}\nmin = -1.0\nmax = "),
+        "1e7",
+    );
+    DatiGioco::da_testi(&f)
+}
+
+#[test]
+fn prezzi_non_positivi_rifiutati() {
+    for nome in [
+        "prezzo_sondaggio_privato",
+        "prezzo_test_misura",
+        "prezzo_centro_studi",
+    ] {
+        let e = con_manopola(nome, "0.0").unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            format!("manopola non valida: {nome} non positivo: 0")
+        );
+        assert!(con_manopola(nome, "1.0").is_ok(), "{nome}");
+    }
+}
+
+#[test]
+fn orizzonte_del_test_fuori_da_1_20_o_non_intero_rifiutato() {
+    for valore in ["0.0", "21.0", "2.5"] {
+        let e = con_manopola("orizzonte_test", valore).unwrap_err();
+        let x: f64 = valore.parse().unwrap();
+        assert_eq!(
+            e.to_string(),
+            format!("manopola non valida: orizzonte_test non intero fra 1 e 20: {x}")
+        );
+    }
+    for valore in ["1.0", "20.0"] {
+        assert!(con_manopola("orizzonte_test", valore).is_ok(), "{valore}");
+    }
+}
+
+#[test]
+fn soglie_della_reazione_rovesciate_rifiutate() {
+    let e = con_manopola("soglia_reazione_poco", "0.1").unwrap_err();
+    assert_eq!(
+        e.to_string(),
+        "manopola non valida: soglia_reazione_poco (0.1) oltre soglia_reazione_medio (0.061)"
+    );
+    assert!(con_manopola("soglia_reazione_poco", "0.061").is_ok());
+}
+
 #[test]
 fn soglie_delle_fasce_rovesciate_rifiutate() {
     let f = imposta(

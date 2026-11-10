@@ -79,6 +79,24 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "perdita_ristrutturazione",
     "turni_ristrutturazione",
     "premio_ristrutturazione",
+    "prezzo_sondaggio_privato",
+    "moltiplicatore_campione_privato",
+    "riduzione_istituto_privato",
+    "prezzo_test_misura",
+    "errore_test",
+    "orizzonte_test",
+    "soglia_reazione_poco",
+    "soglia_reazione_medio",
+    "prezzo_centro_studi",
+    "quota_errore_centro_studi",
+    "rmse_pil_1",
+    "rmse_pil_4",
+    "rmse_inflazione_1",
+    "rmse_inflazione_4",
+    "rmse_disoccupazione_1",
+    "rmse_disoccupazione_4",
+    "rmse_debito_1",
+    "rmse_debito_4",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",
@@ -842,6 +860,31 @@ impl DatiGioco {
         if scala <= 0.0 {
             return Err(Errore::Grandezze(format!(
                 "manopola scala_servizio non positiva: {scala}"
+            )));
+        }
+        for nome in [
+            "prezzo_sondaggio_privato",
+            "prezzo_test_misura",
+            "prezzo_centro_studi",
+        ] {
+            let prezzo = self.manopola(nome);
+            if prezzo <= 0.0 {
+                return Err(Errore::Manopola(format!("{nome} non positivo: {prezzo}")));
+            }
+        }
+        let orizzonte = self.manopola("orizzonte_test");
+        if !(orizzonte.fract() == 0.0 && (1.0..=20.0).contains(&orizzonte)) {
+            return Err(Errore::Manopola(format!(
+                "orizzonte_test non intero fra 1 e 20: {orizzonte}"
+            )));
+        }
+        let (poco, medio) = (
+            self.manopola("soglia_reazione_poco"),
+            self.manopola("soglia_reazione_medio"),
+        );
+        if poco > medio {
+            return Err(Errore::Manopola(format!(
+                "soglia_reazione_poco ({poco}) oltre soglia_reazione_medio ({medio})"
             )));
         }
         let emivita = self.manopola("emivita_danno");

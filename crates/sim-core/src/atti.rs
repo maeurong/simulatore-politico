@@ -114,6 +114,17 @@ impl Atto {
 pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
     let ko = |m: String| Err(Errore::Atti(m));
     let atti = dati.atti();
+    let (base, test) = (
+        crate::parlamento::CHIAVE_ATTI,
+        crate::parlamento::CHIAVE_TEST,
+    );
+    if base + atti.len() as u64 >= test {
+        return ko(format!(
+            "{} atti, il limite è {}: le chiavi dell'anteprima sono {base} + atto sotto {test}",
+            atti.len(),
+            test - base - 1
+        ));
+    }
     for (i, a) in atti.iter().enumerate() {
         if atti[..i].iter().any(|p| p.id == a.id) {
             return ko(format!("atto ripetuto: {}", a.id));
@@ -217,4 +228,32 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    /// Il tetto delle chiavi dell'anteprima sul confine: con 399999 atti il rifiuto è il
+    /// successivo, perché le copie si ripetono.
+    #[test]
+    fn il_tetto_degli_atti_sta_sul_confine_delle_chiavi() {
+        let mut dati = dati_base();
+        let primo = dati.atti[0].clone();
+        dati.atti = vec![primo.clone(); 400_000];
+        assert_eq!(
+            valida(&dati).unwrap_err().to_string(),
+            "catalogo degli atti non valido: 400000 atti, il limite è 399999: le chiavi \
+             dell'anteprima sono 500000 + atto sotto 900000"
+        );
+        dati.atti.pop();
+        assert_eq!(
+            valida(&dati).unwrap_err().to_string(),
+            format!(
+                "catalogo degli atti non valido: atto ripetuto: {}",
+                primo.id
+            )
+        );
+    }
 }

@@ -2,6 +2,7 @@
 
 use crate::economia::Bilancio;
 use crate::errore::Errore;
+use crate::informazione::Acquisto;
 use crate::legislatura::{Assegnazione, Cessione, Fase, Spesa};
 use crate::ministri::EffettoComando;
 use crate::parlamento::{Decreto, ValoreProposto};
@@ -41,6 +42,10 @@ pub enum Comando {
     },
     Respingi {
         dicastero: String,
+    },
+    /// Compra informazione con la cassa del partito: al massimo una volta a turno per tipo.
+    Compra {
+        acquisto: Acquisto,
     },
     /// Presenta la legge di bilancio del turno, sostituendo quella già presentata; l'aula la
     /// vota in chiusura. La `spesa` di ogni voce è il totale voluto: chi cambia salari,
@@ -202,7 +207,7 @@ impl Partita {
     /// `Comando` col nome del dicastero o della disposizione in causa, `Bilancio` col guasto
     /// della legge di bilancio; la partita resta identica. A partita finita, `Comando`. Ogni
     /// comando tranne `DichiaraCoalizione`, `ProponiSpartizione`, `Allarga`, `ChiediGuida`,
-    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti`, `RispondiEvento` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
+    /// `RifiutaRibaltone`, `Riposiziona`, `Campagna`, `Prometti`, `RispondiEvento`, `Compra` e quelli dell'opposizione (`Linea`, `Sfiducia`, `PresentaProposta`,
     /// `PromuoviReferendum`, `Confermativo`, con la guardia `all_opposizione`; `Linea` anche a chi
     /// governa, sulle proposte dell'opposizione) è di governo: se il giocatore non
     /// governa, `Comando` col motivo. Nel
@@ -242,6 +247,7 @@ impl Partita {
             }
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
             Comando::Campagna { spese } => return self.campagna(spese),
+            Comando::Compra { acquisto } => return self.compra(acquisto),
             Comando::Prometti { promesse } => return self.prometti(promesse),
             Comando::RispondiEvento { evento, opzione } => {
                 return self.rispondi_evento(*evento, opzione);

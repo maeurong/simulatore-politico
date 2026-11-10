@@ -7,7 +7,8 @@ use crate::economia::{
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{
-    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo, toccati,
+    Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, Quesito,
+    condizione_di, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
@@ -16,7 +17,10 @@ use crate::eventi::{
     emergenze, rischio, situazioni,
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
-use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
+use crate::informazione::{
+    Acquistati, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto,
+    VistaCentroStudi, VistaTest, VocePrevisione, genera,
+};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
     Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
@@ -33,10 +37,10 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
-    VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
-    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione, VocePartito,
-    VoceProgramma, VocePromessa, VoceSituazione,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, PrezzoAcquisto, SeggiPartito, Vista,
+    VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato,
+    VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero,
+    VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
@@ -45,7 +49,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 14;
+pub const VERSIONE_SCHEMA: u32 = 15;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,7 +94,7 @@ impl Trimestre {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Partita {
     versione_schema: u32,
     caso: Caso,
@@ -121,6 +125,8 @@ pub struct Partita {
     partenza: [f64; 4],
     /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
     mosse: Vec<MossaIa>,
+    /// Gli acquisti d'informazione del turno col loro risultato, svuotati a ogni `chiudi_turno`.
+    acquisti: Acquistati,
     /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
     serie: Vec<PuntoSerie>,
     /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
@@ -312,6 +318,7 @@ impl Partita {
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
             mosse: Vec::new(),
+            acquisti: Acquistati::default(),
             serie: Vec::new(),
             riavvolgimenti: 0,
         };
@@ -541,6 +548,7 @@ impl Partita {
             return;
         }
         self.mosse.clear();
+        self.acquisti = Acquistati::default();
         self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
@@ -586,41 +594,7 @@ impl Partita {
             self.spendi_campagne();
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
-        let nuove = Misure::da(
-            &self.dati,
-            &self.grandezze,
-            &self.ministri,
-            &self.economia,
-            &self.elettorato,
-            self.turno,
-            self.data,
-            &self.disposizioni,
-        );
-        let prima = std::mem::replace(&mut self.misure, nuove);
-        if (self.economia.programma_mes).is_some_and(|fine| self.turno >= fine) {
-            self.economia.programma_mes = None;
-        }
-        let innovazioni =
-            (self.economia).passo(&self.dati, &mut self.caso, self.data, &self.misure);
-        self.grandezze
-            .avanza(&self.dati, Some(&mut self.caso), &self.economia, self.turno);
-        self.elettorato
-            .aggiorna_redditi(&self.dati, &self.economia, &self.misure, self.turno);
-        // La ristrutturazione resta finché il premio vale almeno 1 pb o la perdita dei redditi
-        // dura ancora nel turno che si apre.
-        let dopo = self.turno.saturating_add(1);
-        self.economia.ristrutturazione = (self.economia.ristrutturazione)
-            .filter(|r| r.premio >= 1.0 || r.perdita_in_corso(&self.dati, dopo));
-        self.elettorato.giudizio(
-            &self.dati,
-            &self.economia,
-            &self.governo,
-            &self.grandezze,
-            &prima,
-            &self.misure,
-        );
-        self.elettorato
-            .composizione(&self.dati, &self.economia, self.data);
+        let innovazioni = self.motore(true);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
         // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
@@ -1074,6 +1048,125 @@ impl Partita {
         };
         self.parlamento.esiti.insert(0, esito);
         true
+    }
+
+    /// Il pezzo di motore della chiusura: misure, economia, grandezze, redditi, giudizio e
+    /// composizione, con le cinque innovazioni dell'economia. Senza `caso` niente shock né deriva
+    /// casuale, e le innovazioni sono zero (`avanza_copia`).
+    fn motore(&mut self, con_caso: bool) -> [f64; 5] {
+        let nuove = Misure::da(
+            &self.dati,
+            &self.grandezze,
+            &self.ministri,
+            &self.economia,
+            &self.elettorato,
+            self.turno,
+            self.data,
+            &self.disposizioni,
+        );
+        let prima = std::mem::replace(&mut self.misure, nuove);
+        if (self.economia.programma_mes).is_some_and(|fine| self.turno >= fine) {
+            self.economia.programma_mes = None;
+        }
+        let innovazioni = if con_caso {
+            (self.economia).passo(&self.dati, &mut self.caso, self.data, &self.misure)
+        } else {
+            (self.economia).passo_con(&self.dati, self.data, &self.misure, [0.0; 5]);
+            [0.0; 5]
+        };
+        let caso = con_caso.then_some(&mut self.caso);
+        (self.grandezze).avanza(&self.dati, caso, &self.economia, self.turno);
+        self.elettorato
+            .aggiorna_redditi(&self.dati, &self.economia, &self.misure, self.turno);
+        // La ristrutturazione resta finché il premio vale almeno 1 pb o la perdita dei redditi
+        // dura ancora nel turno che si apre.
+        let dopo = self.turno.saturating_add(1);
+        self.economia.ristrutturazione = (self.economia.ristrutturazione)
+            .filter(|r| r.premio >= 1.0 || r.perdita_in_corso(&self.dati, dopo));
+        self.elettorato.giudizio(
+            &self.dati,
+            &self.economia,
+            &self.governo,
+            &self.grandezze,
+            &prima,
+            &self.misure,
+        );
+        self.elettorato
+            .composizione(&self.dati, &self.economia, self.data);
+        innovazioni
+    }
+
+    /// Una copia della partita dopo `turni` chiusure del solo `motore`, senza caso, con gli arrivi
+    /// delle disposizioni; con la `bozza` entrata in vigore prima, come approvata ora. La partita
+    /// non cambia. Rispetto a `chiudi_turno` salta eventi, scandali, `ministri.esegui`, aula,
+    /// campagna, situazioni, crisi del debito ed elezioni dentro l'orizzonte, e tiene fissi governo
+    /// e presidente: il confronto di due copie è l'effetto della sola bozza in un mondo senza
+    /// altri fatti.
+    pub(crate) fn avanza_copia(&self, turni: u32, bozza: Option<&Misura>) -> Partita {
+        let mut p = self.clone();
+        if let Some(m) = bozza {
+            p.entra_in_vigore(m);
+        }
+        for _ in 0..turni {
+            p.passo_copia();
+        }
+        p
+    }
+
+    /// Una chiusura di `avanza_copia`: `motore` senza caso, turno e data dopo, arrivi.
+    fn passo_copia(&mut self) {
+        self.motore(false);
+        self.turno = self.turno.saturating_add(1);
+        self.data = self.data.successivo();
+        (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
+    }
+
+    /// La bozza del test di una misura: niente guardie di governo né di crisi, né i rifiuti di
+    /// calendario della bozza, perché non entra in calendario (lo comprano governo e opposizione).
+    fn bozza_test(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
+        self.vincolo_mes(valori)?;
+        (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori, false)
+    }
+
+    /// Per condizione, nell'ordine di `Condizione::TUTTE`: la reazione vera alla bozza `m` dopo
+    /// `orizzonte_test` turni (`peso_giudizio` per la differenza, con e senza la bozza, della
+    /// somma dei giudizi sui partiti di governo, media dei gruppi pesata con gli elettori di ora)
+    /// e la quota degli elettori.
+    fn reazioni(&self, m: &Misura) -> [(f64, f64); 6] {
+        let turni = self.dati.manopola("orizzonte_test").round() as u32;
+        let (con, senza) = (
+            self.avanza_copia(turni, Some(m)),
+            self.avanza_copia(turni, None),
+        );
+        let d = self.dati.elettorato();
+        let governo: Vec<usize> = (0..self.partiti.len())
+            .filter(|&j| self.governo.al_governo(j))
+            .collect();
+        let mut somme = [(0.0, 0.0); 6];
+        let coppie = (con.elettorato.gruppi.iter()).zip(&senza.elettorato.gruppi);
+        for (i, (a, b)) in coppie.enumerate() {
+            let w = self.elettorato.elettori(d, i);
+            let s = &mut somme[condizione_di(i) as usize];
+            s.0 += w;
+            s.1 += w * governo
+                .iter()
+                .map(|&j| a.giudizio[j] - b.giudizio[j])
+                .sum::<f64>();
+        }
+        let totale: f64 = somme.iter().map(|s| s.0).sum();
+        let gamma = self.dati.manopola("peso_giudizio");
+        somme.map(|(w, x)| (if w > 0.0 { gamma * x / w } else { 0.0 }, w / totale))
+    }
+
+    /// Le reazioni vere e le quote del test della bozza `valori` (`reazioni`). Solo per i test
+    /// d'integrazione, che non vedono il `pub(crate)`: la cifra vera non va mai alla vista né
+    /// all'app.
+    ///
+    /// # Errors
+    /// Quelli di `Compra` col test, tranne doppio acquisto e cassa.
+    #[doc(hidden)]
+    pub fn reazioni_vere(&self, valori: &[ValoreProposto]) -> Result<[(f64, f64); 6], Errore> {
+        Ok(self.reazioni(&self.bozza_test(valori)?))
     }
 
     /// I valori della misura approvata entrano in vigore, o arrivano fra `turni_rinvio_regime`
@@ -1837,7 +1930,8 @@ impl Partita {
         self.di_governo()?;
         self.fuori_dalla_crisi()?;
         self.vincolo_mes(valori)?;
-        let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let m =
+            (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori, true)?;
         let capacita = (m.proponente)
             .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
             .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
@@ -2098,9 +2192,9 @@ impl Partita {
         self.vincolo_mes(valori)?;
         let inneschi = self.eventi.inneschi(&self.dati);
         parlamento::ammetti_disposizioni(&self.dati, &inneschi, valori)?;
-        let bozza = self
-            .parlamento
-            .bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let bozza =
+            self.parlamento
+                .bozza(&self.dati, &self.disposizioni, self.turno, valori, true)?;
         Ok(Misura {
             forma: FormaMisura::Conversione,
             voto: self.turno,
@@ -2225,6 +2319,87 @@ impl Partita {
             let testo = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
             self.mossa(j, testo);
         }
+    }
+
+    /// `Compra`: paga subito dalla cassa del partito del giocatore e registra il
+    /// risultato, calcolato sulle intenzioni vere di ora o, per il test, sulle copie di
+    /// `avanza_copia`.
+    ///
+    /// # Errors
+    /// `Comando` se il tipo è già stato comprato nel turno o la cassa non basta; per il test,
+    /// poi, quelli del MES e della bozza. La partita resta identica.
+    pub(crate) fn compra(&mut self, a: &Acquisto) -> Result<(), Errore> {
+        let tipo = a.tipo();
+        let comprato = match a {
+            Acquisto::SondaggioPrivato => self.acquisti.sondaggio_privato.is_some(),
+            Acquisto::TestMisura { .. } => self.acquisti.test_misura.is_some(),
+            Acquisto::CentroStudi => self.acquisti.centro_studi.is_some(),
+        };
+        if comprato {
+            return Err(Errore::Comando(format!(
+                "già comprato questo turno: {}",
+                tipo.nome()
+            )));
+        }
+        let prezzo = tipo.prezzo(&self.dati);
+        let cassa = self.partiti.get(self.giocatore).map_or(0, |p| p.cassa);
+        if cassa < prezzo {
+            return Err(Errore::Comando(format!(
+                "cassa insufficiente per il {}: servono {} euro, ce ne sono {}",
+                tipo.nome(),
+                campagna::migliaia(prezzo),
+                campagna::migliaia(cassa)
+            )));
+        }
+        match a {
+            Acquisto::SondaggioPrivato => {
+                // Il blocco riservato di ogni turno, dentro `turno · 1024 + gruppo` di
+                // `elettori_campione`: `valida_gruppi` tiene i gruppi sotto il blocco, e
+                // l'anteprima parte da 2^35, oltre 33 milioni di turni.
+                let chiave = u64::from(self.turno) * 1024 + BLOCCO_SONDAGGIO_PRIVATO as u64;
+                let s = self.informazione.rileva_privato(
+                    &self.dati,
+                    &self.caso,
+                    &self.elettorato,
+                    &self.intenzioni_vere(),
+                    &self.governo,
+                    chiave,
+                );
+                self.acquisti.sondaggio_privato = Some(s);
+            }
+            Acquisto::TestMisura { valori } => {
+                let m = self.bozza_test(valori)?;
+                let t = VistaTest::stima(
+                    &self.dati,
+                    self.caso.estemporaneo(parlamento::chiave_test(self.turno)),
+                    parlamento::nome_misura(&self.dati, &m),
+                    self.reazioni(&m),
+                );
+                self.acquisti.test_misura = Some(t);
+            }
+            Acquisto::CentroStudi => {
+                // La previsione è una copia chiusa da `passo_copia` un turno per volta.
+                let mut copia = self.clone();
+                let previsione = (1..=4)
+                    .map(|h| {
+                        copia.passo_copia();
+                        let data = copia.data.precedente();
+                        VocePrevisione::da(&self.dati, &copia.economia, data, h)
+                    })
+                    .collect();
+                let stima = VistaCentroStudi::stima(
+                    &self.dati,
+                    &self.informazione.statistica,
+                    self.caso
+                        .estemporaneo(parlamento::chiave_centro_studi(self.turno)),
+                );
+                self.acquisti.centro_studi = Some(VistaCentroStudi { stima, previsione });
+            }
+        }
+        if let Some(p) = self.partiti.get_mut(self.giocatore) {
+            p.cassa = p.cassa.saturating_sub(prezzo);
+        }
+        Ok(())
     }
 
     /// `Campagna` (scelte 13-14): nel turno del voto sostituisce la campagna del giocatore.
@@ -3912,6 +4087,18 @@ impl Partita {
             },
             eventi: self.voci_eventi(),
             situazioni: self.situazioni(),
+            acquisti: VistaAcquisti {
+                sondaggio_privato: self.acquisti.sondaggio_privato.clone(),
+                test_misura: self.acquisti.test_misura.clone(),
+                centro_studi: self.acquisti.centro_studi.clone(),
+                prezzi: TipoAcquisto::TUTTI
+                    .iter()
+                    .map(|&acquisto| PrezzoAcquisto {
+                        acquisto,
+                        euro: acquisto.prezzo(&self.dati),
+                    })
+                    .collect(),
+            },
         }
     }
 
@@ -4511,6 +4698,7 @@ impl Partita {
     /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
+        (self.acquisti).controlla(&self.dati, self.partiti.len(), self.data)?;
         ok(
             self.turni_al_governo <= self.turno.saturating_add(1)
                 && self.partenza.iter().all(|x| x.is_finite()),
@@ -5162,7 +5350,7 @@ mod tests {
             gradino: "70".into(),
         }];
         (p.parlamento)
-            .bozza(&p.dati, &p.disposizioni, p.turno, &valori)
+            .bozza(&p.dati, &p.disposizioni, p.turno, &valori, true)
             .unwrap()
     }
 

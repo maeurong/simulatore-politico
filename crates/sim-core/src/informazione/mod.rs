@@ -9,10 +9,15 @@ use crate::errore::Errore;
 use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
 
+mod acquisti;
 mod campione;
 pub(crate) use campione::indice;
 mod sondaggio;
 mod statistica;
+pub use acquisti::{
+    Acquistati, Acquisto, Forchetta, ReazioneStimata, TipoAcquisto, VistaCentroStudi, VistaTest,
+    VocePrevisione,
+};
 pub use campione::{ElettoreCampione, Motivo, genera};
 pub use sondaggio::{Incrocio, Rilevazione, Sondaggio};
 pub use statistica::{Revisione, Statistica, Stima};
@@ -116,6 +121,29 @@ impl Informazione {
         );
     }
 
+    /// Il sondaggio privato di `vero`: stessi bias e primo istituto del pubblico, normali dalla
+    /// chiave estemporanea `chiave`. Non avanza nessun flusso e non tocca lo stato.
+    pub(crate) fn rileva_privato(
+        &self,
+        dati: &DatiGioco,
+        caso: &Caso,
+        el: &Elettorato,
+        vero: &Intenzioni,
+        governo: &Governo,
+        chiave: u64,
+    ) -> Sondaggio {
+        let mut rng = caso.estemporaneo(chiave);
+        sondaggio::rileva_privato(
+            dati,
+            el,
+            vero,
+            governo.presidente,
+            &self.bias,
+            &self.effetti_istituto,
+            &mut || rng.normale(),
+        )
+    }
+
     /// Lunghezze e finitezza, per uno stato letto da un salvataggio.
     ///
     /// # Errors
@@ -135,27 +163,8 @@ impl Informazione {
                 d.istituti.len()
             ));
         }
-        let s = &self.sondaggio;
-        if s.istituti.len() != d.istituti.len() || !s.istituti.iter().all(|r| giusta(&r.quote, alt))
-        {
-            return ko("sondaggio.istituti non combacia con gli istituti dei dati");
-        }
-        let incroci = [
-            (&s.condizioni, Condizione::TUTTE.len(), "condizioni"),
-            (&s.fasce, Fascia::TUTTE.len(), "fasce"),
-            (&s.regioni, d.regioni.len(), "regioni"),
-        ];
-        for (v, n, nome) in incroci {
-            let ok = v.len() == n
-                && v.iter().all(|i| {
-                    giusta(&i.quote, alt)
-                        && giusta(&i.posizione, PUNTI)
-                        && i.approvazione.is_finite()
-                });
-            if !ok {
-                return ko(&format!("sondaggio.{nome}: forma o valori non validi"));
-            }
-        }
+        controlla_sondaggio(&self.sondaggio, dati, alt, d.istituti.len())
+            .or_else(|m| ko(&format!("sondaggio.{m}")))?;
         let t = &self.statistica;
         let trimestri_ok = (1..=4).contains(&t.trimestre.trimestre)
             && t.revisione
@@ -175,6 +184,38 @@ impl Informazione {
         }
         Ok(())
     }
+}
+
+/// Lunghezze e finitezza di un sondaggio con `n_istituti` rilevazioni e `alt` alternative; in
+/// `Err` il guasto, senza il prefisso del campo.
+fn controlla_sondaggio(
+    s: &Sondaggio,
+    dati: &DatiGioco,
+    alt: usize,
+    n_istituti: usize,
+) -> Result<(), String> {
+    let d = dati.elettorato();
+    let giusta = |v: &[f64], n: usize| v.len() == n && v.iter().all(|x| x.is_finite());
+    if s.istituti.len() != n_istituti || !s.istituti.iter().all(|r| giusta(&r.quote, alt)) {
+        return Err(format!(
+            "istituti: servono {n_istituti} rilevazioni di {alt} valori finiti"
+        ));
+    }
+    let incroci = [
+        (&s.condizioni, Condizione::TUTTE.len(), "condizioni"),
+        (&s.fasce, Fascia::TUTTE.len(), "fasce"),
+        (&s.regioni, d.regioni.len(), "regioni"),
+    ];
+    for (v, n, nome) in incroci {
+        let ok = v.len() == n
+            && v.iter().all(|i| {
+                giusta(&i.quote, alt) && giusta(&i.posizione, PUNTI) && i.approvazione.is_finite()
+            });
+        if !ok {
+            return Err(format!("{nome}: forma o valori non validi"));
+        }
+    }
+    Ok(())
 }
 
 /// `alt` normali di `Flusso::Sondaggi` per `sigma_bias_comune`.

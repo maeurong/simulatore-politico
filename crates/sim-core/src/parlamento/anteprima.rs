@@ -14,9 +14,38 @@ use crate::vista::{Anteprima, EffettoStimato, Fascia3, VoceLeva};
 /// l'anteprima resta sotto il tetto di 2^36 fino a 34 mila turni.
 const OFFSET_CHIAVE: u64 = 1 << 35;
 
+/// Distanza fra le basi di due turni consecutivi.
+const PASSO_TURNO: u64 = 1_000_003;
+
+/// La chiave `k` del turno `turno`, con `k` sotto `PASSO_TURNO`.
+fn chiave(turno: u32, k: u64) -> u64 {
+    OFFSET_CHIAVE + u64::from(turno) * PASSO_TURNO + k
+}
+
 /// Sposta le chiavi degli atti (`CHIAVE_ATTI + indice globale dell'atto`) dopo quelle delle
-/// disposizioni dello stesso turno (`64 · d + g`).
-const CHIAVE_ATTI: u64 = 500_000;
+/// disposizioni dello stesso turno (`64 · d + g`), che `disposizioni::valida` tiene sotto.
+pub(crate) const CHIAVE_ATTI: u64 = 500_000;
+
+/// La chiave del test di una misura, una per turno, la prima delle chiavi degli acquisti: sopra le
+/// disposizioni e gli atti del turno (`atti::valida` tiene `CHIAVE_ATTI + atti` sotto), sotto il
+/// turno dopo (`PASSO_TURNO`). Il centro studi sta subito dopo, a `CHIAVE_CENTRO_STUDI`.
+pub(crate) const CHIAVE_TEST: u64 = 900_000;
+
+/// La chiave del test di una misura comprato al turno `turno`.
+pub(crate) fn chiave_test(turno: u32) -> u64 {
+    chiave(turno, CHIAVE_TEST)
+}
+
+/// La chiave della stima del centro studi, accanto a quella del test: non collide, perché c'è un
+/// solo acquisto per tipo e per turno e la base del turno dopo sta `PASSO_TURNO` più in là.
+const CHIAVE_CENTRO_STUDI: u64 = 900_001;
+
+const _: () = assert!(CHIAVE_TEST != CHIAVE_CENTRO_STUDI && CHIAVE_CENTRO_STUDI < PASSO_TURNO);
+
+/// La chiave del centro studi comprato al turno `turno`.
+pub(crate) fn chiave_centro_studi(turno: u32) -> u64 {
+    chiave(turno, CHIAVE_CENTRO_STUDI)
+}
 
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
 /// `soglia_fascia_medio`, altrimenti `Molto`.
@@ -80,8 +109,7 @@ pub(crate) fn anteprima(
                 });
             }
         }
-        let chiave = OFFSET_CHIAVE + u64::from(m.presentata) * 1_000_003 + 64 * d as u64 + g as u64;
-        let mut rng = caso.estemporaneo(chiave);
+        let mut rng = caso.estemporaneo(chiave(m.presentata, 64 * d as u64 + g as u64));
         for (id, delta, ritardo) in variazioni(prima, dopo) {
             let Some(k) = dati.grandezza(id) else {
                 continue;
@@ -104,9 +132,7 @@ pub(crate) fn anteprima(
     if let Some(FondiDecreto::Accolti { atto, importo, .. }) = m.fondi {
         // Un decreto accolto costa l'importo, e porta gli effetti nominali dell'atto.
         costo_annuo = importo;
-        let chiave =
-            OFFSET_CHIAVE + u64::from(m.presentata) * 1_000_003 + CHIAVE_ATTI + atto as u64;
-        let mut rng = caso.estemporaneo(chiave);
+        let mut rng = caso.estemporaneo(chiave(m.presentata, CHIAVE_ATTI + atto as u64));
         for e in &dati.atti()[atto].effetti {
             let Some(k) = dati.grandezza(&e.grandezza) else {
                 continue;

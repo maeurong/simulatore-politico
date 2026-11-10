@@ -94,6 +94,10 @@ impl fmt::Display for Fascia {
 /// Gruppi per regione: condizioni x fasce.
 pub(crate) const PER_REGIONE: usize = 18;
 
+/// Il blocco di ogni turno riservato al sondaggio privato nelle chiavi `turno · 1024 + blocco`
+/// di `Caso::estemporaneo`: nessun gruppo può avere questo indice.
+pub(crate) const BLOCCO_SONDAGGIO_PRIVATO: usize = 1023;
+
 /// Indice canonico di un gruppo: `regione·18 + condizione·3 + fascia`.
 pub fn indice_gruppo(regione: usize, c: Condizione, f: Fascia) -> usize {
     regione * PER_REGIONE + c as usize * Fascia::TUTTE.len() + f as usize
@@ -226,6 +230,12 @@ impl DatiElettorato {
     }
 
     fn valida_gruppi(&self) -> Result<(), Errore> {
+        if self.gruppi.len() > BLOCCO_SONDAGGIO_PRIVATO {
+            return Err(ko(format!(
+                "{} gruppi, il limite è {BLOCCO_SONDAGGIO_PRIVATO}: la chiave del sondaggio privato è turno·1024 + {BLOCCO_SONDAGGIO_PRIVATO}",
+                self.gruppi.len()
+            )));
+        }
         if self.gruppi.len() != self.regioni.len() * PER_REGIONE {
             return Err(ko(format!(
                 "{} gruppi, ne servono {} (18 per regione)",
@@ -517,5 +527,33 @@ impl Elettorato {
             return ko("elettorato.aliquota_irpef_0 fuori da (0, 1)".into());
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    /// Il tetto della chiave del sondaggio privato sul confine: con 1023 gruppi il rifiuto è il
+    /// successivo, sul numero per regione.
+    #[test]
+    fn il_tetto_dei_gruppi_sta_sul_confine_della_chiave_del_privato() {
+        let mut e = dati_base().elettorato().clone();
+        e.gruppi = vec![e.gruppi[0].clone(); 1024];
+        let rifiuto = |e: &DatiElettorato| e.valida_gruppi().unwrap_err().to_string();
+        let r = rifiuto(&e);
+        assert!(r.contains("1024 gruppi, il limite è 1023"), "{r}");
+        e.gruppi.pop();
+        let r = rifiuto(&e);
+        assert!(r.contains("1023 gruppi, ne servono"), "{r}");
+    }
+
+    /// `Condizione as usize` indicizza le somme per condizione nell'ordine di `TUTTE`.
+    #[test]
+    fn l_ordine_delle_condizioni_e_quello_di_tutte() {
+        for (k, c) in Condizione::TUTTE.into_iter().enumerate() {
+            assert_eq!(c as usize, k, "{c}");
+        }
     }
 }

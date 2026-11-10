@@ -1579,3 +1579,129 @@ valore = 300.0
 min = 1.0
 max = 1000.0
 ticket = "07"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:21-41 (1.000-1.500 interviste: 10.000-20.000 €)
+[prezzo_sondaggio_privato]
+valore = 15000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[moltiplicatore_campione_privato]
+valore = 4.0
+min = 1.0
+max = 10.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[riduzione_istituto_privato]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:116-125 (test di una misura: 10.000-25.000 €)
+[prezzo_test_misura]
+valore = 20000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# forma da informazione-a-pagamento.md:54-59 (σ = errore_test / √quota della condizione, in unità di utilità); misurato sui dati base al turno zero, seme 1: soglia_reazione_poco · √0,343, la quota della condizione più grande (dipendenti privati), così la sigma del gruppo più grande vale la soglia del Poco; da rimisurare se cambiano lo scenario o le soglie
+[errore_test]
+valore = 0.00275
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 9 (turni delle copie senza shock su cui si legge la reazione vera): a 2 turni la reazione dei pensionati alle pensioni più generose ha il segno atteso, da 4 si capovolge
+[orizzonte_test]
+valore = 2.0
+min = 1.0
+max = 20.0
+ticket = "25"
+
+# misurato sui dati base al turno zero, seme 1, con orizzonte_test 2: primo terzile di |reazione vera| ≥ 1e-4 sui 68 cambi di un gradino adiacente (66 ammessi, 64 valori; sotto 1e-4 è rumore numerico sui gruppi non toccati); sotto, Poco
+[soglia_reazione_poco]
+valore = 0.0047
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# la misura di soglia_reazione_poco, secondo terzile; sotto, Medio, sopra, Molto
+[soglia_reazione_medio]
+valore = 0.061
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:61-73 e :116-125 (centro studi di partito: 80.000-250.000 € a trimestre)
+[prezzo_centro_studi]
+valore = 150000.0
+min = 1000.0
+max = 1000000.0
+ticket = "25"
+
+# assunzione del piano 9, forchetta 50-70% da informazione-a-pagamento.md:123
+[quota_errore_centro_studi]
+valore = 0.6
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno in corso). Per ogni grandezza, _1 è l'anno in corso, usato a un trimestre (h = 1), _4 l'anno dopo, a quattro (h = 4); in mezzo la sigma è lineare in h
+[rmse_pil_1]
+valore = 1.15
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno dopo)
+[rmse_pil_4]
+valore = 1.84
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno in corso)
+[rmse_inflazione_1]
+valore = 0.86
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno dopo)
+[rmse_inflazione_4]
+valore = 2.28
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno in corso)
+[rmse_disoccupazione_1]
+valore = 1.06
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno dopo)
+[rmse_disoccupazione_4]
+valore = 1.47
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# assunzione del piano 9: la fonte non dà l'errore sul debito (informazione-a-pagamento.md:89 [NON TROVATO]), qui un terzo di rmse_debito_4
+[rmse_debito_1]
+valore = 1.0
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# stima [INF] da informazione-a-pagamento.md:89: circa 3 punti di PIL a un anno, dall'errore sul PIL nominale più quello sul saldo; grezza, da tarare
+[rmse_debito_4]
+valore = 3.0
+min = 0.0
+max = 10.0
+ticket = "25"
