@@ -8,7 +8,8 @@ use sim_core::economia::Economia;
 use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::informazione::{Acquisto, Stima, VistaCentroStudi};
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
-use sim_core::parlamento::ValoreProposto;
+use sim_core::parlamento::{FormaMisura, ValoreProposto};
+use sim_core::vista::Fascia3;
 use sim_core::{Comando, Partita};
 
 const PREZZO: i64 = 15_000;
@@ -72,7 +73,9 @@ fn acquisto_rifiutato_non_cambia_nulla() {
 
     let mut p = con_cassa(&Partita::nuova(dati_base(), 1), PREZZO - 1);
     let prima = p.salva().unwrap();
-    assert!(errore(&mut p).ends_with("cassa insufficiente: servono 15.000 euro"));
+    assert!(errore(&mut p).ends_with(
+        "cassa insufficiente per il sondaggio privato: servono 15.000 euro, ce ne sono 14.999"
+    ));
     assert_eq!(p.salva().unwrap(), prima);
 
     let mut p = Partita::nuova(dati_base(), 1);
@@ -229,6 +232,38 @@ fn il_test_indovina_il_segno_dei_gruppi_grandi() {
     assert!(giusti[piccola] < giusti[pensionato], "{giusti:?} {quote:?}");
 }
 
+/// La condizione più grande ha la sigma pari a `soglia_reazione_poco`: con la reazione vera in
+/// Molto, la fascia stimata è Molto in almeno 140 semi su 200.
+#[test]
+fn il_test_dice_la_fascia_della_condizione_piu_grande() {
+    let valori = v("ticket", "nessuno");
+    let medio = dati_base().manopola("soglia_reazione_medio");
+    let mut molto = 0;
+    for seme in 0..200 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        let vere = p.reazioni_vere(&valori).unwrap();
+        let grande = (0..6)
+            .max_by(|&a, &b| vere[a].1.total_cmp(&vere[b].1))
+            .unwrap();
+        assert!(vere[grande].0.abs() >= medio, "{seme}: {vere:?}");
+        p.comanda(test_di(&valori)).unwrap();
+        let t = p.vista().acquisti.test_misura.unwrap();
+        molto += u32::from(t.reazioni[grande].fascia == Fascia3::Molto);
+    }
+    assert!(molto >= 140, "{molto}");
+}
+
+/// Il test non entra in calendario: la legge che il governo ha in esame si testa.
+#[test]
+fn l_opposizione_testa_la_legge_del_governo_in_esame() {
+    let mut p = all_opposizione();
+    let legge = (p.vista().calendario.into_iter())
+        .find(|m| m.promotore.is_none() && m.forma == FormaMisura::Riforma)
+        .unwrap();
+    p.comanda(test_di(&legge.valori)).unwrap();
+    assert!(p.vista().acquisti.test_misura.is_some());
+}
+
 #[test]
 fn test_su_misura_non_ammessa_rifiutato_senza_pagare() {
     let mut p = Partita::nuova(dati_base(), 1);
@@ -383,7 +418,10 @@ fn il_test_rifiuta_doppio_e_senza_cassa_prima_della_bozza() {
     for valori in [valori, v("eta_pensionabile", "67")] {
         let e = rifiuto(&mut p, &valori);
         assert!(
-            e.ends_with("cassa insufficiente: servono 20.000 euro"),
+            e.ends_with(
+                "cassa insufficiente per il test di una misura: servono 20.000 euro, ce ne sono \
+                 19.999"
+            ),
             "{e}"
         );
     }

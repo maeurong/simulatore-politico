@@ -862,6 +862,31 @@ impl DatiGioco {
                 "manopola scala_servizio non positiva: {scala}"
             )));
         }
+        for nome in [
+            "prezzo_sondaggio_privato",
+            "prezzo_test_misura",
+            "prezzo_centro_studi",
+        ] {
+            let prezzo = self.manopola(nome);
+            if prezzo <= 0.0 {
+                return Err(Errore::Manopola(format!("{nome} non positivo: {prezzo}")));
+            }
+        }
+        let orizzonte = self.manopola("orizzonte_test");
+        if !(orizzonte.fract() == 0.0 && (1.0..=20.0).contains(&orizzonte)) {
+            return Err(Errore::Manopola(format!(
+                "orizzonte_test non intero fra 1 e 20: {orizzonte}"
+            )));
+        }
+        let (poco, medio) = (
+            self.manopola("soglia_reazione_poco"),
+            self.manopola("soglia_reazione_medio"),
+        );
+        if poco > medio {
+            return Err(Errore::Manopola(format!(
+                "soglia_reazione_poco ({poco}) oltre soglia_reazione_medio ({medio})"
+            )));
+        }
         let emivita = self.manopola("emivita_danno");
         if emivita <= 0.0 {
             return Err(Errore::Eventi(format!(

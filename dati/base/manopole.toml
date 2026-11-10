@@ -1608,30 +1608,30 @@ min = 1000.0
 max = 100000.0
 ticket = "25"
 
-# assunzione del piano 9, forma da informazione-a-pagamento.md:54-59 (σ = errore_test / √quota della condizione, in unità di utilità)
+# forma da informazione-a-pagamento.md:54-59 (σ = errore_test / √quota della condizione, in unità di utilità); misurato sui dati base al turno zero, seme 1: soglia_reazione_poco · √0,343, la quota della condizione più grande (dipendenti privati), così la sigma del gruppo più grande vale la soglia del Poco
 [errore_test]
-valore = 0.05
+valore = 0.00275
 min = 0.0
 max = 1.0
 ticket = "25"
 
-# assunzione del piano 9 (turni delle copie senza shock su cui si legge la reazione vera)
+# assunzione del piano 9 (turni delle copie senza shock su cui si legge la reazione vera): a 2 turni la reazione dei pensionati alle pensioni più generose ha il segno atteso, da 4 si capovolge
 [orizzonte_test]
-valore = 4.0
+valore = 2.0
 min = 1.0
 max = 20.0
 ticket = "25"
 
-# misurato nel Task 11 del piano 9: primo terzile di |reazione vera| ≥ 1e-4 sui 68 cambi di un gradino adiacente dei dati base al turno zero (66 ammessi, seme 1, 91 valori; sotto 1e-4 è rumore numerico sui gruppi non toccati); sotto, Poco (Ruling 68)
+# misurato sui dati base al turno zero, seme 1, con orizzonte_test 2: primo terzile di |reazione vera| ≥ 1e-4 sui 68 cambi di un gradino adiacente (66 ammessi, 64 valori; sotto 1e-4 è rumore numerico sui gruppi non toccati); sotto, Poco
 [soglia_reazione_poco]
-valore = 0.0063
+valore = 0.0047
 min = 0.0
 max = 1.0
 ticket = "25"
 
-# misurato nel Task 11 del piano 9: secondo terzile della stessa misura; sotto, Medio, sopra, Molto (Ruling 68)
+# la misura di soglia_reazione_poco, secondo terzile; sotto, Medio, sopra, Molto
 [soglia_reazione_medio]
-valore = 0.046
+valore = 0.061
 min = 0.0
 max = 1.0
 ticket = "25"

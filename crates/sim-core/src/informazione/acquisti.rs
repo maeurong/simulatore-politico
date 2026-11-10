@@ -219,8 +219,8 @@ impl VistaCentroStudi {
     /// stima e dalla sua non si ricava il vero.
     pub(crate) fn stima(dati: &DatiGioco, s: &Statistica, mut rng: Estrattore) -> Stima {
         // Al turno zero la prima stima è già il vero (`Statistica::iniziale`): un errore in più
-        // renderebbe il centro studi peggiore del dato pubblico (Ruling 78).
-        if s.prima_stima == s.vera {
+        // renderebbe il centro studi peggiore del dato pubblico.
+        if s.trimestre == Trimestre::TURNO_ZERO.precedente() {
             return s.vera.clone();
         }
         let q = dati.manopola("quota_errore_centro_studi");
@@ -326,12 +326,15 @@ mod tests {
             .collect()
     }
 
+    /// Con `errore_test` 0,05, perché la vera 0,05 non stia a molte sigma dallo zero.
     #[test]
     fn i_segni_giusti_crescono_con_la_quota() {
         let quote = [0.04, 0.09, 0.16, 0.25, 0.36, 0.49];
         let reazioni = quote.map(|q| (0.05, q));
         let mut giusti = [0; 6];
-        for t in stime(&dati_base(), reazioni, 20_000) {
+        let mut dati = dati_base();
+        dati.imposta_manopola("errore_test", 0.05);
+        for t in stime(&dati, reazioni, 20_000) {
             for (g, r) in giusti.iter_mut().zip(&t.reazioni) {
                 *g += u32::from(r.segno == 1);
             }
@@ -341,10 +344,12 @@ mod tests {
 
     /// Con le stesse `z`, `|σ₁ z| < s` vale esattamente quando `|σ₂ z| < s · σ₂/σ₁`: con σ come
     /// `1/√quota` i `Poco` coincidono se la soglia scala di `√(q₁/q₂)`, con σ costante no.
+    /// `errore_test` 0,05 tiene la soglia 0,1 a meno di una sigma.
     #[test]
     fn la_dispersione_scala_come_uno_su_radice_della_quota() {
         let poco = |quota: f64, soglia: f64| {
             let mut dati = dati_base();
+            dati.imposta_manopola("errore_test", 0.05);
             dati.imposta_manopola("soglia_reazione_poco", soglia);
             (stime(&dati, [(0.0, quota); 6], 5_000).iter())
                 .flat_map(|t| &t.reazioni)

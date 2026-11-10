@@ -1116,11 +1116,11 @@ impl Partita {
         p
     }
 
-    /// La bozza del test di una misura: niente guardie di governo né di crisi, perché non entra
-    /// in calendario (lo comprano governo e opposizione).
+    /// La bozza del test di una misura: niente guardie di governo né di crisi, né i rifiuti di
+    /// calendario della bozza, perché non entra in calendario (lo comprano governo e opposizione).
     fn bozza_test(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
         self.vincolo_mes(valori)?;
-        (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)
+        (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori, false)
     }
 
     /// Per condizione, nell'ordine di `Condizione::TUTTE`: la reazione vera alla bozza `m` dopo
@@ -1925,7 +1925,8 @@ impl Partita {
         self.di_governo()?;
         self.fuori_dalla_crisi()?;
         self.vincolo_mes(valori)?;
-        let m = (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let m =
+            (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori, true)?;
         let capacita = (m.proponente)
             .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
             .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
@@ -2186,9 +2187,9 @@ impl Partita {
         self.vincolo_mes(valori)?;
         let inneschi = self.eventi.inneschi(&self.dati);
         parlamento::ammetti_disposizioni(&self.dati, &inneschi, valori)?;
-        let bozza = self
-            .parlamento
-            .bozza(&self.dati, &self.disposizioni, self.turno, valori)?;
+        let bozza =
+            self.parlamento
+                .bozza(&self.dati, &self.disposizioni, self.turno, valori, true)?;
         Ok(Misura {
             forma: FormaMisura::Conversione,
             voto: self.turno,
@@ -2334,8 +2335,10 @@ impl Partita {
         let cassa = self.partiti.get(self.giocatore).map_or(0, |p| p.cassa);
         if cassa < prezzo {
             return Err(Errore::Comando(format!(
-                "cassa insufficiente: servono {} euro",
-                campagna::migliaia(prezzo)
+                "cassa insufficiente per il {}: servono {} euro, ce ne sono {}",
+                tipo.nome(),
+                campagna::migliaia(prezzo),
+                campagna::migliaia(cassa)
             )));
         }
         let esito = match a {
@@ -5356,7 +5359,7 @@ mod tests {
             gradino: "70".into(),
         }];
         (p.parlamento)
-            .bozza(&p.dati, &p.disposizioni, p.turno, &valori)
+            .bozza(&p.dati, &p.disposizioni, p.turno, &valori, true)
             .unwrap()
     }
 
