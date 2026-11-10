@@ -1,6 +1,7 @@
 mod comune;
-use comune::{all_opposizione, chiudi_col_bilancio, dati_base, edita};
-use sim_core::elettorato::Condizione;
+use comune::{all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_shock};
+use sim_core::dati::DatiGioco;
+use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::informazione::Acquisto;
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 use sim_core::parlamento::ValoreProposto;
@@ -294,4 +295,133 @@ fn un_test_manomesso_nel_salvataggio_e_rifiutato() {
     })
     .unwrap_err();
     assert!(e.to_string().contains("acquisti.test.reazioni"), "{e}");
+}
+
+/// L'oracolo della reazione vera: la partita vera senza shock né derive, con la bozza messa in
+/// vigore prima della chiusura (come `entra_in_vigore` nell'aula dello stesso turno), chiusa
+/// `orizzonte_test` volte contro una gemella senza bozza; Δ della somma dei giudizi sui partiti
+/// di governo, per condizione, pesata con gli elettori del turno zero.
+fn oracolo(d: &str, g: &str) -> ([f64; 6], [(f64, f64); 6]) {
+    let dati = DatiGioco::da_testi(&senza_shock()).unwrap();
+    let (k, gamma) = (
+        dati.disposizione(d).unwrap(),
+        dati.manopola("peso_giudizio"),
+    );
+    let gradino = dati.disposizioni()[k].gradino(g).unwrap();
+    let turni = dati.manopola("orizzonte_test") as usize;
+    let p = Partita::nuova(dati.clone(), 1);
+    let vere = p.reazioni_vere(&v(d, g)).unwrap();
+    let chiusa = |con: bool| {
+        let mut q = edita(&p, |j| {
+            if con {
+                j["disposizioni"]["voci"][k]["in_vigore"] = gradino.into();
+                j["disposizioni"]["voci"][k]["in_arrivo"] = serde_json::json!([]);
+            }
+        })
+        .unwrap();
+        for _ in 0..turni {
+            ferma_tutti(&mut q);
+            chiudi_col_bilancio(&mut q);
+        }
+        assert_eq!(q.governo(), p.governo());
+        q
+    };
+    let (con, senza) = (chiusa(true), chiusa(false));
+    let governo: Vec<usize> = (0..p.partiti().len())
+        .filter(|&j| p.governo().al_governo(j))
+        .collect();
+    let mut somme = [(0.0, 0.0); 6];
+    let coppie = (con.elettorato().gruppi.iter()).zip(&senza.elettorato().gruppi);
+    for (i, (a, b)) in coppie.enumerate() {
+        let w = p.elettorato().elettori(dati.elettorato(), i);
+        let s = &mut somme[condizione_di(i) as usize];
+        s.0 += w;
+        s.1 += w * governo
+            .iter()
+            .map(|&j| a.giudizio[j] - b.giudizio[j])
+            .sum::<f64>();
+    }
+    (somme.map(|(w, x)| gamma * x / w), vere)
+}
+
+#[test]
+fn la_reazione_vera_coincide_con_la_partita_chiusa() {
+    for (d, g) in [
+        ("regime_pensioni", "retributivo"),
+        ("indicizzazione_pensioni", "piena"),
+        ("indicizzazione_pensioni", "bloccata_sopra_soglia"),
+    ] {
+        let (attesa, vere) = oracolo(d, g);
+        for (a, (vera, _)) in attesa.iter().zip(vere) {
+            assert!((a - vera).abs() <= 1e-5, "{d} {g}: {attesa:?} {vere:?}");
+        }
+    }
+}
+
+fn rifiuto(p: &mut Partita, valori: &[ValoreProposto]) -> String {
+    p.comanda(test_di(valori)).unwrap_err().to_string()
+}
+
+#[test]
+fn il_test_rifiuta_doppio_e_senza_cassa_prima_della_bozza() {
+    let valori = v("regime_pensioni", "retributivo");
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(test_di(&valori)).unwrap();
+    let prima = p.salva().unwrap();
+    assert_eq!(
+        rifiuto(&mut p, &valori),
+        "comando non ammesso: già comprato questo turno: test di una misura"
+    );
+    assert_eq!(p.salva().unwrap(), prima);
+
+    let mut p = con_cassa(&Partita::nuova(dati_base(), 1), PREZZO_TEST - 1);
+    let prima = p.salva().unwrap();
+    for valori in [valori, v("eta_pensionabile", "67")] {
+        let e = rifiuto(&mut p, &valori);
+        assert!(
+            e.ends_with("cassa insufficiente: servono 20.000 euro"),
+            "{e}"
+        );
+    }
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn il_test_rifiuta_cio_che_il_mes_vincola() {
+    let dati = dati_base();
+    let c = &dati.condizionalita()[0];
+    let k = dati.disposizione(&c.disposizione).unwrap();
+    let x = &dati.disposizioni()[k];
+    let vincolato = x.gradino(&c.gradino).unwrap();
+    let altro = &x.gradini[(vincolato + 1) % x.gradini.len()].id;
+    // Tutta la condizionalità ai gradini del memorandum, come la mette la risposta all'evento.
+    let mut p = edita(&Partita::nuova(dati_base(), 1), |j| {
+        j["economia"]["programma_mes"] = 8.into();
+        for c in dati.condizionalita() {
+            let k = dati.disposizione(&c.disposizione).unwrap();
+            let g = dati.disposizioni()[k].gradino(&c.gradino).unwrap();
+            j["disposizioni"]["voci"][k]["in_vigore"] = g.into();
+            j["disposizioni"]["voci"][k]["in_arrivo"] = serde_json::json!([]);
+        }
+    })
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let e = rifiuto(&mut p, &v(&x.id, altro));
+    let atteso = format!(
+        "{}: vincolo del memorandum del MES, fino al turno 8",
+        x.nome
+    );
+    assert!(e.ends_with(&atteso), "{e}");
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+/// Ruling 64: il test non entra in calendario, quindi la crisi non lo ferma (l'anteprima sì).
+#[test]
+fn il_test_si_compra_anche_in_crisi() {
+    let valori = v("regime_pensioni", "retributivo");
+    let p = Partita::nuova(dati_base(), 1);
+    let mut p = edita(&p, |j| j["legislatura"]["crisi"] = 0.into()).unwrap();
+    assert!(p.anteprima(&valori).is_err());
+    p.comanda(test_di(&valori)).unwrap();
+    assert!(p.vista().acquisti.test_misura.is_some());
 }

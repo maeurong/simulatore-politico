@@ -1052,7 +1052,7 @@ impl Partita {
 
     /// Il pezzo di motore della chiusura: misure, economia, grandezze, redditi, giudizio e
     /// composizione, con le cinque innovazioni dell'economia. Senza `caso` niente shock né deriva
-    /// casuale, e le innovazioni sono zero (`proietta`).
+    /// casuale, e le innovazioni sono zero (`avanza_copia`).
     fn motore(&mut self, con_caso: bool) -> [f64; 5] {
         let nuove = Misure::da(
             &self.dati,
@@ -1098,8 +1098,11 @@ impl Partita {
 
     /// Una copia della partita dopo `turni` chiusure del solo `motore`, senza caso, con gli arrivi
     /// delle disposizioni; con la `bozza` entrata in vigore prima, come approvata ora. La partita
-    /// non cambia.
-    pub(crate) fn proietta(&self, turni: u32, bozza: Option<&Misura>) -> Partita {
+    /// non cambia. Rispetto a `chiudi_turno` salta eventi, scandali, `ministri.esegui`, aula,
+    /// campagna, situazioni, crisi del debito ed elezioni dentro l'orizzonte, e tiene fissi governo
+    /// e presidente: il confronto di due copie è l'effetto della sola bozza in un mondo senza
+    /// altri fatti.
+    pub(crate) fn avanza_copia(&self, turni: u32, bozza: Option<&Misura>) -> Partita {
         let mut p = self.clone();
         if let Some(m) = bozza {
             p.entra_in_vigore(m);
@@ -1121,31 +1124,42 @@ impl Partita {
     }
 
     /// Per condizione, nell'ordine di `Condizione::TUTTE`: la reazione vera alla bozza `m` dopo
-    /// `orizzonte_test` turni (`peso_giudizio` per la differenza del giudizio sul presidente con
-    /// e senza la bozza, media dei gruppi pesata con gli elettori di ora) e la quota degli
-    /// elettori.
+    /// `orizzonte_test` turni (`peso_giudizio` per la differenza, con e senza la bozza, della
+    /// somma dei giudizi sui partiti di governo, media dei gruppi pesata con gli elettori di ora)
+    /// e la quota degli elettori.
     fn reazioni(&self, m: &Misura) -> [(f64, f64); 6] {
         let turni = self.dati.manopola("orizzonte_test").round() as u32;
-        let (con, senza) = (self.proietta(turni, Some(m)), self.proietta(turni, None));
-        let (d, pres) = (self.dati.elettorato(), self.governo.presidente);
+        let (con, senza) = (
+            self.avanza_copia(turni, Some(m)),
+            self.avanza_copia(turni, None),
+        );
+        let d = self.dati.elettorato();
+        let governo: Vec<usize> = (0..self.partiti.len())
+            .filter(|&j| self.governo.al_governo(j))
+            .collect();
         let mut somme = [(0.0, 0.0); 6];
         let coppie = (con.elettorato.gruppi.iter()).zip(&senza.elettorato.gruppi);
         for (i, (a, b)) in coppie.enumerate() {
             let w = self.elettorato.elettori(d, i);
             let s = &mut somme[condizione_di(i) as usize];
             s.0 += w;
-            s.1 += w * (a.giudizio[pres] - b.giudizio[pres]);
+            s.1 += w * governo
+                .iter()
+                .map(|&j| a.giudizio[j] - b.giudizio[j])
+                .sum::<f64>();
         }
         let totale: f64 = somme.iter().map(|s| s.0).sum();
         let gamma = self.dati.manopola("peso_giudizio");
         somme.map(|(w, x)| (if w > 0.0 { gamma * x / w } else { 0.0 }, w / totale))
     }
 
-    /// Le reazioni vere e le quote del test della bozza `valori` (`reazioni`): le leggono i
-    /// test, mai la vista.
+    /// Le reazioni vere e le quote del test della bozza `valori` (`reazioni`). Solo per i test
+    /// d'integrazione, che non vedono il `pub(crate)`: la cifra vera non va mai alla vista né
+    /// all'app.
     ///
     /// # Errors
     /// Quelli di `Compra` col test, tranne doppio acquisto e cassa.
+    #[doc(hidden)]
     pub fn reazioni_vere(&self, valori: &[ValoreProposto]) -> Result<[(f64, f64); 6], Errore> {
         Ok(self.reazioni(&self.bozza_test(valori)?))
     }
@@ -2303,7 +2317,7 @@ impl Partita {
 
     /// `Compra` (scelte 21-23): paga subito dalla cassa del partito del giocatore e registra il
     /// risultato, calcolato sulle intenzioni vere di ora o, per il test, sulle copie di
-    /// `proietta`.
+    /// `avanza_copia`.
     ///
     /// # Errors
     /// `Comando` se il tipo è già stato comprato nel turno o la cassa non basta; per il test,

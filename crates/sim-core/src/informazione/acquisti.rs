@@ -83,7 +83,8 @@ pub struct VistaTest {
 impl VistaTest {
     /// Da `(vera, quota)` per condizione: la stima è `vera + σ·z`, con
     /// `σ = errore_test / √quota` (informazione-a-pagamento.md:54-59) e una `z` di `rng` per
-    /// condizione, in ordine.
+    /// condizione, in ordine. Una condizione senza elettori (quota non positiva o NaN) dà segno 0
+    /// e `Poco`.
     pub(crate) fn stima(
         dati: &DatiGioco,
         mut rng: Estrattore,
@@ -97,7 +98,15 @@ impl VistaTest {
         );
         let reazioni = (Condizione::TUTTE.into_iter().zip(reazioni))
             .map(|(condizione, (vera, quota))| {
-                let stima = vera + errore / quota.sqrt() * rng.normale();
+                let z = rng.normale();
+                if quota.is_nan() || quota <= 0.0 {
+                    return ReazioneStimata {
+                        condizione,
+                        segno: 0,
+                        fascia: Fascia3::Poco,
+                    };
+                }
+                let stima = vera + errore / quota.sqrt() * z;
                 let fascia = match stima.abs() {
                     x if x < poco => Fascia3::Poco,
                     x if x < medio => Fascia3::Medio,
@@ -157,5 +166,70 @@ impl Acquistato {
                 Ok(())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::caso::Caso;
+    use crate::dati::dati_base;
+
+    /// `n` test con le stesse `reazioni`, chiavi `0..n`: la condizione `k` riceve la stessa `z`
+    /// a parità di chiave, qualunque siano vere e quote.
+    fn stime(dati: &DatiGioco, reazioni: [(f64, f64); 6], n: u64) -> Vec<VistaTest> {
+        let caso = Caso::nuovo(1);
+        (0..n)
+            .map(|k| VistaTest::stima(dati, caso.estemporaneo(k), String::new(), reazioni))
+            .collect()
+    }
+
+    #[test]
+    fn i_segni_giusti_crescono_con_la_quota() {
+        let quote = [0.04, 0.09, 0.16, 0.25, 0.36, 0.49];
+        let reazioni = quote.map(|q| (0.05, q));
+        let mut giusti = [0; 6];
+        for t in stime(&dati_base(), reazioni, 20_000) {
+            for (g, r) in giusti.iter_mut().zip(&t.reazioni) {
+                *g += u32::from(r.segno == 1);
+            }
+        }
+        assert!(giusti.windows(2).all(|w| w[0] < w[1]), "{giusti:?}");
+    }
+
+    /// Con le stesse `z`, `|σ₁ z| < s` vale esattamente quando `|σ₂ z| < s · σ₂/σ₁`: con σ come
+    /// `1/√quota` i `Poco` coincidono se la soglia scala di `√(q₁/q₂)`, con σ costante no.
+    #[test]
+    fn la_dispersione_scala_come_uno_su_radice_della_quota() {
+        let poco = |quota: f64, soglia: f64| {
+            let mut dati = dati_base();
+            dati.imposta_manopola("soglia_reazione_poco", soglia);
+            (stime(&dati, [(0.0, quota); 6], 5_000).iter())
+                .flat_map(|t| &t.reazioni)
+                .filter(|r| r.fascia == Fascia3::Poco)
+                .count()
+        };
+        let (q1, q2, s) = (0.04, 0.36, 0.1);
+        let piccola = poco(q1, s);
+        assert!((5_000..25_000).contains(&piccola), "{piccola}");
+        assert!(piccola.abs_diff(poco(q2, s * (q1 / q2).sqrt())) <= 2);
+        assert!(poco(q2, s) > piccola + 5_000);
+    }
+
+    #[test]
+    fn una_condizione_senza_elettori_da_segno_zero_e_poco() {
+        let reazioni = [
+            (0.3, 0.0),
+            (0.3, f64::NAN),
+            (0.3, 0.5),
+            (0.3, -1.0),
+            (0.3, 0.5),
+            (0.3, 0.5),
+        ];
+        let t = &stime(&dati_base(), reazioni, 1)[0];
+        for r in [&t.reazioni[0], &t.reazioni[1], &t.reazioni[3]] {
+            assert_eq!((r.segno, r.fascia), (0, Fascia3::Poco));
+        }
+        assert_eq!(t.reazioni[2].segno, 1);
     }
 }
