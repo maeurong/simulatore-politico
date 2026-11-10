@@ -95,12 +95,12 @@ fn i_dati_viaggiano_nel_salvataggio() {
 }
 
 #[test]
-fn il_salvataggio_porta_lo_schema_12() {
+fn il_salvataggio_porta_lo_schema_15() {
     assert!(
         giocata(1, 0)
             .salva()
             .unwrap()
-            .contains("\"versione_schema\":12")
+            .contains("\"versione_schema\":15")
     );
 }
 

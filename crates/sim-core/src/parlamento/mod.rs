@@ -21,7 +21,7 @@ mod intesa;
 mod regole;
 pub mod voto;
 
-pub(crate) use anteprima::anteprima;
+pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_centro_studi, chiave_test};
 pub use decreti::{Decreto, FondiDecreto};
 pub(crate) use decreti::{ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
@@ -582,7 +582,7 @@ impl Parlamento {
         turno: u32,
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
-        let m = self.bozza(dati, disposizioni, turno, valori)?;
+        let m = self.bozza(dati, disposizioni, turno, valori, true)?;
         let (posti, occupati) = if m.forma == FormaMisura::Costituzionale {
             (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
         } else {
@@ -654,7 +654,7 @@ impl Parlamento {
         promotore: usize,
         valori: &[ValoreProposto],
     ) -> Result<Misura, Errore> {
-        let m = self.bozza(dati, disposizioni, turno, valori)?;
+        let m = self.bozza(dati, disposizioni, turno, valori, true)?;
         if m.forma == FormaMisura::Costituzionale {
             return ko("una norma costituzionale non entra nel posto riservato".into());
         }
@@ -686,7 +686,8 @@ impl Parlamento {
     }
 
     /// La misura che `PresentaLegge` metterebbe in calendario, con tutte le sue regole tranne il
-    /// posto in calendario; non tocca nulla.
+    /// posto in calendario; non tocca nulla. Senza `calendario` (il test di una misura, che non
+    /// entra in calendario) salta i rifiuti «già in esame» e «respinta da poco».
     ///
     /// # Errors
     /// `Comando`, nell'ordine: legge vuota, disposizione sconosciuta, ripetuta, gradino
@@ -699,6 +700,7 @@ impl Parlamento {
         disposizioni: &Disposizioni,
         turno: u32,
         valori: &[ValoreProposto],
+        calendario: bool,
     ) -> Result<Misura, Errore> {
         let catalogo = dati.disposizioni();
         if valori.is_empty() {
@@ -754,10 +756,10 @@ impl Parlamento {
                     "{nome}: il gradino «{gradino}» è bloccato dal referendum"
                 ));
             }
-            if self.in_esame(d) {
+            if calendario && self.in_esame(d) {
                 return ko(format!("{nome} è già in esame"));
             }
-            if let Some(da) = self.respinta_da_poco(d, turno) {
+            if calendario && let Some(da) = self.respinta_da_poco(d, turno) {
                 return ko(format!(
                     "{nome}: legge respinta, si ripresenta da {}",
                     mese(data_di(da))

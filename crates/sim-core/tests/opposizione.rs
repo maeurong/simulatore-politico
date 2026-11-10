@@ -1,5 +1,8 @@
 mod comune;
-use comune::{all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, fondata};
+use comune::{
+    all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, fondata,
+    togli_eventi_nati,
+};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
@@ -278,6 +281,9 @@ fn la_proposta_dell_opposizione_va_al_voto_senza_costi() {
     let mut attesa = p.partiti()[pdc].valence;
     let mut chiudi = |p: &mut Partita| {
         let data = p.vista().data;
+        // Gli eventi nati nella chiusura prima si chiuderebbero ora con la loro valence: qui si
+        // misurano le leggi.
+        togli_eventi_nati(p);
         chiudi_senza_opposizione_ia(p);
         let perso: f64 = (p.vista().esiti.iter())
             .filter(|e| e.data == data && e.misura != id && !e.approvata)

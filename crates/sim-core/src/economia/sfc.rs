@@ -1,8 +1,8 @@
 //! Conti a quattro settori (famiglie, imprese, Stato, estero), senza banche. Ogni flusso compare
 //! con segni opposti in due settori, perciò la somma dei saldi fa zero: è il controllo di chiusura.
 
-use super::Economia;
 use super::finanza::{MLD, euro};
+use super::{Economia, Ristrutturazione};
 use crate::dati::DatiGioco;
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +46,32 @@ impl Sfc {
 }
 
 impl Economia {
+    /// Taglia il debito di `taglio` (quota): lo Stato guadagna lo stesso importo, che esce dagli
+    /// stock positivi di famiglie, estero e imprese in proporzione; il resto dell'arrotondamento
+    /// alle famiglie. Gli stock restano a somma zero e lo Stato a `−debito`.
+    pub(crate) fn ristruttura(&mut self, turno: u32, taglio: f64, premio: f64) {
+        // Un salvataggio può allargare min e max della manopola: il taglio resta una quota.
+        let t = euro(self.debito as f64 * taglio.clamp(0.0, 1.0)).max(0);
+        let s = &mut self.sfc.stock;
+        let positivi = [s.famiglie, s.estero, s.imprese].map(|x| x.max(0));
+        let totale: i128 = positivi.iter().map(|&x| i128::from(x)).sum();
+        // Cast senza perdita: `q ≤ t` perché `x ≤ totale`. E `t ≤ totale dei positivi` con stock
+        // coerenti: stato = −debito e somma zero danno famiglie + estero + imprese = debito, e i
+        // positivi sommano almeno il debito, che è almeno `t`.
+        let quote = positivi.map(|x| {
+            (i128::from(t) * i128::from(x))
+                .checked_div(totale)
+                .map_or(0, |q| q as i64)
+        });
+        let resto = t.saturating_sub(quote.iter().fold(0, |a: i64, &q| a.saturating_add(q)));
+        s.famiglie = s.famiglie.saturating_sub(quote[0].saturating_add(resto));
+        s.estero = s.estero.saturating_sub(quote[1]);
+        s.imprese = s.imprese.saturating_sub(quote[2]);
+        s.stato = s.stato.saturating_add(t);
+        self.debito = self.debito.saturating_sub(t);
+        self.ristrutturazione = Some(Ristrutturazione { turno, premio });
+    }
+
     /// Somma dei quattro saldi del turno: zero se la contabilità è chiusa.
     pub fn residuo_sfc(&self) -> i64 {
         self.sfc.saldi.somma()
@@ -120,5 +146,44 @@ impl Economia {
             estero: self.sfc.stock.estero + saldi.estero,
         };
         self.sfc.saldi = saldi;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    fn ristrutturata(debito: i64, f: i64, i: i64, e: i64) -> Economia {
+        let mut x = Economia::iniziale(&dati_base());
+        x.debito = debito;
+        x.sfc.stock = Settori {
+            famiglie: f,
+            imprese: i,
+            stato: -debito,
+            estero: e,
+        };
+        x.ristruttura(3, 0.5, 300.0);
+        x
+    }
+
+    #[test]
+    fn il_taglio_tiene_gli_stock_a_somma_zero() {
+        // Estero negativo (esclusa dal taglio), imprese positive, un arrotondamento dispari,
+        // e il debito zero.
+        for (debito, f, i, e) in [
+            (1001, 1500, 500, -999),
+            (1001, 1001, 0, 0),
+            (7, 1, 1, 5),
+            (0, 0, 0, 0),
+        ] {
+            let x = ristrutturata(debito, f, i, e);
+            assert_eq!(x.sfc.stock.stato, -x.debito, "{debito}");
+            assert_eq!(x.residuo_stock(), 0, "{debito}");
+            assert_eq!(x.debito, debito - (debito as f64 * 0.5).round() as i64);
+            if e < 0 {
+                assert_eq!(x.sfc.stock.estero, e, "lo stock negativo non paga");
+            }
+        }
     }
 }

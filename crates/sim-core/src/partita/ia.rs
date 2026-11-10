@@ -575,12 +575,14 @@ impl Partita {
                 .get(i)
                 .map_or(0, |d| d.peso_spartizione)
         };
-        let individuale = || {
+        let individuale = |scandalo: bool| {
             let (i, m) = (self.ministri.dicasteri.iter().enumerate())
                 .filter_map(|(i, st)| Some((i, st.ministro.as_ref()?)))
                 .filter(|(_, m)| !in_ultimatum.contains(&m.partito))
                 .min_by(|&(a, x), &(b, y)| {
-                    (giudizio(x.partito).total_cmp(&giudizio(y.partito)))
+                    // Prima chi è sotto scandalo (se `scandalo`), poi il giudizio peggiore.
+                    ((scandalo && y.sotto_scandalo > 0).cmp(&(scandalo && x.sotto_scandalo > 0)))
+                        .then(giudizio(x.partito).total_cmp(&giudizio(y.partito)))
                         .then(peso(b).cmp(&peso(a)))
                 })?;
             let nome = &self.dati.dicasteri().get(i)?.nome;
@@ -593,7 +595,8 @@ impl Partita {
         };
         let scelta = match motivo(None).filter(|_| !self.rinascerebbe_uguale()) {
             Some(m) => Some((None, format!("Presenta la sfiducia al governo: {m}"))),
-            None => individuale(),
+            // Se la sfiducia sul ministro sotto scandalo non passa, ripiega sul giudizio peggiore.
+            None => individuale(true).or_else(|| individuale(false)),
         };
         if let Some((dicastero, testo)) = scelta {
             self.parlamento.sfiducia = Some((dicastero, promotore));
@@ -1025,7 +1028,8 @@ impl Partita {
     /// Il bilancio del governo IA, la quota e la riga (scelta 10 del piano): la bozza coi budget
     /// dei dicasteri indicizzati della quota più alta che tiene la crescita della spesa netta
     /// entro il tetto UE (bisezione in 20 passi; quota 0 se nemmeno la bozza ci sta), poi i
-    /// dicasteri degli alleati in ultimatum indicizzati per intero, anche oltre il tetto. La riga
+    /// dicasteri degli alleati in ultimatum indicizzati per intero, anche oltre il tetto UE ma non
+    /// oltre quello del programma del MES in corso, che li lascerebbe fuori tutti. La riga
     /// dice entro od oltre il tetto sul bilancio finale; niente, se il riepilogo non si calcola.
     /// La quota serve solo ai test. `None` senza bozza o se l'indicizzazione fallisce.
     pub(super) fn bilancio_ia(&self) -> Option<(Bilancio, f64, String)> {
@@ -1039,20 +1043,7 @@ impl Partita {
                     .map_or(true, |r| r.crescita_spesa_netta <= r.tetto)
             })
         };
-        let quota = if entro(1.0) {
-            1.0
-        } else {
-            let (mut sotto, mut sopra) = (0.0, 1.0);
-            for _ in 0..20 {
-                let q = f64::midpoint(sotto, sopra);
-                if entro(q) {
-                    sotto = q;
-                } else {
-                    sopra = q;
-                }
-            }
-            sotto
-        };
+        let quota = quota_massima(entro);
         let mut b = con(quota)?;
         let richiedenti = self.alleati_in_ultimatum();
         let dicasteri_di = |j: usize| {
@@ -1063,8 +1054,13 @@ impl Partita {
         let k: Vec<usize> = richiedenti.iter().flat_map(|&j| dicasteri_di(j)).collect();
         // Solo gli alleati le cui voci l'indicizzazione piena cambia davvero.
         let mut nomi = Vec::new();
-        if !k.is_empty() {
-            let pieno = self.indicizza_dicasteri(&b, &k).ok()?;
+        let pieno = if k.is_empty() {
+            None
+        } else {
+            Some(self.indicizza_dicasteri(&b, &k).ok()?)
+        };
+        // Col programma del MES in corso gli ultimatum non portano oltre il suo tetto.
+        if let Some(pieno) = pieno.filter(|x| self.oltre_il_tetto_mes(x).is_none()) {
             let spesa = |x: &Bilancio, k: usize| x.dicasteri.get(k).map(|d| d.spesa);
             for &j in &richiedenti {
                 if dicasteri_di(j).any(|k| spesa(&b, k) != spesa(&pieno, k))
@@ -1089,6 +1085,24 @@ impl Partita {
         }
         Some((b, quota, testo))
     }
+}
+
+/// La quota più alta in [0, 1] per cui vale `entro`, che si suppone vero a 0: 1 se vale lì,
+/// altrimenti bisezione in 20 passi.
+pub(super) fn quota_massima(entro: impl Fn(f64) -> bool) -> f64 {
+    if entro(1.0) {
+        return 1.0;
+    }
+    let (mut sotto, mut sopra) = (0.0, 1.0);
+    for _ in 0..20 {
+        let q = f64::midpoint(sotto, sopra);
+        if entro(q) {
+            sotto = q;
+        } else {
+            sopra = q;
+        }
+    }
+    sotto
 }
 
 /// I nomi in elenco: «A», «A e B», «A, B e C».

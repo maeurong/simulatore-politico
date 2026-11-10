@@ -346,6 +346,14 @@ pub(crate) fn valida(
     regioni: &[Regione],
 ) -> Result<(), Errore> {
     let ko = |m: String| Err(Errore::Disposizioni(m));
+    if 64 * catalogo.len() as u64 >= crate::parlamento::CHIAVE_ATTI {
+        return ko(format!(
+            "{} disposizioni, il limite è {}: le chiavi dell'anteprima sono 64·d + g sotto {}",
+            catalogo.len(),
+            (crate::parlamento::CHIAVE_ATTI - 1) / 64,
+            crate::parlamento::CHIAVE_ATTI
+        ));
+    }
     for (i, d) in catalogo.iter().enumerate() {
         let id = &d.id;
         if catalogo[..i].iter().any(|p| p.id == *id) {
@@ -492,6 +500,25 @@ mod tests {
         valida(catalogo, d.dicasteri(), d.grandezze(), d.regioni())
             .unwrap_err()
             .to_string()
+    }
+
+    /// Il tetto delle chiavi dell'anteprima sul confine: con 7812 disposizioni il rifiuto è il
+    /// successivo, perché le copie si ripetono.
+    #[test]
+    fn il_tetto_delle_disposizioni_sta_sul_confine_delle_chiavi() {
+        let primo = dati_base().disposizioni()[0].clone();
+        assert_eq!(
+            rifiuto(&vec![primo.clone(); 7813]),
+            "disposizioni non valide: 7813 disposizioni, il limite è 7812: le chiavi \
+             dell'anteprima sono 64·d + g sotto 500000"
+        );
+        assert_eq!(
+            rifiuto(&vec![primo.clone(); 7812]),
+            format!(
+                "disposizioni non valide: disposizione ripetuta: {}",
+                primo.id
+            )
+        );
     }
 
     #[test]

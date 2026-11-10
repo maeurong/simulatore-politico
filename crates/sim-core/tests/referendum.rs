@@ -1,7 +1,8 @@
 mod comune;
 use comune::{
     al_governo, all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo,
-    con_seggi, dati_base, edita, imposta, partito, presenta, senza_shock, sostituisci,
+    con_seggi, dati_base, edita, imposta, partito, presenta, senza_emergenze, senza_shock,
+    sostituisci,
 };
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::parlamento::{FormaMisura, TipoReferendum};
@@ -427,7 +428,8 @@ fn senza_gruppi_toccati_l_affluenza_dell_abrogativo_resta_bassa() {
 #[test]
 fn abrogazione_approvata_costa_a_tutta_la_coalizione() {
     let prima = Partita::nuova(DatiGioco::da_testi(&senza_shock()).unwrap(), 1);
-    let p = al_voto(abrogazione_che_vince("-5.0"));
+    // Senza emergenze: la risposta del governo muove la valence del suo partito.
+    let p = al_voto(senza_emergenze(abrogazione_che_vince("-5.0")));
     let persa = |id: &str| {
         let v = |q: &Partita| q.partiti().iter().find(|x| x.id == id).unwrap().valence;
         v(&prima) - v(&p)

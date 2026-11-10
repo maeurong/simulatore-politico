@@ -25,6 +25,7 @@ pub enum CausaIntesa {
     RotturaImpegno,
     SfiduciaRespinta,
     Promessa,
+    ProgrammaMes,
 }
 
 impl fmt::Display for CausaIntesa {
@@ -42,6 +43,7 @@ impl fmt::Display for CausaIntesa {
             Self::RotturaImpegno => "rottura dell'impegno pre-elettorale",
             Self::SfiduciaRespinta => "sfiducia respinta",
             Self::Promessa => "promessa che non condivide",
+            Self::ProgrammaMes => "programma del MES",
         })
     }
 }

@@ -15,7 +15,8 @@ fn con_evento_di_prova() -> Partita {
 fn con_evento(p: Partita) -> Partita {
     let evento = dati_base().evento("criminalita").unwrap();
     edita(&p, |j| {
-        j["eventi"]["aperti"] = json!([{
+        // In testa (indice 0), davanti a quelli che il caso ha già aperto (le emergenze).
+        let prova = json!({
             "evento": evento,
             "turno": p.vista().turno,
             "causa": { "tipo": "soglia", "misura": "sicurezza", "valore": 80.0, "soglia": 85.0 },
@@ -24,7 +25,11 @@ fn con_evento(p: Partita) -> Partita {
             "tono": "ordinario",
             "costo": 0,
             "scelta": null,
-        }]);
+        });
+        j["eventi"]["aperti"]
+            .as_array_mut()
+            .unwrap()
+            .insert(0, prova);
     })
     .unwrap()
 }
@@ -49,11 +54,12 @@ fn sicurezza(p: &Partita) -> f64 {
 fn senza_scelta_vale_il_default() {
     let mut p = con_evento_di_prova();
     let mut q = al_governo();
-    assert_eq!(p.vista().eventi.len(), 1);
+    assert_eq!(p.vista().eventi[0].nome, "Ondata di criminalità");
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut q);
-    assert!(p.vista().eventi.is_empty());
-    // Il default non ha effetti: la partita e' identica a quella senza evento.
+    // L'evento di prova è chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
+    assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
+    // Il default non ha effetti: la partita è identica a quella senza evento.
     assert_eq!(p, q);
 }
 
@@ -132,7 +138,7 @@ fn evento_aperto_sopravvive_al_salvataggio() {
 #[test]
 fn salvataggio_con_eventi_incoerenti_rifiutato() {
     let p = con_evento_di_prova();
-    let guasti: [(&str, Guasto); 6] = [
+    let guasti: [(&str, Guasto); 8] = [
         ("evento", |j| j["eventi"]["aperti"][0]["evento"] = 99.into()),
         ("scelta", |j| j["eventi"]["aperti"][0]["scelta"] = 5.into()),
         ("regione", |j| {
@@ -147,6 +153,13 @@ fn salvataggio_con_eventi_incoerenti_rifiutato() {
         ("contatori", |j| {
             j["eventi"]["contatori"] = json!([0]);
         }),
+        ("troppi aperti", |j| {
+            let primo = j["eventi"]["aperti"][0].clone();
+            (j["eventi"]["aperti"].as_array_mut().unwrap()).resize(1000, primo);
+        }),
+        ("persona senza bersaglio", |j| {
+            j["eventi"]["aperti"][0]["persona"] = json!("Nessuno");
+        }),
     ];
     for (nome, guasto) in guasti {
         let e = edita(&p, guasto).unwrap_err();
@@ -155,4 +168,21 @@ fn salvataggio_con_eventi_incoerenti_rifiutato() {
             "{nome}: {e:?}"
         );
     }
+}
+
+#[test]
+fn sotto_scandalo_oltre_il_massimo_e_rifiutato() {
+    let p = Partita::nuova(dati_base(), 1);
+    let sotto = |turni: u32| {
+        edita(&p, |j| {
+            j["ministri"]["dicasteri"][0]["ministro"]["sotto_scandalo"] = turni.into();
+        })
+    };
+    assert!(sotto(12).is_ok());
+    let e = sotto(13).unwrap_err();
+    assert!(
+        e.to_string()
+            .contains("sotto_scandalo oltre turni_scandalo"),
+        "{e}"
+    );
 }

@@ -4,7 +4,7 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
-use crate::eventi::{DatoEvento, DatoSituazione};
+use crate::eventi::{DatoCondizionalita, DatoEvento, DatoSituazione};
 use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
@@ -69,6 +69,34 @@ impl FileDati {
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
     "spinta_situazione",
+    "soglia_shock",
+    "aiuti_shock",
+    "clausola_energia_margine",
+    "soglia_crisi_debito",
+    "durata_mes",
+    "intesa_mes",
+    "taglio_ristrutturazione",
+    "perdita_ristrutturazione",
+    "turni_ristrutturazione",
+    "premio_ristrutturazione",
+    "prezzo_sondaggio_privato",
+    "moltiplicatore_campione_privato",
+    "riduzione_istituto_privato",
+    "prezzo_test_misura",
+    "errore_test",
+    "orizzonte_test",
+    "soglia_reazione_poco",
+    "soglia_reazione_medio",
+    "prezzo_centro_studi",
+    "quota_errore_centro_studi",
+    "rmse_pil_1",
+    "rmse_pil_4",
+    "rmse_inflazione_1",
+    "rmse_inflazione_4",
+    "rmse_disoccupazione_1",
+    "rmse_disoccupazione_4",
+    "rmse_debito_1",
+    "rmse_debito_4",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",
@@ -268,6 +296,21 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "valence_sfiducia_respinta",
     "soglia_incrinata",
     "soglia_emendamento_bilancio",
+    "emergenze_idro_anno",
+    "siccita_anno",
+    "k_prevenzione_sisma",
+    "k_prevenzione_altre",
+    "costo_emergenza_lieve",
+    "costo_emergenza_grave",
+    "costo_emergenza_vittime",
+    "valence_emergenza_risposta",
+    "valence_emergenza_ignorata",
+    "scandalo_base",
+    "valence_scandalo",
+    "valence_dimissioni_scandalo",
+    "turni_scandalo",
+    "danno_stock_per_miliardo",
+    "emivita_danno",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
@@ -282,6 +325,7 @@ const GRANDEZZE_RICHIESTE: &[(&str, bool)] = &[
     ("efficienza_riscossione", false),
     ("durata_processi", false),
     ("regole_lavoro", false),
+    ("corruzione", false),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -354,6 +398,7 @@ pub struct DatiGioco {
     pub(crate) disposizioni: Vec<DatoDisposizione>,
     pub(crate) eventi: Vec<DatoEvento>,
     pub(crate) situazioni: Vec<DatoSituazione>,
+    pub(crate) condizionalita: Vec<DatoCondizionalita>,
     /// Le differenze dalla base da cui vengono questi dati; `None` per lo scenario di base.
     pub(crate) su_misura: Option<SuMisura>,
 }
@@ -362,6 +407,7 @@ pub struct DatiGioco {
 struct FileEventi {
     evento: Vec<DatoEvento>,
     situazione: Vec<DatoSituazione>,
+    condizionalita: Vec<DatoCondizionalita>,
 }
 
 #[derive(Deserialize)]
@@ -482,6 +528,11 @@ impl DatiGioco {
 
     pub fn situazioni(&self) -> &[DatoSituazione] {
         &self.situazioni
+    }
+
+    /// Le disposizioni che il memorandum del MES vincola, coi gradini a cui le porta.
+    pub fn condizionalita(&self) -> &[DatoCondizionalita] {
+        &self.condizionalita
     }
 
     /// Posizione di un evento per id.
@@ -610,6 +661,7 @@ impl DatiGioco {
         let FileEventi {
             evento: eventi,
             situazione: situazioni,
+            condizionalita,
         } = toml::from_str::<FileEventi>(&file.eventi)
             .map_err(|e| errore_toml("eventi.toml", e))?;
         if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
@@ -641,6 +693,7 @@ impl DatiGioco {
             disposizioni,
             eventi,
             situazioni,
+            condizionalita,
             su_misura: None,
         };
         dati.valida()?;
@@ -809,6 +862,37 @@ impl DatiGioco {
                 "manopola scala_servizio non positiva: {scala}"
             )));
         }
+        for nome in [
+            "prezzo_sondaggio_privato",
+            "prezzo_test_misura",
+            "prezzo_centro_studi",
+        ] {
+            let prezzo = self.manopola(nome);
+            if prezzo <= 0.0 {
+                return Err(Errore::Manopola(format!("{nome} non positivo: {prezzo}")));
+            }
+        }
+        let orizzonte = self.manopola("orizzonte_test");
+        if !(orizzonte.fract() == 0.0 && (1.0..=20.0).contains(&orizzonte)) {
+            return Err(Errore::Manopola(format!(
+                "orizzonte_test non intero fra 1 e 20: {orizzonte}"
+            )));
+        }
+        let (poco, medio) = (
+            self.manopola("soglia_reazione_poco"),
+            self.manopola("soglia_reazione_medio"),
+        );
+        if poco > medio {
+            return Err(Errore::Manopola(format!(
+                "soglia_reazione_poco ({poco}) oltre soglia_reazione_medio ({medio})"
+            )));
+        }
+        let emivita = self.manopola("emivita_danno");
+        if emivita <= 0.0 {
+            return Err(Errore::Eventi(format!(
+                "manopola emivita_danno non positiva: {emivita}"
+            )));
+        }
         self.struttura.valida(&self.regioni, &self.dicasteri)?;
         self.elettorato
             .valida(&self.regioni, &self.dicasteri, self.struttura.settori.len())?;
@@ -824,5 +908,39 @@ impl DatiGioco {
             ))),
             None => Ok(()),
         }
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::MANOPOLE_RICHIESTE;
+
+    /// Ogni lettura letterale di una manopola nei sorgenti del crate è fra le richieste: senza,
+    /// un salvataggio che non la porta passerebbe `valida` e la lettura andrebbe in panico.
+    #[test]
+    fn ogni_manopola_letta_e_richiesta() {
+        let mut da_leggere = vec![std::path::PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src"
+        ))];
+        let mut mancanti = Vec::new();
+        while let Some(p) = da_leggere.pop() {
+            if p.is_dir() {
+                da_leggere.extend(std::fs::read_dir(&p).unwrap().map(|e| e.unwrap().path()));
+                continue;
+            }
+            let testo = std::fs::read_to_string(&p).unwrap();
+            for pezzo in testo.split("manopola(\"").skip(1) {
+                let nome = pezzo.split('"').next().unwrap();
+                if !MANOPOLE_RICHIESTE.contains(&nome) {
+                    mancanti.push(format!("{}: {nome}", p.display()));
+                }
+            }
+        }
+        assert!(mancanti.is_empty(), "{mancanti:?}");
     }
 }

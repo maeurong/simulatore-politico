@@ -4,6 +4,7 @@
 
 use crate::atti::Forma;
 use crate::dati::DatiGioco;
+use crate::disposizioni::Norma;
 use crate::errore::Errore;
 use crate::grandezze::Verso;
 use crate::partita::{LIMITE_EURO, vita::virgola};
@@ -12,7 +13,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
+pub(crate) mod emergenze;
+pub(crate) mod rischio;
 pub(crate) mod situazioni;
+
+/// L'evento della crisi del debito, che il motore apre dallo spread.
+pub(crate) const ASTE_SCOPERTE: &str = "aste_scoperte";
 
 /// Le misure che non sono grandezze ma che il motore calcola: crescita annualizzata vera del PIL
 /// reale ed `Economia.energia`.
@@ -38,8 +44,9 @@ pub enum Tono {
     Grave,
 }
 
-/// Cosa fa un'opzione. `Grandezza` e `Valence` sono gli unici che `valida` ammette finora: gli
-/// altri li applicano i task che li introducono.
+/// Cosa fa un'opzione. `Dimissioni` solo per lo scandalo sul ministro; `FondoRiserva` e `Debito`
+/// al più uno per opzione; `Mes` e `Ristrutturazione` solo sugli eventi del debito,
+/// `ClausolaEnergia` solo sugli shock.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tipo", rename_all = "snake_case")]
 pub enum EffettoOpzione {
@@ -57,11 +64,21 @@ pub enum EffettoOpzione {
     Valence {
         delta: f64,
     },
+    /// Spende il costo dell'evento dal fondo di riserva (fino al residuo dell'anno) sul primo
+    /// dicastero dell'evento, nel turno. Le `Grandezza` che seguono in elenco valgono per la quota
+    /// pagata; l'emergenza ripristina in proporzione il suo danno.
     FondoRiserva,
+    /// Come `FondoRiserva`, ma per intero e a disavanzo.
     Debito,
     Dimissioni,
+    /// Per l'anno in corso aggiunge il margine UE per l'energia (controllo annuale successivo).
+    /// Conta solo dopo `clausola_nazionale_fino_a`, che l'energia la copre già.
     ClausolaEnergia,
+    /// Il programma del MES: dura `durata_mes` turni, mette in vigore la condizionalità e costa
+    /// `intesa_mes` a ogni alleato.
     Mes,
+    /// Taglia il debito di `taglio_ristrutturazione`, con perdita di reddito ai detentori e un
+    /// premio sullo spread che si dimezza con l'emivita della ristrutturazione.
     Ristrutturazione,
 }
 
@@ -81,12 +98,23 @@ pub struct DatoEvento {
     pub nome: String,
     /// Nel tetto di un evento a turno vince la gravità più alta.
     pub gravita: u8,
-    /// Dicasteri (id) le cui disposizioni ordinarie il decreto innescato ammette.
+    /// Dicasteri (id): il decreto innescato ne ammette le disposizioni ordinarie solo se `norme`
+    /// è vuota.
     pub dicasteri: Vec<String>,
+    /// Disposizioni (id) che il decreto innescato ammette; vuota = tutte le ordinarie dei
+    /// `dicasteri`.
+    pub norme: Vec<String>,
     pub decreto: bool,
     /// Fra le opzioni c'è il decreto a debito.
     pub debito: bool,
     pub opzioni: Vec<DatoOpzione>,
+}
+
+/// Una disposizione che il memorandum del MES porta a un gradino e tiene lì finché dura.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DatoCondizionalita {
+    pub disposizione: String,
+    pub gradino: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -122,6 +150,8 @@ pub enum Causa {
     Shock {
         serie: String,
         sigma: f64,
+        /// La `soglia_shock` letta alla nascita, in sigma.
+        soglia: f64,
     },
     Spread {
         pb: i32,
@@ -158,7 +188,15 @@ impl Causa {
                     Fascia3::Molto => "alto",
                 }
             ),
-            Causa::Shock { serie, sigma } => format!("{serie}: shock di {} sigma", virgola(*sigma)),
+            Causa::Shock {
+                serie,
+                sigma,
+                soglia,
+            } => format!(
+                "{serie}: shock di {} sigma (soglia {} sigma)",
+                virgola(*sigma),
+                virgola(*soglia)
+            ),
             Causa::Spread { pb, soglia } => format!("spread a {pb} pb (soglia {soglia} pb)"),
         }
     }
@@ -179,6 +217,9 @@ pub struct EventoAperto {
     pub causa: Causa,
     pub regione: Option<usize>,
     pub bersaglio: Option<Bersaglio>,
+    /// Il nome di chi era il bersaglio alla nascita (ministro o leader): se alla chiusura il posto è
+    /// di un altro, lo scandalo si chiude senza effetti. `None` = non verificato.
+    pub persona: Option<String>,
     pub tono: Tono,
     /// Euro.
     pub costo: i64,
@@ -199,15 +240,21 @@ impl EventoAperto {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Eventi {
     pub aperti: Vec<EventoAperto>,
+    /// Emergenze lievi nate in questa chiusura: non sono eventi (il giocatore non le vede), le
+    /// paga il fondo alla chiusura dopo, nel trimestre in cui la spesa cade.
+    pub lievi: Vec<EventoAperto>,
     pub accese: Vec<bool>,
     /// Trimestri consecutivi dalla parte giusta della soglia (la recessione ne conta due).
     pub contatori: Vec<u8>,
 }
 
-/// Cosa innesca il decreto su disposizioni: i dicasteri (indici) degli eventi aperti che lo
-/// ammettono.
+/// Cosa innesca il decreto su disposizioni: i dicasteri (indici) e le disposizioni (indici di
+/// catalogo) degli eventi aperti che lo ammettono.
 pub(crate) struct Inneschi {
     pub dicasteri: Vec<usize>,
+    pub disposizioni: Vec<usize>,
+    /// Un evento del debito con decreto è aperto: passa ogni disposizione ordinaria.
+    pub tutte: bool,
 }
 
 impl Eventi {
@@ -223,19 +270,30 @@ impl Eventi {
     }
 
     pub(crate) fn inneschi(&self, dati: &DatiGioco) -> Inneschi {
-        let dicasteri = (self.aperti.iter())
-            .filter_map(|a| dati.eventi().get(a.evento))
-            .filter(|e| e.decreto)
+        let aperti = || {
+            (self.aperti.iter())
+                .filter_map(|a| dati.eventi().get(a.evento))
+                .filter(|e| e.decreto)
+        };
+        let dicasteri = (aperti().filter(|e| e.norme.is_empty()))
             .flat_map(|e| &e.dicasteri)
             .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
             .collect();
-        Inneschi { dicasteri }
+        let disposizioni = (aperti().flat_map(|e| &e.norme))
+            .filter_map(|id| dati.disposizione(id))
+            .collect();
+        Inneschi {
+            dicasteri,
+            disposizioni,
+            tutte: aperti().any(|e| e.famiglia == Famiglia::Debito),
+        }
     }
 
     pub fn iniziali(dati: &DatiGioco) -> Eventi {
         let n = dati.situazioni().len();
         Eventi {
             aperti: Vec::new(),
+            lievi: Vec::new(),
             accese: vec![false; n],
             contatori: vec![0; n],
         }
@@ -270,12 +328,20 @@ impl Eventi {
         if self.accese.len() != n || self.contatori.len() != n {
             return ko("accese e contatori non combaciano con le situazioni dei dati");
         }
-        for a in &self.aperti {
+        if self.aperti.len() > dati.eventi().len() || self.lievi.len() > dati.regioni().len() * 4 {
+            return ko(
+                "più eventi aperti di quanti il catalogo e le regioni ne possano far nascere",
+            );
+        }
+        for a in self.aperti.iter().chain(&self.lievi) {
             let Some(e) = dati.eventi().get(a.evento) else {
                 return ko("evento aperto fuori dal catalogo");
             };
             if a.scelta.is_some_and(|k| k >= e.opzioni.len()) {
                 return ko("scelta fuori dalle opzioni dell'evento");
+            }
+            if a.persona.is_some() && a.bersaglio.is_none() {
+                return ko("persona senza bersaglio");
             }
             if a.regione.is_some_and(|r| r >= dati.regioni().len()) {
                 return ko("regione fuori dai dati");
@@ -290,7 +356,7 @@ impl Eventi {
             }
             let causa_ok = match &a.causa {
                 Causa::Soglia { valore, soglia, .. } => valore.is_finite() && soglia.is_finite(),
-                Causa::Shock { sigma, .. } => sigma.is_finite(),
+                Causa::Shock { sigma, soglia, .. } => sigma.is_finite() && soglia.is_finite(),
                 Causa::Rischio { .. } | Causa::Spread { .. } => true,
             };
             if !causa_ok || a.turno > turno || !(0..=LIMITE_EURO).contains(&a.costo) {
@@ -317,6 +383,12 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                 e.opzioni.len()
             ));
         }
+        if matches!(e.famiglia, Famiglia::Emergenza | Famiglia::Scandalo) && e.gravita >= 10 {
+            return ko(format!(
+                "{nome}: la gravità di emergenze e scandali sta sotto 10, è {}",
+                e.gravita
+            ));
+        }
         let default = e.opzioni.iter().filter(|o| o.default).count();
         if default != 1 {
             return ko(format!(
@@ -330,13 +402,131 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
         {
             return ko(format!("{nome}: dicastero sconosciuto {id}"));
         }
+        if !e.norme.is_empty() && !e.decreto {
+            return ko(format!("{nome}: norme per il decreto senza decreto"));
+        }
+        if e.famiglia == Famiglia::Emergenza && e.decreto && e.norme.is_empty() {
+            return ko(format!(
+                "{nome}: un'emergenza con decreto deve elencare le sue norme"
+            ));
+        }
+        if !e.norme.is_empty() && dati.situazioni().iter().any(|s| s.evento == e.id) {
+            return ko(format!(
+                "{nome}: un evento di situazione apre il suo ministero, niente norme per il decreto"
+            ));
+        }
+        if e.famiglia == Famiglia::Debito && e.decreto && !e.norme.is_empty() {
+            return ko(format!(
+                "{nome}: un evento del debito apre ogni riforma, niente norme per il decreto"
+            ));
+        }
+        for (k, id) in e.norme.iter().enumerate() {
+            if e.norme[..k].contains(id) {
+                return ko(format!("{nome}: norma ripetuta: {id}"));
+            }
+            let Some(d) = dati
+                .disposizione(id)
+                .and_then(|j| dati.disposizioni().get(j))
+            else {
+                return ko(format!("{nome}: norma sconosciuta per il decreto: {id}"));
+            };
+            if d.norma != Norma::Ordinaria {
+                return ko(format!(
+                    "{nome}: la norma {id} non è ordinaria, il decreto non la ammette"
+                ));
+            }
+        }
         for (k, o) in e.opzioni.iter().enumerate() {
             if e.opzioni[..k].iter().any(|p| p.id == o.id) {
                 return ko(format!("{nome}: opzione ripetuta {}", o.id));
             }
+            let spende = |x: &EffettoOpzione| {
+                matches!(x, EffettoOpzione::FondoRiserva | EffettoOpzione::Debito)
+            };
+            if o.effetti.iter().filter(|x| spende(x)).count() > 1 {
+                return ko(format!(
+                    "{nome}: l'opzione {} ha più di un effetto di spesa",
+                    o.id
+                ));
+            }
+            if o.effetti.iter().any(spende) && e.dicasteri.is_empty() {
+                return ko(format!(
+                    "{nome}: l'opzione {} spende dal primo dicastero e l'evento non ne ha",
+                    o.id
+                ));
+            }
             for effetto in &o.effetti {
                 valida_effetto(dati, nome, effetto)?;
+                // Lo scandalo lo risolve `risolvi_scandalo`: ammette solo le dimissioni del ministro.
+                let ammesso =
+                    *effetto == EffettoOpzione::Dimissioni && e.id != rischio::SCANDALI[1];
+                if e.famiglia == Famiglia::Scandalo && !ammesso {
+                    return ko(format!(
+                        "{nome}: lo scandalo ammette solo le dimissioni, e solo sul ministro"
+                    ));
+                }
+                let fuori_posto = match effetto {
+                    EffettoOpzione::Mes | EffettoOpzione::Ristrutturazione
+                        if e.famiglia != Famiglia::Debito =>
+                    {
+                        Some("il MES e la ristrutturazione stanno solo sugli eventi del debito")
+                    }
+                    EffettoOpzione::ClausolaEnergia if e.famiglia != Famiglia::Shock => {
+                        Some("la clausola per l'energia sta solo sugli shock")
+                    }
+                    _ => None,
+                };
+                if let Some(m) = fuori_posto {
+                    return ko(format!("{nome}: {m}"));
+                }
             }
+        }
+    }
+    let richiesti = (emergenze::EVENTI
+        .iter()
+        .map(|id| (id, Famiglia::Emergenza, "emergenza")))
+    .chain(
+        rischio::SHOCK
+            .iter()
+            .map(|s| (&s.evento, Famiglia::Shock, "shock")),
+    )
+    .chain(
+        rischio::SCANDALI
+            .iter()
+            .map(|id| (id, Famiglia::Scandalo, "scandalo")),
+    )
+    .chain(std::iter::once((
+        &ASTE_SCOPERTE,
+        Famiglia::Debito,
+        "debito",
+    )));
+    for (id, famiglia, nome_famiglia) in richiesti {
+        match dati.evento(id).and_then(|k| eventi.get(k)) {
+            None => return ko(format!("evento richiesto dal motore mancante: {id}")),
+            Some(e) if e.famiglia != famiglia => {
+                return ko(format!("{}: serve la famiglia {nome_famiglia}", e.nome));
+            }
+            Some(_) => {}
+        }
+    }
+    for c in dati.condizionalita() {
+        let gradino = (dati.disposizione(&c.disposizione))
+            .and_then(|k| dati.disposizioni().get(k))
+            .map(|d| d.gradino(&c.gradino));
+        match gradino {
+            None => {
+                return ko(format!(
+                    "condizionalità: disposizione sconosciuta {}",
+                    c.disposizione
+                ));
+            }
+            Some(None) => {
+                return ko(format!(
+                    "condizionalità: gradino sconosciuto «{}» per {}",
+                    c.gradino, c.disposizione
+                ));
+            }
+            Some(Some(_)) => {}
         }
     }
     for (i, s) in dati.situazioni().iter().enumerate() {
@@ -395,7 +585,12 @@ fn valida_effetto(dati: &DatiGioco, nome: &str, effetto: &EffettoOpzione) -> Res
         }
         EffettoOpzione::Valence { delta } if delta.is_finite() => Ok(()),
         EffettoOpzione::Valence { .. } => ko("valence non finita".into()),
-        _ => ko("effetto non ancora ammesso nei dati".into()),
+        EffettoOpzione::FondoRiserva
+        | EffettoOpzione::Debito
+        | EffettoOpzione::Dimissioni
+        | EffettoOpzione::ClausolaEnergia
+        | EffettoOpzione::Mes
+        | EffettoOpzione::Ristrutturazione => Ok(()),
     }
 }
 
@@ -417,6 +612,7 @@ mod tests {
             },
             regione: None,
             bersaglio: None,
+            persona: None,
             tono: Tono::Ordinario,
             costo: 0,
             scelta,

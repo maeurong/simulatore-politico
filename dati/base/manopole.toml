@@ -1404,3 +1404,304 @@ valore = 0.002
 min = 0.0
 max = 0.01
 ticket = "15"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:123, valore iniziale proposto; DA TARARE: la frequenza vera è [NON TROVATO] a :32 (la perdita media simulata deve tornare intorno a 1-5 miliardi l'anno)
+[emergenze_idro_anno]
+valore = 4.0
+min = 0.0
+max = 20.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (siccità regionali con stato di emergenza: 2017, 2022 e 2024 in situazioni-ed-eventi-al-turno-zero.md:119-121, circa una ogni tre anni)
+[siccita_anno]
+valore = 0.4
+min = 0.0
+max = 2.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:108 e :133 (DM 58/2017, da G a B: 1 - 1,13/7,5)
+[k_prevenzione_sisma]
+valore = 0.85
+min = 0.0
+max = 1.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (pericolosita-naturale-regioni.md:134: per idro e incendi k è una scelta di design)
+[k_prevenzione_altre]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (euro; ordine di grandezza dei costi in pericolosita-naturale-regioni.md:87-97)
+[costo_emergenza_lieve]
+valore = 100000000.0
+min = 0.0
+max = 10000000000.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:129 (euro; l'ordine dell'alluvione dell'Emilia-Romagna 2023, 8,5 miliardi, scalato a 1)
+[costo_emergenza_grave]
+valore = 1000000000.0
+min = 0.0
+max = 20000000000.0
+ticket = "19"
+
+# docs/ricerca/dati/pericolosita-naturale-regioni.md:91 e :128 (euro; circa 10 miliardi per episodio sismico, qui 5 perché la media dei tre livelli sia sotto)
+[costo_emergenza_vittime]
+valore = 5000000000.0
+min = 0.0
+max = 40000000000.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence in più al partito del governo che risponde a un'emergenza)
+[valence_emergenza_risposta]
+valore = 0.02
+min = 0.0
+max = 0.5
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence in meno al partito del governo che lascia un'emergenza senza risposta)
+[valence_emergenza_ignorata]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (punti di stock_infrastrutture persi per miliardo di danno, nella regione colpita)
+[danno_stock_per_miliardo]
+valore = 2.0
+min = 0.0
+max = 20.0
+ticket = "19"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (emivita in turni del danno non ripristinato: due anni)
+[emivita_danno]
+valore = 8.0
+min = 1.0
+max = 40.0
+ticket = "19"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:110-112 (otto ministri dimessi in 2008-2026, 0,11 a trimestre: è il tasso delle dimissioni, usato qui come tasso degli scandali, che sono più delle dimissioni; assunzione del piano 9). Legame col CPI non trovato (:97-114): scala con la corruzione, 100 = 0,11
+[scandalo_base]
+valore = 0.11
+min = 0.0
+max = 1.0
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (valence persa dal partito del ministro o del leader sotto scandalo, se non si dimette)
+[valence_scandalo]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "15"
+
+# assunzione del piano 9: metà di valence_scandalo (valence persa dal partito del ministro che si dimette per scandalo, anche alleato)
+[valence_dimissioni_scandalo]
+valore = 0.025
+min = 0.0
+max = 0.5
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (turni in cui il ministro difeso resta sotto scandalo: la sfiducia IA lo prende di mira)
+[turni_scandalo]
+valore = 4.0
+min = 1.0
+max = 12.0
+ticket = "15"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:146-154 (2,5 sigma: P(|z| > 2,5) = 0,0124, circa 1,2 eventi a legislatura sulle cinque serie, 0,6 sul lato sfavorevole; decisione 3 del piano 9)
+[soglia_shock]
+valore = 2.5
+min = 1.0
+max = 4.0
+ticket = "15"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota del PIL annuo del decreto a debito per gli shock)
+[aiuti_shock]
+valore = 0.003
+min = 0.0
+max = 0.02
+ticket = "15"
+
+# regole-fiscali-ue:49 (la clausola nazionale vale 0,3 difesa + 0,3 energia, % del PIL); per l'anno in corso, conta solo dopo `clausola_nazionale_fino_a`, che l'energia la copre già
+[clausola_energia_margine]
+valore = 0.3
+min = 0.0
+max = 1.5
+ticket = "15"
+
+# docs/ricerca/modelli/economia-italiana-parametri.md:27 (massimo di novembre 2011, 5,5 punti; pb di spread oltre cui si aprono le aste scoperte)
+[soglia_crisi_debito]
+valore = 550.0
+min = 300.0
+max = 1000.0
+ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (turni del programma del MES: un anno di ECCL, rinnovabile; 8 turni = 2 anni)
+[durata_mes]
+valore = 8.0
+min = 2.0
+max = 20.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (intesa persa da ogni alleato quando il governo chiede il MES)
+[intesa_mes]
+valore = 10.0
+min = 0.0
+max = 50.0
+ticket = "07"
+
+# docs/ricerca/sintesi/situazioni-ed-eventi-al-turno-zero.md:136-145 (PSI greco 2012: taglio nominale del 53,5%)
+[taglio_ristrutturazione]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (quota di reddito primario persa dalle fasce media e alta, i detentori)
+[perdita_ristrutturazione]
+valore = 0.05
+min = 0.0
+max = 0.5
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (turni di perdita di reddito dopo il taglio)
+[turni_ristrutturazione]
+valore = 8.0
+min = 1.0
+max = 40.0
+ticket = "07"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca (premio sullo spread in pb, si dimezza con l'emivita della ristrutturazione)
+[premio_ristrutturazione]
+valore = 300.0
+min = 1.0
+max = 1000.0
+ticket = "07"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:21-41 (1.000-1.500 interviste: 10.000-20.000 €)
+[prezzo_sondaggio_privato]
+valore = 15000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[moltiplicatore_campione_privato]
+valore = 4.0
+min = 1.0
+max = 10.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[riduzione_istituto_privato]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:116-125 (test di una misura: 10.000-25.000 €)
+[prezzo_test_misura]
+valore = 20000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# forma da informazione-a-pagamento.md:54-59 (σ = errore_test / √quota della condizione, in unità di utilità); misurato sui dati base al turno zero, seme 1: soglia_reazione_poco · √0,343, la quota della condizione più grande (dipendenti privati), così la sigma del gruppo più grande vale la soglia del Poco; da rimisurare se cambiano lo scenario o le soglie
+[errore_test]
+valore = 0.00275
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 9 (turni delle copie senza shock su cui si legge la reazione vera): a 2 turni la reazione dei pensionati alle pensioni più generose ha il segno atteso, da 4 si capovolge
+[orizzonte_test]
+valore = 2.0
+min = 1.0
+max = 20.0
+ticket = "25"
+
+# misurato sui dati base al turno zero, seme 1, con orizzonte_test 2: primo terzile di |reazione vera| ≥ 1e-4 sui 68 cambi di un gradino adiacente (66 ammessi, 64 valori; sotto 1e-4 è rumore numerico sui gruppi non toccati); sotto, Poco
+[soglia_reazione_poco]
+valore = 0.0047
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# la misura di soglia_reazione_poco, secondo terzile; sotto, Medio, sopra, Molto
+[soglia_reazione_medio]
+valore = 0.061
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:61-73 e :116-125 (centro studi di partito: 80.000-250.000 € a trimestre)
+[prezzo_centro_studi]
+valore = 150000.0
+min = 1000.0
+max = 1000000.0
+ticket = "25"
+
+# assunzione del piano 9, forchetta 50-70% da informazione-a-pagamento.md:123
+[quota_errore_centro_studi]
+valore = 0.6
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno in corso). Per ogni grandezza, _1 è l'anno in corso, usato a un trimestre (h = 1), _4 l'anno dopo, a quattro (h = 4); in mezzo la sigma è lineare in h
+[rmse_pil_1]
+valore = 1.15
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno dopo)
+[rmse_pil_4]
+valore = 1.84
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno in corso)
+[rmse_inflazione_1]
+valore = 0.86
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno dopo)
+[rmse_inflazione_4]
+valore = 2.28
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno in corso)
+[rmse_disoccupazione_1]
+valore = 1.06
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno dopo)
+[rmse_disoccupazione_4]
+valore = 1.47
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# assunzione del piano 9: la fonte non dà l'errore sul debito (informazione-a-pagamento.md:89 [NON TROVATO]), qui un terzo di rmse_debito_4
+[rmse_debito_1]
+valore = 1.0
+min = 0.0
+max = 10.0
+ticket = "25"
+
+# stima [INF] da informazione-a-pagamento.md:89: circa 3 punti di PIL a un anno, dall'errore sul PIL nominale più quello sul saldo; grezza, da tarare
+[rmse_debito_4]
+valore = 3.0
+min = 0.0
+max = 10.0
+ticket = "25"

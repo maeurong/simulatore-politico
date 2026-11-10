@@ -21,7 +21,7 @@ Solo libreria standard di Python, **3.11 o successivo** (`tomllib`). Lo script c
 |---|---|---|
 | `dati/base/economia.toml` | `settori`, `a`, `importazioni`, `valore_aggiunto`, `consumi`, `investimenti`, `esportazioni`, `spesa_pubblica`, `anno_tavola` | FIGARO 2024 |
 | `dati/base/economia.toml` | `piramide` | ISTAT, residenti al 1° gennaio 2026 |
-| `dati/base/regioni.toml` | 20 regioni con `forze_lavoro`, `disoccupazione_2025`, `okun`, `mix` | Eurostat LFS, ISTAT conti territoriali, Bonaventura (2020) |
+| `dati/base/regioni.toml` | 20 regioni con `forze_lavoro`, `disoccupazione_2025`, `okun`, `mix`, `pericolosita` | Eurostat LFS, ISTAT conti territoriali, Bonaventura (2020); `pericolosita` copiata da `docs/ricerca/dati/pericolosita-naturale-regioni.md:46-67` (DPC, INGV, ISPRA, EFFIS), senza rete |
 | `dati/base/dicasteri.toml` | `spesa_pil`, `salari_pil`, `acquisti_pil` per dicastero, `settori` per Infrastrutture e Trasporti | Eurostat COFOG e conti nazionali |
 | `dati/base/elettorato.toml` | tutto il file, da `elettorato.py` | `elettori` e `quota`: Camera 2022, ISTAT, MEF, IBF; `primario` di dipendenti e autonomi: MEF; `posizione`: ESS round 11, edizione 4.2 (`--ess`, CC BY-NC-SA 4.0); il resto provvisorio (vedi «Elettorato») |
 | `dati/base/elettorato.toml` | `astensione` di ogni regione, riscritta da `sim-cli tara` (da `elettorato.py` esce la costante di partenza) | affluenza 2022 della Camera, in `bersagli.toml` |
