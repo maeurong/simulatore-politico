@@ -1,7 +1,7 @@
 mod comune;
 use comune::{
     all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_emergenze,
-    senza_shock,
+    senza_shock, sostituisci,
 };
 use sim_core::dati::DatiGioco;
 use sim_core::economia::Economia;
@@ -28,7 +28,8 @@ fn con_cassa(p: &Partita, euro: i64) -> Partita {
 
 #[test]
 fn il_sondaggio_privato_costa_e_sbaglia_meno() {
-    let (mut privato, mut pubblico, mut scarto) = (0.0, 0.0, vec![0.0; 8]);
+    let (mut privato, mut pubblico) = (0.0, 0.0);
+    let (mut scarto_privato, mut scarto_pubblico) = (vec![Vec::new(); 8], vec![Vec::new(); 8]);
     for seme in 0..200 {
         let mut p = Partita::nuova(dati_base(), seme);
         let g = p.giocatore();
@@ -47,17 +48,19 @@ fn il_sondaggio_privato_costa_e_sbaglia_meno() {
         assert_eq!(priv_.istituti.len(), 1);
         privato += errore(&priv_.istituti[0].quote);
         pubblico += ist.iter().map(|r| errore(&r.quote)).sum::<f64>() / ist.len() as f64;
-        for (j, s) in scarto.iter_mut().enumerate() {
-            *s += priv_.istituti[0].quote[j]
-                - ist.iter().map(|r| r.quote[j]).sum::<f64>() / ist.len() as f64;
+        for j in 0..8 {
+            scarto_privato[j].push(priv_.istituti[0].quote[j] - vero[j]);
+            let media = ist.iter().map(|r| r.quote[j]).sum::<f64>() / ist.len() as f64;
+            scarto_pubblico[j].push(media - vero[j]);
         }
     }
     assert!(privato < pubblico, "{privato} {pubblico}");
-    // Il bias comune è lo stesso: la differenza media fra i due non ha segno, su ogni alternativa.
-    assert!(
-        scarto.iter().all(|s| (s / 200.0).abs() < 0.005),
-        "{scarto:?}"
-    );
+    // Il bias comune è lo stesso: su ogni alternativa l'errore del privato segue quello del
+    // pubblico da un seme all'altro.
+    for j in 0..8 {
+        let r = correlazione(&scarto_privato[j], &scarto_pubblico[j]);
+        assert!(r > 0.5, "{j}: r = {r}");
+    }
 }
 
 #[test]
@@ -279,6 +282,53 @@ fn il_test_lo_compra_anche_l_opposizione() {
     );
 }
 
+/// Con la cassa pari al prezzo l'acquisto passa e la cassa va a zero, per i tre tipi.
+#[test]
+fn con_la_cassa_pari_al_prezzo_si_compra() {
+    let test = test_di(&v("regime_pensioni", "retributivo"));
+    for (acquisto, prezzo) in [
+        (SONDAGGIO, PREZZO),
+        (test, PREZZO_TEST),
+        (CENTRO_STUDI, PREZZO_CENTRO_STUDI),
+    ] {
+        let mut p = con_cassa(&Partita::nuova(dati_base(), 1), prezzo);
+        p.comanda(acquisto).unwrap();
+        assert_eq!(p.partiti()[p.giocatore()].cassa, 0, "{prezzo}");
+    }
+}
+
+/// La quota di una condizione è la sua parte degli elettori di ora.
+#[test]
+fn la_quota_del_test_e_la_parte_degli_elettori() {
+    let p = Partita::nuova(dati_base(), 1);
+    let d = dati_base();
+    let mut elettori = [0.0; 6];
+    for i in 0..p.elettorato().gruppi.len() {
+        elettori[condizione_di(i) as usize] += p.elettorato().elettori(d.elettorato(), i);
+    }
+    let totale: f64 = elettori.iter().sum();
+    let vere = p
+        .reazioni_vere(&v("regime_pensioni", "retributivo"))
+        .unwrap();
+    for (w, (_, quota)) in elettori.iter().zip(vere) {
+        assert!((w / totale - quota).abs() <= 1e-9, "{elettori:?} {vere:?}");
+    }
+    let somma: f64 = vere.iter().map(|(_, q)| q).sum();
+    assert!((somma - 1.0).abs() <= 1e-9, "{somma}");
+}
+
+#[test]
+fn l_opposizione_compra_il_sondaggio_privato_e_il_centro_studi() {
+    let mut p = all_opposizione();
+    let g = p.giocatore();
+    let cassa = p.partiti()[g].cassa;
+    p.comanda(SONDAGGIO).unwrap();
+    assert_eq!(p.partiti()[g].cassa, cassa - PREZZO);
+    centro_studi(&mut p);
+    let a = p.vista().acquisti;
+    assert!(a.sondaggio_privato.is_some() && a.centro_studi.is_some());
+}
+
 #[test]
 fn il_test_non_tocca_la_partita() {
     let json = |p: &Partita| -> serde_json::Value {
@@ -320,12 +370,11 @@ fn un_test_manomesso_nel_salvataggio_e_rifiutato() {
     assert!(e.to_string().contains("acquisti.test.reazioni"), "{e}");
 }
 
-/// L'oracolo della reazione vera: la partita vera senza shock né derive, con la bozza messa in
-/// vigore prima della chiusura (come `entra_in_vigore` nell'aula dello stesso turno), chiusa
-/// `orizzonte_test` volte contro una gemella senza bozza; Δ della somma dei giudizi sui partiti
-/// di governo, per condizione, pesata con gli elettori del turno zero.
-fn oracolo(d: &str, g: &str) -> ([f64; 6], [(f64, f64); 6]) {
-    let dati = DatiGioco::da_testi(&senza_shock()).unwrap();
+/// L'oracolo della reazione vera: la partita di `dati` con la bozza messa in vigore prima della
+/// chiusura (come `entra_in_vigore` nell'aula dello stesso turno), chiusa `orizzonte_test` volte
+/// contro una gemella senza bozza; per condizione, `peso_giudizio` per il Δ del giudizio su ogni
+/// partito di governo, pesato con gli elettori del turno zero. Con le reazioni vere.
+fn oracolo(dati: DatiGioco, d: &str, g: &str) -> ([Vec<f64>; 6], [(f64, f64); 6]) {
     let (k, gamma) = (
         dati.disposizione(d).unwrap(),
         dati.manopola("peso_giudizio"),
@@ -353,18 +402,20 @@ fn oracolo(d: &str, g: &str) -> ([f64; 6], [(f64, f64); 6]) {
     let governo: Vec<usize> = (0..p.partiti().len())
         .filter(|&j| p.governo().al_governo(j))
         .collect();
-    let mut somme = [(0.0, 0.0); 6];
+    let mut somme: [(f64, Vec<f64>); 6] = std::array::from_fn(|_| (0.0, vec![0.0; governo.len()]));
     let coppie = (con.elettorato().gruppi.iter()).zip(&senza.elettorato().gruppi);
     for (i, (a, b)) in coppie.enumerate() {
         let w = p.elettorato().elettori(dati.elettorato(), i);
         let s = &mut somme[condizione_di(i) as usize];
         s.0 += w;
-        s.1 += w * governo
-            .iter()
-            .map(|&j| a.giudizio[j] - b.giudizio[j])
-            .sum::<f64>();
+        for (x, &j) in s.1.iter_mut().zip(&governo) {
+            *x += w * (a.giudizio[j] - b.giudizio[j]);
+        }
     }
-    (somme.map(|(w, x)| gamma * x / w), vere)
+    (
+        somme.map(|(w, x)| x.iter().map(|x| gamma * x / w).collect()),
+        vere,
+    )
 }
 
 #[test]
@@ -374,10 +425,40 @@ fn la_reazione_vera_coincide_con_la_partita_chiusa() {
         ("indicizzazione_pensioni", "piena"),
         ("indicizzazione_pensioni", "bloccata_sopra_soglia"),
     ] {
-        let (attesa, vere) = oracolo(d, g);
+        let (attesa, vere) = oracolo(DatiGioco::da_testi(&senza_shock()).unwrap(), d, g);
         for (a, (vera, _)) in attesa.iter().zip(vere) {
+            let a: f64 = a.iter().sum();
             assert!((a - vera).abs() <= 1e-5, "{d} {g}: {attesa:?} {vere:?}");
         }
+    }
+}
+
+/// Col lavoro al centrodestra l'alleato prende la colpa delle pensioni: la reazione vera è la
+/// somma su tutti i partiti di governo, non sul solo presidente.
+#[test]
+fn la_reazione_vera_somma_anche_gli_alleati() {
+    let f = sostituisci(
+        senza_shock(),
+        "scenario",
+        "lavoro_welfare = \"destra\"",
+        "lavoro_welfare = \"centrodestra\"",
+    );
+    let dati = DatiGioco::da_testi(&f).unwrap();
+    let p = Partita::nuova(dati.clone(), 1);
+    let governo: Vec<usize> = (0..p.partiti().len())
+        .filter(|&j| p.governo().al_governo(j))
+        .collect();
+    let alleato = (p.partiti().iter())
+        .position(|x| x.id == "centrodestra")
+        .unwrap();
+    let k = governo.iter().position(|&j| j == alleato).unwrap();
+    assert_ne!(p.governo().presidente, alleato);
+    let (attesa, vere) = oracolo(dati, "regime_pensioni", "retributivo");
+    let pensionato = Condizione::Pensionato as usize;
+    assert!(attesa[pensionato][k].abs() > 1e-3, "{attesa:?}");
+    for (a, (vera, _)) in attesa.iter().zip(vere) {
+        let a: f64 = a.iter().sum();
+        assert!((a - vera).abs() <= 1e-5, "{attesa:?} {vere:?}");
     }
 }
 

@@ -529,3 +529,31 @@ impl Elettorato {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    /// Il tetto della chiave del sondaggio privato sul confine: con 1023 gruppi il rifiuto è il
+    /// successivo, sul numero per regione.
+    #[test]
+    fn il_tetto_dei_gruppi_sta_sul_confine_della_chiave_del_privato() {
+        let mut e = dati_base().elettorato().clone();
+        e.gruppi = vec![e.gruppi[0].clone(); 1024];
+        let rifiuto = |e: &DatiElettorato| e.valida_gruppi().unwrap_err().to_string();
+        let r = rifiuto(&e);
+        assert!(r.contains("1024 gruppi, il limite è 1023"), "{r}");
+        e.gruppi.pop();
+        let r = rifiuto(&e);
+        assert!(r.contains("1023 gruppi, ne servono"), "{r}");
+    }
+
+    /// `Condizione as usize` indicizza le somme per condizione nell'ordine di `TUTTE`.
+    #[test]
+    fn l_ordine_delle_condizioni_e_quello_di_tutte() {
+        for (k, c) in Condizione::TUTTE.into_iter().enumerate() {
+            assert_eq!(c as usize, k, "{c}");
+        }
+    }
+}

@@ -353,6 +353,31 @@ mod tests {
         assert!(poco(q2, s) > piccola + 5_000);
     }
 
+    /// Senza errore la stima è la vera: fascia dalle soglie, comprese, e segno anche negativo.
+    #[test]
+    fn senza_errore_fascia_e_segno_sono_quelli_della_vera() {
+        let mut dati = dati_base();
+        dati.imposta_manopola("errore_test", 0.0);
+        let (poco, medio) = (
+            dati.manopola("soglia_reazione_poco"),
+            dati.manopola("soglia_reazione_medio"),
+        );
+        let vere = [poco / 2.0, poco, medio, -poco / 2.0, -medio, -poco];
+        let t = &stime(&dati, vere.map(|x| (x, 0.5)), 1)[0];
+        let viste: Vec<_> = t.reazioni.iter().map(|r| (r.segno, r.fascia)).collect();
+        assert_eq!(
+            viste,
+            [
+                (1, Fascia3::Poco),
+                (1, Fascia3::Medio),
+                (1, Fascia3::Molto),
+                (-1, Fascia3::Poco),
+                (-1, Fascia3::Molto),
+                (-1, Fascia3::Medio),
+            ]
+        );
+    }
+
     #[test]
     fn una_condizione_senza_elettori_da_segno_zero_e_poco() {
         let reazioni = [

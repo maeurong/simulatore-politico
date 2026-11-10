@@ -502,6 +502,25 @@ mod tests {
             .to_string()
     }
 
+    /// Il tetto delle chiavi dell'anteprima sul confine: con 7812 disposizioni il rifiuto è il
+    /// successivo, perché le copie si ripetono.
+    #[test]
+    fn il_tetto_delle_disposizioni_sta_sul_confine_delle_chiavi() {
+        let primo = dati_base().disposizioni()[0].clone();
+        assert_eq!(
+            rifiuto(&vec![primo.clone(); 7813]),
+            "disposizioni non valide: 7813 disposizioni, il limite è 7812: le chiavi \
+             dell'anteprima sono 64·d + g sotto 500000"
+        );
+        assert_eq!(
+            rifiuto(&vec![primo.clone(); 7812]),
+            format!(
+                "disposizioni non valide: disposizione ripetuta: {}",
+                primo.id
+            )
+        );
+    }
+
     #[test]
     fn leve_richieste_una_volta_sola() {
         let mut catalogo = dati_base().disposizioni().to_vec();
