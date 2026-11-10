@@ -247,7 +247,7 @@ impl Partita {
             }
             Comando::Riposiziona { posizione } => return self.riposiziona(*posizione),
             Comando::Campagna { spese } => return self.campagna(spese),
-            Comando::Compra { acquisto } => return self.compra(*acquisto),
+            Comando::Compra { acquisto } => return self.compra(acquisto),
             Comando::Prometti { promesse } => return self.prometti(promesse),
             Comando::RispondiEvento { evento, opzione } => {
                 return self.rispondi_evento(*evento, opzione);

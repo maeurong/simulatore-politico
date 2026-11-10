@@ -15,8 +15,17 @@ use crate::vista::{Anteprima, EffettoStimato, Fascia3, VoceLeva};
 const OFFSET_CHIAVE: u64 = 1 << 35;
 
 /// Sposta le chiavi degli atti (`CHIAVE_ATTI + indice globale dell'atto`) dopo quelle delle
-/// disposizioni dello stesso turno (`64 · d + g`).
-const CHIAVE_ATTI: u64 = 500_000;
+/// disposizioni dello stesso turno (`64 · d + g`), che `disposizioni::valida` tiene sotto.
+pub(crate) const CHIAVE_ATTI: u64 = 500_000;
+
+/// La chiave del test di una misura, una sola per turno: sopra le disposizioni e gli atti del
+/// turno (`atti::valida` tiene `CHIAVE_ATTI + atti` sotto), sotto il turno dopo (`1_000_003`).
+pub(crate) const CHIAVE_TEST: u64 = 900_000;
+
+/// La chiave del test di una misura comprato al turno `turno`.
+pub(crate) fn chiave_test(turno: u32) -> u64 {
+    OFFSET_CHIAVE + u64::from(turno) * 1_000_003 + CHIAVE_TEST
+}
 
 /// `Poco` sotto `soglia_fascia_poco` di `|Δ| / (max − min)` della grandezza `k`, `Medio` sotto
 /// `soglia_fascia_medio`, altrimenti `Molto`.

@@ -1,7 +1,9 @@
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, edita};
+use comune::{all_opposizione, chiudi_col_bilancio, dati_base, edita};
+use sim_core::elettorato::Condizione;
 use sim_core::informazione::Acquisto;
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
+use sim_core::parlamento::ValoreProposto;
 use sim_core::{Comando, Partita};
 
 const PREZZO: i64 = 15_000;
@@ -169,4 +171,127 @@ fn un_sondaggio_privato_malformato_nel_salvataggio_e_rifiutato() {
     })
     .unwrap_err();
     assert!(e.to_string().contains("acquisti.privato.istituti"), "{e}");
+}
+
+const PREZZO_TEST: i64 = 20_000;
+
+fn v(d: &str, g: &str) -> Vec<ValoreProposto> {
+    vec![ValoreProposto {
+        disposizione: d.into(),
+        gradino: g.into(),
+    }]
+}
+
+fn test_di(valori: &[ValoreProposto]) -> Comando {
+    Comando::Compra {
+        acquisto: Acquisto::TestMisura {
+            valori: valori.to_vec(),
+        },
+    }
+}
+
+fn segno(x: f64) -> i8 {
+    if x > 0.0 {
+        1
+    } else if x < 0.0 {
+        -1
+    } else {
+        0
+    }
+}
+
+#[test]
+fn il_test_indovina_il_segno_dei_gruppi_grandi() {
+    let valori = v("regime_pensioni", "retributivo");
+    let (mut giusti, mut quote) = ([0; 6], [0.0; 6]);
+    for seme in 0..200 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        let vere = p.reazioni_vere(&valori).unwrap();
+        assert_ne!(vere[Condizione::Pensionato as usize].0, 0.0);
+        p.comanda(test_di(&valori)).unwrap();
+        let t = p.vista().acquisti.test_misura.unwrap();
+        assert_eq!(t.reazioni.len(), 6);
+        for (k, (r, (vera, quota))) in t.reazioni.iter().zip(vere).enumerate() {
+            giusti[k] += u32::from(r.segno == segno(vera));
+            quote[k] = quota;
+        }
+    }
+    let pensionato = Condizione::Pensionato as usize;
+    let piccola = (0..6)
+        .min_by(|&a, &b| quote[a].total_cmp(&quote[b]))
+        .unwrap();
+    assert!(giusti[pensionato] >= 180, "{giusti:?}");
+    assert!(giusti[piccola] < giusti[pensionato], "{giusti:?} {quote:?}");
+}
+
+#[test]
+fn test_su_misura_non_ammessa_rifiutato_senza_pagare() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let g = p.giocatore();
+    let (cassa, prima) = (p.partiti()[g].cassa, p.salva().unwrap());
+    let e = p
+        .comanda(test_di(&v("eta_pensionabile", "67")))
+        .unwrap_err();
+    assert!(
+        e.to_string().contains("Età pensionabile è già a 67 anni"),
+        "{e}"
+    );
+    assert_eq!(p.partiti()[g].cassa, cassa);
+    assert_eq!(p.salva().unwrap(), prima);
+}
+
+#[test]
+fn il_test_lo_compra_anche_l_opposizione() {
+    let mut p = all_opposizione();
+    let g = p.giocatore();
+    let cassa = p.partiti()[g].cassa;
+    p.comanda(test_di(&v("regime_pensioni", "retributivo")))
+        .unwrap();
+    assert_eq!(p.partiti()[g].cassa, cassa - PREZZO_TEST);
+    let t = p.vista().acquisti.test_misura.unwrap();
+    assert_eq!(
+        t.reazioni.iter().map(|r| r.condizione).collect::<Vec<_>>(),
+        Condizione::TUTTE
+    );
+}
+
+#[test]
+fn il_test_non_tocca_la_partita() {
+    let json = |p: &Partita| -> serde_json::Value {
+        let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        j["acquisti"] = serde_json::Value::Null;
+        j["partiti"][p.giocatore()]["cassa"] = 0.into();
+        j
+    };
+    let chiusa = |compra: bool| {
+        let mut p = Partita::nuova(dati_base(), 1);
+        if compra {
+            let prima = json(&p);
+            p.comanda(test_di(&v("regime_pensioni", "retributivo")))
+                .unwrap();
+            assert_eq!(json(&p), prima);
+        }
+        chiudi_col_bilancio(&mut p);
+        let v = p.vista();
+        (v.sondaggio, v.statistica.prima_stima)
+    };
+    assert_eq!(chiusa(false), chiusa(true));
+}
+
+#[test]
+fn un_test_manomesso_nel_salvataggio_e_rifiutato() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(test_di(&v("regime_pensioni", "retributivo")))
+        .unwrap();
+    let e = edita(&p, |j| {
+        j["acquisti"][0]["TestMisura"]["reazioni"][0]["segno"] = 2.into();
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("acquisti.test.segno"), "{e}");
+    let e = edita(&p, |j| {
+        let r = &mut j["acquisti"][0]["TestMisura"]["reazioni"];
+        r.as_array_mut().unwrap().swap(0, 1);
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("acquisti.test.reazioni"), "{e}");
 }

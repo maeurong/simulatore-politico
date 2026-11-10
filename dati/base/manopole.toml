@@ -1600,3 +1600,38 @@ valore = 0.5
 min = 0.0
 max = 1.0
 ticket = "25"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:116-125 (test di una misura: 10.000-25.000 €)
+[prezzo_test_misura]
+valore = 20000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# assunzione del piano 9, forma da informazione-a-pagamento.md:54-59 (σ = errore_test / √quota della condizione, in unità di utilità)
+[errore_test]
+valore = 0.05
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# assunzione del piano 9 (turni delle copie senza shock su cui si legge la reazione vera)
+[orizzonte_test]
+valore = 4.0
+min = 1.0
+max = 20.0
+ticket = "25"
+
+# misurato nel Task 11 del piano 9: primo terzile di |reazione vera| ≠ 0 sui 68 cambi di un gradino adiacente dei dati base al turno zero (seme 1, 168 valori, 5,09e-6); sotto, Poco
+[soglia_reazione_poco]
+valore = 0.0000051
+min = 0.0
+max = 1.0
+ticket = "25"
+
+# misurato nel Task 11 del piano 9: secondo terzile della stessa misura (9,70e-3); sotto, Medio, sopra, Molto
+[soglia_reazione_medio]
+valore = 0.0097
+min = 0.0
+max = 1.0
+ticket = "25"

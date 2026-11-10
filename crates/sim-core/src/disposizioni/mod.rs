@@ -346,6 +346,14 @@ pub(crate) fn valida(
     regioni: &[Regione],
 ) -> Result<(), Errore> {
     let ko = |m: String| Err(Errore::Disposizioni(m));
+    if 64 * catalogo.len() as u64 >= crate::parlamento::CHIAVE_ATTI {
+        return ko(format!(
+            "{} disposizioni, il limite è {}: le chiavi dell'anteprima sono 64·d + g sotto {}",
+            catalogo.len(),
+            (crate::parlamento::CHIAVE_ATTI - 1) / 64,
+            crate::parlamento::CHIAVE_ATTI
+        ));
+    }
     for (i, d) in catalogo.iter().enumerate() {
         let id = &d.id;
         if catalogo[..i].iter().any(|p| p.id == *id) {

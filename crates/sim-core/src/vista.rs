@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
-use crate::informazione::{Acquisto, Revisione, Sondaggio, Stima};
+use crate::informazione::{Revisione, Sondaggio, Stima, TipoAcquisto, VistaTest};
 use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
@@ -105,6 +105,7 @@ pub struct Vista {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaAcquisti {
     pub sondaggio_privato: Option<Sondaggio>,
+    pub test_misura: Option<VistaTest>,
     pub prezzi: Vec<PrezzoAcquisto>,
 }
 
@@ -112,7 +113,7 @@ pub struct VistaAcquisti {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct PrezzoAcquisto {
-    pub acquisto: Acquisto,
+    pub acquisto: TipoAcquisto,
     pub euro: i64,
 }
 

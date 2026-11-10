@@ -8,7 +8,7 @@ use crate::economia::{
 };
 use crate::elettorato::{
     Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, Quesito,
-    indice_gruppo, toccati,
+    condizione_di, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
@@ -18,7 +18,8 @@ use crate::eventi::{
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{
-    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, genera,
+    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto, VistaTest,
+    genera,
 };
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
@@ -93,7 +94,7 @@ impl Trimestre {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Partita {
     versione_schema: u32,
     caso: Caso,
@@ -593,41 +594,7 @@ impl Partita {
             self.spendi_campagne();
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
-        let nuove = Misure::da(
-            &self.dati,
-            &self.grandezze,
-            &self.ministri,
-            &self.economia,
-            &self.elettorato,
-            self.turno,
-            self.data,
-            &self.disposizioni,
-        );
-        let prima = std::mem::replace(&mut self.misure, nuove);
-        if (self.economia.programma_mes).is_some_and(|fine| self.turno >= fine) {
-            self.economia.programma_mes = None;
-        }
-        let innovazioni =
-            (self.economia).passo(&self.dati, &mut self.caso, self.data, &self.misure);
-        self.grandezze
-            .avanza(&self.dati, Some(&mut self.caso), &self.economia, self.turno);
-        self.elettorato
-            .aggiorna_redditi(&self.dati, &self.economia, &self.misure, self.turno);
-        // La ristrutturazione resta finché il premio vale almeno 1 pb o la perdita dei redditi
-        // dura ancora nel turno che si apre.
-        let dopo = self.turno.saturating_add(1);
-        self.economia.ristrutturazione = (self.economia.ristrutturazione)
-            .filter(|r| r.premio >= 1.0 || r.perdita_in_corso(&self.dati, dopo));
-        self.elettorato.giudizio(
-            &self.dati,
-            &self.economia,
-            &self.governo,
-            &self.grandezze,
-            &prima,
-            &self.misure,
-        );
-        self.elettorato
-            .composizione(&self.dati, &self.economia, self.data);
+        let innovazioni = self.motore(true);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
         // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
@@ -1081,6 +1048,106 @@ impl Partita {
         };
         self.parlamento.esiti.insert(0, esito);
         true
+    }
+
+    /// Il pezzo di motore della chiusura: misure, economia, grandezze, redditi, giudizio e
+    /// composizione, con le cinque innovazioni dell'economia. Senza `caso` niente shock né deriva
+    /// casuale, e le innovazioni sono zero (`proietta`).
+    fn motore(&mut self, con_caso: bool) -> [f64; 5] {
+        let nuove = Misure::da(
+            &self.dati,
+            &self.grandezze,
+            &self.ministri,
+            &self.economia,
+            &self.elettorato,
+            self.turno,
+            self.data,
+            &self.disposizioni,
+        );
+        let prima = std::mem::replace(&mut self.misure, nuove);
+        if (self.economia.programma_mes).is_some_and(|fine| self.turno >= fine) {
+            self.economia.programma_mes = None;
+        }
+        let innovazioni = if con_caso {
+            (self.economia).passo(&self.dati, &mut self.caso, self.data, &self.misure)
+        } else {
+            (self.economia).passo_con(&self.dati, self.data, &self.misure, [0.0; 5]);
+            [0.0; 5]
+        };
+        let caso = con_caso.then_some(&mut self.caso);
+        (self.grandezze).avanza(&self.dati, caso, &self.economia, self.turno);
+        self.elettorato
+            .aggiorna_redditi(&self.dati, &self.economia, &self.misure, self.turno);
+        // La ristrutturazione resta finché il premio vale almeno 1 pb o la perdita dei redditi
+        // dura ancora nel turno che si apre.
+        let dopo = self.turno.saturating_add(1);
+        self.economia.ristrutturazione = (self.economia.ristrutturazione)
+            .filter(|r| r.premio >= 1.0 || r.perdita_in_corso(&self.dati, dopo));
+        self.elettorato.giudizio(
+            &self.dati,
+            &self.economia,
+            &self.governo,
+            &self.grandezze,
+            &prima,
+            &self.misure,
+        );
+        self.elettorato
+            .composizione(&self.dati, &self.economia, self.data);
+        innovazioni
+    }
+
+    /// Una copia della partita dopo `turni` chiusure del solo `motore`, senza caso, con gli arrivi
+    /// delle disposizioni; con la `bozza` entrata in vigore prima, come approvata ora. La partita
+    /// non cambia.
+    pub(crate) fn proietta(&self, turni: u32, bozza: Option<&Misura>) -> Partita {
+        let mut p = self.clone();
+        if let Some(m) = bozza {
+            p.entra_in_vigore(m);
+        }
+        for _ in 0..turni {
+            p.motore(false);
+            p.turno = p.turno.saturating_add(1);
+            p.data = p.data.successivo();
+            (p.disposizioni).arrivi(&p.dati, p.turno, &mut p.grandezze.effetti);
+        }
+        p
+    }
+
+    /// La bozza del test di una misura: niente guardie di governo né di crisi, perché non entra
+    /// in calendario (lo comprano governo e opposizione).
+    fn bozza_test(&self, valori: &[ValoreProposto]) -> Result<Misura, Errore> {
+        self.vincolo_mes(valori)?;
+        (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori)
+    }
+
+    /// Per condizione, nell'ordine di `Condizione::TUTTE`: la reazione vera alla bozza `m` dopo
+    /// `orizzonte_test` turni (`peso_giudizio` per la differenza del giudizio sul presidente con
+    /// e senza la bozza, media dei gruppi pesata con gli elettori di ora) e la quota degli
+    /// elettori.
+    fn reazioni(&self, m: &Misura) -> [(f64, f64); 6] {
+        let turni = self.dati.manopola("orizzonte_test").round() as u32;
+        let (con, senza) = (self.proietta(turni, Some(m)), self.proietta(turni, None));
+        let (d, pres) = (self.dati.elettorato(), self.governo.presidente);
+        let mut somme = [(0.0, 0.0); 6];
+        let coppie = (con.elettorato.gruppi.iter()).zip(&senza.elettorato.gruppi);
+        for (i, (a, b)) in coppie.enumerate() {
+            let w = self.elettorato.elettori(d, i);
+            let s = &mut somme[condizione_di(i) as usize];
+            s.0 += w;
+            s.1 += w * (a.giudizio[pres] - b.giudizio[pres]);
+        }
+        let totale: f64 = somme.iter().map(|s| s.0).sum();
+        let gamma = self.dati.manopola("peso_giudizio");
+        somme.map(|(w, x)| (if w > 0.0 { gamma * x / w } else { 0.0 }, w / totale))
+    }
+
+    /// Le reazioni vere e le quote del test della bozza `valori` (`reazioni`): le leggono i
+    /// test, mai la vista.
+    ///
+    /// # Errors
+    /// Quelli di `Compra` col test, tranne doppio acquisto e cassa.
+    pub fn reazioni_vere(&self, valori: &[ValoreProposto]) -> Result<[(f64, f64); 6], Errore> {
+        Ok(self.reazioni(&self.bozza_test(valori)?))
     }
 
     /// I valori della misura approvata entrano in vigore, o arrivano fra `turni_rinvio_regime`
@@ -2234,20 +2301,22 @@ impl Partita {
         }
     }
 
-    /// `Compra` (scelte 21-22): paga subito dalla cassa del partito del giocatore e registra il
-    /// risultato, calcolato sulle intenzioni vere di ora.
+    /// `Compra` (scelte 21-23): paga subito dalla cassa del partito del giocatore e registra il
+    /// risultato, calcolato sulle intenzioni vere di ora o, per il test, sulle copie di
+    /// `proietta`.
     ///
     /// # Errors
-    /// `Comando` se il tipo è già stato comprato nel turno o la cassa non basta; la partita
-    /// resta identica.
-    pub(crate) fn compra(&mut self, a: Acquisto) -> Result<(), Errore> {
-        if self.acquisti.iter().any(|e| e.tipo() == a) {
+    /// `Comando` se il tipo è già stato comprato nel turno o la cassa non basta; per il test,
+    /// poi, quelli del MES e della bozza. La partita resta identica.
+    pub(crate) fn compra(&mut self, a: &Acquisto) -> Result<(), Errore> {
+        let tipo = a.tipo();
+        if self.acquisti.iter().any(|e| e.tipo() == tipo) {
             return Err(Errore::Comando(format!(
                 "già comprato questo turno: {}",
-                a.nome()
+                tipo.nome()
             )));
         }
-        let prezzo = a.prezzo(&self.dati);
+        let prezzo = tipo.prezzo(&self.dati);
         let cassa = self.partiti.get(self.giocatore).map_or(0, |p| p.cassa);
         if cassa < prezzo {
             return Err(Errore::Comando(format!(
@@ -2268,6 +2337,15 @@ impl Partita {
                     &self.intenzioni_vere(),
                     &self.governo,
                     chiave,
+                ))
+            }
+            Acquisto::TestMisura { valori } => {
+                let m = self.bozza_test(valori)?;
+                Acquistato::TestMisura(VistaTest::stima(
+                    &self.dati,
+                    self.caso.estemporaneo(parlamento::chiave_test(self.turno)),
+                    parlamento::nome_misura(&self.dati, &m),
+                    self.reazioni(&m),
                 ))
             }
         };
@@ -3964,13 +4042,15 @@ impl Partita {
             eventi: self.voci_eventi(),
             situazioni: self.situazioni(),
             acquisti: VistaAcquisti {
-                sondaggio_privato: self
-                    .acquisti
-                    .iter()
-                    .map(|Acquistato::SondaggioPrivato(s)| s)
-                    .next()
-                    .cloned(),
-                prezzi: Acquisto::TUTTI
+                sondaggio_privato: self.acquisti.iter().find_map(|a| match a {
+                    Acquistato::SondaggioPrivato(s) => Some(s.clone()),
+                    Acquistato::TestMisura(_) => None,
+                }),
+                test_misura: self.acquisti.iter().find_map(|a| match a {
+                    Acquistato::TestMisura(t) => Some(t.clone()),
+                    Acquistato::SondaggioPrivato(_) => None,
+                }),
+                prezzi: TipoAcquisto::TUTTI
                     .iter()
                     .map(|&acquisto| PrezzoAcquisto {
                         acquisto,

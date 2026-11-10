@@ -114,6 +114,17 @@ impl Atto {
 pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
     let ko = |m: String| Err(Errore::Atti(m));
     let atti = dati.atti();
+    let (base, test) = (
+        crate::parlamento::CHIAVE_ATTI,
+        crate::parlamento::CHIAVE_TEST,
+    );
+    if base + atti.len() as u64 >= test {
+        return ko(format!(
+            "{} atti, il limite è {}: le chiavi dell'anteprima sono {base} + atto sotto {test}",
+            atti.len(),
+            test - base - 1
+        ));
+    }
     for (i, a) in atti.iter().enumerate() {
         if atti[..i].iter().any(|p| p.id == a.id) {
             return ko(format!("atto ripetuto: {}", a.id));
