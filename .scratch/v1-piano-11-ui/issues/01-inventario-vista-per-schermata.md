@@ -24,3 +24,14 @@ Pagina: [vista-per-schermata](../../../docs/ricerca/sintesi/vista-per-schermata.
 - **Senza piano**: esito del turno con causa e registro (storie 14-16; la Vista ha solo frammenti che durano 1-2 turni); il predicato di «avanti fino a novità» (il piano 7b lo dà al piano 11, ma è una regola); i dati regionali della mappa (3 livelli su 5, voto e seggi per regione, gruppi della scheda, cantieri finiti); PDE e conto di controllo nella Vista; piano strutturale riveduto; minaccia di scissione persistente; caricature e motti.
 - **Piano 9**: eventi, situazioni, tono grave, pericolosità ed emergenze, acquisti d'informazione. **Piano 10**: partite e albo, editor, riavvolgimento, serie dei tre indicatori.
 - **Contratto del guscio**: 17 tipi generati dicono `bigint` ma `JSON.stringify` non li serializza; `Fondazione` e `Fascia` non sono esportati in TypeScript; fondazione e anteprima devono condividere il seme, che `AnteprimaFondazione` non riporta.
+
+## Aggiornamento del 10/11/2026
+
+La risposta sopra è del 01/11, su main a `c56787d`. Riletta su `8952a06` (#48), con i piani 9 e 10 fusi; il dettaglio con le citazioni è nella sezione datata in coda a [vista-per-schermata](../../../docs/ricerca/sintesi/vista-per-schermata.md).
+
+- **Rimandi chiusi.** Eventi e tono grave (`Vista.eventi`, `Comando::RispondiEvento`), situazioni (`Vista.situazioni`), acquisti d'informazione (`Vista.acquisti`, `Comando::Compra`), fondo di riserva residuo, partite e albo con la serie dei tre indicatori, editor con `riepilogo_scenario` e i tre avvisi (senza maggioranza, situazioni accese, crisi del debito), riavvolgimento (`riavvolgi`), abbandono ed eredità.
+- **Guscio.** `comanda` c'è e apre 30 varianti; `fonda_partita` c'è e `Fondazione` è esportato. Mancano ancora i passacarte di `anteprima_sfiducia`, `anteprima_campagna`, `elettori_campione`, `bozza_bilancio`/`indicizza`/`riepilogo_bilancio`, `riepilogo_presentato`, più `serie` (i tre indicatori a partita in corso) e, se serve, `anteprima_fondazione`.
+- **Contratto.** Il nodo del seme ha cambiato forma: il guscio lo sceglie dall'orologio e il riepilogo dello scenario è senza seme. `Fascia` resta non esportato; i tipi con `bigint` sono 19.
+- **Senza piano, come prima.** Esito del turno con causa e registro, «avanti fino a novità», dati regionali della mappa, PDE e conto di controllo, piano strutturale, minaccia di scissione.
+- **Senza piano, nuovi (debiti del piano 9).** Stato del MES e della ristrutturazione, clausola dell'energia, avviso del bilancio ricondotto al tetto del MES, avviso della campagna tagliata. Elenco in [Dati senza piano](11-dati-senza-piano.md).
+

@@ -217,3 +217,8 @@ Nuova pagina [[movimento-e-scala-in-wkwebview]] per il ticket 04 del piano 11. 2
 
 ## [2026-11-01] ingest | mappa SVG delle regioni
 Ticket research 02 della mappa del piano 11. Nuova pagina [[mappa-svg-delle-regioni]], 16 fonti nuove (ISTAT confini 2026, Natural Earth admin-1, README geojson-italy, riferimento mapshaper, ColorBrewer schemi e controllo daltonismo, Datawrapper daltonismo parte 2, Machado 2009, WCAG 2.2 su dimensione del bersaglio, contrasto non testuale e uso del colore, APG radio group e interfaccia da tastiera, MDN tabindex SVG, Apple tabFocusesLinks, SVG 2 ordine di rendering). Misure [M] con mapshaper 0.7.101: peso per livello di semplificazione, isole sopravvissute, centroidi contro punti interni, scarto d'area UTM32 contro LAEA, L* e simulazione CVD delle rampe del prototipo. Esiti: la semplificazione in percentuale cancella le isole; il centroide della Liguria cade in mare; tre regioni sotto i 24 px; wry 0.57.0 imposta tabFocusesLinks a vero; `S_RAMP` del prototipo ha passi di luminosità diseguali. Nessuna pagina esistente modificata.
+
+## [2026-11-10] lint | vista-per-schermata superata dai piani 9 e 10
+
+`sintesi/vista-per-schermata.md` fotografava main a `c56787d` (01/11). Aggiunta una sezione datata letta su `8952a06`: rimandi chiusi (eventi, situazioni, acquisti, partite, editor, albo, riavvolgimento, avvisi del riepilogo, `comanda`, fondazione), passacarte che mancano ancora al guscio, dati senza piano ricontrollati, debiti nuovi del piano 9 (stato del MES e della ristrutturazione, clausola dell'energia, avvisi mancanti). Il testo del 01/11 non è riscritto.
+

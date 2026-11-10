@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: []
-aggiornato: 2026-11-01
+aggiornato: 2026-11-10
 ---
 # Vista per schermata: cosa serve già il core, cosa manca al guscio, cosa non porta nessun piano
 
@@ -112,3 +112,64 @@ Nota sul menu della legge elettorale (piano 2, `:15`): i gradini sono in `VoceDi
 - [[feedback-visivo-dello-stato]]: i sei canali e il rischio di notifiche; l'esito a 7 voci è la risposta della spec, ma non ha una fonte nel core.
 - [[core-rust-e-ui-separata]]: l'interfaccia stretta prevista (`comando(c)`, `snapshot()`, `salva()`/`carica()`, riga 15) contro il guscio di oggi, che ha solo `nuova_partita` e `chiudi_turno`.
 - [[decisioni]]: dove registrare chi produce esito e registro, una volta deciso.
+
+## Aggiornamento del 2026-11-10: piani 9 e 10 su main
+
+Aggiunta datata: il testo sopra resta la fotografia del 01/11 a `c56787d` e non è riscritto. Questa sezione è letta su `origin/main` a `8952a06` (#48), con i piani 9 (#44-#47) e 10 (#41-#43) fusi. Dove le due parti si contraddicono vale questa. Stessi tag: [V] letto, [M] misurato, [INF] inferenza.
+
+### Rimandi chiusi
+
+- **Eventi** (riga «Eventi» della tabella, rimando al 9): `Vista.eventi: Vec<VoceEvento>` con famiglia, causa, tono, regione, bersaglio, costo, opzioni e scelta (`app/src/lib/tipi/Vista.ts`, `VoceEvento.ts`); si risponde con `Comando::RispondiEvento` (`crates/sim-core/src/comando.rs:146`) [V]. Il tono grave arriva come `VoceEvento.tono`.
+- **Situazioni**: `Vista.situazioni: Vec<VoceSituazione>` con misura, valore ufficiale, soglie di accensione e spegnimento, `accesa` (`VoceSituazione.ts`) [V].
+- **Acquisti d'informazione** (riga «Campagna», rimando al 9): `Vista.acquisti: VistaAcquisti` con sondaggio privato, test di una misura, centro studi e prezzi (`VistaAcquisti.ts`); si compra con `Comando::Compra` (`comando.rs:47`) [V]. I dati ci sono, la schermata no.
+- **Fondo di riserva speso dalle emergenze** (riga «Passaggio del bilancio»): `VistaBilancio.fondo_residuo` (`VistaBilancio.ts`) [V].
+- **Partite in corso e albo** (rimando al 10): comandi del guscio `partite`, `riprendi`, `albo` (`app/src-tauri/src/lib.rs:240-318`), tipi `VocePartita`, `Testata`, `VoceAlbo`. `VoceAlbo.serie` porta i tre indicatori per turno (`PuntoSerie`, `crates/sim-core/src/salvataggi.rs:18-25`) [V].
+- **Editor con riepilogo dal vivo** (rimando al 10): `scenari`, `salva_scenario`, `carica_scenario`, `riepilogo_scenario` (`lib.rs:320-358`); `RiepilogoScenario` porta spread, interessi, disavanzo, saldo delle disposizioni, una `PosizioneAttesa` per posizione della fondazione e gli `avvisi` [V].
+- **Avvisi del riepilogo**: `Avviso` ha tre varianti, `senza_maggioranza`, `situazioni_accese`, `crisi_del_debito` (`app/src/lib/tipi/Avviso.ts`; le ultime due dalla #48) [V].
+- **Riavvolgimento** (rimando al 10): comando `riavvolgi(turno)` (`lib.rs:286-293`); `Eredita.riavvolgimenti` e `VoceAlbo.riavvolgimenti` [V].
+- **Eredità e abbandono**: `abbandona` e `conferma_eredita` nel guscio (`lib.rs:295-309`) [V].
+- **`comanda`**: esiste (`lib.rs:277-284`) e apre le 30 varianti di `Comando` (erano 28: si aggiungono `Compra` e `RispondiEvento`) [M: conteggio delle varianti in `comando.rs:18-146`]. La scoperta 3 è chiusa.
+- **Fondazione**: `fonda_partita(scenario, fondazione)` (`lib.rs:249-266`); `Fondazione` ora è esportato in TypeScript (`app/src/lib/tipi/Fondazione.ts`) [V]. La scoperta 4 è chiusa per metà, vedi sotto.
+
+### Cosa manca ancora al guscio
+
+Metodi pubblici del core senza comando Tauri [M: confronto fra `generate_handler!` a `lib.rs:405-423` e i `pub fn` di `partita.rs`]:
+
+| Metodo | Dove | Schermata |
+|---|---|---|
+| `anteprima_sfiducia` | `partita.rs:3802` | opposizione |
+| `anteprima_campagna` | `partita.rs:2422` | campagna |
+| `elettori_campione` | `partita.rs:2548` | mappa, scheda della regione |
+| `bozza_bilancio`, `indicizza`, `riepilogo_bilancio` | `partita.rs:1666`, `:1674`, `:1684` | passaggio del bilancio |
+| `riepilogo_presentato` | `partita.rs:1691` | aula, opposizione |
+| `serie` | `partita.rs:2600` | cruscotto: le caselle dei tre indicatori a partita in corso |
+| `anteprima_fondazione` | `legislatura/fondazione.rs:142` | fondazione |
+
+- **Il nodo del seme ha cambiato forma.** `fonda_partita` prende il seme dall'orologio (`lib.rs:257`) e non lo riceve dalla UI. Il riepilogo dello scenario è «deterministico e senza seme» (`crates/sim-core/src/riepilogo.rs:14-15`, `:116-118`) e dà già la quota attesa per posizione. Resta da decidere se la schermata della fondazione si nutre solo di `riepilogo_scenario`, rinunciando a istogramma e disponibilità di `AnteprimaFondazione`, o se serve ancora un passacarte per `anteprima_fondazione` con un seme che non è quello della partita [INF].
+- **`Fascia` non è ancora esportato** in TypeScript [M: `app/src/lib/tipi/Fascia.ts` assente].
+- **`bigint`**: i file generati che lo dicono sono 19, non più 17 [M: `grep -l bigint app/src/lib/tipi/*.ts | wc -l`]. La scoperta 7 resta aperta.
+
+### Dati che mancano ancora, senza piano
+
+Ricontrollati su `8952a06`:
+
+- **Esito del turno con causa e registro** (storie 14-16): la Vista non ha un campo esito né registro [V: `Vista.ts`]. Il riavvolgimento c'è, il registro da cui scegliere il turno no.
+- **«Avanti fino a novità»** (storia 89): nessun predicato nel core [M: `grep -rn -i novit crates/` trova solo un commento a `partita.rs:331`].
+- **Dati regionali della mappa**: disoccupazione e reddito per regione assenti da `vista.rs` [M: `grep -n 'disoccupaz\|reddito' crates/sim-core/src/vista.rs` → nessun risultato]. Voto e seggi per regione, gruppi della scheda e cantieri finiti non ricontrollati in questa sessione: valgono come al 01/11.
+- **PDE e conto di controllo nella Vista** (storia 50): assenti [M: `grep -n -i pde crates/sim-core/src/vista.rs` → nessun risultato].
+- **Minaccia di scissione persistente** (storia 108): `VocePartito` non la porta (`vista.rs:446-461`) [V].
+- **Piano strutturale riveduto** (storia 51): non ricontrollato, vale come al 01/11.
+
+### Debiti nuovi lasciati dal piano 9
+
+- **Stato del MES e della ristrutturazione fuori dalla Vista.** La scelta passa da un evento («Aste scoperte», `partita.rs:393-420`) e quindi dalla schermata degli eventi. Lo stato che ne segue vive in `Economia` (`crates/sim-core/src/economia/mod.rs:106-111`) e la Vista non lo porta [M: `grep -n -i 'mes\b\|ristruttur' crates/sim-core/src/vista.rs` → nessun risultato]: la UI non sa se un programma è in corso né fino a quando.
+- **Clausola dell'energia**: l'effetto scrive `clausola_energia_fino_a` sulla regione (`partita.rs:4220-4227`); nella Vista non c'è [M: `grep -n -i clausola crates/sim-core/src/vista.rs` → nessun risultato].
+- **Bilancio ricondotto al tetto del MES senza avviso**: un bilancio presentato prima del programma «entra ricondotto» (`partita.rs:1646-1647`) e la Vista non lo segnala [V commento; INF assenza dell'avviso].
+- **Campagna tagliata senza avviso** quando la cassa non basta dopo gli acquisti: riportato dalla sessione che ha chiuso il piano 9, non riletto qui nel codice.
+- **Serie dei tre indicatori a partita in corso**: esiste (`Partita::serie`, `partita.rs:2600`) ma arriva alla UI solo dentro `VoceAlbo`, cioè a partita finita. È un passacarte mancante, non un dato mancante.
+
+### Cosa cambia nelle conclusioni
+
+- La «fetta zero» (scoperta 3) non è più `comanda`: è l'elenco dei passacarte qui sopra.
+- L'esito e il registro restano la mancanza maggiore, e ora sono anche il posto naturale dei due avvisi mancanti (tetto del MES, campagna tagliata) [INF].
+- Le schermate di eventi, situazioni, acquisti, partite, editor, albo ed eredità hanno i loro dati: si possono prototipare su Viste vere.

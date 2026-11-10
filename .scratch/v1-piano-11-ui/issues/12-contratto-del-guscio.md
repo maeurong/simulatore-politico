@@ -9,4 +9,8 @@ Map: ../map.md
 
 Com'è fatto il contratto fra UI e guscio Tauri? Elenco dei comandi passacarte (`comanda` più quelli dell'[inventario](01-inventario-vista-per-schermata.md)); i 17 tipi generati come `bigint` che `JSON.stringify` non serializza (convenzione in ingresso e in uscita); `Fondazione` e `Fascia` non esportati in TypeScript; il seme condiviso fra `anteprima_fondazione` e `fonda` (stato nel guscio, `u64` da JS o campo nel core); come la UI riceve gli errori del core. Decisione tecnica: si risolve con Mario solo dove tocca il core.
 
+### Premesse al 10/11/2026
+
+Il piano 10 ha cambiato il guscio ([Inventario](01-inventario-vista-per-schermata.md), aggiornamento del 10/11): `comanda` e `fonda_partita` esistono, `Fondazione` è esportato, i tipi con `bigint` sono 19, il seme lo sceglie il guscio dall'orologio e il riepilogo dello scenario è senza seme. Restano da decidere i passacarte mancanti (anteprime di sfiducia e campagna, elettori campione, bilancio, `serie`, forse `anteprima_fondazione`), `Fascia`, la convenzione sui `bigint` e gli errori.
+
 ## Answer
