@@ -28,7 +28,7 @@ Debiti lasciati dal piano 9:
 8. Avviso della campagna tagliata quando la cassa non basta dopo gli acquisti.
 9. Avviso del bilancio ricondotto al tetto del MES (`crates/sim-core/src/partita.rs:1646-1647`).
 10. Stato del MES e della ristrutturazione: in corso o no, fino a quando (`crates/sim-core/src/economia/mod.rs:106-111`). La scelta passa già dall'evento «Aste scoperte».
-11. Clausola dell'energia per regione (`partita.rs:4220-4227`).
+11. Clausola dell'energia: fino a che anno vale (`partita.rs:4220-4227`, `crates/sim-core/src/economia/regole_ue.rs:31`). È nazionale, non per regione: corretto il 10/11 su segnalazione della sessione del piano di core.
 
 Fuori da questo ticket, perché i dati ci sono: gli acquisti d'informazione (`Vista.acquisti`) aspettano solo una schermata, da [Ossatura e navigazione](07-ossatura-e-navigazione.md); la serie dei tre indicatori a partita in corso (`Partita::serie`) aspetta un passacarte, da [Contratto del guscio](12-contratto-del-guscio.md).
 
@@ -57,4 +57,12 @@ Lasciato al brainstorming del piano di core:
 - quattro voci minori dell'inventario del 01/11, non ricontrollate su `8952a06`, da verificare e prendere se mancano ancora: forbice del sondaggio per regione, combinazioni spente della legge elettorale (storia 72), posti liberi in calendario, costo in soddisfazione di Ferma e Dirotta (storia 28).
 
 Conseguenze sulla mappa: [Testi del Pungolo](09-testi-del-pungolo.md) aspetta la spec del piano di core, che porta l'elenco dei tipi di voce. [Fette](10-fette.md) ordina le fette dell'esito, del registro, della mappa e dell'opposizione dietro quel piano. Termine nuovo nel glossario: «Fermata».
+
+### Correzioni del 10/11/2026, dopo la chiusura
+
+Dalla ricerca della sessione del piano di core «esito e Vista completa»:
+
+- **La clausola dell'energia è nazionale.** Verificato qui: `clausola_energia_fino_a` è un campo di `regole_ue` (`crates/sim-core/src/economia/regole_ue.rs:31`), scritto a `crates/sim-core/src/partita.rs:4224-4225`. L'elenco diceva «per regione»: era un errore di lettura.
+- **Seggi per regione**: valgono quelli del Senato (storia 138). La sessione del core riporta che i seggi della Camera per regione e lista non esistono, perché il riparto è nazionale; non verificato qui.
+- Tre esposizioni chiedono stato nuovo e non solo un campo nella Vista, secondo la stessa sessione: disoccupazione regionale del turno prima, voti e seggi del Senato per regione, cantieri finiti.
 
