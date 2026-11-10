@@ -235,24 +235,16 @@ impl VistaCentroStudi {
     }
 }
 
-/// Un acquisto del turno col suo risultato.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum Acquistato {
-    SondaggioPrivato(Sondaggio),
-    TestMisura(VistaTest),
-    CentroStudi(VistaCentroStudi),
+/// Gli acquisti del turno col loro risultato, al massimo uno per tipo.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Acquistati {
+    pub sondaggio_privato: Option<Sondaggio>,
+    pub test_misura: Option<VistaTest>,
+    pub centro_studi: Option<VistaCentroStudi>,
 }
 
-impl Acquistato {
-    pub fn tipo(&self) -> TipoAcquisto {
-        match self {
-            Acquistato::SondaggioPrivato(_) => TipoAcquisto::SondaggioPrivato,
-            Acquistato::TestMisura(_) => TipoAcquisto::TestMisura,
-            Acquistato::CentroStudi(_) => TipoAcquisto::CentroStudi,
-        }
-    }
-
-    /// Forma e finitezza del risultato, per uno stato letto da un salvataggio: il privato ha
+impl Acquistati {
+    /// Forma e finitezza dei risultati, per uno stato letto da un salvataggio: il privato ha
     /// un solo istituto, il test una reazione per condizione in ordine col segno fra −1 e 1, il
     /// centro studi quattro trimestri consecutivi da `data`, il corrente.
     ///
@@ -264,50 +256,48 @@ impl Acquistato {
         n_partiti: usize,
         data: Trimestre,
     ) -> Result<(), Errore> {
-        match self {
-            Acquistato::SondaggioPrivato(s) => controlla_sondaggio(s, dati, n_partiti + 1, 1)
-                .map_err(|m| Errore::SalvataggioIlleggibile(format!("acquisti.privato.{m}"))),
-            Acquistato::TestMisura(t) => {
-                let ko =
-                    |m: &str| Err(Errore::SalvataggioIlleggibile(format!("acquisti.test.{m}")));
-                let condizioni = t.reazioni.iter().map(|r| r.condizione);
-                if !condizioni.eq(Condizione::TUTTE) {
-                    return ko("reazioni: servono le 6 condizioni, nel loro ordine");
-                }
-                if t.reazioni.iter().any(|r| !(-1..=1).contains(&r.segno)) {
-                    return ko("segno: fuori da −1, 0, 1");
-                }
-                Ok(())
+        if let Some(s) = &self.sondaggio_privato {
+            controlla_sondaggio(s, dati, n_partiti + 1, 1)
+                .map_err(|m| Errore::SalvataggioIlleggibile(format!("acquisti.privato.{m}")))?;
+        }
+        if let Some(t) = &self.test_misura {
+            let ko = |m: &str| Err(Errore::SalvataggioIlleggibile(format!("acquisti.test.{m}")));
+            let condizioni = t.reazioni.iter().map(|r| r.condizione);
+            if !condizioni.eq(Condizione::TUTTE) {
+                return ko("reazioni: servono le 6 condizioni, nel loro ordine");
             }
-            Acquistato::CentroStudi(c) => {
-                let ko = |m: &str| {
-                    Err(Errore::SalvataggioIlleggibile(format!(
-                        "acquisti.centro_studi.{m}"
-                    )))
-                };
-                if c.previsione.len() != 4 {
-                    return ko("previsione: servono 4 voci");
-                }
-                let date = std::iter::successors(Some(data), |t| Some(t.successivo()));
-                if !c.previsione.iter().map(|v| v.data).eq(date.take(4)) {
-                    return ko("date: servono i 4 trimestri consecutivi dal corrente");
-                }
-                let forchette = (c.previsione.iter())
-                    .flat_map(|v| [v.pil, v.disoccupazione, v.inflazione, v.debito]);
-                for f in forchette {
-                    if !(f.centro.is_finite() && f.sigma.is_finite()) {
-                        return ko("previsione: valore non finito");
-                    }
-                    if f.sigma < 0.0 {
-                        return ko("sigma: negativa");
-                    }
-                }
-                if !c.stima.e_finita() {
-                    return ko("stima: valore non finito");
-                }
-                Ok(())
+            if t.reazioni.iter().any(|r| !(-1..=1).contains(&r.segno)) {
+                return ko("segno: fuori da −1, 0, 1");
             }
         }
+        if let Some(c) = &self.centro_studi {
+            let ko = |m: &str| {
+                Err(Errore::SalvataggioIlleggibile(format!(
+                    "acquisti.centro_studi.{m}"
+                )))
+            };
+            if c.previsione.len() != 4 {
+                return ko("previsione: servono 4 voci");
+            }
+            let date = std::iter::successors(Some(data), |t| Some(t.successivo()));
+            if !c.previsione.iter().map(|v| v.data).eq(date.take(4)) {
+                return ko("date: servono i 4 trimestri consecutivi dal corrente");
+            }
+            let forchette = (c.previsione.iter())
+                .flat_map(|v| [v.pil, v.disoccupazione, v.inflazione, v.debito]);
+            for f in forchette {
+                if !(f.centro.is_finite() && f.sigma.is_finite()) {
+                    return ko("previsione: valore non finito");
+                }
+                if f.sigma < 0.0 {
+                    return ko("sigma: negativa");
+                }
+            }
+            if !c.stima.e_finita() {
+                return ko("stima: valore non finito");
+            }
+        }
+        Ok(())
     }
 }
 

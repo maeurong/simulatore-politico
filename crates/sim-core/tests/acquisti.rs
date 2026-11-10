@@ -136,22 +136,6 @@ fn comprare_non_sposta_le_estrazioni() {
     assert_eq!(chiusa(false), chiusa(true));
 }
 
-#[test]
-fn due_acquisti_dello_stesso_tipo_nel_salvataggio_sono_rifiutati() {
-    let mut p = Partita::nuova(dati_base(), 1);
-    p.comanda(SONDAGGIO).unwrap();
-    let e = edita(&p, |j| {
-        let primo = j["acquisti"][0].clone();
-        j["acquisti"].as_array_mut().unwrap().push(primo);
-    })
-    .unwrap_err();
-    assert!(
-        e.to_string()
-            .contains("acquisti: due acquisti dello stesso tipo nel turno"),
-        "{e}"
-    );
-}
-
 /// Gli incroci del privato pescano dal campione di un solo istituto (4 volte il suo), non da
 /// quello di tutti.
 #[test]
@@ -174,7 +158,7 @@ fn un_sondaggio_privato_malformato_nel_salvataggio_e_rifiutato() {
     let mut p = Partita::nuova(dati_base(), 1);
     p.comanda(SONDAGGIO).unwrap();
     let e = edita(&p, |j| {
-        let quote = &mut j["acquisti"][0]["SondaggioPrivato"]["istituti"][0]["quote"];
+        let quote = &mut j["acquisti"]["sondaggio_privato"]["istituti"][0]["quote"];
         quote.as_array_mut().unwrap().pop();
     })
     .unwrap_err();
@@ -324,12 +308,12 @@ fn un_test_manomesso_nel_salvataggio_e_rifiutato() {
     p.comanda(test_di(&v("regime_pensioni", "retributivo")))
         .unwrap();
     let e = edita(&p, |j| {
-        j["acquisti"][0]["TestMisura"]["reazioni"][0]["segno"] = 2.into();
+        j["acquisti"]["test_misura"]["reazioni"][0]["segno"] = 2.into();
     })
     .unwrap_err();
     assert!(e.to_string().contains("acquisti.test.segno"), "{e}");
     let e = edita(&p, |j| {
-        let r = &mut j["acquisti"][0]["TestMisura"]["reazioni"];
+        let r = &mut j["acquisti"]["test_misura"]["reazioni"];
         r.as_array_mut().unwrap().swap(0, 1);
     })
     .unwrap_err();
@@ -652,7 +636,7 @@ fn un_centro_studi_manomesso_nel_salvataggio_e_rifiutato() {
     let mut p = Partita::nuova(dati_base(), 1);
     centro_studi(&mut p);
     let rifiuto = |f: &dyn Fn(&mut serde_json::Value)| {
-        edita(&p, |j| f(&mut j["acquisti"][0]["CentroStudi"]))
+        edita(&p, |j| f(&mut j["acquisti"]["centro_studi"]))
             .unwrap_err()
             .to_string()
     };

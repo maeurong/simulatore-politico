@@ -18,7 +18,7 @@ use crate::eventi::{
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{
-    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto,
+    Acquistati, Acquisto, ElettoreCampione, Informazione, Sondaggio, TipoAcquisto,
     VistaCentroStudi, VistaTest, VocePrevisione, genera,
 };
 use crate::legislatura::{
@@ -126,7 +126,7 @@ pub struct Partita {
     /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
     mosse: Vec<MossaIa>,
     /// Gli acquisti d'informazione del turno col loro risultato, svuotati a ogni `chiudi_turno`.
-    acquisti: Vec<Acquistato>,
+    acquisti: Acquistati,
     /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
     serie: Vec<PuntoSerie>,
     /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
@@ -318,7 +318,7 @@ impl Partita {
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
             mosse: Vec::new(),
-            acquisti: Vec::new(),
+            acquisti: Acquistati::default(),
             serie: Vec::new(),
             riavvolgimenti: 0,
         };
@@ -548,7 +548,7 @@ impl Partita {
             return;
         }
         self.mosse.clear();
-        self.acquisti.clear();
+        self.acquisti = Acquistati::default();
         self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
@@ -1108,12 +1108,17 @@ impl Partita {
             p.entra_in_vigore(m);
         }
         for _ in 0..turni {
-            p.motore(false);
-            p.turno = p.turno.saturating_add(1);
-            p.data = p.data.successivo();
-            (p.disposizioni).arrivi(&p.dati, p.turno, &mut p.grandezze.effetti);
+            p.passo_copia();
         }
         p
+    }
+
+    /// Una chiusura di `avanza_copia`: `motore` senza caso, turno e data dopo, arrivi.
+    fn passo_copia(&mut self) {
+        self.motore(false);
+        self.turno = self.turno.saturating_add(1);
+        self.data = self.data.successivo();
+        (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
     }
 
     /// La bozza del test di una misura: niente guardie di governo né di crisi, né i rifiuti di
@@ -2325,7 +2330,12 @@ impl Partita {
     /// poi, quelli del MES e della bozza. La partita resta identica.
     pub(crate) fn compra(&mut self, a: &Acquisto) -> Result<(), Errore> {
         let tipo = a.tipo();
-        if self.acquisti.iter().any(|e| e.tipo() == tipo) {
+        let comprato = match a {
+            Acquisto::SondaggioPrivato => self.acquisti.sondaggio_privato.is_some(),
+            Acquisto::TestMisura { .. } => self.acquisti.test_misura.is_some(),
+            Acquisto::CentroStudi => self.acquisti.centro_studi.is_some(),
+        };
+        if comprato {
             return Err(Errore::Comando(format!(
                 "già comprato questo turno: {}",
                 tipo.nome()
@@ -2341,56 +2351,54 @@ impl Partita {
                 campagna::migliaia(cassa)
             )));
         }
-        let esito = match a {
+        match a {
             Acquisto::SondaggioPrivato => {
                 // Il blocco riservato di ogni turno, dentro `turno · 1024 + gruppo` di
                 // `elettori_campione`: `valida_gruppi` tiene i gruppi sotto il blocco, e
                 // l'anteprima parte da 2^35, oltre 33 milioni di turni.
                 let chiave = u64::from(self.turno) * 1024 + BLOCCO_SONDAGGIO_PRIVATO as u64;
-                Acquistato::SondaggioPrivato(self.informazione.rileva_privato(
+                let s = self.informazione.rileva_privato(
                     &self.dati,
                     &self.caso,
                     &self.elettorato,
                     &self.intenzioni_vere(),
                     &self.governo,
                     chiave,
-                ))
+                );
+                self.acquisti.sondaggio_privato = Some(s);
             }
             Acquisto::TestMisura { valori } => {
                 let m = self.bozza_test(valori)?;
-                Acquistato::TestMisura(VistaTest::stima(
+                let t = VistaTest::stima(
                     &self.dati,
                     self.caso.estemporaneo(parlamento::chiave_test(self.turno)),
                     parlamento::nome_misura(&self.dati, &m),
                     self.reazioni(&m),
-                ))
+                );
+                self.acquisti.test_misura = Some(t);
             }
             Acquisto::CentroStudi => {
-                // Ruling 71: la previsione è la catena delle copie di `avanza_copia`, un turno
-                // per volta.
+                // La previsione è una copia chiusa da `passo_copia` un turno per volta.
                 let mut copia = self.clone();
                 let previsione = (1..=4)
                     .map(|h| {
-                        copia = copia.avanza_copia(1, None);
+                        copia.passo_copia();
                         let data = copia.data.precedente();
                         VocePrevisione::da(&self.dati, &copia.economia, data, h)
                     })
                     .collect();
-                Acquistato::CentroStudi(VistaCentroStudi {
-                    stima: VistaCentroStudi::stima(
-                        &self.dati,
-                        &self.informazione.statistica,
-                        self.caso
-                            .estemporaneo(parlamento::chiave_centro_studi(self.turno)),
-                    ),
-                    previsione,
-                })
+                let stima = VistaCentroStudi::stima(
+                    &self.dati,
+                    &self.informazione.statistica,
+                    self.caso
+                        .estemporaneo(parlamento::chiave_centro_studi(self.turno)),
+                );
+                self.acquisti.centro_studi = Some(VistaCentroStudi { stima, previsione });
             }
-        };
+        }
         if let Some(p) = self.partiti.get_mut(self.giocatore) {
             p.cassa = p.cassa.saturating_sub(prezzo);
         }
-        self.acquisti.push(esito);
         Ok(())
     }
 
@@ -4080,18 +4088,9 @@ impl Partita {
             eventi: self.voci_eventi(),
             situazioni: self.situazioni(),
             acquisti: VistaAcquisti {
-                sondaggio_privato: self.acquisti.iter().find_map(|a| match a {
-                    Acquistato::SondaggioPrivato(s) => Some(s.clone()),
-                    Acquistato::TestMisura(_) | Acquistato::CentroStudi(_) => None,
-                }),
-                test_misura: self.acquisti.iter().find_map(|a| match a {
-                    Acquistato::TestMisura(t) => Some(t.clone()),
-                    Acquistato::SondaggioPrivato(_) | Acquistato::CentroStudi(_) => None,
-                }),
-                centro_studi: self.acquisti.iter().find_map(|a| match a {
-                    Acquistato::CentroStudi(c) => Some(c.clone()),
-                    Acquistato::SondaggioPrivato(_) | Acquistato::TestMisura(_) => None,
-                }),
+                sondaggio_privato: self.acquisti.sondaggio_privato.clone(),
+                test_misura: self.acquisti.test_misura.clone(),
+                centro_studi: self.acquisti.centro_studi.clone(),
                 prezzi: TipoAcquisto::TUTTI
                     .iter()
                     .map(|&acquisto| PrezzoAcquisto {
@@ -4699,15 +4698,7 @@ impl Partita {
     /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
-        for a in &self.acquisti {
-            a.controlla(&self.dati, self.partiti.len(), self.data)?;
-        }
-        let doppio = (self.acquisti.iter().enumerate())
-            .find(|(k, e)| self.acquisti[..*k].iter().any(|f| f.tipo() == e.tipo()));
-        ok(
-            doppio.is_none(),
-            "acquisti: due acquisti dello stesso tipo nel turno",
-        )?;
+        (self.acquisti).controlla(&self.dati, self.partiti.len(), self.data)?;
         ok(
             self.turni_al_governo <= self.turno.saturating_add(1)
                 && self.partenza.iter().all(|x| x.is_finite()),

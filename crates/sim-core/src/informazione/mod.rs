@@ -15,7 +15,7 @@ pub(crate) use campione::indice;
 mod sondaggio;
 mod statistica;
 pub use acquisti::{
-    Acquistato, Acquisto, Forchetta, ReazioneStimata, TipoAcquisto, VistaCentroStudi, VistaTest,
+    Acquistati, Acquisto, Forchetta, ReazioneStimata, TipoAcquisto, VistaCentroStudi, VistaTest,
     VocePrevisione,
 };
 pub use campione::{ElettoreCampione, Motivo, genera};
