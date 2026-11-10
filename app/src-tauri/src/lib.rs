@@ -113,7 +113,8 @@ fn apri_partita(stato: &Stato, archivio: &Archivio, id: String) -> Result<Vista,
 
 /// Chiude il turno; con un id, lo snapshot della nuova apertura. Lo snapshot si scrive anche se la
 /// chiusura finisce la partita; se era già finita, no. Se lo snapshot non si scrive, errore e
-/// partita in memoria invariata.
+/// partita in memoria invariata. Il disco può restare un turno avanti, se il guasto arriva dopo
+/// il file del turno: la chiusura ripetuta lo riscrive.
 fn chiudi(stato: &Stato, archivio: &Archivio) -> Result<Vista, String> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
@@ -535,6 +536,7 @@ mod tests {
     /// Sostituisce `nome` con una cartella non vuota: ogni scrittura su quel file fallisce.
     fn guasta(c: &Path, nome: &str) -> Result<std::path::PathBuf, String> {
         let file = c.join("partite").join(ID).join(nome);
+        // Il file può mancare; ogni altro errore emerge da `create_dir`.
         let _ = std::fs::remove_file(&file);
         std::fs::create_dir(&file).map_err(|e| e.to_string())?;
         std::fs::write(file.join("dentro"), "x").map_err(|e| e.to_string())?;
@@ -564,8 +566,31 @@ mod tests {
         let prima = sulla_partita(&stato, |p| Ok(p.clone()))?;
         guasta(&c.0, "bozza.json.gz")?;
 
-        assert!(esegui(&stato, &archivio, campagna(1)).is_err());
+        // L'errore è della scrittura, non di un comando rifiutato.
+        let e = esegui(&stato, &archivio, campagna(1))
+            .err()
+            .unwrap_or_default();
+        assert!(e.starts_with("impossibile"), "{e}");
         assert!(sulla_partita(&stato, |p| Ok(*p == prima))?);
+        Ok(())
+    }
+
+    /// Il guasto dopo il file del turno: su disco resta `turno-001`, la memoria no, e la chiusura
+    /// ripetuta lo riscrive.
+    #[test]
+    fn chiudi_guasta_a_meta_si_ripete() -> Result<(), String> {
+        let c = cartella("lib-chiudi-a-meta");
+        let (stato, archivio) = con_partita(&c.0)?;
+        // La bozza non si cancella: lo snapshot fallisce al secondo passo.
+        let guasto = guasta(&c.0, "bozza.json.gz")?;
+
+        let e = chiudi(&stato, &archivio).err().unwrap_or_default();
+        assert!(e.starts_with("impossibile cancellare"), "{e}");
+        assert!(guasto.with_file_name("turno-001.json.gz").is_file());
+        assert_eq!(sulla_partita(&stato, |p| Ok(p.vista()))?.turno, 0);
+
+        std::fs::remove_dir_all(&guasto).map_err(|e| e.to_string())?;
+        assert_eq!(chiudi(&stato, &archivio)?.turno, 1);
         Ok(())
     }
 
