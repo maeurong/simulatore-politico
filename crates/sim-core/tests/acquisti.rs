@@ -220,7 +220,8 @@ fn il_test_indovina_il_segno_dei_gruppi_grandi() {
 }
 
 /// La condizione più grande ha la sigma pari a `soglia_reazione_poco`: con la reazione vera in
-/// Molto, la fascia stimata è Molto in almeno 140 semi su 200.
+/// Molto, la fascia stimata è Molto in almeno 190 semi su 200 (con la taratura attuale la vera
+/// sta a circa cinque sigma dalla soglia del Medio: una deriva di `errore_test` lo fa cadere).
 #[test]
 fn il_test_dice_la_fascia_della_condizione_piu_grande() {
     let valori = v("ticket", "nessuno");
@@ -237,7 +238,7 @@ fn il_test_dice_la_fascia_della_condizione_piu_grande() {
         let t = p.vista().acquisti.test_misura.unwrap();
         molto += u32::from(t.reazioni[grande].fascia == Fascia3::Molto);
     }
-    assert!(molto >= 140, "{molto}");
+    assert!(molto >= 190, "{molto}");
 }
 
 /// Il test non entra in calendario: la legge che il governo ha in esame si testa.
