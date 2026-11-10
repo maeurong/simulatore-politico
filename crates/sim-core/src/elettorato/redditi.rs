@@ -75,7 +75,13 @@ impl Elettorato {
     /// `reddito_prima ← reddito`, poi il reddito nuovo dallo stato dell'economia. La riscossione
     /// delle misure pesa anche sulle imposte degli autonomi; le leve delle disposizioni, rispetto
     /// a quelle di partenza, muovono salario minimo, reddito minimo, cuneo e forfettario.
-    pub fn aggiorna_redditi(&mut self, dati: &DatiGioco, e: &Economia, misure: &Misure) {
+    pub fn aggiorna_redditi(
+        &mut self,
+        dati: &DatiGioco,
+        e: &Economia,
+        misure: &Misure,
+        turno: u32,
+    ) {
         let (l, l0) = (&misure.leve, &Leve::partenza(dati));
         let (i, b) = (Indici::da(e, dati, l), self.base);
         let (ore, copertura) = (
@@ -91,10 +97,19 @@ impl Elettorato {
         // ponytail: base nulla (per esempio tutti i salari_pil a 0) = nessun termine di
         // confronto, il reddito resta quello dei dati invece di diventare NaN.
         let rapporto = |oggi: f64, base: f64| if base > 0.0 { oggi / base } else { 1.0 };
+        // I detentori del debito sono le fasce media e alta: per `turni_ristrutturazione` turni
+        // dal taglio il loro reddito primario cala di `perdita_ristrutturazione`.
+        let in_corso = (e.ristrutturazione).is_some_and(|r| r.perdita_in_corso(dati, turno));
+        let fattore = if in_corso {
+            1.0 - dati.manopola("perdita_ristrutturazione")
+        } else {
+            1.0
+        };
         for (g, dato) in self.gruppi.iter_mut().zip(&d.gruppi) {
             g.reddito_prima = g.reddito;
             let (c, bassa) = (dato.condizione, dato.fascia == Fascia::Bassa);
             let mut primario = dato.primario
+                * if bassa { 1.0 } else { fattore }
                 * match dato.condizione {
                     Condizione::DipendentePubblico => {
                         rapporto(i.salari_pubblici, b.salari_pubblici)

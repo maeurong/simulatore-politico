@@ -403,8 +403,8 @@ impl Elettorato {
                 .collect(),
         };
         // Due volte, così `reddito_prima == reddito` al turno zero.
-        el.aggiorna_redditi(dati, e, &neutre);
-        el.aggiorna_redditi(dati, e, &neutre);
+        el.aggiorna_redditi(dati, e, &neutre, 0);
+        el.aggiorna_redditi(dati, e, &neutre, 0);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
         el
     }

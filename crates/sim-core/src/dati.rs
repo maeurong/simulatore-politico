@@ -4,7 +4,7 @@ use crate::economia::produzione_riferimento;
 use crate::elettorato::DatiElettorato;
 use crate::elezioni::{DatiElezioni, LeggeElettorale};
 use crate::errore::Errore;
-use crate::eventi::{DatoEvento, DatoSituazione};
+use crate::eventi::{DatoCondizionalita, DatoEvento, DatoSituazione};
 use crate::grandezze::{DatoDeriva, DatoGrandezza, Dinamica};
 use crate::partiti;
 use crate::scenario::Scenario;
@@ -69,6 +69,16 @@ impl FileDati {
 /// Manopole che il motore legge: se mancano, il caricamento fallisce.
 const MANOPOLE_RICHIESTE: &[&str] = &[
     "spinta_situazione",
+    "soglia_shock",
+    "aiuti_shock",
+    "clausola_energia_margine",
+    "soglia_crisi_debito",
+    "durata_mes",
+    "intesa_mes",
+    "taglio_ristrutturazione",
+    "perdita_ristrutturazione",
+    "turni_ristrutturazione",
+    "premio_ristrutturazione",
     "is_gap_1",
     "is_gap_2",
     "is_tasso",
@@ -370,6 +380,7 @@ pub struct DatiGioco {
     pub(crate) disposizioni: Vec<DatoDisposizione>,
     pub(crate) eventi: Vec<DatoEvento>,
     pub(crate) situazioni: Vec<DatoSituazione>,
+    pub(crate) condizionalita: Vec<DatoCondizionalita>,
     /// Le differenze dalla base da cui vengono questi dati; `None` per lo scenario di base.
     pub(crate) su_misura: Option<SuMisura>,
 }
@@ -378,6 +389,7 @@ pub struct DatiGioco {
 struct FileEventi {
     evento: Vec<DatoEvento>,
     situazione: Vec<DatoSituazione>,
+    condizionalita: Vec<DatoCondizionalita>,
 }
 
 #[derive(Deserialize)]
@@ -498,6 +510,11 @@ impl DatiGioco {
 
     pub fn situazioni(&self) -> &[DatoSituazione] {
         &self.situazioni
+    }
+
+    /// Le disposizioni che il memorandum del MES vincola, coi gradini a cui le porta.
+    pub fn condizionalita(&self) -> &[DatoCondizionalita] {
+        &self.condizionalita
     }
 
     /// Posizione di un evento per id.
@@ -626,6 +643,7 @@ impl DatiGioco {
         let FileEventi {
             evento: eventi,
             situazione: situazioni,
+            condizionalita,
         } = toml::from_str::<FileEventi>(&file.eventi)
             .map_err(|e| errore_toml("eventi.toml", e))?;
         if let Some(d) = disposizioni.iter().find(|d| d.norma == Norma::Elettorale) {
@@ -657,6 +675,7 @@ impl DatiGioco {
             disposizioni,
             eventi,
             situazioni,
+            condizionalita,
             su_misura: None,
         };
         dati.valida()?;
@@ -846,5 +865,39 @@ impl DatiGioco {
             ))),
             None => Ok(()),
         }
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::unwrap_used,
+    reason = "nei test un unwrap che fallisce e' il fallimento voluto"
+)]
+mod tests {
+    use super::MANOPOLE_RICHIESTE;
+
+    /// Ogni lettura letterale di una manopola nei sorgenti del crate è fra le richieste: senza,
+    /// un salvataggio che non la porta passerebbe `valida` e la lettura andrebbe in panico.
+    #[test]
+    fn ogni_manopola_letta_e_richiesta() {
+        let mut da_leggere = vec![std::path::PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src"
+        ))];
+        let mut mancanti = Vec::new();
+        while let Some(p) = da_leggere.pop() {
+            if p.is_dir() {
+                da_leggere.extend(std::fs::read_dir(&p).unwrap().map(|e| e.unwrap().path()));
+                continue;
+            }
+            let testo = std::fs::read_to_string(&p).unwrap();
+            for pezzo in testo.split("manopola(\"").skip(1) {
+                let nome = pezzo.split('"').next().unwrap();
+                if !MANOPOLE_RICHIESTE.contains(&nome) {
+                    mancanti.push(format!("{}: {nome}", p.display()));
+                }
+            }
+        }
+        assert!(mancanti.is_empty(), "{mancanti:?}");
     }
 }

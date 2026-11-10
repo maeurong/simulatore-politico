@@ -89,7 +89,7 @@ fn estrazioni_fisse_per_turno() {
         let d = DatiGioco::da_testi(&f).unwrap();
         // A ogni chiusura: una normale per riga `[[deriva]]`, poi due uniformi per
         // candidato delle emergenze (livello ed estrazione; uno per regione e tipo, più la siccità),
-        // poi due dello scandalo (bersaglio ed estrazione).
+        // poi due dello scandalo (bersaglio ed estrazione), poi cinque degli shock.
         for _ in 0..turni {
             for _ in 0..d.derive().len() {
                 atteso.normale(Flusso::Eventi);
@@ -97,7 +97,7 @@ fn estrazioni_fisse_per_turno() {
             for _ in 0..2 * 4 * d.regioni().len() {
                 atteso.uniforme(Flusso::Eventi);
             }
-            for _ in 0..2 {
+            for _ in 0..2 + 5 {
                 atteso.uniforme(Flusso::Eventi);
             }
         }

@@ -92,8 +92,8 @@ pub fn senza_shock_vero() -> FileDati {
     f
 }
 
-/// `f` senza emergenze naturali né scandali: nessun sisma, idro, siccità e `scandalo_base` a zero,
-/// così i test che misurano valence, elettorato o grandezze non trovano eventi per caso.
+/// `f` senza emergenze naturali, scandali né shock: nessun sisma, idro, siccità, `scandalo_base` a
+/// zero e `soglia_shock` al massimo (4 sigma: nei semi dei test non esce mai), così i test che misurano valence, elettorato o grandezze non trovano eventi per caso.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -108,7 +108,7 @@ pub fn senza_emergenze(mut f: FileDati) -> FileDati {
     for nome in ["emergenze_idro_anno", "siccita_anno", "scandalo_base"] {
         f = imposta(f, "manopole", &format!("[{nome}]\nvalore = "), "0.0");
     }
-    f
+    imposta(f, "manopole", "[soglia_shock]\nvalore = ", "4.0")
 }
 
 /// `senza_emergenze(f)` con lo scandalo che nasce a ogni chiusura (`p` = 1).

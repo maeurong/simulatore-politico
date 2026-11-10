@@ -126,7 +126,9 @@ fn la_situazione_non_lampeggia() {
     let mut p = con_valore(&p, "sovraffollamento_carceri", 105.0);
     chiudi_col_bilancio(&mut p);
     assert!(!accesa(&p, "sovraffollamento_carceri"));
-    let mut p = con_valore(&p, "sovraffollamento_carceri", 118.0);
+    // 125 e non 118: l'accensione è a 117 e il rumore della deriva, che dipende dal seme e dalle
+    // estrazioni, può portare il valore ufficiale sotto.
+    let mut p = con_valore(&p, "sovraffollamento_carceri", 125.0);
     chiudi_col_bilancio(&mut p);
     assert_eq!(eventi_carceri(&p), 1);
 }
