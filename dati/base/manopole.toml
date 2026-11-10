@@ -1650,56 +1650,56 @@ min = 0.0
 max = 1.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno in corso). Per ogni grandezza, _1 è l'anno in corso, usato a un trimestre (h = 1), _4 l'anno dopo, a quattro (h = 4); in mezzo la sigma è lineare in h
 [rmse_pil_1]
 valore = 1.15
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua del PIL in volume, anno dopo)
 [rmse_pil_4]
 valore = 1.84
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno in corso)
 [rmse_inflazione_1]
 valore = 0.86
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sull'inflazione del deflatore dei consumi, anno dopo)
 [rmse_inflazione_4]
 valore = 2.28
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno in corso)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno in corso)
 [rmse_disoccupazione_1]
 valore = 1.06
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sulla crescita annua, anno dopo)
+# docs/ricerca/modelli/informazione-a-pagamento.md:75-89 (RMSE della Commissione per l'Italia sul tasso di disoccupazione, in punti, anno dopo)
 [rmse_disoccupazione_4]
 valore = 1.47
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# [NON TROVATO] in fonte, informazione-a-pagamento.md:89, assunzione del piano 9
+# assunzione del piano 9: la fonte non dà l'errore sul debito (informazione-a-pagamento.md:89 [NON TROVATO]), qui un terzo di rmse_debito_4
 [rmse_debito_1]
 valore = 1.0
 min = 0.0
 max = 10.0
 ticket = "25"
 
-# [NON TROVATO] in fonte, informazione-a-pagamento.md:89, assunzione del piano 9 (circa 3 punti a un anno [INF])
+# stima [INF] da informazione-a-pagamento.md:89: circa 3 punti di PIL a un anno, dall'errore sul PIL nominale più quello sul saldo; grezza, da tarare
 [rmse_debito_4]
 valore = 3.0
 min = 0.0

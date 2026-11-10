@@ -2,7 +2,6 @@
 import type { ReazioneStimata } from "./ReazioneStimata";
 
 /**
- * Il test di una misura: `misura` è il nome della bozza, una reazione per condizione
- * nell'ordine di `Condizione::TUTTE`.
+ * Il test di una misura: `misura` è il nome della bozza, poi una reazione per condizione.
  */
 export type VistaTest = { misura: string, reazioni: Array<ReazioneStimata>, };

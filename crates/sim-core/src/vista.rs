@@ -101,6 +101,8 @@ pub struct Vista {
     pub acquisti: VistaAcquisti,
 }
 
+/// L'informazione comprata: un campo vuoto è un tipo non comprato in questo turno. Prezzi in
+/// euro.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaAcquisti {

@@ -4,4 +4,8 @@ import type { Sondaggio } from "./Sondaggio";
 import type { VistaCentroStudi } from "./VistaCentroStudi";
 import type { VistaTest } from "./VistaTest";
 
+/**
+ * L'informazione comprata: un campo vuoto è un tipo non comprato in questo turno. Prezzi in
+ * euro.
+ */
 export type VistaAcquisti = { sondaggio_privato: Sondaggio | null, test_misura: VistaTest | null, centro_studi: VistaCentroStudi | null, prezzi: Array<PrezzoAcquisto>, };

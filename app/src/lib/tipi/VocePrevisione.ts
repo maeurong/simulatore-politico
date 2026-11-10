@@ -7,10 +7,7 @@ import type { Trimestre } from "./Trimestre";
  */
 export type VocePrevisione = { data: Trimestre, 
 /**
- * Crescita del PIL reale sul trimestre dello stesso anno prima: le RMSE sono sulla crescita
- * annua, e `storico` tiene i PIL nominali di otto trimestri, `inflazione` i prezzi. I quattro
- * trimestri prima del turno zero sono il conto del turno zero ai suoi prezzi, quindi si
- * deflaziona solo con le inflazioni dei trimestri chiusi dopo (Ruling 75).
+ * Crescita del PIL reale sullo stesso trimestre dell'anno prima.
  */
 pil: Forchetta, 
 /**
@@ -18,7 +15,7 @@ pil: Forchetta,
  */
 disoccupazione: Forchetta, 
 /**
- * Prezzi sul trimestre dello stesso anno prima, dalle quattro inflazioni trimestrali.
+ * Prezzi sullo stesso trimestre dell'anno prima.
  */
 inflazione: Forchetta, 
 /**

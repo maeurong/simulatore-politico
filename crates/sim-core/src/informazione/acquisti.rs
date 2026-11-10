@@ -82,8 +82,8 @@ pub struct ReazioneStimata {
     pub fascia: Fascia3,
 }
 
-/// Il test di una misura: `misura` è il nome della bozza, una reazione per condizione
-/// nell'ordine di `Condizione::TUTTE`.
+/// Il test di una misura: `misura` è il nome della bozza, poi una reazione per condizione.
+// Le reazioni stanno nell'ordine di `Condizione::TUTTE`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaTest {
@@ -140,7 +140,8 @@ impl VistaTest {
     }
 }
 
-/// Simmetrica: `centro ± sigma` è l'intervallo di 1σ.
+/// Simmetrica: `centro ± sigma` è l'intervallo di 1σ, in punti percentuali (il debito in punti
+/// di PIL).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Forchetta {
@@ -153,14 +154,15 @@ pub struct Forchetta {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VocePrevisione {
     pub data: Trimestre,
-    /// Crescita del PIL reale sul trimestre dello stesso anno prima: le RMSE sono sulla crescita
-    /// annua, e `storico` tiene i PIL nominali di otto trimestri, `inflazione` i prezzi. I quattro
-    /// trimestri prima del turno zero sono il conto del turno zero ai suoi prezzi, quindi si
-    /// deflaziona solo con le inflazioni dei trimestri chiusi dopo (Ruling 75).
+    /// Crescita del PIL reale sullo stesso trimestre dell'anno prima.
+    // Le RMSE sono sulla crescita annua, e `storico` tiene i PIL nominali di otto trimestri,
+    // `inflazione` i prezzi. I quattro trimestri prima del turno zero sono il conto del turno zero
+    // ai suoi prezzi, quindi si deflaziona solo con le inflazioni dei trimestri chiusi dopo.
     pub pil: Forchetta,
     /// Tasso nazionale.
     pub disoccupazione: Forchetta,
-    /// Prezzi sul trimestre dello stesso anno prima, dalle quattro inflazioni trimestrali.
+    /// Prezzi sullo stesso trimestre dell'anno prima.
+    // Dalle quattro inflazioni trimestrali.
     pub inflazione: Forchetta,
     /// In % del PIL degli ultimi quattro trimestri.
     pub debito: Forchetta,
@@ -203,9 +205,10 @@ impl VocePrevisione {
     }
 }
 
-/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. PIL e
-/// inflazione della `stima` sono annualizzati sul trimestre prima, come la prima stima; quelli
-/// della `previsione` sono sullo stesso trimestre dell'anno prima.
+/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. Il PIL e
+/// l'inflazione della `stima` non sono confrontabili con quelli della `previsione`: i primi sono
+/// annualizzati sul trimestre prima, come la prima stima, i secondi sono sullo stesso trimestre
+/// dell'anno prima.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaCentroStudi {
@@ -215,7 +218,7 @@ pub struct VistaCentroStudi {
 
 impl VistaCentroStudi {
     /// La stima è `vera + quota_errore_centro_studi · errore_stima_<campo> · z`, campo per campo,
-    /// con le `z` di `rng` nell'ordine dei campi (Ruling 77): un errore suo, così dalla prima
+    /// con le `z` di `rng` nell'ordine dei campi: un errore suo, così dalla prima
     /// stima e dalla sua non si ricava il vero.
     pub(crate) fn stima(dati: &DatiGioco, s: &Statistica, mut rng: Estrattore) -> Stima {
         // Al turno zero la prima stima è già il vero (`Statistica::iniziale`): un errore in più

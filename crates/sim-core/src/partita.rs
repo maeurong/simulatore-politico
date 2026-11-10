@@ -2321,7 +2321,7 @@ impl Partita {
         }
     }
 
-    /// `Compra` (scelte 21-23): paga subito dalla cassa del partito del giocatore e registra il
+    /// `Compra`: paga subito dalla cassa del partito del giocatore e registra il
     /// risultato, calcolato sulle intenzioni vere di ora o, per il test, sulle copie di
     /// `avanza_copia`.
     ///

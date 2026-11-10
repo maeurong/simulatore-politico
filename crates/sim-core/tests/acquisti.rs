@@ -522,7 +522,7 @@ fn il_test_rifiuta_cio_che_il_mes_vincola() {
     assert_eq!(p.salva().unwrap(), prima);
 }
 
-/// Ruling 64: il test non entra in calendario, quindi la crisi non lo ferma (l'anteprima sì).
+/// Il test non entra in calendario, quindi la crisi non lo ferma (l'anteprima sì).
 #[test]
 fn il_test_si_compra_anche_in_crisi() {
     let valori = v("regime_pensioni", "retributivo");
@@ -568,7 +568,7 @@ fn correlazione(x: &[f64], y: &[f64]) -> f64 {
     c / (deviazione(x) * deviazione(y))
 }
 
-/// Ruling 77: su 200 semi, per campo, l'errore della stima è fra 0,5 e 0,7 volte quello della prima
+/// Su 200 semi, per campo, l'errore della stima è fra 0,5 e 0,7 volte quello della prima
 /// stima, e non lo segue (|r| < 0,3). Con la stima presa come frazione dell'errore della prima,
 /// r = 1 e il vero si ricava da tutte e due.
 #[test]
@@ -596,7 +596,7 @@ fn la_stima_del_centro_studi_e_piu_vicina() {
     }
 }
 
-/// Ruling 78: al turno zero la prima stima è il vero, e il centro studi non ci aggiunge errore.
+/// Al turno zero la prima stima è il vero, e il centro studi non ci aggiunge errore.
 #[test]
 fn al_turno_zero_la_stima_del_centro_studi_e_il_vero() {
     let mut p = Partita::nuova(dati_base(), 1);
