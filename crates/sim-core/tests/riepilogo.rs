@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{chiudi_col_bilancio, con_ingresso, dati_base, file_base, file_vero};
+use comune::{chiudi_col_bilancio, con_ingresso, dati_base, file_base, file_vero, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::legislatura::{Fondazione, posizioni};
 use sim_core::riepilogo::{Avviso, RiepilogoScenario, riepilogo};
@@ -129,7 +129,8 @@ fn il_debito_al_massimo_accende_l_avviso_di_crisi() {
     assert_eq!(json["tipo"], "crisi_del_debito");
 }
 
-/// L'avviso c'è se e solo se la prima chiusura apre davvero le Aste scoperte.
+/// L'avviso c'è se e solo se la prima chiusura apre davvero le Aste scoperte. Vale lontano dalla
+/// soglia (debito 110 e 160): vicino, la chiusura ricalcola lo spread col ministro vero.
 #[test]
 fn l_avviso_di_crisi_coincide_con_le_aste_della_prima_chiusura() {
     let aste = dati_base().evento("aste_scoperte").unwrap();
@@ -161,4 +162,50 @@ fn gli_avvisi_di_stato_seguono_l_ordine() {
             Avviso::CrisiDelDebito { .. }
         ]
     ));
+}
+
+#[test]
+fn senza_posizioni_gli_avvisi_vengono_dalla_partita_del_governo_uscente() {
+    let mut f = con_ingresso(file_vero(), "debito_pil", 160.0);
+    f.scenario = f
+        .scenario
+        .lines()
+        .map(|l| {
+            if l.starts_with("posizione = ") {
+                "posizione = 4.0"
+            } else {
+                l
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let r = riepilogo_di(f);
+    assert!(r.posizioni.is_empty());
+    assert!(matches!(
+        r.avvisi.as_slice(),
+        [
+            Avviso::SituazioniAccese { .. },
+            Avviso::CrisiDelDebito { .. }
+        ]
+    ));
+}
+
+#[test]
+fn le_situazioni_accese_stanno_nell_ordine_dei_dati() {
+    // «scende»: si accende sotto `accensione`, quindi alzarla sopra il valore di oggi la accende.
+    let f = sostituisci(
+        file_vero(),
+        "eventi",
+        "accensione = 85.0\nspegnimento = 92.0",
+        "accensione = 110.0\nspegnimento = 115.0",
+    );
+    let r = riepilogo_di(f);
+    let [a @ Avviso::SituazioniAccese { nomi }] = r.avvisi.as_slice() else {
+        panic!("un avviso solo: {:?}", r.avvisi);
+    };
+    assert_eq!(nomi, &["Criminalità", "Caro energia"]);
+    assert_eq!(
+        a.testo(),
+        "Già accese al turno zero: Criminalità e Caro energia. Pesano finché non rientrano."
+    );
 }

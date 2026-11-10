@@ -399,7 +399,7 @@ impl Partita {
         let Some(evento) = self.dati.evento(ASTE_SCOPERTE) else {
             return;
         };
-        if self.economia.spread < soglia
+        if !crate::riepilogo::alla_soglia_della_crisi(soglia, self.economia.spread)
             || self.economia.mes_in_corso(self.turno).is_some()
             // Con la ristrutturazione in corso la crisi non si riapre, anche se il suo premio
             // tiene lo spread sopra la soglia.
