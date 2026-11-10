@@ -493,6 +493,16 @@ fn la_stima_del_centro_studi_e_piu_vicina() {
     }
 }
 
+/// Ruling 78: al turno zero la prima stima è il vero, e il centro studi non ci aggiunge errore.
+#[test]
+fn al_turno_zero_la_stima_del_centro_studi_e_il_vero() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    let vera: Stima =
+        serde_json::from_value(j["informazione"]["statistica"]["vera"].clone()).unwrap();
+    assert_eq!(centro_studi(&mut p).stima, vera);
+}
+
 #[test]
 fn la_forchetta_si_allarga() {
     let dati = dati_base();

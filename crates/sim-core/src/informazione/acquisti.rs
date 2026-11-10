@@ -218,6 +218,11 @@ impl VistaCentroStudi {
     /// con le `z` di `rng` nell'ordine dei campi (Ruling 77): un errore suo, così dalla prima
     /// stima e dalla sua non si ricava il vero.
     pub(crate) fn stima(dati: &DatiGioco, s: &Statistica, mut rng: Estrattore) -> Stima {
+        // Al turno zero la prima stima è già il vero (`Statistica::iniziale`): un errore in più
+        // renderebbe il centro studi peggiore del dato pubblico (Ruling 78).
+        if s.prima_stima == s.vera {
+            return s.vera.clone();
+        }
         let q = dati.manopola("quota_errore_centro_studi");
         let v = &s.vera;
         let mut errore = |nome: &str, vera: f64| vera + q * dati.manopola(nome) * rng.normale();

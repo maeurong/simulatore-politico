@@ -18,8 +18,9 @@ const OFFSET_CHIAVE: u64 = 1 << 35;
 /// disposizioni dello stesso turno (`64 · d + g`), che `disposizioni::valida` tiene sotto.
 pub(crate) const CHIAVE_ATTI: u64 = 500_000;
 
-/// La chiave del test di una misura, una sola per turno: sopra le disposizioni e gli atti del
-/// turno (`atti::valida` tiene `CHIAVE_ATTI + atti` sotto), sotto il turno dopo (`1_000_003`).
+/// La chiave del test di una misura, una per turno, la prima delle chiavi degli acquisti: sopra le
+/// disposizioni e gli atti del turno (`atti::valida` tiene `CHIAVE_ATTI + atti` sotto), sotto il
+/// turno dopo (`1_000_003`). Il centro studi sta subito dopo, a `CHIAVE_CENTRO_STUDI`.
 pub(crate) const CHIAVE_TEST: u64 = 900_000;
 
 /// La chiave del test di una misura comprato al turno `turno`.
