@@ -7,7 +7,8 @@ use crate::economia::{
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{
-    Affluenza, Condizione, Elettorato, Fascia, Intenzioni, Quesito, indice_gruppo, toccati,
+    Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, Quesito,
+    indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
@@ -2250,15 +2251,16 @@ impl Partita {
         let cassa = self.partiti.get(self.giocatore).map_or(0, |p| p.cassa);
         if cassa < prezzo {
             return Err(Errore::Comando(format!(
-                "cassa insufficiente: servono {prezzo} €"
+                "cassa insufficiente: servono {} euro",
+                campagna::migliaia(prezzo)
             )));
         }
         let esito = match a {
             Acquisto::SondaggioPrivato => {
-                // Il blocco 1023 di ogni turno, dentro `turno · 1024 + gruppo` di
-                // `elettori_campione`: i gruppi sono meno di 1023 (`i_gruppi_stanno_sotto_la_chiave`),
-                // e l'anteprima parte da 2^35, oltre 33 milioni di turni.
-                let chiave = u64::from(self.turno) * 1024 + 1023;
+                // Il blocco riservato di ogni turno, dentro `turno · 1024 + gruppo` di
+                // `elettori_campione`: `valida_gruppi` tiene i gruppi sotto il blocco, e
+                // l'anteprima parte da 2^35, oltre 33 milioni di turni.
+                let chiave = u64::from(self.turno) * 1024 + BLOCCO_SONDAGGIO_PRIVATO as u64;
                 Acquistato::SondaggioPrivato(self.informazione.rileva_privato(
                     &self.dati,
                     &self.caso,
@@ -4575,6 +4577,9 @@ impl Partita {
     /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
+        for a in &self.acquisti {
+            a.controlla(&self.dati, self.partiti.len())?;
+        }
         let doppio = (self.acquisti.iter().enumerate())
             .find(|(k, e)| self.acquisti[..*k].iter().any(|f| f.tipo() == e.tipo()));
         ok(
@@ -5046,14 +5051,6 @@ mod tests {
     use crate::disposizioni::InArrivo;
     use crate::legislatura::{CausaDisponibilita, Fondazione};
     use crate::partiti::Vocazione;
-
-    /// La chiave del sondaggio privato (`turno · 1024 + 1023`) non è quella di nessun gruppo.
-    #[test]
-    fn i_gruppi_stanno_sotto_la_chiave() {
-        let p = Partita::nuova(dati_base(), 1);
-        let gruppi = p.dati.elettorato().regioni.len() * crate::elettorato::PER_REGIONE;
-        assert!(gruppi < 1023, "{gruppi}");
-    }
 
     fn fondata() -> Partita {
         let f = Fondazione {

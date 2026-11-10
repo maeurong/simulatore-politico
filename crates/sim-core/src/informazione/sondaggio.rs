@@ -173,7 +173,8 @@ fn rileva_con(
     let n_tot: f64 = campione
         * d.istituti
             .iter()
-            .map(|i| f64::from(i.campione))
+            .zip(effetti)
+            .map(|(i, _)| f64::from(i.campione))
             .sum::<f64>();
     let elettori: Vec<f64> = (0..el.gruppi.len()).map(|i| el.elettori(d, i)).collect();
     let totale: f64 = elettori.iter().sum();

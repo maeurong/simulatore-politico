@@ -1,8 +1,9 @@
 //! Informazione comprata con la cassa del partito del giocatore, al massimo una volta a turno
 //! per tipo.
 
-use super::Sondaggio;
+use super::{Sondaggio, controlla_sondaggio};
 use crate::dati::DatiGioco;
+use crate::errore::Errore;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -41,6 +42,18 @@ impl Acquistato {
     pub fn tipo(&self) -> Acquisto {
         match self {
             Acquistato::SondaggioPrivato(_) => Acquisto::SondaggioPrivato,
+        }
+    }
+
+    /// Forma e finitezza del risultato, per uno stato letto da un salvataggio: il privato ha
+    /// un solo istituto.
+    ///
+    /// # Errors
+    /// `SalvataggioIlleggibile` col campo nel messaggio.
+    pub(crate) fn controlla(&self, dati: &DatiGioco, n_partiti: usize) -> Result<(), Errore> {
+        match self {
+            Acquistato::SondaggioPrivato(s) => controlla_sondaggio(s, dati, n_partiti + 1, 1)
+                .map_err(|m| Errore::SalvataggioIlleggibile(format!("acquisti.privato.{m}"))),
         }
     }
 }

@@ -94,6 +94,10 @@ impl fmt::Display for Fascia {
 /// Gruppi per regione: condizioni x fasce.
 pub(crate) const PER_REGIONE: usize = 18;
 
+/// Il blocco di ogni turno riservato al sondaggio privato nelle chiavi `turno · 1024 + blocco`
+/// di `Caso::estemporaneo`: nessun gruppo può avere questo indice.
+pub(crate) const BLOCCO_SONDAGGIO_PRIVATO: usize = 1023;
+
 /// Indice canonico di un gruppo: `regione·18 + condizione·3 + fascia`.
 pub fn indice_gruppo(regione: usize, c: Condizione, f: Fascia) -> usize {
     regione * PER_REGIONE + c as usize * Fascia::TUTTE.len() + f as usize
@@ -226,6 +230,12 @@ impl DatiElettorato {
     }
 
     fn valida_gruppi(&self) -> Result<(), Errore> {
+        if self.gruppi.len() > BLOCCO_SONDAGGIO_PRIVATO {
+            return Err(ko(format!(
+                "{} gruppi, il limite è {BLOCCO_SONDAGGIO_PRIVATO}: la chiave del sondaggio privato è turno·1024 + {BLOCCO_SONDAGGIO_PRIVATO}",
+                self.gruppi.len()
+            )));
+        }
         if self.gruppi.len() != self.regioni.len() * PER_REGIONE {
             return Err(ko(format!(
                 "{} gruppi, ne servono {} (18 per regione)",

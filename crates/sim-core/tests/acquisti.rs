@@ -20,7 +20,7 @@ fn con_cassa(p: &Partita, euro: i64) -> Partita {
 
 #[test]
 fn il_sondaggio_privato_costa_e_sbaglia_meno() {
-    let (mut privato, mut pubblico, mut scarto) = (0.0, 0.0, 0.0);
+    let (mut privato, mut pubblico, mut scarto) = (0.0, 0.0, vec![0.0; 8]);
     for seme in 0..200 {
         let mut p = Partita::nuova(dati_base(), seme);
         let g = p.giocatore();
@@ -39,12 +39,17 @@ fn il_sondaggio_privato_costa_e_sbaglia_meno() {
         assert_eq!(priv_.istituti.len(), 1);
         privato += errore(&priv_.istituti[0].quote);
         pubblico += ist.iter().map(|r| errore(&r.quote)).sum::<f64>() / ist.len() as f64;
-        scarto += priv_.istituti[0].quote[0]
-            - ist.iter().map(|r| r.quote[0]).sum::<f64>() / ist.len() as f64;
+        for (j, s) in scarto.iter_mut().enumerate() {
+            *s += priv_.istituti[0].quote[j]
+                - ist.iter().map(|r| r.quote[j]).sum::<f64>() / ist.len() as f64;
+        }
     }
     assert!(privato < pubblico, "{privato} {pubblico}");
-    // Il bias comune è lo stesso: la differenza media fra i due non ha segno.
-    assert!((scarto / 200.0).abs() < 0.005, "{scarto}");
+    // Il bias comune è lo stesso: la differenza media fra i due non ha segno, su ogni alternativa.
+    assert!(
+        scarto.iter().all(|s| (s / 200.0).abs() < 0.005),
+        "{scarto:?}"
+    );
 }
 
 #[test]
@@ -60,7 +65,7 @@ fn acquisto_rifiutato_non_cambia_nulla() {
 
     let mut p = con_cassa(&Partita::nuova(dati_base(), 1), PREZZO - 1);
     let prima = p.salva().unwrap();
-    assert!(errore(&mut p).ends_with("cassa insufficiente: servono 15000 €"));
+    assert!(errore(&mut p).ends_with("cassa insufficiente: servono 15.000 euro"));
     assert_eq!(p.salva().unwrap(), prima);
 
     let mut p = Partita::nuova(dati_base(), 1);
@@ -135,4 +140,33 @@ fn due_acquisti_dello_stesso_tipo_nel_salvataggio_sono_rifiutati() {
             .contains("acquisti: due acquisti dello stesso tipo nel turno"),
         "{e}"
     );
+}
+
+/// Gli incroci del privato pescano dal campione di un solo istituto (4 volte il suo), non da
+/// quello di tutti.
+#[test]
+fn gli_incroci_del_privato_hanno_il_campione_di_un_istituto() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(SONDAGGIO).unwrap();
+    let v = p.vista();
+    let privato = v.acquisti.sondaggio_privato.unwrap();
+    let campione = privato.istituti[0].campione;
+    assert_eq!(campione, 4 * v.sondaggio.istituti[0].campione);
+    let regioni: u32 = privato.regioni.iter().map(|r| r.campione).sum();
+    assert!(
+        regioni.abs_diff(campione) as usize <= privato.regioni.len(),
+        "{regioni} {campione}"
+    );
+}
+
+#[test]
+fn un_sondaggio_privato_malformato_nel_salvataggio_e_rifiutato() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    p.comanda(SONDAGGIO).unwrap();
+    let e = edita(&p, |j| {
+        let quote = &mut j["acquisti"][0]["SondaggioPrivato"]["istituti"][0]["quote"];
+        quote.as_array_mut().unwrap().pop();
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("acquisti.privato.istituti"), "{e}");
 }
