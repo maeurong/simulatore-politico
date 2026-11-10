@@ -112,28 +112,34 @@ fn apri_partita(stato: &Stato, archivio: &Archivio, id: String) -> Result<Vista,
 }
 
 /// Chiude il turno; con un id, lo snapshot della nuova apertura. Lo snapshot si scrive anche se la
-/// chiusura finisce la partita; se era già finita, no.
+/// chiusura finisce la partita; se era già finita, no. Se lo snapshot non si scrive, errore e
+/// partita in memoria invariata.
 fn chiudi(stato: &Stato, archivio: &Archivio) -> Result<Vista, String> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
     let gia_finita = c.partita.finita();
-    c.partita.chiudi_turno();
+    let mut nuova = c.partita.clone();
+    nuova.chiudi_turno();
     if let Some(id) = &c.id
         && !gia_finita
     {
-        archivio.snapshot(id, &c.partita)?;
+        archivio.snapshot(id, &nuova)?;
     }
+    c.partita = nuova;
     Ok(c.partita.vista())
 }
 
-/// Il comando; con un id, la bozza se è accettato. Un comando rifiutato non la scrive.
+/// Il comando; con un id, la bozza se è accettato. Un comando rifiutato non la scrive. Se la
+/// bozza non si scrive, errore e partita in memoria invariata.
 fn esegui(stato: &Stato, archivio: &Archivio, comando: Comando) -> Result<Vista, String> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
-    c.partita.comanda(comando).map_err(|e| e.to_string())?;
+    let mut nuova = c.partita.clone();
+    nuova.comanda(comando).map_err(|e| e.to_string())?;
     if let Some(id) = &c.id {
-        archivio.bozza(id, &c.partita)?;
+        archivio.bozza(id, &nuova)?;
     }
+    c.partita = nuova;
     Ok(c.partita.vista())
 }
 
@@ -523,6 +529,43 @@ mod tests {
         );
         // In memoria c'è ora l'ultimo snapshot leggibile, il turno 1.
         assert_eq!(sulla_partita(&stato, |p| Ok(p.vista()))?.turno, 1);
+        Ok(())
+    }
+
+    /// Sostituisce `nome` con una cartella non vuota: ogni scrittura su quel file fallisce.
+    fn guasta(c: &Path, nome: &str) -> Result<std::path::PathBuf, String> {
+        let file = c.join("partite").join(ID).join(nome);
+        let _ = std::fs::remove_file(&file);
+        std::fs::create_dir(&file).map_err(|e| e.to_string())?;
+        std::fs::write(file.join("dentro"), "x").map_err(|e| e.to_string())?;
+        Ok(file)
+    }
+
+    #[test]
+    fn chiudi_con_snapshot_fallito_non_avanza() -> Result<(), String> {
+        let c = cartella("lib-chiudi-snapshot-fallito");
+        let (stato, archivio) = con_partita(&c.0)?;
+        let prima = sulla_partita(&stato, |p| Ok(p.clone()))?;
+        let guasto = guasta(&c.0, "turno-001.json.gz")?;
+
+        assert!(chiudi(&stato, &archivio).is_err());
+        assert!(sulla_partita(&stato, |p| Ok(*p == prima))?);
+        assert_eq!(sulla_partita(&stato, |p| Ok(p.vista()))?.turno, 0);
+
+        std::fs::remove_dir_all(&guasto).map_err(|e| e.to_string())?;
+        assert_eq!(chiudi(&stato, &archivio)?.turno, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn esegui_con_bozza_fallita_non_applica_il_comando() -> Result<(), String> {
+        let c = cartella("lib-esegui-bozza-fallita");
+        let (stato, archivio) = con_partita(&c.0)?;
+        let prima = sulla_partita(&stato, |p| Ok(p.clone()))?;
+        guasta(&c.0, "bozza.json.gz")?;
+
+        assert!(esegui(&stato, &archivio, campagna(1)).is_err());
+        assert!(sulla_partita(&stato, |p| Ok(*p == prima))?);
         Ok(())
     }
 
