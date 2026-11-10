@@ -222,3 +222,7 @@ Ticket research 02 della mappa del piano 11. Nuova pagina [[mappa-svg-delle-regi
 
 `sintesi/vista-per-schermata.md` fotografava main a `c56787d` (01/11). Aggiunta una sezione datata letta su `8952a06`: rimandi chiusi (eventi, situazioni, acquisti, partite, editor, albo, riavvolgimento, avvisi del riepilogo, `comanda`, fondazione), passacarte che mancano ancora al guscio, dati senza piano ricontrollati, debiti nuovi del piano 9 (stato del MES e della ristrutturazione, clausola dell'energia, avvisi mancanti). Il testo del 01/11 non è riscritto.
 
+## [2026-11-10] query | chi produce i dati senza piano
+
+Decisioni di Mario sul ticket 11 del piano 11 archiviate in `sintesi/decisioni.md`: piano di core «esito e Vista completa», piano strutturale a parte, forma dei dati regionali, dei gruppi e dei cantieri finiti.
+

@@ -350,6 +350,10 @@ _Evita_: notifiche, report
 L'elenco completo di ciò che è successo in un turno, consultabile a richiesta.
 _Evita_: log, cronologia
 
+**Fermata**:
+Il motivo per cui «avanti fino a novità» smette di concatenare le chiusure: nel turno appena aperto serve una scelta del giocatore.
+_Evita_: interruzione, pausa, stop
+
 **Tono grave**:
 Il modo in cui il gioco presenta un evento con vittime o comunque serio: la cornice giocosa tace (niente testata, battute, motti, illustrazioni) e resta il fatto. Lo decide un evento del modello, non il giocatore; il resto del tempo il tono è ordinario.
 _Evita_: registro grave (registro è già l'elenco del turno)

@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: []
-aggiornato: 2026-10-18
+aggiornato: 2026-11-10
 ---
 # Decisioni di Mario
 
@@ -318,6 +318,18 @@ Grilling sul ticket wayfinder «Punti di aggancio» (`.scratch/v1-giocabile/issu
 
 ## 2026-10-25: derivati ESS in dati/base
 Mario ha scelto di leggere la «cartella separata» della decisione del 2026-10-16 (spec riga 405) come `dati/`, separata dal codice: niente cartella nuova, gli istogrammi delle posizioni derivati da ESS round 11 restano in `dati/base/elettorato.toml`. Il file passa in CC BY-NC-SA 4.0, perché lo share-alike lo prende tutto. La licenza è dichiarata in tre posti: nell'intestazione del file, con URI della licenza, edizione, DOI e Data Portal; nel `README.md` del repo, che toglie il file dal perimetro MIT; nella sezione Licenze di `strumenti/taratura/README.md`. Gli altri file di `dati/base` restano MIT. Se un giorno servisse un file di dati solo MIT, le posizioni andrebbero spostate in un file a parte.
+
+## 2026-11-10: dati che le schermate chiedono e nessun piano portava
+
+Ticket `.scratch/v1-piano-11-ui/issues/11-dati-senza-piano.md`, sull'inventario [[vista-per-schermata]].
+
+- **Niente esce dalla v1 e niente si calcola nella UI.** Esito del turno con causa e criticità, registro, fermate di «avanti fino a novità» e i due avvisi lasciati dal piano 9 (campagna tagliata, bilancio ricondotto al tetto del MES) li produce un piano di core nuovo, «esito e Vista completa», fuori dalla mappa del piano 11 e avviato subito.
+- **Stesso piano, PR a parte per le esposizioni:** dati regionali della mappa, PDE e conto di controllo, minaccia di scissione, stato del MES e della ristrutturazione, clausola dell'energia.
+- **Piano strutturale riveduto** (storia 51): resta nella v1, in un piano di core suo, dopo. Non blocca la UI.
+- **Disoccupazione e reddito per regione esatti, con un turno di ritardo.** Il dato esatto arriva insieme alla revisione nazionale, quindi non buca l'informazione imperfetta.
+- **Gruppi della scheda della regione:** quota di elettori e tre elettori campione al clic; nessun consenso per gruppo.
+- **Cantieri finiti:** il segno sulla mappa resta fino al voto successivo.
+- **Rimandato al brainstorming del piano di core:** cosa rende critica una voce e come si scelgono le sette in evidenza.
 
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
