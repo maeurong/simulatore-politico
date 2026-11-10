@@ -1579,3 +1579,24 @@ valore = 300.0
 min = 1.0
 max = 1000.0
 ticket = "07"
+
+# docs/ricerca/modelli/informazione-a-pagamento.md:21-41 (1.000-1.500 interviste: 10.000-20.000 €)
+[prezzo_sondaggio_privato]
+valore = 15000.0
+min = 1000.0
+max = 100000.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[moltiplicatore_campione_privato]
+valore = 4.0
+min = 1.0
+max = 10.0
+ticket = "25"
+
+# assunzione del piano 9, nessuna fonte in docs/ricerca
+[riduzione_istituto_privato]
+valore = 0.5
+min = 0.0
+max = 1.0
+ticket = "25"

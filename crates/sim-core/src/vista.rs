@@ -3,7 +3,7 @@ use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
-use crate::informazione::{Revisione, Sondaggio, Stima};
+use crate::informazione::{Acquisto, Revisione, Sondaggio, Stima};
 use crate::legislatura::{Eredita, EsitoElezioni, Fase, Spesa, VoceDisponibilita, VoceRichiesta};
 use crate::ministri::{Causa, StatoAgenda, Variazione};
 use crate::parlamento::{
@@ -97,6 +97,23 @@ pub struct Vista {
     pub eventi: Vec<VoceEvento>,
     /// Le situazioni a soglia, accese o no.
     pub situazioni: Vec<VoceSituazione>,
+    /// L'informazione comprata nel turno e i prezzi di quella comprabile.
+    pub acquisti: VistaAcquisti,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaAcquisti {
+    pub sondaggio_privato: Option<Sondaggio>,
+    pub prezzi: Vec<PrezzoAcquisto>,
+}
+
+/// Euro.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct PrezzoAcquisto {
+    pub acquisto: Acquisto,
+    pub euro: i64,
 }
 
 /// Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello

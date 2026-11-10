@@ -9,10 +9,12 @@ use crate::errore::Errore;
 use crate::partiti::{Governo, Partito};
 use serde::{Deserialize, Serialize};
 
+mod acquisti;
 mod campione;
 pub(crate) use campione::indice;
 mod sondaggio;
 mod statistica;
+pub use acquisti::{Acquistato, Acquisto};
 pub use campione::{ElettoreCampione, Motivo, genera};
 pub use sondaggio::{Incrocio, Rilevazione, Sondaggio};
 pub use statistica::{Revisione, Statistica, Stima};
@@ -114,6 +116,29 @@ impl Informazione {
             &self.bias,
             &self.effetti_istituto,
         );
+    }
+
+    /// Il sondaggio privato di `vero`: stessi bias e primo istituto del pubblico, normali dalla
+    /// chiave estemporanea `chiave`. Non avanza nessun flusso e non tocca lo stato.
+    pub(crate) fn rileva_privato(
+        &self,
+        dati: &DatiGioco,
+        caso: &Caso,
+        el: &Elettorato,
+        vero: &Intenzioni,
+        governo: &Governo,
+        chiave: u64,
+    ) -> Sondaggio {
+        let mut rng = caso.estemporaneo(chiave);
+        sondaggio::rileva_privato(
+            dati,
+            el,
+            vero,
+            governo.presidente,
+            &self.bias,
+            &self.effetti_istituto,
+            &mut || rng.normale(),
+        )
     }
 
     /// Lunghezze e finitezza, per uno stato letto da un salvataggio.

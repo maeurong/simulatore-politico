@@ -16,7 +16,9 @@ use crate::eventi::{
     emergenze, rischio, situazioni,
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
-use crate::informazione::{ElettoreCampione, Informazione, Sondaggio, genera};
+use crate::informazione::{
+    Acquistato, Acquisto, ElettoreCampione, Informazione, Sondaggio, genera,
+};
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
     Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
@@ -33,10 +35,10 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, SeggiPartito, Vista, VistaBilancio,
-    VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
-    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione, VocePartito,
-    VoceProgramma, VocePromessa, VoceSituazione,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, PrezzoAcquisto, SeggiPartito, Vista,
+    VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato,
+    VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero,
+    VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
@@ -45,7 +47,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 14;
+pub const VERSIONE_SCHEMA: u32 = 15;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -121,6 +123,8 @@ pub struct Partita {
     partenza: [f64; 4],
     /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
     mosse: Vec<MossaIa>,
+    /// Gli acquisti d'informazione del turno col loro risultato, svuotati a ogni `chiudi_turno`.
+    acquisti: Vec<Acquistato>,
     /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
     serie: Vec<PuntoSerie>,
     /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
@@ -312,6 +316,7 @@ impl Partita {
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
             mosse: Vec::new(),
+            acquisti: Vec::new(),
             serie: Vec::new(),
             riavvolgimenti: 0,
         };
@@ -541,6 +546,7 @@ impl Partita {
             return;
         }
         self.mosse.clear();
+        self.acquisti.clear();
         self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
@@ -2225,6 +2231,49 @@ impl Partita {
             let testo = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
             self.mossa(j, testo);
         }
+    }
+
+    /// `Compra` (scelte 21-22): paga subito dalla cassa del partito del giocatore e registra il
+    /// risultato, calcolato sulle intenzioni vere di ora.
+    ///
+    /// # Errors
+    /// `Comando` se il tipo è già stato comprato nel turno o la cassa non basta; la partita
+    /// resta identica.
+    pub(crate) fn compra(&mut self, a: Acquisto) -> Result<(), Errore> {
+        if self.acquisti.iter().any(|e| e.tipo() == a) {
+            return Err(Errore::Comando(format!(
+                "già comprato questo turno: {}",
+                a.nome()
+            )));
+        }
+        let prezzo = a.prezzo(&self.dati);
+        let cassa = self.partiti.get(self.giocatore).map_or(0, |p| p.cassa);
+        if cassa < prezzo {
+            return Err(Errore::Comando(format!(
+                "cassa insufficiente: servono {prezzo} €"
+            )));
+        }
+        let esito = match a {
+            Acquisto::SondaggioPrivato => {
+                // Il blocco 1023 di ogni turno, dentro `turno · 1024 + gruppo` di
+                // `elettori_campione`: i gruppi sono meno di 1023 (`i_gruppi_stanno_sotto_la_chiave`),
+                // e l'anteprima parte da 2^35, oltre 33 milioni di turni.
+                let chiave = u64::from(self.turno) * 1024 + 1023;
+                Acquistato::SondaggioPrivato(self.informazione.rileva_privato(
+                    &self.dati,
+                    &self.caso,
+                    &self.elettorato,
+                    &self.intenzioni_vere(),
+                    &self.governo,
+                    chiave,
+                ))
+            }
+        };
+        if let Some(p) = self.partiti.get_mut(self.giocatore) {
+            p.cassa = p.cassa.saturating_sub(prezzo);
+        }
+        self.acquisti.push(esito);
+        Ok(())
     }
 
     /// `Campagna` (scelte 13-14): nel turno del voto sostituisce la campagna del giocatore.
@@ -3912,6 +3961,21 @@ impl Partita {
             },
             eventi: self.voci_eventi(),
             situazioni: self.situazioni(),
+            acquisti: VistaAcquisti {
+                sondaggio_privato: self
+                    .acquisti
+                    .iter()
+                    .map(|Acquistato::SondaggioPrivato(s)| s)
+                    .next()
+                    .cloned(),
+                prezzi: Acquisto::TUTTI
+                    .iter()
+                    .map(|&acquisto| PrezzoAcquisto {
+                        acquisto,
+                        euro: acquisto.prezzo(&self.dati),
+                    })
+                    .collect(),
+            },
         }
     }
 
@@ -4511,6 +4575,12 @@ impl Partita {
     /// Partiti, giocatore, legislatura, governo ed elettorato di un salvataggio contro i dati.
     fn controlla_partiti(&self) -> Result<(), Errore> {
         let n = self.partiti.len();
+        let doppio = (self.acquisti.iter().enumerate())
+            .find(|(k, e)| self.acquisti[..*k].iter().any(|f| f.tipo() == e.tipo()));
+        ok(
+            doppio.is_none(),
+            "acquisti: due acquisti dello stesso tipo nel turno",
+        )?;
         ok(
             self.turni_al_governo <= self.turno.saturating_add(1)
                 && self.partenza.iter().all(|x| x.is_finite()),
@@ -4976,6 +5046,14 @@ mod tests {
     use crate::disposizioni::InArrivo;
     use crate::legislatura::{CausaDisponibilita, Fondazione};
     use crate::partiti::Vocazione;
+
+    /// La chiave del sondaggio privato (`turno · 1024 + 1023`) non è quella di nessun gruppo.
+    #[test]
+    fn i_gruppi_stanno_sotto_la_chiave() {
+        let p = Partita::nuova(dati_base(), 1);
+        let gruppi = p.dati.elettorato().regioni.len() * crate::elettorato::PER_REGIONE;
+        assert!(gruppi < 1023, "{gruppi}");
+    }
 
     fn fondata() -> Partita {
         let f = Fondazione {

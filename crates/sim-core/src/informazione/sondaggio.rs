@@ -84,7 +84,27 @@ pub(super) fn rileva(
     effetti: &[Vec<f64>],
 ) -> Sondaggio {
     let mut z = || caso.normale(Flusso::Sondaggi);
-    rileva_con(dati, el, vero, presidente, bias, effetti, &mut z)
+    rileva_con(dati, el, vero, presidente, bias, effetti, 1.0, &mut z)
+}
+
+/// Il sondaggio privato: il primo istituto, `moltiplicatore_campione_privato` volte il campione
+/// e `riduzione_istituto_privato` volte il suo effetto; il bias è quello comune. Le normali
+/// vengono da `z`, mai dai flussi.
+pub(super) fn rileva_privato(
+    dati: &DatiGioco,
+    el: &Elettorato,
+    vero: &Intenzioni,
+    presidente: usize,
+    bias: &[f64],
+    effetti: &[Vec<f64>],
+    z: &mut impl FnMut() -> f64,
+) -> Sondaggio {
+    let riduzione = dati.manopola("riduzione_istituto_privato");
+    let ridotti: Vec<Vec<f64>> = (effetti.iter().take(1))
+        .map(|h| h.iter().map(|x| x * riduzione).collect())
+        .collect();
+    let campione = dati.manopola("moltiplicatore_campione_privato");
+    rileva_con(dati, el, vero, presidente, bias, &ridotti, campione, z)
 }
 
 impl Sondaggio {
@@ -98,11 +118,25 @@ impl Sondaggio {
     ) -> Sondaggio {
         let nulli = vec![0.0; vero.nazionali.len()];
         let effetti = [nulli.clone()];
-        rileva_con(dati, el, vero, presidente, &nulli, &effetti, &mut || 0.0)
+        rileva_con(
+            dati,
+            el,
+            vero,
+            presidente,
+            &nulli,
+            &effetti,
+            1.0,
+            &mut || 0.0,
+        )
     }
 }
 
-/// `rileva` con le normali di `z`: un istituto per riga di `effetti`.
+/// `rileva` con le normali di `z`: un istituto per riga di `effetti`, ciascuno col campione
+/// moltiplicato per `campione` (1 per il pubblico).
+#[expect(
+    clippy::too_many_arguments,
+    reason = "tre ingressi del modello più il moltiplicatore; un tipo solo per questo non serve"
+)]
 fn rileva_con(
     dati: &DatiGioco,
     el: &Elettorato,
@@ -110,6 +144,7 @@ fn rileva_con(
     presidente: usize,
     bias: &[f64],
     effetti: &[Vec<f64>],
+    campione: f64,
     z: &mut impl FnMut() -> f64,
 ) -> Sondaggio {
     let d = dati.elettorato();
@@ -126,21 +161,20 @@ fn rileva_con(
         .zip(effetti)
         .map(|(ist, h)| {
             let sposta: Vec<f64> = bias.iter().zip(h).map(|(b, x)| b + x).collect();
+            let n = f64::from(ist.campione) * campione;
             Rilevazione {
                 istituto: ist.nome.clone(),
-                campione: ist.campione,
-                quote: campiona(
-                    &vero.nazionali,
-                    &sposta,
-                    f64::from(ist.campione),
-                    disegno,
-                    z,
-                ),
+                campione: n as u32,
+                quote: campiona(&vero.nazionali, &sposta, n, disegno, z),
             }
         })
         .collect();
 
-    let n_tot: f64 = d.istituti.iter().map(|i| f64::from(i.campione)).sum();
+    let n_tot: f64 = campione
+        * d.istituti
+            .iter()
+            .map(|i| f64::from(i.campione))
+            .sum::<f64>();
     let elettori: Vec<f64> = (0..el.gruppi.len()).map(|i| el.elettori(d, i)).collect();
     let totale: f64 = elettori.iter().sum();
     // Effetto medio degli istituti, più il bias comune.
