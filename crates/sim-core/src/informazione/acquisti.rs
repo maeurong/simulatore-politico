@@ -154,7 +154,9 @@ pub struct Forchetta {
 pub struct VocePrevisione {
     pub data: Trimestre,
     /// Crescita del PIL reale sul trimestre dello stesso anno prima: le RMSE sono sulla crescita
-    /// annua, e `storico` tiene i PIL nominali di otto trimestri, `inflazione` i prezzi.
+    /// annua, e `storico` tiene i PIL nominali di otto trimestri, `inflazione` i prezzi. I quattro
+    /// trimestri prima del turno zero sono il conto del turno zero ai suoi prezzi, quindi si
+    /// deflaziona solo con le inflazioni dei trimestri chiusi dopo (Ruling 75).
     pub pil: Forchetta,
     /// Tasso nazionale.
     pub disoccupazione: Forchetta,
@@ -165,29 +167,41 @@ pub struct VocePrevisione {
 }
 
 impl VocePrevisione {
-    /// L'economia `e` dopo `h` chiusure (1-4) della copia, `data` il trimestre chiuso per ultimo.
-    /// La sigma va da `rmse_<grandezza>_1` a `rmse_<grandezza>_4`, lineare in `h`.
-    pub(crate) fn da(dati: &DatiGioco, e: &Economia, data: Trimestre, h: u32) -> VocePrevisione {
+    /// L'economia `e` dopo `h` chiusure (1-4) della copia e `passi` dal turno zero, `data` il
+    /// trimestre chiuso per ultimo. La sigma va da `rmse_<grandezza>_1` a `rmse_<grandezza>_4`,
+    /// lineare in `h`.
+    pub(crate) fn da(
+        dati: &DatiGioco,
+        e: &Economia,
+        data: Trimestre,
+        h: u32,
+        passi: u32,
+    ) -> VocePrevisione {
         let t = f64::from(h.saturating_sub(1)) / 3.0;
         let forchetta = |nome: &str, centro: f64| Forchetta {
             centro,
             sigma: dati.manopola(&format!("rmse_{nome}_1")) * (1.0 - t)
                 + dati.manopola(&format!("rmse_{nome}_4")) * t,
         };
-        let prezzi: f64 = (e.inflazione[..4].iter())
-            .map(|i| 1.0 + i / 400.0)
-            .product();
+        let prezzi = |n: usize| -> f64 {
+            (e.inflazione.iter().take(n))
+                .map(|i| 1.0 + i / 400.0)
+                .product()
+        };
+        let deflatore = prezzi(passi.min(4) as usize);
         // ponytail: con meno di cinque trimestri in `storico` (solo da un salvataggio scritto a
         // mano) la crescita vale 0, come al turno zero della statistica.
         let pil = match (e.storico.last(), e.storico.iter().rev().nth(4)) {
-            (Some(ora), Some(prima)) => 100.0 * (ora.pil as f64 / prima.pil as f64 / prezzi - 1.0),
+            (Some(ora), Some(prima)) => {
+                100.0 * (ora.pil as f64 / prima.pil as f64 / deflatore - 1.0)
+            }
             _ => 0.0,
         };
         VocePrevisione {
             data,
             pil: forchetta("pil", pil),
             disoccupazione: forchetta("disoccupazione", e.disoccupazione_nazionale(dati)),
-            inflazione: forchetta("inflazione", 100.0 * (prezzi - 1.0)),
+            inflazione: forchetta("inflazione", 100.0 * (prezzi(4) - 1.0)),
             debito: forchetta("debito", e.debito_e_disavanzo_pil().0),
         }
     }

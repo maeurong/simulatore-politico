@@ -506,16 +506,20 @@ fn la_previsione_non_tocca_la_partita() {
     assert_eq!(chiusa(false), chiusa(true));
 }
 
-/// I valori veri del trimestre appena chiuso, con le definizioni della previsione ricalcolate qui
-/// dalle serie dell'economia: PIL reale e prezzi sul trimestre dello stesso anno prima, debito sul
-/// PIL degli ultimi quattro trimestri.
-fn veri(dati: &DatiGioco, e: &Economia) -> [f64; 4] {
+/// PIL reale come la statistica: nominale sul livello dei prezzi.
+fn reale(e: &Economia) -> f64 {
+    e.pil_trimestrale / e.livello_prezzi
+}
+
+/// I valori veri del trimestre appena chiuso, al primo turno. PIL: il trimestre di un anno prima è
+/// uno dei quattro piatti al conto e ai prezzi del turno zero, quindi il reale di `zero`.
+/// Prezzi sullo stesso trimestre dell'anno prima, debito sul PIL degli ultimi quattro trimestri.
+fn veri(dati: &DatiGioco, zero: &Economia, e: &Economia) -> [f64; 4] {
     let n = e.storico.len();
     let prezzi: f64 = e.inflazione[..4].iter().map(|i| 1.0 + i / 400.0).product();
-    let pil = e.storico[n - 1].pil as f64 / e.storico[n - 5].pil as f64 / prezzi;
     let pil_anno: f64 = e.storico[n - 4..].iter().map(|t| t.pil as f64).sum();
     [
-        100.0 * (pil - 1.0),
+        100.0 * (reale(e) / reale(zero) - 1.0),
         e.disoccupazione_nazionale(dati),
         100.0 * (prezzi - 1.0),
         100.0 * e.debito as f64 / pil_anno,
@@ -523,12 +527,14 @@ fn veri(dati: &DatiGioco, e: &Economia) -> [f64; 4] {
 }
 
 /// L'oracolo della previsione: senza shock, derive, emergenze né atti dei ministri, il centro del
-/// primo turno è il valore della chiusura vera. Tolleranza 1e-9: stesse operazioni nello stesso
-/// ordine sullo stesso stato, la differenza attesa è zero.
+/// primo turno è il valore della chiusura vera. Tolleranza 1e-9: sopra l'ordine delle operazioni
+/// del debito (2,8e-14) e l'arrotondamento a euro del PIL di `storico` (~1e-10 punti).
+/// La previsione del PIL sta anche entro una sigma dall'oracolo.
 #[test]
 fn senza_shock_la_previsione_e_esatta() {
     let dati = DatiGioco::da_testi(&senza_emergenze(senza_shock())).unwrap();
     let mut p = Partita::nuova(dati.clone(), 1);
+    let zero = p.economia().clone();
     ferma_tutti(&mut p);
     let voce = centro_studi(&mut p).previsione.remove(0);
     let data = p.vista().data;
@@ -540,7 +546,11 @@ fn senza_shock_la_previsione_e_esatta() {
         voce.inflazione.centro,
         voce.debito.centro,
     ];
-    let veri = veri(&dati, p.economia());
+    let veri = veri(&dati, &zero, p.economia());
+    assert!(
+        (voce.pil.centro - veri[0]).abs() <= voce.pil.sigma,
+        "{centri:?} {veri:?}"
+    );
     for (k, (c, v)) in centri.iter().zip(veri).enumerate() {
         assert!((c - v).abs() <= 1e-9, "{k}: {centri:?} {veri:?}");
     }

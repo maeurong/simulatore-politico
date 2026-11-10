@@ -2370,7 +2370,7 @@ impl Partita {
                     .map(|h| {
                         copia = copia.avanza_copia(1, None);
                         let data = copia.data.precedente();
-                        VocePrevisione::da(&self.dati, &copia.economia, data, h)
+                        VocePrevisione::da(&self.dati, &copia.economia, data, h, copia.turno)
                     })
                     .collect();
                 Acquistato::CentroStudi(VistaCentroStudi {
