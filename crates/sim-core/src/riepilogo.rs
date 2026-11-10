@@ -58,6 +58,10 @@ pub struct PosizioneAttesa {
 pub enum Avviso {
     /// Le posizioni da cui il blocco del giocatore non ha la maggioranza attesa.
     SenzaMaggioranza { posizioni: Vec<f64> },
+    /// Le situazioni già accese al turno zero, nell'ordine dei dati.
+    SituazioniAccese { nomi: Vec<String> },
+    /// Lo spread del turno zero è già alla soglia della crisi del debito.
+    CrisiDelDebito { spread_pb: i32, soglia_pb: i32 },
 }
 
 impl Avviso {
@@ -67,15 +71,31 @@ impl Avviso {
             Avviso::SenzaMaggioranza { posizioni } => format!(
                 "Da {}, nessuna coalizione con te ha la maggioranza attesa in entrambe le Camere, \
                  prima della campagna.",
-                elenco(posizioni)
+                elenco(
+                    posizioni
+                        .iter()
+                        .map(|x| x.to_string().replace('.', ","))
+                        .collect()
+                )
+            ),
+            Avviso::SituazioniAccese { nomi } => format!(
+                "Già accese al turno zero: {}. Pesano finché non tornano sotto la soglia di \
+                 spegnimento.",
+                elenco(nomi.clone())
+            ),
+            Avviso::CrisiDelDebito {
+                spread_pb,
+                soglia_pb,
+            } => format!(
+                "Spread a {spread_pb} punti base, oltre la soglia di {soglia_pb}: alla prima \
+                 chiusura le aste vanno scoperte e dovrai scegliere fra MES e ristrutturazione."
             ),
         }
     }
 }
 
 /// «1,5», «1,5 e 2,5», «1,5; 2,5 e 3,5»: virgola decimale, quindi punto e virgola fra le voci.
-fn elenco(xs: &[f64]) -> String {
-    let voci: Vec<String> = xs.iter().map(|x| x.to_string().replace('.', ",")).collect();
+fn elenco(voci: Vec<String>) -> String {
     match voci.split_last() {
         Some((ultima, prima)) if !prima.is_empty() => format!("{} e {ultima}", prima.join("; ")),
         _ => voci.concat(),
@@ -93,13 +113,16 @@ pub fn riepilogo(dati: &DatiGioco) -> RiepilogoScenario {
             // per stato, per posizione solo elettorato e voto).
             let nuovo = partito_nuovo(dati, SEGNAPOSTO, x);
             let p = Partita::costruisci(dati.clone(), SEME, Some(nuovo));
-            r.get_or_insert_with(|| conti(dati, &p));
+            r.get_or_insert_with(|| (conti(dati, &p), di_stato(dati, &p)));
             attesa(dati, &p, x)
         })
         .collect();
     // Nessuna posizione se i partiti dello scenario stanno tutti in un punto: i conti allora
     // vengono dalla partita del governo uscente.
-    let mut r = r.unwrap_or_else(|| conti(dati, &Partita::nuova(dati.clone(), SEME)));
+    let (mut r, di_stato) = r.unwrap_or_else(|| {
+        let p = Partita::nuova(dati.clone(), SEME);
+        (conti(dati, &p), di_stato(dati, &p))
+    });
     let senza: Vec<f64> = (posizioni.iter())
         .filter(|p| !p.maggioranza)
         .map(|p| p.posizione)
@@ -107,8 +130,30 @@ pub fn riepilogo(dati: &DatiGioco) -> RiepilogoScenario {
     if !senza.is_empty() {
         r.avvisi.push(Avviso::SenzaMaggioranza { posizioni: senza });
     }
+    r.avvisi.extend(di_stato);
     r.posizioni = posizioni;
     r
+}
+
+/// Gli avvisi sullo stato del paese al turno zero, che non dipendono dalla posizione: le
+/// situazioni già accese e lo spread già alla soglia di `crisi_del_debito`.
+fn di_stato(dati: &DatiGioco, p: &Partita) -> Vec<Avviso> {
+    let mut avvisi = Vec::new();
+    let nomi: Vec<String> = (p.situazioni().into_iter())
+        .filter(|s| s.accesa)
+        .map(|s| s.nome)
+        .collect();
+    if !nomi.is_empty() {
+        avvisi.push(Avviso::SituazioniAccese { nomi });
+    }
+    let soglia = dati.manopola("soglia_crisi_debito");
+    if p.economia().spread >= soglia {
+        avvisi.push(Avviso::CrisiDelDebito {
+            spread_pb: p.economia().spread.round() as i32,
+            soglia_pb: soglia.round() as i32,
+        });
+    }
+    avvisi
 }
 
 /// I conti del turno zero, senza posizioni né avvisi. Non dipendono dal partito fondato:
@@ -197,6 +242,32 @@ mod tests {
             a(vec![1.5, 2.5, 6.5]),
             "Da 1,5; 2,5 e 6,5, nessuna coalizione con te ha la maggioranza attesa in entrambe le \
              Camere, prima della campagna."
+        );
+    }
+
+    #[test]
+    fn i_testi_degli_avvisi_di_stato() {
+        let coda = "Pesano finché non tornano sotto la soglia di spegnimento.";
+        let a = |nomi: &[&str]| {
+            let nomi = nomi.iter().map(|n| n.to_string()).collect();
+            Avviso::SituazioniAccese { nomi }.testo()
+        };
+        assert_eq!(
+            a(&["Caro energia"]),
+            format!("Già accese al turno zero: Caro energia. {coda}")
+        );
+        assert_eq!(
+            a(&["Caro energia", "Criminalità"]),
+            format!("Già accese al turno zero: Caro energia e Criminalità. {coda}")
+        );
+        assert_eq!(
+            Avviso::CrisiDelDebito {
+                spread_pb: 585,
+                soglia_pb: 550
+            }
+            .testo(),
+            "Spread a 585 punti base, oltre la soglia di 550: alla prima chiusura le aste vanno \
+             scoperte e dovrai scegliere fra MES e ristrutturazione."
         );
     }
 }

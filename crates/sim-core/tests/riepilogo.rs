@@ -4,9 +4,10 @@
 )]
 
 mod comune;
-use comune::dati_base;
+use comune::{chiudi_col_bilancio, con_ingresso, dati_base, file_base, file_vero};
+use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::legislatura::{Fondazione, posizioni};
-use sim_core::riepilogo::{Avviso, riepilogo};
+use sim_core::riepilogo::{Avviso, RiepilogoScenario, riepilogo};
 use sim_core::{Partita, SuMisura};
 
 #[test]
@@ -85,4 +86,79 @@ fn le_disposizioni_dell_editor_entrano_nel_saldo() {
     s.disposizioni.insert("cuneo_fiscale".into(), "0".into());
     let r = riepilogo(&base.con_su_misura(&s).unwrap());
     assert_ne!(r.saldo_disposizioni_pil, 0.0);
+}
+
+fn riepilogo_di(f: FileDati) -> RiepilogoScenario {
+    riepilogo(&DatiGioco::da_testi(&f).unwrap())
+}
+
+#[test]
+fn caro_energia_acceso_al_turno_zero_avvisa() {
+    let r = riepilogo_di(file_vero());
+    assert_eq!(
+        r.avvisi,
+        [Avviso::SituazioniAccese {
+            nomi: vec!["Caro energia".into()]
+        }]
+    );
+    let json = serde_json::to_value(&r.avvisi[0]).unwrap();
+    assert_eq!(json["tipo"], "situazioni_accese");
+    assert!(
+        riepilogo_di(con_ingresso(file_vero(), "energia", 9.0))
+            .avvisi
+            .is_empty()
+    );
+}
+
+#[test]
+fn il_debito_al_massimo_accende_l_avviso_di_crisi() {
+    let r = riepilogo_di(con_ingresso(file_base(), "debito_pil", 160.0));
+    let [
+        Avviso::CrisiDelDebito {
+            spread_pb,
+            soglia_pb,
+        },
+    ] = r.avvisi.as_slice()
+    else {
+        panic!("un avviso solo: {:?}", r.avvisi);
+    };
+    assert_eq!(*soglia_pb, 550);
+    assert!(spread_pb > soglia_pb, "spread {spread_pb}");
+    assert_eq!(*spread_pb, r.spread_pb);
+    let json = serde_json::to_value(&r.avvisi[0]).unwrap();
+    assert_eq!(json["tipo"], "crisi_del_debito");
+}
+
+/// L'avviso c'è se e solo se la prima chiusura apre davvero le Aste scoperte.
+#[test]
+fn l_avviso_di_crisi_coincide_con_le_aste_della_prima_chiusura() {
+    let aste = dati_base().evento("aste_scoperte").unwrap();
+    for debito in [110.0, 160.0] {
+        let f = con_ingresso(file_base(), "debito_pil", debito);
+        let avviso = riepilogo_di(f.clone())
+            .avvisi
+            .iter()
+            .any(|a| matches!(a, Avviso::CrisiDelDebito { .. }));
+        let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+        chiudi_col_bilancio(&mut p);
+        let json: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+        let aperte = json["eventi"]["aperti"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["evento"] == aste);
+        assert_eq!(avviso, aperte, "debito {debito}");
+    }
+}
+
+#[test]
+fn gli_avvisi_di_stato_seguono_l_ordine() {
+    let r = riepilogo_di(con_ingresso(file_vero(), "debito_pil", 160.0));
+    assert!(matches!(
+        r.avvisi.as_slice(),
+        [
+            Avviso::SituazioniAccese { .. },
+            Avviso::CrisiDelDebito { .. }
+        ]
+    ));
 }
