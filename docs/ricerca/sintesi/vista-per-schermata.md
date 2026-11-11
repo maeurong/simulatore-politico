@@ -163,7 +163,7 @@ Ricontrollati su `8952a06`:
 ### Debiti nuovi lasciati dal piano 9
 
 - **Stato del MES e della ristrutturazione fuori dalla Vista.** La scelta passa da un evento («Aste scoperte», `partita.rs:393-420`) e quindi dalla schermata degli eventi. Lo stato che ne segue vive in `Economia` (`crates/sim-core/src/economia/mod.rs:106-111`) e la Vista non lo porta [M: `grep -n -i 'mes\b\|ristruttur' crates/sim-core/src/vista.rs` → nessun risultato]: la UI non sa se un programma è in corso né fino a quando.
-- **Clausola dell'energia**: l'effetto scrive `clausola_energia_fino_a` sulla regione (`partita.rs:4220-4227`); nella Vista non c'è [M: `grep -n -i clausola crates/sim-core/src/vista.rs` → nessun risultato].
+- **Clausola dell'energia**: l'effetto scrive `clausola_energia_fino_a` in `regole_ue`, quindi è nazionale (`partita.rs:4220-4227`, `economia/regole_ue.rs:31`; in una prima stesura questa riga diceva «sulla regione», corretto lo stesso giorno); nella Vista non c'è [M: `grep -n -i clausola crates/sim-core/src/vista.rs` → nessun risultato].
 - **Bilancio ricondotto al tetto del MES senza avviso**: un bilancio presentato prima del programma «entra ricondotto» (`partita.rs:1646-1647`) e la Vista non lo segnala [V commento; INF assenza dell'avviso].
 - **Campagna tagliata senza avviso** quando la cassa non basta dopo gli acquisti: riportato dalla sessione che ha chiuso il piano 9, non riletto qui nel codice.
 - **Serie dei tre indicatori a partita in corso**: esiste (`Partita::serie`, `partita.rs:2600`) ma arriva alla UI solo dentro `VoceAlbo`, cioè a partita finita. È un passacarte mancante, non un dato mancante.
