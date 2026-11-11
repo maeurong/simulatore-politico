@@ -2414,6 +2414,7 @@
       "crescita_pil": 0.5334062349869457,
       "disoccupazione": 5.827018053273658,
       "inflazione": 3.8190260660894877,
+      "inflazione_annua": 3.6535214056230725,
       "disavanzo": 2.5083756851402352
     },
     "revisione": {
@@ -2425,12 +2426,14 @@
         "crescita_pil": 0.0,
         "disoccupazione": 5.6000000000000005,
         "inflazione": 4.2,
+        "inflazione_annua": 4.2,
         "disavanzo": 2.937322276651066
       },
       "riveduta": {
         "crescita_pil": 0.0,
         "disoccupazione": 5.6000000000000005,
         "inflazione": 4.2,
+        "inflazione_annua": 4.2,
         "disavanzo": 2.937322276651066
       }
     }

@@ -2253,6 +2253,7 @@
       "crescita_pil": 0.0,
       "disoccupazione": 5.6000000000000005,
       "inflazione": 4.2,
+      "inflazione_annua": 4.2,
       "disavanzo": 2.937322276651066
     },
     "revisione": null

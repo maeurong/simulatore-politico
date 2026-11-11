@@ -19,7 +19,7 @@ Fatto l'11/11/2026. Otto Viste in [`../viste/`](../viste/README.md), tutte raggi
 | `02-trattativa-incarico.json` | trattativa, incarico al giocatore | 4 | 4,5 | 1, 2027T1 |
 | `03-governo-ordinario.json` | al governo, evento aperto, 3 proposte dei ministri | 4 | 4,5 | 2, 2027T2 |
 | `04-governo-bilancio.json` + `.bozza.json` | al governo nel turno del bilancio, bilancio presentato | 4 | 4,5 | 4, 2027T4 |
-| `05-crisi.json` | crisi fuori dall'esercizio provvisorio, 6 voci di disponibilità | 13 | 4,5 | 26, 2033T2 |
+| `05-crisi.json` | crisi fuori dall'esercizio provvisorio, 5 voci di disponibilità | 9 | 4,5 | 34, 2035T2 |
 | `06-opposizione-governo-ia.json` | opposizione sotto un governo IA | 1 | 1,5 | 2, 2027T2 |
 | `07-partita-finita-eredita.json` | partita finita per abbandono, eredità in Vista | 4 | 4,5 | 9, 2029T1 |
 | `08-tono-grave.json` | al governo con «Emergenza incendi» in tono grave | 4 | 4,5 | 7, 2028T3 |
@@ -36,4 +36,9 @@ Fatti che servono ai ticket dopo:
 - **Numeri non arrotondati** (`5.6000000000000005`): arrotonda la UI ([Testi esterni](03-testi-esterni.md), `Intl`).
 - `referendum` ed `esiti_referendum` vuoti in tutte le Viste: nessuno stato campione li mostra; servirà una Vista in più a chi prototipa i referendum in Aula.
 
-Fuori dalla mappa, da guardare nel core: coi turni chiusi senza decisioni l'inflazione della prima stima scende da 4,2 (turno zero) a −4,33 (2028T4, file 07) ed è già −0,51 al 2027T1 nel 06. Non è materia della UI.
+Fuori dalla mappa, da guardare nel core: coi turni chiusi senza decisioni l'inflazione della prima stima scendeva da 4,2 (turno zero) a −4,33 (2028T4, file 07) ed era già −0,51 al 2027T1 nel 06.
+
+**Aggiornamento dell'11/11/2026.** Il core è stato corretto e le otto Viste rigenerate su main `94087b9` (tabella sopra aggiornata: la crisi ora è il seme 9, turno 34). Due fatti nuovi per i ticket dopo:
+
+- **L'inflazione da titolo è `statistica.prima_stima.inflazione_annua`** (prezzi sullo stesso trimestre dell'anno prima), non `inflazione`, che è la variazione del trimestre annualizzata e resta nella `Stima` accanto. Nelle Viste l'annua va da 4,2 a 0,71; la trimestrale scende fino a −0,32. L'indicatore `inflazione` dell'eredità è l'annua.
+- **La crescita della spesa netta del riepilogo di bilancio è una stima**: su 30 semi dista in media 0,3-0,4 punti da quella vera, contro un tetto di 1,5-1,7. Chi prototipa la schermata del bilancio decide come mostrarla; non è ancora deciso.
