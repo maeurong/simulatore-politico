@@ -52,6 +52,7 @@ Del brainstorming di questo piano:
 - **Le sette.** Entrano prima le critiche, poi le notevoli, fino a sette. Le voci gemelle si fondono in una. L'apertura le rivela nell'ordine della chiusura, con le critiche segnate. Le critiche oltre la settima vanno nel registro, e la pagina dice quante sono.
 - **La fermata sul voto.** Una misura tocca l'elettorato del giocatore quando almeno una quota fissa dei suoi elettori stimati sta nei gruppi toccati. La quota è una manopola, 30% per partire.
 - **Le quattro voci minori** entrano tutte nella PR delle esposizioni: forbice del sondaggio per regione, combinazioni spente della legge elettorale, posti in calendario, costo di Ferma e Dirotta.
+- **Redditi per fascia: subito, esatti.** La voce «reddito sotto l'atteso» e i redditi per fascia della Vista dicono il trimestre appena chiuso, senza il turno di ritardo delle regioni: la voce spiega il giudizio che si è mosso ora. Mario accetta che così trapeli la crescita reale esatta per fascia, e con essa un pezzo dell'inflazione vera.
 
 ## Scelte mie, da ricontrollare leggendo
 
@@ -90,6 +91,7 @@ Una voce porta:
 |---|---|---|
 | `tipo` | `TipoVoce` | enum senza dati, una variante per riga del catalogo sotto; in `snake_case` nel JSON |
 | `criticita` | `Criticita` | `critica`, `notevole`, `ordinaria` |
+| `precedenza` | `u8` | 3, 2 o 1 per le critiche (la sigla del catalogo), 0 per le altre; serve alla scelta delle sette |
 | `in_evidenza` | `bool` | è una delle (al massimo) sette |
 | `tono` | `Tono` | `grave` se la voce viene da un evento di tono grave, altrimenti `ordinario` |
 | `fatto` | `String` | cosa è successo, col numero: l'occhiello serio |
@@ -415,7 +417,7 @@ I costi sono il `delta` della formula, prima del limite a 0-100 della soddisfazi
 
 ### Redditi per fascia (storia 116)
 
-`Vista.redditi: Vec<VoceReddito>`, tre voci: fascia, reddito reale per elettore, crescita reale dell'ultimo trimestre, crescita attesa. **Stato nuovo**: l'aggregato che la PR 1 calcola in `giudizio` si conserva, perché l'attesa usata non si rifà dallo stato quando la finestra è piena (`fatti-della-chiusura.md:377`).
+`Vista.redditi: Vec<VoceReddito>`, tre voci: fascia, reddito reale per elettore, crescita reale dell'ultimo trimestre, crescita attesa. Sono i numeri della voce `reddito_deluso`, esatti e del trimestre appena chiuso (decisione di Mario). **Stato nuovo**: l'aggregato che la PR 1 calcola in `giudizio` si conserva, perché l'attesa usata non si rifà dallo stato quando la finestra è piena (`fatti-della-chiusura.md:377`).
 
 ### Schema
 
