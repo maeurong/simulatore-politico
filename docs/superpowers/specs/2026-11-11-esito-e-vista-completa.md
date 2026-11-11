@@ -2,7 +2,7 @@
 
 Spec del piano di core che sta fra il piano 10 e il piano 11 (UI «Il Settimanale»). Nasce dal ticket «Dati senza piano» della mappa del piano 11, chiuso con Mario il 10/11/2026: le schermate chiedono dati che nessun piano portava, e la UI non calcola regole (spec v1 `docs/superpowers/specs/2026-10-21-v1-giocabile.md:247-248`). Questo piano produce quei dati in `sim-core`.
 
-Base: `origin/main` a `8952a06` (#48). Ricerche lette prima di scrivere, entrambe sul codice a quel commit:
+Base: `origin/main` a `8952a06` (#48), poi riallineata ad `a02f6ad` (#49), che tocca solo `app/src-tauri/src/lib.rs`. Ricerche lette prima di scrivere, entrambe sul codice a `8952a06`:
 
 - `docs/ricerca/sintesi/fatti-della-chiusura.md`: i 135 fatti che una chiusura produce, nell'ordine di `chiudi_turno`. Qui sotto «fatto n» rimanda alla sua tabella.
 - `docs/ricerca/sintesi/stato-per-le-esposizioni.md`: dove vive ogni dato da esporre.
@@ -78,6 +78,8 @@ Scelte tecniche o di dettaglio prese scrivendo. Mario non le ha discusse: se una
 18. **Forbice del sondaggio** = margine dichiarato di campionamento, al massimo (p = 0,5), come lo dichiarano gli istituti veri. Non copre l'errore comune, che per decisione si rivela solo al voto.
 19. **Elenco delle regioni e pericolosità naturale nella Vista**: la Vista oggi non ha un elenco delle regioni, e la pericolosità è un livello della mappa (storia 137) che sta solo nei dati. La Vista la porta come indici relativi da 0 a 1 (la regione più esposta vale 1), mai come probabilità: la mappa è nota, la probabilità per turno resta nascosta (`.scratch/v1-giocabile/issues/25-informazione-imperfetta.md:44`).
 20. **Le voci di ogni turno non salgono.** La regola «il soggetto è il giocatore» non vale per i tre tipi che nascono a ogni chiusura (`sondaggio`, `revisione`, `entrate_di_cassa`): altrimenti occuperebbero due o tre dei sette posti in ogni turno.
+21. **Il governo avversario che si dimette ha una voce sua**, `governo_dimissionario`. Oggi è una mossa scritta in apertura, coi suoi tre motivi; la caduta vera arriva alla chiusura dopo, con `governo_caduto`. Senza un tipo suo la riga sparirebbe, o la caduta comparirebbe in due esiti. **Da confermare con Mario prima dell'esecuzione.**
+22. **«Al governo» vuol dire Presidente del Consiglio.** Le colonne G e O del catalogo guardano se il giocatore presiede il governo, anche da uscente in trattativa: i suoi ministri eseguono ancora. La fermata `governo` guarda invece se può dare comandi di governo (`Vista.governa`).
 
 ## PR 1: logica nuova
 
@@ -264,10 +266,11 @@ Le voci la cui causa è una frase fissa («–» più il testo fra parentesi) la
 | `emendamento_deciso` | 131 | il governo avversario accoglie o respinge un emendamento | il motivo, uno dei tre che il core scrive già | – | o | sì |
 | `fiducia_posta` | 132 | il governo avversario pone la questione di fiducia su una misura | la forbice include la sconfitta | – | N | no |
 | `sfiducia_presentata` | 133 | chi presenta la sfiducia, al governo o a quale ministro | la linea prevista, gli alleati in ultimatum che la voterebbero | C3 | N | no |
+| `governo_dimissionario` | 127 | il governo avversario in crisi si dimette: cade alla chiusura del turno | il motivo, uno dei tre che il core scrive già | – | C3 | no |
 
 Interim e rosa dei successori, agende annunciate e proposte nate (fatti 123-125) non sono voci dell'esito: l'apertura le mostra già nelle loro schermate.
 
-Il catalogo ha 91 tipi. Un fatto nuovo che un piano futuro aggiunge alla chiusura prende un tipo nuovo: `TipoVoce` è un'enum chiusa, e un tipo senza riga in questa tabella non compila (la criticità è un `match` esaustivo).
+Il catalogo ha 92 tipi. Un fatto nuovo che un piano futuro aggiunge alla chiusura prende un tipo nuovo: `TipoVoce` è un'enum chiusa, e un tipo senza riga in questa tabella non compila (la criticità è un `match` esaustivo).
 
 ### Le sette
 
@@ -282,9 +285,9 @@ Quante critiche sono rimaste fuori lo dice la pagina contando le voci critiche n
 ### Registro
 
 - **La partita** ha un campo `esito: Vec<VoceEsito>` al posto di `mosse`: si svuota all'inizio di `chiudi_turno`, si riempie durante, si compone alla fine. È stato salvato, perché l'apertura lo deve ritrovare dopo un riavvio.
-- **Il registro del turno N**, cioè le voci della chiusura del turno N, sta nel salvataggio del turno N+1, che il guscio scrive subito dopo ogni chiusura (`app/src-tauri/src/lib.rs:116-127`) e conserva per tutta la partita.
+- **Il registro del turno N**, cioè le voci della chiusura del turno N, sta nel salvataggio del turno N+1, che il guscio scrive a ogni chiusura (`app/src-tauri/src/lib.rs:118-131`) e conserva per tutta la partita.
 - **Il core** offre una funzione pura, `esito_da_salvataggio(json) -> Result<Vec<VoceEsito>, Errore>`, che legge dal testo del salvataggio solo la versione dello schema e l'esito, senza caricare la partita. Schema diverso: lo stesso errore di `carica`.
-- **Il guscio** offre il comando `registro(turno) -> Vec<VoceEsito>`: legge il salvataggio del turno `turno + 1` dall'archivio e lo passa a quella funzione. Per un turno che non ha ancora un salvataggio successivo, errore.
+- **Il guscio** offre il comando `registro(turno) -> Vec<VoceEsito>`: legge il salvataggio del turno `turno + 1` dall'archivio e lo passa a quella funzione. Per un turno che la partita in memoria non ha ancora chiuso, errore, anche se sul disco quel salvataggio c'è già: dopo un guasto a metà il disco può restare un turno avanti (`app/src-tauri/src/lib.rs:114-117`).
 
 Perché così: il salvataggio non cresce con la partita (con l'intero registro dentro, cento turni peserebbero in ogni file), il riavvolgimento resta coerente da solo (cancellare i turni dopo N cancella anche i loro registri), e i salvataggi di ogni turno ci sono già (`docs/ricerca/tecnica/persistenza-dei-salvataggi.md:79`). Il prezzo: la partita di prova, che non si salva, ha solo l'ultimo esito; e leggere molti turni di fila costa una lettura di file ciascuno.
 
@@ -331,7 +334,7 @@ Sono le voci `campagna_tagliata` e `bilancio_ricondotto`. Tutte e due vanno pres
 
 ### Altri cambi di stato della PR 1
 
-- **Perché cade un governo.** `legislatura.dimissioni` passa da booleano a un'origine facoltativa, scritta nei sette punti in cui oggi si alza il flag (`fatti-della-chiusura.md`, fatto 100). `Vista.dimissioni` resta un booleano.
+- **Perché cade un governo.** `legislatura.dimissioni` passa da booleano a un'origine facoltativa, scritta nei sette punti in cui oggi si alza il flag (`fatti-della-chiusura.md`, fatto 100). Se due punti scattano nella stessa chiusura vale la prima origine. `Vista.dimissioni` resta un booleano.
 - **Franchi tiratori.** `Conteggio` prende `franchi: u32`: i seggi che hanno votato contro la linea del loro partito, contati in `voto::conta`. Zero dove il voto non li estrae: sotto fiducia (salvo il voto finale della Camera sulla legge elettorale, che resta segreto: `crates/sim-core/src/parlamento/mod.rs:326-336`), nella sfiducia e nei voti a blocchi.
 - **Shock escluso.** `estrai` rende anche gli shock usciti e scartati dal tetto, perché la chiusura ne scriva la voce. Nessun effetto si applica: il default degli shock non ne ha. Il numero e l'ordine delle estrazioni non cambiano, quindi i semi dei test restano validi.
 - **`VERSIONE_SCHEMA` da 15 a 16.**
@@ -417,7 +420,7 @@ I costi sono il `delta` della formula, prima del limite a 0-100 della soddisfazi
 
 ### Redditi per fascia (storia 116)
 
-`Vista.redditi: Vec<VoceReddito>`, tre voci: fascia, reddito reale per elettore, crescita reale dell'ultimo trimestre, crescita attesa. Sono i numeri della voce `reddito_deluso`, esatti e del trimestre appena chiuso (decisione di Mario). **Stato nuovo**: l'aggregato che la PR 1 calcola in `giudizio` si conserva, perché l'attesa usata non si rifà dallo stato quando la finestra è piena (`fatti-della-chiusura.md:377`).
+`Vista.redditi`, tre voci: fascia, reddito reale per elettore, crescita reale dell'ultimo trimestre, crescita attesa. Sono i numeri della voce `reddito_deluso`, esatti e del trimestre appena chiuso (decisione di Mario). **Stato nuovo**: l'aggregato che la PR 1 calcola in `giudizio` si conserva, perché l'attesa usata non si rifà dallo stato quando la finestra è piena (`fatti-della-chiusura.md:377`).
 
 ### Schema
 
