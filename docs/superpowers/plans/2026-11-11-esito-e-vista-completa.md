@@ -21,7 +21,7 @@
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-60, e non si riaprono: la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11.
+Stanno nella spec, righe 39-60, e non si riaprono: la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»).
 
 ## Scelte del piano
 
@@ -619,10 +619,10 @@ La deviazione di `controllo_annuale` diventa una funzione pura che controllo e p
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati.
 - [ ] **Step 5:** commit `feat(core): regole UE, debito e minaccia di scissione nella Vista`.
 
-### Task 16: posti in calendario, menu elettorale, costo di Ferma e Dirotta
+### Task 16: posti in calendario, menu elettorale, anteprima della proposta, costo di Ferma e Dirotta
 
 **Files:**
-- Modify: `crates/sim-core/src/parlamento/mod.rs` (conteggio dei posti di `presenta` `:585-602`, costanti `:33-40`), `crates/sim-core/src/parlamento/regole.rs` (`legge_non_valida` `:139-150`), `crates/sim-core/src/ministri/agenda.rs` (`ferma` `:383-389`, `dirotta` `:447-458`, `ferma_cantiere` `:492-497`), `crates/sim-core/src/vista.rs`, `crates/sim-core/src/partita.rs`, `crates/sim-core/tests/calendario.rs`, `crates/sim-core/tests/agenda.rs`, `crates/sim-core/tests/norme.rs`, `app/src/lib/tipi/`
+- Modify: `crates/sim-core/src/parlamento/mod.rs` (conteggio dei posti di `presenta` `:585-602`, costanti `:33-40`), `crates/sim-core/src/parlamento/regole.rs` (`legge_non_valida` `:139-150`), `crates/sim-core/src/ministri/agenda.rs` (`ferma` `:383-389`, `dirotta` `:447-458`, `ferma_cantiere` `:492-497`), `crates/sim-core/src/vista.rs`, `crates/sim-core/src/partita.rs` (`anteprima` `:1929-1946`, `presenta_proposta` `:3868`), `crates/sim-core/tests/calendario.rs`, `crates/sim-core/tests/agenda.rs`, `crates/sim-core/tests/norme.rs`, `crates/sim-core/tests/opposizione.rs`, `app/src/lib/tipi/`
 
 **Ricerca:** `docs/ricerca/sintesi/stato-per-le-esposizioni.md:127-146` (voci 9b, 9c, 9d).
 
@@ -639,20 +639,23 @@ pub struct Vista { /* … */ pub posti: VistaPosti }
 impl Partita {
     pub fn menu_elettorale(&self, valori: &[ValoreProposto]) -> Vec<VoceMenu>;
     pub fn costo_dirotta(&self, dicastero: &str, atto: Option<&str>, regione: Option<&str>) -> Result<f64, Errore>;
+    pub fn anteprima_proposta(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore>;
 }
 ```
 
-Il conteggio dei posti e le tre formule di costo si estraggono in funzioni che il comando e la Vista usano entrambi: una regola sola, non una copia. I costi sono il `delta` prima del limite a 0-100. `costo_dirotta` ha gli stessi rifiuti del comando `Dirotta`. I comandi passacarte del guscio restano al ticket 12 della mappa.
+Il conteggio dei posti e le tre formule di costo si estraggono in funzioni che il comando e la Vista usano entrambi: una regola sola, non una copia. I costi sono il `delta` prima del limite a 0-100. `costo_dirotta` ha gli stessi rifiuti del comando `Dirotta`. `anteprima_proposta` è `presenta_proposta` senza il controllo del posto riservato: `all_opposizione`, poi `Parlamento::bozza_proposta` (`parlamento/mod.rs:649-666`) e `parlamento::anteprima` con `CAPACITA_NEUTRA`, come fa `anteprima`; nessuna regola copiata. I comandi passacarte del guscio restano al ticket 12 della mappa.
 
 - [ ] **Step 1: test che falliscono:**
   - `i_posti_contati_come_li_conta_presenta`: con i posti ordinari tutti occupati, `ordinari_occupati == ordinari` e `presenta` rifiuta; con uno libero accetta.
   - `il_costo_di_ferma_e_quello_vero`: `costo_ferma` è la variazione di soddisfazione che `Ferma` applica (soddisfazione lontana da 0 e da 100).
   - `il_costo_di_dirotta_e_quello_vero`, `costo_dirotta_rifiuta_come_il_comando`.
   - `il_menu_spegne_il_premio_senza_coalizioni`: con le coalizioni spente il gradino del premio alla coalizione ha `ammesso == false` e un motivo; `ammesso` coincide con `legge_non_valida` per ogni gradino.
-- [ ] **Step 2:** `cargo test -p sim-core --test calendario --test agenda --test norme` → non compila.
+  - `l_anteprima_della_proposta_e_quella_in_calendario`: all'opposizione, col posto riservato libero, linee e forbice di `anteprima_proposta` coincidono con quelle della misura che `PresentaProposta` mette in calendario nello stesso turno; la partita prima e dopo l'anteprima è la stessa.
+  - `anteprima_proposta_rifiuta_come_il_comando`: rifiuta al governo e con una norma costituzionale; col posto riservato di un altro partito non rifiuta.
+- [ ] **Step 2:** `cargo test -p sim-core --test calendario --test agenda --test norme --test opposizione` → non compila.
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati.
-- [ ] **Step 5:** commit `feat(core): posti, menu elettorale e costo di Ferma e Dirotta`.
+- [ ] **Step 5:** commit `feat(core): posti, menu elettorale, anteprima della proposta e costo di Ferma e Dirotta`.
 
 ### Task 17: redditi per fascia e chiusura della PR 2
 
@@ -679,6 +682,6 @@ Il conteggio dei posti e le tre formule di costo si estraggono in funzioni che i
 
 - **Piano 11 (UI):** prima pagina del Pungolo, registro con «torna al turno N», mappa a cinque livelli, «Conti», «Avanti fino a novità». I posti dei dati sono quelli del ticket 07 della mappa.
 - **Ticket 09 della mappa:** titoli spiritosi e varianti per ciascuno dei 92 tipi.
-- **Ticket 12 della mappa:** comandi passacarte del guscio per `elettori_campione`, `menu_elettorale`, `costo_dirotta`.
+- **Ticket 12 della mappa:** comandi passacarte del guscio per `elettori_campione`, `menu_elettorale`, `costo_dirotta`, `anteprima_proposta`.
 - **Piano strutturale riveduto** (storia 51): piano di core suo.
 - **Aspettativa «alzata dalle promesse»:** debito aperto fra glossario e motore (spec riga 30).

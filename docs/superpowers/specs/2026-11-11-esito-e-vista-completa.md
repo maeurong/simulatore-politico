@@ -25,7 +25,7 @@ Due PR, in quest'ordine.
 - Il piano strutturale riveduto (storia 51): avrà un piano di core suo, dopo.
 - I testi del Pungolo (titolo spiritoso, varianti, motti): ticket 09 della mappa, che parte dal catalogo dei tipi di voce di questa spec.
 - Ogni schermata. Questo piano non tocca `app/src/`, salvo i tipi generati in `app/src/lib/tipi/`.
-- I comandi passacarte del guscio per i metodi puri (`elettori_campione`, `menu_elettorale`, `costo_dirotta`): restano al «Contratto del guscio» della mappa (ticket 12). Fa eccezione `registro`, che legge un salvataggio e sta qui.
+- I comandi passacarte del guscio per i metodi puri (`elettori_campione`, `menu_elettorale`, `costo_dirotta`, `anteprima_proposta`): restano al «Contratto del guscio» della mappa (ticket 12). Fa eccezione `registro`, che legge un salvataggio e sta qui.
 - Il confronto fra l'ultimo sondaggio e il voto (fatto 83): non lo chiede nessuna storia.
 - L'aspettativa «alzata dalle promesse»: glossario e spec v1 lo dicono (`CONTEXT.md:292-293`, spec v1 `:310`, `:379`), il motore non lo fa (`dati/base/manopole.toml:1394`). Questo piano non lo cambia e non scrive voci che citino le promesse come causa; il disaccordo resta un debito da sciogliere con Mario.
 
@@ -416,6 +416,12 @@ Tutti tranne la proiezione sono il verdetto su un anno chiuso e riveduto, quindi
 
 Metodo `menu_elettorale(valori) -> Vec<VoceMenu>`: per ogni gradino di ogni disposizione della legge elettorale, se è ammesso una volta messo nella bozza `valori` al posto del valore di quella disposizione, e altrimenti il motivo. Usa la regola che c'è, `legge_non_valida` (`crates/sim-core/src/parlamento/regole.rs:139-150`), sui valori in vigore e su quelli in arrivo. Non guarda chi governa, la crisi, il MES o il calendario: quelli li dice l'anteprima.
 
+### Anteprima della proposta d'opposizione
+
+Decisione di Mario dell'11/11/2026, ticket «Aula e calendario» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/19-aula-e-calendario.md`). Oggi `Partita::anteprima` rifiuta chi non governa (`crates/sim-core/src/partita.rs:1930`): all'opposizione la proposta per il posto riservato si scrive senza costo, linee né forbice, che si vedono solo quando è già in calendario. La storia 55 chiede l'anteprima di ogni misura; la 94 vuole una proposta che costringa la maggioranza a votare contro i suoi elettori, e per sceglierla servono le linee e i gruppi toccati.
+
+Metodo `anteprima_proposta(valori) -> Result<Anteprima, Errore>`: l'anteprima della proposta che `PresentaProposta` metterebbe nel posto riservato. Valgono le regole di quel comando tranne il posto riservato, così come `anteprima` salta il calendario pieno: la guardia dell'opposizione, poi `bozza_proposta` (`crates/sim-core/src/parlamento/mod.rs:649-666`), che rifiuta anche la norma costituzionale. Il resto è `parlamento::anteprima` come in `anteprima`, con la capacità neutra perché nessun ministro stima la proposta. La bozza porta già il promotore, quindi linee e forbice seguono le regole della proposta d'opposizione (`crates/sim-core/src/parlamento/mod.rs:295-297`). La partita non cambia.
+
 ### Ferma e Dirotta
 
 - `VoceAgenda.costo_ferma` e `VoceCantiere.costo_ferma`: la soddisfazione che il ministro perderebbe, con la formula di `ferma` e di `ferma_cantiere` (`crates/sim-core/src/ministri/agenda.rs:383-389`, `:492-497`).
@@ -482,6 +488,8 @@ Esposizioni:
 - Uno shock escluso dal tetto lascia la voce `shock_assorbito` e nessun effetto: stesso stato, voce a parte, di una chiusura senza quello shock.
 - `costo_ferma` è la variazione di soddisfazione che `Ferma` applica davvero, salvo il limite a 0-100.
 - `menu_elettorale` segna non ammesso il premio alla coalizione con le coalizioni spente, col motivo.
+- All'opposizione `anteprima_proposta` rende le linee e la forbice della misura che `PresentaProposta` mette in calendario nello stesso turno, e la partita non cambia.
+- `anteprima_proposta` rifiuta al governo e con una norma costituzionale, come `PresentaProposta`; col posto riservato occupato non rifiuta.
 - Un salvataggio con lo schema 15 è rifiutato con `SchemaDiverso`.
 
 ## Riferimenti
