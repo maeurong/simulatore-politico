@@ -230,3 +230,8 @@ Decisioni di Mario sul ticket 11 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | ossatura e navigazione della UI
 
 Decisioni di Mario sul ticket 07 del piano 11 archiviate in `sintesi/decisioni.md`: cornice fissa con sommario di dieci sezioni, cruscotto corto, sezioni barrate col motivo, tono grave a tutto il turno, nessuna modale, edicola all'avvio, diciotto schermate da prototipare. Prese su un prototipo navigabile, non a parole.
+
+
+## [2026-11-11] query | fondamenta visive della UI
+
+Decisioni di Mario sul ticket 08 del piano 11 archiviate in `sintesi/decisioni.md`: cornice a gerenza su due righe, tracciati che si riempiono con la caduta a sinistra, sette inchiostri, scala dei caratteri da 12 a 72 px, iniziali al posto della caricatura nel tono grave, più contenuto a 1440, scala mai sotto 1024 px utili. Prese su un prototipo navigabile.

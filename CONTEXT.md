@@ -432,3 +432,11 @@ _Evita_: dashboard, scrivania, plancia
 **Edicola**:
 La schermata fuori dalla partita, che il gioco apre all'avvio: partite in corso, partita nuova, albo delle partite.
 _Evita_: menu principale, home, lobby
+
+**Tracciato**:
+La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, uno stacco segna dove comincia il pericolo.
+_Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
+
+**Fascia** (di un valore):
+Un valore mostrato come una fra poche classi con un nome (capacità buona, rischio alto, intesa media) invece che come numero. La fascia di reddito è un'altra cosa e si dice sempre per intero.
+_Evita_: livello (che è della mappa), classe, grado

@@ -346,6 +346,19 @@ Ticket `.scratch/v1-piano-11-ui/issues/07-ossatura-e-navigazione.md`, deciso in 
 - **Diciotto schermate da prototipare**, una per ticket (13-30 della mappa).
 - **Metodo:** le proposte grafiche a Mario vanno su un prototipo nel browser, non descritte a parole.
 
+## 2026-11-11: fondamenta visive della UI
+
+Ticket `.scratch/v1-piano-11-ui/issues/08-fondamenta-visive.md`, deciso su un prototipo navigabile (`.scratch/v1-piano-11-ui/prototipi/08-fondamenta.prototype.html`), le cui variabili CSS sono i token.
+
+- **Cornice a gerenza, su due righe:** testatina, stato, tre tracciati e chiusura del turno; sotto il sommario. Scartate la colonna a sinistra e il sommario in testa con gli indicatori al piede; una striscia su una riga sola non entra a 1280 px.
+- **Tracciati che si riempiono, con la caduta a sinistra** per tutti e tre; uno stacco segna la soglia di pericolo anche senza colore ([[tabellone-e-carta-ritagliata]]). Scale e soglie restano da fissare.
+- **Sette inchiostri** (carta, inchiostro, grigio, rosso, verde, biro, giallo), tutti sopra 4,5:1 sulla carta tranne il giallo, che è solo evidenziatore. Nessun angolo arrotondato, ombra o sfumatura.
+- **Caratteri:** Fraunces per testata e titoli, Atkinson Hyperlegible Next per il resto, cifre tabellari; scala da 12 a 72 px, niente sotto i 12 ([[tipografia-e-font-aperti]]).
+- **Il colore non è mai l'unico segnale del critico:** la freccia dice il verso, il colore il giudizio, e sotto soglia la variazione va in negativo.
+- **Un pulsante spento dice sempre perché**; ciò che distrugge si conferma sul posto.
+- **Tono grave:** una classe sola sulla radice; la caricatura conta come illustrazione e lascia il posto alle iniziali ([[caricature-di-personaggi-inventati]], [[tono-giocoso-su-temi-seri]]).
+- **A 1440×900 più contenuto**, non caratteri più grandi. **La scala non scende sotto 1024 px utili**: 1,25× a 1280, 1,4× a 1440 ([[movimento-e-scala-in-wkwebview]]).
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
