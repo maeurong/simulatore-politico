@@ -52,6 +52,9 @@ pub struct Economia {
     pub output_gap: [f64; 2],
     /// Annualizzata, dalla più recente.
     pub inflazione: [f64; 8],
+    /// Inflazione di fondo, annualizzata, dalla più recente: quella su cui lavorano i ritardi
+    /// della Phillips. I prezzi importati vi entrano per la quota `secondo_giro_importata`.
+    pub inflazione_fondo: [f64; 8],
     pub tasso_bce: f64,
     pub regioni: Vec<EconomiaRegione>,
     /// Scostamento % del prezzo degli input importati, AR(1).
@@ -141,21 +144,26 @@ impl Economia {
         let spostamento = s.disoccupazione.valore - somma / pesi;
         let bilancio = finanza::Bilancio::iniziale(dati);
         let debito = euro(s.debito_pil.valore / 100.0 * 4.0 * s.pil_trimestrale.valore * MLD);
+        let inflazione = [
+            s.inflazione.valore,
+            s.inflazione_t3.valore,
+            s.inflazione_t2.valore,
+            OBIETTIVO_INFLAZIONE,
+            OBIETTIVO_INFLAZIONE,
+            OBIETTIVO_INFLAZIONE,
+            OBIETTIVO_INFLAZIONE,
+            OBIETTIVO_INFLAZIONE,
+        ];
         let mut e = Economia {
             pil_trimestrale: s.pil_trimestrale.valore,
             pil_potenziale_reale: s.pil_trimestrale.valore / (1.0 + gap / 100.0),
             livello_prezzi: 1.0,
             output_gap: [gap, gap],
-            inflazione: [
-                s.inflazione.valore,
-                s.inflazione_t3.valore,
-                s.inflazione_t2.valore,
-                OBIETTIVO_INFLAZIONE,
-                OBIETTIVO_INFLAZIONE,
-                OBIETTIVO_INFLAZIONE,
-                OBIETTIVO_INFLAZIONE,
-                OBIETTIVO_INFLAZIONE,
-            ],
+            inflazione,
+            // Assunzione senza fonte, da confermare: tutta l'inflazione di partenza conta come
+            // inflazione di fondo. Lo scenario parte con l'energia già rincarata, e quel rincaro
+            // si considera già passato nei prezzi interni.
+            inflazione_fondo: inflazione,
             tasso_bce: s.tasso_bce.valore,
             regioni: dati
                 .regioni()
@@ -308,9 +316,16 @@ impl Economia {
             self.domanda_estera - domanda_estera_prima,
             shock_domanda,
         );
-        let pi = self.phillips(dati);
+        // L'importata entra intera nell'inflazione pubblicata e per la quota `s` in quella di
+        // fondo: pi - fondo = (1 - s) * importata.
+        let s = dati.manopola("secondo_giro_importata");
+        let interna = self.phillips(dati);
+        let fondo = interna + s * self.inflazione_importata;
+        let pi = interna + self.inflazione_importata;
         self.tasso_reale_precedente = r_1;
         self.output_gap = [y, self.output_gap[0]];
+        self.inflazione_fondo.rotate_right(1);
+        self.inflazione_fondo[0] = fondo;
         self.inflazione.rotate_right(1);
         self.inflazione[0] = pi;
 
@@ -363,6 +378,7 @@ impl Economia {
             .iter()
             .chain(&self.output_gap)
             .chain(&self.inflazione)
+            .chain(&self.inflazione_fondo)
             .chain(&self.prezzi_settori)
             .chain(&self.gap_settori)
             .chain(

@@ -75,6 +75,13 @@ min = 0.0
 max = 0.5
 ticket = "07"
 
+# assunzione dell'11/11/2026, nessuna fonte in docs/ricerca: quota dell'inflazione importata che passa nell'inflazione di fondo; a 1 i prezzi importati entrano interi nei ritardi
+[secondo_giro_importata]
+valore = 0.2
+min = 0.0
+max = 1.0
+ticket = "07"
+
 # assunzione del piano 3, nessuna fonte in docs/ricerca
 [tasso_naturale_reale]
 valore = 0.25

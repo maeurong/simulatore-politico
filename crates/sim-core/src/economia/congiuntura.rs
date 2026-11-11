@@ -21,17 +21,17 @@ impl Economia {
             + shock_domanda
     }
 
-    /// Nuova inflazione annualizzata, dal gap del turno prima e dall'inflazione importata.
+    /// Inflazione annualizzata del trimestre senza i prezzi importati: ritardi dell'inflazione di
+    /// fondo, ancoraggio e gap del turno prima. L'importata la aggiunge `passo_con`.
     pub(super) fn phillips(&self, dati: &DatiGioco) -> f64 {
         let m = |n: &str| dati.manopola(n);
         let media = |p: &[f64]| p.iter().sum::<f64>() / p.len() as f64;
         let a = m("ancoraggio_aspettative");
         (1.0 - a)
-            * (m("phillips_1") * self.inflazione[0]
-                + m("phillips_2_4") * media(&self.inflazione[1..4])
-                + m("phillips_5_8") * media(&self.inflazione[4..8]))
+            * (m("phillips_1") * self.inflazione_fondo[0]
+                + m("phillips_2_4") * media(&self.inflazione_fondo[1..4])
+                + m("phillips_5_8") * media(&self.inflazione_fondo[4..8]))
             + a * OBIETTIVO_INFLAZIONE
             + m("phillips_gap") * self.output_gap[0]
-            + self.inflazione_importata
     }
 }
