@@ -79,6 +79,52 @@ fn senza_errore_la_prima_stima_e_esatta() {
     }
 }
 
+/// I tre trimestri prima sono già riveduti: la prima stima dell'inflazione annua li compone con
+/// la stima dell'ultimo, senza un errore suo.
+#[test]
+fn la_prima_stima_dell_inflazione_annua_compone_quella_del_trimestre() {
+    let mut p = Partita::nuova(dati_base(), 4);
+    p.chiudi_turno();
+    let s = &p.informazione().statistica;
+    assert_ne!(s.prima_stima.inflazione, s.vera.inflazione);
+    let attesa = p.economia().inflazione_annua_con(s.prima_stima.inflazione);
+    assert!((s.prima_stima.inflazione_annua - attesa).abs() < 1e-12);
+}
+
+/// Dalla sola `Vista`: la prima stima dell'inflazione annua è la composizione di quella del
+/// trimestre coi tre trimestri prima, che il giocatore ha già riveduti (o letti nello scenario).
+/// Nessun residuo, quindi dalle due stime non si ricava l'inflazione vera.
+#[test]
+fn dalla_vista_l_inflazione_annua_non_dice_piu_di_quella_del_trimestre() {
+    let dati = dati_base();
+    let sc = dati.scenario();
+    let mut riveduti = vec![sc.inflazione_t3.valore, sc.inflazione_t2.valore];
+    let mut p = Partita::nuova(dati.clone(), 4);
+    for turno in 1..=8 {
+        p.chiudi_turno();
+        let s = p.vista().statistica;
+        riveduti.insert(0, s.revisione.unwrap().riveduta.inflazione);
+        let prima: f64 = riveduti[..3].iter().map(|i| 1.0 + i / 400.0).product();
+        let attesa = 100.0 * ((1.0 + s.prima_stima.inflazione / 400.0) * prima - 1.0);
+        let annua = s.prima_stima.inflazione_annua;
+        assert!(
+            (annua - attesa).abs() < 1e-12,
+            "turno {turno}: {annua} {attesa}"
+        );
+    }
+}
+
+/// I valori di scenario sono già variazioni sull'anno prima: al turno zero l'annua pubblicata è
+/// il dato, non la composizione dei trimestri.
+#[test]
+fn al_turno_zero_l_inflazione_annua_e_il_dato_di_scenario() {
+    let dati = dati_base();
+    let dato = dati.scenario().inflazione.valore;
+    let p = Partita::nuova(dati, 4);
+    assert_eq!(p.vista().statistica.prima_stima.inflazione_annua, dato);
+    assert_eq!(p.informazione().statistica.vera.inflazione_annua, dato);
+}
+
 #[test]
 fn la_statistica_segue_l_economia() {
     let d = dati_base();
@@ -91,6 +137,7 @@ fn la_statistica_segue_l_economia() {
     let crescita = 400.0 * (e.pil_trimestrale / e.livello_prezzi / r0 - 1.0);
     assert!((vera.crescita_pil - crescita).abs() < 1e-9);
     assert_eq!(vera.inflazione, e.inflazione[0]);
+    assert_eq!(vera.inflazione_annua, e.inflazione_annua());
     assert!((vera.disoccupazione - e.disoccupazione_nazionale(&d)).abs() < 1e-12);
     let disavanzo = 100.0 * e.disavanzo_trimestre as f64 / (e.pil_trimestrale * 1e9);
     assert!((vera.disavanzo - disavanzo).abs() < 1e-12);

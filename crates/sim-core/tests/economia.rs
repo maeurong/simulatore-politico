@@ -281,3 +281,22 @@ fn il_turno_zero_ha_l_energia_nei_prezzi() {
     assert_eq!(p.economia().energia, 11.0);
     assert!(p.economia().prezzi_settori.iter().all(|&x| x > 1.0));
 }
+
+/// Solo i quattro trimestri più recenti, composti: 1,01 · 1 · 0,99 · 1,02 = 1,019898.
+#[test]
+fn l_inflazione_annua_compone_gli_ultimi_quattro_trimestri() {
+    let mut e = Economia::iniziale(&dati_base());
+    e.inflazione = [4.0, 0.0, -4.0, 8.0, 99.0, 99.0, 99.0, 99.0];
+    assert!((e.inflazione_annua() - 1.9898).abs() < 1e-12);
+}
+
+/// Con un ultimo trimestre dato: lo compone coi tre prima, senza divisioni (a −400 resta finita).
+/// Con l'ultimo vero è l'annua, al bit.
+#[test]
+fn l_inflazione_annua_con_un_ultimo_trimestre_dato() {
+    let mut e = Economia::iniziale(&dati_base());
+    e.inflazione = [99.0, 0.0, -4.0, 8.0, 99.0, 99.0, 99.0, 99.0];
+    assert!((e.inflazione_annua_con(4.0) - 1.9898).abs() < 1e-12);
+    assert_eq!(e.inflazione_annua_con(-400.0), -100.0);
+    assert_eq!(e.inflazione_annua_con(99.0), e.inflazione_annua());
+}

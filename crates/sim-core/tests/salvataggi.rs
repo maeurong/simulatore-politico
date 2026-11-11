@@ -142,6 +142,13 @@ fn la_voce_dell_albo_regge_un_formato_futuro() {
     assert_eq!(serde_json::from_value::<VoceAlbo>(j).unwrap(), v);
 }
 
+/// Formato 2: l'indicatore `inflazione` a fine partita è l'annua, non più la trimestrale
+/// annualizzata.
+#[test]
+fn l_albo_porta_il_formato_2() {
+    assert_eq!(FORMATO_ALBO, 2);
+}
+
 #[test]
 fn l_albo_porta_elezioni_e_serie() {
     let mut p = fondata(3.5);
