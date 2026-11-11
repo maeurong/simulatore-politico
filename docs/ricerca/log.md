@@ -243,3 +243,7 @@ Decisioni di Mario sul ticket 10 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | contratto del guscio
 
 Decisioni di Mario sul ticket 12 del piano 11 archiviate in `sintesi/decisioni.md`: errori in due specie (rifiuto sul posto, guasto nella cornice), seme della fondazione tenuto dal guscio fra anteprima e fondazione, bozze della UI solo in memoria, `Fascia` esportata da chi arriva prima fra 11b e la PR 2 del core.
+
+## [2026-11-11] query | edicola
+
+Decisioni di Mario sul ticket 13 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col dettaglio a lato, abbandono che resta nell'edicola con la voce d'albo aperta, partite in corso con la sola testata.

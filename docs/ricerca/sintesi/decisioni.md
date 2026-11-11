@@ -388,6 +388,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/12-contratto-del-guscio.md`, un giro sul 
 - **Bozze della UI solo in memoria:** bilancio in composizione, legge, spese di campagna si perdono all'uscita; ciò che è comandato è salvato.
 - **`Fascia` esportata da chi arriva prima** fra la fetta 11b e la PR 2 del core: una riga d'esportazione, niente a runtime.
 
+## 2026-11-11: edicola
+Ticket `.scratch/v1-piano-11-ui/issues/13-edicola.md`, un giro su un prototipo con tre forme nutrito con partite giocate.
+
+- **Forma A · Banco:** in corso sopra, albo sotto, dettaglio a lato come il borsino. La voce d'albo si legge con gli indicatori contro il turno zero, tre piccoli grafici turno per turno (uno per asse) e le elezioni.
+- **Abbandono dall'edicola resta nell'edicola:** conferma sul posto, poi la voce d'albo aperta nel dettaglio; nessuna pagina Eredità. Il guscio abbandona solo la partita caricata, quindi la UI chiama `riprendi` e poi `abbandona`.
+- **Partite in corso con la sola testata:** niente indicatori nell'indice, nessun rimando al core per averli.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

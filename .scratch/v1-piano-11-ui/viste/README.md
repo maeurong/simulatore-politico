@@ -30,11 +30,18 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `06-opposizione-governo-ia.json` | 1 | 1,5 | 2, 2027T2 | 114555 | `fonda`, nessuna coalizione, chiudi (voto), chiudi (trattativa IA) |
 | `07-partita-finita-eredita.json` | 4 | 4,5 | 9, 2029T1 | 115377 | come 05 fino all'8° turno al governo, poi `abbandona()` |
 | `08-tono-grave.json` | 4 | 4,5 | 7, 2028T3 | 116474 | come 05; «Emergenza incendi» in tono grave, al governo |
+| `13-edicola.json` | 1-4, 9 | varie | — | 25496 | `partite()` e `albo()` del guscio rifatti con `testata()` e `voce_albo()`: cinque partite in corso coi nomi diversi, tre abbandonate nell'albo (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 13: aggiunta dal ticket «Edicola». `ultimo_salvataggio` a orari fissi (dal 28/10 al 6/11/2026). **Forzati**: lo
+  schema 16 di «Unione dei Pendolari» (col `motivo` che il guscio scriverebbe) e la `finita` di «Lista del Faro»,
+  perché la fine senza seggi in tutte e due le Camere (`partita.rs:2891-2893`) non arriva coi semi 1-60 a 6,5.
+  Nel margine dell'albo il turno zero vale −201 / −101: prima del voto le Camere della fondazione non hanno seggi
+  della coalizione.
 
 - `richieste` è vuota in tutti gli stati di governo: per `partita.rs:3263` sono le richieste
   degli alleati **in trattativa**, non dei ministri. Le richieste dei ministri stanno in

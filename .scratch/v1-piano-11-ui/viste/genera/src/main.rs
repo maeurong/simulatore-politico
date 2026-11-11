@@ -5,7 +5,8 @@ use std::path::Path;
 
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
-use sim_core::{Comando, DatiGioco, FileDati, Partita};
+use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
+use sim_core::{Comando, DatiGioco, FileDati, Partita, VERSIONE_SCHEMA};
 
 type Esito<T> = Result<T, String>;
 
@@ -185,6 +186,112 @@ fn al_governo(
     Ok(())
 }
 
+/// Una partita giocata come in `al_governo` (coalizione con la destra se `destra`, la bozza a
+/// ogni bilancio fuori dalla crisi), fino al turno `fino` o alla fine.
+fn giocata(
+    d: &DatiGioco,
+    seme: u64,
+    posizione: f64,
+    nome: &str,
+    destra: bool,
+    fino: u32,
+) -> Esito<Partita> {
+    let f = Fondazione {
+        nome: nome.into(),
+        posizione,
+    };
+    let mut p = Partita::fonda(d.clone(), seme, &f).map_err(|e| e.to_string())?;
+    if destra {
+        con_la_destra(&mut p)?;
+    }
+    while p.vista().turno < fino && !p.finita() {
+        if p.governa() && !p.vista().crisi {
+            if let Some(bilancio) = p.bozza_bilancio() {
+                comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
+            }
+        }
+        p.chiudi_turno();
+    }
+    Ok(p)
+}
+
+fn voce(p: &Partita, id: &str, ultimo_salvataggio: u64) -> VocePartita {
+    VocePartita {
+        indice: IndicePartita {
+            formato_indice: FORMATO_INDICE,
+            id: id.into(),
+            testata: p.testata(),
+            ultimo_salvataggio,
+            riavvolgimenti: p.riavvolgimenti(),
+        },
+        apribile: true,
+        motivo: None,
+    }
+}
+
+/// L'edicola (ticket 13): `partite()` e `albo()` del guscio, ricostruiti da `testata()` e
+/// `voce_albo()` di partite giocate. Nomi dei partiti diversi, perché l'elenco li distingua.
+fn edicola(d: &DatiGioco) -> Esito<Uscita> {
+    // ponytail: orari fissi (10/11/2026 sera e prima), il file resta deterministico.
+    let ore = 1_794_000_000;
+    let governo = giocata(d, 4, 4.5, "Patto Civico", true, 6)?;
+    let opposizione = giocata(d, 1, 1.5, "Fronte dei Comuni", false, 5)?;
+    let crisi = giocata(d, 9, 4.5, "Nuova Concordia", true, 34)?;
+    let mut vecchia = voce(
+        &giocata(d, 2, 5.5, "Unione dei Pendolari", false, 3)?,
+        "unione-dei-pendolari",
+        ore - 9 * 86_400,
+    );
+    // Forzata: lo schema 16 di un salvataggio di prima delle #51-#52 (archivio.rs:98-103).
+    vecchia.indice.testata.versione_schema = VERSIONE_SCHEMA - 1;
+    vecchia.apribile = false;
+    vecchia.motivo = Some(
+        sim_core::Errore::SchemaDiverso {
+            trovata: VERSIONE_SCHEMA - 1,
+            attesa: VERSIONE_SCHEMA,
+        }
+        .to_string(),
+    );
+    // Forzata: senza seggi in tutte e due le Camere (partita.rs:2891-2893) non si raggiunge coi
+    // semi 1-60 a 6,5; la partita finita con l'eredità in bozza resta fra le partite in corso.
+    let mut senza_seggi = voce(
+        &giocata(d, 3, 6.5, "Lista del Faro", false, 1)?,
+        "lista-del-faro",
+        ore - 86_400,
+    );
+    senza_seggi.indice.testata.finita = true;
+    let partite = vec![
+        voce(&governo, "patto-civico", ore),
+        senza_seggi,
+        voce(&crisi, "nuova-concordia", ore - 2 * 86_400 - 3_600),
+        voce(&opposizione, "fronte-dei-comuni", ore - 5 * 86_400),
+        vecchia,
+    ];
+    let mut albo = Vec::new();
+    for (seme, pos, nome, destra, fino) in [
+        (4, 4.5, "Partito del giocatore", true, 10),
+        (9, 4.5, "Concordia", true, 34),
+        (1, 1.5, "Fronte Popolare dei Borghi", false, 12),
+    ] {
+        let mut p = giocata(d, seme, pos, nome, destra, fino)?;
+        if !p.finita() {
+            p.abbandona().map_err(|e| e.to_string())?;
+        }
+        albo.extend(p.voce_albo());
+    }
+    let json = serde_json::json!({ "partite": partite, "albo": albo });
+    Ok(Uscita {
+        nome: "13-edicola.json",
+        json: serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
+        nota: format!(
+            "partite: Patto Civico s4 t6, Nuova Concordia s9 t34, Fronte dei Comuni s1 t5, \
+             Unione dei Pendolari s2 t3 con schema forzato a {}, Lista del Faro s3 t1 con \
+             `finita` forzata; albo: abbandoni s4 t10, s9 t34, s1 t12",
+            VERSIONE_SCHEMA - 1
+        ),
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -212,6 +319,7 @@ fn esegui() -> Esito<()> {
             break;
         }
     }
+    uscite.push(edicola(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

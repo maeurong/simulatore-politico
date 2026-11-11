@@ -1,0 +1,450 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Edicola» (13), mappa v1-piano-11-ui.
+  Domanda: com'è fatta l'edicola, la schermata fuori dalla partita che l'app apre sempre all'avvio?
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Banco      — elenchi a pagina (in corso, poi albo) e dettaglio a lato, come il borsino
+    B  Copertina  — l'ultima partita come apertura di prima pagina; l'albo è una pagina sua
+    C  Schedario  — un registro solo, partite in corso e albo nella stessa tabella; il dettaglio si apre sotto la riga
+  Altri parametri:
+    ?vuota=0|1                primo avvio: nessuna partita, albo vuoto
+    ?fin=1280|1440  ?scala=1|1.25|1.5
+  Dati: .scratch/v1-piano-11-ui/viste/13-edicola.json (genera/: `testata()` e `voce_albo()` di partite giocate,
+  `ultimo_salvataggio` a orari fissi). Forzati e dichiarati: lo schema 16 di «Unione dei Pendolari» e la `finita` di
+  «Lista del Faro» (senza seggi non si raggiunge giocando coi semi 1-60). L'abbandono qui è simulato: la voce d'albo
+  che ne nascerebbe non c'è, il dettaglio lo dice.
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A). Non è codice di produzione. Buttare dopo il verdetto.
+
+  VERDETTO (Mario, 11/11/2026), nel ticket 13: A · Banco; dopo l'abbandono si resta nell'edicola con la voce d'albo
+  aperta; le partite in corso con la sola testata. Il file si apre su questa forma. Scartate: ?v=B|C
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo edicola · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec)}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.lnk-via{color:var(--rosso);text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.bollo{display:inline-block;border:3px double var(--rosso);color:var(--rosso);font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:1px 9px;transform:rotate(-5deg);font-size:var(--c-min);white-space:nowrap}
+.bollo.ink{border-color:var(--ink);color:var(--ink)}
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+h3.tit{font-size:var(--c-sez)}
+h4.tit{font-size:var(--c-riq)}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.dati dt{color:var(--grigio)}
+
+/* ===== testa dell'edicola (niente cornice: fuori dalla partita) ===== */
+.testa{display:flex;align-items:end;gap:16px;padding:12px var(--marg) 8px;border-bottom:var(--doppio)}
+.testa .nomino{font-size:30px}
+.testa .dove{font-family:var(--tit);font-size:var(--c-sez);font-weight:600}
+.testa .fuori{margin-left:auto;display:flex;gap:16px;align-items:center;padding-bottom:3px}
+.corpo{padding:14px var(--marg) 16px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:12px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+.titsez{display:flex;align-items:baseline;gap:12px;border-bottom:var(--forte);padding-bottom:4px;margin-bottom:2px}
+.titsez .tit{font-size:var(--c-riq)}
+.titsez .dx{margin-left:auto}
+
+/* righe degli elenchi (A) */
+.rp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;padding:8px 8px;border-bottom:var(--filo);cursor:pointer;align-items:center}
+.rp:hover{background:var(--velo)}
+.rp.sel{background:var(--velo);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.rp .n{font-family:var(--tit);font-weight:700;font-size:var(--c-riq);line-height:1.15}
+.rp.prima .n{font-size:var(--c-sez)}
+.rp .m{font-size:var(--c-sec);color:var(--grigio)}
+.rp .m b{color:var(--ink);font-weight:700}
+.rp .azr{display:flex;gap:8px;align-items:center;grid-row:span 2}
+.rp.spenta .n{color:var(--grigio)}
+.rp.spenta{background:repeating-linear-gradient(45deg,transparent 0 6px,rgb(31 26 23 / .05) 6px 7px)}
+.rp.via{opacity:.55}
+
+/* dettaglio */
+.lato{border:var(--bordo);padding:12px 14px;overflow-x:hidden;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start;min-height:0}
+.lato h3{font-size:var(--c-sez)}
+.ind{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.ind>span:nth-child(4n+1){color:var(--grigio)}
+.ind .h{font-size:var(--c-min);color:var(--grigio);letter-spacing:.06em;text-transform:uppercase}
+.ind .r{text-align:right;white-space:nowrap}
+.gr{position:relative}
+.gr .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);display:flex;justify-content:space-between}
+.gr .k b{color:var(--ink);letter-spacing:0;text-transform:none;font-size:var(--c-sec)}
+.gr svg{overflow:visible}
+.gr text{font:var(--c-min) var(--txt);fill:var(--grigio)}
+.tip{position:absolute;z-index:4;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 7px;pointer-events:none;white-space:nowrap}
+.el{display:grid;gap:4px;padding-top:6px;border-top:var(--filo)}
+.el:first-child{border-top:0;padding-top:0}
+.barra{display:flex;gap:2px;height:16px}
+.barra i{background:var(--grigio);min-width:0;position:relative}
+.barra i:nth-child(even){background:var(--ink)}
+.barra i.mio{background:var(--rosso)}
+.etich{display:flex;gap:2px;font-size:var(--c-min);color:var(--grigio)}
+.etich span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:clip}
+.etich span.mio{color:var(--rosso);font-weight:700}
+
+/* B · copertina */
+.testata{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding:10px 28px 4px}
+.testata .nome{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;font-size:var(--c-test);line-height:1.08;color:var(--rosso);text-align:center}
+.orecchio{font-size:var(--c-sec);line-height:1.35;color:var(--grigio)}
+.orecchio b{color:var(--ink)} .orecchio.dx{text-align:right}
+.sotto{display:flex;justify-content:space-between;font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--ink);border-bottom:var(--doppio);padding:4px 0;color:var(--grigio);margin:0 28px}
+.pagina{padding:12px 28px 14px;display:grid;gap:12px;align-content:start;overflow:hidden auto;min-height:0}
+.apertura{display:grid;grid-template-columns:minmax(0,1fr) 30%;gap:26px;padding-bottom:12px;border-bottom:1px solid var(--ink)}
+.lead h2{font-size:var(--c-apre);line-height:1.06;margin:3px 0 6px}
+.lead .o{font-size:17px;font-weight:700}
+.lead p{font-size:var(--c-lead);color:var(--grigio)}
+.tagliando{border:2px dashed var(--ink);padding:12px 14px;display:grid;gap:8px;align-content:start;background:var(--carta)}
+.tagliando .tit{font-size:var(--c-sez)}
+.colonne{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}
+.breve{padding:8px 0;border-top:var(--filo);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center}
+.breve .n{font-family:var(--tit);font-weight:700;font-size:var(--c-riq)}
+.breve .m{font-size:var(--c-sec);color:var(--grigio)}
+.piede{display:flex;justify-content:space-between;align-items:center;border-top:var(--doppio);padding-top:7px}
+.albo-pag{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:var(--canale)}
+
+/* C · schedario */
+.filtri{display:flex;gap:2px;align-items:end;border-bottom:var(--forte)}
+.filtri button{padding:4px 12px 5px;font-weight:700;color:var(--grigio);border:1.5px solid transparent;border-bottom:0}
+.filtri button.qui{color:var(--ink);border-color:var(--ink);margin-bottom:-2px;padding-bottom:7px;background:var(--carta)}
+.filtri .dx{margin-left:auto;padding-bottom:5px}
+table.sch{width:100%;border-collapse:collapse;font-size:var(--c-sec)}
+.sch th{font-size:var(--c-min);letter-spacing:.06em;text-transform:uppercase;color:var(--grigio);text-align:left;font-weight:700;padding:6px 8px;border-bottom:var(--filo)}
+.sch td{padding:7px 8px;border-bottom:var(--filo);vertical-align:middle}
+.sch tr.r{cursor:pointer}
+.sch tr.r:hover td{background:var(--velo)}
+.sch tr.sel td{background:var(--velo);border-bottom-color:transparent}
+.sch td.n{font-family:var(--tit);font-weight:700;font-size:var(--c-lead)}
+.sch td.num{text-align:right;white-space:nowrap}
+.sch tr.gruppo td{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso);border-bottom:var(--bordo);padding-top:12px}
+.sch tr.spenta td{color:var(--grigio)}
+.sch tr.apre td{padding:4px 8px 14px;background:var(--velo);border-bottom:var(--bordo)}
+.apre-in{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr) minmax(0,1fr);gap:var(--canale)}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px}
+#proto .lab{min-width:130px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">archivio</span><span class="seg" data-k="vuota"><button data-v="0">pieno</button><button data-v="1">primo avvio</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button><button data-v="1.5">1,5×</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+const D = {"albo":[{"anni_al_governo":2.0,"elezioni":[{"affluenza":0.7140327215902681,"data":{"anno":2026,"trimestre":4},"seggi_giocatore":[76,38],"voti":[["Estrema sinistra",0.024615046106056],["Sinistra",0.33282626275304666],["Centrosinistra",0.05741840834508147],["Centro",0.04134085153471969],["Centrodestra",0.07024873934619229],["Destra",0.24933003381413937],["Estrema destra",0.06005696816351142],["Partito del giocatore",0.16416368993725308]]}],"esito":"Abbandono","fine":{"anno":2029,"trimestre":2},"formato_albo":2,"indicatori":[{"fine":136.80450759081097,"id":"debito_pil","nome":"Debito (% del PIL)","turno_zero":136.7},{"fine":75.90502204484164,"id":"spread","nome":"Spread (punti base)","turno_zero":83.87909999999988},{"fine":6.127971438534668,"id":"disoccupazione","nome":"Disoccupazione (%)","turno_zero":5.6000000000000005},{"fine":0.02432377128067653,"id":"inflazione","nome":"Inflazione annua (%)","turno_zero":4.2}],"inizio":{"anno":2026,"trimestre":4},"leggi_in_vigore":[],"nome":"Partito del giocatore","riavvolgimenti":0,"scenario":"Italia di oggi","serie":[{"consenso":0.19238741424985617,"data":{"anno":2026,"trimestre":4},"margine_camera":-201,"margine_senato":-101,"spread_pb":84,"turno":0},{"consenso":0.508936886691874,"data":{"anno":2027,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":83,"turno":1},{"consenso":0.5668132895987577,"data":{"anno":2027,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":86,"turno":2},{"consenso":0.5884855328465333,"data":{"anno":2027,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":89,"turno":3},{"consenso":0.5125147001172894,"data":{"anno":2027,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":71,"turno":4},{"consenso":0.49232458161835047,"data":{"anno":2028,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":67,"turno":5},{"consenso":0.5044040154905136,"data":{"anno":2028,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":64,"turno":6},{"consenso":0.4648243075440794,"data":{"anno":2028,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":62,"turno":7},{"consenso":0.46464314404486956,"data":{"anno":2028,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":64,"turno":8},{"consenso":0.4866768564797642,"data":{"anno":2029,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":62,"turno":9},{"consenso":0.4897144430544256,"data":{"anno":2029,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":76,"turno":10}],"turni":10},{"anni_al_governo":5.25,"elezioni":[{"affluenza":0.6831781576337791,"data":{"anno":2031,"trimestre":4},"seggi_giocatore":[64,36],"voti":[["Estrema sinistra",0.04001186790684925],["Sinistra",0.39068492475816535],["Centrosinistra",0.06121202972471698],["Centro",0.04068699327306323],["Centrodestra",0.0658667566918036],["Destra",0.15585890265126764],["Estrema destra",0.08919600457662868],["Concordia",0.15648252041750527]]},{"affluenza":0.7210855511492933,"data":{"anno":2026,"trimestre":4},"seggi_giocatore":[70,36],"voti":[["Estrema sinistra",0.024563343177276976],["Sinistra",0.3228700815462948],["Centrosinistra",0.057085308639677736],["Centro",0.03956814147895883],["Centrodestra",0.067310325860246],["Destra",0.2731365537955234],["Estrema destra",0.05779034811608389],["Concordia",0.15767589738593837]]}],"esito":"Abbandono","fine":{"anno":2035,"trimestre":2},"formato_albo":2,"indicatori":[{"fine":138.3846905023213,"id":"debito_pil","nome":"Debito (% del PIL)","turno_zero":136.7},{"fine":126.77709956095248,"id":"spread","nome":"Spread (punti base)","turno_zero":83.87909999999988},{"fine":5.881052853867047,"id":"disoccupazione","nome":"Disoccupazione (%)","turno_zero":5.6000000000000005},{"fine":-0.12658108236240917,"id":"inflazione","nome":"Inflazione annua (%)","turno_zero":4.2}],"inizio":{"anno":2026,"trimestre":4},"leggi_in_vigore":[],"nome":"Concordia","riavvolgimenti":0,"scenario":"Italia di oggi","serie":[{"consenso":0.2329499743540891,"data":{"anno":2026,"trimestre":4},"margine_camera":-201,"margine_senato":-101,"spread_pb":84,"turno":0},{"consenso":0.5367242229404445,"data":{"anno":2027,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":113,"turno":1},{"consenso":0.5182631538149574,"data":{"anno":2027,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":119,"turno":2},{"consenso":0.5524086773093577,"data":{"anno":2027,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":121,"turno":3},{"consenso":0.5166811985542542,"data":{"anno":2027,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":107,"turno":4},{"consenso":0.46149386062504494,"data":{"anno":2028,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":105,"turno":5},{"consenso":0.4478673893140622,"data":{"anno":2028,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":104,"turno":6},{"consenso":0.43533686588514964,"data":{"anno":2028,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":104,"turno":7},{"consenso":0.44428647531754756,"data":{"anno":2028,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":111,"turno":8},{"consenso":0.4442841526018716,"data":{"anno":2029,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":121,"turno":9},{"consenso":0.45576899667471116,"data":{"anno":2029,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":138,"turno":10},{"consenso":0.46974740919257274,"data":{"anno":2029,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":152,"turno":11},{"consenso":0.44444106925369997,"data":{"anno":2029,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":162,"turno":12},{"consenso":0.4563281661506501,"data":{"anno":2030,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":171,"turno":13},{"consenso":0.3748640148409848,"data":{"anno":2030,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":179,"turno":14},{"consenso":0.43020255832617027,"data":{"anno":2030,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":183,"turno":15},{"consenso":0.45339030569923616,"data":{"anno":2030,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":182,"turno":16},{"consenso":0.4161708867710442,"data":{"anno":2031,"trimestre":1},"margine_camera":23,"margine_senato":14,"spread_pb":172,"turno":17},{"consenso":0.3758690086153461,"data":{"anno":2031,"trimestre":2},"margine_camera":23,"margine_senato":14,"spread_pb":160,"turno":18},{"consenso":0.39712775058763056,"data":{"anno":2031,"trimestre":3},"margine_camera":23,"margine_senato":14,"spread_pb":142,"turno":19},{"consenso":0.39909915082989,"data":{"anno":2031,"trimestre":4},"margine_camera":23,"margine_senato":14,"spread_pb":130,"turno":20},{"consenso":0.39755460495210837,"data":{"anno":2032,"trimestre":1},"margine_camera":-48,"margine_senato":-25,"spread_pb":102,"turno":21},{"consenso":0.41740408239891214,"data":{"anno":2032,"trimestre":2},"margine_camera":-48,"margine_senato":-25,"spread_pb":90,"turno":22},{"consenso":0.5237440754340041,"data":{"anno":2032,"trimestre":3},"margine_camera":-48,"margine_senato":-25,"spread_pb":106,"turno":23},{"consenso":0.5146162812813209,"data":{"anno":2032,"trimestre":4},"margine_camera":-48,"margine_senato":-25,"spread_pb":93,"turno":24},{"consenso":0.47772883921796866,"data":{"anno":2033,"trimestre":1},"margine_camera":-48,"margine_senato":-25,"spread_pb":88,"turno":25},{"consenso":0.4905343519869229,"data":{"anno":2033,"trimestre":2},"margine_camera":-48,"margine_senato":-25,"spread_pb":91,"turno":26},{"consenso":0.4967172028719542,"data":{"anno":2033,"trimestre":3},"margine_camera":-48,"margine_senato":-25,"spread_pb":60,"turno":27},{"consenso":0.4567901408808842,"data":{"anno":2033,"trimestre":4},"margine_camera":-48,"margine_senato":-25,"spread_pb":54,"turno":28},{"consenso":0.47690175102571486,"data":{"anno":2034,"trimestre":1},"margine_camera":-48,"margine_senato":-25,"spread_pb":54,"turno":29},{"consenso":0.5672539064067448,"data":{"anno":2034,"trimestre":2},"margine_camera":-48,"margine_senato":-25,"spread_pb":93,"turno":30},{"consenso":0.5883896249953885,"data":{"anno":2034,"trimestre":3},"margine_camera":-48,"margine_senato":-25,"spread_pb":91,"turno":31},{"consenso":0.5397195260471515,"data":{"anno":2034,"trimestre":4},"margine_camera":-48,"margine_senato":-25,"spread_pb":94,"turno":32},{"consenso":0.5436663055201233,"data":{"anno":2035,"trimestre":1},"margine_camera":-48,"margine_senato":-25,"spread_pb":97,"turno":33},{"consenso":0.20816044054935173,"data":{"anno":2035,"trimestre":2},"margine_camera":-97,"margine_senato":-46,"spread_pb":127,"turno":34}],"turni":34},{"anni_al_governo":0.0,"elezioni":[{"affluenza":0.7037131126684226,"data":{"anno":2026,"trimestre":4},"seggi_giocatore":[34,18],"voti":[["Estrema sinistra",0.023354442055336346],["Sinistra",0.32377256441708463],["Centrosinistra",0.05940474550592579],["Centro",0.04034803070680274],["Centrodestra",0.07523320579352974],["Destra",0.32880055487617244],["Estrema destra",0.06617133816110105],["Fronte Popolare dei Borghi",0.0829151184840473]]}],"esito":"Abbandono","fine":{"anno":2029,"trimestre":4},"formato_albo":2,"indicatori":[{"fine":136.34503782676083,"id":"debito_pil","nome":"Debito (% del PIL)","turno_zero":136.7},{"fine":67.01269276431674,"id":"spread","nome":"Spread (punti base)","turno_zero":83.87909999999988},{"fine":5.6913030802857385,"id":"disoccupazione","nome":"Disoccupazione (%)","turno_zero":5.6000000000000005},{"fine":1.3806459014216843,"id":"inflazione","nome":"Inflazione annua (%)","turno_zero":4.2}],"inizio":{"anno":2026,"trimestre":4},"leggi_in_vigore":[],"nome":"Fronte Popolare dei Borghi","riavvolgimenti":0,"scenario":"Italia di oggi","serie":[{"consenso":0.12115409585436071,"data":{"anno":2026,"trimestre":4},"margine_camera":-201,"margine_senato":-101,"spread_pb":84,"turno":0},{"consenso":0.0919579256563618,"data":{"anno":2027,"trimestre":1},"margine_camera":-167,"margine_senato":-83,"spread_pb":70,"turno":1},{"consenso":0.05670143883021484,"data":{"anno":2027,"trimestre":2},"margine_camera":-167,"margine_senato":-83,"spread_pb":75,"turno":2},{"consenso":0.08898789190869841,"data":{"anno":2027,"trimestre":3},"margine_camera":-167,"margine_senato":-83,"spread_pb":98,"turno":3},{"consenso":0.10041268065131971,"data":{"anno":2027,"trimestre":4},"margine_camera":-167,"margine_senato":-83,"spread_pb":88,"turno":4},{"consenso":0.08071395189005237,"data":{"anno":2028,"trimestre":1},"margine_camera":-167,"margine_senato":-83,"spread_pb":90,"turno":5},{"consenso":0.11074645365083857,"data":{"anno":2028,"trimestre":2},"margine_camera":-167,"margine_senato":-83,"spread_pb":90,"turno":6},{"consenso":0.11927133441574914,"data":{"anno":2028,"trimestre":3},"margine_camera":-167,"margine_senato":-83,"spread_pb":93,"turno":7},{"consenso":0.11474912975666327,"data":{"anno":2028,"trimestre":4},"margine_camera":-167,"margine_senato":-83,"spread_pb":99,"turno":8},{"consenso":0.08595715354772328,"data":{"anno":2029,"trimestre":1},"margine_camera":-167,"margine_senato":-83,"spread_pb":93,"turno":9},{"consenso":0.09052491250689534,"data":{"anno":2029,"trimestre":2},"margine_camera":-167,"margine_senato":-83,"spread_pb":84,"turno":10},{"consenso":0.04784906515424662,"data":{"anno":2029,"trimestre":3},"margine_camera":-171,"margine_senato":-85,"spread_pb":77,"turno":11},{"consenso":0.043447171725414145,"data":{"anno":2029,"trimestre":4},"margine_camera":-171,"margine_senato":-85,"spread_pb":67,"turno":12}],"turni":12}],"partite":[{"apribile":true,"indice":{"formato_indice":1,"id":"patto-civico","riavvolgimenti":0,"testata":{"data":{"anno":2028,"trimestre":2},"finita":false,"nome":"Patto Civico","scenario":"Italia di oggi","turno":6,"versione_schema":17},"ultimo_salvataggio":1794000000},"motivo":null},{"apribile":true,"indice":{"formato_indice":1,"id":"lista-del-faro","riavvolgimenti":0,"testata":{"data":{"anno":2027,"trimestre":1},"finita":true,"nome":"Lista del Faro","scenario":"Italia di oggi","turno":1,"versione_schema":17},"ultimo_salvataggio":1793913600},"motivo":null},{"apribile":true,"indice":{"formato_indice":1,"id":"nuova-concordia","riavvolgimenti":0,"testata":{"data":{"anno":2035,"trimestre":2},"finita":false,"nome":"Nuova Concordia","scenario":"Italia di oggi","turno":34,"versione_schema":17},"ultimo_salvataggio":1793823600},"motivo":null},{"apribile":true,"indice":{"formato_indice":1,"id":"fronte-dei-comuni","riavvolgimenti":0,"testata":{"data":{"anno":2028,"trimestre":1},"finita":false,"nome":"Fronte dei Comuni","scenario":"Italia di oggi","turno":5,"versione_schema":17},"ultimo_salvataggio":1793568000},"motivo":null},{"apribile":false,"indice":{"formato_indice":1,"id":"unione-dei-pendolari","riavvolgimenti":0,"testata":{"data":{"anno":2027,"trimestre":3},"finita":false,"nome":"Unione dei Pendolari","scenario":"Italia di oggi","turno":3,"versione_schema":16},"ultimo_salvataggio":1793222400},"motivo":"salvataggio di una versione diversa del gioco: schema 16, atteso 17"}]};
+const DEF = {v:'A', vuota:'0', fin:'1280', scala:'1'};
+const st = {...DEF, sel:null, conf:null, via:[], pagB:'edicola', filtro:'tutte', msg:''};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const FORME = {A:'A · Banco', B:'B · Copertina', C:'C · Schedario'};
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ===== formati =====
+const MESI=['gennaio–marzo','aprile–giugno','luglio–settembre','ottobre–dicembre'];
+const per = t => `${MESI[t.trimestre-1]} ${t.anno}`;
+const Per = t => { const s=per(t); return s[0].toUpperCase()+s.slice(1); };
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const pct = q => num(q*100)+'%';
+const segno = n => (n>0?'+':n<0?'−':'')+Math.abs(n);
+// ponytail: «oggi» fisso al mattino dopo l'ultimo salvataggio, perché il file non cambi col giorno in cui lo si apre
+const OGGI = new Date((1794000000+10*3600)*1000);
+const giorno = d => new Date(d.getFullYear(),d.getMonth(),d.getDate());
+function salvata(sec){
+  const d=new Date(sec*1000), g=Math.round((giorno(OGGI)-giorno(d))/864e5), ora=d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  if(g===0) return `oggi alle ${ora}`; if(g===1) return `ieri alle ${ora}`;
+  if(g<7) return `${d.toLocaleDateString('it-IT',{weekday:'long'})} alle ${ora}`;
+  return `il ${d.toLocaleDateString('it-IT',{day:'numeric',month:'long'})} alle ${ora}`;
+}
+function anni(a){ if(!a) return 'mai al governo'; const y=Math.floor(a), m=Math.round((a-y)*12);
+  return [y?`${y} ann${y===1?'o':'i'}`:'', m?`${m} mes${m===1?'e':'i'}`:''].filter(Boolean).join(' e ')+' al governo'; }
+const fr = v => v ? `<svg class="fr ${v==='giu'?'giu':''}" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 .5 9.5 9.5H.5Z"/></svg>` : '<span aria-hidden="true">= </span>';
+
+// ===== dati =====
+const partite = () => st.vuota==='1' ? [] : D.partite.filter(p=>!st.via.includes(p.indice.id));
+const albo = () => st.vuota==='1' ? [] : [...st.via.map(id=>({prova:true, ...D.partite.find(p=>p.indice.id===id).indice.testata, id})), ...D.albo];
+const stato = p => p.indice.testata.finita ? 'bozza' : !p.apribile ? 'spenta' : 'viva';
+
+// ===== pezzi condivisi =====
+function metaPartita(p){
+  const t=p.indice.testata;
+  return `${esc(t.scenario)} · turno <b>${t.turno}</b>, ${per(t.data)} · salvata ${salvata(p.indice.ultimo_salvataggio)}${p.indice.riavvolgimenti?` · ${p.indice.riavvolgimenti} riavvolgimenti`:''}`;
+}
+function azioniPartita(p, piccole){
+  const s=stato(p), id=p.indice.id, P=piccole?' p':'';
+  if(s==='spenta') return `<span class="min muto">Non si apre</span>`;
+  if(s==='bozza') return `<button class="btn${P}" data-riprendi="${id}">Apri l’eredità ›</button>`;
+  if(st.conf===id) return `<button class="btn via pieno${P}" data-abb="${id}">Conferma: abbandona</button><button class="btn${P}" data-conf="">Annulla</button>`;
+  return `<button class="btn pieno${P}" data-riprendi="${id}">Riprendi ›</button><button class="lnk-via" data-conf="${id}">Abbandona</button>`;
+}
+function notaPartita(p){
+  const s=stato(p);
+  if(s==='spenta') return `<p class="sec male">${esc(p.motivo)}.</p><p class="min muto">Il salvataggio resta dov’è, non si cancella: lo riapre la versione del gioco con cui è nato.</p>`;
+  if(s==='bozza') return `<p class="sec">Senza seggi al voto: la partita è finita, ma l’eredità è in bozza. Dentro si può ancora tornare a un turno, o confermarla e mandarla nell’albo.</p>`;
+  if(st.conf===p.indice.id) return `<p class="sec male">Abbandonare chiude la partita per sempre: l’eredità si scrive subito e va nell’albo, la partita esce dall’elenco.</p>`;
+  return '';
+}
+function dettPartita(p){
+  const t=p.indice.testata;
+  return `<div><div class="occ">${stato(p)==='bozza'?'Partita finita · eredità in bozza':stato(p)==='spenta'?'Salvataggio di un’altra versione':'Partita in corso'}</div>
+    <h3 class="tit">${esc(t.nome)}</h3></div>
+    <dl class="dati"><dt>Scenario</dt><dd>${esc(t.scenario)}</dd><dt>Turno</dt><dd><b>${t.turno}</b> · ${per(t.data)}</dd>
+      <dt>Salvata</dt><dd>${salvata(p.indice.ultimo_salvataggio)}</dd><dt>Riavvolgimenti</dt><dd>${p.indice.riavvolgimenti}</dd>
+      <dt>Schema</dt><dd>${t.versione_schema}</dd></dl>
+    ${notaPartita(p)}
+    <div class="az">${azioniPartita(p)}</div>
+    <p class="min muto">La testata dell’indice non porta i tre indicatori: chi li vuole qui chiede un campo nuovo a <code>IndicePartita</code>.</p>`;
+}
+const GIUDIZIO = {'Debito (% del PIL)':1,'Spread (punti base)':1,'Disoccupazione (%)':1};   // salire è male; l'inflazione non ha un verso buono
+function indicatori(a){
+  return `<div class="ind"><span class="h">Indicatore</span><span class="h r">Turno zero</span><span class="h r">Fine</span><span class="h r"></span>
+    ${a.indicatori.map(i=>{ const d=i.fine-i.turno_zero, dec=/Spread/.test(i.nome)?0:1, v=d>0?'su':d<0?'giu':'';
+      const g = GIUDIZIO[i.nome] ? (d>0?'male':'bene') : 'muto';
+      return `<span>${esc(i.nome)}</span><span class="r">${num(i.turno_zero,dec)}</span><span class="r"><b>${num(i.fine,dec)}</b></span><span class="r dl ${Math.abs(d)<.05?'muto':g}">${fr(Math.abs(d)<.05?'':v)}${num(Math.abs(d),dec)}</span>`; }).join('')}</div>`;
+}
+// piccoli multipli: un asse per grafico, un inchiostro, Camera piena e Senato tratteggiato (si distinguono senza colore)
+let GR=[];
+function grafico(titolo, serie, fmt, opz={}){
+  const id=GR.length, W=opz.w||290, H=58, pad={l:2,r:52,t:6,b:14};
+  const tutti=serie.flatMap(s=>s.v).concat(opz.zero?[0]:[]), lo=Math.min(...tutti), hi=Math.max(...tutti), sp=(hi-lo)||1;
+  const n=serie[0].v.length, x=i=>pad.l+(W-pad.l-pad.r)*(n<2?0:i/(n-1)), y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-lo)/sp);
+  const voti=(opz.voti||[]).map(i=>`<line x1="${x(i)}" x2="${x(i)}" y1="${pad.t-4}" y2="${H-pad.b}" stroke="var(--grigio)" stroke-dasharray="2 2"/><text x="${x(i)+3}" y="${pad.t+4}">voto</text>`).join('');
+  const zero=opz.zero&&lo<0&&hi>0?`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink)" stroke-width="1"/><text x="${pad.l+2}" y="${y(0)-3}">metà più uno</text>`:'';
+  const linee=serie.map(s=>`<polyline fill="none" stroke="var(--ink)" stroke-width="2" ${s.trat?'stroke-dasharray="5 3"':''} stroke-linejoin="round" points="${s.v.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`).join('');
+  const etich=serie.length>1?serie.map(s=>`<text x="${W-pad.r+4}" y="${y(s.v[n-1])+4}" style="fill:var(--ink)">${s.nome}</text>`).join(''):'';
+  GR.push({serie,fmt,x,n,W,date:opz.date});
+  const ultimo=serie.map(s=>fmt(s.v[n-1])).join(' / ');
+  return `<div class="gr"><div class="k"><span>${titolo}</span><b>${ultimo}</b></div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titolo)}, dal turno zero alla fine">${voti}${zero}${linee}${etich}
+      <text x="${pad.l}" y="${H-2}">turno 0</text><text x="${W-pad.r}" y="${H-2}" text-anchor="end">${n-1}</text>
+      <line class="cross" x1="0" x2="0" y1="${pad.t}" y2="${H-pad.b}" stroke="var(--rosso)" stroke-width="1" visibility="hidden"/>
+      <rect data-gr="${id}" x="0" y="0" width="${W-pad.r}" height="${H}" fill="transparent"/></svg></div>`;
+}
+function grafici(a,w){
+  const S=a.serie, idx=a.elezioni.map(e=>S.findIndex(p=>p.data.anno===e.data.anno&&p.data.trimestre===e.data.trimestre)).filter(i=>i>=0);
+  const date=S.map(p=>`turno ${p.turno}, ${per(p.data)}`);
+  return [grafico('Consenso della coalizione',[{v:S.map(p=>p.consenso*100)}],v=>num(v)+'%',{voti:idx,date,w}),
+    grafico('Margine sulla metà più uno',[{nome:'Camera',v:S.map(p=>p.margine_camera)},{nome:'Senato',v:S.map(p=>p.margine_senato),trat:1}],segno,{voti:idx,zero:1,date,w}),
+    grafico('Spread',[{v:S.map(p=>p.spread_pb)}],v=>num(v,0)+' pb',{voti:idx,date,w})].join('');
+}
+function elezioni(a){
+  return a.elezioni.map(e=>{ const mio=e.voti.find(v=>v[0]===a.nome), tot=e.voti.reduce((s,v)=>s+v[1],0);
+    return `<div class="el"><div class="sec"><b>Voto di ${per(e.data)}</b> <span class="muto">· affluenza ${pct(e.affluenza)}</span></div>
+      <div class="barra">${e.voti.map(v=>`<i class="${v[0]===a.nome?'mio':''}" style="flex:${v[1]/tot}" title="${esc(v[0])} ${pct(v[1])}"></i>`).join('')}</div>
+      <div class="etich">${e.voti.map(v=>`<span class="${v[0]===a.nome?'mio':''}" style="flex:${v[1]/tot}">${v[1]>.07?esc(v[0].split(' ').pop())+' '+num(v[1]*100,0):''}</span>`).join('')}</div>
+      <div class="sec">${esc(a.nome)}: <b>${mio?pct(mio[1]):'assente'}</b>, ${e.seggi_giocatore[0]} seggi alla Camera, ${e.seggi_giocatore[1]} al Senato</div></div>`; }).join('');
+}
+function testaAlbo(a){
+  return `<div><div class="occ">Albo · ${esc(a.scenario)}</div><h3 class="tit">${esc(a.nome)}</h3>
+    <div class="sec muto">${Per(a.inizio)} – ${per(a.fine)} · ${a.turni} turni · ${anni(a.anni_al_governo)}</div></div>
+    <div style="display:flex;gap:14px;align-items:center"><span class="bollo ${a.esito==='Abbandono'?'ink':''}">${esc(a.esito)}</span>
+      <span class="sec">${a.leggi_in_vigore.length?`${a.leggi_in_vigore.length} leggi ancora in vigore`:'Nessuna legge ancora in vigore'} · ${a.riavvolgimenti} riavvolgimenti</span></div>`;
+}
+function dettAlbo(a,w){
+  if(a.prova) return `<div><div class="occ">Albo</div><h3 class="tit">${esc(a.nome)}</h3></div><span class="bollo ink">Abbandono</span>
+    <div class="ph"><b>Simulato dal prototipo.</b> Qui la voce d’albo che <code>abbandona</code> scrive: indicatori, serie, elezioni. Il guscio rende l’<code>Eredita</code>, poi l’<code>albo()</code> la porta.</div>`;
+  return `${testaAlbo(a)}<div><h4 class="tit" style="margin-bottom:4px">Contro il turno zero</h4>${indicatori(a)}</div>
+    <div style="display:grid;gap:8px"><h4 class="tit">I tre indicatori, turno per turno</h4>${grafici(a,w)}</div>
+    <div style="display:grid;gap:8px"><h4 class="tit">Elezioni</h4>${elezioni(a)}</div>`;
+}
+function vuotoInvito(){
+  return `<div class="tagliando"><div class="occ">Primo numero</div><div class="tit">Nessuna partita in corso</div>
+    <p class="sec">Fonda un partito sullo scenario di base, oppure costruisci il tuo nell’editor. Ogni partita finita o abbandonata finisce nell’albo.</p>
+    <div class="az"><button class="btn pieno" data-nuova>Nuova partita ›</button></div></div>`;
+}
+const testa = (dove) => `<header class="testa"><span class="nomino">Il Pungolo</span><span class="dove">${dove}</span>
+  <span class="fuori"><button class="link">Impostazioni</button></span></header>`;
+
+// ===== A · Banco =====
+function vA(){
+  const P=partite(), L=albo();
+  if(!st.sel) st.sel = P.length ? {k:'p',id:P[0].indice.id} : L.length ? {k:'a',i:0} : null;
+  const righeP = P.map((p,i)=>{ const s=stato(p), sel=st.sel&&st.sel.k==='p'&&st.sel.id===p.indice.id;
+    return `<div class="rp ${i===0?'prima':''} ${s==='spenta'?'spenta':''} ${sel?'sel':''}" data-selp="${p.indice.id}">
+      <span class="n">${esc(p.indice.testata.nome)}${i===0?' <span class="occ" style="vertical-align:.2em;margin-left:6px">l’ultima giocata</span>':''}</span>
+      <span class="azr">${azioniPartita(p,i!==0)}</span>
+      <span class="m">${s==='spenta'?`<span class="male">${esc(p.motivo)}</span>`:s==='bozza'?'Senza seggi · eredità in bozza · '+metaPartita(p):metaPartita(p)}</span></div>`; }).join('');
+  const righeA = L.map((a,i)=>{ const sel=st.sel&&st.sel.k==='a'&&st.sel.i===i;
+    return `<div class="rp ${sel?'sel':''}" data-sela="${i}"><span class="n">${esc(a.nome)}</span><span class="azr"><span class="bollo ${a.esito==='Senza seggi'?'':'ink'}">${esc(a.esito||'Abbandono')}</span></span>
+      <span class="m">${a.prova?'appena abbandonata':`${esc(a.scenario)} · ${per(a.inizio)} – ${per(a.fine)} · ${anni(a.anni_al_governo)}`}</span></div>`; }).join('');
+  const lato = !st.sel ? vuotoInvito() : st.sel.k==='p' ? dettPartita(P.find(p=>p.indice.id===st.sel.id)||P[0]) : dettAlbo(L[st.sel.i]);
+  return `${testa('Edicola')}<div class="corpo" style="grid-template-columns:minmax(0,1fr) var(--lato)">
+    <div style="display:grid;gap:18px;align-content:start">
+      <section><div class="titsez"><h3 class="tit">In corso</h3><span class="sec muto">${P.length} partit${P.length===1?'a':'e'}, la più recente in testa</span><span class="dx"><button class="btn pieno" data-nuova>Nuova partita ›</button></span></div>
+        ${righeP||'<p class="sec muto" style="padding:10px 8px">Nessuna partita in corso.</p>'}</section>
+      <section><div class="titsez"><h3 class="tit">Albo</h3><span class="sec muto">le partite concluse, anche quando i salvataggi non si aprono più</span></div>
+        ${righeA||'<p class="sec muto" style="padding:10px 8px">L’albo è vuoto: ci finisce ogni partita conclusa o abbandonata.</p>'}</section>
+    </div>
+    <aside class="lato" style="overflow:hidden auto">${lato}</aside></div>`;
+}
+
+// ===== B · Copertina =====
+function vB(){
+  const P=partite(), L=albo(), ult=P[0];
+  if(st.pagB==='albo') return vBalbo(L);
+  const lead = ult ? `<article class="lead"><div class="o">L’ultima partita · salvata ${salvata(ult.indice.ultimo_salvataggio)}</div>
+      <h2 class="tit">${esc(ult.indice.testata.nome)}, turno ${ult.indice.testata.turno}</h2>
+      <p>${esc(ult.indice.testata.scenario)} · ${Per(ult.indice.testata.data)}. Si riparte dalla prima pagina del turno, già tutta rivelata.</p>
+      ${notaPartita(ult)}<div class="az" style="margin-top:12px">${azioniPartita(ult)}</div></article>`
+    : `<article class="lead"><div class="o">Primo numero</div><h2 class="tit">Nessuna partita in edicola</h2><p>Fonda un partito e porta il Paese al primo voto. Le partite finite vanno nell’albo.</p></article>`;
+  const altre = P.slice(1).map(p=>{ const s=stato(p);
+    return `<div class="breve"><span class="n" ${s==='spenta'?'style="color:var(--grigio)"':''}>${esc(p.indice.testata.nome)}</span><span class="az" style="margin:0">${azioniPartita(p,1)}</span>
+      <span class="m">${s==='spenta'?`<span class="male">${esc(p.motivo)}</span>`:(s==='bozza'?'Senza seggi · eredità in bozza · ':'')+metaPartita(p)}</span>${st.conf===p.indice.id?`<span style="grid-column:1/-1">${notaPartita(p)}</span>`:''}</div>`; }).join('');
+  const brevAlbo = L.slice(0,4).map((a,i)=>`<div class="breve"><span class="n">${esc(a.nome)}</span><span class="bollo ${a.esito==='Senza seggi'?'':'ink'}">${esc(a.esito||'Abbandono')}</span>
+      <span class="m">${a.prova?'appena abbandonata':`${a.inizio.anno}–${a.fine.anno} · ${anni(a.anni_al_governo)}`} · <button class="link" data-albob="${i}">leggi ›</button></span></div>`).join('');
+  return `<div style="display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:0">
+    <header class="testata"><div class="orecchio">L’edicola<br><b>${P.length} partite in corso</b><br>${L.length} nell’albo</div><div class="nome">Il Pungolo</div>
+      <div class="orecchio dx"><button class="link">Impostazioni</button><br>&nbsp;<br>Costa poco, punge tutti</div></header>
+    <div class="sotto"><span>Settimanale di satira e conti pubblici</span><span>Edizione dell’edicola</span><span>Ogni partita un numero</span></div>
+    <div class="pagina">
+      <div class="apertura">${lead}<aside class="tagliando"><div class="occ">Tagliando</div><div class="tit">Fonda un partito</div>
+        <p class="sec">Scenario di base, oppure l’editor per costruirne uno. Poi la fondazione e il turno zero.</p>
+        <div class="az"><button class="btn ${ult?'':'pieno'}" data-nuova>Nuova partita ›</button></div></aside></div>
+      <div class="colonne"><section><div class="occ" style="color:var(--ink)">Altre partite in corso</div>${altre||'<p class="sec muto" style="padding-top:8px">Nessun’altra.</p>'}</section>
+        <section><div class="occ" style="color:var(--ink)">Dall’albo</div>${brevAlbo||'<p class="sec muto" style="padding-top:8px">L’albo è vuoto.</p>'}</section></div>
+      <footer class="piede"><span class="sec muto">Le partite si salvano da sole a ogni scelta.</span><button class="btn" data-albob="0" ${L.length?'':'aria-disabled="true"'}>L’albo completo ›</button></footer>
+    </div></div>`;
+}
+function vBalbo(L){
+  if(!st.sel||st.sel.k!=='a') st.sel={k:'a',i:0};
+  const a=L[st.sel.i];
+  const elenco = L.map((x,i)=>`<div class="rp ${i===st.sel.i?'sel':''}" data-sela="${i}"><span class="n">${esc(x.nome)}</span><span class="azr"><span class="bollo ${x.esito==='Senza seggi'?'':'ink'}">${esc(x.esito||'Abbandono')}</span></span>
+    <span class="m">${x.prova?'appena abbandonata':`${Per(x.inizio)} – ${per(x.fine)} · ${anni(x.anni_al_governo)}`}</span></div>`).join('');
+  return `<div style="display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0">${`<header class="testa"><button class="link" data-pagb="edicola">‹ Edicola</button><span class="nomino">Il Pungolo</span><span class="dove">L’albo</span><span class="fuori"><button class="link">Impostazioni</button></span></header>`}
+    <div class="corpo albo-pag"><section>${elenco||'<p class="sec muto">L’albo è vuoto.</p>'}</section>
+      <section class="lato" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start">${a?`<div style="grid-column:1/-1;display:grid;gap:8px">${a.prova?dettAlbo(a):testaAlbo(a)}</div>
+        ${a.prova?'':`<div style="display:grid;gap:12px"><div><h4 class="tit" style="margin-bottom:4px">Contro il turno zero</h4>${indicatori(a)}</div><div style="display:grid;gap:8px"><h4 class="tit">Elezioni</h4>${elezioni(a)}</div></div>
+        <div style="display:grid;gap:8px"><h4 class="tit">I tre indicatori, turno per turno</h4>${grafici(a,250)}</div>`}`:''}</section></div></div>`;
+}
+
+// ===== C · Schedario =====
+function vC(){
+  const P=partite(), L=albo(), f=st.filtro;
+  const rp = P.map(p=>{ const s=stato(p), t=p.indice.testata, id=p.indice.id, sel=st.sel&&st.sel.k==='p'&&st.sel.id===id;
+    const riga = `<tr class="r ${s==='spenta'?'spenta':''} ${sel?'sel':''}" data-selp="${id}"><td class="n">${esc(t.nome)}</td><td>${esc(t.scenario)}</td>
+      <td>turno ${t.turno} · ${per(t.data)}</td><td>${s==='spenta'?`<span class="male">non si apre</span>`:s==='bozza'?'senza seggi, in bozza':'in corso'}</td><td>${salvata(p.indice.ultimo_salvataggio)}</td>
+      <td class="num"><span class="az" style="margin:0;justify-content:end">${azioniPartita(p,1)}</span></td></tr>`;
+    return riga + (sel?`<tr class="apre"><td colspan="6"><div class="apre-in"><div style="display:grid;gap:8px">${notaPartita(p)||'<p class="sec">Si riparte dalla prima pagina del turno, già tutta rivelata.</p>'}</div><div class="sec muto">Turno ${t.turno}, ${per(t.data)} · schema ${t.versione_schema} · ${p.indice.riavvolgimenti} riavvolgimenti</div><div></div></div></td></tr>`:''); }).join('');
+  const ra = L.map((a,i)=>{ const sel=st.sel&&st.sel.k==='a'&&st.sel.i===i;
+    const riga = `<tr class="r ${sel?'sel':''}" data-sela="${i}"><td class="n">${esc(a.nome)}</td><td>${esc(a.scenario)}</td>
+      <td>${a.prova?'—':`${Per(a.inizio)} – ${per(a.fine)}`}</td><td><span class="bollo ${a.esito==='Senza seggi'?'':'ink'}">${esc(a.esito||'Abbandono')}</span></td><td>${a.prova?'appena abbandonata':anni(a.anni_al_governo)}</td><td class="num"><button class="link">${sel?'chiudi':'apri'}</button></td></tr>`;
+    return riga + (sel?`<tr class="apre"><td colspan="6">${a.prova?dettAlbo(a):`<div class="apre-in"><div style="display:grid;gap:10px;align-content:start">${testaAlbo(a)}${indicatori(a)}</div><div style="display:grid;gap:8px;align-content:start">${grafici(a,340)}</div><div style="display:grid;gap:8px;align-content:start">${elezioni(a)}</div></div>`}</td></tr>`:''); }).join('');
+  const vuota = `<tr><td colspan="6" class="muto" style="padding:14px 8px">Nessuna partita.</td></tr>`;
+  const corpo = (f!=='albo'?`<tr class="gruppo"><td colspan="6">In corso · ${P.length}</td></tr>${rp||vuota}`:'') + (f!=='corso'?`<tr class="gruppo"><td colspan="6">Albo · ${L.length}</td></tr>${ra||vuota}`:'');
+  return `${testa('Edicola')}<div class="corpo">
+    <div class="filtri">${[['tutte','Tutte'],['corso','In corso'],['albo','Albo']].map(([k,t])=>`<button class="${f===k?'qui':''}" data-filtro="${k}">${t}</button>`).join('')}
+      <span class="dx"><button class="btn pieno" data-nuova>Nuova partita ›</button></span></div>
+    <table class="sch"><thead><tr><th>Partito</th><th>Scenario</th><th>Dove</th><th>Stato</th><th>Ultima volta</th><th></th></tr></thead><tbody>${corpo}</tbody></table>
+    ${!P.length&&!L.length?vuotoInvito():''}</div>`;
+}
+
+// ===== montaggio =====
+const scr = document.getElementById('screen');
+let limite='';
+function render(){
+  GR=[];
+  const W=+st.fin, H=W===1440?900:800, chiesta=+st.scala, z=Math.min(chiesta,W/1024), lw=W/z, lh=H/z;
+  limite = z<chiesta ? `scala fermata a ${z.toLocaleString('it-IT',{maximumFractionDigits:2})}× (minimo 1024 px utili)` : '';
+  const html = st.v==='B' ? vB() : st.v==='C' ? vC() : vA();
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS" style="zoom:${z};width:${lw}px;height:${lh}px;${st.v==='B'?'grid-template-rows:minmax(0,1fr)':''}">${html}</div>`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  document.getElementById('avv').textContent=[limite, st.msg].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.v=k[(k.indexOf(st.v)+(b.id==='next'?1:k.length-1))%k.length]; }
+  else st[b.parentElement.dataset.k]=b.dataset.v;
+  st.sel=null; st.conf=null; st.pagB='edicola'; st.msg=''; render();
+});
+scr.addEventListener('click',e=>{
+  const q=s=>e.target.closest(s); let x; st.msg='';
+  if(x=q('[data-riprendi]')){ const p=D.partite.find(p=>p.indice.id===x.dataset.riprendi); st.msg = stato(p)==='bozza' ? `(apre l’Eredità di «${p.indice.testata.nome}»)` : `(apre la prima pagina del turno ${p.indice.testata.turno} di «${p.indice.testata.nome}»)`; }
+  else if(x=q('[data-abb]')){ st.via.unshift(x.dataset.abb); st.conf=null; st.sel={k:'a',i:0}; if(st.v==='B'){ st.pagB='albo'; } }
+  else if(x=q('[data-conf]')){ st.conf=x.dataset.conf||null; if(st.conf) st.sel={k:'p',id:st.conf}; }
+  else if(x=q('[data-nuova]')){ st.msg='(apre Scenario ed editor, ticket 14)'; }
+  else if(x=q('[data-albob]')){ st.pagB='albo'; st.sel={k:'a',i:+x.dataset.albob}; }
+  else if(x=q('[data-pagb]')){ st.pagB='edicola'; st.sel=null; }
+  else if(x=q('[data-filtro]')){ st.filtro=x.dataset.filtro; }
+  else if(x=q('[data-selp]')){ const id=x.dataset.selp; st.sel = (st.v==='C'&&st.sel&&st.sel.id===id)?{k:'x'}:{k:'p',id}; if(st.conf!==id) st.conf=null; }
+  else if(x=q('[data-sela]')){ const i=+x.dataset.sela; st.sel = (st.v==='C'&&st.sel&&st.sel.k==='a'&&st.sel.i===i)?{k:'x'}:{k:'a',i}; st.conf=null; }
+  else return;
+  render();
+});
+// passaggio sui grafici: linea a mano e valore del turno
+scr.addEventListener('mousemove',e=>{
+  scr.querySelectorAll('.tip').forEach(t=>t.remove()); scr.querySelectorAll('.cross').forEach(c=>c.setAttribute('visibility','hidden'));
+  const r=e.target.closest('[data-gr]'); if(!r) return;
+  const g=GR[+r.dataset.gr], svg=r.ownerSVGElement, B=svg.getBoundingClientRect(), fx=(e.clientX-B.left)/B.width*g.W;
+  let i=0, best=1e9; for(let j=0;j<g.n;j++){ const d=Math.abs(g.x(j)-fx); if(d<best){best=d;i=j;} }
+  const c=svg.querySelector('.cross'); c.setAttribute('x1',g.x(i)); c.setAttribute('x2',g.x(i)); c.setAttribute('visibility','visible');
+  const t=document.createElement('div'); t.className='tip'; t.textContent=`${g.date[i]}: ${g.serie.map(s=>(s.nome?s.nome+' ':'')+g.fmt(s.v[i])).join(' · ')}`;
+  const box=svg.parentElement; box.appendChild(t); t.style.left=Math.min(g.x(i), g.W-t.offsetWidth)+'px'; t.style.top='-6px';
+});
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>
