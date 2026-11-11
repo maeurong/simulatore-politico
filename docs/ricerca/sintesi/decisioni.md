@@ -403,5 +403,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/14-scenario-ed-editor.md`, un giro su un 
 - **L'inflazione di partenza resta** anche se non muove il riepilogo: una riga dice che pesa dal primo trimestre.
 - **Scenari solo dalla cartella del gioco**, nessuna finestra per aprire un file qualsiasi.
 
+## 2026-11-11: fondazione
+Ticket `.scratch/v1-piano-11-ui/issues/15-fondazione.md`, un giro su un prototipo con tre forme nutrito con `anteprima_fondazione` vera.
+
+- **Forma A · Banco:** nome e asse con l'istogramma a pagina, tabella dei sei posti, il posto scelto nel dettaglio a lato con la quota attesa e i sette partiti con la causa.
+- **Coalizioni possibili come elenco dei disponibili**, senza quota della coalizione né seggi: l'anteprima non li porta e il core non cambia.
+- **Rumore dichiarato senza numeri:** la quota attesa è la media degli istituti e varia di qualche punto da seme a seme; una riga fissa dice che è un sondaggio.
+- **Fondare è diretto**, senza conferma; nessun posto scelto all'apertura.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

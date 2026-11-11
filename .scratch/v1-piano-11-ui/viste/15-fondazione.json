@@ -1,0 +1,1077 @@
+{
+  "anteprime": {
+    "elettorato a destra, seme 4": {
+      "istogramma": [
+        0.0,
+        0.04855690608572014,
+        0.19531005479836905,
+        0.12555098867559858,
+        0.22529796743401898,
+        0.1131702325004744,
+        0.29211385050581884
+      ],
+      "posizioni": [
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 1.5,
+          "quota_attesa": 0.06464749457704469
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "più probabilità di governare altrove",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 2.5,
+          "quota_attesa": 0.10703510115391182
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "più probabilità di governare altrove",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 3.5,
+          "quota_attesa": 0.15441820547578872
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "più probabilità di governare altrove",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 4.5,
+          "quota_attesa": 0.19267193543787267
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "più probabilità di governare altrove",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 5.5,
+          "quota_attesa": 0.20002205742753246
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "più probabilità di governare altrove",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 6.5,
+          "quota_attesa": 0.16983923643396454
+        }
+      ]
+    },
+    "oggi, seme 1": {
+      "istogramma": [
+        0.04447112594885564,
+        0.19429880321785992,
+        0.11341069612433097,
+        0.24700301042760794,
+        0.11802670073887862,
+        0.225232257200336,
+        0.05755740634213079
+      ],
+      "posizioni": [
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 1.5,
+          "quota_attesa": 0.12115409585436071
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 2.5,
+          "quota_attesa": 0.16737822906885005
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 3.5,
+          "quota_attesa": 0.2008625873474118
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 4.5,
+          "quota_attesa": 0.20551977256190718
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 5.5,
+          "quota_attesa": 0.17809032763738242
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 6.5,
+          "quota_attesa": 0.13232304732487538
+        }
+      ]
+    },
+    "oggi, seme 4": {
+      "istogramma": [
+        0.04236482865237872,
+        0.19935685991273736,
+        0.1251712787099908,
+        0.24344282914672496,
+        0.10673244022798177,
+        0.22352707131543495,
+        0.059404692034751426
+      ],
+      "posizioni": [
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 1.5,
+          "quota_attesa": 0.10851777465372552
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "guiderebbe la propria coalizione",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 2.5,
+          "quota_attesa": 0.15443031806247898
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 3.5,
+          "quota_attesa": 0.18795973639682587
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 4.5,
+          "quota_attesa": 0.19238741424985617
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 5.5,
+          "quota_attesa": 0.16465535834245068
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 6.5,
+          "quota_attesa": 0.11914416560299902
+        }
+      ]
+    },
+    "oggi, seme 9": {
+      "istogramma": [
+        0.04664980182060781,
+        0.1831226897623368,
+        0.1439129413336863,
+        0.2327445652551201,
+        0.12420384968020431,
+        0.21467228113243347,
+        0.05469387101561124
+      ],
+      "posizioni": [
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 1.5,
+          "quota_attesa": 0.14479856503425492
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 2.5,
+          "quota_attesa": 0.19301449173224072
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 3.5,
+          "quota_attesa": 0.22819134225011678
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 4.5,
+          "quota_attesa": 0.2329499743540891
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione vicina alla tua",
+              "disponibile": true,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 5.5,
+          "quota_attesa": 0.20402821738168828
+        },
+        {
+          "disponibilita": [
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "sinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrosinistra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centro"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "centrodestra"
+            },
+            {
+              "causa": "più probabilità di governare con te",
+              "disponibile": true,
+              "partito": "destra"
+            },
+            {
+              "causa": "posizione troppo lontana dalla tua",
+              "disponibile": false,
+              "partito": "estrema_destra"
+            }
+          ],
+          "posizione": 6.5,
+          "quota_attesa": 0.15623523878415663
+        }
+      ]
+    }
+  },
+  "partiti": [
+    {
+      "id": "estrema_sinistra",
+      "nome": "Estrema sinistra",
+      "posizione": 1.0
+    },
+    {
+      "id": "sinistra",
+      "nome": "Sinistra",
+      "posizione": 2.0
+    },
+    {
+      "id": "centrosinistra",
+      "nome": "Centrosinistra",
+      "posizione": 3.0
+    },
+    {
+      "id": "centro",
+      "nome": "Centro",
+      "posizione": 4.0
+    },
+    {
+      "id": "centrodestra",
+      "nome": "Centrodestra",
+      "posizione": 5.0
+    },
+    {
+      "id": "destra",
+      "nome": "Destra",
+      "posizione": 6.0
+    },
+    {
+      "id": "estrema_destra",
+      "nome": "Estrema destra",
+      "posizione": 7.0
+    }
+  ]
+}

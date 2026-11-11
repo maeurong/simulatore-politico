@@ -251,3 +251,7 @@ Decisioni di Mario sul ticket 13 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | scenario ed editor
 
 Decisioni di Mario sul ticket 14 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col riepilogo dal vivo nel dettaglio a lato, catalogo dell'editor da una funzione nuova del core, cursore dell'inflazione con la nota, scenari solo dalla cartella del gioco.
+
+## [2026-11-11] query | fondazione
+
+Decisioni di Mario sul ticket 15 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col posto scelto nel dettaglio a lato, coalizioni possibili come elenco dei disponibili, nota fissa sul sondaggio rumoroso, fondazione diretta senza conferma.

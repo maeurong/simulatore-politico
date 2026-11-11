@@ -32,11 +32,17 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `08-tono-grave.json` | 4 | 4,5 | 7, 2028T3 | 116474 | come 05; «Emergenza incendi» in tono grave, al governo |
 | `13-edicola.json` | 1-4, 9 | varie | — | 25496 | `partite()` e `albo()` del guscio rifatti con `testata()` e `voce_albo()`: cinque partite in corso coi nomi diversi, tre abbandonate nell'albo (vedi sotto) |
 | `14-editor.json` | — | — | — | 204849 | `riepilogo()` di `sim-core::riepilogo` su `con_su_misura()`: intervalli dei sei cursori, leggi elettorali coi nove parametri, 46 disposizioni coi gradini (35 ordinarie, 2 costituzionali, 9 elettorali), otto scenari di prova e nove passi per cursore (vedi sotto) |
+| `15-fondazione.json` | 4, 1, 9 | — | — | 32675 | `Partita::anteprima_fondazione` sull'Italia di oggi coi semi 4, 1, 9 e sull'«Elettorato a destra» (orientamento +1) col seme 4, più i partiti dello scenario coi posti (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 15: aggiunta dal ticket «Fondazione». Un'anteprima costa circa 43 ms in release. Il sondaggio è rumoroso: a 1,5
+  la quota attesa va dal 10,9% (seme 4) al 14,5% (seme 9), al posto medio 4,5 dal 19,2% al 23,3%. Il Centro non è mai
+  disponibile, nemmeno a mezzo punto, con la causa «posizione troppo lontana dalla tua»: `Distanza` è il ripiego quando
+  nessun termine spinge contro (`crates/sim-core/src/legislatura/coalizione.rs:326`).
 
 - 14: aggiunta dal ticket «Scenario ed editor». Nessun comando del guscio porta ciò che qui sta sopra i riepiloghi
   (intervalli, leggi, disposizioni): `genera/` lo legge da `DatiGioco`. Scenari salvati: quattro delle prove, coi loro nomi.

@@ -418,6 +418,37 @@ fn editor(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// `anteprima_fondazione` vera: tre semi sull'Italia di oggi (quanto rumore fa il sondaggio) e una
+/// sull'elettorato a destra; accanto, i partiti dello scenario coi loro posti sull'asse.
+fn fondazione(d: &DatiGioco) -> Esito<Uscita> {
+    let partiti: Vec<_> = (d.scenario().partiti.iter())
+        .map(|p| serde_json::json!({ "id": p.id, "nome": p.nome, "posizione": p.posizione }))
+        .collect();
+    let mut destra = SuMisura::base(d);
+    destra.nome = "Elettorato a destra".into();
+    destra.cursori.orientamento = 1.0;
+    let destra = d.con_su_misura(&destra).map_err(|e| e.to_string())?;
+    let mut anteprime = serde_json::Map::new();
+    let mut ms = Vec::new();
+    for (etichetta, dati, seme) in [
+        ("oggi, seme 4", d, 4),
+        ("oggi, seme 1", d, 1),
+        ("oggi, seme 9", d, 9),
+        ("elettorato a destra, seme 4", &destra, 4),
+    ] {
+        let t = std::time::Instant::now();
+        let a = Partita::anteprima_fondazione(dati, seme);
+        ms.push(t.elapsed().as_millis());
+        anteprime.insert(etichetta.into(), serde_json::to_value(&a).map_err(|e| e.to_string())?);
+    }
+    let json = serde_json::json!({ "partiti": partiti, "anteprime": anteprime });
+    Ok(Uscita {
+        nome: "15-fondazione.json",
+        json: serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
+        nota: format!("quattro anteprime, ms {ms:?}"),
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -447,6 +478,7 @@ fn esegui() -> Esito<()> {
     }
     uscite.push(edicola(&d)?);
     uscite.push(editor(&d)?);
+    uscite.push(fondazione(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {
