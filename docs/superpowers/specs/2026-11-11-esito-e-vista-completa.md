@@ -2,7 +2,7 @@
 
 Spec del piano di core che sta fra il piano 10 e il piano 11 (UI «Il Settimanale»). Nasce dal ticket «Dati senza piano» della mappa del piano 11, chiuso con Mario il 10/11/2026: le schermate chiedono dati che nessun piano portava, e la UI non calcola regole (spec v1 `docs/superpowers/specs/2026-10-21-v1-giocabile.md:247-248`). Questo piano produce quei dati in `sim-core`.
 
-Base: `origin/main` a `8952a06` (#48), poi riallineata ad `a02f6ad` (#49), che tocca solo `app/src-tauri/src/lib.rs`. Ricerche lette prima di scrivere, entrambe sul codice a `8952a06`:
+Base: `origin/main` a `8952a06` (#48), poi riallineata ad `a02f6ad` (#49), che tocca solo `app/src-tauri/src/lib.rs`, e l’11/11/2026 a `94087b9` (#51, #52): main è allo schema 17, quindi le due PR lo portano a 18 e 19, e in `partita.rs` le righe dopo `:464` slittano di 2, quelle dopo `:2392` di 3. Ricerche lette prima di scrivere, entrambe sul codice a `8952a06`:
 
 - `docs/ricerca/sintesi/fatti-della-chiusura.md`: i 135 fatti che una chiusura produce, nell'ordine di `chiudi_turno`. Qui sotto «fatto n» rimanda alla sua tabella.
 - `docs/ricerca/sintesi/stato-per-le-esposizioni.md`: dove vive ogni dato da esporre.
@@ -17,8 +17,8 @@ Lo stesso vale per la mappa (due livelli su cinque), per i conti europei, per il
 
 Due PR, in quest'ordine.
 
-1. **Logica nuova** (`feat/esito-del-turno`): l'esito del turno come elenco di voci, il registro per turno, le fermate, i due avvisi lasciati dal piano 9. Schema dei salvataggi da 15 a 16.
-2. **Esposizioni** (`feat/vista-completa`): stato che il core ha già, o che calcola e butta, portato nella Vista. Schema da 16 a 17.
+1. **Logica nuova** (`feat/esito-del-turno`): l'esito del turno come elenco di voci, il registro per turno, le fermate, i due avvisi lasciati dal piano 9. Schema dei salvataggi da 17 a 18.
+2. **Esposizioni** (`feat/vista-completa`): stato che il core ha già, o che calcola e butta, portato nella Vista. Schema da 18 a 19.
 
 ## Fuori da questo piano
 
@@ -348,7 +348,7 @@ Sono le voci `campagna_tagliata` e `bilancio_ricondotto`. Tutte e due vanno pres
 - **Perché cade un governo.** `legislatura.dimissioni` passa da booleano a un'origine facoltativa, scritta nei sette punti in cui oggi si alza il flag (`fatti-della-chiusura.md`, fatto 100). Se due punti scattano nella stessa chiusura vale la prima origine. `Vista.dimissioni` resta un booleano.
 - **Franchi tiratori.** `Conteggio` prende `franchi: u32`: i seggi che hanno votato contro la linea del loro partito, contati in `voto::conta`. Zero dove il voto non li estrae: sotto fiducia (salvo il voto finale della Camera sulla legge elettorale, che resta segreto: `crates/sim-core/src/parlamento/mod.rs:326-336`), nella sfiducia e nei voti a blocchi.
 - **Shock escluso.** `estrai` rende anche gli shock usciti e scartati dal tetto, perché la chiusura ne scriva la voce. Nessun effetto si applica: il default degli shock non ne ha. Il numero e l'ordine delle estrazioni non cambiano, quindi i semi dei test restano validi.
-- **`VERSIONE_SCHEMA` da 15 a 16.**
+- **`VERSIONE_SCHEMA` da 17 a 18.**
 
 ## PR 2: esposizioni
 
@@ -441,7 +441,7 @@ I costi sono il `delta` della formula, prima del limite a 0-100 della soddisfazi
 
 ### Schema
 
-`VERSIONE_SCHEMA` da 16 a 17, un solo salto per tutto lo stato nuovo della PR.
+`VERSIONE_SCHEMA` da 18 a 19, un solo salto per tutto lo stato nuovo della PR.
 
 ## Termini nuovi
 
@@ -496,7 +496,7 @@ Esposizioni:
 - `menu_elettorale` segna non ammesso il premio alla coalizione con le coalizioni spente, col motivo.
 - All'opposizione `anteprima_proposta` rende le linee e la forbice della misura che `PresentaProposta` mette in calendario nello stesso turno, e la partita non cambia.
 - `anteprima_proposta` rifiuta al governo e con una norma costituzionale, come `PresentaProposta`; col posto riservato occupato non rifiuta.
-- Un salvataggio con lo schema 15 è rifiutato con `SchemaDiverso`.
+- Un salvataggio con lo schema 17 è rifiutato con `SchemaDiverso`.
 
 ## Riferimenti
 

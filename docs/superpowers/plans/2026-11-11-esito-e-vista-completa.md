@@ -16,8 +16,8 @@
 
 | PR | Branch | Task | Schema |
 |---|---|---|---|
-| 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 15 → 16 |
-| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17 | 16 → 17 |
+| 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 17 → 18 |
+| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17 | 18 → 19 |
 
 ## Decisioni di Mario
 
@@ -48,7 +48,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 - Le voci in tono grave non hanno battute: il testo del core è sempre l'occhiello serio; il titolo spiritoso è del ticket 09 della mappa.
 - `app/src/` non si tocca, salvo i tipi generati in `app/src/lib/tipi/`.
 - Ogni manopola nuova ha `valore`, `min`, `max`, `ticket` ed entra in `MANOPOLE_RICHIESTE` (`crates/sim-core/src/dati.rs:70`) nel task che la introduce, col commento della fonte.
-- `VERSIONE_SCHEMA` (`crates/sim-core/src/partita.rs:52`) sale a 16 nel Task 2 e a 17 nel Task 11; i campi nuovi degli altri task entrano senza alzarla.
+- `VERSIONE_SCHEMA` (`crates/sim-core/src/partita.rs:52`) sale a 18 nel Task 2 e a 19 nel Task 11; i campi nuovi degli altri task entrano senza alzarla.
 - Ogni cargo gira con `TS_RS_EXPORT_DIR=<worktree assoluto>/app/src/lib/tipi` e `--manifest-path <worktree assoluto>/Cargo.toml`: senza, i tipi finiscono nel checkout sbagliato.
 - Ogni task che tocca `vista.rs` o un tipo esportato rigenera i tipi con `cargo test -p sim-core` e committa `app/src/lib/tipi/`; `npm --prefix app run check` passa.
 - Verifiche di ogni task: `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --check`.
@@ -207,12 +207,12 @@ Ognuna delle 25 chiamate di `mossa` diventa una chiamata di `voce` col tipo del 
   - `nessuna_causa_vuota_mai_piu_di_sette`: dopo 8 chiusure di `al_governo()` e di `all_opposizione()`, a ogni turno nessuna voce ha `causa` vuota, nessuna ordinaria è in evidenza, le voci in evidenza sono al massimo 7.
   - `stesso_seme_stesso_esito`: due partite uguali, stessi comandi, 6 chiusure → `vista().esito` uguale a ogni turno.
   - `l_esito_sopravvive_al_salvataggio`: `Partita::carica(&p.salva()?)` ha lo stesso `vista().esito`; chiudere l'originale e la ricaricata dà lo stesso esito.
-  - `schema_15_rifiutato`: un salvataggio con `versione_schema` 15 dà `Errore::SchemaDiverso { trovata: 15, attesa: 16 }`.
+  - `schema_17_rifiutato`: un salvataggio con `versione_schema` 17 dà `Errore::SchemaDiverso { trovata: 17, attesa: 18 }`.
   - I test che oggi leggono `.mosse` passano a `voci(&p, tipo)` e confrontano `fatto` e `causa`.
 - [ ] **Step 2:** `cargo test -p sim-core --test esito` → non compila (`esito` assente dalla Vista).
-- [ ] **Step 3:** implementa: campo, `voce`, `voce_di`, `al_governo`, schema 16, Vista, validazione, le 25 conversioni, `componi` a fine chiusura. Nella PR la tabella «mossa → tipo».
+- [ ] **Step 3:** implementa: campo, `voce`, `voce_di`, `al_governo`, schema 18, Vista, validazione, le 25 conversioni, `componi` a fine chiusura. Nella PR la tabella «mossa → tipo».
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati; `npm --prefix app run check` verde.
-- [ ] **Step 5:** commit `feat(core)!: l'esito del turno sostituisce le mosse (schema 16)`.
+- [ ] **Step 5:** commit `feat(core)!: l'esito del turno sostituisce le mosse (schema 18)`.
 
 ### Task 3: voci di eventi risolti, default e atti
 
@@ -420,7 +420,7 @@ Quando scatta ciascuna, in quest'ordine nella lista: `Fine` se la partita è fin
 
 **Ricerca:** `docs/ricerca/tecnica/persistenza-dei-salvataggi.md:78-85` (uno snapshot per apertura, peso); spec righe 290-297.
 
-**Architect (11/11):** `rust-engineer` confermato: solo file `.rs`, e il guscio è nel workspace, quindi `cargo test -p app registro` vale quanto il `--manifest-path` dello Step 2 e rispetta il vincolo globale. Righe da correggere: col merge di `a02f6ad` (#49) nel branch (`c840da3`) quelle di `lib.rs` sono scese. `torna_a` è a `:148-164` (l'errore della partita di prova a `:151-153`), `generate_handler!` a `:412`, `chiudi` scrive lo snapshot a `:118-131`. Tre casi limite, presi dai difetti di questo repo. (1) **Disco un turno avanti.** Dopo una chiusura guasta a metà lo snapshot del turno N+1 può esistere mentre la partita in memoria è ancora al turno N (`lib.rs:114-117`, test `chiudi_guasta_a_meta_si_ripete` a `:581`). `registro(N)` leggerebbe l'esito di una chiusura che per il giocatore non è avvenuta. La spec riveduta lo chiede già (sezione «Registro»: errore per un turno che la partita in memoria non ha ancora chiuso), il piano no. `Archivio::registro(id, turno)` non vede la partita in memoria: il rifiuto sta nel comando di `lib.rs`, prima di toccare il disco, e il caso «turno in corso» di `registro_fuori_dai_turni_e_un_errore` si prova lì, sul disco lasciato un turno avanti, non in `archivio.rs`. (2) **Il messaggio.** Uno snapshot che manca esce da `apri` come errore di lettura col percorso (`archivio.rs:135`): il testo «nessun registro per il turno N» chiede di guardare prima `turni(cartella)` (`:257`). (3) **Schema e validazione.** La versione si legge per prima, come in `carica` (`partita.rs:4488-4502`): un salvataggio dello schema 15 non ha il campo `esito`, e letto in un colpo solo darebbe `SalvataggioIlleggibile` invece di `SchemaDiverso`. `esito_da_salvataggio` non passa da `controlla_coerenza`: i controlli dell'esito (causa non vuota, al massimo sette in evidenza) stanno in una funzione che usano sia lei sia `carica`.
+**Architect (11/11):** `rust-engineer` confermato: solo file `.rs`, e il guscio è nel workspace, quindi `cargo test -p app registro` vale quanto il `--manifest-path` dello Step 2 e rispetta il vincolo globale. Righe da correggere: col merge di `a02f6ad` (#49) nel branch (`c840da3`) quelle di `lib.rs` sono scese. `torna_a` è a `:148-164` (l'errore della partita di prova a `:151-153`), `generate_handler!` a `:412`, `chiudi` scrive lo snapshot a `:118-131`. Tre casi limite, presi dai difetti di questo repo. (1) **Disco un turno avanti.** Dopo una chiusura guasta a metà lo snapshot del turno N+1 può esistere mentre la partita in memoria è ancora al turno N (`lib.rs:114-117`, test `chiudi_guasta_a_meta_si_ripete` a `:581`). `registro(N)` leggerebbe l'esito di una chiusura che per il giocatore non è avvenuta. La spec riveduta lo chiede già (sezione «Registro»: errore per un turno che la partita in memoria non ha ancora chiuso), il piano no. `Archivio::registro(id, turno)` non vede la partita in memoria: il rifiuto sta nel comando di `lib.rs`, prima di toccare il disco, e il caso «turno in corso» di `registro_fuori_dai_turni_e_un_errore` si prova lì, sul disco lasciato un turno avanti, non in `archivio.rs`. (2) **Il messaggio.** Uno snapshot che manca esce da `apri` come errore di lettura col percorso (`archivio.rs:135`): il testo «nessun registro per il turno N» chiede di guardare prima `turni(cartella)` (`:257`). (3) **Schema e validazione.** La versione si legge per prima, come in `carica` (`partita.rs:4488-4502`): un salvataggio dello schema 17 non ha il campo `esito`, e letto in un colpo solo darebbe `SalvataggioIlleggibile` invece di `SchemaDiverso`. `esito_da_salvataggio` non passa da `controlla_coerenza`: i controlli dell'esito (causa non vuota, al massimo sette in evidenza) stanno in una funzione che usano sia lei sia `carica`.
 
 **Interfaces:**
 - Consumes: `Partita.esito` salvato (Task 2); `nome_turno`, `leggi_da`, `apri` (`app/src-tauri/src/archivio.rs:25`, `:124`, `:135`).
@@ -470,7 +470,7 @@ impl Archivio { pub(crate) fn registro(&self, id: &str, turno: u32) -> Result<Ve
 
 **Files:**
 - Create: `crates/sim-core/tests/vista_completa.rs`
-- Modify: `crates/sim-core/src/partita.rs` (`VERSIONE_SCHEMA` → 17; `vista()`; il punto del motore in cui la disoccupazione regionale si aggiorna), `crates/sim-core/src/economia/mod.rs` (stato della regione), `crates/sim-core/src/vista.rs`, `crates/sim-core/src/elettorato/mod.rs` (`Fascia` esportata), `app/src/lib/tipi/`
+- Modify: `crates/sim-core/src/partita.rs` (`VERSIONE_SCHEMA` → 19; `vista()`; il punto del motore in cui la disoccupazione regionale si aggiorna), `crates/sim-core/src/economia/mod.rs` (stato della regione), `crates/sim-core/src/vista.rs`, `crates/sim-core/src/elettorato/mod.rs` (`Fascia` esportata), `app/src/lib/tipi/`
 
 **Ricerca:** `docs/ricerca/sintesi/stato-per-le-esposizioni.md:23-44` (disoccupazione e reddito per regione), `:56-65` (gruppi), `:147-171` (tabella dello stato).
 
@@ -503,7 +503,7 @@ Stato nuovo: la disoccupazione regionale della chiusura precedente, copiata prim
 - [ ] **Step 2:** `cargo test -p sim-core --test vista_completa` → non compila.
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati.
-- [ ] **Step 5:** commit `feat(core)!: regioni nella Vista (schema 17)`.
+- [ ] **Step 5:** commit `feat(core)!: regioni nella Vista (schema 19)`.
 
 ### Task 12: margine dichiarato del sondaggio
 
