@@ -35,11 +35,18 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `17-cruscotto.json` | 4, 1, 14 | 4,5 | varie | 673154 | stati del cruscotto al governo che mancavano, ciascuno con la sua `Vista` e il `come`: `ultimatum`, `esercizio_provvisorio`, `crisi_provvisorio` cercati giocando come il 05 (gli ultimi due senza mai presentare il bilancio), `dimissioni` e `scelte_fatte` dalla 03, più `anteprima_accogli_03` (vedi sotto) |
 | `15-fondazione.json` | 4, 1, 9 | — | — | 32675 | `Partita::anteprima_fondazione` sull'Italia di oggi coi semi 4, 1, 9 e sull'«Elettorato a destra» (orientamento +1) col seme 4, più i partiti dello scenario coi posti (vedi sotto) |
 | `19-aula.json` | 4, 2 | 4,5 / 1,5 | 2-4 | 838325 | stati dell'Aula che mancavano, ciascuno con `come` e `vista`: `piena` (il 03 con `PresentaLegge` della legge elettorale «proporzionale al 3%», della costituzionale più votata e della riforma più lontana dalla destra), `dopo_voto`, `seconda_deliberazione`, `dopo_elettorale` (chiusure successive, bilancio presentato), `opposizione_libero` e `opposizione_proposta` (seme 2 a 1,5, `PresentaProposta` e `Linea`), più `anteprima_elettorale`, `anteprima_riforma` e due rifiuti veri (vedi sotto) |
+| `16-prima-pagina.json` | 4, 9, 1 | 4,5 / 1,5 | varie | 653911 | stati della prima pagina che mancavano, ciascuno con `come` e `vista`: `t3` (il 03 chiuso una volta), `zero_9` e `voto_9` (seme 9 prima e dopo il voto), `voto_opp` (seme 1 a 1,5 dopo il voto), e le corse di «avanti fino a novità» dal 06 in `corse`, con `prima` e `vista` di tre fermate: `fermata_4` (primo ultimatum), `fermata_19` (la corsa più lunga, 3 chiusure), `fermata_20` (campagna) (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 16: aggiunta dal ticket «Prima pagina». Le fermate sono calcolate in `genera/` con le regole della spec di core
+  «esito e Vista completa» (sezione «Fermate»), tranne `voto`, che chiede la quota dei suoi elettori toccati: la porterà
+  il core. All'opposizione la corsa si ferma quasi a ogni turno (posto riservato libero, finestra del referendum di
+  luglio-settembre, ultimatum agli alleati del governo): la più lunga in 24 turni è 16→19. Nella chiusura del turno 18
+  la Recessione si accende e il suo evento nasce insieme: due voci uguali, rimandate al core.
 
 - 19: aggiunta dal ticket «Aula e calendario». Due rifiuti veri: una seconda costituzionale con quella in esame dà
   «calendario pieno»; `anteprima` all'opposizione dà «non governi: sei all'opposizione» (niente anteprima della proposta).

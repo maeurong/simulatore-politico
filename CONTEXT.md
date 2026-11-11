@@ -437,6 +437,14 @@ _Evita_: sottotitolo, sommario (che è l'elenco delle sezioni)
 La riga spiritosa sotto l'occhiello, scelta per tipo di voce; non porta nomi né cifre e non serve per decidere.
 _Evita_: nome spiritoso, headline
 
+**Voce di testa**:
+La voce in evidenza in cima alla prima pagina, col titolo più grande e la vignetta accanto: quella con la criticità e la precedenza più alte, a parità la prima della chiusura.
+_Evita_: apertura (che è la fase del turno), notizia d'apertura, lead
+
+**Vignetta**:
+Il disegno accanto alla voce di testa, scelto dal tipo di voce, con la sua didascalia; nella pagina del voto al suo posto c'è il risultato. Nel tono grave non c'è.
+_Evita_: illustrazione, immagine
+
 **Motto**:
 La frase in prima persona che accompagna un ministro nel borsino; scherza sul mestiere del dicastero e resta la stessa finché il ministro è in carica.
 _Evita_: slogan, citazione

@@ -824,6 +824,102 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Perché «avanti fino a novità» si fermerebbe sul turno appena aperto, con le regole della spec
+/// di core «esito e Vista completa» (sezione «Fermate»). ponytail: senza la fermata `voto`, che
+/// chiede la quota degli elettori toccati sul sondaggio; la porterà il core.
+fn fermate(v: &sim_core::Vista, prima: &sim_core::Vista) -> Vec<String> {
+    let mut f = Vec::new();
+    if v.governa {
+        f.push("governo".into());
+    }
+    if v.finita {
+        f.push("fine".into());
+    }
+    for a in &v.alleati_avversari {
+        let gia = (prima.alleati_avversari.iter())
+            .any(|b| b.partito == a.partito && b.causa_ultimatum.is_some());
+        if a.causa_ultimatum.is_some() && !gia {
+            f.push(format!("ultimatum:{}", a.partito));
+        }
+    }
+    if v.crisi && !prima.crisi {
+        f.push("crisi".into());
+    }
+    if v.data.trimestre == 3 && v.referendum.is_empty() {
+        f.push("referendum".into());
+    }
+    if v.campagna.attiva {
+        f.push("campagna".into());
+    }
+    if v.fase == Fase::Trattativa && v.incarico.is_some() {
+        f.push("incarico".into());
+    }
+    if v.posto_riservato {
+        f.push("posto_riservato".into());
+    }
+    f
+}
+
+/// Gli stati della prima pagina che le Viste 01-08 non hanno: il turno 3 del seme 4 (fra 03 e 04),
+/// il voto col giocatore all'opposizione (seme 1 a 1,5), il voto del seme 9 a 4,5, e le corse di
+/// «avanti fino a novità» all'opposizione dal 06 in poi, con la Vista prima e dopo ogni fermata.
+fn prima_pagina(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let mut metti = |k: &str, come: String, v: &sim_core::Vista| -> Esito<()> {
+        let j = serde_json::to_value(v).map_err(|e| e.to_string())?;
+        out.insert(k.into(), serde_json::json!({"come": come, "vista": j}));
+        Ok(())
+    };
+    let mut p = governo_03(d)?;
+    p.chiudi_turno();
+    metti("t3", "seme 4: come 03, poi chiudi senza decisioni".into(), &p.vista())?;
+
+    let mut p = fonda(d, 9, 4.5)?;
+    con_la_destra(&mut p)?;
+    metti("zero_9", "seme 9, 4,5: coalizione con la destra, prima di chiudere".into(), &p.vista())?;
+    p.chiudi_turno();
+    metti("voto_9", "seme 9, 4,5: coalizione con la destra, chiudi (voto)".into(), &p.vista())?;
+
+    let mut p = fonda(d, 1, 1.5)?;
+    p.chiudi_turno();
+    metti("voto_opp", "seme 1, 1,5: nessuna coalizione, chiudi (voto)".into(), &p.vista())?;
+    p.chiudi_turno();
+    // Dal 06: «avanti fino a novità» premuto di nuovo a ogni fermata, per 24 turni.
+    let mut corse = Vec::new();
+    let mut da = p.vista().turno;
+    for _ in 0..24 {
+        if p.finita() {
+            break;
+        }
+        let ultima = p.vista();
+        p.chiudi_turno();
+        let v = p.vista();
+        let f = fermate(&v, &ultima);
+        if !f.is_empty() {
+            let k = format!("fermata_{}", v.turno);
+            corse.push(serde_json::json!({"da": da, "a": v.turno, "fermate": f, "chiave": k}));
+            note.push(format!("{}→{} {:?}", da, v.turno, f));
+            // ponytail: tiene solo la corsa più lunga (≥ 3 turni), il primo ultimatum e la campagna.
+            let tieni = v.turno - da >= 3
+                || f.iter().any(|x| x == "campagna")
+                || (f.iter().any(|x| x.starts_with("ultimatum")) && !out.keys().any(|k| k.starts_with("fermata")));
+            if tieni {
+                let j = serde_json::json!({"prima": serde_json::to_value(&ultima).map_err(|e| e.to_string())?,
+                    "vista": serde_json::to_value(&v).map_err(|e| e.to_string())?});
+                out.insert(k, j);
+            }
+            da = v.turno;
+        }
+    }
+    out.insert("corse".into(), serde_json::Value::Array(corse));
+    Ok(Uscita {
+        nome: "16-prima-pagina.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: format!("t3, voto_9, voto_opp, corse dal 06: {}", note.join("; ")),
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -856,6 +952,7 @@ fn esegui() -> Esito<()> {
     uscite.push(fondazione(&d)?);
     uscite.push(cruscotto(&d)?);
     uscite.push(aula(&d)?);
+    uscite.push(prima_pagina(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

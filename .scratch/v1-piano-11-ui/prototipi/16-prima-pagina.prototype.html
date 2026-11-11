@@ -1,0 +1,605 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Prima pagina» (16), mappa v1-piano-11-ui.
+  Domanda: com'è fatta la prima pagina di «Il Pungolo», cioè l'esito del turno? Striscia della cornice sopra la testata
+  grande; la voce d'apertura e fino a sette voci in evidenza (storia 15); la rivelazione una voce alla volta nell'ordine
+  della chiusura (storia 14), con la velocità e il salto; occhiello serio e titolo spiritoso (storia 153), vignetta;
+  i tracciati a caselle che avanzano mentre l'esito si rivela; la notizia dell'evento aperto, senza opzioni;
+  «Vai al cruscotto ›» e «Altre N notizie nel registro ›».
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Giornale composto — testata, apertura con vignetta, le altre in tre colonne; ogni notizia si accende al suo posto
+    B  Cronaca           — una colonna nell'ordine della chiusura, la notizia scelta nel dettaglio a lato
+    C  Una alla volta    — la rivelazione è una carta a tutta pagina per voce, poi la pagina A composta
+  Stati, ?stato=: ordinario (04: chiusura del turno 3) · quieto (turno 3: chiusura del turno 2) · voto (seme 9, turno 1)
+    · grave (03: chiusura della trattativa, evento grave risolto) · fermata (opposizione, seme 1, turno 19, dopo tre chiusure)
+  Apertura, ?riv=: chiusura (si rivela) · riprendi (già tutta rivelata). Velocità, ?vel=1|2|0. ?fin=1280|1440 ?scala=1|1.25
+  Dati: le Viste 02, 03, 04 e viste/16-prima-pagina.json (genera/, tutto giocato). La Vista di oggi non porta l'esito
+  (lo porta la PR 1 del piano di core «esito e Vista completa»): le voci qui sotto le ho scritte a mano col catalogo
+  della spec (tipo, criticità, precedenza, fatto, causa, fusione delle gemelle), leggendo i fatti nelle due Viste prima e
+  dopo ogni chiusura. Mancano i franchi tiratori e le voci che le Viste non lasciano vedere. I titoli del Pungolo sono
+  una bozza del prototipo: li scrive la fetta, con le sette regole di [Testi del Pungolo].
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A). Non è codice di produzione. Buttare dopo il verdetto.
+  VERDETTO (Mario, 11/11/2026), nel ticket 16: A · Giornale composto; vignetta da un kit per tipo con la didascalia;
+  fermate come sono; grandi cali senza notizia; voce doppia della situazione accesa al core. Il file si apre su A.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo prima pagina · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* cornice A · Gerenza */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:2px}
+.capo h3{margin:0}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+
+/* ===== prima pagina (comune) ===== */
+.cas i{transition:background-color calc(240ms*var(--k)) steps(2,end)}
+.cas i.scatto{background:var(--giallo)!important;border-color:var(--ink)!important}
+.g .cas i.scatto{background:var(--ink)!important}
+.prev{font-size:var(--c-min);color:var(--grigio);font-weight:400;margin-left:4px}
+.banda.ferma{background:var(--biro)}
+.g .banda.ferma{background:var(--ink)}
+.banda.ferma button{color:inherit;text-decoration:underline;text-underline-offset:2px;font-weight:700}
+.nuova{animation:entra calc(520ms*var(--k)) var(--e-work) both}
+@keyframes entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.g .nuova{animation-name:dissolve}
+@keyframes dissolve{from{opacity:0}to{opacity:1}}
+.attesa{visibility:hidden}
+.occh{font-size:var(--c-sec);font-weight:700;line-height:1.3}
+.occh.crit{color:var(--rosso)}
+.occh.crit::before{content:"";display:inline-block;width:.6em;height:.6em;background:var(--rosso);margin-right:.35em;vertical-align:.04em}
+.g .occh.crit::before{background:var(--ink)}
+.causa{font-size:var(--c-min);color:var(--grigio);line-height:1.3}
+.causa::before{content:"perché: ";font-style:italic}
+.tit.crit::before{content:"";display:inline-block;width:.42em;height:.42em;background:var(--ink);margin-right:.3em;vertical-align:.1em}
+.det{font-size:var(--c-min);color:var(--grigio);margin-top:3px;display:grid;gap:1px}
+.det span::before{content:"· "}
+.rim{font-size:var(--c-min);text-decoration:underline;text-underline-offset:2px;color:var(--ink);font-weight:700;white-space:nowrap}
+.aperto{display:inline-block;font-size:var(--c-min);font-weight:700;border:1.5px solid var(--ink);padding:0 5px;margin-top:4px}
+.piede{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:var(--doppio);padding-top:7px}
+.piede .sx{display:flex;gap:14px;align-items:center}
+.salta{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px}
+
+/* risultato del voto */
+.ris{display:grid;gap:3px;font-size:var(--c-min)}
+.ris .r{display:grid;grid-template-columns:118px 1fr 44px 58px;gap:6px;align-items:center;cursor:default;padding:0;border:0}
+.ris .r:hover{background:none}
+.ris .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ris .r.tu .nm{font-weight:700}
+.ris .bar{height:9px;background:var(--velo);position:relative}
+.ris .bar i{position:absolute;inset:0 auto 0 0;background:var(--grigio)}
+.ris .r.coal .bar i{background:var(--ink)}
+.ris .r.tu .bar i{background:var(--rosso)}
+.ris .q{text-align:right;font-weight:700}
+.ris .sg{text-align:right;color:var(--grigio)}
+.ris .cap{display:flex;justify-content:space-between;color:var(--grigio);border-bottom:var(--filo);padding-bottom:2px;margin-bottom:2px}
+
+/* A · Giornale composto */
+.pagina{padding:8px var(--marg) 10px;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;min-height:0;min-width:0;overflow:hidden}
+.testata{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding-bottom:3px}
+.testata .nome{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;font-size:var(--c-test);line-height:1.04;color:var(--rosso);text-align:center}
+.g .testata .nome{font-size:var(--c-pag);font-weight:600;padding:12px 0 4px;color:var(--ink)}
+.orecchio{font-size:var(--c-sec);line-height:1.35;color:var(--grigio)}
+.orecchio b{color:var(--ink)} .orecchio.dx{text-align:right}
+.sotto{display:flex;justify-content:space-between;font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--ink);border-bottom:var(--doppio);padding:3px 0;color:var(--grigio)}
+.apertura{display:grid;grid-template-columns:minmax(0,1fr) 30%;gap:24px;padding:10px 0 9px;border-bottom:1px solid var(--ink)}
+.g .apertura,.apertura.sola{grid-template-columns:1fr}
+.lead h2{font-size:var(--c-apre);line-height:1.04;margin:3px 0 6px}
+.g .lead h2{font-size:var(--c-pag)}
+.lead .occh{font-size:var(--c-lead)}
+.lead .causa{font-size:var(--c-sec)}
+.vignetta{border:var(--forte);padding:6px 8px;display:grid;gap:4px;align-content:start}
+.vignetta svg{width:100%;height:auto;max-height:150px}
+.vignetta figcaption{font-size:var(--c-sec);text-align:center;font-weight:700}
+.colonne{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:min-content;padding-top:8px;min-height:0;overflow:hidden}
+.colonne article{padding:2px 16px 2px;border-right:var(--filo);display:grid;gap:3px;align-content:start}
+.colonne article:nth-child(3n+1){padding-left:0}
+.colonne article:nth-child(3n){border-right:0;padding-right:0}
+.colonne h2{font-size:var(--c-sez);line-height:1.1}
+.g .colonne h2{font-size:var(--c-riq)}
+.vuota{color:var(--grigio);font-size:var(--c-sec);padding:6px 0}
+
+/* B · Cronaca */
+.cro{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr);gap:0 var(--canale);padding-bottom:0}
+.cro .tt{grid-column:1/-1;display:flex;align-items:baseline;gap:14px;border-bottom:var(--doppio);padding-bottom:4px}
+.cro .tt .nomino{font-size:var(--c-pag)}
+.g .cro .tt .nomino{display:none}
+.cro .tt .chi{white-space:normal}
+.lista{display:grid;align-content:start;min-height:0;overflow:auto;padding-bottom:10px}
+.n{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:1px 10px;padding:8px 6px;border-bottom:var(--filo);cursor:pointer;align-items:start}
+.n:hover{background:var(--velo)}
+.n.sel{background:var(--velo);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.n .num{font-family:var(--tit);font-size:var(--c-pag);font-weight:800;line-height:.95;color:var(--grigio)}
+.n.c .num{color:var(--rosso)}
+.g .n .num{color:var(--ink);font-weight:600}
+.n h2{font-size:var(--c-riq);line-height:1.15;grid-column:2}
+.n .occh{grid-column:2}
+.n .sz{grid-row:1/span 2;grid-column:3;align-self:center}
+.cro .lato{border-left:var(--forte);padding:8px 0 10px var(--canale);overflow:auto;min-height:0}
+.cro .lato h2{font-size:var(--c-pag);line-height:1.08}
+.cro .lato .occh{font-size:var(--c-lead)}
+.cro .lato .causa{font-size:var(--c-sec)}
+.cro .piede{grid-column:1/-1;padding-bottom:10px}
+
+/* C · Una alla volta */
+.carta{display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:14px var(--marg) 12px;min-height:0}
+.carta .cima{display:flex;justify-content:space-between;align-items:baseline;border-bottom:var(--doppio);padding-bottom:4px}
+.carta .cima .nomino{font-size:var(--c-pag)}
+.g .carta .cima .nomino{display:none}
+.carta .pip{display:flex;gap:4px}
+.carta .pip i{width:22px;height:6px;border:1.5px solid var(--ink)}
+.carta .pip i.on{background:var(--ink)}
+.carta .pip i.c{border-color:var(--rosso)}
+.carta .pip i.c.on{background:var(--rosso)}
+.carta .dentro{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:0 40px;align-content:center;max-width:1100px;margin:0 auto;width:100%}
+.carta .dentro.sola{grid-template-columns:minmax(0,1fr)}
+.carta .numero{font-family:var(--tit);font-size:var(--c-test);font-weight:800;color:var(--grigio);line-height:1}
+.carta .numero.c{color:var(--rosso)}
+.g .carta .numero{color:var(--ink);font-weight:600;font-size:var(--c-apre)}
+.carta h2{font-size:var(--c-apre);line-height:1.04;margin:6px 0 10px}
+.g .carta h2{font-size:var(--c-pag)}
+.carta .occh{font-size:var(--c-riq)}
+.carta .causa{font-size:var(--c-lead)}
+.carta .tit.crit::before{content:"";display:inline-block;width:.42em;height:.42em;background:var(--ink);margin-right:.3em;vertical-align:.1em}
+.det{font-size:var(--c-sec)}
+.carta .giu{display:flex;justify-content:space-between;align-items:center;border-top:var(--filo);padding-top:8px}
+.carta .apre{font-family:var(--tit);font-size:var(--c-apre);font-weight:700;line-height:1.1;text-align:center;max-width:22ch;margin:0 auto}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="ordinario">ordinario</button><button data-v="quieto">quieto</button><button data-v="voto">voto</button><button data-v="grave">grave</button><button data-v="fermata">fermata</button></span>
+  <span class="cap">apertura</span><span class="seg" data-k="riv"><button data-v="chiusura">dopo la chiusura</button><button data-v="riprendi">Riprendi</button></span>
+  <span class="cap">velocità</span><span class="seg" data-k="vel"><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="0">istantaneo</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <button id="rivedi" title="rifà la rivelazione">rivedi</button>
+  <span id="avv"></span>
+</div>
+<script>
+const D = {"ordinario":{"turno":4,"data":{"anno":2027,"trimestre":4},"chiusa":{"anno":2027,"trimestre":3},"turni_al_voto":16,"fase":"ordinaria","governa":true,"crisi":false,"tre":{"consenso":[58.8,51.3],"margine":[[23,14],[23,14]],"spread":[89,71]},"bilancio":true,"campagna":false,"nomi":{"estrema_sinistra":"Estrema sinistra","sinistra":"Sinistra","centrosinistra":"Centrosinistra","centro":"Centro","centrodestra":"Centrodestra","destra":"Destra","estrema_destra":"Estrema destra","giocatore":"Partito del giocatore"},"def":7},"quieto":{"turno":3,"data":{"anno":2027,"trimestre":3},"chiusa":{"anno":2027,"trimestre":2},"turni_al_voto":17,"fase":"ordinaria","governa":true,"crisi":false,"tre":{"consenso":[56.7,58.8],"margine":[[23,14],[23,14]],"spread":[86,89]},"bilancio":false,"campagna":false,"nomi":{"estrema_sinistra":"Estrema sinistra","sinistra":"Sinistra","centrosinistra":"Centrosinistra","centro":"Centro","centrodestra":"Centrodestra","destra":"Destra","estrema_destra":"Estrema destra","giocatore":"Partito del giocatore"},"def":6},"grave":{"turno":2,"data":{"anno":2027,"trimestre":2},"chiusa":{"anno":2027,"trimestre":1},"turni_al_voto":18,"fase":"ordinaria","governa":true,"crisi":false,"tre":{"consenso":[50.9,56.7],"margine":[[23,14],[23,14]],"spread":[83,86]},"bilancio":false,"campagna":false,"nomi":{"estrema_sinistra":"Estrema sinistra","sinistra":"Sinistra","centrosinistra":"Centrosinistra","centro":"Centro","centrodestra":"Centrodestra","destra":"Destra","estrema_destra":"Estrema destra","giocatore":"Partito del giocatore"},"def":4},"voto":{"turno":1,"data":{"anno":2027,"trimestre":1},"chiusa":{"anno":2026,"trimestre":4},"turni_al_voto":19,"fase":"trattativa","governa":false,"crisi":false,"tre":{"consenso":[57.1,53.7],"margine":[null,[23,14]],"spread":[84,113]},"bilancio":false,"campagna":false,"nomi":{"estrema_sinistra":"Estrema sinistra","sinistra":"Sinistra","centrosinistra":"Centrosinistra","centro":"Centro","centrodestra":"Centrodestra","destra":"Destra","estrema_destra":"Estrema destra","giocatore":"Partito del giocatore"},"elezioni":{"affluenza":72.1,"premio":"giocatore+centrodestra+destra","voti":[["estrema_sinistra",2.5,0,0],["sinistra",32.3,121,60],["centrosinistra",5.7,20,9],["centro",4.0,14,4],["centrodestra",6.7,31,15],["destra",27.3,123,64],["estrema_destra",5.8,21,12],["giocatore",15.8,70,36]]},"def":0},"fermata":{"turno":19,"data":{"anno":2031,"trimestre":3},"chiusa":{"anno":2031,"trimestre":2},"turni_al_voto":1,"fase":"ordinaria","governa":false,"crisi":false,"tre":{"consenso":[6.5,4.7],"margine":[[139,71],[139,71]],"spread":[80,93]},"bilancio":false,"campagna":false,"nomi":{"estrema_sinistra":"Estrema sinistra","sinistra":"Sinistra","centrosinistra":"Centrosinistra","centro":"Centro","centrodestra":"Centrodestra","destra":"Destra","estrema_destra":"Estrema destra","giocatore":"Partito del giocatore","nuovo_8":"Lista dei Territori"},"corsa":{"a":19,"chiave":"fermata_19","da":16,"fermate":["referendum","posto_riservato"]},"def":0}};
+// ======================= le voci dell'esito, scritte a mano col catalogo della spec di core =======================
+// t tipo · c criticità (C critica, N notevole, o ordinaria) · p precedenza delle critiche · ev in evidenza · g tono grave
+// fam famiglia (solo eventi) · f fatto (occhiello) · ca causa · det dettagli delle voci fuse · sez sezione del rimando
+// tk tracciato che la voce muove (consenso, spread) · ap evento aperto ora (si sceglie sul cruscotto)
+const PG = 'Partito del giocatore';
+const VOCI = {
+ordinario: [
+ {t:'evento_risolto',fam:'emergenza',c:'C',p:1,ev:1,f:'Emergenza incendi in Calabria: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio alto',sez:'Conti'},
+ {t:'proposta_respinta',c:'C',p:1,ev:1,f:'Tre proposte dei ministri respinte senza risposta: soddisfazione −8 a ciascuno',ca:'in sospeso da due turni senza risposta',sez:'Governo',
+  det:['Infrastrutture e Trasporti, Filippo Ricci: «Manutenzione straordinaria delle strade locali»','Ambiente ed Energia, Luca Romano: «Nucleare: consentito»','Esteri e Difesa, Giulia Rossi: «Leva militare: obbligatoria»']},
+ {t:'legge_approvata',c:'N',ev:1,f:'Approvata «Sgravio contributivo nel Mezzogiorno: 15%»: Camera 232 sì e 168 no, Senato 113 sì e 87 no',ca:`sì Centro, Centrodestra, Destra e ${PG}; no Estrema sinistra, Sinistra, Centrosinistra ed Estrema destra`,sez:'Aula'},
+ {t:'spread',c:'o',f:'Spread a 71 punti base, −18',ca:'chiusura del trimestre',tk:'spread',sez:'Conti'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 51,3%, −7,5',ca:'sondaggio pubblico del trimestre',tk:'consenso',sez:'Paese'},
+ {t:'prima_stima',c:'o',f:'Luglio–settembre, prima stima: PIL −3,3% annuo, inflazione 3,1%, disoccupazione 6,0%, disavanzo 2,7%',ca:'prima stima, riveduta fra un turno',sez:'Conti'},
+ {t:'revisione',c:'o',f:'Aprile–giugno riveduto: PIL da +1,8% a +1,3%, disoccupazione da 5,5% a 5,6%',ca:'revisione della prima stima',sez:'Conti'},
+ {t:'entrate_di_cassa',c:'o',f:`${PG}: 203.170 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione',sez:'Partiti'},
+ {t:'soddisfazione_variata',c:'o',f:'Dieci ministri cambiano soddisfazione',ca:'più cause',sez:'Governo',det:['Sanità, Sara Ferraro: indicatore in calo −24,7, obiettivo raggiunto +10','Economia e Finanze, Simone Gallo: obiettivo raggiunto +10','e altri otto']},
+ {t:'intesa_variata',c:'o',f:'Tre variazioni d’intesa degli alleati',ca:'più cause',sez:'Partiti',det:['Centrodestra: quota di ministeri scoperta, −1,0','Centrodestra: sondaggi in calo, −1,9','Destra: una norma lontana dalla sua posizione, −2,0']},
+ {t:'evento_nato',fam:'emergenza',c:'C',p:1,ev:1,ap:1,f:'Emergenza idrogeologica in Emilia-Romagna: 1 mld',ca:'rischio alto',sez:'Cruscotto'},
+ {t:'misura_presentata',c:'N',ev:1,f:'Sinistra porta nel posto riservato «Regime delle pensioni: retributivo»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe',sez:'Aula'},
+],
+quieto: [
+ {t:'evento_risolto',fam:'emergenza',c:'C',p:1,ev:1,f:'Emergenza idrogeologica nelle Marche: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio basso',sez:'Conti'},
+ {t:'spread',c:'o',f:'Spread a 89 punti base, +3',ca:'chiusura del trimestre',tk:'spread',sez:'Conti'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 58,8%, +2,1',ca:'sondaggio pubblico del trimestre',tk:'consenso',sez:'Paese'},
+ {t:'prima_stima',c:'o',f:'Aprile–giugno, prima stima: PIL +1,8% annuo, inflazione 3,8%, disoccupazione 5,5%, disavanzo 2,9%',ca:'prima stima, riveduta fra un turno',sez:'Conti'},
+ {t:'revisione',c:'o',f:'Gennaio–marzo riveduto: PIL da +3,1% a +2,2%, disavanzo da 4,1% a 3,7%',ca:'revisione della prima stima',sez:'Conti'},
+ {t:'entrate_di_cassa',c:'o',f:`${PG}: 215.865 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione',sez:'Partiti'},
+ {t:'soddisfazione_variata',c:'o',f:'Sette ministri cambiano soddisfazione',ca:'più cause',sez:'Governo',det:['Ambiente ed Energia, Luca Romano: indicatore in calo −4,5, obiettivo raggiunto +10','e altri sei']},
+ {t:'intesa_variata',c:'o',f:'Due variazioni d’intesa di Centrodestra',ca:'più cause',sez:'Partiti',det:['quota di ministeri scoperta, −1,0','sondaggi in calo, −2,3']},
+ {t:'evento_nato',fam:'emergenza',c:'C',p:1,ev:1,ap:1,f:'Emergenza incendi in Calabria: 1 mld',ca:'rischio alto',sez:'Cruscotto'},
+ {t:'misura_presentata',c:'N',ev:1,f:'Estrema destra porta nel posto riservato «Autonomia differenziata: intese complete»',ca:'225 seggi fra Camera e Senato dei partiti alleati la voterebbero',sez:'Aula'},
+],
+grave: [
+ {t:'evento_risolto',fam:'emergenza',c:'C',p:1,ev:1,g:1,f:'Emergenza idrogeologica in Emilia-Romagna: fondo di riserva per default, coperti 305,7 mln € su 5 mld',ca:'rischio alto',sez:'Conti'},
+ {t:'spread',c:'o',f:'Spread a 86 punti base, +3',ca:'chiusura del trimestre',tk:'spread',sez:'Conti'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 56,7%, +5,8',ca:'sondaggio pubblico del trimestre',tk:'consenso',sez:'Paese'},
+ {t:'prima_stima',c:'o',f:'Gennaio–marzo, prima stima: PIL +3,1% annuo, inflazione 4,1%, disoccupazione 5,3%, disavanzo 4,1%',ca:'prima stima, riveduta fra un turno',sez:'Conti'},
+ {t:'revisione',c:'o',f:'Ottobre–dicembre 2026 riveduto: PIL da +0,5% a −1,4%, disavanzo da 2,5% a 2,9%',ca:'revisione della prima stima',sez:'Conti'},
+ {t:'entrate_di_cassa',c:'o',f:`${PG}: 222.436 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione',sez:'Partiti'},
+ {t:'governo_formato',c:'C',p:3,ev:1,f:`Nasce il governo: Presidente del Consiglio del ${PG}, con Centrodestra e Destra; quattro ministeri al ${PG}, quattro alla Destra, due al Centrodestra`,ca:'la coalizione dichiarata ha la maggioranza: 224 seggi su 400 alla Camera, 115 su 200 al Senato',sez:'Governo'},
+ {t:'intesa_variata',c:'o',f:'Due variazioni d’intesa degli alleati',ca:'spartizione dei ministeri',sez:'Partiti',det:['Centrodestra: spartizione dei ministeri, −5,1','Destra: spartizione dei ministeri, +2,1']},
+ {t:'evento_nato',fam:'emergenza',c:'C',p:1,ev:1,ap:1,f:'Emergenza idrogeologica nelle Marche: 1 mld',ca:'rischio basso',sez:'Cruscotto'},
+ {t:'misura_presentata',c:'N',ev:1,f:'Centro porta nel posto riservato «Sgravio contributivo nel Mezzogiorno: 15%»',ca:'225 seggi fra Camera e Senato dei partiti alleati la voterebbero',sez:'Aula'},
+],
+voto: [
+ {t:'promessa_fatta',c:'o',f:'Sette partiti dichiarano due promesse ciascuno',ca:'la prima voce del programma, o la posizione',sez:'Partiti',det:['Sinistra: «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»','Destra: «Nucleare: consentito» e «Autonomia differenziata: intese complete»','e altri cinque']},
+ {t:'spesa_di_campagna',c:'N',ev:1,f:'Sette partiti spendono 22,1 mln € in campagna; il tuo nulla',ca:'la cassa disponibile',sez:'Partiti',det:['Sinistra 8,1 mln €: dipendenti privati, pensionati e Campania','Destra 7,1 mln €: pensionati, dipendenti privati e Lombardia','e altri cinque']},
+ {t:'spread',c:'o',f:'Spread a 113 punti base, +29',ca:'chiusura del trimestre',tk:'spread',sez:'Conti'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 53,7%, −3,4',ca:'sondaggio pubblico del trimestre',tk:'consenso',sez:'Paese'},
+ {t:'prima_stima',c:'o',f:'Ottobre–dicembre 2026, prima stima: PIL +0,7% annuo, inflazione 3,1%, disoccupazione 5,5%, disavanzo 2,1%',ca:'prima stima, riveduta fra un turno',sez:'Conti'},
+ {t:'revisione',c:'o',f:'Luglio–settembre 2026 riveduto: nessuna cifra cambia',ca:'revisione della prima stima',sez:'Conti'},
+ {t:'entrate_di_cassa',c:'o',f:`${PG}: 215.165 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione',sez:'Partiti'},
+ {t:'risultato_del_voto',c:'C',p:3,ev:1,tk:'margine',f:`Elezioni: affluenza 72,1%. ${PG} 15,8%, 70 seggi alla Camera e 36 al Senato; primo partito la Sinistra, 32,3%; premio alla coalizione del ${PG}`,ca:'elezioni politiche',sez:'Partiti',ris:1},
+ {t:'incarico',c:'C',p:3,ev:1,f:`Incarico al ${PG}: si tratta il governo con Centrodestra e Destra`,ca:'la coalizione ha 224 seggi su 400 alla Camera e 115 su 200 al Senato',sez:'Cruscotto'},
+ {t:'evento_nato',fam:'emergenza',c:'C',p:1,ev:1,ap:1,f:'Emergenza idrogeologica in Emilia-Romagna: 1 mld',ca:'rischio alto',sez:'Cruscotto'},
+],
+fermata: [
+ {t:'evento_risolto',fam:'emergenza',c:'N',ev:1,f:'Emergenza siccità in Veneto: fondo di riserva per default, coperti 205,7 mln € su 1 mld',ca:'rischio basso',sez:'Conti'},
+ {t:'legge_respinta',c:'N',ev:1,f:'Respinta «Ingressi per lavoro: alti», proposta della Lista dei Territori: Camera 203 sì e 197 no, Senato 100 sì e 100 no',ca:`sì Estrema sinistra, Sinistra, Centrosinistra, Centro, ${PG} e Lista dei Territori; no Centrodestra, Destra ed Estrema destra`,sez:'Aula'},
+ {t:'minaccia_di_scissione',c:'o',f:'Estrema sinistra: la posizione percepita dista 0,5 punti dalla dichiarata',ca:'la soglia di minaccia',sez:'Partiti'},
+ {t:'spread',c:'o',f:'Spread a 93 punti base, +13',ca:'chiusura del trimestre',tk:'spread',sez:'Conti'},
+ {t:'sondaggio',c:'o',f:`${PG} al 4,7%, −1,8`,ca:'sondaggio pubblico del trimestre',tk:'consenso',sez:'Paese'},
+ {t:'prima_stima',c:'o',f:'Aprile–giugno 2031, prima stima: PIL −2,9% annuo, inflazione −0,2%, disoccupazione 5,3%, disavanzo 1,8%',ca:'prima stima, riveduta fra un turno',sez:'Conti'},
+ {t:'revisione',c:'o',f:'Gennaio–marzo 2031 riveduto: PIL da −1,6% a −1,4%, disoccupazione da 5,4% a 5,7%',ca:'revisione della prima stima',sez:'Conti'},
+ {t:'situazione_accesa',c:'N',ev:1,f:'Recessione: crescita del PIL −2,9% annuo',ca:'la soglia di accensione, −1,0%',sez:'Conti'},
+ {t:'entrate_di_cassa',c:'o',f:`${PG}: 115.999 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione',sez:'Partiti'},
+ {t:'evento_nato',fam:'situazione',c:'N',ev:1,ap:1,f:'Recessione: il governo decide se intervenire',ca:'crescita del PIL: −2,9% annuo (soglia −1,0%)',sez:'Cruscotto'},
+ {t:'evento_nato',fam:'emergenza',c:'N',ev:1,ap:1,f:'Emergenza incendi in Sardegna: 1 mld',ca:'rischio alto',sez:'Cruscotto'},
+],
+};
+// Titoli del Pungolo: BOZZA del prototipo, chiave tipo (e famiglia per i due tipi d'evento). Senza nomi né cifre.
+const TIT = {
+ 'evento_risolto|emergenza':'La pratica è chiusa. Il fango, meno',
+ 'evento_nato|emergenza':'Il cielo presenta il conto. Si paga entro il trimestre',
+ 'evento_nato|situazione':'Il dato è ufficiale. Il comunicato, ancora in bozza',
+ proposta_respinta:'Nessuno ha risposto. Agli atti risulta un no',
+ legge_approvata:'La legge passa. I vincitori si contano a cena',
+ legge_respinta:'L’aula boccia. Tutti dicono che era previsto',
+ misura_presentata:'C’è posto in aula. I voti, meno',
+ governo_formato:'Giurano tutti. Qualcuno anche sul serio',
+ risultato_del_voto:'Hanno vinto tutti. I seggi la pensano diversamente',
+ incarico:'Squilla il telefono del Colle. Stavolta era il numero giusto',
+ spesa_di_campagna:'Manifesti in ogni via. I programmi, in ultima pagina',
+ situazione_accesa:'L’indicatore si accende. A Palazzo cercano l’interruttore',
+};
+// Vignetta: disegno per tipo d'apertura (kit, come le caricature), didascalia con le stesse regole dei titoli.
+const VIGN = {
+ evento_risolto:['cassa','«Il fondo c’era. Era il fondo del cassetto.»'],
+ evento_nato:['cassa','«Mettiamolo a bilancio. Quale bilancio?»'],
+ proposta_respinta:['carte','«Se non rispondiamo, vale come risposta.»'],
+ risultato_del_voto:['urna','«Abbiamo vinto. Adesso ci tocca governare.»'],
+ governo_formato:['urna','«Il programma? Lo leggiamo dopo il giuramento.»'],
+ legge_respinta:['aula','«Pari e patta. Si torna a casa.»'],
+};
+const FERMA = {referendum:'luglio–settembre: ultimo trimestre per chiedere un referendum quest’anno', posto_riservato:'il posto riservato all’opposizione di questo turno è tuo, ed è libero',
+  campagna:'si vota a fine turno: è il turno della campagna', incarico:'la trattativa è tua', crisi:'il governo è entrato in crisi'};
+
+// ======================= stato del prototipo =======================
+const DEF = {v:'A', stato:'ordinario', riv:'chiusura', vel:'1', fin:'1280', scala:'1'};
+const st = {...DEF, n:0, sel:null};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const FORME = {A:'A · Giornale composto', B:'B · Cronaca', C:'C · Una alla volta, poi la pagina'};
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const TRIM = ['','Gennaio–marzo','Aprile–giugno','Luglio–settembre','Ottobre–dicembre'];
+const per = d => `${TRIM[d.trimestre]} ${d.anno}`;
+const S = () => D[st.stato];
+const TUTTE = () => VOCI[st.stato].map((x,i)=>({...x,i}));
+const EV = () => TUTTE().filter(x=>x.ev);
+const grave = () => VOCI[st.stato].some(x=>x.g);   // la UI non lo deduce: lo dice il tono della voce
+const k = () => st.vel==='0' ? 0 : st.vel==='2' ? .5 : 1;
+const rango = x => (x.c==='C'?10:x.c==='N'?5:0) + (x.p||0);
+function apertura(){ const e=EV(); return e.reduce((a,x)=>rango(x)>rango(a)?x:a, e[0]); } // la più alta; a parità la prima della chiusura
+const tit = x => grave() ? null : TIT[x.fam ? `${x.t}|${x.fam}` : x.t] || null;   // senza titolo: l'occhiello sale a titolo
+const fine = () => st.n >= EV().length;
+const visto = x => fine() || EV().findIndex(y=>y.i===x.i) < st.n;
+const nuova = x => st.anim && EV().findIndex(y=>y.i===x.i)===st.n-1 ? 'nuova' : '';
+// il cursore della chiusura: fin dove la rivelazione è arrivata nell'ordine di tutte le voci
+const cursore = () => fine() ? Infinity : st.n===0 ? -1 : EV()[st.n-1].i;
+const mosso = tk => { const v=TUTTE().find(x=>x.tk===tk); return v ? v.i < cursore() || fine() : fine(); };
+
+// ======================= cornice A · Gerenza, con i tracciati che scattano =======================
+function caselle(pos,soglia=3,n=10,prima=null){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  const inp=pos<=soglia;
+  return `<span class="cas ${inp?'inp':''}">${Array.from({length:n},(_,i)=>{ const sc = prima!=null && prima!==pos && i>=Math.min(prima,pos) && i<Math.max(prima,pos);
+    return `<i class="${[i<soglia?'per':'', i===soglia-1?'sog':'', i<pos?'on':'', sc?'scatto':''].join(' ')}"></i>`; }).join('')}</span>`;
+}
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+const pC = c => clamp(Math.round((c-25)/5),0,10), pM = m => m ? clamp(Math.round((Math.min(...m)+9)/3),0,10) : null, pS = s => clamp(Math.round((500-s)/50),0,10);
+const fM = m => m ? m.map(x=>(x>0?'+':x<0?'−':'')+Math.abs(x)).join(' / ') : 'Camere sciolte';
+function tracciati(){
+  const s=S(), T=s.tre, opp=!s.governa && s.fase!=='trattativa';
+  const riga = (nome, tk, val, pos, fmt) => { const ok=mosso(tk), a=pos(val[0]), b=pos(val[1]);
+    const appena = ok && st.scatto===tk;
+    return `<div class="trk"><span class="k">${nome}</span>${caselle(ok?b:a,3,10,appena?a:null)}<span class="v">${fmt(ok?val[1]:val[0])}${ok&&String(val[0])!==String(val[1])?`<span class="prev">era ${fmt(val[0])}</span>`:''}</span></div>`; };
+  return `<div class="trks">${riga(opp?'Consenso del partito':'Consenso','consenso',T.consenso,pC,x=>num(x)+'%')}${riga(opp?'Maggioranza del governo':'Maggioranza C / S','margine',T.margine,pM,fM)}${riga('Conti · spread','spread',T.spread,pS,x=>num(x,0))}</div>`;
+}
+const SEZ = [['prima','Prima pagina'],['cruscotto','Cruscotto'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function barrate(){
+  const s=S(), b={};
+  if(!s.governa) b.governo = s.fase==='trattativa' ? 'Trattativa: il governo non c’è ancora' : 'Non governi: nessun ministro tuo';
+  if(s.fase==='trattativa') b.aula='Trattativa: le Camere aspettano il governo';
+  if(!s.bilancio) b.bilancio = s.governa ? 'La legge di bilancio si presenta in ottobre-dicembre' : 'Non governi: il bilancio lo presenta il governo';
+  if(!s.campagna) b.campagna='Si fa campagna solo nel turno prima del voto';
+  return b;
+}
+function cornice(){
+  const s=S(), b=barrate(), opp=!s.governa && s.fase!=='trattativa';
+  const stato = s.fase==='trattativa' ? 'Trattativa · incarico a te' : opp ? 'All’opposizione' : s.crisi ? 'Crisi di governo' : 'Al governo';
+  const chi=`<span class="chi"><b>${stato}</b><br>${per(s.data)} · turno ${s.turno}<br><b>${s.turni_al_voto===1?'1 turno al voto':s.turni_al_voto+' turni al voto'}</b></span>`;
+  const nomeS = k => k==='cruscotto' && s.fase==='trattativa' ? 'Trattativa' : SEZ.find(x=>x[0]===k)[1];
+  const somm=`<nav class="somm" aria-label="Sommario">${SEZ.map(([k])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}">${nomeS(k)}</button>` : `<button class="${k==='prima'?'qui':''}" ${k==='prima'?'aria-current="page"':''}>${nomeS(k)}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+  const dx = opp ? `<div class="pila"><button class="btn p">Avanti fino a novità ››</button><button class="btn pieno">Chiudi il turno ›</button></div>`
+    : `<div class="pila"><button class="btn pieno">Chiudi il turno ›</button></div>${s.def ? `<button class="def">${s.def} ${s.def===1?'scelta va':'scelte vanno'} al default ›</button>` : '<span class="def tutte">nessuna scelta al default</span>'}`;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx">${chi}</div>${tracciati()}<div class="c-dx">${dx}</div></div>${somm}</header>`;
+}
+function bandaFermata(){
+  const c=S().corsa; if(!c) return '';
+  const passate = c.a - c.da;
+  const turni = Array.from({length:passate-1},(_,i)=>c.da+i);
+  return `<div class="banda ferma">Avanti fino a novità: ${passate} chiusure di fila da turno ${c.da}. Ti ferma qui: ${c.fermate.map(f=>FERMA[f]||f).join('; ')}. Le pagine saltate sono nel registro: <button>${turni.length>1?'turni '+turni.join(' e '):'turno '+turni[0]} ›</button></div>`;
+}
+
+// ======================= pezzi comuni delle voci =======================
+const rimando = x => x.ap ? `<span class="aperto">${S().governa||S().fase==='trattativa'?'Si decide sul cruscotto ›':'Lo decide il governo'}</span>` : `<button class="rim">${x.sez} ›</button>`;
+const occh = (x,cl='') => `<div class="occh ${x.c==='C'?'crit':''} ${cl}">${esc(x.f)}</div>`;
+const det = x => x.det ? `<div class="det">${x.det.map(d=>`<span>${esc(d)}</span>`).join('')}</div>` : '';
+function testo(x, h='h2'){   // occhiello col fatto, titolo; senza titolo (o nel tono grave) l'occhiello sale a titolo
+  const t=tit(x);
+  return t ? `${occh(x)}<${h} class="tit">${esc(t)}</${h}>` : `<${h} class="tit ${x.c==='C'?'crit':''}">${esc(x.f)}</${h}>`;
+}
+function risultato(){
+  const e=S().elezioni, coal=(e.premio||'').split('+'), nomi=S().nomi;
+  const voti=[...e.voti].filter(v=>v[1]>0.5).sort((a,b)=>b[1]-a[1]), max=voti[0][1];
+  return `<div class="ris"><div class="cap"><span>Affluenza ${num(e.affluenza)}%</span><span>Camera · Senato</span></div>${voti.map(([p,q,c,s])=>`<div class="r ${coal.includes(p)?'coal':''} ${p==='giocatore'?'tu':''}">
+    <span class="nm">${esc(nomi[p])}</span><span class="bar"><i style="width:${(q/max*100).toFixed(1)}%"></i></span><span class="q">${num(q)}%</span><span class="sg">${c} · ${s}</span></div>`).join('')}
+    <div class="cap" style="border:0;border-top:var(--filo);padding-top:2px"><span>in nero la coalizione col premio</span></div></div>`;
+}
+function disegno(tipo){
+  const r='stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  const d = {
+   cassa:`<rect x="70" y="40" width="160" height="80" rx="6" ${r}/><path d="M70 62h160M150 40v-14M118 26h64" ${r}/><path d="M120 92h60M128 104h44" ${r} stroke-dasharray="4 6"/><path d="M226 120c10 10 26 12 40 2M248 118l4 16" ${r}/>`,
+   carte:`<path d="M80 120h150M95 120V60h120v60" ${r}/><path d="M110 60l8-26h80l8 26M125 34l6-14h56l6 14" ${r}/><path d="M118 80h74M118 96h50" ${r}/>`,
+   urna:`<path d="M95 70h110l-10 60h-90z" ${r}/><path d="M120 70V40l30 6 30-6v30M140 30h20" ${r}/><path d="M110 92h80" ${r} stroke-dasharray="3 6"/>`,
+   aula:`<path d="M60 128a90 90 0 0 1 180 0M84 128a66 66 0 0 1 132 0M108 128a42 42 0 0 1 84 0" ${r}/><path d="M138 128v-14h24v14" ${r}/>`,
+  }[tipo]||'';
+  return `<svg viewBox="0 0 300 150" aria-hidden="true" style="color:var(--ink)"><rect x="0" y="0" width="300" height="150" fill="url(#ret)" opacity=".35"/>${d}<defs><pattern id="ret" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.2" height="6" fill="currentColor" opacity=".35"/></pattern></defs></svg>`;
+}
+function vignetta(x){
+  if(x.ris) return `<figure class="vignetta">${risultato()}</figure>`;
+  const v=VIGN[x.t]; if(!v || grave()) return '';
+  return `<figure class="vignetta solo-ord">${disegno(v[0])}<figcaption>${esc(v[1])}</figcaption></figure>`;
+}
+const fuori = () => TUTTE().length - EV().length;
+const critFuori = () => TUTTE().filter(x=>x.c==='C' && !x.ev).length;   // un conto, non una regola
+function piede(){
+  const cf=critFuori();
+  return `<footer class="piede"><span class="sx"><button class="link">Altre ${fuori()} notizie nel registro${cf?`, ${cf} critiche`:''} ›</button>${fine()?'':'<button class="salta" data-salta>Salta la rivelazione ››</button>'}</span><button class="btn pieno">Vai al cruscotto ›</button></footer>`;
+}
+
+// ======================= A · Giornale composto =======================
+function giornale(){
+  const s=S(), g=grave(), ap=apertura(), resto=EV().filter(x=>x.i!==ap.i);
+  const art = (x,cl='') => `<article class="${cl} ${visto(x)?nuova(x):'attesa'}">${testo(x)}<div class="causa">${esc(x.ca)}</div>${det(x)}<div>${rimando(x)}</div></article>`;
+  const vg = vignetta(ap);
+  return `<div class="pagina">
+  <header class="testata"><div class="orecchio">Esito del trimestre<br><b>${per(s.chiusa)}</b><br>${EV().length} notizie in pagina, ${fuori()} nel registro</div>
+    <div class="nome">${g?'Esito del trimestre':'Il Pungolo'}</div>
+    <div class="orecchio dx">n. ${s.turno} · turno ${s.turno}<br><b>${per(s.data)}</b><br>${g?'':'Costa poco, punge tutti'}</div></header>
+  <div class="sotto"><span>${g?'Edizione straordinaria':'Settimanale di satira e conti pubblici'}</span><span>${per(s.data)}</span><span>${g?'In questo numero, niente commenti':'Si legge in cinque minuti, si discute per tre mesi'}</span></div>
+  <div class="apertura ${vg?'':'sola'}">${art(ap,'lead')}${vg ? `<div class="${visto(ap)?nuova(ap):'attesa'}">${vg}</div>` : ''}</div>
+  <div class="colonne">${resto.length ? resto.map(x=>art(x)).join('') : '<div class="vuota">Nient’altro in evidenza questo trimestre.</div>'}</div>
+  ${piede()}</div>`;
+}
+
+// ======================= B · Cronaca =======================
+function cronaca(){
+  const s=S(), g=grave(), E=EV();
+  const sel = st.sel!=null ? E.find(x=>x.i===st.sel) : !fine() && st.n ? E[st.n-1] : apertura();
+  const riga = (x,j) => `<div class="n ${x.c==='C'?'c':''} ${sel&&sel.i===x.i&&visto(x)?'sel':''} ${visto(x)?nuova(x):'attesa'}" data-sel="${x.i}">
+      <span class="num">${j+1}</span>${testo(x)}<span class="sz">${x.ap?'<span class="aperto">aperto</span>':''}</span></div>`;
+  const lato = sel && visto(sel) ? `<aside class="lato ${nuova(sel)}">${testo(sel)}<div class="causa" style="margin-top:6px">${esc(sel.ca)}</div>${det(sel)}
+      ${sel.ris?`<div style="margin-top:10px">${risultato()}</div>`:vignetta(sel)?`<div style="margin-top:10px">${vignetta(sel)}</div>`:''}
+      <div style="margin-top:10px">${sel.ap?rimando(sel):`<button class="btn">${sel.sez} ›</button>`}</div></aside>` : '<aside class="lato"></aside>';
+  return `<div class="corpo cro">
+    <div class="tt"><span class="nomino solo-ord">Il Pungolo</span><span class="chi"><b>Esito di ${per(s.chiusa).toLowerCase()}</b> · ${E.length} notizie nell’ordine della chiusura, ${fuori()} nel registro</span></div>
+    <div class="lista">${E.map(riga).join('')}</div>${lato}
+    ${piede()}</div>`;
+}
+
+// ======================= C · Una alla volta, poi la pagina =======================
+function carte(){
+  if(fine()) return giornale();
+  const s=S(), E=EV(), x=E[st.n-1];
+  const pip = `<span class="pip">${E.map((y,j)=>`<i class="${y.c==='C'?'c':''} ${j<st.n?'on':''}"></i>`).join('')}</span>`;
+  const dentro = !x ? `<div class="dentro sola ${st.anim?'nuova':''}"><div class="apre">${grave()?'Esito del trimestre':'Il Pungolo'}<br><span class="occh" style="font-family:var(--txt)">${per(s.chiusa)}: ${E.length} notizie</span></div></div>`
+    : `<div class="dentro ${vignetta(x)?'':'sola'} ${st.anim?'nuova':''}"><div><span class="numero ${x.c==='C'?'c':''}">${st.n}</span>${testo(x)}<div class="causa">${esc(x.ca)}</div>${det(x)}<div style="margin-top:8px">${rimando(x)}</div></div>${vignetta(x)}</div>`;
+  return `<div class="carta"><div class="cima"><span class="nomino solo-ord">Il Pungolo</span><span class="chi">${x?`${st.n} di ${E.length} · nell’ordine della chiusura`:'Esito del trimestre'}</span>${pip}</div>
+    ${dentro}
+    <div class="giu"><button class="salta" data-salta>Salta ›› alla pagina</button><button class="btn pieno" data-avanti>${st.n<E.length?'Avanti ›':'Alla pagina ›'}</button></div></div>`;
+}
+
+// ======================= montaggio e rivelazione =======================
+const scr = document.getElementById('screen');
+let limite='', timer=null;
+function render(){
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  const banda = bandaFermata();
+  const corpo = st.v==='B' ? cronaca() : st.v==='C' ? carte() : giornale();
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS ${grave()?'g':''} ${lw<1150?'stretta':''}" style="--k:${k()||1};zoom:${z};width:${lw}px;height:${lh}px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto ${banda?'auto ':''}minmax(0,1fr)">${cornice()}${banda}${corpo}</div>`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const kk in DEF) if(st[kk]!==DEF[kk]) p.set(kk,st[kk]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  tagli();
+}
+function passo(){   // una voce in più; il tracciato scatta quando la rivelazione passa la sua voce
+  const prima = cursore(); st.n++; st.anim=true;
+  const dopo = cursore(); st.scatto = ['consenso','spread','margine'].find(tk=>{ const v=TUTTE().find(x=>x.tk===tk); const i=v?v.i:Infinity; return i>=prima && i<dopo; }) || null;
+  render(); st.anim=false;
+  if(fine()) stop();
+}
+function stop(){ clearInterval(timer); timer=null; }
+function parti(){
+  stop(); st.sel=null; st.scatto=null;
+  if(st.riv==='riprendi' || k()===0){ st.n=EV().length; st.anim=false; render(); return; }
+  st.n=0; render();
+  timer=setInterval(passo, (st.v==='C'?2400:1100)*k());   // in C una carta resta di più: «Avanti ›» e spazio accelerano
+}
+function salta(){ stop(); st.n=EV().length; st.anim=false; st.scatto=null; render(); }
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('svg')) return; const b=el.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (b.bottom>R.bottom+1 && !el.closest('.corpo,.lista,.lato')));
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/ellipsis/.test(cs.textOverflow) && cs.overflow!=='hidden' && !/auto|scroll/.test(cs.overflowY) && el!==r;
+    if(fuori||stretto) n++; });
+  const c=r.querySelector('.colonne,.lista'), scorre = c && c.scrollHeight>c.clientHeight+1;
+  document.getElementById('avv').textContent = [limite, n?`tagli: ${n}`:'', scorre?'le colonne non bastano':''].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const kk=Object.keys(FORME); st.v=kk[(kk.indexOf(st.v)+(b.id==='next'?1:kk.length-1))%kk.length]; parti(); return; }
+  if(b.id==='rivedi'){ parti(); return; }
+  const kk=b.parentElement.dataset.k; st[kk]=b.dataset.v;
+  if(kk==='fin'||kk==='scala') render(); else parti();
+});
+scr.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('[data-salta]')){ salta(); return; }
+  if(t.closest('[data-avanti]')){ if(fine()) render(); else passo(); return; }
+  const r=t.closest('[data-sel]');
+  if(r && fine()){ st.sel=+r.dataset.sel; render(); return; }
+  if(!fine() && st.v!=='C' && !t.closest('button,nav')) salta();   // un clic sulla pagina salta la rivelazione
+});
+function perche(e){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=e.type==='mouseover'||e.type==='focusin' ? e.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, kk=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/kk/z)+'px'; el.style.top=((B.bottom-R.top)/kk/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click();
+  if(e.key===' ' && st.v==='C' && !fine()){ e.preventDefault(); passo(); } });
+addEventListener('resize',render);
+parti(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

@@ -425,5 +425,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/19-aula-e-calendario.md`, due giri su un 
 - **Questione di fiducia con la conferma sul posto**, anche sul cruscotto: il core non la ritira e l'intesa cala subito.
 - **Anteprima della proposta d'opposizione al core:** oggi `anteprima` la rifiuta a chi non governa, e la proposta si scriverebbe alla cieca.
 
+## 2026-11-11: prima pagina
+Ticket `.scratch/v1-piano-11-ui/issues/16-prima-pagina.md`, un giro su un prototipo con tre forme e cinque chiusure giocate, con le voci scritte a mano col catalogo della spec di core.
+
+- **Forma A · Giornale composto:** voce di testa con la vignetta, le altre in tre colonne; ogni voce si accende al suo posto nell'ordine della chiusura, e i tracciati scattano quando la rivelazione supera la voce che li muove.
+- **Voce di testa per criticità e precedenza:** con la sola regola dell'ordine della chiusura la pagina del voto si aprirebbe con le spese di campagna.
+- **Vignetta da un kit per tipo** con la didascalia; nella pagina del voto, al suo posto, il risultato a barre.
+- **Fermate e grandi cali restano come sono:** all'opposizione «avanti fino a novità» si ferma quasi a ogni turno, ma per decisioni vere; un calo di 7,5 punti nel sondaggio si vede dal tracciato, non in pagina.
+- **Una voce sola per una situazione accesa col suo evento**, rimandata al core.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
