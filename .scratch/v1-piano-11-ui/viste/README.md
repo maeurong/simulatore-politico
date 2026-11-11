@@ -32,12 +32,19 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `08-tono-grave.json` | 4 | 4,5 | 7, 2028T3 | 116474 | come 05; «Emergenza incendi» in tono grave, al governo |
 | `13-edicola.json` | 1-4, 9 | varie | — | 25496 | `partite()` e `albo()` del guscio rifatti con `testata()` e `voce_albo()`: cinque partite in corso coi nomi diversi, tre abbandonate nell'albo (vedi sotto) |
 | `14-editor.json` | — | — | — | 204849 | `riepilogo()` di `sim-core::riepilogo` su `con_su_misura()`: intervalli dei sei cursori, leggi elettorali coi nove parametri, 46 disposizioni coi gradini (35 ordinarie, 2 costituzionali, 9 elettorali), otto scenari di prova e nove passi per cursore (vedi sotto) |
+| `17-cruscotto.json` | 4, 1, 14 | 4,5 | varie | 673154 | stati del cruscotto al governo che mancavano, ciascuno con la sua `Vista` e il `come`: `ultimatum`, `esercizio_provvisorio`, `crisi_provvisorio` cercati giocando come il 05 (gli ultimi due senza mai presentare il bilancio), `dimissioni` e `scelte_fatte` dalla 03, più `anteprima_accogli_03` (vedi sotto) |
 | `15-fondazione.json` | 4, 1, 9 | — | — | 32675 | `Partita::anteprima_fondazione` sull'Italia di oggi coi semi 4, 1, 9 e sull'«Elettorato a destra» (orientamento +1) col seme 4, più i partiti dello scenario coi posti (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 17: aggiunta dal ticket «Cruscotto al governo». Ultimatum ed esercizio provvisorio arrivano tutti e due al seme 1,
+  turno 13 (2030T1), nella seconda legislatura (alleati sinistra, centrosinistra, centro); la crisi in esercizio
+  provvisorio al seme 14, turno 37, con cinque ministeri in interim e `bilancio.presentabile` vero. `scelte_fatte` è la
+  03 con `Rinvia` su Ambiente (`rinviata` diventa vera subito) e `RispondiEvento` «debito» (`scelta` 1). Il fondo di
+  riserva rimasto è 0 nella 03 e nella 04, mentre il default degli eventi è «attingere al fondo».
 
 - 15: aggiunta dal ticket «Fondazione». Un'anteprima costa circa 43 ms in release. Il sondaggio è rumoroso: a 1,5
   la quota attesa va dal 10,9% (seme 4) al 14,5% (seme 9), al posto medio 4,5 dal 19,2% al 23,3%. Il Centro non è mai

@@ -5,8 +5,8 @@ use std::path::Path;
 
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
-use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
 use sim_core::riepilogo::riepilogo;
+use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, VERSIONE_SCHEMA};
 
 type Esito<T> = Result<T, String>;
@@ -312,9 +312,7 @@ fn riepilogo_di(d: &DatiGioco, etichetta: &str, s: &SuMisura) -> serde_json::Val
 fn editor(d: &DatiGioco) -> Esito<Uscita> {
     let sc = d.scenario();
     let c = &sc.cursori;
-    let ingresso = |nome: &str, unita: &str, i: &sim_core::scenario::Ingresso| {
-        serde_json::json!({ "nome": nome, "unita": unita, "valore": i.valore, "min": i.min, "max": i.max })
-    };
+    let ingresso = |nome: &str, unita: &str, i: &sim_core::scenario::Ingresso| serde_json::json!({ "nome": nome, "unita": unita, "valore": i.valore, "min": i.min, "max": i.max });
     let cursori = vec![
         ingresso("debito_pil", "% del PIL", &sc.debito_pil),
         ingresso("disoccupazione", "%", &sc.disoccupazione),
@@ -359,25 +357,47 @@ fn editor(d: &DatiGioco) -> Esito<Uscita> {
     };
     let prove = [
         ("base", base.clone()),
-        ("debito al tetto", con("Debito al tetto", &|s| s.cursori.debito_pil = 160.0)),
-        ("crisi", con("Crisi", &|s| {
-            s.cursori.debito_pil = 160.0;
-            s.cursori.inflazione = 8.0;
-            s.cursori.disoccupazione = 11.6;
-            s.cursori.ricchezza = -20.0;
-        })),
-        ("elettorato a sinistra", con("Elettorato a sinistra", &|s| s.cursori.orientamento = -1.0)),
-        ("elettorato a destra", con("Elettorato a destra", &|s| s.cursori.orientamento = 1.0)),
-        ("proporzionale puro", con("Proporzionale puro", &|s| {
-            s.cursori.legge_elettorale = "proporzionale_puro".into();
-        })),
-        ("detrazione al 110", con("Superbonus", &|s| {
-            s.disposizioni.insert("detrazione_edilizia".into(), "110".into());
-        })),
-        ("legge elettorale incoerente", con("Incoerente", &|s| {
-            // Premio alla coalizione senza coalizioni.
-            s.disposizioni.insert("coalizioni".into(), "no".into());
-        })),
+        (
+            "debito al tetto",
+            con("Debito al tetto", &|s| s.cursori.debito_pil = 160.0),
+        ),
+        (
+            "crisi",
+            con("Crisi", &|s| {
+                s.cursori.debito_pil = 160.0;
+                s.cursori.inflazione = 8.0;
+                s.cursori.disoccupazione = 11.6;
+                s.cursori.ricchezza = -20.0;
+            }),
+        ),
+        (
+            "elettorato a sinistra",
+            con("Elettorato a sinistra", &|s| s.cursori.orientamento = -1.0),
+        ),
+        (
+            "elettorato a destra",
+            con("Elettorato a destra", &|s| s.cursori.orientamento = 1.0),
+        ),
+        (
+            "proporzionale puro",
+            con("Proporzionale puro", &|s| {
+                s.cursori.legge_elettorale = "proporzionale_puro".into();
+            }),
+        ),
+        (
+            "detrazione al 110",
+            con("Superbonus", &|s| {
+                s.disposizioni
+                    .insert("detrazione_edilizia".into(), "110".into());
+            }),
+        ),
+        (
+            "legge elettorale incoerente",
+            con("Incoerente", &|s| {
+                // Premio alla coalizione senza coalizioni.
+                s.disposizioni.insert("coalizioni".into(), "no".into());
+            }),
+        ),
     ];
     let riepiloghi: Vec<_> = prove.iter().map(|(e, s)| riepilogo_di(d, e, s)).collect();
     // ponytail: nove passi per cursore, uno alla volta dalla base; i cursori mossi insieme il
@@ -385,7 +405,10 @@ fn editor(d: &DatiGioco) -> Esito<Uscita> {
     let mut griglia = serde_json::Map::new();
     for c in &cursori {
         let nome = c["nome"].as_str().unwrap_or_default().to_string();
-        let (lo, hi) = (c["min"].as_f64().unwrap_or(0.0), c["max"].as_f64().unwrap_or(0.0));
+        let (lo, hi) = (
+            c["min"].as_f64().unwrap_or(0.0),
+            c["max"].as_f64().unwrap_or(0.0),
+        );
         let passi: Vec<_> = (0..9)
             .map(|k| {
                 let v = lo + (hi - lo) * f64::from(k) / 8.0;
@@ -399,7 +422,10 @@ fn editor(d: &DatiGioco) -> Esito<Uscita> {
                     "eta_mediana" => x.eta_mediana = v,
                     _ => x.orientamento = v,
                 }
-                let r = d.con_su_misura(&s).map(|x| riepilogo(&x)).map_err(|e| e.to_string());
+                let r = d
+                    .con_su_misura(&s)
+                    .map(|x| riepilogo(&x))
+                    .map_err(|e| e.to_string());
                 r.map(|r| serde_json::json!({ "valore": v, "riepilogo": r }))
             })
             .collect::<Esito<_>>()?;
@@ -414,7 +440,10 @@ fn editor(d: &DatiGioco) -> Esito<Uscita> {
     Ok(Uscita {
         nome: "14-editor.json",
         json: serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
-        nota: format!("{} riepiloghi di prova e nove passi per cursore; scenari salvati: quattro prove", prove.len()),
+        nota: format!(
+            "{} riepiloghi di prova e nove passi per cursore; scenari salvati: quattro prove",
+            prove.len()
+        ),
     })
 }
 
@@ -439,13 +468,134 @@ fn fondazione(d: &DatiGioco) -> Esito<Uscita> {
         let t = std::time::Instant::now();
         let a = Partita::anteprima_fondazione(dati, seme);
         ms.push(t.elapsed().as_millis());
-        anteprime.insert(etichetta.into(), serde_json::to_value(&a).map_err(|e| e.to_string())?);
+        anteprime.insert(
+            etichetta.into(),
+            serde_json::to_value(&a).map_err(|e| e.to_string())?,
+        );
     }
     let json = serde_json::json!({ "partiti": partiti, "anteprime": anteprime });
     Ok(Uscita {
         nome: "15-fondazione.json",
         json: serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
         nota: format!("quattro anteprime, ms {ms:?}"),
+    })
+}
+
+/// Il governo del 03 (seme 4 a 4,5, coalizione con la destra, due chiusure).
+fn governo_03(d: &DatiGioco) -> Esito<Partita> {
+    let mut p = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut p)?;
+    p.chiudi_turno();
+    p.chiudi_turno();
+    Ok(p)
+}
+
+/// Primo turno al governo, sui semi in fila, dove `cerca` vale; `bilancio` presenta la bozza a
+/// ogni turno che la offre, altrimenti la salta (esercizio provvisorio).
+fn cerca_al_governo(
+    d: &DatiGioco,
+    bilancio: bool,
+    cerca: impl Fn(&sim_core::Vista) -> bool,
+) -> Esito<Option<(u64, Partita)>> {
+    for seme in SEMI {
+        let mut p = fonda(d, seme, 4.5)?;
+        con_la_destra(&mut p)?;
+        p.chiudi_turno();
+        p.chiudi_turno();
+        for _ in 0..TURNI {
+            if p.finita() {
+                break;
+            }
+            if p.governa() {
+                let v = p.vista();
+                if cerca(&v) {
+                    return Ok(Some((seme, p)));
+                }
+                if let Some(b) = p.bozza_bilancio().filter(|_| bilancio && !v.crisi) {
+                    comanda(&mut p, Comando::PresentaBilancio { bilancio: b })?;
+                }
+            }
+            p.chiudi_turno();
+        }
+    }
+    Ok(None)
+}
+
+/// Gli stati del cruscotto al governo che le Viste 01-08 non hanno: ultimatum, esercizio
+/// provvisorio (anche in crisi), dimissioni annunciate, proposta rinviata, e l'anteprima di
+/// `Accogli` sulla proposta di fondi del 03.
+fn cruscotto(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let note = std::cell::RefCell::new(Vec::new());
+    let metti_nota = |chiave: &str| note.borrow_mut().push(format!("{chiave}: NON RAGGIUNTO"));
+    let mut metti = |chiave: &str, p: &Partita, come: String| -> Esito<()> {
+        let v = p.vista();
+        note.borrow_mut().push(format!(
+            "{chiave}: {come}, turno {} {}T{}",
+            v.turno, v.data.anno, v.data.trimestre
+        ));
+        let val = serde_json::json!({ "come": come, "vista": v });
+        out.insert(chiave.into(), val);
+        Ok(())
+    };
+    let p03 = governo_03(d)?;
+    let anteprima =
+        (p03.anteprima_accogli("infrastrutture_trasporti")).map_err(|e| e.to_string())?;
+    let mut q = p03.clone();
+    comanda(&mut q, Comando::Dimettiti)?;
+    metti("dimissioni", &q, "il 03, poi Dimettiti".into())?;
+    let mut q = p03.clone();
+    comanda(
+        &mut q,
+        Comando::Rinvia {
+            dicastero: "ambiente_energia".into(),
+        },
+    )?;
+    comanda(
+        &mut q,
+        Comando::RispondiEvento {
+            evento: 0,
+            opzione: "debito".into(),
+        },
+    )?;
+    metti(
+        "scelte_fatte",
+        &q,
+        "il 03, poi Rinvia su Ambiente e RispondiEvento «debito»".into(),
+    )?;
+    type Cerca = fn(&sim_core::Vista) -> bool;
+    let cerche: [(&str, bool, Cerca); 3] = [
+        ("ultimatum", true, |v| {
+            !v.crisi && v.alleati.iter().any(|a| a.ultimatum)
+        }),
+        ("esercizio_provvisorio", false, |v| {
+            !v.crisi && v.bilancio.esercizio_provvisorio
+        }),
+        ("crisi_provvisorio", false, |v| {
+            v.crisi && v.bilancio.esercizio_provvisorio
+        }),
+    ];
+    for (chiave, bilancio, cerca) in cerche {
+        match cerca_al_governo(d, bilancio, cerca)? {
+            Some((s, p)) => {
+                let come = if bilancio {
+                    "la bozza a ogni bilancio"
+                } else {
+                    "bilancio mai presentato"
+                };
+                metti(chiave, &p, format!("seme {s}, come il 05, {come}"))?;
+            }
+            None => metti_nota(chiave),
+        }
+    }
+    out.insert(
+        "anteprima_accogli_03".into(),
+        serde_json::to_value(&anteprima).map_err(|e| e.to_string())?,
+    );
+    Ok(Uscita {
+        nome: "17-cruscotto.json",
+        json: serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?,
+        nota: note.into_inner().join("; "),
     })
 }
 
@@ -479,6 +629,7 @@ fn esegui() -> Esito<()> {
     uscite.push(edicola(&d)?);
     uscite.push(editor(&d)?);
     uscite.push(fondazione(&d)?);
+    uscite.push(cruscotto(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

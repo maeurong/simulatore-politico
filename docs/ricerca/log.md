@@ -255,3 +255,7 @@ Decisioni di Mario sul ticket 14 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | fondazione
 
 Decisioni di Mario sul ticket 15 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col posto scelto nel dettaglio a lato, coalizioni possibili come elenco dei disponibili, nota fissa sul sondaggio rumoroso, fondazione diretta senza conferma.
+
+## [2026-11-11] query | cruscotto al governo
+
+Decisioni di Mario sul ticket 17 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Ordine del giorno col dettaglio a lato, default scritto su ogni riga, conferma sul posto per «Dimettiti», fondo di riserva rimasto accanto al costo dell'evento.

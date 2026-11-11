@@ -410,6 +410,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/15-fondazione.md`, un giro su un prototip
 - **Coalizioni possibili come elenco dei disponibili**, senza quota della coalizione né seggi: l'anteprima non li porta e il core non cambia.
 - **Rumore dichiarato senza numeri:** la quota attesa è la media degli istituti e varia di qualche punto da seme a seme; una riga fissa dice che è un sondaggio.
 - **Fondare è diretto**, senza conferma; nessun posto scelto all'apertura.
+## 2026-11-11: cruscotto al governo
+Ticket `.scratch/v1-piano-11-ui/issues/17-cruscotto-al-governo.md`, un giro su un prototipo con tre forme e dieci stati giocati.
+
+- **Forma A · Ordine del giorno:** evento o crisi in testa, poi righe per gruppo con le azioni sulla riga; la riga scelta nel dettaglio a lato, con l'anteprima del decreto per le proposte di fondi.
+- **Il default su ogni riga**, oltre al conto delle scelte al default nella cornice.
+- **«Dimettiti» con la conferma sul posto:** il core non lo ritira, quindi vale come le altre tre conferme dell'ossatura.
+- **Fondo di riserva accanto al costo dell'evento:** paga solo fino al residuo, che nelle partite giocate è quasi sempre zero.
 
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
