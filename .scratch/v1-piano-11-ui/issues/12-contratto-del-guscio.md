@@ -40,7 +40,7 @@ Deciso con Mario l'11/11/2026 in un giro, sul guscio di main a `894274d` (`app/s
 | 11d | `bozza_bilancio`, `indicizza`, `riepilogo_bilancio`, `riepilogo_presentato` |
 | 11e | `anteprima_sfiducia` |
 | 11f | `registro`, che porta il piano di core |
-| 11g | `menu_elettorale`, `costo_dirotta`: li lascia a questo ticket la spec del core (`:28`); corregge il «nessuno» di [Fette](10-fette.md) |
+| 11g | `menu_elettorale`, `costo_dirotta`: li lascia a questo ticket la spec del core (`:28`); corregge il «nessuno» di [Fette](10-fette.md). Più `anteprima_proposta`, dall'11/11/2026 ([Aula e calendario](19-aula-e-calendario.md)) |
 
 ### Scartato
 

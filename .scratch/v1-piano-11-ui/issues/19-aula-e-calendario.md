@@ -37,12 +37,12 @@ Nata dal primo giro: Mario ha scelto l'ossatura di A, voleva l'emiciclo di B («
 
 ### Rimandi
 
-- **Anteprima della proposta d'opposizione — al core.** All'opposizione `Partita::anteprima` rifiuta («non governi: sei all'opposizione»): la proposta per il posto riservato si scriverebbe senza costo, linee né forbice, che arrivano solo quando è già in calendario. Mario sceglie il rimando: l'anteprima vale anche per la proposta d'opposizione, come quinta voce minore della PR delle esposizioni del piano di core «esito e Vista completa»; l'Aula la mostra in 11g. Fino ad allora, nella bozza all'opposizione il rifiuto si legge al posto dell'anteprima.
+- **Anteprima della proposta d'opposizione — al core.** All'opposizione `Partita::anteprima` rifiuta («non governi: sei all'opposizione»): la proposta per il posto riservato si scriverebbe senza costo, linee né forbice, che arrivano solo quando è già in calendario. Mario sceglie il rimando: l'anteprima vale anche per la proposta d'opposizione, come quinta voce minore della PR delle esposizioni del piano di core «esito e Vista completa»; l'Aula la mostra in 11g. Fino ad allora, nella bozza all'opposizione il rifiuto si legge al posto dell'anteprima. Il rimando è nella spec e nel piano dall'11/11/2026 (PR #50, `adba86f`): metodo `anteprima_proposta` nel Task 16, e il suo passacarte va a 11g con quelli del [Contratto del guscio](12-contratto-del-guscio.md).
 - **Posti in calendario e combinazioni spente — a 11g**, già decisi ([Dati senza piano](11-dati-senza-piano.md), [Contratto del guscio](12-contratto-del-guscio.md)): il prototipo conta i posti da sé solo per mostrarli, segnati «11g»; i gradini impossibili della legge elettorale li spegne `menu_elettorale`.
 
 ### Guscio e dati
 
-Nessun dato nuovo oltre ai rimandi, nessun passacarte nuovo. Le scelte passano da `comanda` (`PresentaLegge`, `PresentaProposta`, `Emendamento`, `PoniFiducia`, `Linea`, `PromuoviReferendum`, `InvitaAstensione`, `Confermativo`); l'anteprima della bozza da `anteprima`, che il guscio ha già (`app/src-tauri/src/lib.rs:379`).
+Nessun dato nuovo oltre ai rimandi. Un passacarte nuovo, `anteprima_proposta`, in 11g. Le scelte passano da `comanda` (`PresentaLegge`, `PresentaProposta`, `Emendamento`, `PoniFiducia`, `Linea`, `PromuoviReferendum`, `InvitaAstensione`, `Confermativo`); l'anteprima della bozza da `anteprima`, che il guscio ha già (`app/src-tauri/src/lib.rs:379`).
 
 ### Stranezze notate
 
