@@ -34,11 +34,18 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `14-editor.json` | — | — | — | 204849 | `riepilogo()` di `sim-core::riepilogo` su `con_su_misura()`: intervalli dei sei cursori, leggi elettorali coi nove parametri, 46 disposizioni coi gradini (35 ordinarie, 2 costituzionali, 9 elettorali), otto scenari di prova e nove passi per cursore (vedi sotto) |
 | `17-cruscotto.json` | 4, 1, 14 | 4,5 | varie | 673154 | stati del cruscotto al governo che mancavano, ciascuno con la sua `Vista` e il `come`: `ultimatum`, `esercizio_provvisorio`, `crisi_provvisorio` cercati giocando come il 05 (gli ultimi due senza mai presentare il bilancio), `dimissioni` e `scelte_fatte` dalla 03, più `anteprima_accogli_03` (vedi sotto) |
 | `15-fondazione.json` | 4, 1, 9 | — | — | 32675 | `Partita::anteprima_fondazione` sull'Italia di oggi coi semi 4, 1, 9 e sull'«Elettorato a destra» (orientamento +1) col seme 4, più i partiti dello scenario coi posti (vedi sotto) |
+| `19-aula.json` | 4, 2 | 4,5 / 1,5 | 2-4 | 838325 | stati dell'Aula che mancavano, ciascuno con `come` e `vista`: `piena` (il 03 con `PresentaLegge` della legge elettorale «proporzionale al 3%», della costituzionale più votata e della riforma più lontana dalla destra), `dopo_voto`, `seconda_deliberazione`, `dopo_elettorale` (chiusure successive, bilancio presentato), `opposizione_libero` e `opposizione_proposta` (seme 2 a 1,5, `PresentaProposta` e `Linea`), più `anteprima_elettorale`, `anteprima_riforma` e due rifiuti veri (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 19: aggiunta dal ticket «Aula e calendario». Due rifiuti veri: una seconda costituzionale con quella in esame dà
+  «calendario pieno»; `anteprima` all'opposizione dà «non governi: sei all'opposizione» (niente anteprima della proposta).
+  La costituzionale entra con la prima deliberazione già votata a fine del turno di presentazione; i 300 e 150 passano alla
+  prima (219 sì, sotto i due terzi) e cadono alla seconda: il referendum confermativo non arriva giocando (`referendum`:
+  NON RAGGIUNTO). La legge elettorale approvata scrive «L. 1/2027» sulle disposizioni che cambia.
 
 - 17: aggiunta dal ticket «Cruscotto al governo». Ultimatum ed esercizio provvisorio arrivano tutti e due al seme 1,
   turno 13 (2030T1), nella seconda legislatura (alleati sinistra, centrosinistra, centro); la crisi in esercizio

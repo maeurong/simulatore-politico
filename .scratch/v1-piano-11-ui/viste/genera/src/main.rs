@@ -5,6 +5,7 @@ use std::path::Path;
 
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
+use sim_core::parlamento::ValoreProposto;
 use sim_core::riepilogo::riepilogo;
 use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, VERSIONE_SCHEMA};
@@ -599,6 +600,230 @@ fn cruscotto(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Il gradino più lontano da `verso` fra quelli non in vigore delle disposizioni ordinarie.
+fn gradino_lontano(v: &sim_core::Vista, verso: f64) -> Option<ValoreProposto> {
+    (v.disposizioni.iter())
+        .filter(|x| matches!(x.norma, sim_core::disposizioni::Norma::Ordinaria))
+        .filter(|x| !(v.calendario.iter()).any(|m| m.valori.iter().any(|w| w.disposizione == x.id)))
+        .flat_map(|x| {
+            (x.gradini.iter())
+                .filter(|g| g.id != x.in_vigore && !g.bloccato && x.in_arrivo.is_empty())
+                .filter_map(|g| g.posizione.map(|p| (x.id.clone(), g.id.clone(), p)))
+        })
+        .max_by(|a, b| (a.2 - verso).abs().total_cmp(&(b.2 - verso).abs()))
+        .map(|(disposizione, gradino, _)| ValoreProposto {
+            disposizione,
+            gradino,
+        })
+}
+
+fn valori(coppie: &[(&str, &str)]) -> Vec<ValoreProposto> {
+    (coppie.iter())
+        .map(|(d, g)| ValoreProposto {
+            disposizione: (*d).into(),
+            gradino: (*g).into(),
+        })
+        .collect()
+}
+
+/// Gli stati dell'Aula che le Viste 01-08 non hanno: calendario pieno con legge elettorale,
+/// norma costituzionale e riforma con emendamenti degli alleati; le deliberazioni e i voti dopo;
+/// all'opposizione il posto riservato libero, poi occupato dalla proposta del giocatore, e una
+/// linea scelta. Più le anteprime della legge elettorale e della riforma.
+fn aula(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let mut metti = |out: &mut serde_json::Map<String, serde_json::Value>,
+                     chiave: &str,
+                     p: &Partita,
+                     come: String| {
+        let v = p.vista();
+        note.push(format!(
+            "{chiave}: {come}, turno {} {}T{}",
+            v.turno, v.data.anno, v.data.trimestre
+        ));
+        out.insert(
+            chiave.into(),
+            serde_json::json!({ "come": come, "vista": v }),
+        );
+    };
+    // L'impostazione pronta «proporzionale al 3%» (`leggi_elettorali` dei dati), meno ciò che è già in vigore.
+    let elettorale = valori(&[
+        ("coalizioni", "no"),
+        ("soglia_coalizione", "0"),
+        ("ripescaggio", "no"),
+        ("premio", "nessuno"),
+        ("soglia_premio", "4000"),
+        ("taglia_premio", "875"),
+        ("tetto", "nessuno"),
+    ]);
+    let p03 = governo_03(d)?;
+    // La norma costituzionale con più sì attesi alla Camera, perché arrivi alla seconda.
+    let costituzionale = [
+        ("durata_legislatura", "4"),
+        ("durata_legislatura", "6"),
+        ("numero_parlamentari", "300_150"),
+        ("numero_parlamentari", "630_315"),
+    ]
+    .into_iter()
+    .map(|c| valori(&[c]))
+    .max_by_key(|v| p03.anteprima(v).map(|a| a.forbice.camera[0]).unwrap_or(0))
+    .ok_or("nessuna costituzionale")?;
+    let riforma = gradino_lontano(&p03.vista(), 5.5).ok_or("nessun gradino lontano")?;
+    let ant_el = p03.anteprima(&elettorale).map_err(|e| e.to_string())?;
+    let ant_ri = (p03.anteprima(std::slice::from_ref(&riforma))).map_err(|e| e.to_string())?;
+    let mut p = p03.clone();
+    for (nome, v) in [
+        ("elettorale", &elettorale),
+        ("costituzionale", &costituzionale),
+        ("riforma", &vec![riforma.clone()]),
+    ] {
+        comanda(&mut p, Comando::PresentaLegge { valori: v.clone() })
+            .map_err(|e| format!("PresentaLegge {nome}: {e}"))?;
+    }
+    let rifiuto = p
+        .comanda(Comando::PresentaLegge {
+            valori: valori(&[("durata_legislatura", "6")]),
+        })
+        .err()
+        .map(|e| e.to_string());
+    let base = format!(
+        "il 03, poi PresentaLegge proporzionale al 3%, {}={}, {}={}",
+        costituzionale[0].disposizione,
+        costituzionale[0].gradino,
+        riforma.disposizione,
+        riforma.gradino
+    );
+    metti(&mut out, "piena", &p, base.clone());
+    // Turni dopo: bilancio presentato quando c'è, emendamenti lasciati al default.
+    let mut q = p.clone();
+    let (mut dopo_voto, mut seconda) = (false, false);
+    for i in 1..=8 {
+        q.chiudi_turno();
+        if q.finita() || !q.governa() {
+            break;
+        }
+        let v = q.vista();
+        if !dopo_voto && !v.esiti.is_empty() {
+            dopo_voto = true;
+            metti(
+                &mut out,
+                "dopo_voto",
+                &q,
+                format!("{base}, poi {i} chiusure"),
+            );
+        }
+        let c = sim_core::parlamento::FormaMisura::Costituzionale;
+        if !seconda
+            && v.calendario
+                .iter()
+                .any(|m| m.forma == c && m.deliberazione == 2)
+        {
+            seconda = true;
+            metti(
+                &mut out,
+                "seconda_deliberazione",
+                &q,
+                format!("{base}, poi {i} chiusure"),
+            );
+        }
+        let el = sim_core::parlamento::FormaMisura::Elettorale;
+        if !out.contains_key("dopo_elettorale")
+            && v.esiti.iter().any(|e| e.forma == el && e.approvata)
+        {
+            metti(
+                &mut out,
+                "dopo_elettorale",
+                &q,
+                format!("{base}, poi {i} chiusure"),
+            );
+        }
+        if !v.referendum.is_empty() {
+            metti(
+                &mut out,
+                "referendum",
+                &q,
+                format!("{base}, poi {i} chiusure"),
+            );
+            break;
+        }
+        if let Some(b) = q.bozza_bilancio() {
+            comanda(&mut q, Comando::PresentaBilancio { bilancio: b })?;
+        }
+    }
+    // All'opposizione: un seme a 1,5 col posto riservato libero.
+    for seme in SEMI {
+        let mut p = fonda(d, seme, 1.5)?;
+        p.chiudi_turno();
+        p.chiudi_turno();
+        let v = p.vista();
+        if p.legislatura().fase != Fase::Ordinaria || p.governa() || !v.posto_riservato {
+            continue;
+        }
+        let come = format!("seme {seme}, fonda a 1,5, nessuna coalizione, chiudi ×2");
+        metti(&mut out, "opposizione_libero", &p, come.clone());
+        let proposta = gradino_lontano(&v, 7.0).ok_or("nessuna proposta")?;
+        let ant = p.anteprima(std::slice::from_ref(&proposta));
+        comanda(
+            &mut p,
+            Comando::PresentaProposta {
+                valori: vec![proposta.clone()],
+            },
+        )?;
+        if let Some(m) = p.vista().calendario.iter().find(|m| m.promotore.is_none()) {
+            comanda(
+                &mut p,
+                Comando::Linea {
+                    misura: m.id,
+                    si: Some(false),
+                },
+            )?;
+        }
+        let come = format!(
+            "{come}, poi PresentaProposta {}={} e Linea no sulla prima del governo",
+            proposta.disposizione, proposta.gradino
+        );
+        metti(&mut out, "opposizione_proposta", &p, come);
+        match ant {
+            Ok(a) => out.insert(
+                "anteprima_proposta".into(),
+                serde_json::to_value(&a).map_err(|e| e.to_string())?,
+            ),
+            Err(e) => out.insert("anteprima_proposta_rifiuto".into(), e.to_string().into()),
+        };
+        break;
+    }
+    for (chiave, a) in [
+        ("anteprima_elettorale", &ant_el),
+        ("anteprima_riforma", &ant_ri),
+    ] {
+        out.insert(
+            chiave.into(),
+            serde_json::to_value(a).map_err(|e| e.to_string())?,
+        );
+    }
+    out.insert(
+        "rifiuto_calendario_costituzionale".into(),
+        serde_json::json!(rifiuto),
+    );
+    for k in [
+        "dopo_voto",
+        "seconda_deliberazione",
+        "dopo_elettorale",
+        "referendum",
+        "opposizione_libero",
+    ] {
+        if !out.contains_key(k) {
+            note.push(format!("{k}: NON RAGGIUNTO"));
+        }
+    }
+    Ok(Uscita {
+        nome: "19-aula.json",
+        json: serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -630,6 +855,7 @@ fn esegui() -> Esito<()> {
     uscite.push(editor(&d)?);
     uscite.push(fondazione(&d)?);
     uscite.push(cruscotto(&d)?);
+    uscite.push(aula(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

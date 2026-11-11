@@ -418,5 +418,12 @@ Ticket `.scratch/v1-piano-11-ui/issues/17-cruscotto-al-governo.md`, un giro su u
 - **«Dimettiti» con la conferma sul posto:** il core non lo ritira, quindi vale come le altre tre conferme dell'ossatura.
 - **Fondo di riserva accanto al costo dell'evento:** paga solo fino al residuo, che nelle partite giocate è quasi sempre zero.
 
+## 2026-11-11: aula e calendario
+Ticket `.scratch/v1-piano-11-ui/issues/19-aula-e-calendario.md`, due giri su un prototipo con tre forme, poi una quarta mista, e dieci stati giocati.
+
+- **Forma D · Misto:** l'ossatura dell'ordine dei lavori (calendario a posti in testa, quattro schede, dettaglio a lato), l'emiciclo nel dettaglio della misura, le disposizioni a righe chiuse che si aprono sui gradini una alla volta. Il codice tutto aperto era più completo ma troppo per un giocatore medio.
+- **Questione di fiducia con la conferma sul posto**, anche sul cruscotto: il core non la ritira e l'intesa cala subito.
+- **Anteprima della proposta d'opposizione al core:** oggi `anteprima` la rifiuta a chi non governa, e la proposta si scriverebbe alla cieca.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
