@@ -226,3 +226,7 @@ Ticket research 02 della mappa del piano 11. Nuova pagina [[mappa-svg-delle-regi
 
 Decisioni di Mario sul ticket 11 del piano 11 archiviate in `sintesi/decisioni.md`: piano di core «esito e Vista completa», piano strutturale a parte, forma dei dati regionali, dei gruppi e dei cantieri finiti.
 
+
+## [2026-11-11] query | ossatura e navigazione della UI
+
+Decisioni di Mario sul ticket 07 del piano 11 archiviate in `sintesi/decisioni.md`: cornice fissa con sommario di dieci sezioni, cruscotto corto, sezioni barrate col motivo, tono grave a tutto il turno, nessuna modale, edicola all'avvio, diciotto schermate da prototipare. Prese su un prototipo navigabile, non a parole.

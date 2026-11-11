@@ -406,3 +406,29 @@ _Evita_: anteprima (che è quella di una misura), proiezione (per i seggi)
 **PIL potenziale**:
 Quanto il paese può produrre senza surriscaldarsi; cresce piano, e lo spostano infrastrutture, scuola, giustizia, energia e demografia.
 _Evita_: crescita (da sola)
+
+## Interfaccia
+
+**Cornice**:
+Ciò che resta a schermo in ogni sezione di una partita: lo stato del giocatore, la data, i turni al voto, i tre indicatori sintetici, il sommario e la chiusura del turno.
+_Evita_: barra, header, HUD
+
+**Sommario**:
+L'elenco delle sezioni dentro la cornice, sempre con le stesse voci nello stesso posto; una sezione che nel turno non ha niente da mostrare è barrata e dice perché.
+_Evita_: menu, navigazione, schede
+
+**Sezione**:
+Una delle pagine intere del sommario: prima pagina, cruscotto, governo, aula, conti, bilancio, paese, partiti, campagna, registro.
+_Evita_: schermata (che è qualunque pagina, anche fuori dalla partita), pannello, tab
+
+**Prima pagina**:
+La sezione che mostra l'esito del turno come prima pagina di «Il Pungolo»; si legge e basta, le scelte stanno altrove.
+_Evita_: esito (che è il contenuto, non la pagina), home
+
+**Cruscotto**:
+La sezione di casa del turno: l'evento aperto e tutto ciò che nel turno chiede una scelta, ciascuno col rimando alla sua sezione. Dopo il voto al suo posto c'è la trattativa, a partita finita l'eredità.
+_Evita_: dashboard, scrivania, plancia
+
+**Edicola**:
+La schermata fuori dalla partita, che il gioco apre all'avvio: partite in corso, partita nuova, albo delle partite.
+_Evita_: menu principale, home, lobby

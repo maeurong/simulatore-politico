@@ -331,6 +331,21 @@ Ticket `.scratch/v1-piano-11-ui/issues/11-dati-senza-piano.md`, sull'inventario 
 - **Cantieri finiti:** il segno sulla mappa resta fino al voto successivo.
 - **Rimandato al brainstorming del piano di core:** cosa rende critica una voce e come si scelgono le sette in evidenza.
 
+## 2026-11-11: ossatura e navigazione della UI
+
+Ticket `.scratch/v1-piano-11-ui/issues/07-ossatura-e-navigazione.md`, deciso in tre giri su un prototipo navigabile (`.scratch/v1-piano-11-ui/prototipi/07-ossatura.prototype.html`).
+
+- **Cornice fissa, sommario di sezioni, dettaglio a lato.** Supera il cruscotto snodo del prototipo della direzione artistica, che reggeva tre schermate e non dieci. I tre indicatori sintetici restano a schermo anche sulla prima pagina, come striscia sopra la testata.
+- **Dieci sezioni sempre nello stesso posto:** Prima pagina, Cruscotto, Governo, Aula, Conti, Bilancio, Paese, Partiti, Campagna, Registro. Quella che non vale nel turno è barrata col motivo, non tolta. Schema dello Stato, impostazioni ed edicola stanno fuori dal sommario.
+- **Cruscotto corto:** evento aperto e scelte del turno, coi rimandi. Il borsino dei ministri ha una sezione sua, Governo, barrata quando il giocatore non governa; bilancio e campagna hanno le loro, accese solo nei loro turni.
+- **La casa cambia nome con lo stato:** Cruscotto al governo, in crisi, all'opposizione e al turno zero; Trattativa dopo il voto; Eredità a partita finita. All'opposizione «Avanti fino a novità» sta sopra «Chiudi il turno».
+- **Tono grave a tutto il turno**, in ogni schermata, finché l'evento è aperto ([[tono-giocoso-su-temi-seri]]).
+- **Nessuna finestra modale:** la chiusura del turno non chiede conferma; le conferme di ciò che distrugge avvengono sul posto; i dettagli si aprono a lato ([[feedback-visivo-dello-stato]]).
+- **Edicola all'avvio**, sempre; **acquisti d'informazione dove si legge il loro risultato**; l'evento si risolve sul cruscotto, non in prima pagina.
+- **Dati che la spec lasciava senza schermata** hanno un posto: sondaggio in Paese, grandezze e situazioni in Conti, asse, casse e intesa in Partiti, disposizioni in Aula.
+- **Diciotto schermate da prototipare**, una per ticket (13-30 della mappa).
+- **Metodo:** le proposte grafiche a Mario vanno su un prototipo nel browser, non descritte a parole.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
