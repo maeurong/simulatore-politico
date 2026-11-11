@@ -11,4 +11,6 @@ Com'è fatta la fondazione del partito? Nome e posto su uno dei sei mezzi punti 
 
 Posto nell'ossatura e regole comuni (cornice, sommario, dettaglio a lato, conferme sul posto, tono grave a tutto il turno): [Ossatura e navigazione](07-ossatura-e-navigazione.md). Un prototipo HTML usa e getta in `.scratch/v1-piano-11-ui/prototipi/`, nutrito con le [Viste campione](06-viste-campione.md), Mario sceglie fra varianti.
 
+Dall'11/11/2026 ([Contratto del guscio](12-contratto-del-guscio.md)): la fondazione si nutre di `anteprima_fondazione` (istogramma, risultato atteso, disponibilità), sullo stesso seme della partita che nasce; `riepilogo_scenario` resta all'editor.
+
 ## Answer

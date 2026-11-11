@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: []
-aggiornato: 2026-11-10
+aggiornato: 2026-11-11
 ---
 # Decisioni di Mario
 
@@ -379,6 +379,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/10-fette.md`, due giri sull'inventario de
 - **Schermate a dati parziali subito**; ogni vuoto ha la fetta che lo riempie. La UI lascia un posto vuoto, non lo riempie deducendo: per questo niente prima pagina provvisoria dai frammenti.
 - **Pronta** con dati su main, prototipi chiusi, Viste campione rigenerate e fetta precedente fusa; solo l'esito può passare avanti, perché scrive nelle sue sezioni.
 - **Passacarte con la schermata che li chiama**, mai in anticipo. Il piano strutturale riveduto non ha una fetta: il suo riquadro lo riempie la prima fetta pianificata dopo il suo piano di core.
+
+## 2026-11-11: contratto del guscio
+Ticket `.scratch/v1-piano-11-ui/issues/12-contratto-del-guscio.md`, un giro sul guscio di main e sulla spec del piano di core «esito e Vista completa».
+
+- **Errori in due specie:** il rifiuto di un comando si mostra sul posto, accanto alla scelta; il guasto (disco, stato interno) nella cornice, e dice che la partita è rimasta com'era.
+- **Seme della fondazione nel guscio**, fra anteprima e fondazione: l'anteprima mostra lo stesso sondaggio della partita che nasce (storia 9). Il core non cambia.
+- **Bozze della UI solo in memoria:** bilancio in composizione, legge, spese di campagna si perdono all'uscita; ciò che è comandato è salvato.
+- **`Fascia` esportata da chi arriva prima** fra la fetta 11b e la PR 2 del core: una riga d'esportazione, niente a runtime.
 
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.

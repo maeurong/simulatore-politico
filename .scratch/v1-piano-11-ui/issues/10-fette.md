@@ -33,7 +33,7 @@ Deciso con Mario l'11/11/2026 in due giri. Parte da [Inventario](01-inventario-v
 | **11d I conti** | [Conti](21-conti.md); [Bilancio](22-bilancio.md) | `bozza_bilancio`, `indicizza`, `riepilogo_bilancio`, `riepilogo_presentato` | main | PDE, conto di controllo, MES, clausola dell'energia, redditi per fascia → 11g; piano strutturale riveduto → rimando agganciato (sotto) |
 | **11e Opposizione e fine** | [Cruscotto all'opposizione](28-cruscotto-all-opposizione.md); [Eredità](30-eredita.md); [Schema dello Stato](29-schema-dello-stato.md) | `anteprima_sfiducia` | main | «Avanti fino a novità», «torna a un turno» dall'eredità → 11f |
 | **11f L'esito** | [Prima pagina](16-prima-pagina.md); [Registro](25-registro.md) con «torna al turno N»; «Avanti fino a novità»; i due avvisi del piano 9; titoli del Pungolo ([Testi del Pungolo](09-testi-del-pungolo.md)) | `registro` (lo porta il piano di core) | PR 1 del core | nessuno |
-| **11g Vista completa** | i pezzi mancanti di Paese, Conti, Partiti, Aula e Governo | nessuno | PR 2 del core | nessuno |
+| **11g Vista completa** | i pezzi mancanti di Paese, Conti, Partiti, Aula e Governo | `menu_elettorale`, `costo_dirotta` ([Contratto del guscio](12-contratto-del-guscio.md)) | PR 2 del core | nessuno |
 
 Paese e Partiti stanno in 11b perché senza sondaggio e senza le casse dei rivali la campagna si gioca alla cieca. Conti e Bilancio fanno fetta a sé per non portare 11c a sei schermate.
 

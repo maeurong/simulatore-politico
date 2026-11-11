@@ -239,3 +239,7 @@ Decisioni di Mario sul ticket 08 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | fette del piano 11
 
 Decisioni di Mario sul ticket 10 del piano 11 archiviate in `sintesi/decisioni.md`: sette fette lungo il percorso di gioco (11a-11e su ciò che main porta già, 11f e 11g dietro le due PR del piano di core «esito e Vista completa»), schermate parziali subito coi vuoti assegnati, passacarte con la schermata che li chiama, quattro condizioni di prontezza.
+
+## [2026-11-11] query | contratto del guscio
+
+Decisioni di Mario sul ticket 12 del piano 11 archiviate in `sintesi/decisioni.md`: errori in due specie (rifiuto sul posto, guasto nella cornice), seme della fondazione tenuto dal guscio fra anteprima e fondazione, bozze della UI solo in memoria, `Fascia` esportata da chi arriva prima fra 11b e la PR 2 del core.
