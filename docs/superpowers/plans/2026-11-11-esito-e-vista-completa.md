@@ -83,7 +83,7 @@ Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponyt
 
 1. **Paralleli accettati:** il 9 accanto alla catena 3 → 8 in un secondo worktree, dal Task 2 fuso (o almeno 8 ∥ 9); 12 ∥ 13 dopo l'11.
 2. **Task spezzati per il dispatch e per la review**, senza riscrivere il piano: 4a/4b, 5a/5b/5c, 6a/6b/6c, come nella riga Architect. Il brief di ogni pezzo copia la riga Architect del suo task.
-3. **«Si dimette» in apertura:** tipo nuovo `governo_dimissionario`, il novantaduesimo (Scelta 21 della spec). Mario lo deve confermare prima del dispatch del Task 2.
+3. **«Si dimette» in apertura:** tipo nuovo `governo_dimissionario`, il novantaduesimo (Scelta 21 della spec). Confermato da Mario l'11/11/2026.
 4. **`al_governo`:** Presidente del Consiglio (Scelta 7).
 5. **Due origini di caduta nella stessa chiusura:** vince la prima; il punto che arriva dopo non sovrascrive. `voto_anticipato` (`crates/sim-core/src/legislatura/mod.rs:77`) si toglie se `Some(VotoAnticipato)` lo copre in tutte le letture; altrimenti la coerenza fra i due entra nel controllo al caricamento.
 6. **Variazioni nate dentro la chiusura:** in testa a `chiudi_turno` si conta quante variazioni del turno corrente ci sono già, per ministro e per alleato. Le voci si scrivono per le altre, alla fine di ogni passo che può variare soddisfazione o intesa, prima di ogni `nuovo_governo` (che azzera, e il conto torna a zero) e a fine chiusura.
