@@ -199,16 +199,16 @@ impl VocePrevisione {
             data,
             pil: forchetta("pil", pil),
             disoccupazione: forchetta("disoccupazione", e.disoccupazione_nazionale(dati)),
-            inflazione: forchetta("inflazione", 100.0 * (prezzi(4) - 1.0)),
+            inflazione: forchetta("inflazione", e.inflazione_annua()),
             debito: forchetta("debito", e.debito_e_disavanzo_pil().0),
         }
     }
 }
 
-/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. Il PIL e
-/// l'inflazione della `stima` non sono confrontabili con quelli della `previsione`: i primi sono
-/// annualizzati sul trimestre prima, come la prima stima, i secondi sono sullo stesso trimestre
-/// dell'anno prima.
+/// La stima del trimestre chiuso e la previsione dei quattro trimestri dal corrente. Con
+/// l'inflazione della `previsione` si confronta l'`inflazione_annua` della `stima`: tutte e due
+/// sullo stesso trimestre dell'anno prima. Il PIL e l'`inflazione` della `stima` no: sono
+/// annualizzati sul trimestre prima, come nella prima stima.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaCentroStudi {
@@ -219,22 +219,23 @@ pub struct VistaCentroStudi {
 impl VistaCentroStudi {
     /// La stima è `vera + quota_errore_centro_studi · errore_stima_<campo> · z`, campo per campo,
     /// con le `z` di `rng` nell'ordine dei campi: un errore suo, così dalla prima
-    /// stima e dalla sua non si ricava il vero.
-    pub(crate) fn stima(dati: &DatiGioco, s: &Statistica, mut rng: Estrattore) -> Stima {
+    /// stima e dalla sua non si ricava il vero. L'inflazione annua non ha una `z` sua
+    /// (`Stima::con_errore`). `e` è l'economia del trimestre di `s`.
+    pub(crate) fn stima(
+        dati: &DatiGioco,
+        s: &Statistica,
+        e: &Economia,
+        mut rng: Estrattore,
+    ) -> Stima {
         // Al turno zero la prima stima è già il vero (`Statistica::iniziale`): un errore in più
         // renderebbe il centro studi peggiore del dato pubblico.
         if s.trimestre == Trimestre::TURNO_ZERO.precedente() {
             return s.vera.clone();
         }
         let q = dati.manopola("quota_errore_centro_studi");
-        let v = &s.vera;
-        let mut errore = |nome: &str, vera: f64| vera + q * dati.manopola(nome) * rng.normale();
-        Stima {
-            crescita_pil: errore("errore_stima_pil", v.crescita_pil),
-            disoccupazione: errore("errore_stima_disoccupazione", v.disoccupazione),
-            inflazione: errore("errore_stima_inflazione", v.inflazione),
-            disavanzo: errore("errore_stima_disavanzo", v.disavanzo),
-        }
+        (s.vera).con_errore(e, |nome, vera| {
+            vera + q * dati.manopola(nome) * rng.normale()
+        })
     }
 }
 
@@ -309,6 +310,27 @@ mod tests {
     use super::*;
     use crate::caso::Caso;
     use crate::dati::dati_base;
+
+    /// Le `z` del centro studi sono le prime quattro dell'estrattore, nell'ordine dei campi:
+    /// l'inflazione annua non ne prende una sua.
+    #[test]
+    fn il_centro_studi_estrae_quattro_normali() {
+        let dati = dati_base();
+        let e = Economia::iniziale(&dati);
+        let mut caso = Caso::nuovo(1);
+        let mut s = Statistica::iniziale(&dati, &e);
+        let reale = e.pil_trimestrale / e.livello_prezzi;
+        s.aggiorna(&dati, &mut caso, &e, reale, Trimestre::TURNO_ZERO);
+        let stima = VistaCentroStudi::stima(&dati, &s, &e, caso.estemporaneo(7));
+        let mut rng = caso.estemporaneo(7);
+        let z: [f64; 4] = std::array::from_fn(|_| rng.normale());
+        let q = dati.manopola("quota_errore_centro_studi");
+        let attesa = |nome: &str, vera: f64, z: f64| vera + q * dati.manopola(nome) * z;
+        let (v, inflazione, disavanzo) =
+            (&s.vera, "errore_stima_inflazione", "errore_stima_disavanzo");
+        assert_eq!(stima.inflazione, attesa(inflazione, v.inflazione, z[2]));
+        assert_eq!(stima.disavanzo, attesa(disavanzo, v.disavanzo, z[3]));
+    }
 
     /// `n` test con le stesse `reazioni`, chiavi `0..n`: la condizione `k` riceve la stessa `z`
     /// a parità di chiave, qualunque siano vere e quote.

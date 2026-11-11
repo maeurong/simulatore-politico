@@ -242,6 +242,21 @@ impl Economia {
         self.pil_potenziale_reale * self.livello_prezzi * 4.0 * MLD
     }
 
+    /// Prezzi sullo stesso trimestre dell'anno prima, in %: i quattro trimestri più recenti di
+    /// `inflazione`, composti.
+    pub fn inflazione_annua(&self) -> f64 {
+        self.inflazione_annua_con(self.inflazione[0])
+    }
+
+    /// `inflazione_annua` con `ultima` al posto dell'inflazione del trimestre più recente: quella
+    /// di chi stima l'ultimo trimestre e conosce i tre prima.
+    pub fn inflazione_annua_con(&self, ultima: f64) -> f64 {
+        let prima: f64 = (self.inflazione[1..4].iter())
+            .map(|i| 1.0 + i / 400.0)
+            .product();
+        100.0 * ((1.0 + ultima / 400.0) * prima - 1.0)
+    }
+
     // Ordine: misure (lette da `Misure`, costruita da `Partita`) → finanza pubblica e spesa
     // obbligatoria → domanda finale per settore → Leontief → IS/Phillips → Okun per regione →
     // tasso BCE → SFC → storico → regole UE → spread.

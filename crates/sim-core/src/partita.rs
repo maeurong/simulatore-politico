@@ -49,7 +49,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 16;
+pub const VERSIONE_SCHEMA: u32 = 17;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -461,15 +461,17 @@ impl Partita {
     }
 
     /// Debito in % del PIL dell'anno mobile (come spread e regole UE), spread in punti base,
-    /// disoccupazione nazionale e inflazione annualizzata dell'economia vera: stessi campi al
-    /// turno zero e a fine partita.
+    /// disoccupazione nazionale dell'economia vera e inflazione annua vera della statistica (al
+    /// turno zero il dato di scenario, che è già una variazione sull'anno prima): stessi campi al
+    /// turno zero e a fine partita. La statistica è quella dell'economia di ora: l'economia fa un
+    /// passo solo in `chiudi_turno`, che subito dopo la aggiorna.
     fn indicatori(&self) -> [f64; 4] {
         let e = &self.economia;
         [
             e.debito_e_disavanzo_pil().0,
             e.spread,
             e.disoccupazione_nazionale(&self.dati),
-            e.inflazione[0],
+            self.informazione.statistica.vera.inflazione_annua,
         ]
     }
 
@@ -2390,6 +2392,7 @@ impl Partita {
                 let stima = VistaCentroStudi::stima(
                     &self.dati,
                     &self.informazione.statistica,
+                    &self.economia,
                     self.caso
                         .estemporaneo(parlamento::chiave_centro_studi(self.turno)),
                 );

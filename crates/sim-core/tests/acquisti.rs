@@ -597,6 +597,18 @@ fn la_stima_del_centro_studi_e_piu_vicina() {
     }
 }
 
+/// Come la prima stima: l'inflazione annua compone la stima sua del trimestre coi tre prima.
+#[test]
+fn il_centro_studi_compone_l_inflazione_annua_dalla_sua_stima() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    chiudi_col_bilancio(&mut p);
+    let vera = p.informazione().statistica.vera.inflazione;
+    let c = centro_studi(&mut p).stima;
+    assert_ne!(c.inflazione, vera);
+    let attesa = p.economia().inflazione_annua_con(c.inflazione);
+    assert!((c.inflazione_annua - attesa).abs() < 1e-12);
+}
+
 /// Al turno zero la prima stima è il vero, e il centro studi non ci aggiunge errore.
 #[test]
 fn al_turno_zero_la_stima_del_centro_studi_e_il_vero() {
