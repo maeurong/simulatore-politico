@@ -42,8 +42,10 @@ pub struct Testata {
 /// Versione del formato della voce dell'albo: sale solo se un campo cambia significato; i campi
 /// nuovi si aggiungono e chi legge ignora quelli che non conosce. Regola del formato: i campi
 /// aggiunti dopo la v1 sono `Option<T>`, mai `serde(default)`; non si rinomina, non si toglie,
-/// non si cambia tipo (ricerca persistenza:94).
-pub const FORMATO_ALBO: u32 = 1;
+/// non si cambia tipo (ricerca persistenza:94). Dalla v2 l'indicatore `inflazione` a fine partita
+/// è l'annua (prezzi sullo stesso trimestre dell'anno prima); nella v1 era quella del trimestre,
+/// annualizzata.
+pub const FORMATO_ALBO: u32 = 2;
 
 /// Un indicatore al turno zero e a fine partita, copia propria dell'albo: il formato dell'albo
 /// non segue il tipo dell'eredità.

@@ -8,13 +8,16 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
-/// Percentuali; crescita e inflazione annualizzate, disavanzo in % del PIL del trimestre.
+/// Percentuali; crescita e `inflazione` annualizzate sul trimestre prima, disavanzo in % del PIL
+/// del trimestre.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Stima {
     pub crescita_pil: f64,
     pub disoccupazione: f64,
     pub inflazione: f64,
+    /// Prezzi sullo stesso trimestre dell'anno prima.
+    pub inflazione_annua: f64,
     pub disavanzo: f64,
 }
 
@@ -24,7 +27,30 @@ impl Stima {
             crescita_pil,
             disoccupazione: e.disoccupazione_nazionale(dati),
             inflazione: e.inflazione[0],
+            inflazione_annua: e.inflazione_annua(),
             disavanzo: 100.0 * e.disavanzo_trimestre as f64 / (e.pil_trimestrale * 1e9),
+        }
+    }
+
+    /// `self`, il vero, con `errore(manopola, valore)` campo per campo, nell'ordine `pil`,
+    /// `disoccupazione`, `inflazione`, `disavanzo`. L'inflazione annua non ha un errore suo: i tre
+    /// trimestri prima sono già riveduti, quindi è la loro composizione in `e` con la stima
+    /// dell'ultimo. Con un errore suo, o con una frazione di quello del trimestre, dalle due stime
+    /// si ricaverebbe il vero.
+    pub(super) fn con_errore(
+        &self,
+        e: &Economia,
+        mut errore: impl FnMut(&str, f64) -> f64,
+    ) -> Stima {
+        let crescita_pil = errore("errore_stima_pil", self.crescita_pil);
+        let disoccupazione = errore("errore_stima_disoccupazione", self.disoccupazione);
+        let inflazione = errore("errore_stima_inflazione", self.inflazione);
+        Stima {
+            crescita_pil,
+            disoccupazione,
+            inflazione,
+            inflazione_annua: e.inflazione_annua_con(inflazione),
+            disavanzo: errore("errore_stima_disavanzo", self.disavanzo),
         }
     }
 
@@ -33,6 +59,7 @@ impl Stima {
             self.crescita_pil,
             self.disoccupazione,
             self.inflazione,
+            self.inflazione_annua,
             self.disavanzo,
         ]
         .iter()
@@ -63,8 +90,13 @@ pub struct Statistica {
 
 impl Statistica {
     /// Turno zero: il trimestre prima di `TURNO_ZERO`; lo scenario non dà la crescita, vale 0.
+    /// L'inflazione annua è il dato di scenario, non la composizione: i valori di scenario sono
+    /// già variazioni sull'anno prima.
     pub(super) fn iniziale(dati: &DatiGioco, e: &Economia) -> Statistica {
-        let vera = Stima::vera(dati, e, 0.0);
+        let vera = Stima {
+            inflazione_annua: e.inflazione[0],
+            ..Stima::vera(dati, e, 0.0)
+        };
         Statistica {
             trimestre: Trimestre::TURNO_ZERO.precedente(),
             prima_stima: vera.clone(),
@@ -86,14 +118,9 @@ impl Statistica {
     ) {
         let reale = e.pil_trimestrale / e.livello_prezzi;
         let vera = Stima::vera(dati, e, 400.0 * (reale / reale_prima - 1.0));
-        let mut errore =
-            |nome: &str, v: f64| v + dati.manopola(nome) * caso.normale(Flusso::Sondaggi);
-        let prima_stima = Stima {
-            crescita_pil: errore("errore_stima_pil", vera.crescita_pil),
-            disoccupazione: errore("errore_stima_disoccupazione", vera.disoccupazione),
-            inflazione: errore("errore_stima_inflazione", vera.inflazione),
-            disavanzo: errore("errore_stima_disavanzo", vera.disavanzo),
-        };
+        let prima_stima = vera.con_errore(e, |nome, v| {
+            v + dati.manopola(nome) * caso.normale(Flusso::Sondaggi)
+        });
         // Inflazione annualizzata: un trimestre ne vale la radice quarta.
         // Pavimento a −99%: sotto −100% la radice non esiste e l'indice diventerebbe NaN.
         let indice_prezzi =
@@ -113,5 +140,29 @@ impl Statistica {
             prima_stima: vecchia.prima_stima,
             riveduta: vecchia.vera,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dati::dati_base;
+
+    /// `aggiorna` prende dal `Caso` quattro normali di `Flusso::Sondaggi` e nient'altro, la quarta
+    /// per il disavanzo: l'inflazione annua non ne ha una sua, e ciò che si estrae dopo non si
+    /// sposta.
+    #[test]
+    fn aggiorna_estrae_quattro_normali_dei_sondaggi() {
+        let dati = dati_base();
+        let e = Economia::iniziale(&dati);
+        let mut caso = Caso::nuovo(1);
+        let mut atteso = caso.clone();
+        let z: [f64; 4] = std::array::from_fn(|_| atteso.normale(Flusso::Sondaggi));
+        let mut s = Statistica::iniziale(&dati, &e);
+        let reale = e.pil_trimestrale / e.livello_prezzi;
+        s.aggiorna(&dati, &mut caso, &e, reale, Trimestre::TURNO_ZERO);
+        assert_eq!(caso, atteso);
+        let disavanzo = s.vera.disavanzo + dati.manopola("errore_stima_disavanzo") * z[3];
+        assert_eq!(s.prima_stima.disavanzo, disavanzo);
     }
 }

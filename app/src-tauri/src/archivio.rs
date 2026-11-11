@@ -698,7 +698,7 @@ pub(crate) mod tests {
         let voce = |id: &str| elenco.iter().find(|v| v.indice.id == id).unwrap();
         assert!(!voce(ID).apribile);
         let motivo = voce(ID).motivo.clone().unwrap();
-        assert!(motivo.contains("10") && motivo.contains("15"), "{motivo}");
+        assert!(motivo.contains("10") && motivo.contains("17"), "{motivo}");
         assert!(!voce("futuro").apribile);
         assert_eq!(
             voce("futuro").motivo.as_deref(),
