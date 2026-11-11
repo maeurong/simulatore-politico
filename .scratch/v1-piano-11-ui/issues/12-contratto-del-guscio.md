@@ -1,7 +1,7 @@
 Type: grilling
 Status: open
 Blocked by: -
-Assignee: -
+Assignee: Mario
 Label: wayfinder:grilling
 Map: ../map.md
 
