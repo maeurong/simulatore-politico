@@ -1,7 +1,7 @@
 Type: task
-Status: open
+Status: claimed
 Blocked by: -
-Assignee: -
+Assignee: Mario
 Label: wayfinder:task
 Map: ../map.md
 
