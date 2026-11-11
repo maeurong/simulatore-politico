@@ -191,3 +191,17 @@ fn al_turno_zero_gli_indicatori_non_cambiano() {
         e.indicatori
     );
 }
+
+/// Al turno zero il dato di scenario, che è già una variazione sull'anno prima; a fine partita la
+/// composizione dei quattro trimestri.
+#[test]
+fn l_eredita_porta_l_inflazione_annua() {
+    let dati = dati_base();
+    let zero = dati.scenario().inflazione.valore;
+    let mut p = Partita::nuova(dati, 1);
+    p.chiudi_turno();
+    let fine = p.economia().inflazione_annua();
+    let e = p.abbandona().unwrap();
+    let i = e.indicatori.iter().find(|i| i.id == "inflazione").unwrap();
+    assert_eq!((i.turno_zero, i.fine), (zero, fine));
+}

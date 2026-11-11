@@ -105,6 +105,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "phillips_5_8",
     "phillips_gap",
     "ancoraggio_aspettative",
+    "secondo_giro_importata",
     "tasso_naturale_reale",
     "crescita_potenziale",
     "sigma_domanda",
