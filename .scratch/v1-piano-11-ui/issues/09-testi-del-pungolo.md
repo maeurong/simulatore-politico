@@ -1,7 +1,7 @@
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: 01, 03, esterno: spec del piano di core «esito e Vista completa»
-Assignee: -
+Assignee: Mario
 Label: wayfinder:grilling
 Map: ../map.md
 
