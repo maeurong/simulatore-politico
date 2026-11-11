@@ -58,6 +58,10 @@ Dell'11/11/2026, ticket «Testi del Pungolo» della mappa del piano 11:
 
 - **La famiglia dell'evento nella voce.** `evento_risolto` ed `evento_nato` coprono tutti gli eventi dei dati e i titoli del Pungolo non portano nomi: la UI sceglie il titolo dal tipo e, per questi due, dalla famiglia. La voce la porta nel campo `famiglia`.
 
+Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
+
+- **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
+
 ## Scelte mie, da ricontrollare leggendo
 
 Scelte tecniche o di dettaglio prese scrivendo. Mario non le ha discusse: se una non va, si cambia qui prima dell'esecuzione.
@@ -272,6 +276,8 @@ Le voci la cui causa è una frase fissa («–» più il testo fra parentesi) la
 | `fiducia_posta` | 132 | il governo avversario pone la questione di fiducia su una misura | la forbice include la sconfitta | – | N | no |
 | `sfiducia_presentata` | 133 | chi presenta la sfiducia, al governo o a quale ministro | la linea prevista, gli alleati in ultimatum che la voterebbero | C3 | N | no |
 | `governo_dimissionario` | 127 | il governo avversario in crisi si dimette: cade alla chiusura del turno | il motivo, uno dei tre che il core scrive già | – | C3 | no |
+
+**Situazione accesa ed evento nato.** Se nella stessa chiusura nasce l'evento di una situazione che si è accesa in quella chiusura, la voce `situazione_accesa` di quella situazione si toglie dall'esito: la causa di `evento_nato` porta già valore ufficiale e soglia. Lo fa il passo che scrive `evento_nato` (fatto 113), che sa da quale situazione viene l'evento. Se l'evento non nasce nella stessa chiusura (il tetto di un evento a turno, o una situazione senza evento), `situazione_accesa` resta. Decisione di Mario dell'11/11/2026 (ticket «Prima pagina»).
 
 Interim e rosa dei successori, agende annunciate e proposte nate (fatti 123-125) non sono voci dell'esito: l'apertura le mostra già nelle loro schermate.
 
