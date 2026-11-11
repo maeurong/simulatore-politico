@@ -235,3 +235,7 @@ Decisioni di Mario sul ticket 07 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | fondamenta visive della UI
 
 Decisioni di Mario sul ticket 08 del piano 11 archiviate in `sintesi/decisioni.md`: cornice a gerenza su due righe, tracciati che si riempiono con la caduta a sinistra, sette inchiostri, scala dei caratteri da 12 a 72 px, iniziali al posto della caricatura nel tono grave, più contenuto a 1440, scala mai sotto 1024 px utili. Prese su un prototipo navigabile.
+
+## [2026-11-11] query | fette del piano 11
+
+Decisioni di Mario sul ticket 10 del piano 11 archiviate in `sintesi/decisioni.md`: sette fette lungo il percorso di gioco (11a-11e su ciò che main porta già, 11f e 11g dietro le due PR del piano di core «esito e Vista completa»), schermate parziali subito coi vuoti assegnati, passacarte con la schermata che li chiama, quattro condizioni di prontezza.

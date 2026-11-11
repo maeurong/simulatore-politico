@@ -371,6 +371,15 @@ Ticket `.scratch/v1-piano-11-ui/issues/09-testi-del-pungolo.md`, tre giri sul ca
 - **Voce senza titolo come nel tono grave:** resta l'occhiello. Un meccanismo solo.
 - **Li scrive un agente, li taglia Mario**, nella fetta che porta la schermata ([[testi-esterni-svelte]]).
 
+## 2026-11-11: fette del piano 11
+Ticket `.scratch/v1-piano-11-ui/issues/10-fette.md`, due giri sull'inventario della Vista ([[vista-per-schermata]]).
+
+- **Taglio per percorso di gioco**, dal giocatore vero: 11a avvio (fondamenta, edicola, editor, fondazione), 11b al voto (cruscotto, campagna, Paese, Partiti, trattativa), 11c al governo, 11d i conti, 11e opposizione e fine. Poi 11f l'esito e 11g Vista completa, dietro le due PR del piano di core «esito e Vista completa».
+- **Una fetta è un piano** con 2-4 PR, come i piani 7, 8 e 9.
+- **Schermate a dati parziali subito**; ogni vuoto ha la fetta che lo riempie. La UI lascia un posto vuoto, non lo riempie deducendo: per questo niente prima pagina provvisoria dai frammenti.
+- **Pronta** con dati su main, prototipi chiusi, Viste campione rigenerate e fetta precedente fusa; solo l'esito può passare avanti, perché scrive nelle sue sezioni.
+- **Passacarte con la schermata che li chiama**, mai in anticipo. Il piano strutturale riveduto non ha una fetta: il suo riquadro lo riempie la prima fetta pianificata dopo il suo piano di core.
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
