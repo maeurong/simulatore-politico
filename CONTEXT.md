@@ -346,6 +346,14 @@ _Evita_: fine turno (per la fase; resta lecito come momento)
 Le conseguenze della chiusura, rivelate in apertura del turno dopo nello stesso ordine della chiusura, ognuna con la sua causa; poche voci in evidenza, il resto nel registro.
 _Evita_: notifiche, report
 
+**Voce**:
+Una conseguenza della chiusura dentro l'esito del turno, col suo fatto e la sua causa; al massimo sette sono in evidenza.
+_Evita_: notifica, riga, evento (che è il fatto del paese che chiede una scelta)
+
+**Criticità**:
+Quanto pesa una voce: critica se tocca un modo di perdere o riprendere il governo, se il gioco ha deciso al posto del giocatore o se ha tono grave; notevole se riguarda il giocatore senza mettere a rischio il governo; ordinaria altrimenti.
+_Evita_: livello (che è quello della mappa), gravità, priorità
+
 **Registro**:
 L'elenco completo di ciò che è successo in un turno, consultabile a richiesta.
 _Evita_: log, cronologia

@@ -259,3 +259,6 @@ Decisioni di Mario sul ticket 15 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | cruscotto al governo
 
 Decisioni di Mario sul ticket 17 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Ordine del giorno col dettaglio a lato, default scritto su ogni riga, conferma sul posto per «Dimettiti», fondo di riserva rimasto accanto al costo dell'evento.
+
+## [2026-11-10] query | fatti della chiusura e stato per le esposizioni (piano «esito e Vista completa»)
+Due ricerche sul codice a HEAD 8952a06, senza fonti esterne. [[fatti-della-chiusura]]: 135 fatti nell'ordine di `chiudi_turno`, con traccia, causa in mano e chi li subisce; i due avvisi del piano 9 si perdono nel punto del fatto (gli acquisti si azzerano prima della spesa di campagna; crescita e limite del tetto del MES sono calcolati e scartati); il governo cade senza che resti l'origine; per la storia 116 il confronto fra reddito e aspettativa esiste ma è locale a `giudizio`. [[stato-per-le-esposizioni]]: tre voci chiedono stato nuovo (disoccupazione regionale della chiusura precedente, voti e seggi del Senato per regione, cantieri finiti). Premesse corrette: la clausola dell'energia è nazionale, non per regione; i seggi della Camera per regione e lista non esistono (riparto nazionale); l'aspettativa nel codice non è alzata dalle promesse, contro `CONTEXT.md` e la spec.
