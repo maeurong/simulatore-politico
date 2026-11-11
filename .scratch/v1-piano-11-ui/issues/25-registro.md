@@ -11,4 +11,6 @@ Com'è fatta la sezione Registro? L'elenco dei turni passati; le voci di un turn
 
 Posto nell'ossatura e regole comuni (cornice, sommario, dettaglio a lato, conferme sul posto, tono grave a tutto il turno): [Ossatura e navigazione](07-ossatura-e-navigazione.md). Un prototipo HTML usa e getta in `.scratch/v1-piano-11-ui/prototipi/`, nutrito con le [Viste campione](06-viste-campione.md), Mario sceglie fra varianti.
 
+Dall'11/11/2026 ([Testi del Pungolo](09-testi-del-pungolo.md)): il registro è neutro, fatto e causa, senza titoli.
+
 ## Answer

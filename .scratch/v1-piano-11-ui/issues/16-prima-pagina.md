@@ -11,4 +11,6 @@ Com'è fatta la prima pagina di «Il Pungolo», cioè l'esito del turno? La stri
 
 Posto nell'ossatura e regole comuni (cornice, sommario, dettaglio a lato, conferme sul posto, tono grave a tutto il turno): [Ossatura e navigazione](07-ossatura-e-navigazione.md). Un prototipo HTML usa e getta in `.scratch/v1-piano-11-ui/prototipi/`, nutrito con le [Viste campione](06-viste-campione.md), Mario sceglie fra varianti.
 
+Dall'11/11/2026 ([Testi del Pungolo](09-testi-del-pungolo.md)): il titolo è senza nomi e scelto per tipo di voce; una voce senza titolo mostra il solo occhiello, come nel tono grave; il corsivo è tagliato dalla v1. La didascalia della vignetta, se c'è, si decide qui con le stesse regole di scrittura.
+
 ## Answer

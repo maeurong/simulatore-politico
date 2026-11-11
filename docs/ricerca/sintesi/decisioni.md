@@ -359,6 +359,18 @@ Ticket `.scratch/v1-piano-11-ui/issues/08-fondamenta-visive.md`, deciso su un pr
 - **Tono grave:** una classe sola sulla radice; la caricatura conta come illustrazione e lascia il posto alle iniziali ([[caricature-di-personaggi-inventati]], [[tono-giocoso-su-temi-seri]]).
 - **A 1440×900 più contenuto**, non caratteri più grandi. **La scala non scende sotto 1024 px utili**: 1,25× a 1280, 1,4× a 1440 ([[movimento-e-scala-in-wkwebview]]).
 
+## 2026-11-11: testi del Pungolo
+Ticket `.scratch/v1-piano-11-ui/issues/09-testi-del-pungolo.md`, tre giri sul catalogo dei 92 tipi di voce dell'esito.
+
+- **Titolo senza nomi, per tipo di voce.** Il nome sta nell'occhiello, che scrive il core. Niente grammatica dei nomi e un titolo che vale anche per le voci fuse.
+- **Eventi per famiglia:** la voce dell'esito deve portare la famiglia dell'evento, rimando al piano di core «esito e Vista completa».
+- **Circa 180 titoli:** quattro varianti ai tipi frequenti, due agli altri che vanno in evidenza, nessuna alle voci ordinarie. Il registro è neutro. Reigns è stato criticato per la ripetitività con 800 carte ([[tono-giocoso-su-temi-seri]]): qui la variante non torna in due turni di fila.
+- **Motti dal dicastero**, quattro per ciascuno, fissati al ministro con un hash del nome ([[caricature-di-personaggi-inventati]]).
+- **Corsivo tagliato dalla v1:** comporre una riga sul trimestre vuol dire regole nella UI.
+- **Sette regole di scrittura:** due tempi; mai cifre né fatti in più; terza persona, il giornale non tifa; bersaglio il palazzo, mai chi subisce; mai destra o sinistra né politici reali; una riga; il titolo regge ogni esito del suo tipo.
+- **Voce senza titolo come nel tono grave:** resta l'occhiello. Un meccanismo solo.
+- **Li scrive un agente, li taglia Mario**, nella fetta che porta la schermata ([[testi-esterni-svelte]]).
+
 ## Collegamenti
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

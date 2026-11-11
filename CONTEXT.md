@@ -355,7 +355,7 @@ Il motivo per cui «avanti fino a novità» smette di concatenare le chiusure: n
 _Evita_: interruzione, pausa, stop
 
 **Tono grave**:
-Il modo in cui il gioco presenta un evento con vittime o comunque serio: la cornice giocosa tace (niente testata, battute, motti, illustrazioni) e resta il fatto. Lo decide un evento del modello, non il giocatore; il resto del tempo il tono è ordinario.
+Il modo in cui il gioco presenta un evento con vittime o comunque serio: la cornice giocosa tace (niente testata, testi del Pungolo, illustrazioni) e resta il fatto. Lo decide un evento del modello, non il giocatore; il resto del tempo il tono è ordinario.
 _Evita_: registro grave (registro è già l'elenco del turno)
 
 **Indicatore sintetico**:
@@ -424,6 +424,22 @@ _Evita_: schermata (che è qualunque pagina, anche fuori dalla partita), pannell
 **Prima pagina**:
 La sezione che mostra l'esito del turno come prima pagina di «Il Pungolo»; si legge e basta, le scelte stanno altrove.
 _Evita_: esito (che è il contenuto, non la pagina), home
+
+**Testi del Pungolo**:
+I testi giocosi del gioco: titoli della prima pagina, motti dei ministri, note a biro. Nel tono grave tacciono tutti; i numeri e i fatti non ne fanno mai parte.
+_Evita_: battute (come nome di un elemento), registro giocoso (registro è già l'elenco del turno), corsivo (la riga che commentava il trimestre, tolta dalla v1)
+
+**Occhiello**:
+La riga seria sopra il titolo di una voce in prima pagina: il fatto col suo numero. Da sola quando la voce non ha titolo o il tono è grave.
+_Evita_: sottotitolo, sommario (che è l'elenco delle sezioni)
+
+**Titolo**:
+La riga spiritosa sotto l'occhiello, scelta per tipo di voce; non porta nomi né cifre e non serve per decidere.
+_Evita_: nome spiritoso, headline
+
+**Motto**:
+La frase in prima persona che accompagna un ministro nel borsino; scherza sul mestiere del dicastero e resta la stessa finché il ministro è in carica.
+_Evita_: slogan, citazione
 
 **Cruscotto**:
 La sezione di casa del turno: l'evento aperto e tutto ciò che nel turno chiede una scelta, ciascuno col rimando alla sua sezione. Dopo il voto al suo posto c'è la trattativa, a partita finita l'eredità.
