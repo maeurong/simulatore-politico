@@ -1,6 +1,6 @@
 Type: prototype
 Status: open
-Blocked by: 06, 08
+Blocked by: 06, 08, 32
 Assignee: -
 Label: wayfinder:prototype
 Map: ../map.md

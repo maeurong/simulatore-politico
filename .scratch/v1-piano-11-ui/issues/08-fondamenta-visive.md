@@ -72,6 +72,7 @@ B · Colonna (tutto a sinistra in 214 px: il corpo perde larghezza e a 1,25× la
 ### Aperto
 
 - Scale e soglie dei tre tracciati: quelle del prototipo sono proposte, non dati del core. Ticket [Scale dei tracciati](31-scale-dei-tracciati.md).
+- Il disegno delle caricature: quelle del prototipo sono un segnaposto e a Mario non piacciono. Qui restano fissati solo il riquadro (34 px in riga, 84 px nella carta) e le iniziali nel tono grave. Ticket [Disegno delle caricature](32-disegno-delle-caricature.md), davanti a Governo, Partiti e Trattativa e spartizione.
 - Cosa mostrano i tre indicatori quando il giocatore non governa: aggiunto alle premesse di [Cruscotto all'opposizione](28-cruscotto-all-opposizione.md).
 
 Termini nuovi nel glossario (`CONTEXT.md`, «Interfaccia»): tracciato, fascia.
