@@ -54,12 +54,16 @@ Del brainstorming di questo piano:
 - **Le quattro voci minori** entrano tutte nella PR delle esposizioni: forbice del sondaggio per regione, combinazioni spente della legge elettorale, posti in calendario, costo di Ferma e Dirotta.
 - **Redditi per fascia: subito, esatti.** La voce «reddito sotto l'atteso» e i redditi per fascia della Vista dicono il trimestre appena chiuso, senza il turno di ritardo delle regioni: la voce spiega il giudizio che si è mosso ora. Mario accetta che così trapeli la crescita reale esatta per fascia, e con essa un pezzo dell'inflazione vera.
 
+Dell'11/11/2026, ticket «Testi del Pungolo» della mappa del piano 11:
+
+- **La famiglia dell'evento nella voce.** `evento_risolto` ed `evento_nato` coprono tutti gli eventi dei dati e i titoli del Pungolo non portano nomi: la UI sceglie il titolo dal tipo e, per questi due, dalla famiglia. La voce la porta nel campo `famiglia`.
+
 ## Scelte mie, da ricontrollare leggendo
 
 Scelte tecniche o di dettaglio prese scrivendo. Mario non le ha discusse: se una non va, si cambia qui prima dell'esecuzione.
 
 1. **Dove vive il registro.** La partita tiene solo l'esito dell'ultima chiusura. Il registro del turno N si rilegge dal salvataggio del turno N+1 (sezione «Registro»).
-2. **Testo nel core.** Ogni voce porta `fatto` e `causa` già scritti in italiano dal core, più un `tipo` enumerato. Il titolo spiritoso lo sceglierà la UI dal `tipo`. È lo stesso schema di `MossaIa.testo` e di `VoceEvento.causa`.
+2. **Testo nel core.** Ogni voce porta `fatto` e `causa` già scritti in italiano dal core, più un `tipo` enumerato. Il titolo spiritoso lo sceglierà la UI dal `tipo` e, per i due tipi d'evento, dalla `famiglia`. È lo stesso schema di `MossaIa.testo` e di `VoceEvento.causa`.
 3. **`Vista.mosse` sparisce**: ogni mossa diventa una voce dell'esito con il suo partito. Nessuna schermata la legge: in `app/src`, nel guscio e nella CLI il nome compare solo nei tipi generati (`app/src/lib/tipi/Vista.ts`, `MossaIa.ts`).
 4. **Il nome «criticità»**, non «livello»: nel glossario «livello» è già ciò che la mappa colora (`CONTEXT.md:381`).
 5. **Precedenza fra le critiche** quando sono più di sette: tre classi (sezione «Le sette»).
@@ -102,6 +106,7 @@ Una voce porta:
 | `dicastero` | `Option<String>` | id |
 | `regione` | `Option<String>` | id |
 | `misura` | `Option<u32>` | id della misura in calendario o votata |
+| `famiglia` | `Option<Famiglia>` | la famiglia dell'evento (situazione, emergenza, scandalo, shock, debito), solo in `evento_risolto` ed `evento_nato`; vuota negli altri tipi |
 | `dettagli` | `Vec<String>` | vuoto, salvo nelle voci fuse: una riga «fatto: causa» per ogni voce confluita |
 
 Regole comuni:
@@ -443,6 +448,7 @@ Esito:
 
 - Al turno zero l'esito è vuoto. Dopo una chiusura ha almeno la prima stima e il sondaggio.
 - Nessuna voce ha la causa vuota. Nessuna voce ordinaria è in evidenza. Mai più di sette in evidenza.
+- `evento_risolto` ed `evento_nato` portano la famiglia del loro evento; nessun altro tipo la porta.
 - Con nove critiche restano fuori le due di precedenza più bassa, e a parità le ultime nell'ordine della chiusura.
 - Con due critiche e otto notevoli entrano le due critiche e le prime cinque notevoli.
 - Dieci atti eseguiti in un turno sono una voce sola con dieci dettagli.
