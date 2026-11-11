@@ -31,11 +31,20 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `07-partita-finita-eredita.json` | 4 | 4,5 | 9, 2029T1 | 115377 | come 05 fino all'8° turno al governo, poi `abbandona()` |
 | `08-tono-grave.json` | 4 | 4,5 | 7, 2028T3 | 116474 | come 05; «Emergenza incendi» in tono grave, al governo |
 | `13-edicola.json` | 1-4, 9 | varie | — | 25496 | `partite()` e `albo()` del guscio rifatti con `testata()` e `voce_albo()`: cinque partite in corso coi nomi diversi, tre abbandonate nell'albo (vedi sotto) |
+| `14-editor.json` | — | — | — | 204849 | `riepilogo()` di `sim-core::riepilogo` su `con_su_misura()`: intervalli dei sei cursori, leggi elettorali coi nove parametri, 46 disposizioni coi gradini (35 ordinarie, 2 costituzionali, 9 elettorali), otto scenari di prova e nove passi per cursore (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 14: aggiunta dal ticket «Scenario ed editor». Nessun comando del guscio porta ciò che qui sta sopra i riepiloghi
+  (intervalli, leggi, disposizioni): `genera/` lo legge da `DatiGioco`. Scenari salvati: quattro delle prove, coi loro nomi.
+  Un riepilogo costa circa 60-70 ms in release. Lungo i cursori, uno per volta: l'inflazione di partenza non muove
+  niente del riepilogo; disoccupazione, età e ricchezza muovono solo il disavanzo; il debito muove spread e interessi
+  (spread fermo a 60 fino a 135%, poi 586 a 160%, crisi del debito sopra 550); solo l'orientamento muove consenso e
+  maggioranze. «Caro energia» è una situazione accesa anche nello scenario di base, quindi quell'avviso c'è sempre.
+  Il regime delle pensioni ha saldo zero su ogni gradino: il suo effetto passa dalle leve, non dal saldo.
 
 - 13: aggiunta dal ticket «Edicola». `ultimo_salvataggio` a orari fissi (dal 28/10 al 6/11/2026). **Forzati**: lo
   schema 16 di «Unione dei Pendolari» (col `motivo` che il guscio scriverebbe) e la `finita` di «Lista del Faro»,

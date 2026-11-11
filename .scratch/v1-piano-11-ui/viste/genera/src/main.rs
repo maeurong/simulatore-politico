@@ -6,7 +6,8 @@ use std::path::Path;
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
 use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
-use sim_core::{Comando, DatiGioco, FileDati, Partita, VERSIONE_SCHEMA};
+use sim_core::riepilogo::riepilogo;
+use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, VERSIONE_SCHEMA};
 
 type Esito<T> = Result<T, String>;
 
@@ -292,6 +293,131 @@ fn edicola(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Riepilogo di uno scenario su misura, o l'errore di `con_su_misura` (rifiuto sul posto).
+fn riepilogo_di(d: &DatiGioco, etichetta: &str, s: &SuMisura) -> serde_json::Value {
+    let t = std::time::Instant::now();
+    let r = d.con_su_misura(s).map(|x| riepilogo(&x));
+    let ms = t.elapsed().as_millis();
+    eprintln!("14 «{etichetta}»: {ms} ms");
+    match r {
+        Ok(r) => serde_json::json!({ "etichetta": etichetta, "scenario": s, "riepilogo": r }),
+        Err(e) => {
+            serde_json::json!({ "etichetta": etichetta, "scenario": s, "errore": e.to_string() })
+        }
+    }
+}
+
+/// Ciò che l'editor deve sapere prima di ogni riepilogo e che nessun comando del guscio porta:
+/// intervalli dei sei cursori, impostazioni elettorali, disposizioni coi gradini.
+fn editor(d: &DatiGioco) -> Esito<Uscita> {
+    let sc = d.scenario();
+    let c = &sc.cursori;
+    let ingresso = |nome: &str, unita: &str, i: &sim_core::scenario::Ingresso| {
+        serde_json::json!({ "nome": nome, "unita": unita, "valore": i.valore, "min": i.min, "max": i.max })
+    };
+    let cursori = vec![
+        ingresso("debito_pil", "% del PIL", &sc.debito_pil),
+        ingresso("disoccupazione", "%", &sc.disoccupazione),
+        ingresso("inflazione", "% annua", &sc.inflazione),
+        ingresso("ricchezza", "± % PIL pro capite", &c.ricchezza),
+        ingresso("eta_mediana", "± anni", &c.eta_mediana),
+        ingresso("orientamento", "± punti 1-7", &c.orientamento),
+    ];
+    let dicastero = |id: &Option<String>| {
+        id.as_ref()
+            .and_then(|i| d.dicasteri().iter().find(|x| &x.id == i))
+            .map(|x| x.nome.clone())
+    };
+    let disposizioni: Vec<_> = (d.disposizioni().iter())
+        .map(|x| {
+            serde_json::json!({
+                "id": x.id, "nome": x.nome, "dicastero": dicastero(&x.dicastero), "norma": x.norma,
+                "partenza": x.partenza,
+                "gradini": x.gradini.iter().map(|g| serde_json::json!({
+                    "id": g.id, "nome": g.nome, "saldo": g.saldo })).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+    let base = SuMisura::base(d);
+    // Per legge: i gradini delle nove disposizioni elettorali, letti dai dati che il core ne fa.
+    let mut leggi = serde_json::Map::new();
+    for nome in d.elezioni().impostazioni.keys() {
+        let mut s = base.clone();
+        s.cursori.legge_elettorale.clone_from(nome);
+        let x = d.con_su_misura(&s).map_err(|e| e.to_string())?;
+        let g: serde_json::Map<_, _> = (x.disposizioni().iter())
+            .filter(|x| x.norma == sim_core::disposizioni::Norma::Elettorale)
+            .map(|x| (x.id.clone(), x.partenza.clone().into()))
+            .collect();
+        leggi.insert(nome.clone(), g.into());
+    }
+    let con = |nome: &str, f: &dyn Fn(&mut SuMisura)| {
+        let mut s = base.clone();
+        s.nome = nome.into();
+        f(&mut s);
+        s
+    };
+    let prove = [
+        ("base", base.clone()),
+        ("debito al tetto", con("Debito al tetto", &|s| s.cursori.debito_pil = 160.0)),
+        ("crisi", con("Crisi", &|s| {
+            s.cursori.debito_pil = 160.0;
+            s.cursori.inflazione = 8.0;
+            s.cursori.disoccupazione = 11.6;
+            s.cursori.ricchezza = -20.0;
+        })),
+        ("elettorato a sinistra", con("Elettorato a sinistra", &|s| s.cursori.orientamento = -1.0)),
+        ("elettorato a destra", con("Elettorato a destra", &|s| s.cursori.orientamento = 1.0)),
+        ("proporzionale puro", con("Proporzionale puro", &|s| {
+            s.cursori.legge_elettorale = "proporzionale_puro".into();
+        })),
+        ("detrazione al 110", con("Superbonus", &|s| {
+            s.disposizioni.insert("detrazione_edilizia".into(), "110".into());
+        })),
+        ("legge elettorale incoerente", con("Incoerente", &|s| {
+            // Premio alla coalizione senza coalizioni.
+            s.disposizioni.insert("coalizioni".into(), "no".into());
+        })),
+    ];
+    let riepiloghi: Vec<_> = prove.iter().map(|(e, s)| riepilogo_di(d, e, s)).collect();
+    // ponytail: nove passi per cursore, uno alla volta dalla base; i cursori mossi insieme il
+    // prototipo li approssima col passo più vicino e lo dice.
+    let mut griglia = serde_json::Map::new();
+    for c in &cursori {
+        let nome = c["nome"].as_str().unwrap_or_default().to_string();
+        let (lo, hi) = (c["min"].as_f64().unwrap_or(0.0), c["max"].as_f64().unwrap_or(0.0));
+        let passi: Vec<_> = (0..9)
+            .map(|k| {
+                let v = lo + (hi - lo) * f64::from(k) / 8.0;
+                let mut s = base.clone();
+                let x = &mut s.cursori;
+                match nome.as_str() {
+                    "debito_pil" => x.debito_pil = v,
+                    "disoccupazione" => x.disoccupazione = v,
+                    "inflazione" => x.inflazione = v,
+                    "ricchezza" => x.ricchezza = v,
+                    "eta_mediana" => x.eta_mediana = v,
+                    _ => x.orientamento = v,
+                }
+                let r = d.con_su_misura(&s).map(|x| riepilogo(&x)).map_err(|e| e.to_string());
+                r.map(|r| serde_json::json!({ "valore": v, "riepilogo": r }))
+            })
+            .collect::<Esito<_>>()?;
+        griglia.insert(nome, passi.into());
+    }
+    let json = serde_json::json!({
+        "cursori": cursori, "leggi_elettorali": leggi, "legge_di_base": sc.legge_elettorale,
+        "disposizioni": disposizioni,
+        "scenari_salvati": ["Debito al tetto", "Elettorato a destra", "Proporzionale puro", "Superbonus"],
+        "riepiloghi": riepiloghi, "griglia": griglia,
+    });
+    Ok(Uscita {
+        nome: "14-editor.json",
+        json: serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
+        nota: format!("{} riepiloghi di prova e nove passi per cursore; scenari salvati: quattro prove", prove.len()),
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -320,6 +446,7 @@ fn esegui() -> Esito<()> {
         }
     }
     uscite.push(edicola(&d)?);
+    uscite.push(editor(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

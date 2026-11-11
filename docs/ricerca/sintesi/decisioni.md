@@ -395,6 +395,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/13-edicola.md`, un giro su un prototipo c
 - **Abbandono dall'edicola resta nell'edicola:** conferma sul posto, poi la voce d'albo aperta nel dettaglio; nessuna pagina Eredità. Il guscio abbandona solo la partita caricata, quindi la UI chiama `riprendi` e poi `abbandona`.
 - **Partite in corso con la sola testata:** niente indicatori nell'indice, nessun rimando al core per averli.
 
-## Collegamenti
+## 2026-11-11: scenario ed editor
+Ticket `.scratch/v1-piano-11-ui/issues/14-scenario-ed-editor.md`, un giro su un prototipo con tre forme nutrito con `riepilogo()` vero.
+
+- **Forma A · Banco:** editor a pagina (scenario, Paese, regole del voto, leggi in vigore), riepilogo dal vivo fermo nel dettaglio a lato. L'Italia di oggi non si cambia: toccarla apre uno scenario su misura nuovo.
+- **Catalogo dell'editor dal core:** intervalli dei cursori, leggi elettorali e disposizioni coi gradini li porta una funzione nuova di sola lettura in `sim-core`, col passacarte `catalogo_scenario` nella fetta 11a.
+- **L'inflazione di partenza resta** anche se non muove il riepilogo: una riga dice che pesa dal primo trimestre.
+- **Scenari solo dalla cartella del gioco**, nessuna finestra per aprire un file qualsiasi.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

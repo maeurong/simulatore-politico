@@ -34,7 +34,7 @@ Deciso con Mario l'11/11/2026 in un giro, sul guscio di main a `894274d` (`app/s
 
 | Fetta | Passacarte |
 |---|---|
-| 11a | `serie`, `anteprima_fondazione` (col seme sopra); forma del contratto applicata a `comanda` e ai comandi che ci sono |
+| 11a | `serie`, `anteprima_fondazione` (col seme sopra); forma del contratto applicata a `comanda` e ai comandi che ci sono; `catalogo_scenario`, verso una funzione nuova del core: lo aggiunge [Scenario ed editor](14-scenario-ed-editor.md) |
 | 11b | `anteprima_campagna`, `elettori_campione` |
 | 11c | nessuno |
 | 11d | `bozza_bilancio`, `indicizza`, `riepilogo_bilancio`, `riepilogo_presentato` |

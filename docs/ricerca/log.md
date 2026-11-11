@@ -247,3 +247,7 @@ Decisioni di Mario sul ticket 12 del piano 11 archiviate in `sintesi/decisioni.m
 ## [2026-11-11] query | edicola
 
 Decisioni di Mario sul ticket 13 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col dettaglio a lato, abbandono che resta nell'edicola con la voce d'albo aperta, partite in corso con la sola testata.
+
+## [2026-11-11] query | scenario ed editor
+
+Decisioni di Mario sul ticket 14 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col riepilogo dal vivo nel dettaglio a lato, catalogo dell'editor da una funzione nuova del core, cursore dell'inflazione con la nota, scenari solo dalla cartella del gioco.
