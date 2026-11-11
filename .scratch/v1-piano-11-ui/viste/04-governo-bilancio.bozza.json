@@ -1,0 +1,108 @@
+{
+  "anno": 2028,
+  "dicasteri": [
+    {
+      "id": "economia_finanze",
+      "spesa": 72737229625,
+      "salari": 24897093307,
+      "acquisti": 18872692754,
+      "margine": 1163795674,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "sviluppo_economico",
+      "spesa": 50297395716,
+      "salari": 4709943133,
+      "acquisti": 4745214799,
+      "margine": 804758331,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "lavoro_welfare",
+      "spesa": 23822483216,
+      "salari": 5107337237,
+      "acquisti": 13972282625,
+      "margine": 381159732,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "sanita",
+      "spesa": 155383445952,
+      "salari": 47388658993,
+      "acquisti": 96632607618,
+      "margine": 2486135135,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "istruzione_ricerca",
+      "spesa": 128400621462,
+      "salari": 74710091477,
+      "acquisti": 19933194179,
+      "margine": 2054409943,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "infrastrutture_trasporti",
+      "spesa": 73179301172,
+      "salari": 5316615788,
+      "acquisti": 10522713690,
+      "margine": 1170868819,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "ambiente_energia",
+      "spesa": 35208177001,
+      "salari": 2490179620,
+      "acquisti": 13720678074,
+      "margine": 563330832,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "interno",
+      "spesa": 29115584561,
+      "salari": 20118958286,
+      "acquisti": 5055605460,
+      "margine": 465849353,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "giustizia",
+      "spesa": 12469709653,
+      "salari": 8258272733,
+      "acquisti": 2718269726,
+      "margine": 199515355,
+      "livello_prezzi": 1.019
+    },
+    {
+      "id": "esteri_difesa",
+      "spesa": 31688064734,
+      "salari": 16737581239,
+      "acquisti": 2356147289,
+      "margine": 507009036,
+      "livello_prezzi": 1.019
+    }
+  ],
+  "aliquote": {
+    "irpef": [
+      {
+        "fino_a": 28000,
+        "aliquota": 0.23,
+        "livello_prezzi": 1.0
+      },
+      {
+        "fino_a": 50000,
+        "aliquota": 0.33,
+        "livello_prezzi": 1.0
+      },
+      {
+        "fino_a": null,
+        "aliquota": 0.43,
+        "livello_prezzi": 1.0
+      }
+    ],
+    "iva": 0.22,
+    "ires": 0.24,
+    "contributi": 0.33
+  },
+  "fondo_riserva": 305700000
+}

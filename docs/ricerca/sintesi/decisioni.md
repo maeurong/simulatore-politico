@@ -1,7 +1,7 @@
 ---
 tipo: sintesi
 fonti: []
-aggiornato: 2026-10-18
+aggiornato: 2026-11-11
 ---
 # Decisioni di Mario
 
@@ -319,6 +319,120 @@ Grilling sul ticket wayfinder «Punti di aggancio» (`.scratch/v1-giocabile/issu
 ## 2026-10-25: derivati ESS in dati/base
 Mario ha scelto di leggere la «cartella separata» della decisione del 2026-10-16 (spec riga 405) come `dati/`, separata dal codice: niente cartella nuova, gli istogrammi delle posizioni derivati da ESS round 11 restano in `dati/base/elettorato.toml`. Il file passa in CC BY-NC-SA 4.0, perché lo share-alike lo prende tutto. La licenza è dichiarata in tre posti: nell'intestazione del file, con URI della licenza, edizione, DOI e Data Portal; nel `README.md` del repo, che toglie il file dal perimetro MIT; nella sezione Licenze di `strumenti/taratura/README.md`. Gli altri file di `dati/base` restano MIT. Se un giorno servisse un file di dati solo MIT, le posizioni andrebbero spostate in un file a parte.
 
-## Collegamenti
+## 2026-11-10: dati che le schermate chiedono e nessun piano portava
+
+Ticket `.scratch/v1-piano-11-ui/issues/11-dati-senza-piano.md`, sull'inventario [[vista-per-schermata]].
+
+- **Niente esce dalla v1 e niente si calcola nella UI.** Esito del turno con causa e criticità, registro, fermate di «avanti fino a novità» e i due avvisi lasciati dal piano 9 (campagna tagliata, bilancio ricondotto al tetto del MES) li produce un piano di core nuovo, «esito e Vista completa», fuori dalla mappa del piano 11 e avviato subito.
+- **Stesso piano, PR a parte per le esposizioni:** dati regionali della mappa, PDE e conto di controllo, minaccia di scissione, stato del MES e della ristrutturazione, clausola dell'energia.
+- **Piano strutturale riveduto** (storia 51): resta nella v1, in un piano di core suo, dopo. Non blocca la UI.
+- **Disoccupazione e reddito per regione esatti, con un turno di ritardo.** Il dato esatto arriva insieme alla revisione nazionale, quindi non buca l'informazione imperfetta.
+- **Gruppi della scheda della regione:** quota di elettori e tre elettori campione al clic; nessun consenso per gruppo.
+- **Cantieri finiti:** il segno sulla mappa resta fino al voto successivo.
+- **Rimandato al brainstorming del piano di core:** cosa rende critica una voce e come si scelgono le sette in evidenza.
+
+## 2026-11-11: ossatura e navigazione della UI
+
+Ticket `.scratch/v1-piano-11-ui/issues/07-ossatura-e-navigazione.md`, deciso in tre giri su un prototipo navigabile (`.scratch/v1-piano-11-ui/prototipi/07-ossatura.prototype.html`).
+
+- **Cornice fissa, sommario di sezioni, dettaglio a lato.** Supera il cruscotto snodo del prototipo della direzione artistica, che reggeva tre schermate e non dieci. I tre indicatori sintetici restano a schermo anche sulla prima pagina, come striscia sopra la testata.
+- **Dieci sezioni sempre nello stesso posto:** Prima pagina, Cruscotto, Governo, Aula, Conti, Bilancio, Paese, Partiti, Campagna, Registro. Quella che non vale nel turno è barrata col motivo, non tolta. Schema dello Stato, impostazioni ed edicola stanno fuori dal sommario.
+- **Cruscotto corto:** evento aperto e scelte del turno, coi rimandi. Il borsino dei ministri ha una sezione sua, Governo, barrata quando il giocatore non governa; bilancio e campagna hanno le loro, accese solo nei loro turni.
+- **La casa cambia nome con lo stato:** Cruscotto al governo, in crisi, all'opposizione e al turno zero; Trattativa dopo il voto; Eredità a partita finita. All'opposizione «Avanti fino a novità» sta sopra «Chiudi il turno».
+- **Tono grave a tutto il turno**, in ogni schermata, finché l'evento è aperto ([[tono-giocoso-su-temi-seri]]).
+- **Nessuna finestra modale:** la chiusura del turno non chiede conferma; le conferme di ciò che distrugge avvengono sul posto; i dettagli si aprono a lato ([[feedback-visivo-dello-stato]]).
+- **Edicola all'avvio**, sempre; **acquisti d'informazione dove si legge il loro risultato**; l'evento si risolve sul cruscotto, non in prima pagina.
+- **Dati che la spec lasciava senza schermata** hanno un posto: sondaggio in Paese, grandezze e situazioni in Conti, asse, casse e intesa in Partiti, disposizioni in Aula.
+- **Diciotto schermate da prototipare**, una per ticket (13-30 della mappa).
+- **Metodo:** le proposte grafiche a Mario vanno su un prototipo nel browser, non descritte a parole.
+
+## 2026-11-11: fondamenta visive della UI
+
+Ticket `.scratch/v1-piano-11-ui/issues/08-fondamenta-visive.md`, deciso su un prototipo navigabile (`.scratch/v1-piano-11-ui/prototipi/08-fondamenta.prototype.html`), le cui variabili CSS sono i token.
+
+- **Cornice a gerenza, su due righe:** testatina, stato, tre tracciati e chiusura del turno; sotto il sommario. Scartate la colonna a sinistra e il sommario in testa con gli indicatori al piede; una striscia su una riga sola non entra a 1280 px.
+- **Tracciati che si riempiono, con la caduta a sinistra** per tutti e tre; uno stacco segna la soglia di pericolo anche senza colore ([[tabellone-e-carta-ritagliata]]). Scale e soglie restano da fissare.
+- **Sette inchiostri** (carta, inchiostro, grigio, rosso, verde, biro, giallo), tutti sopra 4,5:1 sulla carta tranne il giallo, che è solo evidenziatore. Nessun angolo arrotondato, ombra o sfumatura.
+- **Caratteri:** Fraunces per testata e titoli, Atkinson Hyperlegible Next per il resto, cifre tabellari; scala da 12 a 72 px, niente sotto i 12 ([[tipografia-e-font-aperti]]).
+- **Il colore non è mai l'unico segnale del critico:** la freccia dice il verso, il colore il giudizio, e sotto soglia la variazione va in negativo.
+- **Un pulsante spento dice sempre perché**; ciò che distrugge si conferma sul posto.
+- **Tono grave:** una classe sola sulla radice; la caricatura conta come illustrazione e lascia il posto alle iniziali ([[caricature-di-personaggi-inventati]], [[tono-giocoso-su-temi-seri]]).
+- **A 1440×900 più contenuto**, non caratteri più grandi. **La scala non scende sotto 1024 px utili**: 1,25× a 1280, 1,4× a 1440 ([[movimento-e-scala-in-wkwebview]]).
+
+## 2026-11-11: testi del Pungolo
+Ticket `.scratch/v1-piano-11-ui/issues/09-testi-del-pungolo.md`, tre giri sul catalogo dei 92 tipi di voce dell'esito.
+
+- **Titolo senza nomi, per tipo di voce.** Il nome sta nell'occhiello, che scrive il core. Niente grammatica dei nomi e un titolo che vale anche per le voci fuse.
+- **Eventi per famiglia:** la voce dell'esito deve portare la famiglia dell'evento, rimando al piano di core «esito e Vista completa».
+- **Circa 180 titoli:** quattro varianti ai tipi frequenti, due agli altri che vanno in evidenza, nessuna alle voci ordinarie. Il registro è neutro. Reigns è stato criticato per la ripetitività con 800 carte ([[tono-giocoso-su-temi-seri]]): qui la variante non torna in due turni di fila.
+- **Motti dal dicastero**, quattro per ciascuno, fissati al ministro con un hash del nome ([[caricature-di-personaggi-inventati]]).
+- **Corsivo tagliato dalla v1:** comporre una riga sul trimestre vuol dire regole nella UI.
+- **Sette regole di scrittura:** due tempi; mai cifre né fatti in più; terza persona, il giornale non tifa; bersaglio il palazzo, mai chi subisce; mai destra o sinistra né politici reali; una riga; il titolo regge ogni esito del suo tipo.
+- **Voce senza titolo come nel tono grave:** resta l'occhiello. Un meccanismo solo.
+- **Li scrive un agente, li taglia Mario**, nella fetta che porta la schermata ([[testi-esterni-svelte]]).
+
+## 2026-11-11: fette del piano 11
+Ticket `.scratch/v1-piano-11-ui/issues/10-fette.md`, due giri sull'inventario della Vista ([[vista-per-schermata]]).
+
+- **Taglio per percorso di gioco**, dal giocatore vero: 11a avvio (fondamenta, edicola, editor, fondazione), 11b al voto (cruscotto, campagna, Paese, Partiti, trattativa), 11c al governo, 11d i conti, 11e opposizione e fine. Poi 11f l'esito e 11g Vista completa, dietro le due PR del piano di core «esito e Vista completa».
+- **Una fetta è un piano** con 2-4 PR, come i piani 7, 8 e 9.
+- **Schermate a dati parziali subito**; ogni vuoto ha la fetta che lo riempie. La UI lascia un posto vuoto, non lo riempie deducendo: per questo niente prima pagina provvisoria dai frammenti.
+- **Pronta** con dati su main, prototipi chiusi, Viste campione rigenerate e fetta precedente fusa; solo l'esito può passare avanti, perché scrive nelle sue sezioni.
+- **Passacarte con la schermata che li chiama**, mai in anticipo. Il piano strutturale riveduto non ha una fetta: il suo riquadro lo riempie la prima fetta pianificata dopo il suo piano di core.
+
+## 2026-11-11: contratto del guscio
+Ticket `.scratch/v1-piano-11-ui/issues/12-contratto-del-guscio.md`, un giro sul guscio di main e sulla spec del piano di core «esito e Vista completa».
+
+- **Errori in due specie:** il rifiuto di un comando si mostra sul posto, accanto alla scelta; il guasto (disco, stato interno) nella cornice, e dice che la partita è rimasta com'era.
+- **Seme della fondazione nel guscio**, fra anteprima e fondazione: l'anteprima mostra lo stesso sondaggio della partita che nasce (storia 9). Il core non cambia.
+- **Bozze della UI solo in memoria:** bilancio in composizione, legge, spese di campagna si perdono all'uscita; ciò che è comandato è salvato.
+- **`Fascia` esportata da chi arriva prima** fra la fetta 11b e la PR 2 del core: una riga d'esportazione, niente a runtime.
+
+## 2026-11-11: edicola
+Ticket `.scratch/v1-piano-11-ui/issues/13-edicola.md`, un giro su un prototipo con tre forme nutrito con partite giocate.
+
+- **Forma A · Banco:** in corso sopra, albo sotto, dettaglio a lato come il borsino. La voce d'albo si legge con gli indicatori contro il turno zero, tre piccoli grafici turno per turno (uno per asse) e le elezioni.
+- **Abbandono dall'edicola resta nell'edicola:** conferma sul posto, poi la voce d'albo aperta nel dettaglio; nessuna pagina Eredità. Il guscio abbandona solo la partita caricata, quindi la UI chiama `riprendi` e poi `abbandona`.
+- **Partite in corso con la sola testata:** niente indicatori nell'indice, nessun rimando al core per averli.
+
+## 2026-11-11: scenario ed editor
+Ticket `.scratch/v1-piano-11-ui/issues/14-scenario-ed-editor.md`, un giro su un prototipo con tre forme nutrito con `riepilogo()` vero.
+
+- **Forma A · Banco:** editor a pagina (scenario, Paese, regole del voto, leggi in vigore), riepilogo dal vivo fermo nel dettaglio a lato. L'Italia di oggi non si cambia: toccarla apre uno scenario su misura nuovo.
+- **Catalogo dell'editor dal core:** intervalli dei cursori, leggi elettorali e disposizioni coi gradini li porta una funzione nuova di sola lettura in `sim-core`, col passacarte `catalogo_scenario` nella fetta 11a.
+- **L'inflazione di partenza resta** anche se non muove il riepilogo: una riga dice che pesa dal primo trimestre.
+- **Scenari solo dalla cartella del gioco**, nessuna finestra per aprire un file qualsiasi.
+
+## 2026-11-11: fondazione
+Ticket `.scratch/v1-piano-11-ui/issues/15-fondazione.md`, un giro su un prototipo con tre forme nutrito con `anteprima_fondazione` vera.
+
+- **Forma A · Banco:** nome e asse con l'istogramma a pagina, tabella dei sei posti, il posto scelto nel dettaglio a lato con la quota attesa e i sette partiti con la causa.
+- **Coalizioni possibili come elenco dei disponibili**, senza quota della coalizione né seggi: l'anteprima non li porta e il core non cambia.
+- **Rumore dichiarato senza numeri:** la quota attesa è la media degli istituti e varia di qualche punto da seme a seme; una riga fissa dice che è un sondaggio.
+- **Fondare è diretto**, senza conferma; nessun posto scelto all'apertura.
+## 2026-11-11: cruscotto al governo
+Ticket `.scratch/v1-piano-11-ui/issues/17-cruscotto-al-governo.md`, un giro su un prototipo con tre forme e dieci stati giocati.
+
+- **Forma A · Ordine del giorno:** evento o crisi in testa, poi righe per gruppo con le azioni sulla riga; la riga scelta nel dettaglio a lato, con l'anteprima del decreto per le proposte di fondi.
+- **Il default su ogni riga**, oltre al conto delle scelte al default nella cornice.
+- **«Dimettiti» con la conferma sul posto:** il core non lo ritira, quindi vale come le altre tre conferme dell'ossatura.
+- **Fondo di riserva accanto al costo dell'evento:** paga solo fino al residuo, che nelle partite giocate è quasi sempre zero.
+
+## 2026-11-11: aula e calendario
+Ticket `.scratch/v1-piano-11-ui/issues/19-aula-e-calendario.md`, due giri su un prototipo con tre forme, poi una quarta mista, e dieci stati giocati.
+
+- **Forma D · Misto:** l'ossatura dell'ordine dei lavori (calendario a posti in testa, quattro schede, dettaglio a lato), l'emiciclo nel dettaglio della misura, le disposizioni a righe chiuse che si aprono sui gradini una alla volta. Il codice tutto aperto era più completo ma troppo per un giocatore medio.
+- **Questione di fiducia con la conferma sul posto**, anche sul cruscotto: il core non la ritira e l'intesa cala subito.
+- **Anteprima della proposta d'opposizione al core:** oggi `anteprima` la rifiuta a chi non governa, e la proposta si scriverebbe alla cieca.
+
+## 2026-11-11: prima pagina
+Ticket `.scratch/v1-piano-11-ui/issues/16-prima-pagina.md`, un giro su un prototipo con tre forme e cinque chiusure giocate, con le voci scritte a mano col catalogo della spec di core.
+
+- **Forma A · Giornale composto:** voce di testa con la vignetta, le altre in tre colonne; ogni voce si accende al suo posto nell'ordine della chiusura, e i tracciati scattano quando la rivelazione supera la voce che li muove.
+- **Voce di testa per criticità e precedenza:** con la sola regola dell'ordine della chiusura la pagina del voto si aprirebbe con le spese di campagna.
+- **Vignetta da un kit per tipo** con la didascalia; nella pagina del voto, al suo posto, il risultato a barre.
+- **Fermate e grandi cali restano come sono:** all'opposizione «avanti fino a novità» si ferma quasi a ogni turno, ma per decisioni vere; un calo di 7,5 punti nel sondaggio si vede dal tracciato, non in pagina.
+- **Una voce sola per una situazione accesa col suo evento**, rimandata al core.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

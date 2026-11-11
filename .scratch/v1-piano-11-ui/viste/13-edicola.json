@@ -1,0 +1,1084 @@
+{
+  "albo": [
+    {
+      "anni_al_governo": 2.0,
+      "elezioni": [
+        {
+          "affluenza": 0.7140327215902681,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "seggi_giocatore": [
+            76,
+            38
+          ],
+          "voti": [
+            [
+              "Estrema sinistra",
+              0.024615046106056
+            ],
+            [
+              "Sinistra",
+              0.33282626275304666
+            ],
+            [
+              "Centrosinistra",
+              0.05741840834508147
+            ],
+            [
+              "Centro",
+              0.04134085153471969
+            ],
+            [
+              "Centrodestra",
+              0.07024873934619229
+            ],
+            [
+              "Destra",
+              0.24933003381413937
+            ],
+            [
+              "Estrema destra",
+              0.06005696816351142
+            ],
+            [
+              "Partito del giocatore",
+              0.16416368993725308
+            ]
+          ]
+        }
+      ],
+      "esito": "Abbandono",
+      "fine": {
+        "anno": 2029,
+        "trimestre": 2
+      },
+      "formato_albo": 2,
+      "indicatori": [
+        {
+          "fine": 136.80450759081097,
+          "id": "debito_pil",
+          "nome": "Debito (% del PIL)",
+          "turno_zero": 136.7
+        },
+        {
+          "fine": 75.90502204484164,
+          "id": "spread",
+          "nome": "Spread (punti base)",
+          "turno_zero": 83.87909999999988
+        },
+        {
+          "fine": 6.127971438534668,
+          "id": "disoccupazione",
+          "nome": "Disoccupazione (%)",
+          "turno_zero": 5.6000000000000005
+        },
+        {
+          "fine": 0.02432377128067653,
+          "id": "inflazione",
+          "nome": "Inflazione annua (%)",
+          "turno_zero": 4.2
+        }
+      ],
+      "inizio": {
+        "anno": 2026,
+        "trimestre": 4
+      },
+      "leggi_in_vigore": [],
+      "nome": "Partito del giocatore",
+      "riavvolgimenti": 0,
+      "scenario": "Italia di oggi",
+      "serie": [
+        {
+          "consenso": 0.19238741424985617,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "margine_camera": -201,
+          "margine_senato": -101,
+          "spread_pb": 84,
+          "turno": 0
+        },
+        {
+          "consenso": 0.508936886691874,
+          "data": {
+            "anno": 2027,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 83,
+          "turno": 1
+        },
+        {
+          "consenso": 0.5668132895987577,
+          "data": {
+            "anno": 2027,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 86,
+          "turno": 2
+        },
+        {
+          "consenso": 0.5884855328465333,
+          "data": {
+            "anno": 2027,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 89,
+          "turno": 3
+        },
+        {
+          "consenso": 0.5125147001172894,
+          "data": {
+            "anno": 2027,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 71,
+          "turno": 4
+        },
+        {
+          "consenso": 0.49232458161835047,
+          "data": {
+            "anno": 2028,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 67,
+          "turno": 5
+        },
+        {
+          "consenso": 0.5044040154905136,
+          "data": {
+            "anno": 2028,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 64,
+          "turno": 6
+        },
+        {
+          "consenso": 0.4648243075440794,
+          "data": {
+            "anno": 2028,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 62,
+          "turno": 7
+        },
+        {
+          "consenso": 0.46464314404486956,
+          "data": {
+            "anno": 2028,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 64,
+          "turno": 8
+        },
+        {
+          "consenso": 0.4866768564797642,
+          "data": {
+            "anno": 2029,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 62,
+          "turno": 9
+        },
+        {
+          "consenso": 0.4897144430544256,
+          "data": {
+            "anno": 2029,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 76,
+          "turno": 10
+        }
+      ],
+      "turni": 10
+    },
+    {
+      "anni_al_governo": 5.25,
+      "elezioni": [
+        {
+          "affluenza": 0.6831781576337791,
+          "data": {
+            "anno": 2031,
+            "trimestre": 4
+          },
+          "seggi_giocatore": [
+            64,
+            36
+          ],
+          "voti": [
+            [
+              "Estrema sinistra",
+              0.04001186790684925
+            ],
+            [
+              "Sinistra",
+              0.39068492475816535
+            ],
+            [
+              "Centrosinistra",
+              0.06121202972471698
+            ],
+            [
+              "Centro",
+              0.04068699327306323
+            ],
+            [
+              "Centrodestra",
+              0.0658667566918036
+            ],
+            [
+              "Destra",
+              0.15585890265126764
+            ],
+            [
+              "Estrema destra",
+              0.08919600457662868
+            ],
+            [
+              "Concordia",
+              0.15648252041750527
+            ]
+          ]
+        },
+        {
+          "affluenza": 0.7210855511492933,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "seggi_giocatore": [
+            70,
+            36
+          ],
+          "voti": [
+            [
+              "Estrema sinistra",
+              0.024563343177276976
+            ],
+            [
+              "Sinistra",
+              0.3228700815462948
+            ],
+            [
+              "Centrosinistra",
+              0.057085308639677736
+            ],
+            [
+              "Centro",
+              0.03956814147895883
+            ],
+            [
+              "Centrodestra",
+              0.067310325860246
+            ],
+            [
+              "Destra",
+              0.2731365537955234
+            ],
+            [
+              "Estrema destra",
+              0.05779034811608389
+            ],
+            [
+              "Concordia",
+              0.15767589738593837
+            ]
+          ]
+        }
+      ],
+      "esito": "Abbandono",
+      "fine": {
+        "anno": 2035,
+        "trimestre": 2
+      },
+      "formato_albo": 2,
+      "indicatori": [
+        {
+          "fine": 138.3846905023213,
+          "id": "debito_pil",
+          "nome": "Debito (% del PIL)",
+          "turno_zero": 136.7
+        },
+        {
+          "fine": 126.77709956095248,
+          "id": "spread",
+          "nome": "Spread (punti base)",
+          "turno_zero": 83.87909999999988
+        },
+        {
+          "fine": 5.881052853867047,
+          "id": "disoccupazione",
+          "nome": "Disoccupazione (%)",
+          "turno_zero": 5.6000000000000005
+        },
+        {
+          "fine": -0.12658108236240917,
+          "id": "inflazione",
+          "nome": "Inflazione annua (%)",
+          "turno_zero": 4.2
+        }
+      ],
+      "inizio": {
+        "anno": 2026,
+        "trimestre": 4
+      },
+      "leggi_in_vigore": [],
+      "nome": "Concordia",
+      "riavvolgimenti": 0,
+      "scenario": "Italia di oggi",
+      "serie": [
+        {
+          "consenso": 0.2329499743540891,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "margine_camera": -201,
+          "margine_senato": -101,
+          "spread_pb": 84,
+          "turno": 0
+        },
+        {
+          "consenso": 0.5367242229404445,
+          "data": {
+            "anno": 2027,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 113,
+          "turno": 1
+        },
+        {
+          "consenso": 0.5182631538149574,
+          "data": {
+            "anno": 2027,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 119,
+          "turno": 2
+        },
+        {
+          "consenso": 0.5524086773093577,
+          "data": {
+            "anno": 2027,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 121,
+          "turno": 3
+        },
+        {
+          "consenso": 0.5166811985542542,
+          "data": {
+            "anno": 2027,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 107,
+          "turno": 4
+        },
+        {
+          "consenso": 0.46149386062504494,
+          "data": {
+            "anno": 2028,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 105,
+          "turno": 5
+        },
+        {
+          "consenso": 0.4478673893140622,
+          "data": {
+            "anno": 2028,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 104,
+          "turno": 6
+        },
+        {
+          "consenso": 0.43533686588514964,
+          "data": {
+            "anno": 2028,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 104,
+          "turno": 7
+        },
+        {
+          "consenso": 0.44428647531754756,
+          "data": {
+            "anno": 2028,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 111,
+          "turno": 8
+        },
+        {
+          "consenso": 0.4442841526018716,
+          "data": {
+            "anno": 2029,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 121,
+          "turno": 9
+        },
+        {
+          "consenso": 0.45576899667471116,
+          "data": {
+            "anno": 2029,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 138,
+          "turno": 10
+        },
+        {
+          "consenso": 0.46974740919257274,
+          "data": {
+            "anno": 2029,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 152,
+          "turno": 11
+        },
+        {
+          "consenso": 0.44444106925369997,
+          "data": {
+            "anno": 2029,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 162,
+          "turno": 12
+        },
+        {
+          "consenso": 0.4563281661506501,
+          "data": {
+            "anno": 2030,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 171,
+          "turno": 13
+        },
+        {
+          "consenso": 0.3748640148409848,
+          "data": {
+            "anno": 2030,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 179,
+          "turno": 14
+        },
+        {
+          "consenso": 0.43020255832617027,
+          "data": {
+            "anno": 2030,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 183,
+          "turno": 15
+        },
+        {
+          "consenso": 0.45339030569923616,
+          "data": {
+            "anno": 2030,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 182,
+          "turno": 16
+        },
+        {
+          "consenso": 0.4161708867710442,
+          "data": {
+            "anno": 2031,
+            "trimestre": 1
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 172,
+          "turno": 17
+        },
+        {
+          "consenso": 0.3758690086153461,
+          "data": {
+            "anno": 2031,
+            "trimestre": 2
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 160,
+          "turno": 18
+        },
+        {
+          "consenso": 0.39712775058763056,
+          "data": {
+            "anno": 2031,
+            "trimestre": 3
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 142,
+          "turno": 19
+        },
+        {
+          "consenso": 0.39909915082989,
+          "data": {
+            "anno": 2031,
+            "trimestre": 4
+          },
+          "margine_camera": 23,
+          "margine_senato": 14,
+          "spread_pb": 130,
+          "turno": 20
+        },
+        {
+          "consenso": 0.39755460495210837,
+          "data": {
+            "anno": 2032,
+            "trimestre": 1
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 102,
+          "turno": 21
+        },
+        {
+          "consenso": 0.41740408239891214,
+          "data": {
+            "anno": 2032,
+            "trimestre": 2
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 90,
+          "turno": 22
+        },
+        {
+          "consenso": 0.5237440754340041,
+          "data": {
+            "anno": 2032,
+            "trimestre": 3
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 106,
+          "turno": 23
+        },
+        {
+          "consenso": 0.5146162812813209,
+          "data": {
+            "anno": 2032,
+            "trimestre": 4
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 93,
+          "turno": 24
+        },
+        {
+          "consenso": 0.47772883921796866,
+          "data": {
+            "anno": 2033,
+            "trimestre": 1
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 88,
+          "turno": 25
+        },
+        {
+          "consenso": 0.4905343519869229,
+          "data": {
+            "anno": 2033,
+            "trimestre": 2
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 91,
+          "turno": 26
+        },
+        {
+          "consenso": 0.4967172028719542,
+          "data": {
+            "anno": 2033,
+            "trimestre": 3
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 60,
+          "turno": 27
+        },
+        {
+          "consenso": 0.4567901408808842,
+          "data": {
+            "anno": 2033,
+            "trimestre": 4
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 54,
+          "turno": 28
+        },
+        {
+          "consenso": 0.47690175102571486,
+          "data": {
+            "anno": 2034,
+            "trimestre": 1
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 54,
+          "turno": 29
+        },
+        {
+          "consenso": 0.5672539064067448,
+          "data": {
+            "anno": 2034,
+            "trimestre": 2
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 93,
+          "turno": 30
+        },
+        {
+          "consenso": 0.5883896249953885,
+          "data": {
+            "anno": 2034,
+            "trimestre": 3
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 91,
+          "turno": 31
+        },
+        {
+          "consenso": 0.5397195260471515,
+          "data": {
+            "anno": 2034,
+            "trimestre": 4
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 94,
+          "turno": 32
+        },
+        {
+          "consenso": 0.5436663055201233,
+          "data": {
+            "anno": 2035,
+            "trimestre": 1
+          },
+          "margine_camera": -48,
+          "margine_senato": -25,
+          "spread_pb": 97,
+          "turno": 33
+        },
+        {
+          "consenso": 0.20816044054935173,
+          "data": {
+            "anno": 2035,
+            "trimestre": 2
+          },
+          "margine_camera": -97,
+          "margine_senato": -46,
+          "spread_pb": 127,
+          "turno": 34
+        }
+      ],
+      "turni": 34
+    },
+    {
+      "anni_al_governo": 0.0,
+      "elezioni": [
+        {
+          "affluenza": 0.7037131126684226,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "seggi_giocatore": [
+            34,
+            18
+          ],
+          "voti": [
+            [
+              "Estrema sinistra",
+              0.023354442055336346
+            ],
+            [
+              "Sinistra",
+              0.32377256441708463
+            ],
+            [
+              "Centrosinistra",
+              0.05940474550592579
+            ],
+            [
+              "Centro",
+              0.04034803070680274
+            ],
+            [
+              "Centrodestra",
+              0.07523320579352974
+            ],
+            [
+              "Destra",
+              0.32880055487617244
+            ],
+            [
+              "Estrema destra",
+              0.06617133816110105
+            ],
+            [
+              "Fronte Popolare dei Borghi",
+              0.0829151184840473
+            ]
+          ]
+        }
+      ],
+      "esito": "Abbandono",
+      "fine": {
+        "anno": 2029,
+        "trimestre": 4
+      },
+      "formato_albo": 2,
+      "indicatori": [
+        {
+          "fine": 136.34503782676083,
+          "id": "debito_pil",
+          "nome": "Debito (% del PIL)",
+          "turno_zero": 136.7
+        },
+        {
+          "fine": 67.01269276431674,
+          "id": "spread",
+          "nome": "Spread (punti base)",
+          "turno_zero": 83.87909999999988
+        },
+        {
+          "fine": 5.6913030802857385,
+          "id": "disoccupazione",
+          "nome": "Disoccupazione (%)",
+          "turno_zero": 5.6000000000000005
+        },
+        {
+          "fine": 1.3806459014216843,
+          "id": "inflazione",
+          "nome": "Inflazione annua (%)",
+          "turno_zero": 4.2
+        }
+      ],
+      "inizio": {
+        "anno": 2026,
+        "trimestre": 4
+      },
+      "leggi_in_vigore": [],
+      "nome": "Fronte Popolare dei Borghi",
+      "riavvolgimenti": 0,
+      "scenario": "Italia di oggi",
+      "serie": [
+        {
+          "consenso": 0.12115409585436071,
+          "data": {
+            "anno": 2026,
+            "trimestre": 4
+          },
+          "margine_camera": -201,
+          "margine_senato": -101,
+          "spread_pb": 84,
+          "turno": 0
+        },
+        {
+          "consenso": 0.0919579256563618,
+          "data": {
+            "anno": 2027,
+            "trimestre": 1
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 70,
+          "turno": 1
+        },
+        {
+          "consenso": 0.05670143883021484,
+          "data": {
+            "anno": 2027,
+            "trimestre": 2
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 75,
+          "turno": 2
+        },
+        {
+          "consenso": 0.08898789190869841,
+          "data": {
+            "anno": 2027,
+            "trimestre": 3
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 98,
+          "turno": 3
+        },
+        {
+          "consenso": 0.10041268065131971,
+          "data": {
+            "anno": 2027,
+            "trimestre": 4
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 88,
+          "turno": 4
+        },
+        {
+          "consenso": 0.08071395189005237,
+          "data": {
+            "anno": 2028,
+            "trimestre": 1
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 90,
+          "turno": 5
+        },
+        {
+          "consenso": 0.11074645365083857,
+          "data": {
+            "anno": 2028,
+            "trimestre": 2
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 90,
+          "turno": 6
+        },
+        {
+          "consenso": 0.11927133441574914,
+          "data": {
+            "anno": 2028,
+            "trimestre": 3
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 93,
+          "turno": 7
+        },
+        {
+          "consenso": 0.11474912975666327,
+          "data": {
+            "anno": 2028,
+            "trimestre": 4
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 99,
+          "turno": 8
+        },
+        {
+          "consenso": 0.08595715354772328,
+          "data": {
+            "anno": 2029,
+            "trimestre": 1
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 93,
+          "turno": 9
+        },
+        {
+          "consenso": 0.09052491250689534,
+          "data": {
+            "anno": 2029,
+            "trimestre": 2
+          },
+          "margine_camera": -167,
+          "margine_senato": -83,
+          "spread_pb": 84,
+          "turno": 10
+        },
+        {
+          "consenso": 0.04784906515424662,
+          "data": {
+            "anno": 2029,
+            "trimestre": 3
+          },
+          "margine_camera": -171,
+          "margine_senato": -85,
+          "spread_pb": 77,
+          "turno": 11
+        },
+        {
+          "consenso": 0.043447171725414145,
+          "data": {
+            "anno": 2029,
+            "trimestre": 4
+          },
+          "margine_camera": -171,
+          "margine_senato": -85,
+          "spread_pb": 67,
+          "turno": 12
+        }
+      ],
+      "turni": 12
+    }
+  ],
+  "partite": [
+    {
+      "apribile": true,
+      "indice": {
+        "formato_indice": 1,
+        "id": "patto-civico",
+        "riavvolgimenti": 0,
+        "testata": {
+          "data": {
+            "anno": 2028,
+            "trimestre": 2
+          },
+          "finita": false,
+          "nome": "Patto Civico",
+          "scenario": "Italia di oggi",
+          "turno": 6,
+          "versione_schema": 17
+        },
+        "ultimo_salvataggio": 1794000000
+      },
+      "motivo": null
+    },
+    {
+      "apribile": true,
+      "indice": {
+        "formato_indice": 1,
+        "id": "lista-del-faro",
+        "riavvolgimenti": 0,
+        "testata": {
+          "data": {
+            "anno": 2027,
+            "trimestre": 1
+          },
+          "finita": true,
+          "nome": "Lista del Faro",
+          "scenario": "Italia di oggi",
+          "turno": 1,
+          "versione_schema": 17
+        },
+        "ultimo_salvataggio": 1793913600
+      },
+      "motivo": null
+    },
+    {
+      "apribile": true,
+      "indice": {
+        "formato_indice": 1,
+        "id": "nuova-concordia",
+        "riavvolgimenti": 0,
+        "testata": {
+          "data": {
+            "anno": 2035,
+            "trimestre": 2
+          },
+          "finita": false,
+          "nome": "Nuova Concordia",
+          "scenario": "Italia di oggi",
+          "turno": 34,
+          "versione_schema": 17
+        },
+        "ultimo_salvataggio": 1793823600
+      },
+      "motivo": null
+    },
+    {
+      "apribile": true,
+      "indice": {
+        "formato_indice": 1,
+        "id": "fronte-dei-comuni",
+        "riavvolgimenti": 0,
+        "testata": {
+          "data": {
+            "anno": 2028,
+            "trimestre": 1
+          },
+          "finita": false,
+          "nome": "Fronte dei Comuni",
+          "scenario": "Italia di oggi",
+          "turno": 5,
+          "versione_schema": 17
+        },
+        "ultimo_salvataggio": 1793568000
+      },
+      "motivo": null
+    },
+    {
+      "apribile": false,
+      "indice": {
+        "formato_indice": 1,
+        "id": "unione-dei-pendolari",
+        "riavvolgimenti": 0,
+        "testata": {
+          "data": {
+            "anno": 2027,
+            "trimestre": 3
+          },
+          "finita": false,
+          "nome": "Unione dei Pendolari",
+          "scenario": "Italia di oggi",
+          "turno": 3,
+          "versione_schema": 16
+        },
+        "ultimo_salvataggio": 1793222400
+      },
+      "motivo": "salvataggio di una versione diversa del gioco: schema 16, atteso 17"
+    }
+  ]
+}

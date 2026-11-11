@@ -1,0 +1,1 @@
+{"derived_from": {"path": "https://developer.mozilla.org/en-US/docs/Web/API/Document/getAnimations", "sha256": "d00329387c98a448fc8b08ae4811e6766293a50d9dec34a90714b07698294c92", "bytes": 2026}, "tool": "defuddle", "tool_version": "0.19.1", "extracted": "2026-11-01"}

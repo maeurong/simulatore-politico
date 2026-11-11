@@ -1,0 +1,4727 @@
+{
+  "turno": 9,
+  "data": {
+    "anno": 2029,
+    "trimestre": 1
+  },
+  "giocatore": "giocatore",
+  "fase": "ordinaria",
+  "voto": {
+    "anno": 2031,
+    "trimestre": 4
+  },
+  "turni_al_voto": 11,
+  "governa": false,
+  "finita": true,
+  "dicasteri": [
+    {
+      "id": "economia_finanze",
+      "nome": "Economia e Finanze"
+    },
+    {
+      "id": "sviluppo_economico",
+      "nome": "Sviluppo economico"
+    },
+    {
+      "id": "lavoro_welfare",
+      "nome": "Lavoro e Welfare"
+    },
+    {
+      "id": "sanita",
+      "nome": "Sanità"
+    },
+    {
+      "id": "istruzione_ricerca",
+      "nome": "Istruzione e Ricerca"
+    },
+    {
+      "id": "infrastrutture_trasporti",
+      "nome": "Infrastrutture e Trasporti"
+    },
+    {
+      "id": "ambiente_energia",
+      "nome": "Ambiente ed Energia"
+    },
+    {
+      "id": "interno",
+      "nome": "Interno"
+    },
+    {
+      "id": "giustizia",
+      "nome": "Giustizia"
+    },
+    {
+      "id": "esteri_difesa",
+      "nome": "Esteri e Difesa"
+    }
+  ],
+  "grandezze": [
+    {
+      "id": "efficienza_riscossione",
+      "nome": "Efficienza della riscossione",
+      "verso": "sale",
+      "valori": [
+        111.33468957198856
+      ]
+    },
+    {
+      "id": "sostegno_imprese",
+      "nome": "Sostegno alle imprese",
+      "verso": "sale",
+      "valori": [
+        102.3751296840771
+      ]
+    },
+    {
+      "id": "copertura_welfare",
+      "nome": "Copertura del welfare",
+      "verso": "sale",
+      "valori": [
+        103.85320809345502
+      ]
+    },
+    {
+      "id": "qualita_servizio_sanitario",
+      "nome": "Qualità del servizio sanitario",
+      "verso": "sale",
+      "valori": [
+        107.94072518563375
+      ]
+    },
+    {
+      "id": "qualita_scuola",
+      "nome": "Qualità della scuola",
+      "verso": "sale",
+      "valori": [
+        116.79628167713014
+      ]
+    },
+    {
+      "id": "qualita_trasporti",
+      "nome": "Qualità dei trasporti",
+      "verso": "sale",
+      "valori": [
+        105.13938640813652
+      ]
+    },
+    {
+      "id": "sicurezza_energetica",
+      "nome": "Sicurezza energetica",
+      "verso": "sale",
+      "valori": [
+        100.84130360851518
+      ]
+    },
+    {
+      "id": "sicurezza",
+      "nome": "Sicurezza",
+      "verso": "sale",
+      "valori": [
+        103.54873477971344
+      ]
+    },
+    {
+      "id": "durata_processi",
+      "nome": "Durata dei processi",
+      "verso": "scende",
+      "valori": [
+        89.96744150891041
+      ]
+    },
+    {
+      "id": "prontezza_difesa",
+      "nome": "Prontezza della difesa",
+      "verso": "sale",
+      "valori": [
+        103.12294506193876
+      ]
+    },
+    {
+      "id": "occupazione_pubblica",
+      "nome": "Occupazione pubblica",
+      "verso": "sale",
+      "valori": [
+        99.06974705302706
+      ]
+    },
+    {
+      "id": "stock_infrastrutture",
+      "nome": "Stock di infrastrutture",
+      "verso": "sale",
+      "valori": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        93.46661598817639,
+        100.0,
+        103.92,
+        98.81079288499728,
+        91.02381422268675,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        98.70316044534898,
+        100.0,
+        100.0
+      ]
+    },
+    {
+      "id": "investimenti_privati",
+      "nome": "Investimenti privati",
+      "verso": "sale",
+      "valori": [
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.46666666666667,
+        97.0,
+        100.0,
+        97.0,
+        94.0,
+        94.0,
+        94.0,
+        94.0,
+        94.0,
+        94.0,
+        94.0
+      ]
+    },
+    {
+      "id": "domanda_regionale",
+      "nome": "Domanda della regione (punti di gap)",
+      "verso": "sale",
+      "valori": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.00382125,
+        0.20606601717798212,
+        0.0,
+        0.0,
+        0.01057,
+        0.0,
+        0.39999999999999997,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.39999999999999997,
+        0.0
+      ]
+    },
+    {
+      "id": "prezzo_energia",
+      "nome": "Prezzo dell'energia (% sugli input importati)",
+      "verso": "scende",
+      "valori": [
+        0.0
+      ]
+    },
+    {
+      "id": "politiche_attive",
+      "nome": "Politiche attive (punti di disoccupazione strutturale tolti)",
+      "verso": "sale",
+      "valori": [
+        0.06333333333333332
+      ]
+    },
+    {
+      "id": "capitale_umano",
+      "nome": "Capitale umano",
+      "verso": "sale",
+      "valori": [
+        105.33333333333333
+      ]
+    },
+    {
+      "id": "sovraffollamento_carceri",
+      "nome": "Sovraffollamento delle carceri",
+      "verso": "scende",
+      "valori": [
+        108.71516274726609
+      ]
+    },
+    {
+      "id": "immigrazione_irregolare",
+      "nome": "Immigrazione irregolare",
+      "verso": "scende",
+      "valori": [
+        98.41452774202946
+      ]
+    },
+    {
+      "id": "corruzione",
+      "nome": "Corruzione",
+      "verso": "scende",
+      "valori": [
+        101.62539685301775
+      ]
+    },
+    {
+      "id": "regole_lavoro",
+      "nome": "Regole del lavoro (punti di disoccupazione strutturale tolti)",
+      "verso": "sale",
+      "valori": [
+        0.0
+      ]
+    }
+  ],
+  "spread_pb": 62,
+  "partiti": [
+    {
+      "id": "estrema_sinistra",
+      "nome": "Estrema sinistra",
+      "posizione_dichiarata": 1.0,
+      "posizione_percepita": 1.1475,
+      "valence": -0.613476,
+      "al_governo": false,
+      "vocazione": "identitaria",
+      "leader": "Anna Ferrucci",
+      "regola": "sticker",
+      "sciolto": false,
+      "cassa": 323538,
+      "promesse": [
+        {
+          "disposizione": "Concorrenza nei servizi",
+          "gradino": "mercato libero",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Regime delle pensioni",
+          "gradino": "retributivo",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "sinistra",
+      "nome": "Sinistra",
+      "posizione_dichiarata": 2.0,
+      "posizione_percepita": 2.05,
+      "valence": 0.969668,
+      "al_governo": false,
+      "vocazione": "mista",
+      "leader": "Luca Benedetti",
+      "regola": "aggregator",
+      "sciolto": false,
+      "cassa": 4088039,
+      "promesse": [
+        {
+          "disposizione": "Concorrenza nei servizi",
+          "gradino": "mercato libero",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Regime delle pensioni",
+          "gradino": "retributivo",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "centrosinistra",
+      "nome": "Centrosinistra",
+      "posizione_dichiarata": 3.0,
+      "posizione_percepita": 3.0,
+      "valence": -0.522527,
+      "al_governo": false,
+      "vocazione": "mista",
+      "leader": "Chiara Lombardo",
+      "regola": "hunter",
+      "sciolto": false,
+      "cassa": 727442,
+      "promesse": [
+        {
+          "disposizione": "Concorrenza nei servizi",
+          "gradino": "mercato libero",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Regime delle pensioni",
+          "gradino": "quota base universale",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "centro",
+      "nome": "Centro",
+      "posizione_dichiarata": 4.0,
+      "posizione_percepita": 4.0,
+      "valence": -0.889093,
+      "al_governo": false,
+      "vocazione": "governista",
+      "leader": "Giorgio Valli",
+      "regola": "governator",
+      "sciolto": false,
+      "cassa": 520884,
+      "promesse": [
+        {
+          "disposizione": "Concorrenza nei servizi",
+          "gradino": "gare",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Salario minimo legale",
+          "gradino": "7 €/h",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "centrodestra",
+      "nome": "Centrodestra",
+      "posizione_dichiarata": 5.0,
+      "posizione_percepita": 5.0025,
+      "valence": -0.42514,
+      "al_governo": true,
+      "vocazione": "mista",
+      "leader": "Silvia Moretti",
+      "regola": "hunter",
+      "sciolto": false,
+      "cassa": 878924,
+      "promesse": [
+        {
+          "disposizione": "Nucleare",
+          "gradino": "consentito",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Autonomia differenziata",
+          "gradino": "prime materie",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "destra",
+      "nome": "Destra",
+      "posizione_dichiarata": 6.0,
+      "posizione_percepita": 5.905,
+      "valence": 0.821245375304388,
+      "al_governo": true,
+      "vocazione": "mista",
+      "leader": "Davide Ranieri",
+      "regola": "aggregator",
+      "sciolto": false,
+      "cassa": 3101671,
+      "promesse": [
+        {
+          "disposizione": "Nucleare",
+          "gradino": "consentito",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Autonomia differenziata",
+          "gradino": "intese complete",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "estrema_destra",
+      "nome": "Estrema destra",
+      "posizione_dichiarata": 7.0,
+      "posizione_percepita": 6.95,
+      "valence": 0.015048,
+      "al_governo": false,
+      "vocazione": "identitaria",
+      "leader": "Bruno Castellani",
+      "regola": "sticker",
+      "sciolto": false,
+      "cassa": 765955,
+      "promesse": [
+        {
+          "disposizione": "Nucleare",
+          "gradino": "consentito",
+          "in_sospeso": true
+        },
+        {
+          "disposizione": "Autonomia differenziata",
+          "gradino": "intese complete",
+          "in_sospeso": true
+        }
+      ]
+    },
+    {
+      "id": "giocatore",
+      "nome": "Partito del giocatore",
+      "posizione_dichiarata": 4.5,
+      "posizione_percepita": 4.461646718749999,
+      "valence": 0.127464815953125,
+      "al_governo": true,
+      "vocazione": "mista",
+      "leader": "",
+      "regola": "sticker",
+      "sciolto": false,
+      "cassa": 2874996,
+      "promesse": []
+    }
+  ],
+  "ministeri": [
+    {
+      "dicastero": "economia_finanze",
+      "ministro": {
+        "nome": "Simone Gallo",
+        "partito": "destra",
+        "capacita": 4,
+        "posizione": 5.925495650975252,
+        "obiettivo": 114.73542856456142,
+        "soddisfazione": 66.28116637610432,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": false,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "economia_finanze_incroci",
+          "nome": "Incrocio delle banche dati fiscali",
+          "motto": "Due case e una barca: il fisco li ha messi in fila.",
+          "costo": 296807094,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "efficienza_riscossione",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "economia_finanze_condono",
+          "nome": "Condono per chi paga subito",
+          "motto": "Incassa oggi, domani si vedrà.",
+          "costo": 445210641,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "efficienza_riscossione",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "efficienza_riscossione",
+              "migliora": false,
+              "ritardo": 2
+            }
+          ]
+        },
+        {
+          "id": "economia_finanze_anagrafe",
+          "nome": "Anagrafe tributaria unica",
+          "motto": "Un solo schedario per tutti i cassetti.",
+          "costo": 296807094,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "efficienza_riscossione",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "economia_finanze_concessionari",
+          "nome": "Riscossione affidata a concessionari privati",
+          "motto": "La cartella esattoriale, ora in appalto.",
+          "costo": 148403547,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "efficienza_riscossione",
+              "migliora": true,
+              "ritardo": 3
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 1163795674,
+      "proposta": null
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "ministro": {
+        "nome": "Marco Bianchi",
+        "partito": "giocatore",
+        "capacita": 2,
+        "posizione": 4.093665205507699,
+        "obiettivo": 104.73542856456142,
+        "soddisfazione": 49.23538941045136,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": false,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "sviluppo_economico_commesse",
+          "nome": "Commesse pubbliche alle imprese del territorio",
+          "motto": "Compriamo locale, anche se costa un po' di più.",
+          "costo": 307860718,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "domanda_regionale",
+              "migliora": true,
+              "ritardo": 1
+            },
+            {
+              "grandezza": "sostegno_imprese",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "sviluppo_economico_sgravi",
+          "nome": "Sgravi mirati sulle zone industriali",
+          "motto": "Meno tasse dove i capannoni sono vuoti.",
+          "costo": 205240479,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "domanda_regionale",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "sviluppo_economico_distretti",
+          "nome": "Distretti produttivi e contratti di filiera",
+          "motto": "Tutti insieme, dal bullone al container.",
+          "costo": 307860718,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "investimenti_privati",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "sviluppo_economico_zone",
+          "nome": "Zone economiche speciali con burocrazia ridotta",
+          "motto": "Qui i timbri si contano sulle dita di una mano.",
+          "costo": 102620239,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "investimenti_privati",
+              "migliora": true,
+              "ritardo": 3
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 804758331,
+      "proposta": null
+    },
+    {
+      "dicastero": "lavoro_welfare",
+      "ministro": {
+        "nome": "Simone Ricci",
+        "partito": "centrodestra",
+        "capacita": 2,
+        "posizione": 4.148357754004794,
+        "obiettivo": 109.73542856456143,
+        "soddisfazione": 35.69907066280616,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "proposta_respinta",
+        "variazioni": [
+          {
+            "causa": "proposta_respinta",
+            "delta": -8.0,
+            "turno": 8
+          },
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          },
+          {
+            "causa": "indicatore_in_calo",
+            "delta": -3.2892154953855055,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "lavoro_welfare_bonus",
+          "nome": "Bonus straordinario per le famiglie in difficoltà",
+          "motto": "Un assegno e un sospiro di sollievo.",
+          "costo": 145812854,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "copertura_welfare",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "lavoro_welfare_incentivi",
+          "nome": "Incentivi alle assunzioni stabili",
+          "motto": "Il contratto fisso torna di moda.",
+          "costo": 97208569,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "politiche_attive",
+              "migliora": true,
+              "ritardo": 2
+            }
+          ]
+        },
+        {
+          "id": "lavoro_welfare_centri_impiego",
+          "nome": "Centri per l'impiego rinnovati",
+          "motto": "Lo sportello che il lavoro lo trova.",
+          "costo": 97208569,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "politiche_attive",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "copertura_welfare",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "lavoro_welfare_formazione",
+          "nome": "Formazione pagata dalle imprese",
+          "motto": "Imparare il mestiere dove si lavora, a spese dell'azienda.",
+          "costo": 48604285,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "politiche_attive",
+              "migliora": true,
+              "ritardo": 3
+            }
+          ]
+        }
+      ],
+      "cantieri": [
+        {
+          "atto": "lavoro_welfare_centri_impiego",
+          "regione": null,
+          "turni_mancanti": 3,
+          "rata": 97516557,
+          "speso": 97516557
+        }
+      ],
+      "margine_residuo": 381159732,
+      "proposta": null
+    },
+    {
+      "dicastero": "sanita",
+      "ministro": {
+        "nome": "Sara Ferraro",
+        "partito": "destra",
+        "capacita": 2,
+        "posizione": 5.9442048619243755,
+        "obiettivo": 114.73542856456142,
+        "soddisfazione": 33.91897186917905,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "sanita_liste_straordinario",
+          "nome": "Piano straordinario sulle liste d'attesa",
+          "motto": "Il numero sul biglietto scende.",
+          "costo": 634048193,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_servizio_sanitario",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "sanita_convenzioni_privato",
+          "nome": "Convenzioni col privato accreditato",
+          "motto": "La sala operatoria accanto, già convenzionata.",
+          "costo": 634048193,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_servizio_sanitario",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "sanita_case_comunita",
+          "nome": "Case di comunità e medicina territoriale",
+          "motto": "Il medico sotto casa, non in capo al mondo.",
+          "costo": 634048193,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_servizio_sanitario",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "sanita_accorpamento_asl",
+          "nome": "Accorpamento delle ASL e premi ai primari",
+          "motto": "Meno sigle, più primari contenti.",
+          "costo": 317024097,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_servizio_sanitario",
+              "migliora": true,
+              "ritardo": 4
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 2486135135,
+      "proposta": null
+    },
+    {
+      "dicastero": "istruzione_ricerca",
+      "ministro": {
+        "nome": "Chiara Caruso",
+        "partito": "giocatore",
+        "capacita": 4,
+        "posizione": 4.688820886998696,
+        "obiettivo": 119.73542856456142,
+        "soddisfazione": 67.64946050816047,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": false,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "istruzione_ricerca_supplenti",
+          "nome": "Assunzione straordinaria di supplenti",
+          "motto": "Una cattedra per ogni classe, anche a settembre.",
+          "costo": 785915593,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_scuola",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "istruzione_ricerca_premi",
+          "nome": "Premi di merito agli istituti",
+          "motto": "Il registro diventa una classifica.",
+          "costo": 523943729,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_scuola",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "istruzione_ricerca_edilizia",
+          "nome": "Edilizia scolastica e tempo pieno",
+          "motto": "Il soffitto regge, la campanella suona più tardi.",
+          "costo": 523943729,
+          "turni": 6,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "qualita_scuola",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "capitale_umano",
+              "migliora": true,
+              "ritardo": 4
+            }
+          ]
+        },
+        {
+          "id": "istruzione_ricerca_atenei",
+          "nome": "Autonomia degli atenei e dottorati industriali",
+          "motto": "L'università fa i conti, e anche i brevetti.",
+          "costo": 261971864,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "capitale_umano",
+              "migliora": true,
+              "ritardo": 4
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 2054409943,
+      "proposta": null
+    },
+    {
+      "dicastero": "infrastrutture_trasporti",
+      "ministro": {
+        "nome": "Filippo Ricci",
+        "partito": "centrodestra",
+        "capacita": 3,
+        "posizione": 4.881342685865796,
+        "obiettivo": 109.73542856456143,
+        "soddisfazione": 36.916128950230615,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "indicatore_in_calo",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          },
+          {
+            "causa": "indicatore_in_calo",
+            "delta": -3.585518516303239,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "infrastrutture_trasporti_manutenzione",
+          "nome": "Manutenzione straordinaria delle strade locali",
+          "motto": "Le buche si chiudono, i coni arancioni restano.",
+          "costo": 447916476,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "domanda_regionale",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "qualita_trasporti",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "infrastrutture_trasporti_commissari",
+          "nome": "Commissari per le opere ferme",
+          "motto": "Un commissario, una firma, una gru.",
+          "costo": 298610984,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "domanda_regionale",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "infrastrutture_trasporti_ferrovie",
+          "nome": "Potenziamento delle linee ferroviarie locali",
+          "motto": "Il regionale in orario, per una volta.",
+          "costo": 298610984,
+          "turni": 5,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "stock_infrastrutture",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "qualita_trasporti",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "infrastrutture_trasporti_grandi_opere",
+          "nome": "Grandi opere pagate dal pedaggio",
+          "motto": "Il ponte lo paga chi lo attraversa.",
+          "costo": 597221968,
+          "turni": 8,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "stock_infrastrutture",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 1170868819,
+      "proposta": null
+    },
+    {
+      "dicastero": "ambiente_energia",
+      "ministro": {
+        "nome": "Luca Romano",
+        "partito": "destra",
+        "capacita": 1,
+        "posizione": 5.650713015749754,
+        "obiettivo": 109.73542856456142,
+        "soddisfazione": 39.34467847855298,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "ambiente_energia_bollette",
+          "nome": "Bonus sulle bollette",
+          "motto": "La luce costa meno, almeno finché dura.",
+          "costo": 215502503,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "prezzo_energia",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "ambiente_energia_riserve",
+          "nome": "Riempimento accelerato delle riserve di gas",
+          "motto": "Gli stoccaggi pieni prima dell'inverno.",
+          "costo": 143668335,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sicurezza_energetica",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "ambiente_energia_rinnovabili",
+          "nome": "Parco di rinnovabili e accumuli",
+          "motto": "Sole e vento, con le batterie per la sera.",
+          "costo": 143668335,
+          "turni": 6,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sicurezza_energetica",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "prezzo_energia",
+              "migliora": true,
+              "ritardo": 2
+            }
+          ]
+        },
+        {
+          "id": "ambiente_energia_rigassificatori",
+          "nome": "Rigassificatori e nuove centrali",
+          "motto": "Una nave alla fonda e il contatore tira il fiato.",
+          "costo": 215502503,
+          "turni": 5,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sicurezza_energetica",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "prezzo_energia",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        }
+      ],
+      "cantieri": [
+        {
+          "atto": "ambiente_energia_rigassificatori",
+          "regione": null,
+          "turni_mancanti": 1,
+          "rata": 209261745,
+          "speso": 837046980
+        }
+      ],
+      "margine_residuo": 563330832,
+      "proposta": null
+    },
+    {
+      "dicastero": "interno",
+      "ministro": {
+        "nome": "Filippo Barbieri",
+        "partito": "giocatore",
+        "capacita": 5,
+        "posizione": 4.1706903810313225,
+        "obiettivo": 109.73542856456142,
+        "soddisfazione": 35.22945878499199,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "indicatore_in_calo",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          },
+          {
+            "causa": "indicatore_in_calo",
+            "delta": -5.012429756145451,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "interno_agenti",
+          "nome": "Agenti di quartiere",
+          "motto": "Il vigile che sa come ti chiami.",
+          "costo": 118807275,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sicurezza",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "interno_controlli",
+          "nome": "Controlli straordinari alle frontiere",
+          "motto": "Alla frontiera il documento lo chiedono anche al gatto.",
+          "costo": 178210912,
+          "turni": 1,
+          "pagabile": false,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "immigrazione_irregolare",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "interno_accoglienza",
+          "nome": "Accoglienza diffusa e corridoi umanitari",
+          "motto": "Pochi per paese, nessuno per strada.",
+          "costo": 118807275,
+          "turni": 3,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "immigrazione_irregolare",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "sicurezza",
+              "migliora": true,
+              "ritardo": 2
+            }
+          ]
+        },
+        {
+          "id": "interno_videosorveglianza",
+          "nome": "Videosorveglianza e centri di rimpatrio",
+          "motto": "Mille telecamere, un solo registro.",
+          "costo": 178210912,
+          "turni": 4,
+          "pagabile": false,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sicurezza",
+              "migliora": true,
+              "ritardo": 0
+            },
+            {
+              "grandezza": "immigrazione_irregolare",
+              "migliora": true,
+              "ritardo": 2
+            }
+          ]
+        }
+      ],
+      "cantieri": [
+        {
+          "atto": "interno_videosorveglianza",
+          "regione": null,
+          "turni_mancanti": 1,
+          "rata": 173050085,
+          "speso": 519150255
+        },
+        {
+          "atto": "interno_accoglienza",
+          "regione": null,
+          "turni_mancanti": 1,
+          "rata": 116634288,
+          "speso": 233268576
+        }
+      ],
+      "margine_residuo": 465849353,
+      "proposta": null
+    },
+    {
+      "dicastero": "giustizia",
+      "ministro": {
+        "nome": "Simone Bianchi",
+        "partito": "giocatore",
+        "capacita": 3,
+        "posizione": 5.361004718070735,
+        "obiettivo": 85.2674013053261,
+        "soddisfazione": 61.77659323693531,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": false,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "giustizia_alternative",
+          "nome": "Pene alternative per le condanne brevi",
+          "motto": "Un braccialetto al posto della cella.",
+          "costo": 50883135,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "sovraffollamento_carceri",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "giustizia_arretrato",
+          "nome": "Squadre di giudici a termine per l'arretrato",
+          "motto": "Una montagna di fascicoli e un tavolo in più.",
+          "costo": 76324703,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "durata_processi",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "giustizia_anticorruzione",
+          "nome": "Autorità anticorruzione con più poteri",
+          "motto": "Chi controlla ora può aprire anche i cassetti.",
+          "costo": 50883135,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "corruzione",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "giustizia_telematico",
+          "nome": "Processo telematico e filtri sui ricorsi",
+          "motto": "La sentenza arriva per posta elettronica certificata.",
+          "costo": 25441568,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "durata_processi",
+              "migliora": true,
+              "ritardo": 3
+            }
+          ]
+        }
+      ],
+      "cantieri": [],
+      "margine_residuo": 199515355,
+      "proposta": null
+    },
+    {
+      "dicastero": "esteri_difesa",
+      "ministro": {
+        "nome": "Giulia Rossi",
+        "partito": "destra",
+        "capacita": 3,
+        "posizione": 5.81386483779669,
+        "obiettivo": 104.73542856456142,
+        "soddisfazione": 34.88365786573538,
+        "rodaggio": false,
+        "tecnico": false,
+        "minaccia": true,
+        "causa_principale": "budget_tagliato",
+        "variazioni": [
+          {
+            "causa": "budget_tagliato",
+            "delta": -3.4261040621438976,
+            "turno": 8
+          },
+          {
+            "causa": "indicatore_in_calo",
+            "delta": -1.4983240604025525,
+            "turno": 8
+          }
+        ]
+      },
+      "rosa": [],
+      "dimissioni_chieste": false,
+      "scelta": null,
+      "causa_dimissioni": null,
+      "agenda": null,
+      "motivo_senza_agenda": null,
+      "atti": [
+        {
+          "id": "esteri_difesa_missioni",
+          "nome": "Missioni di pace sotto mandato internazionale",
+          "motto": "Un casco blu, un mandato e tanta pazienza.",
+          "costo": 129304380,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "prontezza_difesa",
+              "migliora": true,
+              "ritardo": 1
+            }
+          ]
+        },
+        {
+          "id": "esteri_difesa_scorte",
+          "nome": "Rifornimento urgente delle scorte",
+          "motto": "I depositi si riempiono e la ragioneria trema.",
+          "costo": 193956571,
+          "turni": 1,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "prontezza_difesa",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "esteri_difesa_cooperazione",
+          "nome": "Difesa comune europea e addestramenti congiunti",
+          "motto": "Ventisette uniformi, un'unica esercitazione.",
+          "costo": 129304380,
+          "turni": 4,
+          "pagabile": true,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "prontezza_difesa",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        },
+        {
+          "id": "esteri_difesa_ammodernamento",
+          "nome": "Ammodernamento dei mezzi",
+          "motto": "Gli stessi carri armati, ma con il navigatore.",
+          "costo": 258608761,
+          "turni": 8,
+          "pagabile": false,
+          "prerequisito_mancante": null,
+          "effetti": [
+            {
+              "grandezza": "prontezza_difesa",
+              "migliora": true,
+              "ritardo": 0
+            }
+          ]
+        }
+      ],
+      "cantieri": [
+        {
+          "atto": "esteri_difesa_ammodernamento",
+          "regione": null,
+          "turni_mancanti": 7,
+          "rata": 256891119,
+          "speso": 256891119
+        }
+      ],
+      "margine_residuo": 507009036,
+      "proposta": null
+    }
+  ],
+  "sondaggio": {
+    "istituti": [
+      {
+        "istituto": "Istituto A",
+        "campione": 1000,
+        "quote": [
+          0.038719534545885594,
+          0.23663469344607277,
+          0.05455556082985762,
+          0.012024152237510206,
+          0.04912860957058403,
+          0.14030066108633132,
+          0.011821229779724263,
+          0.0867514211404689,
+          0.37006413736356536
+        ]
+      },
+      {
+        "istituto": "Istituto B",
+        "campione": 800,
+        "quote": [
+          0.001818398315538343,
+          0.2160753002116376,
+          0.06785615824815802,
+          0.0,
+          0.05079386669179717,
+          0.1986986210966883,
+          0.002733797938328819,
+          0.11175370857375976,
+          0.35027014892409203
+        ]
+      },
+      {
+        "istituto": "Istituto C",
+        "campione": 1200,
+        "quote": [
+          0.012345951408650606,
+          0.20541698777353015,
+          0.07840521148242217,
+          0.015637225021108085,
+          0.04619744292165419,
+          0.16720113677414183,
+          0.014196126258479713,
+          0.0911133755905092,
+          0.36948654276950393
+        ]
+      },
+      {
+        "istituto": "Istituto D",
+        "campione": 1500,
+        "quote": [
+          0.005302569692563127,
+          0.2540775327113189,
+          0.0698710249605662,
+          0.014541562179360784,
+          0.03343397404063275,
+          0.17516498952707468,
+          0.0,
+          0.0954518812574704,
+          0.3521564656310132
+        ]
+      }
+    ],
+    "condizioni": [
+      {
+        "id": "dipendente_privato",
+        "campione": 1553,
+        "quote": [
+          0.018574650171876043,
+          0.24905299906396255,
+          0.06378568754561317,
+          0.019520359372950182,
+          0.03274739245513879,
+          0.19895947973066502,
+          0.005307872281128307,
+          0.10530649803063252,
+          0.30674506134803337
+        ],
+        "posizione": [
+          0.03381465024688994,
+          0.19127081307381236,
+          0.11609976228144044,
+          0.29121897924324397,
+          0.13332507455786116,
+          0.19600280972436535,
+          0.03826791087238694
+        ],
+        "approvazione": -0.33888754764842755
+      },
+      {
+        "id": "dipendente_pubblico",
+        "campione": 319,
+        "quote": [
+          0.020828037268821018,
+          0.23417939467624374,
+          0.05172593387690051,
+          0.0,
+          0.07463583969886158,
+          0.15412976599806577,
+          0.0,
+          0.12264191260795215,
+          0.34185911587315526
+        ],
+        "posizione": [
+          0.0779353028502265,
+          0.14419398972090722,
+          0.1666771081728361,
+          0.23249702379429427,
+          0.14171406774380235,
+          0.19536046090136033,
+          0.041622046816573256
+        ],
+        "approvazione": -0.10380483300660454
+      },
+      {
+        "id": "autonomo",
+        "campione": 515,
+        "quote": [
+          0.01100551861834239,
+          0.18938031114332013,
+          0.06667850953816178,
+          0.034184743069869995,
+          0.04233550042235513,
+          0.19169874257924546,
+          0.019677161775045707,
+          0.11112154891951986,
+          0.3339179639341394
+        ],
+        "posizione": [
+          0.0021356005181440755,
+          0.20625922306559338,
+          0.10792251111068364,
+          0.19404066629468178,
+          0.1714731109802525,
+          0.30647483193792285,
+          0.011694056092721783
+        ],
+        "approvazione": -0.23716185879277382
+      },
+      {
+        "id": "pensionato",
+        "campione": 1442,
+        "quote": [
+          0.021184725937725853,
+          0.22253720657910658,
+          0.06320788737653454,
+          0.015089057590550781,
+          0.06444804999934603,
+          0.19956239393916783,
+          0.01668572922960785,
+          0.0403829384894171,
+          0.3569020108585435
+        ],
+        "posizione": [
+          0.0643994978983342,
+          0.19156807819493304,
+          0.10856228122752169,
+          0.21002122749264238,
+          0.10897235922897652,
+          0.24483883687951746,
+          0.07163771907807483
+        ],
+        "approvazione": -1.0825245140847677
+      },
+      {
+        "id": "disoccupato_inattivo",
+        "campione": 412,
+        "quote": [
+          0.025966972954366146,
+          0.16870331776060427,
+          0.06280552373278708,
+          0.014971121057632425,
+          0.001212602407661516,
+          0.16594737536166648,
+          0.0,
+          0.09433908387698169,
+          0.46605400284830045
+        ],
+        "posizione": [
+          0.06828226951861602,
+          0.1998048441600105,
+          0.10114716288893455,
+          0.23773834797373836,
+          0.11893905376505179,
+          0.25320701666595913,
+          0.020881305027689503
+        ],
+        "approvazione": -0.17074251364016158
+      },
+      {
+        "id": "studente",
+        "campione": 259,
+        "quote": [
+          0.03824144765709932,
+          0.2864242557564799,
+          0.07518845833389924,
+          0.015913724768930545,
+          0.017493369799035086,
+          0.063463730302629,
+          0.0035473963669830724,
+          0.15840427684065755,
+          0.3413233401742864
+        ],
+        "posizione": [
+          0.06016126339197559,
+          0.2631915755384764,
+          0.11504678006888562,
+          0.3108099325189302,
+          0.05562600666100482,
+          0.1670893703164241,
+          0.02807507150430354
+        ],
+        "approvazione": 0.24654893774313089
+      }
+    ],
+    "fasce": [
+      {
+        "id": "bassa",
+        "campione": 1390,
+        "quote": [
+          0.009227939599756886,
+          0.1819652720041816,
+          0.05574433657771409,
+          0.015413893399163034,
+          0.03497009363786753,
+          0.12423967216062566,
+          0.0,
+          0.08033455262179948,
+          0.49810423999889175
+        ],
+        "posizione": [
+          0.032531537206362995,
+          0.20861706146652795,
+          0.1335131212296329,
+          0.30406935114172595,
+          0.08817325860096474,
+          0.16011566352609513,
+          0.07298000682869027
+        ],
+        "approvazione": -0.4005211350055605
+      },
+      {
+        "id": "media",
+        "campione": 1786,
+        "quote": [
+          0.023964468336091994,
+          0.2435193917473126,
+          0.05561388919066184,
+          0.0076974090817084,
+          0.0526095367308629,
+          0.19210646953789534,
+          0.010024263871401377,
+          0.10495375407524948,
+          0.30951081742881603
+        ],
+        "posizione": [
+          0.043755222497804024,
+          0.17394392419777308,
+          0.12697733104115788,
+          0.2623598525910478,
+          0.11693226616570677,
+          0.21495920394712942,
+          0.06107219955938097
+        ],
+        "approvazione": -0.5436179253339528
+      },
+      {
+        "id": "alta",
+        "campione": 1324,
+        "quote": [
+          0.030288201181083135,
+          0.2500739903930083,
+          0.059680478899942414,
+          0.012256947501515854,
+          0.05326465978416221,
+          0.21353726880130947,
+          0.01672063490808228,
+          0.10948721611639063,
+          0.2546906024145057
+        ],
+        "posizione": [
+          0.0440353602002373,
+          0.2074220022653695,
+          0.09506547976902983,
+          0.1947076952612708,
+          0.11203614090743776,
+          0.30731782419808756,
+          0.03941549739856726
+        ],
+        "approvazione": -0.53758709614028
+      }
+    ],
+    "regioni": [
+      {
+        "id": "piemonte",
+        "campione": 324,
+        "quote": [
+          0.031022063950246564,
+          0.1993721595209459,
+          0.053096577375878945,
+          0.01656083812014137,
+          0.06652863596722701,
+          0.19123323120253857,
+          0.035311208795052645,
+          0.10291655934086857,
+          0.3039587257271004
+        ],
+        "posizione": [
+          0.04762476860535462,
+          0.22153212989631166,
+          0.09136500046346176,
+          0.23533496760154266,
+          0.11560811113527447,
+          0.22247070699038682,
+          0.06606431530766815
+        ],
+        "approvazione": -0.5605554458466412
+      },
+      {
+        "id": "valle_d_aosta",
+        "campione": 9,
+        "quote": [
+          0.11967868652041116,
+          0.0,
+          0.0,
+          0.12737327465025167,
+          0.0,
+          0.14676510521820166,
+          0.07459512370177608,
+          0.05853610264020236,
+          0.47305170726915724
+        ],
+        "posizione": [
+          0.0,
+          0.07214444407337957,
+          0.2763051965173757,
+          0.3960108575918633,
+          0.0,
+          0.14410872451587364,
+          0.11143077730150781
+        ],
+        "approvazione": -0.9299277195332935
+      },
+      {
+        "id": "liguria",
+        "campione": 117,
+        "quote": [
+          0.013798824666118833,
+          0.19706226199615068,
+          0.09337901112478249,
+          0.02708755445829227,
+          0.05074612695229487,
+          0.17825876319866157,
+          0.0,
+          0.051383116134101785,
+          0.38828434146959756
+        ],
+        "posizione": [
+          0.09658042981672804,
+          0.12600289477734797,
+          0.06634793561938504,
+          0.21330848794510418,
+          0.1403101956547305,
+          0.24237732003774057,
+          0.11507273614896368
+        ],
+        "approvazione": -0.6176583034409201
+      },
+      {
+        "id": "lombardia",
+        "campione": 732,
+        "quote": [
+          0.032940764283637146,
+          0.23634061668911432,
+          0.06922276880581235,
+          0.008758936485283341,
+          0.06834863036069616,
+          0.19911326307566016,
+          0.05103947589670228,
+          0.08476400464660228,
+          0.24947153975649206
+        ],
+        "posizione": [
+          0.05808383076147273,
+          0.15821459582428257,
+          0.11003663662858873,
+          0.2446229355366344,
+          0.10682716803246946,
+          0.22778201123676242,
+          0.09443282197978982
+        ],
+        "approvazione": -0.4312360215607812
+      },
+      {
+        "id": "trentino_alto_adige",
+        "campione": 79,
+        "quote": [
+          0.0,
+          0.25165019792159793,
+          0.022629396194045727,
+          0.06295559888313158,
+          0.0,
+          0.10877564180310959,
+          0.006114446393383137,
+          0.08978437884455981,
+          0.45809033996017223
+        ],
+        "posizione": [
+          0.04254917831922417,
+          0.21721054658825073,
+          0.24347763840388595,
+          0.0463978676671625,
+          0.13521418102365906,
+          0.2667035595391389,
+          0.04844702845867866
+        ],
+        "approvazione": -0.38975819485013374
+      },
+      {
+        "id": "veneto",
+        "campione": 363,
+        "quote": [
+          0.02445464443806253,
+          0.300392608432351,
+          0.055519251935468056,
+          0.009060162605072263,
+          0.05025166086724394,
+          0.18146536126876567,
+          0.03373977312597426,
+          0.08083480911380111,
+          0.2642817282132613
+        ],
+        "posizione": [
+          0.03591143931719055,
+          0.22196843218514076,
+          0.21387416288950314,
+          0.19958801828308712,
+          0.10143854956845612,
+          0.16066222406255046,
+          0.06655717369407185
+        ],
+        "approvazione": -0.5829763718367635
+      },
+      {
+        "id": "friuli_venezia_giulia",
+        "campione": 91,
+        "quote": [
+          0.11063338882779009,
+          0.24803839650577233,
+          0.07818189629014236,
+          0.006644109082794832,
+          0.029850835608188894,
+          0.14392232493815246,
+          0.0,
+          0.0,
+          0.38272904874715896
+        ],
+        "posizione": [
+          0.0017432365270634656,
+          0.2701399933620089,
+          0.1250352477662781,
+          0.12311107049324284,
+          0.05820976666550836,
+          0.36301137474987827,
+          0.05874931043602011
+        ],
+        "approvazione": -0.531263815961705
+      },
+      {
+        "id": "emilia_romagna",
+        "campione": 325,
+        "quote": [
+          0.06683826123609725,
+          0.2999884514708267,
+          0.027238512713242437,
+          0.0,
+          0.05376825304384124,
+          0.1393611054826804,
+          0.03093816281872425,
+          0.10870355729176819,
+          0.2731636959428195
+        ],
+        "posizione": [
+          0.08374655024097834,
+          0.24527154535554666,
+          0.16247020043022295,
+          0.16218763875280037,
+          0.10940565187265631,
+          0.17896334362969293,
+          0.05795506971810225
+        ],
+        "approvazione": -0.5629328024272039
+      },
+      {
+        "id": "toscana",
+        "campione": 274,
+        "quote": [
+          0.009505288685042764,
+          0.1930193141096333,
+          0.0924249403076059,
+          0.01613015545164858,
+          0.054634505094418175,
+          0.2211528070789597,
+          0.002703067337154454,
+          0.10148698752061569,
+          0.30894293441492143
+        ],
+        "posizione": [
+          0.02114034042918295,
+          0.18618523831721184,
+          0.10311137253709443,
+          0.24432015280618619,
+          0.12622608440096314,
+          0.2651139902247152,
+          0.053902821284646324
+        ],
+        "approvazione": -0.5656966052242196
+      },
+      {
+        "id": "umbria",
+        "campione": 65,
+        "quote": [
+          0.0,
+          0.22118791659631915,
+          0.05216057977812985,
+          0.0,
+          0.008367359688664507,
+          0.16160709531289977,
+          0.050172957516212834,
+          0.11182663974308692,
+          0.39467745136468696
+        ],
+        "posizione": [
+          0.02333891321096348,
+          0.12143326835688184,
+          0.12758785167627446,
+          0.16448424920797763,
+          0.11190388586531393,
+          0.43206380451639553,
+          0.019188027166193226
+        ],
+        "approvazione": -0.6331703030275634
+      },
+      {
+        "id": "marche",
+        "campione": 114,
+        "quote": [
+          0.023012577798279945,
+          0.25665224377184953,
+          0.08526906025945105,
+          0.0,
+          0.09484142062982592,
+          0.1814089108878101,
+          0.014464941706900178,
+          0.1407690197272013,
+          0.20358182521868198
+        ],
+        "posizione": [
+          0.0011179957505703956,
+          0.0959049845250746,
+          0.14396454792637503,
+          0.35810444141668485,
+          0.054714384965886584,
+          0.3461936454154085,
+          0.0
+        ],
+        "approvazione": -0.6605020090629793
+      },
+      {
+        "id": "lazio",
+        "campione": 428,
+        "quote": [
+          0.0018260675778230269,
+          0.1511857229208303,
+          0.04751458101148328,
+          0.021992365402972346,
+          0.07444308384628576,
+          0.2538583405001514,
+          0.03877910921207641,
+          0.07713007281051092,
+          0.33327065671786654
+        ],
+        "posizione": [
+          0.011974761758107655,
+          0.160866297418356,
+          0.09188808091708807,
+          0.24688326821276838,
+          0.16812776990818115,
+          0.27355622900995513,
+          0.046703592775543534
+        ],
+        "approvazione": -0.4260581839222908
+      },
+      {
+        "id": "abruzzo",
+        "campione": 100,
+        "quote": [
+          0.06866278430517671,
+          0.35260680658234117,
+          0.08145546431237524,
+          0.0,
+          0.06962224828127078,
+          0.06143281584840605,
+          0.0,
+          0.09759792991151464,
+          0.2686219507589154
+        ],
+        "posizione": [
+          0.04379309757038836,
+          0.2287566818081104,
+          0.11152349272806622,
+          0.2877753516192285,
+          0.064331270868297,
+          0.20597992731147868,
+          0.05784017809443094
+        ],
+        "approvazione": -0.5446589702680511
+      },
+      {
+        "id": "molise",
+        "campione": 24,
+        "quote": [
+          0.0,
+          0.3870303815408138,
+          0.20469800563452514,
+          0.0,
+          0.0,
+          0.3821317609439331,
+          0.0,
+          0.0,
+          0.026139851880728024
+        ],
+        "posizione": [
+          0.15538783831824077,
+          0.09045526579567978,
+          0.16656358410547842,
+          0.255447397470184,
+          0.17827541007195352,
+          0.15387050423846343,
+          0.0
+        ],
+        "approvazione": -0.16215162098196373
+      },
+      {
+        "id": "campania",
+        "campione": 439,
+        "quote": [
+          0.0,
+          0.21747959175542278,
+          0.045657752416900906,
+          0.002962648568403624,
+          0.02950636645438313,
+          0.13201250212421342,
+          0.008755461195593906,
+          0.08074418532839558,
+          0.48288149215668663
+        ],
+        "posizione": [
+          0.06362228008169801,
+          0.1544150813598804,
+          0.13800841554047089,
+          0.3237050358042442,
+          0.04640789369693233,
+          0.21637163944407367,
+          0.057469654072700445
+        ],
+        "approvazione": -0.3476806168229626
+      },
+      {
+        "id": "puglia",
+        "campione": 313,
+        "quote": [
+          0.003127424300025583,
+          0.18595047952930613,
+          0.0627798331399797,
+          0.01722946269009857,
+          0.005194854759095496,
+          0.18540203777469605,
+          0.002825885971352875,
+          0.07553864615720986,
+          0.46195137567823563
+        ],
+        "posizione": [
+          0.03618482207224463,
+          0.2283938599375786,
+          0.17655634184498653,
+          0.24193795221622144,
+          0.07149658543539031,
+          0.18952086396937623,
+          0.05590957452420217
+        ],
+        "approvazione": -0.5333732107685228
+      },
+      {
+        "id": "basilicata",
+        "campione": 43,
+        "quote": [
+          0.08076047388812256,
+          0.14865099936882323,
+          0.008309071147869617,
+          0.06194945228263685,
+          0.062234207430083954,
+          0.22381510693684098,
+          0.028768855165934075,
+          0.0973935545693994,
+          0.2881182792102893
+        ],
+        "posizione": [
+          0.06690811279652945,
+          0.21439761671726118,
+          0.16190635876687373,
+          0.23164461956871987,
+          0.04266685398329071,
+          0.17988820259708896,
+          0.10258823557023611
+        ],
+        "approvazione": -0.6915262051122015
+      },
+      {
+        "id": "calabria",
+        "campione": 146,
+        "quote": [
+          0.024771649966163482,
+          0.2671006666649085,
+          0.09574407317920049,
+          0.0,
+          0.020011740447583727,
+          0.13618387154572018,
+          0.0,
+          0.008558662541402048,
+          0.4476293356550216
+        ],
+        "posizione": [
+          0.02934435952143857,
+          0.26639024214906437,
+          0.15280125433962974,
+          0.2800018802531374,
+          0.04230211908933617,
+          0.18494338134939017,
+          0.0442167632980036
+        ],
+        "approvazione": -0.4413341203973868
+      },
+      {
+        "id": "sicilia",
+        "campione": 384,
+        "quote": [
+          0.037182390505492505,
+          0.1919575740003709,
+          0.0741309377637619,
+          0.009366876100192482,
+          0.02835575106578467,
+          0.12933047930055336,
+          0.005905089027251943,
+          0.09887253353875833,
+          0.4248983686978338
+        ],
+        "posizione": [
+          0.05684264615168598,
+          0.19905194470278667,
+          0.11324725437394947,
+          0.2863394557211502,
+          0.12468708254051108,
+          0.19972982716717563,
+          0.02010178934274085
+        ],
+        "approvazione": -0.48868257794775355
+      },
+      {
+        "id": "sardegna",
+        "campione": 131,
+        "quote": [
+          0.01483628305904729,
+          0.28607854930078225,
+          0.05456869444506968,
+          0.0,
+          0.0,
+          0.18172148014664138,
+          0.0,
+          0.05810058229120286,
+          0.4046944107572566
+        ],
+        "posizione": [
+          0.049882946237653644,
+          0.21736145876612015,
+          0.10696138443295534,
+          0.3210992788402707,
+          0.19927847725546338,
+          0.09443754413444827,
+          0.010978910333088489
+        ],
+        "approvazione": -0.6155577383325703
+      }
+    ]
+  },
+  "proiezione": [
+    {
+      "partito": "estrema_sinistra",
+      "camera": 13,
+      "senato": 4
+    },
+    {
+      "partito": "sinistra",
+      "camera": 120,
+      "senato": 63
+    },
+    {
+      "partito": "centrosinistra",
+      "camera": 32,
+      "senato": 12
+    },
+    {
+      "partito": "centro",
+      "camera": 0,
+      "senato": 1
+    },
+    {
+      "partito": "centrodestra",
+      "camera": 35,
+      "senato": 15
+    },
+    {
+      "partito": "destra",
+      "camera": 129,
+      "senato": 67
+    },
+    {
+      "partito": "estrema_destra",
+      "camera": 11,
+      "senato": 5
+    },
+    {
+      "partito": "giocatore",
+      "camera": 60,
+      "senato": 33
+    }
+  ],
+  "statistica": {
+    "trimestre": {
+      "anno": 2028,
+      "trimestre": 4
+    },
+    "prima_stima": {
+      "crescita_pil": 1.3562636978326688,
+      "disoccupazione": 5.616128724698582,
+      "inflazione": 1.067963600920395,
+      "inflazione_annua": 0.7096274675408631,
+      "disavanzo": 2.315881324341664
+    },
+    "revisione": {
+      "trimestre": {
+        "anno": 2028,
+        "trimestre": 3
+      },
+      "prima_stima": {
+        "crescita_pil": -0.6390605329104663,
+        "disoccupazione": 6.028780848934269,
+        "inflazione": -1.9918474304061256,
+        "inflazione_annua": 0.8095896099732158,
+        "disavanzo": 2.1148364341138106
+      },
+      "riveduta": {
+        "crescita_pil": -0.8554194970914253,
+        "disoccupazione": 5.887644279852259,
+        "inflazione": -2.3021534555382295,
+        "inflazione_annua": 0.7309936745756529,
+        "disavanzo": 1.951443122070202
+      }
+    }
+  },
+  "bilancio": {
+    "anno": 2029,
+    "dicasteri": [
+      {
+        "id": "economia_finanze",
+        "spesa": 72737229625,
+        "salari": 24897093307,
+        "acquisti": 18872692754,
+        "margine": 1163795674,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "sviluppo_economico",
+        "spesa": 50297395716,
+        "salari": 4709943133,
+        "acquisti": 4745214799,
+        "margine": 804758331,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "lavoro_welfare",
+        "spesa": 23822483216,
+        "salari": 5107337237,
+        "acquisti": 13972282625,
+        "margine": 381159732,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "sanita",
+        "spesa": 155383445952,
+        "salari": 47388658993,
+        "acquisti": 96632607618,
+        "margine": 2486135135,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "istruzione_ricerca",
+        "spesa": 128400621462,
+        "salari": 74710091477,
+        "acquisti": 19933194179,
+        "margine": 2054409943,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "infrastrutture_trasporti",
+        "spesa": 73179301172,
+        "salari": 5316615788,
+        "acquisti": 10522713690,
+        "margine": 1170868819,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "ambiente_energia",
+        "spesa": 35208177001,
+        "salari": 2490179620,
+        "acquisti": 13720678074,
+        "margine": 563330832,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "interno",
+        "spesa": 29115584561,
+        "salari": 20118958286,
+        "acquisti": 5055605460,
+        "margine": 465849353,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "giustizia",
+        "spesa": 12469709653,
+        "salari": 8258272733,
+        "acquisti": 2718269726,
+        "margine": 199515355,
+        "perdita_reale": 1.9737315720989579
+      },
+      {
+        "id": "esteri_difesa",
+        "spesa": 31688064734,
+        "salari": 16737581239,
+        "acquisti": 2356147289,
+        "margine": 507009036,
+        "perdita_reale": 1.9737315720989579
+      }
+    ],
+    "aliquote": {
+      "irpef": [
+        {
+          "fino_a": 28000,
+          "aliquota": 0.23,
+          "livello_prezzi": 1.0
+        },
+        {
+          "fino_a": 50000,
+          "aliquota": 0.33,
+          "livello_prezzi": 1.0
+        },
+        {
+          "fino_a": null,
+          "aliquota": 0.43,
+          "livello_prezzi": 1.0
+        }
+      ],
+      "iva": 0.22,
+      "ires": 0.24,
+      "contributi": 0.33
+    },
+    "perdita_reale_scaglioni": [
+      3.80150301481742,
+      3.80150301481742
+    ],
+    "fondo_riserva": 305700000,
+    "fondo_residuo": 305700000,
+    "presentabile": false,
+    "presentato": false,
+    "esercizio_provvisorio": false
+  },
+  "disposizioni": [
+    {
+      "id": "forfettario",
+      "nome": "Regime forfettario degli autonomi",
+      "dicastero": "economia_finanze",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "85000",
+      "legge": "L. 197/2022, art. 1 c. 54",
+      "precedente": "65000",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "assente",
+          "nome": "assente",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "65000",
+          "nome": "fino a 65.000 €",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "85000",
+          "nome": "fino a 85.000 €",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "100000",
+          "nome": "fino a 100.000 €",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "cuneo_fiscale",
+      "nome": "Cuneo fiscale",
+      "dicastero": "economia_finanze",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "7",
+      "legge": "L. 207/2024, art. 1 c. 4-9",
+      "precedente": "0",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "nessuno",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "3",
+          "nome": "3 punti",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "7",
+          "nome": "7 punti",
+          "posizione": 4.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "detrazione_edilizia",
+      "nome": "Detrazione edilizia",
+      "dicastero": "economia_finanze",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "36_50",
+      "legge": "L. 199/2025, art. 1 c. 22",
+      "precedente": "36_50",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "nessuna",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "36_50",
+          "nome": "36-50%",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "65",
+          "nome": "65%",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "110",
+          "nome": "110%",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "tetto_contante",
+      "nome": "Tetto al contante",
+      "dicastero": "economia_finanze",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "5000",
+      "legge": "L. 197/2022, art. 1 c. 384",
+      "precedente": "1000",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "1000",
+          "nome": "1.000 €",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "3000",
+          "nome": "3.000 €",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "5000",
+          "nome": "5.000 €",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "nessuno",
+          "nome": "nessun tetto",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "incentivo_investimenti",
+      "nome": "Incentivo fiscale agli investimenti",
+      "dicastero": "sviluppo_economico",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "0",
+      "legge": "L. 199/2025, art. 1 c. 427",
+      "precedente": "40",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "nessuno",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "10",
+          "nome": "10% del costo",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "20",
+          "nome": "20% del costo",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "40",
+          "nome": "40% del costo",
+          "posizione": 4.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "concorrenza_servizi",
+      "nome": "Concorrenza nei servizi",
+      "dicastero": "sviluppo_economico",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "licenze_chiuse",
+      "legge": "L. 21/1992, art. 8",
+      "precedente": "licenze_chiuse",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "licenze_chiuse",
+          "nome": "licenze chiuse",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "gare",
+          "nome": "gare",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "libere",
+          "nome": "mercato libero",
+          "posizione": 3.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "regime_pensioni",
+      "nome": "Regime delle pensioni",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "contributivo",
+      "legge": "DL 201/2011, art. 24 c. 2",
+      "precedente": "retributivo",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "retributivo",
+          "nome": "retributivo",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "contributivo",
+          "nome": "contributivo",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "quota_base_universale",
+          "nome": "quota base universale",
+          "posizione": 3.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "eta_pensionabile",
+      "nome": "Età pensionabile",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "67",
+      "legge": "L. 199/2025, art. 1 c. 185",
+      "precedente": "67",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "62",
+          "nome": "62 anni",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "63",
+          "nome": "63 anni",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "64",
+          "nome": "64 anni",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "65",
+          "nome": "65 anni",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "66",
+          "nome": "66 anni",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "67",
+          "nome": "67 anni",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "68",
+          "nome": "68 anni",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "69",
+          "nome": "69 anni",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "70",
+          "nome": "70 anni",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "indicizzazione_pensioni",
+      "nome": "Indicizzazione delle pensioni",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "per_fasce",
+      "legge": "L. 160/2019, art. 1 c. 478",
+      "precedente": "bloccata_sopra_soglia",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "piena",
+          "nome": "piena",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "per_fasce",
+          "nome": "per fasce",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "bloccata_sopra_soglia",
+          "nome": "bloccata sopra soglia",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "pensione_minima",
+      "nome": "Pensione minima",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuale",
+      "legge": "L. 207/2024, art. 1 c. 177",
+      "precedente": "attuale",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "attuale",
+          "nome": "attuale",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "piu_20",
+          "nome": "più 20%",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "piu_50",
+          "nome": "più 50%",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "sussidi_disoccupazione",
+      "nome": "Sussidi di disoccupazione",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "assicurativo",
+      "legge": "D.Lgs. 22/2015, art. 1",
+      "precedente": "assicurativo",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "assicurativo",
+          "nome": "assicurativo",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "esteso",
+          "nome": "esteso",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "universale",
+          "nome": "universale",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "reddito_minimo",
+      "nome": "Reddito minimo",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "categoriale",
+      "legge": "DL 48/2023, artt. 1-2",
+      "precedente": "universale",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "non_istituito",
+          "nome": "non istituito",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "categoriale",
+          "nome": "categoriale",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "universale",
+          "nome": "universale",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "salario_minimo",
+      "nome": "Salario minimo legale",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "nessuno",
+      "legge": "DL 62/2026, art. 7",
+      "precedente": "nessuno",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "nessuno",
+          "nome": "nessuno",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "7",
+          "nome": "7 €/h",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "9",
+          "nome": "9 €/h",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "11",
+          "nome": "11 €/h",
+          "posizione": 1.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "licenziamento",
+      "nome": "Licenziamento",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "tutele_crescenti",
+      "legge": "D.Lgs. 23/2015, art. 3",
+      "precedente": "reintegro",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "reintegro",
+          "nome": "reintegro",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "tutele_crescenti",
+          "nome": "tutele crescenti",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "solo_indennizzo",
+          "nome": "solo indennizzo",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "decontribuzione",
+      "nome": "Sgravio contributivo nel Mezzogiorno",
+      "dicastero": "lavoro_welfare",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "15",
+      "legge": "L. 0/2027",
+      "precedente": "20",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [
+        "abruzzo",
+        "basilicata",
+        "calabria",
+        "campania",
+        "molise",
+        "puglia",
+        "sardegna",
+        "sicilia"
+      ],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "nessuno sgravio",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "15",
+          "nome": "15%",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "20",
+          "nome": "20%",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "30",
+          "nome": "30%",
+          "posizione": 3.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "ticket",
+      "nome": "Ticket sanitario",
+      "dicastero": "sanita",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuale",
+      "legge": "L. 537/1993, art. 8 c. 15",
+      "precedente": "attuale",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "nessuno",
+          "nome": "nessuno",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "attuale",
+          "nome": "attuale",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "alto",
+          "nome": "alto",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "accesso_medicina",
+      "nome": "Accesso a Medicina",
+      "dicastero": "sanita",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "semestre_filtro",
+      "legge": "D.Lgs. 71/2025, artt. 1-2",
+      "precedente": "numero_chiuso",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "numero_chiuso",
+          "nome": "numero chiuso",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "semestre_filtro",
+          "nome": "semestre filtro",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "libero",
+          "nome": "libero",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "privato_accreditato",
+      "nome": "Privato accreditato",
+      "dicastero": "sanita",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuale",
+      "legge": "L. 199/2025, art. 1 c. 400",
+      "precedente": "attuale",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "ridotto",
+          "nome": "ridotto",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "attuale",
+          "nome": "attuale",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "ampio",
+          "nome": "ampio",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "obbligo_scolastico",
+      "nome": "Obbligo scolastico",
+      "dicastero": "istruzione_ricerca",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "16",
+      "legge": "L. 296/2006, art. 1 c. 622",
+      "precedente": "16",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "16",
+          "nome": "fino a 16 anni",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "18",
+          "nome": "fino a 18 anni",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "tasse_universitarie",
+      "nome": "Tasse universitarie",
+      "dicastero": "istruzione_ricerca",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "per_isee",
+      "legge": "L. 232/2016, art. 1 c. 255",
+      "precedente": "per_isee",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "gratuite",
+          "nome": "gratuite",
+          "posizione": 2.0,
+          "bloccato": false
+        },
+        {
+          "id": "per_isee",
+          "nome": "per fasce ISEE",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "alte",
+          "nome": "alte",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "codice_appalti",
+      "nome": "Codice degli appalti",
+      "dicastero": "infrastrutture_trasporti",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "semplificato",
+      "legge": "D.Lgs. 36/2023, art. 50",
+      "precedente": "rigido",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "rigido",
+          "nome": "rigido",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "semplificato",
+          "nome": "semplificato",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "deroga_generale",
+          "nome": "deroga generale",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "concessioni_autostradali",
+      "nome": "Concessioni autostradali",
+      "dicastero": "infrastrutture_trasporti",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "a_gara",
+      "legge": "L. 193/2024, art. 3",
+      "precedente": "a_gara",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "pubbliche",
+          "nome": "pubbliche",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "a_gara",
+          "nome": "a gara",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "private",
+          "nome": "private",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "nucleare",
+      "nome": "Nucleare",
+      "dicastero": "ambiente_energia",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "consentito",
+      "legge": "L. 169/2026, art. 1",
+      "precedente": "vietato",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "vietato",
+          "nome": "vietato",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "consentito",
+          "nome": "consentito",
+          "posizione": 5.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "accise",
+      "nome": "Accise sui carburanti",
+      "dicastero": "ambiente_energia",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuali",
+      "legge": "L. 199/2025, art. 1 c. 129",
+      "precedente": "attuali",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "basse",
+          "nome": "basse",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "attuali",
+          "nome": "attuali",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "alte",
+          "nome": "alte",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "rinnovabili",
+      "nome": "Autorizzazioni per le rinnovabili",
+      "dicastero": "ambiente_energia",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "ordinarie",
+      "legge": "D.Lgs. 190/2024, art. 1",
+      "precedente": "ordinarie",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "ordinarie",
+          "nome": "ordinarie",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "accelerate",
+          "nome": "accelerate",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "decreto_flussi",
+      "nome": "Ingressi per lavoro",
+      "dicastero": "interno",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuali",
+      "legge": "DPCM 2/10/2025",
+      "precedente": "attuali",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "bassi",
+          "nome": "bassi",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "attuali",
+          "nome": "attuali",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "alti",
+          "nome": "alti",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "cittadinanza",
+      "nome": "Cittadinanza",
+      "dicastero": "interno",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "ius_sanguinis",
+      "legge": "L. 91/1992, art. 3-bis",
+      "precedente": "ius_sanguinis",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "ius_sanguinis",
+          "nome": "ius sanguinis",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "ius_scholae",
+          "nome": "ius scholae",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "ius_soli_temperato",
+          "nome": "ius soli temperato",
+          "posizione": 2.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "accoglienza",
+      "nome": "Accoglienza dei richiedenti asilo",
+      "dicastero": "interno",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "centri",
+      "legge": "D.Lgs. 142/2015, art. 8",
+      "precedente": "centri",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "centri",
+          "nome": "centri",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "diffusa",
+          "nome": "diffusa",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "prescrizione",
+      "nome": "Prescrizione",
+      "dicastero": "giustizia",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "improcedibilita",
+      "legge": "L. 134/2021",
+      "precedente": "bloccata",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "classica",
+          "nome": "classica",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "bloccata",
+          "nome": "bloccata dopo il primo grado",
+          "posizione": 2.5,
+          "bloccato": false
+        },
+        {
+          "id": "improcedibilita",
+          "nome": "improcedibilità",
+          "posizione": 4.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "pene_alternative",
+      "nome": "Pene alternative al carcere",
+      "dicastero": "giustizia",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "attuali",
+      "legge": "L. 689/1981, art. 53",
+      "precedente": "attuali",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "ristrette",
+          "nome": "ristrette",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "attuali",
+          "nome": "attuali",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "estese",
+          "nome": "estese",
+          "posizione": 2.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "intercettazioni",
+      "nome": "Intercettazioni",
+      "dicastero": "giustizia",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "limitate",
+      "legge": "L. 47/2025",
+      "precedente": "ampie",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "ampie",
+          "nome": "ampie",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "limitate",
+          "nome": "limitate",
+          "posizione": 5.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "leva_militare",
+      "nome": "Leva militare",
+      "dicastero": "esteri_difesa",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "sospesa",
+      "legge": "D.Lgs. 66/2010, art. 1929",
+      "precedente": "obbligatoria",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "sospesa",
+          "nome": "sospesa",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "volontaria_rafforzata",
+          "nome": "volontaria rafforzata",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "obbligatoria",
+          "nome": "obbligatoria",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "export_armi",
+      "nome": "Export di armi",
+      "dicastero": "esteri_difesa",
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "restrittivo",
+      "legge": "L. 185/1990, art. 1",
+      "precedente": "restrittivo",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "restrittivo",
+          "nome": "restrittivo",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "permissivo",
+          "nome": "permissivo",
+          "posizione": 5.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "credito_zes",
+      "nome": "Credito d'imposta nella ZES unica",
+      "dicastero": "sviluppo_economico",
+      "norma": "ordinaria",
+      "tipo": "parametro",
+      "in_vigore": "0_75",
+      "legge": "DL 124/2023, art. 16",
+      "precedente": "1",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [
+        "abruzzo",
+        "basilicata",
+        "calabria",
+        "campania",
+        "marche",
+        "molise",
+        "puglia",
+        "sardegna",
+        "sicilia",
+        "umbria"
+      ],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "nessuno stanziamento",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "0_75",
+          "nome": "0,75 miliardi",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "1",
+          "nome": "1 miliardo",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "2_3",
+          "nome": "2,3 miliardi",
+          "posizione": 3.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "autonomia_differenziata",
+      "nome": "Autonomia differenziata",
+      "dicastero": null,
+      "norma": "ordinaria",
+      "tipo": "regime",
+      "in_vigore": "non_attuata",
+      "legge": "L. 86/2024",
+      "precedente": "non_attuata",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [
+        "liguria",
+        "lombardia",
+        "piemonte",
+        "veneto"
+      ],
+      "gradini": [
+        {
+          "id": "non_attuata",
+          "nome": "non attuata",
+          "posizione": 3.0,
+          "bloccato": false
+        },
+        {
+          "id": "prime_materie",
+          "nome": "prime materie",
+          "posizione": 5.0,
+          "bloccato": false
+        },
+        {
+          "id": "intese_complete",
+          "nome": "intese complete",
+          "posizione": 6.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "durata_legislatura",
+      "nome": "Durata della legislatura",
+      "dicastero": null,
+      "norma": "costituzionale",
+      "tipo": "parametro",
+      "in_vigore": "5",
+      "legge": "Cost., art. 60",
+      "precedente": "5",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "4",
+          "nome": "4 anni",
+          "posizione": 3.5,
+          "bloccato": false
+        },
+        {
+          "id": "5",
+          "nome": "5 anni",
+          "posizione": 4.0,
+          "bloccato": false
+        },
+        {
+          "id": "6",
+          "nome": "6 anni",
+          "posizione": 4.5,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "numero_parlamentari",
+      "nome": "Numero dei parlamentari",
+      "dicastero": null,
+      "norma": "costituzionale",
+      "tipo": "parametro",
+      "in_vigore": "400_200",
+      "legge": "L. cost. 1/2020",
+      "precedente": "630_315",
+      "in_arrivo": [],
+      "referendabile": false,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "300_150",
+          "nome": "300 deputati e 150 senatori",
+          "posizione": 5.5,
+          "bloccato": false
+        },
+        {
+          "id": "400_200",
+          "nome": "400 deputati e 200 senatori",
+          "posizione": 4.5,
+          "bloccato": false
+        },
+        {
+          "id": "630_315",
+          "nome": "630 deputati e 315 senatori",
+          "posizione": 3.0,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "soglia_lista",
+      "nome": "Soglia di lista",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "parametro",
+      "in_vigore": "300",
+      "legge": "L. 180/2026",
+      "precedente": "300",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "0%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "300",
+          "nome": "3%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "400",
+          "nome": "4%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "500",
+          "nome": "5%",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "coalizioni",
+      "nome": "Coalizioni",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "regime",
+      "in_vigore": "si",
+      "legge": "L. 180/2026",
+      "precedente": "si",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "no",
+          "nome": "non ammesse",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "si",
+          "nome": "ammesse",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "soglia_coalizione",
+      "nome": "Soglia di coalizione",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "parametro",
+      "in_vigore": "1000",
+      "legge": "L. 180/2026",
+      "precedente": "1000",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "0",
+          "nome": "0%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "1000",
+          "nome": "10%",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "ripescaggio",
+      "nome": "Ripescaggio",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "regime",
+      "in_vigore": "si",
+      "legge": "L. 180/2026",
+      "precedente": "no",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "no",
+          "nome": "non previsto",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "si",
+          "nome": "previsto",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "premio",
+      "nome": "Premio di maggioranza",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "regime",
+      "in_vigore": "coalizione",
+      "legge": "L. 180/2026",
+      "precedente": "nessuno",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "nessuno",
+          "nome": "nessuno",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "lista",
+          "nome": "alla lista",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "coalizione",
+          "nome": "alla coalizione",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "soglia_premio",
+      "nome": "Soglia del premio",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "parametro",
+      "in_vigore": "4200",
+      "legge": "L. 180/2026",
+      "precedente": "4200",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "4000",
+          "nome": "40%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "4200",
+          "nome": "42%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "4500",
+          "nome": "45%",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "taglia_premio",
+      "nome": "Taglia del premio",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "parametro",
+      "in_vigore": "1750",
+      "legge": "L. 180/2026",
+      "precedente": "1750",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "875",
+          "nome": "8,75%",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "1750",
+          "nome": "17,5%",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "tetto",
+      "nome": "Tetto ai seggi",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "parametro",
+      "in_vigore": "5500_5650",
+      "legge": "L. 180/2026",
+      "precedente": "nessuno",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "5500_5650",
+          "nome": "55% alla Camera, 56,5% al Senato",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "6000_6000",
+          "nome": "60% alla Camera, 60% al Senato",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "nessuno",
+          "nome": "nessuno",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    },
+    {
+      "id": "formula",
+      "nome": "Formula di riparto",
+      "dicastero": null,
+      "norma": "elettorale",
+      "tipo": "regime",
+      "in_vigore": "hare",
+      "legge": "L. 180/2026",
+      "precedente": "hare",
+      "in_arrivo": [],
+      "referendabile": true,
+      "perimetro": [],
+      "gradini": [
+        {
+          "id": "hare",
+          "nome": "quozienti Hare",
+          "posizione": null,
+          "bloccato": false
+        },
+        {
+          "id": "dhondt",
+          "nome": "D'Hondt",
+          "posizione": null,
+          "bloccato": false
+        }
+      ]
+    }
+  ],
+  "seggi": [
+    {
+      "partito": "estrema_sinistra",
+      "camera": 0,
+      "senato": 0
+    },
+    {
+      "partito": "sinistra",
+      "camera": 120,
+      "senato": 63
+    },
+    {
+      "partito": "centrosinistra",
+      "camera": 20,
+      "senato": 8
+    },
+    {
+      "partito": "centro",
+      "camera": 14,
+      "senato": 2
+    },
+    {
+      "partito": "centrodestra",
+      "camera": 32,
+      "senato": 15
+    },
+    {
+      "partito": "destra",
+      "camera": 116,
+      "senato": 62
+    },
+    {
+      "partito": "estrema_destra",
+      "camera": 22,
+      "senato": 12
+    },
+    {
+      "partito": "giocatore",
+      "camera": 76,
+      "senato": 38
+    }
+  ],
+  "alleati": [
+    {
+      "partito": "centrodestra",
+      "intesa": 41.5244583778478,
+      "ultimatum": true,
+      "causa_ultimatum": "emendamento_respinto",
+      "causa_principale": "emendamento_respinto",
+      "variazioni": [
+        {
+          "partito": 4,
+          "causa": "emendamento_respinto",
+          "delta": -5.0,
+          "turno": 8
+        },
+        {
+          "partito": 4,
+          "causa": "ministri_scontenti",
+          "delta": -0.5775044196048214,
+          "turno": 8
+        },
+        {
+          "partito": 4,
+          "causa": "quota_scoperta",
+          "delta": -1.026784660766964,
+          "turno": 8
+        }
+      ]
+    },
+    {
+      "partito": "destra",
+      "intesa": 52.27596676145764,
+      "ultimatum": false,
+      "causa_ultimatum": null,
+      "causa_principale": "emendamento_respinto",
+      "variazioni": [
+        {
+          "partito": 5,
+          "causa": "emendamento_respinto",
+          "delta": -5.0,
+          "turno": 8
+        }
+      ]
+    }
+  ],
+  "alleati_avversari": [],
+  "posto_riservato": false,
+  "calendario": [
+    {
+      "id": 6,
+      "nome": "Leva militare: obbligatoria",
+      "forma": "riforma",
+      "proponente": null,
+      "promotore": "estrema_destra",
+      "linea_giocatore": null,
+      "valori": [
+        {
+          "disposizione": "leva_militare",
+          "gradino": "obbligatoria"
+        }
+      ],
+      "voto": {
+        "anno": 2029,
+        "trimestre": 1
+      },
+      "deliberazione": 0,
+      "fiducia": false,
+      "linee": [
+        {
+          "partito": "estrema_sinistra",
+          "si": false
+        },
+        {
+          "partito": "sinistra",
+          "si": false
+        },
+        {
+          "partito": "centrosinistra",
+          "si": false
+        },
+        {
+          "partito": "centro",
+          "si": false
+        },
+        {
+          "partito": "centrodestra",
+          "si": true
+        },
+        {
+          "partito": "destra",
+          "si": true
+        },
+        {
+          "partito": "estrema_destra",
+          "si": true
+        },
+        {
+          "partito": "giocatore",
+          "si": false
+        }
+      ],
+      "forbice": {
+        "camera": [
+          162,
+          172
+        ],
+        "senato": [
+          84,
+          91
+        ],
+        "maggioranza_camera": 201,
+        "maggioranza_senato": 101,
+        "in_bilico": true
+      },
+      "emendamenti": [],
+      "alleati_contro_fiducia": [],
+      "seggi": []
+    },
+    {
+      "id": 7,
+      "nome": "Regime delle pensioni: retributivo",
+      "forma": "riforma",
+      "proponente": null,
+      "promotore": "sinistra",
+      "linea_giocatore": null,
+      "valori": [
+        {
+          "disposizione": "regime_pensioni",
+          "gradino": "retributivo"
+        }
+      ],
+      "voto": {
+        "anno": 2029,
+        "trimestre": 1
+      },
+      "deliberazione": 0,
+      "fiducia": false,
+      "linee": [
+        {
+          "partito": "estrema_sinistra",
+          "si": true
+        },
+        {
+          "partito": "sinistra",
+          "si": true
+        },
+        {
+          "partito": "centrosinistra",
+          "si": false
+        },
+        {
+          "partito": "centro",
+          "si": false
+        },
+        {
+          "partito": "centrodestra",
+          "si": false
+        },
+        {
+          "partito": "destra",
+          "si": false
+        },
+        {
+          "partito": "estrema_destra",
+          "si": false
+        },
+        {
+          "partito": "giocatore",
+          "si": false
+        }
+      ],
+      "forbice": {
+        "camera": [
+          116,
+          125
+        ],
+        "senato": [
+          60,
+          66
+        ],
+        "maggioranza_camera": 201,
+        "maggioranza_senato": 101,
+        "in_bilico": true
+      },
+      "emendamenti": [],
+      "alleati_contro_fiducia": [
+        "centrodestra"
+      ],
+      "seggi": []
+    },
+    {
+      "id": 9,
+      "nome": "Concorrenza nei servizi: mercato libero",
+      "forma": "riforma",
+      "proponente": null,
+      "promotore": "centrosinistra",
+      "linea_giocatore": null,
+      "valori": [
+        {
+          "disposizione": "concorrenza_servizi",
+          "gradino": "libere"
+        }
+      ],
+      "voto": {
+        "anno": 2029,
+        "trimestre": 2
+      },
+      "deliberazione": 0,
+      "fiducia": false,
+      "linee": [
+        {
+          "partito": "estrema_sinistra",
+          "si": true
+        },
+        {
+          "partito": "sinistra",
+          "si": true
+        },
+        {
+          "partito": "centrosinistra",
+          "si": true
+        },
+        {
+          "partito": "centro",
+          "si": false
+        },
+        {
+          "partito": "centrodestra",
+          "si": false
+        },
+        {
+          "partito": "destra",
+          "si": false
+        },
+        {
+          "partito": "estrema_destra",
+          "si": false
+        },
+        {
+          "partito": "giocatore",
+          "si": false
+        }
+      ],
+      "forbice": {
+        "camera": [
+          131,
+          143
+        ],
+        "senato": [
+          65,
+          74
+        ],
+        "maggioranza_camera": 201,
+        "maggioranza_senato": 101,
+        "in_bilico": true
+      },
+      "emendamenti": [],
+      "alleati_contro_fiducia": [
+        "centrodestra"
+      ],
+      "seggi": []
+    }
+  ],
+  "esiti": [
+    {
+      "misura": 8,
+      "nome": "Legge di bilancio",
+      "forma": "bilancio",
+      "data": {
+        "anno": 2028,
+        "trimestre": 4
+      },
+      "deliberazione": 0,
+      "camera": {
+        "si": 219,
+        "no": 181
+      },
+      "senato": {
+        "si": 114,
+        "no": 86
+      },
+      "approvata": true,
+      "fiducia": false,
+      "fiducia_respinta": false,
+      "linee": [
+        {
+          "partito": "estrema_sinistra",
+          "si": false
+        },
+        {
+          "partito": "sinistra",
+          "si": false
+        },
+        {
+          "partito": "centrosinistra",
+          "si": false
+        },
+        {
+          "partito": "centro",
+          "si": false
+        },
+        {
+          "partito": "centrodestra",
+          "si": true
+        },
+        {
+          "partito": "destra",
+          "si": true
+        },
+        {
+          "partito": "estrema_destra",
+          "si": false
+        },
+        {
+          "partito": "giocatore",
+          "si": true
+        }
+      ],
+      "decaduta": null
+    },
+    {
+      "misura": 5,
+      "nome": "Cuneo fiscale: 3 punti",
+      "forma": "riforma",
+      "data": {
+        "anno": 2028,
+        "trimestre": 3
+      },
+      "deliberazione": 0,
+      "camera": {
+        "si": 17,
+        "no": 383
+      },
+      "senato": {
+        "si": 4,
+        "no": 196
+      },
+      "approvata": false,
+      "fiducia": false,
+      "fiducia_respinta": false,
+      "linee": [
+        {
+          "partito": "estrema_sinistra",
+          "si": false
+        },
+        {
+          "partito": "sinistra",
+          "si": false
+        },
+        {
+          "partito": "centrosinistra",
+          "si": false
+        },
+        {
+          "partito": "centro",
+          "si": true
+        },
+        {
+          "partito": "centrodestra",
+          "si": false
+        },
+        {
+          "partito": "destra",
+          "si": false
+        },
+        {
+          "partito": "estrema_destra",
+          "si": false
+        },
+        {
+          "partito": "giocatore",
+          "si": false
+        }
+      ],
+      "decaduta": null
+    }
+  ],
+  "referendum": [],
+  "esiti_referendum": [],
+  "eredita": {
+    "fine": "abbandono",
+    "bozza": false,
+    "anni_al_governo": 1.75,
+    "riavvolgimenti": 0,
+    "leggi_in_vigore": [],
+    "indicatori": [
+      {
+        "id": "debito_pil",
+        "nome": "Debito (% del PIL)",
+        "turno_zero": 136.7,
+        "fine": 136.07506710616312
+      },
+      {
+        "id": "spread",
+        "nome": "Spread (punti base)",
+        "turno_zero": 83.87909999999988,
+        "fine": 61.8055489499784
+      },
+      {
+        "id": "disoccupazione",
+        "nome": "Disoccupazione (%)",
+        "turno_zero": 5.6000000000000005,
+        "fine": 5.844158135670893
+      },
+      {
+        "id": "inflazione",
+        "nome": "Inflazione annua (%)",
+        "turno_zero": 4.2,
+        "fine": 0.7487521477110182
+      }
+    ]
+  },
+  "disponibilita": [],
+  "coalizione": [],
+  "richieste": [],
+  "elezioni": [
+    {
+      "data": {
+        "anno": 2026,
+        "trimestre": 4
+      },
+      "affluenza": 0.7140327215902681,
+      "voti": [
+        {
+          "partito": "estrema_sinistra",
+          "quota": 0.024615046106056,
+          "camera": 0,
+          "senato": 0
+        },
+        {
+          "partito": "sinistra",
+          "quota": 0.33282626275304666,
+          "camera": 120,
+          "senato": 63
+        },
+        {
+          "partito": "centrosinistra",
+          "quota": 0.05741840834508147,
+          "camera": 20,
+          "senato": 8
+        },
+        {
+          "partito": "centro",
+          "quota": 0.04134085153471969,
+          "camera": 14,
+          "senato": 2
+        },
+        {
+          "partito": "centrodestra",
+          "quota": 0.07024873934619229,
+          "camera": 32,
+          "senato": 15
+        },
+        {
+          "partito": "destra",
+          "quota": 0.24933003381413937,
+          "camera": 116,
+          "senato": 62
+        },
+        {
+          "partito": "estrema_destra",
+          "quota": 0.06005696816351142,
+          "camera": 22,
+          "senato": 12
+        },
+        {
+          "partito": "giocatore",
+          "quota": 0.16416368993725308,
+          "camera": 76,
+          "senato": 38
+        }
+      ],
+      "premio": "giocatore+centrodestra+destra",
+      "coalizioni": [
+        [
+          "giocatore",
+          "centrodestra",
+          "destra"
+        ],
+        [
+          "sinistra",
+          "centrosinistra"
+        ]
+      ]
+    }
+  ],
+  "incarico": null,
+  "dimissioni": false,
+  "crisi": false,
+  "mosse": [
+    {
+      "partito": "sinistra",
+      "testo": "Presenta la sfiducia a Filippo Barbieri, Interno: Centrodestra in ultimatum la voterebbe"
+    },
+    {
+      "partito": "centrosinistra",
+      "testo": "Porta nel posto riservato Concorrenza nei servizi: mercato libero; nessun seggio fra Camera e Senato dei partiti alleati la voterebbe"
+    }
+  ],
+  "programma": [],
+  "campagna": {
+    "attiva": false,
+    "spese": []
+  },
+  "eventi": [],
+  "situazioni": [
+    {
+      "nome": "Recessione",
+      "misura": "crescita_pil",
+      "valore": 1.3562636978326688,
+      "accensione": -1.0,
+      "spegnimento": 0.0,
+      "accesa": false
+    },
+    {
+      "nome": "Criminalità",
+      "misura": "sicurezza",
+      "valore": 103.54873477971344,
+      "accensione": 85.0,
+      "spegnimento": 92.0,
+      "accesa": false
+    },
+    {
+      "nome": "Liste d'attesa",
+      "misura": "qualita_servizio_sanitario",
+      "valore": 107.94072518563375,
+      "accensione": 90.0,
+      "spegnimento": 95.0,
+      "accesa": false
+    },
+    {
+      "nome": "Sovraffollamento delle carceri",
+      "misura": "sovraffollamento_carceri",
+      "valore": 108.71516274726609,
+      "accensione": 117.0,
+      "spegnimento": 110.0,
+      "accesa": false
+    },
+    {
+      "nome": "Caro energia",
+      "misura": "energia",
+      "valore": -2.922510931859299,
+      "accensione": 10.0,
+      "spegnimento": 5.0,
+      "accesa": false
+    },
+    {
+      "nome": "Ondata di sbarchi",
+      "misura": "immigrazione_irregolare",
+      "valore": 98.41452774202946,
+      "accensione": 250.0,
+      "spegnimento": 175.0,
+      "accesa": false
+    }
+  ],
+  "acquisti": {
+    "sondaggio_privato": null,
+    "test_misura": null,
+    "centro_studi": null,
+    "prezzi": [
+      {
+        "acquisto": "sondaggio_privato",
+        "euro": 15000
+      },
+      {
+        "acquisto": "test_misura",
+        "euro": 20000
+      },
+      {
+        "acquisto": "centro_studi",
+        "euro": 150000
+      }
+    ]
+  }
+}

@@ -358,8 +358,12 @@ _Evita_: livello (che è quello della mappa), gravità, priorità
 L'elenco completo di ciò che è successo in un turno, consultabile a richiesta.
 _Evita_: log, cronologia
 
+**Fermata**:
+Il motivo per cui «avanti fino a novità» smette di concatenare le chiusure: nel turno appena aperto serve una scelta del giocatore.
+_Evita_: interruzione, pausa, stop
+
 **Tono grave**:
-Il modo in cui il gioco presenta un evento con vittime o comunque serio: la cornice giocosa tace (niente testata, battute, motti, illustrazioni) e resta il fatto. Lo decide un evento del modello, non il giocatore; il resto del tempo il tono è ordinario.
+Il modo in cui il gioco presenta un evento con vittime o comunque serio: la cornice giocosa tace (niente testata, testi del Pungolo, illustrazioni) e resta il fatto. Lo decide un evento del modello, non il giocatore; il resto del tempo il tono è ordinario.
 _Evita_: registro grave (registro è già l'elenco del turno)
 
 **Indicatore sintetico**:
@@ -410,3 +414,61 @@ _Evita_: anteprima (che è quella di una misura), proiezione (per i seggi)
 **PIL potenziale**:
 Quanto il paese può produrre senza surriscaldarsi; cresce piano, e lo spostano infrastrutture, scuola, giustizia, energia e demografia.
 _Evita_: crescita (da sola)
+
+## Interfaccia
+
+**Cornice**:
+Ciò che resta a schermo in ogni sezione di una partita: lo stato del giocatore, la data, i turni al voto, i tre indicatori sintetici, il sommario e la chiusura del turno.
+_Evita_: barra, header, HUD
+
+**Sommario**:
+L'elenco delle sezioni dentro la cornice, sempre con le stesse voci nello stesso posto; una sezione che nel turno non ha niente da mostrare è barrata e dice perché.
+_Evita_: menu, navigazione, schede
+
+**Sezione**:
+Una delle pagine intere del sommario: prima pagina, cruscotto, governo, aula, conti, bilancio, paese, partiti, campagna, registro.
+_Evita_: schermata (che è qualunque pagina, anche fuori dalla partita), pannello, tab
+
+**Prima pagina**:
+La sezione che mostra l'esito del turno come prima pagina di «Il Pungolo»; si legge e basta, le scelte stanno altrove.
+_Evita_: esito (che è il contenuto, non la pagina), home
+
+**Testi del Pungolo**:
+I testi giocosi del gioco: titoli della prima pagina, motti dei ministri, note a biro. Nel tono grave tacciono tutti; i numeri e i fatti non ne fanno mai parte.
+_Evita_: battute (come nome di un elemento), registro giocoso (registro è già l'elenco del turno), corsivo (la riga che commentava il trimestre, tolta dalla v1)
+
+**Occhiello**:
+La riga seria sopra il titolo di una voce in prima pagina: il fatto col suo numero. Da sola quando la voce non ha titolo o il tono è grave.
+_Evita_: sottotitolo, sommario (che è l'elenco delle sezioni)
+
+**Titolo**:
+La riga spiritosa sotto l'occhiello, scelta per tipo di voce; non porta nomi né cifre e non serve per decidere.
+_Evita_: nome spiritoso, headline
+
+**Voce di testa**:
+La voce in evidenza in cima alla prima pagina, col titolo più grande e la vignetta accanto: quella con la criticità e la precedenza più alte, a parità la prima della chiusura.
+_Evita_: apertura (che è la fase del turno), notizia d'apertura, lead
+
+**Vignetta**:
+Il disegno accanto alla voce di testa, scelto dal tipo di voce, con la sua didascalia; nella pagina del voto al suo posto c'è il risultato. Nel tono grave non c'è.
+_Evita_: illustrazione, immagine
+
+**Motto**:
+La frase in prima persona che accompagna un ministro nel borsino; scherza sul mestiere del dicastero e resta la stessa finché il ministro è in carica.
+_Evita_: slogan, citazione
+
+**Cruscotto**:
+La sezione di casa del turno: l'evento aperto e tutto ciò che nel turno chiede una scelta, ciascuno col rimando alla sua sezione. Dopo il voto al suo posto c'è la trattativa, a partita finita l'eredità.
+_Evita_: dashboard, scrivania, plancia
+
+**Edicola**:
+La schermata fuori dalla partita, che il gioco apre all'avvio: partite in corso, partita nuova, albo delle partite.
+_Evita_: menu principale, home, lobby
+
+**Tracciato**:
+La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, uno stacco segna dove comincia il pericolo.
+_Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
+
+**Fascia** (di un valore):
+Un valore mostrato come una fra poche classi con un nome (capacità buona, rischio alto, intesa media) invece che come numero. La fascia di reddito è un'altra cosa e si dice sempre per intero.
+_Evita_: livello (che è della mappa), classe, grado

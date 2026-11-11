@@ -1,0 +1,575 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Fondamenta visive» (08), mappa v1-piano-11-ui.
+  Domanda: quali sono le fondamenta visive di tutte le schermate? Token, caratteri, griglia e densità,
+  componenti di base, cornice (anche nel tono grave), scala della UI.
+  Tre forme della cornice via ?c=A|B|C (frecce ← →):
+    A  Gerenza   — due righe: testatina, stato, tre tracciati, chiusura; sotto il sommario
+    B  Colonna   — tutto in una colonna a sinistra, sommario in verticale; il corpo prende tutta l'altezza
+    C  Testa e piede — il sommario in testa; stato, tracciati e chiusura in fondo alla pagina
+       (scartata prima di mostrarla: la striscia su una riga sola, 1.300 px di contenuto in 1.232)
+  Altri parametri:
+    ?pag=sezione|campionario|prima      cosa c'è sotto la cornice
+    ?stato=governo|grave|crisi|opposizione|zero
+    ?t=riemp|pedina                     come si legge il tracciato a caselle
+    ?fin=1280|1440  ?spazio=fluido|ingr a 1440 più contenuto o tutto più grande
+    ?scala=1|1.25|1.5                   scala della UI (CSS zoom, ticket 04)
+    ?car=grigia|iniziali|niente         la caricatura nel tono grave
+    ?griglia=0|1  ?tagli=0|1            griglia a 12 colonne; contorno su ciò che esce dal suo riquadro
+  Stile S «Il Settimanale» da .scratch/v1-giocabile/prototipi/10-direzione-artistica-2.prototype.html.
+  Dati: Viste campione 01, 03, 05, 06, 08 (.scratch/v1-piano-11-ui/viste/). Il consenso è calcolato qui a mano
+  sulle quote medie degli istituti senza l'astensione; le variazioni sul turno prima sono vere solo nello stato
+  «governo» (dalla Vista 02), altrove sono di prova. Scale e soglie dei tracciati: proposte, non dati del core.
+  Non è codice di produzione. Buttare dopo il verdetto.
+
+  VERDETTO (Mario, 11/11/2026), nel ticket 08: A · Gerenza; tracciato che si riempie; iniziali al posto della
+  caricatura nel tono grave; a 1440 più contenuto. Il file si apre su questa forma.
+  Alternative scartate: ?c=B|C ?t=pedina ?car=grigia|niente ?spazio=ingr
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo fondamenta visive · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* =====================================================================
+   FONDAMENTA — i token. Tutto ciò che segue li usa; nessun colore o misura a mano.
+   ===================================================================== */
+.vS{
+  /* inchiostri */
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  /* caratteri */
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  /* spazio: passo di 4 */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  /* filetti */
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  /* movimento (ticket 04): durate per --k */
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+/* tono grave: tacciono colori, evidenziatore e ghiribizzi del titolo */
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS.g ::selection{background:var(--ink);color:var(--carta)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec)}
+.link:hover{text-decoration-thickness:2px}
+
+/* ---------- pulsante d'azione ---------- */
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn[aria-disabled=true]:active{transform:none}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+
+/* ---------- numero con freccia ---------- */
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.nf .dl{margin-left:.35em}
+
+/* ---------- tracciato a caselle ---------- */
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}            /* il retino solo dove la casella è abbastanza grande da reggerlo */
+.cas i.sog{margin-right:4px}                       /* lo stacco segna la soglia a ogni misura, anche senza colore */
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas i.ped{background:var(--ink)}
+.cas.inp i.ped{background:var(--rosso);border-color:var(--rosso)}
+.cas i.era{border-style:dashed}
+.cas i.era:not(.per){background:var(--velo)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.trk .d{white-space:nowrap}
+
+/* ---------- fascia: poche classi con un nome ---------- */
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+
+/* ---------- voce con causa ---------- */
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.notizia .occ{color:var(--ink);letter-spacing:0;text-transform:none;font-size:var(--c-corpo)}
+.notizia .occ.crit{color:var(--rosso)}
+.notizia h4{font-size:var(--c-sez);margin:2px 0 4px}
+.notizia p{font-size:var(--c-sec);color:var(--grigio)}
+
+/* ---------- riquadri ---------- */
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.faccia.grigia{filter:grayscale(1)}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em}
+.bollo{display:inline-block;border:3px double var(--rosso);color:var(--rosso);font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:1px 9px;transform:rotate(-5deg)}
+
+/* =====================================================================
+   CORNICE — tre forme
+   ===================================================================== */
+.cornice{min-width:0}
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+
+/* A · Gerenza */
+.cA,.cC{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k,.c1 .trk .d{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm,.cC .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button,.cC .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui,.cC .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+/* A stretta (sotto 1150 px utili): via la testatina, variazione in linea */
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button,.stretta .cC .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* C · Testa e piede: il sommario in testa, stato, tracciati e chiusura in fondo alla pagina */
+.cC{display:flex;align-items:end;gap:14px}
+.cC .nomino{font-size:23px;padding-bottom:6px}
+.cC .somm{flex:1;min-width:0;margin-top:0}
+.cC.piede-c{display:block;border-bottom:0;border-top:var(--doppio);padding:6px var(--marg) 8px}
+.cC.piede-c .c1{padding-bottom:0}
+.stretta .cC .nomino{display:none}
+
+/* B · Colonna */
+.cB{width:214px;border-right:var(--doppio);padding:12px 14px 12px var(--marg);display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0}
+.cB .nomino{font-size:30px}
+.cB .chi{white-space:normal}
+.cB .trks{display:grid;gap:8px;border-top:var(--filo);padding-top:8px}
+.cB .trk{grid-template-columns:1fr auto;gap:1px 6px}
+.cB .trk .cas{grid-column:1/-1;--cw:14px;--ch:13px;gap:2px;--ret:var(--retino)}
+.cB .trk .d{grid-column:1/-1}
+.cB .somm{display:grid;border-top:var(--filo);padding-top:6px}
+.cB .somm button{padding:2px 6px;margin-left:-6px;border-left:0}
+.cB .somm button.qui{background:var(--ink);color:var(--carta)}
+.cB .somm .fuori{margin:6px 0 0;display:grid;gap:0;padding:6px 0 0;border-top:var(--filo)}
+.cB .somm .fuori button{padding:1px 0;margin:0}
+.cB .c-dx{margin-top:auto;display:grid;gap:5px}
+.cB .c-dx .btn{text-align:center;padding:6px 8px}
+
+/* =====================================================================
+   CORPO
+   ===================================================================== */
+/* il corpo scorre in verticale quando la scala lo stringe; la cornice mai, e niente scorre di lato */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+.grl{position:absolute;inset:0 var(--marg);display:grid;grid-template-columns:repeat(12,1fr);gap:var(--canale);pointer-events:none;z-index:2}
+.grl i{background:rgb(179 18 43 / .09);border-inline:1px solid rgb(179 18 43 / .25)}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.corsivo{font-size:var(--c-corpo);font-style:italic;display:flex;gap:10px;align-items:baseline}
+.corsivo .occ{flex:none;font-style:normal}
+.corsivo span:last-child{min-width:0}
+
+/* sezione tipo: il borsino */
+.riga{display:grid;grid-template-columns:36px minmax(120px,170px) minmax(0,1.5fr) 74px minmax(0,1fr) 112px;align-items:center;gap:0 10px;height:43px;border-top:var(--filo);cursor:pointer}
+.riga:last-of-type{border-bottom:var(--filo)}
+.riga:hover{background:var(--velo)}
+.riga.sel{background:var(--velo);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.riga.ev .dic::before{content:"";display:inline-block;width:.55em;height:.55em;background:var(--rosso);margin-right:5px}
+.riga .dic{font-weight:700;font-size:var(--c-sec);display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riga .chi2{font-size:var(--c-min);color:var(--grigio);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.riga .atto{font-size:var(--c-sec);line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.riga .motto{font-size:var(--c-min);font-style:italic;line-height:1.2;color:var(--biro);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.riga .sodd{font-size:17px}
+.riga .azr{display:flex;gap:4px}
+.carta-min{display:grid;gap:8px;align-content:start}
+.carta-min .su{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* campionario */
+.camp{grid-template-columns:repeat(3,minmax(0,1fr))}
+.camp h3{border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:8px}
+.camp h4{margin:12px 0 5px}
+.ink{display:grid;grid-template-columns:26px 1fr auto;gap:2px 10px;align-items:center;padding:4px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.ink i{width:26px;height:26px;border:var(--bordo);grid-row:span 2}
+.ink small{grid-column:2/-1;color:var(--grigio);font-size:var(--c-min)}
+.ink code,.car code{font:inherit;font-size:var(--c-min);color:var(--grigio)}
+.car{display:grid;grid-template-columns:54px minmax(0,1fr);gap:0 10px;align-items:baseline;padding:3px 0;border-top:var(--filo)}
+.car>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.fil{display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center;font-size:var(--c-min);color:var(--grigio)}
+.fil i{display:block;height:0}
+.col-num{display:grid;grid-template-columns:1fr auto;font-size:var(--c-sec);max-width:240px}
+.col-num span:nth-child(even){text-align:right;font-weight:700}
+
+/* prima pagina */
+.pagina{padding:10px 28px;display:grid;grid-template-rows:auto auto auto 1fr auto;min-height:0;min-width:0;overflow:hidden}
+.testata{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding-bottom:4px}
+.testata .nome{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;font-size:var(--c-test);line-height:1.08;color:var(--rosso);text-align:center}
+.g .testata .nome{font-size:var(--c-pag);font-weight:600;padding:14px 0 6px}
+.orecchio{font-size:var(--c-sec);line-height:1.35;color:var(--grigio)}
+.orecchio b{color:var(--ink)} .orecchio.dx{text-align:right}
+.sotto{display:flex;justify-content:space-between;font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--ink);border-bottom:var(--doppio);padding:4px 0;color:var(--grigio)}
+.apertura{display:grid;grid-template-columns:1fr 28%;gap:26px;padding:12px 0 10px;border-bottom:1px solid var(--ink)}
+.g .apertura{grid-template-columns:1fr}
+.lead h2{font-size:var(--c-apre);line-height:1.06;margin:3px 0 6px}
+.lead .o{font-size:17px;font-weight:700}
+.lead p{font-size:var(--c-lead);color:var(--grigio);max-width:70ch}
+.vignetta{border:var(--forte);min-height:130px;display:grid;place-items:center;font-style:italic;color:var(--grigio);background:var(--retino)}
+.colonne{display:grid;grid-template-columns:repeat(3,1fr);padding-top:8px;gap:0}
+.colonne .ph{margin:3px 16px 0 0}
+.piede{display:flex;justify-content:space-between;align-items:center;border-top:var(--doppio);padding-top:7px}
+
+.taglio{outline:2px solid magenta!important;outline-offset:-1px}
+
+/* ---------- barra del prototipo (non fa parte del disegno) ---------- */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px}
+#proto .lab{min-width:130px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">sotto</span><span class="seg" data-k="pag"><button data-v="sezione">sezione tipo</button><button data-v="campionario">campionario</button><button data-v="prima">prima pagina</button></span>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="governo">governo</button><button data-v="grave">tono grave</button><button data-v="crisi">crisi</button><button data-v="opposizione">opposizione</button><button data-v="zero">turno zero</button></span>
+  <span class="cap">tracciato</span><span class="seg" data-k="t"><button data-v="riemp">si riempie</button><button data-v="pedina">pedina</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">a 1440</span><span class="seg" data-k="spazio"><button data-v="fluido">più contenuto</button><button data-v="ingr">tutto più grande</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button><button data-v="1.5">1,5×</button></span>
+  <span class="cap">caricatura nel grave</span><span class="seg" data-k="car"><button data-v="grigia">in grigio</button><button data-v="iniziali">iniziali</button><button data-v="niente">niente</button></span>
+  <span class="cap">griglia</span><span class="seg" data-k="griglia"><button data-v="0">no</button><button data-v="1">sì</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+// ======================= stato del prototipo =======================
+const DEF = {c:'A', pag:'sezione', stato:'governo', t:'riemp', fin:'1280', spazio:'fluido', scala:'1', car:'iniziali', griglia:'0', tagli:'0'};
+const st = {...DEF, sel:3, conf:false, scelta:null};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const FORME = {A:'A · Gerenza', B:'B · Colonna', C:'C · Testa e piede'};
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const grave = ()=>st.stato==='grave';
+
+// ======================= dati dalle Viste campione =======================
+const cause = {indicatore_in_calo:'indicatore del dicastero in calo', obiettivo_raggiunto:'obiettivo raggiunto', quota_scoperta:'quota di ministeri scoperta', sondaggi_in_calo:'sondaggi in calo', spartizione:'spartizione dei ministeri'};
+const M = (dic,nome,part,cap,sodd,ds,atto,costo,motivo,ev,motto,causa)=>({dic,nome,part,cap,sodd,ds,atto,costo,motivo,ev,motto,causa});
+const MIN03 = [ // Vista 03: tutti a 60, in rodaggio
+  M('Economia e Finanze','Simone Gallo','Destra',4,60,0,'Incrocio delle banche dati fiscali',291463533,'Efficienza della riscossione: avvicina l’obiettivo',1,'Due case e una barca: il fisco li ha messi in fila.'),
+  M('Sviluppo economico','Marco Bianchi','Partito del giocatore',2,60,0,'Commesse pubbliche alle imprese del territorio · Sicilia',302318154,'Sostegno alle imprese: avvicina l’obiettivo; Sicilia: ne ha bisogno',1,'Compriamo locale, anche se costa un po’ di più.'),
+  M('Lavoro e Welfare','Simone Ricci','Centrodestra',2,60,0,'Formazione pagata dalle imprese',47729238,'vicino alla sua posizione',0,'Imparare il mestiere dove si lavora, a spese dell’azienda.'),
+  M('Sanità','Sara Ferraro','Destra',2,60,0,'Accorpamento delle ASL e premi ai primari',311316560,'vicino alla sua posizione',0,'Meno sigle, più primari contenti.'),
+  M('Istruzione e Ricerca','Chiara Caruso','Partito del giocatore',4,60,0,'Premi di merito agli istituti',514510918,'vicino alla sua posizione',0,'Il registro diventa una classifica.'),
+  M('Infrastrutture e Trasporti','Filippo Ricci','Centrodestra',3,60,0,null,null,'margine esaurito',0,null),
+  M('Ambiente ed Energia','Luca Romano','Destra',1,60,0,'Riempimento accelerato delle riserve di gas',141081805,'vicino alla sua posizione',1,'Gli stoccaggi pieni prima dell’inverno.'),
+  M('Interno','Filippo Barbieri','Partito del giocatore',5,60,0,'Accoglienza diffusa e corridoi umanitari',116668331,'Sicurezza: avvicina l’obiettivo',0,'Pochi per paese, nessuno per strada.'),
+  M('Giustizia','Simone Bianchi','Partito del giocatore',3,60,0,'Squadre di giudici a termine per l’arretrato',74950593,'Durata dei processi: avvicina l’obiettivo',0,'Una montagna di fascicoli e un tavolo in più.'),
+  M('Esteri e Difesa','Giulia Rossi','Destra',3,60,0,null,null,'margine esaurito',0,null),
+];
+const MIN08 = [ // Vista 08: soddisfazioni mosse, con le cause
+  M('Economia e Finanze','Simone Gallo','Destra',4,71,10,'Riscossione affidata a concessionari privati',146846321,'vicino alla sua posizione',0,'La cartella esattoriale, ora in appalto.','obiettivo_raggiunto'),
+  M('Sviluppo economico','Marco Bianchi','Partito del giocatore',2,51,-2.7,'Zone economiche speciali con burocrazia ridotta · Campania',101543427,'vicino alla sua posizione; Campania: ne ha bisogno',0,'Qui i timbri si contano sulle dita di una mano.','indicatore_in_calo'),
+  M('Lavoro e Welfare','Simone Ricci','Centrodestra',2,51,-5.7,null,null,'margine esaurito',0,null,'indicatore_in_calo'),
+  M('Sanità','Sara Ferraro','Destra',2,33,-12.2,'Convenzioni col privato accreditato',627395009,'Qualità del servizio sanitario: avvicina l’obiettivo',1,'La sala operatoria accanto, già convenzionata.','indicatore_in_calo'),
+  M('Istruzione e Ricerca','Chiara Caruso','Partito del giocatore',4,64,0,'Premi di merito agli istituti',518445891,'vicino alla sua posizione',0,'Il registro diventa una classifica.'),
+  M('Infrastrutture e Trasporti','Filippo Ricci','Centrodestra',3,52,0,null,null,'margine esaurito',0,null),
+  M('Ambiente ed Energia','Luca Romano','Destra',1,49,-2.7,null,null,'margine esaurito',0,null,'indicatore_in_calo'),
+  M('Interno','Filippo Barbieri','Partito del giocatore',5,54,10,null,null,'margine esaurito',0,null,'obiettivo_raggiunto'),
+  M('Giustizia','Simone Bianchi','Partito del giocatore',3,73,0,'Processo telematico e filtri sui ricorsi',25174605,'Durata dei processi: avvicina l’obiettivo',0,'La sentenza arriva per posta elettronica certificata.'),
+  M('Esteri e Difesa','Giulia Rossi','Destra',3,53,-1.8,null,null,'margine esaurito',0,null,'indicatore_in_calo'),
+];
+// Tracciati: 10 caselle, a sinistra la caduta. pos = caselle fino al valore, soglia = caselle della zona di pericolo.
+// Scale proposte: consenso 25→75% (5 punti a casella, pericolo sotto 40); maggioranza: margine più stretto fra le Camere,
+// −9→+21 seggi (3 a casella, pericolo sotto +3); conti: spread 500→0 pb (50 a casella, pericolo sopra 350).
+const S = {
+  governo:{nome:'Al governo', periodo:'Aprile–giugno 2027', turno:2, alVoto:'18 turni al voto', def:'3 scelte al default', min:MIN03,
+    tre:[['Consenso','56,5%',7,6,'5,6','su','bene'],['Maggioranza C / S','+24 / +15',8,8,'','pari',''],['Conti · spread','86',9,9,'3','su','male']],
+    barrate:{bilancio:'La legge di bilancio si presenta in ottobre-dicembre', campagna:'Si fa campagna solo nel turno prima del voto'}},
+  grave:{nome:'Al governo', periodo:'Luglio–settembre 2028', turno:7, alVoto:'13 turni al voto', def:'2 scelte al default', min:MIN08,
+    tre:[['Consenso','47,3%',5,6,'3,1','giu','male'],['Maggioranza C / S','+24 / +15',8,8,'','pari',''],['Conti · spread','85',9,9,'2','giu','bene']],
+    barrate:{bilancio:'La legge di bilancio si presenta in ottobre-dicembre', campagna:'Si fa campagna solo nel turno prima del voto'}},
+  crisi:{nome:'Crisi di governo', periodo:'Aprile–giugno 2033', turno:26, alVoto:'14 turni al voto', def:'1 scelta al default', min:MIN08, banda:'Crisi di governo: solo ordinaria amministrazione. Allarga la maggioranza o dimettiti.',
+    tre:[['Consenso','18,8%',0,1,'4,0','giu','male','crit'],['Maggioranza C / S','−116 / −59',0,0,'','pari','male','crit'],['Conti · spread','1.000',0,0,'120','su','male','crit']],
+    barrate:{bilancio:'La legge di bilancio si presenta in ottobre-dicembre', campagna:'Si fa campagna solo nel turno prima del voto'}},
+  opposizione:{nome:'All’opposizione', periodo:'Aprile–giugno 2027', turno:2, alVoto:'18 turni al voto', def:'', avanti:1, min:MIN03,
+    tre:[['Consenso','5,6%',0,0,'0,3','giu','male'],['Maggioranza C / S','+140 / +72',10,10,'','pari',''],['Conti · spread','78',9,9,'5','giu','bene']],
+    barrate:{governo:'Non governi: nessun ministro tuo', bilancio:'La legge di bilancio si presenta in ottobre-dicembre, al governo', campagna:'Si fa campagna solo nel turno prima del voto'}},
+  zero:{nome:'Turno zero · Camere sciolte', periodo:'Ottobre–dicembre 2026', turno:0, alVoto:'si vota a fine turno', def:'2 scelte al default', min:MIN03,
+    tre:[['Consenso','19,2%',0,0,'','pari',''],['Maggioranza','Camere sciolte',null,null,'','',''],['Conti · spread','84',9,9,'','pari','']],
+    barrate:{prima:'Turno zero: non c’è un turno prima', governo:'Non governi: nessun ministro tuo', aula:'Camere sciolte: niente aula fino al voto', bilancio:'La legge di bilancio si presenta in ottobre-dicembre, al governo', registro:'Turno zero: nessun turno passato'}},
+};
+const SEZ = [['prima','Prima pagina'],['cruscotto','Cruscotto'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+
+// ======================= pezzi di base =======================
+const fr = v => v==='pari' ? '<span aria-hidden="true">= </span>' : v ? `<svg class="fr ${v==='giu'?'giu':''}" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 .5 9.5 9.5H.5Z"/></svg>` : '';
+// numero con freccia: la freccia dice il verso, il colore il giudizio; il critico va in negativo e regge anche senza colore
+const delta = (d,verso,giud,crit)=> (d===''&&verso!=='pari') ? '' : `<span class="dl ${giud||'muto'} ${crit?'crit':''}">${fr(verso)}${d}</span>`;
+const nf = (v,d,verso,giud,crit)=>`<span class="nf">${v}${delta(d,verso,giud,crit)}</span>`;
+function caselle(pos,prev,soglia=3,n=10){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  const inp = pos<=soglia, p=Math.max(pos,1), q=Math.max(prev,1);
+  const cl = i => [i<soglia?'per':'', i===soglia-1?'sog':'', st.t==='riemp' ? (i<pos?'on':'') : (i===p-1?'ped':(i===q-1&&q!==p?'era':''))].join(' ');
+  return `<span class="cas ${inp?'inp':''}">${Array.from({length:n},(_,i)=>`<i class="${cl(i)}"></i>`).join('')}</span>`;
+}
+const trk = ([k,v,pos,prev,d,verso,giud,crit])=>`<div class="trk"><span class="k">${k}</span>${caselle(pos,prev)}<span class="v">${v}</span><span class="d">${delta(d,verso,giud,crit)}</span></div>`;
+const fascia = (n,di,nome)=>`<span class="fascia"><span class="cas">${Array.from({length:di},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>${nome}</span>`;
+const euro = c => c>=1e9 ? (c/1e9).toLocaleString('it-IT',{maximumFractionDigits:1})+' mld €' : Math.round(c/1e6).toLocaleString('it-IT')+' mln €';
+
+// caricatura: kit di parti del prototipo vincolante, scelte con un hash di ruolo:partito:nome (ticket 05)
+const ACC = {
+  'Economia e Finanze':'<rect x="40" y="44" width="20" height="15" fill="#fff" stroke="#1b1b1b" stroke-width="2"/><circle cx="45" cy="49" r="2" fill="#C8372A"/><circle cx="51" cy="49" r="2" fill="#1b1b1b"/><circle cx="48" cy="55" r="2" fill="#1b1b1b"/><circle cx="55" cy="55" r="2" fill="#C8372A"/>',
+  'Sanità':'<rect x="42" y="42" width="18" height="18" rx="3" fill="#fff" stroke="#1b1b1b" stroke-width="2"/><path d="M51 45v12M45 51h12" stroke="#C8372A" stroke-width="3"/>',
+  'Sviluppo economico':'<rect x="41" y="46" width="20" height="13" rx="2" fill="#8a5a33" stroke="#1b1b1b" stroke-width="2"/><path d="M47 46v-3h8v3" fill="none" stroke="#1b1b1b" stroke-width="2"/>',
+  'Lavoro e Welfare':'<path d="M43 59 L56 46" stroke="#1b1b1b" stroke-width="3.5" stroke-linecap="round"/><circle cx="57" cy="45" r="4.5" fill="none" stroke="#1b1b1b" stroke-width="2.5"/>',
+  'Istruzione e Ricerca':'<rect x="41" y="49" width="20" height="7" rx="1" fill="#fff" stroke="#1b1b1b" stroke-width="2" transform="rotate(-25 51 52)"/>',
+  'Infrastrutture e Trasporti':'<path d="M40 58h21l-3-9h-15z" fill="#F2B134" stroke="#1b1b1b" stroke-width="2"/>',
+  'Ambiente ed Energia':'<path d="M43 59 C43 47 51 42 60 42 C60 52 54 59 43 59Z" fill="#5a9a5a" stroke="#1b1b1b" stroke-width="2"/>',
+  'Interno':'<rect x="41" y="48" width="15" height="10" rx="5" fill="#ddd" stroke="#1b1b1b" stroke-width="2"/><rect x="54" y="46" width="7" height="5" fill="#ddd" stroke="#1b1b1b" stroke-width="2"/>',
+  'Giustizia':'<path d="M51 42v16M43 46h16M43 46l-3 7h6zM59 46l-3 7h6z" fill="#fff" stroke="#1b1b1b" stroke-width="2"/>',
+  'Esteri e Difesa':'<circle cx="51" cy="51" r="9" fill="#9DC3E6" stroke="#1b1b1b" stroke-width="2"/><path d="M42 51h18M51 42c-5 5-5 13 0 18c5-5 5-13 0-18" fill="none" stroke="#1b1b1b" stroke-width="1.5"/>',
+};
+const hash = s => { let h=5381; for(const c of s) h=((h<<5)+h+c.charCodeAt(0))>>>0; return h; };
+function faccia(m,px){
+  if(grave() && st.car==='niente') return '';
+  if(grave() && st.car==='iniziali'){ const i=m.nome.split(' ').map(w=>w[0]).join(''); return `<span class="iniz" style="width:${px}px;height:${px}px;font-size:${Math.max(12,Math.round(px*.36))}px" aria-hidden="true">${i}</span>`; }
+  const h=hash(`${m.dic}:${m.part}:${m.nome}`), f='qctm'[h%4], col=['#E9B872','#D98E73','#9DB8A0','#C9A6C4','#E3C16F','#A8BFD6'][(h>>>3)%6], ink='#1b1b1b', u=m.sodd<25?2:m.sodd<40?1:0, dy=f==='t'?6:0;
+  const sh={q:'<rect x="10" y="6" width="40" height="40" rx="3"/>',c:'<circle cx="30" cy="26" r="21"/>',t:'<path d="M30 3 L55 47 L5 47Z"/>',m:'<path d="M8 28 A22 22 0 0 1 52 28 L52 46 L8 46Z"/>'}[f];
+  const bocca=[`M23 ${36+dy} Q30 ${41+dy} 37 ${36+dy}`,`M23 ${38+dy} L37 ${38+dy}`,`M23 ${40+dy} Q30 ${35+dy} 37 ${40+dy}`][u];
+  return `<svg class="faccia ${grave()?'grigia':''}" width="${px}" height="${px}" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 64 Q30 46 52 64Z" fill="#4a4d55"/><g fill="${col}" stroke="${ink}" stroke-width="2.2">${sh}</g><circle cx="${f==='t'?26:23}" cy="${26+dy}" r="2.6" fill="${ink}"/><circle cx="${f==='t'?34:37}" cy="${26+dy}" r="2.6" fill="${ink}"/><path d="${bocca}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>${ACC[m.dic]||''}</svg>`;
+}
+
+// ======================= cornice =======================
+function qui(){ const b=S[st.stato].barrate; return st.pag==='prima'&&!b.prima ? 'prima' : st.pag==='sezione'&&!b.governo ? 'governo' : 'cruscotto'; }
+function sommario(){
+  const s=S[st.stato], q=qui();
+  return `<nav class="somm" aria-label="Sommario">${SEZ.map(([k,t])=> s.barrate[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(s.barrate[k])}">${t}</button>` : `<button class="${q===k?'qui':''}" ${q===k?'aria-current="page"':''}>${t}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+}
+function chiusura(){
+  const s=S[st.stato];
+  return `<div class="c-dx"><div class="pila">${s.avanti?'<button class="btn p">Avanti fino a novità ››</button>':''}<button class="btn pieno">Chiudi il turno ›</button></div>${s.def?`<button class="def">${s.def} ›</button>`:''}</div>`;
+}
+function cornice(){
+  const s=S[st.stato], tre=`<div class="trks">${s.tre.map(trk).join('')}</div>`;
+  const chi=`<span class="chi"><b>${s.nome}</b><br>${s.periodo} · turno ${s.turno}<br><b>${s.alVoto}</b></span>`;
+  const nomino = st.pag==='prima' ? '' : '<span class="nomino solo-ord">Il Pungolo</span>';   // sulla prima pagina c'è già la testata grande
+  const c1 = n=>`<div class="c1"><div class="c-sx">${n}${chi}</div>${tre}${chiusura()}</div>`;
+  if(st.c==='B') return [`<header class="cornice cB">${nomino}${chi}${tre}${sommario()}${chiusura()}</header>`,''];
+  if(st.c==='C') return [`<header class="cornice cC">${nomino}${sommario()}</header>`, `<footer class="cornice cC piede-c">${c1('')}</footer>`];
+  return [`<header class="cornice cA">${c1(nomino)}${sommario()}</header>`,''];
+}
+
+// ======================= sotto la cornice =======================
+function sezione(){
+  const s=S[st.stato], g=grave(), m=s.min[st.sel];
+  const righe = s.min.map((x,i)=>`<div class="riga ${i===st.sel?'sel':''} ${x.ev?'ev':''}" data-sel="${i}">
+    <div>${faccia(x,34)}</div>
+    <div><span class="dic">${x.dic}</span><span class="chi2">${x.nome} · ${x.part}</span></div>
+    <div class="atto">${x.atto?`${esc(x.atto)} <span class="muto">${euro(x.costo)}</span>`:`<span class="muto">Nessun atto: ${x.motivo}</span>`}</div>
+    <div class="sodd">${nf(x.sodd, x.ds?String(Math.abs(x.ds)).replace('.',','):'', x.ds<0?'giu':x.ds>0?'su':'pari', x.ds<0?'male':x.ds>0?'bene':'', x.sodd<40)}</div>
+    <div class="motto">${g||!x.motto?'':'«'+esc(x.motto)+'»'}</div>
+    <div class="azr">${x.atto?'<button class="btn p">Ferma</button><button class="btn p">Dirotta</button>':''}</div></div>`).join('');
+  const nota = S[st.stato].barrate.governo ? `<div class="ph" style="grid-column:1/-1"><b>Campione di densità.</b> In questo stato «Governo» è barrata: il borsino qui sotto serve solo a misurare righe e colonne.</div>` : '';
+  return `<div class="corpo" style="grid-template-columns:minmax(0,1fr) var(--lato)">${nota}
+    <section><h3 class="tit">${g?'Agenda dei ministri':'Il borsino dei ministri'}</h3>${righe}
+      <div class="corsivo solo-ord" style="margin-top:10px"><span class="occ">Il corsivo</span><span>Dieci ministri, otto atti, due casse vuote: il trimestre comincia in salita e col freno a mano.</span></div></section>
+    <section class="carta-min box">
+      <div class="su"><div>${faccia(m,84)}</div><div><div class="occ">${m.dic}</div><h4 class="tit" style="font-size:var(--c-sez)">${m.nome}</h4><div class="sec muto">${m.part}</div></div></div>
+      <dl class="dati"><dt>Capacità</dt><dd>${fascia(m.cap,5,['','scarsa','modesta','discreta','buona','ottima'][m.cap])}</dd>
+        <dt>Soddisfazione</dt><dd>${nf(m.sodd, m.ds?String(Math.abs(m.ds)).replace('.',','):'', m.ds<0?'giu':m.ds>0?'su':'pari', m.ds<0?'male':m.ds>0?'bene':'', m.sodd<40)} ${m.sodd<40?'<span class="min male" style="font-weight:700">in preavviso</span>':''}</dd></dl>
+      <div>${m.causa?`<div class="voce"><b>Soddisfazione ${m.ds>0?'+':'−'}${String(Math.abs(m.ds)).replace('.',',')}</b><span class="muto">turno ${s.turno-1}</span><small>${cause[m.causa]}</small></div>`:''}
+        <div class="voce"><b>${m.atto?esc(m.atto):'Nessun atto in agenda'}</b><span>${m.atto?euro(m.costo):''}</span><small>${esc(m.motivo)}</small></div></div>
+      ${m.motto&&!g?`<div class="sec" style="font-style:italic;color:var(--biro)">«${esc(m.motto)}»</div>`:''}
+      <div class="az">${m.atto?`<button class="btn ${st.scelta==='ferma'?'scelto':''}" data-scelta="ferma">Ferma</button><button class="btn ${st.scelta==='dirotta'?'scelto':''}" data-scelta="dirotta">Dirotta</button>`:`<button class="btn" aria-disabled="true">Ferma</button><span class="min muto">niente da fermare: ${m.motivo}</span>`}</div>
+      <div class="az" style="border-top:var(--filo);padding-top:8px;margin-top:0">${st.conf?`<button class="btn via pieno" data-conf="0">Conferma: chiedi le dimissioni</button><button class="btn" data-conf="0">Annulla</button>`:`<button class="btn via" data-conf="1">Chiedi le dimissioni</button>`}</div>
+    </section></div>`;
+}
+function campionario(){
+  const I = (v,ruolo,hex,cr)=>`<div class="ink"><i style="background:var(--${v})"></i><b>${v}</b><code>${hex} · ${cr}</code><small>${ruolo}</small></div>`;
+  const C = (px,nome,html)=>`<div class="car"><code>${px} · ${nome}</code><span>${html}</span></div>`;
+  const F = (stile,nome)=>`<i style="${stile}"></i><span>${nome}</span>`;
+  const m=S[st.stato].min, g=grave();
+  return `<div class="corpo camp">
+  <section><h3 class="tit">Inchiostri</h3>
+    ${I('carta','Il foglio: l’unico fondo.','#F4ECD8','—')}${I('ink','Testo, filetti forti, pieni.','#1F1A17','14,6 : 1')}${I('grigio','Testo secondario, filetti sottili.','#5E5750','6,0 : 1')}
+    ${I('rosso','Testata, ciò che va male, il critico.','#B3122B','5,9 : 1')}${I('verde','Ciò che va bene.','#2E6B45','5,4 : 1')}${I('biro','Note a biro, motti, rimandi allo schema.','#1D4E89','7,1 : 1')}
+    ${I('giallo','Evidenziatore: solo sotto l’inchiostro, mai testo né filetto.','#FFD23F','1,2 : 1')}
+    <p class="min muto" style="margin-top:6px">Contrasto sulla carta. Nel tono grave rosso, verde e biro diventano inchiostro e il giallo sparisce: prova lo stato «tono grave».</p>
+    <h4 class="tit">Filetti e campiture</h4>
+    <div class="fil">${F('border-top:var(--filo)','1 px grigio · fra le righe')}${F('border-top:var(--bordo)','1,5 px · riquadri e caselle')}${F('border-top:var(--forte)','2 px · pulsanti')}${F('border-top:var(--doppio)','doppio · testa e piede di pagina')}
+      ${F('height:12px;background:var(--retino);border:var(--bordo)','retino · zona di pericolo, vignette')}${F('height:12px;background:var(--velo)','velo · riga scelta, passaggio del puntatore')}${F('height:12px;border:1.5px dashed var(--grigio)','tratteggio · spento o non ancora valido')}</div>
+    <p class="min muto" style="margin-top:6px">Nessun angolo arrotondato, nessuna ombra, nessuna sfumatura.</p>
+  </section>
+  <section><h3 class="tit">Caratteri</h3>
+    ${g?'':'<div class="car" style="grid-template-columns:1fr"><code>72 · testata</code><span class="nomino" style="font-size:72px;line-height:1.05">Il Pungolo</span></div>'}
+    ${C('44','apertura','<span class="tit" style="font-size:44px">Piove sul Po e sui conti</span>')}
+    ${C('30','pagina','<span class="tit" style="font-size:30px">Come funziona lo Stato</span>')}
+    ${C('23','sezione','<span class="tit" style="font-size:23px">Il borsino dei ministri</span>')}
+    ${C('18','riquadro','<span class="tit" style="font-size:18px">Emergenza idrogeologica</span>')}
+    ${C('19','numero','<b style="font-size:19px">56,5% · +24 / +15 · 1.000</b>')}
+    ${C('16','attacco','<span style="font-size:16px">Il fondo di riserva copre un miliardo.</span>')}
+    ${C('14','corpo','Formazione pagata dalle imprese')}
+    ${C('13','secondo','<span class="sec muto">Simone Ricci · Centrodestra</span>')}
+    ${C('12','minimo','<span class="min muto">vicino alla sua posizione</span>')}
+    ${C('12','occhiello','<span class="occ">Emergenza · Marche</span>')}
+    ${g?'':C('13','motto','<span class="sec" style="font-style:italic;color:var(--biro)">«Meno sigle, più primari contenti.»</span>')}
+    <p class="min muto" style="margin-top:6px">Fraunces per testata e titoli${g?', senza ghiribizzi nel tono grave':' (SOFT 100, WONK 1)'}; Atkinson Hyperlegible Next per tutto il resto. Niente sotto i 12 px a scala 1×.</p>
+    <h4 class="tit">Cifre tabellari</h4>
+    <div class="col-num">${m.filter(x=>x.atto).slice(0,5).map(x=>`<span>${x.dic}</span><span>${euro(x.costo)}</span>`).join('')}</div>
+  </section>
+  <section><h3 class="tit">Componenti</h3>
+    <h4 class="tit" style="margin-top:0">Numero con freccia</h4>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:17px">${nf('71','10','su','bene')}${nf('51','2,7','giu','male')}${nf('33','12,2','giu','male',1)}${nf('60','','pari','')}${nf('86 pb','3','su','male')}</div>
+    <p class="min muto">La freccia dice il verso, il colore il giudizio (lo spread che sale è rosso). Sotto soglia la variazione va in negativo: si legge anche senza colore.</p>
+    <h4 class="tit">Tracciato a caselle</h4>
+    <div style="display:grid;gap:4px;--cw:16px;--ch:16px;--ret:var(--retino)">${[[7,6],[3,5],[0,1],[null,null]].map(([a,b])=>caselle(a,b)).join('')}</div>
+    <p class="min muto">A sinistra la caduta, col retino. Fuori pericolo, appena entrato in pericolo, a terra, senza valore.</p>
+    <h4 class="tit">Fascia</h4>
+    <div style="display:flex;gap:16px;flex-wrap:wrap" class="sec">${fascia(4,5,'capacità buona')}${fascia(3,3,'rischio alto')}${fascia(2,3,'intesa media')}</div>
+    <h4 class="tit">Voce con causa</h4>
+    <div><div class="voce"><b>Centrodestra: intesa 50,3</b>${nf('','1,0','giu','male')}<small>quota di ministeri scoperta</small></div>
+      <div class="voce"><b>Sanità: soddisfazione 33</b>${nf('','12,2','giu','male',1)}<small>indicatore del dicastero in calo</small></div></div>
+    <h4 class="tit">Pulsante d’azione</h4>
+    <div class="az" style="margin-top:0"><button class="btn pieno">Chiudi il turno ›</button><button class="btn">Presenta</button><button class="btn scelto">Scelto</button><button class="btn p">Ferma</button><button class="btn" aria-disabled="true">Poni la fiducia</button><span class="min muto">Camere sciolte</span></div>
+    <div class="az">${st.conf?`<button class="btn via pieno" data-conf="0">Conferma: cancella 1 turno</button><button class="btn" data-conf="0">Annulla</button>`:`<button class="btn via" data-conf="1">Torna al turno 1</button>`}<button class="link">Altre 14 notizie nel registro ›</button></div>
+    <h4 class="tit">Caricatura${g?' nel tono grave':''}</h4>
+    <div style="display:flex;gap:12px;align-items:center;min-height:56px">${m.slice(0,5).map(x=>faccia(x,56)).join('')||'<span class="sec muto">Nessuna figura: restano nome e partito.</span>'}${g?'':'<span class="bollo">Fermato</span>'}</div>
+  </section></div>`;
+}
+function prima(){
+  const s=S[st.stato], g=grave();
+  if(s.barrate.prima) return `<div class="corpo"><div class="ph"><b>Prima pagina barrata.</b> ${s.barrate.prima}.</div></div>`;
+  return `<div class="pagina">
+  <header class="testata"><div class="orecchio">Esito del trimestre<br><b>${s.periodo}</b><br>7 notizie in pagina, 14 nel registro</div>
+    <div class="nome">${g?'Esito del trimestre':'Il Pungolo'}</div>
+    <div class="orecchio dx">turno ${s.turno}<br><b>${s.alVoto}</b><br>${g?'':'Costa poco, punge tutti'}</div></header>
+  <div class="sotto"><span>${g?'Edizione straordinaria':'Settimanale di satira e conti pubblici'}</span><span>${s.periodo}</span><span>${g?'In questo numero, niente commenti':'Si legge in cinque minuti, si discute per tre mesi'}</span></div>
+  <div class="apertura"><article class="lead notizia">${g
+      ? `<div class="o">Emergenza incendi nel Lazio</div><h2 class="tit">Incendi nel Lazio: servono 5 miliardi</h2><p>Rischio alto nella regione. La scelta fra fondo di riserva, decreto a debito e nessun intervento è sul cruscotto.</p>`
+      : `<div class="o">Emergenza idrogeologica nelle Marche: 1 miliardo</div><h2 class="tit">Piove sul bagnato, e il bagnato chiede un miliardo</h2><p>Rischio basso nella regione, ma è arrivata lo stesso. Fondo di riserva, decreto a debito o niente: si sceglie sul cruscotto.</p>`}</article>
+    ${g?'':'<figure class="vignetta">vignetta</figure>'}</div>
+  <div class="colonne">${[1,2,3].map(()=>'<div class="ph">Notizia: occhiello col fatto e il numero, titolo, causa. Si disegna nel ticket «Prima pagina».</div>').join('')}</div>
+  <footer class="piede"><button class="link">Altre 14 notizie nel registro ›</button><button class="btn pieno">Vai al cruscotto ›</button></footer></div>`;
+}
+
+// ======================= montaggio =======================
+const scr = document.getElementById('screen');
+let limite = '';
+function render(){
+  const W=+st.fin, H=W===1440?900:800;
+  // la scala non scende mai sotto 1024 px di larghezza utile: a 1280 si ferma a 1,25×
+  const chiesta = (+st.scala) * (W===1440 && st.spazio==='ingr' ? 1.125 : 1), z = Math.min(chiesta, W/1024), lw=W/z, lh=H/z;
+  limite = z<chiesta ? `scala fermata a ${z.toLocaleString('it-IT',{maximumFractionDigits:2})}× (minimo 1024 px utili)` : '';
+  const s=S[st.stato], col = st.c==='B';
+  const corpo = st.pag==='campionario' ? campionario() : st.pag==='prima' ? prima() : sezione();
+  const banda = s.banda ? `<div class="banda">${s.banda}</div>` : '';
+  const [testa,piede] = cornice();
+  const dentro = col
+    ? `${testa}<div style="display:grid;grid-template-rows:${banda?'auto ':''}minmax(0,1fr);min-width:0;min-height:0">${banda}${corpo}</div>`
+    : `${testa}${banda}${corpo}${piede}`;
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS ${grave()?'g':''} ${lw<1150?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;${col?'grid-template-columns:auto minmax(0,1fr);grid-template-rows:minmax(0,1fr)':`grid-template-columns:minmax(0,1fr);grid-template-rows:auto ${banda?'auto ':''}minmax(0,1fr)${piede?' auto':''}`}">${dentro}</div>`;
+  if(st.griglia==='1'){ const c=scr.querySelector('.corpo'); if(c) c.insertAdjacentHTML('beforeend',`<div class="grl">${'<i></i>'.repeat(12)}</div>`); }
+  // barra
+  document.getElementById('lab').textContent = FORME[st.c];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  tagli();
+}
+// controllo dei tagli: quanti elementi escono dal loro riquadro (il campionario scorre apposta)
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('.grl')||el.closest('svg')) return; const b=el.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (b.bottom>R.bottom+1 && !el.closest('.corpo,.cB')));
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/ellipsis/.test(cs.textOverflow) && cs.webkitLineClamp==='none' && el!==r;
+    if(fuori||stretto){ n++; if(st.tagli==='1') el.classList.add('taglio'); } });
+  const cb=r.querySelector('.cB'); if(cb && cb.scrollHeight>cb.clientHeight+1) n++;
+  document.getElementById('avv').textContent = [limite, n ? `tagli: ${n}${cb&&cb.scrollHeight>cb.clientHeight+1?' (la colonna scorre)':''}` : ''].filter(Boolean).join(' · ');
+  return n;
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.c=k[(k.indexOf(st.c)+(b.id==='next'?1:k.length-1))%k.length]; }
+  else { st[b.parentElement.dataset.k]=b.dataset.v; st.conf=false; }
+  render();
+});
+scr.addEventListener('click',e=>{
+  const r=e.target.closest('[data-sel]'), c=e.target.closest('[data-conf]'), s=e.target.closest('[data-scelta]');
+  if(c){ st.conf=c.dataset.conf==='1'; render(); }
+  else if(s){ st.scelta = st.scelta===s.dataset.scelta ? null : s.dataset.scelta; render(); }
+  else if(r && !e.target.closest('button')){ st.sel=+r.dataset.sel; st.conf=false; st.scelta=null; render(); }
+});
+// la sezione barrata dice perché: al passaggio e al fuoco, senza spostare la pagina
+function perche(e){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=e.type==='mouseover'||e.type==='focusin' ? e.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, k=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/k/z)+'px'; el.style.top=((B.bottom-R.top)/k/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

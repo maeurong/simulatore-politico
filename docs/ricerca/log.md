@@ -203,5 +203,62 @@ Pagina nuova [[persistenza-dei-salvataggi]]; aggiornata [[tauri]] (cartelle dati
 ## [2026-10-29] query | cursori dello scenario (piano 10)
 Ricerca sul cablaggio dei sei cursori e dei due menu dell'editor (ticket 21, spec 274-285) sul codice a HEAD 95f18cb. Nuova pagina [[cursori-dello-scenario]]. Trovate quattro premesse da correggere: le fasce di reddito sono relative (elettorato.py:67), quindi «quote fra le fasce» non è un derivato della ricchezza; cambiare `partenza` di una disposizione azzera saldo, leve ed effetti (effetti.rs:62-80); NASpI a spesa fissa (previdenza.rs:41); anteprima_fondazione legge il sondaggio rumoroso. Misurati costruisci e anteprima_fondazione in release e in debug. Sei fonti nuove in fonti/ con sidecar.
 
+## [2026-11-01] query | vista per schermata (piano 11)
+Ticket wayfinder 01 di `.scratch/v1-piano-11-ui/`. Nuova pagina [[vista-per-schermata]], letta su main a `c56787d`: 8b è già fuso (#36-#38). Esiti: il guscio non ha `comanda` né `fonda`, e `nuova_partita` gioca la partita di prova; esito del turno e registro (storie 14-16) e «avanti fino a novità» non li porta nessun piano; la mappa ha 2 livelli su 5; PDE fuori dalla Vista e piano strutturale riveduto assente dal core; i tipi `bigint` non sono serializzabili in JSON. Nessuna fonte nuova in `fonti/`: solo codice e piani del repo.
+
+## [2026-11-01] ingest | Testi esterni dell'interfaccia in Svelte
+Ticket research 03 della mappa del piano 11. Pagina nuova [[testi-esterni-svelte]]. 14 fonti nuove in fonti/ (MDN PluralRules, NumberFormat, Math.random; Vite JSON; TypeScript resolveJsonModule; risorse di Tauri; svelte-i18n, typesafe-i18n, Paraglide e add-on sv, wuchale; selettori di Fluent; MF2 Unicode; proposta TC39 Intl.MessageFormat). Misure [M]: Intl in italiano su JavaScriptCore di macOS 27.0.1 e Node 26.7.0 (categorie one/many/other; 1234 senza separatore; Intl.MessageFormat assente); tsc 6.0.3 segnala le chiavi mancanti (TS2345, TS2741); stato e peso delle librerie da npm, gh e bundlephobia. Aperti: il seme alla UI (guscio, piano 10), il segnale del registro grave nella Vista (piano 9), `tnum` nei font della spec [NON TROVATO].
+
+## [2026-11-01] ingest | Caricature di personaggi inventati
+Ticket research 05 della mappa del piano 11. Pagina nuova [[caricature-di-personaggi-inventati]], letta su main a `c56787d`. 12 fonti nuove in fonti/ (licenze, libreria JS, schema e guida Figma di DiceBear 10; Open Peeps; Boring Avatars; licenza di Multiavatar; abstract di Rhodes, Brennan e Carey 1987; COPYING di Inkscape; FAQ della GPL; Wikipedia su Matteo Ricci e Andrea Romano). Esiti: kit del prototipo esteso e combinato con un hash di ruolo, partito e nome, nessuna dipendenza; iniziali come ripiego nel tono grave; il prototipo tiene la testa nel borsino anche nel tono grave (riga 712), contro la spec (riga 400); il bacino dei nomi genera politici reali (Matteo Ricci, Andrea Romano). Nessuna pagina esistente modificata.
+
+## [2026-11-01] ingest | movimento e scala della UI in WKWebView
+Nuova pagina [[movimento-e-scala-in-wkwebview]] per il ticket 04 del piano 11. 28 fonti nuove in fonti/: BCD al commit 0efedff8 (easing-function, backface-visibility, transform-style, zoom, Animation), MDN (linear(), backface-visibility, zoom, getAnimations, updatePlaybackRate, transform), WebKit (Safari 17.2, bug 27684 e 264954), Chrome (linear()), Svelte (doc motion e transition, sorgenti 5.57.2 di transitions.js e spring.js), Tauri (webview.d.ts 2.12.3, zoom-hotkey.js), wry 0.57.0 wkwebview, Apple pageZoom, WCAG 1.4.4 e 2.3.3 (nuova cattura con la definizione di motion animation), CSSWG MQ4 e Transitions, web.dev. Misure [M]: versioni di macOS, Safari e WebKit sul Mac di Mario; permesso dello zoom assente dalla capability; spazio effettivo per scala; memoria degli strati. Esiti: le transizioni Svelte ignorano il CSS di movimento ridotto; getAnimations() serve solo per «salta»; pageZoom equivale a CSS zoom; transform: scale sfoca. Da verificare nel guscio: media query e coordinate sotto CSS zoom, prefers-reduced-motion in WKWebView.
+
+## [2026-11-01] ingest | mappa SVG delle regioni
+Ticket research 02 della mappa del piano 11. Nuova pagina [[mappa-svg-delle-regioni]], 16 fonti nuove (ISTAT confini 2026, Natural Earth admin-1, README geojson-italy, riferimento mapshaper, ColorBrewer schemi e controllo daltonismo, Datawrapper daltonismo parte 2, Machado 2009, WCAG 2.2 su dimensione del bersaglio, contrasto non testuale e uso del colore, APG radio group e interfaccia da tastiera, MDN tabindex SVG, Apple tabFocusesLinks, SVG 2 ordine di rendering). Misure [M] con mapshaper 0.7.101: peso per livello di semplificazione, isole sopravvissute, centroidi contro punti interni, scarto d'area UTM32 contro LAEA, L* e simulazione CVD delle rampe del prototipo. Esiti: la semplificazione in percentuale cancella le isole; il centroide della Liguria cade in mare; tre regioni sotto i 24 px; wry 0.57.0 imposta tabFocusesLinks a vero; `S_RAMP` del prototipo ha passi di luminosità diseguali. Nessuna pagina esistente modificata.
+
+## [2026-11-10] lint | vista-per-schermata superata dai piani 9 e 10
+
+`sintesi/vista-per-schermata.md` fotografava main a `c56787d` (01/11). Aggiunta una sezione datata letta su `8952a06`: rimandi chiusi (eventi, situazioni, acquisti, partite, editor, albo, riavvolgimento, avvisi del riepilogo, `comanda`, fondazione), passacarte che mancano ancora al guscio, dati senza piano ricontrollati, debiti nuovi del piano 9 (stato del MES e della ristrutturazione, clausola dell'energia, avvisi mancanti). Il testo del 01/11 non è riscritto.
+
+## [2026-11-10] query | chi produce i dati senza piano
+
+Decisioni di Mario sul ticket 11 del piano 11 archiviate in `sintesi/decisioni.md`: piano di core «esito e Vista completa», piano strutturale a parte, forma dei dati regionali, dei gruppi e dei cantieri finiti.
+
+
+## [2026-11-11] query | ossatura e navigazione della UI
+
+Decisioni di Mario sul ticket 07 del piano 11 archiviate in `sintesi/decisioni.md`: cornice fissa con sommario di dieci sezioni, cruscotto corto, sezioni barrate col motivo, tono grave a tutto il turno, nessuna modale, edicola all'avvio, diciotto schermate da prototipare. Prese su un prototipo navigabile, non a parole.
+
+
+## [2026-11-11] query | fondamenta visive della UI
+
+Decisioni di Mario sul ticket 08 del piano 11 archiviate in `sintesi/decisioni.md`: cornice a gerenza su due righe, tracciati che si riempiono con la caduta a sinistra, sette inchiostri, scala dei caratteri da 12 a 72 px, iniziali al posto della caricatura nel tono grave, più contenuto a 1440, scala mai sotto 1024 px utili. Prese su un prototipo navigabile.
+
+## [2026-11-11] query | fette del piano 11
+
+Decisioni di Mario sul ticket 10 del piano 11 archiviate in `sintesi/decisioni.md`: sette fette lungo il percorso di gioco (11a-11e su ciò che main porta già, 11f e 11g dietro le due PR del piano di core «esito e Vista completa»), schermate parziali subito coi vuoti assegnati, passacarte con la schermata che li chiama, quattro condizioni di prontezza.
+
+## [2026-11-11] query | contratto del guscio
+
+Decisioni di Mario sul ticket 12 del piano 11 archiviate in `sintesi/decisioni.md`: errori in due specie (rifiuto sul posto, guasto nella cornice), seme della fondazione tenuto dal guscio fra anteprima e fondazione, bozze della UI solo in memoria, `Fascia` esportata da chi arriva prima fra 11b e la PR 2 del core.
+
+## [2026-11-11] query | edicola
+
+Decisioni di Mario sul ticket 13 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col dettaglio a lato, abbandono che resta nell'edicola con la voce d'albo aperta, partite in corso con la sola testata.
+
+## [2026-11-11] query | scenario ed editor
+
+Decisioni di Mario sul ticket 14 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col riepilogo dal vivo nel dettaglio a lato, catalogo dell'editor da una funzione nuova del core, cursore dell'inflazione con la nota, scenari solo dalla cartella del gioco.
+
+## [2026-11-11] query | fondazione
+
+Decisioni di Mario sul ticket 15 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Banco col posto scelto nel dettaglio a lato, coalizioni possibili come elenco dei disponibili, nota fissa sul sondaggio rumoroso, fondazione diretta senza conferma.
+
+## [2026-11-11] query | cruscotto al governo
+
+Decisioni di Mario sul ticket 17 del piano 11 archiviate in `sintesi/decisioni.md`: forma A · Ordine del giorno col dettaglio a lato, default scritto su ogni riga, conferma sul posto per «Dimettiti», fondo di riserva rimasto accanto al costo dell'evento.
+
 ## [2026-11-10] query | fatti della chiusura e stato per le esposizioni (piano «esito e Vista completa»)
 Due ricerche sul codice a HEAD 8952a06, senza fonti esterne. [[fatti-della-chiusura]]: 135 fatti nell'ordine di `chiudi_turno`, con traccia, causa in mano e chi li subisce; i due avvisi del piano 9 si perdono nel punto del fatto (gli acquisti si azzerano prima della spesa di campagna; crescita e limite del tetto del MES sono calcolati e scartati); il governo cade senza che resti l'origine; per la storia 116 il confronto fra reddito e aspettativa esiste ma è locale a `giudizio`. [[stato-per-le-esposizioni]]: tre voci chiedono stato nuovo (disoccupazione regionale della chiusura precedente, voti e seggi del Senato per regione, cantieri finiti). Premesse corrette: la clausola dell'energia è nazionale, non per regione; i seggi della Camera per regione e lista non esistono (riparto nazionale); l'aspettativa nel codice non è alzata dalle promesse, contro `CONTEXT.md` e la spec.

@@ -1,0 +1,500 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Ossatura e navigazione» (07), mappa v1-piano-11-ui.
+  Domanda: com'è fatta l'ossatura dell'app? Tre varianti strutturali via ?v=A|B|C:
+    A  Sommario di sezioni — cornice fissa + sezioni a pagina intera + dettaglio a lato
+    B  Cruscotto snodo     — come il prototipo vincolante: si entra e si esce dal cruscotto
+    C  Cruscotto unico     — una pagina sola, pannelli che si aprono al posto
+  Altri parametri: ?scr=esito|cruscotto|aula|conti|paese|partiti|registro|schema|edicola
+    ?stato=governo|opposizione|trattativa|crisi|zero|fine   (cosa cambia nell'ossatura)
+    ?pp=striscia|testata|dentro   (la cornice sulla prima pagina)
+    ?reg=ord|grave  ?est=turno|evento|cornice   (fin dove arriva il tono grave)
+  Stile S «Il Settimanale» da .scratch/v1-giocabile/prototipi/10-direzione-artistica-2.prototype.html.
+  Dati inventati. I riquadri tratteggiati sono segnaposto: dicono cosa va lì, non com'è fatto.
+  Non è codice di produzione. Buttare dopo il verdetto.
+
+  VERDETTO (Mario, 10-11/11/2026), nel ticket 07: A sommario di sezioni; striscia in prima pagina; grave a tutto
+  il turno; edicola all'avvio; otto sezioni con «Governo» e cruscotto corto, poi Bilancio e Campagna come sezioni
+  loro (dieci in tutto); sezioni vuote barrate col motivo; evento sul cruscotto; acquisti dove si leggono;
+  Governo barrata quando non governi; la casa cambia nome con lo stato. Il file si apre su questa forma.
+  Alternative scartate: ?v=B|C ?pp=testata|dentro ?est=evento|cornice ?somm=sette|sei ?spente=tolte
+    ?evpos=prima ?acq=unico ?govopp=carica ?camp=partiti ?bil=conti
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo ossatura · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{width:1280px;height:800px;flex:none;position:relative;overflow:hidden;transform-origin:center;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{display:block}
+
+.vS{--carta:#F4ECD8;--ink:#1F1A17;--rosso:#B3122B;--biro:#1D4E89;--grigio:#5E5750;--verde:#2E6B45;--giallo:#FFD23F;
+  --tit:'Fraunces',Georgia,serif;--txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  width:100%;height:100%;background:var(--carta);color:var(--ink);font-family:var(--txt);font-size:14px;line-height:1.35;display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);min-height:0}
+.g{--rosso:var(--ink);--biro:var(--ink);--verde:var(--ink);--giallo:transparent}
+.g .solo-ord{display:none!important}
+.g .faccia{filter:grayscale(1)}
+.tit{font-family:var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1}
+.btn{border:2px solid var(--ink);padding:4px 11px;font-size:14px;font-weight:700;background:var(--carta);white-space:nowrap}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn.p{padding:1px 7px;font-size:12px;border-width:1.5px}
+.btn.scelto{background:var(--giallo)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.link{text-decoration:underline;font-size:13px}
+.bene{color:var(--verde)} .male{color:var(--rosso)} .muto{color:var(--grigio)}
+h3.tit{font-size:23px;font-weight:700;line-height:1.1;margin-bottom:4px}
+h4.tit{font-size:18px;font-weight:700;line-height:1.15}
+.occ{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--rosso);font-weight:700}
+
+/* ---------- cornice ---------- */
+.cornice{padding:8px 24px 0;border-bottom:3px double var(--ink)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c-sx{display:flex;align-items:center;gap:12px;font-size:13px;line-height:1.3;color:var(--grigio);white-space:nowrap}
+.c-sx b{color:var(--ink)}
+.nomino{white-space:nowrap;font-family:var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1;font-size:27px;font-weight:800;color:var(--rosso);line-height:1}
+.trks{display:flex;justify-content:center}
+.trk{padding:0 11px;border-left:1px solid var(--grigio);display:grid;grid-template-columns:auto auto;gap:0 8px;align-items:center}
+.trk:last-child{border-right:1px solid var(--grigio)}
+.trk .k{grid-column:1/3;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--grigio)}
+.cas{display:flex;gap:2px}
+.cas i{width:8px;height:14px;border:1.5px solid var(--ink)}
+.cas i.on{background:var(--ink)}
+.cas i.ult{background:var(--rosso);border-color:var(--rosso)}
+.trk .v{font-size:19px;font-weight:700;line-height:1.1;white-space:nowrap}
+.trk .d{grid-column:1/3;font-size:12px;font-weight:700}
+.c-dx{display:flex;gap:8px;align-items:center}
+.c-dx .pila{display:flex;flex-direction:column;gap:3px}
+.c-dx .pila .btn{font-size:13px;padding:2px 10px}
+.def{font-size:12px;color:var(--grigio);text-align:right;line-height:1.2;text-decoration:underline;cursor:pointer}
+.somm{display:flex;gap:2px;align-items:end;margin-top:2px}
+.somm button{padding:4px 13px 5px;font-size:14px;font-weight:700;border:1.5px solid transparent;border-bottom:0;color:var(--grigio)}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink);border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm button.chiusa{text-decoration:line-through;cursor:default}
+.somm .sec{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.banda{background:var(--ink);color:var(--carta);padding:4px 24px;font-size:13px;font-weight:700;letter-spacing:.04em}
+.striscia{display:flex;align-items:center;gap:18px;padding:5px 28px;border-bottom:1px solid var(--ink);font-size:13px}
+.striscia .trk{grid-template-columns:auto auto auto auto;gap:0 8px}
+.striscia .trk .k,.striscia .trk .d{grid-column:auto}
+.striscia .trk .v{font-size:15px}
+
+/* ---------- corpo e pezzi comuni ---------- */
+.corpo{padding:10px 24px 12px;min-height:0;overflow:hidden;display:grid;gap:10px 20px;align-content:start}
+.testa-pag{display:flex;justify-content:space-between;align-items:end;gap:16px}
+.box{border:1.5px solid var(--ink);padding:8px 12px}
+.box+.box{margin-top:8px}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:13px}
+.ph b{color:var(--ink)}
+.ph+.ph,.box+.ph,.ph+.box{margin-top:8px}
+.az{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.corsivo{font-size:14px;font-style:italic;display:flex;gap:10px;align-items:baseline}
+.corsivo b{font-style:normal;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--rosso)}
+.riga{display:grid;grid-template-columns:34px 172px 1fr 50px 150px 108px;align-items:center;gap:0 8px;height:39px;border-top:1px solid var(--grigio);cursor:pointer}
+.riga:hover,.riga.sel{background:rgb(31 26 23 / .06)}
+.riga .chi b{font-size:13px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riga .chi span{font-size:12px;color:var(--grigio)}
+.riga .atto{font-size:13px;line-height:1.2}
+.riga .nota{color:var(--rosso);font-weight:700;font-size:12px}
+.riga .punti{font-size:17px;font-weight:700;white-space:nowrap}
+.riga .punti small{font-size:12px}
+.riga .motto{font-size:12px;font-style:italic;line-height:1.2;color:var(--biro)}
+.riga .azr{display:flex;gap:4px}
+.voce{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 0;border-top:1px solid var(--grigio);font-size:13px}
+.voce:first-of-type{border-top:0}
+.voce small{grid-column:1/3;color:var(--grigio);font-size:12px}
+.barra{height:10px;border:1.5px solid var(--ink);position:relative;margin:3px 0}
+.barra i{position:absolute;inset:0 auto 0 0;background:var(--ink)}
+.barra u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.pulsantiera{display:flex;gap:6px}
+
+/* ---------- prima pagina ---------- */
+.pagina{padding:10px 28px 10px;display:grid;grid-template-rows:auto auto auto 1fr auto;min-height:0}
+.testata{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;padding-bottom:4px}
+.testata .nome{font-family:var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1;font-weight:800;font-size:70px;line-height:1.08;color:var(--rosso);text-align:center}
+.g .testata .nome{font-size:34px;font-weight:700;padding:14px 0 6px}
+.orecchio{font-size:13px;line-height:1.35;color:var(--grigio)}
+.orecchio b{color:var(--ink)} .orecchio.dx{text-align:right}
+.orecchio .trk{border:0;padding:0;margin-top:3px;display:inline-grid}
+.sotto{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--ink);border-bottom:3px double var(--ink);padding:4px 0;color:var(--grigio)}
+.apertura{display:grid;grid-template-columns:1fr 300px;gap:26px;padding:12px 0 10px;border-bottom:1px solid var(--ink)}
+.g .apertura{grid-template-columns:1fr}
+.not .o{font-size:15px;font-weight:700;line-height:1.3}
+.not .o.crit{color:var(--rosso)}
+.not h2{font-family:var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1;font-weight:700;line-height:1.06;margin:3px 0 5px;font-size:26px}
+.not p{font-size:14px;line-height:1.35;color:var(--grigio)}
+.lead h2{font-size:44px} .lead .o{font-size:17px} .lead p{font-size:16px}
+.vignetta{border:2px solid var(--ink);height:150px;display:flex;align-items:center;justify-content:center;font-style:italic;color:var(--grigio);background:repeating-linear-gradient(45deg,transparent 0 4px,rgb(31 26 23 / .08) 4px 5px)}
+.colonne{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:min-content;padding-top:8px}
+.colonne article{padding:3px 16px 9px;border-right:1px solid var(--grigio)}
+.colonne article:nth-child(3n+1){padding-left:0}
+.colonne article:nth-child(3n){border-right:0;padding-right:0}
+.piede{display:flex;justify-content:space-between;align-items:center;border-top:3px double var(--ink);padding-top:7px;font-size:14px}
+
+/* ---------- cruscotto unico (C) ---------- */
+.unico{grid-template-columns:440px 1fr 360px}
+.unico .riga{grid-template-columns:28px 1fr 44px 96px;height:35px}
+.unico .riga .motto{display:none}
+.unico .riga .atto{font-size:12px;color:var(--grigio);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unico h3.tit{font-size:19px}
+.acc{border:1.5px solid var(--ink);margin-top:-1.5px}
+.acc>button{display:flex;justify-content:space-between;width:100%;padding:4px 10px;font-weight:700;font-size:13px;text-align:left}
+.acc.ap>button{background:var(--ink);color:var(--carta)}
+.acc .dentro{padding:8px 10px;font-size:12px}
+
+/* ---------- barra del prototipo ---------- */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px}
+#proto .lab{min-width:210px;text-align:center;font-weight:700;font-size:13px}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="variante precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="variante successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="governo">governo</button><button data-v="bilancio">governo · bilancio</button><button data-v="voto">governo · si vota</button><button data-v="opposizione">opposizione</button><button data-v="trattativa">trattativa</button><button data-v="crisi">crisi</button><button data-v="zero">turno zero</button><button data-v="fine">partita finita</button></span>
+  <span class="cap">fuori partita</span><span class="seg" data-k="scr"><button data-v="edicola">edicola</button></span>
+  <span class="cap">tono</span><span class="seg" data-k="reg"><button data-v="ord">ordinario</button><button data-v="grave">grave</button></span>
+  <span class="cap">scartate ·· «Governo» quando non governi</span><span class="seg" data-k="govopp"><button data-v="carica">il governo in carica</button><button data-v="barrata">barrata</button></span>
+  <span class="cap">campagna</span><span class="seg" data-k="camp"><button data-v="sezione">sezione sua</button><button data-v="partiti">dentro Partiti</button></span>
+  <span class="cap">passaggio del bilancio</span><span class="seg" data-k="bil"><button data-v="conti">dentro Conti</button><button data-v="sezione">sezione sua</button></span>
+  <!-- deciso il 10/11: A, striscia, grave a tutto il turno; poi «Governo», barrate, evento sul cruscotto, acquisti dove si leggono. Le alternative restano via ?v= ?pp= ?est= ?somm= ?spente= ?evpos= ?acq= -->
+</div>
+<script>
+// geometria delle regioni: dal prototipo vincolante (openpolis/geojson-italy, ISTAT, semplificata)
+const GEO = {"w": 400.0, "h": 524.9, "regioni": {"Piemonte": {"d": "M17.1,82.0L16.2,79.9L18.8,76.4L15.9,74.0L17.1,71.3L17.4,73.0L20.0,73.4L21.6,71.4L25.2,71.3L29.0,68.3L31.6,67.9L33.0,69.2L37.2,69.7L40.4,67.6L42.9,67.9L44.2,65.5L43.0,63.7L44.1,61.9L41.6,58.9L42.1,50.6L43.0,49.7L45.8,49.6L47.3,47.3L47.3,45.0L51.2,43.0L51.8,41.1L48.9,37.6L50.8,35.7L53.0,35.6L56.8,32.2L56.0,31.0L56.5,30.1L61.2,28.4L61.9,32.9L60.6,35.9L61.1,38.1L64.1,39.6L66.8,43.9L70.2,45.0L70.7,48.1L65.4,53.9L66.2,56.9L64.9,59.6L66.2,61.6L68.2,62.3L67.7,64.0L69.1,64.0L69.3,65.8L68.3,65.8L69.8,67.5L70.2,71.1L72.7,72.6L74.5,76.8L70.4,77.5L71.8,78.7L69.4,81.4L68.5,81.4L67.2,78.7L64.8,78.3L62.9,81.4L64.2,82.1L64.5,83.2L63.8,83.4L64.9,83.7L64.0,83.8L64.6,85.4L63.9,85.8L65.7,85.5L64.4,86.8L66.8,88.9L68.1,93.6L70.1,92.9L72.1,94.3L72.9,93.1L76.0,91.9L77.0,95.2L78.5,95.2L79.9,98.8L81.7,99.7L82.2,102.9L85.2,103.0L85.6,105.0L87.0,105.9L86.7,112.9L84.4,113.9L82.3,111.7L81.4,112.1L80.3,109.8L77.5,109.3L75.9,111.0L77.0,114.5L74.0,114.5L72.7,117.8L70.2,113.6L67.2,113.4L65.6,116.9L62.0,116.3L61.3,117.4L60.2,116.7L58.3,118.9L54.7,116.0L52.8,118.6L53.6,120.3L53.1,121.6L51.2,122.5L49.6,126.3L48.7,125.7L48.2,126.3L49.2,127.5L48.3,128.5L49.4,131.0L48.6,133.3L46.5,132.9L45.5,133.7L46.6,135.2L44.2,135.4L38.2,133.5L36.7,135.2L38.1,136.1L36.6,137.1L35.0,134.0L35.6,132.0L27.0,134.0L26.8,134.8L24.7,134.6L24.1,133.3L21.9,133.5L18.9,130.8L12.8,129.2L12.4,127.2L8.8,123.5L9.0,120.9L10.8,120.5L8.4,118.1L7.7,115.8L10.3,114.0L11.5,111.8L11.3,109.3L15.1,108.7L12.6,104.1L13.4,102.6L10.3,100.8L9.6,101.7L8.2,101.4L4.2,98.9L4.0,94.1L1.5,93.6L0.0,89.9L1.8,88.3L3.8,88.5L4.8,87.4L7.5,88.9L9.0,88.4L9.0,87.0L10.8,86.9L11.3,85.4L12.7,84.7L15.1,85.0L17.1,83.2L17.1,82.0Z", "c": [46.5, 90.6]}, "Valle d'Aosta/Vallée d'Aoste": {"d": "M37.3,52.9L37.8,52.1L41.6,53.2L41.6,58.9L44.1,61.9L43.0,63.7L44.2,65.5L42.9,67.9L40.4,67.6L37.2,69.7L33.0,69.2L31.6,67.9L29.0,68.3L25.2,71.3L21.6,71.4L20.0,73.4L17.4,73.0L17.2,71.3L16.1,73.5L14.1,73.2L14.4,72.4L12.6,71.8L11.8,68.0L12.4,65.7L9.7,65.1L9.3,63.9L7.7,63.6L6.3,62.0L6.4,56.9L10.6,56.2L14.0,52.9L16.1,55.8L17.7,54.9L19.2,55.7L22.5,52.9L25.5,54.1L28.6,51.5L30.8,51.3L31.1,50.0L34.9,50.5L37.3,52.9Z", "c": [24.7, 62.3]}, "Liguria": {"d": "M31.1,144.7L31.6,142.4L34.4,141.1L34.9,138.6L38.1,136.1L36.7,135.2L37.0,134.1L38.2,133.5L42.3,135.2L46.3,135.3L45.7,133.4L48.6,133.3L49.4,131.0L48.3,128.5L49.2,127.5L48.2,126.3L48.7,125.7L49.6,126.3L51.2,122.5L53.1,121.6L53.6,120.3L52.8,118.9L53.8,116.6L54.7,116.0L58.3,118.9L60.2,116.7L61.3,117.4L62.0,116.3L65.6,116.9L67.2,113.4L70.4,113.7L72.7,117.8L74.0,114.5L77.0,114.5L75.9,111.0L77.5,109.3L80.3,109.8L81.4,112.1L82.3,111.7L84.4,113.9L88.1,111.9L88.1,112.8L89.9,112.4L91.5,113.7L92.6,113.8L93.5,112.7L94.0,113.9L96.3,114.6L96.5,118.1L95.6,118.1L94.6,121.0L95.9,121.4L98.6,120.1L101.8,121.3L102.5,123.4L103.6,123.3L104.4,125.0L108.5,127.7L109.3,129.8L108.7,131.3L110.4,130.4L111.2,131.0L109.9,132.4L112.6,132.3L113.0,135.5L114.3,134.5L115.8,135.7L112.7,138.3L107.9,134.9L107.1,135.3L108.5,137.2L107.8,137.7L102.3,133.5L101.2,133.9L96.2,129.1L93.4,128.5L92.5,126.8L87.7,124.2L87.1,126.4L84.9,125.6L85.0,124.1L83.1,123.1L77.5,122.0L77.1,121.2L77.1,121.9L71.2,120.6L61.4,126.9L60.5,131.1L55.2,133.6L53.8,138.0L51.7,140.2L52.0,142.0L48.6,144.9L40.6,148.2L36.1,149.0L35.2,150.0L30.4,149.7L29.2,146.1L31.1,144.7Z", "c": [73.9, 126.9]}, "Lombardia": {"d": "M65.7,60.6L64.8,59.0L66.2,56.9L65.4,53.9L70.6,48.6L69.9,45.5L71.2,43.9L74.8,46.0L72.6,49.9L76.3,51.3L77.9,55.3L76.9,57.1L78.1,56.5L81.0,57.4L82.8,53.9L80.5,52.6L79.4,50.7L80.8,49.7L80.1,47.8L82.4,46.4L82.2,44.0L86.0,41.6L88.1,38.8L89.9,34.6L89.3,30.8L88.1,29.7L89.3,26.9L92.0,26.3L93.6,28.3L95.3,26.4L95.3,32.4L98.3,35.7L103.5,36.2L104.6,33.5L106.0,34.2L111.9,32.2L113.3,33.5L113.3,36.5L115.3,37.5L115.0,39.0L117.6,39.3L119.4,37.7L117.0,34.4L119.0,31.0L117.8,29.9L116.1,30.3L114.8,29.3L114.9,25.1L116.9,23.0L116.9,21.8L121.5,20.7L121.7,23.2L123.4,24.5L127.6,24.5L129.5,27.0L132.1,27.3L134.4,29.1L134.7,31.2L133.8,32.2L130.9,33.3L132.9,35.7L132.3,36.5L133.1,38.3L131.7,40.9L132.5,41.8L131.9,44.2L129.7,46.8L128.7,49.9L130.6,52.9L129.9,54.6L130.4,57.1L131.7,57.7L131.4,59.0L135.0,58.4L135.5,57.0L136.8,56.6L141.7,57.0L134.6,67.4L135.2,74.4L134.4,74.6L135.2,74.7L135.1,75.7L137.6,76.3L136.6,79.1L138.3,81.7L139.8,80.4L141.9,83.0L145.0,84.1L144.9,85.0L147.0,86.2L146.9,87.8L148.8,87.9L148.4,89.5L150.4,90.3L152.0,89.0L153.9,89.6L153.0,91.9L155.2,92.7L156.0,92.1L156.3,93.9L161.5,96.6L152.2,97.7L149.5,96.4L143.4,98.6L142.6,97.8L138.5,97.0L137.9,95.0L136.8,96.4L136.5,95.3L134.6,98.1L130.9,98.6L128.1,97.2L127.1,95.4L125.5,96.2L120.5,93.1L118.8,92.7L117.0,93.7L116.2,92.5L115.1,92.8L113.0,88.6L110.7,90.1L110.8,88.5L109.4,88.9L110.0,91.0L108.0,90.3L107.5,92.3L105.3,89.6L103.9,92.0L101.2,90.9L101.0,88.7L99.6,90.1L98.3,88.7L97.8,91.1L96.6,90.0L93.6,90.9L90.6,97.2L89.4,97.7L89.1,99.4L91.3,100.7L92.0,102.7L89.4,105.2L91.0,106.6L90.2,108.0L90.7,108.7L88.5,109.1L87.7,107.5L88.0,108.8L86.6,108.8L87.0,105.9L85.6,105.0L85.2,103.0L82.2,102.9L81.7,99.7L79.9,98.8L78.5,95.2L77.0,95.2L76.0,91.9L73.0,93.0L72.1,94.3L70.1,92.9L68.4,93.8L66.8,88.9L64.4,86.8L65.7,85.5L63.8,85.7L64.6,85.4L64.0,83.8L64.9,83.7L63.8,83.4L64.5,83.2L64.2,82.1L62.9,81.4L64.8,78.3L67.2,78.7L68.5,81.4L69.4,81.4L71.8,78.7L70.4,77.5L74.5,76.8L72.7,72.6L70.2,71.1L69.8,67.5L68.3,65.8L69.3,65.8L69.1,64.0L67.7,64.0L68.1,62.3L65.7,60.6Z", "c": [104.8, 69.4]}, "Trentino-Alto Adige/Südtirol": {"d": "M181.2,24.5L180.7,25.3L179.6,24.8L174.9,26.4L174.4,27.8L176.6,28.1L177.0,29.4L175.7,29.7L175.2,32.8L173.1,33.2L175.1,34.8L175.4,37.2L176.9,36.8L177.1,38.0L178.3,38.1L177.7,39.2L179.4,40.4L179.1,41.7L178.3,41.4L177.0,44.0L170.1,45.2L170.8,47.3L169.5,47.8L169.8,50.9L166.8,50.8L166.5,49.1L164.3,48.9L162.1,50.3L159.7,50.1L159.9,51.8L158.8,53.5L157.2,52.3L157.3,53.1L155.8,53.0L155.1,55.9L153.4,57.8L153.9,59.2L152.9,59.0L153.1,61.3L151.3,63.4L147.5,62.2L146.0,63.9L146.1,62.9L145.2,64.2L144.5,63.9L144.6,63.0L141.8,62.1L143.3,57.9L141.2,56.7L136.8,56.6L135.5,57.0L135.0,58.4L131.4,59.0L131.7,57.7L130.4,57.1L129.9,54.6L130.6,52.9L129.8,50.7L128.7,50.2L132.5,41.9L131.7,40.9L133.1,38.3L132.3,36.5L132.9,35.9L130.8,33.7L134.7,31.2L134.4,29.1L132.1,27.3L128.9,26.3L130.0,21.6L128.5,20.4L127.0,20.6L126.4,18.6L129.6,10.5L132.1,11.4L135.9,9.8L139.1,12.1L138.0,13.7L147.8,14.8L149.9,12.2L150.3,8.1L152.6,6.8L152.6,5.7L157.8,4.5L160.7,5.7L163.2,3.6L165.2,4.9L168.1,3.6L172.2,5.6L178.4,2.4L187.0,0.0L188.8,1.1L187.6,2.9L184.8,3.8L186.4,7.0L185.6,8.0L187.1,8.4L188.0,9.9L189.9,9.4L191.0,11.4L190.3,14.0L192.7,14.3L193.6,17.0L196.8,18.6L193.5,20.3L193.7,21.2L189.5,20.9L187.2,22.5L187.3,21.4L183.0,18.8L181.2,24.5Z", "c": [160.0, 33.1]}, "Veneto": {"d": "M134.8,70.4L134.7,67.1L141.7,57.0L143.3,57.9L141.8,62.1L144.6,63.0L144.1,63.5L145.0,64.2L147.5,62.2L151.3,63.4L153.1,61.3L152.9,59.0L153.9,59.2L153.4,57.8L155.1,55.9L155.8,53.0L157.3,53.1L157.2,52.3L158.8,53.5L159.9,51.8L159.7,50.1L162.1,50.3L164.3,48.9L166.5,49.1L166.8,50.8L169.8,50.9L169.5,47.8L170.8,47.3L170.1,45.2L177.1,43.9L179.4,40.4L177.7,39.2L178.3,38.1L177.1,38.0L176.9,36.8L175.2,37.0L175.1,34.8L173.1,33.2L175.2,32.8L175.7,29.7L177.0,29.4L176.6,28.1L174.3,27.5L175.7,26.0L179.6,24.8L180.7,25.3L182.3,22.9L183.0,18.8L187.3,21.4L187.2,22.5L189.5,20.9L193.7,21.2L193.5,20.3L196.8,18.6L199.8,19.9L203.8,19.7L205.3,20.7L201.6,24.8L203.0,28.2L198.5,28.4L196.0,31.7L196.3,32.7L192.6,34.9L191.5,37.2L192.7,38.9L195.7,40.0L195.7,41.2L197.4,42.6L197.0,44.6L194.1,47.5L195.0,51.8L197.7,52.9L199.7,57.0L200.7,57.8L201.1,56.7L203.2,58.9L206.9,56.0L207.9,57.5L209.7,56.2L210.6,57.5L212.0,57.7L213.0,56.3L214.1,57.8L213.6,59.0L214.6,61.8L215.3,61.3L216.5,64.9L217.8,65.6L211.4,66.9L195.1,75.7L194.2,75.3L192.8,76.7L190.7,83.5L191.9,90.6L199.4,96.2L196.4,101.7L194.1,104.0L192.2,101.4L190.6,101.0L190.2,97.3L185.6,97.9L184.5,96.4L182.3,95.7L174.1,95.7L172.2,96.6L171.8,98.0L167.9,99.7L165.0,97.5L161.5,97.8L161.3,96.3L156.3,93.8L156.0,92.1L155.2,92.7L153.0,91.9L153.9,89.6L152.0,88.9L151.4,90.0L149.5,90.2L148.0,89.1L148.7,87.8L146.9,87.8L147.0,86.2L144.9,85.0L145.0,84.1L141.9,83.0L139.8,80.4L137.9,81.5L136.5,78.6L137.5,78.0L137.5,75.9L135.1,75.7L135.2,74.7L134.4,74.6L135.2,74.4L134.8,70.4Z", "c": [174.8, 59.8]}, "Friuli-Venezia Giulia": {"d": "M231.7,32.1L229.1,33.1L229.4,34.4L227.0,35.9L228.6,38.8L228.2,39.8L230.6,39.2L236.7,41.7L233.6,45.4L231.2,46.6L231.4,47.9L230.4,49.1L232.5,51.0L234.2,49.9L235.9,50.1L235.7,52.4L233.6,56.2L234.4,58.1L241.1,61.0L245.2,66.1L242.6,68.3L238.7,67.7L241.5,67.2L239.5,65.7L240.2,65.1L239.7,63.9L235.6,59.9L233.2,59.4L232.3,58.2L232.8,59.2L231.7,61.0L232.9,61.9L230.0,62.7L228.9,63.9L225.9,63.9L222.6,62.1L219.5,63.0L217.7,65.5L216.5,64.9L214.0,59.5L214.1,57.8L212.9,56.3L212.0,57.7L210.6,57.5L209.7,56.2L207.9,57.5L206.9,56.0L203.2,58.9L201.1,56.7L200.7,57.8L199.4,57.1L197.7,52.9L195.0,51.8L194.1,47.5L197.5,43.1L195.7,40.0L194.3,40.0L194.2,39.0L193.2,39.3L191.6,37.8L192.6,34.9L196.3,32.7L196.0,31.7L198.6,28.4L203.0,28.2L201.9,26.7L201.9,24.0L206.3,20.1L208.7,20.9L209.2,22.0L217.5,22.3L222.2,24.3L225.1,24.4L226.9,23.2L238.4,25.7L237.5,29.5L234.5,29.5L231.7,32.1Z", "c": [220.0, 47.4]}, "Emilia-Romagna": {"d": "M91.0,106.6L89.4,105.2L92.0,102.7L91.3,100.7L89.1,99.4L89.4,97.7L90.6,97.2L93.6,90.9L96.6,90.0L97.8,91.1L98.3,88.7L99.6,90.1L101.0,88.7L101.2,90.9L103.9,92.0L105.3,89.6L107.5,92.3L108.0,90.3L110.0,91.0L109.4,88.9L110.8,88.5L110.7,90.1L113.0,88.6L115.1,92.8L116.2,92.5L116.6,93.6L118.9,92.6L120.5,93.1L125.4,96.2L127.2,95.4L128.2,97.3L132.5,98.8L137.9,95.0L138.5,97.0L143.4,98.6L147.0,96.7L149.6,96.4L152.2,97.7L155.4,96.9L156.2,97.4L157.9,96.4L161.4,96.8L161.5,97.9L165.0,97.5L167.8,99.7L171.8,98.0L172.2,96.6L174.2,95.7L182.3,95.7L184.5,96.4L185.6,97.9L186.5,97.3L188.3,98.1L190.0,97.2L190.6,101.0L192.2,101.4L194.1,104.0L191.5,104.2L193.7,104.2L191.4,101.8L190.3,101.9L189.4,103.0L190.3,102.9L188.8,107.7L192.7,127.7L198.1,135.1L203.9,140.5L206.0,141.3L205.0,145.3L203.6,147.7L201.9,148.0L200.5,145.1L199.0,146.0L197.6,145.5L197.8,140.3L194.3,141.9L194.4,144.3L196.3,144.8L195.7,145.7L194.2,145.7L193.8,148.2L190.3,149.2L190.3,150.5L187.8,151.0L187.3,152.0L186.1,150.7L183.1,151.6L179.1,150.0L177.7,148.4L175.4,148.6L171.0,145.5L171.2,143.4L168.8,140.3L172.4,134.5L170.0,134.4L169.0,135.3L166.7,134.8L167.8,132.7L164.4,132.8L161.2,129.1L156.5,132.8L153.7,133.1L155.8,134.7L155.4,135.5L152.3,134.8L148.7,135.8L147.2,134.8L147.3,133.6L144.1,137.1L143.5,135.7L138.7,132.9L135.0,132.7L134.4,134.5L133.3,134.6L131.1,132.8L129.7,129.8L127.9,129.7L123.8,127.0L122.0,127.8L118.3,123.9L116.8,124.2L113.8,122.3L113.1,121.6L113.5,119.9L112.1,118.8L107.4,118.8L105.4,122.3L102.5,123.4L101.8,121.3L100.0,120.1L94.7,121.1L95.6,118.1L96.5,118.1L96.3,114.6L94.0,113.9L93.5,112.7L92.6,113.8L89.9,112.4L88.1,112.8L88.1,111.9L86.6,112.1L86.6,108.8L88.0,108.8L87.7,107.5L88.5,109.1L90.7,108.7L90.2,108.0L91.0,106.6Z", "c": [143.1, 116.3]}, "Marche": {"d": "M197.6,161.6L196.2,161.8L195.4,160.8L194.0,162.1L193.2,161.1L191.9,161.5L191.2,160.5L193.1,159.0L193.2,157.5L189.4,158.5L187.1,156.5L189.0,154.3L190.6,154.2L191.1,152.1L191.3,154.5L192.0,154.5L191.8,153.1L193.2,153.1L190.3,150.5L190.3,149.3L193.8,148.2L194.2,145.7L195.7,145.7L196.5,144.6L198.9,146.0L200.5,145.1L201.7,148.0L203.4,147.8L203.7,146.6L205.4,145.8L206.0,141.3L207.5,141.5L211.2,143.4L224.3,154.7L229.6,157.5L231.4,156.6L235.4,160.3L235.4,162.6L242.8,181.3L245.2,189.9L238.1,192.0L236.7,193.9L232.3,193.5L230.9,197.1L229.4,197.3L229.1,198.8L227.5,199.3L223.9,196.9L222.9,197.8L220.7,197.2L220.9,195.9L222.5,195.9L223.2,193.8L222.3,191.2L219.8,192.7L216.1,188.8L214.4,189.3L213.5,191.1L213.6,188.5L210.8,186.8L210.9,180.9L208.7,178.9L209.8,175.7L207.2,172.3L207.4,170.0L205.8,167.5L207.0,166.4L206.7,164.5L205.4,164.1L204.6,165.9L203.0,165.4L201.5,166.3L197.6,161.6Z", "c": [208.9, 168.0]}, "Toscana": {"d": "M110.0,132.5L111.2,131.0L109.8,130.5L108.9,131.7L108.5,127.7L102.9,123.3L105.4,122.3L107.4,118.8L110.1,118.5L112.5,118.9L113.6,120.2L113.5,122.1L116.8,124.2L118.3,123.9L122.0,127.8L123.8,127.0L127.9,129.7L129.7,129.8L131.1,132.8L133.4,134.7L134.4,134.5L135.1,132.7L138.8,132.9L143.5,135.7L144.1,137.1L147.3,133.6L147.2,134.8L148.7,135.8L152.3,134.8L155.3,135.5L155.8,134.7L153.7,133.1L156.5,132.8L161.2,129.1L164.4,132.8L167.8,132.7L166.7,134.8L169.0,135.3L170.0,134.4L172.2,134.3L168.8,140.3L171.2,143.4L171.0,145.5L175.4,148.6L177.7,148.4L179.1,150.0L183.1,151.6L186.1,150.7L187.3,152.0L187.8,151.0L190.3,150.5L193.2,153.0L191.8,153.1L192.0,154.5L191.3,154.5L191.1,152.1L190.6,154.2L189.0,154.3L187.0,156.1L187.9,157.5L185.9,161.2L184.2,161.2L183.8,162.0L185.5,163.9L181.6,166.4L183.3,167.0L183.3,168.6L184.9,169.0L185.2,171.9L186.7,172.4L187.3,170.9L188.2,171.8L184.8,173.6L183.8,174.5L181.9,174.0L181.5,176.7L178.2,178.5L178.1,181.8L178.7,182.8L179.3,182.1L180.1,182.9L178.4,189.3L179.3,191.0L177.2,192.7L174.5,193.2L174.2,194.4L173.1,193.3L172.4,194.1L172.2,194.9L174.6,196.7L173.3,198.5L174.3,200.9L172.3,201.5L171.8,203.0L168.7,204.8L166.5,204.8L165.9,207.0L167.8,208.3L167.9,210.7L163.5,210.5L162.2,213.3L155.2,211.5L154.2,211.9L153.5,213.9L152.2,214.1L150.4,212.6L150.1,211.1L150.6,210.2L152.9,210.3L153.1,206.1L152.4,205.0L151.2,205.1L150.0,202.1L147.5,200.7L145.5,197.1L138.0,194.1L139.4,192.8L139.5,189.3L135.2,187.3L132.3,187.4L131.7,188.7L130.2,188.2L129.7,185.7L130.8,185.2L131.5,181.4L131.1,174.3L127.8,167.1L124.6,163.7L123.3,160.4L124.2,158.7L123.4,159.8L121.5,145.7L118.3,141.0L114.1,137.9L115.7,135.4L114.1,134.5L113.2,135.7L112.6,132.3L110.0,132.5ZM116.1,202.4L116.8,204.4L115.0,203.9L115.9,203.7L116.1,202.4ZM122.4,196.7L121.5,196.6L121.4,197.6L118.2,197.3L117.1,194.5L119.7,193.7L121.6,194.8L122.3,192.9L125.2,194.3L127.3,190.9L128.3,192.0L128.1,195.3L126.4,196.1L128.0,198.2L126.3,198.0L125.0,195.8L124.2,196.0L124.2,197.1L123.8,196.1L123.1,197.1L122.4,196.7ZM107.6,181.9L108.0,184.0L107.1,185.0L106.5,184.2L107.6,181.9ZM124.0,214.5L124.5,215.8L123.2,215.7L124.0,214.5ZM188.3,148.5L188.8,149.6L187.4,150.3L186.4,148.7L188.3,148.5ZM143.3,212.8L144.7,215.7L142.6,214.4L143.3,212.8Z", "c": [154.7, 163.4]}, "Umbria": {"d": "M219.7,200.8L218.3,200.7L216.5,202.2L215.2,201.5L214.5,202.6L210.3,202.8L210.7,204.9L204.6,207.8L205.7,209.1L203.3,210.4L201.6,209.2L201.1,212.2L198.4,213.9L197.9,212.2L195.9,212.5L196.3,211.0L194.6,211.2L194.9,208.1L192.5,209.0L190.4,208.0L191.0,207.9L190.0,207.4L190.0,205.1L188.7,204.5L188.9,202.0L187.6,200.5L186.1,199.8L184.9,201.0L184.3,200.3L181.7,201.3L178.7,199.5L178.2,198.5L180.0,195.8L178.3,195.1L177.1,192.3L179.3,191.0L178.4,189.3L180.1,182.9L179.3,182.1L178.6,182.6L177.8,179.4L178.7,178.0L181.5,176.7L181.9,174.0L183.8,174.5L188.2,171.9L187.3,170.9L186.7,172.4L185.2,171.9L185.1,169.3L183.2,168.5L183.3,167.0L181.6,166.4L185.5,163.9L183.8,162.5L183.9,161.5L185.9,161.2L187.9,157.5L190.7,158.7L193.2,157.5L193.1,159.0L191.2,160.5L191.9,161.5L193.2,161.1L194.0,162.1L195.2,160.9L196.2,161.8L197.0,161.3L201.5,166.3L203.0,165.4L204.6,165.9L205.4,164.1L206.7,164.5L207.0,166.4L205.8,167.5L207.4,170.0L207.2,172.3L209.8,175.7L208.7,178.9L210.9,180.9L210.8,186.8L213.6,188.5L213.5,191.1L214.4,189.3L216.2,188.8L219.5,192.6L221.4,192.3L222.3,191.2L222.7,192.0L222.6,195.7L220.9,196.0L219.7,200.8Z", "c": [196.6, 185.7]}, "Lazio": {"d": "M174.4,193.9L175.6,192.5L177.5,192.8L178.3,195.1L180.0,195.8L178.2,198.6L181.7,201.3L184.3,200.3L184.9,201.0L186.1,199.8L187.6,200.5L188.9,202.0L188.7,204.5L190.0,205.1L190.0,207.4L191.0,207.9L190.4,208.0L192.5,209.0L194.9,208.1L194.6,211.2L196.3,211.0L195.9,212.5L197.9,212.2L198.4,213.9L201.1,212.2L201.6,209.2L203.3,210.4L205.7,209.1L204.6,207.8L210.7,204.9L210.6,202.7L212.0,203.1L214.7,202.5L215.2,201.5L216.3,202.2L218.3,200.7L219.3,201.1L220.7,197.2L222.9,197.8L223.7,196.9L225.1,197.7L226.4,199.0L226.1,200.2L228.1,201.3L227.6,203.7L224.2,204.6L220.8,203.8L219.6,206.0L220.3,208.7L218.3,210.3L220.9,212.8L219.5,214.3L222.0,216.0L222.5,218.2L227.1,222.3L222.7,224.7L217.3,222.4L217.2,223.9L215.4,224.9L215.2,228.2L216.2,229.7L217.7,230.1L217.9,229.2L226.6,233.8L227.1,238.7L228.4,237.9L233.6,241.5L236.2,239.0L237.9,240.0L238.9,239.5L240.1,241.8L241.7,241.5L245.2,243.2L247.6,246.0L247.9,249.7L248.8,250.5L248.2,251.3L248.9,252.0L247.1,253.3L247.7,253.9L247.2,254.7L243.3,256.8L244.1,257.6L244.2,262.4L242.2,263.0L242.4,264.1L240.0,265.6L238.1,264.2L235.2,263.9L233.6,264.8L234.2,266.2L233.5,266.4L223.8,262.2L216.3,265.5L213.5,260.3L211.0,257.9L209.0,256.9L206.4,257.1L203.7,255.2L201.6,255.6L195.5,246.8L188.6,242.2L189.3,241.9L188.2,242.0L187.6,238.1L185.4,234.2L177.8,228.6L175.1,229.1L169.4,218.2L162.2,213.3L163.5,210.5L167.9,210.7L167.8,208.3L165.9,207.0L166.5,204.8L168.7,204.8L171.8,203.0L172.3,201.5L174.1,201.3L173.3,198.5L174.6,196.7L172.2,194.9L172.9,193.3L174.4,193.9Z", "c": [208.4, 222.7]}, "Campania": {"d": "M250.9,254.9L252.0,252.7L253.5,254.0L253.8,253.1L256.1,253.2L259.0,255.2L264.0,256.7L265.0,258.4L267.0,257.9L268.3,259.2L270.4,257.3L273.1,257.2L274.4,255.2L277.0,256.4L281.9,253.7L282.7,255.2L285.0,256.2L284.9,258.0L283.6,258.8L284.0,260.6L286.0,261.3L286.6,263.0L288.4,262.7L291.0,264.7L289.9,265.0L290.4,266.7L288.7,268.9L291.1,271.3L293.9,271.8L294.9,270.8L300.0,273.3L300.7,276.8L299.3,279.8L297.3,280.7L297.1,281.7L293.5,281.0L294.3,283.1L292.9,283.1L294.4,284.2L294.4,288.2L298.5,290.9L296.7,293.4L299.7,295.2L299.7,298.8L305.2,303.6L306.1,306.7L308.7,308.6L308.3,310.9L305.6,312.9L305.3,315.6L303.5,317.4L304.2,317.8L303.3,319.0L302.6,317.6L299.2,317.7L295.7,321.4L293.5,320.9L292.2,319.5L290.7,319.9L290.7,317.6L286.1,313.2L282.8,313.1L281.3,311.0L278.6,309.9L279.7,308.3L279.7,305.7L281.4,304.9L281.6,303.4L278.0,295.3L274.6,290.9L273.2,290.3L271.2,292.3L269.0,291.6L265.7,293.5L264.3,292.5L258.9,295.2L259.4,292.6L261.4,292.1L264.1,289.5L263.1,286.9L261.4,286.6L257.0,282.8L254.4,285.0L251.5,283.3L250.4,283.9L251.0,285.7L249.3,285.1L248.5,278.9L242.3,268.1L240.0,265.6L242.4,264.1L242.2,263.0L244.3,262.2L243.4,256.7L247.1,254.7L249.4,257.9L251.7,258.2L250.9,254.9ZM255.7,296.4L254.6,296.7L254.6,295.6L256.1,295.8L256.7,296.2L255.7,296.4ZM246.4,288.9L243.7,289.3L243.2,287.4L243.6,286.5L246.0,287.1L246.4,288.9Z", "c": [277.5, 282.4]}, "Abruzzo": {"d": "M246.0,244.5L244.3,242.4L240.1,241.8L238.9,239.5L238.1,240.0L236.2,239.0L233.6,241.5L228.4,237.9L227.1,238.7L226.6,233.9L217.9,229.2L217.7,230.1L216.2,229.7L215.0,227.1L215.4,224.9L217.2,223.9L217.3,222.4L222.7,224.7L227.1,222.3L222.5,218.2L222.0,216.0L219.5,214.3L220.9,212.8L218.3,210.3L220.3,208.7L219.6,206.0L220.8,203.8L224.2,204.6L227.2,204.1L228.1,201.4L226.1,200.2L226.4,198.9L229.0,198.8L229.4,197.3L230.9,197.1L232.3,193.5L236.7,193.9L238.1,192.0L241.6,190.9L245.3,190.0L247.7,198.1L252.1,205.5L256.7,210.5L262.1,214.3L265.1,219.0L271.9,222.4L272.1,225.7L274.2,227.2L274.2,229.1L272.3,230.4L267.1,238.6L264.4,241.2L263.3,241.1L262.9,237.6L260.6,235.9L259.5,236.6L257.5,234.5L252.9,238.2L254.5,241.8L253.8,241.0L252.0,242.0L251.6,243.7L251.1,242.3L250.3,242.3L248.6,244.8L246.0,244.5Z", "c": [240.1, 222.9]}, "Molise": {"d": "M262.1,256.0L256.1,253.2L253.8,253.1L253.5,254.0L252.1,252.7L250.6,255.4L251.8,258.1L249.4,257.9L247.1,253.3L248.9,252.0L248.2,251.3L248.8,250.5L247.9,249.7L248.3,248.2L246.0,244.5L248.6,244.8L250.3,242.3L251.1,242.3L251.6,243.7L252.0,242.0L253.8,241.0L254.5,241.8L252.9,238.2L257.5,234.5L259.5,236.6L260.6,235.9L262.9,237.6L263.4,241.2L264.4,241.2L268.1,237.2L270.5,232.8L274.3,229.0L273.6,228.4L274.2,227.2L278.0,229.4L281.8,230.1L284.3,233.0L286.2,233.7L284.9,241.0L285.7,243.1L287.0,243.6L283.3,245.9L282.5,247.5L280.4,246.6L279.5,247.5L279.5,251.8L281.9,253.7L281.0,254.4L276.7,256.4L274.4,255.2L273.1,257.2L270.4,257.3L268.3,259.2L267.0,257.9L265.0,258.4L264.0,256.7L262.1,256.0Z", "c": [264.7, 246.0]}, "Puglia": {"d": "M284.9,258.0L284.9,256.0L282.7,255.2L279.5,251.9L279.4,247.6L280.4,246.6L282.5,247.5L283.3,245.9L287.0,243.6L285.7,243.1L284.9,241.0L286.2,233.7L295.3,234.9L302.5,233.6L305.2,234.3L315.7,232.7L318.1,233.1L321.5,235.7L321.8,239.6L320.1,242.1L313.2,246.8L313.5,247.6L313.1,246.9L311.9,247.8L312.0,251.4L313.8,254.7L334.9,266.3L343.9,269.8L344.4,269.2L344.8,270.1L351.9,272.8L359.0,277.6L365.0,283.4L372.7,286.6L377.1,289.6L380.5,290.0L381.7,290.9L380.1,292.0L383.0,291.9L383.8,295.4L385.2,297.2L390.4,300.6L396.9,308.0L400.0,316.1L398.5,318.7L396.2,322.0L394.9,330.3L388.3,327.7L382.9,322.3L382.3,320.9L383.1,319.5L381.6,318.4L382.6,317.7L382.8,316.0L377.8,308.1L371.8,307.2L366.0,307.6L355.8,302.4L357.2,300.1L352.7,297.4L348.5,298.7L344.2,302.8L342.2,300.2L339.5,299.2L339.7,289.8L338.7,289.1L339.6,288.6L337.5,287.0L337.2,287.6L334.6,286.5L334.3,287.6L333.8,286.6L333.4,288.1L332.1,286.4L329.7,289.1L328.7,288.9L323.4,283.0L322.0,279.4L320.7,278.9L319.3,280.3L314.5,277.6L316.1,276.1L316.6,274.1L313.7,270.7L310.9,269.3L308.2,271.7L301.3,271.2L299.9,273.1L294.9,270.8L293.9,271.8L291.1,271.3L288.6,268.6L290.4,266.7L289.9,265.0L291.0,264.7L288.4,262.7L286.6,263.0L286.0,261.3L284.0,260.6L283.6,258.8L284.9,258.0Z", "c": [330.9, 276.8]}, "Basilicata": {"d": "M297.3,292.3L298.5,290.9L294.4,288.2L294.4,284.2L292.9,283.1L294.3,283.1L293.5,281.0L297.1,281.7L297.3,280.7L299.3,279.8L300.7,276.8L299.7,272.5L300.4,271.7L306.5,271.2L307.4,271.9L310.9,269.3L313.7,270.7L316.6,274.1L316.1,276.1L314.5,277.6L319.3,280.3L320.7,278.9L322.0,279.4L323.4,283.0L328.7,288.9L329.7,289.1L332.1,286.4L333.3,288.1L333.3,286.9L334.5,287.6L334.9,286.4L339.6,288.6L338.7,289.1L339.7,289.8L339.0,296.0L340.2,299.9L342.2,300.2L344.4,302.9L339.9,311.8L336.9,315.6L329.4,314.4L328.6,320.2L326.7,323.8L327.1,325.5L324.2,323.9L322.4,324.3L322.5,325.6L320.6,324.6L316.9,325.7L315.5,322.9L316.3,321.2L314.5,321.7L312.8,320.9L311.8,321.8L310.1,320.7L307.6,322.7L307.0,324.4L303.3,319.0L304.3,318.4L303.5,317.4L305.3,315.6L305.6,312.9L308.3,310.9L308.7,308.6L306.1,306.7L305.2,303.6L299.7,298.8L299.7,295.2L296.7,293.4L297.3,292.3Z", "c": [315.4, 298.3]}, "Calabria": {"d": "M314.4,345.0L311.1,341.2L309.1,335.4L307.5,328.4L308.2,327.3L307.0,324.4L307.6,322.7L310.1,320.7L311.8,321.8L312.8,320.9L314.5,321.7L315.9,321.1L315.5,322.9L316.9,325.7L320.6,324.6L322.5,325.6L322.4,324.3L324.2,323.9L325.9,324.1L327.0,325.5L326.7,323.8L328.6,320.2L329.4,314.4L333.1,315.6L336.3,315.1L336.9,315.6L335.4,319.1L336.3,322.8L331.7,330.1L331.8,332.2L333.0,333.4L332.7,336.0L336.0,338.0L341.1,338.1L344.4,341.8L349.6,344.3L351.6,347.1L354.1,348.0L352.4,354.2L353.8,356.9L352.6,361.7L353.8,364.0L355.8,364.9L354.5,366.3L354.3,368.4L352.0,371.0L351.7,370.2L349.6,370.4L348.3,369.0L344.7,369.6L335.9,374.3L333.2,379.2L334.7,388.7L334.1,392.6L331.0,396.0L325.9,398.4L320.8,405.3L320.1,410.1L317.4,414.8L306.3,414.8L303.0,411.2L303.7,409.6L302.8,406.8L303.7,405.3L302.9,401.4L308.3,398.8L312.1,391.3L312.9,386.7L309.4,383.4L309.7,382.3L314.8,378.7L319.9,378.9L321.6,377.2L322.6,373.5L322.5,369.6L320.5,368.4L318.6,364.9L317.0,352.8L314.4,345.0Z", "c": [326.5, 355.8]}, "Sicilia": {"d": "M211.2,410.3L217.0,407.5L216.1,405.2L217.9,402.8L220.8,403.8L224.9,401.3L226.6,403.2L227.3,406.5L229.2,407.1L232.4,406.3L233.4,409.6L239.4,412.8L248.7,409.6L250.2,410.6L257.7,411.1L265.5,409.6L269.4,408.1L273.2,403.9L274.4,404.6L278.7,402.8L280.7,404.6L283.2,404.7L284.9,406.0L288.7,403.0L289.7,400.4L289.2,399.2L290.1,400.0L289.7,401.6L291.5,402.1L296.0,400.5L299.8,397.8L303.5,399.2L301.2,400.4L300.9,402.7L298.2,408.1L288.8,422.5L287.6,430.6L284.7,434.2L285.0,442.4L288.0,443.9L288.5,443.4L290.2,445.8L289.1,445.9L289.4,447.7L288.8,445.5L287.9,446.0L288.5,449.7L289.8,450.1L289.2,449.9L289.0,450.9L291.6,451.9L291.6,454.2L290.7,454.4L292.9,456.6L290.6,456.6L290.4,457.9L286.8,460.5L285.4,463.4L284.8,466.8L286.0,471.8L284.3,472.6L282.4,470.3L280.1,470.5L278.1,468.9L274.3,470.1L271.5,469.5L269.1,467.3L264.6,466.4L260.9,458.7L256.7,454.1L250.6,451.7L243.9,452.1L242.1,450.2L239.6,449.9L236.6,447.9L233.0,443.8L228.8,442.9L223.5,439.0L220.0,434.4L215.0,434.3L213.1,431.2L211.6,430.6L203.4,431.3L201.0,427.6L198.1,426.8L195.0,420.4L196.2,419.7L197.1,417.2L196.1,415.6L198.2,411.0L197.3,410.7L199.9,408.3L202.4,407.9L202.9,406.4L204.6,406.5L205.5,405.1L204.8,403.6L205.3,402.9L206.5,403.3L208.0,407.8L211.2,410.3ZM191.1,413.4L193.0,415.7L190.2,415.1L190.1,413.9L191.1,413.4ZM182.8,411.7L183.8,413.8L182.6,413.6L181.7,411.8L182.8,411.7ZM179.2,464.0L182.5,466.2L181.6,468.7L179.9,467.8L178.2,465.6L179.2,464.0ZM276.5,387.1L274.7,386.0L275.1,385.1L276.7,385.1L277.3,387.1L276.5,387.1ZM280.3,391.9L281.8,394.5L279.9,393.8L280.3,391.9ZM280.3,387.8L281.0,389.6L280.1,390.1L279.8,391.5L278.2,389.2L278.7,388.0L280.3,387.8ZM289.1,374.7L289.8,375.1L289.2,376.3L287.9,375.7L289.1,374.7ZM198.9,523.3L201.7,523.6L201.9,524.4L198.1,523.7L198.9,523.3Z", "c": [254.8, 428.0]}, "Sardegna": {"d": "M58.6,298.5L57.5,298.3L56.1,294.1L53.0,295.2L53.6,293.7L52.8,292.9L51.7,295.6L51.2,294.4L51.0,292.7L52.5,292.0L53.1,290.1L50.7,287.8L53.5,281.6L52.1,278.6L53.0,276.9L54.1,278.0L54.2,280.1L56.7,282.7L59.1,282.4L58.0,282.9L63.8,283.6L69.7,279.5L72.8,279.2L75.9,274.4L77.4,273.7L80.2,270.1L85.2,268.4L85.4,265.3L84.7,264.5L87.7,264.0L89.2,265.3L89.1,266.9L89.5,265.7L89.6,266.9L90.6,266.5L91.0,267.3L92.0,266.3L92.3,267.4L94.1,267.7L93.5,268.6L94.7,269.6L94.7,270.9L95.5,269.2L97.5,268.6L98.0,270.5L98.9,270.7L96.8,275.3L98.7,274.0L98.5,275.5L99.8,274.7L102.2,275.9L100.4,275.5L99.2,278.9L97.5,278.7L96.7,279.6L98.7,279.3L99.6,280.2L101.5,279.3L100.6,280.7L102.2,282.3L104.3,282.8L102.9,283.1L102.4,285.4L104.0,287.0L103.9,288.8L105.1,290.3L105.1,293.7L107.7,297.0L105.5,303.2L102.8,305.7L100.8,309.5L101.9,314.5L104.6,317.4L102.9,321.7L103.9,324.2L102.7,325.9L103.3,327.6L101.6,336.7L101.5,345.3L99.9,350.4L101.1,352.7L99.4,354.2L99.3,358.2L97.4,361.9L96.7,360.2L94.5,360.7L90.6,356.9L87.0,355.9L85.2,358.0L83.5,356.5L81.1,358.3L80.1,360.6L80.4,362.3L81.6,362.3L80.7,362.5L81.4,363.7L80.7,366.1L74.9,371.8L73.3,370.7L73.1,371.4L70.4,369.1L68.5,370.1L67.7,372.3L67.9,371.0L66.6,371.0L67.0,368.5L65.9,368.2L65.2,366.3L65.5,364.7L64.0,363.5L61.9,363.7L61.1,367.6L60.0,368.1L58.0,361.8L58.6,361.0L59.0,361.7L60.5,361.2L61.9,363.6L62.6,362.3L58.6,356.4L60.9,353.1L58.7,349.3L60.1,346.8L59.0,345.5L62.0,339.1L61.1,331.9L61.7,331.4L63.1,333.9L64.5,330.2L64.5,327.2L65.3,327.1L62.7,325.0L60.8,327.4L59.6,325.3L60.1,320.2L58.9,319.3L61.4,318.6L62.8,317.0L61.5,312.9L62.5,308.5L61.6,306.5L59.1,305.6L59.7,302.4L58.6,298.5ZM56.9,270.2L57.9,271.6L57.6,272.9L55.6,272.7L54.1,274.6L54.9,276.2L53.3,276.2L53.6,273.8L56.9,270.2ZM95.7,264.6L96.0,267.3L95.6,268.0L95.1,267.0L94.5,267.4L95.7,264.6ZM94.0,263.5L94.6,265.9L92.7,266.2L92.5,265.1L94.0,263.5ZM56.6,357.7L56.5,361.5L54.8,361.5L54.7,360.3L53.6,359.6L53.9,358.7L56.6,357.7Z", "c": [78.3, 313.9]}}};
+const VAR = {A:'A · Sommario di sezioni', B:'B · Cruscotto snodo', C:'C · Cruscotto unico'};
+const st = {v:'A', scr:'esito', stato:'governo', pp:'striscia', reg:'ord', est:'turno', somm:'governo', spente:'barrate', evpos:'cruscotto', acq:'contesto', govopp:'barrata', camp:'sezione', bil:'sezione', sub:'mappa', det:null, ev:1, c3:'mappa', conf:0};
+new URLSearchParams(location.search).forEach((v,k)=>{ if(k in st) st[k]=v; });
+const T = {periodo:'Aprile–giugno 2027', turno:3, alVoto:17, esitoDi:'gennaio–marzo 2027', numero:37};
+const esc = s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const grave = ()=>st.reg==='grave';
+const corniceGrave = ()=>grave() && st.est!=='evento';
+const corpoGrave = scr=>grave() && (st.est==='turno' || scr==='esito');
+
+const VOCI = [
+  {c:1, fatto:'Unione Riformista: intesa a 38, sotto la soglia di 40', tit:'L’alleato fa le valigie, ma lascia le chiavi sotto lo zerbino', causa:'Respinta la sua richiesta su Sviluppo economico. Sotto 25 lascia la coalizione.'},
+  {c:1, fatto:'Sanità: soddisfazione della ministra Morandi a 34', tit:'Morandi scrive le dimissioni. In bella copia, per ora', causa:'Taglio del 4% al funzionamento del dicastero. Sotto 25 si dimette.'},
+  {c:1, ev:1, fatto:'Piena del Po: argini a rischio in Emilia-Romagna', tit:'Il fiume chiede udienza, il governo cerca gli stivali', causa:'Da decidere in questo turno: decreto o fondo di riserva (1,1 mld).'},
+  {fatto:'Senato: convertito il decreto Energia, 104 sì e 91 no', tit:'Qualcuno vota col cuore. Il cuore non firma', causa:'6 franchi tiratori, dentro la forbice attesa di 3–9.'},
+  {fatto:'Partito il lotto 2 dell’alta velocità Salerno–Reggio', tit:'Posato il primo binario. Il nastro, tagliato tre volte', causa:'Atto del ministro delle Infrastrutture: 3 turni di cantiere.'},
+  {fatto:'Spread a 171 punti, +14; deficit 2027 al 3,4%', tit:'I mercati prendono appunti. Noi prendiamo tempo', causa:'Il deficit sfora il tetto alla crescita della spesa netta.'},
+  {fatto:'Coalizione al 44,6%, −0,9, forbice ±2,1', tit:'Tutti i partiti dichiarano di aver vinto il sondaggio', causa:'Il calo maggiore fra i pensionati a reddito basso del Sud.'},
+];
+const VOCE_GRAVE = {c:1, ev:1, fatto:'Alluvione in Emilia-Romagna: 4 morti e 2.300 sfollati', tit:null, causa:'Soccorsi da decidere in questo turno: decreto o fondo di riserva (1,1 mld).'};
+const AGENDA = [
+  {dic:'Economia e Finanze', nome:'Ferraris', part:'tecnico', col:'#BFD0E0', atto:'Dismissione di quote in partecipate', costo:'+2,1 mld', sodd:61, ds:2, motto:'Il centesimo è sacro, il resto si vedrà', nota:'contro la tua linea'},
+  {dic:'Sanità', nome:'Morandi', part:'TL', col:'#F2A7A0', atto:'Assunzioni straordinarie di infermieri', costo:'0,4 mld', sodd:34, ds:-7, motto:'Prima il paziente, poi la lettera', nota:'in preavviso'},
+  {dic:'Infrastrutture e Trasporti', nome:'Galli', part:'UR', col:'#F1D9A0', atto:'Rinforzo degli argini in Emilia-Romagna', costo:'0,3 mld', sodd:72, ds:4, motto:'Ogni cantiere merita due inaugurazioni', nota:'tocca l’evento aperto'},
+  {dic:'Sviluppo economico', nome:'Rinaldi', part:'UR', col:'#D8C3DE', atto:'Credito d’imposta per l’export', costo:'0,2 mld', sodd:48, ds:-3, motto:'Ne parliamo al prossimo tavolo'},
+  {dic:'Lavoro e Welfare', nome:'Conti', part:'RC', col:'#C9D8C5', atto:'Politiche attive per i disoccupati del Sud', costo:'0,3 mld', sodd:66, ds:1, motto:'Il lavoro nobilita, la riforma pure'},
+  {dic:'Istruzione e Ricerca', nome:'Sartori', part:'RC', col:'#F6D365', atto:'Tempo pieno nelle primarie', costo:'0,2 mld', sodd:70, ds:0, motto:'Chi non studia ripete. Anche il ministro'},
+  {dic:'Ambiente ed Energia', nome:'Bassi', part:'TL', col:'#9ED8C8', atto:'Incentivi alle rinnovabili domestiche', costo:'0,3 mld', sodd:58, ds:-2, motto:'Il futuro è verde, il bilancio meno'},
+  {dic:'Interno', nome:'Mancini', part:'RC', col:'#E8C4B8', atto:'Presidi nelle stazioni', costo:'0,1 mld', sodd:63, ds:1, motto:'Ordine, disciplina e un caffè'},
+  {dic:'Giustizia', nome:'Fabbri', part:'UR', col:'#F2C14E', atto:'Digitalizzazione dei tribunali', costo:'0,1 mld', sodd:55, ds:-1, motto:'Mi riservo di rispondere, in tre gradi'},
+  {dic:'Esteri e Difesa', nome:'Orlandi', part:'tecnico', col:'#9DC3E6', atto:'Acquisto di due fregate', costo:'0,4 mld', sodd:60, ds:3, motto:'Dipende. In sei lingue'},
+];
+const DISOC = {'Piemonte':6.1,"Valle d'Aosta/Vallée d'Aoste":4.5,'Lombardia':4.0,'Trentino-Alto Adige/Südtirol':2.8,'Veneto':4.3,'Friuli-Venezia Giulia':4.9,'Liguria':6.3,'Emilia-Romagna':4.6,'Toscana':5.7,'Umbria':6.2,'Marche':5.6,'Lazio':7.6,'Abruzzo':8.3,'Molise':9.4,'Campania':17.4,'Puglia':11.3,'Basilicata':7.9,'Calabria':15.0,'Sicilia':15.0,'Sardegna':9.3};
+
+// ======================= pezzi comuni =======================
+const faccia = (m,s)=>`<svg class="faccia" width="${s}" height="${s}" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="${m.col}" stroke="#1F1A17" stroke-width="2"/><circle cx="14" cy="17" r="2"/><circle cx="26" cy="17" r="2"/><path d="M13 26q7 5 14 0" fill="none" stroke="#1F1A17" stroke-width="2"/></svg>`;
+function trk(k,v,pieni,d,male){ return `<div class="trk"><span class="k">${k}</span><span class="cas">${Array.from({length:10},(_,i)=>`<i class="${i<pieni?'on':''}${i===pieni-1&&male?' ult':''}"></i>`).join('')}</span><span class="v">${v}</span><span class="d ${male?'male':'bene'}">${d}</span></div>`; }
+const TRE = ()=> trk('Consenso','44,6%',6,'▼ 0,9 · forbice ±2,1',1) + trk('Maggioranza C / S','+18 / +8',5,'senza UR −6 / −4',1) + trk('Conti · spread','171',6,'▲ 14 punti base',1);
+const governi = ()=>['governo','crisi','bilancio','voto'].includes(st.stato);
+const inCampagna = ()=>st.stato==='zero'||st.stato==='voto';
+const STATO = {bilancio:'Al governo · turno del bilancio', voto:'Al governo · ultimo turno', governo:'Al governo', opposizione:'All’opposizione', trattativa:'Trattativa · interim', crisi:'Crisi di governo', zero:'Turno zero · Camere sciolte', fine:'Partita finita'};
+const CASA = {governo:'Cruscotto', bilancio:'Cruscotto', voto:'Cruscotto', crisi:'Cruscotto', opposizione:'Cruscotto', trattativa:'Trattativa', zero:'Cruscotto', fine:'Eredità'};
+function sezioni(){
+  const s=st.stato;
+  let v=[['esito','Prima pagina'],['cruscotto',CASA[s]],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+  if(st.somm!=='governo') v=v.filter(x=>x[0]!=='governo');
+  if(st.bil!=='sezione') v=v.filter(x=>x[0]!=='bilancio');
+  if(st.camp!=='sezione') v=v.filter(x=>x[0]!=='campagna');
+  if(st.somm==='sei') v=v.filter(x=>x[0]!=='partiti');
+  if(st.spente==='tolte') v=v.filter(x=>!spenta(x[0]));
+  return v;
+}
+// una sezione che in questo stato non ha niente da mostrare
+function spenta(k){ const s=st.stato;
+  if(k==='aula') return s==='zero'||s==='trattativa'||s==='fine';
+  if(k==='esito'||k==='registro') return s==='zero';
+  if(k==='governo') return st.govopp==='barrata' && !governi();
+  if(k==='campagna') return !inCampagna();
+  if(k==='bilancio') return s!=='bilancio';
+  return false; }
+const MOTIVO = ()=>({governo:'Non governi: nessun ministro tuo', campagna:'Si fa campagna solo nel turno prima del voto', bilancio:'La legge di bilancio si presenta in ottobre-dicembre', esito:'Turno zero: non c’è un turno prima', registro:'Turno zero: nessun turno passato', aula: st.stato==='zero'?'Camere sciolte: niente aula fino al voto':st.stato==='fine'?'Partita finita':'Trattativa: l’aula riapre col governo nuovo'});
+const compra = (n,p,t)=> st.acq==='contesto' ? `<div class="ph"><b>${n}</b> · ${p} · ${t} <button class="btn p">Compra</button></div>` : '';
+function chiudi(){
+  if(st.stato==='fine') return '';
+  const def = governi()&&st.stato!=='crisi' ? `<span class="def" data-go="cruscotto">3 scelte andranno<br>al default</span>` : '';
+  if(st.stato==='opposizione') return `<span class="pila"><button class="btn">Avanti fino a novità ››</button><button class="btn pieno">Chiudi il turno ›</button></span>`;
+  return `${def}<button class="btn pieno">Chiudi il turno ›</button>`;
+}
+function cornice(){
+  const g=corniceGrave(), A=st.v==='A';
+  const somm = A ? `<nav class="somm">${sezioni().map(([k,t])=> spenta(k) ? `<button class="chiusa" title="${MOTIVO()[k]}">${t}</button>` : `<button class="${st.scr===k?'qui':''}" data-go="${k}">${t}</button>`).join('')}<span class="sec">${st.acq==='unico'?'<button class="link" data-go="info">Informazione</button>':''}<button class="link" data-go="schema">Schema dello Stato</button><button class="link" data-go="edicola">Edicola</button></span></nav>` : '';
+  const banda = st.stato==='crisi' ? `<div class="banda">CRISI DI GOVERNO · solo ordinaria amministrazione: allarga la maggioranza o dimettiti; senza scelta, a fine turno si vota la sfiducia</div>` : '';
+  return `<div class="${g?'g':''}"><header class="cornice" style="${A?'':'padding-bottom:6px'}"><div class="c1" style="${A?'':'padding-bottom:0'}">
+    <div class="c-sx">${g?'':'<span class="nomino">Il Pungolo</span>'}<span><b>${STATO[st.stato]}</b><br>${T.periodo} · turno ${T.turno}<br>${inCampagna()?'si vota a fine turno':T.alVoto+' turni al voto'}</span></div>
+    <div class="trks">${TRE()}</div>
+    <div class="c-dx">${A?'':`<button class="link" data-go="edicola">Edicola</button>`}${chiudi()}</div>
+  </div>${somm}</header>${banda}</div>`;
+}
+function borsino(g, altrui){
+  const spento = st.stato==='crisi';
+  return AGENDA.map((m,i)=>`<div class="riga ${st.det===i?'sel':''}" ${altrui?'':`data-det="${i}"`}>
+    <div>${faccia(m,30)}</div>
+    <div class="chi"><b>${m.dic}</b><span>${m.nome} · ${m.part}</span></div>
+    <div class="atto">${altrui?`<span class="muto">agenda non visibile · ultimo atto eseguito: ${esc(m.atto)}</span>`:spento?'<span class="muto">nessun atto: ordinaria amministrazione</span>':`${esc(m.atto)} <span class="muto">${m.costo}</span>${m.nota?` <span class="nota">· ${m.nota}</span>`:''}`}</div>
+    <div class="punti">${m.sodd} <small class="${m.ds<0?'male':'bene'}">${m.ds<0?'▼':m.ds>0?'▲':'='}${m.ds?Math.abs(m.ds):''}</small></div>
+    <div class="motto solo-ord">«${esc(m.motto)}»</div>
+    <div class="azr">${spento||altrui?'':'<button class="btn p">Ferma</button><button class="btn p">Dirotta</button>'}</div></div>`).join('');
+}
+const OPZ = ['Decreto a debito','Fondo di riserva','Niente'];
+const opzioni = ()=>`<div class="az">${OPZ.map((o,i)=>`<button class="btn p ${st.ev==i?'scelto':''}" data-ev="${i}">${o}${i===1?' · default':''}</button>`).join('')}</div>`;
+function evento(){
+  const g=grave();
+  if(st.evpos==='prima') return `<div class="box ${g?'g':''}"><div class="occ">Evento aperto</div><b>${g?'Alluvione in Emilia-Romagna':'Piena del Po'}</b> · scelto: ${OPZ[st.ev]} · <button class="link" data-go="esito">cambia in Prima pagina</button></div>`;
+  return `<div class="box ${g?'g':''}"><div class="occ">${g?'Calamità · evento aperto':'Evento aperto'}</div>
+    <h4 class="tit">${g?'Alluvione in Emilia-Romagna: 4 morti e 2.300 sfollati':'Piena del Po: argini a rischio in Emilia-Romagna'}</h4>
+    <div class="muto" style="font-size:13px">Causa: pericolosità idraulica alta, prevenzione al 40%. Costo 1,1 mld. Senza scelta vale «Fondo di riserva».${g?'':' <i class="solo-ord" style="color:var(--biro)">Il fiume chiede udienza.</i>'}</div>
+    ${opzioni()}</div>`;
+}
+function cartaMinistro(i){
+  const m=AGENDA[i];
+  return `<div class="box"><div style="display:flex;gap:10px;align-items:center">${faccia(m,54)}<div><div class="occ">${m.dic}</div><h4 class="tit">${m.nome} · ${m.part}</h4></div><button class="link" style="margin-left:auto" data-det="x">chiudi ×</button></div>
+    <div class="ph" style="margin-top:8px"><b>Carta del ministro</b>: capacità, posizione, obiettivo, soddisfazione ${m.sodd} con le cause, minaccia di dimissioni. Su Ferma e Dirotta la carta si gira.</div>
+    <div class="az"><button class="btn p">Ferma l’atto</button><button class="btn p">Dirotta</button><button class="btn p">Chiedi le dimissioni</button></div></div>`;
+}
+const doveCampagna = ()=>st.camp==='sezione'?['campagna','Campagna']:['partiti','Partiti'];
+const doveBilancio = ()=>st.bil==='sezione'?['bilancio','Bilancio']:['conti','Conti'];
+const chiede = ()=>`<div class="box"><div class="occ">Chiede una scelta in questo turno</div>
+  ${st.stato==='bilancio'?`<div class="voce"><b>Legge di bilancio 2028 da presentare</b><button class="link" data-go="${doveBilancio()[0]}">› ${doveBilancio()[1]}</button><small>Senza bilancio: un turno di esercizio provvisorio, poi le dimissioni.</small></div>`:''}
+  ${st.stato==='voto'?`<div class="voce"><b>Si vota a fine turno · coalizione e campagna</b><button class="link" data-go="${doveCampagna()[0]}">› ${doveCampagna()[1]}</button><small>Coalizione da dichiarare, tre bersagli, due promesse.</small></div>`:''}
+  <div class="voce"><b>Proposta · Sanità: piano per le liste d’attesa</b><span class="az" style="margin:0"><button class="btn p">Accogli</button><button class="btn p">Rinvia</button><button class="btn p">Respingi</button></span><small>Innesco: fondi che non bastano. Ignorata, vale come respinta al prossimo turno.</small></div>
+  <div class="voce"><b>Ultimatum · Unione Riformista, intesa 38</b><button class="link" data-go="partiti">› Partiti</button><small>Causa: respinta la richiesta su Sviluppo economico.</small></div>
+  <div class="voce"><b>Emendamento · UR sul decreto Energia</b><button class="link" data-go="aula">› Aula</button><small>Respingerlo costa intesa e franchi tiratori.</small></div>
+  <div class="voce"><b>Al voto a fine turno · conversione del decreto Energia</b><button class="link" data-go="aula">› Aula</button><small>Forbice al Senato: 126–141 sì su 200.</small></div></div>`;
+
+const CAMPAGNA = ()=>({
+    sx:`<h3 class="tit">Campagna: un turno prima del voto</h3>
+      <div class="box"><div class="occ">Coalizione da dichiarare</div><div class="ph" style="margin-top:4px"><b>Disponibilità di ogni partito</b> con la causa; posti delle liste comuni da cedere.</div></div>
+      <div class="box"><div class="occ">Tre bersagli · cassa 2,4 mln</div><div class="ph" style="margin-top:4px"><b>Condizione o regione</b> (selettore con la lista delle 20 regioni), leva fra mobilitare, persuadere e convincere, anteprima a fasce.</div></div>
+      <div class="box"><div class="occ">Promesse e posizione</div><div class="ph" style="margin-top:4px"><b>Fino a 2 promesse</b> su disposizioni; riposizionamento di mezzo punto.</div></div>`,
+    dx:`<div class="ph"><b>Casse dei rivali</b> in cifre.</div>${compra('Sondaggio privato','60.000 €','toglie denaro alla campagna.')}`});
+
+// ======================= la sezione di casa, per stato =======================
+function casa(){
+  const s=st.stato, g=corpoGrave('cruscotto');
+  if(governi() && st.somm==='governo') return {
+    sx:`${s==='crisi'?'<div class="ph"><b>Crisi</b>: allarga la maggioranza o dimettiti.</div>':evento()}<div style="margin-top:8px">${chiede()}</div>`,
+    dx:`<div class="box"><div class="occ">Ministri in evidenza · 3 su 10</div>${AGENDA.filter(m=>m.nota).map(m=>`<div class="voce"><b>${m.dic} · ${m.nome}</b><span class="male">${m.nota}</span><small>${esc(m.atto)} · ${m.costo}</small></div>`).join('')}<div class="az"><button class="link" data-go="governo">› Governo: tutti e dieci i ministri</button></div></div>
+      <div class="ph"><b>Cruscotto corto</b>: solo ciò che chiede una scelta; il borsino sta nella sezione Governo.</div>`};
+  if(governi()) return {
+    sx:`${s==='crisi'?`<div class="box"><div class="occ">Crisi</div><h4 class="tit">Terra e Lavoro è uscita: mancano 4 seggi al Senato</h4><div class="ph" style="margin-top:6px"><b>Allarga o dimettiti</b>: disponibilità di ogni partito fuori dalla coalizione, coi seggi veri e la causa.</div><div class="az"><button class="btn p">Allarga a Libertà e Impresa</button><button class="btn p">Dimettiti</button></div></div>`:evento()}
+      <h3 class="tit" style="margin-top:8px">${g?'Agenda dei ministri':'Il borsino dei ministri'}</h3>${borsino(g)}`,
+    dx: st.det!=null ? cartaMinistro(st.det) : chiede() + `<div class="ph"><b>Niente modale</b>: un clic su un ministro apre qui la sua carta; il resto della pagina resta vivo.</div>`};
+  if(s==='opposizione') return {
+    sx:`<h3 class="tit">Il programma del governo, misura per misura</h3>
+      ${['Flat tax al 23% · in aula, voto a fine turno','Autonomia differenziata · presentata, voto fra un turno','Riforma delle concessioni · prossima in programma'].map(t=>`<div class="voce"><b>${t}</b><span class="az" style="margin:0"><button class="btn p">Sì</button><button class="btn p scelto">No</button><button class="btn p">Astensione</button></span><small>La tua linea. Votare lontano dalla tua posizione costa franchi tiratori e sposta la percepita.</small></div>`).join('')}
+      <div class="ph" style="margin-top:8px"><b>Ministri del governo avversario</b>: gli atti si vedono solo dopo l’esecuzione, nella prima pagina. Qui nessuna agenda.</div>`,
+    dx:`<div class="box"><div class="occ">Le tue leve</div>
+      <div class="voce"><b>Sfiducia</b><button class="btn p">Anteprima</button><small>Hai il decimo dei seggi. Chi la voterebbe fra i suoi alleati.</small></div>
+      <div class="voce"><b>Posto riservato all’opposizione</b><button class="btn p">Presenta</button><small>Libero in questo trimestre.</small></div>
+      <div class="voce"><b>Referendum abrogativo</b><button class="btn p">Promuovi</button><small>Finestra aperta: firme in un turno.</small></div></div>
+      <div class="ph"><b>Intesa dei suoi alleati</b>, in tre fasce, mai in cifre.</div>`};
+  if(s==='trattativa') return {
+    sx:`<h3 class="tit">La spartizione dei dieci dicasteri</h3>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px">${AGENDA.map(m=>`<div class="box" style="margin:0;padding:6px 8px"><b style="font-size:12px;line-height:1.15;display:block;height:30px">${m.dic}</b><div class="az" style="margin-top:4px"><span class="btn p">${m.part==='tecnico'?'RC · tecnico':m.part}</span></div></div>`).join('')}</div>
+      <div class="ph" style="margin-top:10px"><b>Proponi tu</b>: trascini un partito su un dicastero; l’intesa di partenza di ogni alleato sale o scende contro la sua richiesta. Senza premio, anche l’allargamento.</div>`,
+    dx:`<div class="box"><div class="occ">Richieste degli alleati</div>
+      <div class="voce"><b>Unione Riformista</b><span>chiede 3 · offri 3</span><small>Intesa di partenza 55.</small></div>
+      <div class="voce"><b>Terra e Lavoro</b><span class="male">chiede 3 · offri 2</span><small>Intesa di partenza 44: un posto in meno.</small></div></div>
+      <div class="ph"><b>Incarico</b> al giocatore; se non è tuo, qui si legge chi tratta e cosa ti chiede.</div>`};
+  if(s==='zero') return {
+    sx:`<div class="box"><div class="occ">Chiede una scelta in questo turno</div>
+      <div class="voce"><b>Coalizione da dichiarare</b><button class="link" data-go="${doveCampagna()[0]}">› ${doveCampagna()[1]}</button><small>Senza dichiarazione corri da solo.</small></div>
+      <div class="voce"><b>Campagna: tre bersagli, due promesse, posizione</b><button class="link" data-go="${doveCampagna()[0]}">› ${doveCampagna()[1]}</button><small>Cassa del partito 2,4 mln.</small></div></div>
+      <div class="ph"><b>Turno zero</b>: Camere sciolte, il tuo partito è appena fondato e fuori dal parlamento. Si vota alla chiusura.</div>`,
+    dx:`<div class="ph"><b>Sondaggio del trimestre</b> in breve: dove sei, chi ti è vicino.</div>`};
+  return {
+    sx:`<h3 class="tit">Eredità</h3><div class="box"><div class="occ">Fine: partito senza seggi in entrambe le Camere · bozza</div>
+      <div class="ph" style="margin-top:6px"><b>Anni al governo</b> 6 · <b>leggi ancora in vigore</b> 9 · <b>riavvolgimenti</b> 2 · i tre indicatori contro il turno zero.</div>
+      <div class="az"><button class="btn p" data-go="registro">‹ Torna a un turno, dal registro</button><button class="btn p pieno">Conferma l’eredità: va nell’albo</button></div></div>`,
+    dx:`<div class="ph"><b>Serie dei tre indicatori</b> per tutta la partita, a caselle.</div><div class="ph"><b>Risultati di ogni elezione.</b></div>`};
+}
+
+// ======================= sezioni =======================
+function mappa(h,g){
+  const R=g?['#F4ECD8','#CFC8B8','#9A948A','#5E5750','#1F1A17']:['#F4ECD8','#EBCB9F','#DB9A66','#A8442A','#8A2A1A'], S=[5,7,10,14];
+  return `<svg viewBox="0 0 ${GEO.w} ${GEO.h}" height="${h}" style="width:auto">${Object.entries(GEO.regioni).map(([n,r])=>{const c=S.findIndex(s=>DISOC[n]<s); return `<path d="${r.d}" fill="${R[c<0?4:c]}" stroke="#1F1A17" stroke-width="1" vector-effect="non-scaling-stroke"><title>${esc(n)}</title></path>`;}).join('')}</svg>`;
+}
+const PASSAGGIO = ()=>`<div class="box"><div class="occ">Passaggio del bilancio 2028 · bozza</div><div class="ph" style="margin-top:4px"><b>Bozza con le cifre dell’anno prima</b>: aliquote delle quattro imposte, budget di ogni dicastero in funzionamento e margine con la perdita reale, fondo di riserva, saldo contro il tetto UE, emendamenti degli alleati. Nel primo anno di governo, il posto del piano strutturale riveduto.</div><div class="az"><button class="btn p">Indicizza tutto all’inflazione · +9,2 mld</button><button class="btn p pieno">Presenta il bilancio</button></div></div>`;
+const boxBilancio = ()=> st.stato==='bilancio'&&st.bil==='conti' ? PASSAGGIO() : `<div class="box"><div class="occ">Bilancio 2027 · in vigore</div><div class="ph" style="margin-top:4px"><b>Voci del bilancio</b> con la perdita reale («Sanità: −4% reale in un anno»), fondo di riserva residuo, saldo contro il tetto UE.${st.bil==='conti'?' In ottobre-dicembre qui si apre il <b>passaggio del bilancio</b>.':''}</div></div>`;
+const SEZ = {
+  campagna: g=>CAMPAGNA(),
+  bilancio: g=>({cols:'1fr 1.25fr 1fr', sx:`<h3 class="tit">Legge di bilancio 2028</h3><div class="box"><div class="occ">Entrate · quattro imposte</div>${['IRPEF a scaglioni','IVA','IRES','Aliquota contributiva'].map(t=>`<div class="voce"><b>${t}</b><span class="muto">aliquote · gettito</span></div>`).join('')}</div><div class="ph"><b>Indicizza all’inflazione</b>: tutto o voce per voce, col costo esatto.</div>`,
+    mid:`<div class="box"><div class="occ">Spesa · dieci dicasteri, funzionamento e margine</div>${AGENDA.map((m,i)=>`<div class="voce" style="padding:3px 0"><b>${m.dic}</b><span>${(8+i*3.1).toFixed(1).replace('.',',')} mld · <span class="male">−${(2+i%3).toFixed(0)}% reale</span></span></div>`).join('')}</div>`,
+    dx:`<div class="box"><div class="occ">Saldo contro il tetto UE</div><div class="barra"><i style="width:71%"></i><u style="left:66%"></u></div><div class="muto" style="font-size:13px">Disavanzo 3,4%: sopra il tetto alla spesa netta.</div></div><div class="box"><div class="occ">Emendamenti degli alleati</div><div class="voce"><b>UR: +0,4 mld a Sviluppo economico</b><span class="az" style="margin:0"><button class="btn p">Accogli</button><button class="btn p">Respingi</button></span></div></div><div class="az"><button class="btn pieno">Presenta il bilancio</button></div><div class="ph"><b>Piano strutturale riveduto</b>: nel primo anno di governo, il suo posto è qui.</div>`}),
+  governo: g=> !governi() ? {sx:`<h3 class="tit">Il governo in carica · ${st.stato==='zero'||st.stato==='trattativa'?'uscente':'guidato da Fronte Sovrano'}</h3>${borsino(g,1)}`,
+      dx:`<div class="ph"><b>Programma del governo</b>, nell’ordine in cui lo porta in aula.</div><div class="ph"><b>Intesa dei suoi alleati</b>, in tre fasce.</div><div class="ph"><b>Niente agenda</b>: gli atti dei suoi ministri si vedono dopo l’esecuzione.</div>`} :
+    ({sx:`<h3 class="tit">${g?'Agenda dei ministri':'Il borsino dei ministri'}</h3>${borsino(g)}`,
+    dx: st.det!=null ? cartaMinistro(st.det) : `<div class="ph"><b>Carta del ministro</b>: un clic su una riga la apre qui.</div><div class="ph"><b>Dicasteri</b>: indicatore di servizio e grandezze di ciascuno.</div>`}),
+  info: g=>({cols:'1fr 1fr 1fr', sx:`<h3 class="tit">Informazione</h3><div class="box"><div class="occ">Sondaggio privato · 60.000 €</div><div class="ph" style="margin-top:4px">Sbaglia meno di quello pubblico. Il risultato si legge qui.</div><div class="az"><button class="btn p">Compra</button></div></div>`,
+    mid:`<div class="box" style="margin-top:31px"><div class="occ">Test di una misura · 40.000 €</div><div class="ph" style="margin-top:4px">Si sceglie la misura da un elenco: l’anteprima resta in Aula.</div><div class="az"><button class="btn p">Compra</button></div></div>`,
+    dx:`<div class="box" style="margin-top:31px"><div class="occ">Centro studi · 80.000 €</div><div class="ph" style="margin-top:4px">Stima del trimestre e previsione a 4 turni.</div><div class="az"><button class="btn p">Compra</button></div></div><div class="ph"><b>Cassa del partito</b> 2,4 mln: ogni acquisto toglie denaro alla campagna.</div>`}),
+  aula: g=>({sx:`<h3 class="tit">Aula e calendario</h3>
+      ${[['Legge ordinaria · 1','Riforma del catasto · presentata, voto a fine turno prossimo'],['Legge ordinaria · 2','libero'],['Legge ordinaria · 3','libero'],['Costituzionale','libero'],['Riservato all’opposizione','Salario minimo · Fronte Sovrano']].map(([k,t])=>`<div class="voce"><b>${k}</b><span class="${t==='libero'?'muto':''}">${t}</span></div>`).join('')}
+      <div class="voce"><b>Decreto Energia · conversione</b><span>voto a fine turno · <button class="btn p">Poni la fiducia</button></span><small>Linee dei partiti, forbice 126–141, emendamento chiesto da UR.</small></div>
+      <div class="ph" style="margin-top:8px"><b>Disposizioni</b>: le 35 più la legge elettorale, col valore in vigore, la legge d’origine, il precedente e quello in arrivo. Da qui si presenta una legge di riforma.</div>
+      <div class="ph"><b>Referendum</b> in attesa del voto ed esiti degli ultimi voti d’aula.</div>`,
+    dx:`<div class="box"><div class="occ">Anteprima della misura</div><h4 class="tit">${g?'Soccorsi e ricostruzione in Emilia-Romagna':'Argini nuovi per il Po'}</h4>
+      <svg viewBox="0 0 300 120" height="120"><path d="M150 4v16M40 20h220M40 20v30M110 20v46M190 20v26M260 20v52" stroke="#1F1A17" stroke-width="2" fill="none"/><circle cx="40" cy="62" r="12" fill="var(--biro)"/><rect x="96" y="66" width="28" height="28" fill="var(--biro)"/><circle cx="190" cy="56" r="10" fill="var(--rosso)"/><rect x="246" y="72" width="28" height="20" fill="var(--rosso)"/></svg>
+      <div class="muto" style="font-size:13px">Il mobile appeso: costo, effetti a fasce, ritardo, gruppi colpiti, forbice del voto.</div>
+      <div class="az"><button class="btn p pieno">Firma il decreto</button><button class="btn p">Lascia stare</button></div></div>
+      ${compra('Test della misura','40.000 €','L’acquisto sta dove si legge il suo risultato.')}`}),
+  conti: g=>({sx:`<h3 class="tit">Conti pubblici</h3>
+      ${boxBilancio()}
+      <div class="box"><div class="occ">Grandezze e situazioni</div>${[['Crescita del PIL · prima stima','−0,4%, recessione sotto −1% per due trimestri',62,80],['Liste d’attesa','118 giorni, collasso a 140',70,84],['Prezzi dell’energia','indice 9, crisi a 11',55,74]].map(([k,t,v,s])=>`<div style="font-size:13px;margin-top:5px"><b>${k}</b> <span class="muto">${t}</span><div class="barra"><i style="width:${v}%"></i><u style="left:${s}%"></u></div></div>`).join('')}</div>`,
+    dx:`<div class="box"><div class="occ">Spread e regole UE</div><div class="ph" style="margin-top:4px"><b>Spread 171</b>, PDE e conto di controllo, stato del MES.</div></div>
+      ${compra('Centro studi','80.000 €','stima migliore del trimestre e previsione a 4 turni.')}`}),
+  paese: g=>({cols:'auto 1fr 330px', sx:mappa(590,g),
+    mid:`<h3 class="tit">Il paese</h3><div class="occ">Livello</div>
+      <div class="az">${['Consenso','Disoccupazione','Reddito','Affluenza','Pericolosità','Risultato del voto'].map((l,i)=>`<button class="btn p ${i===1?'scelto':''}">${l}</button>`).join('')}</div>
+      <div class="ph" style="margin-top:10px"><b>Le 20 regioni in lista</b>, col valore del livello: stessa scelta della mappa, da tastiera.</div>
+      <div class="ph"><b>Segni</b>: atti e cantieri in corso o finiti, emergenze aperte.</div>
+      <div class="box"><div class="occ">Sondaggio del trimestre</div><div class="ph" style="margin-top:4px"><b>Intenzioni di voto</b> da 3-4 istituti, incroci per condizione, fascia e regione, proiezione dei seggi.</div>
+      ${st.acq==='contesto'?'<div class="az"><span class="muto" style="font-size:13px">Sondaggio privato · 60.000 €</span><button class="btn p">Compra</button></div>':''}</div>`,
+    dx:`<div class="box"><div class="occ">Scheda della regione</div><h4 class="tit">Campania</h4><div class="ph" style="margin-top:6px"><b>18 gruppi</b> con la quota di elettori; al clic tre elettori campione. Seggi, forbice del sondaggio, disposizioni territoriali in vigore.</div></div>`}),
+  partiti: g=>{ const p={sx:`<h3 class="tit">Partiti e coalizione</h3>
+      <svg viewBox="0 0 760 110" style="width:100%;max-width:760px;height:auto"><path d="M20 60h720" stroke="#1F1A17" stroke-width="2"/>${[1,2,3,4,5,6,7].map(n=>`<text x="${20+(n-1)*120}" y="92" font-size="13" text-anchor="middle">${n}</text><circle cx="${20+(n-1)*120}" cy="60" r="${[10,7,14,9,12,8,6][n-1]}" fill="${n===3?'var(--rosso)':'#1F1A17'}"/>`).join('')}<circle cx="320" cy="60" r="15" fill="var(--giallo)" stroke="#1F1A17" stroke-width="2"/><text x="320" y="30" font-size="13" text-anchor="middle" font-weight="700">tu · 3,5</text></svg>
+      <div class="ph"><b>L’asse</b>: sette partiti IA più il tuo, posizione dichiarata e percepita, leader con caricatura, vocazione e regola di movimento in una riga, minaccia di scissione.</div>
+      <div class="box"><div class="occ">Alleati</div>${[['Unione Riformista',38,'ultimatum · respinta la richiesta su Sviluppo economico'],['Terra e Lavoro',57,'stabile']].map(([n,v,c])=>`<div style="font-size:13px;margin-top:5px"><b>${n}</b> intesa ${v} <span class="muto">· ${c}</span><div class="barra"><i style="width:${v}%"></i><u style="left:40%"></u><u style="left:25%"></u></div></div>`).join('')}</div>`,
+    dx:`<div class="ph"><b>Parlamento in carica</b>: seggi di Camera e Senato per partito.</div><div class="ph"><b>Casse dei partiti</b> in cifre, la tua con 2 per mille e donazioni.</div>`};
+    if(st.camp==='partiti'&&inCampagna()){ const c=CAMPAGNA(); return {cols:'minmax(0,1fr) minmax(0,1fr) 250px', sx:p.sx, mid:c.sx, dx:p.dx+c.dx}; }
+    return p; },
+  registro: g=>({cols:'150px 1fr 330px', sx:`<h3 class="tit">Registro</h3>${[3,2,1,0].map(n=>`<div class="voce" style="${n===2?'font-weight:700':''}"><span>Turno ${n}</span><span>${n===2?'‹':''}</span></div>`).join('')}`,
+    mid:`<div class="occ">Turno 2 · gennaio–marzo 2027 · 21 voci</div>${VOCI.concat(VOCI).slice(0,11).map(v=>`<div class="voce"><b>${esc(v.fatto)}</b><small>${esc(v.causa)}</small></div>`).join('')}`,
+    dx:`<div class="box"><div class="occ">Riavvolgimento</div><h4 class="tit">Torna al turno 2</h4><div class="muto" style="font-size:13px">Riapre l’apertura del turno 2 e cancella il turno 3. Le stesse scelte danno lo stesso esito.</div>
+      <div class="az">${st.conf?`<button class="btn p pieno">Conferma: cancella 1 turno</button><button class="btn p" data-conf="0">Annulla</button>`:`<button class="btn p" data-conf="1">Torna al turno 2</button>`}</div></div>
+      <div class="ph"><b>Conferma sul posto</b>: il pulsante diventa due pulsanti. Nessuna finestra sopra la pagina.</div>`}),
+  schema: g=>({cols:'1fr 300px', sx:`<h3 class="tit">Tavola n. ${T.turno} · Come funziona lo Stato</h3>
+      <svg viewBox="0 0 860 560" height="560"><g stroke="var(--biro)" stroke-width="2" fill="none"><path d="M430 280L150 110M430 280L710 110M430 280L160 440M430 280L700 440M430 280L430 90"/><path d="M430 280L250 280M430 280L610 280" stroke="var(--rosso)" stroke-dasharray="7 5"/></g>
+      <circle cx="430" cy="280" r="50" fill="#1F1A17"/><text x="430" y="278" text-anchor="middle" fill="#F4ECD8" font-size="13" font-weight="700">Presidente</text><text x="430" y="294" text-anchor="middle" fill="#F4ECD8" font-size="13">del Consiglio</text>
+      ${[[150,110,'Camera',1],[710,110,'Senato',1],[430,90,'Mercati e UE',1],[250,280,'Sanità',0],[610,280,'Infrastrutture',0],[160,440,'Pensionati',2],[700,440,'Autonomi',2]].map(([x,y,t,k])=>k===2?`<ellipse cx="${x}" cy="${y}" rx="66" ry="20" fill="#EBCB9F" stroke="#1F1A17" stroke-width="2"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700">${t}</text>`:`<rect x="${x-66}" y="${y-17}" width="132" height="34" fill="${k?'#1F1A17':'#F4ECD8'}" stroke="#1F1A17" stroke-width="2"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="${k?'#F4ECD8':'#1F1A17'}">${t}</text>`).join('')}</svg>`,
+    dx:`<div class="ph"><b>Vista secondaria</b>: chi tocca chi in questo trimestre. I numeri nei tondi rimandano alle notizie della prima pagina.</div>`}),
+};
+
+// ======================= schermate =======================
+function esito(){
+  const g=corpoGrave('esito');
+  const v = g ? [VOCE_GRAVE].concat(VOCI.filter((_,i)=>i!==2).map(x=>({...x,tit:null}))) : VOCI;
+  const not = x=>`<div class="o ${x.c?'crit':''}">${esc(x.tit?x.fatto:(x.c?'In evidenza':'Notizia'))}</div><h2>${esc(x.tit||x.fatto)}</h2><p>${esc(x.causa)}</p>${x.ev&&st.evpos==='prima'?opzioni():''}`;
+  const sA = st.v==='A' && st.pp!=='testata' ? '' : '';
+  const dentro = st.pp==='dentro';
+  const zero = st.stato==='zero';
+  return `<div class="pagina ${g?'g':''}">
+  <header class="testata">
+    <div class="orecchio">Esito del trimestre<br><b>${T.esitoDi}</b><br>7 notizie in pagina, 14 nel registro${dentro?`<br>${trk('Consenso','44,6%',6,'▼ 0,9',1)}`:''}</div>
+    <div class="nome">${g?'Esito del trimestre':'Il Pungolo'}</div>
+    <div class="orecchio dx">n. ${T.numero} · turno ${T.turno}<br><b>${T.alVoto} turni al voto</b><br>${g?'':'Costa poco, punge tutti'}${dentro?`<br>${trk('Maggioranza','+18 / +8',5,'',1)} ${trk('Conti','171',6,'▲ 14',1)}`:''}</div>
+  </header>
+  <div class="sotto"><span>${g?'Edizione straordinaria':'Settimanale di satira e conti pubblici'}</span><span>${T.periodo}</span><span>${g?'In questo numero, niente commenti':'Si legge in cinque minuti, si discute per tre mesi'}</span></div>
+  <div class="apertura"><article class="not lead">${not(v[0])}</article>${g?'':`<figure class="vignetta solo-ord">vignetta</figure>`}</div>
+  <div class="colonne">${v.slice(1).map(x=>`<article class="not">${not(x)}</article>`).join('')}</div>
+  <footer class="piede"><button class="link" data-go="${st.v==='C'?'cruscotto':'registro'}">Altre 14 notizie nel registro ›</button><button class="btn pieno" data-go="cruscotto">Vai al ${CASA[st.stato].toLowerCase()==='cruscotto'?'cruscotto':CASA[st.stato].toLowerCase()} ›</button></footer>
+  </div>`;
+}
+function striscia(){
+  const g=corniceGrave();
+  return `<div class="striscia ${g?'g':''}"><b>${STATO[st.stato]}</b>${TRE()}<span style="margin-left:auto" class="muto">${T.alVoto} turni al voto</span></div>`;
+}
+function pagina(scr){
+  const g=corpoGrave(scr);
+  const indietro = st.v==='B' && scr!=='cruscotto' ? `<div class="testa-pag" style="grid-column:1/-1"><span></span><button class="btn" data-go="cruscotto">‹ Torna al cruscotto</button></div>` : '';
+  if(scr==='cruscotto'){
+    const c=casa();
+    const snodo = st.v==='B' ? `<div class="pulsantiera" style="grid-column:1/-1">${sezioni().filter(x=>x[0]!=='cruscotto'&&!spenta(x[0])).map(([k,t])=>`<button class="btn" data-go="${k}">${k==='esito'?'‹ ':''}${t}${k==='esito'?'':' ›'}</button>`).join('')}<button class="btn" data-go="schema">Schema dello Stato ›</button></div>` : '';
+    const cors = st.stato==='governo' ? `<div class="corsivo solo-ord" style="grid-column:1/-1"><b>Il corsivo</b><span>Piove sul Po e sui conti: l’alleato tiene il broncio, i mercati prendono appunti.</span></div>` : '';
+    return `<div class="corpo ${g?'g':''}" style="grid-template-columns:1fr 380px">${snodo}${cors}<section>${c.sx}</section><section>${c.dx}</section></div>`;
+  }
+  let key=scr, sub='';
+  if(scr==='paese'&&st.somm==='sei'){ sub=`<div class="pulsantiera" style="grid-column:1/-1">${[['mappa','Mappa e sondaggio'],['partiti','Partiti e coalizione']].map(([k,t])=>`<button class="btn ${st.sub===k?'pieno':''}" data-sub="${k}">${t}</button>`).join('')}</div>`; if(st.sub==='partiti') key='partiti'; }
+  const s=SEZ[key](g);
+  return `<div class="corpo ${g?'g':''}" style="grid-template-columns:${s.cols||'1fr 380px'}">${indietro}${sub}<section>${s.sx}</section>${s.mid?`<section>${s.mid}</section>`:''}<section>${s.dx}</section></div>`;
+}
+function unico(){
+  const g=corpoGrave('cruscotto'), c=casa();
+  const ACC = {mappa:['Mappa',()=>mappa(250,g)+'<div class="muto" style="margin-top:4px">Disoccupazione per regione. Livelli, segni e scheda: non entrano qui.</div>'],
+    conti:['Bilancio e conti',()=>'Voci del bilancio, spread, grandezze vicine alle soglie, centro studi: una colonna di 340 px.'],
+    partiti:['Partiti e alleati',()=>'Asse, intesa con le cause, casse.'],
+    registro:['Registro',()=>'21 voci del turno 2 e «torna al turno N».'],
+    schema:['Schema dello Stato',()=>'La rete non entra in 340 px: serve comunque una pagina sua.']};
+  return `<div class="corpo unico ${g?'g':''}" style="${st.stato==='governo'||st.stato==='crisi'?'':'grid-template-columns:1fr 330px 300px'}">
+    <section>${st.stato==='governo'||st.stato==='crisi'?`<h3 class="tit">${g?'Agenda dei ministri':'Il borsino dei ministri'}</h3>${AGENDA.map((m,i)=>`<div class="riga"><div>${faccia(m,24)}</div><div class="chi"><b>${m.dic}</b><div class="atto">${esc(m.atto)}</div></div><div class="punti">${m.sodd}</div><div class="azr"><button class="btn p">Ferma</button><button class="btn p">Dir.</button></div></div>`).join('')}`:c.sx}</section>
+    <section>${st.stato==='governo'?evento():''}${st.stato==='governo'?chiede():c.dx}<div class="ph"><b>Aula e calendario</b>: cinque posti, linee e forbici. <b>Anteprima della misura</b>: si apre al posto di questo riquadro.</div><div class="az"><button class="link" data-go="esito">‹ Prima pagina</button></div></section>
+    <section>${Object.entries(ACC).map(([k,[t,f]])=>`<div class="acc ${st.c3===k?'ap':''}"><button data-c3="${k}"><span>${t}</span><span>${st.c3===k?'▾':'▸'}</span></button>${st.c3===k?`<div class="dentro">${f()}</div>`:''}</div>`).join('')}</section>
+  </div>`;
+}
+function edicola(){
+  return `<div class="vS" style="grid-template-rows:auto 1fr"><header class="cornice" style="padding-bottom:8px"><div class="c1" style="padding:0"><div class="c-sx"><span class="nomino">Il Pungolo</span><span><b>Edicola</b><br>le tue partite, gli scenari, l’albo</span></div><span></span><span></span></div></header>
+  <div class="corpo" style="grid-template-columns:1.2fr 1fr 1fr;padding-top:16px">
+    <section><h3 class="tit">Partite in corso</h3>
+      ${[['Rinascita Civica','Italia di oggi','turno 3 · aprile–giugno 2027','ieri, 22:41',1],['Lega dei Comuni','Debito al 160%','turno 11 · al governo','3 novembre',1],['Partito del Tè','Italia di oggi','turno 7','schema 3, atteso 4: non si apre',0]].map(([n,s,t,d,ok],i)=>`<div class="box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h4 class="tit">${n}</h4><div class="muto" style="font-size:13px">${s} · ${t}<br>${ok?'ultimo salvataggio: ':''}<span class="${ok?'':'male'}">${d}</span></div></div>${ok?`<button class="btn ${i?'':'pieno'}" data-go="esito">Riprendi ›</button>`:''}</div></div>`).join('')}</section>
+    <section><h3 class="tit">Nuova partita</h3>
+      <div class="box"><div class="occ">Scenario di base</div><h4 class="tit">L’Italia di oggi</h4><div class="az"><button class="btn p pieno">Fonda il partito ›</button></div></div>
+      <div class="box"><div class="occ">Scenario su misura</div><div class="ph" style="margin-top:4px"><b>Editor</b>: sei cursori, legge elettorale, disposizioni, riepilogo dal vivo con gli avvisi.</div><div class="az"><button class="btn p">Nuovo nell’editor ›</button><button class="btn p">Carica da file</button></div></div>
+      <div class="ph"><b>Fondazione</b>: nome del partito e uno dei sei posti sull’asse, con istogramma e risultato atteso. Poi il turno zero.</div></section>
+    <section><h3 class="tit">Albo</h3>
+      ${[['Fronte del Buonsenso','9 anni al governo · 3 elezioni · 1 riavvolgimento'],['Rinascita Civica (prima)','2 anni al governo · abbandono']].map(([n,d])=>`<div class="box"><h4 class="tit">${n}</h4><div class="muto" style="font-size:13px">${d}</div><div class="ph" style="margin-top:6px">serie dei tre indicatori · eredità</div></div>`).join('')}</section>
+  </div></div>`;
+}
+function render(){
+  const S=document.getElementById('screen');
+  if(st.scr==='partiti'&&st.somm==='sei'){ st.scr='paese'; st.sub='partiti'; }
+  if(!['edicola','schema','info'].includes(st.scr) && (!sezioni().some(x=>x[0]===st.scr) || spenta(st.scr))) st.scr='cruscotto';
+  if(st.scr==='info'&&st.acq!=='unico') st.scr='cruscotto';
+  if(st.v==='C' && !['esito','cruscotto','edicola'].includes(st.scr)) st.scr='cruscotto';
+  let h;
+  if(st.scr==='edicola') h=edicola();
+  else if(st.scr==='esito'){
+    const sopra = st.pp==='striscia' ? (st.v==='A' ? cornice() : striscia()) : '<div></div>';
+    h=`<div class="vS">${sopra}${esito()}</div>`;
+  }
+  else h=`<div class="vS">${cornice()}${st.v==='C'?unico():pagina(st.scr)}</div>`;
+  S.innerHTML=h;
+  document.getElementById('lab').textContent=`${VAR[st.v]} · ${st.scr}`;
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const q=new URLSearchParams(); ['v','scr','stato','pp','reg','est','somm','spente','evpos','acq','govopp','camp','bil'].forEach(k=>q.set(k,st[k]));
+  try{ history.replaceState(null,'','?'+q); }catch(e){}  // anteprima senza URL: si va avanti lo stesso
+}
+function fit(){ const s=document.getElementById('stage'); document.getElementById('screen').style.transform=`scale(${Math.min(s.clientWidth/1280,s.clientHeight/800)})`; }
+function varia(d){ const k=Object.keys(VAR); st.v=k[(k.indexOf(st.v)+d+k.length)%k.length]; st.det=null; render(); }
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-ev],[data-det],[data-c3],[data-conf],[data-sub],#prev,#next,#proto .seg button'); if(!t) return;
+  if(t.id==='prev') return varia(-1);
+  if(t.id==='next') return varia(1);
+  if(t.closest('#proto .seg')){ st[t.parentNode.dataset.k]=t.dataset.v; if(t.parentNode.dataset.k==='stato'&&st.scr==='edicola') st.scr='cruscotto'; st.det=null; }
+  else if(t.dataset.go){ st.scr=t.dataset.go; st.det=null; }
+  else if(t.dataset.sub) st.sub=t.dataset.sub;
+  else if(t.dataset.ev) st.ev=+t.dataset.ev;
+  else if(t.dataset.c3) st.c3=t.dataset.c3;
+  else if(t.dataset.conf) st.conf=+t.dataset.conf;
+  else if(t.dataset.det){ if(e.target.closest('.azr')) return; st.det = t.dataset.det==='x'?null:+t.dataset.det; }
+  render();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft') varia(-1); if(e.key==='ArrowRight') varia(1); });
+addEventListener('resize',fit); new ResizeObserver(fit).observe(document.getElementById('stage')); render(); fit();
+</script>
+</body>
+</html>
