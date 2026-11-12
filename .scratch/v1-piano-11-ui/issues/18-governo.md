@@ -1,7 +1,7 @@
 Type: prototype
 Status: open
 Blocked by: 06, 08, 32
-Assignee: -
+Assignee: maeurong
 Label: wayfinder:prototype
 Map: ../map.md
 
