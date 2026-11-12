@@ -521,7 +521,7 @@ Ticket `.scratch/v1-piano-11-ui/issues/31-scale-dei-tracciati.md`, un giro a par
 ## 2026-11-12: disegno delle caricature
 Ticket `.scratch/v1-piano-11-ui/issues/32-disegno-delle-caricature.md`, una tavola di riferimenti ([[riferimenti-per-le-facce]]), quattro varianti e una rifinitura.
 
-- **Profilo al tratto alla Guasco:** pennino piatto, figura campita di carta, piani in terra chiara. L'identità sta nella silhouette del profilo (naso, mento, fronte, nuca) e nel colletto, non in forme e tinte dentro la testa: è ciò che rendeva il segnaposto «tutto uguale».
+- **Profilo al tratto alla Guasco:** pennino piatto, figura campita di carta, piani in terra chiara. L'identità sta nella silhouette del profilo (naso, mento, fronte, nuca) e nel colletto, non in forme e tinte dentro la testa: per questo le facce del segnaposto sembravano «tutte uguali».
 - **Due inchiostri sovrapposti, solo nelle facce:** come una stampa a due passaggi, sempre dai sette inchiostri.
 - **Soddisfazione dal fondo del riquadro:** a 34 px un colore pieno si legge prima di una bocca.
 - **Donne senza capelli:** ciglia e naso all'85% per tutte, poi labbra, orecchino e cappello combinati dall'hash, così si distinguono anche fra loro.

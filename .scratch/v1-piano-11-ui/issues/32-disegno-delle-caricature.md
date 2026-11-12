@@ -29,7 +29,7 @@ Mario: l'aspetto astratto va bene, ma le facce erano «proprio brutte da vedere�
 
 Direzione C della ricerca, con Riccardo Guasco come riferimento principale («mi piacciono moltissimo i disegni di Guasco»). È la variante 5, cioè la Linea rifinita:
 
-- **Profilo verso destra**, disegnato a **pennino piatto**: lo spessore cambia con la direzione, i capi si assottigliano, due pennellate si staccano alla radice del naso. Il tratto è sempre d'inchiostro.
+- **Profilo verso destra**, disegnato a **pennino piatto**: lo spessore cambia con la direzione, le estremità del tratto si assottigliano, due pennellate si staccano alla radice del naso. Il tratto è sempre d'inchiostro.
 - **Figura campita di carta**, che sui fondi colorati si stacca come un ritaglio. I piani alla Guasco (sotto la mascella, sotto il naso, l'orecchio) sono in terra chiara.
 - **Due inchiostri sovrapposti** ammessi solo nelle facce, come una stampa a due passaggi: terra chiara (giallo e rosso), colletto arancio (giallo e rosso), colletto oliva (giallo e biro). Contrasto del tratto su ciascuno fra 4,9:1 e 10,3:1.
 - **Leve d'identità** scelte dall'hash di `ruolo:partito:nome`: naso 6, mento 3, fronte 2, nuca 2, occhio 2 (tondo o a mandorla), colletto 6. Sono 864 combinazioni per genere; sul bacino, 8 coppie uguali su 10.296.
@@ -39,7 +39,7 @@ Direzione C della ricerca, con Riccardo Guasco come riferimento principale («mi
 
 ### Donne
 
-Il problema l'ha visto Mario sulle quattro varianti: le donne non avevano tratti femminili. Si è risolto subito, perché è una leva d'identità e non ha una soluzione ovvia senza capelli.
+Mario l'ha notato sulle quattro varianti: le donne non avevano tratti femminili. Il problema si è risolto subito, perché è una leva d'identità e non ha una soluzione ovvia senza capelli.
 
 - Tutte le donne hanno le **ciglia** (tre, piegate all'indietro) e il naso dell'hash ridotto **all'85%**. Senza la riduzione, naso a uncino e labbra rosse davano la strega.
 - **Labbra rosse** sempre; **orecchino** a rombo giallo e **cappello a tesa larga** nel colore del colletto, sì o no secondo l'hash. Così le donne si distinguono anche fra loro. A 34 px il cappello si legge bene, le labbra come un punto rosso, l'orecchino appena.
@@ -52,7 +52,7 @@ Se un candidato ripete naso e colletto di chi è già nella rosa, passa alla com
 ### Per la fetta che porta i ministri
 
 - **Peso:** il pennino del prototipo è fatto di quadrilateri misurati sul tracciato, circa 15 KB per faccia. In produzione si precalcola un poligono unico per ogni parte del kit.
-- **Prova di riconoscimento:** il campione va mostrato senza nomi a 3-5 persone (metodo in `docs/ricerca/estetica/grafica-italiana-giocosa.md:107`) prima di fondere la fetta. Il designer ha già escluso a vista un mento prominente calvo con la testa alta, che ricordava Mussolini.
+- **Prova di riconoscimento:** il campione va mostrato senza nomi a 3-5 persone (metodo in `docs/ricerca/estetica/grafica-italiana-giocosa.md:107`) prima di fondere la fetta. Il designer ha già tolto il mento prominente, che con la testa calva e alta ricordava Mussolini.
 - **Tono grave:** non cambia. Restano le iniziali ([Fondamenta visive](08-fondamenta-visive.md)).
 
 ### Dati e rimandi
@@ -61,4 +61,4 @@ Se un candidato ripete naso e colletto di chi è già nella rosa, passa alla com
 
 ### Scartato
 
-Le direzioni A (isotipo), B (macchiette di sagoma) e D (figurino a solidi); le varianti 1 (piani senza contorno, soddisfazione dalla postura, debole a 34 px), 3 (il cappello come segno del dicastero, solo 216 combinazioni) e 4 (sagoma piena, spilla illeggibile a 34 px); il tratto a spessore costante della variante 2, troppo vicino alla Linea di Cavandoli; il naso pieno arancio; un solo segno femminile per tutte; tutti e tre i segni su ogni donna, che faceva del cappello una divisa.
+Le direzioni A (isotipo), B (macchiette di sagoma) e D (figurino a solidi); le varianti 1 (piani senza contorno, soddisfazione dalla postura, debole a 34 px), 3 (il cappello come segno del dicastero, solo 216 combinazioni) e 4 (sagoma piena, spilla illeggibile a 34 px); il tratto a spessore costante della variante 2, troppo vicino alla Linea di Cavandoli; il naso pieno arancio; un solo segno femminile per tutte; tutti e tre i segni su ogni donna, che farebbe del cappello una divisa.
