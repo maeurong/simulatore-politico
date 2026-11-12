@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "fraunces",
+        "createdAt": "2026-11-12T14:24:23.101Z",
+        "reason": "Mario: Fraunces deciso in Direzione artistica (.scratch/v1-giocabile/issues/10) e Fondamenta visive (ticket 08)"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "createdAt": "2026-11-12T14:24:23.124Z",
+        "reason": "Mario: carta #F4ECD8 è un token delle Fondamenta visive (.scratch/v1-piano-11-ui/issues/08), riferimento vincolante per tutta la UI"
+      }
+    ]
+  }
+}
