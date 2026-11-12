@@ -1,7 +1,7 @@
 Type: prototype
 Status: open
 Blocked by: 06, 08
-Assignee: -
+Assignee: Mario
 Label: wayfinder:prototype
 Map: ../map.md
 
