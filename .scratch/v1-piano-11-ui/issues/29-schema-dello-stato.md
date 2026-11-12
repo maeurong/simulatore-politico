@@ -17,7 +17,7 @@ Deciso con Mario il 12/11/2026 in un giro su un prototipo navigabile: [29-schema
 
 ### A cosa serve
 
-Mario: lo schema risponde prima di tutto a **chi muove cosa ora**, cioè alle pressioni del trimestre: chi chiede soldi, chi minaccia, cosa va in aula, cosa arriva dal Paese. Non serve a spiegare com'è fatto lo Stato, e nemmeno a risalire da una notizia alla sua causa.
+Mario: lo schema risponde prima di tutto a **chi muove cosa ora**, cioè alle pressioni del trimestre: chi chiede soldi, chi minaccia, cosa va in aula, cosa arriva dal Paese. Le altre due letture proposte, com'è fatto lo Stato e da dove viene una notizia, vengono dopo.
 
 ### Forma: B · Tavola per poteri
 
@@ -31,14 +31,14 @@ Sotto la cornice, col dettaglio a lato.
 ### Decisioni sui casi
 
 - **All'apertura si vedono tutti i fili** (27 al governo nella Vista 04, 20 all'opposizione al turno 19), e c'è il filtro «Solo quelli in prima pagina».
-- **Battute a biro sì**, una per voce, solo sui fili in prima pagina, con le regole dei [Testi del Pungolo](09-testi-del-pungolo.md); in B stanno nel dettaglio del filo. Nel prototipo ce n'è una bozza per tipo di filo: le scrive la fetta, con lo stesso agente e lo stesso taglio di Mario dei titoli. Nel tono grave tacciono.
+- **Battute a biro sì**, una per voce, solo sui fili in prima pagina, con le regole dei [Testi del Pungolo](09-testi-del-pungolo.md); in B stanno nel dettaglio del filo. Il prototipo ne ha una bozza per tipo di filo; quelle vere le scrive la fetta, con lo stesso agente e lo stesso taglio di Mario dei titoli. Nel tono grave tacciono.
 - **Al turno zero lo schema si apre**: governo uscente coi suoi ministri, Camere sciolte a tratteggio, «si vota a fine turno». Niente tondi, perché non c'è una prima pagina.
 - **All'opposizione** le stesse colonne: il Presidente del Consiglio porta «guida: …», gli alleati del governo vanno al Presidente con la fascia d'intesa, il posto riservato libero è un filo dal tuo partito alla Camera. Le agende dei ministri avversari non si vedono, come nel [Cruscotto all'opposizione](28-cruscotto-all-opposizione.md).
 - **Tono grave**: le regole delle fondamenta, tutto a inchiostro, senza battute.
 
 ### Note di Mario ancora aperte
 
-Su B, Mario ha detto che «non si capisce e non ci si riesce bene ad orientare», per tre motivi: i **fili muti**, che per capire cosa sono vanno cliccati; il **groviglio sul Presidente**, dove finiscono quasi tutti i fili e quelli interni alla colonna Governo si accavallano; il **verso non chiaro**, perché non si vede chi agisce e chi subisce. La forma D, nata per rispondere a queste note, non lo ha convinto: le tre note vanno risolte **dentro B**, nella fetta che porta lo schema.
+Su B, Mario ha detto che «non si capisce e non ci si riesce bene ad orientare», per tre motivi: i **fili muti**, che per capire cosa sono vanno cliccati; il **groviglio sul Presidente**, dove finiscono quasi tutti i fili e quelli interni alla colonna Governo si accavallano; il **verso non chiaro**, perché non si vede chi agisce e chi subisce. Alla forma D, nata per rispondere a queste note, Mario ha preferito B («dai, va bene la B»): le tre note vanno risolte **dentro B**, nella fetta che porta lo schema.
 
 ### I fili e da dove vengono
 
@@ -60,7 +60,7 @@ Nessun campo nuovo: ogni filo viene da un campo che la Vista porta già. Quale c
 | spread | mercati → Economia | `spread_pb` |
 
 - **I tondi vogliono l'esito**: senza la PR 1 del piano di core «esito e Vista completa» non ci sono voci da numerare. Lo schema entra in 11e coi fili, come da [Fette](10-fette.md); i tondi e l'elenco delle notizie arrivano in 11f, insieme alla prima pagina.
-- **Chi guida il governo** fuori dal governo è il partito di governo senza fascia d'intesa in `alleati_avversari`. Al turno zero la Vista non lo dice; il prototipo prende il partito con più ministri. Nessun rimando: la fetta scrive i partiti del governo uscente.
+- **Chi guida il governo**, quando il giocatore è all'opposizione, è il partito di governo senza fascia d'intesa in `alleati_avversari`. Al turno zero la Vista non lo dice; il prototipo prende il partito con più ministri. Nessun rimando: la fetta scrive i partiti del governo uscente.
 - **Nessun passacarte nuovo.**
 
 ### Glossario
@@ -70,8 +70,8 @@ In `CONTEXT.md`: schema dello Stato, filo.
 ### Stranezze notate
 
 - Nella Vista 04 sei ministri su dieci hanno una proposta in sospeso perché il margine è esaurito: sono 1,8 mld di richieste al Presidente nello stesso turno.
-- «Caro energia» resta accesa a 6,97 con la soglia di accensione a 10: è l'isteresi (si spegne sotto 5), non un errore. La Vista però non dice quale dicastero muove la situazione: il filo va al Presidente.
+- «Caro energia» resta accesa a 6,97 anche se la soglia di accensione è 10: si spegne solo sotto 5. La Vista non dice quale dicastero muove la situazione, quindi il filo va al Presidente.
 
 ### Scartato
 
-A · Tavola a rete (la rete del prototipo vincolante, troppo affollata con 20-27 fili, anche sfoltita); C · Indice dei fili (elenco con la rete piccola a lato); D · Mappa delle forze (sette blocchi con i fili raggruppati in frecce scritte e col verso, nata dal giro: non ha convinto); l'apertura sui soli fili in prima pagina; lo schema barrato al turno zero.
+A · Tavola a rete (la rete del prototipo vincolante, troppo affollata con 20-27 fili, anche sfoltita); C · Indice dei fili (elenco con la rete piccola a lato); D · Mappa delle forze (sette blocchi con i fili raggruppati in frecce scritte e col verso, nata dal giro: Mario le ha preferito B); l'apertura sui soli fili in prima pagina; lo schema barrato al turno zero.

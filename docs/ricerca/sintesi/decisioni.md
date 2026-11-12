@@ -498,7 +498,7 @@ Ticket `.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md`, un giro
 Ticket `.scratch/v1-piano-11-ui/issues/29-schema-dello-stato.md`, due giri su un prototipo con quattro forme e quattro stati giocati, tutti da Viste già esistenti.
 
 - **Lo schema risponde a «chi muove cosa ora»:** le pressioni del trimestre, non la struttura dello Stato né la causa di una notizia.
-- **Forma B · Tavola per poteri:** quattro colonne fisse, un soggetto per riga, i fili da riga a riga. La rete del prototipo vincolante scartata: con 20-27 fili per turno si affolla anche sfoltita. Scartata anche la mappa delle forze, sette blocchi coi fili raggruppati in frecce scritte.
+- **Forma B · Tavola per poteri:** quattro colonne fisse, un soggetto per riga, i fili da riga a riga. La rete del prototipo vincolante scartata: con 20-27 fili per turno si affolla anche sfoltita. Mario ha preferito B anche alla mappa delle forze, sette blocchi coi fili raggruppati in frecce scritte.
 - **Restano da risolvere dentro B** i fili muti, il groviglio sul Presidente del Consiglio e il verso non chiaro: sono le tre note di Mario al primo giro.
 - **Nessun campo nuovo:** ogni filo viene da un campo della Vista (agende, cantieri, proposte, intesa, calendario, esiti, eventi, situazioni, spread). I tondi aspettano l'esito del core.
 

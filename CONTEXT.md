@@ -485,7 +485,7 @@ La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si r
 _Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
 
 **Schema dello Stato**:
-La pagina intera fuori dal sommario che mostra chi muove cosa nel trimestre: partiti, Parlamento, governo e Paese in colonne, coi fili fra loro.
+La pagina intera, fuori dalle dieci sezioni del sommario, che mostra chi muove cosa nel trimestre: partiti, Parlamento, governo e Paese in colonne, coi fili fra loro.
 _Evita_: mappa (che è quella delle regioni), organigramma, rete
 
 **Filo**:
