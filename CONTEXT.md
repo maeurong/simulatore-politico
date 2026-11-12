@@ -485,8 +485,12 @@ La schermata fuori dalla partita, che il gioco apre all'avvio: partite in corso,
 _Evita_: menu principale, home, lobby
 
 **Tracciato**:
-La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, uno stacco segna dove comincia il pericolo.
+La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, lo stacco dopo la terza casella.
 _Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
+
+**Stacco**:
+Nel tracciato, il punto in cui una regola del gioco scatta: la maggioranza persa, le Aste scoperte, il premio di maggioranza o la soglia di lista mancati. A sinistra dello stacco la regola è già scattata, o scatta alla chiusura del turno.
+_Evita_: soglia di allarme, zona gialla, preavviso
 
 **Schema dello Stato**:
 La pagina intera, fuori dalle dieci sezioni del sommario, che mostra chi muove cosa nel trimestre: partiti, Parlamento, governo e Paese in colonne, coi fili fra loro.
