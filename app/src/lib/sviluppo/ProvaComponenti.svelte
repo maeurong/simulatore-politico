@@ -10,6 +10,14 @@
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
+  import Tracciato from "$lib/componenti/Tracciato.svelte";
+  import { tracciatiDi, type Tracciato as T } from "$lib/tracciati";
+  import type { Vista } from "$lib/tipi/Vista";
+  import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
+  import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
+  import v05 from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
+  import v06 from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
+  import v07 from "../../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 
   let grave = $state(false);
   let scelta = $state<"ferma" | "dirotta" | null>(null);
@@ -43,6 +51,20 @@
     ["height:12px;border:1.5px dashed var(--grigio)", "tratteggio · spento o non ancora valido"],
   ];
   const uno = (x: number) => numero(x, 1);
+
+  const dalleViste: [string, unknown][] = [["Turno zero · 01", v01], ["Al governo · 03", v03], ["Crisi · 05", v05], ["All’opposizione · 06", v06], ["Partita finita · 07", v07]];
+  const SPREAD = { stacco: 550, passo: 75, rovesciata: true };
+  const prova = (x: Partial<T>): T => ({ nome: "tracciato.conti", valore: 0, testo: "", ramo: null, scala: SPREAD, rosso: false, grigio: false, rimando: null, prima: null, ...x });
+  const diProva: [string, T[]][] = [
+    ["Con la variazione", [
+      prova({ nome: "tracciato.consenso_coalizione", valore: 56.68, testo: "56,7%", scala: { stacco: 42, passo: 4, rovesciata: false }, prima: 53.1 }),
+      prova({ nome: "tracciato.maggioranza", valore: 14, testo: "+14", ramo: "Senato", scala: { stacco: 0, passo: 3, rovesciata: false }, prima: 15 }),
+      prova({ valore: 205, testo: "205", prima: 196 }),
+    ]],
+    ["Spread alla soglia e al tetto", [prova({ valore: 550, testo: "550" }), prova({ valore: 1000, testo: "1.000" })]],
+    ["Caselle larghe, col retino", [prova({ nome: "tracciato.maggioranza", valore: 2, testo: "+2", ramo: "Camera", scala: { stacco: 0, passo: 3, rovesciata: false } })]],
+  ];
+  let riempi = $state(2);
 </script>
 
 <div class="camp">
@@ -133,6 +155,23 @@
   </section>
 </div>
 
+<section class="tracciati">
+  <h3 class="tit">Tracciati</h3>
+  {#each dalleViste as [nome, v] (nome)}
+    <div class="stato"><b class="sec">{nome}</b><div class="trks">{#each tracciatiDi(v as Vista, []) as x (x.nome)}<Tracciato tracciato={x} />{/each}</div></div>
+  {/each}
+  {#each diProva as [nome, tre] (nome)}
+    <div class="stato" style={nome.startsWith("Caselle") ? "--cw:14px;--ch:13px;--ret:var(--retino)" : undefined}>
+      <b class="sec">{nome} <span class="min muto">· di prova</span></b><div class="trks">{#each tre as x, i (i)}<Tracciato tracciato={x} />{/each}</div>
+    </div>
+  {/each}
+  <div class="stato">
+    <b class="sec">A scatti <span class="min muto">· di prova</span></b>
+    <div class="trks"><Tracciato tracciato={prova({ nome: "tracciato.maggioranza", valore: riempi, testo: String(riempi), ramo: "Camera", scala: { stacco: 0, passo: 3, rovesciata: false }, rosso: riempi < 0 })} /></div>
+    <span class="fila"><Pulsante forma="piccolo" onclick={() => (riempi = riempi === 2 ? 20 : riempi === 20 ? -12 : 2)}>Cambia: {riempi}</Pulsante></span>
+  </div>
+</section>
+
 <div class="lato">
   <div class="corpo">
     <Segnaposto sezione={t("sommario.governo")} fetta="11b" />
@@ -183,6 +222,10 @@
   .fila { display: flex; gap: 6px; margin-top: var(--s2); flex-wrap: wrap; align-items: center }
   .grande { gap: 18px; font-size: 17px; margin-top: 0 }
   .contenitore { border: 1.5px dashed var(--grigio); padding: var(--s1) var(--s2) }
+
+  .tracciati { padding: 0 var(--marg) var(--s3) }
+  .stato { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) 0; border-top: var(--filo) }
+  .trks { display: flex; flex-wrap: wrap; row-gap: var(--s2) }
 
   /* flex, non grid: il 30% di --lato si misura sulla riga intera, come nella sezione del prototipo */
   .lato { display: flex; gap: var(--canale); padding: 0 var(--marg) var(--marg); height: 640px }

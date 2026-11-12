@@ -42,7 +42,7 @@
   /* filetti */
   --filo: 1px solid var(--grigio); --bordo: 1.5px solid var(--ink); --forte: 2px solid var(--ink); --doppio: 3px double var(--ink);
   /* movimento: durate per --k */
-  --k: 1; --t-press: 80ms; --e-work: cubic-bezier(.2, 0, .38, .9);
+  --k: 1; --t-press: 80ms; --t-casella: 40ms; --e-work: cubic-bezier(.2, 0, .38, .9);
   background: var(--carta); color: var(--ink); font: 400 var(--c-corpo)/1.35 var(--txt);
   font-variant-numeric: tabular-nums lining-nums;
   accent-color: var(--ink);

@@ -17,9 +17,14 @@
   "stato.zero": "Turno zero · Camere sciolte",
   "stato.fine": "Partita finita",
 
-  "tracciato.consenso": "Consenso",
-  "tracciato.maggioranza": "Maggioranza C / S",
+  "tracciato.consenso_partito": "Consenso · partito",
+  "tracciato.consenso_coalizione": "Consenso · coalizione",
+  "tracciato.maggioranza": "Maggioranza",
+  "tracciato.seggi_attesi": "Seggi attesi",
+  "tracciato.per_farlo_cadere": "Per farlo cadere",
   "tracciato.conti": "Conti · spread",
+  "tracciato.pb": "pb",
+  "tracciato.arriva": "arriva con la fetta {fetta}",
 
   "sommario.etichetta": "Sommario",
   "sommario.prima_pagina": "Prima pagina",
