@@ -1,0 +1,760 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Partiti» (24), mappa v1-piano-11-ui.
+  Domanda: com'è fatta la sezione Partiti? L'asse coi partiti IA e il tuo, posizione dichiarata e percepita (storia 117),
+  leader con nome e caricatura (103), vocazione e regola di movimento in una riga (100), minaccia di scissione (108),
+  nascite e scioglimenti (108-109); gli alleati con intesa, cause, ultimatum e soglie (83); il parlamento in carica;
+  le casse dei partiti (122, 129). All'opposizione gli alleati sono quelli del governo avversario, in fasce.
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Schieramento — l'asse a tutta pagina coi partiti sopra, dichiarata e percepita; sotto, una scheda per partito
+    B  Schedario    — tabella densa, una riga per partito nell'ordine dell'asse; sotto, le due Camere a barre
+    C  Campi        — tre colonne per rapporto con te (maggioranza, opposizione, fuori dalle Camere), l'intesa in grande
+  In tutte la scheda del partito sta nel dettaglio a lato; senza scelta il lato mostra le Camere in carica e quelle che
+  uscirebbero votando oggi.
+  Stati, ?stato=: governo (Vista 03) · ultimatum (seme 1, turno 13: Sinistra in ultimatum, minaccia di scissione, Lista
+    dei Territori nata) · dieci (seme 14, turno 37: dieci partiti, il tetto, e due leader nuovi) · opposizione (06) ·
+    opp_fine (seme 1, turno 19) · sciolto (seme 43, turno 21: Estrema sinistra sciolta; a partita finita, qui solo per
+    vedere la riga) · grave (08) · zero (01, turno zero)
+  Altri parametri: ?fin=1280|1440 ?scala=1|1.25
+  Dati: le Viste campione, nessuna aggiunta a genera/ (dati incollati da uno script che legge viste/). Ricavati qui:
+  la minaccia (distanza ≥ 0,5: `VocePartito.minaccia` è nella spec del core, le soglie in `VistaCampagna`), le elezioni
+  senza seggi di fila (da `Vista.elezioni`), il leader nuovo (confronto col turno zero: in partita lo dice il registro,
+  voce `cambio_di_leader`), l'origine del partito nato (la dice il registro, voci `partito_di_protesta` e `scissione`;
+  qui scritta a mano dove la nota del 26 la sa). Rifatte dai dati del core, e quindi un rimando: le soglie dell'intesa,
+  40 per l'ultimatum e 25 per l'uscita (manopole.toml, soglia_ultimatum e soglia_uscita), che la Vista non porta.
+  Colori dei partiti: gli otto del ticket 23; i partiti nati in partita a retino grigio. Facce: variante 5 del 32,
+  copiata dal 18. Stile: 08-fondamenta (forma A), cornice del 17/18. Non è codice di produzione. Buttare dopo il verdetto.
+
+  VERDETTO (Mario, 12/11/2026), nel ticket 24: A · Schieramento; carisma del leader come numero con segno; partiti nati
+  a retino grigio; senza scelta il lato mostra le Camere. Il file si apre su questa forma. Scartate: B e C dalla barra.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo Partiti · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* cornice A · Gerenza */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:2px}
+.capo h3{margin:0}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+
+.lato{border-left:var(--forte);padding-left:var(--canale);display:grid;gap:8px;align-content:start}
+.lato h4{font-size:var(--c-sez)}
+.chip{display:inline-block;border:1.5px solid var(--ink);padding:0 6px;font-size:var(--c-min);font-weight:700;white-space:nowrap;line-height:1.4}
+.chip.rosso{border-color:var(--rosso);color:var(--rosso)}
+.chip.pieno{background:var(--ink);color:var(--carta)}
+.chip.ok{border-color:var(--verde);color:var(--verde)}
+.chip.tr{border-style:dashed;border-color:var(--grigio);color:var(--grigio)}
+.sez-l{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--grigio);border-bottom:1.5px solid var(--ink);padding-bottom:2px;margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+.sez-l span{letter-spacing:0;text-transform:none;font-weight:400}
+
+/* ===== Partiti (ticket 24) ===== */
+.par{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.par>.lato{overflow:hidden auto;min-height:0;padding-bottom:8px}
+.par>.pag{min-height:0;overflow:hidden auto;display:grid;gap:10px;align-content:start}
+.sw{display:inline-block;width:10px;height:10px;border:1px solid var(--ink);vertical-align:-1px;margin-right:5px;flex:none}
+.sw.nato{background:var(--retino)!important}
+.g .sw{background:var(--carta)!important}
+.tu-box{display:inline-grid;place-items:center;border:2px solid var(--biro);color:var(--biro);font-weight:800;font-family:var(--tit);flex:none}
+.g .tu-box{border-color:var(--ink);color:var(--ink)}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.sciolto{color:var(--grigio)}
+.sciolto .nmP{text-decoration:line-through}
+.nmP{font-weight:700}
+.ld{font-size:var(--c-min);color:var(--grigio)}
+.ld b{color:var(--ink);font-weight:400}
+.ind1{font-size:var(--c-min);color:var(--grigio);line-height:1.25}
+.num{font-weight:700;white-space:nowrap}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none;position:relative}
+.cas i.on{background:var(--ink)}
+.cas i.rs{border-color:var(--rosso)}
+.cas i.rs.on{background:var(--rosso)}
+.cas i.sg::after{content:"";position:absolute;right:-3.5px;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.g .cas i.sg::after{background:var(--ink)}
+.intesa{display:grid;gap:2px}
+.intesa .cas{--cw:12px;--ch:10px}
+.ints{font-size:var(--c-min);color:var(--grigio);display:flex;justify-content:space-between;gap:6px}
+.barraI{position:relative;height:12px;border:1px solid var(--grigio);background:var(--velo)}
+.barraI i{position:absolute;inset:0 auto 0 0;background:var(--ink)}
+.barraI i.ult{background:var(--rosso)}
+.barraI b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.barraI em{position:absolute;top:13px;font-size:10px;font-style:normal;color:var(--rosso);transform:translateX(-50%);white-space:nowrap}
+.cause{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;font-size:var(--c-min)}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.dati dt{color:var(--grigio)}
+.dati dd b{font-weight:700}
+.mossa{font-size:var(--c-min);border-left:2px solid var(--biro);padding-left:6px;color:var(--ink);line-height:1.3}
+.g .mossa{border-color:var(--ink)}
+.prom{display:grid;grid-template-columns:minmax(0,1fr) auto;font-size:var(--c-min);gap:1px 8px}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.testa{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.testa h4{font-size:var(--c-sez)}
+.ax text{font:400 11px var(--txt);fill:var(--grigio)}
+.ax .nmA{font-weight:700;fill:var(--ink);font-size:12px}
+.ax .nmA.sc{text-decoration:line-through;fill:var(--grigio)}
+.sel-ring{outline:2px solid var(--ink);outline-offset:1px}
+[data-sel]{cursor:pointer}
+
+/* A · Schieramento */
+.schier{display:grid;grid-template-columns:repeat(var(--nc),minmax(0,1fr));gap:6px}
+.sch .cas{--cw:10px;--ch:9px}
+.sch .cas i.sg::after{right:-2.5px}
+.sch .ind1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sch{border:var(--bordo);padding:6px 8px 7px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;align-content:start;border-top-width:5px;min-width:0}
+.sch>:not(.fz){grid-column:2}
+.sch .fz{grid-row:1/span 3;grid-column:1;align-self:start}
+.sch .largo{grid-column:1/-1}
+.sch:hover{background:var(--velo)}
+.sch.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+
+.sch .nmP{font-size:var(--c-sec);line-height:1.15}
+.sch.sciolto{border-style:dashed;border-color:var(--grigio)}
+.sch .rr{display:flex;justify-content:space-between;gap:4px;font-size:var(--c-min);min-width:0}
+.sch .rr>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.asseG{border-bottom:var(--doppio);padding-bottom:4px}
+
+/* B · Schedario */
+.lst{width:100%;border-collapse:collapse;font-size:var(--c-sec)}
+.lst th{font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;color:var(--grigio);text-align:left;font-weight:700;border-bottom:1.5px solid var(--ink);padding:2px 5px;white-space:nowrap}
+.lst th.n,.lst td.n{text-align:right}
+.lst td{border-bottom:var(--filo);padding:3px 5px;vertical-align:middle}
+.lst tr.riga:hover td{background:var(--velo)}
+.lst tr.sel td{background:var(--velo)}
+.lst tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--ink)}
+.lst tr.mi td:first-child{box-shadow:inset 3px 0 0 var(--rosso)}
+.lst td.f{width:40px;padding:2px 4px}
+.lst td.nm{white-space:nowrap}
+.lst td.ind{font-size:var(--c-min);color:var(--grigio);max-width:0;width:22%}
+.lst td.ind>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lst td.n{white-space:nowrap}
+.camere{display:grid;gap:4px}
+.cam{display:grid;grid-template-columns:62px minmax(0,1fr) 54px;gap:8px;align-items:center;font-size:var(--c-min)}
+.stk{display:flex;height:14px;border:1px solid var(--ink);position:relative}
+.stk i{height:100%;border-right:1px solid var(--carta)}
+.stk b{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.g .stk b{background:var(--ink)}
+
+/* C · Campi */
+.campi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.campi>section{padding:0 14px;border-left:var(--filo);display:grid;gap:6px;align-content:start;min-width:0}
+.campi>section:first-child{padding-left:0;border-left:0}
+.campi>section:last-child{padding-right:0}
+.campi .capo h3{font-size:var(--c-riq)}
+.fas{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 8px;align-items:center;border:var(--filo);border-left:5px solid var(--ink);padding:5px 7px}
+.fas:hover{background:var(--velo)}
+.fas.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.fas.sciolto{border-style:dashed}
+.fas .t{min-width:0;line-height:1.2}
+.fas .s{grid-column:1/-1;font-size:var(--c-min);color:var(--grigio);line-height:1.25}
+.fas .intesa{grid-column:1/-1}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="governo">governo</button><button data-v="ultimatum">ultimatum</button><button data-v="dieci">dieci partiti</button><button data-v="opposizione">opposizione</button><button data-v="opp_fine">opp. a fine legislatura</button><button data-v="sciolto">sciolto</button><button data-v="grave">tono grave</button><button data-v="zero">turno zero</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+const D = {"governo":{"come":"Vista 03: seme 4 a 4,5, turno 2, al governo con Centrodestra e Destra","turno":2,"data":{"anno":2027,"trimestre":2},"governa":true,"crisi":false,"fase":"ordinaria","finita":false,"turni_al_voto":18,"spread":86,"grave":false,"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.0,"valence":-0.613476,"al_governo":false,"vocazione":"identitaria","leader":"Anna Ferrucci","regola":"sticker","sciolto":false,"cassa":67898,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"sinistra","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.0,"valence":0.969668,"al_governo":false,"vocazione":"mista","leader":"Luca Benedetti","regola":"aggregator","sciolto":false,"cassa":889890,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"centrosinistra","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.0,"valence":-0.522527,"al_governo":false,"vocazione":"mista","leader":"Chiara Lombardo","regola":"hunter","sciolto":false,"cassa":155219,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true}]},{"id":"centro","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.0,"valence":-0.889093,"al_governo":false,"vocazione":"governista","leader":"Giorgio Valli","regola":"governator","sciolto":false,"cassa":110799,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}]},{"id":"centrodestra","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":5.0,"valence":-0.42514,"al_governo":true,"vocazione":"mista","leader":"Silvia Moretti","regola":"hunter","sciolto":false,"cassa":186996,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true}]},{"id":"destra","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":6.0,"valence":0.8218195199999999,"al_governo":true,"vocazione":"mista","leader":"Davide Ranieri","regola":"aggregator","sciolto":false,"cassa":712398,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"estrema_destra","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":7.0,"valence":0.015048,"al_governo":false,"vocazione":"identitaria","leader":"Bruno Castellani","regola":"sticker","sciolto":false,"cassa":159557,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"giocatore","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.5,"valence":0.26578124999999997,"al_governo":true,"vocazione":"mista","leader":"","regola":"sticker","sciolto":false,"cassa":1446455,"promesse":[]}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[120,63],"centrosinistra":[20,8],"centro":[14,2],"centrodestra":[32,15],"destra":[116,62],"estrema_destra":[22,12],"giocatore":[76,38]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[134,66],"centrosinistra":[41,18],"centro":[0,0],"centrodestra":[22,9],"destra":[136,72],"estrema_destra":[0,0],"giocatore":[67,35]},"sondaggio":{"estrema_sinistra":0.022381699781598294,"sinistra":0.31472766643553474,"centrosinistra":0.08569877148344732,"centro":0.008011158096499242,"centrodestra":0.046207436441144556,"destra":0.3449262904212248,"estrema_destra":0.0029038551588765472,"giocatore":0.17514312218167438},"astensione":0.31960255700212353,"alleati":[{"partito":"centrodestra","intesa":54.86607669616519,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"spartizione","variazioni":[{"partito":4,"causa":"spartizione","delta":-5.133923303834813,"turno":1}]},{"partito":"destra","intesa":62.126843657817105,"ultimatum":false,"causa_ultimatum":null,"causa_principale":null,"variazioni":[{"partito":5,"causa":"spartizione","delta":2.126843657817105,"turno":1}]}],"avversari":[],"mosse":[{"partito":"centro","testo":"Porta nel posto riservato Sgravio contributivo nel Mezzogiorno: 15%; 225 seggi fra Camera e Senato dei partiti alleati la voterebbero"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.024615046106056,0,0],"sinistra":[0.33282626275304666,120,63],"centrosinistra":[0.05741840834508147,20,8],"centro":[0.04134085153471969,14,2],"centrodestra":[0.07024873934619229,32,15],"destra":[0.24933003381413937,116,62],"estrema_destra":[0.06005696816351142,22,12],"giocatore":[0.16416368993725308,76,38]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":56.627684904404376,"margine":[23,14]},"ultimatum":{"come":"17-cruscotto.json › ultimatum: seme 1, turno 13, Sinistra in ultimatum, Lista dei Territori nata","turno":13,"data":{"anno":2030,"trimestre":1},"governa":true,"crisi":false,"fase":"ordinaria","finita":false,"turni_al_voto":7,"spread":93,"grave":false,"partiti":[{"al_governo":false,"cassa":523020,"id":"estrema_sinistra","leader":"Anna Ferrucci","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.389984375,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":-0.613476,"vocazione":"identitaria"},{"al_governo":true,"cassa":5202042,"id":"sinistra","leader":"Luca Benedetti","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.7551544371681054,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.609753640604094,"vocazione":"mista"},{"al_governo":true,"cassa":942579,"id":"centrosinistra","leader":"Chiara Lombardo","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.1438897522362796,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.886670178827,"vocazione":"mista"},{"al_governo":true,"cassa":645062,"id":"centro","leader":"Giorgio Valli","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.130589503974658,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}],"regola":"governator","sciolto":false,"valence":-1.2532361788270001,"vocazione":"governista"},{"al_governo":false,"cassa":1135146,"id":"centrodestra","leader":"Silvia Moretti","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":4.506772630990471,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.519283178827,"vocazione":"mista"},{"al_governo":false,"cassa":4485405,"id":"destra","leader":"Davide Ranieri","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":5.95,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.7265758211729999,"vocazione":"mista"},{"al_governo":false,"cassa":1089573,"id":"estrema_destra","leader":"Bruno Castellani","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":6.430366609374999,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":0.015048,"vocazione":"identitaria"},{"al_governo":true,"cassa":3798080,"id":"giocatore","leader":"","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.100314810080388,"promesse":[],"regola":"sticker","sciolto":false,"valence":-0.1865950275079547,"vocazione":"mista"},{"al_governo":false,"cassa":918956,"id":"nuovo_8","leader":"Fabio Barbieri","nome":"Lista dei Territori","posizione_dichiarata":4.837459396763153,"posizione_percepita":4.845586426924996,"promesse":[],"regola":"aggregator","sciolto":false,"valence":1.0360018125,"vocazione":"mista"}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[134,72],"centrosinistra":[22,10],"centro":[14,6],"centrodestra":[27,11],"destra":[100,52],"estrema_destra":[24,10],"giocatore":[65,32],"nuovo_8":[14,7]},"proiezione":{"estrema_sinistra":[16,7],"sinistra":[81,38],"centrosinistra":[24,13],"centro":[0,0],"centrodestra":[26,12],"destra":[92,47],"estrema_destra":[39,22],"giocatore":[14,6],"nuovo_8":[108,55]},"sondaggio":{"estrema_sinistra":0.03662713846039655,"sinistra":0.17833503168603093,"centrosinistra":0.05074797505150022,"centro":0.010147894281589031,"centrodestra":0.06673798482457481,"destra":0.22101352549807,"estrema_destra":0.10564174487450372,"giocatore":0.053604030928886236,"nuovo_8":0.27714467439444856},"astensione":0.2894404408286526,"alleati":[{"causa_principale":"sondaggi_in_calo","causa_ultimatum":"sondaggi_in_calo","intesa":29.096898936094526,"partito":"sinistra","ultimatum":true,"variazioni":[{"causa":"emendamento_respinto","delta":-5.0,"partito":1,"turno":12},{"causa":"quota_scoperta","delta":-0.7958309859154937,"partito":1,"turno":12},{"causa":"sondaggi_in_calo","delta":-14.561793044402002,"partito":1,"turno":12}]},{"causa_principale":"emendamento_respinto","causa_ultimatum":null,"intesa":46.136468068689716,"partito":"centrosinistra","ultimatum":false,"variazioni":[{"causa":"emendamento_respinto","delta":-5.0,"partito":2,"turno":12},{"causa":"sondaggi_in_calo","delta":-0.6343469033338067,"partito":2,"turno":12}]},{"causa_principale":"sondaggi_in_calo","causa_ultimatum":null,"intesa":49.90915202260561,"partito":"centro","ultimatum":false,"variazioni":[{"causa":"emendamento_respinto","delta":-2.5,"partito":3,"turno":12},{"causa":"sondaggi_in_calo","delta":-2.6810673927230226,"partito":3,"turno":12}]}],"avversari":[],"mosse":[{"partito":"destra","testo":"Presenta la sfiducia al governo: Sinistra in ultimatum la voterebbe"},{"partito":"destra","testo":"Porta nel posto riservato Ingressi per lavoro: attuali; 20 seggi fra Camera e Senato dei partiti alleati la voterebbero"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.02476179762742284,0,0],"sinistra":[0.32397628888818747,134,72],"centrosinistra":[0.05693706490996889,22,10],"centro":[0.03688616563103453,14,6],"centrodestra":[0.0658120526249419,27,11],"destra":[0.2774490584620687,114,59],"estrema_destra":[0.05739244486921177,24,10],"giocatore":[0.15678512698716388,65,32]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":29.28349319480064,"margine":[34,19]},"dieci":{"come":"17-cruscotto.json › crisi_provvisorio: seme 14, turno 37, dieci partiti (il tetto), crisi","turno":37,"data":{"anno":2036,"trimestre":1},"governa":true,"crisi":true,"fase":"ordinaria","finita":false,"turni_al_voto":3,"spread":60,"grave":false,"partiti":[{"al_governo":false,"cassa":1119051,"id":"estrema_sinistra","leader":"Anna Ferrucci","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.6368601562499998,"promesse":[{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"11 €/h","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":-0.613476,"vocazione":"identitaria"},{"al_governo":false,"cassa":6038918,"id":"sinistra","leader":"Anna Romano","nome":"Sinistra","posizione_dichiarata":2.5,"posizione_percepita":3.1419264450540925,"promesse":[{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"9 €/h","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":1.0304702249467008,"vocazione":"mista"},{"al_governo":false,"cassa":1264595,"id":"centrosinistra","leader":"Chiara Lombardo","nome":"Centrosinistra","posizione_dichiarata":3.5,"posizione_percepita":3.502723658278164,"promesse":[{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.6007242866286463,"vocazione":"mista"},{"al_governo":false,"cassa":750115,"id":"centro","leader":"Giorgio Valli","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.1799926755041605,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}],"regola":"governator","sciolto":false,"valence":-1.0290576262570412,"vocazione":"governista"},{"al_governo":true,"cassa":1774019,"id":"centrodestra","leader":"Silvia Moretti","nome":"Centrodestra","posizione_dichiarata":4.500000000000001,"posizione_percepita":4.439703262058118,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"licenze chiuse","in_sospeso":true},{"disposizione":"Leva militare","gradino":"volontaria rafforzata","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.5118617272442864,"vocazione":"mista"},{"al_governo":false,"cassa":7442527,"id":"destra","leader":"Anna Gallo","nome":"Destra","posizione_dichiarata":5.5,"posizione_percepita":5.509775532591814,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"licenze chiuse","in_sospeso":true},{"disposizione":"Leva militare","gradino":"volontaria rafforzata","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.27210243102548276,"vocazione":"mista"},{"al_governo":false,"cassa":1788492,"id":"estrema_destra","leader":"Bruno Castellani","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":6.95,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"licenze chiuse","in_sospeso":true},{"disposizione":"Leva militare","gradino":"obbligatoria","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":0.015048,"vocazione":"identitaria"},{"al_governo":true,"cassa":7656731,"id":"giocatore","leader":"","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.476236205449374,"promesse":[],"regola":"sticker","sciolto":false,"valence":-0.04623742540100882,"vocazione":"mista"},{"al_governo":false,"cassa":370167,"id":"nuovo_8","leader":"Davide Ferraro","nome":"Prospettiva","posizione_dichiarata":2.0397932695772227,"posizione_percepita":2.4414323671896536,"promesse":[],"regola":"sticker","sciolto":false,"valence":-0.5105068981579688,"vocazione":"identitaria"},{"al_governo":false,"cassa":409561,"id":"nuovo_9","leader":"Elena Esposito","nome":"La Bussola","posizione_dichiarata":5.984288019640384,"posizione_percepita":5.9608199377254465,"promesse":[],"regola":"sticker","sciolto":false,"valence":0.23033081249999998,"vocazione":"identitaria"}],"seggi":{"estrema_sinistra":[19,9],"sinistra":[74,39],"centrosinistra":[21,9],"centro":[13,6],"centrodestra":[33,11],"destra":[168,88],"estrema_destra":[29,13],"giocatore":[36,22],"nuovo_8":[3,1],"nuovo_9":[4,2]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[132,67],"centrosinistra":[15,6],"centro":[18,9],"centrodestra":[24,11],"destra":[31,13],"estrema_destra":[35,17],"giocatore":[52,26],"nuovo_8":[48,26],"nuovo_9":[45,25]},"sondaggio":{"estrema_sinistra":0.0022033703289432143,"sinistra":0.3238852584474574,"centrosinistra":0.046501780836867665,"centro":0.05036935771537189,"centrodestra":0.047931098789186354,"destra":0.08365062586729324,"estrema_destra":0.09286682786150194,"giocatore":0.11914541066825797,"nuovo_8":0.1255884988674344,"nuovo_9":0.10785777061768595},"astensione":0.2934628561758853,"alleati":[{"causa_principale":"sondaggi_in_calo","causa_ultimatum":null,"intesa":53.065750163052364,"partito":"centrodestra","ultimatum":false,"variazioni":[{"causa":"quota_scoperta","delta":-0.6786592178770974,"partito":4,"turno":36},{"causa":"sondaggi_in_calo","delta":-3.632766733790362,"partito":4,"turno":36}]}],"avversari":[],"mosse":[{"partito":"estrema_destra","testo":"Porta nel posto riservato Detrazione edilizia: nessuna; nessun seggio fra Camera e Senato dei partiti alleati la voterebbe"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2031,"trimestre":4},"voti":{"estrema_sinistra":[0.05664239331055615,22,10],"sinistra":[0.18336558269618758,74,39],"centrosinistra":[0.05436988631750459,21,9],"centro":[0.03357676034857499,13,6],"centrodestra":[0.08390884943470164,33,11],"destra":[0.41772669104008137,168,88],"estrema_destra":[0.08424931615309271,33,15],"giocatore":[0.08616052069930098,36,22]}},{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.025520238030032595,0,0],"sinistra":[0.33113071960809964,137,74],"centrosinistra":[0.05841344394686362,23,9],"centro":[0.04009008662372674,16,8],"centrodestra":[0.06874322792395629,28,12],"destra":[0.2520003398014817,104,50],"estrema_destra":[0.06102134487451261,25,10],"giocatore":[0.16308059919132678,67,37]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":16.707650945744433,"margine":[-132,-68]},"opposizione":{"come":"Vista 06: seme 1 a 1,5, turno 2, all’opposizione del governo IA della Destra","turno":2,"data":{"anno":2027,"trimestre":2},"governa":false,"crisi":false,"fase":"ordinaria","finita":false,"turni_al_voto":18,"spread":75,"grave":false,"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.0,"valence":-0.613476,"al_governo":false,"vocazione":"identitaria","leader":"Anna Ferrucci","regola":"sticker","sciolto":false,"cassa":64170,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"sinistra","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.0,"valence":0.6696679999999999,"al_governo":true,"vocazione":"mista","leader":"Luca Benedetti","regola":"aggregator","sciolto":false,"cassa":865432,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"centrosinistra","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.0,"valence":-0.822527,"al_governo":true,"vocazione":"mista","leader":"Chiara Lombardo","regola":"hunter","sciolto":false,"cassa":160009,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true}]},{"id":"centro","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.0,"valence":-1.189093,"al_governo":true,"vocazione":"governista","leader":"Giorgio Valli","regola":"governator","sciolto":false,"cassa":109445,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}]},{"id":"centrodestra","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":5.0,"valence":-0.72514,"al_governo":true,"vocazione":"mista","leader":"Silvia Moretti","regola":"hunter","sciolto":false,"cassa":200496,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true}]},{"id":"destra","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":6.0,"valence":0.5207189999999999,"al_governo":true,"vocazione":"mista","leader":"Davide Ranieri","regola":"aggregator","sciolto":false,"cassa":925331,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"estrema_destra","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":7.0,"valence":0.015048,"al_governo":false,"vocazione":"identitaria","leader":"Bruno Castellani","regola":"sticker","sciolto":false,"cassa":175346,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"giocatore","nome":"Partito del giocatore","posizione_dichiarata":1.5,"posizione_percepita":1.5,"valence":0.26578124999999997,"al_governo":false,"vocazione":"mista","leader":"","regola":"sticker","sciolto":false,"cassa":1228981,"promesse":[]}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[134,72],"centrosinistra":[23,10],"centro":[16,7],"centrodestra":[31,12],"destra":[136,71],"estrema_destra":[26,10],"giocatore":[34,18]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[102,52],"centrosinistra":[24,9],"centro":[0,0],"centrodestra":[33,17],"destra":[191,98],"estrema_destra":[29,13],"giocatore":[21,11]},"sondaggio":{"estrema_sinistra":0.01635797954297257,"sinistra":0.2801210114850635,"centrosinistra":0.06266545710638849,"centro":0.026584219842227107,"centrodestra":0.05842713227617882,"destra":0.406041781532178,"estrema_destra":0.0929886680243208,"giocatore":0.056813750190670885},"astensione":0.2882674420602875,"alleati":[],"avversari":[{"partito":"sinistra","fascia":"incrinata","causa_ultimatum":null},{"partito":"centrosinistra","fascia":"incrinata","causa_ultimatum":null},{"partito":"centro","fascia":"incrinata","causa_ultimatum":null},{"partito":"centrodestra","fascia":"incrinata","causa_ultimatum":null}],"mosse":[{"partito":"destra","testo":"Forma il governo con Sinistra, Centrosinistra, Centro e Centrodestra: la maggioranza che gli vale di più"},{"partito":"destra","testo":"Programma di governo: 1 disposizione, Sgravio contributivo nel Mezzogiorno"},{"partito":"destra","testo":"Porta in aula: Sgravio contributivo nel Mezzogiorno: 15%"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Economia e Finanze"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Infrastrutture e Trasporti"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Interno"},{"partito":"estrema_destra","testo":"Porta nel posto riservato Autonomia differenziata: intese complete; 250 seggi fra Camera e Senato dei partiti di governo la voterebbero"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.023354442055336346,0,0],"sinistra":[0.32377256441708463,134,72],"centrosinistra":[0.05940474550592579,23,10],"centro":[0.04034803070680274,16,7],"centrodestra":[0.07523320579352974,31,12],"destra":[0.32880055487617244,136,71],"estrema_destra":[0.06617133816110105,26,10],"giocatore":[0.0829151184840473,34,18]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":83.38396022420359,"margine":[139,71]},"opp_fine":{"come":"28-opposizione.json › fine: seme 1 a 1,5, turno 19, ultimo anno all’opposizione","turno":19,"data":{"anno":2031,"trimestre":3},"governa":false,"crisi":false,"fase":"ordinaria","finita":false,"turni_al_voto":1,"spread":93,"grave":false,"partiti":[{"al_governo":false,"cassa":694743,"id":"estrema_sinistra","leader":"Anna Ferrucci","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.54768496875,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":-0.613476,"vocazione":"identitaria"},{"al_governo":true,"cassa":8297495,"id":"sinistra","leader":"Luca Benedetti","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.879975410520316,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.9196364549010002,"vocazione":"mista"},{"al_governo":true,"cassa":1531637,"id":"centrosinistra","leader":"Chiara Lombardo","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.0672276880869145,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.5725585450989997,"vocazione":"mista"},{"al_governo":true,"cassa":1060898,"id":"centro","leader":"Giorgio Valli","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":3.8596168363281254,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}],"regola":"governator","sciolto":false,"valence":-0.9391245450989997,"vocazione":"governista"},{"al_governo":true,"cassa":1955797,"id":"centrodestra","leader":"Silvia Moretti","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":4.760013840369143,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.4751715450989997,"vocazione":"mista"},{"al_governo":true,"cassa":7590245,"id":"destra","leader":"Davide Ranieri","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":5.075935058938561,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.7599655938782802,"vocazione":"mista"},{"al_governo":false,"cassa":1990487,"id":"estrema_destra","leader":"Bruno Castellani","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":6.286382366129882,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":0.015048,"vocazione":"identitaria"},{"al_governo":false,"cassa":3066729,"id":"giocatore","leader":"","nome":"Partito del giocatore","posizione_dichiarata":1.5,"posizione_percepita":2.058415930859375,"promesse":[],"regola":"sticker","sciolto":false,"valence":0.04432482198614504,"vocazione":"mista"},{"al_governo":false,"cassa":739469,"id":"nuovo_8","leader":"Fabio Barbieri","nome":"Lista dei Territori","posizione_dichiarata":2.5028313579837853,"posizione_percepita":2.5487400355513476,"promesse":[],"regola":"sticker","sciolto":false,"valence":0.127122347953125,"vocazione":"mista"}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[134,72],"centrosinistra":[23,10],"centro":[16,7],"centrodestra":[31,12],"destra":[136,71],"estrema_destra":[26,10],"giocatore":[30,16],"nuovo_8":[4,2]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[146,78],"centrosinistra":[29,12],"centro":[0,0],"centrodestra":[25,11],"destra":[72,40],"estrema_destra":[52,27],"giocatore":[26,9],"nuovo_8":[50,23]},"sondaggio":{"estrema_sinistra":0.0296014919316412,"sinistra":0.35069446399653476,"centrosinistra":0.05889259652893878,"centro":0.020122279819797705,"centrodestra":0.07637221836577256,"destra":0.16990202279710406,"estrema_destra":0.13982311829981767,"giocatore":0.047198334869096886,"nuovo_8":0.1073934733912964},"astensione":0.3136219118787423,"alleati":[],"avversari":[{"causa_ultimatum":"norma_lontana","fascia":"ultimatum","partito":"sinistra"},{"causa_ultimatum":null,"fascia":"incrinata","partito":"centrosinistra"},{"causa_ultimatum":"sondaggi_in_calo","fascia":"ultimatum","partito":"centro"},{"causa_ultimatum":null,"fascia":"incrinata","partito":"centrodestra"}],"mosse":[{"partito":"estrema_sinistra","testo":"Minaccia di scissione: la posizione percepita dista 0,5 punti dalla dichiarata"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Sanità"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Istruzione e Ricerca"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Ambiente ed Energia"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Interno"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.023354442055336346,0,0],"sinistra":[0.32377256441708463,134,72],"centrosinistra":[0.05940474550592579,23,10],"centro":[0.04034803070680274,16,7],"centrodestra":[0.07523320579352974,31,12],"destra":[0.32880055487617244,136,71],"estrema_destra":[0.06617133816110105,26,10],"giocatore":[0.0829151184840473,34,18]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":67.59835815081479,"margine":[139,71]},"sciolto":{"come":"30-eredita.json › vista: seme 43, turno 21, Estrema sinistra sciolta (partita finita: qui solo per vedere lo sciolto)","turno":21,"data":{"anno":2032,"trimestre":1},"governa":false,"crisi":false,"fase":"trattativa","finita":true,"turni_al_voto":19,"spread":108,"grave":false,"partiti":[{"al_governo":false,"cassa":31870,"id":"estrema_sinistra","leader":"Anna Ferrucci","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.3065624999999998,"promesse":[],"regola":"sticker","sciolto":true,"valence":-0.613476,"vocazione":"identitaria"},{"al_governo":false,"cassa":399914,"id":"sinistra","leader":"Marco Ferraro","nome":"Sinistra","posizione_dichiarata":2.5,"posizione_percepita":2.41875,"promesse":[{"disposizione":"Detrazione edilizia","gradino":"110%","in_sospeso":true},{"disposizione":"Export di armi","gradino":"restrittivo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":1.297793,"vocazione":"mista"},{"al_governo":false,"cassa":70071,"id":"centrosinistra","leader":"Chiara Lombardo","nome":"Centrosinistra","posizione_dichiarata":3.0220865210530046,"posizione_percepita":3.316897050982244,"promesse":[{"disposizione":"Detrazione edilizia","gradino":"65%","in_sospeso":true},{"disposizione":"Export di armi","gradino":"restrittivo","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.5630525515301897,"vocazione":"mista"},{"al_governo":false,"cassa":47092,"id":"centro","leader":"Giorgio Valli","nome":"Centro","posizione_dichiarata":4.5,"posizione_percepita":4.256554565814022,"promesse":[{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true},{"disposizione":"Detrazione edilizia","gradino":"36-50%","in_sospeso":true}],"regola":"governator","sciolto":false,"valence":-0.9296185515301898,"vocazione":"governista"},{"al_governo":true,"cassa":79354,"id":"centrodestra","leader":"Silvia Moretti","nome":"Centrodestra","posizione_dichiarata":4.986479280412268,"posizione_percepita":4.672596002603072,"promesse":[{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true},{"disposizione":"Incentivo fiscale agli investimenti","gradino":"40% del costo","in_sospeso":true}],"regola":"hunter","sciolto":false,"valence":-0.4656655515301898,"vocazione":"mista"},{"al_governo":false,"cassa":336492,"id":"destra","leader":"Fabio Bruno","nome":"Destra","posizione_dichiarata":5.5,"posizione_percepita":5.443114233203124,"promesse":[{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true},{"disposizione":"Incentivo fiscale agli investimenti","gradino":"40% del costo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":1.148844,"vocazione":"mista"},{"al_governo":false,"cassa":80985,"id":"estrema_destra","leader":"Bruno Castellani","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":6.07611873600047,"promesse":[{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true},{"disposizione":"Incentivo fiscale agli investimenti","gradino":"40% del costo","in_sospeso":true}],"regola":"sticker","sciolto":false,"valence":0.015048,"vocazione":"identitaria"},{"al_governo":true,"cassa":5296578,"id":"giocatore","leader":"","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.133869934098857,"promesse":[],"regola":"sticker","sciolto":false,"valence":-0.1564697881912225,"vocazione":"mista"},{"al_governo":true,"cassa":67464,"id":"nuovo_8","leader":"Marco Rossi","nome":"Orizzonte Comune","posizione_dichiarata":4.7268767503402165,"posizione_percepita":4.839514544222649,"promesse":[{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true},{"disposizione":"Incentivo fiscale agli investimenti","gradino":"40% del costo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":0.7382991131578125,"vocazione":"mista"},{"al_governo":false,"cassa":107852,"id":"nuovo_9","leader":"Luca Bruno","nome":"Voce del Paese","posizione_dichiarata":3.209657309208543,"posizione_percepita":3.1147675890781237,"promesse":[{"disposizione":"Detrazione edilizia","gradino":"65%","in_sospeso":true},{"disposizione":"Export di armi","gradino":"restrittivo","in_sospeso":true}],"regola":"aggregator","sciolto":false,"valence":1.1266091703124999,"vocazione":"mista"}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[114,63],"centrosinistra":[18,9],"centro":[0,0],"centrodestra":[16,7],"destra":[88,39],"estrema_destra":[24,13],"giocatore":[0,0],"nuovo_8":[48,26],"nuovo_9":[92,43]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[101,50],"centrosinistra":[21,11],"centro":[23,11],"centrodestra":[0,0],"destra":[85,40],"estrema_destra":[21,10],"giocatore":[0,0],"nuovo_8":[47,24],"nuovo_9":[102,54]},"sondaggio":{"estrema_sinistra":0.013218766423948456,"sinistra":0.23246869212492421,"centrosinistra":0.04772092745231287,"centro":0.04749690698488729,"centrodestra":0.03153932298159861,"destra":0.22847429529590457,"estrema_destra":0.047207775188014514,"giocatore":0.018543200221023935,"nuovo_8":0.11298277488520701,"nuovo_9":0.22034733844217846},"astensione":0.23388771413306692,"alleati":[{"causa_principale":null,"causa_ultimatum":"sondaggi_in_calo","intesa":39.80521395990837,"partito":"centrodestra","ultimatum":true,"variazioni":[]},{"causa_principale":null,"causa_ultimatum":null,"intesa":51.935953465405916,"partito":"nuovo_8","ultimatum":false,"variazioni":[]}],"avversari":[],"mosse":[{"partito":"sinistra","testo":"Promessa mancata: «Concorrenza nei servizi: mercato libero»"},{"partito":"sinistra","testo":"Promessa mancata: «Regime delle pensioni: retributivo»"},{"partito":"estrema_sinistra","testo":"Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»"},{"partito":"sinistra","testo":"Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»"},{"partito":"centrosinistra","testo":"Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»"},{"partito":"centro","testo":"Promette «Autonomia differenziata: prime materie» e «Detrazione edilizia: 36-50%»"},{"partito":"centrodestra","testo":"Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"},{"partito":"destra","testo":"Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"},{"partito":"estrema_destra","testo":"Promette «Autonomia differenziata: intese complete» e «Incentivo fiscale agli investimenti: 40% del costo»"},{"partito":"nuovo_8","testo":"Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"},{"partito":"nuovo_9","testo":"Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»"},{"partito":"estrema_sinistra","testo":"Spende 760.891 euro: persuade dipendenti pubblici, Basilicata e autonomi"},{"partito":"sinistra","testo":"Spende 7.324.593 euro: persuade dipendenti privati, pensionati e Campania"},{"partito":"centrosinistra","testo":"Spende 1.444.726 euro: persuade pensionati, Lombardia e dipendenti privati"},{"partito":"centro","testo":"Spende 1.021.859 euro: persuade dipendenti privati, pensionati e Campania"},{"partito":"centrodestra","testo":"Spende 1.760.343 euro: persuade autonomi, pensionati e Sicilia"},{"partito":"destra","testo":"Spende 6.530.041 euro: persuade pensionati, dipendenti privati e Lombardia"},{"partito":"estrema_destra","testo":"Spende 1.695.477 euro: persuade dipendenti privati, pensionati e Lombardia"},{"partito":"nuovo_8","testo":"Spende 1.359.405 euro: persuade pensionati, dipendenti privati e Lombardia"},{"partito":"nuovo_9","testo":"Spende 1.241.692 euro: persuade dipendenti privati, pensionati e Lombardia"},{"partito":"estrema_sinistra","testo":"Si scioglie dopo 2 elezioni senza seggi"},{"partito":"sinistra","testo":"Nuovo leader: Marco Ferraro, dopo il calo di 8,4 punti percentuali al voto"},{"partito":"destra","testo":"Nuovo leader: Fabio Bruno, dopo il calo di 4,5 punti percentuali al voto"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2031,"trimestre":4},"voti":{"estrema_sinistra":[0.02124576887127251,0,0],"sinistra":[0.24287573648371802,114,63],"centrosinistra":[0.041966772954608024,18,9],"centro":[0.027174313791143892,0,0],"centrodestra":[0.04344163499814107,16,7],"destra":[0.2199222762859918,88,39],"estrema_destra":[0.06049196844076237,24,13],"giocatore":[0.02412629138244558,0,0],"nuovo_8":[0.12266142512209709,48,26],"nuovo_9":[0.19609381166981965,92,43]}},{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.024778811631567175,0,0],"sinistra":[0.3269463714159547,134,72],"centrosinistra":[0.05768359146829971,23,10],"centro":[0.03946212122714321,16,7],"centrodestra":[0.06808361939719376,28,10],"destra":[0.26458790490211576,109,59],"estrema_destra":[0.05857427562585689,24,10],"giocatore":[0.15988330433186881,66,32]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":16.306529808782955,"margine":[-137,-68]},"grave":{"come":"Vista 08: seme 4, turno 7, Emergenza incendi in tono grave","turno":7,"data":{"anno":2028,"trimestre":3},"governa":true,"crisi":false,"fase":"ordinaria","finita":false,"turni_al_voto":13,"spread":62,"grave":true,"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.1475,"valence":-0.613476,"al_governo":false,"vocazione":"identitaria","leader":"Anna Ferrucci","regola":"sticker","sciolto":false,"cassa":248600,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"sinistra","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.05,"valence":0.969668,"al_governo":false,"vocazione":"mista","leader":"Luca Benedetti","regola":"aggregator","sciolto":false,"cassa":3163247,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"retributivo","in_sospeso":true}]},{"id":"centrosinistra","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.0,"valence":-0.522527,"al_governo":false,"vocazione":"mista","leader":"Chiara Lombardo","regola":"hunter","sciolto":false,"cassa":562058,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"mercato libero","in_sospeso":true},{"disposizione":"Regime delle pensioni","gradino":"quota base universale","in_sospeso":true}]},{"id":"centro","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.0,"valence":-0.889093,"al_governo":false,"vocazione":"governista","leader":"Giorgio Valli","regola":"governator","sciolto":false,"cassa":402171,"promesse":[{"disposizione":"Concorrenza nei servizi","gradino":"gare","in_sospeso":true},{"disposizione":"Salario minimo legale","gradino":"7 €/h","in_sospeso":true}]},{"id":"centrodestra","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":5.0025,"valence":-0.42514,"al_governo":true,"vocazione":"mista","leader":"Silvia Moretti","regola":"hunter","sciolto":false,"cassa":679256,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"prime materie","in_sospeso":true}]},{"id":"destra","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":5.905,"valence":0.8213688460548,"al_governo":true,"vocazione":"mista","leader":"Davide Ranieri","regola":"aggregator","sciolto":false,"cassa":2432780,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"estrema_destra","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":6.95,"valence":0.015048,"al_governo":false,"vocazione":"identitaria","leader":"Bruno Castellani","regola":"sticker","sciolto":false,"cassa":589043,"promesse":[{"disposizione":"Nucleare","gradino":"consentito","in_sospeso":true},{"disposizione":"Autonomia differenziata","gradino":"intese complete","in_sospeso":true}]},{"id":"giocatore","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.459628124999999,"valence":0.1569411703125,"al_governo":true,"vocazione":"mista","leader":"","regola":"sticker","sciolto":false,"cassa":2475083,"promesse":[]}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[120,63],"centrosinistra":[20,8],"centro":[14,2],"centrodestra":[32,15],"destra":[116,62],"estrema_destra":[22,12],"giocatore":[76,38]},"proiezione":{"estrema_sinistra":[11,6],"sinistra":[170,88],"centrosinistra":[54,27],"centro":[0,0],"centrodestra":[27,14],"destra":[84,41],"estrema_destra":[0,0],"giocatore":[54,24]},"sondaggio":{"estrema_sinistra":0.02683985913027682,"sinistra":0.3560605222682349,"centrosinistra":0.10874194006850883,"centro":0.016132742595246205,"centrodestra":0.07108520172613247,"destra":0.2457267300853129,"estrema_destra":0.027468837609622227,"giocatore":0.14794416651666567},"astensione":0.35330814862300086,"alleati":[{"partito":"centrodestra","intesa":46.79723909860998,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"quota_scoperta","variazioni":[{"partito":4,"causa":"quota_scoperta","delta":-1.026784660766964,"turno":6}]},{"partito":"destra","intesa":56.01971205118227,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"sondaggi_in_calo","variazioni":[{"partito":5,"causa":"sondaggi_in_calo","delta":-0.3099642892468353,"turno":6}]}],"avversari":[],"mosse":[{"partito":"estrema_destra","testo":"Porta nel posto riservato Leva militare: obbligatoria; 225 seggi fra Camera e Senato dei partiti alleati la voterebbero"}],"campagna":{"attiva":false,"spese":[]},"coalizione":[],"disponibilita":[],"elezioni":[{"data":{"anno":2026,"trimestre":4},"voti":{"estrema_sinistra":[0.024615046106056,0,0],"sinistra":[0.33282626275304666,120,63],"centrosinistra":[0.05741840834508147,20,8],"centro":[0.04134085153471969,14,2],"centrodestra":[0.07024873934619229,32,15],"destra":[0.24933003381413937,116,62],"estrema_destra":[0.06005696816351142,22,12],"giocatore":[0.16416368993725308,76,38]}}],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":46.4756098328111,"margine":[23,14]},"zero":{"come":"Vista 01: seme 4 a 4,5, turno zero, Camere sciolte","turno":0,"data":{"anno":2026,"trimestre":4},"governa":false,"crisi":false,"fase":"sciolta","finita":false,"turni_al_voto":0,"spread":84,"grave":false,"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","posizione_dichiarata":1.0,"posizione_percepita":1.0,"valence":-0.613476,"al_governo":false,"vocazione":"identitaria","leader":"Anna Ferrucci","regola":"sticker","sciolto":false,"cassa":758560,"promesse":[]},{"id":"sinistra","nome":"Sinistra","posizione_dichiarata":2.0,"posizione_percepita":2.0,"valence":0.969668,"al_governo":false,"vocazione":"mista","leader":"Luca Benedetti","regola":"aggregator","sciolto":false,"cassa":8135300,"promesse":[]},{"id":"centrosinistra","nome":"Centrosinistra","posizione_dichiarata":3.0,"posizione_percepita":3.0,"valence":-0.522527,"al_governo":false,"vocazione":"mista","leader":"Chiara Lombardo","regola":"hunter","sciolto":false,"cassa":1603240,"promesse":[]},{"id":"centro","nome":"Centro","posizione_dichiarata":4.0,"posizione_percepita":4.0,"valence":-0.889093,"al_governo":false,"vocazione":"governista","leader":"Giorgio Valli","regola":"governator","sciolto":false,"cassa":1113760,"promesse":[]},{"id":"centrodestra","nome":"Centrodestra","posizione_dichiarata":5.0,"posizione_percepita":5.0,"valence":-0.42514,"al_governo":true,"vocazione":"mista","leader":"Silvia Moretti","regola":"hunter","sciolto":false,"cassa":1834280,"promesse":[]},{"id":"destra","nome":"Destra","posizione_dichiarata":6.0,"posizione_percepita":6.0,"valence":0.820719,"al_governo":true,"vocazione":"mista","leader":"Davide Ranieri","regola":"aggregator","sciolto":false,"cassa":7071820,"promesse":[]},{"id":"estrema_destra","nome":"Estrema destra","posizione_dichiarata":7.0,"posizione_percepita":7.0,"valence":0.015048,"al_governo":false,"vocazione":"identitaria","leader":"Bruno Castellani","regola":"sticker","sciolto":false,"cassa":1614560,"promesse":[]},{"id":"giocatore","nome":"Partito del giocatore","posizione_dichiarata":4.5,"posizione_percepita":4.5,"valence":0.328125,"al_governo":false,"vocazione":"mista","leader":"","regola":"sticker","sciolto":false,"cassa":1000000,"promesse":[]}],"seggi":{"estrema_sinistra":[0,0],"sinistra":[0,0],"centrosinistra":[0,0],"centro":[0,0],"centrodestra":[0,0],"destra":[0,0],"estrema_destra":[0,0],"giocatore":[0,0]},"proiezione":{"estrema_sinistra":[0,0],"sinistra":[112,61],"centrosinistra":[15,6],"centro":[26,12],"centrodestra":[16,7],"destra":[128,66],"estrema_destra":[23,9],"giocatore":[80,39]},"sondaggio":{"estrema_sinistra":0.020372128889459225,"sinistra":0.2983342974253069,"centrosinistra":0.03981664590534267,"centro":0.0594079344736334,"centrodestra":0.043455959474412914,"destra":0.30278409581295457,"estrema_destra":0.043102629817029656,"giocatore":0.19272630820186057},"astensione":0.3025991491921532,"alleati":[],"avversari":[],"mosse":[],"campagna":{"attiva":true,"spese":[]},"coalizione":[],"disponibilita":[{"partito":"estrema_sinistra","disponibile":false,"causa":"posizione troppo lontana dalla tua"},{"partito":"sinistra","disponibile":false,"causa":"posizione troppo lontana dalla tua"},{"partito":"centrosinistra","disponibile":false,"causa":"posizione troppo lontana dalla tua"},{"partito":"centro","disponibile":false,"causa":"posizione troppo lontana dalla tua"},{"partito":"centrodestra","disponibile":true,"causa":"posizione vicina alla tua"},{"partito":"destra","disponibile":true,"causa":"più probabilità di governare con te"},{"partito":"estrema_destra","disponibile":false,"causa":"posizione troppo lontana dalla tua"}],"elezioni":[],"leader_zero":{"estrema_sinistra":"Anna Ferrucci","sinistra":"Luca Benedetti","centrosinistra":"Chiara Lombardo","centro":"Giorgio Valli","centrodestra":"Silvia Moretti","destra":"Davide Ranieri","estrema_destra":"Bruno Castellani","giocatore":""},"consenso":34.624005528736745,"margine":null}};
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+// ======================= facce: dal prototipo 32, variante 5 =======================
+const K = {carta:'#F4ECD8', ink:'#1F1A17', grigio:'#5E5750', rosso:'#B3122B', verde:'#2E6B45', biro:'#1D4E89', giallo:'#FFD23F'};
+// tinta smorzata = un solo inchiostro steso sulla carta al t (come un retino pieno): niente colori fuori dai sette
+const mix = (c,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.slice(i,i+2),16)*t+parseInt(K.carta.slice(i,i+2),16)*(1-t)).toString(16).padStart(2,'0')).join('');
+const hash = s => { let h=5381; for(const c of s) h=((h<<5)+h+c.charCodeAt(0))>>>0; return h; };
+// djb2 da solo cambia poco fra «Sara Rossi» e «Sara Russi»: lo rimescolo (finalizzatore di MurmurHash3)
+const mescola = h => { h^=h>>>16; h=Math.imul(h,0x85ebca6b)>>>0; h^=h>>>13; h=Math.imul(h,0xc2b2ae35)>>>0; return (h^(h>>>16))>>>0; };
+const leve = (h,basi)=>basi.map(b=>{ const v=h%b; h=Math.floor(h/b); return v; });
+const ruolo = m => m.leader ? 'leader' : m.tecnico ? 'tecnico' : 'ministro';
+const umore = m => m.sodd==null ? 0 : m.sodd<25 ? 2 : m.sodd<40 ? 1 : 0;
+
+// --- il profilo: quattro leve di forma, 6 × 3 × 2 × 2 = 72 sagome ---
+const NASI = [ // dalla radice (42,26) alla base (43,34); tutti oltre ogni naso reale
+  ['triangolo','L61 34',[61,34]], ['uncino','Q56 20 60 30Q61 38 53 36.5',[60,32]], ['patata','L46 25.5C59 21 63 40 50 38.5',[59,33]],
+  ['all’insù','Q50 35 61 23L54 35.5',[61,23]], ['becco','Q55 23 62 41L50 37.5',[62,41]], ['spezzato','L52 22.5L61 33L49 36.5',[61,33]]];
+// niente mento sporgente: calvo + mascella in fuori + testa alta è la caricatura di Mussolini (e il Craxi di Forattini)
+const MENTI = [['sfuggente','Q43 42 40 45'],['dritto','L45 41L44 46'],['doppio','L44.6 41Q48.5 42.6 45 45.2Q48 47.4 43.6 49']];
+const forma = h => { const [naso,mento,fronte,cranio]=leve(h,[6,3,2,2]); return {naso,mento,fronte,cranio,resto:Math.floor(h/72)}; };
+function profilo(id){
+  const b = id.cranio ? 18 : 13;                                  // nuca lunga o corta
+  const fr = id.fronte ? 'Q35 5 38 9L44 23' : 'Q38 6 41 11L43 23'; // fronte sfuggente o dritta
+  const davanti = `L42 26${NASI[id.naso][1]}L43 35L44 39${MENTI[id.mento][1]}`;
+  const giro = `C${b} 36 ${b} 9 30 7${fr}${davanti}L35 48L36 51`;
+  return { b, tip:NASI[id.naso][2], davanti:'M42 26'+davanti.slice(6), naso:`M42 26${NASI[id.naso][1]}L43 35Z`,
+    sagoma:`M20 44${giro}L37 61L23 61L21 47Z`, linea:`M23 57L21 47L20 44${giro}L37 57`,
+    nuca:`M4 29L31 34L36 52L14 52Z` };
+}
+
+// --- il dicastero come oggetto: un disegno, due stampe (a colori col contorno, o piena in un inchiostro) ---
+const stampa = (fg,bg)=> fg ? {f:()=>fg, d:()=>bg, o:''} : {f:c=>c, d:c=>c, o:`stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"`};
+const OGG = { // riquadro 16 × 16
+  'Economia e Finanze': p=>`<circle cx="8" cy="8" r="7" fill="${p.f(K.giallo)}" ${p.o}/><path d="M11.2 5A4 4 0 1 0 11.2 11M3.4 7h5.8M3.4 9.4h5.8" fill="none" stroke="${p.d(K.ink)}" stroke-width="1.7"/>`,
+  'Sviluppo economico': p=>`<path d="M5 6V2.6h6V6" fill="none" stroke="${p.f(K.ink)}" stroke-width="2"/><rect x="1" y="5.5" width="14" height="9.5" fill="${p.f(K.biro)}" ${p.o}/><path d="M1.6 9.8h12.8" stroke="${p.d(K.carta)}" stroke-width="1.5"/>`,
+  'Lavoro e Welfare': p=>`<path d="M2.6 13.4L9.6 6.4" stroke="${p.f(K.ink)}" stroke-width="3.6" stroke-linecap="round"/><circle cx="11.4" cy="4.6" r="3.3" fill="none" stroke="${p.f(K.ink)}" stroke-width="2.6"/>`,
+  'Sanità': p=>`<rect x="1" y="1" width="14" height="14" fill="${p.f(K.carta)}" ${p.o}/><path d="M8 3.4v9.2M3.4 8h9.2" stroke="${p.d(K.rosso)}" stroke-width="3.2"/>`,
+  'Istruzione e Ricerca': p=>`<path d="M1.5 14.5L3 9.4L11.6 .8L15.2 4.4L6.6 13Z" fill="${p.f(K.giallo)}" ${p.o}/><path d="M1.5 14.5L3 9.4L6.6 13Z" fill="${p.d(K.ink)}"/>`,
+  'Infrastrutture e Trasporti': p=>`<path d="M4.4 13L7 1.4h2L11.6 13Z" fill="${p.f(K.rosso)}" ${p.o}/><path d="M5.7 7.4h4.6l.6 2.8H5.1Z" fill="${p.d(K.carta)}"/><rect x="1.2" y="12.6" width="13.6" height="2.8" fill="${p.f(K.rosso)}" ${p.o}/>`,
+  'Ambiente ed Energia': p=>`<path d="M1.5 14.5C1.5 6 7 1.5 14.5 1.5C14.5 10 9 14.5 1.5 14.5Z" fill="${p.f(K.verde)}" ${p.o}/><path d="M3.2 12.8L10.8 5.2" stroke="${p.d(K.carta)}" stroke-width="1.6"/>`,
+  'Interno': p=>`<path d="M8 .6l2.2 4.7 5.1.5-3.9 3.5 1.2 5L8 11.8l-4.6 2.5 1.2-5L.7 5.8l5.1-.5Z" fill="${p.f(K.biro)}" ${p.o}/>`,
+  'Giustizia': p=>`<path d="M1.4 5.6L6 1l5 5-4.6 4.6Z" fill="${p.f(K.ink)}"/><path d="M8.4 8.4l5.4 5.4" stroke="${p.f(K.ink)}" stroke-width="2.8" stroke-linecap="round"/><rect x=".6" y="13.2" width="8.4" height="2.4" fill="${p.f(K.ink)}"/>`,
+  'Esteri e Difesa': p=>`<circle cx="8" cy="8" r="7" fill="${p.f(K.biro)}" ${p.o}/><ellipse cx="8" cy="8" rx="3" ry="6.4" fill="none" stroke="${p.d(K.carta)}" stroke-width="1.4"/><path d="M1.6 8h12.8" stroke="${p.d(K.carta)}" stroke-width="1.4"/>`,
+};
+const ogg = (dic,x,y,s,p)=> OGG[dic] ? `<g transform="translate(${x} ${y}) scale(${s})">${OGG[dic](p)}</g>` : '';
+// --- il ruolo: il leader porta la coccarda, il tecnico il cartellino e l'abito grigio ---
+const coccarda = (x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})"><circle r="8.4" fill="${K.carta}"/><circle r="7.2" fill="${K.verde}"/><circle r="4.6" fill="${K.carta}"/><circle r="2.4" fill="${K.rosso}"/></g>`;
+const cartellino = (x,y)=>`<g transform="translate(${x} ${y})"><rect width="9.4" height="6.6" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.2"/><rect x="1.8" y="1.8" width="5.8" height="1.8" fill="${K.biro}"/><rect x="1.8" y="4.2" width="3.8" height="1.1" fill="${K.ink}"/></g>`;
+
+// ======================= le varianti =======================
+const pezzi = { occhio:(u,c)=> u===2 ? `<path d="M35.4 23.6h5.4" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>` : `<circle cx="38" cy="23" r="2.2" fill="${c}"/>`,
+  bocca:(u,c,w=1.9)=>`<path d="M44 39L39.6 ${[37.4,39.2,41.2][u]}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>` };
+// a testa alta, china, crollata: la testa ruota sul collo e arretra, così il naso non esce dal riquadro e non tocca l'abito
+const posa = u => `translate(${[0,-1,-3][u]} 0) rotate(${[-8,12,20][u]} 30 46)`;
+const VAR = {
+  '5': { nome:'5 · Linea rifinita', basi:'naso 6 × mento 3 × fronte 2 × nuca 2 × occhio 2 × colletto 6 = 864, per genere',
+    id: h=>{ const f=forma(h), [o,c]=leve(f.resto,[2,4+SOVR.length]); return [f.naso,f.mento,f.fronte,f.cranio,o,c]; },
+    vista: (h,d)=>{ const f=forma(h), [,c]=leve(f.resto,[2,4+SOVR.length]); return `${f.naso}:${c}:${d?'f':'m'}`; },
+    disegna(m,h,u,uid,r){
+      const f=forma(h), [o,c]=leve(f.resto,[2,4+SOVR.length]), d=donna(m), tr=null, xx=Math.floor(f.resto/(2*(4+SOVR.length))), p=profilo5(f, d ? .85 : 1);
+      const fondo=[null,K.giallo,K.rosso][u], segno = u===2 ? K.carta : K.ink;   // il segno del dicastero prende il colore che regge sul fondo
+      const coll = r==='tecnico' ? K.grigio : [K.rosso,K.verde,K.biro,K.giallo,...SOVR.map(s=>s[1])][c];
+      const pen = (dd,L,a)=>`<path d="${pennello(dd,L,a)}" fill="${K.ink}"/><path d="${dd}" fill="none" stroke="${K.ink}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const sottile = (dd,w=1.9,col=K.ink)=>`<path d="${dd}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      // occhio proprio: palpebra pesante sopra la pupilla, oppure mandorla di profilo; la donna ha la coda all'indietro
+      const occhio = (o
+        ? `<path d="M35.2 22.8Q38.4 19.4 41.2 21.3Q40.6 24.6 35.2 22.8Z" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/><circle cx="39.3" cy="22.2" r="1.45" fill="${K.ink}"/>`
+        : `<circle cx="38.2" cy="22.6" r="2.7" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.4"/><circle cx="39.4" cy="22.6" r="1.45" fill="${K.ink}"/>`)
+        + (d ? sottile(o ? 'M36.2 21.4L34.4 18.9M38 20.4L37 17.6M39.8 20.6L39.6 17.8' : 'M36.3 20.6L34.6 18.2M38 19.9L37.2 17.1M39.7 20.2L39.6 17.4',1.4) : '');
+      const orecchio = `<path d="M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36Z" fill="${PIANO[0]}"/>${pen('M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36',2.6,35)}${sottile('M27 30.2Q25.4 32 27.2 33.6',1.5)}`;
+      // labbra rosse con un filo di carta sotto il contorno: così reggono anche sul fondo rosso della crisi
+      const bocca = d
+        ? `<path d="M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z" fill="${K.rosso}" stroke="${K.carta}" stroke-width="2.6" stroke-linejoin="round"/><path d="M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z" fill="${K.rosso}" stroke="${K.ink}" stroke-width=".9" stroke-linejoin="round"/>${sottile('M46 40.5L41.2 40.8',1.1)}`
+        : sottile('M44 39.4L40.3 39.8',1.9);
+      const orecchino = d && (xx&1) ? `${sottile('M27.4 35.8L27.4 37.6',1.5)}<path d="M27.4 37.2L31.2 42.2L27.4 47.2L23.6 42.2Z" fill="${K.giallo}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/>` : '';
+      // cappello a tesa larga, inclinato all'indietro, col nastro: costume, non capelli; la tesa resta sopra le ciglia e
+      // lascia libero l'angolo del segno del dicastero. Il nastro è d'inchiostro: giallo col nastro rosso è il cappello di paglia
+      // di un personaggio noto dei fumetti
+      const CAPPELLO = ['M3.6 19.6Q2.6 16.6 8 14.6Q26 8.6 43.4 5.4Q46.4 5.2 45 7.4Q28 13.2 7.4 20.8Q4.6 21.6 3.6 19.6Z','M16.6 13.2Q15.6 3 27.4 1.4Q38.6 0 40.2 7.8Q28 9.6 16.6 13.2Z'];
+      const cappello = d && (xx&2) ? `<path d="${CAPPELLO.join('')}" fill="none" stroke="${K.carta}" stroke-width="3.6" stroke-linejoin="round"/>
+        ${CAPPELLO.map(c=>`<path d="${c}" fill="${coll}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/>`).join('')}
+        ${sottile('M17.4 11.2Q28 7.8 39.6 6.2',2.2)}` : '';
+      return `${fondo?`<rect width="64" height="64" fill="${fondo}"/>`:''}
+        <path d="M2 64C3 56 10 53 20 53L42 53C52 53 58 57 61 64Z" fill="${K.carta}"/><path d="${p.sagoma}" fill="${K.carta}"/>
+        <clipPath id="${uid}"><path d="${p.sagoma}"/></clipPath><g clip-path="url(#${uid})"><path d="M28 37.5L39 45L38 58L21 58Z" fill="${PIANO[0]}"/><path d="M45 31L${p.tip}L44 35.4Z" fill="${PIANO[0]}"/></g>
+        ${pen(p.dietro,4.6,35)}${pen(p.davanti,4.6,35)}${pen('M2.4 64C3.4 56.4 10 53.4 21 53.2',4.2,35)}${pen('M38 53.2C50 53.2 57.6 57 60.6 64',4.2,35)}
+        ${orecchio}${occhio}${bocca}${orecchino}
+        <path d="M21 51L38 49L40.5 55.5L22 57Z" fill="${coll}" stroke="${K.ink}" stroke-width="1.8" stroke-linejoin="round"/>
+        ${cappello}${r==='leader' ? coccarda(55,55.5,.95) : ogg(m.dic,47.5,1.5,.92,stampa(segno,fondo||K.carta))}${r==='tecnico'?cartellino(5,54.5):''}`;
+    }},
+};
+// ---- per la 5 ----
+// due inchiostri sovrapposti, come una stampa a due passaggi: ogni inchiostro al suo retino (mix), poi moltiplicati sulla carta
+const sovr = (a,b)=>'#'+[1,3,5].map(i=>{ const x=k=>parseInt(k.slice(i,i+2),16); return Math.round(x(a)*x(b)/x(K.carta)).toString(16).padStart(2,'0'); }).join('');
+const PIANO = [sovr(mix(K.giallo,.42),mix(K.rosso,.16)), sovr(mix(K.giallo,.6),mix(K.rosso,.32))];   // terra chiara (guancia, orecchio), terra (sotto il naso)
+const SOVR = [['arancio',sovr(K.giallo,mix(K.rosso,.5))],['oliva',sovr(K.giallo,mix(K.biro,.5))]];       // due colletti in più, oltre ai quattro inchiostri
+// ponytail: il genere si ricava dal nome con una lista fissa, perché il core non lo porta. Sono i sei femminili del bacino
+// (dati/base/elettorato.toml:11, alternati F/M) più Silvia, leader del Centrodestra (dati/base/scenario.toml:307).
+// Se cambia uno dei due file la lista va rifatta a mano; il posto giusto è un campo `genere` accanto al nome, nel core.
+const DONNE = new Set(['Giulia','Francesca','Chiara','Sara','Elena','Anna','Silvia']);
+const donna = m => DONNE.has(m.nome.split(' ')[0]);
+// il profilo della 5: due pennellate (nuca-fronte, naso-collo) che si staccano alla radice del naso; nella donna il naso
+// resta lo stesso dell'hash ma scala dell'85% verso la radice
+function profilo5(id,k){
+  const sc = s=>s.replace(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g,(_,x,y)=>`${+(42+(x-42)*k).toFixed(2)} ${+(26+(y-26)*k).toFixed(2)}`);
+  const b = id.cranio ? 18 : 13, fr = id.fronte ? 'Q35 5 38 9L44 23' : 'Q38 6 41 11L43 23';
+  const naso = sc(NASI[id.naso][1]), tip = NASI[id.naso][2].map((v,i)=>+((i?26:42)+(v-(i?26:42))*k).toFixed(2));
+  const davanti = `M42 26${naso}L43 35L44 39${MENTI[id.mento][1]}L35 48L36 51L37 57`;
+  return { tip, davanti, naso:`M42 26${naso}L43 35Z`, dietro:`M23 57L21 47L20 44C${b} 36 ${b} 9 30 7${fr}L42 26`,
+    sagoma:`M20 44C${b} 36 ${b} 9 30 7${fr}L42 26${davanti.slice(6).replace(/L37 57$/,'')}L37 61L23 61L21 47Z` };
+}
+// pennello a punta piatta: la punta (lunga L, inclinata di a gradi) scorre lungo il tracciato, così lo spessore cambia
+// con la direzione come in un tratto a pennino; si assottiglia ai due capi. Ogni passo è un quadrilatero, tutti con lo
+// stesso verso, in un solo path: la regola nonzero ne fa l'unione senza giunte.
+const PENNI = new Map();
+let PEN;
+function pennello(d,L,a,passo=.7,coda=.16){
+  const chiave=`${d}|${L}|${a}`; if(PENNI.has(chiave)) return PENNI.get(chiave);
+  if(!PEN){ const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('style','position:absolute;width:0;height:0;visibility:hidden'); PEN=document.createElementNS(s.namespaceURI,'path'); s.appendChild(PEN); document.body.appendChild(s); }
+  PEN.setAttribute('d',d);
+  const tot=PEN.getTotalLength(), n=Math.max(8,Math.ceil(tot/passo)), nx=Math.cos(a*Math.PI/180)*L/2, ny=-Math.sin(a*Math.PI/180)*L/2;
+  const pt = Array.from({length:n+1},(_,i)=>{ const t=i/n, q=PEN.getPointAtLength(t*tot), s=Math.max(.25,Math.min(1,t/coda,(1-t)/coda)); return [q.x,q.y,nx*s,ny*s]; });
+  const f = v=>+v.toFixed(1);
+  let out='';
+  for(let i=0;i<n;i++){
+    const [x0,y0,a0,b0]=pt[i], [x1,y1,a1,b1]=pt[i+1];
+    let q=[[x0-a0,y0-b0],[x0+a0,y0+b0],[x1+a1,y1+b1],[x1-a1,y1-b1]];
+    if(q.reduce((s,[x,y],j)=>{ const [X,Y]=q[(j+1)%4]; return s+x*Y-X*y; },0)<0) q.reverse();
+    out+='M'+q.map(([x,y])=>`${f(x)} ${f(y)}`).join('L')+'Z';
+  }
+  PENNI.set(chiave,out); return out;
+}
+// la rosa non mostra due facce uguali: chi viene dopo passa alla combinazione successiva (h+1, che cambia il naso) finché
+// naso e colletto, le due leve che si leggono a 34 px, non differiscono da chi è già in rosa. Regola solo della UI.
+
+// ======================= dati e regole =======================
+const SOGLIA = {ultimatum:40, uscita:25};            // rimando: manopole soglia_ultimatum e soglia_uscita, la Vista non le porta
+const SCISS = {minaccia:.5, scissione:1};            // nella spec del core: VistaCampagna.minaccia_scissione e soglia_scissione
+const BASE8 = ['estrema_sinistra','sinistra','centrosinistra','centro','centrodestra','destra','estrema_destra','giocatore'];
+const PCOL = {estrema_sinistra:'#A3242F', sinistra:'#E36B4F', centrosinistra:'#B8478A', centro:'#C99A1E', centrodestra:'#3E8FD6', destra:'#2D55A6', estrema_destra:'#9A5A1C', giocatore:'#1F8A70'};
+// l'origine dei nati la dice il registro; qui solo dove si sa (nota del 26: al seme 1 la Lista dei Territori nasce per protesta)
+const ORIG = {'opp_fine:nuovo_8':'per protesta'};
+const VOC = {identitaria:'Tiene alle idee più che alle poltrone', mista:'Pesa idee e poltrone allo stesso modo', governista:'Tiene alle poltrone più che alle idee'};
+const REG = {sticker:'non si sposta mai', aggregator:'si sposta verso i suoi elettori', hunter:'insegue i voti: dopo un guadagno rifà il passo, dopo una perdita torna indietro', governator:'al governo resta fermo, fuori si avvicina al governo'};
+const REGC = {sticker:'fermo', aggregator:'verso i suoi elettori', hunter:'insegue i voti', governator:'verso il governo'};
+const FASCIA = {solida:'solida', incrinata:'incrinata', ultimatum:'in ultimatum'};
+const CAUSE = {norma_lontana:'norma lontana dalla sua posizione', emendamento_respinto:'emendamento respinto', fiducia:'questione di fiducia', seggi_persi:'seggi persi con la legge elettorale',
+  spartizione:'quota dei dicasteri rispetto alla richiesta', ministri_scontenti:'ministri del suo partito scontenti', dimissioni_chieste:'dimissioni chieste a un suo ministro',
+  quota_scoperta:'dicasteri sotto la sua richiesta', sondaggi_in_calo:'calo nei sondaggi al governo', rottura_impegno:'rottura dell’impegno pre-elettorale',
+  sfiducia_respinta:'sfiducia respinta', promessa:'promessa che non condivide', programma_mes:'programma del MES'};
+const causa = c => CAUSE[c] || String(c||'').replaceAll('_',' ');
+
+const DEF = {v:'A', stato:'governo', fin:'1280', scala:'1'};
+const st = {...DEF, sel:null};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const FORME = {A:'A · Schieramento', B:'B · Schedario', C:'C · Campi'};
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const euro = c => c>=1e9 ? (c/1e9).toLocaleString('it-IT',{maximumFractionDigits:1})+' mld €' : c>=1e6 ? (c/1e6).toLocaleString('it-IT',{maximumFractionDigits:1})+' mln €' : c.toLocaleString('it-IT',{useGrouping:'always'})+' €';
+const pc = x => num(x*100)+'%';
+const sgn = x => (x>0?'+':x<0?'−':'')+Math.abs(x);
+const TRIM = ['','Gennaio–marzo','Aprile–giugno','Luglio–settembre','Ottobre–dicembre'];
+const per = d => `${TRIM[d.trimestre]} ${d.anno}`;
+
+const V = () => D[st.stato];
+const grave = () => V().grave;
+const tutti = () => [...V().partiti].sort((a,b)=>a.posizione_dichiarata-b.posizione_dichiarata || BASE8.indexOf(a.id)-BASE8.indexOf(b.id));
+const Pid = id => V().partiti.find(p=>p.id===id);
+const seggi = p => V().seggi[p.id] || [0,0];
+const proi = p => V().proiezione[p.id] || [0,0];
+const sond = p => V().sondaggio[p.id] || 0;
+const nato = p => !BASE8.includes(p.id);
+const dist = p => Math.abs(p.posizione_percepita - p.posizione_dichiarata);
+const minaccia = p => !p.sciolto && dist(p) >= SCISS.minaccia;
+const col = p => grave() ? (p.id==='giocatore'?'#1F1A17':'#5E5750') : nato(p) ? '#8A837B' : PCOL[p.id];
+const mio = () => Pid('giocatore');
+const leaderNuovo = p => !nato(p) && p.id!=='giocatore' && V().leader_zero[p.id] && V().leader_zero[p.id]!==p.leader;
+// elezioni di fila senza seggi, dall'ultima indietro (a due il partito IA si scioglie)
+function senzaSeggi(p){ let n=0; for(const e of V().elezioni){ const x=e.voti[p.id]; if(!x) break; if(x[1]+x[2]>0) break; n++; } return n; }
+function rapporto(p){
+  const v=V();
+  if(p.id==='giocatore') return {k:'tu'};
+  if(p.sciolto) return {k:'sciolto'};
+  const a=v.alleati.find(x=>x.partito===p.id); if(a) return {k:'alleato',a};
+  const f=v.avversari.find(x=>x.partito===p.id); if(f) return {k:'fascia',f};
+  if(p.al_governo && v.fase==='sciolta') return {k:'uscente'};
+  if(p.al_governo && !v.governa){ const g=v.partiti.filter(x=>x.al_governo&&x.id!=='giocatore'); const capo=g.reduce((a,x)=>seggi(x)[0]>seggi(a)[0]?x:a,g[0]);
+    return {k: capo.id===p.id ? 'pdc' : 'gov'}; }
+  return {k:'altro'};
+}
+const umoreP = p => { const r=rapporto(p); return r.k==='alleato' ? (r.a.intesa<SOGLIA.uscita?2:r.a.ultimatum?1:0) : r.k==='fascia' && r.f.fascia==='ultimatum' ? 1 : 0; };
+function faccia(p,px){
+  if(p.id==='giocatore') return `<span class="tu-box" style="width:${px}px;height:${px}px;font-size:${Math.round(px*.34)}px" aria-hidden="true">Tu</span>`;
+  if(grave()){ const i=p.leader.split(' ').map(w=>w[0]).join(''); return `<span class="iniz" style="width:${px}px;height:${px}px;font-size:${Math.max(12,Math.round(px*.36))}px" aria-hidden="true">${i}</span>`; }
+  const m={leader:true, part:p.id, nome:p.leader, dic:''};
+  const h=mescola(hash(`leader:${p.id}:${p.leader}`));
+  return `<svg class="faccia" width="${px}" height="${px}" viewBox="0 0 64 64" aria-hidden="true" style="${p.sciolto?'opacity:.45':''}">${VAR['5'].disegna(m,h,umoreP(p),'k'+(++nUid),'leader')}</svg>`;
+}
+let nUid=0;
+const nomeA = p => p.id==='giocatore' ? 'Tu' : p.nome;
+const euroB = c => c>=1e6 ? euro(c) : Math.round(c/1000).toLocaleString('it-IT')+' mila €';
+const sw = p => `<i class="sw ${nato(p)?'nato':''}" style="background:${col(p)}"></i>`;
+
+// lo stato breve del partito: chip
+function chips(p, corto){
+  const r=rapporto(p), c=[];
+  if(p.sciolto) c.push(`<span class="chip tr">sciolto</span>`);
+  if(r.k==='tu') c.push(`<span class="chip pieno">il tuo partito</span>`);
+  if(r.k==='pdc') c.push(`<span class="chip pieno">guida il governo</span>`);
+  if(r.k==='gov') c.push(`<span class="chip">al governo</span>`);
+  if(r.k==='uscente') c.push(`<span class="chip">governo uscente</span>`);
+  if(r.k==='alleato' && r.a.ultimatum) c.push(`<span class="chip rosso">ultimatum</span>`);
+  if(r.k==='fascia' && r.f.fascia==='ultimatum') c.push(`<span class="chip rosso">ultimatum al governo</span>`);
+  if(minaccia(p)) c.push(`<span class="chip rosso">minaccia di scissione</span>`);
+  if(nato(p) && !corto) c.push(`<span class="chip">nato in partita</span>`);
+  if(leaderNuovo(p) && !corto) c.push(`<span class="chip">leader nuovo</span>`);
+  const z=senzaSeggi(p); if(!p.sciolto && p.id!=='giocatore' && z===1 && !corto) c.push(`<span class="chip tr">senza seggi all’ultimo voto</span>`);
+  return c.join(' ');
+}
+// l'intesa in dieci caselle: le soglie di 40 e 25 come fili rossi dopo la quarta e la terza (si legge «sotto il filo»)
+function intesa(a, larga){
+  const n=Math.round(a.intesa/10), rossa = a.intesa<SOGLIA.ultimatum;
+  const cas = `<span class="cas">${Array.from({length:10},(_,i)=>`<i class="${[i<n?'on':'', rossa?'rs':'', i===2||i===3?'':'' ].join(' ')}${i===3?' sg':''}"></i>`).join('')}</span>`;
+  if(!larga) return `<span class="intesa">${cas}<span class="ints"><b class="${rossa?'male':''}">intesa ${num(a.intesa,0)}</b><span>${a.ultimatum?'ultimatum':a.intesa<SOGLIA.ultimatum+10?'vicina al filo':''}</span></span></span>`;
+  const w=x=>`${x}%`;
+  return `<div class="barraI"><i class="${rossa?'ult':''}" style="width:${w(a.intesa)}"></i><b style="left:${w(SOGLIA.ultimatum)}"></b><b style="left:${w(SOGLIA.uscita)}"></b>
+    <em style="left:${w(SOGLIA.ultimatum)}">40 ultimatum</em><em style="left:${w(SOGLIA.uscita)}">25 esce</em></div><div style="height:12px"></div>`;
+}
+function fascia3(f){
+  const n={solida:3,incrinata:2,ultimatum:1}[f.fascia];
+  return `<span class="intesa"><span class="cas" style="--cw:18px;--ch:10px">${[0,1,2].map(i=>`<i class="${i<n?'on':''} ${f.fascia==='ultimatum'?'rs':''}"></i>`).join('')}</span><span class="ints"><b class="${f.fascia==='ultimatum'?'male':''}">col governo: ${FASCIA[f.fascia]}</b></span></span>`;
+}
+function rapBreve(p){
+  const r=rapporto(p);
+  if(r.k==='alleato') return intesa(r.a);
+  if(r.k==='fascia') return fascia3(r.f);
+  return '';
+}
+
+// ======================= l'asse =======================
+// x da 1 a 7; dichiarata = punto pieno, percepita = anello, la freccia fra le due; i fili di minaccia e scissione
+// solo dal lato dove scivola la percepita
+function asse(ps, W, H, opz={}){
+  if(opz.etichette){ // file dei nomi prima, per sapere quanto è alto
+    const L0=18, R0=W-18, X0=x=>L0+(x-1)/6*(R0-L0), lv=[];
+    for(const p of ps){ const x=X0(p.posizione_dichiarata), w=nomeA(p).length*6.6+12; let k=0; while((lv[k]??-1e9) > x - w/2) k++; lv[k]=x+w/2; }
+    H = 52 + lv.length*16; }
+  const L=18, R=W-18, X=x=>L+(x-1)/6*(R-L), y0=H-22;
+  let s=`<line x1="${L}" y1="${y0}" x2="${R}" y2="${y0}" stroke="#1F1A17" stroke-width="1.5"/>`;
+  for(let i=1;i<=7;i++) s+=`<line x1="${X(i)}" y1="${y0}" x2="${X(i)}" y2="${y0+5}" stroke="#1F1A17"/><text x="${X(i)}" y="${y0+16}" text-anchor="middle">${i}</text>`;
+  s+=`<text x="${L}" y="${y0+16}" text-anchor="start" dx="-14">◂</text><text x="${R}" y="${y0+16}" text-anchor="end" dx="14">▸</text>`;
+  // file per non sovrapporre i nomi: avido, da sinistra
+  const livelli=[]; const pos={};
+  for(const p of ps){ const x=X(p.posizione_dichiarata), w=(opz.etichette? (nomeA(p).length*6.6+12):18); let k=0; while((livelli[k]??-1e9) > x - w/2) k++; livelli[k]=x+w/2; pos[p.id]=k; }
+  const passo = 16;
+  for(const p of ps){
+    const xd=X(p.posizione_dichiarata), xp=X(p.posizione_percepita), y=y0-6, c=col(p), sel=st.sel===p.id;
+    const verso=Math.sign(p.posizione_percepita-p.posizione_dichiarata)||1;
+    if(opz.fili && minaccia(p)) for(const [d,lab] of [[SCISS.minaccia,'½'],[SCISS.scissione,'1']]) { const xx=X(p.posizione_dichiarata+verso*d); s+=`<line x1="${xx}" y1="${y-9}" x2="${xx}" y2="${y+3}" stroke="#B3122B" stroke-width="${d===1?2:1}" ${d===1?'':'stroke-dasharray="2 2"'}/>`; }
+    if(Math.abs(xp-xd)>2) s+=`<line x1="${xd}" y1="${y}" x2="${xp-Math.sign(xp-xd)*4}" y2="${y}" stroke="${minaccia(p)&&!grave()?'#B3122B':'#5E5750'}" stroke-width="1.5" marker-end="url(#pt)"/>`;
+    s+=`<circle cx="${xp}" cy="${y}" r="4.5" fill="#F4ECD8" stroke="${c}" stroke-width="2"/>`;
+    if(opz.etichette){ const yl=y-14-pos[p.id]*passo; s+=`<line x1="${xd}" y1="${y-5}" x2="${xd}" y2="${yl+3}" stroke="${c}" stroke-width="${sel?2.5:1}"/>`;
+      const anc = xd-L < nomeA(p).length*3.4 ? 'start' : R-xd < nomeA(p).length*3.4 ? 'end' : 'middle', dx = anc==='start'?-6:anc==='end'?6:0;
+      s+=`<text class="nmA ${p.sciolto?'sc':''}" x="${xd+dx}" y="${yl}" text-anchor="${anc}" data-sel="${p.id}" style="${sel?'text-decoration:underline':''}">${esc(nomeA(p))}</text>`; }
+    s+=`<rect x="${xd-5}" y="${y-5}" width="10" height="10" fill="${c}" stroke="#1F1A17" stroke-width="1" ${p.sciolto?'opacity=".35"':''} data-sel="${p.id}" style="cursor:pointer"/>`;
+  }
+  if(opz.tu){ const t=mio(), xt=X(t.posizione_dichiarata); s+=`<path d="M${xt-5} ${y0-19}L${xt+5} ${y0-19}L${xt} ${y0-11}Z" fill="${grave()?'#1F1A17':'#1D4E89'}"/><text x="${xt}" y="${y0-22}" text-anchor="middle" style="fill:${grave()?'#1F1A17':'#1D4E89'}">tu</text>`; }
+  return `<svg class="ax" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" viewBox="0 0 ${W} ${H}" role="img" aria-label="Asse destra-sinistra: dichiarata (quadrato) e percepita (anello)"><defs><marker id="pt" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#5E5750"/></marker></defs>${s}</svg>`;
+}
+
+// ======================= le Camere =======================
+function camere(fonte, piccole){
+  const ps=tutti().filter(p=>!p.sciolto);
+  const riga = (k,i,tot,lab)=>{ const xs=ps.map(p=>[p,(fonte==='ora'?seggi(p):proi(p))[i]]).filter(x=>x[1]>0);
+    return `<div class="cam"><span>${lab}</span><div class="stk">${xs.map(([p,n])=>`<i title="${esc(p.nome)}: ${n}" style="width:${n/tot*100}%;background:${col(p)}" class="${nato(p)?'':''}"></i>`).join('')}<b></b></div><span class="muto">${tot} seggi</span></div>`; };
+  return `<div class="camere">${riga('c',0,400,'Camera')}${riga('s',1,200,'Senato')}</div>`;
+}
+
+// ======================= il dettaglio a lato =======================
+function lato(){
+  const v=V();
+  if(!st.sel){
+    const ps=tutti(), vivi=ps.filter(p=>!p.sciolto).length;
+    const legenda = ps.filter(p=>!p.sciolto).map(p=>`<div class="prom"><span>${sw(p)}${esc(p.id==='giocatore'?'Il tuo partito':p.nome)}</span><span class="num">${seggi(p)[0]} · ${seggi(p)[1]}</span></div>`).join('');
+    return `<aside class="lato"><h4 class="tit">Le Camere</h4>
+      ${v.fase==='sciolta'?`<div class="sez-l">in carica<span>sciolte, fino al voto</span></div>`:`<div class="sez-l">in carica<span>elette nel ${v.elezioni[0]?.data.anno??'—'}</span></div>${camere('ora')}`}
+      <div class="sez-l">se si votasse oggi<span>dal sondaggio pubblico</span></div>${camere('oggi')}
+      <div class="sez-l">seggi Camera · Senato<span>${vivi} partiti su 10</span></div>${legenda}
+      <p class="min muto">Il filo rosso è la maggioranza: 201 alla Camera, 101 al Senato. Al massimo dieci partiti: oltre, nessuno nasce.</p>
+      <p class="min muto">Tocca un partito per la sua scheda.</p></aside>`;
+  }
+  const p=Pid(st.sel), r=rapporto(p), s=seggi(p), q=proi(p), tu=p.id==='giocatore';
+  const ult=v.elezioni[0]?.voti[p.id], z=senzaSeggi(p);
+  const orig = nato(p) ? `Nato in partita${ORIG[st.stato+':'+p.id]?' '+ORIG[st.stato+':'+p.id]:''}: il quando e il perché li dice il registro.` : '';
+  const d=dist(p), vrs = p.posizione_percepita>p.posizione_dichiarata ? 'verso destra' : 'verso sinistra';
+  const pos = d<.005 ? 'La percepita coincide con la dichiarata.' :
+    `Gli elettori lo vedono a ${num(p.posizione_percepita,2)}, ${vrs}: ${num(d,2)} punti dalla dichiarata. ${d>=SCISS.scissione?'Oltre un punto: alla chiusura si scinde.':d>=SCISS.minaccia?'Oltre mezzo punto: minaccia la scissione; a un punto una frangia esce coi suoi seggi e una parte della cassa.':'La minaccia scatta a mezzo punto.'}`;
+  const rap = r.k==='alleato' ? `<div class="sez-l">intesa con te<span>${num(r.a.intesa,1)} su 100</span></div>${intesa(r.a,true)}
+      ${r.a.ultimatum?`<p class="sec"><b class="male">Ultimatum</b> per ${esc(causa(r.a.causa_ultimatum))}. Sotto 25 a fine turno esce dal governo e i suoi dicasteri vanno in interim. <button class="link">Rispondi nel Cruscotto ›</button></p>`:r.a.intesa<SOGLIA.ultimatum+10?`<p class="sec">A ${num(r.a.intesa-SOGLIA.ultimatum,0)} punti dall’ultimatum.</p>`:''}
+      ${r.a.causa_principale?`<p class="min muto">Pesa di più: ${esc(causa(r.a.causa_principale))}.</p>`:''}
+      ${r.a.variazioni.length?`<div class="cause">${r.a.variazioni.map(x=>`<span>${esc(causa(x.causa))} <span class="muto">· turno ${x.turno}</span></span><b class="${x.delta<0?'male':'bene'}">${x.delta>0?'+':'−'}${num(Math.abs(x.delta))}</b>`).join('')}</div>`:''}`
+    : r.k==='fascia' ? `<div class="sez-l">intesa col governo<span>all’opposizione la vedi in fasce</span></div>${fascia3(r.f)}${r.f.causa_ultimatum?`<p class="sec">Ultimatum per ${esc(causa(r.f.causa_ultimatum))}.</p>`:''}<p class="min muto">Un alleato incrinato vota meno compatto: la sfiducia ha più margine.</p>`
+    : r.k==='pdc' ? `<div class="sez-l">governo</div><p class="sec">${esc(p.leader)} è Presidente del Consiglio.</p>` : '';
+  const mosse = v.mosse.filter(m=>m.partito===p.id);
+  const spese = (v.campagna.spese||[]).filter(x=>x.partito===p.id);
+  return `<aside class="lato">
+    <div class="testa">${faccia(p,84)}<div><h4 class="tit ${p.sciolto?'sciolto':''}">${sw(p)}${esc(tu?'Il tuo partito':p.nome)}</h4>
+      ${tu?`<div class="ld">Sei tu il leader, e lo resti.</div>`:`<div class="ld">leader <b>${esc(p.leader)}</b>${leaderNuovo(p)?` · al posto di ${esc(v.leader_zero[p.id])}, dopo la sconfitta`:''}</div>`}
+      <div style="margin-top:3px">${chips(p)}</div></div></div>
+    ${p.sciolto?`<p class="sec"><b>Sciolto</b> dopo due elezioni senza seggi. Resta qui fino alla fine, senza voti.</p>`:''}
+    ${orig?`<p class="min muto">${orig}</p>`:''}
+    <div class="sez-l">posizione<span>dichiarata ${num(p.posizione_dichiarata,1)}${tu?'':' · tu a '+num(mio().posizione_dichiarata,1)}</span></div>
+    ${asse([p], 380, 56, {fili:true, tu:!tu})}
+    <p class="sec">${pos}</p>
+    ${tu?'':`<div class="sez-l">indole</div><p class="sec">${VOC[p.vocazione]}; ${REG[p.regola]}.</p>`}
+    ${rap}
+    <div class="sez-l">seggi<span>Camera · Senato</span></div>
+    <dl class="dati"><dt>in carica</dt><dd><b>${s[0]} · ${s[1]}</b></dd><dt>se si votasse oggi</dt><dd>${q[0]} · ${q[1]} <span class="muto min">(${sgn(q[0]-s[0])} alla Camera)</span></dd>
+      <dt>sondaggio</dt><dd>${pc(sond(p))} <span class="muto min">media degli istituti</span></dd>
+      ${ult?`<dt>ultimo voto</dt><dd>${pc(ult[0])} · ${v.elezioni[0].data.anno}${z&&!tu&&!p.sciolto?` <span class="male min">· nessun seggio: alla seconda elezione di fila si scioglie</span>`:''}</dd>`:''}
+      ${tu?'':`<dt>carisma</dt><dd>${sgn(+p.valence.toFixed(2)).replace('.',',')} <span class="muto min">del leader, nel voto</span></dd>`}
+      <dt>cassa</dt><dd><b>${euro(p.cassa)}</b>${spese.length?` <span class="muto min">· spesi in campagna ${euro(spese.reduce((a,x)=>a+(x.euro||0),0))}</span>`:''}</dd></dl>
+    ${p.promesse.length?`<div class="sez-l">promesse<span>si verificano al voto</span></div><div class="prom">${p.promesse.map(x=>`<span>${esc(x.disposizione)}: <b>${esc(x.gradino)}</b></span><span class="muto">${x.in_sospeso?'dal voto prima':'in campagna'}</span>`).join('')}</div>`:''}
+    ${mosse.length?`<div class="sez-l">mosse di questo turno</div>${mosse.map(m=>`<div class="mossa">${esc(m.testo)}</div>`).join('')}`:''}
+    ${tu&&v.turni_al_voto<=1?`<button class="link">Riposizionati nella Campagna ›</button>`:''}
+    <button class="link" data-sel="">‹ Le Camere</button>
+  </aside>`;
+}
+
+// ======================= le forme =======================
+function capoSez(){
+  const v=V(), ps=tutti(), n=ps.filter(p=>!p.sciolto).length, m=ps.filter(minaccia).length;
+  return `<div class="capo" style="grid-column:1/-1"><h3 class="tit">I partiti</h3><span class="sec muto">${per(v.data)} · ${n} su 10${m?` · ${m} in minaccia di scissione`:''}</span></div>`;
+}
+function formaA(){
+  const ps=tutti();
+  const scheda = p=>{ const s=seggi(p), sel=st.sel===p.id;
+    return `<div class="sch ${sel?'sel':''} ${p.sciolto?'sciolto':''}" data-sel="${p.id}" style="border-top-color:${col(p)}">
+      <span class="fz">${faccia(p,46)}</span>
+      <span class="nmP">${esc(p.id==='giocatore'?'Il tuo partito':p.nome)}</span>
+      <span class="ld">${p.id==='giocatore'?'tu':esc(p.leader)}</span>
+      <span class="rr"><span class="muto">sondaggio</span><b>${pc(sond(p))}</b></span>
+      <span class="rr largo"><span class="muto">seggi C · S</span><b>${s[0]} · ${s[1]}</b></span>
+      <span class="rr largo"><span class="muto">cassa</span><b>${euroB(p.cassa)}</b></span>
+      ${p.id==='giocatore'?'':`<span class="ind1 largo">${p.vocazione} · ${REGC[p.regola]}</span>`}
+      ${rapBreve(p)?`<span class="largo">${rapBreve(p)}</span>`:''}${chips(p,true)?`<span class="largo">${chips(p,true)}</span>`:''}</div>`; };
+  return `<main class="corpo par">${capoSez()}<div class="pag">
+    <div class="asseG">${asse(ps, 820, 0, {etichette:true, fili:true})}<p class="min muto">Quadrato: la posizione dichiarata. Anello: quella percepita dagli elettori. In rosso chi è a mezzo punto o più, coi fili della minaccia (½) e della scissione (1).</p></div>
+    <div class="schier" style="--nc:${Math.ceil(ps.length/2)}">${ps.map(scheda).join('')}</div></div>${lato()}</main>`;
+}
+function formaB(){
+  const ps=tutti();
+  const riga = p=>{ const s=seggi(p), q=proi(p), r=rapporto(p), sel=st.sel===p.id;
+    const rapT = r.k==='alleato' ? intesa(r.a) : r.k==='fascia' ? fascia3(r.f) : r.k==='tu' ? '<span class="chip pieno">tu</span>' : r.k==='pdc' ? '<span class="chip pieno">guida il governo</span>' : r.k==='gov' ? '<span class="chip">al governo</span>' : r.k==='uscente' ? '<span class="chip">governo uscente</span>' : p.sciolto ? '<span class="chip tr">sciolto</span>' : '<span class="muto min">—</span>';
+    return `<tr class="riga ${sel?'sel':''} ${minaccia(p)?'mi':''} ${p.sciolto?'sciolto':''}" data-sel="${p.id}">
+      <td class="f">${faccia(p,34)}</td>
+      <td class="nm">${sw(p)}<span class="nmP">${esc(p.id==='giocatore'?'Il tuo partito':p.nome)}</span>${nato(p)?' <span class="chip">nato</span>':''}<div class="ld">${p.id==='giocatore'?'tu':esc(p.leader)}${leaderNuovo(p)?' · nuovo':''}</div></td>
+      <td class="n">${num(p.posizione_dichiarata,1)}<div class="ld ${minaccia(p)?'male':''}">${dist(p)>=.005?'perc. '+num(p.posizione_percepita,2):'&nbsp;'}</div></td>
+      <td class="ind"><div>${p.id==='giocatore'?'':esc(p.vocazione+' · '+REGC[p.regola])}</div></td>
+      <td class="n"><b>${s[0]}</b> · ${s[1]}<div class="ld">oggi ${q[0]} · ${q[1]}</div></td>
+      <td class="n"><b>${pc(sond(p))}</b></td>
+      <td class="n">${euro(p.cassa)}</td>
+      <td>${rapT}${minaccia(p)?'<div><span class="chip rosso">minaccia di scissione</span></div>':''}</td></tr>`; };
+  return `<main class="corpo par">${capoSez()}<div class="pag">
+    <table class="lst"><thead><tr><th></th><th>Partito · leader</th><th class="n">Posizione</th><th>Indole</th><th class="n">Seggi C · S</th><th class="n">Sondaggio</th><th class="n">Cassa</th><th>Con te</th></tr></thead>
+    <tbody>${ps.map(riga).join('')}</tbody></table>
+    <div><div class="sez-l">il parlamento in carica<span>filo rosso: la maggioranza</span></div>${camere('ora')}</div>
+    <div>${asse(ps, 820, 64, {fili:true})}</div></div>${lato()}</main>`;
+}
+function formaC(){
+  const v=V(), ps=tutti();
+  const fuori = p => p.sciolto || (v.fase!=='sciolta' && seggi(p)[0]+seggi(p)[1]===0);   // a Camere sciolte nessuno ha seggi
+  let campi;
+  if(v.governa) campi=[['La tua maggioranza', ps.filter(p=>!fuori(p)&&p.al_governo), 'tu e gli alleati, con l’intesa'], ['L’opposizione', ps.filter(p=>!fuori(p)&&!p.al_governo), 'in Parlamento'], ['Fuori dalle Camere', ps.filter(fuori), 'senza seggi o sciolti']];
+  else if(v.fase==='sciolta') campi=[['Il tuo partito', ps.filter(p=>p.id==='giocatore'), 'coalizione da dichiarare in Campagna'], ['Gli altri', ps.filter(p=>p.id!=='giocatore'&&!fuori(p)), 'al voto con te'], ['Fuori dalle Camere', ps.filter(p=>p.id!=='giocatore'&&fuori(p)), 'senza seggi o sciolti']];
+  else campi=[['Il governo', ps.filter(p=>!fuori(p)&&p.al_governo), 'gli alleati del governo avversario, in fasce'], ['L’opposizione', ps.filter(p=>!fuori(p)&&!p.al_governo), 'tu e gli altri'], ['Fuori dalle Camere', ps.filter(p=>fuori(p)&&p.id!=='giocatore'), 'senza seggi o sciolti']];
+  const fas = p=>{ const s=seggi(p), sel=st.sel===p.id;
+    return `<div class="fas ${sel?'sel':''} ${p.sciolto?'sciolto':''}" data-sel="${p.id}" style="border-left-color:${col(p)}">${faccia(p,40)}
+      <div class="t"><span class="nmP">${esc(p.id==='giocatore'?'Il tuo partito':p.nome)}</span><div class="ld">${p.id==='giocatore'?'tu':esc(p.leader)} · ${num(p.posizione_dichiarata,1)}${dist(p)>=.005?` → ${num(p.posizione_percepita,1)}`:''}</div></div>
+      <div class="num" style="text-align:right">${s[0]} · ${s[1]}<div class="ld">${pc(sond(p))}</div></div>
+      ${rapBreve(p)?`<div class="intesa">${rapBreve(p)}</div>`:''}
+      <div class="s">${p.id==='giocatore'?'':esc(p.vocazione+' · '+REGC[p.regola])+' · '}cassa ${euro(p.cassa)}${p.id!=='giocatore'&&!p.sciolto&&senzaSeggi(p)===1?' · senza seggi all’ultimo voto':''}</div>
+      ${chips(p,true)?`<div class="s">${chips(p,true)}</div>`:''}</div>`; };
+  const tuPrima = xs => [...xs.filter(p=>p.id==='giocatore'), ...xs.filter(p=>p.id!=='giocatore')];
+  return `<main class="corpo par">${capoSez()}<div class="pag">
+    <div class="campi">${campi.map(([t,xs0,sub])=>{ const xs=tuPrima(xs0); return `<section><div class="capo"><h3 class="tit">${t}</h3><span class="min muto">${sub}</span></div>${xs.length?xs.map(fas).join(''):'<p class="min muto">nessuno</p>'}</section>`; }).join('')}</div></div>${lato()}</main>`;
+}
+
+// ======================= cornice (da 08, forma A, come nel 18) =======================
+function caselle(pos,soglia=3,n=10){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  const inp=pos<=soglia;
+  return `<span class="cas ${inp?'inp':''}">${Array.from({length:n},(_,i)=>`<i class="${[i<soglia?'per':'', i===soglia-1?'sog':'', i<pos?'on':''].join(' ')}"></i>`).join('')}</span>`;
+}
+function tracciati(){
+  const v=V(), m=v.margine, stretto=m?Math.min(...m):null;
+  const cons = v.governa ? ['Consenso', v.consenso] : ['Il tuo consenso', sond(mio())*100];
+  const t=[[cons[0], num(cons[1])+'%', clamp(Math.round((cons[1]-25)/5),0,10)],
+    [v.governa?'Maggioranza C / S':'Governo C / S', m? m.map(sgn).join(' / ') : 'Camere sciolte', m? clamp(Math.round((stretto+9)/3),0,10) : null],
+    ['Conti · spread', num(v.spread,0), clamp(Math.round((500-v.spread)/50),0,10)]];
+  return `<div class="trks">${t.map(([k,val,pos])=>`<div class="trk"><span class="k">${k}</span>${caselle(pos)}<span class="v">${val}</span></div>`).join('')}</div>`;
+}
+const SEZ = [['prima','Prima pagina'],['cruscotto','Cruscotto'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function cornice(){
+  const v=V(), b={};
+  if(!v.governa) b.governo = v.fase==='sciolta' ? 'Camere sciolte: nessun governo da guidare' : 'Non governi: sei all’opposizione';
+  if(!(v.governa && v.data.trimestre===4)) b.bilancio = v.governa ? 'La legge di bilancio si presenta in ottobre-dicembre' : 'Il bilancio lo presenta chi governa';
+  if(v.turni_al_voto>1) b.campagna='Si fa campagna solo nel turno prima del voto';
+  if(v.fase==='sciolta'){ b.aula='Camere sciolte'; }
+  const stato = v.finita ? 'Partita finita' : v.fase==='sciolta' ? 'Camere sciolte' : v.crisi ? 'Crisi di governo' : v.governa ? 'Al governo' : 'All’opposizione';
+  const chi=`<span class="chi"><b>${stato}</b><br>${per(v.data)} · turno ${v.turno}<br><b>${v.turni_al_voto?v.turni_al_voto+' turni al voto':'si vota a fine turno'}</b></span>`;
+  const somm=`<nav class="somm" aria-label="Sommario">${SEZ.map(([k,t])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}">${t}</button>` : `<button class="${k==='partiti'?'qui':''}" ${k==='partiti'?'aria-current="page"':''}>${t}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino solo-ord">Il Pungolo</span>${chi}</div>${tracciati()}
+    <div class="c-dx"><div class="pila"><button class="btn pieno">Chiudi il turno ›</button></div><span class="def tutte">nessuna scelta al default</span></div></div>${somm}</header>`;
+}
+
+// ======================= render =======================
+const scr = document.getElementById('screen');
+let limite='';
+function render(){
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  const v=V();
+  if(st.sel && !Pid(st.sel)) st.sel=null;
+  const banda = v.crisi ? `<div class="banda">Crisi di governo: solo ordinaria amministrazione. Allarga la maggioranza o dimettiti.</div>` : '';
+  const corpo = st.v==='B' ? formaB() : st.v==='C' ? formaC() : formaA();
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS ${grave()?'g':''} ${lw<1150?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto ${banda?'auto ':''}minmax(0,1fr)">${cornice()}${banda}${corpo}</div>`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  tagli();
+}
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('svg')||el.closest('.cas')) return; const b=el.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (b.bottom>R.bottom+1 && !el.closest('.corpo')));
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/ellipsis/.test(cs.textOverflow) && cs.overflow!=='hidden' && !/auto|scroll/.test(cs.overflowY) && el!==r;
+    if(fuori||stretto) n++; });
+  const c=r.querySelector('.pag'), scorre = c && c.scrollHeight>c.clientHeight+1;
+  const l=r.querySelector('.lato'), scorreL = l && l.scrollHeight>l.clientHeight+1;
+  document.getElementById('avv').textContent = [limite, n?`tagli: ${n}`:'', scorre?'la pagina scorre':'', scorreL?'il lato scorre':''].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.v=k[(k.indexOf(st.v)+(b.id==='next'?1:k.length-1))%k.length]; }
+  else { st[b.parentElement.dataset.k]=b.dataset.v; if(b.parentElement.dataset.k==='stato') st.sel=null; }
+  render();
+});
+scr.addEventListener('click',e=>{
+  const x=e.target.closest('[data-sel]'); if(!x) return;
+  const id=x.dataset.sel; st.sel = !id || st.sel===id ? null : id; render();
+});
+function perche(e){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=e.type==='mouseover'||e.type==='focusin' ? e.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, k=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/k/z)+'px'; el.style.top=((B.bottom-R.top)/k/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

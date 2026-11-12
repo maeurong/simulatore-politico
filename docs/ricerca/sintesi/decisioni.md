@@ -434,5 +434,132 @@ Ticket `.scratch/v1-piano-11-ui/issues/16-prima-pagina.md`, un giro su un protot
 - **Fermate e grandi cali restano come sono:** all'opposizione «avanti fino a novità» si ferma quasi a ogni turno, ma per decisioni vere; un calo di 7,5 punti nel sondaggio si vede dal tracciato, non in pagina.
 - **Una voce sola per una situazione accesa col suo evento**, rimandata al core.
 
+## 2026-11-12: anteprima della misura
+Ticket `.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md`, due giri su un prototipo con tre forme, poi una quarta mista, e tredici casi giocati.
+
+- **Forma D · Cartellino col prima e dopo:** un foglio appeso a uno spillo nel dettaglio a lato, con la tabella ora / con la misura e gli effetti con quando e quanto. Il mobile a fili lunghi quanto il ritardo era il più fedele alla metafora, ma stretto con quattro pezzi e senza scala per i 40 turni del nucleare.
+- **Oscilla solo a un gesto:** aprire, cambiare un gradino, comprare il test; mai in loop, fermo nel tono grave.
+- **La stima è del ministro, e lo si dice** con la sua capacità; quanto spesso sbaglia no, perché verrebbe da una manopola.
+- **Il test cambia ciò che si legge:** prima chi la misura tocca, dopo come reagiscono al governo le sei condizioni.
+- **Due dati al core:** costo, effetti e gruppi di una misura già in calendario, che oggi `anteprima` rifiuta, e le norme che il decreto di un evento ammette.
+
+## 2026-11-12: conti
+Ticket `.scratch/v1-piano-11-ui/issues/21-conti.md`, due giri su un prototipo con tre forme e nove stati giocati, il centro studi comprato davvero in sei.
+
+- **Forma A · Listino:** tre colonne di pagina economica (bilancio, economia, soglie) e il centro studi nel dettaglio a lato. I termometri delle situazioni in testa e le schede alla maniera dell'Aula scartati: i primi allungano la pagina, le seconde nascondono le soglie dietro un clic.
+- **Le soglie a righello:** accensione, spegnimento e isteresi sulla stessa riga, con la distanza scritta; le 21 grandezze si aprono a lato, così la colonna sta in uno schermo.
+- **Il centro studi a ventagli:** la stima del trimestre accanto alla prima stima, quattro previsioni con la fascia di una e due sigma.
+- **Due dati al core:** i trimestri già passati oltre la soglia (la recessione ne chiede due, e a −4,2% può essere spenta) e il debito sul PIL, che oggi si legge solo pagando il centro studi.
+
+## 2026-11-12: registro
+Ticket `.scratch/v1-piano-11-ui/issues/25-registro.md`, due giri su un prototipo con tre forme e quattro stati; le voci delle chiusure 0-8 del seme 4 scritte a mano col catalogo della spec di core, perché la PR dell'esito non è ancora eseguita.
+
+- **Forma D · Indice col filo:** colonna dei turni e voci del turno scelto a pagina, coi filtri della cronologia che valgono su tutti i turni e le voci collegate nel dettaglio a lato. Cronologia continua e tabellone turni × sezioni scartati: si legge un turno alla volta, e il filo si segue filtrando.
+- **«Torna al turno N» in testa al registro del turno N**, con la conferma sul posto: cancella anche quella chiusura, perché si torna all'apertura per rifare le scelte che l'hanno prodotta.
+- **I ministri del giocatore restano ordinari** e il ritorno della soddisfazione verso la base resta muto, come la rata di un cantiere.
+- **Due dati al core, PR dell'esito:** i soggetti per riga nei dettagli delle voci fuse, e gli id delle disposizioni nella voce, perché una legge ripresentata cambia id di misura.
+
+## 2026-11-12: paese
+Ticket `.scratch/v1-piano-11-ui/issues/23-paese.md`, un giro su un prototipo con tre forme, quattro stati giocati e il selettore dentro tre sezioni ospiti; le venti regioni calcolate con le regole della spec di core.
+
+- **Forma A · Atlante:** mappa e lista a pagina, il sondaggio nel dettaglio a lato finché non si sceglie una regione. Sondaggio a fronte e schede scartati: la mappa va letta accanto ai suoi numeri, e la scheda della regione ha bisogno del lato.
+- **Consenso della coalizione del giocatore** come livello di default: dice chi vince il seggio, e all'opposizione la sola quota del giocatore schiaccia le cinque classi.
+- **Otto colori dei partiti**, validati per i daltonici sulla carta, nella mappa del voto e nelle barre; il resto a inchiostro, col nome sempre accanto perché tre hanno contrasto basso.
+- **Il selettore di regione resta nella sezione che lo chiede**, nel dettaglio a lato: mappa piccola, lista da tastiera, bottone d'azione.
+- **Nessun dato nuovo al core:** regioni, voto per regione e opere sono già nella PR delle esposizioni.
+
+## 2026-11-12: bilancio
+Ticket `.scratch/v1-piano-11-ui/issues/22-bilancio.md`, un giro su un prototipo con tre forme e sei stati giocati, coi riepiloghi veri del core per ogni modifica.
+
+- **Forma B · Bilancia:** in testa il giogo della spesa netta contro il tetto UE, sotto entrate e spesa a fronte, i dicasteri a barre. Il prospetto unico e la legge per passi scartati: il primo lascia il saldo a lato, il secondo nasconde la tabella.
+- **Il costo accanto a ogni «Indicizza»:** la bozza ripete le cifre nominali, e indicizzare tutto nel 2027 costa 6,2 mld di spesa e 1,3 di gettito.
+- **Il funzionamento tagliato lo scrive la UI:** il riepilogo del core non lo vede, perché il saldo non cambia; la regola del ritardo sul servizio è fissa.
+- **All'opposizione la sezione resta barrata;** il riepilogo del bilancio del governo va in Aula.
+- **Due dati al core:** le cifre del bilancio in aula, che cambiano quando si accoglie un emendamento, e i dicasteri chiesti da ogni emendamento, per dire il costo prima di scegliere.
+
+## 2026-11-12: campagna
+Ticket `.scratch/v1-piano-11-ui/issues/26-campagna.md`, un giro su un prototipo con tre forme e cinque stati giocati; ogni disponibilità, fascia e rifiuto preso dal core col comando vero.
+
+- **Forma A · Tavolo:** coalizione, spesa, posizione e promesse insieme a pagina, la cassa nel dettaglio a lato. La cassa ripartita e l'ordine del giorno scartati: la campagna è un'allocazione fra leve diverse, e il giocatore le deve vedere insieme.
+- **La dichiarazione parte al clic:** il comando si sostituisce, e il rifiuto del core sulla riga dice perché un'alleanza non si fa.
+- **Riposizionamento e promesse con l'anteprima del core:** si fanno una volta, quindi la conferma sul posto dice la distanza contro le soglie di scissione e l'intesa che ogni alleato perde.
+- **L'avviso della campagna tagliata lo scrive la UI**, prima della chiusura: un acquisto fatto dopo la campagna abbassa la cassa, e la chiusura taglia le spese in ordine.
+- **Due dati al core:** le due anteprime, con le soglie di scissione nella Vista.
+
+## 2026-11-12: cruscotto all'opposizione
+Ticket `.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md`, un giro su un prototipo con tre forme e dieci stati giocati sotto un governo IA; anteprime della sfiducia e rifiuti presi dal core.
+
+- **Forma A · Ordine del giorno con le leve in testa:** sfiducia, posto riservato e referendum prima delle misure, perché le linee vanno quasi sempre al default e le leve sono le scelte rare che contano. Il controprogramma a due colonne e la maggioranza al centro scartati.
+- **Il secondo tracciato all'opposizione è «per farlo cadere»:** i sì che mancano alla sfiducia, dall'anteprima. Il margine in seggi inganna quando gli alleati sono in ultimatum: +140 alla Camera mentre la sfiducia passerebbe. Al turno zero, i seggi attesi.
+- **Niente conto delle linee al default** nella cornice; conferma sul posto per sfiducia e referendum, che non si ritirano.
+- **Quattro dati al core:** sfiducia presentata, di chi è il posto riservato, ammissibilità del referendum per disposizione, costo della linea.
+
+## 2026-11-12: schema dello Stato
+Ticket `.scratch/v1-piano-11-ui/issues/29-schema-dello-stato.md`, due giri su un prototipo con quattro forme e quattro stati giocati, tutti da Viste già esistenti.
+
+- **Lo schema risponde a «chi muove cosa ora»:** le pressioni del trimestre, non la struttura dello Stato né la causa di una notizia.
+- **Forma B · Tavola per poteri:** quattro colonne fisse, un soggetto per riga, i fili da riga a riga. La rete del prototipo vincolante scartata: con 20-27 fili per turno si affolla anche sfoltita. Mario ha preferito B anche alla mappa delle forze, sette blocchi coi fili raggruppati in frecce scritte.
+- **Restano da risolvere dentro B** i fili muti, il groviglio sul Presidente del Consiglio e il verso non chiaro: sono le tre note di Mario al primo giro.
+- **Nessun campo nuovo:** ogni filo viene da un campo della Vista (agende, cantieri, proposte, intesa, calendario, esiti, eventi, situazioni, spread). I tondi aspettano l'esito del core.
+
+## 2026-11-12: eredità
+Ticket `.scratch/v1-piano-11-ui/issues/30-eredita.md`, un giro su un prototipo con tre forme, nutrito da una partita giocata fino alla fine senza seggi (seme 43 a 4,5).
+
+- **Forma A · Ultima edizione:** la fine come pagina di giornale, col voto perso in testa e tre colonne (elezioni, Paese contro il turno zero, leggi che restano), i grafici in fondo. Scartati il consuntivo a quattro numeri e la cronologia su un asse solo.
+- **Riavvolgimento in due passi:** un pulsante diretto per il turno del voto perso, il Registro per tutti gli altri. Ogni turno riavvolgibile dalla pagina stessa è stato scartato: il Registro lo fa già.
+- **Una composizione, due sorgenti:** la stessa pagina si rilegge dall'albo, senza cornice né azioni.
+- **La fine senza seggi si raggiunge giocando**: 17 partite su 720 senza leggi, tutte al secondo voto. Più leggi passano, meno il giocatore la raggiunge.
+
+## 2026-11-12: scale dei tracciati
+Ticket `.scratch/v1-piano-11-ui/issues/31-scale-dei-tracciati.md`, un giro a parole e uno su un prototipo con otto stati, sette dalle Viste campione e uno di prova.
+
+- **Lo stacco segna una regola del core, non un preavviso:** maggioranza persa, Aste scoperte a 550 pb, premio o soglia di lista mancati. Una zona di allarme prima della regola chiederebbe un numero che il core non ha.
+- **Scala ancorata alla soglia:** stacco sempre dopo la terza casella, passo fisso; se la legge elettorale cambia la soglia, la scala scorre.
+- **Il consenso al governo ha stacco e rosso indipendenti:** lo stacco sta al premio, il rosso viene dalla proiezione dei seggi. Una coalizione al 38,5% sotto il premio ha comunque 225 seggi su 400.
+- **Un dato al core:** la soglia della crisi del debito nella Vista.
+
+## 2026-11-12: disegno delle caricature
+Ticket `.scratch/v1-piano-11-ui/issues/32-disegno-delle-caricature.md`, una tavola di riferimenti ([[riferimenti-per-le-facce]]), quattro varianti e una rifinitura.
+
+- **Profilo al tratto alla Guasco:** pennino piatto, figura campita di carta, piani in terra chiara. L'identità sta nella silhouette del profilo (naso, mento, fronte, nuca) e nel colletto, non in forme e tinte dentro la testa: per questo le facce del segnaposto sembravano «tutte uguali».
+- **Due inchiostri sovrapposti, solo nelle facce:** come una stampa a due passaggi, sempre dai sette inchiostri.
+- **Soddisfazione dal fondo del riquadro:** a 34 px un colore pieno si legge prima di una bocca.
+- **Donne senza capelli:** ciglia e naso all'85% per tutte, poi labbra, orecchino e cappello combinati dall'hash, così si distinguono anche fra loro.
+- **Un dato al core:** il genere del personaggio nella Vista.
+
+## 2026-11-12: sezione Governo
+Ticket `.scratch/v1-piano-11-ui/issues/18-governo.md`, un giro su tre forme del prototipo.
+
+- **Figurine, non listino:** dieci carte 5 × 2, ciascuna col suo personaggio (caricatura, voto con freccia, motto), anche se la tabella densa era più compatta. Nell'album le carte in evidenza hanno un filo rosso in testa.
+- **Il costo sul bottone basta:** Ferma è diretto e scrive quanto costa al ministro; la conferma sul posto resta per ciò che costa ad altri (l'intesa con le dimissioni) o butta denaro (il cantiere fermato).
+- **La regione con mappa e lista** anche nel dettaglio a lato: la mappa dice dove il ministro non vuole andare, la lista dà il numero.
+- **Quattro dati al core:** i costi di Ferma e Dirotta; l'indicatore di servizio del dicastero; il perché dell'evidenza; le soglie della soddisfazione col costo d'intesa delle dimissioni.
+
+## 2026-11-12: trattativa e spartizione
+Ticket `.scratch/v1-piano-11-ui/issues/27-trattativa-e-spartizione.md`, un giro su tre forme del prototipo.
+
+- **Righe, non cesti:** un dicastero per riga coi bottoni «a chi»; il conto di ogni alleato (richiesta, punti dati, intesa di partenza) sta nel lato, non nella pagina.
+- **Allargare riporta la spartizione al default:** chi entra riceve la sua parte, come già fa il core.
+- **Il tecnico su qualunque dicastero:** conta sempre nella tua quota, e su un dicastero dell'alleato gli toglie il punto.
+- **Chiedere la guida è diretto:** non costa niente; restare fuori dal ribaltone ha la conferma sul posto.
+- **Tre dati al core:** la spartizione in corso per dicastero col peso; l'intesa di partenza per alleato; la coalizione del ribaltone col primo per seggi.
+
+## 2026-11-12: impostazioni del giocatore
+Ticket `.scratch/v1-piano-11-ui/issues/33-impostazioni-del-giocatore.md`, due giri e tre forme del prototipo; ricerca [[localstorage-in-wkwebview]].
+
+- **Per l'app, non per la partita:** scala, velocità e movimento sono preferenze di chi legge; valgono in edicola e in ogni partita.
+- **In `localStorage`, non in un file del guscio:** la lettura sincrona dà la scala giusta al primo disegno, e il guscio resta passacarte. ITP non cancella nulla in un gioco che si gioca cliccando.
+- **Si salva la scelta, non il tetto:** la finestra stretta riduce la scala applicata; allargandola torna la scelta.
+- **Movimento a tre posizioni:** «Come il sistema» segue macOS anche a partita aperta, così non c'è uno stato nascosto.
+- **Nel dettaglio a lato:** la pagina sotto resta in vista e cambia mentre si sceglie.
+
+## 2026-11-12: verifica della UI
+Ticket `.scratch/v1-piano-11-ui/issues/34-verifica-della-ui.md`, tre giri di domande.
+
+- **Test solo sulla logica pura:** Vitest su scale, testi, hash e ordine delle voci; niente test di componente, che cambierebbero a ogni ritocco grafico.
+- **Le Viste campione come batteria:** `mockIPC` le serve all'app nel browser, in sviluppo; ogni stato della fetta a due finestre e due scale, con zero tagli.
+- **L'app vera la gioca l'agente:** `tauri-driver` non va su macOS e WebdriverIO vorrebbe un plugin nel guscio, quindi il giro in WKWebView si fa con computer-use; basta quello, con gli screenshot in PR.
+- **Screenshot come prova, non come confronto:** niente immagini di riferimento, perché ogni fetta cambia le schermate; la fedeltà al prototipo la giudica il `craft-reviewer`.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

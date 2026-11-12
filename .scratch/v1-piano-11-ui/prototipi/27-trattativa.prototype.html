@@ -1,0 +1,767 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Trattativa e spartizione» (27), mappa v1-piano-11-ui.
+  Domanda: com'è fatta la casa del turno dopo il voto? Il risultato in testa; la spartizione dei dieci dicasteri proposta
+  dal giocatore, con la richiesta di ogni alleato in vista e l'intesa di partenza che sale o scende (storie 79-80); i
+  tecnici nella quota del proprio partito (81); l'allargamento quando manca la maggioranza (82); con l'incarico a un altro,
+  chiedere la guida o restare fuori dal ribaltone (98).
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Righe     — il risultato in testa, poi un dicastero per riga col peso e i bottoni «a chi»; gli alleati nel lato
+    B  Cesti     — un cesto per partito coi dicasteri dentro come tessere alte quanto il peso, la richiesta tratteggiata;
+                   un clic su una tessera la sceglie e il lato dice dove spostarla
+    C  Incroci   — tabella dicasteri × partiti a pallini, sotto i totali, la richiesta e l'intesa di partenza;
+                   il risultato e l'allargamento nel lato
+  Stati, ?stato=: premio (Vista 02, tono ordinario) · grave (la stessa 02 com'è: l'emergenza idrogeologica è grave) ·
+    senza (proporzionale al 3%, seme 4 a 5,5: incarico senza maggioranza, Centrosinistra e Centro disponibili) ·
+    guida (seme 2 a 1,5, turno 5: il ribaltone dopo la caduta del governo di destra, la Sinistra primo per seggi) ·
+    capo (seme 1 a 1,5: l'incarico al Capo dello Stato, il turno del 06 prima che nasca il governo IA)
+  Altri parametri: ?fin=1280|1440 ?scala=1|1,25 ?cede=si|no (solo nella guida; «no» è scritto a mano: nei semi provati la
+  Sinistra la cede, il testo è la causa del core «guiderebbe la propria coalizione»)
+  Dati: viste/27-trattativa.json, nuovo in genera/ (src/trattativa.rs). Rifatti qui e quindi rimandi al core: la
+  spartizione in corso per dicastero (la Vista porta solo richiesta e offerta in punti per alleato), il peso dei dicasteri
+  (3 Economia, 2 Interno ed Esteri, 1 gli altri: dati/base/dicasteri.toml), l'intesa di partenza 60 + 10 × (offerta −
+  richiesta) (manopole intesa_base e intesa_per_punto), la coalizione del ribaltone e il primo per seggi. Verificati
+  giocando: cinque proposte sulla 02 danno l'intesa che dice la formula, e un tecnico conta nella tua quota anche messo
+  su un dicastero di un alleato. Scritta a mano: la spartizione di default dello stato «senza» prima di allargare (la
+  chiusura lì forma il governo della Sinistra), coi punti delle offerte che la Vista porta, Centrodestra 3 e Destra 7.
+  Facce: variante 5 del 32, copiata dal 24. Stile: 08-fondamenta (forma A), cornice del 24. Non è codice di produzione.
+
+  VERDETTO (Mario, 12/11/2026), nel ticket 27: A · Righe; allargare riporta la spartizione al default; il tecnico su
+  qualunque dicastero, nella tua quota; «Chiedi la guida» diretto. Il file si apre su questa forma. Scartate: B e C dalla barra.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo Trattativa · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* cornice A · Gerenza */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:2px}
+.capo h3{margin:0}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+
+.lato{border-left:var(--forte);padding-left:var(--canale);display:grid;gap:8px;align-content:start}
+.lato h4{font-size:var(--c-sez)}
+.chip{display:inline-block;border:1.5px solid var(--ink);padding:0 6px;font-size:var(--c-min);font-weight:700;white-space:nowrap;line-height:1.4}
+.chip.rosso{border-color:var(--rosso);color:var(--rosso)}
+.chip.pieno{background:var(--ink);color:var(--carta)}
+.chip.ok{border-color:var(--verde);color:var(--verde)}
+.chip.tr{border-style:dashed;border-color:var(--grigio);color:var(--grigio)}
+.sez-l{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--grigio);border-bottom:1.5px solid var(--ink);padding-bottom:2px;margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+.sez-l span{letter-spacing:0;text-transform:none;font-weight:400}
+
+/* ===== Partiti (ticket 24) ===== */
+.par{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.par>.lato{overflow:hidden auto;min-height:0;padding-bottom:8px}
+.par>.pag{min-height:0;overflow:hidden auto;display:grid;gap:10px;align-content:start}
+.sw{display:inline-block;width:10px;height:10px;border:1px solid var(--ink);vertical-align:-1px;margin-right:5px;flex:none}
+.sw.nato{background:var(--retino)!important}
+.g .sw{background:var(--carta)!important}
+.tu-box{display:inline-grid;place-items:center;border:2px solid var(--biro);color:var(--biro);font-weight:800;font-family:var(--tit);flex:none}
+.g .tu-box{border-color:var(--ink);color:var(--ink)}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.sciolto{color:var(--grigio)}
+.sciolto .nmP{text-decoration:line-through}
+.nmP{font-weight:700}
+.ld{font-size:var(--c-min);color:var(--grigio)}
+.ld b{color:var(--ink);font-weight:400}
+.ind1{font-size:var(--c-min);color:var(--grigio);line-height:1.25}
+.num{font-weight:700;white-space:nowrap}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none;position:relative}
+.cas i.on{background:var(--ink)}
+.cas i.rs{border-color:var(--rosso)}
+.cas i.rs.on{background:var(--rosso)}
+.cas i.sg::after{content:"";position:absolute;right:-3.5px;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.g .cas i.sg::after{background:var(--ink)}
+.intesa{display:grid;gap:2px}
+.intesa .cas{--cw:12px;--ch:10px}
+.ints{font-size:var(--c-min);color:var(--grigio);display:flex;justify-content:space-between;gap:6px}
+.barraI{position:relative;height:12px;border:1px solid var(--grigio);background:var(--velo)}
+.barraI i{position:absolute;inset:0 auto 0 0;background:var(--ink)}
+.barraI i.ult{background:var(--rosso)}
+.barraI b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.barraI em{position:absolute;top:13px;font-size:10px;font-style:normal;color:var(--rosso);transform:translateX(-50%);white-space:nowrap}
+.cause{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;font-size:var(--c-min)}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.dati dt{color:var(--grigio)}
+.dati dd b{font-weight:700}
+.mossa{font-size:var(--c-min);border-left:2px solid var(--biro);padding-left:6px;color:var(--ink);line-height:1.3}
+.g .mossa{border-color:var(--ink)}
+.prom{display:grid;grid-template-columns:minmax(0,1fr) auto;font-size:var(--c-min);gap:1px 8px}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.testa{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.testa h4{font-size:var(--c-sez)}
+.ax text{font:400 11px var(--txt);fill:var(--grigio)}
+.ax .nmA{font-weight:700;fill:var(--ink);font-size:12px}
+.ax .nmA.sc{text-decoration:line-through;fill:var(--grigio)}
+.sel-ring{outline:2px solid var(--ink);outline-offset:1px}
+[data-sel]{cursor:pointer}
+
+
+/* ===== Trattativa (ticket 27) ===== */
+.camere{display:grid;gap:4px}
+.cam{display:grid;grid-template-columns:62px minmax(0,1fr) 72px;gap:8px;align-items:center;font-size:var(--c-min)}
+.stk{display:flex;height:14px;border:1px solid var(--ink);position:relative}
+.stk i{height:100%;border-right:1px solid var(--carta)}
+.stk b{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:var(--rosso)}
+.g .stk b{background:var(--ink)}
+.trt{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.trt>.lato{overflow:hidden auto;min-height:0;padding-bottom:8px}
+.trt>.pag{min-height:0;overflow:hidden auto;display:grid;gap:10px;align-content:start}
+.ris{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:4px 18px;border-bottom:var(--doppio);padding-bottom:8px}
+.ris>.sez-l{grid-column:1/-1}
+.ris .vt{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--c-min)}
+.ris .vt span{white-space:nowrap}
+.ris .mg{font-size:var(--c-sec);align-self:end}
+.stk i.coal{box-shadow:inset 0 -4px 0 var(--ink)}
+.stk{height:16px}
+.evt{font-size:var(--c-sec);border-left:3px solid var(--rosso);padding-left:8px}
+.g .evt{border-color:var(--ink)}
+.pesi{display:inline-flex;gap:2px;vertical-align:middle}
+.pesi i{width:7px;height:7px;border-radius:50%;background:var(--ink)}
+/* A · Righe */
+.rig{width:100%;border-collapse:collapse;font-size:var(--c-sec)}
+.rig th{font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;color:var(--grigio);text-align:left;font-weight:700;border-bottom:1.5px solid var(--ink);padding:2px 6px;white-space:nowrap}
+.rig td{border-bottom:var(--filo);padding:4px 6px;vertical-align:middle;white-space:nowrap}
+.rig td.d{font-weight:700}
+.rig tr.mod td.d::after{content:" •";color:var(--biro)}
+.g .rig tr.mod td.d::after{color:var(--ink)}
+.chi2{display:inline-flex;gap:3px}
+.op{border:1.5px solid var(--ink);padding:1px 8px;font-size:var(--c-min);font-weight:700;background:var(--carta);white-space:nowrap}
+.op:hover{background:var(--velo)}
+.op.on{color:var(--carta);background:var(--pc,var(--ink));border-color:var(--pc,var(--ink))}
+.op.tec.on{background:var(--retino),var(--carta);color:var(--ink);border-style:double;border-width:3px;padding:0 6px}
+.tot{display:flex;gap:16px;font-size:var(--c-sec);flex-wrap:wrap}
+.tot b{font-size:var(--c-num)}
+/* gli alleati nel lato */
+.all{border:var(--bordo);border-top-width:5px;padding:6px 8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 8px}
+.all>:not(.fz){grid-column:2}
+.all .fz{grid-row:1/span 2}
+.all .largo{grid-column:1/-1}
+.punti{display:flex;gap:2px;position:relative;margin:2px 0 12px}
+.punti i{width:14px;height:12px;border:1.5px solid var(--ink);flex:none}
+.punti i.on{background:var(--pc,var(--ink))}
+.punti b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--biro)}
+.punti em{position:absolute;top:14px;font-size:10px;font-style:normal;color:var(--biro);transform:translateX(-50%);white-space:nowrap}
+.g .punti b{background:var(--ink)} .g .punti em{color:var(--ink)}
+.fu{border:var(--filo);padding:5px 7px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;font-size:var(--c-sec)}
+.fu.no{color:var(--grigio)}
+.conf{border:var(--forte);padding:6px 8px;font-size:var(--c-sec);display:grid;gap:6px;background:var(--velo)}
+.rif{border:1.5px solid var(--rosso);color:var(--rosso);padding:5px 8px;font-size:var(--c-sec);font-weight:700}
+.g .rif{border-color:var(--ink);color:var(--ink)}
+/* B · Cesti */
+.cesti{display:grid;grid-template-columns:repeat(var(--nc),minmax(0,1fr));gap:10px;align-items:start}
+.cesto{border:var(--bordo);border-top-width:5px;padding:6px 7px 8px;display:grid;gap:6px;min-width:0}
+.cesto .tst{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;align-items:center}
+.pila2{position:relative;display:grid;gap:3px;padding:3px;min-height:calc(var(--rq)*30px)}
+.pila2 .rq{position:absolute;left:-1px;right:-1px;top:-1px;height:calc(var(--rq)*30px + 2px);border:2px dashed var(--biro);pointer-events:none}
+.pila2 .rq span{position:absolute;right:3px;bottom:-15px;font-size:10px;color:var(--biro);white-space:nowrap}
+.g .pila2 .rq{border-color:var(--ink)} .g .pila2 .rq span{color:var(--ink)}
+.tes{height:calc(var(--p)*30px - 3px);border:1.5px solid var(--ink);background:var(--pcm,var(--carta));padding:2px 6px;font-size:var(--c-min);font-weight:700;display:flex;justify-content:space-between;gap:6px;align-items:start;text-align:left}
+.tes.tec{background:var(--retino),var(--carta)}
+.tes:hover{outline:2px solid var(--ink)}
+.tes.sel{outline:3px solid var(--ink);outline-offset:1px}
+.cesto .vuo{font-size:var(--c-min);color:var(--grigio);font-style:italic}
+/* C · Incroci */
+.inc{width:100%;border-collapse:collapse;font-size:var(--c-sec)}
+.inc th{font-size:var(--c-min);font-weight:700;text-align:center;border-bottom:1.5px solid var(--ink);padding:3px 6px;white-space:nowrap;vertical-align:bottom}
+.inc th.d,.inc td.d{text-align:left}
+.inc td{border-bottom:var(--filo);padding:3px 6px;text-align:center;white-space:nowrap}
+.inc td.d{font-weight:700}
+.inc tr.mod td.d::after{content:" •";color:var(--biro)}
+.inc .pal{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--ink);display:inline-block;vertical-align:middle;background:var(--carta)}
+.inc .pal.on{background:var(--pc,var(--ink));border-color:var(--pc,var(--ink));box-shadow:0 0 0 2px var(--carta),0 0 0 3.5px var(--pc,var(--ink))}
+.inc .pal.tec.on{background:var(--retino),var(--carta);border-color:var(--ink);box-shadow:0 0 0 2px var(--carta),0 0 0 3.5px var(--ink)}
+.inc td button{padding:2px 8px}
+.inc tfoot td{border-bottom:0;border-top:1.5px solid var(--ink);font-size:var(--c-min)}
+.inc tfoot tr+tr td{border-top:var(--filo)}
+.inc tfoot td.d{font-weight:400;color:var(--grigio);text-transform:uppercase;letter-spacing:.08em}
+.inc tfoot b{font-size:var(--c-sec)}
+.inc .cas{justify-content:center}
+.inc .cas i{--cw:7px;--ch:10px}
+.inc .cas i.sg::after{right:-2.5px}
+/* guida e Capo dello Stato */
+.gui{display:grid;gap:10px;max-width:760px}
+.gui .grande{font-family:var(--tit);font-variation-settings:var(--wonk);font-size:var(--c-pag);font-weight:700;line-height:1.1}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="premio">col premio</button><button data-v="grave">tono grave</button><button data-v="senza">senza maggioranza</button><button data-v="guida">ribaltone</button><button data-v="capo">incarico ad altri</button></span>
+  <span class="cap">la guida</span><span class="seg" data-k="cede"><button data-v="si">ceduta</button><button data-v="no">negata</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+const D = {"premio":{"come":"Vista 02: seme 4, fonda a 4,5, coalizione con la destra, voto con il premio, incarico a te","turno":1,"data":{"anno":2027,"trimestre":1},"turni_al_voto":19,"spread":83,"grave":false,"incarico":"giocatore","fase":"trattativa","partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","leader":"Anna Ferrucci","pos":1.0,"valence":-0.61,"al_governo":false},{"id":"sinistra","nome":"Sinistra","leader":"Luca Benedetti","pos":2.0,"valence":0.97,"al_governo":false},{"id":"centrosinistra","nome":"Centrosinistra","leader":"Chiara Lombardo","pos":3.0,"valence":-0.52,"al_governo":false},{"id":"centro","nome":"Centro","leader":"Giorgio Valli","pos":4.0,"valence":-0.89,"al_governo":false},{"id":"centrodestra","nome":"Centrodestra","leader":"Silvia Moretti","pos":5.0,"valence":-0.43,"al_governo":true},{"id":"destra","nome":"Destra","leader":"Davide Ranieri","pos":6.0,"valence":0.82,"al_governo":true},{"id":"estrema_destra","nome":"Estrema destra","leader":"Bruno Castellani","pos":7.0,"valence":0.02,"al_governo":false},{"id":"giocatore","nome":"Partito del giocatore","leader":"","pos":4.5,"valence":0.3,"al_governo":false}],"sond":{"estrema_sinistra":0.0132,"sinistra":0.2383,"centrosinistra":0.0355,"centro":0.0386,"centrodestra":0.043,"destra":0.1967,"estrema_destra":0.0253,"giocatore":0.1242},"voto":{"data":{"anno":2026,"trimestre":4},"affluenza":0.714,"premio":"giocatore+centrodestra+destra","coalizioni":[["giocatore","centrodestra","destra"],["sinistra","centrosinistra"]],"voti":{"estrema_sinistra":[0.0246,0,0],"sinistra":[0.3328,120,63],"centrosinistra":[0.0574,20,8],"centro":[0.0413,14,2],"centrodestra":[0.0702,32,15],"destra":[0.2493,116,62],"estrema_destra":[0.0601,22,12],"giocatore":[0.1642,76,38]}},"seggi":{"estrema_sinistra":[0,0],"sinistra":[120,63],"centrosinistra":[20,8],"centro":[14,2],"centrodestra":[32,15],"destra":[116,62],"estrema_destra":[22,12],"giocatore":[76,38]},"richieste":[{"partito":"centrodestra","richiesta":2.51,"offerta":2.0},{"partito":"destra","richiesta":6.79,"offerta":7.0}],"disponibilita":[{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_sinistra"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"sinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centrosinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centro"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_destra"}],"dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"eventi":[{"nome":"Emergenza idrogeologica","regione":"Emilia-Romagna","tono":"grave","default":"Attingere al fondo di riserva"}],"default":{"economia_finanze":"destra","sviluppo_economico":"giocatore","lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"}},"grave":{"come":"Vista 02: seme 4, fonda a 4,5, coalizione con la destra, voto con il premio, incarico a te","turno":1,"data":{"anno":2027,"trimestre":1},"turni_al_voto":19,"spread":83,"grave":true,"incarico":"giocatore","fase":"trattativa","partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","leader":"Anna Ferrucci","pos":1.0,"valence":-0.61,"al_governo":false},{"id":"sinistra","nome":"Sinistra","leader":"Luca Benedetti","pos":2.0,"valence":0.97,"al_governo":false},{"id":"centrosinistra","nome":"Centrosinistra","leader":"Chiara Lombardo","pos":3.0,"valence":-0.52,"al_governo":false},{"id":"centro","nome":"Centro","leader":"Giorgio Valli","pos":4.0,"valence":-0.89,"al_governo":false},{"id":"centrodestra","nome":"Centrodestra","leader":"Silvia Moretti","pos":5.0,"valence":-0.43,"al_governo":true},{"id":"destra","nome":"Destra","leader":"Davide Ranieri","pos":6.0,"valence":0.82,"al_governo":true},{"id":"estrema_destra","nome":"Estrema destra","leader":"Bruno Castellani","pos":7.0,"valence":0.02,"al_governo":false},{"id":"giocatore","nome":"Partito del giocatore","leader":"","pos":4.5,"valence":0.3,"al_governo":false}],"sond":{"estrema_sinistra":0.0132,"sinistra":0.2383,"centrosinistra":0.0355,"centro":0.0386,"centrodestra":0.043,"destra":0.1967,"estrema_destra":0.0253,"giocatore":0.1242},"voto":{"data":{"anno":2026,"trimestre":4},"affluenza":0.714,"premio":"giocatore+centrodestra+destra","coalizioni":[["giocatore","centrodestra","destra"],["sinistra","centrosinistra"]],"voti":{"estrema_sinistra":[0.0246,0,0],"sinistra":[0.3328,120,63],"centrosinistra":[0.0574,20,8],"centro":[0.0413,14,2],"centrodestra":[0.0702,32,15],"destra":[0.2493,116,62],"estrema_destra":[0.0601,22,12],"giocatore":[0.1642,76,38]}},"seggi":{"estrema_sinistra":[0,0],"sinistra":[120,63],"centrosinistra":[20,8],"centro":[14,2],"centrodestra":[32,15],"destra":[116,62],"estrema_destra":[22,12],"giocatore":[76,38]},"richieste":[{"partito":"centrodestra","richiesta":2.51,"offerta":2.0},{"partito":"destra","richiesta":6.79,"offerta":7.0}],"disponibilita":[{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_sinistra"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"sinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centrosinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centro"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_destra"}],"dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"eventi":[{"nome":"Emergenza idrogeologica","regione":"Emilia-Romagna","tono":"grave","default":"Attingere al fondo di riserva"}],"default":{"economia_finanze":"destra","sviluppo_economico":"giocatore","lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"}},"senza":{"come":"legge proporzionale_3, seme 4, fonda a 5.5, coalizione con la destra, chiudi (voto): incarico al giocatore senza maggioranza (scenario su misura con la proporzionale al 3%)","turno":1,"data":{"anno":2027,"trimestre":1},"turni_al_voto":19,"spread":83,"grave":false,"incarico":"giocatore","fase":"trattativa","partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","leader":"Anna Ferrucci","pos":1.0,"valence":-0.61,"al_governo":false},{"id":"sinistra","nome":"Sinistra","leader":"Luca Benedetti","pos":2.0,"valence":0.97,"al_governo":false},{"id":"centrosinistra","nome":"Centrosinistra","leader":"Chiara Lombardo","pos":3.0,"valence":-0.52,"al_governo":false},{"id":"centro","nome":"Centro","leader":"Giorgio Valli","pos":4.0,"valence":-0.89,"al_governo":false},{"id":"centrodestra","nome":"Centrodestra","leader":"Silvia Moretti","pos":5.0,"valence":-0.43,"al_governo":true},{"id":"destra","nome":"Destra","leader":"Davide Ranieri","pos":6.0,"valence":0.82,"al_governo":true},{"id":"estrema_destra","nome":"Estrema destra","leader":"Bruno Castellani","pos":7.0,"valence":0.02,"al_governo":false},{"id":"giocatore","nome":"Partito del giocatore","leader":"","pos":5.5,"valence":0.3,"al_governo":false}],"sond":{"estrema_sinistra":0.0138,"sinistra":0.252,"centrosinistra":0.0376,"centro":0.0393,"centrodestra":0.0431,"destra":0.1936,"estrema_destra":0.0238,"giocatore":0.1059},"voto":{"data":{"anno":2026,"trimestre":4},"affluenza":0.7081,"premio":null,"coalizioni":[["giocatore","centrodestra","destra"],["sinistra","centrosinistra"]],"voti":{"estrema_sinistra":[0.0258,0,0],"sinistra":[0.3551,147,76],"centrosinistra":[0.0608,25,11],"centro":[0.0428,17,6],"centrodestra":[0.0711,29,14],"destra":[0.2469,102,52],"estrema_destra":[0.0581,23,10],"giocatore":[0.1395,57,31]}},"seggi":{"estrema_sinistra":[0,0],"sinistra":[147,76],"centrosinistra":[25,11],"centro":[17,6],"centrodestra":[29,14],"destra":[102,52],"estrema_destra":[23,10],"giocatore":[57,31]},"richieste":[{"partito":"centrodestra","richiesta":2.65,"offerta":3.0},{"partito":"destra","richiesta":6.96,"offerta":7.0}],"disponibilita":[{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_sinistra"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"sinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centrosinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centro"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_destra"}],"dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"eventi":[{"nome":"Emergenza idrogeologica","regione":"Emilia-Romagna","tono":"grave","default":"Attingere al fondo di riserva"}],"default":{"economia_finanze":"destra","esteri_difesa":"destra","sanita":"destra","ambiente_energia":"destra","lavoro_welfare":"centrodestra","infrastrutture_trasporti":"centrodestra","sviluppo_economico":"centrodestra","interno":"giocatore","istruzione_ricerca":"giocatore","giustizia":"giocatore"},"allarga":{"estrema_sinistra":{"esito":"Estrema sinistra non entra: posizione troppo lontana dalla tua"},"sinistra":{"esito":"Sinistra non entra: posizione troppo lontana dalla tua"},"centrosinistra":{"esito":"ok","richieste":[{"partito":"centrodestra","richiesta":2.46,"offerta":3.0},{"partito":"destra","richiesta":6.29,"offerta":6.0},{"partito":"centrosinistra","richiesta":2.22,"offerta":2.0}],"default":{"economia_finanze":"destra","sviluppo_economico":"centrodestra","lavoro_welfare":"centrosinistra","sanita":"centrodestra","istruzione_ricerca":"destra","infrastrutture_trasporti":"centrosinistra","ambiente_energia":"giocatore","interno":"destra","giustizia":"centrodestra","esteri_difesa":"giocatore"},"maggioranza":true},"centro":{"esito":"ok","richieste":[{"partito":"centrodestra","richiesta":2.52,"offerta":3.0},{"partito":"destra","richiesta":6.51,"offerta":6.0},{"partito":"centro","richiesta":1.81,"offerta":2.0}],"default":{"economia_finanze":"destra","sviluppo_economico":"centrodestra","lavoro_welfare":"centro","sanita":"centrodestra","istruzione_ricerca":"destra","infrastrutture_trasporti":"giocatore","ambiente_energia":"centro","interno":"destra","giustizia":"centrodestra","esteri_difesa":"giocatore"},"maggioranza":true},"estrema_destra":{"esito":"Estrema destra non entra: posizione troppo lontana dalla tua"},"centrosinistra+centro":{"esito":"ok","richieste":[{"partito":"centrodestra","richiesta":2.36,"offerta":2.0},{"partito":"destra","richiesta":5.93,"offerta":6.0},{"partito":"centrosinistra","richiesta":2.14,"offerta":2.0},{"partito":"centro","richiesta":1.72,"offerta":2.0}],"default":{"economia_finanze":"destra","sviluppo_economico":"centrosinistra","lavoro_welfare":"giocatore","sanita":"centro","istruzione_ricerca":"centrosinistra","infrastrutture_trasporti":"destra","ambiente_energia":"giocatore","interno":"destra","giustizia":"centro","esteri_difesa":"centrodestra"},"maggioranza":true}}},"guida":{"come":"seme 2, fonda a 1.5, nessuna coalizione, turni chiusi senza comandi fino alla guida (turno 5, dopo la caduta del governo di destra)","turno":5,"data":{"anno":2028,"trimestre":1},"turni_al_voto":15,"spread":56,"grave":false,"incarico":"guida","fase":"trattativa","partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","leader":"Anna Ferrucci","pos":1.0,"valence":-0.61,"al_governo":false},{"id":"sinistra","nome":"Sinistra","leader":"Luca Benedetti","pos":2.0,"valence":0.53,"al_governo":true},{"id":"centrosinistra","nome":"Centrosinistra","leader":"Chiara Lombardo","pos":3.0,"valence":-0.74,"al_governo":true},{"id":"centro","nome":"Centro","leader":"Giorgio Valli","pos":4.0,"valence":-1.11,"al_governo":true},{"id":"centrodestra","nome":"Centrodestra","leader":"Silvia Moretti","pos":5.0,"valence":-0.64,"al_governo":true},{"id":"destra","nome":"Destra","leader":"Anna Barbieri","pos":6.0,"valence":1.06,"al_governo":false},{"id":"estrema_destra","nome":"Estrema destra","leader":"Bruno Castellani","pos":7.0,"valence":0.02,"al_governo":false},{"id":"giocatore","nome":"Partito del giocatore","leader":"","pos":1.5,"valence":0.19,"al_governo":false}],"sond":{"estrema_sinistra":0.0176,"sinistra":0.1486,"centrosinistra":0.0196,"centro":0.0269,"centrodestra":0.019,"destra":0.2955,"estrema_destra":0.0511,"giocatore":0.087},"voto":{"data":{"anno":2026,"trimestre":4},"affluenza":0.7032,"premio":null,"coalizioni":[["giocatore"],["sinistra","centrosinistra"],["centrodestra","destra"]],"voti":{"estrema_sinistra":[0.0236,0,0],"sinistra":[0.3239,134,71],"centrosinistra":[0.0593,23,10],"centro":[0.0434,17,8],"centrodestra":[0.0759,31,13],"destra":[0.3249,135,69],"estrema_destra":[0.0661,26,11],"giocatore":[0.0829,34,18]}},"seggi":{"estrema_sinistra":[0,0],"sinistra":[134,71],"centrosinistra":[23,10],"centro":[17,8],"centrodestra":[31,13],"destra":[135,69],"estrema_destra":[26,11],"giocatore":[34,18]},"richieste":[],"disponibilita":[],"dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"eventi":[],"ribaltone":["sinistra","centrosinistra","centro","giocatore"],"dopo_chiedi":{"richieste":[{"partito":"sinistra","richiesta":8.18,"offerta":8.0},{"partito":"centrosinistra","richiesta":2.14,"offerta":2.0},{"partito":"centro","richiesta":1.86,"offerta":2.0}],"default":{"economia_finanze":"sinistra","sviluppo_economico":"centrosinistra","lavoro_welfare":"centro","sanita":"giocatore","istruzione_ricerca":"sinistra","infrastrutture_trasporti":"centrosinistra","ambiente_energia":"centro","interno":"sinistra","giustizia":"giocatore","esteri_difesa":"sinistra"},"disponibilita":[{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_sinistra"},{"causa":"più probabilità di governare con te","disponibile":true,"partito":"centrodestra"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"destra"},{"causa":"posizione troppo lontana dalla tua","disponibile":false,"partito":"estrema_destra"}]},"senza_scelta":"chiusa senza scelta: la chiusura chiede la guida, ceduta, governi tu","rifiuta":"chiusa dopo «Resta fuori»: governo IA senza di te, fase ordinaria"},"capo":{"come":"seme 1, fonda a 1,5, nessuna coalizione, chiudi (voto): il 06 un turno prima","turno":1,"data":{"anno":2027,"trimestre":1},"turni_al_voto":19,"spread":70,"grave":false,"incarico":"capo_dello_stato","fase":"trattativa","partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","leader":"Anna Ferrucci","pos":1.0,"valence":-0.61,"al_governo":false},{"id":"sinistra","nome":"Sinistra","leader":"Luca Benedetti","pos":2.0,"valence":0.97,"al_governo":false},{"id":"centrosinistra","nome":"Centrosinistra","leader":"Chiara Lombardo","pos":3.0,"valence":-0.52,"al_governo":false},{"id":"centro","nome":"Centro","leader":"Giorgio Valli","pos":4.0,"valence":-0.89,"al_governo":false},{"id":"centrodestra","nome":"Centrodestra","leader":"Silvia Moretti","pos":5.0,"valence":-0.43,"al_governo":true},{"id":"destra","nome":"Destra","leader":"Davide Ranieri","pos":6.0,"valence":0.82,"al_governo":true},{"id":"estrema_destra","nome":"Estrema destra","leader":"Bruno Castellani","pos":7.0,"valence":0.02,"al_governo":false},{"id":"giocatore","nome":"Partito del giocatore","leader":"","pos":1.5,"valence":0.3,"al_governo":false}],"sond":{"estrema_sinistra":0.0097,"sinistra":0.2135,"centrosinistra":0.0602,"centro":0.0,"centrodestra":0.0651,"destra":0.2395,"estrema_destra":0.0583,"giocatore":0.0654},"voto":{"data":{"anno":2026,"trimestre":4},"affluenza":0.7037,"premio":null,"coalizioni":[["giocatore"],["sinistra","centrosinistra"],["centrodestra","destra"]],"voti":{"estrema_sinistra":[0.0234,0,0],"sinistra":[0.3238,134,72],"centrosinistra":[0.0594,23,10],"centro":[0.0403,16,7],"centrodestra":[0.0752,31,12],"destra":[0.3288,136,71],"estrema_destra":[0.0662,26,10],"giocatore":[0.0829,34,18]}},"seggi":{"estrema_sinistra":[0,0],"sinistra":[134,72],"centrosinistra":[23,10],"centro":[16,7],"centrodestra":[31,12],"destra":[136,71],"estrema_destra":[26,10],"giocatore":[34,18]},"richieste":[],"disponibilita":[],"dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"eventi":[]},"pesi":{"economia_finanze":3,"sviluppo_economico":1,"lavoro_welfare":1,"sanita":1,"istruzione_ricerca":1,"infrastrutture_trasporti":1,"ambiente_energia":1,"interno":2,"giustizia":1,"esteri_difesa":2},"proposte_vere":[{"nome":"default","richieste":[["centrodestra",2.51,2.0],["destra",6.79,7.0]],"intesa":[["centrodestra",54.9,false],["destra",62.1,false]]},{"nome":"generosa_centrodestra","richieste":[["centrodestra",2.51,3.0],["destra",6.79,7.0]],"intesa":[["centrodestra",64.9,false],["destra",62.1,false]]},{"nome":"avara_destra","richieste":[["centrodestra",2.51,2.0],["destra",6.79,4.0]],"intesa":[["centrodestra",54.9,false],["destra",32.1,true]]},{"nome":"tecnico_mio","richieste":[["centrodestra",2.51,2.0],["destra",6.79,7.0]],"intesa":[["centrodestra",54.9,false],["destra",62.1,false]]},{"nome":"tecnico_della_destra","richieste":[["centrodestra",2.51,2.0],["destra",6.79,6.0]],"intesa":[["centrodestra",54.9,false],["destra",52.1,false]]}],"rifiuti":{"fuori":"Centro non è nella coalizione: niente dicasteri","mancante":"Economia e Finanze senza assegnazione: servono tutti i dicasteri"}};
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+// ======================= facce: dal prototipo 32, variante 5 =======================
+const K = {carta:'#F4ECD8', ink:'#1F1A17', grigio:'#5E5750', rosso:'#B3122B', verde:'#2E6B45', biro:'#1D4E89', giallo:'#FFD23F'};
+// tinta smorzata = un solo inchiostro steso sulla carta al t (come un retino pieno): niente colori fuori dai sette
+const mix = (c,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.slice(i,i+2),16)*t+parseInt(K.carta.slice(i,i+2),16)*(1-t)).toString(16).padStart(2,'0')).join('');
+const hash = s => { let h=5381; for(const c of s) h=((h<<5)+h+c.charCodeAt(0))>>>0; return h; };
+// djb2 da solo cambia poco fra «Sara Rossi» e «Sara Russi»: lo rimescolo (finalizzatore di MurmurHash3)
+const mescola = h => { h^=h>>>16; h=Math.imul(h,0x85ebca6b)>>>0; h^=h>>>13; h=Math.imul(h,0xc2b2ae35)>>>0; return (h^(h>>>16))>>>0; };
+const leve = (h,basi)=>basi.map(b=>{ const v=h%b; h=Math.floor(h/b); return v; });
+const ruolo = m => m.leader ? 'leader' : m.tecnico ? 'tecnico' : 'ministro';
+const umore = m => m.sodd==null ? 0 : m.sodd<25 ? 2 : m.sodd<40 ? 1 : 0;
+
+// --- il profilo: quattro leve di forma, 6 × 3 × 2 × 2 = 72 sagome ---
+const NASI = [ // dalla radice (42,26) alla base (43,34); tutti oltre ogni naso reale
+  ['triangolo','L61 34',[61,34]], ['uncino','Q56 20 60 30Q61 38 53 36.5',[60,32]], ['patata','L46 25.5C59 21 63 40 50 38.5',[59,33]],
+  ['all’insù','Q50 35 61 23L54 35.5',[61,23]], ['becco','Q55 23 62 41L50 37.5',[62,41]], ['spezzato','L52 22.5L61 33L49 36.5',[61,33]]];
+// niente mento sporgente: calvo + mascella in fuori + testa alta è la caricatura di Mussolini (e il Craxi di Forattini)
+const MENTI = [['sfuggente','Q43 42 40 45'],['dritto','L45 41L44 46'],['doppio','L44.6 41Q48.5 42.6 45 45.2Q48 47.4 43.6 49']];
+const forma = h => { const [naso,mento,fronte,cranio]=leve(h,[6,3,2,2]); return {naso,mento,fronte,cranio,resto:Math.floor(h/72)}; };
+function profilo(id){
+  const b = id.cranio ? 18 : 13;                                  // nuca lunga o corta
+  const fr = id.fronte ? 'Q35 5 38 9L44 23' : 'Q38 6 41 11L43 23'; // fronte sfuggente o dritta
+  const davanti = `L42 26${NASI[id.naso][1]}L43 35L44 39${MENTI[id.mento][1]}`;
+  const giro = `C${b} 36 ${b} 9 30 7${fr}${davanti}L35 48L36 51`;
+  return { b, tip:NASI[id.naso][2], davanti:'M42 26'+davanti.slice(6), naso:`M42 26${NASI[id.naso][1]}L43 35Z`,
+    sagoma:`M20 44${giro}L37 61L23 61L21 47Z`, linea:`M23 57L21 47L20 44${giro}L37 57`,
+    nuca:`M4 29L31 34L36 52L14 52Z` };
+}
+
+// --- il dicastero come oggetto: un disegno, due stampe (a colori col contorno, o piena in un inchiostro) ---
+const stampa = (fg,bg)=> fg ? {f:()=>fg, d:()=>bg, o:''} : {f:c=>c, d:c=>c, o:`stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"`};
+const OGG = { // riquadro 16 × 16
+  'Economia e Finanze': p=>`<circle cx="8" cy="8" r="7" fill="${p.f(K.giallo)}" ${p.o}/><path d="M11.2 5A4 4 0 1 0 11.2 11M3.4 7h5.8M3.4 9.4h5.8" fill="none" stroke="${p.d(K.ink)}" stroke-width="1.7"/>`,
+  'Sviluppo economico': p=>`<path d="M5 6V2.6h6V6" fill="none" stroke="${p.f(K.ink)}" stroke-width="2"/><rect x="1" y="5.5" width="14" height="9.5" fill="${p.f(K.biro)}" ${p.o}/><path d="M1.6 9.8h12.8" stroke="${p.d(K.carta)}" stroke-width="1.5"/>`,
+  'Lavoro e Welfare': p=>`<path d="M2.6 13.4L9.6 6.4" stroke="${p.f(K.ink)}" stroke-width="3.6" stroke-linecap="round"/><circle cx="11.4" cy="4.6" r="3.3" fill="none" stroke="${p.f(K.ink)}" stroke-width="2.6"/>`,
+  'Sanità': p=>`<rect x="1" y="1" width="14" height="14" fill="${p.f(K.carta)}" ${p.o}/><path d="M8 3.4v9.2M3.4 8h9.2" stroke="${p.d(K.rosso)}" stroke-width="3.2"/>`,
+  'Istruzione e Ricerca': p=>`<path d="M1.5 14.5L3 9.4L11.6 .8L15.2 4.4L6.6 13Z" fill="${p.f(K.giallo)}" ${p.o}/><path d="M1.5 14.5L3 9.4L6.6 13Z" fill="${p.d(K.ink)}"/>`,
+  'Infrastrutture e Trasporti': p=>`<path d="M4.4 13L7 1.4h2L11.6 13Z" fill="${p.f(K.rosso)}" ${p.o}/><path d="M5.7 7.4h4.6l.6 2.8H5.1Z" fill="${p.d(K.carta)}"/><rect x="1.2" y="12.6" width="13.6" height="2.8" fill="${p.f(K.rosso)}" ${p.o}/>`,
+  'Ambiente ed Energia': p=>`<path d="M1.5 14.5C1.5 6 7 1.5 14.5 1.5C14.5 10 9 14.5 1.5 14.5Z" fill="${p.f(K.verde)}" ${p.o}/><path d="M3.2 12.8L10.8 5.2" stroke="${p.d(K.carta)}" stroke-width="1.6"/>`,
+  'Interno': p=>`<path d="M8 .6l2.2 4.7 5.1.5-3.9 3.5 1.2 5L8 11.8l-4.6 2.5 1.2-5L.7 5.8l5.1-.5Z" fill="${p.f(K.biro)}" ${p.o}/>`,
+  'Giustizia': p=>`<path d="M1.4 5.6L6 1l5 5-4.6 4.6Z" fill="${p.f(K.ink)}"/><path d="M8.4 8.4l5.4 5.4" stroke="${p.f(K.ink)}" stroke-width="2.8" stroke-linecap="round"/><rect x=".6" y="13.2" width="8.4" height="2.4" fill="${p.f(K.ink)}"/>`,
+  'Esteri e Difesa': p=>`<circle cx="8" cy="8" r="7" fill="${p.f(K.biro)}" ${p.o}/><ellipse cx="8" cy="8" rx="3" ry="6.4" fill="none" stroke="${p.d(K.carta)}" stroke-width="1.4"/><path d="M1.6 8h12.8" stroke="${p.d(K.carta)}" stroke-width="1.4"/>`,
+};
+const ogg = (dic,x,y,s,p)=> OGG[dic] ? `<g transform="translate(${x} ${y}) scale(${s})">${OGG[dic](p)}</g>` : '';
+// --- il ruolo: il leader porta la coccarda, il tecnico il cartellino e l'abito grigio ---
+const coccarda = (x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})"><circle r="8.4" fill="${K.carta}"/><circle r="7.2" fill="${K.verde}"/><circle r="4.6" fill="${K.carta}"/><circle r="2.4" fill="${K.rosso}"/></g>`;
+const cartellino = (x,y)=>`<g transform="translate(${x} ${y})"><rect width="9.4" height="6.6" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.2"/><rect x="1.8" y="1.8" width="5.8" height="1.8" fill="${K.biro}"/><rect x="1.8" y="4.2" width="3.8" height="1.1" fill="${K.ink}"/></g>`;
+
+// ======================= le varianti =======================
+const pezzi = { occhio:(u,c)=> u===2 ? `<path d="M35.4 23.6h5.4" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>` : `<circle cx="38" cy="23" r="2.2" fill="${c}"/>`,
+  bocca:(u,c,w=1.9)=>`<path d="M44 39L39.6 ${[37.4,39.2,41.2][u]}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>` };
+// a testa alta, china, crollata: la testa ruota sul collo e arretra, così il naso non esce dal riquadro e non tocca l'abito
+const posa = u => `translate(${[0,-1,-3][u]} 0) rotate(${[-8,12,20][u]} 30 46)`;
+const VAR = {
+  '5': { nome:'5 · Linea rifinita', basi:'naso 6 × mento 3 × fronte 2 × nuca 2 × occhio 2 × colletto 6 = 864, per genere',
+    id: h=>{ const f=forma(h), [o,c]=leve(f.resto,[2,4+SOVR.length]); return [f.naso,f.mento,f.fronte,f.cranio,o,c]; },
+    vista: (h,d)=>{ const f=forma(h), [,c]=leve(f.resto,[2,4+SOVR.length]); return `${f.naso}:${c}:${d?'f':'m'}`; },
+    disegna(m,h,u,uid,r){
+      const f=forma(h), [o,c]=leve(f.resto,[2,4+SOVR.length]), d=donna(m), tr=null, xx=Math.floor(f.resto/(2*(4+SOVR.length))), p=profilo5(f, d ? .85 : 1);
+      const fondo=[null,K.giallo,K.rosso][u], segno = u===2 ? K.carta : K.ink;   // il segno del dicastero prende il colore che regge sul fondo
+      const coll = r==='tecnico' ? K.grigio : [K.rosso,K.verde,K.biro,K.giallo,...SOVR.map(s=>s[1])][c];
+      const pen = (dd,L,a)=>`<path d="${pennello(dd,L,a)}" fill="${K.ink}"/><path d="${dd}" fill="none" stroke="${K.ink}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const sottile = (dd,w=1.9,col=K.ink)=>`<path d="${dd}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      // occhio proprio: palpebra pesante sopra la pupilla, oppure mandorla di profilo; la donna ha la coda all'indietro
+      const occhio = (o
+        ? `<path d="M35.2 22.8Q38.4 19.4 41.2 21.3Q40.6 24.6 35.2 22.8Z" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/><circle cx="39.3" cy="22.2" r="1.45" fill="${K.ink}"/>`
+        : `<circle cx="38.2" cy="22.6" r="2.7" fill="${K.carta}" stroke="${K.ink}" stroke-width="1.4"/><circle cx="39.4" cy="22.6" r="1.45" fill="${K.ink}"/>`)
+        + (d ? sottile(o ? 'M36.2 21.4L34.4 18.9M38 20.4L37 17.6M39.8 20.6L39.6 17.8' : 'M36.3 20.6L34.6 18.2M38 19.9L37.2 17.1M39.7 20.2L39.6 17.4',1.4) : '');
+      const orecchio = `<path d="M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36Z" fill="${PIANO[0]}"/>${pen('M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36',2.6,35)}${sottile('M27 30.2Q25.4 32 27.2 33.6',1.5)}`;
+      // labbra rosse con un filo di carta sotto il contorno: così reggono anche sul fondo rosso della crisi
+      const bocca = d
+        ? `<path d="M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z" fill="${K.rosso}" stroke="${K.carta}" stroke-width="2.6" stroke-linejoin="round"/><path d="M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z" fill="${K.rosso}" stroke="${K.ink}" stroke-width=".9" stroke-linejoin="round"/>${sottile('M46 40.5L41.2 40.8',1.1)}`
+        : sottile('M44 39.4L40.3 39.8',1.9);
+      const orecchino = d && (xx&1) ? `${sottile('M27.4 35.8L27.4 37.6',1.5)}<path d="M27.4 37.2L31.2 42.2L27.4 47.2L23.6 42.2Z" fill="${K.giallo}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/>` : '';
+      // cappello a tesa larga, inclinato all'indietro, col nastro: costume, non capelli; la tesa resta sopra le ciglia e
+      // lascia libero l'angolo del segno del dicastero. Il nastro è d'inchiostro: giallo col nastro rosso è il cappello di paglia
+      // di un personaggio noto dei fumetti
+      const CAPPELLO = ['M3.6 19.6Q2.6 16.6 8 14.6Q26 8.6 43.4 5.4Q46.4 5.2 45 7.4Q28 13.2 7.4 20.8Q4.6 21.6 3.6 19.6Z','M16.6 13.2Q15.6 3 27.4 1.4Q38.6 0 40.2 7.8Q28 9.6 16.6 13.2Z'];
+      const cappello = d && (xx&2) ? `<path d="${CAPPELLO.join('')}" fill="none" stroke="${K.carta}" stroke-width="3.6" stroke-linejoin="round"/>
+        ${CAPPELLO.map(c=>`<path d="${c}" fill="${coll}" stroke="${K.ink}" stroke-width="1.5" stroke-linejoin="round"/>`).join('')}
+        ${sottile('M17.4 11.2Q28 7.8 39.6 6.2',2.2)}` : '';
+      return `${fondo?`<rect width="64" height="64" fill="${fondo}"/>`:''}
+        <path d="M2 64C3 56 10 53 20 53L42 53C52 53 58 57 61 64Z" fill="${K.carta}"/><path d="${p.sagoma}" fill="${K.carta}"/>
+        <clipPath id="${uid}"><path d="${p.sagoma}"/></clipPath><g clip-path="url(#${uid})"><path d="M28 37.5L39 45L38 58L21 58Z" fill="${PIANO[0]}"/><path d="M45 31L${p.tip}L44 35.4Z" fill="${PIANO[0]}"/></g>
+        ${pen(p.dietro,4.6,35)}${pen(p.davanti,4.6,35)}${pen('M2.4 64C3.4 56.4 10 53.4 21 53.2',4.2,35)}${pen('M38 53.2C50 53.2 57.6 57 60.6 64',4.2,35)}
+        ${orecchio}${occhio}${bocca}${orecchino}
+        <path d="M21 51L38 49L40.5 55.5L22 57Z" fill="${coll}" stroke="${K.ink}" stroke-width="1.8" stroke-linejoin="round"/>
+        ${cappello}${r==='leader' ? coccarda(55,55.5,.95) : ogg(m.dic,47.5,1.5,.92,stampa(segno,fondo||K.carta))}${r==='tecnico'?cartellino(5,54.5):''}`;
+    }},
+};
+// ---- per la 5 ----
+// due inchiostri sovrapposti, come una stampa a due passaggi: ogni inchiostro al suo retino (mix), poi moltiplicati sulla carta
+const sovr = (a,b)=>'#'+[1,3,5].map(i=>{ const x=k=>parseInt(k.slice(i,i+2),16); return Math.round(x(a)*x(b)/x(K.carta)).toString(16).padStart(2,'0'); }).join('');
+const PIANO = [sovr(mix(K.giallo,.42),mix(K.rosso,.16)), sovr(mix(K.giallo,.6),mix(K.rosso,.32))];   // terra chiara (guancia, orecchio), terra (sotto il naso)
+const SOVR = [['arancio',sovr(K.giallo,mix(K.rosso,.5))],['oliva',sovr(K.giallo,mix(K.biro,.5))]];       // due colletti in più, oltre ai quattro inchiostri
+// ponytail: il genere si ricava dal nome con una lista fissa, perché il core non lo porta. Sono i sei femminili del bacino
+// (dati/base/elettorato.toml:11, alternati F/M) più Silvia, leader del Centrodestra (dati/base/scenario.toml:307).
+// Se cambia uno dei due file la lista va rifatta a mano; il posto giusto è un campo `genere` accanto al nome, nel core.
+const DONNE = new Set(['Giulia','Francesca','Chiara','Sara','Elena','Anna','Silvia']);
+const donna = m => DONNE.has(m.nome.split(' ')[0]);
+// il profilo della 5: due pennellate (nuca-fronte, naso-collo) che si staccano alla radice del naso; nella donna il naso
+// resta lo stesso dell'hash ma scala dell'85% verso la radice
+function profilo5(id,k){
+  const sc = s=>s.replace(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g,(_,x,y)=>`${+(42+(x-42)*k).toFixed(2)} ${+(26+(y-26)*k).toFixed(2)}`);
+  const b = id.cranio ? 18 : 13, fr = id.fronte ? 'Q35 5 38 9L44 23' : 'Q38 6 41 11L43 23';
+  const naso = sc(NASI[id.naso][1]), tip = NASI[id.naso][2].map((v,i)=>+((i?26:42)+(v-(i?26:42))*k).toFixed(2));
+  const davanti = `M42 26${naso}L43 35L44 39${MENTI[id.mento][1]}L35 48L36 51L37 57`;
+  return { tip, davanti, naso:`M42 26${naso}L43 35Z`, dietro:`M23 57L21 47L20 44C${b} 36 ${b} 9 30 7${fr}L42 26`,
+    sagoma:`M20 44C${b} 36 ${b} 9 30 7${fr}L42 26${davanti.slice(6).replace(/L37 57$/,'')}L37 61L23 61L21 47Z` };
+}
+// pennello a punta piatta: la punta (lunga L, inclinata di a gradi) scorre lungo il tracciato, così lo spessore cambia
+// con la direzione come in un tratto a pennino; si assottiglia ai due capi. Ogni passo è un quadrilatero, tutti con lo
+// stesso verso, in un solo path: la regola nonzero ne fa l'unione senza giunte.
+const PENNI = new Map();
+let PEN;
+function pennello(d,L,a,passo=.7,coda=.16){
+  const chiave=`${d}|${L}|${a}`; if(PENNI.has(chiave)) return PENNI.get(chiave);
+  if(!PEN){ const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('style','position:absolute;width:0;height:0;visibility:hidden'); PEN=document.createElementNS(s.namespaceURI,'path'); s.appendChild(PEN); document.body.appendChild(s); }
+  PEN.setAttribute('d',d);
+  const tot=PEN.getTotalLength(), n=Math.max(8,Math.ceil(tot/passo)), nx=Math.cos(a*Math.PI/180)*L/2, ny=-Math.sin(a*Math.PI/180)*L/2;
+  const pt = Array.from({length:n+1},(_,i)=>{ const t=i/n, q=PEN.getPointAtLength(t*tot), s=Math.max(.25,Math.min(1,t/coda,(1-t)/coda)); return [q.x,q.y,nx*s,ny*s]; });
+  const f = v=>+v.toFixed(1);
+  let out='';
+  for(let i=0;i<n;i++){
+    const [x0,y0,a0,b0]=pt[i], [x1,y1,a1,b1]=pt[i+1];
+    let q=[[x0-a0,y0-b0],[x0+a0,y0+b0],[x1+a1,y1+b1],[x1-a1,y1-b1]];
+    if(q.reduce((s,[x,y],j)=>{ const [X,Y]=q[(j+1)%4]; return s+x*Y-X*y; },0)<0) q.reverse();
+    out+='M'+q.map(([x,y])=>`${f(x)} ${f(y)}`).join('L')+'Z';
+  }
+  PENNI.set(chiave,out); return out;
+}
+// la rosa non mostra due facce uguali: chi viene dopo passa alla combinazione successiva (h+1, che cambia il naso) finché
+// naso e colletto, le due leve che si leggono a 34 px, non differiscono da chi è già in rosa. Regola solo della UI.
+
+// ======================= dati e regole =======================
+
+// ======================= la trattativa (ticket 27) =======================
+const SOGLIA = {ultimatum:40, uscita:25};      // rimando (ticket 24): manopole soglia_ultimatum e soglia_uscita
+const INTESA = {base:60, per_punto:10};        // rimando: manopole intesa_base e intesa_per_punto, la Vista non le porta
+const TOT = {c:400, s:200};
+const BASE8 = ['estrema_sinistra','sinistra','centrosinistra','centro','centrodestra','destra','estrema_destra','giocatore'];
+const PCOL = {estrema_sinistra:'#A3242F', sinistra:'#E36B4F', centrosinistra:'#B8478A', centro:'#C99A1E', centrodestra:'#3E8FD6', destra:'#2D55A6', estrema_destra:'#9A5A1C', giocatore:'#1F8A70'};
+const DEF = {v:'A', stato:'premio', fin:'1280', scala:'1', cede:'si'};
+const st = {...DEF};
+new URLSearchParams(location.search).forEach((x,k)=>{ if(k in DEF) st[k]=x; });
+const azzera = ()=>Object.assign(st,{sel:null, prop:{}, alla:[], conf:null, chiesta:false, fuori:false, rifiuto:null});
+azzera();
+const FORME = {A:'A · Righe', B:'B · Cesti', C:'C · Incroci'};
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const pc = x => num(x*100)+'%';
+const sgn = x => (x>0?'+':x<0?'−':'±')+Math.abs(x);
+const TRIM = ['','gennaio-marzo','aprile-giugno','luglio-settembre','ottobre-dicembre'];
+const per = d => `${TRIM[d.trimestre]} ${d.anno}`;
+const Per = d => per(d).replace(/^./,c=>c.toUpperCase());
+
+const V = () => D[st.stato];
+const grave = () => V().grave;
+const Pid = id => V().partiti.find(p=>p.id===id);
+const col = id => grave() ? (id==='giocatore'?'#1F1A17':'#5E5750') : PCOL[id] || '#8A837B';
+const nomeP = id => id==='giocatore' ? 'Il tuo partito' : Pid(id).nome;
+const nomeB = o => o==='giocatore' ? 'Tu' : o===null ? 'Tecnico' : Pid(o).nome;
+const sw = id => `<i class="sw" style="background:${col(id)}"></i>`;
+const pesi = n => `<span class="pesi" title="${n} punt${n>1?'i':'o'}">${'<i></i>'.repeat(n)}</span>`;
+const elenco = xs => xs.length<2 ? xs.join('') : xs.slice(0,-1).join(', ')+' e '+xs[xs.length-1];
+
+// lo stato effettivo: la Vista più ciò che il giocatore ha fatto in questo turno (allargamento, guida chiesta)
+function E(){
+  const v=V();
+  if(st.stato==='capo') return {...v, modo:'capo', coal:[]};
+  if(st.stato==='guida'){
+    if(!st.chiesta) return {...v, modo:'guida', coal:v.ribaltone};
+    const d=v.dopo_chiedi;
+    return {...v, modo:'incarico', richieste:d.richieste, default:d.default, disponibilita:d.disponibilita, coal:v.ribaltone, guidata:true};
+  }
+  const base = v.voto.coalizioni.find(c=>c.includes('giocatore')) || ['giocatore'];
+  const e = {...v, modo:'incarico', coal:[...base]};
+  if(st.alla.length){
+    const a=v.allarga[st.alla.join('+')];
+    Object.assign(e, {richieste:a.richieste, default:a.default, coal:[...base,...st.alla],
+      disponibilita:v.disponibilita.filter(x=>!st.alla.includes(x.partito))});
+  }
+  return e;
+}
+const seg = (id,i) => (V().seggi[id]||[0,0])[i];
+const somma = (ids,i) => ids.reduce((a,id)=>a+seg(id,i),0);
+const margine = e => e.coal.length ? [somma(e.coal,0)-TOT.c/2, somma(e.coal,1)-TOT.s/2] : null;
+const maggioranza = e => { const m=margine(e); return m && m[0]>0 && m[1]>0; };
+const alleati = e => e.richieste.map(r=>r.partito);
+const titolari = e => ['giocatore', null, ...alleati(e)];
+
+// la spartizione in corso: il default della chiusura (rimando: la Vista non lo porta) più le scelte del giocatore
+function sparti(e){ const s={...e.default}; for(const k in st.prop) s[k]=st.prop[k]; return s; }
+function offerte(s){ const o={}; for(const d in s){ const p=s[d]===null?'giocatore':s[d]; o[p]=(o[p]||0)+D.pesi[d]; } return o; }
+const partenza = (o,r) => clamp(INTESA.base + INTESA.per_punto*(o-r), 0, 100);
+const tecnici = s => Object.values(s).filter(x=>x===null).length;
+const cambiata = (e,s) => Object.keys(s).some(d=>s[d]!==e.default[d]);
+const umoreI = it => it<SOGLIA.uscita ? 2 : it<SOGLIA.ultimatum ? 1 : 0;
+
+let nUid=0;
+function faccia(id,px,um=0){
+  if(id==='giocatore') return `<span class="tu-box" style="width:${px}px;height:${px}px;font-size:${Math.round(px*.34)}px" aria-hidden="true">Tu</span>`;
+  const p=Pid(id);
+  if(grave()){ const i=p.leader.split(' ').map(w=>w[0]).join(''); return `<span class="iniz" style="width:${px}px;height:${px}px;font-size:${Math.max(12,Math.round(px*.36))}px" aria-hidden="true">${i}</span>`; }
+  const m={leader:true, part:id, nome:p.leader, dic:''};
+  return `<svg class="faccia" width="${px}" height="${px}" viewBox="0 0 64 64" aria-hidden="true">${VAR['5'].disegna(m,mescola(hash(`leader:${id}:${p.leader}`)),um,'k'+(++nUid),'leader')}</svg>`;
+}
+// l'intesa in dieci caselle col filo dell'ultimatum dopo la quarta
+function caselleI(it){
+  const n=Math.round(it/10), rossa=it<SOGLIA.ultimatum;
+  return `<span class="cas">${Array.from({length:10},(_,i)=>`<i class="${i<n?'on':''} ${rossa?'rs':''} ${i===3?'sg':''}"></i>`).join('')}</span>`;
+}
+
+// ======================= pezzi comuni =======================
+function evento(){
+  const ev=V().eventi[0]; if(!ev) return '';
+  return `<p class="evt"><b>${esc(ev.nome)}</b>${ev.regione?' in '+esc(ev.regione):''} è aperta. In trattativa nessuno governa e nessuno risponde: a fine turno vale il default, «${esc(ev.default)}».</p>`;
+}
+function camere(e){
+  const ids=BASE8.filter(id=>Pid(id)).sort((a,b)=>Pid(a).pos-Pid(b).pos);
+  const riga=(i,tot,lab)=>`<div class="cam"><span>${lab}</span><div class="stk">${ids.filter(id=>seg(id,i)>0).map(id=>`<i title="${esc(nomeB(id))}: ${seg(id,i)}" class="${e.coal.includes(id)?'coal':''}" style="width:${seg(id,i)/tot*100}%;background:${col(id)}"></i>`).join('')}<b></b></div><span class="muto">${e.coal.length?somma(e.coal,i)+' su '+tot:tot+' seggi'}</span></div>`;
+  return `<div class="camere">${riga(0,TOT.c,'Camera')}${riga(1,TOT.s,'Senato')}</div>`;
+}
+function frase(e){
+  const m=margine(e); if(!m) return 'Nessuna maggioranza ti comprende.';
+  if(m[0]>0&&m[1]>0) return `${e.modo==='guida'?'Il ribaltone':'La tua coalizione'} ha ${somma(e.coal,0)} seggi alla Camera e ${somma(e.coal,1)} al Senato: la maggioranza in tutte e due.`;
+  const mc=[m[0]<=0?`${1-m[0]} alla Camera`:'', m[1]<=0?`${1-m[1]} al Senato`:''].filter(Boolean);
+  return `La tua coalizione ha ${somma(e.coal,0)} seggi alla Camera e ${somma(e.coal,1)} al Senato: per la maggioranza ne mancano ${elenco(mc)}.`;
+}
+function risultato(e){
+  const vt=V().voto, ids=BASE8.filter(id=>vt.voti[id]).sort((a,b)=>Pid(a).pos-Pid(b).pos);
+  const premio = vt.premio ? `premio di maggioranza a ${elenco(vt.premio.split('+').map(nomeB))}` : 'nessun premio';
+  const voti = ids.map(id=>`<span>${sw(id)}${e.coal.includes(id)?'<b>':''}${esc(nomeB(id))}${e.coal.includes(id)?'</b>':''} ${pc(vt.voti[id][0])}</span>`).join('');
+  return `<section class="ris"><div class="sez-l">il voto di ${per(vt.data)}<span>affluenza ${pc(vt.affluenza)} · ${premio}</span></div>
+    <div><div class="vt" style="margin:2px 0 6px">${voti}</div>${camere(e)}</div>
+    <p class="mg">${frase(e)}<br><span class="min muto">filo rosso: la metà; segno nero sotto la barra: ${e.modo==='guida'?'il ribaltone':'la tua coalizione'}</span></p></section>`;
+}
+function capoSez(e){
+  const v=V(), inc = e.modo==='capo' ? 'incarico a un’altra coalizione' : e.modo==='guida' ? 'ribaltone: la guida è della Sinistra' : e.guidata ? 'incarico a te, la Sinistra ti ha ceduto la guida' : 'incarico a te';
+  return `<div class="capo" style="grid-column:1/-1"><h3 class="tit">La trattativa</h3><span class="sec muto">${Per(v.data)} · turno ${v.turno} · ${inc}</span></div>`;
+}
+function conferma(k, testo, ok){
+  return st.conf===k ? `<div class="conf largo">${testo}<div class="az" style="margin:0"><button class="btn p pieno" data-act="ok-${k}">${ok}</button><button class="btn p" data-act="annulla">Annulla</button></div></div>` : '';
+}
+
+// ======================= il lato =======================
+function lAlleati(e,s){
+  const o=offerte(s);
+  const carte = e.richieste.map(r=>{
+    const off=o[r.partito]||0, it=partenza(off,r.richiesta), d=off-r.richiesta, p=Pid(r.partito);
+    const pt = Array.from({length:14},(_,i)=>`<i class="${i<off?'on':''}"></i>`).join('');
+    const avviso = it<SOGLIA.uscita ? `<span class="chip rosso">sotto 25: può uscire alla prima chiusura</span>` : it<SOGLIA.ultimatum ? `<span class="chip rosso">entra in ultimatum: spartizione</span>` : '';
+    return `<div class="all" style="border-top-color:${col(r.partito)};--pc:${col(r.partito)}"><span class="fz">${faccia(r.partito,46,umoreI(it))}</span>
+      <span><span class="nmP">${esc(p.nome)}</span> <span class="ld">${esc(p.leader)}</span></span>
+      <span class="sec">chiede <b>${num(r.richiesta)}</b> punti, ne offri <b>${off}</b></span>
+      <div class="largo"><div class="punti">${pt}<b style="left:${r.richiesta*16-1}px"></b><em style="left:${r.richiesta*16}px">chiede ${num(r.richiesta)}</em></div></div>
+      <div class="largo intesa">${caselleI(it)}<span class="ints"><b class="${it<SOGLIA.ultimatum?'male':''}">parte da ${num(it,0)}</b><span>${Math.abs(d)<.005?'quanto chiede':`${num(Math.abs(d))} punti ${d>0?'sopra':'sotto'} la richiesta`}</span></span></div>
+      ${avviso?`<div class="largo">${avviso}</div>`:''}</div>`; }).join('');
+  const t=tecnici(s);
+  return `<div class="sez-l">gli alleati<span>14 punti: Economia 3, Interno ed Esteri 2</span></div>${carte}
+    <div class="sez-l">il tuo partito<span>${o.giocatore||0} punti${t?`, ${t} a tecnic${t>1?'i':'o'}`:''}</span></div>
+    <p class="min muto">L’intesa di partenza di ogni alleato è 60, più 10 per ogni punto sopra la sua richiesta, meno 10 per ogni punto sotto. Un tecnico conta nella tua quota, anche su un dicastero che il default dava a un alleato.</p>
+    ${cambiata(e,s)?`<div class="az"><button class="btn p" data-act="reset">Torna alla spartizione di default</button></div>`:''}`;
+}
+function lAllarga(e){
+  const xs=e.disponibilita||[]; if(!xs.length) return '';
+  const ok=maggioranza(e), disp=xs.filter(x=>x.disponibile).map(x=>x.partito);
+  const k2=disp.join('+');
+  const riga = x=>{ const k='allarga-'+x.partito;
+    return `<div class="fu ${x.disponibile?'':'no'}"><span>${sw(x.partito)}<b>${esc(Pid(x.partito).nome)}</b> <span class="min">${seg(x.partito,0)} · ${seg(x.partito,1)} seggi</span><br><span class="min ${x.disponibile?'':'muto'}">${x.disponibile?'disponibile':'non entra'}: ${esc(x.causa)}</span></span>
+      ${x.disponibile&&st.stato==='senza'?`<button class="btn p" data-act="${k}">Allarga ›</button>`:''}${conferma(k,`${esc(Pid(x.partito).nome)} entra nella coalizione e ci resta fino al governo, poi chiede la sua parte di dicasteri. La spartizione torna quella di default.`,'Allarga')}</div>`; };
+  const tutti = st.stato==='senza' && disp.length>1 && !ok ? `<div class="az"><button class="btn p" data-act="allarga-${k2}">Allarga a ${elenco(disp.map(id=>Pid(id).nome))} ›</button></div>${conferma('allarga-'+k2,`Entrano tutti e due, o nessuno: restano fino al governo. La spartizione torna quella di default.`,'Allarga')}` : '';
+  if(ok && !st.alla.length) return `<div class="sez-l">allargare<span>hai la maggioranza</span></div><p class="sec">Puoi anche allargare: ${elenco(disp.map(id=>Pid(id).nome))} ${disp.length>1?'sono disponibili':'è disponibile'}. Chi entra chiede la sua parte di dicasteri.</p>`;
+  const avviso = ok ? '' : `<p class="rif">Senza maggioranza, a fine turno l’incarico passa: nasce un governo della Sinistra senza di te.</p>`;
+  return `<div class="sez-l">allargare<span>${ok?'hai la maggioranza: chi entra chiede la sua parte':'per la maggioranza'}</span></div>${avviso}${xs.map(riga).join('')}${tutti}`;
+}
+function lato(e,s){
+  if(e.modo==='capo') return `<aside class="lato"><h4 class="tit">Le Camere</h4>${camere(e)}<p class="sec">Il voto non ti dà una maggioranza: dal turno dopo sei all’opposizione, e il Cruscotto torna la casa del turno.</p></aside>`;
+  if(e.modo==='guida'){
+    const rib=e.coal.slice().sort((a,b)=>seg(b,0)+seg(b,1)-seg(a,0)-seg(a,1));
+    return `<aside class="lato"><h4 class="tit">Il ribaltone</h4>${rib.map(id=>`<div class="prom">${'<span>'+sw(id)+esc(nomeP(id))+'</span>'}<span class="num">${seg(id,0)} · ${seg(id,1)}</span></div>`).join('')}
+      <p class="min muto">Primo per seggi, Camera più Senato: la guida è sua. Seggi Camera · Senato.</p></aside>`;
+  }
+  if(st.v==='B' && st.sel){
+    const d=V().dicasteri.find(x=>x.id===st.sel), ora=s[st.sel];
+    return `<aside class="lato"><h4 class="tit">${esc(d.nome)}</h4><p class="sec">${pesi(D.pesi[d.id])} ${D.pesi[d.id]} punt${D.pesi[d.id]>1?'i':'o'} · ora a <b>${esc(nomeB(ora))}</b>${ora!==e.default[d.id]?` (il default: ${esc(nomeB(e.default[d.id]))})`:''}</p>
+      <div class="sez-l">sposta a<span>un clic</span></div><div class="az" style="margin:0">${titolari(e).map(o=>`<button class="op ${o===null?'tec':''} ${ora===o?'on':''}" style="--pc:${o===null?'':col(o)}" data-as="${d.id}|${o}">${esc(nomeB(o))}</button>`).join('')}</div>
+      <div class="az"><button class="link" data-sel="">Chiudi</button></div>${lAlleati(e,s)}</aside>`;
+  }
+  if(st.v==='C') return `<aside class="lato">${lAllarga(e)}<div class="sez-l">il voto di ${per(V().voto.data)}<span>${V().voto.premio?'col premio':'senza premio'}</span></div>${camere(e)}<p class="sec">${frase(e)}</p>
+    <p class="min muto">L’intesa di partenza è 60, più 10 per ogni punto sopra la richiesta, meno 10 per ogni punto sotto. Un tecnico conta nella tua quota.</p>${cambiata(e,s)?`<div class="az"><button class="btn p" data-act="reset">Torna alla spartizione di default</button></div>`:''}</aside>`;
+  return `<aside class="lato">${lAllarga(e)}${lAlleati(e,s)}</aside>`;
+}
+
+// ======================= le forme =======================
+function bott(e,s,d){
+  return `<span class="chi2">${titolari(e).map(o=>`<button class="op ${o===null?'tec':''} ${s[d]===o?'on':''}" style="--pc:${o===null?'':col(o)}" data-as="${d}|${o}">${esc(nomeB(o))}</button>`).join('')}</span>`;
+}
+function totali(e,s){
+  const o=offerte(s);
+  return `<div class="tot">${['giocatore',...alleati(e)].map(id=>`<span>${sw(id)}${esc(nomeB(id))} <b>${o[id]||0}</b>${id==='giocatore'?'':` <span class="min muto">chiede ${num(e.richieste.find(r=>r.partito===id).richiesta)}</span>`}</span>`).join('')}<span class="min muto" style="align-self:end">punti su 14${tecnici(s)?` · tecnici: ${tecnici(s)}, nella tua quota`:''}</span></div>`;
+}
+const nota = `<p class="min muto">• cambiato rispetto alla spartizione di default. Senza proposta, a fine turno vale quella.</p>`;
+function formaA(e,s){
+  const righe=V().dicasteri.map(d=>`<tr class="${s[d.id]!==e.default[d.id]?'mod':''}"><td class="d">${esc(d.nome)}</td><td>${pesi(D.pesi[d.id])}</td><td>${bott(e,s,d.id)}</td></tr>`).join('');
+  return `<div class="pag">${evento()}${risultato(e)}<table class="rig"><thead><tr><th>Dicastero</th><th>Peso</th><th>A chi</th></tr></thead><tbody>${righe}</tbody></table>${totali(e,s)}${nota}</div>`;
+}
+function formaB(e,s){
+  const o=offerte(s), chi=['giocatore',...alleati(e)];
+  const cesto = id=>{
+    const ds=V().dicasteri.filter(d=>(s[d.id]===null?'giocatore':s[d.id])===id).sort((a,b)=>D.pesi[b.id]-D.pesi[a.id]);
+    const r=e.richieste.find(x=>x.partito===id), it=r?partenza(o[id]||0,r.richiesta):null;
+    const tes=ds.map(d=>`<button class="tes ${s[d.id]===null?'tec':''} ${st.sel===d.id?'sel':''}" style="--p:${D.pesi[d.id]};--pcm:${grave()?'var(--carta)':mix(col(id),.22)}" data-tes="${d.id}"><span>${esc(d.nome)}${s[d.id]===null?' · tecnico':''}${s[d.id]!==e.default[d.id]?' •':''}</span><span>${D.pesi[d.id]}</span></button>`).join('');
+    return `<section class="cesto" style="border-top-color:${col(id)}"><div class="tst">${faccia(id,40,it==null?0:umoreI(it))}<span><span class="nmP">${esc(nomeP(id))}</span><br><span class="sec">${r?`chiede <b>${num(r.richiesta)}</b> · ha <b>${o[id]||0}</b>`:`<b>${o[id]||0}</b> punti, il resto`}</span></span></div>
+      ${r?`<div class="intesa">${caselleI(it)}<span class="ints"><b class="${it<SOGLIA.ultimatum?'male':''}">parte da ${num(it,0)}</b><span>${it<SOGLIA.ultimatum?'ultimatum':''}</span></span></div>`:''}
+      <div class="pila2" style="--rq:${r?r.richiesta:0}">${r?`<span class="rq"><span>la richiesta</span></span>`:''}${tes||'<span class="vuo">nessun dicastero</span>'}</div></section>`; };
+  return `<div class="pag">${evento()}${risultato(e)}<p class="sec">Un clic su un dicastero per spostarlo. Ogni tessera è alta quanto il suo peso; il tratteggio è la richiesta.</p>
+    <div class="cesti" style="--nc:${chi.length}">${chi.map(cesto).join('')}</div>${nota}</div>`;
+}
+function formaC(e,s){
+  const o=offerte(s), cols=titolari(e);
+  const righe=V().dicasteri.map(d=>`<tr class="${s[d.id]!==e.default[d.id]?'mod':''}"><td class="d">${esc(d.nome)}</td><td>${pesi(D.pesi[d.id])}</td>${cols.map(c=>`<td><button data-as="${d.id}|${c}" aria-label="${esc(d.nome)} a ${esc(nomeB(c))}"><span class="pal ${c===null?'tec':''} ${s[d.id]===c?'on':''}" style="--pc:${c===null?'':col(c)}"></span></button></td>`).join('')}</tr>`).join('');
+  const pT = c => c===null ? Object.keys(s).filter(d=>s[d]===null).reduce((a,d)=>a+D.pesi[d],0) : c==='giocatore' ? Object.keys(s).filter(d=>s[d]==='giocatore').reduce((a,d)=>a+D.pesi[d],0) : o[c]||0;
+  const rq = c => { const r=e.richieste.find(x=>x.partito===c); return r ? `<b>${num(r.richiesta)}</b>` : ''; };
+  const it = c => { const r=e.richieste.find(x=>x.partito===c); if(!r) return ''; const v=partenza(o[c]||0,r.richiesta); return `${caselleI(v)}<b class="${v<SOGLIA.ultimatum?'male':''}">${num(v,0)}</b>`; };
+  const th = c => `<th>${c===null?'<span class="sec">Tecnico</span><br><span class="min muto">conta per te</span>':`${faccia(c,30)}<span class="sec">${esc(nomeB(c))}</span>`}</th>`;
+  return `<div class="pag">${evento()}<table class="inc"><thead><tr><th class="d">Dicastero</th><th>Peso</th>${cols.map(th).join('')}</tr></thead><tbody>${righe}</tbody>
+    <tfoot><tr><td class="d">punti dati</td><td></td>${cols.map(c=>`<td><b>${pT(c)}</b></td>`).join('')}</tr>
+    <tr><td class="d">richiesta</td><td></td>${cols.map(c=>`<td>${rq(c)}</td>`).join('')}</tr>
+    <tr><td class="d">intesa di partenza</td><td></td>${cols.map(c=>`<td>${it(c)}</td>`).join('')}</tr></tfoot></table>${nota}</div>`;
+}
+function guida(e){
+  const v=V(), rib=e.coal.filter(id=>id!=='giocatore'), primo=Pid('sinistra');
+  let corpo;
+  if(st.fuori) corpo=`<p class="grande">Resti fuori dal ribaltone.</p><p>A fine turno il Capo dello Stato cerca una maggioranza senza di te; se non la trova, le Camere si sciolgono. Dal turno dopo sei all’opposizione.</p>`;
+  else corpo=`<p class="grande">Il governo è caduto. ${esc(elenco([...rib.map(id=>Pid(id).nome),'il tuo partito']))} hanno la maggioranza.</p>
+    <p>La Sinistra è il primo per seggi (${seg('sinistra',0)+seg('sinistra',1)} contro i tuoi ${seg('giocatore',0)+seg('giocatore',1)}): la guida è sua. Puoi chiederla come condizione per entrare, o restare fuori.</p>
+    ${risultato(e)}
+    ${st.rifiuto?`<p class="rif">${esc(st.rifiuto)}. A fine turno nasce un governo senza di te.</p>`:''}
+    <div class="az"><button class="btn pieno" data-act="chiedi" ${st.rifiuto?'aria-disabled="true"':''}>Chiedi la guida a ${esc(primo.leader)} ›</button><button class="btn via" data-act="fuori">Resta fuori</button></div>
+    ${conferma('fuori','Resti fuori: il Capo dello Stato cerca una maggioranza senza di te, e non si torna indietro in questo turno.','Resta fuori')}
+    <p class="min muto">Senza scelta, a fine turno la chiusura chiede la guida per te.</p>`;
+  return `<div class="pag"><div class="gui"><p class="occ">Il ribaltone</p>${corpo}</div></div>`;
+}
+function capo(e){
+  return `<div class="pag"><div class="gui"><p class="occ">L’incarico</p><p class="grande">L’incarico va a un’altra coalizione.</p>
+    <p>Nessuna maggioranza ti comprende: il Capo dello Stato dà l’incarico, e il governo nasce a fine turno senza di te.</p>${risultato(e)}</div></div>`;
+}
+
+// ======================= cornice (da 08, forma A, come nel 24) =======================
+function caselle(pos,soglia=3,n=10){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  const inp=pos<=soglia;
+  return `<span class="cas ${inp?'inp':''}">${Array.from({length:n},(_,i)=>`<i class="${[i<soglia?'per':'', i===soglia-1?'sog':'', i<pos?'on':''].join(' ')}"></i>`).join('')}</span>`;
+}
+function tracciati(e){
+  const v=V(), tot=BASE8.reduce((a,id)=>a+(v.sond[id]||0),0), cons=v.sond.giocatore/tot*100;
+  const m = e.modo==='capo' || st.fuori ? null : margine(e), stretto=m?Math.min(...m):null;
+  const t=[['Il tuo consenso', num(cons)+'%', clamp(Math.round((cons-25)/5),0,10)],
+    [e.modo==='guida'?'Ribaltone C / S':'Coalizione C / S', m? m.map(sgn).join(' / ') : 'fuori', m? clamp(Math.round((stretto+9)/3),0,10) : null],
+    ['Conti · spread', num(v.spread,0), clamp(Math.round((500-v.spread)/50),0,10)]];
+  return `<div class="trks">${t.map(([k,val,pos])=>`<div class="trk"><span class="k">${k}</span>${caselle(pos)}<span class="v">${val}</span></div>`).join('')}</div>`;
+}
+const SEZ = [['prima','Prima pagina'],['cruscotto','Trattativa'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function cornice(e,s){
+  const v=V(), b={governo:'Non guidi il governo uscente', aula:'Le Camere aspettano il governo nuovo', bilancio:'Il bilancio lo presenta chi governa'};
+  if(v.turni_al_voto>1) b.campagna='Si fa campagna solo nel turno prima del voto';
+  const chi=`<span class="chi"><b>Trattativa</b><br>${per(v.data)} · turno ${v.turno}<br><b>${v.turni_al_voto} turni al voto</b></span>`;
+  const somm=`<nav class="somm" aria-label="Sommario">${SEZ.map(([k,t])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}">${t}</button>` : `<button class="${k==='cruscotto'?'qui':''}" ${k==='cruscotto'?'aria-current="page"':''}>${t}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+  const def = e.modo==='capo' ? ['tutte','nessuna scelta da fare'] : e.modo==='guida' ? (st.fuori?['tutte','resti fuori']:['','senza scelta: chiedi la guida']) : cambiata(e,s) ? ['tutte','la tua spartizione'] : ['','senza proposta: la spartizione di default'];
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino solo-ord">Il Pungolo</span>${chi}</div>${tracciati(e)}
+    <div class="c-dx"><div class="pila"><button class="btn pieno">Chiudi il turno ›</button></div><span class="def ${def[0]}">${def[1]}</span></div></div>${somm}</header>`;
+}
+
+// ======================= render =======================
+const scr = document.getElementById('screen');
+let limite='';
+function render(){
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  const e=E(), s=e.modo==='incarico'?sparti(e):{};
+  const pag = e.modo==='capo' ? capo(e) : e.modo==='guida' ? guida(e) : st.v==='B' ? formaB(e,s) : st.v==='C' ? formaC(e,s) : formaA(e,s);
+  const corpo = `<main class="corpo trt">${capoSez(e)}${pag}${lato(e,s)}</main>`;
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS ${grave()?'g':''} ${lw<1150?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)">${cornice(e,s)}${corpo}</div>`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(x){}
+  tagli();
+}
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('svg')||el.closest('.cas')) return; const b=el.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (b.bottom>R.bottom+1 && !el.closest('.corpo')));
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/ellipsis/.test(cs.textOverflow) && cs.overflow!=='hidden' && !/auto|scroll/.test(cs.overflowY) && el!==r;
+    if(fuori||stretto) n++; });
+  const c=r.querySelector('.pag'), scorre = c && c.scrollHeight>c.clientHeight+1;
+  const l=r.querySelector('.lato'), scorreL = l && l.scrollHeight>l.clientHeight+1;
+  document.getElementById('avv').textContent = [limite, n?`tagli: ${n}`:'', scorre?'la pagina scorre':'', scorreL?'il lato scorre':''].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.v=k[(k.indexOf(st.v)+(b.id==='next'?1:k.length-1))%k.length]; st.sel=null; }
+  else { const k=b.parentElement.dataset.k; st[k]=b.dataset.v; if(k==='stato'||k==='cede') azzera(); }
+  render();
+});
+scr.addEventListener('click',ev=>{
+  const x=ev.target.closest('[data-as],[data-tes],[data-act],[data-sel]'); if(!x) return;
+  const e=E();
+  if(x.dataset.as){ const [d,o0]=x.dataset.as.split('|'), o=o0==='null'?null:o0; if(o===e.default[d]) delete st.prop[d]; else st.prop[d]=o; }
+  else if(x.dataset.tes){ st.sel = st.sel===x.dataset.tes ? null : x.dataset.tes; }
+  else if('sel' in x.dataset){ st.sel=null; }
+  else { const a=x.dataset.act;
+    if(a==='annulla') st.conf=null;
+    else if(a==='reset') st.prop={};
+    else if(a==='chiedi'){ if(st.rifiuto) return; if(st.cede==='si'){ st.chiesta=true; st.prop={}; } else st.rifiuto='Sinistra non ti cede la guida: guiderebbe la propria coalizione'; }
+    else if(a==='fuori') st.conf='fuori';
+    else if(a==='ok-fuori'){ st.fuori=true; st.conf=null; }
+    else if(a.startsWith('ok-allarga-')){ const ids=a.slice(11).split('+'); st.alla=[...new Set([...st.alla,...ids])].sort((p,q)=>BASE8.indexOf(p)-BASE8.indexOf(q)); st.prop={}; st.conf=null; }
+    else if(a.startsWith('allarga-')) st.conf=a;
+  }
+  render();
+});
+function perche(ev){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=ev.type==='mouseover'||ev.type==='focusin' ? ev.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, k=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/k/z)+'px'; el.style.top=((B.bottom-R.top)/k/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',ev=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(ev.key==='ArrowRight') document.getElementById('next').click(); if(ev.key==='ArrowLeft') document.getElementById('prev').click(); });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

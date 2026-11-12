@@ -39,3 +39,7 @@ Pagina senza cornice: testatina «Il Pungolo · Edicola», a destra «Impostazio
 ### Scartato
 
 B · Copertina (l'ultima partita come apertura di prima pagina, l'albo su una pagina sua); C · Schedario (una tabella con filtri, dettaglio aperto sotto la riga); pagina Eredità dopo l'abbandono; indicatori nell'indice delle partite.
+
+### Aggiornato dal ticket 30 (12/11/2026)
+
+Il dettaglio della voce d'albo prende «Leggi l'eredità ›», che apre la pagina dell'[Eredità](30-eredita.md) senza cornice, con «‹ Edicola» e senza azioni. La fine senza seggi si raggiunge giocando su altri posti (17 partite su 720, seme 43 a 4,5 nella Vista 30): «Lista del Faro» resta forzata solo perché la prova qui guardava il 6,5.

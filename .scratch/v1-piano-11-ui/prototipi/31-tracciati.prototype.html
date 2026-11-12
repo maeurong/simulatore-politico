@@ -1,0 +1,174 @@
+<!doctype html>
+<!--
+  Prototipo usa e getta · ticket 31, Scale dei tracciati.
+  I tre tracciati della cornice A · Gerenza in otto stati, coi valori veri delle Viste campione
+  (03, 08, 05, 06 e 28-opposizione, 01, 30-eredita) e le scale decise al primo giro:
+    stacco sulla regola del core, sempre dopo la terza casella, passo fisso, estremi ancorati alla soglia.
+    consenso al governo: 4 punti, stacco alla soglia del premio (42%: 30→70); al partito: 1 punto, stacco alla soglia di lista (3%: 0→10)
+    maggioranza: 3 seggi, stacco a 0 (−9→+21) · spread rovesciato: 75 pb, stacco a 550 (775→25)
+  Uno stato è di prova, dichiarato: lo spread al massimo (1.000 pb), che nessuna Vista campione raggiunge.
+  Parametri (barra in basso): ?fuori=num|segno &camere=una|due &cadere=15|3 &fine=grigi|vuoti &cons=premio|proiez &scale=1|0
+  Foglio di stile e tracciato copiati da 08-fondamenta.prototype.html (forma A), nessun colore né misura a mano.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Scale dei tracciati · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750; --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06); --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,serif; --txt:'Atkinson Hyperlegible Next',system-ui,sans-serif; --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-num:19px; --c-sez:23px; --c-pag:30px;
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --doppio:3px double var(--ink);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);font-variant-numeric:tabular-nums lining-nums;
+}
+.vS .g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--wonk:"SOFT" 0,"WONK" 0}
+body{min-height:100vh;padding:28px 24px 96px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1}
+h1{font-size:var(--c-pag)} .muto{color:var(--grigio)} .min{font-size:var(--c-min)} .sec{font-size:var(--c-sec)}
+.intro{max-width:880px;margin:6px 0 20px}
+
+/* tracciato, dalle fondamenta */
+.cas{display:flex;gap:2px;align-items:center}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.cas.fermo i{border-color:var(--grigio)} .cas.fermo i.on{background:var(--grigio)} .cas.fermo i.per{background:none}
+.cas b.oltre{font-size:var(--c-min);line-height:1;color:var(--rosso);width:8px;text-align:center}
+.cas b.oltre.su{color:var(--grigio)}
+.fila{display:grid;gap:3px}
+.fila .r{display:flex;align-items:center;gap:4px} .fila .r em{font-style:normal;font-size:var(--c-min);color:var(--grigio);width:9px}
+.fila.due .cas i{--ch:6px}
+.trk{display:grid;grid-template-columns:auto auto;gap:0 8px;align-items:center;padding:0 12px;border-left:var(--filo)}
+.trk:last-child{border-right:var(--filo)}
+.trk .k{grid-column:1/-1;font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.trk .v small{font-size:var(--c-min);font-weight:400;color:var(--grigio);margin-left:3px}
+.trk .v.fermo{color:var(--grigio)}
+.trk .sc{grid-column:1/-1;font-size:var(--c-min);color:var(--grigio);white-space:nowrap}
+
+/* la tavola degli stati */
+.stati{display:grid;gap:0;border-top:var(--doppio)}
+.stato{display:grid;grid-template-columns:200px minmax(0,1fr);gap:6px 18px;align-items:center;padding:12px 0;border-bottom:var(--filo)}
+.stato .nota{grid-column:2}
+.stato .nome b{display:block}
+.stato .trks{display:flex;flex-wrap:wrap;row-gap:8px}
+.stato .nota{font-size:var(--c-sec);color:var(--grigio);max-width:420px}
+.prova{display:inline-block;border:1.5px dashed var(--grigio);padding:0 5px;font-size:var(--c-min);color:var(--grigio);margin-top:3px}
+
+/* barra delle varianti */
+.barra{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:var(--carta);display:flex;flex-wrap:wrap;gap:6px 18px;padding:9px 16px;font-size:var(--c-min);z-index:9}
+.barra .cap{opacity:.7;margin-right:4px}
+.barra .seg{display:inline-flex;border:1px solid var(--carta)}
+.barra .seg button{padding:2px 8px}
+.barra .seg button{color:var(--carta)} .barra .seg button.on{background:var(--giallo);color:var(--ink);font-weight:700}
+</style>
+</head>
+<body class="vS">
+<h1 class="tit">Scale dei tracciati</h1>
+<p class="intro sec muto">I tre tracciati della cornice in otto stati, coi valori veri delle Viste campione. Lo stacco sta sempre dopo la terza casella, sulla regola del core; a sinistra la regola è scattata. Le varianti, nella barra in basso, sono le domande del secondo giro.</p>
+<div class="stati" id="stati"></div>
+<div class="barra" id="barra"></div>
+<script>
+const DEF={fuori:'segno',camere:'una',cadere:'15',fine:'grigi',cons:'premio',scale:'1'};
+const st={...DEF}; try{new URLSearchParams(location.search).forEach((v,k)=>{if(k in DEF)st[k]=v})}catch(e){}
+const VAR=[['fuori','fuori scala',[['num','solo il numero'],['segno','col segno ◂ ▸']]],
+  ['camere','maggioranza',[['una','la Camera più debole'],['due','tutte e due']]],
+  ['cadere','per farlo cadere',[['15','15 seggi a casella'],['3','3 seggi a casella']]],
+  ['fine','a partita finita',[['grigi','fermi in grigio'],['vuoti','vuoti']]],
+  ['cons','consenso in pericolo',[['premio','sotto il premio'],['proiez','senza maggioranza in proiezione']]],
+  ['scale','scale scritte',[['1','sì'],['0','no']]]];
+const it=(x,d=0)=>x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sgn=x=>x>0?'+'+x:x<0?'−'+(-x):'0';
+
+// Scale: n caselle, la i-esima copre [da+i·passo, da+(i+1)·passo). Piene quelle col limite basso raggiunto.
+// spread e «per farlo cadere» rovesciati: si conta da sinistra scendendo.
+const SC={
+  premio:{da:30,passo:4,nome:'consenso, 30→70%, stacco al premio (42%)'},
+  lista:{da:0,passo:1,nome:'partito, 0→10%, stacco alla soglia di lista (3%)'},
+  marg:{da:-9,passo:3,nome:'seggi, −9→+21, stacco a 0'},
+  spread:{da:775,passo:75,rov:1,nome:'pb, 775→25, stacco a 550'},
+  cad15:{da:150,passo:15,rov:1,nome:'sì che mancano, 150→0, piena quando passa'},
+  cad3:{da:30,passo:3,rov:1,nome:'sì che mancano, 30→0, piena quando passa'},
+};
+function pos(s,v){
+  const raw = s.rov ? Math.ceil((s.da-v)/s.passo) : Math.floor((v-s.da)/s.passo)+1;
+  return {p:Math.max(0,Math.min(10,raw)), sotto:raw<1, sopra:raw>10};
+}
+// una fila di caselle; stacco=false per «per farlo cadere», che non ha zona di pericolo
+function caselle(s,v,{stacco=true,inp=null,fermo=false}={}){
+  const {p,sotto,sopra}=pos(s,v), danger = inp ?? (stacco && p<=3);
+  const cl=i=>[stacco&&i<3&&!fermo?'per':'',stacco&&i===2?'sog':'',i<p?'on':''].join(' ');
+  const pre = st.fuori==='segno' && sotto ? `<b class="oltre ${stacco&&!fermo?'':'su'}">◂</b>` : st.fuori==='segno' ? '<b class="oltre"></b>' : '';
+  const post= st.fuori==='segno' && sopra ? '<b class="oltre su">▸</b>' : st.fuori==='segno' ? '<b class="oltre"></b>' : '';
+  return `<span class="cas ${danger&&!fermo?'inp':''} ${fermo?'fermo':''}">${pre}${Array.from({length:10},(_,i)=>`<i class="${cl(i)}"></i>`).join('')}${post}</span>`;
+}
+const vuote=()=>`<span class="cas vuoto">${st.fuori==='segno'?'<b class="oltre"></b>':''}${'<i></i>'.repeat(10)}${st.fuori==='segno'?'<b class="oltre"></b>':''}</span>`;
+const trk=(k,corpo,v,sc)=>`<div class="trk"><span class="k">${k}</span>${corpo}<span class="v">${v}</span>${st.scale==='1'&&sc?`<span class="sc">${sc}</span>`:''}</div>`;
+
+// i tre tracciati
+function consenso(x){
+  if(x.fine && st.fine==='vuoti') return trk('Consenso · partito',vuote(),'<span class="v fermo">—</span>','partita finita');
+  if(x.partito!=null){ const s=SC.lista; return trk(x.fine?'Consenso · al voto':'Consenso · partito',caselle(s,x.partito,{fermo:!!x.fine}),`<span class="${x.fine?'fermo':''}">${it(x.partito,1)}%</span>`,s.nome); }
+  const s=SC.premio, inp = st.cons==='proiez' ? !x.proiez : null;
+  return trk('Consenso · coalizione',caselle(s,x.coal,{inp}),`${it(x.coal,1)}%`,s.nome+(st.cons==='proiez'?`; rosso se la proiezione non dà la maggioranza (${x.proiezTxt})`:''));
+}
+function seggi(k,c,se,s,opt={}){
+  const m=Math.min(c,se), ramo=c<=se?'Camera':'Senato';
+  if(st.camere==='due') return trk(k,`<span class="fila due"><span class="r"><em>C</em>${caselle(s,c,opt)}</span><span class="r"><em>S</em>${caselle(s,se,opt)}</span></span>`,`<span class="${opt.fermo?'fermo':''}">${sgn(c)} / ${sgn(se)}</span>`,s.nome);
+  return trk(k,caselle(s,m,opt),`<span class="${opt.fermo?'fermo':''}">${sgn(m)}</span><small>${ramo}</small>`,s.nome);
+}
+function secondo(x){
+  if(x.fine && st.fine==='vuoti') return trk('Maggioranza',vuote(),'<span class="v fermo">—</span>','partita finita');
+  if(x.cadere){ const s=st.cadere==='15'?SC.cad15:SC.cad3, [c,se]=x.cadere, m=Math.min(c,se), ramo=c<=se?'Camera':'Senato';
+    const fmt=v=>v<=0?'passa':`${v}`;
+    if(st.camere==='due') return trk('Per farlo cadere',`<span class="fila due"><span class="r"><em>C</em>${caselle(s,c,{stacco:false,inp:false})}</span><span class="r"><em>S</em>${caselle(s,se,{stacco:false,inp:false})}</span></span>`,`${fmt(c)} / ${fmt(se)}`,s.nome);
+    return trk('Per farlo cadere',caselle(s,m,{stacco:false,inp:false}),m<=0?`passa<small>${ramo}</small>`:`mancano ${m}<small>${ramo}</small>`,s.nome);
+  }
+  return seggi(x.attesi?'Seggi attesi':x.fine?'Seggi · al voto':'Maggioranza',x.marg[0],x.marg[1],SC.marg,{fermo:!!x.fine});
+}
+function conti(x){
+  if(x.fine && st.fine==='vuoti') return trk('Conti · spread',vuote(),'<span class="v fermo">—</span>','partita finita');
+  return trk('Conti · spread',caselle(SC.spread,x.spread,{fermo:!!x.fine}),`<span class="${x.fine?'fermo':''}">${it(x.spread)}</span><small>pb</small>`,SC.spread.nome);
+}
+
+// gli otto stati, dalle Viste campione
+const STATI=[
+  {nome:'Al governo',da:'Vista 03 · turno 2',coal:38.5,proiez:true,proiezTxt:'225 / 116 seggi',marg:[23,14],spread:86,
+   nota:'Tre partiti al 38,5%: sotto il premio della Legge 180, ma la proiezione dà 225 seggi su 400. Con «sotto il premio» il consenso è rosso già al secondo turno.'},
+  {nome:'Al governo, tono grave',da:'Vista 08 · turno 7',g:1,coal:30.1,proiez:false,proiezTxt:'165 / 79 seggi',marg:[23,14],spread:62,
+   nota:'Al 30,1% la proiezione non dà più la maggioranza: rosso in tutte e due le varianti.'},
+  {nome:'Crisi di governo',da:'Vista 05 · turno 26',coal:13.1,proiez:false,proiezTxt:'67 / 34 seggi',marg:[-97,-46],spread:127,
+   nota:'Margine −97 alla Camera: molto oltre la scala, che finisce a −9.'},
+  {nome:'Aste scoperte',da:'di prova',prova:1,coal:38.5,proiez:true,proiezTxt:'225 / 116 seggi',marg:[23,14],spread:1000,
+   nota:'Lo spread al tetto del core, 1.000 pb: nessuna Vista campione ci arriva.'},
+  {nome:'All’opposizione',da:'28-opposizione · turno 3',partito:4.0,cadere:[141,73],spread:78,
+   nota:'Sfiducia respinta 60 a 340: mancano 141 sì alla Camera, 73 al Senato. Il partito al 4% sta appena sopra la soglia di lista.'},
+  {nome:'All’opposizione, la sfiducia passa',da:'28-opposizione · turno 4',partito:4.0,cadere:[-16,-9],spread:80,
+   nota:'217 a 183: alla Camera i sì superano la metà più uno di 16.'},
+  {nome:'Turno zero',da:'Vista 01',partito:13.4,attesi:1,marg:[-121,-62],spread:84,
+   nota:'Il partito da solo, senza coalizione dichiarata: 80 seggi attesi contro 201. Il 13,4% esce dalla scala del partito, che finisce al 10.'},
+  {nome:'Partita finita',da:'30-eredita · ultimo voto',fine:1,partito:2.4,marg:[-201,-101],spread:85,
+   nota:'Il 2,4% e nessun seggio. Fermi in grigio, senza pericolo acceso (ticket 30).'},
+];
+function render(){
+  document.getElementById('stati').innerHTML=STATI.map(x=>`<div class="stato ${x.g?'g':''}">
+    <div class="nome"><b class="tit" style="font-size:18px">${x.nome}</b><span class="min muto">${x.da}</span>${x.prova?'<br><span class="prova">stato di prova</span>':''}</div>
+    <div class="trks">${consenso(x)}${secondo(x)}${conti(x)}</div>
+    <div class="nota">${x.nota}</div></div>`).join('');
+  document.getElementById('barra').innerHTML=VAR.map(([k,cap,opz])=>`<span><span class="cap">${cap}</span><span class="seg">${opz.map(([v,l])=>`<button data-k="${k}" data-v="${v}" class="${st[k]===v?'on':''}">${l}</button>`).join('')}</span></span>`).join('');
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button[data-k]'); if(!b) return; st[b.dataset.k]=b.dataset.v;
+  history.replaceState(null,'','?'+new URLSearchParams(Object.entries(st).filter(([k,v])=>DEF[k]!==v)));render();});
+render();
+</script>
+</body>
+</html>

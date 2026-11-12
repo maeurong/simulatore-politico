@@ -58,6 +58,38 @@ Dell'11/11/2026, ticket «Testi del Pungolo» della mappa del piano 11:
 
 - **La famiglia dell'evento nella voce.** `evento_risolto` ed `evento_nato` coprono tutti gli eventi dei dati e i titoli del Pungolo non portano nomi: la UI sceglie il titolo dal tipo e, per questi due, dalla famiglia. La voce la porta nel campo `famiglia`.
 
+Del 12/11/2026, ticket «Anteprima della misura» della mappa del piano 11:
+
+- **Anteprima di una misura in calendario** e **norme del decreto d'evento**: tutte e due nella PR delle esposizioni, nelle sezioni omonime qui sotto.
+
+Del 12/11/2026, ticket «Conti» della mappa del piano 11:
+
+- **Trimestri oltre la soglia** di una situazione e **debito sul PIL**: tutti e due nella PR delle esposizioni, nelle sezioni «Situazioni» e «Debito» qui sotto.
+
+Del 12/11/2026, ticket «Bilancio» della mappa del piano 11:
+
+- **Il bilancio in aula** nella Vista, e **i dicasteri chiesti** da ogni emendamento sul bilancio: tutti e due nella PR delle esposizioni, nella sezione «Bilancio in aula» qui sotto.
+
+Del 12/11/2026, ticket «Registro» della mappa del piano 11:
+
+- **I soggetti delle voci fuse.** Ogni riga di `dettagli` porta i soggetti della voce confluita, come campi accanto al testo: il registro segue un partito, un dicastero o una regione anche dentro una voce fusa, senza cercare nel testo (sezione «La voce dell'esito»).
+- **Le disposizioni nella voce.** Una voce su una misura porta anche gli id delle disposizioni che tocca: una legge ripresentata prende un id di misura nuovo, e senza le disposizioni il filo si spezzerebbe. Il bilancio, che non tocca disposizioni, si segue per misura.
+
+Del 12/11/2026, ticket «Campagna» della mappa del piano 11:
+
+- **L'anteprima del riposizionamento** con le soglie di scissione nella Vista, e **l'anteprima delle promesse** con l'intesa che costano agli alleati: tutte e due nella PR delle esposizioni, nella sezione «Riposizionamento e promesse» qui sotto.
+
+Del 12/11/2026, ticket «Cruscotto all'opposizione» della mappa del piano 11:
+
+- **La sfiducia presentata**, **di chi è il posto riservato**, **l'ammissibilità del referendum abrogativo** per disposizione e **il costo della linea** del giocatore: tutti e quattro nella PR delle esposizioni (sezione «Cruscotto all'opposizione» qui sotto), mostrati nella fetta 11g del piano 11. Fino ad allora il cruscotto mostra il rifiuto sul posto e una frase.
+
+Del 12/11/2026, ticket «Governo», «Partiti», «Trattativa e spartizione», «Scale dei tracciati» e «Disegno delle caricature» della mappa del piano 11, portati qui dopo la spec del piano 11 (`docs/superpowers/specs/2026-11-12-v1-piano-11-ui.md`, tabella «Rimandi al core»):
+
+- **L'indicatore di servizio** di ogni dicastero, **il perché dell'evidenza** di un atto e **il prezzo delle dimissioni chieste**: nella PR delle esposizioni, sezione «Governo» qui sotto.
+- **Le soglie della soddisfazione**, **le soglie dell'intesa** e **la soglia delle Aste scoperte**: sezione «Soglie».
+- **La spartizione in corso** per dicastero col peso, **l'intesa di partenza** di ogni alleato e **la coalizione del ribaltone** col primo per seggi: sezione «Trattativa».
+- **Il genere** di ministri, candidati e leader: sezione «Genere dei personaggi». È l'unico di questi rimandi con stato nuovo.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -110,8 +142,9 @@ Una voce porta:
 | `dicastero` | `Option<String>` | id |
 | `regione` | `Option<String>` | id |
 | `misura` | `Option<u32>` | id della misura in calendario o votata |
+| `disposizioni` | `Vec<String>` | id delle disposizioni che la misura tocca, nell'ordine dei suoi valori; vuoto senza misura e per il bilancio |
 | `famiglia` | `Option<Famiglia>` | la famiglia dell'evento (situazione, emergenza, scandalo, shock, debito), solo in `evento_risolto` ed `evento_nato`; vuota negli altri tipi |
-| `dettagli` | `Vec<String>` | vuoto, salvo nelle voci fuse: una riga «fatto: causa» per ogni voce confluita |
+| `dettagli` | `Vec<Dettaglio>` | vuoto, salvo nelle voci fuse: una riga per ogni voce confluita, col `testo` «fatto: causa» e i suoi `partito`, `dicastero`, `regione`, `misura` e `disposizioni`, gli stessi campi della voce |
 
 Regole comuni:
 
@@ -287,7 +320,7 @@ Il catalogo ha 92 tipi. Un fatto nuovo che un piano futuro aggiunge alla chiusur
 
 L'evidenza si compone alla fine della chiusura, sulle voci raccolte, in tre passi.
 
-1. **Fusione.** Per ogni tipo fondibile, le voci dello stesso tipo e della stessa criticità diventano una voce sola, messa al posto della prima. `dettagli` porta una riga per ogni voce confluita, nell'ordine. `fatto` è il riassunto col conteggio («Tre ministri perdono soddisfazione»), `causa` la più frequente fra le confluite, o «più cause» se nessuna prevale. `partito`, `dicastero`, `regione` e `misura` restano solo se sono uguali in tutte. Una voce sola di un tipo fondibile resta com'è.
+1. **Fusione.** Per ogni tipo fondibile, le voci dello stesso tipo e della stessa criticità diventano una voce sola, messa al posto della prima. `dettagli` porta una riga per ogni voce confluita, nell'ordine, coi soggetti di quella voce. `fatto` è il riassunto col conteggio («Tre ministri perdono soddisfazione»), `causa` la più frequente fra le confluite, o «più cause» se nessuna prevale. `partito`, `dicastero`, `regione`, `misura` e `disposizioni` restano solo se sono uguali in tutte; nelle righe dei dettagli restano sempre. Una voce sola di un tipo fondibile resta com'è.
 2. **Scelta.** Entrano le critiche. Se sono più di sette, restano le sette con la precedenza più alta (3, poi 2, poi 1); a parità, le prime nell'ordine della chiusura. Se sono meno di sette, i posti liberi vanno alle notevoli, le prime nell'ordine della chiusura. Le ordinarie non entrano mai: un turno quieto apre con meno di sette voci.
 3. **Ordine.** Niente si sposta: l'elenco resta nell'ordine della chiusura, e `in_evidenza` segna le scelte.
 
@@ -407,6 +440,7 @@ Tutti tranne la proiezione sono il verdetto su un anno chiuso e riveduto, quindi
 
 `Vista.debito`:
 
+- `debito_pil`: il debito in % del PIL degli ultimi quattro trimestri, dopo l'ultima chiusura, quello con cui si calcola lo spread (`Economia::debito_e_disavanzo_pil`, `crates/sim-core/src/economia/spread.rs:21-27`). Esatto, come lo spread che la Vista già porta: il debito è un conto pubblicato, non una stima. Decisione di Mario del 12/11/2026, ticket «Conti» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/21-conti.md`): oggi la pagina dei Conti lo saprebbe solo comprando il centro studi, che lo prevede.
 - `mes`: se c'è un programma, il trimestre in cui finisce e le disposizioni vincolate col loro gradino.
 - `ristrutturazione`: se c'è, il trimestre del taglio, il premio di oggi sullo spread in punti base e il trimestre in cui finisce la perdita dei redditi (nessuno, se è già finita).
 
@@ -416,7 +450,7 @@ Tutti tranne la proiezione sono il verdetto su un anno chiuso e riveduto, quindi
 
 ### Calendario
 
-`Vista.posti`: per i posti ordinari e per quello costituzionale, quanti sono e quanti sono occupati, contati come li conta `presenta` (`crates/sim-core/src/parlamento/mod.rs:585-602`). `posto_riservato` resta com'è.
+`Vista.posti`: per i posti ordinari e per quello costituzionale, quanti sono e quanti sono occupati, contati come li conta `presenta` (`crates/sim-core/src/parlamento/mod.rs:585-602`). `posto_riservato` resta com'è; di chi sia il posto lo dice un campo accanto, `posto_riservato_di` (sezione «Cruscotto all'opposizione»).
 
 ### Legge elettorale
 
@@ -427,6 +461,79 @@ Metodo `menu_elettorale(valori) -> Vec<VoceMenu>`: per ogni gradino di ogni disp
 Decisione di Mario dell'11/11/2026, ticket «Aula e calendario» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/19-aula-e-calendario.md`). Oggi `Partita::anteprima` rifiuta chi non governa (`crates/sim-core/src/partita.rs:1930`): all'opposizione la proposta per il posto riservato si scrive senza costo, linee né forbice, che si vedono solo quando è già in calendario. La storia 55 chiede l'anteprima di ogni misura; la 94 vuole una proposta che costringa la maggioranza a votare contro i suoi elettori, e per sceglierla servono le linee e i gruppi toccati.
 
 Metodo `anteprima_proposta(valori) -> Result<Anteprima, Errore>`: l'anteprima della proposta che `PresentaProposta` metterebbe nel posto riservato. Valgono le regole di quel comando tranne il posto riservato, così come `anteprima` salta il calendario pieno: la guardia dell'opposizione, poi `bozza_proposta` (`crates/sim-core/src/parlamento/mod.rs:649-666`), che rifiuta anche la norma costituzionale. Il resto è `parlamento::anteprima` come in `anteprima`, con la capacità neutra perché nessun ministro stima la proposta. La bozza porta già il promotore, quindi linee e forbice seguono le regole della proposta d'opposizione (`crates/sim-core/src/parlamento/mod.rs:295-297`). La partita non cambia.
+
+### Anteprima di una misura in calendario
+
+Decisione di Mario del 12/11/2026, ticket «Anteprima della misura» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md`). Una misura in calendario porta linee e forbice, ma non costo, effetti né gruppi toccati, e `Partita::anteprima` la rifiuta perché è già in esame (`crates/sim-core/src/parlamento/mod.rs:759-761`). Chi apre una misura in Aula non sa quanto costa né cosa fa.
+
+`VoceMisura` prende i campi di `Anteprima` che non ha: `costo_annuo`, `effetti`, `leve`, `gruppi`, con lo stesso significato. Li calcola `parlamento::anteprima` (`crates/sim-core/src/parlamento/anteprima.rs:82-89`) sulla misura in calendario, con ciò che le passa `Partita::anteprima` (`crates/sim-core/src/partita.rs:1931-1946`): la capacità effettiva del ministro che oggi guida il dicastero proponente, neutra senza ministro e per una proposta d'opposizione, e il PIL potenziale annuo. La stima non si ricampiona di turno in turno, perché l'estrattore ha la chiave del turno di presentazione, della disposizione e del gradino. Cambia solo con la capacità: un ministro nuovo, o la fine del suo rodaggio (`crates/sim-core/src/ministri/mod.rs:125-132`). È la stima di chi siede oggi al dicastero. Nessuno stato nuovo, e `Partita::anteprima` continua a rifiutare la misura in esame.
+
+### Norme del decreto d'evento
+
+Decisione di Mario del 12/11/2026, stesso ticket. Il decreto innescato da un evento aperto vale solo su certe disposizioni: quelle di `norme`, o le ordinarie dei suoi `dicasteri` se `norme` è vuota (`crates/sim-core/src/eventi/mod.rs:101-106`); un evento del debito le ammette tutte (`:256-257`). `VoceEvento` non lo dice, e la UI dovrebbe provare `EmanaDecreto` su ogni disposizione per saperlo.
+
+`VoceEvento.norme: Vec<String>`: le disposizioni (id) che il decreto innescato da quell'evento ammette, nell'ordine del catalogo. È la regola di `ammetti_disposizioni` (`crates/sim-core/src/parlamento/decreti.rs:115-139`) con quel solo evento aperto: solo norme ordinarie, ciascuna ammessa come disposizione o per il suo dicastero. Vuota se l'evento non ammette decreto. La regola resta una: il comando e la Vista usano la stessa funzione. Nessuno stato nuovo.
+
+### Situazioni
+
+Decisione di Mario del 12/11/2026, ticket «Conti» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/21-conti.md`). Una situazione cambia stato dopo un certo numero di trimestri di fila dalla parte del cambio: due per la recessione, uno per le altre (`trimestri`, `crates/sim-core/src/eventi/situazioni.rs:12-14`); il conto lo tiene `Eventi.contatori` (`crates/sim-core/src/eventi/mod.rs:247-248`, aggiornato in `aggiorna`, `crates/sim-core/src/eventi/situazioni.rs:38-61`). `VoceSituazione` non lo dice: giocando col seme 1 a 4,5, turno 13, la crescita è a −4,2% contro una soglia di −1% e la recessione è spenta, perché è il primo trimestre sotto.
+
+`VoceSituazione` prende `trimestri: u8`, quanti trimestri di fila servono per cambiare stato, e `oltre: u8`, quanti ne sono già passati dalla parte del cambio (il contatore). Una situazione spenta con `oltre` 1 su 2 si legge «oltre la soglia da un trimestre: si accende al secondo di fila». Nessuno stato nuovo: la regola resta in `trimestri`, che la Vista chiama.
+
+### Bilancio in aula
+
+Decisione di Mario del 12/11/2026, ticket «Bilancio» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/22-bilancio.md`). `VistaBilancio` porta il bilancio in vigore e due booleani, `presentabile` e `presentato` (`crates/sim-core/src/vista.rs:404-421`), ma non le cifre della legge presentata. Accogliere l'emendamento di un alleato indicizza i suoi dicasteri dentro il core (`bilancio_emendato`, `crates/sim-core/src/partita.rs:1502-1524`), e da lì la UI non sa più quanto va a ogni dicastero: ha solo il riepilogo di `riepilogo_presentato`. Giocando col seme 4 a 4,5, turno 4, l'emendamento accolto del Centrodestra mette in pari Lavoro e Welfare e Infrastrutture e Trasporti e costa 981.850.113 € in più della bozza, ma le cifre nuove non escono.
+
+`VistaBilancio` prende `in_aula: Option<Bilancio>`: `Economia.bilancio_presentato` com'è, con gli emendamenti accolti già dentro; `None` senza legge presentata. Lo vede chiunque, come il riepilogo: il bilancio in aula è pubblico. Nessuno stato nuovo; `presentato` resta.
+
+Prima di scegliere, la pagina dice quanto costa accogliere ogni emendamento: `riepilogo_bilancio` sul bilancio in aula indicizzato sui dicasteri chiesti. Ma la richiesta li tiene come `(indice, Attenuazione::Indicizza)` (`crates/sim-core/src/parlamento/emendamenti.rs:39-44`) e `VoceEmendamento` porta solo testo e motivo (`crates/sim-core/src/vista.rs:345-350`). `VoceEmendamento` prende `dicasteri: Vec<String>`: gli id dei dicasteri delle voci `Indicizza`, nell'ordine della proposta; vuoto sugli emendamenti delle leggi. Stessa decisione di Mario.
+
+### Riposizionamento e promesse
+
+Decisione di Mario del 12/11/2026, ticket «Campagna» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/26-campagna.md`). Riposizionamento e promesse si fanno una volta per campagna (`Partita::riposiziona`, `crates/sim-core/src/partita.rs:3105-3146`; `prometti`, `:2452-2507`) e non si disfano: la UI li conferma sul posto, e la conferma deve dire cosa succede. Oggi non può.
+
+- **Riposizionamento.** `sposta` muove la percepita della metà del passo della dichiarata, nello stesso verso (`crates/sim-core/src/partiti.rs:116-120`); le soglie di minaccia e di scissione sono manopole (`minaccia_scissione` 0,5 e `soglia_scissione` 1, `dati/base/manopole.toml:1318-1330`), lette solo in `scissioni` (`crates/sim-core/src/partita/vita.rs:114-137`). Metodo `anteprima_riposizionamento(posizione) -> Result<AnteprimaRiposizionamento, Errore>`: gli stessi rifiuti di `Riposiziona`, estratti in una funzione che comando e anteprima usano, poi la dichiarata, la percepita che `sposta` darebbe e la loro distanza. La partita non cambia. `VistaCampagna` prende `riposizionato: bool` (`Legislatura.riposizionato`: già fatto in questa campagna), `passo: f64` (`passo_movimento`) e le due soglie, `minaccia_scissione` e `soglia_scissione`: con queste la UI disegna la distanza contro le soglie, e con `minaccia` della sezione «Partiti» dice se la minaccia è già accesa. Giocato col seme 1 a 1,5, turno 20, all'opposizione: dichiarata 1,5, percepita 2,11, distanza 0,61, minaccia accesa; spostarsi a 2 la porta a 0,36, a 1 a 0,86.
+- **Promesse.** Al governo `prometti` toglie `intesa_promessa` per il peso delle politiche a ogni alleato la cui linea su una promessa sarebbe no (`crates/sim-core/src/partita.rs:2488-2504`). Metodo `anteprima_promesse(promesse) -> Result<Vec<VoceCostoPromessa>, Errore>`: gli stessi rifiuti di `Prometti`, estratti come sopra, poi una voce per alleato contrario ad almeno una promessa, con `partito` (id), `intesa` (la somma delle variazioni, negativa) e `disposizioni` (gli id delle promesse su cui è contrario). Il calcolo è quello del comando, in una funzione sola. La lista è vuota fuori dal governo e per le disposizioni senza posizione. Giocato col seme 4 a 4,5, turno 20, al governo: promettere reddito minimo universale ed età pensionabile a 64 anni costa 10 punti d'intesa al Centrodestra, già in ultimatum, e 10 alla Destra.
+
+### Cruscotto all'opposizione
+
+Decisione di Mario del 12/11/2026, ticket «Cruscotto all'opposizione» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md`, sezione «Rimandi»). Due leve dell'opposizione non si ritirano: la sfiducia, una per turno, che respinta costa valence, e il referendum abrogativo, che blocca ogni altro quesito. La UI le conferma sul posto, ma oggi la Vista non dice che la sfiducia è già presentata, di chi è il posto riservato, se un quesito sarebbe ammesso, né quanto costa la linea: il cruscotto lo scopre solo dal rifiuto del comando. Tutto si legge da ciò che c'è: nessuno stato nuovo, nessun salto di schema. Le partite citate sono quelle delle Viste del ticket (`.scratch/v1-piano-11-ui/viste/genera/src/opposizione.rs`), giocate sul core di `81e09d3` col seme 1 a 1,5 sotto il governo IA.
+
+- **La sfiducia presentata.** La mozione del turno sta solo in `Parlamento.sfiducia` (`crates/sim-core/src/parlamento/mod.rs:135`): la presenta il giocatore (`presenta_sfiducia`, `crates/sim-core/src/partita.rs:3815-3832`) o l'opposizione IA in apertura (`crates/sim-core/src/partita/ia.rs:602`), e la chiusura la consuma (`crates/sim-core/src/partita.rs:813`). `Vista.sfiducia: Option<VoceSfiducia>`, con `dicastero` (id; `None` = al governo) e `partito` (id di chi l'ha presentata), letta così com'è. Al turno 2 la Vista dopo `Sfiducia` al governo è oggi uguale a quella di prima, e la seconda si rifiuta con «una sfiducia è già presentata in questo turno, da Partito del giocatore»; col campo la riga sa che la mozione c'è. La sfiducia di un partito IA si legge allo stesso modo: la mossa d'apertura la racconta, il campo dice che il giocatore non ne può presentare un'altra.
+- **Di chi è il posto riservato.** `posto_riservato: bool` resta com'è: vale vero quando il posto del turno è del giocatore ed è libero (`crates/sim-core/src/partita.rs:4016-4018`), ed è ciò che legge la fermata `posto_riservato`. Accanto, `Vista.posto_riservato_di: Option<String>`, l'id del partito a cui la rotazione dà il posto nel turno: è `fn posto_riservato` (`:3837-3845`, `fila[turno % fila.len()]` sui partiti fuori dal governo con seggi alla Camera), in fase ordinaria; `None` fuori dalla fase ordinaria o con la fila vuota. Coi due campi la UI legge i tre casi del ticket senza contare nulla: suo e libero, di un altro partito, suo e già occupato dalla sua proposta. Si aggiunge un campo invece di trasformare il booleano in partito più libero: il booleano ha già una fermata e due file di test che lo leggono (`crates/sim-core/tests/opposizione.rs:13-21`, `:273`, `crates/sim-core/tests/opposizione_ia.rs:432-438`), e il posto occupato da un partito IA si vede già dal calendario (`VoceMisura.promotore`). Al turno 2 la fila è Estrema destra e giocatore (l'Estrema sinistra non ha seggi) e il posto va all'Estrema destra; al turno 3 è del giocatore e libero; dopo `PresentaProposta` sul salario minimo a 11 € è suo e occupato.
+- **L'ammissibilità del referendum abrogativo.** `VoceDisposizione.referendabile` è statico (`crates/sim-core/src/vista.rs:377`). Una disposizione referendabile si rifiuta ancora per l'ultimo anno della legislatura, le Camere sciolte e i sei mesi dopo i comizi (`finestra_referendum`, `crates/sim-core/src/partita.rs:1870-1887`), e poi per niente da abrogare, gradino già abrogato da un referendum, quesito elettorale inammissibile, disposizione già in esame, referendum già in corso e fuori finestra (`Parlamento::abrogativo`, `crates/sim-core/src/parlamento/mod.rs:496-554`). Nessuna delle due modifica la partita: la regola c'è, va solo raccolta in una funzione. `abrogativo_ammesso(promotore, disposizione) -> Result<Referendum, Errore>` chiama la finestra e poi `abrogativo`; `promuovi_referendum` (`crates/sim-core/src/partita.rs:1850-1864`) la usa e scrive il referendum. `VoceDisposizione` prende `rifiuto_referendum: Option<String>`: il testo dell'errore che `PromuoviReferendum` renderebbe ora, `None` se il quesito sarebbe ammesso. La Vista lo calcola per ogni disposizione col giocatore come promotore, dopo la guardia dell'opposizione, nello stesso ordine del comando (`crates/sim-core/src/comando.rs:239-243`): al governo, o fuori dalla fase ordinaria, ogni disposizione porta il rifiuto della guardia. Al turno 2 il tetto al contante è ammesso, il regime forfettario «non è referendabile» e la concorrenza nei servizi, referendabile, dà «niente da abrogare»; dopo `PromuoviReferendum` sul tetto al contante il regime delle pensioni, che da solo sarebbe ammesso, dice «un referendum è già in corso». Al turno 4 (ottobre-dicembre 2027) il tetto al contante è fuori finestra; al turno 19 ogni disposizione dice l'ultimo anno della legislatura.
+- **Il costo della linea.** Storia 91 (`docs/superpowers/specs/2026-10-21-v1-giocabile.md:137`): votare lontano dalla propria posizione costa franchi tiratori e sposta la percepita. Il core calcola tutte e due le cose, e nessuna arriva alla Vista. I franchi tiratori del partito del giocatore li dà `previsione` (`crates/sim-core/src/parlamento/mod.rs:302-399`). Con la linea scelta valgono `ft_base + ft_distanza · |x − sostenuta| / 6`, entro `ft_max`, dove `x` è la posizione dichiarata e `sostenuta` la posizione nuova col sì, la vigente col no (`:385-390`). Con la linea di default valgono le regole di tutti i partiti (`probabilita_franco`, `crates/sim-core/src/parlamento/voto.rs:75-103`): col sì `ft_base + ft_distanza · d`, col no `ft_base · (1 − d)`, dove `d` è la distanza dalla posizione nuova. La percepita scivola a ogni voto di `scivolamento_percepita` (0,05) verso la posizione che il voto sostiene, anche con la linea di default (`crates/sim-core/src/partita.rs:1004-1013`). `VoceMisura` prende `costo_linea: Option<CostiLinea>`, con tre voci, `si`, `no` e `default`, ciascuna un `CostoLinea { percepita, franchi_camera, franchi_senato }`: la percepita del giocatore dopo quel voto, calcolata su quella di adesso, e i franchi tiratori attesi del suo partito in ogni ramo, cioè la probabilità per i suoi seggi, con le regole della forbice: doppi alla Camera sull'elettorale, che lì si vota a scrutinio segreto, e zero sotto fiducia, tranne in quel voto segreto. `None` dove il giocatore non sceglie la linea: la regola è la guardia di `Partita::linea` (`crates/sim-core/src/partita.rs:3853-3865`), estratta in una funzione che comando e Vista usano. Nessuna formula si copia: la Vista chiama `previsione` sulla misura con le tre linee, e lo scivolamento diventa una funzione pura che `vota` e la Vista usano entrambi. Al turno 2, misura 0 «Sgravio contributivo nel Mezzogiorno: 15%» (vigente il 20% a 3,5, nuova a 4, default no), col giocatore a 1,5 e 34 seggi alla Camera e 18 al Senato: col sì la percepita va a 1,625 e i franchi attesi sono 2,805 alla Camera e 1,485 al Senato; col no scelto 1,6, 2,38 e 1,26; col default 1,6, 0,397 e 0,21. Giocando, la linea sì porta la percepita a 1,9363 dopo il voto, contro 1,9149 col default: la differenza, 0,0214, è lo 0,025 di qui ridotto dai tre voti che seguono nella stessa chiusura (0,025 · 0,95³). Il no scelto costa sei volte i franchi del no di default, perché le due regole misurano la distanza da posizioni diverse: la Vista mostra il costo com'è. Mario, il 12/11/2026: è un difetto del core, una linea uguale al default deve costare come il default; si corregge fuori da questo piano (mappa del piano 11, «Out of scope»).
+
+### Governo
+
+Decisione di Mario del 12/11/2026, ticket «Governo» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/18-governo.md`, sezione «Guscio e dati»). La carta del ministro mostra l'obiettivo contro l'indicatore di servizio, perché l'atto è in evidenza e quanto costano le dimissioni chieste: oggi la UI dovrebbe rifare tre regole leggendo i file del core. Nessuno stato nuovo.
+
+- **L'indicatore di servizio.** `VoceDicastero` porta solo `id` e `nome` (`crates/sim-core/src/vista.rs:485-488`). L'indicatore sta nei dati (`indicatore_servizio`, `crates/sim-core/src/dati.rs:362`, `dati/base/dicasteri.toml:9`) ed è l'id della grandezza che il motore muove col funzionamento del dicastero (`crates/sim-core/src/grandezze.rs:201-208`), già in `Vista.grandezze`. `VoceDicastero.indicatore: String`, l'id; il valore la UI lo legge in `Vista.grandezze`, accanto a `VoceMinistro.obiettivo`.
+- **Il perché dell'evidenza.** `VoceAgenda.in_evidenza` (`vista.rs:552`) unisce tre regole con un «o»: ministro in minaccia, atto a `distanza_evidenza` (2) o più dalla posizione del Presidente del Consiglio, evento aperto nel dicastero (`crates/sim-core/src/ministri/agenda.rs:570-576`). `VoceAgenda.evidenza: Vec<MotivoEvidenza>`, con `MotivoEvidenza { Minaccia, Distanza, Evento }` nell'ordine della regola. `in_evidenza` resta, uguale a `!evidenza.is_empty()`: lo legge `evento_nel_dicastero_mette_in_evidenza` (`crates/sim-core/tests/ministri.rs:258-265`). Le tre condizioni si calcolano una volta e scrivono i due campi.
+- **Il prezzo delle dimissioni chieste.** `ChiediDimissioni` toglie `costo_dimissioni_chieste` (10) all'intesa dell'alleato solo se il ministro è di un alleato e non è un tecnico (`crates/sim-core/src/partita.rs:1583-1595`): col partito del giocatore e col tecnico è gratis. `VoceMinistero.prezzo_dimissioni: f64`, l'intesa che l'alleato perderebbe, 0 negli altri casi e in interim. La condizione si estrae in una funzione che `dimissioni_chieste` e la Vista usano entrambe.
+
+### Soglie
+
+Decisioni di Mario del 12/11/2026, ticket «Governo», «Partiti» e «Scale dei tracciati» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/18-governo.md`, `24-partiti.md`, `31-scale-dei-tracciati.md`). Cinque manopole che la UI disegna come fili o stacchi, e che la Vista non porta: la barra della soddisfazione (40 e 25), la barra dell'intesa (40 e 25), lo stacco dello spread (550 pb). Copiate nella UI, smetterebbero di valere senza errori al primo cambio delle manopole.
+
+`Vista.soglie: VistaSoglie { minaccia, dimissioni, ultimatum, uscita, crisi_debito_pb }`, lette con `dati.manopola` da `soglia_minaccia`, `soglia_dimissioni`, `soglia_ultimatum`, `soglia_uscita` e `soglia_crisi_debito` (`dati/base/manopole.toml:4-13`, `:807-811`, `:1136-1140`, `:1542-1546`), come le leggono le regole che le usano (per la crisi del debito `crates/sim-core/src/partita.rs:398`). Nessuna regola nuova. Le due soglie di scissione restano in `VistaCampagna` (sezione «Riposizionamento e promesse»).
+
+### Trattativa
+
+Decisione di Mario del 12/11/2026, ticket «Trattativa e spartizione» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/27-trattativa-e-spartizione.md`, sezione «Guscio e dati»). La pagina della trattativa parte dalla spartizione in corso e dice quanto costa all'intesa ogni scelta; oggi la Vista porta solo richiesta e offerta in punti per alleato (`VoceRichiesta`, `crates/sim-core/src/legislatura/spartizione.rs:25-29`). Nessuno stato nuovo.
+
+- **La spartizione in corso.** `assegnati_dal_giocatore` (`crates/sim-core/src/partita.rs:3249-3263`) dà la proposta del giocatore o, senza, la spartizione di default che la chiusura applicherà; i pesi sono `peso_spartizione` (`crates/sim-core/src/dati.rs:363`). `Vista.spartizione: Vec<VoceSpartizione>`, una per dicastero nell'ordine dei dati, solo in trattativa con l'incarico al giocatore e vuota altrove, come `richieste`. Campi: `dicastero` (id), `peso`, `partito: Option<String>` (id; `None` = tecnico, come in `Assegnazione`, `spartizione.rs:16-19`) e `di_default: String`, il partito della spartizione di default, così la UI segna le righe cambiate senza rifarla.
+- **L'intesa di partenza.** Alla formazione del governo ogni alleato riparte da `intesa_base + intesa_per_punto · (offerta − richiesta)` (60 e 10; `partita.rs:3345-3353`, `dati/base/manopole.toml:793-797`, `:1129-1133`), limitata a 0-100 da `varia` (`crates/sim-core/src/parlamento/intesa.rs:88-93`). `VoceRichiesta.intesa_partenza: f64`, con la stessa funzione, estratta, che `forma_governo` usa. Giocato sulla 02 delle Viste (seme 4 a 4,5): la Destra parte da 62,1 con la spartizione di default e da 52,1 con un tecnico su Sanità, che le toglie un punto.
+- **Il ribaltone.** `VoceIncarico::Guida` è senza dati (`crates/sim-core/src/vista.rs:193-197`), mentre il core tiene la coalizione in `Incarico::Guida { coalizione }` e chiede la guida al primo per seggi (`partita.rs:3591-3608`). `Vista.ribaltone: Option<VistaRibaltone>`, con `coalizione: Vec<String>` (id) e `primo: Option<String>`, da `guida_aperta` e `primo_per_seggi`; `None` fuori dalla trattativa con `Guida`. `VoceIncarico` resta com'è. Giocato: seme 2 a 1,5, turno 5, coalizione di Sinistra, Centrosinistra, Centro e giocatore, prima la Sinistra.
+
+### Genere dei personaggi
+
+Decisione di Mario del 12/11/2026, ticket «Disegno delle caricature» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/32-disegno-delle-caricature.md`, sezione «Dati e rimandi»). Le facce delle donne hanno segni loro (ciglia, labbra, orecchino, cappello) e la Vista non dice chi è donna. Una lista di nomi copiata nella UI smetterebbe di valere senza errori al primo cambio dei dati. È l'unica esposizione di questo gruppo con **stato nuovo**.
+
+- **Da dove viene il nome.** Ministri, candidati della rosa e leader nuovi prendono il nome dal bacino `nomi` (`dati/base/elettorato.toml:11`; `crates/sim-core/src/ministri/mod.rs:234`, `crates/sim-core/src/partita/ia.rs:47`); i leader di partenza dallo scenario (`dati/base/scenario.toml:251-335`). Nessuno dei due dice il genere.
+- **Dati.** Accanto a `nomi`, `generi`: un `Genere` (`donna`, `uomo`) per nome, nello stesso ordine; il caricamento rifiuta liste di lunghezza diversa, accanto al controllo di oggi sui nomi vuoti (`crates/sim-core/src/elettorato/mod.rs:226-228`). L'estrazione non cambia: lo stesso indice dà nome e genere, quindi con lo stesso seme escono gli stessi nomi di oggi. Ogni partito dello scenario prende `genere_leader`, obbligatorio. Nel bacino di oggi sono donne Giulia, Francesca, Chiara, Sara, Elena e Anna; fra i leader di partenza Anna Ferrucci, Chiara Lombardo e Silvia Moretti.
+- **Stato.** Il genere si scrive dove nasce il nome: `Ministro.genere` e il genere del leader nel partito, anche per i partiti nati in partita. Si salva, quindi entra nel salto di schema della PR.
+- **Vista.** `VoceMinistro.genere` (anche nella rosa) e `VocePartito.genere_leader: Option<Genere>`, `None` per il partito del giocatore, che non ha leader (`vista.rs:454-455`). Gli elettori campione non lo prendono: non hanno faccia.
 
 ### Ferma e Dirotta
 
@@ -464,6 +571,8 @@ Esito:
 - Con nove critiche restano fuori le due di precedenza più bassa, e a parità le ultime nell'ordine della chiusura.
 - Con due critiche e otto notevoli entrano le due critiche e le prime cinque notevoli.
 - Dieci atti eseguiti in un turno sono una voce sola con dieci dettagli.
+- Tre ministri di dicasteri diversi che perdono soddisfazione sono una voce fusa senza `dicastero`; ognuna delle tre righe dei dettagli porta il suo.
+- Una legge respinta e ripresentata dà due voci con `misura` diversa e le stesse `disposizioni`.
 - Stesso seme e stessi comandi danno lo stesso esito, voce per voce.
 - Ogni fatto della ricerca che il catalogo copre ha un test che lo fa accadere e trova la sua voce. I primi da scrivere sono quelli che oggi non lasciano traccia: evento risolto per default, alleato che esce, governo caduto con ognuna delle sei origini, situazione spenta, valore non applicato per il memorandum.
 - Campagna tagliata: campagna pari alla cassa, poi un sondaggio privato; la voce porta il chiesto, lo speso e la somma degli acquisti. Senza taglio nessuna voce.
@@ -496,6 +605,14 @@ Esposizioni:
 - `menu_elettorale` segna non ammesso il premio alla coalizione con le coalizioni spente, col motivo.
 - All'opposizione `anteprima_proposta` rende le linee e la forbice della misura che `PresentaProposta` mette in calendario nello stesso turno, e la partita non cambia.
 - `anteprima_proposta` rifiuta al governo e con una norma costituzionale, come `PresentaProposta`; col posto riservato occupato non rifiuta.
+- Una legge appena presentata ha in `VoceMisura` costo, effetti, leve e gruppi uguali a quelli dell'anteprima della stessa bozza nello stesso turno; al turno dopo, con lo stesso ministro fuori dal rodaggio, gli effetti non cambiano.
+- Con un solo evento aperto, ogni disposizione di `VoceEvento.norme` passa `ammetti_disposizioni`, e ogni disposizione ordinaria fuori dalla lista è rifiutata come «decreto senza innesco». Un evento senza decreto ha la lista vuota.
+- `VoceDicastero.indicatore` è, per ogni dicastero, l'id di una grandezza di `Vista.grandezze`.
+- `evidenza` è vuota se e solo se `in_evidenza` è falso; un evento aperto nel dicastero dà `Evento`.
+- `prezzo_dimissioni` è l'intesa che `ChiediDimissioni` toglie davvero: 10 al ministro di un alleato, 0 al ministro del giocatore e al tecnico.
+- `Vista.soglie` riporta le cinque manopole della partita.
+- In trattativa con l'incarico, `intesa_partenza` di ogni alleato è la sua intesa dopo la chiusura, con la spartizione di default e con una proposta comandata; `spartizione` riporta la proposta comandata, e `di_default` non cambia.
+- `generi` ha la lunghezza di `nomi`, altrimenti il caricamento rifiuta; con lo stesso seme i nomi dei ministri sono quelli di prima del campo.
 - Un salvataggio con lo schema 17 è rifiutato con `SchemaDiverso`.
 
 ## Riferimenti

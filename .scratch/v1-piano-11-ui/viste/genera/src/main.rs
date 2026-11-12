@@ -5,7 +5,8 @@ use std::path::Path;
 
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
-use sim_core::parlamento::ValoreProposto;
+use sim_core::informazione::Acquisto;
+use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::riepilogo;
 use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, VERSIONE_SCHEMA};
@@ -626,6 +627,19 @@ fn valori(coppie: &[(&str, &str)]) -> Vec<ValoreProposto> {
         .collect()
 }
 
+/// L'impostazione pronta «proporzionale al 3%» (`leggi_elettorali` dei dati), meno ciò che è già in vigore.
+fn proporzionale_al_3() -> Vec<ValoreProposto> {
+    valori(&[
+        ("coalizioni", "no"),
+        ("soglia_coalizione", "0"),
+        ("ripescaggio", "no"),
+        ("premio", "nessuno"),
+        ("soglia_premio", "4000"),
+        ("taglia_premio", "875"),
+        ("tetto", "nessuno"),
+    ])
+}
+
 /// Gli stati dell'Aula che le Viste 01-08 non hanno: calendario pieno con legge elettorale,
 /// norma costituzionale e riforma con emendamenti degli alleati; le deliberazioni e i voti dopo;
 /// all'opposizione il posto riservato libero, poi occupato dalla proposta del giocatore, e una
@@ -647,16 +661,7 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
             serde_json::json!({ "come": come, "vista": v }),
         );
     };
-    // L'impostazione pronta «proporzionale al 3%» (`leggi_elettorali` dei dati), meno ciò che è già in vigore.
-    let elettorale = valori(&[
-        ("coalizioni", "no"),
-        ("soglia_coalizione", "0"),
-        ("ripescaggio", "no"),
-        ("premio", "nessuno"),
-        ("soglia_premio", "4000"),
-        ("taglia_premio", "875"),
-        ("tetto", "nessuno"),
-    ]);
+    let elettorale = proporzionale_al_3();
     let p03 = governo_03(d)?;
     // La norma costituzionale con più sì attesi alla Camera, perché arrivi alla seconda.
     let costituzionale = [
@@ -824,6 +829,352 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Un gradino di `id` che non è in vigore né bloccato: l'ultimo dell'elenco.
+fn altro_gradino(v: &sim_core::Vista, id: &str) -> Option<ValoreProposto> {
+    let x = v.disposizioni.iter().find(|x| x.id == id)?;
+    let g = (x.gradini.iter()).rfind(|g| g.id != x.in_vigore && !g.bloccato)?;
+    Some(ValoreProposto {
+        disposizione: id.into(),
+        gradino: g.id.clone(),
+    })
+}
+
+/// Il primo decreto su disposizioni che `anteprima_decreto` ammette sul turno: una disposizione
+/// ordinaria e un gradino non in vigore.
+fn decreto_ammesso(p: &Partita) -> Option<(ValoreProposto, sim_core::vista::Anteprima)> {
+    let v = p.vista();
+    (v.disposizioni.iter())
+        .filter(|x| matches!(x.norma, sim_core::disposizioni::Norma::Ordinaria))
+        .flat_map(|x| {
+            (x.gradini.iter())
+                .filter(|g| g.id != x.in_vigore && !g.bloccato)
+                .map(|g| ValoreProposto {
+                    disposizione: x.id.clone(),
+                    gradino: g.id.clone(),
+                })
+        })
+        .find_map(|w| {
+            let decreto = Decreto::Disposizioni {
+                valori: vec![w.clone()],
+            };
+            p.anteprima_decreto(&decreto).ok().map(|a| (w, a))
+        })
+}
+
+/// Le anteprime che le Viste 17 e 19 non hanno: sul 03 le tre disposizioni territoriali, una
+/// legge su due disposizioni, la costituzionale, la proporzionale al 3% e il decreto di `Accogli`;
+/// il decreto su disposizioni di un evento aperto, in tono ordinario e in tono grave, con la
+/// sua Vista; il test della misura comprato su due bozze, con gli acquisti e la cassa prima e dopo.
+fn anteprima_misura(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let p03 = governo_03(d)?;
+    let v03 = p03.vista();
+    let riforma = gradino_lontano(&v03, 5.5).ok_or("nessun gradino lontano")?;
+    let territoriali = ["decontribuzione", "credito_zes", "autonomia_differenziata"]
+        .map(|id| altro_gradino(&v03, id).ok_or(format!("nessun gradino: {id}")));
+    let [deco, zes, autonomia] = territoriali;
+    // ponytail: la decontribuzione è già in esame nel 03 (rifiuto vero), il test va sulla ZES.
+    let (deco, zes, autonomia) = (deco?, zes?, autonomia?);
+    // Una seconda disposizione del dicastero della riforma, non in esame: una legge sta in un dicastero solo.
+    let dicastero = |id: &str| v03.disposizioni.iter().find(|x| x.id == id).and_then(|x| x.dicastero.clone());
+    let in_esame = |id: &str| (v03.calendario.iter()).any(|m| m.valori.iter().any(|w| w.disposizione == id));
+    let seconda = (v03.disposizioni.iter())
+        .filter(|x| x.id != riforma.disposizione && !in_esame(&x.id))
+        .filter(|x| x.dicastero.is_some() && x.dicastero == dicastero(&riforma.disposizione))
+        .find_map(|x| altro_gradino(&v03, &x.id))
+        .ok_or("nessuna seconda disposizione")?;
+    let bozze: [(&str, Vec<ValoreProposto>); 8] = [
+        ("riforma", vec![riforma.clone()]),
+        ("territoriale_decontribuzione", vec![deco]),
+        ("territoriale_zes", vec![zes.clone()]),
+        ("territoriale_autonomia", vec![autonomia]),
+        ("due_disposizioni", vec![riforma.clone(), seconda]),
+        ("costituzionale", valori(&[("numero_parlamentari", "300_150")])),
+        ("elettorale", proporzionale_al_3()),
+        // La riforma che il ministro dell'Ambiente (capacità 1) propone nel 03: la stima peggiore.
+        ("proposta_nucleare", valori(&[("nucleare", "consentito")])),
+    ];
+    let mut anteprime = serde_json::Map::new();
+    for (k, v) in &bozze {
+        let a = p03.anteprima(v);
+        note.push(format!("{k}: {}", if a.is_ok() { "ok" } else { "rifiutata" }));
+        anteprime.insert(
+            (*k).into(),
+            match a {
+                Ok(a) => serde_json::json!({ "valori": v, "anteprima": a }),
+                Err(e) => serde_json::json!({ "valori": v, "rifiuto": e.to_string() }),
+            },
+        );
+    }
+    // Ogni gradino di quattro disposizioni, perché il prototipo cambi la bozza con l'anteprima aperta.
+    let mut gradini = Vec::new();
+    for id in ["salario_minimo", "credito_zes", "autonomia_differenziata", "numero_parlamentari"] {
+        let Some(x) = v03.disposizioni.iter().find(|x| x.id == id) else {
+            continue;
+        };
+        for g in (x.gradini.iter()).filter(|g| g.id != x.in_vigore && !g.bloccato) {
+            let w = vec![ValoreProposto {
+                disposizione: id.into(),
+                gradino: g.id.clone(),
+            }];
+            gradini.push(match p03.anteprima(&w) {
+                Ok(a) => serde_json::json!({ "valori": w, "anteprima": a }),
+                Err(e) => serde_json::json!({ "valori": w, "rifiuto": e.to_string() }),
+            });
+        }
+    }
+    out.insert("gradini".into(), gradini.into());
+    let accogli = p03.anteprima_accogli("infrastrutture_trasporti");
+    anteprime.insert(
+        "accogli".into(),
+        serde_json::json!({ "dicastero": "infrastrutture_trasporti", "anteprima": accogli.map_err(|e| e.to_string())? }),
+    );
+    out.insert("anteprime".into(), anteprime.into());
+    // Test della misura: due bozze, ciascuna su una copia del 03 (uno solo per turno).
+    let mut test = serde_json::Map::new();
+    for (k, v) in [("riforma", vec![riforma]), ("territoriale_zes", vec![zes])] {
+        let mut p = p03.clone();
+        let cassa = |p: &Partita| (p.vista().partiti.iter()).find(|x| x.id == p.vista().giocatore).map(|x| x.cassa);
+        let prima = cassa(&p);
+        let acquisto = Acquisto::TestMisura { valori: v };
+        comanda(&mut p, Comando::Compra { acquisto: acquisto.clone() })?;
+        let ripetuto = p.comanda(Comando::Compra { acquisto }).err().map(|e| e.to_string());
+        test.insert(
+            k.into(),
+            serde_json::json!({ "cassa_prima": prima, "cassa_dopo": cassa(&p), "acquisti": p.vista().acquisti, "rifiuto_ripetuto": ripetuto }),
+        );
+    }
+    out.insert("test".into(), test.into());
+    // Decreto su disposizioni di un evento: primo turno al governo che ne ammette uno, poi il primo in tono grave.
+    'semi: for seme in 4..=12 {
+        let mut p = fonda(d, seme, 4.5)?;
+        con_la_destra(&mut p)?;
+        p.chiudi_turno();
+        p.chiudi_turno();
+        for _ in 0..TURNI {
+            if p.finita() {
+                break;
+            }
+            if p.governa() && !p.vista().crisi {
+                let v = p.vista();
+                let grave = v.eventi.iter().any(|e| e.tono == Tono::Grave);
+                let chiave = if grave { "decreto_grave" } else { "decreto" };
+                if !out.contains_key(chiave)
+                    && let Some((w, a)) = decreto_ammesso(&p)
+                {
+                    note.push(format!("{chiave}: seme {seme}, turno {}, {}={}", v.turno, w.disposizione, w.gradino));
+                    out.insert(
+                        chiave.into(),
+                        serde_json::json!({ "seme": seme, "valori": [w], "anteprima": a, "vista": v }),
+                    );
+                }
+                if out.contains_key("decreto") && out.contains_key("decreto_grave") {
+                    break 'semi;
+                }
+                if let Some(b) = p.bozza_bilancio() {
+                    comanda(&mut p, Comando::PresentaBilancio { bilancio: b })?;
+                }
+            }
+            p.chiudi_turno();
+        }
+    }
+    for k in ["decreto", "decreto_grave"] {
+        if !out.contains_key(k) {
+            note.push(format!("{k}: NON RAGGIUNTO"));
+        }
+    }
+    Ok(Uscita {
+        nome: "20-anteprima.json",
+        json: serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
+/// Gli stati dei Conti (ticket 21) che le Viste 01-08 non hanno: il centro studi comprato (03,
+/// 05, 06), due situazioni accese insieme, una grandezza a meno di metà strada dalla soglia, lo
+/// spread oltre 200 punti base, e un bilancio non indicizzato da più di un anno (perdita reale).
+fn conti(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let cassa = |p: &Partita| (p.vista().partiti.iter()).find(|x| x.id == p.vista().giocatore).map(|x| x.cassa);
+    let mut compra = |k: &str, mut p: Partita, come: &str, note: &mut Vec<String>| -> Esito<()> {
+        let prima = cassa(&p);
+        let rifiuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
+        let ripetuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
+        let v = p.vista();
+        note.push(format!("{k}: {come}, turno {}", v.turno));
+        let j = serde_json::json!({"come": come, "cassa_prima": prima, "cassa_dopo": cassa(&p),
+            "rifiuto": rifiuto, "rifiuto_ripetuto": ripetuto, "serie": p.serie(), "vista": v});
+        out.insert(k.into(), j);
+        Ok(())
+    };
+    compra("studi_03", governo_03(d)?, "il 03, poi Compra CentroStudi", &mut note)?;
+    let mut p06 = fonda(d, 1, 1.5)?;
+    p06.chiudi_turno();
+    p06.chiudi_turno();
+    compra("studi_06", p06, "il 06 (seme 1, 1,5, opposizione), poi Compra CentroStudi", &mut note)?;
+    let vicina = |s: &sim_core::vista::VoceSituazione| {
+        // Metà strada fra lo spegnimento e l'accensione, dalla parte spenta.
+        let meta = s.spegnimento + (s.accensione - s.spegnimento) / 2.0;
+        !s.accesa && if s.accensione > s.spegnimento { s.valore >= meta } else { s.valore <= meta }
+    };
+    type Cerca = fn(&sim_core::Vista) -> bool;
+    let cerche: [(&str, bool, Cerca); 3] = [
+        ("due_accese", true, |v| v.situazioni.iter().filter(|s| s.accesa).count() >= 2),
+        ("spread_alto", true, |v| v.spread_pb > 200),
+        ("senza_bilancio", false, |v| v.bilancio.anno + 1 < v.data.anno && !v.crisi),
+    ];
+    for (k, bilancio, cerca) in cerche {
+        match cerca_al_governo(d, bilancio, cerca)? {
+            Some((s, p)) => {
+                let come = format!("seme {s}, come il 05, {}", if bilancio { "la bozza a ogni bilancio" } else { "bilancio mai presentato" });
+                compra(k, p, &come, &mut note)?;
+            }
+            None => note.push(format!("{k}: NON RAGGIUNTO")),
+        }
+    }
+    // La vicina la cerca a mano: la chiusura serve una closure che non è `fn`.
+    match cerca_al_governo(d, true, |v| v.situazioni.iter().any(|s| vicina(s) && s.misura != "energia"))? {
+        Some((s, p)) => compra("vicina", p, &format!("seme {s}, come il 05, la bozza a ogni bilancio"), &mut note)?,
+        None => note.push("vicina: NON RAGGIUNTO".into()),
+    }
+    Ok(Uscita {
+        nome: "21-conti.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
+/// Gli stati del Bilancio (ticket 22): la bozza del 04 prima di presentarla, coi riepiloghi
+/// dell'indicizzazione per tutto e per voce, di un ritocco alle aliquote e di un margine
+/// allargato; il bilancio presentato con gli emendamenti degli alleati, accolti e respinti, e
+/// ripresentato; l'esercizio provvisorio; all'opposizione e fuori stagione i rifiuti.
+fn bilancio(d: &DatiGioco) -> Esito<Uscita> {
+    use sim_core::economia::Voce;
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let riep = |p: &Partita, b: &sim_core::economia::Bilancio| match p.riepilogo_bilancio(b) {
+        Ok(r) => serde_json::json!({ "riepilogo": r }),
+        Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
+    };
+    // La bozza del 04: il 03 chiuso due volte, ottobre-dicembre.
+    let mut p = governo_03(d)?;
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let bozza = p.bozza_bilancio().ok_or("04: nessuna bozza")?;
+    let mut varianti = serde_json::Map::new();
+    for (k, voce) in [("tutto", Voce::Tutto), ("scaglioni", Voce::Scaglioni)] {
+        let b = p.indicizza(&bozza, &voce).map_err(|e| e.to_string())?;
+        let mut r = riep(&p, &b);
+        r["bilancio"] = serde_json::to_value(&b).map_err(|e| e.to_string())?;
+        varianti.insert(k.into(), r);
+    }
+    let mut per_dicastero = Vec::new();
+    for x in &bozza.dicasteri {
+        let b = p.indicizza(&bozza, &Voce::Dicastero { id: x.id.clone() }).map_err(|e| e.to_string())?;
+        let mut r = riep(&p, &b);
+        r["id"] = x.id.clone().into();
+        r["dicastero"] = serde_json::to_value(b.dicasteri.iter().find(|y| y.id == x.id)).map_err(|e| e.to_string())?;
+        per_dicastero.push(r);
+    }
+    varianti.insert("per_dicastero".into(), per_dicastero.into());
+    let mut b = bozza.clone();
+    b.aliquote.iva = 0.24;
+    varianti.insert("iva_24".into(), riep(&p, &b));
+    let mut b = bozza.clone();
+    b.aliquote.irpef[0].aliquota = 0.21;
+    varianti.insert("irpef_primo_21".into(), riep(&p, &b));
+    // Margine della Sanità raddoppiato togliendo agli acquisti (funzionamento): spesa uguale.
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    let m = s.margine;
+    s.margine += m;
+    s.acquisti -= m;
+    varianti.insert("margine_sanita_da_funzionamento".into(), riep(&p, &b));
+    // Lo stesso margine in disavanzo: spesa in più.
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    s.margine += m;
+    s.spesa += m;
+    varianti.insert("margine_sanita_in_disavanzo".into(), riep(&p, &b));
+    let mut b = bozza.clone();
+    b.aliquote.iva = 0.95;
+    varianti.insert("rifiuto_aliquota".into(), riep(&p, &b));
+    out.insert("bozza_04".into(), serde_json::json!({
+        "come": "il 03 chiuso due volte (2027T4), prima di PresentaBilancio",
+        "bozza": bozza, "riepilogo_bozza": riep(&p, &bozza), "varianti": varianti, "serie": p.serie(), "vista": p.vista(),
+    }));
+    note.push(format!("bozza_04: turno {}", p.vista().turno));
+    // Presentato: la bozza, poi gli emendamenti.
+    comanda(&mut p, Comando::PresentaBilancio { bilancio: bozza.clone() })?;
+    let id = (p.vista().calendario.iter()).find(|m| m.nome == "Legge di bilancio").map(|m| m.id).ok_or("bilancio in calendario")?;
+    out.insert("presentato".into(), serde_json::json!({
+        "come": "bozza_04, poi PresentaBilancio con la bozza", "misura": id,
+        "riepilogo_presentato": p.riepilogo_presentato(), "serie": p.serie(), "vista": p.vista(),
+    }));
+    let alleati: Vec<String> = (p.vista().calendario.iter()).filter(|m| m.id == id)
+        .flat_map(|m| m.emendamenti.iter().map(|e| e.partito.clone())).collect();
+    // Cosa costa accogliere ciascun emendamento da solo: il riepilogo del presentato dopo.
+    let mut se_accogli = serde_json::Map::new();
+    for a in &alleati {
+        let mut r = p.clone();
+        comanda(&mut r, Comando::Emendamento { misura: id, partito: a.clone(), accogli: true })?;
+        se_accogli.insert(a.clone(), serde_json::to_value(r.riepilogo_presentato()).map_err(|e| e.to_string())?);
+    }
+    out.get_mut("presentato").ok_or("presentato")?["se_accogli"] = se_accogli.into();
+    let mut q = p.clone();
+    if let Some(a) = alleati.first() {
+        comanda(&mut q, Comando::Emendamento { misura: id, partito: a.clone(), accogli: true })?;
+    }
+    if let Some(a) = alleati.get(1) {
+        comanda(&mut q, Comando::Emendamento { misura: id, partito: a.clone(), accogli: false })?;
+    }
+    out.insert("emendamenti_decisi".into(), serde_json::json!({
+        "come": format!("presentato, poi Emendamento accolto di {:?} e respinto di {:?}", alleati.first(), alleati.get(1)),
+        "riepilogo_presentato": q.riepilogo_presentato(), "serie": q.serie(), "vista": q.vista(),
+    }));
+    // Ripresentato tutto indicizzato: l'accolto si riapplica, nuovi emendamenti?
+    let tutto = q.indicizza(&bozza, &Voce::Tutto).map_err(|e| e.to_string())?;
+    comanda(&mut q, Comando::PresentaBilancio { bilancio: tutto })?;
+    out.insert("ripresentato".into(), serde_json::json!({
+        "come": "emendamenti_decisi, poi PresentaBilancio con la bozza indicizzata per tutto",
+        "riepilogo_presentato": q.riepilogo_presentato(), "serie": q.serie(), "vista": q.vista(),
+    }));
+    note.push(format!("presentato: misura {id}, alleati {alleati:?}"));
+    // Esercizio provvisorio, fuori dalla crisi.
+    match cerca_al_governo(d, false, |v| !v.crisi && v.bilancio.esercizio_provvisorio)? {
+        Some((s, p)) => {
+            let bozza = p.bozza_bilancio();
+            let r = bozza.as_ref().map(|b| riep(&p, b));
+            out.insert("provvisorio".into(), serde_json::json!({
+                "come": format!("seme {s}, come il 05, bilancio mai presentato"),
+                "bozza": bozza, "riepilogo_bozza": r, "serie": p.serie(), "vista": p.vista(),
+            }));
+            note.push(format!("provvisorio: seme {s}, turno {}", p.vista().turno));
+        }
+        None => note.push("provvisorio: NON RAGGIUNTO".into()),
+    }
+    // All'opposizione, in ottobre-dicembre: il bilancio del governo IA.
+    let mut o = fonda(d, 1, 1.5)?;
+    while !(o.vista().data.trimestre == 4 && o.vista().turno > 1) {
+        o.chiudi_turno();
+    }
+    let rifiuto = o.bozza_bilancio().map(|b| riep(&o, &b));
+    out.insert("opposizione".into(), serde_json::json!({
+        "come": "il 06 chiuso fino a ottobre-dicembre", "riepilogo_presentato": o.riepilogo_presentato(),
+        "rifiuto_riepilogo": rifiuto, "serie": o.serie(), "vista": o.vista(),
+    }));
+    // Fuori stagione: la bozza del 04 sul 03.
+    let p03 = governo_03(d)?;
+    out.insert("fuori_stagione".into(), riep(&p03, &bozza));
+    Ok(Uscita {
+        nome: "22-bilancio.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
 /// Perché «avanti fino a novità» si fermerebbe sul turno appena aperto, con le regole della spec
 /// di core «esito e Vista completa» (sezione «Fermate»). ponytail: senza la fermata `voto`, che
 /// chiede la quota degli elettori toccati sul sondaggio; la porterà il core.
@@ -920,6 +1271,449 @@ fn prima_pagina(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Il registro (ticket 25): la partita del 05 (seme 4 a 4,5, la bozza a ogni bilancio), con la
+/// Vista prima e dopo ogni chiusura dei turni 0-8. Le voci le scrive a mano il prototipo.
+fn registro(d: &DatiGioco) -> Esito<Uscita> {
+    let mut p = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut p)?;
+    let mut chiusure = Vec::new();
+    let mut note = Vec::new();
+    while p.vista().turno <= 8 && !p.finita() {
+        let turno = p.vista().turno;
+        let mut mosse = Vec::new();
+        if turno == 0 {
+            mosse.push("DichiaraCoalizione con la destra disponibile");
+        }
+        if p.governa() && !p.vista().crisi {
+            if let Some(bilancio) = p.bozza_bilancio() {
+                comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
+                mosse.push("PresentaBilancio con la bozza");
+            }
+        }
+        let prima = serde_json::to_value(p.vista()).map_err(|e| e.to_string())?;
+        p.chiudi_turno();
+        let dopo = serde_json::to_value(p.vista()).map_err(|e| e.to_string())?;
+        note.push(format!("{turno}: {mosse:?}"));
+        chiusure.push(serde_json::json!({"turno": turno, "mosse": mosse, "prima": prima, "dopo": dopo}));
+    }
+    Ok(Uscita {
+        nome: "25-registro.json",
+        json: serde_json::to_string(&chiusure).map_err(|e| e.to_string())?,
+        nota: format!("seme 4 a 4,5, chiusure {}", note.join("; ")),
+    })
+}
+
+/// Pericolosità della spec di core «esito e Vista completa» (PR 2, «Regioni»): per tipo le
+/// emergenze attese l'anno, con le probabilità di `eventi/emergenze.rs:40-60` sui quattro
+/// trimestri, divise per quelle della regione più esposta; `totale` fa lo stesso sulla somma.
+fn pericolosita(d: &DatiGioco) -> Vec<[f64; 4]> {
+    let m = d.manopola("emergenze_idro_anno");
+    let grezzi: Vec<[f64; 4]> = (d.regioni().iter())
+        .map(|r| {
+            let h = &r.pericolosita;
+            let sisma = 4.0 * h.sisma.clamp(0.0, 1.0);
+            let idro = 4.0 * (1.0 - (-m * h.idro / 4.0).exp()).clamp(0.0, 1.0);
+            // Solo il terzo trimestre.
+            let incendi = (3.5 * h.incendi).clamp(0.0, 1.0);
+            [sisma, idro, incendi, sisma + idro + incendi]
+        })
+        .collect();
+    let mut max = [0.0_f64; 4];
+    for g in &grezzi {
+        for (x, y) in max.iter_mut().zip(g) {
+            *x = x.max(*y);
+        }
+    }
+    (grezzi.iter())
+        .map(|g| std::array::from_fn(|k| if max[k] > 0.0 { g[k] / max[k] } else { 0.0 }))
+        .collect()
+}
+
+/// `VoceRegione` della spec (PR 2, «Regioni»), calcolata qui: `prima` è la partita al turno
+/// prima, da cui la disoccupazione della chiusura precedente.
+fn regioni(d: &DatiGioco, p: &Partita, prima: &Partita) -> Esito<serde_json::Value> {
+    use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
+    let gruppi = &p.elettorato().gruppi;
+    let mut out = Vec::new();
+    for (r, [sisma, idro, incendi, totale]) in d.regioni().iter().zip(pericolosita(d)) {
+        let manca = || format!("{}: regione assente", r.id);
+        let k = (d.elettorato().regioni.iter())
+            .position(|x| x.id == r.id)
+            .ok_or_else(manca)?;
+        let disoccupazione = (prima.economia().regioni.iter())
+            .find(|x| x.id == r.id)
+            .map(|x| x.disoccupazione)
+            .ok_or_else(manca)?;
+        let g = (Condizione::TUTTE.iter())
+            .flat_map(|&c| Fascia::TUTTE.map(|f| gruppi.get(indice_gruppo(k, c, f))))
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(manca)?;
+        let quota: f64 = g.iter().map(|x| x.quota).sum();
+        let reddito = g
+            .iter()
+            .map(|x| x.quota * x.reddito_prima.reale())
+            .sum::<f64>()
+            / quota;
+        out.push(serde_json::json!({
+            "id": r.id, "nome": r.nome, "macroarea": r.macroarea,
+            "pericolosita": { "sisma": sisma, "idro": idro, "incendi": incendi, "totale": totale },
+            "disoccupazione": disoccupazione, "reddito": reddito,
+            "gruppi": g.iter().map(|x| x.quota).collect::<Vec<_>>(),
+        }));
+    }
+    Ok(out.into())
+}
+
+/// Gli elettori campione di tutti i gruppi, a chiave `regione|condizione|fascia`.
+fn campione(d: &DatiGioco, p: &Partita) -> Esito<serde_json::Value> {
+    use sim_core::elettorato::{Condizione, Fascia};
+    let mut out = serde_json::Map::new();
+    for r in &d.elettorato().regioni {
+        for c in Condizione::TUTTE {
+            for f in Fascia::TUTTE {
+                let e = p
+                    .elettori_campione(&r.id, c, f)
+                    .map_err(|e| e.to_string())?;
+                let cf = serde_json::json!([c, f]);
+                let id = |i: usize| cf[i].as_str().unwrap_or_default().to_string();
+                let k = format!("{}|{}|{}", r.id, id(0), id(1));
+                out.insert(k, serde_json::to_value(e).map_err(|e| e.to_string())?);
+            }
+        }
+    }
+    Ok(out.into())
+}
+
+/// La media delle disoccupazioni di `regioni`, pesata sulle forze di lavoro dei dati.
+fn media_disoccupazione(d: &DatiGioco, regioni: &serde_json::Value) -> f64 {
+    let (mut s, mut w) = (0.0, 0.0);
+    for (r, v) in d
+        .regioni()
+        .iter()
+        .zip(regioni.as_array().into_iter().flatten())
+    {
+        s += r.forze_lavoro * v["disoccupazione"].as_f64().unwrap_or(0.0);
+        w += r.forze_lavoro;
+    }
+    s / w
+}
+
+/// La sezione «Paese» (ticket 23): regioni come `VoceRegione` della spec di core, elettori
+/// campione di tutti i gruppi e sondaggio privato comprato, sul 03, sul 06, al turno zero e
+/// sull'08 (tono grave).
+fn paese(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let senza_voto = "null: `vota_parlamento` parte da `intenzioni_vere()` presa dentro \
+        `chiudi_turno` dopo motore, campagna e posizioni (partita.rs:595-610) e la consuma nella \
+        stessa chiusura (:641); fuori se ne vede solo il prima o il dopo, e `voti_per_regione` e \
+        `riparto_con` sono pub(crate) (legislatura/voto.rs:53, parlamento/regole.rs:118). Misurato sul seme 4: la destra fra i \
+        votanti vale 0,259 nelle `intenzioni_vere()` prima della chiusura, 0,227 dopo, 0,249 al voto";
+    let cassa = |p: &Partita| {
+        (p.vista().partiti.iter())
+            .find(|x| x.id == p.vista().giocatore)
+            .map(|x| x.cassa)
+    };
+    let compra = |prima: &Partita, mut p: Partita, come: &str| -> Esito<serde_json::Value> {
+        let cassa_prima = cassa(&p);
+        let campione_prima = campione(d, &p)?;
+        let acquisto = || Comando::Compra {
+            acquisto: Acquisto::SondaggioPrivato,
+        };
+        let rifiuto = p.comanda(acquisto()).err().map(|e| e.to_string());
+        let ripetuto = p.comanda(acquisto()).err().map(|e| e.to_string());
+        let campione = campione(d, &p)?;
+        if campione != campione_prima {
+            return Err(format!("{come}: il campione cambia col sondaggio privato"));
+        }
+        Ok(serde_json::json!({
+            "come": format!("{come}, poi Compra SondaggioPrivato; campione dopo l'acquisto (uguale a prima)"),
+            "cassa_prima": cassa_prima, "cassa_dopo": cassa(&p), "rifiuto": rifiuto,
+            "rifiuto_ripetuto": ripetuto, "campione": campione, "regioni": regioni(d, &p, prima)?,
+            "elezioni_regioni": null, "vista": p.vista(),
+        }))
+    };
+    let mut metti =
+        |k: &str, j: serde_json::Value, seme: u64| {
+            let v = &j["vista"];
+            note.push(format!(
+            "{k}: seme {seme}, turno {} {}T{}, disoccupazione media {:.3} (riveduta pubblica {})",
+            v["turno"], v["data"]["anno"], v["data"]["trimestre"],
+            media_disoccupazione(d, &j["regioni"]),
+            v["statistica"]["revisione"]["riveduta"]["disoccupazione"]
+        ));
+            out.insert(k.into(), j);
+        };
+    let mut prima = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut prima)?;
+    prima.chiudi_turno();
+    let mut p = prima.clone();
+    p.chiudi_turno();
+    metti("governo", compra(&prima, p, "il 03")?, 4);
+    let mut prima = fonda(d, 1, 1.5)?;
+    prima.chiudi_turno();
+    let mut p = prima.clone();
+    p.chiudi_turno();
+    metti("opposizione", compra(&prima, p, "il 06 (seme 1, 1,5)")?, 1);
+    let zero = fonda(d, 4, 4.5)?;
+    let j = serde_json::json!({
+        "come": "fonda a 4,5, nessun comando; disoccupazione e reddito del turno zero, senza chiusure prima",
+        "campione": campione(d, &zero)?, "regioni": regioni(d, &zero, &zero)?, "vista": zero.vista(),
+    });
+    metti("zero", j, 4);
+    // L'08: `giocata` gioca come `al_governo`, la bozza a ogni bilancio fuori dalla crisi.
+    let prima = giocata(d, 4, 4.5, "Partito del giocatore", true, 6)?;
+    let p = giocata(d, 4, 4.5, "Partito del giocatore", true, 7)?;
+    if !p.vista().eventi.iter().any(|e| e.tono == Tono::Grave) {
+        return Err("grave: il turno 7 del seme 4 non ha un evento in tono grave".into());
+    }
+    let j = serde_json::json!({
+        "come": "l'08: seme 4 a 4,5 come il 05, turno 7, «Emergenza incendi» in tono grave",
+        "regioni": regioni(d, &p, &prima)?, "vista": p.vista(),
+    });
+    metti("grave", j, 4);
+    note.push(format!("elezioni_regioni: {senza_voto}"));
+    note.push("cantiere_finito: NON RAGGIUNTO".into());
+    out.insert(
+        "effetto_disegno".into(),
+        d.manopola("effetto_disegno").into(),
+    );
+    Ok(Uscita {
+        nome: "23-paese.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+/// `{"ok": valore}` o `{"rifiuto": testo}`: tutti e due finiscono nel JSON.
+macro_rules! esito {
+    ($r:expr) => {
+        match $r {
+            Ok(x) => serde_json::json!({ "ok": serde_json::to_value(&x).map_err(|e| e.to_string())? }),
+            Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
+        }
+    };
+}
+
+macro_rules! json {
+    ($x:expr) => {
+        serde_json::to_value(&$x).map_err(|e| e.to_string())?
+    };
+}
+
+// Dopo le macro: `esito!` vi entra solo per visibilità testuale.
+mod eredita;
+mod governo;
+mod opposizione;
+mod trattativa;
+
+/// La campagna (ticket 26): il turno zero del seme 4 a 4,5 con dichiarazione, cessioni, anteprime,
+/// riposizionamento, promesse, sondaggio e campagna tagliata; poi il turno del voto di fine
+/// legislatura al governo (seme 4, percorso del 05) e all'opposizione (seme 1 a 1,5, come il 06).
+fn campagna(d: &DatiGioco) -> Esito<Uscita> {
+    use sim_core::elettorato::Condizione;
+    use sim_core::legislatura::{Bersaglio, Cessione, Leva, Spesa};
+    let mut out = serde_json::Map::new();
+    let zero = fonda(d, 4, 4.5)?;
+    out.insert("zero".into(), json!(zero.vista()));
+
+    // Dichiarazione con la destra, poi cessioni a un partito non disponibile.
+    let mut p = zero.clone();
+    con_la_destra(&mut p)?;
+    let destra = p.vista().coalizione.clone();
+    out.insert("dichiarata".into(), json!(p.vista()));
+    let mut cessioni = Vec::new();
+    for chi in ["estrema_destra", "centro"] {
+        for seggi in [0, 5, 10, 20, 40, 80] {
+            let mut q = zero.clone();
+            let mut partiti = destra.clone();
+            partiti.push(chi.into());
+            let c = Comando::DichiaraCoalizione {
+                partiti,
+                cessioni: if seggi == 0 { vec![] } else { vec![Cessione { partito: chi.into(), seggi }] },
+            };
+            let r = q.comanda(c).map(|()| q.vista().disponibilita);
+            cessioni.push(serde_json::json!({"partito": chi, "seggi": seggi, "esito": esito!(r)}));
+        }
+    }
+    out.insert("cessioni".into(), serde_json::Value::Array(cessioni));
+    // Una cessione che convince: un partito che non viene per i seggi, i seggi ceduti a salire.
+    let mut convince = serde_json::Value::Null;
+    'cerca: for seme in 1..=30u64 {
+        for pos in [2.5, 3.5, 4.5, 5.5] {
+            let z = fonda(d, seme, pos)?;
+            for v in z.disponibilita().into_iter().filter(|v| !v.disponibile && !v.causa.contains("lontana")) {
+                let mut prove = Vec::new();
+                for seggi in [5, 10, 15, 20, 30, 40, 60] {
+                    let mut q = z.clone();
+                    let c = Comando::DichiaraCoalizione {
+                        partiti: vec![v.partito.clone()],
+                        cessioni: vec![Cessione { partito: v.partito.clone(), seggi }],
+                    };
+                    let r = q.comanda(c).map(|()| q.vista());
+                    let ok = r.is_ok();
+                    prove.push(serde_json::json!({"seggi": seggi, "esito": esito!(r)}));
+                    if ok {
+                        convince = serde_json::json!({"seme": seme, "posizione": pos, "partito": v.partito,
+                            "causa": v.causa, "zero": json!(z.vista()), "prove": prove});
+                        break 'cerca;
+                    }
+                }
+            }
+        }
+    }
+    out.insert("cessione_che_convince".into(), convince);
+
+    // Anteprime: ogni bersaglio a sei spese con persuadere, le tre leve su uno, e i rifiuti.
+    let mut bersagli: Vec<Bersaglio> = Condizione::TUTTE.iter().map(|&c| Bersaglio::Condizione(c)).collect();
+    bersagli.extend((0..d.regioni().len()).map(Bersaglio::Regione));
+    let mut anteprime = Vec::new();
+    for &b in &bersagli {
+        let spese: Vec<Spesa> = [25_000, 50_000, 100_000, 200_000, 400_000, 500_000, 800_000]
+            .into_iter()
+            .map(|euro| Spesa { bersaglio: b, leva: Leva::Persuadere, euro })
+            .collect();
+        // Una per chiamata: tre bersagli al massimo, e ripetuti no.
+        for s in spese {
+            anteprime.push(esito!(p.anteprima_campagna(std::slice::from_ref(&s))));
+        }
+    }
+    out.insert("anteprime".into(), serde_json::Value::Array(anteprime));
+    let pens = Bersaglio::Condizione(Condizione::Pensionato);
+    let leve: Vec<Spesa> = [Leva::Mobilitare, Leva::Persuadere, Leva::Convincere]
+        .into_iter()
+        .zip([Bersaglio::Condizione(Condizione::Pensionato), Bersaglio::Regione(14), Bersaglio::Condizione(Condizione::Studente)])
+        .map(|(leva, bersaglio)| Spesa { bersaglio, leva, euro: 300_000 })
+        .collect();
+    out.insert("piano".into(), esito!(p.anteprima_campagna(&leve)));
+    let s = |b, euro| Spesa { bersaglio: b, leva: Leva::Persuadere, euro };
+    let rifiuti = [
+        ("quattro", (0..4).map(|r| s(Bersaglio::Regione(r), 10_000)).collect::<Vec<_>>()),
+        ("ripetuto", vec![s(pens, 10_000), s(pens, 20_000)]),
+        ("oltre_cassa", vec![s(pens, 600_000), s(Bersaglio::Regione(14), 600_000)]),
+        ("zero_euro", vec![s(pens, 0)]),
+    ];
+    let mut rr = serde_json::Map::new();
+    for (k, spese) in rifiuti {
+        rr.insert(k.into(), esito!(p.anteprima_campagna(&spese)));
+    }
+    out.insert("rifiuti_campagna".into(), serde_json::Value::Object(rr));
+
+    // Riposizionamento: due ammessi, due rifiutati.
+    let mut rip = serde_json::Map::new();
+    for x in [4.0, 4.75, 5.0, 3.5] {
+        let mut q = p.clone();
+        let r = q.comanda(Comando::Riposiziona { posizione: x }).map(|()| q.vista().partiti);
+        rip.insert(format!("{x}"), esito!(r));
+    }
+    out.insert("riposiziona".into(), serde_json::Value::Object(rip));
+
+    // Promesse: due ammesse, e i rifiuti.
+    let coppie = |c: &[(&str, &str)]| c.iter().map(|(a, b)| ((*a).to_string(), (*b).to_string())).collect::<Vec<_>>();
+    let mut pr = serde_json::Map::new();
+    for (k, c) in [
+        ("due", coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")])),
+        ("vigente", coppie(&[("cuneo_fiscale", "7")])),
+        ("tre", coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64"), ("cuneo_fiscale", "3")])),
+    ] {
+        let mut q = p.clone();
+        let r = q.comanda(Comando::Prometti { promesse: c }).map(|()| q.vista().partiti);
+        pr.insert(k.into(), esito!(r));
+    }
+    out.insert("promesse".into(), serde_json::Value::Object(pr));
+
+    // Il piano intero, il sondaggio privato, poi la chiusura: le spese degli altri nelle mosse.
+    let mut piano = p.clone();
+    comanda(&mut piano, Comando::Campagna { spese: leve.clone() })?;
+    comanda(&mut piano, Comando::Riposiziona { posizione: 4.0 })?;
+    comanda(&mut piano, Comando::Prometti { promesse: coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]) })?;
+    comanda(&mut piano, Comando::Compra { acquisto: Acquisto::SondaggioPrivato })?;
+    out.insert("piano_scelto".into(), json!(piano.vista()));
+    piano.chiudi_turno();
+    out.insert("piano_dopo".into(), json!(piano.vista()));
+
+    // Campagna tagliata: tutta la cassa, poi il sondaggio privato.
+    let mut t = p.clone();
+    let cassa = t.vista().partiti.iter().find(|x| x.id == "giocatore").map_or(0, |x| x.cassa);
+    let tutta = vec![s(pens, cassa / 2), Spesa { bersaglio: Bersaglio::Regione(14), leva: Leva::Mobilitare, euro: cassa - cassa / 2 }];
+    comanda(&mut t, Comando::Campagna { spese: tutta })?;
+    comanda(&mut t, Comando::Compra { acquisto: Acquisto::SondaggioPrivato })?;
+    out.insert("tagliata_prima".into(), json!(t.vista()));
+    t.chiudi_turno();
+    out.insert("tagliata_dopo".into(), json!(t.vista()));
+
+    // Fine legislatura al governo: il percorso del 05 fino al turno del voto.
+    let mut g = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut g)?;
+    g.chiudi_turno();
+    while !g.finita() && !(g.vista().campagna.attiva && g.governa()) {
+        if g.governa() && !g.vista().crisi {
+            if let Some(bilancio) = g.bozza_bilancio() {
+                comanda(&mut g, Comando::PresentaBilancio { bilancio })?;
+            }
+        }
+        g.chiudi_turno();
+    }
+    out.insert("governo_fine".into(), json!(g.vista()));
+    let mut gp = g.clone();
+    let r = gp
+        .comanda(Comando::Prometti { promesse: coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]) })
+        .map(|()| gp.vista().alleati);
+    out.insert("governo_promesse".into(), esito!(r));
+
+    // Fine legislatura all'opposizione: il 06 fino al turno del voto.
+    let mut o = fonda(d, 1, 1.5)?;
+    o.chiudi_turno();
+    while !o.finita() && !o.vista().campagna.attiva {
+        o.chiudi_turno();
+    }
+    out.insert("opposizione_fine".into(), json!(o.vista()));
+
+    // Per ogni stato: la disponibilità di ogni coalizione dichiarabile (sottoinsiemi dei partiti IA)
+    // e i riposizionamenti a passi di un quarto.
+    let mut prove = serde_json::Map::new();
+    for (k, q0) in [("zero", &zero), ("governo_fine", &g), ("opposizione_fine", &o)] {
+        let ia: Vec<String> = (q0.vista().partiti.iter())
+            .filter(|x| x.id != "giocatore" && !x.sciolto)
+            .map(|x| x.id.clone())
+            .collect();
+        let mut coal = serde_json::Map::new();
+        for mask in 0u32..(1 << ia.len()) {
+            let partiti: Vec<String> = (0..ia.len()).filter(|i| mask >> i & 1 == 1).map(|i| ia[i].clone()).collect();
+            let mut q = q0.clone();
+            let r = q
+                .comanda(Comando::DichiaraCoalizione { partiti: partiti.clone(), cessioni: vec![] })
+                .map(|()| (q.vista().disponibilita, q.vista().proiezione));
+            coal.insert(partiti.join("+"), esito!(r));
+        }
+        let x = q0.vista().partiti.iter().find(|x| x.id == "giocatore").map_or(0.0, |x| x.posizione_dichiarata);
+        let mut pos = serde_json::Map::new();
+        for dx in [-0.5, -0.25, 0.25, 0.5] {
+            let mut q = q0.clone();
+            let r = q
+                .comanda(Comando::Riposiziona { posizione: x + dx })
+                .map(|()| q.vista().partiti.into_iter().find(|x| x.id == "giocatore"));
+            pos.insert(format!("{dx}"), esito!(r));
+        }
+        let mut q = q0.clone();
+        let r = q
+            .comanda(Comando::Compra { acquisto: Acquisto::SondaggioPrivato })
+            .map(|()| q.vista().acquisti.sondaggio_privato);
+        prove.insert(k.into(), serde_json::json!({"coalizioni": coal, "riposiziona": pos, "privato": esito!(r)}));
+    }
+    out.insert("prove".into(), serde_json::Value::Object(prove));
+
+    let nota = format!(
+        "seme 4 a 4,5 turno zero; governo_fine turno {}; opposizione_fine (seme 1 a 1,5) turno {}",
+        g.vista().turno,
+        o.vista().turno
+    );
+    Ok(Uscita {
+        nome: "26-campagna.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota,
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -953,6 +1747,16 @@ fn esegui() -> Esito<()> {
     uscite.push(cruscotto(&d)?);
     uscite.push(aula(&d)?);
     uscite.push(prima_pagina(&d)?);
+    uscite.push(anteprima_misura(&d)?);
+    uscite.push(conti(&d)?);
+    uscite.push(bilancio(&d)?);
+    uscite.push(paese(&d)?);
+    uscite.push(registro(&d)?);
+    uscite.push(campagna(&d)?);
+    uscite.push(opposizione::opposizione(&d)?);
+    uscite.push(eredita::eredita(&d)?);
+    uscite.push(governo::governo(&d)?);
+    uscite.push(trattativa::trattativa(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

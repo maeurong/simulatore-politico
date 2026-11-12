@@ -82,7 +82,7 @@ $effect.root(() => $effect(() => document.documentElement.style.setProperty('--k
 ```
 
 - Velocità e movimento sono due assi distinti, come chiede la spec. `k` decide quanto dura, `spento` cosa si muove: rotazioni, traslazioni, scale e oscillazioni diventano dissolvenze o scompaiono. In CSS basta `:root[data-movimento=spento]` per riassegnare le variabili; in Svelte un `mov.spento ? fade : fly`.
-- Il valore iniziale di `spento` viene da `prefersReducedMotion` (la preferenza di sistema), poi decide il giocatore. «Sopra `prefers-reduced-motion`» vuol dire questo [INF]. Su macOS la preferenza sta in Impostazioni di Sistema > Accessibilità (fonti/mdn-prefers-reduced-motion.md:50-51) [V]. MDN chiama Tahoe «macOS 25», ma Tahoe è macOS 26: refuso della fonte.
+- Il valore iniziale di `spento` viene da `prefersReducedMotion` (la preferenza di sistema), poi decide il giocatore. «Sopra `prefers-reduced-motion`» vuol dire questo [INF]. Su macOS la preferenza sta in Impostazioni di Sistema > Accessibilità (fonti/mdn-prefers-reduced-motion.md:50-51) [V]. MDN chiama Tahoe «macOS 25», ma Tahoe è macOS 26: refuso della fonte. Il 12/11/2026 il ticket 33 ha deciso diversamente: tre posizioni, e «Come il sistema» segue la preferenza anche dopo il primo avvio; le impostazioni stanno in `localStorage` ([[localstorage-in-wkwebview]]).
 - `Spring` e `Tween` non leggono `--k`: si passa `dur()` a `Tween`, e per `Spring` `instant: mov.k === 0` [INF] (vedi § 1).
 
 ## 3. Scala della UI

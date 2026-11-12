@@ -1,0 +1,67 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Disegno delle caricature» (32), mappa v1-piano-11-ui.
+  Tavola dei riferimenti da docs/ricerca/estetica/riferimenti-per-le-facce.md: Mario sceglie le direzioni
+  da far disegnare al graphic-designer. Immagini linkate dai siti d'origine, sotto i diritti dei loro autori:
+  servono solo per guardare, non entrano nel gioco. Buttare dopo il verdetto.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riferimenti per le facce</title>
+<style>
+  :root{--carta:#F4ECD8;--ink:#1F1A17;--grigio:#5E5750;--rosso:#B3122B;--verde:#2E6B45;--biro:#1D4E89;--giallo:#FFD23F}
+  body{margin:0;background:var(--carta);color:var(--ink);font:15px/1.4 Georgia,serif;padding:24px 32px}
+  h1{font-size:34px;margin:0 0 4px} .sott{color:var(--grigio);margin:0 0 20px}
+  .diag{border:1.5px solid var(--ink);padding:12px 16px;margin-bottom:28px;columns:2;column-gap:32px}
+  .diag b{color:var(--rosso)}
+  section{margin-bottom:34px;border-top:3px double var(--ink);padding-top:10px}
+  h2{font-size:24px;margin:0} h2 span{color:var(--rosso);margin-right:8px}
+  .leve{color:var(--grigio);margin:4px 0 12px;max-width:110ch}
+  .card{display:inline-block;vertical-align:top;width:250px;margin:0 16px 16px 0}
+  .card .img{height:200px;background:#fff;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .card img{max-width:100%;max-height:100%}
+  .card b{display:block;margin-top:6px} .card small{color:var(--grigio)}
+  .anche{font-size:13px;color:var(--grigio)}
+  .anche a{color:var(--biro)}
+</style>
+</head>
+<body>
+<h1>Riferimenti per le facce</h1>
+<p class="sott">Ticket 32 · quattro direzioni dalla ricerca. Il dicastero resta nell'oggetto, la soddisfazione nella bocca o nella forma: qui si sceglie come si disegna l'<i>identità</i>.</p>
+
+<div class="diag">
+  <b>Perché il segnaposto stanca.</b> 1. Sei pastelli e un nero che non sono i nostri inchiostri: la faccia sembra incollata, non stampata. 2. Occhi e bocca sempre nello stesso punto: a 34 px dieci ministri sono una faccia sola in cornici diverse. 3. Contorno uguale e busto identico, quindi nessuna silhouette. 4. L'oggetto in basso a destra si mangia il mento. 5. A 34 px contorno 1,2 px e occhi di 2,8 px: si leggono solo massa, sagoma e colore.
+</div>
+
+<div id="tavola"></div>
+
+<script>
+const R = {
+  zagnoli:['Olimpia Zagnoli','https://oz.imbeard.com/wp-content/uploads/2025/10/OLIMPIADI26_DEFINITIVO-1463x2048.jpg','https://www.olimpiazagnoli.com/about/','Campi pieni accostati senza contorno; il colletto a motivo al posto dei capelli.'],
+  guasco:['Riccardo Guasco · ciclisti','https://www.pushing-pixels.org/wp-content/uploads/2013/11/cyclists.jpg','https://www.pushing-pixels.org/2013/11/23/illustrators-at-work-interview-with-riccardo-guasco.html','Testa futurista di profilo, a tre o quattro piani; il naso come leva.'],
+  linea:['Cavandoli · La Linea','https://upload.wikimedia.org/wikipedia/it/7/79/La_Linea.png','https://it.wikipedia.org/wiki/La_Linea_(personaggio)','Profilo e naso bastano; lo stato nel colore del fondo.'],
+  rossi:['Bozzetto · il Signor Rossi','https://www.lambiek.net/artists/image/b/bozzetto_bruno/bozzetto_srrossi.jpg','https://www.lambiek.net/artists/b/bozzetto_bruno.htm','La macchietta italiana; la sagoma intera fa il personaggio.'],
+  arntz:['Gerd Arntz · Isotype','https://gerdarntz.org/sites/gerdarntz.org/files/u2/Isotype-symbols.gif','https://gerdarntz.org/content/gerd-arntz.html','Figure uguali rese specifiche dal segno del mestiere, in negativo sul petto.'],
+  schlemmer:['Schlemmer · Triadisches Ballett','https://upload.wikimedia.org/wikipedia/commons/0/0c/Das_Triadische_Ballett%2C_Plakat_f%C3%BCr_eine_geplante_Auff%C3%BChrung_1924.jpg','https://en.wikipedia.org/wiki/Triadic_Ballet','Corpo di solidi; collo e spalle come leve. Pubblico dominio.'],
+  mrmen:['Hargreaves · Mr. Men','https://upload.wikimedia.org/wikipedia/en/4/4b/Mr._Tickle.jpg','https://en.wikipedia.org/wiki/Mr._Men','Un carattere diventa una sagoma e un colore; tratto a pennarello.'],
+  miffy:['Dick Bruna · Miffy','https://upload.wikimedia.org/wikipedia/en/3/30/Miffy%2C_by_Dick_Bruna.jpg','https://en.wikipedia.org/wiki/Miffy','Palette chiusa e un solo volto canonico; cambia la sagoma in alto.'],
+  barba:['Barbapapà','https://upload.wikimedia.org/wikipedia/en/8/81/Barbapapa.jpg','https://en.wikipedia.org/wiki/Barbapapa','Identità = colore e volto; la forma dice lo stato.'],
+  harper:['Charley Harper','https://upload.wikimedia.org/wikipedia/en/a/ae/Red-and-fed.jpg','https://en.wikipedia.org/wiki/Charley_Harper','«Contare le ali»: un solo dettaglio forte per volto.'],
+  mii:['Nintendo · Mii','https://upload.wikimedia.org/wikipedia/en/0/07/Default_Miis.jpeg','https://nintendo.com/en-gb/Iwata-Asks/Iwata-Asks-Wii/Iwata-Asks-Wii-Channels/4-Aiming-For-Worldwide-Mii-Communication/4-Aiming-For-Worldwide-Mii-Communication-213650.html','Poche parti scelte bene, posizioni strette: oltre, diventa un generatore di sosia.'],
+  chernoff:['Facce di Chernoff','https://upload.wikimedia.org/wikipedia/commons/1/17/Chernoff_faces_for_evaluations_of_US_judges.svg','https://en.wikipedia.org/wiki/Chernoff_face','Pesano di più misura degli occhi e sopracciglia. Senza disegno restano povere.'],
+  thumbs:['DiceBear · Thumbs (CC0)','https://api.dicebear.com/10.x/thumbs/svg?seed=ministro-1','https://www.dicebear.com/styles/thumbs/','Testa ruotata ±20°, occhi spostati: varietà a costo zero.'],
+};
+const D = [
+  ['A','Isotipo col segno sul petto',['arntz','miffy','barba'],'Sagoma piena senza contorno, volto color carta, abito in un inchiostro scuro, oggetto del dicastero ritagliato sul petto. Leve: colore dell’abito, spalle, collo, forma della testa · 180 combinazioni. Sembra un timbro in pagina; rischio: fredda.'],
+  ['B','Macchiette di sagoma',['mrmen','barba','thumbs','schlemmer'],'Testa e corpo una forma sola: la silhouette dice il tipo (veterano tondo, tecnico lungo, ambiziosa a punta). Leve: 6 sagome, colore, posizione degli occhi, inclinazione ±8° · 270 combinazioni. La più giocosa; rischio: da libro per bambini.'],
+  ['C','Profilo al tratto',['guasco','linea','rossi'],'Testa di profilo a piani, naso dominante, colletto; contorno a pennello. Leve: naso, mento, fronte, colore del colletto · 150 combinazioni. La più satirica e italiana; rischio di somiglianza più alto: nasi oltre ogni naso reale e prova di riconoscimento.'],
+  ['D','Figurino a solidi',['schlemmer','zagnoli','harper'],'Solidi piatti accostati senza contorno: testa a cerchio, collo a cilindro, busto a campana o cono, colletto a motivo, un solo dettaglio sul volto. Leve: busto, collo, motivo, colore, dettaglio · 720 combinazioni. La più elegante; rischio: campi vicini che si fondono a 34 px.'],
+];
+const card = k => { const [n,img,url,p]=R[k]; return `<div class="card"><div class="img"><img src="${img}" alt="${n}"></div><b>${n}</b><small>${p} <a href="${url}">fonte</a></small></div>`; };
+document.getElementById('tavola').innerHTML = D.map(([l,t,ks,leve])=>`<section><h2><span>${l}</span>${t}</h2><p class="leve">${leve}</p>${ks.map(card).join('')}</section>`).join('')
+  + `<section><h2><span>·</span>Per tutte: le leve di posizione</h2><p class="leve">Spostare gli occhi di pochi pixel e inclinare la testa di pochi gradi dà più varietà di una forma nuova, a intervalli stretti. Le sopracciglia, se ci sono, dicono lo stato.</p>${['mii','chernoff'].map(card).join('')}</section>`;
+</script>
+</body>
+</html>

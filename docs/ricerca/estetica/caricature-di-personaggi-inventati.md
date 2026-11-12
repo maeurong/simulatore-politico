@@ -141,3 +141,4 @@ Non soddisfa le storie 103 («nome e caricatura») e 154 («borsino con caricatu
 - [[tono-giocoso-su-temi-seri]]: due registri con soglia, caricatura da 32 px nel borsino, linea a pennello.
 - [[soggetti-reali-vs-fittizi]]: articoli 96-97 della legge sul diritto d'autore, nessun volto né nome reale.
 - [[decisioni]]: soglie di soddisfazione 40 e 25, che sono le bocche del kit.
+- [[riferimenti-per-le-facce]]: tredici riferimenti visivi e quattro direzioni di stile per disegnare il kit; perché il segnaposto stanca.

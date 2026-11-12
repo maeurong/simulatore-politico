@@ -17,13 +17,20 @@ Compito che una regola del gioco attribuisce a un dicastero, come prendersi la c
 _Evita_: competenza, delega
 
 **Spesa di funzionamento**:
-Quota del budget di un dicastero che tiene in piedi il servizio; se si taglia, l'indicatore di servizio peggiora con ritardo, senza bisogno di alcun atto.
+Quota del budget di un dicastero che tiene in piedi il servizio, fatta di salari e acquisti; se si taglia, l'indicatore di servizio peggiora con ritardo, senza bisogno di alcun atto. Spostarne una parte nel margine non cambia il saldo.
+
+**Resto della spesa**:
+Quota del budget di un dicastero fuori da funzionamento e margine (trasferimenti, investimenti); la legge di bilancio la lascia nominale o la indicizza, ma non la ritocca a voce.
 
 **Indicatore di servizio**:
 L'unica grandezza di un dicastero tenuta in piedi dalla spesa di funzionamento (per la Sanità, la qualità del servizio sanitario).
 
 **Fondo di riserva**:
 Somma fissata nella legge di bilancio, fuori da ogni dicastero, che solo il Presidente del Consiglio spende nelle emergenze.
+
+**Perdita reale**:
+Il potere d'acquisto che una cifra nominale del bilancio (il budget di un dicastero, la soglia di uno scaglione) ha perso con l'inflazione da quando è stata fissata; si recupera solo indicizzandola in una legge di bilancio.
+_Evita_: taglio (che è nominale), erosione (da sola)
 
 **Spesa obbligatoria**:
 Spesa fuori dai dicasteri che si muove da sola secondo una regola: pensioni, sussidi, interessi sul debito. Il giocatore non la ripartisce; ne cambia regime e parametri per legge, e può istituire voci nuove.
@@ -120,6 +127,10 @@ _Evita_: previsione (che è quella del centro studi), simulazione
 Legge annuale con cui il Presidente del Consiglio, insieme al ministro dell'Economia, fissa aliquote e budget di ogni dicastero; durante l'anno i fondi si spostano solo per decreto.
 _Evita_: manovra (come termine del modello), finanziaria
 
+**Bozza del bilancio**:
+Il punto da cui parte la legge di bilancio: le cifre nominali del bilancio in vigore, portate all'anno dopo (nell'esercizio provvisorio, all'anno in corso). Presentata così com'è, taglia in termini reali tutto ciò che non si indicizza.
+_Evita_: bilancio fotocopia (come termine del modello)
+
 **Legge elettorale**:
 Legge che trasforma i voti in seggi, fatta di disposizioni fuori da ogni dicastero: soglie, coalizioni, premio, tetto, formula di riparto. Si parte da quella reale (180/2026); la cambia solo il Presidente del Consiglio, o il governo avversario, e vale dal voto successivo.
 
@@ -143,7 +154,7 @@ Parlamentare che vota contro la linea del suo partito; prima del voto se ne cono
 _Evita_: dissidente, ribelle
 
 **Emendamento**:
-Attenuazione di una legge che un alleato chiede prima del voto; se il giocatore la accoglie, il partito vota compatto, se la respinge paga in intesa.
+Attenuazione di una legge che un alleato chiede prima del voto; se il giocatore la accoglie, il partito vota compatto, se la respinge paga in intesa. Sulla legge di bilancio l'alleato chiede di indicizzare i suoi dicasteri che perdono potere d'acquisto oltre una soglia.
 
 **Questione di fiducia**:
 Voto in cui il governo lega la propria sopravvivenza a una legge o a una conversione: niente emendamenti né franchi tiratori, voto nel turno stesso; se è respinta, il governo si dimette. Sulla legge elettorale copre solo gli articoli: il voto finale alla Camera resta segreto, con i suoi franchi tiratori.
@@ -264,6 +275,10 @@ Periodo fra due elezioni; parte da 5 anni e la sua durata si cambia con una norm
 Il resoconto con cui finisce la partita (partito senza seggi in entrambe le Camere, oppure abbandono): anni al governo, leggi ancora in vigore, indicatori confrontati col turno zero.
 _Evita_: bilancio (che è la legge), punteggio, game over
 
+**Eredità in bozza**:
+L'eredità dopo la fine senza seggi, prima che il giocatore la confermi: la partita resta fra quelle in corso e il voto perso si può ancora riavvolgere. Confermata, va nell'albo e non si torna più a nessun turno.
+_Evita_: eredità provvisoria, game over
+
 **Abbandono**:
 Il comando, da confermare, con cui il giocatore chiude la partita e riceve subito l'eredità; non si torna indietro.
 _Evita_: resa, uscita
@@ -375,7 +390,7 @@ Fatto del paese che si mostra in apertura, cita la sua causa nel modello e chied
 _Evita_: crisi (che è quella di governo), dilemma, notizia
 
 **Situazione**:
-Stato del paese che si accende quando una grandezza supera una soglia e si spegne solo sotto una soglia più bassa (recessione, ondata di criminalità); finché è accesa pesa a ogni turno.
+Stato del paese che si accende quando una grandezza supera una soglia e si spegne solo sotto una soglia più bassa (recessione, ondata di criminalità); la recessione chiede due trimestri di fila oltre la soglia, le altre uno. Finché è accesa pesa a ogni turno.
 _Evita_: crisi, emergenza (che è un evento puntuale)
 
 **Regione**:
@@ -391,8 +406,12 @@ La regione su cui spende e rende un atto di Infrastrutture e Trasporti o di Svil
 _Evita_: bersaglio (da solo, che è quello della campagna), collegio
 
 **Livello**:
-Ciò che la mappa colora, uno alla volta: consenso, disoccupazione, reddito, affluenza, pericolosità naturale, oppure il risultato del voto.
+Ciò che la mappa colora, uno alla volta: consenso (di default quello della coalizione del giocatore), disoccupazione, reddito, affluenza, pericolosità naturale, oppure il risultato del voto.
 _Evita_: layer, filtro, vista
+
+**Segno**:
+Marca fissa sulla mappa, sopra ogni livello, nel punto interno della regione: atto in agenda, cantiere in corso, opera finita, emergenza aperta.
+_Evita_: icona, puntina, marker
 
 ## Economia
 
@@ -466,8 +485,20 @@ La schermata fuori dalla partita, che il gioco apre all'avvio: partite in corso,
 _Evita_: menu principale, home, lobby
 
 **Tracciato**:
-La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, uno stacco segna dove comincia il pericolo.
+La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, lo stacco dopo la terza casella.
 _Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
+
+**Stacco**:
+Nel tracciato, il punto in cui scatta una regola del gioco (la maggioranza persa, le Aste scoperte, il premio di maggioranza o la soglia di lista mancati). A sinistra dello stacco la regola è già scattata, o scatta alla chiusura del turno.
+_Evita_: soglia di allarme, zona gialla, preavviso
+
+**Schema dello Stato**:
+La pagina intera, fuori dalle dieci sezioni del sommario, che mostra chi muove cosa nel trimestre: partiti, Parlamento, governo e Paese in colonne, coi fili fra loro.
+_Evita_: mappa (che è quella delle regioni), organigramma, rete
+
+**Filo**:
+Nello schema dello Stato, una pressione del trimestre da un soggetto a un altro (una proposta in sospeso, una misura in aula, un evento), presa da un campo della Vista; il tondo col numero la lega alla sua voce della prima pagina.
+_Evita_: collegamento, arco, freccia, relazione
 
 **Fascia** (di un valore):
 Un valore mostrato come una fra poche classi con un nome (capacità buona, rischio alto, intesa media) invece che come numero. La fascia di reddito è un'altra cosa e si dice sempre per intero.
