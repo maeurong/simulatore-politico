@@ -8,6 +8,18 @@ type Campioni = { campione: any; turnoZero?: any; edicola: any; editor: any; fon
 const rifiuto = (testo: string): ErroreGuscio => ({ specie: "rifiuto", testo });
 const uguali = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+const presente = (v: unknown, comando: string) => {
+  if (v == null) throw rifiuto(`non nel campione: ${comando}`);
+  return v;
+};
+
+export function trovaFile(nomi: string[], vista: string): string | undefined {
+  return (
+    nomi.find((n) => n === vista || n === `${vista}.json`) ??
+    nomi.filter((n) => n.startsWith(vista)).sort((a, b) => a.length - b.length)[0]
+  );
+}
+
 export function vistaDi(campione: any): Vista | null {
   if (campione && typeof campione === "object" && "turno" in campione) return campione;
   return campione?.vista ?? campione?.prima ?? null;
@@ -43,10 +55,10 @@ function riepilogo(scenario: any, editor: any): unknown {
 export function rispondi(comando: string, args: Record<string, unknown>, c: Campioni): unknown {
   const { campione, edicola, editor, fondazione } = c;
   switch (comando) {
-    case "chiudi_turno": return campione.dopo;
-    case "comanda": return campione.dopo_comando;
-    case "serie": return campione.serie ?? [];
-    case "riprendi": return vistaDi(campione);
+    case "chiudi_turno": return presente(campione?.dopo, comando);
+    case "comanda": return presente(campione?.dopo_comando, comando);
+    case "serie": return campione?.serie ?? [];
+    case "riprendi": return presente(vistaDi(campione), comando);
     case "partite": return edicola.partite;
     case "albo": return edicola.albo;
     case "scenari": return editor.scenari_salvati;
@@ -76,7 +88,9 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     import: "default",
   });
   const carica = async (prefisso: string) => {
-    const chiave = Object.keys(file).find((k) => k.split("/").pop()!.startsWith(prefisso));
+    const nomi = Object.keys(file).map((k) => k.split("/").pop()!);
+    const trovato = trovaFile(nomi, prefisso);
+    const chiave = Object.keys(file).find((k) => k.endsWith(`/${trovato}`));
     return chiave ? await file[chiave]() : null;
   };
   const nome = url.searchParams.get("vista");

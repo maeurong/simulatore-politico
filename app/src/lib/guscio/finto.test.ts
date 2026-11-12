@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rispondi, vistaDi } from "./finto";
+import { rispondi, trovaFile, vistaDi } from "./finto";
+import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
 import editorJson from "../../../../.scratch/v1-piano-11-ui/viste/14-editor.json";
@@ -48,5 +49,31 @@ describe("rispondi", () => {
     expect(() => rispondi("anteprima_sfiducia", {}, c)).toThrow(
       expect.objectContaining({ specie: "rifiuto", testo: expect.stringContaining("non nel campione") }),
     );
+  });
+});
+
+describe("campione che manca", () => {
+  const rifiutoDi = (comando: string) =>
+    expect.objectContaining({ specie: "rifiuto", testo: `non nel campione: ${comando}` });
+  it("chiudi_turno senza .dopo è rifiuto", () => {
+    expect(() => rispondi("chiudi_turno", {}, { ...c, campione: governo })).toThrow(rifiutoDi("chiudi_turno"));
+  });
+  it.each(["chiudi_turno", "comanda", "riprendi"])("%s con campione nullo è rifiuto", (cmd) => {
+    expect(() => rispondi(cmd, {}, { ...c, campione: null })).toThrow(rifiutoDi(cmd));
+  });
+  it("serie con campione nullo dà []", () => {
+    expect(rispondi("serie", {}, { ...c, campione: null })).toEqual([]);
+  });
+});
+
+describe("trovaFile", () => {
+  const nomi = ["04-governo-bilancio.bozza.json", "04-governo-bilancio.json", "17-cruscotto.json"];
+  it("nome esatto prima del prefisso", () => {
+    expect(trovaFile(nomi, "04-governo-bilancio")).toBe("04-governo-bilancio.json");
+    expect(trovaFile(nomi, "04-governo-bilancio.bozza")).toBe("04-governo-bilancio.bozza.json");
+  });
+  it("prefisso, il più corto vince", () => {
+    expect(trovaFile(nomi, "17")).toBe("17-cruscotto.json");
+    expect(trovaFile(nomi, "04")).toBe("04-governo-bilancio.json");
   });
 });
