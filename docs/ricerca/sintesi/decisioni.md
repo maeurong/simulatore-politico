@@ -451,6 +451,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/21-conti.md`, due giri su un prototipo co
 - **Il centro studi a ventagli:** la stima del trimestre accanto alla prima stima, quattro previsioni con la fascia di una e due sigma.
 - **Due dati al core:** i trimestri già passati oltre la soglia (la recessione ne chiede due, e a −4,2% può essere spenta) e il debito sul PIL, che oggi si legge solo pagando il centro studi.
 
+## 2026-11-12: registro
+Ticket `.scratch/v1-piano-11-ui/issues/25-registro.md`, due giri su un prototipo con tre forme e quattro stati; le voci delle chiusure 0-8 del seme 4 scritte a mano col catalogo della spec di core, perché la PR dell'esito non è ancora eseguita.
+
+- **Forma D · Indice col filo:** colonna dei turni e voci del turno scelto a pagina, coi filtri della cronologia che valgono su tutti i turni e le voci collegate nel dettaglio a lato. Cronologia continua e tabellone turni × sezioni scartati: si legge un turno alla volta, e il filo si segue filtrando.
+- **«Torna al turno N» in testa al registro del turno N**, con la conferma sul posto: cancella anche quella chiusura, perché si torna all'apertura per rifare le scelte che l'hanno prodotta.
+- **I ministri del giocatore restano ordinari** e il ritorno della soddisfazione verso la base resta muto, come la rata di un cantiere.
+- **Due dati al core, PR dell'esito:** i soggetti per riga nei dettagli delle voci fuse, e gli id delle disposizioni nella voce, perché una legge ripresentata cambia id di misura.
+
 ## 2026-11-12: paese
 Ticket `.scratch/v1-piano-11-ui/issues/23-paese.md`, un giro su un prototipo con tre forme, quattro stati giocati e il selettore dentro tre sezioni ospiti; le venti regioni calcolate con le regole della spec di core.
 

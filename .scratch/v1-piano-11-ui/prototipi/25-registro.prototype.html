@@ -1,0 +1,761 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Registro» (25), mappa v1-piano-11-ui.
+  Domanda: com'è fatta la sezione Registro? L'elenco dei turni passati; le voci di un turno con la loro causa (storia 16),
+  revisioni delle stime comprese (119); «Torna al turno N» con la conferma sul posto che dice cosa si cancella (144); il
+  registro a partita finita finché l'eredità è in bozza (150); barrata al turno zero. Neutro: fatto e causa, niente titoli.
+  VERDETTO (Mario, 12/11/2026): D · Indice col filo, cioè A più i filtri di B, su tutti i turni. Il file si apre su D;
+  A, B e C restano dalla barra. Simulati due rimandi al core: `disposizioni` (id delle disposizioni toccate) accanto a `misura`,
+  e i soggetti su ogni riga dei dettagli delle voci fuse (il filtro non cerca nel testo). Nello stato «governo» la banda
+  simula il rimando di «avanti fino a novità» ai turni saltati.
+  Quattro forme via ?v=D|A|B|C (frecce ← →):
+    D  Indice col filo — l'Indice di A con i filtri di B sopra; filtrando, la colonna tiene solo i turni che combaciano
+    A  Indice      — colonna dei turni, le voci del turno scelto a pagina, la voce scelta nel dettaglio a lato
+    B  Cronologia  — tutte le chiusure in una colonna, la più recente in alto, filtri su tutti i turni, voci collegate a lato
+    C  Tabellone   — griglia turni × sezioni con un segno per voce; clic su cella o colonna apre le voci a lato
+  Stati, ?stato=: governo (turno 9 aperto, registro 0-8) · grave (turno 7 aperto, incendi nel Lazio in tono grave,
+    registro 0-6) · finita (eredità in bozza: STATO FORZATO, vedi sotto) · zero (turno zero, sezione barrata).
+  «Torna al turno N» si può provare: dopo la conferma il prototipo si mette all'apertura del turno N (niente comandi veri).
+  Dati: la partita delle Viste 02-05/07/08 (seme 4 a 4,5, la bozza presentata a ogni bilancio), con la Vista prima e dopo
+  ogni chiusura 0-8 in viste/25-registro.json (genera/, tutto giocato). La Vista di oggi non porta l'esito (lo porta la PR 1
+  del piano di core «esito e Vista completa»): le voci qui sotto sono una BOZZA scritta a mano col catalogo della spec
+  (tipo, criticità, precedenza, fatto, causa, fusione delle gemelle), leggendo i fatti nelle due Viste di ogni chiusura.
+  Chiusure 1-3: le voci di 16-prima-pagina, più gli atti dei ministri e i cantieri che lì mancavano. La scelta delle sette
+  la fa il codice qui sotto con la regola della spec, non a mano.
+  Stato «finita» forzato: la sconfitta per seggi non arriva giocando (13-edicola: nessun seme 1-60 a 6,5). Qui la partita
+  dei turni 0-8 prende una chiusura 9 inventata con `risultato_del_voto` e `fine_della_partita`, segnata «forzata».
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A). Non è codice di produzione. Buttare dopo il verdetto.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo registro · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS.g ::selection{background:var(--ink);color:var(--carta)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.vS *{scrollbar-width:thin;scrollbar-color:var(--grigio) transparent}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.muto{color:var(--grigio)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+
+/* cornice A · Gerenza (08) */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em;display:flex;gap:12px;align-items:baseline}
+.banda.riav{background:var(--biro)}
+.banda button{color:inherit;text-decoration:underline;text-underline-offset:2px;font-weight:700}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:150px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+
+/* ===== registro (comune) ===== */
+.corpo{min-height:0;min-width:0;overflow:hidden;display:grid;position:relative}
+.corpo>*{min-width:0;min-height:0}
+.col{overflow:auto;min-height:0}
+.lato{border-left:var(--forte);padding:12px var(--canale) 12px;overflow:auto;min-height:0}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:var(--doppio);padding-bottom:4px;flex-wrap:wrap}
+.capo .conf{flex-basis:100%;margin:2px 0 4px}
+.capo .tit{font-size:var(--c-sez)}
+.meta{font-size:var(--c-min);color:var(--grigio)}
+/* la voce: fatto e causa, niente titolo (09) */
+.vc{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:1px 8px;padding:6px 6px 7px;border-top:var(--filo);cursor:pointer;align-items:start}
+.vc:first-child{border-top:0}
+.vc:hover{background:var(--velo)}
+.vc.sel{background:var(--velo);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.vc .fa{font-size:var(--c-sec);line-height:1.3}
+.vc.C .fa,.vc.N .fa{font-weight:700}
+.vc .ca{grid-column:2;font-size:var(--c-min);color:var(--grigio);line-height:1.3}
+.ca::before,.causa::before{content:"perché: ";font-style:italic}
+.vc .rf{grid-column:2;font-size:var(--c-min);line-height:1.3;padding-left:10px;text-indent:-10px}
+.vc .rf::before{content:"· "}
+.vc .tg{grid-row:1/span 2;grid-column:3;display:flex;flex-direction:column;align-items:end;gap:2px}
+.mk{width:9px;height:9px;margin-top:4px;flex:none}
+.mk.C{background:var(--rosso)}
+.mk.N{border:1.5px solid var(--ink)}
+.mk.o{width:5px;height:5px;margin:6px 2px 0;background:var(--grigio);border-radius:50%}
+.g .mk.C{background:var(--ink)}
+.etc{font-size:var(--c-min);white-space:nowrap;color:var(--grigio)}
+.grave{font-family:var(--txt);display:inline-block;font-size:var(--c-min);font-weight:700;background:var(--ink);color:var(--carta);padding:0 5px;letter-spacing:.04em;white-space:nowrap}
+.forz{font-family:var(--txt);display:inline-block;font-size:var(--c-min);font-weight:700;border:1.5px dashed var(--ink);padding:0 5px;white-space:nowrap}
+.pp{font-size:var(--c-min);white-space:nowrap;border-bottom:1.5px solid var(--ink)}
+/* dettaglio della voce */
+.dv .fatto{font-family:var(--tit);font-variation-settings:var(--wonk);font-size:var(--c-riq);font-weight:700;line-height:1.2;margin:4px 0 6px;text-wrap:pretty}
+.g .dv .fatto{font-weight:600}
+.dv .causa{font-size:var(--c-sec);color:var(--grigio)}
+.det{font-size:var(--c-sec);margin-top:8px;display:grid;gap:3px;border-top:var(--filo);padding-top:6px}
+.det span{padding-left:10px;text-indent:-10px}
+.det span::before{content:"· "}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);margin-top:10px}
+.dati dt{color:var(--grigio)}
+.h5{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);font-weight:700;margin:14px 0 4px}
+.rif{border:var(--bordo);padding:6px 9px;margin-top:6px;font-size:var(--c-sec);cursor:pointer}
+.rif:hover{background:var(--velo)}
+.rif .meta{display:block;margin-bottom:2px}
+/* conferma sul posto */
+.conf{border:1.5px solid var(--rosso);padding:8px 11px;margin:8px 0;font-size:var(--c-sec);display:grid;gap:4px}
+.conf p{max-width:78ch}
+.conf b{font-weight:700}
+.conf .az{margin-top:4px}
+.nota{border-top:1.5px dashed var(--grigio);padding:5px var(--marg) 6px;font-size:var(--c-min);color:var(--grigio);line-height:1.35}
+.nota b{color:var(--ink)}
+
+/* A · Indice */
+.ind{grid-template-columns:244px minmax(0,1fr) var(--lato);grid-template-rows:minmax(0,1fr) auto}
+.ind .nota{grid-column:1/-1}
+.ind.filo{grid-template-rows:auto minmax(0,1fr) auto}
+.banda.ferma{background:var(--biro)}
+.g .banda.ferma{background:var(--ink)}
+.turni{border-right:var(--forte);padding:12px 0 10px}
+.turni h3{font-size:var(--c-riq);padding:0 var(--s4) 4px var(--marg);border-bottom:var(--doppio)}
+.tn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 8px;width:100%;padding:7px var(--s4) 7px var(--marg);border-bottom:var(--filo);align-items:center}
+.tn:hover{background:var(--velo)}
+.tn.sel{background:var(--ink);color:var(--carta)}
+.tn.sel .meta{color:var(--carta)}
+.tn b{font-size:var(--c-corpo)}
+.tn .segni{display:flex;gap:4px;align-items:center;justify-content:end}
+.tn.sel .grave{background:var(--carta);color:var(--ink)}
+.g .tn.sel .mk.C{background:var(--carta)}
+.tn.sel .mk.N{border-color:var(--carta)}
+.tn.sel .forz{border-color:var(--carta)}
+.voto{font-family:var(--txt);display:inline-block;font-size:var(--c-min);font-weight:700;border:1.5px solid currentColor;padding:0 4px;white-space:nowrap}
+.pag{padding:12px var(--canale) 10px var(--canale)}
+.pag .voci{margin-top:4px}
+
+/* B · Cronologia */
+.cro{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr) auto}
+.cro .nota{grid-column:1/-1}
+.filtri{grid-column:1/-1;display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:8px var(--marg) 7px;border-bottom:var(--forte);font-size:var(--c-sec)}
+.filtri .gr{display:flex;gap:3px;align-items:center}
+.filtri .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);margin-right:3px}
+.filtri select{border:1.5px solid var(--ink);padding:2px 6px;font-size:var(--c-sec);background:var(--carta);max-width:260px}
+.filtri label{display:flex;gap:4px;align-items:center;font-size:var(--c-min);cursor:pointer}
+.flusso{padding:4px var(--canale) 12px var(--marg)}
+.chiu{margin-top:12px}
+.chiu .capo{position:sticky;top:0;background:var(--carta);z-index:1;padding-top:4px}
+.chiu .capo .tit{font-size:var(--c-riq)}
+.vuote{font-size:var(--c-min);color:var(--grigio);padding:5px 6px}
+
+/* C · Tabellone */
+.tab{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:minmax(0,1fr) auto}
+.tab .nota{grid-column:1/-1}
+.griglia{padding:12px var(--canale) 10px var(--marg)}
+.tb{display:grid;margin-top:8px;border-top:var(--forte)}
+.tb .hd{padding:6px 6px 5px;border-bottom:var(--forte);border-left:var(--filo);font-size:var(--c-min);line-height:1.25;text-align:left}
+.tb .hd:hover{background:var(--velo)}
+.tb .hd.sel{background:var(--ink);color:var(--carta)}
+.tb .hd.sel .meta{color:var(--carta)}
+.tb .hd b{font-size:var(--c-sec);display:block}
+.tb .hd .segni{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;min-height:15px}
+.tb .rg{padding:7px 8px 7px 0;border-bottom:var(--filo);font-size:var(--c-sec);font-weight:700}
+.tb .cl{padding:6px 6px;border-bottom:var(--filo);border-left:var(--filo);display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;min-height:48px;cursor:pointer}
+.tb .cl:hover{background:var(--velo)}
+.tb .cl.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.tb .cl.col{background:var(--velo)}
+.tb .cl .mk{margin-top:0}
+.tb .cl .mk.o{margin:2px}
+.mk.rev{position:relative;margin-left:9px!important}
+.mk.rev::before{content:"";position:absolute;right:calc(100% + 1px);top:50%;width:8px;border-top:1.5px solid var(--grigio)}
+.mk.leg{outline:2px solid var(--biro);outline-offset:1px}
+.leg-r{display:flex;gap:16px;align-items:center;margin-top:10px;font-size:var(--c-min);color:var(--grigio);flex-wrap:wrap}
+.leg-r span{display:inline-flex;gap:5px;align-items:center}
+.leg-r .mk{margin-top:0}
+.gruppo{margin-top:6px}
+.gruppo h4{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);margin:10px 0 2px}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="governo">al governo, turno 9</button><button data-v="grave">tono grave, turno 7</button><button data-v="finita">partita finita (forzato)</button><button data-v="zero">turno zero</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+// ======================= nomi =======================
+const PG = 'Partito del giocatore';
+const NP = {estrema_sinistra:'Estrema sinistra',sinistra:'Sinistra',centrosinistra:'Centrosinistra',centro:'Centro',centrodestra:'Centrodestra',destra:'Destra',estrema_destra:'Estrema destra',giocatore:PG};
+const DIC = {economia_finanze:'Economia e Finanze',sviluppo_economico:'Sviluppo economico',lavoro_welfare:'Lavoro e Welfare',sanita:'Sanità',istruzione_ricerca:'Istruzione e Ricerca',infrastrutture_trasporti:'Infrastrutture e Trasporti',ambiente_energia:'Ambiente ed Energia',interno:'Interno',giustizia:'Giustizia',esteri_difesa:'Esteri e Difesa'};
+const REG = {emilia_romagna:'Emilia-Romagna',marche:'Marche',calabria:'Calabria',lazio:'Lazio',liguria:'Liguria',umbria:'Umbria',sicilia:'Sicilia',campania:'Campania',molise:'Molise',valle_d_aosta:'Valle d’Aosta'};
+// id delle misure dal calendario delle Viste: la stessa norma ripresentata prende un id nuovo (2 e 7, 4 e 9)
+const MIS = {0:'Sgravio contributivo nel Mezzogiorno: 15%',1:'Autonomia differenziata: intese complete',2:'Regime delle pensioni: retributivo (misura 2)',3:'Legge di bilancio 2028',4:'Concorrenza nei servizi: mercato libero (misura 4)',5:'Cuneo fiscale: 3 punti',6:'Leva militare: obbligatoria',7:'Regime delle pensioni: retributivo (misura 7)',8:'Legge di bilancio 2029',9:'Concorrenza nei servizi: mercato libero (misura 9)'};
+
+// ======================= le chiusure 0-8 del seme 4: BOZZA scritta a mano col catalogo =======================
+// Una voce per oggetto, nell'ordine della chiusura (i passi di chiudi_turno, partita.rs:546-725).
+// t tipo · c criticità (C critica, N notevole, o ordinaria) · p precedenza delle critiche · g tono grave · f fatto · ca causa
+// det dettagli delle voci fuse · pa partito · di dicastero · re regione · mi misura (i soggetti; nelle fuse solo se uguali in tutte)
+// Le ordinarie lunghe (atti, cantieri, revisioni) le ho composte rileggendo le Viste con uno script usa e getta, i testi a mano.
+// Esclusa ogni voce che le Viste non lasciano vedere: franchi tiratori, soddisfazione dei ministri prima del governo, regione
+// e tipo delle emergenze lievi (si vedono solo come 100 mln € in meno nel fondo di riserva).
+const LSI = (si) => { const no = Object.keys(NP).filter(p=>!si.includes(p)); const e = a => a.length>1 ? a.slice(0,-1).map(p=>NP[p]).join(', ')+(/^[AEIOU]/.test(NP[a.at(-1)])?' ed ':' e ')+NP[a.at(-1)] : NP[a[0]]; return `sì ${e(si)}; no ${e(no)}`; };
+const CH = [
+{n:0, voci:[
+ {t:'cantiere_avviato',c:'o',f:'Tre cantieri avviati dai ministri uscenti',ca:'più cause',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», rata 93,5 mln €, 4 turni di lavori',di:'lavoro_welfare'},{s:'Infrastrutture e Trasporti: «Potenziamento delle linee ferroviarie locali» in Umbria, rata 287,3 mln €, 5 turni',di:'infrastrutture_trasporti',re:'umbria'},{s:'Esteri e Difesa: «Difesa comune europea e addestramenti congiunti», rata 124,4 mln €, 4 turni',di:'esteri_difesa'}]},
+ {t:'promessa_fatta',c:'o',f:'Sette partiti dichiarano due promesse ciascuno',ca:'la prima voce del programma, o la posizione',det:[{s:'Estrema sinistra e Sinistra: «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»',pa:['estrema_sinistra','sinistra'],disposizioni:['concorrenza_servizi','regime_pensioni']},{s:'Centrosinistra: «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: quota base universale»',pa:'centrosinistra',disposizioni:['concorrenza_servizi','regime_pensioni']},{s:'Centro: «Concorrenza nei servizi: gare» e «Salario minimo legale: 7 €/h»',pa:'centro',disposizioni:['concorrenza_servizi','salario_minimo']},{s:'Centrodestra: «Nucleare: consentito» e «Autonomia differenziata: prime materie»',pa:'centrodestra',disposizioni:['nucleare','autonomia_differenziata']},{s:'Destra ed Estrema destra: «Nucleare: consentito» e «Autonomia differenziata: intese complete»',pa:['estrema_destra','destra'],disposizioni:['nucleare','autonomia_differenziata']}]},
+ {t:'spesa_di_campagna',c:'N',f:`Sette partiti spendono 22,1 mln € in campagna; il ${PG} nulla`,ca:'la cassa disponibile',det:[{s:'Sinistra 8,1 mln €: dipendenti privati, pensionati e Lombardia',pa:'sinistra'},{s:'Destra 7,1 mln €: dipendenti privati, pensionati e Lombardia',pa:'destra'},{s:'Centrodestra 1,8 mln €: pensionati, dipendenti privati e autonomi',pa:'centrodestra'},{s:'Estrema destra 1,6 mln €: pensionati, autonomi e Puglia',pa:'estrema_destra'},{s:'Centrosinistra 1,6 mln €: Lombardia, disoccupati e inattivi, pensionati',pa:'centrosinistra'},{s:'Centro 1,1 mln €: dipendenti privati, pensionati e Lombardia',pa:'centro'},{s:'Estrema sinistra 0,8 mln €: Calabria, Piemonte e autonomi',pa:'estrema_sinistra'}]},
+ {t:'spread',c:'o',f:'Spread a 83 punti base, −1',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 50,9%, −3,0',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Ottobre–dicembre 2026, prima stima: PIL +0,5% annuo, inflazione 3,7%, disoccupazione 5,8%, disavanzo 2,5%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Luglio–settembre 2026 riveduto: nessuna cifra cambia',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 224.019 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'risultato_del_voto',c:'C',p:3,pa:'giocatore',f:`Elezioni: affluenza 71,4%. ${PG} 16,4%, 76 seggi alla Camera e 38 al Senato; primo partito la Sinistra, 33,3%; premio alla coalizione del ${PG}`,ca:'elezioni politiche'},
+ {t:'incarico',c:'C',p:3,pa:'giocatore',f:`Incarico al ${PG}: si tratta il governo con Centrodestra e Destra`,ca:'la coalizione ha 224 seggi su 400 alla Camera e 115 su 200 al Senato'},
+ {t:'evento_nato',c:'C',p:1,g:1,re:'emilia_romagna',f:'Emergenza idrogeologica in Emilia-Romagna: 5 mld',ca:'rischio alto'},
+]},
+{n:1, voci:[   // da 16-prima-pagina, stato «grave», più i cantieri
+ {t:'evento_risolto',c:'C',p:1,g:1,re:'emilia_romagna',f:'Emergenza idrogeologica in Emilia-Romagna: fondo di riserva per default, coperti 305,7 mln € su 5 mld',ca:'rischio alto'},
+ {t:'cantiere_avviato',c:'o',f:'Due cantieri avviati dai ministri uscenti',ca:'più cause',det:[{s:'Ambiente ed Energia: «Rigassificatori e nuove centrali», rata 209,3 mln €, 5 turni di lavori',di:'ambiente_energia'},{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 mln €, 4 turni',di:'interno'}]},
+ {t:'spread',c:'o',f:'Spread a 86 punti base, +3',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 56,7%, +5,8',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Gennaio–marzo 2027, prima stima: PIL +3,1% annuo, inflazione 4,1%, disoccupazione 5,3%, disavanzo 4,1%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Ottobre–dicembre 2026 riveduto: PIL da +0,5% a −1,4%, disavanzo da 2,5% a 2,9%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 222.436 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'governo_formato',c:'C',p:3,pa:'giocatore',f:`Nasce il governo: Presidente del Consiglio del ${PG}, con Centrodestra e Destra; quattro ministeri al ${PG}, quattro alla Destra, due al Centrodestra`,ca:'la coalizione dichiarata ha la maggioranza: 224 seggi su 400 alla Camera, 115 su 200 al Senato'},
+ {t:'intesa_variata',c:'o',f:'Due variazioni d’intesa degli alleati',ca:'spartizione dei ministeri',det:[{s:'Centrodestra: spartizione dei ministeri, −5,1',pa:'centrodestra'},{s:'Destra: spartizione dei ministeri, +2,1',pa:'destra'}]},
+ {t:'evento_nato',c:'C',p:1,re:'marche',f:'Emergenza idrogeologica nelle Marche: 1 mld',ca:'rischio basso'},
+ {t:'misura_presentata',c:'N',pa:'centro',mi:0,disposizioni:['decontribuzione'],f:'Centro porta nel posto riservato «Sgravio contributivo nel Mezzogiorno: 15%»',ca:'225 seggi fra Camera e Senato dei partiti alleati la voterebbero'},
+]},
+{n:2, voci:[   // da 16-prima-pagina, stato «quieto», più gli atti
+ {t:'evento_risolto',c:'C',p:1,re:'marche',f:'Emergenza idrogeologica nelle Marche: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio basso'},
+ {t:'atto_eseguito',c:'o',f:'Sette atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Incrocio delle banche dati fiscali», 291,4 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Commesse pubbliche alle imprese del territorio» in Sicilia, 302,2 mln €',di:'sviluppo_economico',re:'sicilia'},{s:'Lavoro e Welfare: «Formazione pagata dalle imprese», 47,7 mln €',di:'lavoro_welfare'},{s:'Sanità: «Accorpamento delle ASL e premi ai primari», 311,2 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Premi di merito agli istituti», 514,4 mln €',di:'istruzione_ricerca'},{s:'Ambiente ed Energia: «Riempimento accelerato delle riserve di gas», 141,0 mln €',di:'ambiente_energia'},{s:'Giustizia: «Squadre di giudici a termine per l’arretrato», 74,9 mln €',di:'giustizia'}]},
+ {t:'cantiere_avviato',c:'o',di:'interno',f:'Interno avvia «Accoglienza diffusa e corridoi umanitari»: rata 116,6 mln €, 3 turni di lavori',ca:'Sicurezza: avvicina l’obiettivo'},
+ {t:'spread',c:'o',f:'Spread a 89 punti base, +3',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 58,8%, +2,1',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Aprile–giugno 2027, prima stima: PIL +1,8% annuo, inflazione 3,8%, disoccupazione 5,5%, disavanzo 2,9%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Gennaio–marzo 2027 riveduto: PIL da +3,1% a +2,2%, disavanzo da 4,1% a 3,7%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 215.865 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Sette ministri cambiano soddisfazione',ca:'più cause',det:[{s:'Ambiente ed Energia, Luca Romano: indicatore in calo −4,5, obiettivo raggiunto +10',di:'ambiente_energia'},{s:'Esteri e Difesa, Giulia Rossi: indicatore in calo −4,3',di:'esteri_difesa'},{s:'Interno, Filippo Barbieri: indicatore in calo −3,9',di:'interno'},{s:'e altri quattro'}]},
+ {t:'intesa_variata',c:'o',pa:'centrodestra',f:'Due variazioni d’intesa di Centrodestra',ca:'più cause',det:[{s:'quota di ministeri scoperta, −1,0'},{s:'sondaggi in calo, −2,3'}]},
+ {t:'evento_nato',c:'C',p:1,re:'calabria',f:'Emergenza incendi in Calabria: 1 mld',ca:'rischio alto'},
+ {t:'misura_presentata',c:'N',pa:'estrema_destra',mi:1,disposizioni:['autonomia_differenziata'],f:'Estrema destra porta nel posto riservato «Autonomia differenziata: intese complete»',ca:'225 seggi fra Camera e Senato dei partiti alleati la voterebbero'},
+]},
+{n:3, voci:[   // da 16-prima-pagina, stato «ordinario», più atti e cantieri fermi
+ {t:'evento_risolto',c:'C',p:1,re:'calabria',f:'Emergenza incendi in Calabria: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio alto'},
+ {t:'proposta_respinta',c:'C',p:1,f:'Tre proposte dei ministri respinte senza risposta: soddisfazione −8 a ciascuno',ca:'in sospeso da due turni senza risposta',det:[{s:'Infrastrutture e Trasporti, Filippo Ricci: «Manutenzione straordinaria delle strade locali»',di:'infrastrutture_trasporti'},{s:'Ambiente ed Energia, Luca Romano: «Nucleare: consentito»',di:'ambiente_energia',disposizioni:['nucleare']},{s:'Esteri e Difesa, Giulia Rossi: «Leva militare: obbligatoria»',di:'esteri_difesa',disposizioni:['leva_militare']}]},
+ {t:'atto_eseguito',c:'o',f:'Cinque atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 146,4 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Zone economiche speciali con burocrazia ridotta» in Sicilia, 101,2 mln €',di:'sviluppo_economico',re:'sicilia'},{s:'Sanità: «Convenzioni col privato accreditato», 625,4 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Premi di merito agli istituti», 516,8 mln €',di:'istruzione_ricerca'},{s:'Giustizia: «Squadre di giudici a termine per l’arretrato», 75,3 mln €',di:'giustizia'}]},
+ {t:'cantiere_fermo',c:'N',f:'Sei cantieri fermi un turno',ca:'la rata contro il margine residuo',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», rata 93,5 mln € su 4,8 mln € di margine',di:'lavoro_welfare'},{s:'Infrastrutture e Trasporti: «Potenziamento delle linee ferroviarie locali», rata 287,3 su 161,4 mln €',di:'infrastrutture_trasporti',re:'umbria'},{s:'Ambiente ed Energia: «Rigassificatori e nuove centrali», rata 209,3 su 3,8 mln €',di:'ambiente_energia'},{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 su 3,1 mln €',di:'interno'},{s:'Interno: «Accoglienza diffusa e corridoi umanitari», rata 116,6 su 3,1 mln €',di:'interno'},{s:'Esteri e Difesa: «Difesa comune europea e addestramenti congiunti», rata 124,4 su 69,9 mln €',di:'esteri_difesa'}]},
+ {t:'legge_approvata',c:'N',pa:'centro',mi:0,disposizioni:['decontribuzione'],f:'Approvata «Sgravio contributivo nel Mezzogiorno: 15%»: Camera 232 sì e 168 no, Senato 113 sì e 87 no',ca:LSI(['centro','centrodestra','destra','giocatore'])},
+ {t:'spread',c:'o',f:'Spread a 71 punti base, −18',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 51,3%, −7,5',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Luglio–settembre 2027, prima stima: PIL −3,3% annuo, inflazione 3,1%, disoccupazione 6,0%, disavanzo 2,7%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Aprile–giugno 2027 riveduto: PIL da +1,8% a +1,3%, disoccupazione da 5,5% a 5,6%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 203.170 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Dieci ministri cambiano soddisfazione',ca:'più cause',det:[{s:'Sanità, Sara Ferraro: indicatore in calo −24,7, obiettivo raggiunto +10',di:'sanita'},{s:'Economia e Finanze, Simone Gallo: obiettivo raggiunto +10',di:'economia_finanze'},{s:'e altri otto'}]},
+ {t:'intesa_variata',c:'o',f:'Tre variazioni d’intesa degli alleati',ca:'più cause',det:[{s:'Centrodestra: quota di ministeri scoperta, −1,0',pa:'centrodestra'},{s:'Centrodestra: sondaggi in calo, −1,9',pa:'centrodestra'},{s:'Destra: una norma lontana dalla sua posizione, −2,0',pa:'destra'}]},
+ {t:'evento_nato',c:'C',p:1,re:'emilia_romagna',f:'Emergenza idrogeologica in Emilia-Romagna: 1 mld',ca:'rischio alto'},
+ {t:'misura_presentata',c:'N',pa:'sinistra',mi:2,disposizioni:['regime_pensioni'],f:'Sinistra porta nel posto riservato «Regime delle pensioni: retributivo»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe'},
+]},
+{n:4, voci:[
+ {t:'evento_risolto',c:'C',p:1,re:'emilia_romagna',f:'Emergenza idrogeologica in Emilia-Romagna: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio alto'},
+ {t:'proposta_respinta',c:'C',p:1,f:'Due proposte dei ministri respinte senza risposta: soddisfazione −8 a ciascuno',ca:'in sospeso da due turni senza risposta',det:[{s:'Lavoro e Welfare, Simone Ricci: «Bonus straordinario per le famiglie in difficoltà»',di:'lavoro_welfare'},{s:'Interno, Filippo Barbieri: «Agenti di quartiere»',di:'interno'}]},
+ {t:'emendamento_respinto',c:'C',p:1,mi:3,f:'Due emendamenti alla legge di bilancio respinti senza risposta: intesa −5 a Centrodestra e a Destra',ca:'senza risposta prima del voto',det:[{s:'Centrodestra: intesa −5,0',pa:'centrodestra'},{s:'Destra: intesa −5,0',pa:'destra'}]},
+ {t:'atto_eseguito',c:'o',f:'Quattro atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 146,9 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Zone economiche speciali con burocrazia ridotta» in Campania, 101,6 mln €',di:'sviluppo_economico',re:'campania'},{s:'Sanità: «Accorpamento delle ASL e premi ai primari», 313,9 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Autonomia degli atenei e dottorati industriali», 259,4 mln €',di:'istruzione_ricerca'}]},
+ {t:'cantiere_fermo',c:'N',f:'Sei cantieri fermi un turno',ca:'la rata contro il margine residuo',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», rata 93,5 mln € su 4,8 mln € di margine',di:'lavoro_welfare'},{s:'Infrastrutture e Trasporti: «Potenziamento delle linee ferroviarie locali», rata 287,3 su 161,4 mln €',di:'infrastrutture_trasporti',re:'umbria'},{s:'Ambiente ed Energia: «Rigassificatori e nuove centrali», rata 209,3 su 3,8 mln €',di:'ambiente_energia'},{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 su 3,1 mln €',di:'interno'},{s:'Interno: «Accoglienza diffusa e corridoi umanitari», rata 116,6 su 3,1 mln €',di:'interno'},{s:'Esteri e Difesa: «Difesa comune europea e addestramenti congiunti», rata 124,4 su 69,9 mln €',di:'esteri_difesa'}]},
+ {t:'leggi_slittate',c:'o',mi:1,disposizioni:['autonomia_differenziata'],f:'Una legge passa al turno dopo: «Autonomia differenziata: intese complete»',ca:'turno del bilancio'},
+ {t:'bilancio_approvato',c:'N',mi:3,f:'Approvata la legge di bilancio 2028: Camera 223 sì e 177 no, Senato 111 sì e 89 no; dieci ministri col budget tagliato in termini reali',ca:LSI(['centrodestra','destra','giocatore'])},
+ {t:'spread',c:'o',f:'Spread a 67 punti base, −4',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 49,4%, −1,9',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Ottobre–dicembre 2027, prima stima: PIL −1,5% annuo, inflazione 2,4%, disoccupazione 5,8%, disavanzo 2,2%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Luglio–settembre 2027 riveduto: PIL da −3,3% a −3,0%, inflazione da 3,1% a 3,2%, disoccupazione da 6,0% a 5,8%, disavanzo da 2,7% a 2,4%',ca:'revisione della prima stima'},
+ {t:'situazione_spenta',c:'N',f:'Caro energia spento: energia a 4,7',ca:'la soglia di spegnimento, 5,0'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 202.380 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Dieci ministri cambiano soddisfazione',ca:'budget tagliato',det:[{s:'Sanità, Sara Ferraro: budget tagliato −2, indicatore in calo −15,9',di:'sanita'},{s:'Interno, Filippo Barbieri: budget tagliato −2, indicatore in calo −2,4',di:'interno'},{s:'Istruzione e Ricerca, Chiara Caruso: budget tagliato −2, obiettivo raggiunto +10',di:'istruzione_ricerca'},{s:'e altri sette'}]},
+ {t:'minaccia_di_dimissioni',c:'C',p:2,di:'sanita',f:'Sara Ferraro, Sanità, sotto la soglia di minaccia: soddisfazione 39,3',ca:'indicatore del dicastero in calo'},
+ {t:'intesa_variata',c:'o',f:'Quattro variazioni d’intesa degli alleati',ca:'emendamento respinto',det:[{s:'Centrodestra: emendamento respinto, −5,0',pa:'centrodestra'},{s:'Destra: emendamento respinto, −5,0',pa:'destra'},{s:'Centrodestra: quota di ministeri scoperta, −1,0',pa:'centrodestra'},{s:'Centrodestra: sondaggi in calo, −0,2',pa:'centrodestra'}]},
+ {t:'misura_presentata',c:'N',pa:'centrosinistra',mi:4,disposizioni:['concorrenza_servizi'],f:'Centrosinistra porta nel posto riservato «Concorrenza nei servizi: mercato libero»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe'},
+]},
+{n:5, voci:[
+ {t:'emergenza_lieve',c:'o',f:'Emergenza lieve: 100 mln € dal fondo di riserva, coperta per intero',ca:'la pericolosità della regione (regione e tipo: la Vista di oggi non li porta)'},
+ {t:'atto_eseguito',c:'o',f:'Nove atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 147,4 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Commesse pubbliche alle imprese del territorio» in Molise, 305,8 mln €',di:'sviluppo_economico',re:'molise'},{s:'Lavoro e Welfare: «Bonus straordinario per le famiglie in difficoltà», 144,8 mln €',di:'lavoro_welfare'},{s:'Sanità: «Convenzioni col privato accreditato», 629,8 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Premi di merito agli istituti», 520,5 mln €',di:'istruzione_ricerca'},{s:'Infrastrutture e Trasporti: «Manutenzione straordinaria delle strade locali» in Sicilia, 444,9 mln €',di:'infrastrutture_trasporti',re:'sicilia'},{s:'Ambiente ed Energia: «Riempimento accelerato delle riserve di gas», 142,7 mln €',di:'ambiente_energia'},{s:'Interno: «Agenti di quartiere», 118,0 mln €',di:'interno'},{s:'Giustizia: «Processo telematico e filtri sui ricorsi», 25,3 mln €',di:'giustizia'}]},
+ {t:'cantiere_avviato',c:'o',di:'esteri_difesa',f:'Esteri e Difesa avvia «Ammodernamento dei mezzi»: rata 256,9 mln €, 8 turni di lavori',ca:'Prontezza della difesa: avvicina l’obiettivo'},
+ {t:'cantiere_finito',c:'N',f:'Due cantieri finiti: gli effetti partono',ca:'la fine dei lavori dopo 4 turni di rata',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», 374,1 mln € in tutto',di:'lavoro_welfare'},{s:'Esteri e Difesa: «Difesa comune europea e addestramenti congiunti», 497,6 mln € in tutto',di:'esteri_difesa'}]},
+ {t:'legge_respinta',c:'o',pa:'sinistra',mi:2,disposizioni:['regime_pensioni'],f:'Respinta «Regime delle pensioni: retributivo», proposta della Sinistra: Camera 120 sì e 280 no, Senato 65 sì e 135 no',ca:LSI(['estrema_sinistra','sinistra'])},
+ {t:'legge_respinta',c:'o',pa:'estrema_destra',mi:1,disposizioni:['autonomia_differenziata'],f:'Respinta «Autonomia differenziata: intese complete», proposta dell’Estrema destra: Camera 167 sì e 233 no, Senato 89 sì e 111 no',ca:LSI(['centrodestra','destra','estrema_destra'])},
+ {t:'spread',c:'o',f:'Spread a 64 punti base, −3',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 50,4%, +1,0',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Gennaio–marzo 2028, prima stima: PIL +3,5% annuo, inflazione 2,2%, disoccupazione 5,7%, disavanzo 3,1%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Ottobre–dicembre 2027 riveduto: PIL da −1,5% a −0,4%, disoccupazione da 5,8% a 5,9%, disavanzo da 2,2% a 2,4%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 201.923 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Cinque ministri cambiano soddisfazione',ca:'indicatore del dicastero in calo',det:[{s:'Istruzione e Ricerca, Chiara Caruso: indicatore in calo −11,3',di:'istruzione_ricerca'},{s:'Lavoro e Welfare, Simone Ricci: obiettivo raggiunto +10',di:'lavoro_welfare'},{s:'Giustizia, Simone Bianchi: indicatore in calo −1,6, obiettivo raggiunto +10',di:'giustizia'},{s:'e altri due'}]},
+ {t:'intesa_variata',c:'o',pa:'centrodestra',f:'Centrodestra: intesa −1,0',ca:'quota di ministeri scoperta'},
+ {t:'misura_presentata',c:'N',pa:'centro',mi:5,disposizioni:['cuneo_fiscale'],f:'Centro porta nel posto riservato «Cuneo fiscale: 3 punti»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe'},
+]},
+{n:6, voci:[
+ {t:'emergenza_lieve',c:'o',f:'Emergenza lieve: 100 mln € dal fondo di riserva, coperta per intero',ca:'la pericolosità della regione (regione e tipo: la Vista di oggi non li porta)'},
+ {t:'atto_eseguito',c:'o',f:'Cinque atti eseguiti dai ministri',ca:'più cause',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 148,9 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Commesse pubbliche alle imprese del territorio» in Valle d’Aosta, 308,8 mln €',di:'sviluppo_economico',re:'valle_d_aosta'},{s:'Sanità: «Piano straordinario sulle liste d’attesa», 636,1 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Assunzione straordinaria di supplenti», 788,4 mln €',di:'istruzione_ricerca'},{s:'Giustizia: «Processo telematico e filtri sui ricorsi», 25,5 mln €',di:'giustizia'}]},
+ {t:'cantiere_avviato',c:'o',di:'lavoro_welfare',f:'Lavoro e Welfare avvia «Centri per l’impiego rinnovati»: rata 97,5 mln €, 4 turni di lavori',ca:'Copertura del welfare: avvicina l’obiettivo'},
+ {t:'cantiere_fermo',c:'N',f:'Tre cantieri fermi un turno',ca:'la rata contro il margine residuo',det:[{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 mln € su 58,1 mln € di margine',di:'interno'},{s:'Interno: «Accoglienza diffusa e corridoi umanitari», rata 116,6 su 58,1 mln €',di:'interno'},{s:'Esteri e Difesa: «Ammodernamento dei mezzi», rata 256,9 su 125,7 mln €',di:'esteri_difesa'}]},
+ {t:'cantiere_finito',c:'N',di:'infrastrutture_trasporti',re:'umbria',f:'Finito «Potenziamento delle linee ferroviarie locali» in Umbria, 1,44 mld € in tutto: gli effetti partono',ca:'la fine dei lavori dopo 5 turni di rata'},
+ {t:'legge_respinta',c:'o',pa:'centrosinistra',mi:4,disposizioni:['concorrenza_servizi'],f:'Respinta «Concorrenza nei servizi: mercato libero», proposta del Centrosinistra: Camera 133 sì e 267 no, Senato 69 sì e 131 no',ca:LSI(['estrema_sinistra','sinistra','centrosinistra'])},
+ {t:'spread',c:'o',f:'Spread a 62 punti base, −2',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 46,5%, −3,9',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Aprile–giugno 2028, prima stima: PIL +0,6% annuo, inflazione 1,7%, disoccupazione 5,7%, disavanzo 1,5%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Gennaio–marzo 2028 riveduto: PIL da +3,5% a +3,2%, inflazione da 2,2% a 2,3%, disoccupazione da 5,7% a 5,8%, disavanzo da 3,1% a 2,9%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 205.290 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Sei ministri cambiano soddisfazione',ca:'indicatore del dicastero in calo',det:[{s:'Sanità, Sara Ferraro: indicatore in calo −12,9',di:'sanita'},{s:'Interno, Filippo Barbieri: obiettivo raggiunto +10',di:'interno'},{s:'Lavoro e Welfare, Simone Ricci: indicatore in calo −6,4',di:'lavoro_welfare'},{s:'e altri tre'}]},
+ {t:'minaccia_di_dimissioni',c:'C',p:2,di:'sanita',f:'Sara Ferraro, Sanità, sotto la soglia di minaccia: soddisfazione 31,6',ca:'indicatore del dicastero in calo'},
+ {t:'intesa_variata',c:'o',f:'Due variazioni d’intesa degli alleati',ca:'più cause',det:[{s:'Centrodestra: quota di ministeri scoperta, −1,0',pa:'centrodestra'},{s:'Destra: sondaggi in calo, −0,3',pa:'destra'}]},
+ {t:'evento_nato',c:'C',p:1,g:1,re:'lazio',f:'Emergenza incendi nel Lazio: 5 mld',ca:'rischio alto'},
+ {t:'misura_presentata',c:'N',pa:'estrema_destra',mi:6,disposizioni:['leva_militare'],f:'Estrema destra porta nel posto riservato «Leva militare: obbligatoria»',ca:'225 seggi fra Camera e Senato dei partiti alleati la voterebbero'},
+]},
+{n:7, voci:[
+ {t:'evento_risolto',c:'C',p:1,g:1,re:'lazio',f:'Emergenza incendi nel Lazio: fondo di riserva per default, coperti 105,7 mln € su 5 mld',ca:'rischio alto'},
+ {t:'proposta_respinta',c:'C',p:1,f:'Quattro proposte dei ministri respinte senza risposta: soddisfazione −8 a ciascuno',ca:'in sospeso da due turni senza risposta',det:[{s:'Infrastrutture e Trasporti, Filippo Ricci: «Manutenzione straordinaria delle strade locali»',di:'infrastrutture_trasporti'},{s:'Ambiente ed Energia, Luca Romano: «Riempimento accelerato delle riserve di gas»',di:'ambiente_energia'},{s:'Interno, Filippo Barbieri: «Agenti di quartiere»',di:'interno'},{s:'Esteri e Difesa, Giulia Rossi: «Missioni di pace sotto mandato internazionale»',di:'esteri_difesa'}]},
+ {t:'atto_eseguito',c:'o',f:'Cinque atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 148,8 mln €',di:'economia_finanze'},{s:'Sviluppo economico: «Zone economiche speciali con burocrazia ridotta» in Campania, 102,9 mln €',di:'sviluppo_economico',re:'campania'},{s:'Sanità: «Convenzioni col privato accreditato», 635,6 mln €',di:'sanita'},{s:'Istruzione e Ricerca: «Premi di merito agli istituti», 525,2 mln €',di:'istruzione_ricerca'},{s:'Giustizia: «Processo telematico e filtri sui ricorsi», 25,5 mln €',di:'giustizia'}]},
+ {t:'cantiere_fermo',c:'N',f:'Cinque cantieri fermi un turno',ca:'la rata contro il margine residuo',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», rata 97,5 mln € su 45,3 mln € di margine',di:'lavoro_welfare'},{s:'Ambiente ed Energia: «Rigassificatori e nuove centrali», rata 209,3 su 2,1 mln €',di:'ambiente_energia'},{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 su 58,1 mln €',di:'interno'},{s:'Interno: «Accoglienza diffusa e corridoi umanitari», rata 116,6 su 58,1 mln €',di:'interno'},{s:'Esteri e Difesa: «Ammodernamento dei mezzi», rata 256,9 su 125,7 mln €',di:'esteri_difesa'}]},
+ {t:'legge_respinta',c:'o',pa:'centro',mi:5,disposizioni:['cuneo_fiscale'],f:'Respinta «Cuneo fiscale: 3 punti», proposta del Centro: Camera 17 sì e 383 no, Senato 4 sì e 196 no',ca:LSI(['centro'])},
+ {t:'spread',c:'o',f:'Spread a 64 punti base, +2',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 46,4%, −0,1',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Luglio–settembre 2028, prima stima: PIL −0,6% annuo, inflazione 0,8%, disoccupazione 6,0%, disavanzo 2,1%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Aprile–giugno 2028 riveduto: PIL da +0,6% a +0,0%, inflazione da 1,7% a 1,8%, disoccupazione da 5,7% a 5,8%, disavanzo da 1,5% a 1,9%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 200.650 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Otto ministri cambiano soddisfazione',ca:'indicatore del dicastero in calo',det:[{s:'Interno, Filippo Barbieri: indicatore in calo −6,8',di:'interno'},{s:'Giustizia, Simone Bianchi: indicatore in calo −6,0',di:'giustizia'},{s:'Istruzione e Ricerca, Chiara Caruso: obiettivo raggiunto +10',di:'istruzione_ricerca'},{s:'e altri cinque'}]},
+ {t:'minaccia_di_dimissioni',c:'C',p:2,di:'esteri_difesa',f:'Giulia Rossi, Esteri e Difesa, sotto la soglia di minaccia: soddisfazione 37,0',ca:'proposta respinta'},
+ {t:'intesa_variata',c:'o',pa:'centrodestra',f:'Due variazioni d’intesa di Centrodestra',ca:'più cause',det:[{s:'quota di ministeri scoperta, −1,0'},{s:'sondaggi in calo, −1,2'}]},
+ {t:'evento_nato',c:'C',p:1,re:'lazio',f:'Emergenza idrogeologica nel Lazio: 1 mld',ca:'rischio basso'},
+ {t:'misura_presentata',c:'N',pa:'sinistra',mi:7,disposizioni:['regime_pensioni'],f:'Sinistra porta nel posto riservato «Regime delle pensioni: retributivo»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe'},
+]},
+{n:8, voci:[
+ {t:'evento_risolto',c:'C',p:1,re:'lazio',f:'Emergenza idrogeologica nel Lazio: fondo di riserva per default, coperti 0 € su 1 mld',ca:'rischio basso'},
+ {t:'proposta_respinta',c:'C',p:1,di:'lavoro_welfare',f:'Proposta respinta senza risposta: Lavoro e Welfare, Simone Ricci, «Bonus straordinario per le famiglie in difficoltà»; soddisfazione −8',ca:'in sospeso da due turni senza risposta'},
+ {t:'emendamento_respinto',c:'C',p:1,mi:8,f:'Due emendamenti alla legge di bilancio respinti senza risposta: intesa −5 a Centrodestra e a Destra',ca:'senza risposta prima del voto',det:[{s:'Centrodestra: intesa −5,0',pa:'centrodestra'},{s:'Destra: intesa −5,0',pa:'destra'}]},
+ {t:'atto_eseguito',c:'o',f:'Tre atti eseguiti dai ministri',ca:'vicino alla sua posizione',det:[{s:'Economia e Finanze: «Riscossione affidata a concessionari privati», 148,0 mln €',di:'economia_finanze'},{s:'Sanità: «Accorpamento delle ASL e premi ai primari», 316,2 mln €',di:'sanita'},{s:'Giustizia: «Squadre di giudici a termine per l’arretrato», 76,1 mln €',di:'giustizia'}]},
+ {t:'cantiere_fermo',c:'N',f:'Cinque cantieri fermi un turno',ca:'la rata contro il margine residuo',det:[{s:'Lavoro e Welfare: «Centri per l’impiego rinnovati», rata 97,5 mln € su 45,3 mln € di margine',di:'lavoro_welfare'},{s:'Ambiente ed Energia: «Rigassificatori e nuove centrali», rata 209,3 su 2,1 mln €',di:'ambiente_energia'},{s:'Interno: «Videosorveglianza e centri di rimpatrio», rata 173,1 su 58,1 mln €',di:'interno'},{s:'Interno: «Accoglienza diffusa e corridoi umanitari», rata 116,6 su 58,1 mln €',di:'interno'},{s:'Esteri e Difesa: «Ammodernamento dei mezzi», rata 256,9 su 125,7 mln €',di:'esteri_difesa'}]},
+ {t:'leggi_slittate',c:'o',mi:6,disposizioni:['leva_militare'],f:'Una legge passa al turno dopo: «Leva militare: obbligatoria»',ca:'turno del bilancio'},
+ {t:'bilancio_approvato',c:'N',mi:8,f:'Approvata la legge di bilancio 2029: Camera 219 sì e 181 no, Senato 114 sì e 86 no; dieci ministri col budget tagliato in termini reali',ca:LSI(['centrodestra','destra','giocatore'])},
+ {t:'spread',c:'o',f:'Spread a 62 punti base, −2',ca:'chiusura del trimestre'},
+ {t:'sondaggio',c:'o',f:'Coalizione al 48,7%, +2,3',ca:'sondaggio pubblico del trimestre'},
+ {t:'prima_stima',c:'o',f:'Ottobre–dicembre 2028, prima stima: PIL +1,4% annuo, inflazione 0,7%, disoccupazione 5,6%, disavanzo 2,3%',ca:'prima stima, riveduta fra un turno'},
+ {t:'revisione',c:'o',f:'Luglio–settembre 2028 riveduto: PIL da −0,6% a −0,9%, inflazione da 0,8% a 0,7%, disoccupazione da 6,0% a 5,9%, disavanzo da 2,1% a 2,0%',ca:'revisione della prima stima'},
+ {t:'entrate_di_cassa',c:'o',pa:'giocatore',f:`${PG}: 199.263 € fra 2 per mille e donazioni`,ca:'i voti dell’ultima elezione'},
+ {t:'soddisfazione_variata',c:'o',f:'Dieci ministri cambiano soddisfazione',ca:'budget tagliato',det:[{s:'Lavoro e Welfare, Simone Ricci: budget tagliato −3,4, indicatore in calo −3,3',di:'lavoro_welfare'},{s:'Interno, Filippo Barbieri: budget tagliato −3,4, indicatore in calo −5,0',di:'interno'},{s:'Infrastrutture e Trasporti, Filippo Ricci: budget tagliato −3,4, indicatore in calo −3,6',di:'infrastrutture_trasporti'},{s:'e altri sette'}]},
+ {t:'minaccia_di_dimissioni',c:'C',p:2,f:'Quattro ministri sotto la soglia di minaccia',ca:'indicatore del dicastero in calo',det:[{s:'Lavoro e Welfare, Simone Ricci: soddisfazione 35,7, proposta respinta',di:'lavoro_welfare'},{s:'Infrastrutture e Trasporti, Filippo Ricci: 36,9, indicatore in calo',di:'infrastrutture_trasporti'},{s:'Ambiente ed Energia, Luca Romano: 39,3, budget tagliato',di:'ambiente_energia'},{s:'Interno, Filippo Barbieri: 35,2, indicatore in calo',di:'interno'}]},
+ {t:'intesa_variata',c:'o',f:'Quattro variazioni d’intesa degli alleati',ca:'emendamento respinto',det:[{s:'Centrodestra: emendamento respinto, −5,0',pa:'centrodestra'},{s:'Centrodestra: ministri scontenti, −0,6',pa:'centrodestra'},{s:'Centrodestra: quota di ministeri scoperta, −1,0',pa:'centrodestra'},{s:'Destra: emendamento respinto, −5,0',pa:'destra'}]},
+ {t:'ultimatum_posto',c:'C',p:2,pa:'centrodestra',f:'Centrodestra in ultimatum: intesa 41,5',ca:'emendamento respinto'},
+ {t:'evento_nato',c:'C',p:1,re:'liguria',f:'Emergenza idrogeologica in Liguria: 1 mld',ca:'rischio medio'},
+ {t:'sfiducia_presentata',c:'C',p:3,pa:'sinistra',di:'interno',f:'Sinistra presenta la sfiducia a Filippo Barbieri, Interno',ca:'Centrodestra in ultimatum la voterebbe'},
+ {t:'misura_presentata',c:'N',pa:'centrosinistra',mi:9,disposizioni:['concorrenza_servizi'],f:'Centrosinistra porta nel posto riservato «Concorrenza nei servizi: mercato libero»',ca:'nessun seggio fra Camera e Senato dei partiti alleati la voterebbe'},
+]},
+// FORZATA: la sconfitta per seggi non arriva giocando; questa chiusura è inventata per lo stato «finita»
+{n:9, forzata:1, voci:[
+ {t:'risultato_del_voto',c:'C',p:3,pa:'giocatore',f:`Elezioni anticipate: affluenza 68,0%. ${PG} 2,4%, nessun seggio alla Camera né al Senato`,ca:'elezioni politiche'},
+ {t:'fine_della_partita',c:'C',p:3,pa:'giocatore',f:`Il ${PG} è senza seggi nelle due Camere: la partita finisce`,ca:'i seggi del voto'},
+]},
+];
+// la scelta delle sette, con la regola della spec («Le sette»): critiche per precedenza, poi le notevoli nell'ordine
+CH.forEach(ch=>{ ch.voci.forEach((x,i)=>{ x.i=i; x.n=ch.n; });
+  const crit = ch.voci.filter(x=>x.c==='C').sort((a,b)=>b.p-a.p||a.i-b.i).slice(0,7), ev=new Set(crit.map(x=>x.i));
+  ch.voci.forEach(x=>{ if(ev.size<7 && x.c==='N') ev.add(x.i); });
+  ch.voci.forEach(x=>x.ev=ev.has(x.i)); });
+
+// sezione di una voce: la voce non la porta, la decide la UI dal tipo
+const RIGHE = [['eventi','Cruscotto · eventi'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['paese','Paese'],['partiti','Partiti']];
+const RIGA = {evento_risolto:'eventi',evento_nato:'eventi',emergenza_lieve:'eventi',incarico:'eventi',
+  proposta_respinta:'governo',atto_eseguito:'governo',cantiere_avviato:'governo',cantiere_fermo:'governo',cantiere_finito:'governo',soddisfazione_variata:'governo',minaccia_di_dimissioni:'governo',governo_formato:'governo',
+  emendamento_respinto:'aula',leggi_slittate:'aula',legge_approvata:'aula',legge_respinta:'aula',bilancio_approvato:'aula',misura_presentata:'aula',sfiducia_presentata:'aula',
+  spread:'conti',prima_stima:'conti',revisione:'conti',situazione_spenta:'conti',
+  sondaggio:'paese',
+  entrate_di_cassa:'partiti',intesa_variata:'partiti',ultimatum_posto:'partiti',promessa_fatta:'partiti',spesa_di_campagna:'partiti',risultato_del_voto:'partiti',fine_della_partita:'partiti'};
+const RIM = {eventi:'Cruscotto',governo:'Governo',aula:'Aula',conti:'Conti',paese:'Paese',partiti:'Partiti'};
+const rimando = x => x.t==='evento_risolto'||x.t==='emergenza_lieve' ? 'Conti' : RIM[RIGA[x.t]];
+
+// ======================= stato del prototipo =======================
+const TRIM = ['','Gennaio–marzo','Aprile–giugno','Luglio–settembre','Ottobre–dicembre'];
+const dataDi = n => ({anno:2026+Math.floor((n+3)/4), trimestre:(n+3)%4+1});
+const per = n => { const d=dataDi(n); return `${TRIM[d.trimestre]} ${d.anno}`; };
+const CONS = [19.3,50.9,56.6,58.9,51.3,49.4,50.4,46.5,46.4,48.7], SPREAD=[84,83,86,89,71,67,64,62,64,62], DEF=[2,0,4,6,8,0,4,6,9,1];
+const STATI = {governo:{T:9}, grave:{T:7}, finita:{T:10,finita:1}, zero:{T:0}};
+const DEF_P = {v:'D', stato:'governo', fin:'1280', scala:'1'};
+const st = {...DEF_P};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF_P) st[k]=v; }); }catch(e){}
+const FORME = {D:'D · Indice col filo', A:'A · Indice', B:'B · Cronologia', C:'C · Tabellone'};
+function azzera(){ Object.assign(st, STATI[st.stato]||STATI.governo, {riav:0, conf:null, sel:null, turno:null, cella:null, fc:'tutte', fs:'tutte', fg:'', salto:null}); if(!STATI[st.stato]) st.stato='governo'; }
+azzera();
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const ultima = () => st.T-1;                                    // l'ultima chiusura nel registro
+const REGISTRO = () => CH.filter(c=>c.n<=ultima() && (!c.forzata || st.finita));   // registro(0) … registro(ultima)
+const grave = () => !st.finita && (st.T===1 || st.T===7);       // evento in tono grave aperto: tutto il turno è grave
+const voce = (n,i) => CH[n].voci[i];
+const ord = k => ['primo','secondo','terzo','quarto','quinto'][k-1] || k+'°';
+
+// ======================= cornice A · Gerenza =======================
+function caselle(pos,soglia=3,n=10){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  return `<span class="cas ${pos<=soglia?'inp':''}">${Array.from({length:n},(_,i)=>`<i class="${[i<soglia?'per':'', i===soglia-1?'sog':'', i<pos?'on':''].join(' ')}"></i>`).join('')}</span>`;
+}
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+function tracciati(){
+  const T=Math.min(st.T,9), c=CONS[T], m=T===0||st.finita?null:[23,14], s=SPREAD[T];
+  const riga = (k,v,pos) => `<div class="trk"><span class="k">${k}</span>${caselle(pos)}<span class="v">${v}</span></div>`;
+  return `<div class="trks">${riga(T===0?'Consenso del partito':'Consenso',num(c)+'%',clamp(Math.round((c-25)/5),0,10))}${riga('Maggioranza C / S', m?m.map(x=>'+'+x).join(' / '):(st.finita?'senza seggi':'Camere sciolte'), m?clamp(Math.round((Math.min(...m)+9)/3),0,10):null)}${riga('Conti · spread',s,clamp(Math.round((500-s)/50),0,10))}</div>`;
+}
+const SEZ = [['prima','Prima pagina'],['cruscotto','Cruscotto'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function barrate(){
+  const T=st.T, b={};
+  if(st.finita){ b.governo='Partita finita: nessun governo da guidare'; b.aula='Partita finita: niente aula'; }
+  if(T===0){ b.prima='Turno zero: nessun esito ancora'; b.governo='Turno zero: il governo nasce dopo il voto'; b.aula='Camere sciolte: niente aula fino al voto'; b.registro='Dal turno 1: al turno zero non c’è ancora nessuna chiusura'; }
+  if(T===1){ b.governo='Trattativa: il governo non c’è ancora'; b.aula='Trattativa: le Camere aspettano il governo'; }
+  if(st.finita || dataDi(T).trimestre!==4 || T<2) b.bilancio='La legge di bilancio si presenta in ottobre-dicembre';
+  if(T!==0) b.campagna='Si fa campagna solo nel turno prima del voto';
+  return b;
+}
+function cornice(){
+  const T=st.T, b=barrate();
+  const stato = st.finita ? 'Partita finita · eredità in bozza' : T===0 ? 'Turno zero' : T===1 ? 'Trattativa · incarico a te' : 'Al governo';
+  const voto = st.finita ? 'nessun turno al voto' : T===0 ? 'si vota a fine turno' : `${20-T} turni al voto`;
+  const chi=`<span class="chi"><b>${stato}</b><br>${per(T)} · turno ${T}<br><b>${voto}</b></span>`;
+  const nomeS = k => k==='cruscotto' ? (st.finita?'Eredità':T===1?'Trattativa':'Cruscotto') : SEZ.find(x=>x[0]===k)[1];
+  const qui = b.registro ? 'cruscotto' : 'registro';
+  const somm=`<nav class="somm" aria-label="Sommario">${SEZ.map(([k])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}" ${k==='registro'?'id="reg-b"':''}>${nomeS(k)}</button>` : `<button class="${k===qui?'qui':''}" ${k===qui?'aria-current="page"':''}>${nomeS(k)}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+  const d=DEF[Math.min(T,9)];
+  const dx = st.finita ? '' : `<div class="pila"><button class="btn pieno">Chiudi il turno ›</button></div>${d ? `<button class="def">${d} ${d===1?'scelta va':'scelte vanno'} al default ›</button>` : '<span class="def tutte">nessuna scelta al default</span>'}`;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino">Il Pungolo</span>${chi}</div>${tracciati()}<div class="c-dx">${dx}</div></div>${somm}</header>`;
+}
+function banda(){
+  if(st.riav) return `<div class="banda riav"><span>Riavvolto all’apertura del turno ${st.T}, ${per(st.T).toLowerCase()} · ${st.riav} ${st.riav===1?'riavvolgimento':'riavvolgimenti'} in questa partita (prototipo: nessun comando vero)</span><button data-azzera>torna allo stato «${st.stato}»</button></div>`;
+  if(st.stato==='governo' && st.T===9) return `<div class="banda ferma"><span>Avanti fino a novità (simulato): 4 chiusure di fila dal turno 5, ti ferma il turno 9. Le pagine saltate sono nel registro:</span><button data-salto="5">turni 5, 6 e 7 ›</button></div>`;
+  if(st.finita) return `<div class="banda"><span>Partita finita: l’eredità è in bozza. Finché non la confermi puoi tornare a un turno dal registro.</span><span class="forz" style="border-color:var(--carta)">stato forzato</span></div>`;
+  return '';
+}
+
+// ======================= pezzi comuni =======================
+const mk = x => `<i class="mk ${x.c}" title="${x.c==='C'?'critica':x.c==='N'?'notevole':'ordinaria'}"></i>`;
+const tagGrave = x => x.g ? '<span class="grave">tono grave</span>' : '';
+function riga(x, sel){   // una voce nell'elenco: segno di criticità, fatto, causa; a destra prima pagina, tono, sezione
+  return `<div class="vc ${x.c} ${sel?'sel':''}" data-v="${x.n}:${x.i}" tabindex="0">${mk(x)}<span class="fa">${esc(x.f)}</span><span class="ca">${esc(x.ca)}</span>${righeFilo(x)}
+    <span class="tg">${x.ev?'<span class="pp">in prima pagina</span>':''}${tagGrave(x)}<span class="etc">${RIM[RIGA[x.t]]}</span></span></div>`;
+}
+const righeFilo = x => { const f=filtro(); if(!f || ha(x,...f) || !x.det) return ''; return x.det.filter(d=>ha(d,...f)).map(d=>`<span class="rf">${esc(d.s)}</span>`).join(''); };
+const conti = ch => { const v=ch.voci, c=v.filter(x=>x.c==='C').length; return {n:v.length, c, ev:v.filter(x=>x.ev).length, g:v.some(x=>x.g), voto:v.some(x=>x.t==='risultato_del_voto'), gov:v.some(x=>x.t==='governo_formato')}; };
+function testoConferma(N){
+  const U=ultima(), k=U-N+1, R=REGISTRO().filter(c=>c.n>=N);
+  const voti=R.filter(c=>conti(c).voto).map(c=>`il voto di ${per(c.n).toLowerCase()}${c.forzata?' (quello perso)':''}`);
+  const gov=R.filter(c=>conti(c).gov).map(c=>`la nascita del governo, ${per(c.n).toLowerCase()}`);
+  const mezzo=[...voti,...gov];
+  const corrente = st.finita ? 'e l’eredità in bozza' : `e il turno ${st.T} in corso, con le scelte già fatte`;
+  return `Torni all’<b>apertura del turno ${N}</b>, ${per(N).toLowerCase()}. Si cancellano <b>${k===1?`la chiusura del turno ${N}`:`${k} chiusure, dal turno ${N} ${[8,11].includes(U)?'all’':'al '}${U}`}</b>, fino a ${per(U).toLowerCase()}, ${corrente}.
+    ${mezzo.length?`In mezzo ${mezzo.length>1?'ci sono':'c’è'} <b>${mezzo.join(' e ')}</b>: ${mezzo.length>1?'si cancellano anche quelli':'si cancella anche quello'}.`:'In mezzo nessun voto e nessun governo nuovo.'}
+    Il riavvolgimento si conta: sarà il ${ord(st.riav+1)} di questa partita, e l’albo lo riporta. Con le stesse scelte il caso dà lo stesso esito.`;
+}
+function torna(N, p=''){   // conferma sul posto: il pulsante diventa due pulsanti, con scritto cosa si cancella
+  if(st.conf!==N) return `<button class="btn via ${p}" data-torna="${N}">Torna al turno ${N} ›</button>`;
+  const k=ultima()-N+1;
+  return `<div class="conf" role="group" aria-label="Conferma del riavvolgimento"><p>${testoConferma(N)}</p>
+    <div class="az"><button class="btn via pieno" data-si="${N}">Conferma: cancella ${k===1?'1 chiusura':k+' chiusure'}</button><button class="btn" data-no>Annulla</button></div></div>`;
+}
+// soggetti simulati (rimandi al core): la voce porta `disposizioni` accanto a `misura`, e ogni riga di `det` porta i suoi campi
+const KS = ['pa','di','re','mi','disposizioni'];
+const DISP = {decontribuzione:'Sgravio contributivo nel Mezzogiorno',autonomia_differenziata:'Autonomia differenziata',regime_pensioni:'Regime delle pensioni',concorrenza_servizi:'Concorrenza nei servizi',cuneo_fiscale:'Cuneo fiscale',leva_militare:'Leva militare',nucleare:'Nucleare',salario_minimo:'Salario minimo legale'};
+const nomeSog = (k,v) => ({pa:NP,di:DIC,re:REG,mi:MIS,disposizioni:DISP})[k][v];
+const valori = (o,k) => o[k]==null ? [] : [].concat(o[k]);
+const ha = (o,k,v) => valori(o,k).includes(v);
+const coppie = o => KS.flatMap(k=>valori(o,k).map(v=>[k,v]));
+const filtro = () => { if(!st.fg) return null; const [k,v]=st.fg.split('='); return [k, k==='mi'?+v:v]; };
+const attivo = () => st.fc!=='tutte' || st.fs!=='tutte' || !!st.fg;
+function dettaglio(x){   // la voce scelta, nel dettaglio a lato
+  const sog = [x.pa&&['Partito',NP[x.pa]], x.di&&['Dicastero',DIC[x.di]], x.re&&['Regione',REG[x.re]], x.mi!=null&&['Misura',MIS[x.mi]], x.disposizioni&&['Disposizioni',x.disposizioni.map(d=>DISP[d]).join(', ')]].filter(Boolean);
+  return `<div class="dv"><div class="meta">Turno ${x.n} · ${per(x.n).toLowerCase()} · voce ${x.i+1} di ${CH[x.n].voci.length}</div>
+    <div class="fatto">${esc(x.f)}</div><div class="causa">${esc(x.ca)}</div>
+    ${x.det?`<div class="det">${x.det.map(d=>`<span>${esc(d.s)}</span>`).join('')}</div>`:''}
+    <dl class="dati"><dt>Criticità</dt><dd>${x.c==='C'?`critica, precedenza ${x.p}`:x.c==='N'?'notevole':'ordinaria'}</dd>
+      <dt>Prima pagina</dt><dd>${x.ev?'sì, una delle sette':'no'}</dd>${x.g?'<dt>Tono</dt><dd>grave</dd>':''}
+      ${sog.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Tipo</dt><dd class="muto">${x.t}</dd></dl>
+    <div class="az"><button class="btn">${rimando(x)} ›</button></div></div>`;
+}
+const corretta = x => x.t==='revisione' && x.n>0 ? CH[x.n-1].voci.find(y=>y.t==='prima_stima') : null;   // storia 119
+const correttaDa = x => x.t==='prima_stima' && CH[x.n+1] && x.n+1<=ultima() ? CH[x.n+1].voci.find(y=>y.t==='revisione') : null;
+function collegate(x){   // stesso soggetto negli altri turni: nei campi della voce, o in una riga dei dettagli di una fusa
+  const keys=[...coppie(x), ...(x.det||[]).flatMap(coppie)], tutte=REGISTRO().flatMap(c=>c.voci).filter(y=>y.n!==x.n);
+  const stesse=tutte.filter(y=>keys.some(([k,v])=>ha(y,k,v)));
+  const nelleRighe=tutte.filter(y=>!stesse.includes(y) && (y.det||[]).some(d=>keys.some(([k,v])=>ha(d,k,v))));
+  return {keys, stesse, nelleRighe};
+}
+const rif = (y,etichetta) => `<div class="rif" data-v="${y.n}:${y.i}" tabindex="0"><span class="meta">${etichetta} · turno ${y.n}, ${per(y.n).toLowerCase()}</span>${esc(y.f)}</div>`;
+const nota = html => `<div class="nota">${html}</div>`;
+function latoCollegate(sel){
+  if(!sel) return '<div class="ph" style="margin-top:4px">Scegli una voce: qui la voce, e le voci degli altri turni che parlano dello stesso partito, dicastero, regione, misura o disposizione. Una revisione porta la prima stima che corregge.</div>';
+  const c=collegate(sel), pr=corretta(sel), rv=correttaDa(sel);
+  return dettaglio(sel)
+    + (pr?`<div class="h5">Corregge</div>${rif(pr,'Prima stima')}`:'') + (rv?`<div class="h5">Riveduta da</div>${rif(rv,'Revisione')}`:'')
+    + (c.keys.length ? `<div class="h5">Stesso soggetto negli altri turni · ${c.stesse.length}</div>${c.stesse.length?c.stesse.map(y=>rif(y,RIM[RIGA[y.t]])).join(''):'<div class="sec muto">Nessuna.</div>'}
+       ${c.nelleRighe.length?`<div class="h5">In una riga dei dettagli · ${c.nelleRighe.length}</div>${c.nelleRighe.map(y=>rif(y,'voce fusa')).join('')}`:''}`
+       : (pr||rv ? '' : `<div class="h5">Collegate</div><div class="sec muto">La voce non porta un soggetto.</div>`));
+}
+
+// ======================= filtri (B e D) =======================
+function passa(x){
+  if(st.fc==='critiche' && x.c!=='C') return false;
+  if(st.fc==='notevoli' && x.c==='o') return false;
+  if(st.fs!=='tutte' && RIGA[x.t]!==st.fs) return false;
+  const f=filtro(); if(f) return ha(x,...f) || (x.det||[]).some(d=>ha(d,...f));
+  return true;
+}
+function filtri(){
+  const sog = {}; KS.forEach(k=>sog[k]=new Set());
+  REGISTRO().forEach(c=>c.voci.forEach(x=>[x,...(x.det||[])].forEach(o=>coppie(o).forEach(([k,v])=>sog[k].add(v)))));
+  const opt = (k,et) => sog[k].size ? `<optgroup label="${et}">${[...sog[k]].sort((a,b)=>String(nomeSog(k,a)).localeCompare(nomeSog(k,b))).map(v=>`<option value="${k}=${v}" ${st.fg===`${k}=${v}`?'selected':''}>${esc(nomeSog(k,v))}</option>`).join('')}</optgroup>` : '';
+  return `<div class="filtri"><span class="gr"><span class="k">Criticità</span>${[['tutte','tutte'],['notevoli','critiche e notevoli'],['critiche','solo critiche']].map(([v,l])=>`<button class="btn p ${st.fc===v?'scelto':''}" data-fc="${v}">${l}</button>`).join('')}</span>
+    <span class="gr"><span class="k">Sezione</span><select data-fs aria-label="Sezione"><option value="tutte">tutte</option>${RIGHE.map(([k,l])=>`<option value="${k}" ${st.fs===k?'selected':''}>${l}</option>`).join('')}</select></span>
+    <span class="gr"><span class="k">Soggetto</span><select data-fg aria-label="Soggetto"><option value="">nessuno</option>${opt('pa','Partito')}${opt('di','Dicastero')}${opt('re','Regione')}${opt('mi','Misura')}${opt('disposizioni','Disposizione')}</select></span>
+    ${attivo()?'<button class="link" data-pulisci>togli i filtri</button>':''}</div>`;
+}
+const LEGGE_MOLTI = n => `<b>Cosa legge:</b> tutti i turni, <code>registro(0)</code> … <code>registro(${ultima()})</code>, ${n} file all’apertura; a fine legislatura una ventina, in una partita lunga cento. I filtri lavorano in memoria.`;
+const SIMULATI = '<b>Simulati (rimandi al core):</b> la voce porta <code>disposizioni</code> accanto a <code>misura</code>, così pensioni (misure 2 e 7) e concorrenza (4 e 9) stanno insieme; ogni riga di <code>dettagli</code> porta i suoi soggetti, così il filo «Interno» passa anche dalle voci fuse.';
+
+// ======================= D · Indice col filo =======================
+function indiceFilo(){
+  const R=REGISTRO(), att=attivo(), sel = st.sel ? voce(...st.sel) : null;
+  const righe = R.map(c=>({c, v:c.voci.filter(passa)})).filter(r=>!att || r.v.length);
+  if(righe.length && !righe.find(r=>r.c.n===st.turno)) st.turno=righe.at(-1).c.n;
+  const r=righe.find(r=>r.c.n===st.turno);
+  const col = righe.length ? [...righe].reverse().map(({c,v})=>{ const k=conti(c); return `<button class="tn ${c.n===st.turno?'sel':''}" data-turno="${c.n}"><b>Turno ${c.n}${c.forzata?' <span class="forz">forzata</span>':''}</b><span class="segni">${k.c?'<i class="mk C" title="ha voci critiche"></i>':''}${k.g?'<span class="grave">grave</span>':''}${k.voto?'<span class="voto">voto</span>':''}</span>
+    <span class="meta">${per(c.n)}</span><span class="meta">${att?`${v.length} di ${k.n}`:`${k.n} voci`}</span></button>`; }).join('') : '<div class="vuote" style="padding:8px var(--marg)">Nessun turno col filtro.</div>';
+  let pag = '<div class="ph" style="margin-top:4px">Nessuna voce in nessun turno con questi filtri.</div>';
+  if(r){ const k=conti(r.c);
+    pag = `<div class="capo"><h3 class="tit">Turno ${r.c.n} · ${per(r.c.n).toLowerCase()}</h3>${torna(r.c.n,'p')}</div>
+    <div class="meta" style="margin:4px 0 2px">${att?`${r.v.length} di ${k.n} voci col filtro, `:`${k.n} voci `}nell’ordine della chiusura · ${k.ev} in prima pagina · ${k.c} critiche${r.c.forzata?' · <span class="forz">chiusura forzata</span>':''}</div>
+    <div class="voci">${r.v.map(x=>riga(x, sel===x)).join('')}</div>`; }
+  return `<div class="corpo ind filo">${filtri()}<div class="turni col"><h3 class="tit">Registro</h3>${col}</div><div class="pag col">${pag}</div><aside class="lato">${latoCollegate(sel)}</aside>
+    ${nota(`${att?LEGGE_MOLTI(R.length):`<b>Cosa legge:</b> senza filtri <code>registro(${st.turno})</code>, un file per turno scelto; la colonna con conteggi e segni, e ogni filtro, chiedono tutti i ${R.length} file.`} ${SIMULATI}`)}</div>`;
+}
+
+// ======================= A · Indice =======================
+function indice(){
+  const R=REGISTRO(); if(st.turno==null || !R.find(c=>c.n===st.turno)) st.turno=R.at(-1).n;
+  const ch=CH[st.turno], sel = st.sel && st.sel[0]===ch.n ? voce(...st.sel) : null;
+  const col = [...R].reverse().map(c=>{ const k=conti(c); return `<button class="tn ${c.n===ch.n?'sel':''}" data-turno="${c.n}"><b>Turno ${c.n}${c.forzata?' <span class="forz">forzata</span>':''}</b><span class="segni">${k.c?'<i class="mk C" title="ha voci critiche"></i>':''}${k.g?'<span class="grave">grave</span>':''}${k.voto?'<span class="voto">voto</span>':''}</span>
+    <span class="meta">${per(c.n)}</span><span class="meta">${k.n} voci</span></button>`; }).join('');
+  const k=conti(ch);
+  const pag = `<div class="capo"><h3 class="tit">Turno ${ch.n} · ${per(ch.n).toLowerCase()}</h3>${torna(ch.n,'p')}</div>
+    <div class="meta" style="margin:4px 0 2px">${k.n} voci nell’ordine della chiusura · ${k.ev} in prima pagina · ${k.c} critiche${ch.forzata?' · <span class="forz">chiusura forzata</span>':''}</div>
+    <div class="voci">${ch.voci.map(x=>riga(x, sel===x)).join('')}</div>`;
+  const lato = sel ? dettaglio(sel) : `<div class="ph" style="margin-top:4px">Scegli una voce: qui il fatto, la causa, i dettagli delle voci fuse e il rimando alla sezione.</div>`;
+  return `<div class="corpo ind"><div class="turni col"><h3 class="tit">Registro</h3>${col}</div><div class="pag col">${pag}</div><aside class="lato">${lato}</aside>
+    ${nota(`<b>Cosa legge:</b> <code>registro(${ch.n})</code>, un file, quando scegli il turno. <b>Cosa sa senza leggere:</b> numero e trimestre di ogni turno chiuso (dal turno della Vista). Numero di voci, quadratino delle critiche, tono grave e voto nella colonna chiedono invece tutti i file, ${R.length} letture all’apertura: o li toglie, o serve un comando che dia il riassunto per turno.`)}</div>`;
+}
+
+// ======================= B · Cronologia =======================
+function cronologia(){
+  const R=[...REGISTRO()].reverse(), sel = st.sel ? voce(...st.sel) : null;
+  let tot=0;
+  const flusso = R.map(c=>{ const v=c.voci.filter(passa), k=conti(c); tot+=v.length;
+    return `<section class="chiu" id="chiu-${c.n}"><div class="capo"><h3 class="tit">Turno ${c.n} · ${per(c.n).toLowerCase()}${k.g?' <span class="grave">grave</span>':''}${k.voto?' <span class="voto">voto</span>':''}${c.forzata?' <span class="forz">forzata</span>':''}</h3>
+      <span class="meta">${v.length===k.n?`${k.n} voci`:`${v.length} di ${k.n} voci`}</span>${torna(c.n,'p')}</div>
+      ${v.length?v.map(x=>riga(x, sel===x)).join(''):'<div class="vuote">Nessuna voce col filtro in questa chiusura.</div>'}</section>`; }).join('');
+  return `<div class="corpo cro">${filtri()}<div class="flusso col">${tot?'':'<div class="ph" style="margin-top:12px">Nessuna voce in nessun turno con questi filtri.</div>'}${flusso}</div><aside class="lato">${latoCollegate(sel)}</aside>
+    ${nota(`${LEGGE_MOLTI(R.length)} ${SIMULATI}`)}</div>`;
+}
+
+// ======================= C · Tabellone =======================
+function tabellone(){
+  const R=REGISTRO(), sel = st.sel ? voce(...st.sel) : null;
+  if(!st.cella) st.cella=[R.at(-1).n,null];
+  const [cn,cr]=st.cella;
+  const leg = sel ? (corretta(sel)||correttaDa(sel)) : null;
+  const segno = x => `<i class="mk ${x.c} ${x.t==='revisione'?'rev':''} ${leg===x||sel===x?'leg':''}" title="${esc(x.f)}"></i>`;
+  const cols = `150px repeat(${R.length},minmax(0,1fr))`;
+  let g = `<div class="tb" style="grid-template-columns:${cols}"><div class="rg" style="border-bottom:var(--forte)"></div>`;
+  g += R.map(c=>{ const k=conti(c); return `<button class="hd ${cn===c.n&&cr==null?'sel':''}" data-col="${c.n}"><b>Turno ${c.n}</b><span class="meta">${TRIM[dataDi(c.n).trimestre].slice(0,3).toLowerCase()}–${TRIM[dataDi(c.n).trimestre].split('–')[1].slice(0,3)} ${dataDi(c.n).anno}</span>
+    <span class="segni">${k.g?'<span class="grave">grave</span>':''}${k.voto?'<span class="voto">voto</span>':''}${c.forzata?'<span class="forz">forz.</span>':''}</span></button>`; }).join('');
+  RIGHE.forEach(([r,l])=>{ g += `<div class="rg">${l}</div>` + R.map(c=>{ const v=c.voci.filter(x=>RIGA[x.t]===r);
+    return `<div class="cl ${cn===c.n&&cr===r?'sel':''} ${cn===c.n&&cr==null?'col':''}" data-cella="${c.n}:${r}" tabindex="0" aria-label="Turno ${c.n}, ${l}: ${v.length} voci">${v.map(segno).join('')}</div>`; }).join(''); });
+  g += '</div>';
+  const legenda = `<div class="leg-r"><span><i class="mk C"></i> critica</span><span><i class="mk N"></i> notevole</span><span><i class="mk o"></i> ordinaria</span><span><i class="mk o rev"></i> revisione: corregge la prima stima della colonna prima</span><span>Clic su una cella o su un turno: le voci a lato.</span></div>`;
+  // a lato: le voci della cella o della colonna, oppure la voce scelta
+  const ch=CH[cn], voci = ch.voci.filter(x=>cr==null || RIGA[x.t]===cr);
+  let lato;
+  if(sel){ const pr=corretta(sel), rv=correttaDa(sel);
+    lato = `<button class="link" data-indietro>‹ ${cr?`Turno ${cn} · ${RIM[cr]}`:`Turno ${cn}`}</button>${dettaglio(sel)}${pr?`<div class="h5">Corregge</div>${rif(pr,'Prima stima')}`:''}${rv?`<div class="h5">Riveduta da</div>${rif(rv,'Revisione')}`:''}`;
+  } else {
+    const k=conti(ch);
+    const gruppi = cr ? `<div class="voci">${voci.map(x=>riga(x,false)).join('')||'<div class="vuote">Nessuna voce di questa sezione nella chiusura.</div>'}</div>`
+      : RIGHE.map(([r,l])=>{ const v=ch.voci.filter(x=>RIGA[x.t]===r); return v.length?`<div class="gruppo"><h4>${l}</h4>${v.map(x=>riga(x,false)).join('')}</div>`:''; }).join('');
+    lato = `<div class="capo"><h3 class="tit" style="font-size:var(--c-riq)">Turno ${cn}${cr?` · ${RIM[cr]}`:''}</h3><span class="meta">${per(cn).toLowerCase()}</span></div>
+      <div class="meta" style="margin:4px 0">${cr?`${voci.length} voci di ${k.n}`:`${k.n} voci, ${k.c} critiche, ${k.ev} in prima pagina`}</div>
+      ${cr?'':torna(cn)}${gruppi}`;
+  }
+  return `<div class="corpo tab"><div class="griglia col"><div class="capo"><h3 class="tit">Registro · ${R.length} chiusure per sezione</h3><span class="meta">un segno per voce, nell’ordine della chiusura</span></div>${g}${legenda}</div><aside class="lato">${lato}</aside>
+    ${nota(`<b>Cosa legge:</b> tutti i turni per riempire la griglia, ${R.length} file di <code>registro(t)</code>. <b>Cosa decide la UI:</b> la riga di ogni voce, dal tipo (la voce non porta la sezione); il legame revisione → prima stima, dal turno prima (la revisione non porta il riferimento).`)}</div>`;
+}
+
+// ======================= turno zero: sezione barrata =======================
+function zero(){
+  return `<div class="corpo" style="grid-template-rows:minmax(0,1fr) auto"><div style="padding:16px var(--marg)"><div class="ph">Qui c’è il <b>Cruscotto del turno zero</b> (prototipo 17): coalizione da dichiarare, campagna. La sezione <b>Registro</b> nel sommario è barrata e dice perché, al passaggio del puntatore: <b>«${esc(barrate().registro)}»</b>. Si accende dopo la prima chiusura, con le voci del voto.</div></div>
+    ${nota('<b>Cosa legge:</b> niente. <code>registro(0)</code> darebbe errore: la partita in memoria non ha ancora chiuso il turno 0.')}</div>`;
+}
+
+// ======================= montaggio =======================
+const scr = document.getElementById('screen');
+let limite='';
+function render(){
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  const b=banda(), corpo = st.T===0 ? zero() : st.v==='B' ? cronologia() : st.v==='C' ? tabellone() : st.v==='A' ? indice() : indiceFilo();
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS ${grave()?'g':''} ${lw<1150?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto ${b?'auto ':''}minmax(0,1fr)">${cornice()}${b}${corpo}</div>`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', st[seg.dataset.k]===x.dataset.v)));
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  try{ const p=new URLSearchParams(); for(const kk in DEF_P) if(st[kk]!==DEF_P[kk]) p.set(kk,st[kk]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  if(st.T===0) mostraPerche(document.getElementById('reg-b'));
+  const c=scr.querySelector('.conf'); if(c) c.scrollIntoView({block:'nearest'});
+  if(st.salto!=null){ const el=scr.querySelector('#chiu-'+st.salto); if(el) el.scrollIntoView({block:'start'}); st.salto=null; }
+  tagli();
+}
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ const b=el.getBoundingClientRect();
+    const fuori = b.width && b.right>R.right+1 && !el.closest('.col,.lato');
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && cs.overflow!=='hidden' && !/auto|scroll/.test(cs.overflowY) && !/auto|scroll/.test(cs.overflowX) && el!==r && el.tagName!=='SELECT';
+    if(fuori||stretto) n++; });
+  document.getElementById('avv').textContent = [limite, n?`tagli: ${n}`:''].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const kk=Object.keys(FORME); st.v=kk[(kk.indexOf(st.v)+(b.id==='next'?1:kk.length-1))%kk.length]; st.sel=null; st.conf=null; render(); return; }
+  const kk=b.parentElement.dataset.k; st[kk]=b.dataset.v;
+  if(kk==='stato') azzera();
+  render();
+});
+function scegli(t){ const [n,i]=t.split(':').map(Number); st.sel=[n,i]; if(st.v==='A'||st.v==='D') st.turno=n; }
+scr.addEventListener('click',e=>{
+  const t=e.target;
+  const q = s => t.closest(s);
+  if(q('[data-azzera]')){ azzera(); render(); return; }
+  if(q('[data-salto]')){ const n=+q('[data-salto]').dataset.salto; Object.assign(st,{fc:'tutte',fs:'tutte',fg:'',sel:null,conf:null,turno:n,cella:[n,null],salto:n}); render(); return; }
+  if(q('[data-pulisci]')){ Object.assign(st,{fc:'tutte',fs:'tutte',fg:''}); render(); return; }
+  if(q('[data-torna]')){ st.conf=+q('[data-torna]').dataset.torna; render(); return; }
+  if(q('[data-no]')){ st.conf=null; render(); return; }
+  if(q('[data-si]')){ const N=+q('[data-si]').dataset.si; st.riav++; st.T=N; st.finita=0; st.conf=null; st.sel=null; st.turno=null; st.cella=null; render(); return; }
+  if(q('[data-turno]')){ st.turno=+q('[data-turno]').dataset.turno; st.sel=null; st.conf=null; render(); return; }
+  if(q('[data-fc]')){ st.fc=q('[data-fc]').dataset.fc; render(); return; }
+  if(q('[data-col]')){ st.cella=[+q('[data-col]').dataset.col,null]; st.sel=null; st.conf=null; render(); return; }
+  if(q('[data-cella]')){ const [n,r]=q('[data-cella]').dataset.cella.split(':'); st.cella=[+n,r]; st.sel=null; st.conf=null; render(); return; }
+  if(q('[data-indietro]')){ st.sel=null; render(); return; }
+  if(q('[data-v]')){ scegli(q('[data-v]').dataset.v); if(st.v==='C' && st.sel) st.cella=[st.sel[0], st.cella&&st.cella[0]===st.sel[0]?st.cella[1]:null]; render(); return; }
+});
+scr.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.matches('[data-fs]')) st.fs=t.value;
+  if(t.matches('[data-fg]')) st.fg=t.value;
+  render();
+});
+scr.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ') && e.target.matches('[data-v],[data-cella]')){ e.preventDefault(); e.target.click(); } });
+function mostraPerche(b){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove()); if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, kk=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  r.appendChild(el);
+  const left=Math.min((B.left-R.left)/kk/z, r.offsetWidth-el.offsetWidth-8);
+  el.style.left=left+'px'; el.style.top=((B.bottom-R.top)/kk/z+2)+'px';
+}
+function perche(e){
+  const b=e.type==='mouseover'||e.type==='focusin' ? e.target.closest('[data-perche]') : null;
+  if(!b && st.T===0) return mostraPerche(document.getElementById('reg-b'));
+  mostraPerche(b);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

@@ -1271,6 +1271,38 @@ fn prima_pagina(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Il registro (ticket 25): la partita del 05 (seme 4 a 4,5, la bozza a ogni bilancio), con la
+/// Vista prima e dopo ogni chiusura dei turni 0-8. Le voci le scrive a mano il prototipo.
+fn registro(d: &DatiGioco) -> Esito<Uscita> {
+    let mut p = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut p)?;
+    let mut chiusure = Vec::new();
+    let mut note = Vec::new();
+    while p.vista().turno <= 8 && !p.finita() {
+        let turno = p.vista().turno;
+        let mut mosse = Vec::new();
+        if turno == 0 {
+            mosse.push("DichiaraCoalizione con la destra disponibile");
+        }
+        if p.governa() && !p.vista().crisi {
+            if let Some(bilancio) = p.bozza_bilancio() {
+                comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
+                mosse.push("PresentaBilancio con la bozza");
+            }
+        }
+        let prima = serde_json::to_value(p.vista()).map_err(|e| e.to_string())?;
+        p.chiudi_turno();
+        let dopo = serde_json::to_value(p.vista()).map_err(|e| e.to_string())?;
+        note.push(format!("{turno}: {mosse:?}"));
+        chiusure.push(serde_json::json!({"turno": turno, "mosse": mosse, "prima": prima, "dopo": dopo}));
+    }
+    Ok(Uscita {
+        nome: "25-registro.json",
+        json: serde_json::to_string(&chiusure).map_err(|e| e.to_string())?,
+        nota: format!("seme 4 a 4,5, chiusure {}", note.join("; ")),
+    })
+}
+
 /// Pericolosità della spec di core «esito e Vista completa» (PR 2, «Regioni»): per tipo le
 /// emergenze attese l'anno, con le probabilità di `eventi/emergenze.rs:40-60` sui quattro
 /// trimestri, divise per quelle della regione più esposta; `totale` fa lo stesso sulla somma.
@@ -1489,6 +1521,7 @@ fn esegui() -> Esito<()> {
     uscite.push(conti(&d)?);
     uscite.push(bilancio(&d)?);
     uscite.push(paese(&d)?);
+    uscite.push(registro(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

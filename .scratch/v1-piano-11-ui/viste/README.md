@@ -40,11 +40,22 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `21-conti.json` | 4, 1, 25, 11 | 4,5 / 1,5 | 2-25 | 441110 | stati dei Conti, ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto_ripetuto`, `serie` e `vista` dopo `Compra { CentroStudi }`: `studi_03` (il 03), `studi_06` (il 06), `due_accese` (seme 4 turno 15), `vicina` (seme 1 turno 13, recessione al primo trimestre sotto), `spread_alto` (seme 25 turno 16, 205 pb), `senza_bilancio` (seme 11 turno 25, bilancio mai presentato) (vedi sotto) |
 | `22-bilancio.json` | 4, 1 | 4,5 / 1,5 | 2-13 | 464346 | stati del Bilancio, ciascuno con `come`, `serie` e `vista`: `bozza_04` (il 03 chiuso due volte, prima di `PresentaBilancio`) con `bozza`, `riepilogo_bozza` e i `varianti` di `riepilogo_bilancio` (indicizza tutto, soglie, ogni dicastero da solo, Iva al 24%, primo scaglione al 21%, margine della Sanità dal funzionamento o in disavanzo, Iva al 95% rifiutata); `presentato` con `riepilogo_presentato` e `se_accogli` per alleato; `emendamenti_decisi` (Centrodestra accolto, Destra respinta); `ripresentato` (indicizzato per tutto); `provvisorio` (seme 1 turno 13, bilancio mai presentato); `opposizione` (il 06 fino a ottobre-dicembre, con il rifiuto di `riepilogo_bilancio`); `fuori_stagione` (la bozza del 04 sul 03, rifiutata) (vedi sotto) |
 | `23-paese.json` | 4, 1 | 4,5 / 1,5 | 0, 2, 7 | 648759 | stati della sezione Paese: `governo` (il 03) e `opposizione` (il 06), ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto`, `rifiuto_ripetuto` e `vista` dopo `Compra { SondaggioPrivato }`, più `campione` (`elettori_campione` dei 360 gruppi a chiave `regione\|condizione\|fascia`), `regioni` (20 `VoceRegione` della spec di core, calcolate in `genera/`) ed `elezioni_regioni` (`null`); `zero` (seme 4 a 4,5, turno zero) con `campione` e `regioni`; `grave` (lo stato dell'08) con `regioni`; `effetto_disegno` della manopola (2) per il margine (vedi sotto) |
+| `25-registro.json` | 4 | 4,5 | 0-8 | 1248503 | la partita del 05 (coalizione con la destra, la bozza a ogni bilancio): un elenco di nove chiusure, ciascuna con `turno`, `mosse` del turno (`DichiaraCoalizione` al turno zero, `PresentaBilancio` ai turni 4 e 8) e la Vista `prima` e `dopo` la chiusura. 02, 03, 04 e 08 coincidono con le Viste di questa partita (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 25: aggiunta dal ticket «Registro». `dopo` della chiusura 0 è la 02, `dopo` della 1 la 03, `prima` della 4 la 04, `dopo` della 6
+  la 08 (stessi JSON); `prima` della 0 è la 01 con la coalizione dichiarata. Le voci del registro le scrive a mano il prototipo.
+  Dalle due Viste si leggono anche gli atti dei ministri (agenda annunciata contro `margine_residuo`) e i cantieri: avviati,
+  fermi (`turni_mancanti` uguale) e finiti (spariti). Due cantieri finiscono giocando, alla chiusura 5 e alla 6 (ferrovie in
+  Umbria): `cantiere_finito` qui c'è. Le emergenze lievi si vedono solo come 100 mln € in meno nel `fondo_residuo` (chiusure 5
+  e 6), senza regione né tipo. La soddisfazione di Sanità risale senza variazione registrata (39,3 → 41,3 nella chiusura 5,
+  31,6 → 34,4 nella 7) e la `minaccia` si spegne e si riaccende. La stessa norma ripresentata nel posto riservato prende un id
+  di misura nuovo (pensioni 2 e 7, concorrenza 4 e 9). Alla chiusura 8 il Centrodestra va in ultimatum e la Sinistra presenta
+  la sfiducia al ministro dell'Interno, che è del giocatore; all'apertura del turno 9 nessun ministro ha una proposta.
 
 - 23: aggiunta dal ticket «Paese». `regioni` segue la tabella `VoceRegione` della spec di core «esito e Vista completa»
   (PR 2): disoccupazione vera della regione presa dalla partita al turno prima, reddito reale per elettore da
