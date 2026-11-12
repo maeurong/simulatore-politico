@@ -23,7 +23,7 @@ Deciso con Mario il 12/11/2026 su un prototipo navigabile: [23-paese.prototype.h
 - **Elettori campione:** un clic su un gruppo della griglia mette sotto i suoi tre elettori (età, nome, voto o astensione, motivo, collocazione), con la riga che dice che sono inventati dal sondaggio.
 - **Sondaggio privato:** il riquadro con «Compra · 15.000 €» e la cassa sta sotto la media; comprato, diventa una colonna accanto alla media, col suo margine, e gli incroci e la scheda della regione passano ai suoi numeri. «Compralo ancora» mostra il rifiuto del core sul posto.
 - **Segni:** triangolo per il cantiere in corso, cerchio per l'atto in agenda, quadrato per l'opera finita, croce rossa per l'emergenza aperta; più segni nella stessa regione in fila.
-- **Mappa come radiogroup:** una fermata di Tab, frecce per scorrere nell'ordine della lista, Invio o spazio per scegliere, l'anello del fuoco e della scelta ricopiati in coda con `<use>`. La lista fa da equivalente per le regioni troppo piccole.
+- **Mappa come radiogroup:** una fermata di Tab, frecce per scorrere nell'ordine della lista, Invio o spazio per scegliere, gli anelli del fuoco e della scelta ricopiati in coda con `<use>`. La lista fa da equivalente per le regioni troppo piccole.
 - **Tono grave:** le regole delle fondamenta; la rampa passa all'inchiostro.
 
 ### Decisioni sui casi

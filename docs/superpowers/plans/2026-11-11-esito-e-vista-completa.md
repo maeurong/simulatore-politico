@@ -44,7 +44,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 - Nessuna dipendenza nuova in nessun crate; `Cargo.lock` non cambia.
 - Nessuna estrazione casuale nuova: nessun task consuma un flusso di `Caso`. Stesso seme e stessi comandi danno le stesse grandezze di prima del piano.
 - Termini: «voce» e «criticità» (`CONTEXT.md`), mai «livello», «gravità» o «priorità» per la criticità; «registro», «fermata», «tono grave» come nel glossario.
-- Una voce non ha mai la causa vuota e non dice ciò che la Vista nasconde: mai i valori attesi in cifre dei partiti IA, mai le probabilità, mai l'intesa avversaria in cifre.
+- Una voce non ha mai la causa vuota e non dice ciò che la Vista nasconde: mai i valori attesi in cifre dei partiti IA, mai le probabilità, mai l'intesa avversaria in cifre. Una voce che porta `misura` porta anche le sue `disposizioni` (regola nel Task 1).
 - Le voci in tono grave non hanno battute: il testo del core è sempre l'occhiello serio; il titolo spiritoso è del ticket 09 della mappa.
 - `app/src/` non si tocca, salvo i tipi generati in `app/src/lib/tipi/`.
 - Ogni manopola nuova ha `valore`, `min`, `max`, `ticket` ed entra in `MANOPOLE_RICHIESTE` (`crates/sim-core/src/dati.rs:70`) nel task che la introduce, col commento della fonte.
@@ -158,6 +158,8 @@ pub(crate) fn componi(voci: &mut Vec<VoceEsito>, giocatore: &str);
 
 `componi`, nell'ordine: (1) alza a notevole ogni voce ordinaria con `partito == giocatore`, tranne `Sondaggio`, `Revisione`, `EntrateDiCassa`; (2) fonde, per ogni tipo fondibile, le voci con lo stesso tipo e la stessa criticità al posto della prima: `dettagli` = un `Dettaglio` per voce, col `testo` «fatto: causa» e i soggetti di quella voce copiati così come sono, `fatto` = `riassunto(tipo, n)`, `causa` = la più frequente o «più cause» se nessuna prevale, `partito`/`dicastero`/`regione`/`misura`/`disposizioni` solo se uguali in tutte, `tono` grave se una lo è; (3) segna `in_evidenza`: le critiche, e se sono più di sette le sette con `precedenza` più alta e a parità le prime; se sono meno, le prime notevoli fino a sette. Non riordina mai.
 
+Il campo `disposizioni` (aggiunto il 12/11/2026 dal ticket «Registro» della mappa del piano 11): qui nasce solo il campo; lo riempiono i task che scrivono le voci. Ogni punto del fatto che scrive `misura` scrive anche gli id delle disposizioni della misura, dai suoi `valori` (`crates/sim-core/src/parlamento/mod.rs:64`) nell'ordine; il bilancio lo lascia vuoto. Test nel Task 4: `la_legge_ripresentata_tiene_le_disposizioni`.
+
 - [ ] **Step 1: test che falliscono**, in `esito.rs`:
   - `ogni_tipo_ha_un_grado`: `grado(FiduciaRespinta, true) == Some(C3)`, `grado(SoddisfazioneVariata, false) == None`, `grado(GuidaRifiutata, true) == None`, `grado(AttoEseguito, true) == Some(O)`; `TipoVoce` ha 92 varianti (conteggio da un array di tutte).
   - `nove_critiche_ne_restano_sette`: 3 voci C3, 3 C2, 3 C1 mescolate; in evidenza 7, fuori le ultime due C1 nell'ordine.
@@ -170,8 +172,6 @@ pub(crate) fn componi(voci: &mut Vec<VoceEsito>, giocatore: &str);
   - `il_soggetto_e_il_giocatore`: `PromessaVerificata` con `partito = Some("x")` e giocatore `"x"` → notevole, e non si fonde con quelle degli altri partiti; `EntrateDiCassa` del giocatore resta ordinaria e si fonde.
   - `causa_della_fusa`: tre voci con cause «a», «a», «b» → «a»; con «a», «b» → «più cause».
   - `l_ordine_non_cambia`: i tipi non fusi escono nell'ordine d'ingresso.
-Il campo `disposizioni` (aggiunto il 12/11/2026 dal ticket «Registro» della mappa del piano 11): ogni punto del fatto che scrive `misura` scrive anche gli id delle disposizioni della misura, dai suoi `valori` (`crates/sim-core/src/parlamento/mod.rs:64`) nell'ordine; il bilancio lo lascia vuoto. Test nel Task 4: `la_legge_ripresentata_tiene_le_disposizioni`, una legge respinta e ripresentata dà due voci con `misura` diversa e `disposizioni` uguali.
-
 - [ ] **Step 2:** `cargo test -p sim-core esito::` → falliscono (modulo assente).
 - [ ] **Step 3:** implementa `esito.rs` come da Interfaces. `riassunto`: una frase per tipo fondibile, «N <fatto al plurale>».
 - [ ] **Step 4:** verifiche globali verdi.
@@ -282,7 +282,7 @@ Tipi di questo task (13): le tabelle «Eventi risolti», «Default delle decisio
 
 Tipi di questo task (21): la tabella «Aula» del catalogo. Le voci dei voti si scrivono leggendo `EsitoVoto` ed `EsitoReferendum` nello stesso passo che li produce. `legge_respinta` del governo e `referendum_votato` perso dal governo prendono `con_grado(C2)` al governo. `bilancio_ricondotto` porta crescita e limite di `oltre_il_tetto_mes` e la quota tenuta.
 
-- [ ] **Step 1: test che falliscono.** Un'asserzione per ciascuno dei 21 tipi. In più: `i_franchi_tiratori_si_contano` (un voto con franchi tiratori: `franchi` uguale ai seggi fuori linea, e la voce `LeggeApprovata` li dice per ramo); `sotto_fiducia_zero_franchi`; `bilancio_ricondotto_lascia_la_voce` (sul caso di `il_bilancio_presentato_prima_del_mes_entra_ricondotto`, `tests/debito.rs:597-631`: la voce porta crescita e limite); `valore_non_applicato_per_il_memorandum`.
+- [ ] **Step 1: test che falliscono.** Un'asserzione per ciascuno dei 21 tipi. In più: `i_franchi_tiratori_si_contano` (un voto con franchi tiratori: `franchi` uguale ai seggi fuori linea, e la voce `LeggeApprovata` li dice per ramo); `sotto_fiducia_zero_franchi`; `bilancio_ricondotto_lascia_la_voce` (sul caso di `il_bilancio_presentato_prima_del_mes_entra_ricondotto`, `tests/debito.rs:597-631`: la voce porta crescita e limite); `valore_non_applicato_per_il_memorandum`; `la_legge_ripresentata_tiene_le_disposizioni` (una legge respinta e ripresentata dà due voci con `misura` diversa e `disposizioni` uguali: il campo del Task 1).
 - [ ] **Step 2:** `cargo test -p sim-core --test voto --test debito` → falliscono.
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati (`Conteggio` è esportato).
@@ -744,7 +744,7 @@ Aggiunto il 12/11/2026 dal ticket «Bilancio» della mappa del piano 11 (spec, s
 ```rust
 // VistaBilancio prende `pub in_aula: Option<Bilancio>`: `Economia.bilancio_presentato` clonato,
 // emendamenti accolti compresi; `None` senza legge presentata. `presentato` resta.
-// VoceEmendamento prende `pub dicasteri: Vec<String>`: gli id delle voci `Attenuazione::Indicizza`
+// VoceEmendamento prende `pub dicasteri: Vec<String>`: gli id dei dicasteri delle voci `Attenuazione::Indicizza`
 // della proposta, in ordine; vuoto sugli emendamenti delle leggi.
 ```
 

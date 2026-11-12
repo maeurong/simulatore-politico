@@ -22,7 +22,7 @@ Deciso con Mario il 12/11/2026 in due giri su un prototipo navigabile: [25-regis
 - **Colonna dei turni** a sinistra, il più recente in alto: turno, trimestre chiuso, quante voci, il quadratino rosso se ci sono critiche, i segni del tono grave e del voto. In fondo il turno zero, che non ha voci ma si può riaprire.
 - **A pagina le voci del turno scelto**, tutte, nell'ordine della chiusura: fatto e causa, senza titoli; le critiche col quadratino, quelle che erano in prima pagina segnate, le fuse con le righe dei dettagli, la sezione del rimando a destra.
 - **Filtri sopra la pagina**, che valgono su tutti i turni: criticità, sezione, soggetto (partito, dicastero, regione, misura, disposizione). Con un filtro attivo la colonna tiene solo i turni con voci che combaciano, col loro numero, e la pagina mostra solo quelle (storia 16).
-- **Dettaglio a lato:** la voce scelta coi dettagli, i soggetti e il rimando alla sezione; sotto, le voci collegate negli altri turni (stesso soggetto, anche dentro le fuse); per una revisione la prima stima del turno prima che corregge, e viceversa (storia 119).
+- **Dettaglio a lato:** la voce scelta coi dettagli, i soggetti e il rimando alla sezione; sotto, le voci collegate negli altri turni (stesso soggetto, anche dentro le fuse); per una revisione la prima stima che corregge, nel turno prima, e viceversa (storia 119).
 - **«Torna al turno N»** in testa al registro del turno N. La conferma sul posto (il pulsante diventa due) dice cosa si cancella: questa chiusura e le K dopo, fino a quale trimestre, il turno in corso o l'eredità in bozza, il voto o il governo nato in mezzo; che il riavvolgimento si conta, e che con le stesse scelte il caso dà lo stesso esito (storia 144). A partita finita resta acceso finché l'eredità è in bozza (storia 150).
 - **Tono grave:** le voci di tono grave portano il loro segno; nel turno grave la pagina segue le regole delle fondamenta.
 - **Barrata al turno zero** col motivo, come nell'ossatura.
@@ -32,7 +32,7 @@ Deciso con Mario il 12/11/2026 in due giri su un prototipo navigabile: [25-regis
 - **I ministri del giocatore restano ordinari** (scelta di Mario): le loro variazioni di soddisfazione e le minacce di dimissioni sono fatti del governo, non del partito, e restano fuse con le altre. La regola «il soggetto è il giocatore» guarda solo il campo `partito`.
 - **Il ritorno della soddisfazione verso la base resta muto** (scelta di Mario): è un movimento continuo (`crates/sim-core/src/ministri/soddisfazione.rs:54-56`), come la rata di un cantiere in corso; nel registro una soddisfazione può salire senza voce.
 - **Dopo «avanti fino a novità»** il rimando della banda apre il registro sul più vecchio dei turni saltati, senza segni nella colonna (scelta di Mario).
-- **Lettura dei registri** (scelta mia): entrando nella sezione la UI chiede `registro(t)` per ogni turno chiuso, un file ciascuno, e li tiene in memoria fino al riavvolgimento successivo; la colonna e i filtri ne hanno bisogno tutti.
+- **Lettura dei registri** (scelta mia): entrando nella sezione la UI chiede `registro(t)` per ogni turno chiuso, un file ciascuno, e li tiene in memoria fino al riavvolgimento successivo; la colonna e i filtri hanno bisogno di tutti.
 - **Sezione di una voce** (scelta mia): una tabella della UI per tipo, come quella dei tracciati della prima pagina; la voce non la porta.
 - **Revisione e prima stima** (scelta mia): la UI cerca la `prima_stima` nel registro del turno prima; nessun legame nel dato.
 

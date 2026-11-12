@@ -15,6 +15,6 @@ Si parte dalle manopole in `dati/base` e da come il core fa cadere un governo pe
 
 ### Premesse dal 12/11/2026
 
-[Cruscotto all'opposizione](28-cruscotto-all-opposizione.md) ha deciso cosa mostrano i tracciati quando il giocatore non governa: il consenso del suo partito, «per farlo cadere» al posto della maggioranza (i sì che mancano alla sfiducia al governo, dall'anteprima, il minimo fra le due Camere; si riempie quando il governo è fragile), al turno zero i seggi attesi dalla proiezione contro la metà più uno della coalizione dichiarata. Servono scala e soglia anche per questi due. Sulla scala di prova del consenso, dal 25 al 75%, un partito d'opposizione fra il 5 e l'11% resta sempre a zero caselle.
+[Cruscotto all'opposizione](28-cruscotto-all-opposizione.md) ha deciso cosa mostrano i tracciati quando il giocatore non governa: il consenso del suo partito; «per farlo cadere» al posto della maggioranza (i sì che mancano alla sfiducia al governo, dall'anteprima, il minimo fra le due Camere; si riempie quando il governo è fragile); al turno zero i seggi attesi dalla proiezione contro la metà più uno della coalizione dichiarata. Servono scala e soglia anche per questi due. Sulla scala di prova del consenso, dal 25 al 75%, un partito d'opposizione fra il 5 e l'11% resta sempre a zero caselle.
 
 ## Answer
