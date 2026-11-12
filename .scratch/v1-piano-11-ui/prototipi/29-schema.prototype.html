@@ -1,0 +1,795 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Schema dello Stato» (29), mappa v1-piano-11-ui.
+  Domanda: com'è fatto lo schema dello Stato, la vista secondaria a pagina intera (storia 157)? Chi tocca cosa nel
+  turno, come rete con le note a biro; i tondi numerati che rimandano alle voci della prima pagina; da quali campi
+  della Vista si compone, senza chiederne di nuovi; cosa mostra all'opposizione e al turno zero; il tono grave.
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Tavola a rete       — la rete del prototipo vincolante: Presidente del Consiglio al centro, dieci dicasteri in
+       cerchio, Parlamento a sinistra, partiti sotto, Paese a destra; etichette a biro sui fili, tondi sui fili
+    B  Tavola per poteri   — quattro colonne fisse (Partiti · Parlamento · Governo · Paese e mercati), una riga per
+       soggetto, i fili da riga a riga col solo tondo; il testo sta nella riga e nel dettaglio a lato
+    C  Indice dei fili     — nessuna rete a pagina: l'elenco dei fili raggruppato per chi tocca, con la frase intera;
+       la rete piccola nel dettaglio a lato accende il filo scelto
+    D  Mappa delle forze   — nata dal giro con Mario: sette blocchi fissi, i fili raggruppati per coppia di blocchi in
+       una freccia col verso di chi muove e l'etichetta scritta; il dettaglio a lato la riapre filo per filo
+  Stati, ?stato=: ordinario (Vista 04) · opposizione (28 «fine», turno 19) · grave (Vista 08) · zero (Vista 01).
+  ?fili=tutti|notizie  ?bat=1|0 (battute a biro, solo A)  ?fin=1280|1440  ?scala=1|1.25
+  Dati: le Viste giocate, ridotte ai campi che lo schema legge (ministeri con agenda, cantieri, proposta e minaccia;
+  alleati e alleati_avversari; calendario ed esiti del trimestre chiuso; eventi; situazioni accese; spread_pb; seggi;
+  mosse; posto_riservato; fase). Nessun campo nuovo. Le voci della prima pagina: quelle scritte a mano nel prototipo
+  16 (stati «ordinario» e «fermata», che sono gli stessi turni), più quelle del tono grave scritte qui allo stesso
+  modo dalla Vista prima e dopo la chiusura del turno 6 (viste/25-registro.json). L'esito lo porta la PR 1 del piano
+  di core «esito e Vista completa». Battute a biro: BOZZA, una per tipo di filo.
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A), cornice dal 28. Non è codice di produzione.
+  Buttare dopo il verdetto.
+  VERDETTO (Mario, 12/11/2026), nel ticket 29: B · Tavola per poteri; tutti i fili col filtro «Solo quelli in prima
+  pagina»; battute a biro sì; al turno zero si apre col governo uscente e le Camere sciolte. Lo schema risponde a «chi
+  muove cosa ora». Restano aperte, da risolvere dentro B nella fetta, le tre note di Mario: fili muti, groviglio sul
+  Presidente, verso non chiaro. Si apre su B: le altre restano dalla barra in basso.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo schema dello Stato · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* cornice A · Gerenza */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:2px}
+.capo h3{margin:0}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+/* i valori all'opposizione (+140 / +72) sono più larghi di quelli al governo: cornice più stretta */
+.c1 .trk{padding:0 8px}
+.c1 .trk .k{letter-spacing:.04em}
+.c1 .trk .cas{--cw:8px}
+.lato .tab th,.lato .tab td{padding:3px 4px;letter-spacing:0}
+/* ===== aggiunte del 29 ===== */
+.prova{display:inline-block;background:#ff8ad8;color:#111;font:700 11px/1.4 system-ui,sans-serif;padding:0 5px;letter-spacing:.03em;vertical-align:.1em;white-space:nowrap}
+.somm .fuori button.qui{font-weight:700;text-decoration:none;background:var(--ink);color:var(--carta);padding:1px 8px}
+.corpo.sch{grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:auto minmax(0,1fr);overflow:hidden;align-content:stretch}
+.corpo.sch.lista{grid-template-columns:minmax(0,1fr) var(--lato)}
+.st-testa{grid-column:1/-1;display:flex;justify-content:space-between;align-items:end;gap:16px;border-bottom:var(--doppio);padding-bottom:5px}
+.st-testa .tavola{font-size:var(--c-pag);display:block}
+.st-testa .sub{font-size:var(--c-sec);color:var(--grigio)}
+.st-testa .ctr{display:flex;gap:6px;align-items:center;flex:none}
+.tav{min-width:0;min-height:0;position:relative}
+.tav svg{display:block;position:absolute;left:0;top:0}
+.lato{border-left:var(--forte);padding-left:var(--canale);display:grid;gap:8px;align-content:start;overflow:hidden auto;min-height:0}
+.lato h4{font-size:var(--c-riq)}
+.leg{display:grid;grid-template-columns:34px 1fr;gap:3px 8px;font-size:var(--c-min);align-items:center}
+.leg svg{width:34px;height:14px}
+.voci{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:var(--c-sec)}
+.voci li{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:start;cursor:pointer}
+.voci li.no{cursor:default;color:var(--grigio)}
+.voci li.no .tn{border-style:dashed;border-color:var(--grigio);color:var(--grigio)}
+.voci li.on{background:var(--velo)}
+.tn{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--biro);color:var(--biro);font-size:var(--c-min);font-weight:700;background:var(--carta)}
+.tn.m{border-color:var(--rosso);color:var(--rosso)}
+.det{display:grid;gap:6px}
+.det .cosa{font-size:var(--c-lead);font-weight:700;line-height:1.25}
+.det .da{font-size:var(--c-sec)}
+.fonte{font-size:var(--c-min);color:var(--grigio);font-family:ui-monospace,Menlo,monospace}
+.fl{display:grid;gap:0}
+.fl button{display:grid;grid-template-columns:auto 1fr;gap:6px;text-align:left;padding:4px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.fl button:hover{background:var(--velo)}
+.fl .ver{font-weight:700;white-space:nowrap}
+/* svg */
+.nd{cursor:pointer}
+.nd text{font-family:var(--txt);fill:var(--ink)}
+.nd .b{fill:var(--carta);stroke:var(--ink);stroke-width:1.5}
+.nd.ist .b{fill:var(--ink)} .nd.ist text{fill:var(--carta)}
+.nd.pdc .b{fill:var(--ink)} .nd.pdc text{fill:var(--carta)}
+.nd.par .b{stroke:var(--grigio);stroke-dasharray:0}
+.nd.par.gov .b{stroke:var(--ink);stroke-width:2}
+.nd.par.tuo .b{stroke:var(--rosso);stroke-width:2}
+.nd.pae .b{fill:var(--velo);stroke:var(--grigio)}
+.nd.sit .b{stroke:var(--rosso);stroke-width:2}
+.nd.spento .b{stroke-dasharray:4 3;stroke:var(--grigio)} .nd.spento text{fill:var(--grigio)}
+.nd.ist.spento .b{fill:var(--carta)}
+.nd .s{font-size:12px;fill:var(--grigio)}
+.nd.ist .s,.nd.pdc .s{fill:var(--carta);opacity:.85}
+.fi{fill:none;stroke:var(--biro);cursor:pointer}
+.fi.m{stroke:var(--rosso)}
+.fi.r{stroke-dasharray:7 5}
+.fi.c{stroke-dasharray:2 4;stroke-linecap:round}
+.fi-hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}
+.et{font-family:var(--txt);font-size:13px;font-style:italic;fill:var(--biro);paint-order:stroke;stroke:var(--carta);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.et.m{fill:var(--rosso)}
+.et.bt{font-size:12px;fill:var(--biro)}
+.g .et{font-style:normal}
+.tnd circle{fill:var(--carta);stroke:var(--biro);stroke-width:1.5}
+.tnd.m circle{stroke:var(--rosso)}
+.tnd text{font-family:var(--txt);font-size:11px;font-weight:700;fill:var(--biro);text-anchor:middle}
+.tnd.m text{fill:var(--rosso)}
+.blk.spento{opacity:.35}
+.blk,.mb{cursor:pointer}
+.fuoco .nd,.fuoco .fi,.fuoco .et,.fuoco .tnd{opacity:.16}
+.fuoco .on{opacity:1!important}
+.fuoco .fi.on{stroke-width:3.5}
+.col-t{font-family:var(--txt);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;fill:var(--grigio)}
+.col-l{stroke:var(--grigio);stroke-width:1}
+/* C · indice */
+.idx{overflow:hidden auto;min-height:0;padding-right:4px}
+.idx .grp{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--grigio);margin:10px 0 0;padding-bottom:2px;border-bottom:1.5px solid var(--ink);display:flex;justify-content:space-between}
+.idx .grp:first-child{margin-top:0}
+.ri{display:grid;grid-template-columns:24px minmax(150px,.9fr) 16px minmax(0,1.6fr) auto;gap:2px 8px;align-items:center;padding:5px 4px;border-bottom:var(--filo);cursor:pointer;font-size:var(--c-sec)}
+.ri:hover{background:var(--velo)}
+.ri.sel{background:var(--velo);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ri .chi{white-space:normal;color:var(--ink);font-weight:700;font-size:var(--c-sec)}
+.ri .chi small{display:block;font-weight:400;color:var(--grigio);font-size:var(--c-min)}
+.ri .ar{color:var(--biro);font-weight:700}
+.ri .ar.m{color:var(--rosso)}
+.ri .q{font-size:var(--c-min);color:var(--grigio);white-space:nowrap}
+.ri .r11{font-size:var(--c-min)}
+.ri .cs{line-height:1.25}
+.ri .cs small{display:block;color:var(--grigio);font-size:var(--c-min)}
+.vuota{border:1.5px dashed var(--grigio);color:var(--grigio);padding:10px 14px;font-size:var(--c-sec)}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="ordinario">al governo</button><button data-v="opposizione">all’opposizione</button><button data-v="grave">tono grave</button><button data-v="zero">turno zero</button></span>
+  <span class="cap">fili</span><span class="seg" data-k="fili"><button data-v="tutti">tutti</button><button data-v="notizie">in prima pagina</button></span>
+  <span class="cap">battute</span><span class="seg" data-k="bat"><button data-v="1">sì</button><button data-v="0">no</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <span id="nota" style="color:#aaa"></span><span id="avv"></span>
+</div>
+<script>
+const DATI = {"o":{"turno":4,"data":{"anno":2027,"trimestre":4},"turni_al_voto":16,"fase":"ordinaria","governa":true,"finita":false,"crisi":false,"dimissioni":false,"spread":71,"dicasteri":{"economia_finanze":"Economia e Finanze","sviluppo_economico":"Sviluppo economico","lavoro_welfare":"Lavoro e Welfare","sanita":"Sanità","istruzione_ricerca":"Istruzione e Ricerca","infrastrutture_trasporti":"Infrastrutture e Trasporti","ambiente_energia":"Ambiente ed Energia","interno":"Interno","giustizia":"Giustizia","esteri_difesa":"Esteri e Difesa"},"grandezze":{"efficienza_riscossione":"Efficienza della riscossione","sostegno_imprese":"Sostegno alle imprese","copertura_welfare":"Copertura del welfare","qualita_servizio_sanitario":"Qualità del servizio sanitario","qualita_scuola":"Qualità della scuola","qualita_trasporti":"Qualità dei trasporti","sicurezza_energetica":"Sicurezza energetica","sicurezza":"Sicurezza","durata_processi":"Durata dei processi","prontezza_difesa":"Prontezza della difesa","occupazione_pubblica":"Occupazione pubblica","stock_infrastrutture":"Stock di infrastrutture","investimenti_privati":"Investimenti privati","domanda_regionale":"Domanda della regione (punti di gap)","prezzo_energia":"Prezzo dell'energia (% sugli input importati)","politiche_attive":"Politiche attive (punti di disoccupazione strutturale tolti)","capitale_umano":"Capitale umano","sovraffollamento_carceri":"Sovraffollamento delle carceri","immigrazione_irregolare":"Immigrazione irregolare","corruzione":"Corruzione","regole_lavoro":"Regole del lavoro (punti di disoccupazione strutturale tolti)"},"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","al_governo":false,"leader":"Anna Ferrucci","sciolto":false},{"id":"sinistra","nome":"Sinistra","al_governo":false,"leader":"Luca Benedetti","sciolto":false},{"id":"centrosinistra","nome":"Centrosinistra","al_governo":false,"leader":"Chiara Lombardo","sciolto":false},{"id":"centro","nome":"Centro","al_governo":false,"leader":"Giorgio Valli","sciolto":false},{"id":"centrodestra","nome":"Centrodestra","al_governo":true,"leader":"Silvia Moretti","sciolto":false},{"id":"destra","nome":"Destra","al_governo":true,"leader":"Davide Ranieri","sciolto":false},{"id":"estrema_destra","nome":"Estrema destra","al_governo":false,"leader":"Bruno Castellani","sciolto":false},{"id":"giocatore","nome":"Partito del giocatore","al_governo":true,"leader":"","sciolto":false}],"seggi":[{"partito":"estrema_sinistra","camera":0,"senato":0},{"partito":"sinistra","camera":120,"senato":63},{"partito":"centrosinistra","camera":20,"senato":8},{"partito":"centro","camera":14,"senato":2},{"partito":"centrodestra","camera":32,"senato":15},{"partito":"destra","camera":116,"senato":62},{"partito":"estrema_destra","camera":22,"senato":12},{"partito":"giocatore","camera":76,"senato":38}],"quote":[0.014249013507061845,0.21983554093498953,0.06285196298339787,0.010552804407333374,0.033658299609882994,0.19651487161597594,0.010728131817928515,0.10440381439801671,0.3472055607254132],"ministeri":[{"dicastero":"economia_finanze","ministro":{"nome":"Simone Gallo","partito":"destra","soddisfazione":69.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":{"atto":"economia_finanze_concessionari","nome":"Riscossione affidata a concessionari privati","regione":null,"costo":146946949,"stato":"annunciata","in_evidenza":false,"motivo":"Efficienza della riscossione: avvicina l'obiettivo","effetti":[{"grandezza":"efficienza_riscossione","migliora":true,"ritardo":3}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sviluppo_economico","ministro":{"nome":"Marco Bianchi","partito":"giocatore","soddisfazione":56.2849282692883,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":{"atto":"sviluppo_economico_zone","nome":"Zone economiche speciali con burocrazia ridotta","regione":"campania","costo":101613010,"stato":"annunciata","in_evidenza":false,"motivo":"vicino alla sua posizione; Campania: ne ha bisogno","effetti":[{"grandezza":"investimenti_privati","migliora":true,"ritardo":3}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"lavoro_welfare","ministro":{"nome":"Simone Ricci","partito":"centrodestra","soddisfazione":55.74187184753062,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"lavoro_welfare_centri_impiego","nome":"Centri per l'impiego rinnovati","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"politiche_attive","migliora":true,"ritardo":0},{"grandezza":"copertura_welfare","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Bonus straordinario per le famiglie in difficoltà","importo":233067057,"motivo":"fondi che non bastano per Bonus straordinario per le famiglie in difficoltà","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sanita","ministro":{"nome":"Sara Ferraro","partito":"destra","soddisfazione":54.834784501714246,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":{"atto":"sanita_accorpamento_asl","nome":"Accorpamento delle ASL e premi ai primari","regione":null,"costo":313912468,"stato":"annunciata","in_evidenza":false,"motivo":"Qualità del servizio sanitario: avvicina l'obiettivo","effetti":[{"grandezza":"qualita_servizio_sanitario","migliora":true,"ritardo":4}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"istruzione_ricerca","ministro":{"nome":"Chiara Caruso","partito":"giocatore","soddisfazione":69.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":{"atto":"istruzione_ricerca_atenei","nome":"Autonomia degli atenei e dottorati industriali","regione":null,"costo":259400580,"stato":"annunciata","in_evidenza":false,"motivo":"vicino alla sua posizione","effetti":[{"grandezza":"capitale_umano","migliora":true,"ritardo":4}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"infrastrutture_trasporti","ministro":{"nome":"Filippo Ricci","partito":"centrodestra","soddisfazione":57.37746260728093,"minaccia":false,"causa_principale":"proposta_respinta","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"infrastrutture_trasporti_ferrovie","nome":"Potenziamento delle linee ferroviarie locali","regione":"umbria","turni_mancanti":2,"effetti":[{"grandezza":"stock_infrastrutture","migliora":true,"ritardo":0},{"grandezza":"qualita_trasporti","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Manutenzione straordinaria delle strade locali","importo":569374362,"motivo":"fondi che non bastano per Manutenzione straordinaria delle strade locali","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"ambiente_energia","ministro":{"nome":"Luca Romano","partito":"destra","soddisfazione":53.74161723257326,"minaccia":false,"causa_principale":"proposta_respinta","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"ambiente_energia_rigassificatori","nome":"Rigassificatori e nuove centrali","regione":null,"turni_mancanti":3,"effetti":[{"grandezza":"sicurezza_energetica","migliora":true,"ritardo":0},{"grandezza":"prezzo_energia","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Riempimento accelerato delle riserve di gas","importo":347753256,"motivo":"fondi che non bastano per Riempimento accelerato delle riserve di gas","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"interno","ministro":{"nome":"Filippo Barbieri","partito":"giocatore","soddisfazione":54.04731340326521,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"interno_videosorveglianza","nome":"Videosorveglianza e centri di rimpatrio","regione":null,"turni_mancanti":2,"effetti":[{"grandezza":"sicurezza","migliora":true,"ritardo":0},{"grandezza":"immigrazione_irregolare","migliora":true,"ritardo":2}]},{"atto":"interno_accoglienza","nome":"Accoglienza diffusa e corridoi umanitari","regione":null,"turni_mancanti":2,"effetti":[{"grandezza":"immigrazione_irregolare","migliora":true,"ritardo":0},{"grandezza":"sicurezza","migliora":true,"ritardo":2}]}],"proposta":{"nome":"Agenti di quartiere","importo":404210646,"motivo":"fondi che non bastano per Agenti di quartiere","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"giustizia","ministro":{"nome":"Simone Bianchi","partito":"giocatore","soddisfazione":59.12056585605968,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[],"proposta":{"nome":"Squadre di giudici a termine per l'arretrato","importo":50975589,"motivo":"fondi che non bastano per Squadre di giudici a termine per l'arretrato","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"esteri_difesa","ministro":{"nome":"Giulia Rossi","partito":"destra","soddisfazione":46.15030095634775,"minaccia":false,"causa_principale":"proposta_respinta","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"esteri_difesa_cooperazione","nome":"Difesa comune europea e addestramenti congiunti","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"prontezza_difesa","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Missioni di pace sotto mandato internazionale","importo":182532584,"motivo":"fondi che non bastano per Missioni di pace sotto mandato internazionale","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null}],"alleati":[{"partito":"centrodestra","intesa":50.49645430936436,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"sondaggi_in_calo","variazioni":[{"partito":4,"causa":"quota_scoperta","delta":-1.026784660766964,"turno":3},{"partito":4,"causa":"sondaggi_in_calo","delta":-1.8918519603933106,"turno":3}]},{"partito":"destra","intesa":59.92274336283185,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"norma_lontana","variazioni":[{"partito":5,"causa":"norma_lontana","delta":-2.0,"turno":3}]}],"alleati_avversari":[],"posto_riservato":false,"coalizione":[],"calendario":[{"id":1,"nome":"Autonomia differenziata: intese complete","forma":"riforma","proponente":null,"promotore":"estrema_destra","linea_giocatore":null,"voto":{"anno":2027,"trimestre":4},"deliberazione":0,"fiducia":false,"forbice":{"camera":[162,173],"senato":[84,91],"maggioranza_camera":201,"maggioranza_senato":101,"in_bilico":true},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false}]},{"id":2,"nome":"Regime delle pensioni: retributivo","forma":"riforma","proponente":null,"promotore":"sinistra","linea_giocatore":null,"voto":{"anno":2028,"trimestre":1},"deliberazione":0,"fiducia":false,"forbice":{"camera":[116,125],"senato":[60,66],"maggioranza_camera":201,"maggioranza_senato":101,"in_bilico":true},"linee":[{"partito":"estrema_sinistra","si":true},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":false},{"partito":"destra","si":false},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false}]},{"id":3,"nome":"Legge di bilancio","forma":"bilancio","proponente":null,"promotore":null,"linea_giocatore":null,"voto":{"anno":2027,"trimestre":4},"deliberazione":0,"fiducia":false,"forbice":{"camera":[217,229],"senato":[110,118],"maggioranza_camera":201,"maggioranza_senato":101,"in_bilico":false},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":true}]}],"esiti":[{"misura":0,"nome":"Sgravio contributivo nel Mezzogiorno: 15%","forma":"riforma","data":{"anno":2027,"trimestre":3},"camera":{"si":232,"no":168},"senato":{"si":113,"no":87},"approvata":true,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":true}]}],"referendum":[],"esiti_referendum":[],"eventi":[{"nome":"Emergenza idrogeologica","famiglia":"emergenza","causa":"rischio alto","tono":"ordinario","regione":"Emilia-Romagna","bersaglio":null,"costo":1000000000,"scelta":null,"default":"Attingere al fondo di riserva"}],"situazioni":[{"nome":"Caro energia","misura":"energia","valore":6.973101552920194,"accensione":10.0}],"mosse":[{"partito":"sinistra","testo":"Porta nel posto riservato Regime delle pensioni: retributivo; nessun seggio fra Camera e Senato dei partiti alleati la voterebbe"}],"bilancio":{"presentabile":true,"presentato":true,"fondo_riserva":305700000,"esercizio_provvisorio":false},"programma":0,"campagna":true},"p":{"turno":19,"data":{"anno":2031,"trimestre":3},"turni_al_voto":1,"fase":"ordinaria","governa":false,"finita":false,"crisi":false,"dimissioni":false,"spread":93,"dicasteri":{"economia_finanze":"Economia e Finanze","sviluppo_economico":"Sviluppo economico","lavoro_welfare":"Lavoro e Welfare","sanita":"Sanità","istruzione_ricerca":"Istruzione e Ricerca","infrastrutture_trasporti":"Infrastrutture e Trasporti","ambiente_energia":"Ambiente ed Energia","interno":"Interno","giustizia":"Giustizia","esteri_difesa":"Esteri e Difesa"},"grandezze":{"efficienza_riscossione":"Efficienza della riscossione","sostegno_imprese":"Sostegno alle imprese","copertura_welfare":"Copertura del welfare","qualita_servizio_sanitario":"Qualità del servizio sanitario","qualita_scuola":"Qualità della scuola","qualita_trasporti":"Qualità dei trasporti","sicurezza_energetica":"Sicurezza energetica","sicurezza":"Sicurezza","durata_processi":"Durata dei processi","prontezza_difesa":"Prontezza della difesa","occupazione_pubblica":"Occupazione pubblica","stock_infrastrutture":"Stock di infrastrutture","investimenti_privati":"Investimenti privati","domanda_regionale":"Domanda della regione (punti di gap)","prezzo_energia":"Prezzo dell'energia (% sugli input importati)","politiche_attive":"Politiche attive (punti di disoccupazione strutturale tolti)","capitale_umano":"Capitale umano","sovraffollamento_carceri":"Sovraffollamento delle carceri","immigrazione_irregolare":"Immigrazione irregolare","corruzione":"Corruzione","regole_lavoro":"Regole del lavoro (punti di disoccupazione strutturale tolti)"},"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","al_governo":false,"leader":"Anna Ferrucci","sciolto":false},{"id":"sinistra","nome":"Sinistra","al_governo":true,"leader":"Luca Benedetti","sciolto":false},{"id":"centrosinistra","nome":"Centrosinistra","al_governo":true,"leader":"Chiara Lombardo","sciolto":false},{"id":"centro","nome":"Centro","al_governo":true,"leader":"Giorgio Valli","sciolto":false},{"id":"centrodestra","nome":"Centrodestra","al_governo":true,"leader":"Silvia Moretti","sciolto":false},{"id":"destra","nome":"Destra","al_governo":true,"leader":"Davide Ranieri","sciolto":false},{"id":"estrema_destra","nome":"Estrema destra","al_governo":false,"leader":"Bruno Castellani","sciolto":false},{"id":"giocatore","nome":"Partito del giocatore","al_governo":false,"leader":"","sciolto":false},{"id":"nuovo_8","nome":"Lista dei Territori","al_governo":false,"leader":"Fabio Barbieri","sciolto":false}],"seggi":[{"camera":0,"partito":"estrema_sinistra","senato":0},{"camera":134,"partito":"sinistra","senato":72},{"camera":23,"partito":"centrosinistra","senato":10},{"camera":16,"partito":"centro","senato":7},{"camera":31,"partito":"centrodestra","senato":12},{"camera":136,"partito":"destra","senato":71},{"camera":26,"partito":"estrema_destra","senato":10},{"camera":30,"partito":"giocatore","senato":16},{"camera":4,"partito":"nuovo_8","senato":2}],"quote":[0.020317815437576724,0.2407089957126508,0.04042258781002962,0.013811491951353717,0.052420217227478166,0.11661702557541065,0.0959715246137813,0.032395902849957615,0.07371252694301919,0.3136219118787423],"ministeri":[{"dicastero":"economia_finanze","ministro":{"nome":"Luca Ferraro","partito":"sinistra","soddisfazione":57.2887739204938,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sviluppo_economico","ministro":{"nome":"Chiara Romano","partito":"centrodestra","soddisfazione":43.01299271087627,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"lavoro_welfare","ministro":null,"agenda":null,"motivo_senza_agenda":"interim","cantieri":[{"atto":"lavoro_welfare_centri_impiego","nome":"Centri per l'impiego rinnovati","regione":null,"turni_mancanti":3,"effetti":[{"grandezza":"politiche_attive","migliora":true,"ritardo":0},{"grandezza":"copertura_welfare","migliora":true,"ritardo":0}]}],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":"indicatore_in_calo"},{"dicastero":"sanita","ministro":{"nome":"Sara Gallo","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":true},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"istruzione_ricerca","ministro":{"nome":"Francesca Gallo","partito":"centro","soddisfazione":44.24200001400207,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[{"atto":"istruzione_ricerca_edilizia","nome":"Edilizia scolastica e tempo pieno","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"qualita_scuola","migliora":true,"ritardo":0},{"grandezza":"capitale_umano","migliora":true,"ritardo":4}]}],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"infrastrutture_trasporti","ministro":{"nome":"Marco Marino","partito":"centrodestra","soddisfazione":62.548047561487614,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"ambiente_energia","ministro":{"nome":"Fabio Marino","partito":"centrosinistra","soddisfazione":57.053727415269755,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[{"atto":"ambiente_energia_rinnovabili","nome":"Parco di rinnovabili e accumuli","regione":null,"turni_mancanti":4,"effetti":[{"grandezza":"sicurezza_energetica","migliora":true,"ritardo":0},{"grandezza":"prezzo_energia","migliora":true,"ritardo":2}]}],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"interno","ministro":{"nome":"Marco Rossi","partito":"destra","soddisfazione":49.98497603138035,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[{"atto":"interno_videosorveglianza","nome":"Videosorveglianza e centri di rimpatrio","regione":null,"turni_mancanti":2,"effetti":[{"grandezza":"sicurezza","migliora":true,"ritardo":0},{"grandezza":"immigrazione_irregolare","migliora":true,"ritardo":2}]}],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"giustizia","ministro":{"nome":"Anna Caruso","partito":"destra","soddisfazione":60.04140700053485,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"esteri_difesa","ministro":{"nome":"Francesca Bianchi","partito":"sinistra","soddisfazione":59.87605726161172,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null}],"alleati":[],"alleati_avversari":[{"causa_ultimatum":"norma_lontana","fascia":"ultimatum","partito":"sinistra"},{"causa_ultimatum":null,"fascia":"incrinata","partito":"centrosinistra"},{"causa_ultimatum":"sondaggi_in_calo","fascia":"ultimatum","partito":"centro"},{"causa_ultimatum":null,"fascia":"incrinata","partito":"centrodestra"}],"posto_riservato":true,"coalizione":[],"calendario":[{"id":81,"nome":"Tetto al contante: 5.000 €","forma":"riforma","proponente":null,"promotore":"estrema_destra","linea_giocatore":null,"voto":{"anno":2031,"trimestre":3},"deliberazione":0,"fiducia":false,"forbice":{"camera":[192,207],"in_bilico":true,"maggioranza_camera":201,"maggioranza_senato":101,"senato":[90,101]},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]},{"id":82,"nome":"Ticket sanitario: alto","forma":"riforma","proponente":"sanita","promotore":null,"linea_giocatore":null,"voto":{"anno":2031,"trimestre":4},"deliberazione":0,"fiducia":false,"forbice":{"camera":[155,165],"in_bilico":true,"maggioranza_camera":201,"maggioranza_senato":101,"senato":[77,83]},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":false},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]},{"id":83,"nome":"Decreto: fondi a Istruzione e Ricerca per Assunzione straordinaria di supplenti","forma":"conversione","proponente":"istruzione_ricerca","promotore":null,"linea_giocatore":null,"voto":{"anno":2031,"trimestre":3},"deliberazione":0,"fiducia":false,"forbice":{"camera":[324,337],"in_bilico":false,"maggioranza_camera":201,"maggioranza_senato":101,"senato":[162,172]},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":true},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]},{"id":84,"nome":"Decreto: fondi a Ambiente ed Energia per Rigassificatori e nuove centrali","forma":"conversione","proponente":"ambiente_energia","promotore":null,"linea_giocatore":null,"voto":{"anno":2031,"trimestre":3},"deliberazione":0,"fiducia":false,"forbice":{"camera":[324,337],"in_bilico":false,"maggioranza_camera":201,"maggioranza_senato":101,"senato":[162,172]},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":true},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]},{"id":85,"nome":"Decreto: fondi a Interno per Agenti di quartiere","forma":"conversione","proponente":"interno","promotore":null,"linea_giocatore":null,"voto":{"anno":2031,"trimestre":3},"deliberazione":0,"fiducia":false,"forbice":{"camera":[324,337],"in_bilico":false,"maggioranza_camera":201,"maggioranza_senato":101,"senato":[162,172]},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":true},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]}],"esiti":[{"misura":80,"nome":"Ingressi per lavoro: alti","forma":"riforma","data":{"anno":2031,"trimestre":2},"camera":{"no":197,"si":203},"senato":{"no":100,"si":100},"approvata":false,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":true},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":true},{"partito":"centro","si":true},{"partito":"centrodestra","si":false},{"partito":"destra","si":false},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":true},{"partito":"nuovo_8","si":true}]},{"misura":70,"nome":"Incentivo fiscale agli investimenti: 20% del costo","forma":"riforma","data":{"anno":2031,"trimestre":1},"camera":{"no":195,"si":205},"senato":{"no":103,"si":97},"approvata":false,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":true},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false},{"partito":"nuovo_8","si":false}]}],"referendum":[],"esiti_referendum":[],"eventi":[{"nome":"Recessione","famiglia":"situazione","causa":"crescita del PIL: -2,9% annuo (soglia -1,0%)","tono":"ordinario","regione":null,"bersaglio":null,"costo":0,"scelta":null,"default":"Non intervenire"},{"nome":"Emergenza incendi","famiglia":"emergenza","causa":"rischio alto","tono":"ordinario","regione":"Sardegna","bersaglio":null,"costo":1000000000,"scelta":null,"default":"Attingere al fondo di riserva"}],"situazioni":[{"nome":"Recessione","misura":"crescita_pil","valore":-2.9008898484741317,"accensione":-1.0}],"mosse":[{"partito":"estrema_sinistra","testo":"Minaccia di scissione: la posizione percepita dista 0,5 punti dalla dichiarata"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Sanità"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Istruzione e Ricerca"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Ambiente ed Energia"},{"partito":"destra","testo":"Accoglie la proposta del dicastero Interno"}],"bilancio":{"presentabile":false,"presentato":false,"fondo_riserva":305700000,"esercizio_provvisorio":false},"programma":1,"campagna":true},"g":{"turno":7,"data":{"anno":2028,"trimestre":3},"turni_al_voto":13,"fase":"ordinaria","governa":true,"finita":false,"crisi":false,"dimissioni":false,"spread":62,"dicasteri":{"economia_finanze":"Economia e Finanze","sviluppo_economico":"Sviluppo economico","lavoro_welfare":"Lavoro e Welfare","sanita":"Sanità","istruzione_ricerca":"Istruzione e Ricerca","infrastrutture_trasporti":"Infrastrutture e Trasporti","ambiente_energia":"Ambiente ed Energia","interno":"Interno","giustizia":"Giustizia","esteri_difesa":"Esteri e Difesa"},"grandezze":{"efficienza_riscossione":"Efficienza della riscossione","sostegno_imprese":"Sostegno alle imprese","copertura_welfare":"Copertura del welfare","qualita_servizio_sanitario":"Qualità del servizio sanitario","qualita_scuola":"Qualità della scuola","qualita_trasporti":"Qualità dei trasporti","sicurezza_energetica":"Sicurezza energetica","sicurezza":"Sicurezza","durata_processi":"Durata dei processi","prontezza_difesa":"Prontezza della difesa","occupazione_pubblica":"Occupazione pubblica","stock_infrastrutture":"Stock di infrastrutture","investimenti_privati":"Investimenti privati","domanda_regionale":"Domanda della regione (punti di gap)","prezzo_energia":"Prezzo dell'energia (% sugli input importati)","politiche_attive":"Politiche attive (punti di disoccupazione strutturale tolti)","capitale_umano":"Capitale umano","sovraffollamento_carceri":"Sovraffollamento delle carceri","immigrazione_irregolare":"Immigrazione irregolare","corruzione":"Corruzione","regole_lavoro":"Regole del lavoro (punti di disoccupazione strutturale tolti)"},"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","al_governo":false,"leader":"Anna Ferrucci","sciolto":false},{"id":"sinistra","nome":"Sinistra","al_governo":false,"leader":"Luca Benedetti","sciolto":false},{"id":"centrosinistra","nome":"Centrosinistra","al_governo":false,"leader":"Chiara Lombardo","sciolto":false},{"id":"centro","nome":"Centro","al_governo":false,"leader":"Giorgio Valli","sciolto":false},{"id":"centrodestra","nome":"Centrodestra","al_governo":true,"leader":"Silvia Moretti","sciolto":false},{"id":"destra","nome":"Destra","al_governo":true,"leader":"Davide Ranieri","sciolto":false},{"id":"estrema_destra","nome":"Estrema destra","al_governo":false,"leader":"Bruno Castellani","sciolto":false},{"id":"giocatore","nome":"Partito del giocatore","al_governo":true,"leader":"","sciolto":false}],"seggi":[{"partito":"estrema_sinistra","camera":0,"senato":0},{"partito":"sinistra","camera":120,"senato":63},{"partito":"centrosinistra","camera":20,"senato":8},{"partito":"centro","camera":14,"senato":2},{"partito":"centrodestra","camera":32,"senato":15},{"partito":"destra","camera":116,"senato":62},{"partito":"estrema_destra","camera":22,"senato":12},{"partito":"giocatore","camera":76,"senato":38}],"quote":[0.01735711819165657,0.23026143834790608,0.07032252654523068,0.010432913176708343,0.04597022070978007,0.15890947401168715,0.01776387344894074,0.09567428694508956,0.35330814862300086],"ministeri":[{"dicastero":"economia_finanze","ministro":{"nome":"Simone Gallo","partito":"destra","soddisfazione":61.56130868152325,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":{"atto":"economia_finanze_concessionari","nome":"Riscossione affidata a concessionari privati","regione":null,"costo":148756294,"stato":"annunciata","in_evidenza":false,"motivo":"Efficienza della riscossione: avvicina l'obiettivo","effetti":[{"grandezza":"efficienza_riscossione","migliora":true,"ritardo":3}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sviluppo_economico","ministro":{"nome":"Marco Bianchi","partito":"giocatore","soddisfazione":50.51713958812453,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":{"atto":"sviluppo_economico_zone","nome":"Zone economiche speciali con burocrazia ridotta","regione":"campania","costo":102864162,"stato":"annunciata","in_evidenza":false,"motivo":"vicino alla sua posizione; Campania: ne ha bisogno","effetti":[{"grandezza":"investimenti_privati","migliora":true,"ritardo":3}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"lavoro_welfare","ministro":{"nome":"Simone Ricci","partito":"centrodestra","soddisfazione":50.57486701616312,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"lavoro_welfare_centri_impiego","nome":"Centri per l'impiego rinnovati","regione":null,"turni_mancanti":3,"effetti":[{"grandezza":"politiche_attive","migliora":true,"ritardo":0},{"grandezza":"copertura_welfare","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Bonus straordinario per le famiglie in difficoltà","importo":198390394,"motivo":"fondi che non bastano per Bonus straordinario per le famiglie in difficoltà","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sanita","ministro":{"nome":"Sara Ferraro","partito":"destra","soddisfazione":31.607982129763656,"minaccia":true,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":{"atto":"sanita_convenzioni_privato","nome":"Convenzioni col privato accreditato","regione":null,"costo":635555293,"stato":"annunciata","in_evidenza":true,"motivo":"vicino alla sua posizione","effetti":[{"grandezza":"qualita_servizio_sanitario","migliora":true,"ritardo":1}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"istruzione_ricerca","ministro":{"nome":"Chiara Caruso","partito":"giocatore","soddisfazione":63.25056069640737,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":{"atto":"istruzione_ricerca_premi","nome":"Premi di merito agli istituti","regione":null,"costo":525189116,"stato":"annunciata","in_evidenza":false,"motivo":"vicino alla sua posizione","effetti":[{"grandezza":"qualita_scuola","migliora":true,"ritardo":1}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"infrastrutture_trasporti","ministro":{"nome":"Filippo Ricci","partito":"centrodestra","soddisfazione":51.50311421516406,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[],"proposta":{"nome":"Manutenzione straordinaria delle strade locali","importo":297572368,"motivo":"fondi che non bastano per Manutenzione straordinaria delle strade locali","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"ambiente_energia","ministro":{"nome":"Luca Romano","partito":"destra","soddisfazione":48.53646560331608,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"ambiente_energia_rigassificatori","nome":"Rigassificatori e nuove centrali","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"sicurezza_energetica","migliora":true,"ritardo":0},{"grandezza":"prezzo_energia","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Riempimento accelerato delle riserve di gas","importo":351178342,"motivo":"fondi che non bastano per Riempimento accelerato delle riserve di gas","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"interno","ministro":{"nome":"Filippo Barbieri","partito":"giocatore","soddisfazione":53.549933325570954,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"interno_videosorveglianza","nome":"Videosorveglianza e centri di rimpatrio","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"sicurezza","migliora":true,"ritardo":0},{"grandezza":"immigrazione_irregolare","migliora":true,"ritardo":2}]},{"atto":"interno_accoglienza","nome":"Accoglienza diffusa e corridoi umanitari","regione":null,"turni_mancanti":1,"effetti":[{"grandezza":"immigrazione_irregolare","migliora":true,"ritardo":0},{"grandezza":"sicurezza","migliora":true,"ritardo":2}]}],"proposta":{"nome":"Agenti di quartiere","importo":350627241,"motivo":"fondi che non bastano per Agenti di quartiere","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"giustizia","ministro":{"nome":"Simone Bianchi","partito":"giocatore","soddisfazione":72.01032576537109,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":{"atto":"giustizia_telematico","nome":"Processo telematico e filtri sui ricorsi","regione":null,"costo":25502041,"stato":"annunciata","in_evidenza":false,"motivo":"Durata dei processi: avvicina l'obiettivo","effetti":[{"grandezza":"durata_processi","migliora":true,"ritardo":3}]},"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"esteri_difesa","ministro":{"nome":"Giulia Rossi","partito":"destra","soddisfazione":44.04117220655728,"minaccia":false,"causa_principale":"indicatore_in_calo","tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":"margine esaurito","cantieri":[{"atto":"esteri_difesa_ammodernamento","nome":"Ammodernamento dei mezzi","regione":null,"turni_mancanti":7,"effetti":[{"grandezza":"prontezza_difesa","migliora":true,"ritardo":0}]}],"proposta":{"nome":"Missioni di pace sotto mandato internazionale","importo":260773803,"motivo":"fondi che non bastano per Missioni di pace sotto mandato internazionale","rinviata":false,"disposizione":null,"gradino":null},"dimissioni_chieste":false,"causa_dimissioni":null}],"alleati":[{"partito":"centrodestra","intesa":46.79723909860998,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"quota_scoperta","variazioni":[{"partito":4,"causa":"quota_scoperta","delta":-1.026784660766964,"turno":6}]},{"partito":"destra","intesa":56.01971205118227,"ultimatum":false,"causa_ultimatum":null,"causa_principale":"sondaggi_in_calo","variazioni":[{"partito":5,"causa":"sondaggi_in_calo","delta":-0.3099642892468353,"turno":6}]}],"alleati_avversari":[],"posto_riservato":false,"coalizione":[],"calendario":[{"id":5,"nome":"Cuneo fiscale: 3 punti","forma":"riforma","proponente":null,"promotore":"centro","linea_giocatore":null,"voto":{"anno":2028,"trimestre":3},"deliberazione":0,"fiducia":false,"forbice":{"camera":[15,24],"senato":[1,8],"maggioranza_camera":201,"maggioranza_senato":101,"in_bilico":true},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":true},{"partito":"centrodestra","si":false},{"partito":"destra","si":false},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false}]},{"id":6,"nome":"Leva militare: obbligatoria","forma":"riforma","proponente":null,"promotore":"estrema_destra","linea_giocatore":null,"voto":{"anno":2028,"trimestre":4},"deliberazione":0,"fiducia":false,"forbice":{"camera":[162,173],"senato":[84,91],"maggioranza_camera":201,"maggioranza_senato":101,"in_bilico":true},"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false}]}],"esiti":[{"misura":4,"nome":"Concorrenza nei servizi: mercato libero","forma":"riforma","data":{"anno":2028,"trimestre":2},"camera":{"si":133,"no":267},"senato":{"si":69,"no":131},"approvata":false,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":true},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":true},{"partito":"centro","si":false},{"partito":"centrodestra","si":false},{"partito":"destra","si":false},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false}]},{"misura":2,"nome":"Regime delle pensioni: retributivo","forma":"riforma","data":{"anno":2028,"trimestre":1},"camera":{"si":120,"no":280},"senato":{"si":65,"no":135},"approvata":false,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":true},{"partito":"sinistra","si":true},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":false},{"partito":"destra","si":false},{"partito":"estrema_destra","si":false},{"partito":"giocatore","si":false}]},{"misura":1,"nome":"Autonomia differenziata: intese complete","forma":"riforma","data":{"anno":2028,"trimestre":1},"camera":{"si":167,"no":233},"senato":{"si":89,"no":111},"approvata":false,"fiducia":false,"decaduta":null,"linee":[{"partito":"estrema_sinistra","si":false},{"partito":"sinistra","si":false},{"partito":"centrosinistra","si":false},{"partito":"centro","si":false},{"partito":"centrodestra","si":true},{"partito":"destra","si":true},{"partito":"estrema_destra","si":true},{"partito":"giocatore","si":false}]}],"referendum":[],"esiti_referendum":[],"eventi":[{"nome":"Emergenza incendi","famiglia":"emergenza","causa":"rischio alto","tono":"grave","regione":"Lazio","bersaglio":null,"costo":5000000000,"scelta":null,"default":"Attingere al fondo di riserva"}],"situazioni":[],"mosse":[{"partito":"estrema_destra","testo":"Porta nel posto riservato Leva militare: obbligatoria; 225 seggi fra Camera e Senato dei partiti alleati la voterebbero"}],"bilancio":{"presentabile":false,"presentato":false,"fondo_riserva":305700000,"esercizio_provvisorio":false},"programma":0,"campagna":true},"z":{"turno":0,"data":{"anno":2026,"trimestre":4},"turni_al_voto":0,"fase":"sciolta","governa":false,"finita":false,"crisi":false,"dimissioni":false,"spread":84,"dicasteri":{"economia_finanze":"Economia e Finanze","sviluppo_economico":"Sviluppo economico","lavoro_welfare":"Lavoro e Welfare","sanita":"Sanità","istruzione_ricerca":"Istruzione e Ricerca","infrastrutture_trasporti":"Infrastrutture e Trasporti","ambiente_energia":"Ambiente ed Energia","interno":"Interno","giustizia":"Giustizia","esteri_difesa":"Esteri e Difesa"},"grandezze":{"efficienza_riscossione":"Efficienza della riscossione","sostegno_imprese":"Sostegno alle imprese","copertura_welfare":"Copertura del welfare","qualita_servizio_sanitario":"Qualità del servizio sanitario","qualita_scuola":"Qualità della scuola","qualita_trasporti":"Qualità dei trasporti","sicurezza_energetica":"Sicurezza energetica","sicurezza":"Sicurezza","durata_processi":"Durata dei processi","prontezza_difesa":"Prontezza della difesa","occupazione_pubblica":"Occupazione pubblica","stock_infrastrutture":"Stock di infrastrutture","investimenti_privati":"Investimenti privati","domanda_regionale":"Domanda della regione (punti di gap)","prezzo_energia":"Prezzo dell'energia (% sugli input importati)","politiche_attive":"Politiche attive (punti di disoccupazione strutturale tolti)","capitale_umano":"Capitale umano","sovraffollamento_carceri":"Sovraffollamento delle carceri","immigrazione_irregolare":"Immigrazione irregolare","corruzione":"Corruzione","regole_lavoro":"Regole del lavoro (punti di disoccupazione strutturale tolti)"},"partiti":[{"id":"estrema_sinistra","nome":"Estrema sinistra","al_governo":false,"leader":"Anna Ferrucci","sciolto":false},{"id":"sinistra","nome":"Sinistra","al_governo":false,"leader":"Luca Benedetti","sciolto":false},{"id":"centrosinistra","nome":"Centrosinistra","al_governo":false,"leader":"Chiara Lombardo","sciolto":false},{"id":"centro","nome":"Centro","al_governo":false,"leader":"Giorgio Valli","sciolto":false},{"id":"centrodestra","nome":"Centrodestra","al_governo":true,"leader":"Silvia Moretti","sciolto":false},{"id":"destra","nome":"Destra","al_governo":true,"leader":"Davide Ranieri","sciolto":false},{"id":"estrema_destra","nome":"Estrema destra","al_governo":false,"leader":"Bruno Castellani","sciolto":false},{"id":"giocatore","nome":"Partito del giocatore","al_governo":false,"leader":"","sciolto":false}],"seggi":[{"partito":"estrema_sinistra","camera":0,"senato":0},{"partito":"sinistra","camera":0,"senato":0},{"partito":"centrosinistra","camera":0,"senato":0},{"partito":"centro","camera":0,"senato":0},{"partito":"centrodestra","camera":0,"senato":0},{"partito":"destra","camera":0,"senato":0},{"partito":"estrema_destra","camera":0,"senato":0},{"partito":"giocatore","camera":0,"senato":0}],"quote":[0.01420754002027598,0.2080585928495703,0.02776816273070075,0.04143114404664875,0.03030622311012688,0.21116188603103914,0.03005981070645215,0.13440749131303284,0.3025991491921532],"ministeri":[{"dicastero":"economia_finanze","ministro":{"nome":"Anna Bianchi","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Detrazione edilizia: nessuna","importo":0,"motivo":"Detrazione edilizia: lontana dalla sua posizione","rinviata":false,"disposizione":"detrazione_edilizia","gradino":"0"},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sviluppo_economico","ministro":{"nome":"Fabio Bianchi","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Credito d'imposta nella ZES unica: nessuno stanziamento","importo":0,"motivo":"Credito d'imposta nella ZES unica: lontana dalla sua posizione","rinviata":false,"disposizione":"credito_zes","gradino":"0"},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"lavoro_welfare","ministro":{"nome":"Luca Romano","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Sgravio contributivo nel Mezzogiorno: nessuno sgravio","importo":0,"motivo":"Sgravio contributivo nel Mezzogiorno: lontana dalla sua posizione","rinviata":false,"disposizione":"decontribuzione","gradino":"0"},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"sanita","ministro":{"nome":"Giulia Ricci","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"istruzione_ricerca","ministro":{"nome":"Davide Bruno","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"infrastrutture_trasporti","ministro":{"nome":"Giulia Esposito","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Codice degli appalti: deroga generale","importo":0,"motivo":"Codice degli appalti: lontana dalla sua posizione","rinviata":false,"disposizione":"codice_appalti","gradino":"deroga_generale"},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"ambiente_energia","ministro":{"nome":"Elena Bruno","partito":"centrodestra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Nucleare: consentito","importo":0,"motivo":"Nucleare: lontana dalla sua posizione","rinviata":false,"disposizione":"nucleare","gradino":"consentito"},"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"interno","ministro":{"nome":"Anna Esposito","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"giustizia","ministro":{"nome":"Filippo Marino","partito":"destra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":null,"dimissioni_chieste":false,"causa_dimissioni":null},{"dicastero":"esteri_difesa","ministro":{"nome":"Anna Ricci","partito":"centrodestra","soddisfazione":60.0,"minaccia":false,"causa_principale":null,"tecnico":false,"rodaggio":false},"agenda":null,"motivo_senza_agenda":null,"cantieri":[],"proposta":{"nome":"Leva militare: obbligatoria","importo":0,"motivo":"Leva militare: lontana dalla sua posizione","rinviata":false,"disposizione":"leva_militare","gradino":"obbligatoria"},"dimissioni_chieste":false,"causa_dimissioni":null}],"alleati":[],"alleati_avversari":[],"posto_riservato":false,"coalizione":[],"calendario":[],"esiti":[],"referendum":[],"esiti_referendum":[],"eventi":[],"situazioni":[{"nome":"Caro energia","misura":"energia","valore":11.0,"accensione":10.0}],"mosse":[],"bilancio":{"presentabile":false,"presentato":false,"fondo_riserva":300000000,"esercizio_provvisorio":false},"programma":0,"campagna":true}};
+const VV = DATI;
+const PG = 'giocatore';
+// ======================= le voci della prima pagina, dal prototipo 16 (stati «ordinario» e «fermata») =======================
+// La Vista di oggi non porta l'esito (PR 1 del piano di core): le voci sono quelle scritte a mano nel 16, più quelle del
+// tono grave scritte qui allo stesso modo, leggendo la Vista prima e dopo la chiusura del turno 6 (viste/25-registro.json).
+// k: i fili (o i nodi, «n:») dello schema a cui la voce rimanda. Il numero del tondo è la posizione della voce nell'elenco.
+const VOCI = {
+o: [
+ {c:'C',f:'Emergenza incendi in Calabria: fondo di riserva per default, coperti 0 € su 1 mld',k:[]},
+ {c:'C',f:'Tre proposte dei ministri respinte senza risposta: soddisfazione −8 a ciascuno',k:['prop:infrastrutture_trasporti','prop:ambiente_energia','prop:esteri_difesa']},
+ {c:'N',f:'Approvata «Sgravio contributivo nel Mezzogiorno: 15%»: Camera 232 sì e 168 no, Senato 113 sì e 87 no',k:['es:Sgravio contributivo nel Mezzogiorno: 15%']},
+ {c:'o',f:'Spread a 71 punti base, −18',k:['spread']},
+ {c:'o',f:'Coalizione al 51,3%, −7,5',k:[]},
+ {c:'o',f:'Luglio–settembre, prima stima: PIL −3,3% annuo, inflazione 3,1%, disoccupazione 6,0%, disavanzo 2,7%',k:[]},
+ {c:'o',f:'Aprile–giugno riveduto: PIL da +1,8% a +1,3%, disoccupazione da 5,5% a 5,6%',k:[]},
+ {c:'o',f:'Partito del giocatore: 203.170 € fra 2 per mille e donazioni',k:[]},
+ {c:'o',f:'Dieci ministri cambiano soddisfazione',k:[]},
+ {c:'o',f:'Tre variazioni d’intesa degli alleati',k:['al:centrodestra','al:destra']},
+ {c:'C',f:'Emergenza idrogeologica in Emilia-Romagna: 1 mld',k:['ev:Emergenza idrogeologica']},
+ {c:'N',f:'Sinistra porta nel posto riservato «Regime delle pensioni: retributivo»',k:['cal:2']},
+],
+g: [
+ {c:'N',f:'Respinta «Concorrenza nei servizi: mercato libero», proposta del Centrosinistra: Camera 133 sì e 267 no, Senato 69 sì e 131 no',k:['es:Concorrenza nei servizi: mercato libero']},
+ {c:'o',f:'Spread a 62 punti base, −2',k:['spread']},
+ {c:'o',f:'Aprile–giugno 2028, prima stima: PIL +0,6% annuo, inflazione 1,7%, disoccupazione 5,7%, disavanzo 1,5%',k:[]},
+ {c:'N',f:'Sanità, Sara Ferraro: soddisfazione a 31,6, −9,7; minaccia le dimissioni',k:['min:sanita']},
+ {c:'o',f:'Due variazioni d’intesa degli alleati',k:['al:centrodestra','al:destra']},
+ {c:'C',g:1,f:'Emergenza incendi nel Lazio: 5 mld',k:['ev:Emergenza incendi']},
+ {c:'N',f:'Estrema destra porta nel posto riservato «Leva militare: obbligatoria»',k:['cal:6']},
+],
+p: [
+ {c:'N',f:'Emergenza siccità in Veneto: fondo di riserva per default, coperti 205,7 mln € su 1 mld',k:[]},
+ {c:'N',f:'Respinta «Ingressi per lavoro: alti», proposta della Lista dei Territori: Camera 203 sì e 197 no, Senato 100 sì e 100 no',k:['es:Ingressi per lavoro: alti']},
+ {c:'o',f:'Estrema sinistra: la posizione percepita dista 0,5 punti dalla dichiarata',k:['n:p:estrema_sinistra']},
+ {c:'o',f:'Spread a 93 punti base, +13',k:['spread']},
+ {c:'o',f:'Partito del giocatore al 4,7%, −1,8',k:[]},
+ {c:'o',f:'Aprile–giugno 2031, prima stima: PIL −2,9% annuo, inflazione −0,2%, disoccupazione 5,3%, disavanzo 1,8%',k:[]},
+ {c:'o',f:'Gennaio–marzo 2031 riveduto: PIL da −1,6% a −1,4%, disoccupazione da 5,4% a 5,7%',k:[]},
+ {c:'o',f:'Partito del giocatore: 115.999 € fra 2 per mille e donazioni',k:[]},
+ {c:'N',f:'Recessione: il governo decide se intervenire',k:['ev:Recessione']},
+ {c:'N',f:'Emergenza incendi in Sardegna: 1 mld',k:['ev:Emergenza incendi']},
+],
+z: [],
+};
+// Battute a biro: BOZZA del prototipo, una per tipo di filo, con le regole dei Testi del Pungolo (niente nomi né cifre).
+const BATTUTE = {prop:'il ministro chiede, il Tesoro finge di non sentire', al:'l’alleato sorride; il broncio è a verbale',
+  ev:'il cielo presenta il conto', spread:'i mercati prendono appunti', bilico:'in aula si conta, due volte',
+  rit:'effetto garantito, fra qualche trimestre', min:'la lettera è pronta, manca la data', esno:'tutti dicono che era previsto'};
+
+const STATI = {
+  ordinario:{v:'o', nota:'Vista 04: seme 4, turno 4, al governo, bilancio presentato'},
+  opposizione:{v:'p', nota:'Vista del 28 «fine»: seme 1 a 1,5, turno 19, sotto un governo di cinque partiti'},
+  grave:{v:'g', nota:'Vista 08: seme 4, turno 7, «Emergenza incendi» in tono grave'},
+  zero:{v:'z', nota:'Vista 01: seme 4, turno zero, Camere sciolte'},
+};
+const DEF = {v:'B', stato:'ordinario', fili:'tutti', bat:'1', fin:'1280', scala:'1'};
+const st = {...DEF, sel:null};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+if(!STATI[st.stato]) st.stato='ordinario';
+const FORME = {B:'B · Tavola per poteri', A:'A · Tavola a rete', C:'C · Indice dei fili', D:'D · Mappa delle forze'};
+
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const euro = c => c>=1e9 ? (c/1e9).toLocaleString('it-IT',{maximumFractionDigits:1})+' mld €' : c>=1e6 ? Math.round(c/1e6).toLocaleString('it-IT')+' mln €' : c.toLocaleString('it-IT',{useGrouping:'always'})+' €';
+const TRIM = ['','gennaio–marzo','aprile–giugno','luglio–settembre','ottobre–dicembre'];
+const TR = ['','gen–mar','apr–giu','lug–set','ott–dic'];
+const per = d => `${TRIM[d.trimestre]} ${d.anno}`;
+const Per = d => per(d).replace(/^./,c=>c.toUpperCase());
+const sgn = x => (x>0?'+':x<0?'−':'')+Math.abs(x);
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+const PROVA = '<span class="prova">DI PROVA</span>';
+const prec = d => d.trimestre===1 ? {anno:d.anno-1, trimestre:4} : {anno:d.anno, trimestre:d.trimestre-1};
+const ugD = (a,b) => a.anno===b.anno && a.trimestre===b.trimestre;
+const fraT = (d,o) => (d.anno-o.anno)*4 + d.trimestre-o.trimestre;
+const CAUSE = {spartizione:'spartizione dei ministeri', sondaggi_in_calo:'sondaggi in calo', norma_lontana:'una norma lontana dalla sua posizione',
+  emendamento_respinto:'emendamento respinto', quota_scoperta:'quota di ministeri scoperta', uscita_dal_governo:'il suo partito è uscito dal governo',
+  indicatore_in_calo:'indicatore in calo', proposta_respinta:'proposta respinta', obiettivo_raggiunto:'obiettivo raggiunto'};
+const causa = c => CAUSE[c] || String(c||'').replaceAll('_',' ');
+const DS = {economia_finanze:'Economia', sviluppo_economico:'Sviluppo', lavoro_welfare:'Lavoro', sanita:'Sanità', istruzione_ricerca:'Istruzione',
+  infrastrutture_trasporti:'Infrastrutture', ambiente_energia:'Ambiente', interno:'Interno', giustizia:'Giustizia', esteri_difesa:'Esteri'};
+const REG = {piemonte:'Piemonte', valle_aosta:'Valle d’Aosta', lombardia:'Lombardia', trentino_alto_adige:'Trentino-Alto Adige', veneto:'Veneto',
+  friuli_venezia_giulia:'Friuli-Venezia Giulia', liguria:'Liguria', emilia_romagna:'Emilia-Romagna', toscana:'Toscana', umbria:'Umbria', marche:'Marche',
+  lazio:'Lazio', abruzzo:'Abruzzo', molise:'Molise', campania:'Campania', puglia:'Puglia', basilicata:'Basilicata', calabria:'Calabria', sicilia:'Sicilia', sardegna:'Sardegna'};
+const regN = r => REG[r] || r;
+
+const V = () => VV[STATI[st.stato].v];
+const grave = () => V().eventi.some(e=>e.tono==='grave');
+const nomeP = id => id===PG ? 'Il tuo partito' : (V().partiti.find(p=>p.id===id)?.nome || id);
+const dic = id => V().dicasteri[id] || id;
+const seg = (id,r) => V().seggi.find(s=>s.partito===id)?.[r] || 0;
+const tot = r => V().seggi.reduce((a,s)=>a+s[r],0);
+const governo = () => V().partiti.filter(p=>p.al_governo).map(p=>p.id);
+// ponytail: la guida non è un campo della Vista; fuori dal governo è il partito di governo senza fascia d'intesa, al turno zero quello con più ministri
+const guida = () => { const v=V(); if(v.governa) return PG; if(v.alleati_avversari.length) return governo().find(id=>!v.alleati_avversari.some(a=>a.partito===id));
+  const c={}; v.ministeri.forEach(m=>{ const p=m.ministro?.partito; if(p) c[p]=(c[p]||0)+1; }); return Object.keys(c).sort((x,y)=>c[y]-c[x])[0]; };
+const margine = r => governo().reduce((a,id)=>a+seg(id,r),0) - tot(r)/2;
+const sciolte = () => V().fase==='sciolta';
+
+// ======================= il modello: nodi e fili, tutti da campi della Vista =======================
+// filo: {id, da, a, et (etichetta corta), cosa (frase intera), m (−: effetto negativo), r (in ritardo), c (in corso),
+//        q (quando), fonte (campo della Vista), sez (sezione dove si decide o si legge), bt (tipo di battuta)}
+function modello(){
+  const v=V(), N=new Map(), F=[];
+  const nodo = (id,o) => { if(!N.has(id)) N.set(id,{id,...o}); return id; };
+  const gu = guida();
+  nodo('pdc',{k:'pdc', t:'Presidente del Consiglio', s: sciolte() ? `uscente · ${nomeP(gu)}` : v.governa ? 'tu' : `guida: ${nomeP(gu)}`});
+  nodo('camera',{k:'ist', t:'Camera', s: sciolte() ? 'sciolta' : `${tot('camera')} seggi`, spento:sciolte()});
+  nodo('senato',{k:'ist', t:'Senato', s: sciolte() ? 'sciolto' : `${tot('senato')} seggi`, spento:sciolte()});
+  nodo('mer',{k:'ist', t:'Mercati e UE', s:`spread ${v.spread} pb`});
+  for(const m of v.ministeri){
+    const mi=m.ministro;
+    nodo('d:'+m.dicastero,{k:'dic', t:DS[m.dicastero]||dic(m.dicastero), lungo:dic(m.dicastero),
+      s: mi ? `${mi.nome.split(' ').slice(-1)[0]} · ${nomeP(mi.partito)}` : 'interim', m});
+  }
+  const par = id => nodo('p:'+id,{k:'par', t:nomeP(id).replace('Estrema ','Estr. ').replace('Lista dei Territori','Lista Territori'), lungo:nomeP(id), s: sciolte() ? 'in campagna' : `seggi ${seg(id,'camera')} / ${seg(id,'senato')}`, gov:governo().includes(id), tuo:id===PG});
+  const gra = g => nodo('g:'+g,{k:'pae', t:v.grandezze[g]||g.replaceAll('_',' '), s:'grandezza'});
+  const reg = r => nodo('r:'+r,{k:'pae', t:regN(r), s:'regione'});
+  // maggioranza
+  if(!sciolte()) for(const r of ['camera','senato']){ const mg=margine(r);
+    F.push({id:'magg:'+r, da:'pdc', a:r, et:`maggioranza ${sgn(Math.round(mg))}`, cosa:`Il governo ha ${governo().reduce((a,id)=>a+seg(id,r),0)} seggi su ${tot(r)} ${r==='camera'?'alla Camera':'al Senato'}: margine ${sgn(Math.round(mg))}`,
+      m:mg<3, fonte:'seggi, partiti[].al_governo', sez:'Aula'}); }
+  else F.push({id:'sciolte', da:'pdc', a:'camera', et:'si vota a fine turno', cosa:'Le Camere sono sciolte: il governo resta per gli affari correnti fino al voto', fonte:'fase', sez:'Campagna'});
+  // ministri
+  for(const m of v.ministeri){
+    const d='d:'+m.dicastero, mi=m.ministro, a=m.agenda;
+    if(a){ const e=a.effetti[0], tgt = a.regione ? reg(a.regione) : e ? gra(e.grandezza) : null;
+      if(tgt) F.push({id:'ag:'+m.dicastero, da:d, a:tgt, et: a.regione ? `${e?(e.migliora?'▲ ':'▼ '):''}${(v.grandezze[e?.grandezza]||'').toLowerCase()}`.trim() || 'agenda' : `${e.migliora?'▲':'▼'} ${e.ritardo?'fra '+e.ritardo+' turni':'subito'}`,
+        cosa:`${a.nome}${a.regione?' in '+regN(a.regione):''}: ${a.effetti.map(x=>`${x.migliora?'migliora':'peggiora'} ${(v.grandezze[x.grandezza]||x.grandezza).toLowerCase()}${x.ritardo?`, fra ${x.ritardo} ${x.ritardo===1?'turno':'turni'}`:', subito'}`).join('; ')}. Costo ${euro(a.costo)}, ${a.stato}.`,
+        m: e && !e.migliora, r: e && e.ritardo>0, q:a.stato, fonte:'ministeri[].agenda, atti[].effetti', sez:'Governo', bt: e?.ritardo>2?'rit':null}); }
+    m.cantieri.forEach((c,i)=>{ const e=c.effetti[0], tgt = c.regione ? reg(c.regione) : e ? gra(e.grandezza) : null; if(!tgt) return;
+      F.push({id:`cant:${m.dicastero}:${i}`, da:d, a:tgt, et:`cantiere, ${c.turni_mancanti} ${c.turni_mancanti===1?'turno':'turni'}`, cosa:`Cantiere «${c.nome}»${c.regione?' in '+regN(c.regione):''}: mancano ${c.turni_mancanti} ${c.turni_mancanti===1?'turno':'turni'}${e?`; poi ${e.migliora?'migliora':'peggiora'} ${(v.grandezze[e.grandezza]||e.grandezza).toLowerCase()}`:''}`,
+        c:1, fonte:'ministeri[].cantieri', sez:'Governo'}); });
+    if(m.proposta){ const p=m.proposta, resp = mi?.causa_principale==='proposta_respinta';
+      F.push({id:'prop:'+m.dicastero, da:d, a:'pdc', et:`chiede ${euro(p.importo)}`, val:p.importo, cosa:`${mi?mi.nome:'Il ministero'} chiede ${euro(p.importo)} per «${p.nome}»: ${p.motivo}${resp?'. L’ultima proposta è stata respinta':''}`,
+        m:resp, q:p.rinviata?'rinviata':'in sospeso', fonte:'ministeri[].proposta', sez:'Cruscotto', bt:'prop'}); }
+    if(mi?.minaccia) F.push({id:'min:'+m.dicastero, da:d, a:'pdc', et:'minaccia le dimissioni', cosa:`${mi.nome} minaccia le dimissioni: soddisfazione ${num(mi.soddisfazione)}, ${causa(mi.causa_principale)}`, m:1, fonte:'ministeri[].ministro.minaccia', sez:'Governo', bt:'min'});
+    if(m.dimissioni_chieste) F.push({id:'dim:'+m.dicastero, da:'pdc', a:d, et:'dimissioni chieste', cosa:`Hai chiesto le dimissioni di ${mi?.nome||'?'}`, m:1, fonte:'ministeri[].dimissioni_chieste', sez:'Governo'});
+  }
+  // alleati
+  for(const a of v.alleati){ const last=a.variazioni.at(-1);
+    F.push({id:'al:'+a.partito, da:par(a.partito), a:'pdc', et:`intesa ${Math.round(a.intesa)}${a.ultimatum?' · ultimatum':''}`,
+      cosa:`${nomeP(a.partito)}: intesa ${num(a.intesa)}${a.ultimatum?`, in ultimatum: ${causa(a.causa_ultimatum)}`:''}${a.causa_principale?`; pesa di più ${causa(a.causa_principale)}`:''}${a.variazioni.length?`. Ultimo turno: ${a.variazioni.map(x=>`${causa(x.causa)} ${sgn(+x.delta.toFixed(1)).replace('.',',')}`).join(', ')}`:''}`,
+      m: a.ultimatum || (last && last.delta<0), fonte:'alleati', sez:'Partiti', bt:'al'}); }
+  for(const a of v.alleati_avversari) F.push({id:'al:'+a.partito, da:par(a.partito), a:'pdc', et: a.fascia, cosa:`${nomeP(a.partito)} con ${nomeP(gu)}: intesa ${a.fascia}${a.causa_ultimatum?`, ${causa(a.causa_ultimatum)}`:''}`, m:a.fascia==='ultimatum', fonte:'alleati_avversari', sez:'Cruscotto', bt:a.fascia==='ultimatum'?'al':null});
+  // aula
+  for(const c of v.calendario){
+    const da = c.promotore ? par(c.promotore) : c.proponente ? 'd:'+c.proponente : c.forma==='bilancio' ? 'd:economia_finanze' : 'pdc';
+    const fra = fraT(c.voto, v.data), f=c.forbice;
+    F.push({id:'cal:'+c.id, da, a:'camera', et: fra<=0 ? 'al voto a fine turno' : `in aula, ${TR[c.voto.trimestre]}`,
+      cosa:`«${c.nome}»${c.promotore?`, nel posto riservato di ${nomeP(c.promotore)}`:c.proponente?`, del dicastero ${dic(c.proponente)}`:''}: al voto ${fra<=0?'a fine turno':'in '+per(c.voto)}. Sì attesi: Camera ${f.camera[0]}–${f.camera[1]} su ${f.maggioranza_camera}, Senato ${f.senato[0]}–${f.senato[1]} su ${f.maggioranza_senato}${f.in_bilico?', in bilico':''}`,
+      r: fra>0, m: f.in_bilico, fonte:'calendario', sez:'Aula', bt: f.in_bilico?'bilico':null}); }
+  const pr = prec(v.data);
+  for(const e of v.esiti.filter(e=>ugD(e.data,pr))){
+    const cal = v.calendario.find(c=>c.nome===e.nome);
+    F.push({id:'es:'+e.nome, da:'camera', a:'senato', et: e.approvata ? 'legge approvata' : 'legge respinta',
+      cosa:`${e.approvata?'Approvata':'Respinta'} «${e.nome}»: Camera ${e.camera.si} sì e ${e.camera.no} no, Senato ${e.senato.si} sì e ${e.senato.no} no`,
+      m:!e.approvata, fonte:'esiti (trimestre chiuso)', sez:'Aula', bt: e.approvata?null:'esno'}); }
+  if(v.posto_riservato && !v.governa) F.push({id:'posto', da:par(PG), a:'camera', et:'posto riservato: tuo', cosa:'Il posto riservato all’opposizione di questo turno è tuo, ed è libero', r:1, fonte:'posto_riservato', sez:'Aula'});
+  // paese
+  for(const e of v.eventi){
+    const da = e.regione ? nodo('r:'+e.regione,{k:'pae', t:e.regione, s:'regione'}) : nodo('s:'+e.nome,{k:'sit', t:e.nome, s:'situazione accesa'});
+    F.push({id:'ev:'+e.nome, nome:e.nome, costo:e.costo, da, a:'pdc', et: e.costo ? euro(e.costo) : 'si decide',
+      cosa:`${e.nome}${e.regione?' in '+e.regione:''}${e.costo?`: ${euro(e.costo)}`:''}, ${e.causa}. ${v.governa?'Lo decidi tu':'Lo decide il governo'}; senza scelta: ${String(e.default||'').toLowerCase()}`,
+      m:1, fonte:'eventi', sez:'Cruscotto', bt:'ev', grave:e.tono==='grave'}); }
+  for(const s of v.situazioni) if(!v.eventi.some(e=>e.nome===s.nome)){
+    nodo('s:'+s.nome,{k:'sit', t:s.nome, s:'situazione accesa'});
+    F.push({id:'sit:'+s.nome, nome:s.nome, da:'s:'+s.nome, a:'pdc', et:'accesa', cosa:`${s.nome}: accesa. La Vista non dice quale dicastero la muove`, m:1, fonte:'situazioni', sez:'Conti'}); }
+  F.push({id:'spread', da:'mer', a:'d:economia_finanze', et:`spread ${v.spread}`, cosa:`Spread a ${v.spread} punti base sul debito`, m:v.spread>350, fonte:'spread_pb', sez:'Conti', bt:'spread'});
+  // nodi solo con un segno
+  for(const mo of v.mosse) if(/scissione/i.test(mo.testo)) { par(mo.partito); N.get('p:'+mo.partito).nota=mo.testo; }
+  // tondi
+  const vo = VOCI[STATI[st.stato].v];
+  const tondi = id => vo.map((x,i)=>x.k.includes(id)?i+1:0).filter(Boolean);
+  F.forEach(f=>{ f.tondi=tondi(f.id); });
+  N.forEach(n=>{ n.tondi=tondi('n:'+n.id); });
+  return {N, F, Ftot:F.length};
+}
+
+// ======================= tracciati e cornice (dal 28) =======================
+const fr = v => '';
+function caselle(pos,soglia=3,n=10){
+  if(pos==null) return `<span class="cas vuoto">${'<i></i>'.repeat(n)}</span>`;
+  const inp=pos<=soglia;
+  return `<span class="cas ${inp?'inp':''}">${Array.from({length:n},(_,i)=>`<i class="${[i<soglia?'per':'', i===soglia-1?'sog':'', i<pos?'on':''].join(' ')}"></i>`).join('')}</span>`;
+}
+function consenso(){
+  const v=V(), q=v.quote, ast=q[q.length-1], ids=v.partiti.map(p=>p.id), c=id=>q[ids.indexOf(id)]/(1-ast)*100;
+  return v.governa ? governo().reduce((a,id)=>a+c(id),0) : c(PG);
+}
+function tracciati(){
+  const v=V(), m=[margine('camera'),margine('senato')], C=consenso();
+  const t=[[v.governa?'Consenso':'Il tuo consenso', num(C)+'%', clamp(Math.round((C-25)/5),0,10)],
+    sciolte() ? ['Maggioranza','al voto',null] : v.governa ? ['Maggioranza C / S', m.map(x=>sgn(Math.round(x))).join(' / '), clamp(Math.round((Math.min(...m)+9)/3),0,10)]
+      : ['Per farlo cadere †', m.map(x=>Math.max(0,Math.ceil(x))).join(' / '), clamp(10-Math.round(Math.min(...m)/3),0,10)],
+    ['Conti · spread', num(v.spread,0), clamp(Math.round((500-v.spread)/50),0,10)]];
+  return `<div class="trks">${t.map(([k,val,pos])=>`<div class="trk"><span class="k">${k}</span>${caselle(pos)}<span class="v">${val}</span></div>`).join('')}</div>`;
+}
+const SEZ = [['prima','Prima pagina'],['cruscotto','Cruscotto'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function barrate(){
+  const v=V(), b={};
+  if(!v.governa){ b.governo='Non governi: i ministri sono del governo avversario'; b.bilancio='La legge di bilancio la presenta il governo'; }
+  if(!v.campagna) b.campagna='Si fa campagna solo nel turno prima del voto';
+  if(sciolte()){ b.aula='Le Camere sono sciolte'; b.prima='Al turno zero non c’è un esito'; }
+  return b;
+}
+function cornice(){
+  const v=V(), b=barrate();
+  const chi=`<span class="chi"><b>${sciolte()?'Turno zero':v.governa?'Al governo':'All’opposizione'}</b><br>${Per(v.data)} · turno ${v.turno}<br><b>${v.turni_al_voto===1?'1 turno al voto':v.turni_al_voto+' turni al voto'}</b></span>`;
+  const somm=`<nav class="somm" aria-label="Sommario">${SEZ.map(([k,t])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}">${t}</button>` : `<button>${t}</button>`).join('')}
+    <span class="fuori"><button class="qui" aria-current="page">Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav>`;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino solo-ord">Il Pungolo</span>${chi}</div>${tracciati()}
+    <div class="c-dx"><div class="pila"><button class="btn p">Avanti fino a novità ››</button><button class="btn pieno">Chiudi il turno ›</button></div></div></div>${somm}</header>`;
+}
+
+// ======================= disegno: misure e pezzi comuni =======================
+const LW = (s,px,b) => Math.round(String(s).length*px*(b?.6:.54)) ;   // ponytail: stima della larghezza del testo, basta per i riquadri
+function box(n){ const w=Math.max(LW(n.t,13,1), LW(n.s||'',12))+18, h=n.s?36:24; return {w,h}; }
+function nodoSvg(n,x,y,o={}){
+  const {w,h}=o.w?{w:o.w,h:o.h}:box(n), cl=['nd',n.k,n.gov?'gov':'',n.tuo?'tuo':'',n.spento?'spento':'',o.on?'on':''].join(' ');
+  const forma = n.k==='pdc' ? `<rect class="b" x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="${h/2}"/>`
+    : n.k==='pae'||n.k==='sit' ? `<rect class="b" x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="8"/>`
+    : `<rect class="b" x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}"/>`;
+  const al = o.al||'middle', tx = al==='start'?x-w/2+9:x;
+  const t = n.s ? `<text x="${tx}" y="${y-3}" text-anchor="${al}" font-size="13" font-weight="700">${esc(n.t)}</text><text class="s" x="${tx}" y="${y+12}" text-anchor="${al}">${esc(n.s)}</text>`
+    : `<text x="${tx}" y="${y+4.5}" text-anchor="${al}" font-size="13" font-weight="700">${esc(n.t)}</text>`;
+  const tn = (n.tondi||[]).map((k,i)=>`<g class="tnd ${o.on?'on':''}"><circle cx="${x+w/2-2+i*18}" cy="${y-h/2}" r="9"/><text x="${x+w/2-2+i*18}" y="${y-h/2+4}">${k}</text></g>`).join('');
+  return `<g class="${cl}" data-nodo="${esc(n.id)}" tabindex="0">${forma}${t}</g>${tn}`;
+}
+function tondoSvg(f,x,y,on){ return f.tondi.map((k,i)=>`<g class="tnd ${f.m?'m':''} ${on?'on':''}"><circle cx="${x+i*19}" cy="${y}" r="9"/><text x="${x+i*19}" y="${y+4}">${k}</text></g>`).join(''); }
+function filoCl(f,on){ return ['fi',f.m?'m':'',f.r?'r':'',f.c?'c':'',on?'on':''].join(' '); }
+const legati = (M,id) => new Set(M.F.filter(f=>f.da===id||f.a===id).flatMap(f=>[f.id,f.da,f.a]));
+function inFuoco(M){ if(!st.sel) return null; const [t,id]=st.sel.split('|');
+  if(t==='n') return legati(M,id).add(id);
+  if(t==='f'){ const f=M.F.find(x=>x.id===id); return f ? new Set([f.id,f.da,f.a]) : null; }
+  if(t==='v'){ const vo=VOCI[STATI[st.stato].v][+id-1]; const s=new Set(); M.F.filter(f=>vo.k.includes(f.id)).forEach(f=>[f.id,f.da,f.a].forEach(x=>s.add(x))); vo.k.filter(k=>k.startsWith('n:')).forEach(k=>s.add(k.slice(2))); return s; }
+  return null; }
+const battuta = f => st.bat==='1' && !grave() && f.bt && BATTUTE[f.bt] ? '«'+BATTUTE[f.bt]+'»' : '';
+
+// ======================= A · Tavola a rete =======================
+// Geometria fissa per tipo: il Presidente del Consiglio al centro, i dieci dicasteri in cerchio, il Parlamento a sinistra,
+// i partiti sotto, il Paese a destra, i mercati in alto. Solo i nodi toccati da un filo, salvo istituzioni e dicasteri.
+function posA(M,W,H,mini){
+  const P={}, cx=W*.41, cy=H*.47, rx=W*(mini?.2:.19), ry=H*.37;
+  P.pdc=[cx,cy]; P.mer=[W*.07,H*.06]; P.camera=[W*.06,H*.34]; P.senato=[W*.06,H*.62];
+  Object.keys(DS).forEach((d,i)=>{ const a=-Math.PI/2+i*2*Math.PI/10; P['d:'+d]=[cx+rx*Math.cos(a), cy+ry*Math.sin(a)]; });
+  const par=[...M.N.values()].filter(n=>n.k==='par'), pae=[...M.N.values()].filter(n=>n.k==='pae'||n.k==='sit');
+  const pw=par.reduce((a,n)=>a+(mini?20:box(n).w+6),0), rk=Math.min(1.5,W*.96/pw); let px=W*.02;
+  par.forEach(n=>{ const w=(mini?20:box(n).w+6)*rk; P[n.id]=[px+w/2, H*.94]; px+=w; });
+  pae.sort((a,b)=>(a.k==='sit')-(b.k==='sit') || (a.s==='regione'?0:1)-(b.s==='regione'?0:1));
+  pae.forEach((n,i)=>{ P[n.id]=[mini?W-30:W-box(n).w/2-3, H*(.04+.78*(i+.5)/pae.length)]; });
+  return P;
+}
+function curva(A,B,k=.12){ const mx=(A[0]+B[0])/2, my=(A[1]+B[1])/2, bx=mx+(B[1]-A[1])*k, by=my-(B[0]-A[0])*k; return {d:`M${A[0]},${A[1]} Q${bx},${by} ${B[0]},${B[1]}`, p:t=>[(1-t)*(1-t)*A[0]+2*(1-t)*t*bx+t*t*B[0], (1-t)*(1-t)*A[1]+2*(1-t)*t*by+t*t*B[1]]}; }
+function svgA(M0,W,H,mini){
+  // i cantieri e le grandezze che toccano solo loro compaiono al clic sul dicastero (o sul filo)
+  const F0=inFuoco(M0), vis=f=>!f.c || (F0&&F0.has(f.id));
+  const Fv=M0.F.filter(vis), usati=new Set(Fv.flatMap(f=>[f.da,f.a]));
+  const M={N:new Map([...M0.N].filter(([id,n])=>!(n.k==='pae'||n.k==='sit'||n.k==='par') || usati.has(id) || (n.tondi||[]).length)), F:Fv};
+  const P=posA(M,W,H,mini), F=inFuoco(M0), on=x=>F&&F.has(x);
+  let fili='', et='', nodi='';
+  const cnt={}, giaB=new Set(), vo=VOCI[STATI[st.stato].v];
+  for(const f of M.F){ const A=P[f.da], B=P[f.a]; if(!A||!B) continue;
+    const kk=f.da+'>'+f.a; cnt[kk]=(cnt[kk]||0)+1; const c=curva(A,B,.1+.09*(cnt[kk]-1)*(cnt[kk]%2?1:-1));
+    fili+=`<path class="${filoCl(f,on(f.id))}" d="${c.d}" stroke-width="${f.c?1.6:2.2}"/><path class="fi-hit" d="${c.d}" data-filo="${esc(f.id)}"/>`;
+    if(mini) continue;
+    const zitto = /^(prop|ag|cant):/.test(f.id) && !f.tondi.length && !on(f.id);
+    const [lx,ly]=c.p(.5), [tx,ty]=c.p(.3), b=f.tondi.length && !giaB.has(f.tondi[0]) && (giaB.add(f.tondi[0]),1) ? battuta(f) : '', lab = zitto ? '' : f.et;
+    if(lab) et+=`<text class="et ${f.m?'m':''} ${on(f.id)?'on':''}" x="${lx}" y="${ly-4}" text-anchor="middle">${esc(lab)}</text>`;
+    if(b && !f.c) et+=`<text class="et bt ${on(f.id)?'on':''}" x="${lx}" y="${ly+11}" text-anchor="middle">${esc(b)}</text>`;
+    if(f.tondi.length) et+=tondoSvg(f,tx,ty,on(f.id));
+  }
+  for(const n of M.N.values()){ const p=P[n.id]; if(!p) continue;
+    if(mini){ nodi+=`<g class="nd ${n.k} ${on(n.id)?'on':''}" data-nodo="${esc(n.id)}"><circle class="b" cx="${p[0]}" cy="${p[1]}" r="${n.k==='pdc'?9:5}"/>${on(n.id)?`<text x="${p[0]}" y="${p[1]-9}" text-anchor="middle" font-size="12" font-weight="700" paint-order="stroke" stroke="var(--carta)" stroke-width="4">${esc(n.t)}</text>`:''}</g>`; continue; }
+    nodi+=nodoSvg(n,p[0],p[1],{on:on(n.id)}); }
+  return `<svg class="${F?'fuoco':''}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Schema dello Stato: chi tocca chi in questo trimestre">${fili}${nodi}${et}</svg>`;
+}
+
+// ======================= B · Tavola per poteri =======================
+// Quattro colonne fisse: Partiti · Parlamento · Governo · Paese. Ogni soggetto è una riga; il filo va da riga a riga e
+// porta solo il tondo; ciò che dice si legge nella riga e nel dettaglio a lato.
+const COL = [['par','Partiti'],['parl','Parlamento'],['gov','Governo'],['pae','Paese e mercati']];
+const colDi = n => n.k==='par' ? 0 : n.id==='camera'||n.id==='senato' ? 1 : n.k==='dic'||n.k==='pdc' ? 2 : 3;
+function svgB(M,W,H){
+  const F=inFuoco(M), on=x=>F&&F.has(x), gap=W*.055, cw=(W-gap*3)/4, top=26;
+  const cols=[[],[],[],[]]; for(const n of M.N.values()) cols[colDi(n)].push(n);
+  cols[3].sort((a,b)=>(a.id==='mer'?-1:b.id==='mer'?1:0) || (a.k==='sit')-(b.k==='sit'));
+  cols[2].sort((a,b)=>(a.k==='pdc'?-1:b.k==='pdc'?1:0));
+  const P={}, R={};
+  cols.forEach((L,c)=>{ const rh=Math.min(50,(H-top-4)/Math.max(L.length,1)), x=c*(cw+gap);
+    L.forEach((n,i)=>{ const y=top+rh*i+rh/2; P[n.id]=[x,y,rh]; R[n.id]=c; }); });
+  let s=COL.map(([,t],c)=>`<text class="col-t" x="${c*(cw+gap)}" y="14">${t}</text><line class="col-l" x1="${c*(cw+gap)}" x2="${c*(cw+gap)+cw}" y1="20" y2="20"/>`).join('');
+  let fili='', tn='';
+  for(const f of M.F){ const A=P[f.da], B=P[f.a]; if(!A||!B) continue;
+    const ca=R[f.da], cb=R[f.a]; let d, mid;
+    if(ca===cb){ const x=A[0]-2, bend=14+Math.abs(B[1]-A[1])*.08; d=`M${x},${A[1]} C${x-bend},${A[1]} ${x-bend},${B[1]} ${x},${B[1]}`; mid=[x-bend*.75,(A[1]+B[1])/2]; }
+    else { const xa = ca<cb ? A[0]+cw : A[0], xb = ca<cb ? B[0] : B[0]+cw; const k=(xb-xa)*.5;
+      d=`M${xa},${A[1]} C${xa+k},${A[1]} ${xb-k},${B[1]} ${xb},${B[1]}`; mid=[(xa+xb)/2,(A[1]+B[1])/2]; }
+    fili+=`<path class="${filoCl(f,on(f.id))}" d="${d}" stroke-width="${f.c?1.5:2}"/><path class="fi-hit" d="${d}" data-filo="${esc(f.id)}"/>`;
+    if(f.tondi.length) tn+=tondoSvg(f,mid[0]-(f.tondi.length-1)*9,mid[1],on(f.id));
+  }
+  let nodi='';
+  for(const n of M.N.values()){ const [x,y,rh]=P[n.id], h=Math.min(rh-6,38);
+    const corto=(t,px,b)=>{ const mx=Math.floor((cw-16)/(px*(b?.55:.5))); return t.length>mx ? t.slice(0,mx-1)+'…' : t; };
+    const nn={...n, t:corto(n.lungo||n.t,13,1), s:corto(n.s,12)};
+    nodi+=nodoSvg(nn,x+cw/2,y,{w:cw,h,on:on(n.id),al:'start'}); }
+  return `<svg class="${F?'fuoco':''}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Schema dello Stato per poteri">${s}${fili}${nodi}${tn}</svg>`;
+}
+
+// ======================= C · Indice dei fili =======================
+const GRP = [['Governo','pdc'],['Ministri','dic'],['Parlamento','ist'],['Alleati e partiti','par'],['Paese e mercati','pae']];
+function grpDi(M,f){ const n=M.N.get(f.da); if(!n) return 'pae'; if(n.k==='sit') return 'pae'; if(n.id==='mer') return 'pae'; return n.k; }
+function indiceC(M){
+  const sel = st.sel?.startsWith('f|') ? st.sel.slice(2) : null, F=inFuoco(M);
+  if(!M.F.length) return `<div class="vuota">Nessun filo da mostrare.</div>`;
+  return GRP.map(([t,k])=>{ const L=M.F.filter(f=>grpDi(M,f)===k); if(!L.length) return '';
+    return `<div class="grp"><span>${t}</span><span>${L.length} ${L.length===1?'filo':'fili'}</span></div>`+L.map(f=>{ const a=M.N.get(f.da), b=M.N.get(f.a);
+      return `<div class="ri ${sel===f.id||(F&&F.has(f.id)&&!sel)?'sel':''}" data-filo="${esc(f.id)}"><span>${f.tondi.map(x=>`<span class="tn ${f.m?'m':''}">${x}</span>`).join('')}</span>
+        <span class="chi">${esc(a.lungo||a.t)}<small>${esc(a.s)}</small></span><span class="ar ${f.m?'m':''}">→</span>
+        <span class="cs"><b>${esc(b.lungo||b.t)}</b>: ${esc(f.et)}${f.r?' <span class="q">· in ritardo</span>':''}${f.c?' <span class="q">· in corso</span>':''}<small>${esc(f.cosa)}</small></span>
+        <button class="link">${esc(f.sez)} ›</button></div>`; }).join(''); }).join('');
+}
+
+
+// ======================= D · Mappa delle forze =======================
+// Sette blocchi fissi; i fili si raggruppano per coppia di blocchi in una freccia sola, col verso di chi muove, spessa
+// quanto i fili che porta e con l'etichetta scritta. Il dettaglio a lato la riapre filo per filo.
+const BLK = {
+  all:{t:()=>V().governa?'I tuoi alleati':sciolte()?'Alleati':'Alleati del governo', r:[0,0,.18,.24]},
+  parl:{t:()=>'Parlamento', r:[0,.32,.18,.34]},
+  opp:{t:()=>V().governa?'Opposizione':sciolte()?'Partiti':'Fuori dal governo', r:[0,.74,.18,.26]},
+  mer:{t:()=>'Mercati e UE', r:[.6,0,.14,.11]},
+  pdc:{t:()=>'Presidente del Consiglio', r:[.32,.27,.23,.11]},
+  min:{t:()=>'Ministri', r:[.26,.58,.38,.42]},
+  pae:{t:()=>'Paese', r:[.78,0,.22,1]},
+};
+function blkDi(n){ if(n.k==='pdc') return 'pdc'; if(n.k==='dic') return 'min'; if(n.id==='camera'||n.id==='senato') return 'parl'; if(n.id==='mer') return 'mer';
+  if(n.k==='pae'||n.k==='sit') return 'pae'; const id=n.id.slice(2), v=V();
+  return v.alleati.some(a=>a.partito===id)||v.alleati_avversari.some(a=>a.partito===id) ? 'all' : 'opp'; }
+function riassunto(L){
+  const g={}; L.forEach(f=>{ const k=f.id.split(':')[0]; (g[k]=g[k]||[]).push(f); }); const r=[], v=V();
+  if(g.magg) r.push('maggioranza '+g.magg.map(f=>f.et.replace('maggioranza ','')).join(' / '));
+  if(g.sciolte) r.push(g.sciolte[0].et);
+  if(g.prop){ const n=g.prop.length, s=g.prop.reduce((a,f)=>a+f.val,0), k=g.prop.filter(f=>f.m).length; r.push(`${n} ${n>1?'chiedono':'chiede'} ${euro(s)}${k?`, ${k} già respint${k>1?'e':'a'}`:''}`); }
+  if(g.min) r.push(`${g.min.length} minaccia le dimissioni`);
+  if(g.dim) r.push('dimissioni chieste');
+  if(g.al) r.push(v.governa ? 'intesa '+g.al.map(f=>f.et.replace('intesa ','')).join(', ') : Object.entries(g.al.reduce((a,f)=>(a[f.et]=(a[f.et]||0)+1,a),{})).map(([k,n])=>`${n} ${k}`).join(', '));
+  if(g.cal){ const n=g.cal.length, b=g.cal.filter(f=>f.m).length, ora=g.cal.filter(f=>!f.r).length; r.push(`${n} ${n>1?'misure':'misura'} in aula${ora?`, ${ora} al voto a fine turno`:''}${b?`, ${b} in bilico`:''}`); }
+  if(g.posto) r.push('posto riservato: tuo, libero');
+  if(g.es) g.es.forEach(f=>r.push(f.et));
+  if(g.ag) r.push(`${g.ag.length} ${g.ag.length>1?'agende':'agenda'} annunciat${g.ag.length>1?'e':'a'}`);
+  if(g.cant) r.push(`${g.cant.length} ${g.cant.length>1?'cantieri':'cantiere'} in corso`);
+  if(g.ev) g.ev.forEach(f=>r.push(`${f.nome}${f.costo?': '+euro(f.costo):''}`));
+  if(g.sit) g.sit.forEach(f=>r.push(`${f.nome}: accesa`));
+  if(g.spread) r.push(g.spread[0].et);
+  return r;
+}
+function bordo(R,x,y){ const cx=R.x+R.w/2, cy=R.y+R.h/2, dx=x-cx, dy=y-cy; const t=Math.min(Math.abs((R.w/2)/(dx||1e-9)), Math.abs((R.h/2)/(dy||1e-9))); return [cx+dx*t, cy+dy*t]; }
+function svgD(M,W,H){
+  const RR={}; for(const [k,b] of Object.entries(BLK)){ const [x,y,w,h]=b.r; RR[k]={x:x*W+2,y:y*H+2,w:w*W-4,h:h*H-4}; }
+  const membri={}; for(const n of M.N.values()){ const b=blkDi(n); (membri[b]=membri[b]||[]).push(n); }
+  const fasci={}; for(const f of M.F){ const a=M.N.get(f.da), b=M.N.get(f.a); if(!a||!b) continue; const k=blkDi(a)+'>'+blkDi(b); if(k.split('>')[0]===k.split('>')[1]) continue; (fasci[k]=fasci[k]||[]).push(f); }
+  const sel=st.sel||'', selF = sel.startsWith('a|') ? sel.slice(2) : null, selB = sel.startsWith('b|') ? sel.slice(2) : null;
+  const vivi = new Set(); if(selF) fasci[selF]?.forEach(f=>{vivi.add(f.da);vivi.add(f.a);}); if(selB) Object.entries(fasci).forEach(([k,L])=>{ if(k.split('>').includes(selB)) L.forEach(f=>{vivi.add(f.da);vivi.add(f.a);}); });
+  const vo=sel.startsWith('v|') ? VOCI[STATI[st.stato].v][+sel.slice(2)-1] : null, selN = sel.startsWith('n|') ? sel.slice(2) : null;
+  if(selN){ vivi.add(selN); M.F.filter(f=>f.da===selN||f.a===selN).forEach(f=>{vivi.add(f.da);vivi.add(f.a);}); }
+  if(vo){ M.F.filter(f=>vo.k.includes(f.id)).forEach(f=>{vivi.add(f.da);vivi.add(f.a);}); vo.k.filter(x=>x.startsWith('n:')).forEach(x=>vivi.add(x.slice(2))); }
+  const fuoco = !!(selF||selB||vo||selN);
+  const accesoF = k => selF===k || (selB && k.split('>').includes(selB)) || (vo && fasci[k].some(f=>vo.k.includes(f.id))) || (selN && fasci[k].some(f=>f.da===selN||f.a===selN));
+  let s=`<defs><marker id="pu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="var(--biro)"/></marker><marker id="pum" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="var(--rosso)"/></marker></defs>`;
+  // blocchi
+  for(const [k,R] of Object.entries(RR)){
+    const L=(membri[k]||[]).slice(), on = !fuoco || selB===k || L.some(n=>vivi.has(n.id)) || (selF&&selF.split('>').includes(k));
+    const dark = k==='pdc'||k==='mer';
+    s+=`<g class="blk ${on?'on':'spento'}" data-blk="${k}"><rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.h}" fill="${dark?'var(--ink)':'var(--carta)'}" stroke="var(--ink)" stroke-width="${selB===k?3:1.5}"/>`;
+    s+=`<text x="${R.x+8}" y="${R.y+17}" font-size="${k==='pdc'?13.5:14}" font-weight="700" fill="${dark?'var(--carta)':'var(--ink)'}" font-family="var(--tit)">${esc(BLK[k].t())}</text>`;
+    if(k==='pdc'){ const n=M.N.get('pdc'); s+=`<text x="${R.x+8}" y="${R.y+34}" font-size="12" fill="var(--carta)">${esc(n.s)}</text>`; }
+    else if(k==='mer'){ const n=M.N.get('mer'); s+=`<text x="${R.x+8}" y="${R.y+34}" font-size="12" fill="var(--carta)">${esc(n.s)}</text>`; }
+    else {
+      if(k==='pae') L.sort((a,b)=>(a.k==='sit'?0:a.s==='regione'?1:2)-(b.k==='sit'?0:b.s==='regione'?1:2));
+      const due = k==='min', rh=Math.min(due?30:32, (R.h-26)/Math.max(due?Math.ceil(L.length/2):L.length,1)), cw=due?R.w/2:R.w;
+      L.forEach((n,i)=>{ const c=due?Math.floor(i/Math.ceil(L.length/2)):0, j=due?i%Math.ceil(L.length/2):i, x=R.x+8+c*cw, y=R.y+26+j*rh;
+        const att = M.F.some(f=>f.da===n.id||f.a===n.id), acc = vivi.has(n.id), mx=Math.floor((cw-14)/6.6);
+        const t=due?n.t:(n.lungo||n.t), sub=n.s||'';
+        s+=`<g class="mb" data-nodo="${esc(n.id)}"><rect x="${x-4}" y="${y}" width="${cw-8}" height="${rh-3}" fill="${acc?'var(--giallo)':'transparent'}" ${n.k==='sit'?'stroke="var(--rosso)" stroke-width="1.5"':''}/>
+          <text x="${x}" y="${y+12}" font-size="12.5" font-weight="${att?700:400}" fill="${att?'var(--ink)':'var(--grigio)'}">${esc(t.length>mx?t.slice(0,mx-1)+'…':t)}</text>
+          ${rh>=26?`<text x="${x}" y="${y+24}" font-size="11.5" fill="var(--grigio)">${esc(sub.length>mx+2?sub.slice(0,mx+1)+'…':sub)}</text>`:''}${(n.tondi||[]).map((q,ii)=>`<g class="tnd"><circle cx="${x+cw-22-ii*18}" cy="${y+9}" r="8"/><text x="${x+cw-22-ii*18}" y="${y+13}">${q}</text></g>`).join('')}</g>`; });
+    }
+    s+='</g>';
+  }
+  // frecce
+  const coppie={};
+  let fr='', et='';
+  for(const [k,L] of Object.entries(fasci)){
+    const [a,b]=k.split('>'), A=RR[a], B=RR[b], inv=fasci[b+'>'+a]; let ca=[A.x+A.w/2,A.y+A.h/2], cb=[B.x+B.w/2,B.y+B.h/2];
+    if(inv){ const sh= a<b?14:-14, dx=cb[0]-ca[0], dy=cb[1]-ca[1], l=Math.hypot(dx,dy); ca=[ca[0]-dy/l*sh,ca[1]+dx/l*sh]; cb=[cb[0]-dy/l*sh,cb[1]+dx/l*sh]; }
+    const p0=bordo(A,cb[0],cb[1]), p1=bordo(B,ca[0],ca[1]); const P0=[p0[0]+(ca[0]-(A.x+A.w/2)),p0[1]+(ca[1]-(A.y+A.h/2))], P1=[p1[0]+(cb[0]-(B.x+B.w/2)),p1[1]+(cb[1]-(B.y+B.h/2))];
+    const m = L.filter(f=>f.m).length > L.length/2, w=Math.min(9,1.6+L.length*.9), on=accesoF(k);
+    const d=`M${P0[0]},${P0[1]} L${P1[0]},${P1[1]}`;
+    fr+=`<path class="fi ${m?'m':''} ${fuoco&&!on?'spento':''}" d="${d}" stroke-width="${w}" marker-end="url(#${m?'pum':'pu'})" style="${fuoco&&!on?'opacity:.15':''}"/><path class="fi-hit" d="${d}" data-fascio="${k}" style="stroke-width:${w+14}"/>`;
+    const righe=riassunto(L), tq=[...new Set(L.flatMap(f=>f.tondi))], bf=L.find(f=>f.tondi.length&&f.bt), bt=bf?battuta(bf):'';
+    const tt = k==='mer>min' ? .22 : .5, mx=P0[0]+(P1[0]-P0[0])*tt, my=P0[1]+(P1[1]-P0[1])*tt, vert=Math.abs(P1[0]-P0[0])<Math.abs(P1[1]-P0[1]);
+    const anc = vert ? 'start' : 'middle', lx = vert ? mx+10 : mx, ly0 = vert ? my-(righe.length-1)*8 : my-6-(righe.length-1)*15 - (tq.length?0:0);
+    et+=`<g class="lab" data-fascio="${k}" style="${fuoco&&!on?'opacity:.15':''};cursor:pointer">`;
+    righe.forEach((r,i)=>{ et+=`<text class="et ${m?'m':''}" x="${lx}" y="${ly0+i*15}" text-anchor="${anc}">${esc(r)}</text>`; });
+    if(bt) et+=`<text class="et bt" x="${lx}" y="${ly0+righe.length*15}" text-anchor="${anc}">${esc(bt)}</text>`;
+    if(tq.length){ const tx = vert ? lx+ (anc==='start'?-0:0) : mx - (tq.length-1)*9, ty = vert ? ly0-18 : ly0-19;
+      et+=tq.map((q,i)=>`<g class="tnd ${m?'m':''}"><circle cx="${(vert?lx+8:tx)+i*19}" cy="${ty}" r="9"/><text x="${(vert?lx+8:tx)+i*19}" y="${ty+4}">${q}</text></g>`).join(''); }
+    et+='</g>';
+  }
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Mappa delle forze del trimestre">${s}${fr}${et}</svg>`;
+}
+function dettaglioD(M){
+  const sel=st.sel||''; if(!(sel.startsWith('a|')||sel.startsWith('b|'))) return '';
+  const fasci={}; for(const f of M.F){ const a=M.N.get(f.da), b=M.N.get(f.a); if(!a||!b) continue; const k=blkDi(a)+'>'+blkDi(b); if(k.split('>')[0]!==k.split('>')[1]) (fasci[k]=fasci[k]||[]).push(f); }
+  const lista = L => `<div class="fl">${L.map(f=>{ const a=M.N.get(f.da), b=M.N.get(f.a); return `<button data-filo="${esc(f.id)}"><span class="ver ${f.m?'male':''}">${f.tondi.map(q=>`<span class="tn ${f.m?'m':''}">${q}</span>`).join('')||'·'}</span><span><b>${esc(a.lungo||a.t)} → ${esc(b.lungo||b.t)}</b><br>${esc(f.cosa)}<br><span class="link">${esc(f.sez)} ›</span></span></button>`; }).join('')}</div>`;
+  if(sel.startsWith('a|')){ const k=sel.slice(2), [a,b]=k.split('>'), L=fasci[k]||[];
+    return `<div class="det box"><div class="occ">${esc(BLK[a].t())} → ${esc(BLK[b].t())}</div><div class="cosa">${esc(riassunto(L).join('; '))}</div>${lista(L)}<div class="az"><button class="link" data-sel="">chiudi</button></div></div>`; }
+  const b=sel.slice(2), ent=Object.entries(fasci).filter(([k])=>k.split('>').includes(b));
+  return `<div class="det box"><div class="occ">${esc(BLK[b].t())}</div>${ent.map(([k,L])=>{ const [x,y]=k.split('>'); return `<div class="sec" style="margin-top:4px"><b>${x===b?'→ '+esc(BLK[y].t()):'← '+esc(BLK[x].t())}</b>: ${esc(riassunto(L).join('; '))}</div>${lista(L)}`; }).join('') || '<span class="sec muto">nessuna freccia in questo trimestre</span>'}<div class="az"><button class="link" data-sel="">chiudi</button></div></div>`;
+}
+
+// ======================= dettaglio a lato =======================
+function legenda(){
+  const l=(cl,sw,da)=>`<svg viewBox="0 0 34 14"><path class="fi ${cl}" d="M2 7 H32" stroke-width="${sw}" ${da?'':''}/></svg>`;
+  return `<div class="leg">${l('',2.2)}<span>filo: chi tocca chi in questo trimestre</span>${l('m',2.2)}<span>effetto contrario, o a rischio</span>${l('r',2.2)}<span>arriva più avanti</span>${l('c',1.6)}<span>cantiere in corso</span>
+    <svg viewBox="0 0 34 14"><circle cx="17" cy="7" r="6" fill="var(--carta)" stroke="var(--biro)" stroke-width="1.5"/></svg><span>il numero rimanda alla notizia qui sotto</span></div>
+    ${st.v==='A'?'<div class="min muto">Cantieri, proposte e agende senza notizia: l’etichetta al clic sul dicastero.</div>':''}`;
+}
+function vociHtml(M){
+  const vo=VOCI[STATI[st.stato].v];
+  if(!vo.length) return `<div class="ph">Al turno zero non c’è una prima pagina: niente tondi.</div>`;
+  const ids=new Set([...M.F.map(f=>f.id),...[...M.N.keys()].map(k=>'n:'+k)]);
+  return `<ol class="voci">${vo.map((x,i)=>{ const ha=x.k.some(k=>ids.has(k)), s=st.sel===`v|${i+1}`;
+    return `<li class="${ha?'':'no'} ${s?'on':''}" ${ha?`data-voce="${i+1}"`:''}><span class="tn ${x.c==='C'?'m':''}">${i+1}</span><span>${esc(x.f)}${ha?'':' <span class="muto">· nessun filo</span>'}</span></li>`; }).join('')}</ol>`;
+}
+function dettaglio(M){
+  if(!st.sel) return '';
+  const [t,id]=st.sel.split('|');
+  if(t==='f'){ const f=M.F.find(x=>x.id===id); if(!f) return ''; const a=M.N.get(f.da), b=M.N.get(f.a);
+    return `<div class="det box"><div class="occ">${esc(a.lungo||a.t)} → ${esc(b.lungo||b.t)}</div><div class="cosa">${esc(f.cosa)}</div>
+      ${f.tondi.length?`<div class="sec">In prima pagina: ${f.tondi.map(k=>`<span class="tn ${f.m?'m':''}">${k}</span>`).join(' ')}</div>`:''}
+      ${f.tondi.length&&battuta(f)?`<div class="sec" style="color:var(--biro);font-style:italic">${esc(battuta(f))}</div>`:''}
+      <div class="az"><button class="btn p">${esc(f.sez)} ›</button><button class="link" data-sel="">chiudi</button></div><div class="fonte">dalla Vista: ${esc(f.fonte)}</div></div>`; }
+  if(t==='n'){ const n=M.N.get(id); if(!n) return ''; const L=M.F.filter(f=>f.da===id||f.a===id);
+    return `<div class="det box"><div class="occ">${esc(n.s)}</div><h4 class="tit">${esc(n.lungo||n.t)}</h4>${n.nota?`<div class="sec">${esc(n.nota)}</div>`:''}
+      <div class="fl">${L.map(f=>{ const o=M.N.get(f.da===id?f.a:f.da); return `<button data-filo="${esc(f.id)}"><span class="ver ${f.m?'male':''}">${f.da===id?'→':'←'} ${esc(o.lungo||o.t)}</span><span>${esc(f.et)}${f.tondi.length?' · '+f.tondi.join(', '):''}</span></button>`; }).join('') || '<span class="sec muto">nessun filo in questo trimestre</span>'}</div>
+      <div class="az"><button class="link" data-sel="">chiudi</button></div></div>`; }
+  return '';
+}
+function lato(M, mini){
+  return `<aside class="lato">${st.v==='D'?dettaglioD(M):''}${dettaglio(M)}${mini||''}<h4 class="tit">Le notizie del trimestre</h4>${vociHtml(M)}<h4 class="tit">Come si legge</h4>${legenda()}</aside>`;
+}
+
+// ======================= render =======================
+let limite='', dim={W:800,H:560};
+function corpo(M){
+  const v=V();
+  const testa = `<div class="st-testa"><div><span class="tit tavola">Tavola n. ${v.turno} · Come funziona lo Stato</span><span class="sub">Chi tocca chi in ${per(v.data)}${VOCI[STATI[st.stato].v].length?'. I numeri nei tondi rimandano alle notizie della prima pagina':''}.</span></div>
+    <div class="ctr"><button class="btn p ${st.fili==='tutti'?'scelto':''}" data-fili="tutti">Tutti i fili · ${M.Ftot}</button><button class="btn p ${st.fili==='notizie'?'scelto':''}" data-fili="notizie">Solo quelli in prima pagina</button></div></div>`;
+  if(st.v==='C'){ const mini=`<div class="box" style="padding:4px">${svgA(M,dim.L-30,250,1)}</div>`;
+    return `<main class="corpo sch lista">${testa}<div class="idx">${indiceC(M)}</div>${lato(M,mini)}</main>`; }
+  return `<main class="corpo sch">${testa}<div class="tav">${st.v==='D'?svgD(M,dim.W,dim.H):st.v==='B'?svgB(M,dim.W,dim.H):svgA(M,dim.W,dim.H)}</div>${lato(M)}</main>`;
+}
+function render(){
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  const M2=modello(); if(st.fili==='notizie') M2.F=M2.F.filter(f=>f.tondi.length);
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  const build = () => `<div class="vS ${grave()?'g':''} ${lw<1200?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)">${cornice()}${corpo(M2)}</div>`;
+  scr.innerHTML = build();
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  // seconda passata: l'area della tavola misurata davvero
+  const r=scr.firstElementChild, k=scr.getBoundingClientRect().width/scr.offsetWidth || 1, t=r.querySelector('.tav, .idx'), la=r.querySelector('.lato');
+  if(t){ const B=t.getBoundingClientRect(); const nW=Math.floor(B.width/k/z), nH=Math.floor(B.height/k/z), nL=Math.floor(la.getBoundingClientRect().width/k/z);
+    if(nW>200 && nH>200 && (Math.abs(nW-dim.W)>2||Math.abs(nH-dim.H)>2||Math.abs((dim.L||0)-nL)>2)){ dim={W:nW,H:nH,L:nL}; scr.innerHTML=build(); } }
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.getElementById('nota').textContent = STATI[st.stato].nota;
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  tagli();
+}
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0;
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('svg')) return; const b=el.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (b.bottom>R.bottom+1 && !el.closest('.lato,.idx')));
+    const cs=getComputedStyle(el);
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/ellipsis/.test(cs.textOverflow) && cs.overflow!=='hidden' && !/auto|scroll/.test(cs.overflowY) && el!==r;
+    if(fuori||stretto) n++; });
+  const sv=r.querySelector('.tav svg'); let fuoriSvg=0;
+  if(sv){ const S=sv.getBoundingClientRect(); sv.querySelectorAll('text,rect').forEach(el=>{ const b=el.getBoundingClientRect(); if(b.left<S.left-1||b.right>S.right+1||b.top<S.top-1||b.bottom>S.bottom+1) fuoriSvg++; }); }
+  const sc=[...r.querySelectorAll('.lato,.idx')].some(c=>c.scrollHeight>c.clientHeight+1);
+  document.getElementById('avv').textContent = [limite, n?`tagli: ${n}`:'', fuoriSvg?`fuori dalla tavola: ${fuoriSvg}`:'', sc?'il lato scorre':''].filter(Boolean).join(' · ');
+}
+const scr=document.getElementById('screen');
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.v=k[(k.indexOf(st.v)+(b.id==='next'?1:k.length-1))%k.length]; }
+  else { const k=b.parentElement.dataset.k; if(!k) return; st[k]=b.dataset.v; if(k==='stato') st.sel=null; }
+  render();
+});
+scr.addEventListener('click',e=>{
+  const t=e.target, q=s=>t.closest(s); let x;
+  if(x=q('[data-fili]')) st.fili=x.dataset.fili;
+  else if(x=q('[data-fascio]')){ const s='a|'+x.dataset.fascio; st.sel = st.sel===s ? null : s; }
+  else if(st.v==='D' && (x=q('[data-blk]')) && !q('[data-nodo]')){ const s='b|'+x.dataset.blk; st.sel = st.sel===s ? null : s; }
+  else if(x=q('[data-filo]')){ const s='f|'+x.dataset.filo; st.sel = st.sel===s ? null : s; }
+  else if(x=q('[data-nodo]')){ const s='n|'+x.dataset.nodo; st.sel = st.sel===s ? null : s; }
+  else if(x=q('[data-voce]')){ const s='v|'+x.dataset.voce; st.sel = st.sel===s ? null : s; }
+  else if(x=q('[data-sel]')) st.sel = x.dataset.sel||null;
+  else if(q('.tav') && !q('button')) st.sel=null;
+  else return;
+  render();
+});
+function perche(e){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=e.type==='mouseover'||e.type==='focusin' ? e.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, k=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/k/z)+'px'; el.style.top=((B.bottom-R.top)/k/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout','focusin','focusout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); if(e.key==='Escape'){ st.sel=null; render(); } });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

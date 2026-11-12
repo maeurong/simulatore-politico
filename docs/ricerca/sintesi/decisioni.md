@@ -494,5 +494,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md`, un giro
 - **Niente conto delle linee al default** nella cornice; conferma sul posto per sfiducia e referendum, che non si ritirano.
 - **Quattro dati al core:** sfiducia presentata, di chi è il posto riservato, ammissibilità del referendum per disposizione, costo della linea.
 
+## 2026-11-12: schema dello Stato
+Ticket `.scratch/v1-piano-11-ui/issues/29-schema-dello-stato.md`, due giri su un prototipo con quattro forme e quattro stati giocati, tutti da Viste già esistenti.
+
+- **Lo schema risponde a «chi muove cosa ora»:** le pressioni del trimestre, non la struttura dello Stato né la causa di una notizia.
+- **Forma B · Tavola per poteri:** quattro colonne fisse, un soggetto per riga, i fili da riga a riga. La rete del prototipo vincolante scartata: con 20-27 fili per turno si affolla anche sfoltita. Scartata anche la mappa delle forze, sette blocchi coi fili raggruppati in frecce scritte.
+- **Restano da risolvere dentro B** i fili muti, il groviglio sul Presidente del Consiglio e il verso non chiaro: sono le tre note di Mario al primo giro.
+- **Nessun campo nuovo:** ogni filo viene da un campo della Vista (agende, cantieri, proposte, intesa, calendario, esiti, eventi, situazioni, spread). I tondi aspettano l'esito del core.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

@@ -484,6 +484,14 @@ _Evita_: menu principale, home, lobby
 La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si riempie fino al valore, la caduta sta a sinistra per tutti e tre, uno stacco segna dove comincia il pericolo.
 _Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
 
+**Schema dello Stato**:
+La pagina intera fuori dal sommario che mostra chi muove cosa nel trimestre: partiti, Parlamento, governo e Paese in colonne, coi fili fra loro.
+_Evita_: mappa (che è quella delle regioni), organigramma, rete
+
+**Filo**:
+Nello schema dello Stato, una pressione del trimestre da un soggetto a un altro (una proposta in sospeso, una misura in aula, un evento), presa da un campo della Vista; il tondo col numero la lega alla sua voce della prima pagina.
+_Evita_: collegamento, arco, freccia, relazione
+
 **Fascia** (di un valore):
 Un valore mostrato come una fra poche classi con un nome (capacità buona, rischio alto, intesa media) invece che come numero. La fascia di reddito è un'altra cosa e si dice sempre per intero.
 _Evita_: livello (che è della mappa), classe, grado
