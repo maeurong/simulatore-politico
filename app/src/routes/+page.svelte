@@ -6,7 +6,7 @@
 </script>
 
 <main class="provvisoria">
-  {#if partita.vista}<a href="/partita/cruscotto">{t("sommario.cruscotto")} ›</a>{:else}<p>{t("edicola.nessuna_in_corso")}</p>{/if}
+  {#if partita.vista}<a href="/partita/cruscotto">{t("edicola.al_cruscotto")}</a>{:else}<p>{t("edicola.nessuna_in_corso")}</p>{/if}
 </main>
 
 <style>

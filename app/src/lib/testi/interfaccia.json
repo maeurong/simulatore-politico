@@ -12,6 +12,7 @@
   "cornice.trimestre_4": "Ottobre–dicembre {anno}",
   "cornice.nessun_turno": "Nessun turno da chiudere",
   "cornice.rimasta_com_era": "La partita è rimasta com’era.",
+  "cornice.grafici_non_aggiornati": "La partita è aggiornata, i grafici no.",
   "cornice.banda_crisi": "CRISI DI GOVERNO · solo ordinaria amministrazione: allarga la maggioranza o dimettiti; senza scelta, a fine turno si vota la sfiducia",
 
   "stato.governo": "Al governo",
@@ -105,6 +106,7 @@
   "impostazioni.prova_esito_3": "La Destra chiede l'Interno",
 
   "edicola.dove": "Edicola",
+  "edicola.al_cruscotto": "Cruscotto ›",
   "edicola.in_corso": "In corso",
   "edicola.albo": "Albo",
   "edicola.nuova_partita": "Nuova partita ›",

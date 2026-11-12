@@ -2,6 +2,7 @@
 import { goto } from "$app/navigation";
 import { comeErrore, guscio } from "$lib/guscio/chiamate";
 import { casa } from "$lib/ossatura";
+import { t } from "$lib/testi/t";
 import type { Fondazione } from "$lib/tipi/Fondazione";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SuMisura } from "$lib/tipi/SuMisura";
@@ -14,22 +15,31 @@ class Partita {
   guasto = $state<string | null>(null);
   occupato = $state(false);
 
-  /** La Vista nuova, o null davanti a un guasto (la partita resta com'era). Il rifiuto si rilancia: lo mostra chi ha chiamato. */
+  /**
+   * La Vista nuova, o null davanti a un guasto del comando (la partita resta com'era). Riuscito il comando la Vista
+   * nuova vale comunque: se poi la serie si guasta resta quella di prima e il guasto lo dice. Il rifiuto si rilancia.
+   */
   async #esegui(chiamata: () => Promise<Vista>): Promise<Vista | null> {
     if (this.occupato) return null;
     this.occupato = true;
     try {
-      const vista = await chiamata();
-      const serie = await guscio.serie();
+      let vista: Vista;
+      try {
+        vista = await chiamata();
+      } catch (e) {
+        const errore = comeErrore(e);
+        if (errore.specie === "rifiuto") throw errore;
+        this.guasto = `${errore.testo} ${t("cornice.rimasta_com_era")}`;
+        return null;
+      }
       this.vista = vista;
-      this.serie = serie;
       this.guasto = null;
+      try {
+        this.serie = await guscio.serie();
+      } catch (e) {
+        this.guasto = `${comeErrore(e).testo} ${t("cornice.grafici_non_aggiornati")}`;
+      }
       return vista;
-    } catch (e) {
-      const errore = comeErrore(e);
-      if (errore.specie === "rifiuto") throw errore;
-      this.guasto = errore.testo;
-      return null;
     } finally {
       this.occupato = false;
     }

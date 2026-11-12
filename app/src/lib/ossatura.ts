@@ -1,10 +1,16 @@
 // L'ossatura dentro la partita: stato del giocatore, casa, sezioni barrate (ticket 07, spec:278-290).
 import type { Vista } from "$lib/tipi/Vista";
-import type { Chiave } from "$lib/testi/t";
+import { t, type Chiave } from "$lib/testi/t";
 
 export type StatoGiocatore = "turno_zero" | "trattativa" | "governo" | "crisi" | "opposizione" | "finita";
 export const SEZIONI = ["prima-pagina", "cruscotto", "governo", "aula", "conti", "bilancio", "paese", "partiti", "campagna", "registro"] as const;
 export type Sezione = (typeof SEZIONI)[number];
+/** Ciò che /partita/[sezione] apre: le dieci sezioni, le due case che non sono il cruscotto, lo schema. */
+export const PAGINE = [...SEZIONI, "trattativa", "eredita", "schema"] as const;
+export type Pagina = (typeof PAGINE)[number];
+
+/** Il nome nel sommario («Prima pagina», «Eredità», «Schema dello Stato»). */
+export const etichetta = (p: Pagina) => t(`sommario.${p.replace("-", "_")}` as Chiave);
 
 /** In quest'ordine: finita → turno === 0 → fase "trattativa" → crisi → governa → opposizione. */
 export function statoDi(v: Vista): StatoGiocatore {
@@ -18,6 +24,15 @@ export function statoDi(v: Vista): StatoGiocatore {
 export function casa(v: Vista): Sezione | "trattativa" | "eredita" {
   const s = statoDi(v);
   return s === "finita" ? "eredita" : s === "trattativa" ? "trattativa" : "cruscotto";
+}
+
+const CASE: readonly string[] = ["cruscotto", "trattativa", "eredita"];
+
+/** Si apre: un nome noto, non barrato e, fra cruscotto, trattativa ed eredità, solo la casa di questo stato. */
+export function apribile(p: string, v: Vista): p is Pagina {
+  if (!(PAGINE as readonly string[]).includes(p)) return false;
+  if (CASE.includes(p)) return p === casa(v);
+  return p === "schema" || barrata(p as Sezione, v) === null;
 }
 
 /** null = accesa; altrimenti il motivo della barrata (07-ossatura.prototype.html:235). */

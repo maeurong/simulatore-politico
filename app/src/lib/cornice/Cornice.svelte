@@ -4,7 +4,7 @@
   import { statoDi, type StatoGiocatore } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
   import { tracciatiDi } from "$lib/tracciati";
-  import type { ErroreGuscio } from "$lib/guscio/chiamate";
+  import { comeErrore } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
@@ -39,7 +39,7 @@
     try {
       await partita.chiudiTurno();
     } catch (e) {
-      rifiuto = (e as ErroreGuscio).testo;
+      rifiuto = comeErrore(e).testo;
     }
   }
 </script>
@@ -68,7 +68,7 @@
   <Sommario {vista} {sezione} {impostazioni} {onimpostazioni} />
 </header>
 {#if vista.crisi}<div class="banda">{t("cornice.banda_crisi")}</div>{/if}
-{#if partita.guasto}<p class="guasto" role="alert">{partita.guasto} {t("cornice.rimasta_com_era")}</p>{/if}
+{#if partita.guasto}<p class="guasto" role="alert">{partita.guasto}</p>{/if}
 
 <style>
   /* 104 px a 1× in ogni stato: la riga di sopra prende ciò che avanza, il sommario resta sul filetto */

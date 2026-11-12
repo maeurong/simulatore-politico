@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { SEZIONI, barrata, casa, fettaDi, statoDi, type Sezione } from "./ossatura";
+import { PAGINE, SEZIONI, apribile, barrata, casa, etichetta, fettaDi, statoDi, type Sezione } from "./ossatura";
 import turnoZeroJson from "../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import governoJson from "../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
@@ -89,5 +89,28 @@ describe("fettaDi", () => {
     expect(fettaDi("campagna", "turno_zero")).toBe("11b");
     expect(fettaDi("eredita", "finita")).toBe("11e");
     expect(fettaDi("schema", "governo")).toBe("11e");
+  });
+});
+
+describe("etichetta", () => {
+  it("ogni pagina ha l'etichetta del sommario", () => {
+    expect(PAGINE.map(etichetta)).toEqual([
+      "Prima pagina", "Cruscotto", "Governo", "Aula", "Conti", "Bilancio", "Paese", "Partiti", "Campagna", "Registro",
+      "Trattativa", "Eredità", "Schema dello Stato",
+    ]);
+  });
+});
+
+describe("apribile", () => {
+  it("una sezione barrata o un nome ignoto no", () => {
+    expect(apribile("aula", turnoZero)).toBe(false);
+    expect(apribile("pippo", governo)).toBe(false);
+    expect(apribile("conti", turnoZero)).toBe(true);
+    expect(apribile("schema", turnoZero)).toBe(true);
+  });
+  it("delle tre case solo quella dello stato", () => {
+    expect(["cruscotto", "trattativa", "eredita"].filter((p) => apribile(p, governo))).toEqual(["cruscotto"]);
+    expect(["cruscotto", "trattativa", "eredita"].filter((p) => apribile(p, trattativa))).toEqual(["trattativa"]);
+    expect(["cruscotto", "trattativa", "eredita"].filter((p) => apribile(p, finita))).toEqual(["eredita"]);
   });
 });
