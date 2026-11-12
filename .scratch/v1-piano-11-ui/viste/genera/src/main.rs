@@ -1484,6 +1484,230 @@ fn paese(d: &DatiGioco) -> Esito<Uscita> {
         nota: note.join("; "),
     })
 }
+/// `{"ok": valore}` o `{"rifiuto": testo}`: tutti e due finiscono nel JSON.
+macro_rules! esito {
+    ($r:expr) => {
+        match $r {
+            Ok(x) => serde_json::json!({ "ok": serde_json::to_value(&x).map_err(|e| e.to_string())? }),
+            Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
+        }
+    };
+}
+
+macro_rules! json {
+    ($x:expr) => {
+        serde_json::to_value(&$x).map_err(|e| e.to_string())?
+    };
+}
+
+/// La campagna (ticket 26): il turno zero del seme 4 a 4,5 con dichiarazione, cessioni, anteprime,
+/// riposizionamento, promesse, sondaggio e campagna tagliata; poi il turno del voto di fine
+/// legislatura al governo (seme 4, percorso del 05) e all'opposizione (seme 1 a 1,5, come il 06).
+fn campagna(d: &DatiGioco) -> Esito<Uscita> {
+    use sim_core::elettorato::Condizione;
+    use sim_core::legislatura::{Bersaglio, Cessione, Leva, Spesa};
+    let mut out = serde_json::Map::new();
+    let zero = fonda(d, 4, 4.5)?;
+    out.insert("zero".into(), json!(zero.vista()));
+
+    // Dichiarazione con la destra, poi cessioni a un partito non disponibile.
+    let mut p = zero.clone();
+    con_la_destra(&mut p)?;
+    let destra = p.vista().coalizione.clone();
+    out.insert("dichiarata".into(), json!(p.vista()));
+    let mut cessioni = Vec::new();
+    for chi in ["estrema_destra", "centro"] {
+        for seggi in [0, 5, 10, 20, 40, 80] {
+            let mut q = zero.clone();
+            let mut partiti = destra.clone();
+            partiti.push(chi.into());
+            let c = Comando::DichiaraCoalizione {
+                partiti,
+                cessioni: if seggi == 0 { vec![] } else { vec![Cessione { partito: chi.into(), seggi }] },
+            };
+            let r = q.comanda(c).map(|()| q.vista().disponibilita);
+            cessioni.push(serde_json::json!({"partito": chi, "seggi": seggi, "esito": esito!(r)}));
+        }
+    }
+    out.insert("cessioni".into(), serde_json::Value::Array(cessioni));
+    // Una cessione che convince: un partito che non viene per i seggi, i seggi ceduti a salire.
+    let mut convince = serde_json::Value::Null;
+    'cerca: for seme in 1..=30u64 {
+        for pos in [2.5, 3.5, 4.5, 5.5] {
+            let z = fonda(d, seme, pos)?;
+            for v in z.disponibilita().into_iter().filter(|v| !v.disponibile && !v.causa.contains("lontana")) {
+                let mut prove = Vec::new();
+                for seggi in [5, 10, 15, 20, 30, 40, 60] {
+                    let mut q = z.clone();
+                    let c = Comando::DichiaraCoalizione {
+                        partiti: vec![v.partito.clone()],
+                        cessioni: vec![Cessione { partito: v.partito.clone(), seggi }],
+                    };
+                    let r = q.comanda(c).map(|()| q.vista());
+                    let ok = r.is_ok();
+                    prove.push(serde_json::json!({"seggi": seggi, "esito": esito!(r)}));
+                    if ok {
+                        convince = serde_json::json!({"seme": seme, "posizione": pos, "partito": v.partito,
+                            "causa": v.causa, "zero": json!(z.vista()), "prove": prove});
+                        break 'cerca;
+                    }
+                }
+            }
+        }
+    }
+    out.insert("cessione_che_convince".into(), convince);
+
+    // Anteprime: ogni bersaglio a sei spese con persuadere, le tre leve su uno, e i rifiuti.
+    let mut bersagli: Vec<Bersaglio> = Condizione::TUTTE.iter().map(|&c| Bersaglio::Condizione(c)).collect();
+    bersagli.extend((0..d.regioni().len()).map(Bersaglio::Regione));
+    let mut anteprime = Vec::new();
+    for &b in &bersagli {
+        let spese: Vec<Spesa> = [25_000, 50_000, 100_000, 200_000, 400_000, 500_000, 800_000]
+            .into_iter()
+            .map(|euro| Spesa { bersaglio: b, leva: Leva::Persuadere, euro })
+            .collect();
+        // Una per chiamata: tre bersagli al massimo, e ripetuti no.
+        for s in spese {
+            anteprime.push(esito!(p.anteprima_campagna(std::slice::from_ref(&s))));
+        }
+    }
+    out.insert("anteprime".into(), serde_json::Value::Array(anteprime));
+    let pens = Bersaglio::Condizione(Condizione::Pensionato);
+    let leve: Vec<Spesa> = [Leva::Mobilitare, Leva::Persuadere, Leva::Convincere]
+        .into_iter()
+        .zip([Bersaglio::Condizione(Condizione::Pensionato), Bersaglio::Regione(14), Bersaglio::Condizione(Condizione::Studente)])
+        .map(|(leva, bersaglio)| Spesa { bersaglio, leva, euro: 300_000 })
+        .collect();
+    out.insert("piano".into(), esito!(p.anteprima_campagna(&leve)));
+    let s = |b, euro| Spesa { bersaglio: b, leva: Leva::Persuadere, euro };
+    let rifiuti = [
+        ("quattro", (0..4).map(|r| s(Bersaglio::Regione(r), 10_000)).collect::<Vec<_>>()),
+        ("ripetuto", vec![s(pens, 10_000), s(pens, 20_000)]),
+        ("oltre_cassa", vec![s(pens, 600_000), s(Bersaglio::Regione(14), 600_000)]),
+        ("zero_euro", vec![s(pens, 0)]),
+    ];
+    let mut rr = serde_json::Map::new();
+    for (k, spese) in rifiuti {
+        rr.insert(k.into(), esito!(p.anteprima_campagna(&spese)));
+    }
+    out.insert("rifiuti_campagna".into(), serde_json::Value::Object(rr));
+
+    // Riposizionamento: due ammessi, due rifiutati.
+    let mut rip = serde_json::Map::new();
+    for x in [4.0, 4.75, 5.0, 3.5] {
+        let mut q = p.clone();
+        let r = q.comanda(Comando::Riposiziona { posizione: x }).map(|()| q.vista().partiti);
+        rip.insert(format!("{x}"), esito!(r));
+    }
+    out.insert("riposiziona".into(), serde_json::Value::Object(rip));
+
+    // Promesse: due ammesse, e i rifiuti.
+    let coppie = |c: &[(&str, &str)]| c.iter().map(|(a, b)| ((*a).to_string(), (*b).to_string())).collect::<Vec<_>>();
+    let mut pr = serde_json::Map::new();
+    for (k, c) in [
+        ("due", coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")])),
+        ("vigente", coppie(&[("cuneo_fiscale", "7")])),
+        ("tre", coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64"), ("cuneo_fiscale", "3")])),
+    ] {
+        let mut q = p.clone();
+        let r = q.comanda(Comando::Prometti { promesse: c }).map(|()| q.vista().partiti);
+        pr.insert(k.into(), esito!(r));
+    }
+    out.insert("promesse".into(), serde_json::Value::Object(pr));
+
+    // Il piano intero, il sondaggio privato, poi la chiusura: le spese degli altri nelle mosse.
+    let mut piano = p.clone();
+    comanda(&mut piano, Comando::Campagna { spese: leve.clone() })?;
+    comanda(&mut piano, Comando::Riposiziona { posizione: 4.0 })?;
+    comanda(&mut piano, Comando::Prometti { promesse: coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]) })?;
+    comanda(&mut piano, Comando::Compra { acquisto: Acquisto::SondaggioPrivato })?;
+    out.insert("piano_scelto".into(), json!(piano.vista()));
+    piano.chiudi_turno();
+    out.insert("piano_dopo".into(), json!(piano.vista()));
+
+    // Campagna tagliata: tutta la cassa, poi il sondaggio privato.
+    let mut t = p.clone();
+    let cassa = t.vista().partiti.iter().find(|x| x.id == "giocatore").map_or(0, |x| x.cassa);
+    let tutta = vec![s(pens, cassa / 2), Spesa { bersaglio: Bersaglio::Regione(14), leva: Leva::Mobilitare, euro: cassa - cassa / 2 }];
+    comanda(&mut t, Comando::Campagna { spese: tutta })?;
+    comanda(&mut t, Comando::Compra { acquisto: Acquisto::SondaggioPrivato })?;
+    out.insert("tagliata_prima".into(), json!(t.vista()));
+    t.chiudi_turno();
+    out.insert("tagliata_dopo".into(), json!(t.vista()));
+
+    // Fine legislatura al governo: il percorso del 05 fino al turno del voto.
+    let mut g = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut g)?;
+    g.chiudi_turno();
+    while !g.finita() && !(g.vista().campagna.attiva && g.governa()) {
+        if g.governa() && !g.vista().crisi {
+            if let Some(bilancio) = g.bozza_bilancio() {
+                comanda(&mut g, Comando::PresentaBilancio { bilancio })?;
+            }
+        }
+        g.chiudi_turno();
+    }
+    out.insert("governo_fine".into(), json!(g.vista()));
+    let mut gp = g.clone();
+    let r = gp
+        .comanda(Comando::Prometti { promesse: coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]) })
+        .map(|()| gp.vista().alleati);
+    out.insert("governo_promesse".into(), esito!(r));
+
+    // Fine legislatura all'opposizione: il 06 fino al turno del voto.
+    let mut o = fonda(d, 1, 1.5)?;
+    o.chiudi_turno();
+    while !o.finita() && !o.vista().campagna.attiva {
+        o.chiudi_turno();
+    }
+    out.insert("opposizione_fine".into(), json!(o.vista()));
+
+    // Per ogni stato: la disponibilità di ogni coalizione dichiarabile (sottoinsiemi dei partiti IA)
+    // e i riposizionamenti a passi di un quarto.
+    let mut prove = serde_json::Map::new();
+    for (k, q0) in [("zero", &zero), ("governo_fine", &g), ("opposizione_fine", &o)] {
+        let ia: Vec<String> = (q0.vista().partiti.iter())
+            .filter(|x| x.id != "giocatore" && !x.sciolto)
+            .map(|x| x.id.clone())
+            .collect();
+        let mut coal = serde_json::Map::new();
+        for mask in 0u32..(1 << ia.len()) {
+            let partiti: Vec<String> = (0..ia.len()).filter(|i| mask >> i & 1 == 1).map(|i| ia[i].clone()).collect();
+            let mut q = q0.clone();
+            let r = q
+                .comanda(Comando::DichiaraCoalizione { partiti: partiti.clone(), cessioni: vec![] })
+                .map(|()| (q.vista().disponibilita, q.vista().proiezione));
+            coal.insert(partiti.join("+"), esito!(r));
+        }
+        let x = q0.vista().partiti.iter().find(|x| x.id == "giocatore").map_or(0.0, |x| x.posizione_dichiarata);
+        let mut pos = serde_json::Map::new();
+        for dx in [-0.5, -0.25, 0.25, 0.5] {
+            let mut q = q0.clone();
+            let r = q
+                .comanda(Comando::Riposiziona { posizione: x + dx })
+                .map(|()| q.vista().partiti.into_iter().find(|x| x.id == "giocatore"));
+            pos.insert(format!("{dx}"), esito!(r));
+        }
+        let mut q = q0.clone();
+        let r = q
+            .comanda(Comando::Compra { acquisto: Acquisto::SondaggioPrivato })
+            .map(|()| q.vista().acquisti.sondaggio_privato);
+        prove.insert(k.into(), serde_json::json!({"coalizioni": coal, "riposiziona": pos, "privato": esito!(r)}));
+    }
+    out.insert("prove".into(), serde_json::Value::Object(prove));
+
+    let nota = format!(
+        "seme 4 a 4,5 turno zero; governo_fine turno {}; opposizione_fine (seme 1 a 1,5) turno {}",
+        g.vista().turno,
+        o.vista().turno
+    );
+    Ok(Uscita {
+        nome: "26-campagna.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota,
+    })
+}
+
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -1522,6 +1746,7 @@ fn esegui() -> Esito<()> {
     uscite.push(bilancio(&d)?);
     uscite.push(paese(&d)?);
     uscite.push(registro(&d)?);
+    uscite.push(campagna(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

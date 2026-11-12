@@ -477,5 +477,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/22-bilancio.md`, un giro su un prototipo 
 - **All'opposizione la sezione resta barrata;** il riepilogo del bilancio del governo va in Aula.
 - **Due dati al core:** le cifre del bilancio in aula, che cambiano quando si accoglie un emendamento, e i dicasteri chiesti da ogni emendamento, per dire il costo prima di scegliere.
 
+## 2026-11-12: campagna
+Ticket `.scratch/v1-piano-11-ui/issues/26-campagna.md`, un giro su un prototipo con tre forme e cinque stati giocati; ogni disponibilità, fascia e rifiuto preso dal core col comando vero.
+
+- **Forma A · Tavolo:** coalizione, spesa, posizione e promesse insieme a pagina, la cassa nel dettaglio a lato. La cassa ripartita e l'ordine del giorno scartati: la campagna è un'allocazione fra leve diverse, e il giocatore le deve vedere insieme.
+- **La dichiarazione parte al clic:** il comando si sostituisce, e il rifiuto del core sulla riga dice perché un'alleanza non si fa.
+- **Riposizionamento e promesse con l'anteprima del core:** si fanno una volta, quindi la conferma sul posto dice la distanza contro le soglie di scissione e l'intesa che ogni alleato perde.
+- **L'avviso della campagna tagliata lo scrive la UI**, prima della chiusura: un acquisto fatto dopo la campagna abbassa la cassa, e la chiusura taglia le spese in ordine.
+- **Due dati al core:** le due anteprime, con le soglie di scissione nella Vista.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
