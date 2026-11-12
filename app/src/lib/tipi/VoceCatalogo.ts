@@ -2,8 +2,15 @@
 import type { GradinoCatalogo } from "./GradinoCatalogo";
 import type { Norma } from "./Norma";
 
+/**
+ * Una disposizione, coi suoi gradini.
+ */
 export type VoceCatalogo = { id: string, nome: string, 
 /**
  * Nome del dicastero; None per costituzionali ed elettorali.
  */
-dicastero: string | null, norma: Norma, partenza: string, gradini: Array<GradinoCatalogo>, };
+dicastero: string | null, norma: Norma, 
+/**
+ * Id del gradino in vigore nello scenario di base.
+ */
+partenza: string, gradini: Array<GradinoCatalogo>, };

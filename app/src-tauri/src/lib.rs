@@ -18,7 +18,7 @@ use sim_core::vista::Anteprima;
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
 
-/// La partita in corso; `id` è `None` per la partita di prova, che non si salva.
+/// La partita in corso. `id` è `None` solo nei test: in produzione ogni partita ha un id.
 struct InCorso {
     id: Option<String>,
     partita: Partita,
@@ -56,9 +56,9 @@ fn seme_da_orologio() -> Result<u64, String> {
     u64::try_from(nanosecondi).map_err(|e| format!("seme fuori intervallo: {e}"))
 }
 
-/// Il seme dell'anteprima, se c'è, e lo consuma; altrimenti uno nuovo dall'orologio.
+/// Il seme dell'anteprima, se c'è, senza toglierlo; altrimenti uno nuovo dall'orologio.
 fn seme_per_fondare(seme: &SemeFondazione) -> Result<u64, ErroreGuscio> {
-    let tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?.take();
+    let tenuto = *seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
     Ok(match tenuto {
         Some(s) => s,
         None => seme_da_orologio()?,
@@ -71,10 +71,12 @@ fn anteprima_di_fondazione(
     scenario: Option<&SuMisura>,
     seme: &SemeFondazione,
 ) -> Result<AnteprimaFondazione, ErroreGuscio> {
+    // Il lock sta per tutto il calcolo: l'ordine dei semi segue quello delle anteprime.
+    let mut tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
     let dati = dati_di(base, scenario)?;
     let nuovo = seme_da_orologio()?;
     let risultato = Partita::anteprima_fondazione(&dati, nuovo);
-    *seme.lock().map_err(|_| guasto(ERRORE_STATO))? = Some(nuovo);
+    *tenuto = Some(nuovo);
     Ok(risultato)
 }
 
@@ -114,6 +116,26 @@ fn fonda(
         partita,
     });
     stato.clear_poison();
+    Ok(vista)
+}
+
+/// Fonda col seme tenuto; solo a fondazione riuscita lo azzera, se è ancora quello usato (un'anteprima
+/// arrivata nel frattempo ha messo il suo). L'azzeramento sta fuori da `fonda`: i due lock non si
+/// tengono insieme.
+fn fonda_col_seme(
+    stato: &Stato,
+    archivio: &Archivio,
+    base: &DatiGioco,
+    scenario: Option<&SuMisura>,
+    fondazione: &Fondazione,
+    seme: &SemeFondazione,
+) -> Result<Vista, ErroreGuscio> {
+    let usato = seme_per_fondare(seme)?;
+    let vista = fonda(stato, archivio, base, scenario, fondazione, usato)?;
+    let mut tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
+    if *tenuto == Some(usato) {
+        *tenuto = None;
+    }
     Ok(vista)
 }
 
@@ -271,14 +293,13 @@ async fn fonda_partita(
     archivio: State<'_, Archivio>,
     seme: State<'_, SemeFondazione>,
 ) -> Result<Vista, ErroreGuscio> {
-    let seme = seme_per_fondare(&seme)?;
-    fonda(
+    fonda_col_seme(
         &stato,
         &archivio,
         &base,
         scenario.as_ref(),
         &fondazione,
-        seme,
+        &seme,
     )
 }
 
@@ -386,7 +407,7 @@ async fn anteprima_fondazione(
 
 #[tauri::command]
 async fn catalogo_scenario(base: State<'_, DatiGioco>) -> Result<CatalogoScenario, ErroreGuscio> {
-    catalogo(&base).map_err(rifiuto)
+    catalogo(&base).map_err(guasto)
 }
 
 /// Esegue `f` sulla partita in corso, in sola lettura.
@@ -910,10 +931,44 @@ mod tests {
         let stato = Stato::default();
         let archivio = Archivio::nuovo(c.0.clone())?;
         let seme = SemeFondazione::new(Some(SEME));
-        let s = seme_per_fondare(&seme)?;
-        fonda(&stato, &archivio, &dati(), None, &fondazione(), s)?;
+        fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
         let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
         assert_eq!(id.as_deref(), Some(ID));
+        assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn la_fondazione_rifiutata_lascia_il_seme() -> Result<(), String> {
+        let c = cartella("lib-fondazione-rifiutata");
+        let stato = Stato::default();
+        let archivio = Archivio::nuovo(c.0.clone())?;
+        let seme = SemeFondazione::new(Some(SEME));
+        let vuota = Fondazione {
+            nome: String::new(),
+            ..fondazione()
+        };
+        let e = fonda_col_seme(&stato, &archivio, &dati(), None, &vuota, &seme).err();
+        assert_eq!(e.map(|e| e.specie), Some(Specie::Rifiuto));
+        assert_eq!(*seme.lock().map_err(|e| e.to_string())?, Some(SEME));
+
+        let vista = fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
+        assert_eq!(vista.turno, 0);
+        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        assert_eq!(id.as_deref(), Some(ID));
+        assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn la_fondazione_senza_anteprima_usa_l_orologio() -> Result<(), String> {
+        let c = cartella("lib-fondazione-senza-anteprima");
+        let stato = Stato::default();
+        let archivio = Archivio::nuovo(c.0.clone())?;
+        let seme = SemeFondazione::default();
+        fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
+        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        assert!(id.is_some_and(|i| i != ID));
         assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
         Ok(())
     }
@@ -959,11 +1014,13 @@ mod tests {
     }
 
     #[test]
-    fn il_seme_tenuto_si_consuma_poi_torna_l_orologio() -> Result<(), ErroreGuscio> {
+    fn il_seme_tenuto_resta_finche_non_si_azzera() -> Result<(), ErroreGuscio> {
         let seme = SemeFondazione::new(Some(SEME));
         assert_eq!(seme_per_fondare(&seme)?, SEME);
-        let dopo = seme_per_fondare(&seme)?;
+        assert_eq!(seme_per_fondare(&seme)?, SEME);
+        let vuoto = SemeFondazione::default();
         // Dall'orologio: nanosecondi dall'epoca, ben oltre ogni seme scelto a mano.
+        let dopo = seme_per_fondare(&vuoto)?;
         assert!(dopo > u64::from(u32::MAX), "{dopo}");
         Ok(())
     }

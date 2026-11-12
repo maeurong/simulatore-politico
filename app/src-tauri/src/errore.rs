@@ -16,7 +16,8 @@ pub struct ErroreGuscio {
     pub testo: String,
 }
 
-/// La regola del gioco o la richiesta dell'utente non lo permette.
+/// La scelta non è permessa: lo dice il core, o la richiesta non si può soddisfare (un nome non
+/// valido).
 pub fn rifiuto(e: impl ToString) -> ErroreGuscio {
     ErroreGuscio {
         specie: Specie::Rifiuto,
@@ -24,7 +25,8 @@ pub fn rifiuto(e: impl ToString) -> ErroreGuscio {
     }
 }
 
-/// Disco, lock o stato: la partita è rimasta com'era.
+/// Disco, lock o stato, non le regole: la scelta non è stata applicata. Memoria e disco possono non
+/// coincidere finché la partita non si riapre (vedi `chiudi`, `torna_a` e `lascia`).
 pub fn guasto(e: impl ToString) -> ErroreGuscio {
     ErroreGuscio {
         specie: Specie::Guasto,
@@ -32,18 +34,21 @@ pub fn guasto(e: impl ToString) -> ErroreGuscio {
     }
 }
 
+/// Una stringa nuda è un guasto (disco, lock, stato); un rifiuto si marca a mano con `rifiuto(...)`.
 impl From<String> for ErroreGuscio {
     fn from(testo: String) -> Self {
         guasto(testo)
     }
 }
 
+/// Una stringa nuda è un guasto (disco, lock, stato); un rifiuto si marca a mano con `rifiuto(...)`.
 impl From<&str> for ErroreGuscio {
     fn from(testo: &str) -> Self {
         guasto(testo)
     }
 }
 
+#[cfg(test)]
 impl From<ErroreGuscio> for String {
     fn from(e: ErroreGuscio) -> Self {
         e.testo

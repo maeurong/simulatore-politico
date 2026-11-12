@@ -126,8 +126,7 @@ pub struct CatalogoScenario {
     /// I sei cursori, in quest'ordine: debito_pil, disoccupazione, inflazione, ricchezza,
     /// eta_mediana, orientamento.
     pub cursori: Vec<CursoreCatalogo>,
-    /// Nome dell'impostazione di elezioni.toml -> (id della disposizione elettorale -> id del
-    /// gradino).
+    /// Per ogni legge elettorale di elezioni.toml, il gradino di ciascuna disposizione elettorale.
     pub leggi_elettorali: BTreeMap<String, BTreeMap<String, String>>,
     pub legge_di_base: String,
     /// Tutte le disposizioni dei dati, nel loro ordine.
@@ -139,6 +138,7 @@ pub struct CatalogoScenario {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct CursoreCatalogo {
+    /// La chiave del cursore in `SuMisura.cursori`, non un'etichetta: il testo lo mette la UI.
     pub nome: String,
     pub valore: f64,
     pub min: f64,
@@ -147,12 +147,14 @@ pub struct CursoreCatalogo {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
+/// Una disposizione, coi suoi gradini.
 pub struct VoceCatalogo {
     pub id: String,
     pub nome: String,
     /// Nome del dicastero; None per costituzionali ed elettorali.
     pub dicastero: Option<String>,
     pub norma: Norma,
+    /// Id del gradino in vigore nello scenario di base.
     pub partenza: String,
     pub gradini: Vec<GradinoCatalogo>,
 }

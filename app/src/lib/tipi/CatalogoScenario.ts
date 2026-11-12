@@ -14,8 +14,7 @@ export type CatalogoScenario = {
  */
 cursori: Array<CursoreCatalogo>, 
 /**
- * Nome dell'impostazione di elezioni.toml -> (id della disposizione elettorale -> id del
- * gradino).
+ * Per ogni legge elettorale di elezioni.toml, il gradino di ciascuna disposizione elettorale.
  */
 leggi_elettorali: { [key in string]: { [key in string]: string } }, legge_di_base: string, 
 /**

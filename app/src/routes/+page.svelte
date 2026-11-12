@@ -15,7 +15,7 @@
       vista = await invoke<Vista>(comando);
       errore = "";
     } catch (e) {
-      errore = String(e);
+      errore = (e as { testo?: string })?.testo ?? String(e);
     } finally {
       occupato = false;
     }
