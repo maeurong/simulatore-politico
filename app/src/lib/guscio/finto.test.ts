@@ -56,6 +56,37 @@ describe("rispondi", () => {
   });
 });
 
+describe("rispondi: il resto dei passacarte", () => {
+  it("carica_scenario dà lo scenario col nome chiesto", () => {
+    const nome = editor.riepiloghi[1].scenario.nome;
+    expect(rispondi("carica_scenario", { nome }, c)).toEqual(editor.riepiloghi[1].scenario);
+  });
+  it("carica_scenario con nome ignoto è rifiuto", () => {
+    expect(() => rispondi("carica_scenario", { nome: "Nessuno" }, c)).toThrow(
+      expect.objectContaining({ specie: "rifiuto" }),
+    );
+  });
+  it("catalogo_scenario: esattamente le cinque chiavi, i partiti dalla fondazione", () => {
+    const cat = rispondi("catalogo_scenario", {}, c) as Record<string, unknown>;
+    expect(Object.keys(cat).sort()).toEqual(["cursori", "disposizioni", "legge_di_base", "leggi_elettorali", "partiti"]);
+    expect(cat.partiti).toEqual((fondazione as { partiti: unknown }).partiti);
+  });
+  it("anteprima_fondazione: orientamento 1 dà l'elettorato a destra, il resto l'oggi", () => {
+    const anteprime = (fondazione as { anteprime: Record<string, unknown> }).anteprime;
+    expect(rispondi("anteprima_fondazione", { scenario: { cursori: { orientamento: 1 } } }, c)).toEqual(
+      anteprime["elettorato a destra, seme 4"],
+    );
+    expect(rispondi("anteprima_fondazione", { scenario: null }, c)).toEqual(anteprime["oggi, seme 4"]);
+  });
+  it("fonda_partita dà la Vista del turno zero", () => {
+    expect((rispondi("fonda_partita", {}, c) as { turno: number }).turno).toBe(0);
+  });
+  it("partite e albo vengono dall'edicola", () => {
+    expect(rispondi("partite", {}, c)).toEqual((edicola as { partite: unknown }).partite);
+    expect(rispondi("albo", {}, c)).toEqual((edicola as { albo: unknown }).albo);
+  });
+});
+
 describe("campione che manca", () => {
   const rifiutoDi = (comando: string) =>
     expect.objectContaining({ specie: "rifiuto", testo: `non nel campione: ${comando}` });

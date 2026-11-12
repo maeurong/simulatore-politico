@@ -17,6 +17,18 @@ describe("numeri", () => {
     expect(segnato(-121)).toBe("−121");
     expect(segnato(0)).toBe("0");
   });
+  it("segnato coi decimali", () => {
+    expect(segnato(2.5, 1)).toBe("+2,5");
+    expect(segnato(-2.5, 1)).toBe("−2,5");
+    expect(segnato(0.04, 1)).toBe("0,0");
+  });
+  // Difetto: Intl dà «-0» e il replace lo rende «−0»; un meno su uno zero non va. Correzione al codice.
+  it.fails("numero: un negativo che arrotonda a zero non porta il meno", () => {
+    expect(numero(-0.4)).toBe("0");
+  });
+  it.fails("percentuale: un negativo che arrotonda a zero non porta il meno", () => {
+    expect(percentuale(-0.0004, 1)).toBe("0,0%");
+  });
 });
 
 describe("dataRelativa", () => {
@@ -35,6 +47,9 @@ describe("dataRelativa", () => {
 describe("t", () => {
   it("sostituisce i segnaposto", () => {
     expect(t("segnaposto.arriva", { sezione: "Aula", fetta: "11b" })).toBe("Aula: arriva con la fetta 11b.");
+  });
+  it("un segnaposto mancante resta com'è, senza lanciare", () => {
+    expect(t("segnaposto.arriva", { sezione: "Aula" })).toBe("Aula: arriva con la fetta {fetta}.");
   });
   it("sceglie il plurale su n", () => {
     expect(t("cornice.turni_al_voto", { n: 1 })).toBe("1 turno al voto");

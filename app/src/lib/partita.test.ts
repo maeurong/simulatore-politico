@@ -53,6 +53,14 @@ describe("partita", () => {
     expect(partita.occupato).toBe(false);
   });
 
+  it("esci: via Vista, serie e guasto, per l'edicola", () => {
+    partita.guasto = "vecchio";
+    partita.esci();
+    expect(partita.vista).toBeNull();
+    expect(partita.serie).toEqual([]);
+    expect(partita.guasto).toBeNull();
+  });
+
   it("comando riuscito e serie guasta: la Vista nuova resta, la serie è quella di prima", async () => {
     guscio.chiudiTurno.mockResolvedValue(dopo);
     guscio.serie.mockRejectedValue({ specie: "guasto", testo: "serie illeggibile" });

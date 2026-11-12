@@ -131,11 +131,13 @@ describe("tracciatiDi", () => {
     const consenso = tracciatiDi({ ...governo, sondaggio: { ...governo.sondaggio, istituti: [] } }, [])[0];
     expect(consenso.valore).toBeNull();
     expect(consenso.rimando).toBeNull();
+    expect(consenso.rosso).toBe(false);
   });
 
   it("col partito fuori dal sondaggio il consenso manca", () => {
     const consenso = tracciatiDi({ ...opposizione, partiti: opposizione.partiti.filter((p) => p.id !== opposizione.giocatore) }, [])[0];
     expect(consenso.valore).toBeNull();
     expect(consenso.rimando).toBeNull();
+    expect(consenso.rosso).toBe(false);
   });
 });

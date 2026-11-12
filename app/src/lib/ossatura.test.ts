@@ -114,3 +114,38 @@ describe("apribile", () => {
     expect(["cruscotto", "trattativa", "eredita"].filter((p) => apribile(p, finita))).toEqual(["eredita"]);
   });
 });
+
+// Ogni Vista dei campioni, anche le annidate (17-cruscotto, 25-registro, …): l'oracolo è la tabella della spec
+// (righe 278-290 e 300-311) letta sui campi grezzi, non barrata().
+const campioni = import.meta.glob("../../../.scratch/v1-piano-11-ui/viste/*.json", { eager: true, import: "default" });
+function trovaViste(o: unknown, percorso: string, fuori: [string, Vista][], profondita = 0) {
+  if (!o || typeof o !== "object" || profondita > 5) return;
+  if ("giocatore" in o && "turno" in o && "finita" in o) return void fuori.push([percorso, o as Vista]);
+  for (const [k, x] of Object.entries(o)) trovaViste(x, `${percorso}/${k}`, fuori, profondita + 1);
+}
+const tutte: [string, Vista][] = [];
+for (const [file, json] of Object.entries(campioni)) trovaViste(json, file.split("/").pop()!, tutte);
+
+function barrateAttese(v: Vista): Sezione[] {
+  const attese: Sezione[] = [];
+  const zero = v.turno === 0;
+  if (zero) attese.push("prima-pagina");
+  if (!v.governa) attese.push("governo");
+  if (v.finita || v.fase === "sciolta" || v.fase === "trattativa") attese.push("aula");
+  if (v.finita || !v.governa || v.data.trimestre !== 4) attese.push("bilancio");
+  if (v.finita || v.turni_al_voto !== 0) attese.push("campagna");
+  if (v.finita ? !v.eredita?.bozza : zero) attese.push("registro");
+  return SEZIONI.filter((s) => attese.includes(s));
+}
+
+describe("ogni Vista campione", () => {
+  it("ne trova, anche annidate", () => {
+    expect(tutte.length).toBeGreaterThan(100);
+  });
+  it.each(tutte)("%s: barrate come dice la spec", (_, v) => {
+    expect(barrate(v)).toEqual(barrateAttese(v));
+  });
+  it.each(tutte)("%s: la casa è eredità a partita finita, trattativa in trattativa, altrimenti cruscotto", (_, v) => {
+    expect(casa(v)).toBe(v.finita ? "eredita" : v.fase === "trattativa" ? "trattativa" : "cruscotto");
+  });
+});
