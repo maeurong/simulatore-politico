@@ -4,7 +4,7 @@
  * Scaglione IRPEF: `aliquota` marginale (frazione 0-1, 0,22 = 22%) sul reddito fino a
  * `fino_a` euro annui; l'ultimo scaglione non ha tetto.
  */
-export type Scaglione = { fino_a: bigint | null, aliquota: number, 
+export type Scaglione = { fino_a: number | null, aliquota: number, 
 /**
  * Il livello dei prezzi a cui la soglia ha preso la sua cifra nominale: 1 al turno zero.
  */

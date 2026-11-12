@@ -52,6 +52,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "serde",
  "serde_json",
  "sim-core",
  "tauri",

@@ -7,4 +7,4 @@ import type { VoceOpzione } from "./VoceOpzione";
  * Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`
  * (`None` = vale il default), `regione` e `bersaglio` i nomi, `costo` in euro.
  */
-export type VoceEvento = { nome: string, famiglia: Famiglia, causa: string, tono: Tono, regione: string | null, bersaglio: string | null, costo: bigint, opzioni: Array<VoceOpzione>, scelta: number | null, };
+export type VoceEvento = { nome: string, famiglia: Famiglia, causa: string, tono: Tono, regione: string | null, bersaglio: string | null, costo: number, opzioni: Array<VoceOpzione>, scelta: number | null, };

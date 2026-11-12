@@ -18,11 +18,11 @@ perdita_reale_scaglioni: Array<number>,
 /**
  * Euro annui.
  */
-fondo_riserva: bigint, 
+fondo_riserva: number, 
 /**
  * Euro annui: il fondo di riserva non ancora speso, mai sotto zero.
  */
-fondo_residuo: bigint, 
+fondo_residuo: number, 
 /**
  * C'è una bozza: si può presentare la legge di bilancio.
  */

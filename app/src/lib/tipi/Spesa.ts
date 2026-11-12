@@ -5,4 +5,4 @@ import type { Leva } from "./Leva";
 /**
  * Euro spesi con una leva su un bersaglio.
  */
-export type Spesa = { bersaglio: Bersaglio, leva: Leva, euro: bigint, };
+export type Spesa = { bersaglio: Bersaglio, leva: Leva, euro: number, };

@@ -5,7 +5,7 @@ export type VoceAtto = { id: string, nome: string, motto: string,
 /**
  * Euro per turno di lavori.
  */
-costo: bigint, turni: number, pagabile: boolean, 
+costo: number, turni: number, pagabile: boolean, 
 /**
  * `serve {disposizione}: {gradino} o {gradino}`; l'atto non è pagabile.
  */

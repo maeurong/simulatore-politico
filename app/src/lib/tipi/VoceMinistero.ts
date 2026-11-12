@@ -41,7 +41,7 @@ atti: Array<VoceAtto>, cantieri: Array<VoceCantiere>,
 /**
  * Euro, prima delle rate dei cantieri.
  */
-margine_residuo: bigint, 
+margine_residuo: number, 
 /**
  * La proposta (di fondi o di riforma) in attesa di Accogli, Rinvia o Respingi.
  */

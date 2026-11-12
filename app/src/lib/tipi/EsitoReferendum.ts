@@ -7,4 +7,4 @@ import type { Trimestre } from "./Trimestre";
  * il motivo per cui il referendum non si è votato (decaduto o sospeso), leggibile per il
  * giocatore.
  */
-export type EsitoReferendum = { tipo: TipoReferendum, nome: string, data: Trimestre, si: bigint, no: bigint, votanti: bigint, aventi_diritto: bigint, quorum: boolean, approvato: boolean, decaduto: string | null, };
+export type EsitoReferendum = { tipo: TipoReferendum, nome: string, data: Trimestre, si: number, no: number, votanti: number, aventi_diritto: number, quorum: boolean, approvato: boolean, decaduto: string | null, };

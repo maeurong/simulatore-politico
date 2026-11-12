@@ -3,4 +3,4 @@
 /**
  * Euro annui; `perdita_reale` in %, il potere d'acquisto perso dalla cifra nominale.
  */
-export type VoceBudget = { id: string, spesa: bigint, salari: bigint, acquisti: bigint, margine: bigint, perdita_reale: number, };
+export type VoceBudget = { id: string, spesa: number, salari: number, acquisti: number, margine: number, perdita_reale: number, };

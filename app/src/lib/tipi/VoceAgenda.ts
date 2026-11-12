@@ -8,4 +8,4 @@ export type VoceAgenda = { atto: string, nome: string, regione: string | null,
 /**
  * Euro per turno di lavori.
  */
-costo: bigint, motivo: string, stato: StatoAgenda, in_evidenza: boolean, };
+costo: number, motivo: string, stato: StatoAgenda, in_evidenza: boolean, };

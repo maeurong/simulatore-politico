@@ -4,4 +4,4 @@ import type { TipoAcquisto } from "./TipoAcquisto";
 /**
  * Euro.
  */
-export type PrezzoAcquisto = { acquisto: TipoAcquisto, euro: bigint, };
+export type PrezzoAcquisto = { acquisto: TipoAcquisto, euro: number, };
