@@ -553,5 +553,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/33-impostazioni-del-giocatore.md`, due gi
 - **Movimento a tre posizioni:** «Come il sistema» segue macOS anche a partita aperta, così non c'è uno stato nascosto.
 - **Nel dettaglio a lato:** la pagina sotto resta in vista e cambia mentre si sceglie.
 
+## 2026-11-12: verifica della UI
+Ticket `.scratch/v1-piano-11-ui/issues/34-verifica-della-ui.md`, due giri di domande.
+
+- **Test solo sulla logica pura:** Vitest su scale, testi, hash e ordine delle voci; niente test di componente, che cambierebbero a ogni ritocco grafico.
+- **Le Viste campione come batteria:** `mockIPC` le serve all'app nel browser, in sviluppo; ogni stato della fetta a due finestre e due scale, con zero tagli.
+- **L'app vera la gioca l'agente:** `tauri-driver` non va su macOS, quindi il giro in WKWebView si fa con computer-use; basta quello, con gli screenshot in PR.
+- **Screenshot come prova, non come confronto:** niente immagini di riferimento, perché ogni fetta cambia le schermate; la fedeltà al prototipo la giudica il `craft-reviewer`.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
