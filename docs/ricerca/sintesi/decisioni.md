@@ -518,5 +518,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/31-scale-dei-tracciati.md`, un giro a par
 - **Il consenso al governo ha stacco e rosso indipendenti:** lo stacco sta al premio, il rosso viene dalla proiezione dei seggi. Una coalizione al 38,5% sotto il premio ha comunque 225 seggi su 400.
 - **Un dato al core:** la soglia della crisi del debito nella Vista.
 
+## 2026-11-12: disegno delle caricature
+Ticket `.scratch/v1-piano-11-ui/issues/32-disegno-delle-caricature.md`, una tavola di riferimenti ([[riferimenti-per-le-facce]]), quattro varianti e una rifinitura.
+
+- **Profilo al tratto alla Guasco:** pennino piatto, figura campita di carta, piani in terra chiara. L'identità sta nella silhouette del profilo (naso, mento, fronte, nuca) e nel colletto, non in forme e tinte dentro la testa: è ciò che rendeva il segnaposto «tutto uguale».
+- **Due inchiostri sovrapposti, solo nelle facce:** come una stampa a due passaggi, sempre dai sette inchiostri.
+- **Soddisfazione dal fondo del riquadro:** a 34 px un colore pieno si legge prima di una bocca.
+- **Donne senza capelli:** ciglia e naso all'85% per tutte, poi labbra, orecchino e cappello combinati dall'hash, così si distinguono anche fra loro.
+- **Un dato al core:** il genere del personaggio nella Vista.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
