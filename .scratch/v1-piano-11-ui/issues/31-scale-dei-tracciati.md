@@ -1,7 +1,7 @@
 Type: grilling
 Status: open
 Blocked by: 08
-Assignee: -
+Assignee: maeurong
 Label: wayfinder:grilling
 Map: ../map.md
 
