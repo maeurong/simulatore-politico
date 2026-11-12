@@ -36,11 +36,19 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `15-fondazione.json` | 4, 1, 9 | — | — | 32675 | `Partita::anteprima_fondazione` sull'Italia di oggi coi semi 4, 1, 9 e sull'«Elettorato a destra» (orientamento +1) col seme 4, più i partiti dello scenario coi posti (vedi sotto) |
 | `19-aula.json` | 4, 2 | 4,5 / 1,5 | 2-4 | 838325 | stati dell'Aula che mancavano, ciascuno con `come` e `vista`: `piena` (il 03 con `PresentaLegge` della legge elettorale «proporzionale al 3%», della costituzionale più votata e della riforma più lontana dalla destra), `dopo_voto`, `seconda_deliberazione`, `dopo_elettorale` (chiusure successive, bilancio presentato), `opposizione_libero` e `opposizione_proposta` (seme 2 a 1,5, `PresentaProposta` e `Linea`), più `anteprima_elettorale`, `anteprima_riforma` e due rifiuti veri (vedi sotto) |
 | `16-prima-pagina.json` | 4, 9, 1 | 4,5 / 1,5 | varie | 653911 | stati della prima pagina che mancavano, ciascuno con `come` e `vista`: `t3` (il 03 chiuso una volta), `zero_9` e `voto_9` (seme 9 prima e dopo il voto), `voto_opp` (seme 1 a 1,5 dopo il voto), e le corse di «avanti fino a novità» dal 06 in `corse`, con `prima` e `vista` di tre fermate: `fermata_4` (primo ultimatum), `fermata_19` (la corsa più lunga, 3 chiusure), `fermata_20` (campagna) (vedi sotto) |
+| `20-anteprima.json` | 4, 7 | 4,5 | 2, 8 | 301982 | anteprime sul 03, ciascuna con `valori` e `anteprima` o `rifiuto`: riforma, tre territoriali (decontribuzione rifiutata perché già in esame, ZES, autonomia), due disposizioni, costituzionale, elettorale, proposta sul nucleare, `accogli`; `gradini` con ogni gradino di salario minimo, ZES, autonomia e numero dei parlamentari; `test` comprato su salario minimo e ZES con cassa prima e dopo e il rifiuto del secondo; `decreto` e `decreto_grave`, primo decreto su disposizioni ammesso da un evento aperto, con la sua Vista (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 20: aggiunta dal ticket «Anteprima della misura». `anteprima` rifiuta una misura già in esame («Sgravio contributivo nel
+  Mezzogiorno è già in esame»: il Centro l'ha nel posto riservato), mentre il test della stessa bozza si compra. Una legge su
+  due dicasteri è un rifiuto («devono stare nello stesso dicastero»). La fascia stimata non è monotona: salario minimo 7 €/h
+  medio, 9 molto, 11 medio. Il primo decreto d'evento ammesso è sul codice degli appalti già al turno 2 del seme 4
+  (emergenza idrogeologica); in tono grave al seme 7, turno 8. La Vista non dice quali norme un evento ammette:
+  `genera/` le trova provando `anteprima_decreto`.
 
 - 16: aggiunta dal ticket «Prima pagina». Le fermate sono calcolate in `genera/` con le regole della spec di core
   «esito e Vista completa» (sezione «Fermate»), tranne `voto`, che chiede la quota dei suoi elettori toccati: la porterà

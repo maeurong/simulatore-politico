@@ -434,5 +434,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/16-prima-pagina.md`, un giro su un protot
 - **Fermate e grandi cali restano come sono:** all'opposizione «avanti fino a novità» si ferma quasi a ogni turno, ma per decisioni vere; un calo di 7,5 punti nel sondaggio si vede dal tracciato, non in pagina.
 - **Una voce sola per una situazione accesa col suo evento**, rimandata al core.
 
+## 2026-11-12: anteprima della misura
+Ticket `.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md`, due giri su un prototipo con tre forme, poi una quarta mista, e tredici casi giocati.
+
+- **Forma D · Cartellino col prima e dopo:** un foglio appeso a uno spillo nel dettaglio a lato, con la tabella ora / con la misura e gli effetti con quando e quanto. Il mobile a fili lunghi quanto il ritardo era il più fedele alla metafora, ma stretto con quattro pezzi e senza scala per i 40 turni del nucleare.
+- **Oscilla solo a un gesto:** aprire, cambiare un gradino, comprare il test; mai in loop, fermo nel tono grave.
+- **La stima è del ministro, e lo si dice** con la sua capacità; quanto spesso sbaglia no, perché verrebbe da una manopola.
+- **Il test cambia ciò che si legge:** prima chi la misura tocca, dopo come reagiscono al governo le sei condizioni.
+- **Due dati al core:** costo, effetti e gruppi di una misura già in calendario, che oggi `anteprima` rifiuta, e le norme che il decreto di un evento ammette.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

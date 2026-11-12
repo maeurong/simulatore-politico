@@ -5,7 +5,8 @@ use std::path::Path;
 
 use sim_core::eventi::Tono;
 use sim_core::legislatura::{Fase, Fondazione, Incarico};
-use sim_core::parlamento::ValoreProposto;
+use sim_core::informazione::Acquisto;
+use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::riepilogo;
 use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VocePartita};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, VERSIONE_SCHEMA};
@@ -626,6 +627,19 @@ fn valori(coppie: &[(&str, &str)]) -> Vec<ValoreProposto> {
         .collect()
 }
 
+/// L'impostazione pronta «proporzionale al 3%» (`leggi_elettorali` dei dati), meno ciò che è già in vigore.
+fn proporzionale_al_3() -> Vec<ValoreProposto> {
+    valori(&[
+        ("coalizioni", "no"),
+        ("soglia_coalizione", "0"),
+        ("ripescaggio", "no"),
+        ("premio", "nessuno"),
+        ("soglia_premio", "4000"),
+        ("taglia_premio", "875"),
+        ("tetto", "nessuno"),
+    ])
+}
+
 /// Gli stati dell'Aula che le Viste 01-08 non hanno: calendario pieno con legge elettorale,
 /// norma costituzionale e riforma con emendamenti degli alleati; le deliberazioni e i voti dopo;
 /// all'opposizione il posto riservato libero, poi occupato dalla proposta del giocatore, e una
@@ -647,16 +661,7 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
             serde_json::json!({ "come": come, "vista": v }),
         );
     };
-    // L'impostazione pronta «proporzionale al 3%» (`leggi_elettorali` dei dati), meno ciò che è già in vigore.
-    let elettorale = valori(&[
-        ("coalizioni", "no"),
-        ("soglia_coalizione", "0"),
-        ("ripescaggio", "no"),
-        ("premio", "nessuno"),
-        ("soglia_premio", "4000"),
-        ("taglia_premio", "875"),
-        ("tetto", "nessuno"),
-    ]);
+    let elettorale = proporzionale_al_3();
     let p03 = governo_03(d)?;
     // La norma costituzionale con più sì attesi alla Camera, perché arrivi alla seconda.
     let costituzionale = [
@@ -824,6 +829,168 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Un gradino di `id` che non è in vigore né bloccato: l'ultimo dell'elenco.
+fn altro_gradino(v: &sim_core::Vista, id: &str) -> Option<ValoreProposto> {
+    let x = v.disposizioni.iter().find(|x| x.id == id)?;
+    let g = (x.gradini.iter()).rfind(|g| g.id != x.in_vigore && !g.bloccato)?;
+    Some(ValoreProposto {
+        disposizione: id.into(),
+        gradino: g.id.clone(),
+    })
+}
+
+/// Il primo decreto su disposizioni che `anteprima_decreto` ammette sul turno: una disposizione
+/// ordinaria e un gradino non in vigore.
+fn decreto_ammesso(p: &Partita) -> Option<(ValoreProposto, sim_core::vista::Anteprima)> {
+    let v = p.vista();
+    (v.disposizioni.iter())
+        .filter(|x| matches!(x.norma, sim_core::disposizioni::Norma::Ordinaria))
+        .flat_map(|x| {
+            (x.gradini.iter())
+                .filter(|g| g.id != x.in_vigore && !g.bloccato)
+                .map(|g| ValoreProposto {
+                    disposizione: x.id.clone(),
+                    gradino: g.id.clone(),
+                })
+        })
+        .find_map(|w| {
+            let decreto = Decreto::Disposizioni {
+                valori: vec![w.clone()],
+            };
+            p.anteprima_decreto(&decreto).ok().map(|a| (w, a))
+        })
+}
+
+/// Le anteprime che le Viste 17 e 19 non hanno: sul 03 le tre disposizioni territoriali, una
+/// legge su due disposizioni, la costituzionale, la proporzionale al 3% e il decreto di `Accogli`;
+/// il decreto su disposizioni di un evento aperto, in tono ordinario e in tono grave, con la
+/// sua Vista; il test della misura comprato su due bozze, con gli acquisti e la cassa prima e dopo.
+fn anteprima_misura(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let p03 = governo_03(d)?;
+    let v03 = p03.vista();
+    let riforma = gradino_lontano(&v03, 5.5).ok_or("nessun gradino lontano")?;
+    let territoriali = ["decontribuzione", "credito_zes", "autonomia_differenziata"]
+        .map(|id| altro_gradino(&v03, id).ok_or(format!("nessun gradino: {id}")));
+    let [deco, zes, autonomia] = territoriali;
+    // ponytail: la decontribuzione è già in esame nel 03 (rifiuto vero), il test va sulla ZES.
+    let (deco, zes, autonomia) = (deco?, zes?, autonomia?);
+    // Una seconda disposizione del dicastero della riforma, non in esame: una legge sta in un dicastero solo.
+    let dicastero = |id: &str| v03.disposizioni.iter().find(|x| x.id == id).and_then(|x| x.dicastero.clone());
+    let in_esame = |id: &str| (v03.calendario.iter()).any(|m| m.valori.iter().any(|w| w.disposizione == id));
+    let seconda = (v03.disposizioni.iter())
+        .filter(|x| x.id != riforma.disposizione && !in_esame(&x.id))
+        .filter(|x| x.dicastero.is_some() && x.dicastero == dicastero(&riforma.disposizione))
+        .find_map(|x| altro_gradino(&v03, &x.id))
+        .ok_or("nessuna seconda disposizione")?;
+    let bozze: [(&str, Vec<ValoreProposto>); 8] = [
+        ("riforma", vec![riforma.clone()]),
+        ("territoriale_decontribuzione", vec![deco]),
+        ("territoriale_zes", vec![zes.clone()]),
+        ("territoriale_autonomia", vec![autonomia]),
+        ("due_disposizioni", vec![riforma.clone(), seconda]),
+        ("costituzionale", valori(&[("numero_parlamentari", "300_150")])),
+        ("elettorale", proporzionale_al_3()),
+        // La riforma che il ministro dell'Ambiente (capacità 1) propone nel 03: la stima peggiore.
+        ("proposta_nucleare", valori(&[("nucleare", "consentito")])),
+    ];
+    let mut anteprime = serde_json::Map::new();
+    for (k, v) in &bozze {
+        let a = p03.anteprima(v);
+        note.push(format!("{k}: {}", if a.is_ok() { "ok" } else { "rifiutata" }));
+        anteprime.insert(
+            (*k).into(),
+            match a {
+                Ok(a) => serde_json::json!({ "valori": v, "anteprima": a }),
+                Err(e) => serde_json::json!({ "valori": v, "rifiuto": e.to_string() }),
+            },
+        );
+    }
+    // Ogni gradino di quattro disposizioni, perché il prototipo cambi la bozza con l'anteprima aperta.
+    let mut gradini = Vec::new();
+    for id in ["salario_minimo", "credito_zes", "autonomia_differenziata", "numero_parlamentari"] {
+        let Some(x) = v03.disposizioni.iter().find(|x| x.id == id) else {
+            continue;
+        };
+        for g in (x.gradini.iter()).filter(|g| g.id != x.in_vigore && !g.bloccato) {
+            let w = vec![ValoreProposto {
+                disposizione: id.into(),
+                gradino: g.id.clone(),
+            }];
+            gradini.push(match p03.anteprima(&w) {
+                Ok(a) => serde_json::json!({ "valori": w, "anteprima": a }),
+                Err(e) => serde_json::json!({ "valori": w, "rifiuto": e.to_string() }),
+            });
+        }
+    }
+    out.insert("gradini".into(), gradini.into());
+    let accogli = p03.anteprima_accogli("infrastrutture_trasporti");
+    anteprime.insert(
+        "accogli".into(),
+        serde_json::json!({ "dicastero": "infrastrutture_trasporti", "anteprima": accogli.map_err(|e| e.to_string())? }),
+    );
+    out.insert("anteprime".into(), anteprime.into());
+    // Test della misura: due bozze, ciascuna su una copia del 03 (uno solo per turno).
+    let mut test = serde_json::Map::new();
+    for (k, v) in [("riforma", vec![riforma]), ("territoriale_zes", vec![zes])] {
+        let mut p = p03.clone();
+        let cassa = |p: &Partita| (p.vista().partiti.iter()).find(|x| x.id == p.vista().giocatore).map(|x| x.cassa);
+        let prima = cassa(&p);
+        let acquisto = Acquisto::TestMisura { valori: v };
+        comanda(&mut p, Comando::Compra { acquisto: acquisto.clone() })?;
+        let ripetuto = p.comanda(Comando::Compra { acquisto }).err().map(|e| e.to_string());
+        test.insert(
+            k.into(),
+            serde_json::json!({ "cassa_prima": prima, "cassa_dopo": cassa(&p), "acquisti": p.vista().acquisti, "rifiuto_ripetuto": ripetuto }),
+        );
+    }
+    out.insert("test".into(), test.into());
+    // Decreto su disposizioni di un evento: primo turno al governo che ne ammette uno, poi il primo in tono grave.
+    'semi: for seme in 4..=12 {
+        let mut p = fonda(d, seme, 4.5)?;
+        con_la_destra(&mut p)?;
+        p.chiudi_turno();
+        p.chiudi_turno();
+        for _ in 0..TURNI {
+            if p.finita() {
+                break;
+            }
+            if p.governa() && !p.vista().crisi {
+                let v = p.vista();
+                let grave = v.eventi.iter().any(|e| e.tono == Tono::Grave);
+                let chiave = if grave { "decreto_grave" } else { "decreto" };
+                if !out.contains_key(chiave)
+                    && let Some((w, a)) = decreto_ammesso(&p)
+                {
+                    note.push(format!("{chiave}: seme {seme}, turno {}, {}={}", v.turno, w.disposizione, w.gradino));
+                    out.insert(
+                        chiave.into(),
+                        serde_json::json!({ "seme": seme, "valori": [w], "anteprima": a, "vista": v }),
+                    );
+                }
+                if out.contains_key("decreto") && out.contains_key("decreto_grave") {
+                    break 'semi;
+                }
+                if let Some(b) = p.bozza_bilancio() {
+                    comanda(&mut p, Comando::PresentaBilancio { bilancio: b })?;
+                }
+            }
+            p.chiudi_turno();
+        }
+    }
+    for k in ["decreto", "decreto_grave"] {
+        if !out.contains_key(k) {
+            note.push(format!("{k}: NON RAGGIUNTO"));
+        }
+    }
+    Ok(Uscita {
+        nome: "20-anteprima.json",
+        json: serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
 /// Perché «avanti fino a novità» si fermerebbe sul turno appena aperto, con le regole della spec
 /// di core «esito e Vista completa» (sezione «Fermate»). ponytail: senza la fermata `voto`, che
 /// chiede la quota degli elettori toccati sul sondaggio; la porterà il core.
@@ -953,6 +1120,7 @@ fn esegui() -> Esito<()> {
     uscite.push(cruscotto(&d)?);
     uscite.push(aula(&d)?);
     uscite.push(prima_pagina(&d)?);
+    uscite.push(anteprima_misura(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {
