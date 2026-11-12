@@ -20,6 +20,11 @@ const finto = import.meta.env.DEV
     })
   : null;
 
-export const load = async () => {
+// contatore dei tagli: solo in sviluppo e solo con ?tagli=1
+if (import.meta.env.DEV && new URL(location.href).searchParams.get("tagli") === "1") {
+  import("$lib/sviluppo/tagli").then((m) => m.avvia());
+}
+
+export const load =async () => {
   await finto;
 };
