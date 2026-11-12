@@ -10,10 +10,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use archivio::Archivio;
 use errore::{ErroreGuscio, guasto, rifiuto};
-use sim_core::legislatura::{Eredita, Fine, Fondazione};
+use sim_core::legislatura::{AnteprimaFondazione, Eredita, Fine, Fondazione};
 use sim_core::parlamento::{Decreto, ValoreProposto};
-use sim_core::riepilogo::{RiepilogoScenario, riepilogo};
-use sim_core::salvataggi::{VoceAlbo, VocePartita};
+use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
+use sim_core::salvataggi::{PuntoSerie, VoceAlbo, VocePartita};
 use sim_core::vista::Anteprima;
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
@@ -27,6 +27,10 @@ struct InCorso {
 /// Ogni chiamata all'`Archivio` avviene tenendo questo `Mutex`: bozza, snapshot e uscita non si
 /// sovrappongono.
 type Stato = Mutex<Option<InCorso>>;
+
+/// Il seme scelto dall'anteprima della fondazione, che la fondazione consuma: la partita fondata è
+/// quella che l'anteprima ha mostrato.
+type SemeFondazione = Mutex<Option<u64>>;
 
 const ERRORE_STATO: &str = "stato della partita non disponibile";
 const NESSUNA: &str = "nessuna partita in corso";
@@ -50,6 +54,28 @@ fn seme_da_orologio() -> Result<u64, String> {
         .map_err(|e| format!("orologio di sistema non valido: {e}"))?
         .as_nanos();
     u64::try_from(nanosecondi).map_err(|e| format!("seme fuori intervallo: {e}"))
+}
+
+/// Il seme dell'anteprima, se c'è, e lo consuma; altrimenti uno nuovo dall'orologio.
+fn seme_per_fondare(seme: &SemeFondazione) -> Result<u64, ErroreGuscio> {
+    let tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?.take();
+    Ok(match tenuto {
+        Some(s) => s,
+        None => seme_da_orologio()?,
+    })
+}
+
+/// L'anteprima con un seme nuovo, che resta tenuto per la fondazione.
+fn anteprima_di_fondazione(
+    base: &DatiGioco,
+    scenario: Option<&SuMisura>,
+    seme: &SemeFondazione,
+) -> Result<AnteprimaFondazione, ErroreGuscio> {
+    let dati = dati_di(base, scenario)?;
+    let nuovo = seme_da_orologio()?;
+    let risultato = Partita::anteprima_fondazione(&dati, nuovo);
+    *seme.lock().map_err(|_| guasto(ERRORE_STATO))? = Some(nuovo);
+    Ok(risultato)
 }
 
 fn blocca(stato: &Stato) -> Result<MutexGuard<'_, Option<InCorso>>, ErroreGuscio> {
@@ -243,8 +269,9 @@ async fn fonda_partita(
     base: State<'_, DatiGioco>,
     stato: State<'_, Stato>,
     archivio: State<'_, Archivio>,
+    seme: State<'_, SemeFondazione>,
 ) -> Result<Vista, ErroreGuscio> {
-    let seme = seme_da_orologio()?;
+    let seme = seme_per_fondare(&seme)?;
     fonda(
         &stato,
         &archivio,
@@ -347,6 +374,21 @@ async fn riepilogo_scenario(
     Ok(riepilogo(&dati_di(&base, scenario.as_ref())?))
 }
 
+// async: sei partite costruite, una per posizione, fuori dal thread principale.
+#[tauri::command]
+async fn anteprima_fondazione(
+    scenario: Option<SuMisura>,
+    base: State<'_, DatiGioco>,
+    seme: State<'_, SemeFondazione>,
+) -> Result<AnteprimaFondazione, ErroreGuscio> {
+    anteprima_di_fondazione(&base, scenario.as_ref(), &seme)
+}
+
+#[tauri::command]
+async fn catalogo_scenario(base: State<'_, DatiGioco>) -> Result<CatalogoScenario, ErroreGuscio> {
+    catalogo(&base).map_err(rifiuto)
+}
+
 /// Esegue `f` sulla partita in corso, in sola lettura.
 fn sulla_partita<T>(
     stato: &Stato,
@@ -355,6 +397,15 @@ fn sulla_partita<T>(
     let guardia = blocca(stato)?;
     let c = guardia.as_ref().ok_or(NESSUNA)?;
     f(&c.partita).map_err(rifiuto)
+}
+
+fn serie_in_corso(stato: &Stato) -> Result<Vec<PuntoSerie>, ErroreGuscio> {
+    sulla_partita(stato, |p| Ok(p.serie().to_vec()))
+}
+
+#[tauri::command]
+async fn serie(stato: State<'_, Stato>) -> Result<Vec<PuntoSerie>, ErroreGuscio> {
+    serie_in_corso(&stato)
 }
 
 // async: le anteprime prendono il Mutex che tiene `chiudi_turno`; fuori dal thread principale non lo bloccano.
@@ -385,6 +436,7 @@ async fn anteprima_accogli(
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(Stato::default())
+        .manage(SemeFondazione::default())
         // `resource_dir` e `app_data_dir` ci sono solo dopo `build`.
         .setup(|app| {
             app.manage(carica_dati(&app.path().resource_dir()?.join("dati/base"))?);
@@ -411,7 +463,10 @@ pub fn run() -> tauri::Result<()> {
             riepilogo_scenario,
             anteprima,
             anteprima_decreto,
-            anteprima_accogli
+            anteprima_accogli,
+            serie,
+            anteprima_fondazione,
+            catalogo_scenario
         ])
         .build(tauri::generate_context!())?
         // Cmd+Q dà solo `RunEvent::Exit` (ricerca `persistenza-dei-salvataggi`, «Chiusura
@@ -847,5 +902,59 @@ mod tests {
         let base = dati();
         assert_eq!(riepilogo(&dati_di(&base, None)?).posizioni.len(), 6);
         Ok(())
+    }
+
+    #[test]
+    fn la_fondazione_riusa_il_seme_dell_anteprima() -> Result<(), String> {
+        let c = cartella("lib-fondazione-riusa-seme");
+        let stato = Stato::default();
+        let archivio = Archivio::nuovo(c.0.clone())?;
+        let seme = SemeFondazione::new(Some(SEME));
+        let s = seme_per_fondare(&seme)?;
+        fonda(&stato, &archivio, &dati(), None, &fondazione(), s)?;
+        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        assert_eq!(id.as_deref(), Some(ID));
+        assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn l_anteprima_mostra_il_sondaggio_della_partita() -> Result<(), String> {
+        let base = dati();
+        let seme = SemeFondazione::default();
+        let a = anteprima_di_fondazione(&base, None, &seme)?;
+        let s = seme_per_fondare(&seme)?;
+        let f = fondazione();
+        let voce = a
+            .posizioni
+            .iter()
+            .find(|v| (v.posizione - f.posizione).abs() <= 1e-9)
+            .ok_or("posizione scelta non in anteprima")?;
+
+        let vista = Partita::fonda(base, s, &f)
+            .map_err(|e| e.to_string())?
+            .vista();
+        let j = vista
+            .partiti
+            .iter()
+            .position(|p| p.id == vista.giocatore)
+            .ok_or("giocatore non nei partiti")?;
+        let istituti = &vista.sondaggio.istituti;
+        let quota = istituti
+            .iter()
+            .map(|r| r.quote[j] / (1.0 - r.quote.last().copied().unwrap_or(0.0)))
+            .sum::<f64>()
+            / istituti.len() as f64;
+        assert!(
+            (voce.quota_attesa - quota).abs() < 1e-12,
+            "anteprima {} vista {quota}",
+            voce.quota_attesa
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serie_senza_partita_e_un_guasto() {
+        assert_eq!(serie_in_corso(&Stato::default()), Err(guasto(NESSUNA)));
     }
 }
