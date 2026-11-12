@@ -1,5 +1,6 @@
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, edita};
+use comune::{chiudi_col_bilancio, dati_base, edita, voci};
+use sim_core::esito::TipoVoce;
 use sim_core::legislatura::Fase;
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Partita};
@@ -44,11 +45,16 @@ fn altro_gradino(p: &Partita, d: usize) -> usize {
 
 /// Il giocatore di `p` con la promessa in sospeso `(d, g)` e `turni` turni da presidente prima
 /// della chiusura del voto, che ne aggiunge uno; chiude il turno. Rende la valence del giocatore
-/// dopo la chiusura e le mosse del suo partito.
-fn al_voto_con(p: &Partita, promesse: &[(usize, usize)], turni: u32) -> (f64, Vec<String>) {
+/// dopo la chiusura e le promesse verificate del suo partito.
+fn al_voto_con(
+    p: &Partita,
+    promesse: &[(usize, usize)],
+    turni: u32,
+) -> (f64, Vec<(String, String)>) {
     let g = p.giocatore();
     let p = chiuso_con(p, g, promesse, turni);
-    (p.partiti()[g].valence, mosse_di(&p, g))
+    let verificate = voci_di(&p, g, TipoVoce::PromessaVerificata);
+    (p.partiti()[g].valence, verificate)
 }
 
 /// Il partito `j` di `p` con le promesse in sospeso `promesse` e `turni` turni da presidente;
@@ -63,12 +69,12 @@ fn chiuso_con(p: &Partita, j: usize, promesse: &[(usize, usize)], turni: u32) ->
     p
 }
 
-/// Le mosse del partito `j` nell'ultima chiusura di `p`.
-fn mosse_di(p: &Partita, j: usize) -> Vec<String> {
+/// Fatto e causa delle voci di `tipo` del partito `j` nell'ultima chiusura di `p`.
+fn voci_di(p: &Partita, j: usize, tipo: TipoVoce) -> Vec<(String, String)> {
     let id = p.partiti()[j].id.clone();
-    (p.vista().mosse.into_iter())
-        .filter(|m| m.partito == id)
-        .map(|m| m.testo)
+    (voci(p, tipo).into_iter())
+        .filter(|v| v.partito.as_ref() == Some(&id))
+        .map(|v| (v.fatto, v.causa))
         .collect()
 }
 
@@ -81,15 +87,16 @@ fn promessa_mantenuta_da_valence() {
     let p = in_campagna();
     let (d, g) = in_vigore(&p, "eta_pensionabile");
     let (senza, _) = al_voto_con(&p, &[], 3);
-    let (con, mosse) = al_voto_con(&p, &[(d, g)], 3);
+    let (con, verificate) = al_voto_con(&p, &[(d, g)], 3);
     let atteso =
         dati.manopola("valence_promessa_mantenuta") * (1.0 - dati.manopola("ritorno_valence"));
     assert!((con - senza - atteso).abs() < 1e-12, "{con} {senza}");
     assert!(atteso > 0.0);
-    assert!(
-        mosse.contains(&format!("Promessa mantenuta: {}", nome(d, g))),
-        "{mosse:?}"
+    let attesa = (
+        format!("Promessa mantenuta: {}", nome(d, g)),
+        "la disposizione sta al gradino promesso".to_string(),
     );
+    assert!(verificate.contains(&attesa), "{verificate:?}");
 }
 
 #[test]
@@ -99,15 +106,16 @@ fn promessa_mancata_toglie_di_piu() {
     let (d, _) = in_vigore(&p, "eta_pensionabile");
     let g = altro_gradino(&p, d);
     let (senza, _) = al_voto_con(&p, &[], 3);
-    let (con, mosse) = al_voto_con(&p, &[(d, g)], 3);
+    let (con, verificate) = al_voto_con(&p, &[(d, g)], 3);
     let mancata = dati.manopola("valence_promessa_mancata");
     let atteso = -mancata * (1.0 - dati.manopola("ritorno_valence"));
     assert!((con - senza - atteso).abs() < 1e-12, "{con} {senza}");
     assert!(mancata > dati.manopola("valence_promessa_mantenuta"));
-    assert!(
-        mosse.contains(&format!("Promessa mancata: {}", nome(d, g))),
-        "{mosse:?}"
+    let attesa = (
+        format!("Promessa mancata: {}", nome(d, g)),
+        "la disposizione non sta al gradino promesso".to_string(),
     );
+    assert!(verificate.contains(&attesa), "{verificate:?}");
 }
 
 /// Con 2 turni chiusi da presidente, la chiusura del voto fa il terzo: sotto i 4 la promessa
@@ -118,12 +126,9 @@ fn senza_quattro_turni_la_promessa_non_conta() {
     let (d, _) = in_vigore(&p, "eta_pensionabile");
     let g = altro_gradino(&p, d);
     let (senza, _) = al_voto_con(&p, &[], 2);
-    let (con, mosse) = al_voto_con(&p, &[(d, g)], 2);
+    let (con, verificate) = al_voto_con(&p, &[(d, g)], 2);
     assert_eq!(con, senza);
-    assert!(
-        !mosse.iter().any(|m| m.starts_with("Promessa")),
-        "{mosse:?}"
-    );
+    assert!(verificate.is_empty(), "{verificate:?}");
 }
 
 /// Al voto le promesse della campagna restano in sospeso fino al voto dopo, e il contatore dei
@@ -173,9 +178,9 @@ fn a_camere_sciolte_il_turno_da_presidente_non_conta() {
     assert_ne!(pc, p.giocatore());
     let (d, _) = in_vigore(&p, "eta_pensionabile");
     let g = altro_gradino(&p, d);
-    let promessa = |m: &[String]| m.iter().any(|x| x.starts_with("Promessa"));
-    assert!(!promessa(&mosse_di(&chiuso_con(&p, pc, &[(d, g)], 3), pc)));
-    assert!(promessa(&mosse_di(&chiuso_con(&p, pc, &[(d, g)], 4), pc)));
+    let promessa = |p: &Partita| !voci_di(p, pc, TipoVoce::PromessaVerificata).is_empty();
+    assert!(!promessa(&chiuso_con(&p, pc, &[(d, g)], 3)));
+    assert!(promessa(&chiuso_con(&p, pc, &[(d, g)], 4)));
 }
 
 /// La quota fra i votanti del giocatore all'ultimo voto di `p`.
@@ -217,8 +222,8 @@ fn al_turno_zero_promettono_il_presidente_e_gli_altri_partiti_ia() {
     assert!(ia.contains(&pc));
     p.chiudi_turno();
     for j in ia {
-        let m = mosse_di(&p, j);
-        let promette: Vec<&String> = m.iter().filter(|x| x.starts_with("Promette «")).collect();
+        let m = voci_di(&p, j, TipoVoce::PromessaFatta);
+        let promette: Vec<_> = m.iter().filter(|x| x.0.starts_with("Promette «")).collect();
         eprintln!("{}: {promette:?}", p.partiti()[j].id);
         assert_eq!(promette.len(), 1, "{}: {m:?}", p.partiti()[j].id);
     }

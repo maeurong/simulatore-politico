@@ -1,7 +1,8 @@
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, edita, fondata};
+use comune::{chiudi_col_bilancio, dati_base, edita, fondata, ha_voce, voci};
 use serde_json::json;
 use sim_core::elettorato::{Condizione, condizione_di};
+use sim_core::esito::TipoVoce;
 use sim_core::legislatura::{Bersaglio, Intensita, Leva, Spesa};
 use sim_core::partiti::{Regola, Vocazione};
 use sim_core::{Comando, Partita};
@@ -47,36 +48,37 @@ fn i_partiti_ia_si_muovono_nel_turno_prima_del_voto() {
         if d != 0.0 {
             mossi += 1;
             assert!((b.ultimo_passo - d).abs() < 1e-12, "{}", a.id);
-            let riga = p
-                .vista()
-                .mosse
-                .iter()
-                .any(|m| m.partito == a.id && m.testo.starts_with("Sposta la posizione da "));
-            assert!(riga, "{}: {:?}", a.id, p.vista().mosse);
+            let riga = (voci(&p, TipoVoce::PosizioneSpostata).iter()).any(|v| {
+                v.partito.as_ref() == Some(&a.id) && v.fatto.starts_with("Sposta la posizione da ")
+            });
+            assert!(riga, "{}: {:?}", a.id, p.vista().esito);
         }
     }
     assert!(mossi > 0);
     // Hunter senza due voti alle spalle: verso il centro.
     let centrodestra = &p.partiti()[4];
     assert_eq!(centrodestra.posizione_dichiarata, 4.5);
-    for (id, riga) in [
+    for (id, fatto, causa) in [
         (
             "centrodestra",
-            "Sposta la posizione da 5,0 a 4,5: alla prima legislatura va verso il centro",
+            "Sposta la posizione da 5,0 a 4,5",
+            "alla prima legislatura va verso il centro",
         ),
         (
             "sinistra",
-            "Sposta la posizione da 2,0 a 2,5: verso i suoi elettori",
+            "Sposta la posizione da 2,0 a 2,5",
+            "verso i suoi elettori",
         ),
         (
             "centro",
-            "Sposta la posizione da 4,0 a 4,5: verso la posizione del governo",
+            "Sposta la posizione da 4,0 a 4,5",
+            "verso la posizione del governo",
         ),
     ] {
-        let mosse = &p.vista().mosse;
         assert!(
-            mosse.iter().any(|m| m.partito == id && m.testo == riga),
-            "{mosse:?}"
+            ha_voce(&p, TipoVoce::PosizioneSpostata, id, fatto, causa),
+            "{:?}",
+            p.vista().esito
         );
     }
 }
@@ -118,7 +120,7 @@ fn niente_movimenti_al_turno_zero() {
         assert_eq!(p.posizione_dichiarata, d.posizione, "{}", p.id);
         assert_eq!(p.posizione_percepita, d.posizione, "{}", p.id);
     }
-    assert!(p.vista().mosse.is_empty());
+    assert!(p.vista().esito.is_empty());
 }
 
 #[test]
@@ -227,11 +229,11 @@ fn in_campagna() -> Partita {
     .unwrap()
 }
 
-/// Gli euro della riga «Spende N euro: …» del partito `id` nel registro, e la riga.
+/// Gli euro della voce «Spende N euro: …» del partito `id` nell'esito, e il suo `fatto`.
 fn spesa_nel_registro(p: &Partita, id: &str) -> Option<(i64, String)> {
-    let riga = (p.vista().mosse.into_iter())
-        .find(|m| m.partito == id && m.testo.starts_with("Spende "))?
-        .testo;
+    let riga = (voci(p, TipoVoce::SpesaDiCampagna).into_iter())
+        .find(|v| v.partito.as_deref() == Some(id))?
+        .fatto;
     let euro = riga.strip_prefix("Spende ")?.split(' ').next()?;
     Some((euro.replace('.', "").parse().ok()?, riga.clone()))
 }
@@ -561,19 +563,20 @@ fn spese_al_turno_zero() {
     .unwrap();
     p.chiudi_turno();
     let v = p.vista();
-    let id = &v.giocatore;
-    let riga = "Spende 400.000 euro: persuade studenti";
+    let fatto = "Spende 400.000 euro: persuade studenti";
+    assert_eq!(dote, 1_000_000);
+    let causa = "cassa di 1.000.000 euro";
     assert!(
-        (v.mosse.iter()).any(|m| &m.partito == id && m.testo == riga),
+        ha_voce(&p, TipoVoce::SpesaDiCampagna, &v.giocatore, fatto, causa),
         "{:?}",
-        v.mosse
+        v.esito
     );
     assert!(p.partiti()[g].campagna.is_empty());
     // Prima del primo voto le entrate leggono la quota vera fra i votanti da tutte e due le parti:
     // la quota al voto la ripete, a meno dell'arrotondamento dei voti.
     let d = dati_base();
     let quota = (v.elezioni[0].voti.iter())
-        .find(|x| &x.partito == id)
+        .find(|x| x.partito == v.giocatore)
         .unwrap()
         .quota;
     let entrate = (d.manopola("due_per_mille_turno") + d.manopola("donazioni_turno"))

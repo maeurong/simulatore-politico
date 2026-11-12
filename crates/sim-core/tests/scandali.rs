@@ -163,7 +163,7 @@ fn bersaglio_sparito_nessun_panic() {
     let p = Partita::nuova(dati_base(), 1);
     let d = indice("ambiente_energia");
     let j = p.ministri().dicasteri[d].ministro.as_ref().unwrap().partito;
-    // Il ministro non c'è più: nessuna chiusura fallisce, nessun effetto e nessuna riga nelle mosse.
+    // Il ministro non c'è più: nessuna chiusura fallisce, nessun effetto, lo stesso esito.
     let sparito = edita(&p, |x| {
         x["ministri"]["dicasteri"][d]["ministro"] = Value::Null;
         x["ministri"]["dicasteri"][d]["agenda"] = Value::Null;
@@ -174,7 +174,7 @@ fn bersaglio_sparito_nessun_panic() {
     let mut con = con_scandalo(&sparito, MINISTRO, ministro(d), None);
     senza.chiudi_turno();
     con.chiudi_turno();
-    assert_eq!(con.vista().mosse, senza.vista().mosse);
+    assert_eq!(con.vista().esito, senza.vista().esito);
     assert!((con.partiti()[j].valence - senza.partiti()[j].valence).abs() < 1e-9);
 }
 

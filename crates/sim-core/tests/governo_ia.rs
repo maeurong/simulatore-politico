@@ -4,8 +4,9 @@
 )]
 
 mod comune;
-use comune::{all_opposizione, edita, file_base, fondata, imposta};
+use comune::{all_opposizione, edita, file_base, fondata, ha_voce, imposta, voci};
 use serde_json::json;
+use sim_core::esito::TipoVoce;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
 use sim_core::vista::VoceIncarico;
@@ -281,11 +282,12 @@ fn il_formatore_sceglie_la_maggioranza_che_gli_vale_di_piu() {
         assert_eq!(p.governo().coalizione, attesa, "{posizione}");
         assert_eq!(p.governo().presidente, 5);
         let altro = &p.partiti()[if attesa[0] == 5 { 6 } else { 4 }].nome;
-        let riga = format!("Forma il governo con {altro}: la maggioranza che gli vale di più");
+        let fatto = format!("Forma il governo con {altro}");
+        let causa = "la maggioranza che gli vale di più";
         assert!(
-            (p.vista().mosse.iter()).any(|m| m.partito == "destra" && m.testo == riga),
+            ha_voce(&p, TipoVoce::GovernoFormato, "destra", &fatto, causa),
             "{:?}",
-            p.vista().mosse
+            p.vista().esito
         );
     }
 }
@@ -569,10 +571,11 @@ fn il_governo_ia_nasce_col_programma_pubblico() {
         .map(|x| (x - pos).abs())
         .collect();
     assert!(distanze.windows(2).all(|w| w[0] >= w[1]), "{distanze:?}");
+    let programma = voci(&p, TipoVoce::ProgrammaDichiarato);
     assert!(
-        v.mosse
-            .iter()
-            .any(|m| m.testo.starts_with("Programma di governo"))
+        (programma.iter()).any(|v| v.fatto.starts_with("Programma di governo")
+            && v.causa == "la nascita del governo avversario"),
+        "{programma:?}"
     );
 }
 
@@ -601,10 +604,9 @@ fn il_programma_va_in_aula_in_ordine() {
     assert!(!in_aula.is_empty() && in_aula.len() <= 3);
     assert_eq!(in_aula, attese);
     assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .any(|m| m.testo.starts_with("Porta in aula: "))
+        (voci(&p, TipoVoce::MisuraPresentata).iter())
+            .any(|v| v.fatto.starts_with("Porta in aula: ")
+                && v.causa == "una voce del programma di governo")
     );
 }
 
@@ -628,10 +630,8 @@ fn programma_esaurito_non_presenta_nulla() {
     .unwrap();
     p.chiudi_turno();
     assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .all(|m| !m.testo.starts_with("Porta in aula"))
+        (voci(&p, TipoVoce::MisuraPresentata).iter())
+            .all(|v| !v.fatto.starts_with("Porta in aula"))
     );
     assert!((p.parlamento().misure.iter()).all(|m| m.valori.iter().all(|v| v.0 != k)));
 }
@@ -658,10 +658,8 @@ fn il_bilancio_ia_sta_nel_tetto_senza_ultimatum() {
         .expect("bilancio IA presentato in apertura");
     assert!(r.crescita_spesa_netta <= r.tetto + 1e-6, "{r:?}");
     assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .any(|m| m.testo.starts_with("Bilancio "))
+        (voci(&p, TipoVoce::MisuraPresentata).iter()).any(|v| v.fatto.starts_with("Bilancio ")
+            && v.causa == "la sessione di bilancio del quarto trimestre")
     );
 }
 
@@ -701,12 +699,20 @@ fn in_crisi(p: Partita, intesa: f64) -> Partita {
     p
 }
 
-const SI_DIMETTE: &str =
-    "Si dimette: nessun partito contiguo gli ridà una maggioranza che gli convenga";
+// Le cause delle tre dimissioni del governo IA in crisi, col fatto comune.
+const DIMESSO: &str = "Si dimette: il governo cade alla chiusura del turno";
+const SI_DIMETTE: &str = "nessun partito contiguo gli ridà una maggioranza che gli convenga";
 const SI_DIMETTE_ROTTURA: &str =
-    "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui";
-const SI_DIMETTE_IN_PROVVISORIO: &str =
-    "Si dimette: in esercizio provvisorio non allarga la coalizione";
+    "nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui";
+const SI_DIMETTE_IN_PROVVISORIO: &str = "in esercizio provvisorio non allarga la coalizione";
+
+/// Le cause delle dimissioni del governo IA in crisi nell'ultima chiusura.
+fn dimissioni(p: &Partita) -> Vec<String> {
+    (voci(p, TipoVoce::GovernoDimissionario).into_iter())
+        .inspect(|v| assert_eq!(v.fatto, DIMESSO))
+        .map(|v| v.causa)
+        .collect()
+}
 
 #[test]
 fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
@@ -720,9 +726,7 @@ fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
         assert!(!l.allargati.contains(&p.giocatore()));
         // L'uscente (Destra) è l'unico vicino con seggi e ridarebbe la maggioranza: ha rotto.
         assert!(l.dimissioni);
-        let mosse = &p.vista().mosse;
-        assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE_ROTTURA));
-        assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE));
+        assert_eq!(dimissioni(&p), [SI_DIMETTE_ROTTURA]);
     }
 }
 
@@ -739,9 +743,7 @@ fn senza_vicini_il_motivo_resta_nessun_partito() {
     let p = edita(&p, |j| j["intesa"]["valori"] = json!(vec![100.0; n])).unwrap();
     let p = in_crisi(p, 10.0);
     assert!(p.legislatura().dimissioni);
-    let mosse = &p.vista().mosse;
-    assert!(mosse.iter().any(|m| m.testo == SI_DIMETTE));
-    assert!(mosse.iter().all(|m| m.testo != SI_DIMETTE_ROTTURA));
+    assert_eq!(dimissioni(&p), [SI_DIMETTE]);
 }
 
 /// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista
@@ -786,12 +788,7 @@ fn il_governo_ia_in_crisi_allarga_ma_non_in_esercizio_provvisorio() {
     assert!(p.economia().bilancio_presentato.is_none());
     let l = p.legislatura();
     assert!(l.allargati.is_empty() && l.dimissioni);
-    assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .any(|m| m.testo == SI_DIMETTE_IN_PROVVISORIO)
-    );
+    assert_eq!(dimissioni(&p), [SI_DIMETTE_IN_PROVVISORIO]);
 }
 
 #[test]
@@ -860,11 +857,11 @@ fn il_governo_ia_accoglie_la_proposta_del_dicastero() {
         .unwrap();
     assert!(sanita.proposta.is_none());
     assert!(
-        v.mosse
-            .iter()
-            .any(|m| m.testo == "Accoglie la proposta del dicastero Sanità"),
+        (voci(&p, TipoVoce::PropostaAccolta).iter())
+            .any(|v| v.fatto == "Accoglie la proposta del dicastero Sanità"
+                && v.causa.starts_with("fondi che non bastano per ")),
         "{:?}",
-        v.mosse
+        v.esito
     );
 }
 
@@ -890,7 +887,10 @@ fn il_governo_ia_presenta_il_bilancio_in_esercizio_provvisorio() {
     assert_eq!(v.data.trimestre, 1);
     assert!(v.bilancio.esercizio_provvisorio && !v.crisi);
     assert!(p.economia().bilancio_presentato.is_some());
-    assert!(v.mosse.iter().any(|m| m.testo.starts_with("Bilancio ")));
+    assert!(
+        (voci(&p, TipoVoce::MisuraPresentata).iter())
+            .any(|v| v.fatto.starts_with("Bilancio ") && v.causa == "l'esercizio provvisorio")
+    );
 }
 
 #[test]
@@ -920,8 +920,7 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
     let dati = sim_core::dati::DatiGioco::da_testi(&f).unwrap();
     let mut base = Partita::fonda(dati, 7, &fondazione).unwrap();
     base.chiudi_turno();
-    let formatore =
-        |p: &Partita| (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Forma il governo"));
+    let formatore = |p: &Partita| !voci(p, TipoVoce::GovernoFormato).is_empty();
     let mut p = comune::edita(&base, |j| {
         j["legislatura"]["incarico"] = serde_json::Value::Null;
         j["parlamento"]["seggi_camera"] = json!([20, 20, 20, 20, 90, 150, 60, 20]);
@@ -932,7 +931,7 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
     assert_eq!(p.legislatura().fase, Fase::Ordinaria);
     assert_eq!(p.governo().coalizione, [4, 5]);
     assert_eq!(p.governo().presidente, 5);
-    assert!(!formatore(&p), "{:?}", p.vista().mosse);
+    assert!(!formatore(&p), "{:?}", p.vista().esito);
     for (camera, senato) in [
         (
             [20, 20, 20, 20, 20, 50, 49, 201],
@@ -948,7 +947,7 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
         .unwrap();
         p.chiudi_turno();
         assert_eq!(p.legislatura().fase, Fase::Sciolta, "{camera:?}");
-        assert!(!formatore(&p), "{:?}", p.vista().mosse);
+        assert!(!formatore(&p), "{:?}", p.vista().esito);
         assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     }
 }

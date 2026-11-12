@@ -1,6 +1,7 @@
 mod comune;
 use comune::*;
 use sim_core::comando::Comando;
+use sim_core::esito::TipoVoce;
 use sim_core::parlamento::CausaIntesa::NormaLontana;
 use sim_core::parlamento::{FormaMisura, TipoReferendum};
 use sim_core::partita::Partita;
@@ -36,23 +37,24 @@ fn l_opposizione_ia_sfiducia_solo_quando_passerebbe() {
     chiudi_col_bilancio(&mut p);
     let (dicastero, promotore) = p.parlamento().sfiducia.expect("almeno l'individuale passa");
     assert_ne!(promotore, p.giocatore());
-    let testo = match dicastero {
+    let fatto = match dicastero {
         Some(i) => {
             let m = p.ministri().dicasteri[i].ministro.as_ref().unwrap();
             assert_ne!(m.partito, partito("centrodestra"));
             format!(
-                "Presenta la sfiducia a {}, {}: Centrodestra in ultimatum la voterebbe",
+                "Presenta la sfiducia a {}, {}",
                 m.nome,
                 dati_base().dicasteri()[i].nome
             )
         }
-        None => "Presenta la sfiducia al governo: Centrodestra in ultimatum la voterebbe".into(),
+        None => "Presenta la sfiducia al governo".into(),
     };
+    let causa = "Centrodestra in ultimatum la voterebbe";
     let promotore = &p.partiti()[promotore].id;
     assert!(
-        (p.vista().mosse.iter()).any(|m| m.testo == testo && &m.partito == promotore),
+        ha_voce(&p, TipoVoce::SfiduciaPresentata, promotore, &fatto, causa),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
     let mut q = al_governo_coi_seggi(false);
     chiudi_col_bilancio(&mut q);
@@ -252,11 +254,14 @@ fn la_sfiducia_al_governo_passa_coi_voti_dell_opposizione() {
     );
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.parlamento().sfiducia, Some((None, partito("sinistra"))));
-    let riga = "Presenta la sfiducia al governo: passerebbe coi voti dell'opposizione";
+    let (fatto, causa) = (
+        "Presenta la sfiducia al governo",
+        "passerebbe coi voti dell'opposizione",
+    );
     assert!(
-        (p.vista().mosse.iter()).any(|m| m.testo == riga && m.partito == "sinistra"),
+        ha_voce(&p, TipoVoce::SfiduciaPresentata, "sinistra", fatto, causa),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
     chiudi_col_bilancio(&mut p);
     let e = (p.vista().esiti.into_iter())
@@ -286,11 +291,20 @@ fn la_sfiducia_al_governo_nomina_l_alleato_in_ultimatum() {
     p.chiudi_turno();
     let ed = partito("estrema_destra");
     assert_eq!(p.parlamento().sfiducia, Some((None, ed)));
-    let riga = "Presenta la sfiducia al governo: Destra in ultimatum la voterebbe";
+    let (fatto, causa) = (
+        "Presenta la sfiducia al governo",
+        "Destra in ultimatum la voterebbe",
+    );
     assert!(
-        (p.vista().mosse.iter()).any(|m| m.testo == riga && m.partito == "estrema_destra"),
+        ha_voce(
+            &p,
+            TipoVoce::SfiduciaPresentata,
+            "estrema_destra",
+            fatto,
+            causa
+        ),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
 }
 
@@ -318,7 +332,7 @@ fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia_ne_propone() {
     assert!(
         (p.parlamento().misure.iter()).all(|m| m.promotore.is_none() || m.presentata != turno),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
 }
 
@@ -327,7 +341,7 @@ fn nel_turno_del_voto_l_opposizione_ia_non_sfiducia_ne_propone() {
 /// governo col sì nelle linee della Vista; col giocatore che presiede, senza il suo partito.
 fn la_riga_della_proposta(mut p: Partita, di: &str) {
     // Avanza finché il posto riservato tocca a un partito IA: si guarda prima di chiudere, perché
-    // la chiusura svuota le mosse.
+    // la chiusura svuota l'esito.
     let mut proposta = None;
     for _ in 0..8 {
         proposta = (p.parlamento().misure.iter())
@@ -352,20 +366,15 @@ fn la_riga_della_proposta(mut p: Partita, di: &str) {
         })
         .sum();
     assert!(n > 0, "almeno un partito di governo la voterebbe");
-    let attesa = match n {
-        1 => format!(
-            "Porta nel posto riservato {}; 1 seggio {di} la voterebbe",
-            voce.nome
-        ),
-        _ => format!(
-            "Porta nel posto riservato {}; {n} seggi {di} la voterebbero",
-            voce.nome
-        ),
+    let fatto = format!("Porta nel posto riservato {}", voce.nome);
+    let causa = match n {
+        1 => format!("1 seggio {di} la voterebbe"),
+        _ => format!("{n} seggi {di} la voterebbero"),
     };
     assert!(
-        (v.mosse.iter()).any(|x| x.testo == attesa),
-        "{attesa}\n{:?}",
-        v.mosse
+        (voci(&p, TipoVoce::MisuraPresentata).iter()).any(|x| x.fatto == fatto && x.causa == causa),
+        "{fatto}: {causa}\n{:?}",
+        v.esito
     );
 }
 
@@ -558,7 +567,7 @@ fn licenziamento_abrogabile(astensione: &str) -> Partita {
     partita_di_prova(&col_licenziamento(con_astensione(astensione)))
 }
 
-/// Chiude il turno e toglie le mosse IA dell'apertura: la proposta IA sul licenziamento lo
+/// Chiude il turno e toglie ciò che l'opposizione IA presenta in apertura: la proposta IA sul licenziamento lo
 /// metterebbe in esame.
 fn chiudi_e_togli(p: &mut Partita) {
     chiudi_col_bilancio(p);
@@ -583,7 +592,7 @@ fn abrogativo(p: &Partita) -> Option<(String, String)> {
 }
 
 fn chiede(p: &Partita) -> bool {
-    (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum"))
+    !voci(p, TipoVoce::ReferendumChiesto).is_empty()
 }
 
 #[test]
@@ -599,16 +608,23 @@ fn l_opposizione_ia_chiede_solo_referendum_vincenti() {
     assert_ne!(promotore, p.giocatore());
     assert!(!p.governo().al_governo(promotore));
     assert!(r.firme && r.richiesto);
-    let riga = (p.vista().mosse.into_iter())
-        .find(|m| m.testo.starts_with("Chiede il referendum su "))
-        .expect("la riga della mossa");
-    assert_eq!(riga.partito, p.partiti()[promotore].id);
+    let voce = (voci(&p, TipoVoce::ReferendumChiesto).into_iter())
+        .next()
+        .expect("la voce del referendum chiesto");
+    assert_eq!(voce.partito.as_ref(), Some(&p.partiti()[promotore].id));
     assert!(
-        riga.testo
-            .ends_with("% dei voti e il quorum sarebbe raggiunto")
-            && riga.testo.contains(','),
+        voce.fatto.starts_with("Chiede il referendum su "),
+        "{voce:?}"
+    );
+    assert!(
+        voce.causa
+            .starts_with("secondo il sondaggio il sì vincerebbe col ")
+            && voce
+                .causa
+                .ends_with("% dei voti e il quorum sarebbe raggiunto")
+            && voce.causa.contains(','),
         "{}",
-        riga.testo
+        voce.causa
     );
     // Il giocatore ha la precedenza: col referendum chiesto nel turno l'IA non ne chiede altri.
     let mut q = licenziamento_abrogabile("-5.0");
@@ -617,7 +633,7 @@ fn l_opposizione_ia_chiede_solo_referendum_vincenti() {
     chiudi_col_bilancio(&mut q);
     let r = q.parlamento().referendum.as_ref().unwrap();
     assert_eq!(q.partiti()[r.promotore.unwrap()].id, "sinistra");
-    assert!(!(q.vista().mosse.iter()).any(|m| m.testo.starts_with("Chiede il referendum")));
+    assert!(!chiede(&q));
 }
 
 /// Lo stato di `l_opposizione_ia_chiede_solo_referendum_vincenti`, che chiede il licenziamento,

@@ -1,11 +1,12 @@
 mod comune;
 use comune::{
     all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_emergenze,
-    senza_shock, sostituisci,
+    senza_shock, sostituisci, voci,
 };
 use sim_core::dati::DatiGioco;
 use sim_core::economia::Economia;
 use sim_core::elettorato::{Condizione, condizione_di};
+use sim_core::esito::TipoVoce;
 use sim_core::informazione::{Acquisto, Stima, VistaCentroStudi};
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 use sim_core::parlamento::{FormaMisura, ValoreProposto};
@@ -106,9 +107,9 @@ fn l_acquisto_toglie_alla_campagna() {
         p.comanda(SONDAGGIO).unwrap();
         chiudi_col_bilancio(&mut p);
         let id = p.vista().giocatore;
-        (p.vista().mosse.into_iter())
-            .find(|m| m.partito == id && m.testo.starts_with("Spende "))
-            .map(|m| m.testo)
+        (voci(&p, TipoVoce::SpesaDiCampagna).into_iter())
+            .find(|v| v.partito.as_ref() == Some(&id))
+            .map(|v| v.fatto)
     };
     let riga = spesa(3_000_000).unwrap();
     assert!(riga.starts_with("Spende 2.985.000 euro"), "{riga}");

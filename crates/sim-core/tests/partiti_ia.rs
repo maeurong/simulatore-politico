@@ -1,6 +1,7 @@
 mod comune;
 use comune::*;
 use sim_core::Partita;
+use sim_core::esito::TipoVoce;
 use sim_core::partiti::{Regola, Vocazione};
 
 #[test]
@@ -130,12 +131,16 @@ fn chi_perde_il_governo_cambia_leader() {
     assert_ne!(dopo.leader, prima.leader);
     let luna = dati_base().manopola("luna_di_miele_leader");
     assert!((dopo.valence - (dopo.valence_base + luna)).abs() < 1e-9);
-    assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .any(|m| m.partito == "destra" && m.testo.contains("la perdita del governo"))
-    );
+    let leader = &p.partiti()[destra].leader;
+    let fatto = format!("Nuovo leader: {leader}");
+    let causa = "la perdita del governo";
+    assert!(ha_voce(
+        &p,
+        TipoVoce::CambioDiLeader,
+        "destra",
+        &fatto,
+        causa
+    ));
 }
 
 #[test]
@@ -154,10 +159,10 @@ fn il_giocatore_non_cambia_mai_leader() {
         assert_eq!(p.partiti()[g].leader, "");
         // Minaccia e scissione toccano anche il partito del giocatore (piano 8b), il leader no.
         assert!(
-            (p.vista().mosse.iter())
-                .all(|m| m.partito != "giocatore" || !m.testo.starts_with("Nuovo leader")),
+            (voci(&p, TipoVoce::CambioDiLeader).iter())
+                .all(|v| v.partito.as_deref() != Some("giocatore")),
             "{:?}",
-            p.vista().mosse
+            p.vista().esito
         );
     }
     // Precondizione: il calo c'è stato (il voto è avvenuto con la quota di prima a 0,9).
@@ -178,8 +183,8 @@ fn una_sconfitta_un_solo_cambio() {
     .unwrap();
     assert_eq!(p.governo().presidente, destra);
     let cambi = |p: &Partita| {
-        (p.vista().mosse.iter())
-            .filter(|m| m.partito == "destra" && m.testo.starts_with("Nuovo leader"))
+        (voci(p, TipoVoce::CambioDiLeader).iter())
+            .filter(|v| v.partito.as_deref() == Some("destra"))
             .count()
     };
     p.chiudi_turno(); // voto: calo
@@ -202,11 +207,11 @@ fn primo_voto_nessun_cambio() {
     p.chiudi_turno();
     assert_eq!(p.legislatura().elezioni.len(), 1);
     // Al turno zero i partiti IA promettono anche senza seggi (R28); le casse IA di `fondata` sono
-    // vuote, quindi nessuno spende: oltre le promesse, nessuna mossa.
-    let mosse = p.vista().mosse;
+    // vuote, quindi nessuno spende: oltre le promesse, nessuna voce dei partiti IA.
+    let esito = p.vista().esito;
     assert!(
-        mosse.iter().all(|m| m.testo.starts_with("Promette ")),
-        "{mosse:?}"
+        (esito.iter()).all(|v| v.tipo == TipoVoce::PromessaFatta),
+        "{esito:?}"
     );
     let dopo: Vec<_> = p.partiti().iter().map(|x| x.leader.clone()).collect();
     assert_eq!(prima, dopo);
@@ -238,20 +243,17 @@ fn calo_sotto_soglia_non_cambia_leader() {
     let dopo: Vec<_> = p.partiti().iter().map(|x| x.leader.clone()).collect();
     assert_eq!(prima, dopo);
     assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .all(|m| !m.testo.contains("il calo di"))
+        (voci(&p, TipoVoce::CambioDiLeader).iter()).all(|v| !v.causa.starts_with("il calo di"))
     );
 }
 
 #[test]
-fn salvataggio_porta_mosse_e_leader_nuovo() {
+fn salvataggio_porta_esito_e_leader_nuovo() {
     let mut p = sinistra_al_governo();
     p.chiudi_turno(); // la destra cambia leader
-    assert!(!p.vista().mosse.is_empty());
+    assert!(!p.vista().esito.is_empty());
     let mut q = Partita::carica(&p.salva().unwrap()).unwrap();
-    assert_eq!(q.vista().mosse, p.vista().mosse);
+    assert_eq!(q.vista().esito, p.vista().esito);
     assert_eq!(q.salva().unwrap(), p.salva().unwrap());
     p.chiudi_turno();
     q.chiudi_turno();
@@ -259,7 +261,7 @@ fn salvataggio_porta_mosse_e_leader_nuovo() {
 }
 
 #[test]
-fn salvataggio_con_leader_o_mosse_sbagliati_rifiutato_col_nome() {
+fn salvataggio_con_leader_o_esito_sbagliati_rifiutato_col_nome() {
     let p = sinistra_al_governo();
     let destra = partito("destra");
     let ko = |f: fn(&mut serde_json::Value, usize), cosa: &str| {
@@ -275,22 +277,23 @@ fn salvataggio_con_leader_o_mosse_sbagliati_rifiutato_col_nome() {
         "giocatore",
     );
     ko(
-        |j, _| j["mosse"] = serde_json::json!([{ "partito": "fantasma", "testo": "x" }]),
+        |j, _| {
+            let mut v = j["esito"][0].clone();
+            v["partito"] = "fantasma".into();
+            j["esito"] = serde_json::json!([v]);
+        },
         "fantasma",
     );
 }
 
 #[test]
-fn le_mosse_si_azzerano_a_ogni_chiusura() {
+fn l_esito_si_azzera_a_ogni_chiusura() {
     let mut p = sinistra_al_governo();
     p.chiudi_turno();
-    assert!(!p.vista().mosse.is_empty());
+    assert!(!p.vista().esito.is_empty());
     p.chiudi_turno();
     assert!(
-        p.vista()
-            .mosse
-            .iter()
-            .all(|m| !m.testo.contains("la perdita del governo"))
+        (voci(&p, TipoVoce::CambioDiLeader).iter()).all(|v| v.causa != "la perdita del governo")
     );
 }
 
@@ -309,7 +312,11 @@ fn chi_resta_alleato_non_cambia_leader() {
     assert!(p.governo().al_governo(destra));
     assert_ne!(p.governo().presidente, destra);
     assert_eq!(p.partiti()[destra].leader, prima);
-    assert!(p.vista().mosse.iter().all(|m| m.partito != "destra"));
+    assert!(
+        (p.vista().esito.iter()).all(|v| v.partito.as_deref() != Some("destra")),
+        "{:?}",
+        p.vista().esito
+    );
 }
 
 #[test]
@@ -332,15 +339,11 @@ fn il_calo_al_voto_cambia_leader() {
     assert!((dopo.valence - (dopo.valence_base + luna)).abs() < 1e-9);
     let quota = p.legislatura().elezioni[0].voti[destra].quota;
     let punti = format!("{:.1}", (0.9 - quota) * 100.0).replace('.', ",");
-    let atteso = format!(
-        "Nuovo leader: {}, dopo il calo di {punti} punti percentuali al voto",
-        dopo.leader
-    );
-    // Al voto la destra spende anche la cassa e promette: qui conta solo il cambio di leader.
-    let campagna = |t: &str| t.starts_with("Spende ") || t.starts_with("Promette ");
-    let testi: Vec<_> = (p.vista().mosse.iter())
-        .filter(|m| m.partito == "destra" && !campagna(&m.testo))
-        .map(|m| m.testo.clone())
+    let fatto = format!("Nuovo leader: {}", dopo.leader);
+    let causa = format!("il calo di {punti} punti percentuali al voto");
+    let testi: Vec<_> = (voci(&p, TipoVoce::CambioDiLeader).into_iter())
+        .filter(|v| v.partito.as_deref() == Some("destra"))
+        .map(|v| (v.fatto, v.causa))
         .collect();
-    assert_eq!(testi, [atteso]);
+    assert_eq!(testi, [(fatto, causa)]);
 }

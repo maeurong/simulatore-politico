@@ -690,7 +690,7 @@ fn il_governo_ia_col_mes_e_un_ultimatum_approva_il_bilancio() {
     assert!(
         p.economia().bilancio_presentato.is_some(),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
     p.chiudi_turno();
     assert!(p.economia().bilancio_approvato.is_some());

@@ -4,7 +4,6 @@ import type { EsitoElezioni } from "./EsitoElezioni";
 import type { EsitoReferendum } from "./EsitoReferendum";
 import type { EsitoVoto } from "./EsitoVoto";
 import type { Fase } from "./Fase";
-import type { MossaIa } from "./MossaIa";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
@@ -17,6 +16,7 @@ import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
 import type { VoceDisponibilita } from "./VoceDisponibilita";
 import type { VoceDisposizione } from "./VoceDisposizione";
+import type { VoceEsito } from "./VoceEsito";
 import type { VoceEvento } from "./VoceEvento";
 import type { VoceFascia } from "./VoceFascia";
 import type { VoceGrandezza } from "./VoceGrandezza";
@@ -134,9 +134,10 @@ dimissioni: boolean,
  */
 crisi: boolean, 
 /**
- * Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
+ * L'esito dell'ultima chiusura: tutte le voci, in evidenza e no, nell'ordine della chiusura;
+ * vuoto al turno zero.
  */
-mosse: Array<MossaIa>, 
+esito: Array<VoceEsito>, 
 /**
  * Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
  * giocatore Presidente del Consiglio.

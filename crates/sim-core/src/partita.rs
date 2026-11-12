@@ -12,6 +12,7 @@ use crate::elettorato::{
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
+use crate::esito::{MASSIMO_IN_EVIDENZA, TipoVoce, VoceEsito};
 use crate::eventi::{
     ASTE_SCOPERTE, Bersaglio, DatoOpzione, EffettoOpzione, Eventi, EventoAperto, Famiglia, Tono,
     emergenze, rischio, situazioni,
@@ -37,19 +38,20 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, MossaIa, PrezzoAcquisto, SeggiPartito, Vista,
-    VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato,
-    VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero,
-    VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceSituazione,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, PrezzoAcquisto, SeggiPartito, Vista, VistaAcquisti,
+    VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget,
+    VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione,
+    VocePartito, VoceProgramma, VocePromessa, VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
+mod esito;
 mod ia;
 pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 17;
+pub const VERSIONE_SCHEMA: u32 = 18;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,8 +125,8 @@ pub struct Partita {
     leggi_del_giocatore: Vec<(u32, u16)>,
     /// I quattro indicatori al turno zero (`indicatori`).
     partenza: [f64; 4],
-    /// Le mosse dei partiti IA dell'ultima chiusura, svuotate a ogni `chiudi_turno`.
-    mosse: Vec<MossaIa>,
+    /// L'esito dell'ultima chiusura, svuotato in testa a ogni `chiudi_turno`.
+    esito: Vec<VoceEsito>,
     /// Gli acquisti d'informazione del turno col loro risultato, svuotati a ogni `chiudi_turno`.
     acquisti: Acquistati,
     /// Gli indicatori a ogni apertura di turno, dal turno zero (`registra_punto`).
@@ -317,7 +319,7 @@ impl Partita {
             turni_al_governo: 0,
             leggi_del_giocatore: Vec::new(),
             partenza: [0.0; 4],
-            mosse: Vec::new(),
+            esito: Vec::new(),
             acquisti: Acquistati::default(),
             serie: Vec::new(),
             riavvolgimenti: 0,
@@ -520,7 +522,7 @@ impl Partita {
     }
 
     // Ordine della chiusura:
-    // svuotamento delle mosse IA del turno prima → eventi aperti risolti (opzione scelta o default,
+    // svuotamento dell'esito del turno prima → eventi aperti risolti (opzione scelta o default,
     // senza estrazioni) → turni da presidente, in fase ordinaria →
     // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
     // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
@@ -541,7 +543,7 @@ impl Partita {
     // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
     // (valori in arrivo, esiti dei due turni prima, campagna nel turno del voto, emendamenti, rose,
     // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio) → mosse IA
-    // dell'apertura (`apertura_ia`).
+    // dell'apertura (`apertura_ia`) → composizione dell'esito (`esito::componi`).
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
     // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
     // decade al voto, e nessuno può presentare.
@@ -549,7 +551,7 @@ impl Partita {
         if self.finita() {
             return;
         }
-        self.mosse.clear();
+        self.esito.clear();
         self.acquisti = Acquistati::default();
         self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
@@ -724,6 +726,11 @@ impl Partita {
         if !self.finita() {
             self.registra_punto();
         }
+        let giocatore = self
+            .partiti
+            .get(self.giocatore)
+            .map_or("", |p| p.id.as_str());
+        crate::esito::componi(&mut self.esito, giocatore);
     }
 
     /// Le perdite reali in % delle voci dei dicasteri di `b`, all'indice pubblicato.
@@ -2316,10 +2323,11 @@ impl Partita {
             if p.campagna.is_empty() {
                 continue;
             }
-            let speso = p.cassa - resto;
+            let (cassa, speso) = (p.cassa, p.cassa - resto);
             p.cassa = resto;
-            let testo = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
-            self.mossa(j, testo);
+            let fatto = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
+            let causa = format!("cassa di {} euro", campagna::migliaia(cassa));
+            self.voce_di(j, TipoVoce::SpesaDiCampagna, fatto, causa);
         }
     }
 
@@ -2527,14 +2535,16 @@ impl Partita {
                     .voci
                     .get(d)
                     .is_some_and(|v| v.in_vigore == g);
-                let (delta, esito) = if tenuta {
-                    (mantenuta, "mantenuta")
+                let (delta, esito, sta) = if tenuta {
+                    (mantenuta, "mantenuta", "sta")
                 } else {
-                    (-mancata, "mancata")
+                    (-mancata, "mancata", "non sta")
                 };
                 self.partiti[j].valence += delta;
                 let nome = campagna::promesse(&self.dati, &[(d, g)]);
-                self.mossa(j, format!("Promessa {esito}: {nome}"));
+                let fatto = format!("Promessa {esito}: {nome}");
+                let causa = format!("la disposizione {sta} al gradino promesso");
+                self.voce_di(j, TipoVoce::PromessaVerificata, fatto, causa);
             }
         }
     }
@@ -3382,12 +3392,13 @@ impl Partita {
             programma,
         };
         if let Some(nome) = prima {
-            let testo = if righe == 1 {
+            let fatto = if righe == 1 {
                 format!("Programma di governo: 1 disposizione, {nome}")
             } else {
                 format!("Programma di governo: {righe} disposizioni, la prima è {nome}")
             };
-            self.mossa(presidente, testo);
+            let causa = "la nascita del governo avversario".to_string();
+            self.voce_di(presidente, TipoVoce::ProgrammaDichiarato, fatto, causa);
         }
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
         // Il voto appena passato (turno == inizio) l'ha già fatto cambiare per il calo: una sola
@@ -4062,7 +4073,7 @@ impl Partita {
             },
             dimissioni: l.dimissioni,
             crisi: self.in_crisi(),
-            mosse: self.mosse.clone(),
+            esito: self.esito.clone(),
             programma: self
                 .governo
                 .programma
@@ -4810,12 +4821,19 @@ impl Partita {
             "un partito sciolto con seggi o dentro coalizioni, incarico, allargati, maggioranza o \
              dichiarazione",
         )?;
-        for m in &self.mosse {
-            ok(
-                self.partiti.iter().any(|p| p.id == m.partito),
-                &format!("mosse: partito {} sconosciuto", m.partito),
-            )?;
+        for v in &self.esito {
+            if let Some(id) = &v.partito {
+                ok(
+                    self.partiti.iter().any(|p| &p.id == id),
+                    &format!("esito: partito {id} sconosciuto"),
+                )?;
+            }
+            ok(!v.causa.is_empty(), "esito: una voce senza causa")?;
         }
+        ok(
+            self.esito.iter().filter(|v| v.in_evidenza).count() <= MASSIMO_IN_EVIDENZA,
+            "esito: più di sette voci in evidenza",
+        )?;
         ok(
             self.legislatura.coalizioni.iter().flatten().all(|&j| j < n),
             "legislatura.coalizioni con un partito fuori dai partiti",
@@ -5239,6 +5257,23 @@ mod tests {
         assert_eq!(p.turno, u32::MAX);
     }
 
+    /// Partito, fatto e causa delle voci di `tipo` nell'esito, nell'ordine; una voce fusa vale le
+    /// sue confluite, col «fatto: causa» del dettaglio diviso all'ultimo «: » (le cause delle
+    /// fondibili non ne hanno).
+    pub(super) fn voci(p: &Partita, tipo: TipoVoce) -> Vec<(Option<&str>, &str, &str)> {
+        let mut voci = Vec::new();
+        for v in p.esito.iter().filter(|v| v.tipo == tipo) {
+            if v.dettagli.is_empty() {
+                voci.push((v.partito.as_deref(), v.fatto.as_str(), v.causa.as_str()));
+            }
+            for d in &v.dettagli {
+                let (fatto, causa) = d.testo.rsplit_once(": ").unwrap();
+                voci.push((d.partito.as_deref(), fatto, causa));
+            }
+        }
+        voci
+    }
+
     /// La partita vera all'estrema sinistra (1,5): dopo il voto e la trattativa, all'opposizione
     /// sotto un governo IA. Al voto le casse IA sono vuote: i casi che la usano sono tarati sul
     /// governo che nasce senza campagne IA.
@@ -5435,8 +5470,15 @@ mod tests {
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
-        let riga = format!("Accoglie l'emendamento di {nome} su {legge}: la sua intesa è sotto 40");
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+        let fatto = format!("Accoglie l'emendamento di {nome} su {legge}");
+        let attesa = (fatto.as_str(), "la sua intesa è sotto 40");
+        assert!(
+            voci(&p, TipoVoce::EmendamentoDeciso)
+                .iter()
+                .any(|v| (v.1, v.2) == attesa),
+            "{:?}",
+            p.esito
+        );
     }
 
     /// Alleato sopra la soglia e i seggi tutti al Presidente del Consiglio: senza l'alleato la
@@ -5456,11 +5498,19 @@ mod tests {
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Respinto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
-        let riga = format!("Respinge l'emendamento di {nome} su {legge}");
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+        let fatto = format!("Respinge l'emendamento di {nome} su {legge}");
+        let causa = format!("la sua intesa regge e la legge passa senza i voti di {nome}");
+        let attesa = (fatto.as_str(), causa.as_str());
+        assert!(
+            voci(&p, TipoVoce::EmendamentoDeciso)
+                .iter()
+                .any(|v| (v.1, v.2) == attesa),
+            "{:?}",
+            p.esito
+        );
     }
 
-    /// Una legge del governo IA al voto con l'emendamento aperto del primo alleato, mosse vuote:
+    /// Una legge del governo IA al voto con l'emendamento aperto del primo alleato, esito vuoto:
     /// la partita, l'id della legge e l'alleato.
     fn con_emendamento_aperto() -> (Partita, u32, usize) {
         let mut p = all_opposizione();
@@ -5473,7 +5523,7 @@ mod tests {
             stato: StatoEmendamento::Aperto,
             motivo: String::new(),
         });
-        p.mosse.clear();
+        p.esito.clear();
         (p, id, a)
     }
 
@@ -5539,15 +5589,22 @@ mod tests {
         p.governo_ia();
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert!(m.fiducia);
-        let riga = format!(
-            "Pone la questione di fiducia su {}: la forbice include la sconfitta",
+        let fatto = format!(
+            "Pone la questione di fiducia su {}",
             parlamento::nome_misura(&p.dati, m)
         );
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+        let attesa = (fatto.as_str(), "la forbice include la sconfitta");
+        assert!(
+            voci(&p, TipoVoce::FiduciaPosta)
+                .iter()
+                .any(|v| (v.1, v.2) == attesa),
+            "{:?}",
+            p.esito
+        );
     }
 
     /// Una legge del governo IA al voto in bilico (i seggi quasi tutti al giocatore, che vota
-    /// no), nessun ultimatum, mosse vuote: la partita e l'id della legge.
+    /// no), nessun ultimatum, esito vuoto: la partita e l'id della legge.
     fn legge_in_bilico() -> (Partita, u32) {
         let mut p = all_opposizione();
         let id = legge_del_governo_al_voto(&mut p);
@@ -5561,7 +5618,7 @@ mod tests {
         let m = p.parlamento.misure.iter_mut().find(|m| m.id == id).unwrap();
         m.linea_giocatore = Some(false);
         p.intesa.ultimatum.iter_mut().for_each(|u| *u = None);
-        p.mosse.clear();
+        p.esito.clear();
         (p, id)
     }
 
@@ -5583,11 +5640,16 @@ mod tests {
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
-        let riga = format!(
-            "Accoglie l'emendamento di {nome} su {legge}: senza i voti di {nome} la legge rischia \
-             di non passare"
+        let fatto = format!("Accoglie l'emendamento di {nome} su {legge}");
+        let causa = format!("senza i voti di {nome} la legge rischia di non passare");
+        let attesa = (fatto.as_str(), causa.as_str());
+        assert!(
+            voci(&p, TipoVoce::EmendamentoDeciso)
+                .iter()
+                .any(|v| (v.1, v.2) == attesa),
+            "{:?}",
+            p.esito
         );
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
     }
 
     #[test]
@@ -5672,7 +5734,7 @@ mod tests {
         p.governo_ia();
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert!(!m.fiducia);
-        assert!(p.mosse.iter().all(|x| !x.testo.starts_with("Pone")));
+        assert!(voci(&p, TipoVoce::FiduciaPosta).is_empty());
     }
 
     /// Scelta 9 del piano: l'alleato a `soglia_ultimatum` più il costo del respinto meno uno, la
@@ -5695,11 +5757,18 @@ mod tests {
         let m = p.parlamento.misure.iter().find(|m| m.id == id).unwrap();
         assert_eq!(m.emendamenti[0].stato, StatoEmendamento::Accolto);
         let (nome, legge) = (&p.partiti[a].nome, nome_in_calendario(&p, id));
-        let riga = format!(
-            "Accoglie l'emendamento di {nome} su {legge}: respingerlo porterebbe la sua intesa \
-             sotto 40"
+        let fatto = format!("Accoglie l'emendamento di {nome} su {legge}");
+        let attesa = (
+            fatto.as_str(),
+            "respingerlo porterebbe la sua intesa sotto 40",
         );
-        assert!(p.mosse.iter().any(|x| x.testo == riga), "{:?}", p.mosse);
+        assert!(
+            voci(&p, TipoVoce::EmendamentoDeciso)
+                .iter()
+                .any(|v| (v.1, v.2) == attesa),
+            "{:?}",
+            p.esito
+        );
     }
 
     /// Scelta 9 del piano: la sola voce del programma, fuori dal calendario, a 2,5 dal primo
@@ -6141,21 +6210,19 @@ mod tests {
         };
         p.partiti[g].campagna = vec![spesa(0), spesa(1), spesa(2)];
         p.partiti[g].cassa = 1_500_000;
-        p.mosse.clear();
+        p.esito.clear();
         p.spendi_campagne();
         assert_eq!(p.partiti[g].cassa, 0);
         let euro: Vec<i64> = p.partiti[g].campagna.iter().map(|s| s.euro).collect();
         assert_eq!(euro, [1_000_000, 500_000]);
         let id = p.partiti[g].id.clone();
-        let righe: Vec<&str> = (p.mosse.iter())
-            .filter(|m| m.partito == id)
-            .map(|m| m.testo.as_str())
+        let righe: Vec<(&str, &str)> = (p.esito.iter())
+            .filter(|v| v.partito.as_ref() == Some(&id))
+            .map(|v| (v.fatto.as_str(), v.causa.as_str()))
             .collect();
         let (a, b) = (&p.dati.regioni()[0].nome, &p.dati.regioni()[1].nome);
-        assert_eq!(
-            righe,
-            [format!("Spende 1.500.000 euro: persuade {a} e {b}")]
-        );
+        let fatto = format!("Spende 1.500.000 euro: persuade {a} e {b}");
+        assert_eq!(righe, [(fatto.as_str(), "cassa di 1.500.000 euro")]);
     }
 
     #[test]

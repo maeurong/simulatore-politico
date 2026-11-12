@@ -1,7 +1,5 @@
 //! La voce dell'esito: ciò che una chiusura di turno ha prodotto, con la sua criticità, e la
 //! scelta delle sette in evidenza (spec «esito e Vista completa»).
-// Il modulo nasce prima di chi lo usa: le voci le scrive la partita dal Task 2 in poi.
-#![cfg_attr(not(test), expect(dead_code, reason = "usata dal Task 2"))]
 
 use crate::eventi::{Famiglia, Tono};
 use serde::{Deserialize, Serialize};
@@ -201,6 +199,13 @@ impl VoceEsito {
     }
 
     /// Per i tipi condizionati: `grado` rende il caso base, il punto del fatto lo cambia.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "la chiamano i punti dei tipi condizionati, dal Task 3"
+        )
+    )]
     pub(crate) fn con_grado(&mut self, g: Grado) -> &mut VoceEsito {
         self.criticita = g.criticita();
         self.precedenza = g.precedenza();
