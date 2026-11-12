@@ -443,5 +443,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md`, due giri s
 - **Il test cambia ciò che si legge:** prima chi la misura tocca, dopo come reagiscono al governo le sei condizioni.
 - **Due dati al core:** costo, effetti e gruppi di una misura già in calendario, che oggi `anteprima` rifiuta, e le norme che il decreto di un evento ammette.
 
+## 2026-11-12: conti
+Ticket `.scratch/v1-piano-11-ui/issues/21-conti.md`, due giri su un prototipo con tre forme e nove stati giocati, il centro studi comprato davvero in sei.
+
+- **Forma A · Listino:** tre colonne di pagina economica (bilancio, economia, soglie) e il centro studi nel dettaglio a lato. I termometri delle situazioni in testa e le schede alla maniera dell'Aula scartati: i primi allungano la pagina, le seconde nascondono le soglie dietro un clic.
+- **Le soglie a righello:** accensione, spegnimento e isteresi sulla stessa riga, con la distanza scritta; le 21 grandezze si aprono a lato, così la colonna sta in uno schermo.
+- **Il centro studi a ventagli:** la stima del trimestre accanto alla prima stima, quattro previsioni con la fascia di una e due sigma.
+- **Due dati al core:** i trimestri già passati oltre la soglia (la recessione ne chiede due, e a −4,2% può essere spenta) e il debito sul PIL, che oggi si legge solo pagando il centro studi.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

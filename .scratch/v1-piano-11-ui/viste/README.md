@@ -37,11 +37,17 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `19-aula.json` | 4, 2 | 4,5 / 1,5 | 2-4 | 838325 | stati dell'Aula che mancavano, ciascuno con `come` e `vista`: `piena` (il 03 con `PresentaLegge` della legge elettorale «proporzionale al 3%», della costituzionale più votata e della riforma più lontana dalla destra), `dopo_voto`, `seconda_deliberazione`, `dopo_elettorale` (chiusure successive, bilancio presentato), `opposizione_libero` e `opposizione_proposta` (seme 2 a 1,5, `PresentaProposta` e `Linea`), più `anteprima_elettorale`, `anteprima_riforma` e due rifiuti veri (vedi sotto) |
 | `16-prima-pagina.json` | 4, 9, 1 | 4,5 / 1,5 | varie | 653911 | stati della prima pagina che mancavano, ciascuno con `come` e `vista`: `t3` (il 03 chiuso una volta), `zero_9` e `voto_9` (seme 9 prima e dopo il voto), `voto_opp` (seme 1 a 1,5 dopo il voto), e le corse di «avanti fino a novità» dal 06 in `corse`, con `prima` e `vista` di tre fermate: `fermata_4` (primo ultimatum), `fermata_19` (la corsa più lunga, 3 chiusure), `fermata_20` (campagna) (vedi sotto) |
 | `20-anteprima.json` | 4, 7 | 4,5 | 2, 8 | 301982 | anteprime sul 03, ciascuna con `valori` e `anteprima` o `rifiuto`: riforma, tre territoriali (decontribuzione rifiutata perché già in esame, ZES, autonomia), due disposizioni, costituzionale, elettorale, proposta sul nucleare, `accogli`; `gradini` con ogni gradino di salario minimo, ZES, autonomia e numero dei parlamentari; `test` comprato su salario minimo e ZES con cassa prima e dopo e il rifiuto del secondo; `decreto` e `decreto_grave`, primo decreto su disposizioni ammesso da un evento aperto, con la sua Vista (vedi sotto) |
+| `21-conti.json` | 4, 1, 25, 11 | 4,5 / 1,5 | 2-25 | 441110 | stati dei Conti, ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto_ripetuto`, `serie` e `vista` dopo `Compra { CentroStudi }`: `studi_03` (il 03), `studi_06` (il 06), `due_accese` (seme 4 turno 15), `vicina` (seme 1 turno 13, recessione al primo trimestre sotto), `spread_alto` (seme 25 turno 16, 205 pb), `senza_bilancio` (seme 11 turno 25, bilancio mai presentato) (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 21: aggiunta dal ticket «Conti». La recessione è spenta con la crescita a −4,2% (seme 1, turno 13): è il primo trimestre
+  sotto il −1% e ne servono due; la Vista non porta il conto. La perdita reale è uguale per tutti i dicasteri e cresce anche
+  presentando la bozza a ogni bilancio (4,1% al seme 4, turno 15). Il debito sul PIL la Vista non lo porta: lo dice solo la
+  previsione del centro studi (137% nel 03). Nel 06, all'opposizione, la perdita reale è negativa (deflazione).
 
 - 20: aggiunta dal ticket «Anteprima della misura». `anteprima` rifiuta una misura già in esame («Sgravio contributivo nel
   Mezzogiorno è già in esame»: il Centro l'ha nel posto riservato), mentre il test della stessa bozza si compra. Una legge su

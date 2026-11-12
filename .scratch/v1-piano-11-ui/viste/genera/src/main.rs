@@ -991,6 +991,61 @@ fn anteprima_misura(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Gli stati dei Conti (ticket 21) che le Viste 01-08 non hanno: il centro studi comprato (03,
+/// 05, 06), due situazioni accese insieme, una grandezza a meno di metà strada dalla soglia, lo
+/// spread oltre 200 punti base, e un bilancio non indicizzato da più di un anno (perdita reale).
+fn conti(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let cassa = |p: &Partita| (p.vista().partiti.iter()).find(|x| x.id == p.vista().giocatore).map(|x| x.cassa);
+    let mut compra = |k: &str, mut p: Partita, come: &str, note: &mut Vec<String>| -> Esito<()> {
+        let prima = cassa(&p);
+        let rifiuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
+        let ripetuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
+        let v = p.vista();
+        note.push(format!("{k}: {come}, turno {}", v.turno));
+        let j = serde_json::json!({"come": come, "cassa_prima": prima, "cassa_dopo": cassa(&p),
+            "rifiuto": rifiuto, "rifiuto_ripetuto": ripetuto, "serie": p.serie(), "vista": v});
+        out.insert(k.into(), j);
+        Ok(())
+    };
+    compra("studi_03", governo_03(d)?, "il 03, poi Compra CentroStudi", &mut note)?;
+    let mut p06 = fonda(d, 1, 1.5)?;
+    p06.chiudi_turno();
+    p06.chiudi_turno();
+    compra("studi_06", p06, "il 06 (seme 1, 1,5, opposizione), poi Compra CentroStudi", &mut note)?;
+    let vicina = |s: &sim_core::vista::VoceSituazione| {
+        // Metà strada fra lo spegnimento e l'accensione, dalla parte spenta.
+        let meta = s.spegnimento + (s.accensione - s.spegnimento) / 2.0;
+        !s.accesa && if s.accensione > s.spegnimento { s.valore >= meta } else { s.valore <= meta }
+    };
+    type Cerca = fn(&sim_core::Vista) -> bool;
+    let cerche: [(&str, bool, Cerca); 3] = [
+        ("due_accese", true, |v| v.situazioni.iter().filter(|s| s.accesa).count() >= 2),
+        ("spread_alto", true, |v| v.spread_pb > 200),
+        ("senza_bilancio", false, |v| v.bilancio.anno + 1 < v.data.anno && !v.crisi),
+    ];
+    for (k, bilancio, cerca) in cerche {
+        match cerca_al_governo(d, bilancio, cerca)? {
+            Some((s, p)) => {
+                let come = format!("seme {s}, come il 05, {}", if bilancio { "la bozza a ogni bilancio" } else { "bilancio mai presentato" });
+                compra(k, p, &come, &mut note)?;
+            }
+            None => note.push(format!("{k}: NON RAGGIUNTO")),
+        }
+    }
+    // La vicina la cerca a mano: la chiusura serve una closure che non è `fn`.
+    match cerca_al_governo(d, true, |v| v.situazioni.iter().any(|s| vicina(s) && s.misura != "energia"))? {
+        Some((s, p)) => compra("vicina", p, &format!("seme {s}, come il 05, la bozza a ogni bilancio"), &mut note)?,
+        None => note.push("vicina: NON RAGGIUNTO".into()),
+    }
+    Ok(Uscita {
+        nome: "21-conti.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
 /// Perché «avanti fino a novità» si fermerebbe sul turno appena aperto, con le regole della spec
 /// di core «esito e Vista completa» (sezione «Fermate»). ponytail: senza la fermata `voto`, che
 /// chiede la quota degli elettori toccati sul sondaggio; la porterà il core.
@@ -1121,6 +1176,7 @@ fn esegui() -> Esito<()> {
     uscite.push(aula(&d)?);
     uscite.push(prima_pagina(&d)?);
     uscite.push(anteprima_misura(&d)?);
+    uscite.push(conti(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

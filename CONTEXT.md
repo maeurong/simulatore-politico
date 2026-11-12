@@ -25,6 +25,10 @@ L'unica grandezza di un dicastero tenuta in piedi dalla spesa di funzionamento (
 **Fondo di riserva**:
 Somma fissata nella legge di bilancio, fuori da ogni dicastero, che solo il Presidente del Consiglio spende nelle emergenze.
 
+**Perdita reale**:
+Il potere d'acquisto che una cifra nominale del bilancio (il budget di un dicastero, la soglia di uno scaglione) ha perso con l'inflazione da quando è stata fissata; si recupera solo indicizzandola in una legge di bilancio.
+_Evita_: taglio (che è nominale), erosione (da sola)
+
 **Spesa obbligatoria**:
 Spesa fuori dai dicasteri che si muove da sola secondo una regola: pensioni, sussidi, interessi sul debito. Il giocatore non la ripartisce; ne cambia regime e parametri per legge, e può istituire voci nuove.
 _Evita_: spesa sociale, welfare (per la voce di bilancio)
@@ -375,7 +379,7 @@ Fatto del paese che si mostra in apertura, cita la sua causa nel modello e chied
 _Evita_: crisi (che è quella di governo), dilemma, notizia
 
 **Situazione**:
-Stato del paese che si accende quando una grandezza supera una soglia e si spegne solo sotto una soglia più bassa (recessione, ondata di criminalità); finché è accesa pesa a ogni turno.
+Stato del paese che si accende quando una grandezza supera una soglia e si spegne solo sotto una soglia più bassa (recessione, ondata di criminalità); la recessione chiede due trimestri di fila oltre la soglia, le altre uno. Finché è accesa pesa a ogni turno.
 _Evita_: crisi, emergenza (che è un evento puntuale)
 
 **Regione**:
