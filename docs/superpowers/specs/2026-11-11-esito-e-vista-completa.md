@@ -75,6 +75,10 @@ Del 12/11/2026, ticket «Registro» della mappa del piano 11:
 - **I soggetti delle voci fuse.** Ogni riga di `dettagli` porta i soggetti della voce confluita, come campi accanto al testo: il registro segue un partito, un dicastero o una regione anche dentro una voce fusa, senza cercare nel testo (sezione «La voce dell'esito»).
 - **Le disposizioni nella voce.** Una voce su una misura porta anche gli id delle disposizioni che tocca: una legge ripresentata prende un id di misura nuovo, e senza le disposizioni il filo si spezzerebbe. Il bilancio, che non tocca disposizioni, si segue per misura.
 
+Del 12/11/2026, ticket «Campagna» della mappa del piano 11:
+
+- **L'anteprima del riposizionamento** con le soglie di scissione nella Vista, e **l'anteprima delle promesse** con l'intesa che costano agli alleati: tutte e due nella PR delle esposizioni, nella sezione «Riposizionamento e promesse» qui sotto.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -472,6 +476,13 @@ Decisione di Mario del 12/11/2026, ticket «Bilancio» della mappa del piano 11 
 `VistaBilancio` prende `in_aula: Option<Bilancio>`: `Economia.bilancio_presentato` com'è, con gli emendamenti accolti già dentro; `None` senza legge presentata. Lo vede chiunque, come il riepilogo: il bilancio in aula è pubblico. Nessuno stato nuovo; `presentato` resta.
 
 Prima di scegliere, la pagina dice quanto costa accogliere ogni emendamento: `riepilogo_bilancio` sul bilancio in aula indicizzato sui dicasteri chiesti. Ma la richiesta li tiene come `(indice, Attenuazione::Indicizza)` (`crates/sim-core/src/parlamento/emendamenti.rs:39-44`) e `VoceEmendamento` porta solo testo e motivo (`crates/sim-core/src/vista.rs:345-350`). `VoceEmendamento` prende `dicasteri: Vec<String>`: gli id dei dicasteri delle voci `Indicizza`, nell'ordine della proposta; vuoto sugli emendamenti delle leggi. Stessa decisione di Mario.
+
+### Riposizionamento e promesse
+
+Decisione di Mario del 12/11/2026, ticket «Campagna» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/26-campagna.md`). Riposizionamento e promesse si fanno una volta per campagna (`Partita::riposiziona`, `crates/sim-core/src/partita.rs:3105-3146`; `prometti`, `:2452-2507`) e non si disfano: la UI li conferma sul posto, e la conferma deve dire cosa succede. Oggi non può.
+
+- **Riposizionamento.** `sposta` porta la percepita a metà strada (`crates/sim-core/src/partiti.rs:116-120`); le soglie di minaccia e di scissione sono manopole (`minaccia_scissione` 0,5 e `soglia_scissione` 1, `dati/base/manopole.toml:1318-1330`), lette solo in `scissioni` (`crates/sim-core/src/partita/vita.rs:114-137`). Metodo `anteprima_riposizionamento(posizione) -> Result<AnteprimaRiposizionamento, Errore>`: gli stessi rifiuti di `Riposiziona`, estratti in una funzione che comando e anteprima usano, poi la dichiarata, la percepita che `sposta` darebbe e la loro distanza. La partita non cambia. `VistaCampagna` prende `riposizionato: bool` (`Legislatura.riposizionato`: già fatto in questa campagna), `passo: f64` (`passo_movimento`) e le due soglie, `minaccia_scissione` e `soglia_scissione`: con queste la UI disegna la distanza contro le soglie, e con `minaccia` della sezione «Partiti» dice se la minaccia è già accesa. Giocato col seme 1 a 1,5, turno 20, all'opposizione: dichiarata 1,5, percepita 2,11, distanza 0,61, minaccia accesa; spostarsi a 2 la porta a 0,36, a 1 a 0,86.
+- **Promesse.** Al governo `prometti` toglie `intesa_promessa` per il peso delle politiche a ogni alleato la cui linea su una promessa sarebbe no (`crates/sim-core/src/partita.rs:2488-2504`). Metodo `anteprima_promesse(promesse) -> Result<Vec<VoceCostoPromessa>, Errore>`: gli stessi rifiuti di `Prometti`, estratti come sopra, poi una voce per alleato contrario ad almeno una promessa, con `partito` (id), `intesa` (la somma delle variazioni, negativa) e `disposizioni` (gli id delle promesse su cui è contrario). Il calcolo è quello del comando, in una funzione sola. Vuota fuori dal governo e per le disposizioni senza posizione. Giocato col seme 4 a 4,5, turno 20, al governo: promettere reddito minimo universale ed età pensionabile a 64 anni costa 10 punti d'intesa al Centrodestra, già in ultimatum, e 10 alla Destra.
 
 ### Ferma e Dirotta
 

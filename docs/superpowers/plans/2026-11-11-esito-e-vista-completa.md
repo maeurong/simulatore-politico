@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (workspace `sim-core`, `sim-cli`, `app/src-tauri`), serde, ts-rs per i tipi in `app/src/lib/tipi/`. Nessuna dipendenza nuova.
 
-**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 144-303) è l'oracolo dei Task 1-7: il piano non lo ricopia.
+**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 148-307) è l'oracolo dei Task 1-7: il piano non lo ricopia.
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md` (i 135 fatti nell'ordine di `chiudi_turno`, con funzione e riga) e `docs/ricerca/sintesi/stato-per-le-esposizioni.md` (dove vive ogni dato da esporre), scritte per questo piano sul codice a `8952a06`.
 
@@ -17,15 +17,15 @@
 | PR | Branch | Task | Schema |
 |---|---|---|---|
 | 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 17 → 18 |
-| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b, 16c e 16d | 18 → 19 |
+| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b, 16c, 16d e 16e | 18 → 19 |
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-80, e non si riaprono: i soggetti per riga nei dettagli delle voci fuse e le disposizioni nella voce, PR 1, Task 1 (ticket «Registro», 12/11/2026, spec «La voce dell'esito»); il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
+Stanno nella spec, righe 39-84, e non si riaprono: l'anteprima del riposizionamento con le soglie di scissione in `VistaCampagna` e l'anteprima delle promesse, PR 2, Task 16e (ticket «Campagna», 12/11/2026, spec «Riposizionamento e promesse»); i soggetti per riga nei dettagli delle voci fuse e le disposizioni nella voce, PR 1, Task 1 (ticket «Registro», 12/11/2026, spec «La voce dell'esito»); il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
 
 ## Scelte del piano
 
-Oltre alle 22 «Scelte mie» della spec (righe 82-107), prese scrivendo il piano:
+Oltre alle 22 «Scelte mie» della spec (righe 86-111), prese scrivendo il piano:
 
 1. **`precedenza` nella voce.** La scelta delle sette gira a fine chiusura su voci già raccolte nello stato: la precedenza (3, 2, 1, oppure 0) è un campo della voce, esportato.
 2. **Criticità condizionata.** `grado(tipo, al_governo)` rende il caso base del catalogo; nei sette tipi con una condizione («C2 se…») il punto del fatto la alza o la abbassa con `VoceEsito::con_grado`. L'elenco dei sette sta nel Task 1.
@@ -67,7 +67,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 
 PR 1: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. I task 3-7 scrivono tutti dentro `chiudi_turno` e i suoi passi in `partita.rs`.
 
-PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 16c → 16d → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`, il 16c a `VoceSituazione`, il 16d a `VistaBilancio` e `VoceEmendamento`.
+PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 16c → 16d → 16e → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`, il 16c a `VoceSituazione`, il 16d a `VistaBilancio` e `VoceEmendamento`, il 16e a `VistaCampagna`, con due metodi nuovi della partita.
 
 Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponytail`, e copia la riga **Ricerca** del task. A fine PR, review in parallelo: `security-reviewer`, `code-reviewer`, `test-writer`, `craft-reviewer` (legge i testi delle voci elencati nella PR), `rust-reviewer` e `spec-reviewer` (questo piano e la spec), con i findings di quest'ultimo in un report a parte. Poi un solo giro di correzioni. Le decisioni prese in esecuzione si elencano nella PR. Il merge lo decide Mario.
 
@@ -616,7 +616,7 @@ pub struct Vista { /* … */ pub regole_ue: VistaRegoleUe, pub debito: VistaDebi
 
 `debito_pil` aggiunto il 12/11/2026 dal ticket «Conti» della mappa del piano 11 (spec, sezione «Debito»): è `Economia::debito_e_disavanzo_pil().0` (`economia/spread.rs:21-27`), lo stesso numero con cui si calcola lo spread, letto in `vista()`. Nessuno stato nuovo.
 
-La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 422: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
+La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 426: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
 
 - [ ] **Step 1: test che falliscono:**
   - `la_proiezione_di_gennaio_coincide_col_controllo`: in gennaio-marzo, `proiezione.deviazione` è la `ultima_deviazione` dopo la chiusura di aprile-giugno, se nel mezzo non cambia nulla (entro 1e-9).
@@ -759,6 +759,42 @@ Nessuno stato nuovo e nessun salto di schema.
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
 - [ ] **Step 5:** commit `feat(core): bilancio in aula e dicasteri degli emendamenti`.
+
+### Task 16e: anteprime del riposizionamento e delle promesse
+
+Aggiunto il 12/11/2026 dal ticket «Campagna» della mappa del piano 11 (spec, sezione «Riposizionamento e promesse»).
+
+**Files:**
+- Modify: `crates/sim-core/src/vista.rs` (`VistaCampagna` `:161-169`), `crates/sim-core/src/partita.rs` (`prometti` `:2452-2507`, `riposiziona` `:3105-3146`, `vista()` `:4085-4090`), `crates/sim-core/src/partiti.rs` (`sposta` `:116-120`), `crates/sim-core/tests/campagna.rs`, `app/src/lib/tipi/`
+
+**Ricerca:** `.scratch/v1-piano-11-ui/issues/26-campagna.md` (sezione «Rimandi»). Nessuna ricerca in `docs/ricerca/` copre questi campi.
+
+**Interfaces:**
+- Produces:
+
+```rust
+pub struct AnteprimaRiposizionamento { pub dichiarata: f64, pub percepita: f64, pub distanza: f64 }
+pub struct VoceCostoPromessa { pub partito: String, pub intesa: f64, pub disposizioni: Vec<String> }
+// VistaCampagna prende `pub riposizionato: bool`, `pub passo: f64` (passo_movimento),
+// `pub minaccia_scissione: f64` e `pub soglia_scissione: f64` (le due manopole).
+impl Partita {
+    pub fn anteprima_riposizionamento(&self, posizione: f64) -> Result<AnteprimaRiposizionamento, Errore>;
+    pub fn anteprima_promesse(&self, promesse: &[(String, String)]) -> Result<Vec<VoceCostoPromessa>, Errore>;
+}
+```
+
+I rifiuti di `riposiziona` e di `prometti` si estraggono in due funzioni che comando e anteprima usano entrambi; la percepita nuova viene dalla regola di `sposta`, estratta in una funzione pura; l'intesa persa dal ciclo di `prometti` sugli alleati, estratto allo stesso modo. Nessuna regola copiata, nessuno stato nuovo, nessun salto di schema.
+
+- [ ] **Step 1: test che falliscono:**
+  - `l_anteprima_del_riposizionamento_e_lo_spostamento`: al turno zero (seme 4 a 4,5) l'anteprima di 4 dà dichiarata 4, percepita 4,25, distanza 0,25, e dopo `Riposiziona { posizione: 4.0 }` il partito del giocatore ha gli stessi numeri; la partita prima e dopo l'anteprima è la stessa.
+  - `anteprima_riposizionamento_rifiuta_come_il_comando`: oltre mezzo punto, scavalcando un partito, fuori dal turno del voto e dopo un riposizionamento, stesso testo del comando.
+  - `la_vista_dice_le_soglie_e_se_e_gia_fatto`: `campagna.minaccia_scissione` e `soglia_scissione` sono le manopole, `passo` è `passo_movimento`; `riposizionato` passa a vero dopo `Riposiziona`.
+  - `l_anteprima_delle_promesse_e_l_intesa_persa`: al governo nel turno del voto (seme 4 a 4,5, turno 20), le voci di `anteprima_promesse` su reddito minimo universale ed età pensionabile a 64 anni coincidono con le variazioni `Promessa` che `Prometti` scrive (Centrodestra −10, Destra −10); all'opposizione e al turno zero la lista è vuota.
+  - `anteprima_promesse_rifiuta_come_il_comando`: tre promesse, gradino in vigore, disposizione ripetuta, promesse già fatte.
+- [ ] **Step 2:** `cargo test -p sim-core --test campagna` → non compila.
+- [ ] **Step 3:** implementa.
+- [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
+- [ ] **Step 5:** commit `feat(core): anteprime del riposizionamento e delle promesse`.
 
 ### Task 17: redditi per fascia e chiusura della PR 2
 
