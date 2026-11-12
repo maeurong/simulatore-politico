@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (workspace `sim-core`, `sim-cli`, `app/src-tauri`), serde, ts-rs per i tipi in `app/src/lib/tipi/`. Nessuna dipendenza nuova.
 
-**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 130-289) è l'oracolo dei Task 1-7: il piano non lo ricopia.
+**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 134-293) è l'oracolo dei Task 1-7: il piano non lo ricopia.
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md` (i 135 fatti nell'ordine di `chiudi_turno`, con funzione e riga) e `docs/ricerca/sintesi/stato-per-le-esposizioni.md` (dove vive ogni dato da esporre), scritte per questo piano sul codice a `8952a06`.
 
@@ -17,15 +17,15 @@
 | PR | Branch | Task | Schema |
 |---|---|---|---|
 | 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 17 → 18 |
-| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b | 18 → 19 |
+| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b e 16c | 18 → 19 |
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-67, e non si riaprono: l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
+Stanno nella spec, righe 39-71, e non si riaprono: i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
 
 ## Scelte del piano
 
-Oltre alle 22 «Scelte mie» della spec (righe 69-94), prese scrivendo il piano:
+Oltre alle 22 «Scelte mie» della spec (righe 73-98), prese scrivendo il piano:
 
 1. **`precedenza` nella voce.** La scelta delle sette gira a fine chiusura su voci già raccolte nello stato: la precedenza (3, 2, 1, oppure 0) è un campo della voce, esportato.
 2. **Criticità condizionata.** `grado(tipo, al_governo)` rende il caso base del catalogo; nei sette tipi con una condizione («C2 se…») il punto del fatto la alza o la abbassa con `VoceEsito::con_grado`. L'elenco dei sette sta nel Task 1.
@@ -67,7 +67,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 
 PR 1: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. I task 3-7 scrivono tutti dentro `chiudi_turno` e i suoi passi in `partita.rs`.
 
-PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`.
+PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 16c → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`, il 16c a `VoceSituazione`.
 
 Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponytail`, e copia la riga **Ricerca** del task. A fine PR, review in parallelo: `security-reviewer`, `code-reviewer`, `test-writer`, `craft-reviewer` (legge i testi delle voci elencati nella PR), `rust-reviewer` e `spec-reviewer` (questo piano e la spec), con i findings di quest'ultimo in un report a parte. Poi un solo giro di correzioni. Le decisioni prese in esecuzione si elencano nella PR. Il merge lo decide Mario.
 
@@ -597,7 +597,7 @@ pub struct VistaRegoleUe {
     pub proiezione: Option<ProiezioneUe>,
 }
 pub struct ProiezioneUe { pub anno: u16, pub deviazione: f64, pub conto: f64 }
-pub struct VistaDebito { pub mes: Option<VistaMes>, pub ristrutturazione: Option<VistaRistrutturazione> }
+pub struct VistaDebito { pub debito_pil: f64, pub mes: Option<VistaMes>, pub ristrutturazione: Option<VistaRistrutturazione> }
 pub struct VistaMes { pub fine: Trimestre, pub vincoli: Vec<VoceVincolo> }
 pub struct VoceVincolo { pub disposizione: String, pub gradino: String }
 pub struct VistaRistrutturazione { pub taglio: Trimestre, pub premio_pb: i32, pub fine_perdita: Option<Trimestre> }
@@ -605,7 +605,9 @@ pub struct Vista { /* … */ pub regole_ue: VistaRegoleUe, pub debito: VistaDebi
 // VocePartito prende `pub minaccia: bool`.
 ```
 
-La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 398: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
+`debito_pil` aggiunto il 12/11/2026 dal ticket «Conti» della mappa del piano 11 (spec, sezione «Debito»): è `Economia::debito_e_disavanzo_pil().0` (`economia/spread.rs:21-27`), lo stesso numero con cui si calcola lo spread, letto in `vista()`. Nessuno stato nuovo.
+
+La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 412: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
 
 - [ ] **Step 1: test che falliscono:**
   - `la_proiezione_di_gennaio_coincide_col_controllo`: in gennaio-marzo, `proiezione.deviazione` è la `ultima_deviazione` dopo la chiusura di aprile-giugno, se nel mezzo non cambia nulla (entro 1e-9).
@@ -613,6 +615,7 @@ La deviazione di `controllo_annuale` diventa una funzione pura che controllo e p
   - `in_luglio_settembre_annualizza_su_due_trimestri`.
   - `il_mes_dice_fine_e_vincoli`, `la_ristrutturazione_dice_premio_e_fine_della_perdita`, `senza_mes_ne_ristrutturazione_tutto_vuoto`.
   - `la_minaccia_sta_nel_partito`.
+  - `il_debito_sul_pil_e_quello_dello_spread`: `debito.debito_pil` è `debito_e_disavanzo_pil().0` della partita (entro 1e-9), al turno zero e dopo una chiusura; al turno zero dello scenario di base vale 136,7 (entro 0,1).
   - `vista_completa_al_turno_zero`: su `al_governo()` e `all_opposizione()` appena nate la Vista si costruisce, `elezioni` senza regioni dove non si è votato, `debito.mes` e `debito.ristrutturazione` vuoti; togliendo con `edita` l'anno dal conto della spesa netta, `proiezione == None`.
 - [ ] **Step 2:** `cargo test -p sim-core --test conti --test vista_completa` → non compila.
 - [ ] **Step 3:** implementa.
@@ -688,6 +691,34 @@ Aggiunto il 12/11/2026 dal ticket «Anteprima della misura» della mappa del pia
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
 - [ ] **Step 5:** commit `feat(core): anteprima in calendario e norme del decreto d'evento`.
+
+### Task 16c: trimestri oltre la soglia delle situazioni
+
+Aggiunto il 12/11/2026 dal ticket «Conti» della mappa del piano 11 (spec, sezione «Situazioni»).
+
+**Files:**
+- Modify: `crates/sim-core/src/vista.rs` (`VoceSituazione` `:128-135`), `crates/sim-core/src/eventi/situazioni.rs` (`trimestri` `:12-14`, da rendere visibile al crate), `crates/sim-core/src/partita.rs` (`situazioni` `:4108-4122`), `crates/sim-core/tests/situazioni.rs`, `app/src/lib/tipi/`
+
+**Ricerca:** `.scratch/v1-piano-11-ui/issues/21-conti.md` (sezione «Rimandi»). Nessuna ricerca in `docs/ricerca/` copre questo campo.
+
+**Interfaces:**
+- Produces:
+
+```rust
+// VoceSituazione prende `pub trimestri: u8` (quanti trimestri di fila servono a cambiare stato,
+// da `situazioni::trimestri`) e `pub oltre: u8` (`Eventi.contatori` della situazione).
+```
+
+`situazioni()` legge `self.eventi.contatori` accanto a `self.eventi.accese`, nello stesso ordine dei dati. Nessuno stato nuovo e nessun salto di schema.
+
+- [ ] **Step 1: test che falliscono:**
+  - `la_recessione_dice_il_primo_trimestre_sotto`: con `con_valore` (`tests/situazioni.rs:29`) la crescita sotto −1% per una chiusura, la recessione è spenta con `trimestri == 2` e `oltre == 1`; alla chiusura dopo, ancora sotto, è accesa con `oltre == 0`.
+  - `le_altre_situazioni_chiedono_un_trimestre`: ogni situazione tranne la recessione ha `trimestri == 1`.
+  - `oltre_torna_a_zero`: una chiusura dalla parte del cambio e una dall'altra parte riportano `oltre` a 0.
+- [ ] **Step 2:** `cargo test -p sim-core --test situazioni` → non compila.
+- [ ] **Step 3:** implementa.
+- [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
+- [ ] **Step 5:** commit `feat(core): trimestri oltre la soglia delle situazioni`.
 
 ### Task 17: redditi per fascia e chiusura della PR 2
 

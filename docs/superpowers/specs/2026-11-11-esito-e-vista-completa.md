@@ -62,6 +62,10 @@ Del 12/11/2026, ticket «Anteprima della misura» della mappa del piano 11:
 
 - **Anteprima di una misura in calendario** e **norme del decreto d'evento**: tutte e due nella PR delle esposizioni, nelle sezioni omonime qui sotto.
 
+Del 12/11/2026, ticket «Conti» della mappa del piano 11:
+
+- **Trimestri oltre la soglia** di una situazione e **debito sul PIL**: tutti e due nella PR delle esposizioni, nelle sezioni «Situazioni» e «Debito» qui sotto.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -411,6 +415,7 @@ Tutti tranne la proiezione sono il verdetto su un anno chiuso e riveduto, quindi
 
 `Vista.debito`:
 
+- `debito_pil`: il debito in % del PIL degli ultimi quattro trimestri, dopo l'ultima chiusura, quello con cui si calcola lo spread (`Economia::debito_e_disavanzo_pil`, `crates/sim-core/src/economia/spread.rs:21-27`). Esatto, come lo spread che la Vista già porta: il debito è un conto pubblicato, non una stima. Decisione di Mario del 12/11/2026, ticket «Conti» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/21-conti.md`): oggi la pagina dei Conti lo saprebbe solo comprando il centro studi, che lo prevede.
 - `mes`: se c'è un programma, il trimestre in cui finisce e le disposizioni vincolate col loro gradino.
 - `ristrutturazione`: se c'è, il trimestre del taglio, il premio di oggi sullo spread in punti base e il trimestre in cui finisce la perdita dei redditi (nessuno, se è già finita).
 
@@ -443,6 +448,12 @@ Decisione di Mario del 12/11/2026, ticket «Anteprima della misura» della mappa
 Decisione di Mario del 12/11/2026, stesso ticket. Il decreto innescato da un evento aperto vale solo su certe disposizioni: quelle di `norme`, o le ordinarie dei suoi `dicasteri` se `norme` è vuota (`crates/sim-core/src/eventi/mod.rs:101-106`); un evento del debito le ammette tutte (`:256-257`). `VoceEvento` non lo dice, e la UI dovrebbe provare `EmanaDecreto` su ogni disposizione per saperlo.
 
 `VoceEvento.norme: Vec<String>`: le disposizioni (id) che il decreto innescato da quell'evento ammette, nell'ordine del catalogo. È la regola di `ammetti_disposizioni` (`crates/sim-core/src/parlamento/decreti.rs:115-139`) con quel solo evento aperto: solo norme ordinarie, ciascuna ammessa come disposizione o per il suo dicastero. Vuota se l'evento non ammette decreto. La regola resta una: il comando e la Vista usano la stessa funzione. Nessuno stato nuovo.
+
+### Situazioni
+
+Decisione di Mario del 12/11/2026, ticket «Conti» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/21-conti.md`). Una situazione cambia stato dopo un certo numero di trimestri di fila dalla parte del cambio: due per la recessione, uno per le altre (`trimestri`, `crates/sim-core/src/eventi/situazioni.rs:12-14`); il conto lo tiene `Eventi.contatori` (`crates/sim-core/src/eventi/mod.rs:247-248`, aggiornato in `aggiorna`, `crates/sim-core/src/eventi/situazioni.rs:38-61`). `VoceSituazione` non lo dice: giocando col seme 1 a 4,5, turno 13, la crescita è a −4,2% contro una soglia di −1% e la recessione è spenta, perché è il primo trimestre sotto.
+
+`VoceSituazione` prende `trimestri: u8`, quanti trimestri di fila servono per cambiare stato, e `oltre: u8`, quanti ne sono già passati dalla parte del cambio (il contatore). Una situazione spenta con `oltre` 1 su 2 si legge «oltre la soglia da un trimestre: si accende al secondo di fila». Nessuno stato nuovo: la regola resta in `trimestri`, che la Vista chiama.
 
 ### Ferma e Dirotta
 
