@@ -5,9 +5,10 @@
 mod comune;
 
 use comune::{
-    chiudi_col_bilancio, edita, file_base, imposta, senza_emergenze, senza_shock, sostituisci,
+    chiudi_col_bilancio, edita, file_base, imposta, senza_emergenze, senza_shock, sostituisci, voci,
 };
 use serde_json::json;
+use sim_core::esito::TipoVoce;
 use sim_core::{Comando, DatiGioco, Partita};
 
 fn deviazione_2027(fino_a_nazionale: u16, energia_fino_a: u16) -> f64 {
@@ -74,6 +75,13 @@ fn clausola_scelta(fino_a_nazionale: u16) -> Partita {
 fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
     let p = clausola_scelta(2025);
     assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 2026);
+    let v = voci(&p, TipoVoce::MargineEnergia);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].fatto, "Margine UE per l'energia chiesto per il 2026");
+    assert_eq!(
+        v[0].causa,
+        "la scelta nel «Rincaro improvviso dell'energia»"
+    );
 }
 
 /// Dentro la clausola nazionale l'energia è già coperta: l'opzione non segna nulla, e un
@@ -82,6 +90,7 @@ fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
 fn dentro_la_clausola_nazionale_l_energia_non_conta_due_volte() {
     let p = clausola_scelta(2028);
     assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 0);
+    assert!(voci(&p, TipoVoce::MargineEnergia).is_empty());
     let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(2026));
     assert!(m.contains("né 0 né dopo clausola_nazionale_fino_a"), "{m}");
 }

@@ -187,7 +187,7 @@ fn ko<T>(m: String) -> Result<T, Errore> {
 }
 
 /// `gennaio 2027`: il primo mese del trimestre.
-fn mese(t: Trimestre) -> String {
+pub(crate) fn mese(t: Trimestre) -> String {
     let m = match t.trimestre {
         1 => "gennaio",
         2 => "aprile",

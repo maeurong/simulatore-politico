@@ -23,6 +23,7 @@ mod agenda;
 mod proposte;
 mod soddisfazione;
 
+pub(crate) use agenda::FattoAtto;
 pub(crate) use agenda::penalizza;
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
 pub use proposte::{Proposta, TipoProposta};

@@ -199,13 +199,6 @@ impl VoceEsito {
     }
 
     /// Per i tipi condizionati: `grado` rende il caso base, il punto del fatto lo cambia.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "la chiamano i punti dei tipi condizionati, dal Task 3"
-        )
-    )]
     pub(crate) fn con_grado(&mut self, g: Grado) -> &mut VoceEsito {
         self.criticita = g.criticita();
         self.precedenza = g.precedenza();

@@ -179,18 +179,17 @@ impl Parlamento {
     }
 
     /// Chiusura: ogni emendamento ancora aperto è respinto, tranne quelli delle leggi che
-    /// slittano nel turno del bilancio o di crisi (`occupato`); rende gli alleati che pagano.
-    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<usize> {
-        let aperti = (self.misure.iter_mut())
-            .filter(|m| !(occupato && slitta(m, turno)))
-            .flat_map(|m| m.emendamenti.iter_mut())
-            .filter(|e| e.stato == StatoEmendamento::Aperto);
-        (aperti)
-            .map(|e| {
+    /// slittano nel turno del bilancio o di crisi (`occupato`); rende gli alleati che pagano, con
+    /// la misura (id).
+    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<(usize, u32)> {
+        let mut respinti = Vec::new();
+        for m in (self.misure.iter_mut()).filter(|m| !(occupato && slitta(m, turno))) {
+            for e in (m.emendamenti.iter_mut()).filter(|e| e.stato == StatoEmendamento::Aperto) {
                 e.stato = StatoEmendamento::Respinto;
-                e.partito
-            })
-            .collect()
+                respinti.push((e.partito, m.id));
+            }
+        }
+        respinti
     }
 
     /// `Emendamento`: accolto, la misura prende il gradino a metà (il rinvio pesa al voto);

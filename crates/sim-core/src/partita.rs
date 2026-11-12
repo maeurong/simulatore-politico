@@ -565,14 +565,21 @@ impl Partita {
             p.turni_da_presidente = p.turni_da_presidente.saturating_add(1);
         }
         let trattativa = self.legislatura.fase == Fase::Trattativa;
-        self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
+        let tolte = self.con_contesto(|ministri, cx, _| ministri.decidi_proposte(cx));
+        self.voci_proposte(tolte);
         // Prima del voto del bilancio: approvato, esce dal calendario. In crisi le leggi restano
         // ferme un turno senza decadere, come nel turno del bilancio (ticket 09, riga 45).
         let occupato = self.turno_del_bilancio() || self.in_crisi();
-        let respinti = self.parlamento.respingi_aperti(self.turno, occupato);
-        self.emendamenti_respinti(respinti);
-        let effetti = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
+        for (j, misura) in self.parlamento.respingi_aperti(self.turno, occupato) {
+            let costo = self.costo_respinto(j);
+            self.emendamenti_respinti([j]);
+            self.voce_emendamento_respinto(j, misura, costo);
+        }
+        let (effetti, atti) = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
+        for f in atti {
+            self.voce_atto(f);
+        }
         let sfiducia_votata = if self.legislatura.fase == Fase::Sciolta {
             self.vota_confermativi();
             false
@@ -4179,16 +4186,23 @@ impl Partita {
             self.grandezze
                 .effetti
                 .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
+            self.voce_lieve(&aperto, quota);
         }
         // ponytail: le opzioni si clonano per liberare `self.dati` ai metodi `&mut self`.
         let risolti: Vec<_> = (self.eventi.risolvi(&self.dati).into_iter())
             .map(|(a, o)| (a, o.clone()))
             .collect();
         for (aperto, opzione) in risolti {
+            // La valence del partito colpito prima dell'evento: la voce dice di quanto è cambiata.
+            let colpito = self.partito_evento(&aperto);
+            let valence = self.partiti.get(colpito).map_or(0.0, |p| p.valence);
             if self.dati.eventi()[aperto.evento].famiglia == Famiglia::Scandalo {
-                self.risolvi_scandalo(&aperto, &opzione);
+                let seguito = self.risolvi_scandalo(&aperto, &opzione);
+                let seguito = seguito.unwrap_or_else(|| "chiuso senza seguito".into());
+                self.voce_evento(&aperto, &opzione, vec![seguito], colpito, valence);
                 continue;
             }
+            let (mut coda, mut seguiti, mut taglio) = (Vec::new(), Vec::new(), 0);
             // La quota del costo pagata da `FondoRiserva`/`Debito`: scala le grandezze che seguono.
             let mut quota = 1.0;
             for effetto in &opzione.effetti {
@@ -4218,25 +4232,36 @@ impl Partita {
                     }
                     EffettoOpzione::Valence { delta } => self.valence_evento(&aperto, *delta),
                     EffettoOpzione::FondoRiserva | EffettoOpzione::Debito => {
-                        quota = self.spendi(&aperto, *effetto == EffettoOpzione::FondoRiserva);
+                        let dal_fondo = *effetto == EffettoOpzione::FondoRiserva;
+                        quota = self.spendi(&aperto, dal_fondo);
                         // Il ripristino toglie al danno nato con l'evento la quota pagata.
                         let inizio = aperto.turno.saturating_sub(1);
                         self.grandezze
                             .effetti
                             .extend(emergenze::danno(&self.dati, &aperto, inizio, -quota));
+                        coda.push(esito::pagamento(aperto.costo, quota, dal_fondo));
                     }
-                    EffettoOpzione::Mes => self.programma_del_mes(),
-                    EffettoOpzione::Ristrutturazione => self.economia.ristruttura(
-                        self.turno,
-                        self.dati.manopola("taglio_ristrutturazione"),
-                        self.dati.manopola("premio_ristrutturazione"),
-                    ),
+                    EffettoOpzione::Mes => {
+                        self.programma_del_mes();
+                        seguiti.push(TipoVoce::MesAvviato);
+                    }
+                    EffettoOpzione::Ristrutturazione => {
+                        let debito = self.economia.debito;
+                        self.economia.ristruttura(
+                            self.turno,
+                            self.dati.manopola("taglio_ristrutturazione"),
+                            self.dati.manopola("premio_ristrutturazione"),
+                        );
+                        taglio = debito - self.economia.debito;
+                        seguiti.push(TipoVoce::Ristrutturazione);
+                    }
                     // Dentro la clausola nazionale l'energia è già coperta: niente da segnare.
                     EffettoOpzione::ClausolaEnergia
                         if self.data.anno > self.dati.scenario().clausola_nazionale_fino_a =>
                     {
                         let r = &mut self.economia.regole_ue;
                         r.clausola_energia_fino_a = r.clausola_energia_fino_a.max(self.data.anno);
+                        seguiti.push(TipoVoce::MargineEnergia);
                     }
                     EffettoOpzione::ClausolaEnergia => {}
                     // Le dimissioni le applica `risolvi_scandalo`.
@@ -4255,6 +4280,10 @@ impl Partita {
                     -self.dati.manopola("valence_emergenza_ignorata")
                 };
                 self.valence_evento(&aperto, delta);
+            }
+            self.voce_evento(&aperto, &opzione, coda, colpito, valence);
+            for tipo in seguiti {
+                self.voce_seguito(tipo, &aperto, taglio);
             }
         }
     }
@@ -4329,13 +4358,13 @@ impl Partita {
     /// `valence_dimissioni_scandalo`, il resto (difendere, o l'unica opzione del leader) costa
     /// `valence_scandalo` al partito del bersaglio e, per un ministro, lo tiene `turni_scandalo`
     /// sotto la sfiducia IA. Un bersaglio che non c'è più o ha cambiato persona, o un rifiuto di
-    /// `applica`, chiudono l'evento in silenzio.
-    fn risolvi_scandalo(&mut self, aperto: &EventoAperto, opzione: &DatoOpzione) {
+    /// `applica`, chiudono l'evento in silenzio. Rende il seguito per la voce, vuoto per il
+    /// leader; `None` se l'evento si chiude perché il bersaglio non c'è più.
+    fn risolvi_scandalo(&mut self, aperto: &EventoAperto, opzione: &DatoOpzione) -> Option<String> {
         let attuale = aperto.bersaglio.and_then(|b| self.nome_del(b));
-        let presente = attuale.is_some_and(|n| aperto.persona.as_ref().is_none_or(|p| *p == n));
-        if !presente {
-            return;
-        }
+        let presente =
+            (attuale.as_ref()).is_some_and(|n| aperto.persona.as_ref().is_none_or(|p| p == n));
+        let nome = attuale.filter(|_| presente)?;
         // Dimissioni già chieste dal giocatore: valgono come date, qualunque opzione sia scelta.
         let chieste = matches!(aperto.bersaglio, Some(Bersaglio::Ministro { dicastero })
             if self.ministri.dicasteri.get(dicastero).is_some_and(|st| st.dimissioni_chieste));
@@ -4350,9 +4379,11 @@ impl Partita {
                 if date {
                     let costo = self.dati.manopola("valence_dimissioni_scandalo");
                     self.valence_evento(aperto, -costo);
+                    return Some(format!("{nome} si dimette"));
                 }
+                return Some("dimissioni non date".into());
             }
-            return;
+            return Some(String::new());
         }
         self.valence_evento(aperto, -self.dati.manopola("valence_scandalo"));
         let turni = self.dati.manopola("turni_scandalo").round() as u32;
@@ -4361,23 +4392,29 @@ impl Partita {
                 (self.ministri.dicasteri.get_mut(dicastero)).and_then(|st| st.ministro.as_mut())
         {
             m.sotto_scandalo = turni;
+            return Some(format!("{nome} resta in carica"));
         }
+        Some(String::new())
     }
 
-    /// `delta` di valence al partito del bersaglio dell'evento, o a quello del Presidente del
-    /// Consiglio.
-    fn valence_evento(&mut self, aperto: &EventoAperto, delta: f64) {
+    /// Il partito del bersaglio dell'evento, o quello del Presidente del Consiglio.
+    fn partito_evento(&self, aperto: &EventoAperto) -> usize {
         let del_ministro = |d: usize| {
             (self.ministri.dicasteri.get(d))
                 .and_then(|st| st.ministro.as_ref())
                 .map(|m| m.partito)
         };
-        let partito = match aperto.bersaglio {
+        match aperto.bersaglio {
             Some(Bersaglio::Leader { partito }) => Some(partito),
             Some(Bersaglio::Ministro { dicastero }) => del_ministro(dicastero),
             None => None,
         }
-        .unwrap_or(self.governo.presidente);
+        .unwrap_or(self.governo.presidente)
+    }
+
+    /// `delta` di valence al [`Self::partito_evento`].
+    fn valence_evento(&mut self, aperto: &EventoAperto, delta: f64) {
+        let partito = self.partito_evento(aperto);
         if let Some(p) = self.partiti.get_mut(partito) {
             p.valence += delta;
         }

@@ -936,14 +936,8 @@ impl Partita {
                     let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
                     format!("fondi che non bastano per {atto}")
                 }
-                TipoProposta::Riforma {
-                    disposizione,
-                    gradino,
-                    ..
-                } => format!(
-                    "la riforma {}",
-                    parlamento::nome(&self.dati, &[(disposizione, gradino)])
-                ),
+                // Senza «: »: nel dettaglio di una voce fusa separa il fatto dalla causa.
+                TipoProposta::Riforma { .. } => proposta.tipo.testo(&self.dati),
             };
             let (id, nome) = (d.id.clone(), d.nome.clone());
             if self.applica(Comando::Accogli { dicastero: id }).is_ok() {

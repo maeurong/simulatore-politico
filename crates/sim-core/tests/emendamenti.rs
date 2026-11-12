@@ -1,6 +1,7 @@
 mod comune;
-use comune::{edita, imposta, partito, presenta, sanita_cara, senza_shock};
+use comune::{edita, imposta, partito, presenta, sanita_cara, senza_shock, voci};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{CausaIntesa, Decreto, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita};
 
@@ -64,6 +65,7 @@ fn emendamento_accolto_attenua_e_compatta() {
 #[test]
 fn emendamento_ignorato_vale_respinto_e_costa_intesa() {
     let mut p = al_voto(("eta_pensionabile", "62"));
+    let misura = p.vista().calendario[0].id;
     p.chiudi_turno();
     let a = &p.vista().alleati[0];
     assert!(
@@ -71,6 +73,14 @@ fn emendamento_ignorato_vale_respinto_e_costa_intesa() {
             .iter()
             .any(|x| x.causa == CausaIntesa::EmendamentoRespinto)
     );
+    let v = voci(&p, TipoVoce::EmendamentoRespinto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Critica);
+    assert_eq!(v[0].partito.as_deref(), Some("centrodestra"));
+    assert_eq!(v[0].misura, Some(misura));
+    assert_eq!(v[0].disposizioni, ["eta_pensionabile"]);
+    assert!(v[0].fatto.contains("Età pensionabile"), "{}", v[0].fatto);
+    assert_eq!(v[0].causa, "senza risposta prima del voto");
 }
 
 #[test]

@@ -2,8 +2,10 @@
 
 mod comune;
 
-use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita};
+use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita, voci};
 use serde_json::json;
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
+use sim_core::eventi::Famiglia;
 use sim_core::{Comando, Errore, Partita};
 
 /// L'evento `criminalita` (indice nel catalogo) aperto al turno corrente, nella partita al governo:
@@ -50,6 +52,20 @@ fn sicurezza(p: &Partita) -> f64 {
     j["grandezze"]["valori"][k][0].as_f64().unwrap()
 }
 
+/// Lo stato salvato senza l'esito, che porta la voce dell'evento di prova.
+fn senza_esito(p: &Partita) -> serde_json::Value {
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    j["esito"] = json!([]);
+    j
+}
+
+/// La voce dell'evento di prova nell'esito.
+fn voce_di_prova(p: &Partita) -> VoceEsito {
+    (voci(p, TipoVoce::EventoRisolto).into_iter())
+        .find(|v| v.fatto.starts_with("Ondata di criminalità"))
+        .unwrap()
+}
+
 #[test]
 fn senza_scelta_vale_il_default() {
     let mut p = con_evento_di_prova();
@@ -59,8 +75,34 @@ fn senza_scelta_vale_il_default() {
     chiudi_col_bilancio(&mut q);
     // L'evento di prova è chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
     assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
-    // Il default non ha effetti: la partita è identica a quella senza evento.
-    assert_eq!(p, q);
+    // Il default non ha effetti: la partita è identica a quella senza evento, voce a parte.
+    assert_eq!(senza_esito(&p), senza_esito(&q));
+}
+
+#[test]
+fn evento_risolto_per_default_e_critico() {
+    let mut p = con_evento_di_prova();
+    chiudi_col_bilancio(&mut p);
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Critica);
+    assert_eq!(v.precedenza, 1);
+    assert!(
+        v.fatto.contains("«Non intervenire» per default"),
+        "{}",
+        v.fatto
+    );
+    assert_eq!(v.famiglia, Some(Famiglia::Situazione));
+    assert_eq!(v.causa, "Sicurezza: 80,0 (soglia 85,0)");
+}
+
+/// All'opposizione l'evento vale il default del governo IA: la voce resta notevole.
+#[test]
+fn evento_risolto_all_opposizione_e_notevole() {
+    let mut p = con_evento(all_opposizione());
+    p.chiudi_turno();
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert!(v.fatto.contains("per default"), "{}", v.fatto);
 }
 
 #[test]
@@ -84,7 +126,11 @@ fn la_scelta_si_puo_cambiare_fino_alla_chiusura() {
     rispondi(&mut p, 0, "ordinaria").unwrap();
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut q);
-    assert_eq!(p, q);
+    assert_eq!(senza_esito(&p), senza_esito(&q));
+    // Scelto, non per default: la voce è notevole.
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert!(!v.fatto.contains("per default"), "{}", v.fatto);
 }
 
 #[test]

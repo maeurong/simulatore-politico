@@ -8,7 +8,9 @@ use crate::caso::{Caso, Flusso};
 use crate::dati::DatiGioco;
 use crate::economia::{Bilancio, euro};
 use crate::errore::Errore;
+use crate::esito::TipoVoce;
 use crate::grandezze::EffettoAttivo;
+use crate::legislatura::campagna::migliaia;
 use crate::partita::LIMITE_EURO;
 use crate::vista::{VoceAgenda, VoceAtto, VoceCantiere, VoceEffetto};
 use serde::{Deserialize, Serialize};
@@ -48,6 +50,30 @@ pub struct Cantiere {
     pub turni_mancanti: u32,
     pub rata: i64,
     pub speso: i64,
+}
+
+/// Un fatto di `esegui`, da cui la partita scrive la voce dell'esito. Di `crate::esito` i ministri
+/// conoscono solo l'etichetta `tipo`. `euro`: la spesa dell'atto, la rata del cantiere, o quanto
+/// il cantiere finito ha speso in tutto; `turni`: i turni di lavori dell'atto; `motivo`: la causa
+/// già scritta.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct FattoAtto {
+    pub tipo: TipoVoce,
+    pub dicastero: usize,
+    pub atto: String,
+    pub regione: Option<usize>,
+    pub euro: i64,
+    pub turni: u32,
+    pub motivo: String,
+}
+
+/// `"{cosa} di N euro contro un margine residuo di M euro"`.
+fn contro_il_margine(cosa: &str, euro: i64, margine: i64) -> String {
+    format!(
+        "{cosa} di {} euro contro un margine residuo di {} euro",
+        migliaia(euro),
+        migliaia(margine)
+    )
 }
 
 /// Cantieri ammessi per dicastero in un salvataggio.
@@ -322,27 +348,52 @@ impl Ministri {
     }
 
     /// Primo passo della chiusura: per ogni dicastero con ministro prima i cantieri in corso,
-    /// poi l'agenda se non fermata e senza dimissioni chieste. Rende gli effetti registrati;
-    /// l'agenda si svuota. In interim i cantieri restano fermi.
-    pub(crate) fn esegui(&mut self, cx: &Contesto) -> Vec<EffettoAttivo> {
+    /// poi l'agenda se non fermata e senza dimissioni chieste. Rende gli effetti registrati e i
+    /// fatti, nell'ordine d'esecuzione; l'agenda si svuota. In interim i cantieri restano fermi,
+    /// senza fatti. L'agenda fermata non è un fatto: il «Ferma» ha già lasciato il suo costo.
+    pub(crate) fn esegui(&mut self, cx: &Contesto) -> (Vec<EffettoAttivo>, Vec<FattoAtto>) {
         let dati = cx.dati;
         let rif = margini_rif(dati);
-        let mut nuovi = Vec::new();
+        let (mut nuovi, mut fatti) = (Vec::new(), Vec::new());
         for (i, st) in self.dicasteri.iter_mut().enumerate() {
             let agenda = st.agenda.take();
             let Some(c) = st.ministro.as_ref().map(|m| m.capacita_effettiva(dati)) else {
                 continue;
+            };
+            let fatto = |tipo, k: usize, regione, euro, motivo| {
+                let a = &dati.atti()[k];
+                FattoAtto {
+                    tipo,
+                    dicastero: i,
+                    atto: a.nome.clone(),
+                    regione,
+                    euro,
+                    turni: a.turni,
+                    motivo,
+                }
             };
             for cantiere in &mut st.cantieri {
                 if cantiere.rata <= st.margine_residuo {
                     st.margine_residuo -= cantiere.rata;
                     cantiere.speso += cantiere.rata;
                     cantiere.turni_mancanti = cantiere.turni_mancanti.saturating_sub(1);
+                } else {
+                    let motivo = contro_il_margine("rata", cantiere.rata, st.margine_residuo);
+                    let (k, r) = (cantiere.atto, cantiere.regione);
+                    fatti.push(fatto(TipoVoce::CantiereFermo, k, r, cantiere.rata, motivo));
                 }
             }
             for f in st.cantieri.iter().filter(|f| f.turni_mancanti == 0) {
                 let a = &dati.atti()[f.atto];
                 nuovi.extend(effetti_di(dati, a, i, f.regione, c, cx.turno));
+                let motivo = format!("la fine dei lavori dopo {} turni", a.turni);
+                fatti.push(fatto(
+                    TipoVoce::CantiereFinito,
+                    f.atto,
+                    f.regione,
+                    f.speso,
+                    motivo,
+                ));
             }
             st.cantieri.retain(|f| f.turni_mancanti > 0);
             let Some(ag) = agenda.filter(|a| a.stato != StatoAgenda::Fermata) else {
@@ -351,11 +402,24 @@ impl Ministri {
             let atto = &dati.atti()[ag.atto];
             let spesa = costo_atto(cx, &rif, i, atto);
             if st.dimissioni_chieste || spesa > st.margine_residuo {
+                let motivo = if st.dimissioni_chieste {
+                    "dimissioni chieste".to_string()
+                } else {
+                    contro_il_margine("spesa", spesa, st.margine_residuo)
+                };
+                fatti.push(fatto(
+                    TipoVoce::AttoSaltato,
+                    ag.atto,
+                    ag.regione,
+                    spesa,
+                    motivo,
+                ));
                 continue;
             }
             st.margine_residuo -= spesa;
-            if atto.turni <= 1 {
+            let tipo = if atto.turni <= 1 {
                 nuovi.extend(effetti_di(dati, atto, i, ag.regione, c, cx.turno));
+                TipoVoce::AttoEseguito
             } else {
                 st.cantieri.push(Cantiere {
                     atto: ag.atto,
@@ -364,9 +428,11 @@ impl Ministri {
                     rata: spesa,
                     speso: spesa,
                 });
-            }
+                TipoVoce::CantiereAvviato
+            };
+            fatti.push(fatto(tipo, ag.atto, ag.regione, spesa, ag.motivo));
         }
-        nuovi
+        (nuovi, fatti)
     }
 
     /// `Ferma`: l'agenda annunciata non si esegue; costa soddisfazione in proporzione

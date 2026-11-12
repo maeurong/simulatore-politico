@@ -992,5 +992,14 @@ fn il_governo_ia_prende_il_default() {
     p.chiudi_turno();
     q.chiudi_turno();
     assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
-    assert_eq!(p, q);
+    // Identiche, salvo la voce dell'evento risolto.
+    let mut esito = p.vista().esito;
+    esito.retain(|v| !v.fatto.starts_with("Ondata di criminalità"));
+    assert_eq!(esito, q.vista().esito);
+    let senza_esito = |x: &Partita| {
+        let mut j: serde_json::Value = serde_json::from_str(&x.salva().unwrap()).unwrap();
+        j["esito"] = json!([]);
+        j
+    };
+    assert_eq!(senza_esito(&p), senza_esito(&q));
 }

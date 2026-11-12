@@ -59,6 +59,43 @@ fn probabilita(dati: &DatiGioco, data: Trimestre, tipo: usize, r: usize) -> f64 
     p.clamp(0.0, 1.0)
 }
 
+/// Emergenze attese l'anno nella regione `r` per il tipo `tipo` (0 sisma, 1 idro, 2 incendi):
+/// `probabilita` sommata sui quattro trimestri, non normalizzata.
+pub(crate) fn attese_pericolosita(dati: &DatiGioco, tipo: usize, r: usize) -> f64 {
+    (1..=4)
+        .map(|trimestre| {
+            let data = Trimestre {
+                trimestre,
+                ..Trimestre::TURNO_ZERO
+            };
+            probabilita(dati, data, tipo, r)
+        })
+        .sum()
+}
+
+/// `attese_pericolosita` diviso il massimo fra le regioni: 0-1; 0 se il massimo è zero.
+pub(crate) fn indice_pericolosita(dati: &DatiGioco, tipo: usize, r: usize) -> f64 {
+    let massimo = (0..dati.regioni().len())
+        .map(|k| attese_pericolosita(dati, tipo, k))
+        .fold(0.0, f64::max);
+    if massimo > 0.0 {
+        attese_pericolosita(dati, tipo, r) / massimo
+    } else {
+        0.0
+    }
+}
+
+/// «alta» da 2/3, «media» da 1/3, «bassa» sotto.
+pub(crate) fn a_parole(indice: f64) -> &'static str {
+    if indice >= 2.0 / 3.0 {
+        "alta"
+    } else if indice >= 1.0 / 3.0 {
+        "media"
+    } else {
+        "bassa"
+    }
+}
+
 /// Un candidato per regione e tipo (poi la siccità per ogni regione), sempre con la sua estrazione
 /// del livello da `Flusso::Eventi`, anche a `p` zero: le estrazioni non dipendono dagli esiti.
 /// `data` è il trimestre del turno che si apre.
@@ -216,6 +253,22 @@ mod tests {
         };
         assert!(sisma("piemonte") > 0.0);
         assert_eq!(sisma("sardegna"), 0.0);
+    }
+
+    #[test]
+    fn indice_di_pericolosita_fra_zero_e_uno() {
+        let dati = dati_base();
+        let n = dati.regioni().len();
+        for tipo in 0..3 {
+            let indici: Vec<f64> = (0..n)
+                .map(|r| indice_pericolosita(&dati, tipo, r))
+                .collect();
+            assert!(indici.iter().all(|x| (0.0..=1.0).contains(x)), "{tipo}");
+            assert!(indici.contains(&1.0), "{tipo}: {indici:?}");
+        }
+        assert_eq!(a_parole(1.0), "alta");
+        assert_eq!(a_parole(0.5), "media");
+        assert_eq!(a_parole(0.0), "bassa");
     }
 
     #[test]

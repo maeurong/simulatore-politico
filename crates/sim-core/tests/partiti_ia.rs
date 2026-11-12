@@ -210,7 +210,9 @@ fn primo_voto_nessun_cambio() {
     // vuote, quindi nessuno spende: oltre le promesse, nessuna voce dei partiti IA.
     let esito = p.vista().esito;
     assert!(
-        (esito.iter()).all(|v| v.tipo == TipoVoce::PromessaFatta),
+        (esito.iter())
+            .filter(|v| v.partito.is_some())
+            .all(|v| v.tipo == TipoVoce::PromessaFatta),
         "{esito:?}"
     );
     let dopo: Vec<_> = p.partiti().iter().map(|x| x.leader.clone()).collect();

@@ -4,9 +4,12 @@ mod comune;
 
 use comune::{
     chiudi_col_bilancio, con_ingresso, dati_base, edita, file_base, imposta, presenta, sostituisci,
+    voci,
 };
 use serde_json::{Value, json};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
+use sim_core::eventi::{Famiglia, Tono};
 use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Partita};
 
@@ -119,6 +122,34 @@ fn il_mes_e_il_default() {
         assert_eq!(v.len(), 1, "alleato {j}");
         assert!((v[0].delta + 10.0).abs() < 1e-9, "{}", v[0].delta);
     }
+    let risolto = voci(&p, TipoVoce::EventoRisolto);
+    let aste = (risolto.iter())
+        .find(|v| v.fatto.starts_with("Aste scoperte"))
+        .unwrap();
+    assert_eq!(aste.tono, Tono::Grave);
+    assert_eq!(aste.famiglia, Some(Famiglia::Debito));
+    let mes = voci(&p, TipoVoce::MesAvviato);
+    assert_eq!(mes.len(), 1, "{mes:?}");
+    assert_eq!(
+        (mes[0].criticita, mes[0].precedenza),
+        (Criticita::Critica, 2)
+    );
+    assert_eq!(mes[0].tono, Tono::Grave);
+    assert!(
+        mes[0].fatto.contains("Età pensionabile")
+            && mes[0]
+                .fatto
+                .ends_with("ogni alleato perde 10,0 punti d'intesa"),
+        "{}",
+        mes[0].fatto
+    );
+    assert!(
+        mes[0]
+            .causa
+            .starts_with("la scelta nelle «Aste scoperte», spread a "),
+        "{}",
+        mes[0].causa
+    );
 }
 
 #[test]
@@ -363,6 +394,18 @@ fn la_ristrutturazione_taglia_il_debito() {
     // Il premio entra intero nello spread del turno, poi decade di un passo.
     assert!(e.spread >= 300.0, "{}", e.spread);
     assert!((premio_dopo(&r) - 300.0 * 0.5_f64.powf(0.125)).abs() < 1e-9);
+    let v = voci(&r, TipoVoce::Ristrutturazione);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Critica);
+    assert!(
+        v[0].fatto.contains("premio di 300 pb sullo spread")
+            && v[0]
+                .fatto
+                .contains("fasce media e alta giù del 5% per 8 turni"),
+        "{}",
+        v[0].fatto
+    );
+    assert_eq!(v[0].causa, "la scelta nelle «Aste scoperte»");
 }
 
 #[test]
