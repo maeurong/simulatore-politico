@@ -33,18 +33,18 @@ Sotto la cornice, l'album a pagina col **dettaglio a lato**.
 ### Decisioni sui casi
 
 - **Ferma diretto**, col costo scritto sul bottone («Ferma −18»), come Accogli e Respingi nel [Cruscotto al governo](17-cruscotto-al-governo.md). Il core non lo ritira (`crates/sim-core/src/ministri/agenda.rs:380-382`): il costo sul bottone basta a renderlo una scelta informata.
-- **Due conferme sul posto in più**: «Chiedi le dimissioni», che dice il prezzo (gratis con un tecnico, 10 punti d'intesa a un alleato, niente col tuo partito, `crates/sim-core/src/partita.rs:1584-1595`), e «Ferma il cantiere», che dice gli euro spesi persi (storia 38). Con quelle dell'ossatura e «Dimettiti» sono sei.
+- **Due conferme sul posto in più**: «Chiedi le dimissioni», che dice il prezzo (gratis con un tecnico, 10 punti d'intesa a un alleato, niente col tuo partito, `crates/sim-core/src/partita.rs:1584-1595`), e «Ferma il cantiere», che dice quanti euro già spesi si perdono (storia 38). Con quelle dell'ossatura e «Dimettiti» sono sei.
 - **Le grandezze del dicastero** (storia 24): l'indicatore di servizio sta nella carta; le altre si leggono negli effetti di Dirotta e in [Conti](21-conti.md), dove le 21 grandezze si aprono a lato.
 - **Crisi**: la banda nera dell'ossatura; le carte in interim con la rosa, le altre come sono.
 - **Motti**: uno per dicastero, dal prototipo vincolante, come primo dei quattro ([Testi del Pungolo](09-testi-del-pungolo.md)); gli altri si scrivono nella fetta.
 
 ### Guscio e dati
 
-I comandi passano da `comanda` (`Ferma`, `Dirotta`, `FermaCantiere`, `ChiediDimissioni`, `ScegliSuccessore`); nessun passacarte nuovo. Il resto lo legge dalla Vista, tranne quattro dati che oggi il prototipo rifà dai file del core. Sono **quattro rimandi al core, PR delle esposizioni, in 11g**:
+I comandi passano da `comanda` (`Ferma`, `Dirotta`, `FermaCantiere`, `ChiediDimissioni`, `ScegliSuccessore`); nessun passacarte nuovo. Il resto la UI lo legge dalla Vista, tranne quattro dati che oggi il prototipo rifà dai file del core. Sono **quattro rimandi al core, PR delle esposizioni, in 11g**:
 
 - **I costi di Ferma e Dirotta**: `VoceAgenda.costo_ferma`, `VoceCantiere.costo_ferma` e `costo_dirotta` sono già nella spec del core (`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md:501-504`). Fino ad allora i bottoni restano senza numero.
 - **L'indicatore di servizio di ogni dicastero**: `VoceDicastero` porta solo `id` e `nome` (`crates/sim-core/src/vista.rs:485-488`); l'indicatore sta in `dati/base/dicasteri.toml:9`.
-- **Il perché dell'evidenza**: `VoceAgenda.in_evidenza` è un booleano (`crates/sim-core/src/vista.rs:552`) che unisce tre regole (minaccia, atto lontano dalla posizione del Presidente del Consiglio, evento nel dicastero: `crates/sim-core/src/ministri/agenda.rs:570-576`). La carta deve dire quale vale; il prototipo la rifà con le posizioni di `dati/base/atti.toml`.
+- **Il perché dell'evidenza**: `VoceAgenda.in_evidenza` è un booleano (`crates/sim-core/src/vista.rs:552`) che unisce tre regole (minaccia, atto lontano dalla posizione del Presidente del Consiglio, evento nel dicastero: `crates/sim-core/src/ministri/agenda.rs:570-576`). La carta deve dire quale vale; il prototipo rifà la regola con le posizioni di `dati/base/atti.toml`.
 - **Le soglie della soddisfazione (25 e 40) e il costo d'intesa delle dimissioni chieste**: sono manopole (`dati/base/manopole.toml:4-11`, `:1164-1168`). La Vista porta solo `minaccia`, e la barra, «si dimette a fine turno» e il prezzo delle dimissioni ne hanno bisogno.
 
 Il genere dei ministri resta il rimando di [Disegno delle caricature](32-disegno-delle-caricature.md).

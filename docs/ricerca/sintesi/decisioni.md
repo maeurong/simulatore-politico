@@ -533,7 +533,7 @@ Ticket `.scratch/v1-piano-11-ui/issues/18-governo.md`, un giro su tre forme del 
 - **Figurine, non listino:** dieci carte 5 × 2, ciascuna col suo personaggio (caricatura, voto con freccia, motto), anche se la tabella densa era più compatta. Nell'album le carte in evidenza hanno un filo rosso in testa.
 - **Il costo sul bottone basta:** Ferma è diretto e scrive quanto costa al ministro; la conferma sul posto resta per ciò che costa ad altri (l'intesa con le dimissioni) o butta denaro (il cantiere fermato).
 - **La regione con mappa e lista** anche nel dettaglio a lato: la mappa dice dove il ministro non vuole andare, la lista dà il numero.
-- **Quattro dati al core:** costi di Ferma e Dirotta, indicatore di servizio del dicastero, perché dell'evidenza, soglie della soddisfazione e costo d'intesa delle dimissioni.
+- **Quattro dati al core:** i costi di Ferma e Dirotta; l'indicatore di servizio del dicastero; il perché dell'evidenza; le soglie della soddisfazione col costo d'intesa delle dimissioni.
 
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
