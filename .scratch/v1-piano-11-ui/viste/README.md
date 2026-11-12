@@ -99,7 +99,8 @@ governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].prop
   `elezioni_regioni` è `null`: il voto parte dalle `intenzioni_vere()` prese dentro la chiusura dopo il motore e le
   consuma lì; prima e dopo la chiusura le intenzioni sono altre (la destra vale 0,259 prima, 0,227 dopo, 0,249 al voto,
   seme 4), e `voti_per_regione` e `riparto_con` sono `pub(crate)`. `cantiere_finito` NON RAGGIUNTO: le agende dei
-  ministri si vedono solo al governo (02 e 06: nessuna agenda su 10 ministeri, cantieri visibili), quindi gli atti a un
+  ministri si vedono solo al governo (fuori dal governo, nella 02 in trattativa e nella 06 all'opposizione, nessuno dei
+  10 ministeri ha un'agenda, mentre i cantieri si vedono), quindi gli atti a un
   turno eseguiti nella chiusura della trattativa, dopo il voto, non si ricostruiscono dalle Viste. Rimandi al core.
 
 - 22: aggiunta dal ticket «Bilancio». La perdita reale è uguale per tutti i dicasteri (1,0% nel 2027T4). Spostare
