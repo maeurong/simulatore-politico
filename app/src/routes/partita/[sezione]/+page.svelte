@@ -23,13 +23,16 @@
   }
 </script>
 
-{#if partita.vista && aperta}
-  {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
+<!-- la cornice resta montata anche per il fotogramma in cui la sezione aperta non è più apribile: il fuoco non cade su body -->
+{#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
     <main class="corpo" class:due={impostazioni}>
       <div>
-        {#if fetta}<Segnaposto sezione={etichetta(aperta)} {fetta} />{/if}
+        {#if aperta}
+          {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
+          {#if fetta}<Segnaposto sezione={etichetta(aperta)} {fetta} />{/if}
+        {/if}
       </div>
       {#if impostazioni}<Impostazioni onchiudi={chiudiImpostazioni} />{/if}
     </main>

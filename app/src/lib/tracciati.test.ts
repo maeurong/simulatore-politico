@@ -96,6 +96,47 @@ describe("tracciatiDi", () => {
     const tre = tracciatiDi(finita, []);
     expect(tre.every((x) => x.grigio)).toBe(true);
     expect(tre.some((x) => x.rosso)).toBe(false);
+    const [consenso, maggioranza] = tre;
+    expect(consenso.nome).toBe("tracciato.consenso_coalizione");
+    expect(consenso.valore).toBeCloseTo(48.67, 2);
+    expect(consenso.testo).toBe("48,7%");
+    expect(caselle(consenso.valore!, consenso.scala!).piene).toBe(5);
+    expect(maggioranza.nome).toBe("tracciato.maggioranza");
+    expect(maggioranza.valore).toBe(14);
+    expect(maggioranza.ramo).toBe("Senato");
+    expect(caselle(maggioranza.valore!, maggioranza.scala!).piene).toBe(8);
+  });
+
+  it("partita finita senza alleati: l'ultimo stato è l'opposizione", () => {
+    const secondo = tracciatiDi({ ...opposizione, finita: true }, [])[1];
+    expect(secondo.nome).toBe("tracciato.per_farlo_cadere");
+    expect(secondo.valore).toBeNull();
+    expect(secondo.grigio).toBe(true);
+  });
+
+  it("lo spread ha il valore e rimanda all'11g per lo stacco", () => {
+    const conti = tracciatiDi(governo, [])[2];
+    expect(conti.valore).toBe(86);
+    expect(conti.rimando).toBe("11g");
+    expect(caselle(conti.valore!, conti.scala!).piene).toBe(10);
+  });
+
+  // la serie dà consenso e margini della coalizione: col partito solo o senza incarico non sono la stessa grandezza
+  const punto = (turno: number): PuntoSerie => ({ turno, data: { anno: 2027, trimestre: 1 }, consenso: 0.5, margine_camera: 10, margine_senato: 5, spread_pb: 80 });
+  it("all'opposizione il consenso del partito non ha variazione", () => {
+    const [consenso, , conti] = tracciatiDi(opposizione, [punto(1), punto(2)]);
+    expect(consenso.nome).toBe("tracciato.consenso_partito");
+    expect(consenso.prima).toBeNull();
+    expect(conti.prima).toBe(80);
+  });
+
+  it("in trattativa senza incarico consenso e maggioranza non hanno variazione; con l'incarico sì", () => {
+    const [consenso, maggioranza, conti] = tracciatiDi({ ...trattativa, richieste: [] }, [punto(0), punto(1)]);
+    expect(consenso.prima).toBeNull();
+    expect(maggioranza.prima).toBeNull();
+    expect(conti.prima).toBe(80);
+    const [conIncarico] = tracciatiDi(trattativa, [punto(0), punto(1)]);
+    expect(conIncarico.prima).toBe(50);
   });
 
   it("all'opposizione: «per farlo cadere» rimanda all'11e", () => {

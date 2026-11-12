@@ -48,5 +48,4 @@
   .bene { color: var(--verde) }
   .male { color: var(--rosso) }
   .crit { background: var(--rosso); color: var(--carta); padding: 0 5px }
-  .nascosto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
 </style>

@@ -57,6 +57,8 @@ svg { display: block }
 ::selection { background: var(--giallo); color: var(--ink) }
 :root.grave ::selection { background: var(--ink); color: var(--carta) }
 :focus-visible { outline: 2px solid var(--biro); outline-offset: 2px }
+/* nascosto alla vista, letto dai lettori di schermo */
+.nascosto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
 
 /* movimento spento (impostazioni.svelte.ts): le transizioni CSS perdono transform, restano le dissolvenze.
    ponytail: tiene solo l'opacità; le transizioni di Svelte e el.animate() non leggono il CSS, chiedono `fattori().muove` */

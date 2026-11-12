@@ -33,13 +33,14 @@
   // sulla prima pagina la testata grande c'è già
   const testatina = $derived(sezione !== "prima-pagina" && !grave);
 
-  let rifiuto = $state<string | null>(null);
+  // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista che l'ha causato, con una nuova sparisce
+  let rifiuto = $state.raw<{ testo: string; vista: Vista } | null>(null);
   async function chiudi() {
     rifiuto = null;
     try {
       await partita.chiudiTurno();
     } catch (e) {
-      rifiuto = comeErrore(e).testo;
+      rifiuto = { testo: comeErrore(e).testo, vista };
     }
   }
 </script>
@@ -61,13 +62,13 @@
         <span class="nessuno">{t("cornice.nessun_turno")}</span>
       {:else}
         <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={chiudi}>{t("cornice.chiudi_il_turno")}</Pulsante>
-        {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
+        {#if rifiuto?.vista === vista}<Rifiuto testo={rifiuto.testo} />{/if}
       {/if}
     </div>
   </div>
   <Sommario {vista} {sezione} {impostazioni} {onimpostazioni} />
 </header>
-{#if vista.crisi}<div class="banda">{t("cornice.banda_crisi")}</div>{/if}
+{#if stato === "crisi"}<div class="banda">{t("cornice.banda_crisi")}</div>{/if}
 {#if partita.guasto}<p class="guasto" role="alert">{partita.guasto}</p>{/if}
 
 <style>
@@ -80,7 +81,9 @@
   .chi { font-size: var(--c-sec); line-height: 1.3; color: var(--grigio); white-space: nowrap }
   .chi b { color: var(--ink) }
   .trks { display: flex; justify-content: center; min-width: 0 }
-  .c-dx { display: grid; gap: 3px; justify-items: center }
+  /* il rifiuto sta sotto il pulsante, fuori dal flusso: non sposta né il pulsante né i tracciati */
+  .c-dx { position: relative; display: grid; justify-items: end }
+  .c-dx :global(.rifiuto) { position: absolute; top: 100%; right: 0; z-index: 3; width: max-content; max-width: 44ch; background: var(--carta); text-align: right }
   .nessuno { font-size: var(--c-sec); color: var(--grigio); white-space: nowrap }
 
   .banda { flex: none; background: var(--ink); color: var(--carta); padding: 4px var(--marg); font-size: var(--c-sec); font-weight: 700; letter-spacing: .04em }

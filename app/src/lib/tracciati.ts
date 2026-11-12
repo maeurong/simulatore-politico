@@ -23,12 +23,13 @@ export type Tracciato = {
   scala: Scala | null; // null → nessuna casella da riempire
   rosso: boolean;
   grigio: boolean; // partita finita
-  rimando: string | null; // fetta che riempie un tracciato senza dato
+  rimando: string | null; // la fetta che riempie il posto vuoto: senza valore il tracciato, col valore lo stacco
   prima: number | null; // il valore al turno prima, dalla serie: la variazione sotto il numero
 };
 
 const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
-// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle
+// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
+// il tracciato porta rimando "11g"
 const SPREAD: Scala = { stacco: 550, passo: 75, rovesciata: true };
 
 const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id === id)?.in_vigore;
@@ -76,8 +77,8 @@ function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], 
 
 export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciato, Tracciato] {
   const prima = serie.find((p) => p.turno === v.turno - 1);
-  // a partita finita valgono le regole dell'ultimo stato
-  const stato = statoDi({ ...v, finita: false });
+  // a partita finita valgono le regole dell'ultimo stato, che si legge dagli alleati: governa è sempre falso
+  const stato = v.finita ? (v.alleati.length ? "governo" : "opposizione") : statoDi(v);
   const turnoZero = stato === "turno_zero";
   const alGoverno = stato === "trattativa" || stato === "crisi" || stato === "governo";
   // Vista.coalizione è piena solo nel turno del voto; in trattativa gli alleati stanno nelle richieste
@@ -88,27 +89,30 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciat
       : v.alleati.map((a) => a.partito)),
   ];
 
+  // la serie è della coalizione: senza incarico, in trattativa, la coalizione qui è il solo giocatore e non si confronta
+  const primaCoalizione = stato === "trattativa" && v.richieste.length === 0 ? undefined : prima;
   let primo: Tracciato;
   if (alGoverno) {
     const stacco = disposizione(v, "premio") === "nessuno" ? 50 : punti(v, "soglia_premio");
     const p = v.proiezione && margini(v.proiezione, coalizione);
     primo = consenso("tracciato.consenso_coalizione", coalizione.reduce((s, x) => s + quota(v, x), 0),
-      { stacco, passo: 4, rovesciata: false }, !!p && ((p.camera ?? 0) < 0 || (p.senato ?? 0) < 0), prima);
+      { stacco, passo: 4, rovesciata: false }, !!p && ((p.camera ?? 0) < 0 || (p.senato ?? 0) < 0), primaCoalizione);
   } else {
     const scala = { stacco: punti(v, "soglia_lista"), passo: 1, rovesciata: false };
     const q = quota(v, v.giocatore);
-    primo = consenso("tracciato.consenso_partito", q, scala, sottoLoStacco(q * 100, scala), prima);
+    // il partito da solo non è la coalizione della serie: nessuna variazione
+    primo = consenso("tracciato.consenso_partito", q, scala, sottoLoStacco(q * 100, scala), undefined);
   }
 
   const secondo: Tracciato = turnoZero
     ? maggioranza("tracciato.seggi_attesi", v.proiezione ?? [], coalizione, prima)
     : alGoverno
-      ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, prima)
+      ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, primaCoalizione)
       : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: "11e", prima: null };
 
   const terzo: Tracciato = {
     nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
-    rosso: false, grigio: false, rimando: null, prima: prima ? prima.spread_pb : null,
+    rosso: false, grigio: false, rimando: "11g", prima: prima ? prima.spread_pb : null,
   };
 
   const tre: [Tracciato, Tracciato, Tracciato] = [primo, secondo, terzo];

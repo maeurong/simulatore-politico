@@ -12,12 +12,13 @@ export type Pagina = (typeof PAGINE)[number];
 /** Il nome nel sommario («Prima pagina», «Eredità», «Schema dello Stato»). */
 export const etichetta = (p: Pagina) => t(`sommario.${p.replace("-", "_")}` as Chiave);
 
-/** In quest'ordine: finita → turno === 0 → fase "trattativa" → crisi → governa → opposizione. */
+/** In quest'ordine: finita → turno === 0 → fase "trattativa" → crisi del proprio governo → governa → opposizione. */
 export function statoDi(v: Vista): StatoGiocatore {
   if (v.finita) return "finita";
   if (v.turno === 0) return "turno_zero";
   if (v.fase === "trattativa") return "trattativa";
-  if (v.crisi) return "crisi";
+  // Vista.crisi è vera anche per la crisi di un governo IA: per chi sta all'opposizione resta opposizione
+  if (v.crisi && v.governa) return "crisi";
   return v.governa ? "governo" : "opposizione";
 }
 
@@ -65,7 +66,7 @@ const CRUSCOTTO: Record<StatoGiocatore, string> = {
   turno_zero: "11b", trattativa: "11b", governo: "11c", crisi: "11c", opposizione: "11e", finita: "11e",
 };
 
-/** La fetta che costruisce la sezione in questo stato; null se è costruita in 11a. */
+/** La fetta che costruisce la sezione in questo stato. Oggi mai null: il null è per le sezioni che le fette dopo costruiranno. */
 export function fettaDi(s: Sezione | "trattativa" | "eredita" | "schema", stato: StatoGiocatore): string | null {
   return s === "cruscotto" ? CRUSCOTTO[stato] : FETTA[s];
 }

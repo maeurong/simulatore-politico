@@ -17,7 +17,7 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
-    fs: { allow: [".."] },
+    fs: { allow: [".", "../.scratch/v1-piano-11-ui/viste"] },
     host: host || "127.0.0.1",
     hmr: host
       ? {

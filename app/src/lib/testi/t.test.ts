@@ -22,11 +22,10 @@ describe("numeri", () => {
     expect(segnato(-2.5, 1)).toBe("−2,5");
     expect(segnato(0.04, 1)).toBe("0,0");
   });
-  // Difetto: Intl dà «-0» e il replace lo rende «−0»; un meno su uno zero non va. Correzione al codice.
-  it.fails("numero: un negativo che arrotonda a zero non porta il meno", () => {
+  it("numero: un negativo che arrotonda a zero non porta il meno", () => {
     expect(numero(-0.4)).toBe("0");
   });
-  it.fails("percentuale: un negativo che arrotonda a zero non porta il meno", () => {
+  it("percentuale: un negativo che arrotonda a zero non porta il meno", () => {
     expect(percentuale(-0.0004, 1)).toBe("0,0%");
   });
 });

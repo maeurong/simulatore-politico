@@ -31,7 +31,7 @@ describe("partita", () => {
     await partita.chiudiTurno();
     expect(partita.vista).toBe(dopo);
     expect(partita.serie).toBe(serieNuova);
-    expect(goto).toHaveBeenCalledWith("/partita/trattativa");
+    expect(goto).toHaveBeenCalledWith("/partita/trattativa", { keepFocus: true });
     expect(partita.occupato).toBe(false);
   });
 
@@ -68,7 +68,7 @@ describe("partita", () => {
     expect(partita.vista).toBe(dopo);
     expect(partita.serie).toBe(serieVecchia);
     expect(partita.guasto).toBe(`serie illeggibile ${t("cornice.grafici_non_aggiornati")}`);
-    expect(goto).toHaveBeenCalledWith("/partita/trattativa");
+    expect(goto).toHaveBeenCalledWith("/partita/trattativa", { keepFocus: true });
     expect(partita.occupato).toBe(false);
   });
 
@@ -91,5 +91,19 @@ describe("partita", () => {
     await prima;
     expect(partita.occupato).toBe(false);
     expect(partita.vista).toBe(dopo);
+  });
+
+  it("esci con un comando in volo: la risposta che arriva dopo si scarta", async () => {
+    let rispondi!: (v: Vista) => void;
+    guscio.chiudiTurno.mockReturnValue(new Promise<Vista>((r) => (rispondi = r)));
+    const inVolo = partita.chiudiTurno();
+    partita.esci();
+    rispondi(dopo);
+    await inVolo;
+    expect(partita.vista).toBeNull();
+    expect(partita.serie).toEqual([]);
+    expect(partita.guasto).toBeNull();
+    expect(goto).not.toHaveBeenCalled();
+    expect(partita.occupato).toBe(false);
   });
 });

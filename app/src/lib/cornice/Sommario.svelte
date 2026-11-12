@@ -31,7 +31,7 @@
     {#if v.motivo}
       <span class="barrata">
         <button type="button" class="voce chiusa" aria-disabled="true" title={t(v.motivo)} aria-describedby="{id}-{v.nome}">{v.etichetta}</button>
-        <span id="{id}-{v.nome}" class="perche">{t(v.motivo)}</span>
+        <span id="{id}-{v.nome}" class="perche nascosto">{t(v.motivo)}</span>
       </span>
     {:else}
       <a class="voce" class:qui={sezione === v.nome} href="/partita/{v.nome}" aria-current={sezione === v.nome ? "page" : undefined}>{v.etichetta}</a>
@@ -57,9 +57,8 @@
   .voce.chiusa { text-decoration: line-through; font-weight: 400; cursor: help }
   .voce.chiusa:hover { color: var(--grigio) }
 
-  /* il motivo, fuori dal nome del bottone: nascosto alla vista ma letto (aria-describedby); al fuoco da tastiera compare
+  /* il motivo, fuori dal nome del bottone: .nascosto ma letto (aria-describedby); al fuoco da tastiera compare
      sotto la voce, come nel prototipo */
-  .perche { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
   .chiusa:focus-visible + .perche {
     width: auto; height: auto; overflow: visible; clip-path: none; left: 0; top: calc(100% + 2px); z-index: 3;
     background: var(--ink); color: var(--carta); font-size: var(--c-min); font-weight: 400; padding: 3px 8px;

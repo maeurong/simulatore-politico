@@ -13,15 +13,16 @@ export function t(chiave: Chiave, valori: Record<string, string | number> = {}):
 }
 
 const MENO = "−";
+/** Si legge zero: nessuna cifra da 1 a 9. */
+const zero = (testo: string) => !/[1-9]/.test(testo);
 
 export function numero(x: number, decimali = 0): string {
-  return new Intl.NumberFormat("it-IT", {
+  const testo = new Intl.NumberFormat("it-IT", {
     minimumFractionDigits: decimali,
     maximumFractionDigits: decimali,
     useGrouping: "always",
-  })
-    .format(x)
-    .replace("-", MENO);
+  }).format(x);
+  return testo.replace("-", zero(testo) ? "" : MENO);
 }
 
 export function percentuale(quota: number, decimali = 1): string {
@@ -30,7 +31,7 @@ export function percentuale(quota: number, decimali = 1): string {
 
 export function segnato(x: number, decimali = 0): string {
   const assoluto = numero(Math.abs(x), decimali);
-  if (!/[1-9]/.test(assoluto)) return assoluto;
+  if (zero(assoluto)) return assoluto;
   return (x > 0 ? "+" : MENO) + assoluto;
 }
 

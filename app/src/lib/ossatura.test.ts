@@ -27,6 +27,10 @@ describe("statoDi", () => {
     expect(statoDi(opposizione)).toBe("opposizione");
     expect(statoDi(finita)).toBe("finita");
   });
+  it("la crisi di un governo IA, col giocatore all'opposizione, resta opposizione", () => {
+    expect(statoDi({ ...opposizione, crisi: true })).toBe("opposizione");
+    expect(statoDi(crisi)).toBe("crisi");
+  });
 });
 
 describe("barrata", () => {

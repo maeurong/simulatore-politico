@@ -8,9 +8,9 @@
   let { tracciato: tr }: { tracciato: Tracciato } = $props();
 
   const pos = $derived(tr.valore !== null && tr.scala ? caselle(tr.valore, tr.scala) : null);
-  // lo stacco dello spread non ha dato fino a 11g
-  const stacco = $derived(tr.nome !== "tracciato.conti");
-  const rimando = $derived(tr.rimando ? t("tracciato.arriva", { fetta: tr.rimando }) : undefined);
+  // col valore il rimando è dello stacco (lo spread fino a 11g): caselle piene, senza tacche dello stacco
+  const stacco = $derived(!tr.rimando);
+  const rimando = $derived(tr.rimando ? t(tr.valore === null ? "tracciato.arriva" : "tracciato.stacco_arriva", { fetta: tr.rimando }) : undefined);
   const decimali = $derived(tr.nome.startsWith("tracciato.consenso") ? 1 : 0);
   const accanto = $derived(tr.ramo ?? (tr.nome === "tracciato.conti" ? t("tracciato.pb") : null));
 </script>
@@ -32,7 +32,7 @@
         formato={() => tr.testo}
         formatoVariazione={(x) => numero(x, decimali)}
         male={tr.scala?.rovesciata ? "sale" : "scende"} />
-      {#if accanto}<small>{accanto}</small>{/if}
+      {#if accanto}<small>{accanto}</small>{/if}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}
     </span>
   {:else}
     <span class="cas vuoto" aria-hidden="true"><b class="oltre"></b>{#each { length: 10 }, i (i)}<i data-tagli-ignora></i>{/each}<b class="oltre"></b></span>
@@ -68,5 +68,4 @@
   .cas.vuoto i { border-style: dashed; border-color: var(--grigio) }
   .oltre { font-size: var(--c-min); line-height: 1; color: var(--rosso); width: 8px; text-align: center }
   .oltre.su { color: var(--grigio) }
-  .nascosto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
 </style>
