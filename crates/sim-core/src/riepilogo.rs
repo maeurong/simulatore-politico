@@ -2,12 +2,17 @@
 //! fondazione, consenso e maggioranza attesi senza rumore, prima della campagna.
 
 use crate::dati::DatiGioco;
+use crate::disposizioni::Norma;
 use crate::elettorato::Intenzioni;
+use crate::errore::Errore;
 use crate::informazione::Sondaggio;
 use crate::legislatura::{Dichiarazione, SEGNAPOSTO, maggioranza, partito_nuovo, posizioni};
 use crate::partita::{Partita, quote_fra_i_votanti};
 use crate::partiti::Partito;
+use crate::scenario::Ingresso;
+use crate::su_misura::SuMisura;
 use serde::Serialize;
+use std::collections::BTreeMap;
 #[cfg(test)]
 use ts_rs::TS;
 
@@ -111,6 +116,127 @@ fn elenco(voci: &[String], separatore: &str) -> String {
 /// `soglia_crisi_debito`. Una sola, così le due non divergono.
 pub(crate) fn alla_soglia_della_crisi(soglia: f64, spread: f64) -> bool {
     spread >= soglia
+}
+
+/// Ciò che l'editor deve sapere prima di ogni riepilogo: intervalli dei sei cursori, leggi
+/// elettorali, disposizioni coi gradini, partiti dello scenario.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CatalogoScenario {
+    /// I sei cursori, in quest'ordine: debito_pil, disoccupazione, inflazione, ricchezza,
+    /// eta_mediana, orientamento.
+    pub cursori: Vec<CursoreCatalogo>,
+    /// Per ogni legge elettorale di elezioni.toml, il gradino di ciascuna disposizione elettorale.
+    pub leggi_elettorali: BTreeMap<String, BTreeMap<String, String>>,
+    pub legge_di_base: String,
+    /// Tutte le disposizioni dei dati, nel loro ordine.
+    pub disposizioni: Vec<VoceCatalogo>,
+    /// I partiti dello scenario, nel loro ordine: la fondazione li mette sotto l'asse.
+    pub partiti: Vec<PartitoCatalogo>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CursoreCatalogo {
+    /// La chiave del cursore in `SuMisura.cursori`, non un'etichetta: il testo lo mette la UI.
+    pub nome: String,
+    pub valore: f64,
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+/// Una disposizione, coi suoi gradini.
+pub struct VoceCatalogo {
+    pub id: String,
+    pub nome: String,
+    /// Nome del dicastero; None per costituzionali ed elettorali.
+    pub dicastero: Option<String>,
+    pub norma: Norma,
+    /// Id del gradino in vigore nello scenario di base.
+    pub partenza: String,
+    pub gradini: Vec<GradinoCatalogo>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct GradinoCatalogo {
+    pub id: String,
+    pub nome: String,
+    pub saldo: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct PartitoCatalogo {
+    pub id: String,
+    pub nome: String,
+    pub posizione: f64,
+}
+
+/// Il catalogo dei dati, di sola lettura. I gradini elettorali di ogni legge sono quelli che
+/// `con_su_misura` ne fa; il suo errore si propaga.
+///
+/// # Errors
+/// Se `con_su_misura` rifiuta una delle leggi elettorali dei dati.
+pub fn catalogo(dati: &DatiGioco) -> Result<CatalogoScenario, Errore> {
+    let sc = dati.scenario();
+    let c = &sc.cursori;
+    let cursore = |nome: &str, i: &Ingresso| CursoreCatalogo {
+        nome: nome.into(),
+        valore: i.valore,
+        min: i.min,
+        max: i.max,
+    };
+    let base = SuMisura::base(dati);
+    let mut leggi_elettorali = BTreeMap::new();
+    for nome in dati.elezioni().impostazioni.keys() {
+        let mut s = base.clone();
+        s.cursori.legge_elettorale.clone_from(nome);
+        let gradini = (dati.con_su_misura(&s)?.disposizioni().iter())
+            .filter(|x| x.norma == Norma::Elettorale)
+            .map(|x| (x.id.clone(), x.partenza.clone()))
+            .collect();
+        leggi_elettorali.insert(nome.clone(), gradini);
+    }
+    Ok(CatalogoScenario {
+        cursori: vec![
+            cursore("debito_pil", &sc.debito_pil),
+            cursore("disoccupazione", &sc.disoccupazione),
+            cursore("inflazione", &sc.inflazione),
+            cursore("ricchezza", &c.ricchezza),
+            cursore("eta_mediana", &c.eta_mediana),
+            cursore("orientamento", &c.orientamento),
+        ],
+        leggi_elettorali,
+        legge_di_base: sc.legge_elettorale.clone(),
+        disposizioni: (dati.disposizioni().iter())
+            .map(|x| VoceCatalogo {
+                id: x.id.clone(),
+                nome: x.nome.clone(),
+                dicastero: (x.dicastero.as_ref())
+                    .and_then(|i| dati.dicasteri().iter().find(|d| &d.id == i))
+                    .map(|d| d.nome.clone()),
+                norma: x.norma,
+                partenza: x.partenza.clone(),
+                gradini: (x.gradini.iter())
+                    .map(|g| GradinoCatalogo {
+                        id: g.id.clone(),
+                        nome: g.nome.clone(),
+                        saldo: g.saldo,
+                    })
+                    .collect(),
+            })
+            .collect(),
+        partiti: (sc.partiti.iter())
+            .map(|p| PartitoCatalogo {
+                id: p.id.clone(),
+                nome: p.nome.clone(),
+                posizione: p.posizione,
+            })
+            .collect(),
+    })
 }
 
 /// Il riepilogo dei dati, deterministico e senza seme: una partita fondata per posizione, sulle

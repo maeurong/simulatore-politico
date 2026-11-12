@@ -9,12 +9,12 @@ export type RiepilogoBilancio = {
  * Euro annui di spesa dei dicasteri e fondo in più della bozza; negativo se la legge spende
  * meno della bozza.
  */
-costo_spesa: bigint, 
+costo_spesa: number, 
 /**
  * Euro annui di gettito persi rispetto alla bozza; negativo se la legge incassa più della
  * bozza.
  */
-costo_entrate: bigint, 
+costo_entrate: number, 
 /**
  * Crescita % della spesa netta sull'anno prima di quello del bilancio, come la misura il
  * controllo UE.

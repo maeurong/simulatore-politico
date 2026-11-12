@@ -6,4 +6,4 @@ import type { Leva } from "./Leva";
 /**
  * Una spesa in anteprima: costo esatto, intensità e la sua causa in una riga.
  */
-export type VoceAnteprimaCampagna = { bersaglio: Bersaglio, leva: Leva, euro: bigint, intensita: Intensita, causa: string, };
+export type VoceAnteprimaCampagna = { bersaglio: Bersaglio, leva: Leva, euro: number, intensita: Intensita, causa: string, };
