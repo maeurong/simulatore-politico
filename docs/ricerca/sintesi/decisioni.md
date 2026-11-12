@@ -502,5 +502,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/29-schema-dello-stato.md`, due giri su un
 - **Restano da risolvere dentro B** i fili muti, il groviglio sul Presidente del Consiglio e il verso non chiaro: sono le tre note di Mario al primo giro.
 - **Nessun campo nuovo:** ogni filo viene da un campo della Vista (agende, cantieri, proposte, intesa, calendario, esiti, eventi, situazioni, spread). I tondi aspettano l'esito del core.
 
+## 2026-11-12: eredità
+Ticket `.scratch/v1-piano-11-ui/issues/30-eredita.md`, un giro su un prototipo con tre forme, nutrito da una partita giocata fino alla fine senza seggi (seme 43 a 4,5).
+
+- **Forma A · Ultima edizione:** la fine come pagina di giornale, col voto perso in testa e tre colonne (elezioni, Paese contro il turno zero, leggi che restano), i grafici in fondo. Scartati il consuntivo a quattro numeri e la cronologia su un asse solo.
+- **Riavvolgimento in due passi:** un pulsante diretto per il turno del voto perso, il Registro per tutti gli altri. Ogni turno riavvolgibile dalla pagina stessa è stato scartato: il Registro lo fa già.
+- **Una composizione, due sorgenti:** la stessa pagina si rilegge dall'albo, senza cornice né azioni.
+- **La fine senza seggi si raggiunge giocando**: 17 partite su 720 senza leggi, tutte al secondo voto. Più leggi passano, meno il giocatore la raggiunge.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

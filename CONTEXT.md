@@ -275,6 +275,10 @@ Periodo fra due elezioni; parte da 5 anni e la sua durata si cambia con una norm
 Il resoconto con cui finisce la partita (partito senza seggi in entrambe le Camere, oppure abbandono): anni al governo, leggi ancora in vigore, indicatori confrontati col turno zero.
 _Evita_: bilancio (che è la legge), punteggio, game over
 
+**Eredità in bozza**:
+L'eredità dopo la fine senza seggi, prima che il giocatore la confermi: la partita resta fra quelle in corso e il voto perso si può ancora riavvolgere. Confermata, va nell'albo e non si torna più a nessun turno.
+_Evita_: eredità provvisoria, game over
+
 **Abbandono**:
 Il comando, da confermare, con cui il giocatore chiude la partita e riceve subito l'eredità; non si torna indietro.
 _Evita_: resa, uscita

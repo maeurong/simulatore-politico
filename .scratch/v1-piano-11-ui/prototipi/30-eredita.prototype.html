@@ -1,0 +1,513 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Eredità» (30), mappa v1-piano-11-ui.
+  Domanda: com'è fatta l'eredità, la casa della partita finita? Anni al governo, leggi ancora in vigore, indicatori contro
+  il turno zero, riavvolgimenti (storia 149); la serie dei tre indicatori e i risultati di ogni elezione; la bozza dopo la
+  sconfitta per seggi, con «torna a un turno» e la conferma sul posto che la manda nell'albo (storia 150). L'abbandono
+  resta nell'edicola (ticket 13): qui solo la fine senza seggi. Si rilegge dall'albo con la stessa composizione?
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Ultima edizione — la pagina di giornale della fine: titolo sul voto perso, tre colonne (elezioni, Paese che lasci,
+       leggi che restano), i tre grafici in fondo; la bozza nel dettaglio a lato, «Torna a un turno ›» porta al Registro
+    B  Consuntivo     — il bilancio di fine partita come un listino: quattro numeri in testa, la tabella contro il turno
+       zero con il righello, i tre grafici grandi a pagina; la bozza è una banda sotto la cornice, con «Torna a prima del
+       voto» diretto e il Registro per gli altri turni
+    C  Cronologia     — la partita su un asse solo: le tre serie una sopra l'altra sullo stesso tempo, legislature a fasce,
+       voti e leggi segnati sull'asse; un turno scelto si apre nel dettaglio a lato con «Torna al turno N» sul posto
+  Stati, ?stato=: bozza (finita senza seggi, dentro la partita, con la cornice) · albo (la stessa eredità riletta
+  dall'edicola, confermata: niente cornice, «‹ Edicola», nessuna azione).
+  ?fin=1280|1440  ?scala=1|1.25
+  Dati: viste/30-eredita.json, giocata da genera/ (seme e mosse nel campo «come» del JSON): `voce_albo()` della partita
+  finita senza seggi, `eredita()`, la Vista e i cambi di legge per chiusura, che `genera/` legge confrontando la Vista prima
+  e dopo ogni chiusura (la Vista dice la legge in vigore, non quando è entrata). Nessun dato forzato. Titoli: BOZZA.
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A), cornice dal 29, grafici e barre del voto dal 13.
+  Non è codice di produzione. Buttare dopo il verdetto.
+
+  VERDETTO (Mario, 12/11/2026), nel ticket 30: A · Ultima edizione, col riavvolgimento di B: nel dettaglio a lato
+  «Torna al turno N · prima del voto ›» diretto con la conferma sul posto, «Un altro turno, nel Registro ›» per gli altri,
+  poi «Conferma l'eredità». Dall'albo dell'edicola si rilegge la stessa pagina, senza cornice e senza azioni. Il file si
+  apre su A col verdetto applicato; B e C restano dalla barra in basso.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo eredità · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.bollo{display:inline-block;border:3px double var(--rosso);color:var(--rosso);font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:1px 9px;transform:rotate(-5deg);font-size:var(--c-min);white-space:nowrap}
+.bollo.ink{border-color:var(--ink);color:var(--ink)}
+.lato .bollo{justify-self:start}
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+h3.tit{font-size:var(--c-sez)}
+h4.tit{font-size:var(--c-riq)}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.dati dt{color:var(--grigio)}
+.bz{display:inline-block;background:#ff8ad8;color:#111;font:700 10px/1.4 system-ui,sans-serif;padding:0 4px;letter-spacing:.04em;vertical-align:.3em;margin-left:6px}
+
+/* cornice A · Gerenza (dal 29) */
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.cas{display:flex;gap:2px}
+.cas i{width:8px;height:14px;border:1.5px solid var(--ink);flex:none}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.fermo i{border-color:var(--grigio)} .cas.fermo i.on{background:var(--grigio)}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.04em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.trk.fermo .v{color:var(--grigio)}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 8px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:end;font-size:var(--c-min);color:var(--grigio);white-space:nowrap}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+.testa{display:flex;align-items:end;gap:16px;padding:12px var(--marg) 8px;border-bottom:var(--doppio)}
+.testa .nomino{font-size:30px}
+.testa .dove{font-family:var(--tit);font-size:var(--c-sez);font-weight:600}
+.testa .fuori{margin-left:auto;display:flex;gap:16px;align-items:center;padding-bottom:3px}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+.lato{border:var(--bordo);padding:12px 14px;overflow:hidden auto;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start;min-height:0}
+.titsez{display:flex;align-items:baseline;gap:12px;border-bottom:var(--forte);padding-bottom:4px;margin-bottom:6px}
+.titsez .tit{font-size:var(--c-riq)}
+.titsez .dx{margin-left:auto}
+
+/* pezzi dal 13 */
+.ind{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:3px 12px;font-size:var(--c-sec);align-items:baseline}
+.ind>span:nth-child(4n+1){color:var(--grigio)}
+.ind .h{font-size:var(--c-min);color:var(--grigio);letter-spacing:.06em;text-transform:uppercase}
+.ind .r{text-align:right;white-space:nowrap}
+.gr{position:relative}
+.gr .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);display:flex;justify-content:space-between}
+.gr .k b{color:var(--ink);letter-spacing:0;text-transform:none;font-size:var(--c-sec)}
+.gr svg{overflow:visible}
+.gr text, .crono text{font:var(--c-min) var(--txt);fill:var(--grigio)}
+.tip{position:absolute;z-index:4;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 7px;pointer-events:none;white-space:nowrap}
+.el{display:grid;gap:4px;padding-top:6px;border-top:var(--filo)}
+.el:first-child{border-top:0;padding-top:0}
+.barra{display:flex;gap:2px;height:16px}
+.barra i{background:var(--grigio);min-width:0;position:relative}
+.barra i:nth-child(even){background:var(--ink)}
+.barra i.mio{background:var(--rosso)}
+.etich{display:flex;gap:2px;font-size:var(--c-min);color:var(--grigio)}
+.etich span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:clip}
+.etich span.mio{color:var(--rosso);font-weight:700}
+.leggi{list-style:none;display:grid;gap:0}
+.leggi li{padding:5px 0;border-top:var(--filo);font-size:var(--c-sec);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px}
+.leggi li:first-child{border-top:0}
+.leggi li small{color:var(--grigio);font-size:var(--c-min);grid-column:1/-1}
+
+/* A · Ultima edizione */
+.apre{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;padding-bottom:10px;border-bottom:1px solid var(--ink);align-items:end}
+.apre h2{font-size:var(--c-apre);line-height:1.04}
+.apre .o{font-size:17px;font-weight:700}
+.apre p{font-size:var(--c-lead);color:var(--grigio);grid-column:1/-1}
+.col3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--canale)}
+.col3>section{border-left:var(--filo);padding-left:var(--canale)}
+.col3>section:first-child{border-left:0;padding-left:0}
+.gr3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--canale);border-top:var(--doppio);padding-top:8px}
+
+/* B · Consuntivo */
+.banda{background:var(--ink);color:var(--carta);padding:6px var(--marg);font-size:var(--c-sec);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.banda b{font-weight:700}
+.banda .btn{border-color:var(--carta);background:var(--ink);color:var(--carta)}
+.banda .btn:hover,.banda .btn.pieno{background:var(--carta);color:var(--ink)}
+.banda .btn.via{border-color:#ff9aa8;color:#ff9aa8}
+.banda .btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.banda .link{color:var(--carta)}
+.banda .dx{margin-left:auto;display:flex;gap:8px;align-items:center}
+.quattro{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:var(--forte);border-bottom:var(--filo)}
+.quattro>div{padding:8px 12px;border-left:var(--filo)}
+.quattro>div:first-child{border-left:0;padding-left:0}
+.quattro .n{font-family:var(--tit);font-size:var(--c-pag);font-weight:700;line-height:1.05}
+.quattro .k{font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;color:var(--grigio)}
+.righ{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;gap:6px 14px;align-items:center;font-size:var(--c-sec)}
+.righ .h{font-size:var(--c-min);color:var(--grigio);letter-spacing:.06em;text-transform:uppercase}
+.righ svg text{font:var(--c-min) var(--txt);fill:var(--grigio)}
+
+/* C · Cronologia */
+.crono{position:relative;border-top:var(--forte);padding-top:4px}
+.crono svg{overflow:visible}
+.crono .hit{cursor:pointer}
+.crono .hit:hover rect.c{fill:var(--velo)}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">stato</span><span class="seg" data-k="stato"><button data-v="bozza">in bozza, nella partita</button><button data-v="albo">riletta dall’albo</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button></span>
+  <span class="cap">scala</span><span class="seg" data-k="scala"><button data-v="1">1×</button><button data-v="1.25">1,25×</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+const D = {"come":"seme 43, fonda a 4,5, nessuna coalizione; la bozza a ogni bilancio e, al governo fuori dalla crisi, la legge più vicina al proprio posto che l'anteprima dà approvata, al più 2; finita senza seggi alla chiusura del turno 20","eredita":{"anni_al_governo":1.0,"bozza":true,"fine":"senza_seggi","indicatori":[{"fine":136.92417093382355,"id":"debito_pil","nome":"Debito (% del PIL)","turno_zero":136.7},{"fine":108.22715874844653,"id":"spread","nome":"Spread (punti base)","turno_zero":83.87909999999988},{"fine":5.80669892554275,"id":"disoccupazione","nome":"Disoccupazione (%)","turno_zero":5.6000000000000005},{"fine":1.395642041719336,"id":"inflazione","nome":"Inflazione annua (%)","turno_zero":4.2}],"leggi_in_vigore":["Concorrenza nei servizi","Export di armi"],"riavvolgimenti":0},"voce_albo":{"anni_al_governo":1.0,"elezioni":[{"affluenza":0.7800504622497744,"data":{"anno":2031,"trimestre":4},"seggi_giocatore":[0,0],"voti":[["Estrema sinistra",0.02124576887127251],["Sinistra",0.24287573648371802],["Centrosinistra",0.041966772954608024],["Centro",0.027174313791143892],["Centrodestra",0.04344163499814107],["Destra",0.2199222762859918],["Estrema destra",0.06049196844076237],["Partito del giocatore",0.02412629138244558],["Orizzonte Comune",0.12266142512209709],["Voce del Paese",0.19609381166981965]]},{"affluenza":0.7181149044888572,"data":{"anno":2026,"trimestre":4},"seggi_giocatore":[66,32],"voti":[["Estrema sinistra",0.024778811631567175],["Sinistra",0.3269463714159547],["Centrosinistra",0.05768359146829971],["Centro",0.03946212122714321],["Centrodestra",0.06808361939719376],["Destra",0.26458790490211576],["Estrema destra",0.05857427562585689],["Partito del giocatore",0.15988330433186881]]}],"esito":"Senza seggi","fine":{"anno":2032,"trimestre":1},"formato_albo":2,"indicatori":[{"fine":136.92417093382355,"id":"debito_pil","nome":"Debito (% del PIL)","turno_zero":136.7},{"fine":108.22715874844653,"id":"spread","nome":"Spread (punti base)","turno_zero":83.87909999999988},{"fine":5.80669892554275,"id":"disoccupazione","nome":"Disoccupazione (%)","turno_zero":5.6000000000000005},{"fine":1.395642041719336,"id":"inflazione","nome":"Inflazione annua (%)","turno_zero":4.2}],"inizio":{"anno":2026,"trimestre":4},"leggi_in_vigore":["Concorrenza nei servizi","Export di armi"],"nome":"Partito del giocatore","riavvolgimenti":0,"scenario":"Italia di oggi","serie":[{"consenso":0.1857625250393906,"data":{"anno":2026,"trimestre":4},"margine_camera":-201,"margine_senato":-101,"spread_pb":84,"turno":0},{"consenso":0.16896473809332302,"data":{"anno":2027,"trimestre":1},"margine_camera":-135,"margine_senato":-69,"spread_pb":77,"turno":1},{"consenso":0.16241509529524753,"data":{"anno":2027,"trimestre":2},"margine_camera":-135,"margine_senato":-69,"spread_pb":87,"turno":2},{"consenso":0.20276159364887034,"data":{"anno":2027,"trimestre":3},"margine_camera":-135,"margine_senato":-69,"spread_pb":119,"turno":3},{"consenso":0.16868389780302384,"data":{"anno":2027,"trimestre":4},"margine_camera":-135,"margine_senato":-69,"spread_pb":118,"turno":4},{"consenso":0.1956707805940553,"data":{"anno":2028,"trimestre":1},"margine_camera":-135,"margine_senato":-69,"spread_pb":133,"turno":5},{"consenso":0.19860800129421274,"data":{"anno":2028,"trimestre":2},"margine_camera":-135,"margine_senato":-69,"spread_pb":154,"turno":6},{"consenso":0.16347415007824032,"data":{"anno":2028,"trimestre":3},"margine_camera":-135,"margine_senato":-69,"spread_pb":179,"turno":7},{"consenso":0.1840541494735185,"data":{"anno":2028,"trimestre":4},"margine_camera":-135,"margine_senato":-69,"spread_pb":195,"turno":8},{"consenso":0.18327756611374238,"data":{"anno":2029,"trimestre":1},"margine_camera":-135,"margine_senato":-69,"spread_pb":208,"turno":9},{"consenso":0.17693048790093413,"data":{"anno":2029,"trimestre":2},"margine_camera":-135,"margine_senato":-69,"spread_pb":210,"turno":10},{"consenso":0.1804551533462766,"data":{"anno":2029,"trimestre":3},"margine_camera":-135,"margine_senato":-69,"spread_pb":201,"turno":11},{"consenso":0.14715355510227437,"data":{"anno":2029,"trimestre":4},"margine_camera":-135,"margine_senato":-69,"spread_pb":177,"turno":12},{"consenso":0.1427968900327489,"data":{"anno":2030,"trimestre":1},"margine_camera":-135,"margine_senato":-69,"spread_pb":143,"turno":13},{"consenso":0.15040975083722116,"data":{"anno":2030,"trimestre":2},"margine_camera":-135,"margine_senato":-69,"spread_pb":115,"turno":14},{"consenso":0.12593795248855294,"data":{"anno":2030,"trimestre":3},"margine_camera":-135,"margine_senato":-69,"spread_pb":97,"turno":15},{"consenso":0.10763985338163452,"data":{"anno":2030,"trimestre":4},"margine_camera":-135,"margine_senato":-69,"spread_pb":108,"turno":16},{"consenso":0.1121061420146906,"data":{"anno":2031,"trimestre":1},"margine_camera":-135,"margine_senato":-69,"spread_pb":80,"turno":17},{"consenso":0.05452561525090784,"data":{"anno":2031,"trimestre":2},"margine_camera":-135,"margine_senato":-69,"spread_pb":89,"turno":18},{"consenso":0.03517350099532246,"data":{"anno":2031,"trimestre":3},"margine_camera":-135,"margine_senato":-69,"spread_pb":84,"turno":19},{"consenso":0.1859226018816572,"data":{"anno":2031,"trimestre":4},"margine_camera":-94,"margine_senato":-52,"spread_pb":85,"turno":20}],"turni":21},"cambi":[{"a":"1","chiusura":0,"da":"2_3","data":{"anno":2027,"trimestre":1},"id":"credito_zes","legge":"DL 124/2023, art. 16","nome":"Credito d'imposta nella ZES unica"},{"a":"consentito","chiusura":3,"da":"vietato","data":{"anno":2027,"trimestre":4},"id":"nucleare","legge":"L. 169/2026, art. 1","nome":"Nucleare"},{"a":"0_75","chiusura":4,"da":"1","data":{"anno":2028,"trimestre":1},"id":"credito_zes","legge":"DL 124/2023, art. 16","nome":"Credito d'imposta nella ZES unica"},{"a":"3","chiusura":6,"da":"7","data":{"anno":2028,"trimestre":3},"id":"cuneo_fiscale","legge":"L. 2/2027","nome":"Cuneo fiscale"},{"a":"gare","chiusura":6,"da":"licenze_chiuse","data":{"anno":2028,"trimestre":3},"id":"concorrenza_servizi","legge":"L. 0/2027","nome":"Concorrenza nei servizi"},{"a":"7","chiusura":6,"da":"nessuno","data":{"anno":2028,"trimestre":3},"id":"salario_minimo","legge":"L. 1/2027","nome":"Salario minimo legale"},{"a":"20","chiusura":8,"da":"40","data":{"anno":2029,"trimestre":1},"id":"incentivo_investimenti","legge":"L. 9/2028","nome":"Incentivo fiscale agli investimenti"},{"a":"66","chiusura":8,"da":"67","data":{"anno":2029,"trimestre":1},"id":"eta_pensionabile","legge":"L. 10/2028","nome":"Età pensionabile"},{"a":"15","chiusura":8,"da":"20","data":{"anno":2029,"trimestre":1},"id":"decontribuzione","legge":"L. 207/2024, art. 1 c. 406-412","nome":"Sgravio contributivo nel Mezzogiorno"},{"a":"10","chiusura":9,"da":"20","data":{"anno":2029,"trimestre":2},"id":"incentivo_investimenti","legge":"L. 34/2029","nome":"Incentivo fiscale agli investimenti"},{"a":"0","chiusura":10,"da":"36_50","data":{"anno":2029,"trimestre":3},"id":"detrazione_edilizia","legge":"L. 19/2028","nome":"Detrazione edilizia"},{"a":"libere","chiusura":10,"da":"gare","data":{"anno":2029,"trimestre":3},"id":"concorrenza_servizi","legge":"L. 20/2028","nome":"Concorrenza nei servizi"},{"a":"rigido","chiusura":10,"da":"semplificato","data":{"anno":2029,"trimestre":3},"id":"codice_appalti","legge":"L. 21/2028","nome":"Codice degli appalti"},{"a":"1","chiusura":11,"da":"0_75","data":{"anno":2029,"trimestre":4},"id":"credito_zes","legge":"L. 46/2029","nome":"Credito d'imposta nella ZES unica"},{"a":"0","chiusura":12,"da":"15","data":{"anno":2030,"trimestre":1},"id":"decontribuzione","legge":"L. 207/2024, art. 1 c. 406-412","nome":"Sgravio contributivo nel Mezzogiorno"},{"a":"semplificato","chiusura":13,"da":"rigido","data":{"anno":2030,"trimestre":2},"id":"codice_appalti","legge":"L. 65/2030","nome":"Codice degli appalti"},{"a":"0","chiusura":14,"da":"0","data":{"anno":2030,"trimestre":3},"id":"detrazione_edilizia","legge":"L. 45/2029","nome":"Detrazione edilizia"},{"a":"7","chiusura":16,"da":"3","data":{"anno":2031,"trimestre":1},"id":"cuneo_fiscale","legge":"L. 49/2030","nome":"Cuneo fiscale"},{"a":"2_3","chiusura":17,"da":"1","data":{"anno":2031,"trimestre":2},"id":"credito_zes","legge":"L. 66/2030","nome":"Credito d'imposta nella ZES unica"},{"a":"permissivo","chiusura":18,"da":"restrittivo","data":{"anno":2031,"trimestre":3},"id":"export_armi","legge":"L. 77/2031","nome":"Export di armi"},{"a":"licenze_chiuse","chiusura":19,"da":"libere","data":{"anno":2031,"trimestre":4},"id":"concorrenza_servizi","legge":"L. 79/2031","nome":"Concorrenza nei servizi"}],"vista":{"turno":21,"data":{"anno":2032,"trimestre":1}}};
+const DEF = {v:'A', stato:'bozza', fin:'1280', scala:'1'};
+const st = {...DEF, conf:null, sel:null, msg:''};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const FORME = {A:'A · Ultima edizione', B:'B · Consuntivo', C:'C · Cronologia'};
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ===== formati =====
+const MESI=['gennaio–marzo','aprile–giugno','luglio–settembre','ottobre–dicembre'];
+const per = t => `${MESI[t.trimestre-1]} ${t.anno}`;
+const Per = t => { const s=per(t); return s[0].toUpperCase()+s.slice(1); };
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:'always'});
+const pct = q => num(q*100)+'%';
+const segno = n => (n>0?'+':n<0?'−':'')+Math.abs(n);
+const ug = (a,b) => a.anno===b.anno && a.trimestre===b.trimestre;
+function anni(a){ if(!a) return 'mai al governo'; const y=Math.floor(a), m=Math.round((a-y)*12);
+  return [y?`${y} ann${y===1?'o':'i'}`:'', m?`${m} mes${m===1?'e':'i'}`:''].filter(Boolean).join(' e ')+' al governo'; }
+const fr = v => v ? `<svg class="fr ${v==='giu'?'giu':''}" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 .5 9.5 9.5H.5Z"/></svg>` : '<span aria-hidden="true">= </span>';
+
+// ===== dati =====
+const A = D.voce_albo, E = D.eredita, S = A.serie, MIO = A.nome;
+const bozza = () => st.stato==='bozza';
+const ultimoVoto = A.elezioni[0];                       // la più recente per prima
+const votoIdx = A.elezioni.map(e=>S.findIndex(p=>ug(p.data,e.data))).filter(i=>i>=0);
+// Le leggi del giocatore ancora in vigore, col turno in cui sono entrate: dai cambi che genera/ legge fra Vista e Vista.
+const LEGGI = A.leggi_in_vigore.map(nome=>{ const c=[...D.cambi].reverse().find(c=>c.nome===nome); return {nome, legge:c?c.legge:'', chiusura:c?c.chiusura:null, data:c?c.data:null, a:c?c.a:''}; });
+// Un turno a cui tornare: il turno del voto perso (la chiusura che ha finito la partita) è l'ultimo della serie.
+const TURNO_VOTO = S[S.length-1].turno;
+
+// ===== pezzi condivisi (dal 13) =====
+const GIUDIZIO = {debito_pil:1, spread:1, disoccupazione:1};   // salire è male; l'inflazione non ha un verso buono
+function indicatori(){
+  return `<div class="ind"><span class="h">Indicatore</span><span class="h r">Turno zero</span><span class="h r">Fine</span><span class="h r"></span>
+    ${A.indicatori.map(i=>{ const d=i.fine-i.turno_zero, dec=i.id==='spread'?0:1, v=d>0?'su':d<0?'giu':'';
+      const g = GIUDIZIO[i.id] ? (d>0?'male':'bene') : 'muto', fermo=Math.abs(d)<.05;
+      return `<span>${esc(i.nome)}</span><span class="r">${num(i.turno_zero,dec)}</span><span class="r"><b>${num(i.fine,dec)}</b></span><span class="r dl ${fermo?'muto':g}">${fr(fermo?'':v)}${num(Math.abs(d),dec)}</span>`; }).join('')}</div>`;
+}
+let GR=[];
+function grafico(titolo, serie, fmt, opz={}){
+  const id=GR.length, W=opz.w||290, H=opz.h||58, pad={l:2,r:52,t:6,b:14};
+  const tutti=serie.flatMap(s=>s.v).concat(opz.zero?[0]:[]), lo=Math.min(...tutti), hi=Math.max(...tutti), sp=(hi-lo)||1;
+  const n=serie[0].v.length, x=i=>pad.l+(W-pad.l-pad.r)*(n<2?0:i/(n-1)), y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-lo)/sp);
+  const voti=votoIdx.map(i=>`<line x1="${x(i)}" x2="${x(i)}" y1="${pad.t-4}" y2="${H-pad.b}" stroke="var(--grigio)" stroke-dasharray="2 2"/><text x="${x(i)+3}" y="${pad.t+4}">voto</text>`).join('');
+  const zero=opz.zero&&lo<0&&hi>0?`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink)" stroke-width="1"/><text x="${pad.l+2}" y="${y(0)-3}">metà più uno</text>`:'';
+  const linee=serie.map(s=>`<polyline fill="none" stroke="var(--ink)" stroke-width="2" ${s.trat?'stroke-dasharray="5 3"':''} stroke-linejoin="round" points="${s.v.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}"/>`).join('');
+  const etich=serie.length>1?serie.map(s=>`<text x="${W-pad.r+4}" y="${y(s.v[n-1])+4}" style="fill:var(--ink)">${s.nome}</text>`).join(''):'';
+  GR.push({serie,fmt,x,n,W});
+  const ultimo=serie.map(s=>fmt(s.v[n-1])).join(' / ');
+  return `<div class="gr"><div class="k"><span>${titolo}</span><b>${ultimo}</b></div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titolo)}, dal turno zero alla fine">${voti}${zero}${linee}${etich}
+      <text x="${pad.l}" y="${H-2}">turno 0</text><text x="${W-pad.r}" y="${H-2}" text-anchor="end">${n-1}</text>
+      <line class="cross" x1="0" x2="0" y1="${pad.t}" y2="${H-pad.b}" stroke="var(--rosso)" stroke-width="1" visibility="hidden"/>
+      <rect data-gr="${id}" x="0" y="0" width="${W-pad.r}" height="${H}" fill="transparent"/></svg></div>`;
+}
+const SERIE3 = [
+  ['Consenso della coalizione', [{v:S.map(p=>p.consenso*100)}], v=>num(v)+'%', {}],
+  ['Margine sulla metà più uno', [{nome:'Camera',v:S.map(p=>p.margine_camera)},{nome:'Senato',v:S.map(p=>p.margine_senato),trat:1}], segno, {zero:1}],
+  ['Spread', [{v:S.map(p=>p.spread_pb)}], v=>num(v,0)+' pb', {}],
+];
+const grafici = (w,h) => SERIE3.map(([t,s,f,o])=>grafico(t,s,f,{...o,w,h})).join('');
+function elezioni(){
+  return A.elezioni.map(e=>{ const mio=e.voti.find(v=>v[0]===MIO), tot=e.voti.reduce((s,v)=>s+v[1],0);
+    return `<div class="el"><div class="sec"><b>Voto di ${per(e.data)}</b> <span class="muto">· affluenza ${pct(e.affluenza)}</span></div>
+      <div class="barra">${e.voti.map(v=>`<i class="${v[0]===MIO?'mio':''}" style="flex:${v[1]/tot}" title="${esc(v[0])} ${pct(v[1])}"></i>`).join('')}</div>
+      <div class="etich">${e.voti.map(v=>`<span class="${v[0]===MIO?'mio':''}" style="flex:${v[1]/tot}">${v[1]>.07?esc(v[0].split(' ').pop())+' '+num(v[1]*100,0):''}</span>`).join('')}</div>
+      <div class="sec">${esc(MIO)}: <b>${mio?pct(mio[1]):'assente'}</b>, ${e.seggi_giocatore[0]} seggi alla Camera, ${e.seggi_giocatore[1]} al Senato</div></div>`; }).join('');
+}
+function leggi(){
+  if(!LEGGI.length) return `<p class="sec muto">Nessuna delle tue leggi è ancora in vigore.</p>`;
+  return `<ul class="leggi">${LEGGI.map(l=>`<li><b>${esc(l.nome)}</b><span class="min muto">${esc(l.legge)}</span>${l.data?`<small>in vigore da ${per(l.data)}</small>`:''}</li>`).join('')}</ul>`;
+}
+const mioUltimo = () => { const v=ultimoVoto.voti.find(v=>v[0]===MIO); return v?v[1]:0; };
+// Titolo spiritoso: BOZZA, regole dei Testi del Pungolo (niente nomi). L'occhiello serio porta il fatto e il numero.
+const occhiello = () => `Voto di ${per(ultimoVoto.data)} · ${pct(mioUltimo())}, nessun seggio`;
+const TITOLO = 'Sfratto esecutivo: si spengono le luci in Parlamento';
+
+// ===== azioni della bozza (conferme sul posto, ossatura) =====
+const cosaCancella = t => `${t===TURNO_VOTO?`Si cancella la chiusura del turno ${t}`:`Si cancellano le chiusure dal turno ${t} al ${TURNO_VOTO}`}, col voto di ${per(ultimoVoto.data)}, e l’eredità in bozza. Il riavvolgimento si conta; con le stesse scelte il caso dà lo stesso esito.`;
+function azioniBozza(dove){
+  if(!bozza()) return '';
+  if(st.conf==='eredita') return `<p class="sec male">Confermata, l’eredità va nell’albo e non si torna più a nessun turno: la partita esce da quelle in corso.</p>
+    <div class="az"><button class="btn via pieno" data-fai="conferma">Conferma: manda nell’albo</button><button class="btn" data-conf="">Annulla</button></div>`;
+  const conf = `<button class="btn via" data-conf="eredita">Conferma l’eredità</button>`;
+  if(dove==='registro') return `<div class="az"><button class="btn pieno" data-fai="registro">Torna a un turno ›</button>${conf}</div>`;
+  // verdetto: A col riavvolgimento di B, il turno del voto diretto e il Registro per gli altri
+  if(dove==='voto') return st.conf==='t'+votoPrima() ? `<div style="display:grid;gap:4px">${tornaA(votoPrima())}</div>`
+    : `<div class="az" style="flex-direction:column;align-items:start">${tornaA(votoPrima()).replace('›',`· prima del voto ›`)}<button class="link" data-fai="registro">Un altro turno, nel Registro ›</button></div><div class="az" style="margin-top:2px">${conf}</div>`;
+  return `<div class="az">${conf}</div>`;
+}
+function tornaA(t, piccolo){
+  if(!bozza()) return '';
+  const P=piccolo?' p':'';
+  if(st.conf==='t'+t) return `<p class="sec male">${cosaCancella(t)}</p><div class="az"><button class="btn via pieno${P}" data-fai="torna" data-t="${t}">Conferma: torna al turno ${t}</button><button class="btn${P}" data-conf="">Annulla</button></div>`;
+  return `<button class="btn pieno${P}" data-conf="t${t}">Torna al turno ${t} ›</button>`;
+}
+
+// ===== cornice (dal 29): partita finita, casa «Eredità» =====
+const SEZ = [['prima','Prima pagina'],['cruscotto','Eredità'],['governo','Governo'],['aula','Aula'],['conti','Conti'],['bilancio','Bilancio'],['paese','Paese'],['partiti','Partiti'],['campagna','Campagna'],['registro','Registro']];
+function cornice(){
+  const b={governo:'Partita finita: nessun governo da guidare', aula:'Partita finita: niente più voti in aula', bilancio:'Partita finita', campagna:'Partita finita'};
+  if(!bozza()) b.registro='Eredità confermata: non si torna a un turno';
+  const ult=S[S.length-1], m=[ult.margine_camera, ult.margine_senato];
+  const cas=(pos)=>`<span class="cas fermo">${Array.from({length:10},(_,i)=>`<i class="${i===2?'sog':''} ${i<pos?'on':''}"></i>`).join('')}</span>`;
+  const cl=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const t=[['Il tuo consenso', num(mioUltimo()*100)+'%', cl(Math.round((mioUltimo()*100-25)/5),0,10)], ['Seggi', '0 / 0', 0], ['Conti · spread', num(ult.spread_pb,0), cl(Math.round((500-ult.spread_pb)/50),0,10)]];
+  const trks=`<div class="trks">${t.map(([k,v,p])=>`<div class="trk fermo"><span class="k">${k}</span>${cas(p)}<span class="v">${v}</span></div>`).join('')}</div>`;
+  const chi=`<span class="chi"><b>Partita finita</b><br>${Per(D.vista.data)} · turno ${D.vista.turno}<br><b>Senza seggi</b></span>`;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino">Il Pungolo</span>${chi}</div>${trks}
+    <div class="c-dx"><span>Nessun turno da chiudere</span><span>fermi al voto di ${per(ultimoVoto.data)}</span></div></div>
+    <nav class="somm" aria-label="Sommario">${SEZ.map(([k,t])=> b[k] ? `<button class="chiusa" aria-disabled="true" data-perche="${esc(b[k])}">${t}</button>` : `<button class="${k==='cruscotto'?'qui':''}" ${k==='registro'?'data-fai="registro"':''}>${t}</button>`).join('')}
+    <span class="fuori"><button>Schema<span class="lungo"> dello Stato</span></button><button>Impostazioni</button><button>Edicola</button></span></nav></header>`;
+}
+const testaAlbo = () => `<header class="testa"><button class="link">‹ Edicola</button><span class="nomino">Il Pungolo</span><span class="dove">Albo · ${esc(MIO)}</span><span class="fuori"><button class="link">Impostazioni</button></span></header>`;
+function riga(){
+  return `${esc(A.scenario)} · ${Per(A.inizio)} – ${per(A.fine)} · ${A.turni} turni · ${anni(A.anni_al_governo)} · ${A.riavvolgimenti?A.riavvolgimenti+' riavvolgimenti':'nessun riavvolgimento'}`;
+}
+
+// ===== A · Ultima edizione =====
+function vA(){
+  const lato = bozza()
+    ? `<div><div class="occ">Eredità in bozza</div><h3 class="tit">Non è ancora scritta</h3></div>
+       <p class="sec">Senza seggi al voto la partita è finita, ma come ogni voto anche questo si può riavvolgere: torna al trimestre prima delle urne, o scegli un altro turno nel Registro. Finché non la confermi, l’eredità resta in bozza e la partita resta fra quelle in corso nell’edicola.</p>
+       ${azioniBozza('voto')}`
+    : `<div><div class="occ">Albo · ${esc(A.scenario)}</div><h3 class="tit">${esc(MIO)}</h3></div><span class="bollo">${esc(A.esito)}</span>
+       <p class="sec muto">Eredità confermata: la partita non si riapre. L’albo la conserva anche quando una versione nuova non aprirà più i salvataggi.</p>`;
+  return `<div class="corpo" style="grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:minmax(0,1fr);height:100%">
+    <div style="display:grid;gap:12px;align-content:start;min-height:0;overflow:hidden auto">
+      <article class="apre"><div><div class="o">${occhiello()}</div><h2 class="tit">${TITOLO}<span class="bz">BOZZA</span></h2></div><span class="bollo">${esc(A.esito)}</span>
+        <p>${riga()}.</p></article>
+      <div class="col3">
+        <section><div class="titsez"><h4 class="tit">Le elezioni</h4></div>${elezioni()}</section>
+        <section><div class="titsez"><h4 class="tit">Il Paese che lasci</h4><span class="dx min muto">contro il turno zero</span></div>${indicatori()}</section>
+        <section><div class="titsez"><h4 class="tit">Le leggi che restano</h4><span class="dx min muto">${LEGGI.length}</span></div>${leggi()}</section>
+      </div>
+      <div class="gr3">${grafici(250,64)}</div>
+    </div>
+    <aside class="lato">${lato}</aside></div>`;
+}
+
+// ===== B · Consuntivo =====
+function righello(i, w){
+  // ponytail: la scala del righello va dal minimo al massimo della serie quando c'è (spread), altrimenti ±50% attorno al turno zero
+  const lo=Math.min(i.turno_zero,i.fine), hi=Math.max(i.turno_zero,i.fine), sp=(hi-lo)||1, a=lo-sp*.6, b=hi+sp*.6, x=v=>4+(w-8)*(v-a)/(b-a);
+  const g = GIUDIZIO[i.id] ? ((i.fine-i.turno_zero)>0?'var(--rosso)':'var(--verde)') : 'var(--ink)';
+  return `<svg width="${w}" height="26" viewBox="0 0 ${w} 26"><line x1="4" x2="${w-4}" y1="13" y2="13" stroke="var(--grigio)"/>
+    <line x1="${x(i.turno_zero)}" x2="${x(i.fine)}" y1="13" y2="13" stroke="${g}" stroke-width="3"/>
+    <circle cx="${x(i.turno_zero)}" cy="13" r="4" fill="var(--carta)" stroke="var(--ink)" stroke-width="1.5"/><circle cx="${x(i.fine)}" cy="13" r="4.5" fill="${g}"/>
+    <text x="${x(i.turno_zero)}" y="25" text-anchor="middle">0</text><text x="${x(i.fine)}" y="8" text-anchor="middle" style="fill:var(--ink)">fine</text></svg>`;
+}
+function vB(){
+  const banda = bozza() ? (st.conf==='t'+votoPrima()||st.conf==='eredita'
+      ? `<div class="banda"><span>${st.conf==='eredita'?'Confermata, l’eredità va nell’albo e non si torna più a nessun turno.':cosaCancella(votoPrima())}</span><span class="dx">${st.conf==='eredita'
+          ?`<button class="btn via pieno p" data-fai="conferma">Conferma: manda nell’albo</button>`:`<button class="btn via pieno p" data-fai="torna" data-t="${votoPrima()}">Conferma: torna al turno ${votoPrima()}</button>`}<button class="btn p" data-conf="">Annulla</button></span></div>`
+      : `<div class="banda"><span><b>Eredità in bozza.</b> Senza seggi al voto di ${per(ultimoVoto.data)}: puoi ancora tornare indietro.</span>
+        <span class="dx"><button class="btn pieno p" data-conf="t${votoPrima()}">Torna a prima del voto · turno ${votoPrima()} ›</button><button class="link" data-fai="registro">Un altro turno, nel Registro ›</button><button class="btn via p" data-conf="eredita">Conferma l’eredità</button></span></div>`) : '';
+  const w=230;
+  return `${banda}<div class="corpo" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)">
+    <div style="grid-column:1/-1;display:flex;align-items:baseline;gap:14px"><h3 class="tit" style="font-size:var(--c-pag)">Il consuntivo di ${esc(MIO)}</h3><span class="bollo">${esc(A.esito)}</span><span class="sec muto" style="margin-left:auto">${esc(A.scenario)} · ${Per(A.inizio)} – ${per(A.fine)}</span></div>
+    <div class="quattro" style="grid-column:1/-1">
+      <div><div class="k">Al governo</div><div class="n">${anni(A.anni_al_governo).replace(' al governo','')}</div><div class="min muto">su ${anni(A.turni/4).replace(' al governo','')} di partita</div></div>
+      <div><div class="k">Leggi ancora in vigore</div><div class="n">${LEGGI.length}</div><div class="min muto">${LEGGI.map(l=>esc(l.nome)).join(' · ')||'nessuna'}</div></div>
+      <div><div class="k">Elezioni</div><div class="n">${A.elezioni.length}</div><div class="min muto">${A.elezioni.map(e=>{const m=e.voti.find(v=>v[0]===MIO); return `${e.data.anno}: ${m?pct(m[1]):'—'}`;}).join(' · ')}</div></div>
+      <div><div class="k">Riavvolgimenti</div><div class="n">${A.riavvolgimenti}</div><div class="min muto">${A.riavvolgimenti?'turni rigiocati':'nessun turno rigiocato'}</div></div>
+    </div>
+    <section><div class="titsez"><h4 class="tit">I tre indicatori, turno per turno</h4></div><div style="display:grid;gap:10px">${grafici(470,74)}</div></section>
+    <section style="display:grid;gap:14px;align-content:start">
+      <div><div class="titsez"><h4 class="tit">Il Paese, contro il turno zero</h4></div>
+        <div class="righ"><span class="h">Indicatore</span><span class="h">dal turno zero alla fine</span><span class="h" style="text-align:right">fine</span>
+        ${A.indicatori.map(i=>{ const d=i.fine-i.turno_zero, dec=i.id==='spread'?0:1, g=GIUDIZIO[i.id]?(d>0?'male':'bene'):'muto';
+          return `<span>${esc(i.nome)}</span>${righello(i,w)}<span style="text-align:right;white-space:nowrap"><b>${num(i.fine,dec)}</b> <span class="dl ${g}">${fr(d>0?'su':'giu')}${num(Math.abs(d),dec)}</span></span>`; }).join('')}</div></div>
+      <div><div class="titsez"><h4 class="tit">Le elezioni</h4></div>${elezioni()}</div>
+      <div><div class="titsez"><h4 class="tit">Le leggi che restano</h4></div>${leggi()}</div>
+    </section></div>`;
+}
+const votoPrima = () => TURNO_VOTO;   // tornare al turno del voto = riaprire il trimestre che vota
+
+// ===== C · Cronologia =====
+let CRONO=null;
+function vC(){
+  const W=Math.round(dimC.W), rows=[['Consenso coalizione',S.map(p=>p.consenso*100),v=>num(v)+'%'],['Margine C / S',S.map(p=>p.margine_camera),segno,S.map(p=>p.margine_senato)],['Spread',S.map(p=>p.spread_pb),v=>num(v,0)+' pb']];
+  const n=S.length, pad={l:118,r:14}, x=i=>pad.l+(W-pad.l-pad.r)*i/(n-1), rh=70, top=40, H=top+rows.length*rh+60+LEGGI.length*15;
+  CRONO={x,n,W};
+  // legislature: dall'inizio della serie e da ogni voto
+  // una legislatura va da un voto al successivo; il voto si tiene alla chiusura del turno che porta la sua data
+  const tagli=[...new Set([0,...votoIdx,n-1])].sort((a,b)=>a-b);
+  const fasce=tagli.slice(0,-1).map((a,k)=>{ const e=A.elezioni.find(e=>ug(e.data,S[a].data));
+    return `<rect x="${x(a)}" y="${top-6}" width="${x(tagli[k+1])-x(a)}" height="${rows.length*rh+6}" fill="${k%2?'var(--velo)':'transparent'}"/><text x="${x(a)+6}" y="${top-12}" style="fill:var(--ink);font-weight:700">${e?`${k+1}ª legislatura, dal voto di ${per(e.data)}`:'Prima del voto'}</text>`; }).join('');
+  const gr=rows.map(([t,v,f,v2],r)=>{ const all=v.concat(v2||[]).concat(r===1?[0]:[]), lo=Math.min(...all), hi=Math.max(...all), sp=(hi-lo)||1, y0=top+r*rh, y=val=>y0+8+(rh-22)*(1-(val-lo)/sp);
+    const pl=(arr,tr)=>`<polyline fill="none" stroke="var(--ink)" stroke-width="2" ${tr?'stroke-dasharray="5 3"':''} points="${arr.map((q,i)=>`${x(i).toFixed(1)},${y(q).toFixed(1)}`).join(' ')}"/>`;
+    return `<text x="0" y="${y0+18}" style="fill:var(--ink);font-weight:700">${t}</text><text x="0" y="${y0+34}">${(v2?[f(v[n-1]),f(v2[n-1])].join(' / '):f(v[n-1]))} alla fine</text>
+      <line x1="${pad.l}" x2="${W-pad.r}" y1="${y0+rh-6}" y2="${y0+rh-6}" stroke="var(--grigio)" stroke-width=".5"/>
+      ${r===1&&lo<0&&hi>0?`<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink)"/><text x="${W-pad.r}" y="${y(0)-3}" text-anchor="end">metà più uno</text>`:''}
+      ${pl(v)}${v2?pl(v2,1):''}`; }).join('');
+  const yA=top+rows.length*rh;
+  const voti=votoIdx.map(i=>{ const e=A.elezioni.find(e=>ug(e.data,S[i].data)), m=e.voti.find(v=>v[0]===MIO);
+    const cx=Math.max(pad.l+40, Math.min(W-pad.r-40, x(i)));
+    return `<line x1="${x(i)}" x2="${x(i)}" y1="${top-6}" y2="${yA+4}" stroke="var(--rosso)" stroke-width="1.5"/><rect x="${cx-40}" y="${yA+22}" width="80" height="17" fill="var(--rosso)"/><text x="${cx}" y="${yA+34}" text-anchor="middle" style="fill:var(--carta);font-weight:700">voto · ${m?pct(m[1]):''}</text>`; }).join('');
+  // le leggi entrano alla chiusura: il segno sta sul turno dopo; etichetta a sinistra del segno, una riga per legge
+  const pins=LEGGI.filter(l=>l.chiusura!=null).map((l,k)=>{ const i=S.findIndex(p=>p.turno===l.chiusura+1); const xi=x(i<0?n-1:i), yy=yA+56+k*15;
+    return `<path d="M${xi},${yy-9} l-5,9 h10 z" fill="var(--ink)"/><text x="${xi-9}" y="${yy}" text-anchor="end" style="fill:var(--ink)">legge: ${esc(l.nome)}</text>`; }).join('');
+  const hit=S.map((p,i)=>{ const w=(W-pad.l-pad.r)/(n-1); const sel=st.sel===p.turno;
+    return `<g class="hit" data-turno="${p.turno}"><rect class="c" x="${x(i)-w/2}" y="${top-6}" width="${w}" height="${rows.length*rh+6}" fill="${sel?'rgb(255 210 63 / .45)':'transparent'}"/></g>`; }).join('');
+  const assex=S.map((p,i)=>p.data.trimestre===1?`<text x="${x(i)}" y="${yA+14}" text-anchor="middle">${p.data.anno}</text>`:'').join('');
+  const svg=`<svg width="${W}" height="${H+14}" viewBox="0 0 ${W} ${H+14}">${fasce}${hit}${gr}${voti}${pins}${assex}</svg>`;
+  const p = st.sel!=null ? S.find(q=>q.turno===st.sel) : null;
+  const lato = p ? `<div><div class="occ">Turno ${p.turno}</div><h3 class="tit">${Per(p.data)}</h3></div>
+      <dl class="dati"><dt>Il tuo consenso</dt><dd><b>${pct(p.consenso)}</b></dd><dt>Margine Camera</dt><dd>${segno(p.margine_camera)}</dd><dt>Margine Senato</dt><dd>${segno(p.margine_senato)}</dd><dt>Spread</dt><dd>${num(p.spread_pb,0)} pb</dd></dl>
+      ${A.elezioni.some(e=>ug(e.data,p.data))?`<p class="sec"><b>In questo turno si vota.</b> Tornarci riapre il trimestre prima delle urne.</p>`:''}
+      ${bozza()?`<div class="az">${tornaA(p.turno)}</div><button class="link" data-fai="registro">Le notizie del turno ${p.turno} nel Registro ›</button>`:''}
+      <button class="link" data-sel="">‹ Il bilancio della partita</button>`
+    : `<div><div class="occ">${bozza()?'Eredità in bozza':'Albo · '+esc(A.scenario)}</div><h3 class="tit">${esc(MIO)}</h3></div><span class="bollo">${esc(A.esito)}</span>
+      <p class="sec">${riga()}.</p>
+      ${bozza()?`<p class="sec">Scegli un turno sull’asse per tornarci: ogni voto, anche l’ultimo, si può riavvolgere.</p>`:''}
+      <div><h4 class="tit" style="margin-bottom:4px">Contro il turno zero</h4>${indicatori()}</div>
+      <div><h4 class="tit" style="margin-bottom:4px">Le leggi che restano</h4>${leggi()}</div>
+      ${azioniBozza('lato')}`;
+  return `<div class="corpo" style="grid-template-columns:minmax(0,1fr) var(--lato);grid-template-rows:minmax(0,1fr);height:100%">
+    <div style="display:grid;gap:10px;align-content:start;min-height:0;overflow:hidden auto">
+      <div><div style="font-size:17px;font-weight:700">${occhiello()}</div><h2 class="tit" style="font-size:var(--c-pag)">${TITOLO}<span class="bz">BOZZA</span></h2></div>
+      <div class="crono" id="crono">${svg}</div>
+      <div><div class="titsez"><h4 class="tit">Le elezioni</h4></div><div style="display:grid;grid-template-columns:repeat(${A.elezioni.length},minmax(0,1fr));gap:var(--canale)">${[...A.elezioni].reverse().map(e=>elezioniDi(e)).join('')}</div></div>
+    </div>
+    <aside class="lato">${lato}</aside></div>`;
+}
+function elezioniDi(e){ const s=A.elezioni; A.elezioni=[e]; const h=elezioni(); A.elezioni=s; return `<div>${h}</div>`; }
+let dimC={W:760};
+
+// ===== montaggio =====
+const scr=document.getElementById('screen');
+let limite='';
+function render(){
+  GR=[];
+  const W=+st.fin, H=W===1440?900:800, z=Math.min(+st.scala, W/1024), lw=W/z, lh=H/z;
+  limite = z<+st.scala ? 'scala fermata (minimo 1024 px utili)' : '';
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  const corpo = st.v==='B'?vB():st.v==='C'?vC():vA();
+  const rows = st.v==='B'&&bozza() ? 'auto auto minmax(0,1fr)' : 'auto minmax(0,1fr)';
+  const build = () => `<div class="vS ${lw<1200?'stretta':''}" style="zoom:${z};width:${lw}px;height:${lh}px;grid-template-rows:${rows}">${bozza()?cornice():testaAlbo()}${st.v==='C'?vC():corpo}</div>`;
+  scr.innerHTML = build();
+  if(st.v==='C'){ const c=scr.querySelector('#crono'); if(c){ const k=scr.getBoundingClientRect().width/scr.offsetWidth||1, nW=Math.floor(c.getBoundingClientRect().width/k/z); if(nW>300&&Math.abs(nW-dimC.W)>2){ dimC.W=nW; GR=[]; scr.innerHTML=build(); } } }
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  document.getElementById('lab').textContent = FORME[st.v];
+  document.querySelectorAll('#proto .seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', st[seg.dataset.k]===b.dataset.v)));
+  try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){}
+  const r=scr.firstElementChild, sc=[...r.querySelectorAll('.corpo,.corpo>div,.lato')].some(c=>c.scrollHeight>c.clientHeight+1);
+  document.getElementById('avv').textContent=[limite, sc?'la pagina scorre':'', st.msg].filter(Boolean).join(' · ');
+}
+document.getElementById('proto').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='prev'||b.id==='next'){ const k=Object.keys(FORME); st.v=k[(k.indexOf(st.v)+(b.id==='next'?1:k.length-1))%k.length]; }
+  else { const k=b.parentElement.dataset.k; if(!k) return; st[k]=b.dataset.v; }
+  st.conf=null; st.sel=null; st.msg=''; render();
+});
+scr.addEventListener('click',e=>{
+  const q=s=>e.target.closest(s); let x; st.msg='';
+  if(x=q('[data-fai]')){ const f=x.dataset.fai;
+    st.msg = f==='registro' ? '(apre il Registro: «Torna al turno N» in testa a ogni turno, ticket 25)'
+      : f==='conferma' ? '(conferma_eredita: l’app apre l’Edicola con la voce d’albo aperta, come dopo l’abbandono)'
+      : `(riavvolgi(${x.dataset.t}): si riapre la prima pagina del turno ${x.dataset.t})`;
+    st.conf=null; }
+  else if(x=q('[data-conf]')) st.conf=x.dataset.conf||null;
+  else if(x=q('[data-sel]')) { st.sel=null; st.conf=null; }
+  else if(x=q('[data-turno]')){ const t=+x.dataset.turno; st.sel = st.sel===t?null:t; st.conf=null; }
+  else return;
+  render();
+});
+scr.addEventListener('mousemove',e=>{
+  scr.querySelectorAll('.tip').forEach(t=>t.remove()); scr.querySelectorAll('.cross').forEach(c=>c.setAttribute('visibility','hidden'));
+  const r=e.target.closest('[data-gr]'); if(!r) return;
+  const g=GR[+r.dataset.gr], svg=r.ownerSVGElement, B=svg.getBoundingClientRect(), fx=(e.clientX-B.left)/B.width*g.W;
+  let i=0, best=1e9; for(let j=0;j<g.n;j++){ const d=Math.abs(g.x(j)-fx); if(d<best){best=d;i=j;} }
+  const c=svg.querySelector('.cross'); c.setAttribute('x1',g.x(i)); c.setAttribute('x2',g.x(i)); c.setAttribute('visibility','visible');
+  const t=document.createElement('div'); t.className='tip'; t.textContent=`turno ${S[i].turno}, ${per(S[i].data)}: ${g.serie.map(s=>(s.nome?s.nome+' ':'')+g.fmt(s.v[i])).join(' · ')}`;
+  const box=svg.parentElement; box.appendChild(t); t.style.left=Math.min(g.x(i), g.W-t.offsetWidth)+'px'; t.style.top='-6px';
+});
+function perche(e){
+  scr.querySelectorAll('.perche').forEach(x=>x.remove());
+  const b=e.type==='mouseover' ? e.target.closest('[data-perche]') : null; if(!b) return;
+  const r=scr.firstElementChild, z=+r.style.zoom||1, k=scr.getBoundingClientRect().width/scr.offsetWidth, B=b.getBoundingClientRect(), R=r.getBoundingClientRect();
+  const el=document.createElement('div'); el.className='perche'; el.textContent=b.dataset.perche;
+  el.style.left=((B.left-R.left)/k/z)+'px'; el.style.top=((B.bottom-R.top)/k/z+2)+'px'; r.appendChild(el);
+}
+['mouseover','mouseout'].forEach(t=>scr.addEventListener(t,perche));
+addEventListener('keydown',e=>{ if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if(e.key==='ArrowRight') document.getElementById('next').click(); if(e.key==='ArrowLeft') document.getElementById('prev').click(); if(e.key==='Escape'){ st.sel=null; st.conf=null; render(); } });
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>

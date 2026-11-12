@@ -43,11 +43,23 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `25-registro.json` | 4 | 4,5 | 0-8 | 1248503 | la partita del 05 (coalizione con la destra, la bozza a ogni bilancio): un elenco di nove chiusure, ciascuna con `turno`, `mosse` del turno (`DichiaraCoalizione` al turno zero, `PresentaBilancio` ai turni 4 e 8) e la Vista `prima` e `dopo` la chiusura. 02, 03, 04 e 08 coincidono con le Viste di questa partita (vedi sotto) |
 | `26-campagna.json` | 4, 1, 2 | 4,5 / 1,5 / 2,5 | 0, 20 | 934734 | stati della Campagna: `zero` (seme 4 a 4,5, turno zero) e `dichiarata` (con la destra); `cessioni` (seggi da 5 a 80 a Estrema destra e Centro, tutti rifiutati) e `cessione_che_convince` (seme 2 a 2,5: la Sinistra, «guiderebbe la propria coalizione», entra con 30 seggi); `anteprime` (`anteprima_campagna` di 26 bersagli a sette importi), `piano` (tre leve), `rifiuti_campagna`; `riposiziona` e `promesse` con i rifiuti; `piano_scelto`/`piano_dopo` (campagna, riposizionamento, promesse e sondaggio privato, poi la chiusura con le spese dei rivali nelle mosse); `tagliata_prima`/`tagliata_dopo` (1.000.000 € di campagna, poi il sondaggio); `governo_fine` (seme 4, turno 20) con `governo_promesse` (l'intesa persa dagli alleati) e `opposizione_fine` (seme 1 a 1,5, turno 20); `prove` per i tre stati: ogni coalizione dichiarabile, i riposizionamenti a passi di un quarto e il sondaggio privato (vedi sotto) |
 | `28-opposizione.json` | 1 | 1,5 | 2-19 | 1264148 | stati del cruscotto all'opposizione, sotto il governo IA del 06, ciascuno con `come` e `vista`: `sfiducia` (il 06: `anteprime` di `anteprima_sfiducia` al governo e per dicastero, `Sfiducia` al governo con `dopo_comando` e il `rifiuto_seconda`, poi la chiusura); `sfiducia_che_passa` (turno 4, al governo) con le anteprime; `referendum` (il 06: `PromuoviReferendum` sul tetto al contante, `dopo_comando`, `rifiuto_secondo` e `rifiuto_non_referendabile`, `chiusure` 1, 2 e quella dell'esito); `posto_mio` (turno 3, `prima` e dopo `PresentaProposta` salario minimo a 11 €); `linea` (il 06: `Linea` sì contro il default no, `dopo_comando`, `dopo_chiusura`, dopo il voto); `intesa_varia` (turno 4), `grave` (turno 11), `fine` (turno 19); `firme_mancanti` e `confermativo` `null` (vedi sotto) |
+| `30-eredita.json` | 43 | 4,5 | 0-21 | 150790 | partita finita **senza seggi, giocata**: nessuna coalizione, la bozza a ogni bilancio e, al governo fuori dalla crisi, la legge più vicina al proprio posto che l'anteprima dà approvata, al più due; finita alla chiusura del turno 20. `come`, `mosse`, `cambi` (disposizioni che cambiano legge a ogni chiusura, dalla Vista prima e dopo), `vista`, `eredita`, `voce_albo`, `serie`, `prove` (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 30: aggiunta dal ticket «Eredità». La fine senza seggi **si raggiunge giocando**, contro quanto dice la nota del 13 (che
+  provava solo il posto 6,5): senza leggi, 17 partite su 720 (semi 1-60, sei posti, con e senza la destra, la bozza a ogni
+  bilancio) finiscono al turno 21, tutte al secondo voto; con al più due leggi che l'anteprima dà approvate, 6 su 360 senza
+  la destra. Più leggi passano, meno il giocatore perde: con una legge a ogni turno al governo il seme 2 non finisce più.
+  Il seme 43 a 4,5 governa un anno (turni 16-19), fa passare Export di armi (L. 77/2031) e Concorrenza nei servizi
+  (L. 79/2031), poi al voto di ottobre-dicembre 2031 prende il 2,4% e zero seggi; nel voto compaiono due partiti nati
+  in partita, Orizzonte Comune e Voce del Paese. Nella `serie` il margine resta a −135/−69 dal turno 1 al 19 (i soli
+  seggi del giocatore) e il consenso salta dal 3,5% al 18,6% al turno 20: in quel turno `coalizione_del_giocatore`
+  (`crates/sim-core/src/partita.rs:3199`) lo mette in una coalizione che non ha dichiarato. La Vista dice la legge in
+  vigore ma non quando è entrata: `cambi` la ricava. Riavvolgimenti a zero: il contatore vero lo tiene il guscio.
 
 - 28: aggiunta dal ticket «Cruscotto all'opposizione». Le firme della sfiducia sono i seggi di tutta l'opposizione, non del
   solo giocatore: sul 06 sono 60 (34 suoi, 26 dell'Estrema destra) contro i 40 che servono. `firme_mancanti` vuole un governo con
