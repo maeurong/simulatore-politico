@@ -57,3 +57,10 @@ svg { display: block }
 ::selection { background: var(--giallo); color: var(--ink) }
 :root.grave ::selection { background: var(--ink); color: var(--carta) }
 :focus-visible { outline: 2px solid var(--biro); outline-offset: 2px }
+
+/* movimento spento (impostazioni.svelte.ts): le transizioni CSS perdono transform, restano le dissolvenze.
+   ponytail: tiene solo opacità e colori; le transizioni di Svelte e el.animate() non leggono il CSS, chiedono `fattori().muove` */
+:root[data-movimento="spento"] *, :root[data-movimento="spento"] ::before, :root[data-movimento="spento"] ::after {
+  transition-property: opacity, color, background-color, border-color !important;
+}
+/* :root.stretta (meno di 1150 px utili) la mette applica(): le regole arrivano con la cornice */

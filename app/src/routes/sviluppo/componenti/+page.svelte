@@ -10,6 +10,7 @@
   import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import Impostazioni from "$lib/cornice/Impostazioni.svelte";
 
   if (!dev) goto("/", { replaceState: true });
 
@@ -17,6 +18,7 @@
   let scelta = $state<"ferma" | "dirotta" | null>(null);
   let confermate = $state(0);
   let rifiuto = $state(false);
+  let impostazioni = $state(false);
   const scegli = (s: "ferma" | "dirotta") => (scelta = scelta === s ? null : s);
 
   $effect(() => {
@@ -128,7 +130,13 @@
 </div>
 
 <div class="lato">
-  <div class="corpo"><Segnaposto sezione={t("sommario.governo")} fetta="11b" /></div>
+  <div class="corpo">
+    <Segnaposto sezione={t("sommario.governo")} fetta="11b" />
+    <p class="nota"><Pulsante forma="link" scelto={impostazioni} onclick={() => (impostazioni = !impostazioni)}>{t("impostazioni.titolo")}</Pulsante></p>
+  </div>
+  {#if impostazioni}
+  <Impostazioni onchiudi={() => (impostazioni = false)} />
+  {:else}
   <Dettaglio aria-label="Dettaglio di prova">
     <div class="occ">Sanità</div>
     <h4 class="tit" style="font-size:var(--c-sez)">Sara Ferraro</h4>
@@ -138,6 +146,7 @@
     {/each}
     <div class="fila"><Pulsante forma="bordo">{t("componenti.ferma")}</Pulsante><Pulsante forma="bordo">{t("componenti.dirotta")}</Pulsante></div>
   </Dettaglio>
+  {/if}
 </div>
 
 <style>
@@ -171,6 +180,6 @@
   .grande { gap: 18px; font-size: 17px; margin-top: 0 }
 
   /* flex, non grid: il 30% di --lato si misura sulla riga intera, come nella sezione del prototipo */
-  .lato { display: flex; gap: var(--canale); padding: 0 var(--marg) var(--marg); height: 320px }
+  .lato { display: flex; gap: var(--canale); padding: 0 var(--marg) var(--marg); height: 640px }
   .corpo { flex: 1; min-width: 0 }
 </style>
