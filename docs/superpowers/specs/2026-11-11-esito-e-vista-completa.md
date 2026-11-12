@@ -66,6 +66,10 @@ Del 12/11/2026, ticket «Conti» della mappa del piano 11:
 
 - **Trimestri oltre la soglia** di una situazione e **debito sul PIL**: tutti e due nella PR delle esposizioni, nelle sezioni «Situazioni» e «Debito» qui sotto.
 
+Del 12/11/2026, ticket «Bilancio» della mappa del piano 11:
+
+- **Il bilancio in aula** nella Vista, e **i dicasteri chiesti** da ogni emendamento sul bilancio: tutti e due nella PR delle esposizioni, nella sezione «Bilancio in aula» qui sotto.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -454,6 +458,14 @@ Decisione di Mario del 12/11/2026, stesso ticket. Il decreto innescato da un eve
 Decisione di Mario del 12/11/2026, ticket «Conti» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/21-conti.md`). Una situazione cambia stato dopo un certo numero di trimestri di fila dalla parte del cambio: due per la recessione, uno per le altre (`trimestri`, `crates/sim-core/src/eventi/situazioni.rs:12-14`); il conto lo tiene `Eventi.contatori` (`crates/sim-core/src/eventi/mod.rs:247-248`, aggiornato in `aggiorna`, `crates/sim-core/src/eventi/situazioni.rs:38-61`). `VoceSituazione` non lo dice: giocando col seme 1 a 4,5, turno 13, la crescita è a −4,2% contro una soglia di −1% e la recessione è spenta, perché è il primo trimestre sotto.
 
 `VoceSituazione` prende `trimestri: u8`, quanti trimestri di fila servono per cambiare stato, e `oltre: u8`, quanti ne sono già passati dalla parte del cambio (il contatore). Una situazione spenta con `oltre` 1 su 2 si legge «oltre la soglia da un trimestre: si accende al secondo di fila». Nessuno stato nuovo: la regola resta in `trimestri`, che la Vista chiama.
+
+### Bilancio in aula
+
+Decisione di Mario del 12/11/2026, ticket «Bilancio» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/22-bilancio.md`). `VistaBilancio` porta il bilancio in vigore e due booleani, `presentabile` e `presentato` (`crates/sim-core/src/vista.rs:404-421`), ma non le cifre della legge presentata. Accogliere l'emendamento di un alleato indicizza i suoi dicasteri dentro il core (`bilancio_emendato`, `crates/sim-core/src/partita.rs:1502-1524`), e da lì la UI non sa più quanto va a ogni dicastero: ha solo il riepilogo di `riepilogo_presentato`. Giocando col seme 4 a 4,5, turno 4, l'emendamento accolto del Centrodestra mette in pari Lavoro e Welfare e Infrastrutture e Trasporti e costa 981.850.113 € in più della bozza, ma le cifre nuove non escono.
+
+`VistaBilancio` prende `in_aula: Option<Bilancio>`: `Economia.bilancio_presentato` com'è, con gli emendamenti accolti già dentro; `None` senza legge presentata. Lo vede chiunque, come il riepilogo: il bilancio in aula è pubblico. Nessuno stato nuovo; `presentato` resta.
+
+Prima di scegliere, la pagina dice quanto costa accogliere ogni emendamento: `riepilogo_bilancio` sul bilancio in aula indicizzato sui dicasteri chiesti. Ma la richiesta li tiene come `(indice, Attenuazione::Indicizza)` (`crates/sim-core/src/parlamento/emendamenti.rs:39-44`) e `VoceEmendamento` porta solo testo e motivo (`crates/sim-core/src/vista.rs:345-350`). `VoceEmendamento` prende `dicasteri: Vec<String>`: gli id dei dicasteri delle voci `Indicizza`, nell'ordine della proposta; vuoto sugli emendamenti delle leggi. Stessa decisione di Mario.
 
 ### Ferma e Dirotta
 
