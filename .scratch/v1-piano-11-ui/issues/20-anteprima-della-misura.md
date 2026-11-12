@@ -36,8 +36,8 @@ Nata dal primo giro: Mario ha scelto A, ma voleva vedere il prima e dopo di C.
 ### Rimandi
 
 - **Anteprima di una misura in calendario — al core.** Una misura in esame porta linee e forbice (`VoceMisura`) ma non costo, effetti né gruppi, e `Partita::anteprima` la rifiuta («è già in esame»). Mario sceglie il rimando: `VoceMisura` porta costo, effetti e gruppi come `Anteprima`, voce minore della PR delle esposizioni del piano di core «esito e Vista completa»; la UI la mostra in 11g. Fino ad allora, «Anteprima della misura ›» su una misura in calendario mostra il rifiuto.
-- **Norme del decreto d'evento — al core.** Un evento aperto ammette un decreto su certe disposizioni (`Evento::norme`, `crates/sim-core/src/eventi/mod.rs:101-107`), ma `VoceEvento` non le porta. Mario sceglie il rimando: `VoceEvento` porta le disposizioni che il suo decreto ammette, e la riga dell'evento nel cruscotto le offre pronte, con «Emana il decreto» e «Anteprima ›». Stessa PR delle esposizioni, stessa fetta.
-- Tutti e due vanno ancora scritti nella spec e nel piano di core, che sono su main dall'11/11 (#50).
+- **Norme del decreto d'evento — al core.** Un evento aperto ammette un decreto su certe disposizioni (`DatoEvento.norme` e `dicasteri`, `crates/sim-core/src/eventi/mod.rs:101-106`), ma `VoceEvento` non le porta. Mario sceglie il rimando: `VoceEvento` porta le disposizioni che il suo decreto ammette, e la riga dell'evento nel cruscotto le offre pronte, con «Emana il decreto» e «Anteprima ›». Stessa PR delle esposizioni, stessa fetta.
+- Tutti e due scritti il 12/11 nella spec di core «esito e Vista completa» (sezioni «Anteprima di una misura in calendario» e «Norme del decreto d'evento», con gli oracoli) e nel suo piano, Task 16b.
 
 ### Guscio e dati
 

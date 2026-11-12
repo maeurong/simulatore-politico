@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (workspace `sim-core`, `sim-cli`, `app/src-tauri`), serde, ts-rs per i tipi in `app/src/lib/tipi/`. Nessuna dipendenza nuova.
 
-**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 117-273) è l'oracolo dei Task 1-7: il piano non lo ricopia.
+**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 130-289) è l'oracolo dei Task 1-7: il piano non lo ricopia.
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md` (i 135 fatti nell'ordine di `chiudi_turno`, con funzione e riga) e `docs/ricerca/sintesi/stato-per-le-esposizioni.md` (dove vive ogni dato da esporre), scritte per questo piano sul codice a `8952a06`.
 
@@ -17,15 +17,15 @@
 | PR | Branch | Task | Schema |
 |---|---|---|---|
 | 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 17 → 18 |
-| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17 | 18 → 19 |
+| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b | 18 → 19 |
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-60, e non si riaprono: la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
+Stanno nella spec, righe 39-67, e non si riaprono: l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
 
 ## Scelte del piano
 
-Oltre alle 22 «Scelte mie» della spec (righe 61-86), prese scrivendo il piano:
+Oltre alle 22 «Scelte mie» della spec (righe 69-94), prese scrivendo il piano:
 
 1. **`precedenza` nella voce.** La scelta delle sette gira a fine chiusura su voci già raccolte nello stato: la precedenza (3, 2, 1, oppure 0) è un campo della voce, esportato.
 2. **Criticità condizionata.** `grado(tipo, al_governo)` rende il caso base del catalogo; nei sette tipi con una condizione («C2 se…») il punto del fatto la alza o la abbassa con `VoceEsito::con_grado`. L'elenco dei sette sta nel Task 1.
@@ -67,7 +67,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 
 PR 1: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. I task 3-7 scrivono tutti dentro `chiudi_turno` e i suoi passi in `partita.rs`.
 
-PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`.
+PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`.
 
 Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponytail`, e copia la riga **Ricerca** del task. A fine PR, review in parallelo: `security-reviewer`, `code-reviewer`, `test-writer`, `craft-reviewer` (legge i testi delle voci elencati nella PR), `rust-reviewer` e `spec-reviewer` (questo piano e la spec), con i findings di quest'ultimo in un report a parte. Poi un solo giro di correzioni. Le decisioni prese in esecuzione si elencano nella PR. Il merge lo decide Mario.
 
@@ -656,6 +656,38 @@ Il conteggio dei posti e le tre formule di costo si estraggono in funzioni che i
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati.
 - [ ] **Step 5:** commit `feat(core): posti, menu elettorale, anteprima della proposta e costo di Ferma e Dirotta`.
+
+### Task 16b: anteprima della misura in calendario e norme del decreto d'evento
+
+Aggiunto il 12/11/2026 dal ticket «Anteprima della misura» della mappa del piano 11 (spec, sezioni «Anteprima di una misura in calendario» e «Norme del decreto d'evento»).
+
+**Files:**
+- Modify: `crates/sim-core/src/vista.rs` (`VoceEvento` `:141`, `VoceMisura` `:275`), `crates/sim-core/src/parlamento/mod.rs` (`voci_calendario` `:912`), `crates/sim-core/src/parlamento/anteprima.rs` (`anteprima` `:82`), `crates/sim-core/src/parlamento/decreti.rs` (`ammetti_disposizioni` `:115-139`), `crates/sim-core/src/eventi/mod.rs` (`inneschi` `:272-290`), `crates/sim-core/src/partita.rs` (`anteprima` `:1931-1946`, chiamata a `voci_calendario` `:4019`, `voci_eventi` `:4124`), `crates/sim-core/tests/calendario.rs`, `crates/sim-core/tests/decreti.rs`, `app/src/lib/tipi/`
+
+**Ricerca:** `.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md` (sezione «Rimandi»). Nessuna ricerca in `docs/ricerca/` copre questi due campi.
+
+**Interfaces:**
+- Produces:
+
+```rust
+// VoceMisura prende, con lo stesso significato che hanno in Anteprima:
+//   pub costo_annuo: i64, pub effetti: Vec<EffettoStimato>, pub leve: Vec<VoceLeva>, pub gruppi: Vec<Condizione>
+// VoceEvento prende `pub norme: Vec<String>`: id delle disposizioni che il suo decreto ammette.
+```
+
+`voci_calendario` riceve ciò che `Partita::anteprima` passa a `parlamento::anteprima`: la capacità effettiva del ministro che oggi guida il dicastero proponente (`CAPACITA_NEUTRA` senza ministro e per una proposta d'opposizione), `caso` e il PIL potenziale annuo; per ogni misura chiama `parlamento::anteprima` e ne copia i quattro campi. La stima ha la chiave di `m.presentata`, quindi è stabile fra un turno e l'altro; `caso.estemporaneo` non avanza nessun flusso, come chiede il vincolo globale. `Partita::anteprima` non cambia e continua a rifiutare la misura in esame.
+
+`VoceEvento.norme` nasce da una funzione pura, estratta da `ammetti_disposizioni`, che dice se una disposizione è ammessa da un insieme di inneschi: il comando la chiama con gli inneschi di tutti gli eventi aperti, `voci_eventi` con quelli del solo evento della voce (le sue `norme`, o le ordinarie dei suoi `dicasteri`, o tutte le ordinarie per un evento del debito). Nessuna regola copiata. Evento senza decreto: lista vuota. Nessuno stato nuovo e nessun salto di schema.
+
+- [ ] **Step 1: test che falliscono:**
+  - `la_misura_in_calendario_porta_l_anteprima`: al governo, una legge presentata ha in `VoceMisura` costo, effetti, leve e gruppi uguali a quelli di `anteprima` sulla stessa bozza, chiamata nello stesso turno prima di presentarla.
+  - `la_stima_in_calendario_non_si_ricampiona`: dopo una chiusura, con lo stesso ministro fuori dal rodaggio, gli effetti della misura sono gli stessi.
+  - `la_proposta_d_opposizione_ha_la_stima_neutra`: la misura col promotore porta effetti stimati con `CAPACITA_NEUTRA`.
+  - `le_norme_dell_evento_sono_quelle_ammesse`: con un solo evento aperto, ogni disposizione di `norme` passa `EmanaDecreto` fino ad `ammetti_disposizioni`, e una disposizione ordinaria fuori dalla lista è rifiutata con «decreto senza innesco»; un evento con `norme` vuota elenca le ordinarie dei suoi dicasteri; un evento senza decreto ha la lista vuota.
+- [ ] **Step 2:** `cargo test -p sim-core --test calendario --test decreti` → non compila.
+- [ ] **Step 3:** implementa.
+- [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
+- [ ] **Step 5:** commit `feat(core): anteprima in calendario e norme del decreto d'evento`.
 
 ### Task 17: redditi per fascia e chiusura della PR 2
 

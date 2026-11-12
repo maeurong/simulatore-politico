@@ -58,6 +58,10 @@ Dell'11/11/2026, ticket «Testi del Pungolo» della mappa del piano 11:
 
 - **La famiglia dell'evento nella voce.** `evento_risolto` ed `evento_nato` coprono tutti gli eventi dei dati e i titoli del Pungolo non portano nomi: la UI sceglie il titolo dal tipo e, per questi due, dalla famiglia. La voce la porta nel campo `famiglia`.
 
+Del 12/11/2026, ticket «Anteprima della misura» della mappa del piano 11:
+
+- **Anteprima di una misura in calendario** e **norme del decreto d'evento**: tutte e due nella PR delle esposizioni, nelle sezioni omonime qui sotto.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -428,6 +432,18 @@ Decisione di Mario dell'11/11/2026, ticket «Aula e calendario» della mappa del
 
 Metodo `anteprima_proposta(valori) -> Result<Anteprima, Errore>`: l'anteprima della proposta che `PresentaProposta` metterebbe nel posto riservato. Valgono le regole di quel comando tranne il posto riservato, così come `anteprima` salta il calendario pieno: la guardia dell'opposizione, poi `bozza_proposta` (`crates/sim-core/src/parlamento/mod.rs:649-666`), che rifiuta anche la norma costituzionale. Il resto è `parlamento::anteprima` come in `anteprima`, con la capacità neutra perché nessun ministro stima la proposta. La bozza porta già il promotore, quindi linee e forbice seguono le regole della proposta d'opposizione (`crates/sim-core/src/parlamento/mod.rs:295-297`). La partita non cambia.
 
+### Anteprima di una misura in calendario
+
+Decisione di Mario del 12/11/2026, ticket «Anteprima della misura» della mappa del piano 11 (`.scratch/v1-piano-11-ui/issues/20-anteprima-della-misura.md`). Una misura in calendario porta linee e forbice, ma non costo, effetti né gruppi toccati, e `Partita::anteprima` la rifiuta perché è già in esame (`crates/sim-core/src/parlamento/mod.rs:759-761`). Chi apre una misura in Aula non sa quanto costa né cosa fa.
+
+`VoceMisura` prende i campi di `Anteprima` che non ha: `costo_annuo`, `effetti`, `leve`, `gruppi`, con lo stesso significato. Li calcola `parlamento::anteprima` (`crates/sim-core/src/parlamento/anteprima.rs:82-89`) sulla misura in calendario, con ciò che le passa `Partita::anteprima` (`crates/sim-core/src/partita.rs:1931-1946`): la capacità effettiva del ministro che oggi guida il dicastero proponente, neutra senza ministro e per una proposta d'opposizione, e il PIL potenziale annuo. La stima non si ricampiona di turno in turno, perché l'estrattore ha la chiave del turno di presentazione, della disposizione e del gradino. Cambia solo con la capacità: un ministro nuovo, o la fine del suo rodaggio (`crates/sim-core/src/ministri/mod.rs:125-132`). È la stima di chi siede oggi al dicastero. Nessuno stato nuovo, e `Partita::anteprima` continua a rifiutare la misura in esame.
+
+### Norme del decreto d'evento
+
+Decisione di Mario del 12/11/2026, stesso ticket. Il decreto innescato da un evento aperto vale solo su certe disposizioni: quelle di `norme`, o le ordinarie dei suoi `dicasteri` se `norme` è vuota (`crates/sim-core/src/eventi/mod.rs:101-106`); un evento del debito le ammette tutte (`:256-257`). `VoceEvento` non lo dice, e la UI dovrebbe provare `EmanaDecreto` su ogni disposizione per saperlo.
+
+`VoceEvento.norme: Vec<String>`: le disposizioni (id) che il decreto innescato da quell'evento ammette, nell'ordine del catalogo. È la regola di `ammetti_disposizioni` (`crates/sim-core/src/parlamento/decreti.rs:115-139`) con quel solo evento aperto: solo norme ordinarie, ciascuna ammessa come disposizione o per il suo dicastero. Vuota se l'evento non ammette decreto. La regola resta una: il comando e la Vista usano la stessa funzione. Nessuno stato nuovo.
+
 ### Ferma e Dirotta
 
 - `VoceAgenda.costo_ferma` e `VoceCantiere.costo_ferma`: la soddisfazione che il ministro perderebbe, con la formula di `ferma` e di `ferma_cantiere` (`crates/sim-core/src/ministri/agenda.rs:383-389`, `:492-497`).
@@ -496,6 +512,8 @@ Esposizioni:
 - `menu_elettorale` segna non ammesso il premio alla coalizione con le coalizioni spente, col motivo.
 - All'opposizione `anteprima_proposta` rende le linee e la forbice della misura che `PresentaProposta` mette in calendario nello stesso turno, e la partita non cambia.
 - `anteprima_proposta` rifiuta al governo e con una norma costituzionale, come `PresentaProposta`; col posto riservato occupato non rifiuta.
+- Una legge appena presentata ha in `VoceMisura` costo, effetti, leve e gruppi uguali a quelli dell'anteprima della stessa bozza nello stesso turno; al turno dopo, con lo stesso ministro fuori dal rodaggio, gli effetti non cambiano.
+- Con un solo evento aperto, ogni disposizione di `VoceEvento.norme` passa `ammetti_disposizioni`, e ogni disposizione ordinaria fuori dalla lista è rifiutata come «decreto senza innesco». Un evento senza decreto ha la lista vuota.
 - Un salvataggio con lo schema 17 è rifiutato con `SchemaDiverso`.
 
 ## Riferimenti
