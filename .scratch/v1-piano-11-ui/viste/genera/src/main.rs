@@ -1500,6 +1500,9 @@ macro_rules! json {
     };
 }
 
+// Dopo le macro: `esito!` vi entra solo per visibilità testuale.
+mod opposizione;
+
 /// La campagna (ticket 26): il turno zero del seme 4 a 4,5 con dichiarazione, cessioni, anteprime,
 /// riposizionamento, promesse, sondaggio e campagna tagliata; poi il turno del voto di fine
 /// legislatura al governo (seme 4, percorso del 05) e all'opposizione (seme 1 a 1,5, come il 06).
@@ -1747,6 +1750,7 @@ fn esegui() -> Esito<()> {
     uscite.push(paese(&d)?);
     uscite.push(registro(&d)?);
     uscite.push(campagna(&d)?);
+    uscite.push(opposizione::opposizione(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

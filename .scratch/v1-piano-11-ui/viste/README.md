@@ -42,11 +42,28 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `23-paese.json` | 4, 1 | 4,5 / 1,5 | 0, 2, 7 | 648759 | stati della sezione Paese: `governo` (il 03) e `opposizione` (il 06), ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto`, `rifiuto_ripetuto` e `vista` dopo `Compra { SondaggioPrivato }`, più `campione` (`elettori_campione` dei 360 gruppi a chiave `regione\|condizione\|fascia`), `regioni` (20 `VoceRegione` della spec di core, calcolate in `genera/`) ed `elezioni_regioni` (`null`); `zero` (seme 4 a 4,5, turno zero) con `campione` e `regioni`; `grave` (lo stato dell'08) con `regioni`; `effetto_disegno` della manopola (2) per il margine (vedi sotto) |
 | `25-registro.json` | 4 | 4,5 | 0-8 | 1248503 | la partita del 05 (coalizione con la destra, la bozza a ogni bilancio): un elenco di nove chiusure, ciascuna con `turno`, `mosse` del turno (`DichiaraCoalizione` al turno zero, `PresentaBilancio` ai turni 4 e 8) e la Vista `prima` e `dopo` la chiusura. 02, 03, 04 e 08 coincidono con le Viste di questa partita (vedi sotto) |
 | `26-campagna.json` | 4, 1, 2 | 4,5 / 1,5 / 2,5 | 0, 20 | 934734 | stati della Campagna: `zero` (seme 4 a 4,5, turno zero) e `dichiarata` (con la destra); `cessioni` (seggi da 5 a 80 a Estrema destra e Centro, tutti rifiutati) e `cessione_che_convince` (seme 2 a 2,5: la Sinistra, «guiderebbe la propria coalizione», entra con 30 seggi); `anteprime` (`anteprima_campagna` di 26 bersagli a sette importi), `piano` (tre leve), `rifiuti_campagna`; `riposiziona` e `promesse` con i rifiuti; `piano_scelto`/`piano_dopo` (campagna, riposizionamento, promesse e sondaggio privato, poi la chiusura con le spese dei rivali nelle mosse); `tagliata_prima`/`tagliata_dopo` (1.000.000 € di campagna, poi il sondaggio); `governo_fine` (seme 4, turno 20) con `governo_promesse` (l'intesa persa dagli alleati) e `opposizione_fine` (seme 1 a 1,5, turno 20); `prove` per i tre stati: ogni coalizione dichiarabile, i riposizionamenti a passi di un quarto e il sondaggio privato (vedi sotto) |
+| `28-opposizione.json` | 1 | 1,5 | 2-19 | 1264148 | stati del cruscotto all'opposizione, sotto il governo IA del 06, ciascuno con `come` e `vista`: `sfiducia` (il 06: `anteprime` di `anteprima_sfiducia` al governo e per dicastero, `Sfiducia` al governo con `dopo_comando` e il `rifiuto_seconda`, poi la chiusura); `sfiducia_che_passa` (turno 4, al governo) con le anteprime; `referendum` (il 06: `PromuoviReferendum` sul tetto al contante, `dopo_comando`, `rifiuto_secondo` e `rifiuto_non_referendabile`, `chiusure` 1, 2 e quella dell'esito); `posto_mio` (turno 3, `prima` e dopo `PresentaProposta` salario minimo a 11 €); `linea` (il 06: `Linea` sì contro il default no, `dopo_comando`, `dopo_chiusura`, dopo il voto); `intesa_varia` (turno 4), `grave` (turno 11), `fine` (turno 19); `firme_mancanti` e `confermativo` `null` (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 28: aggiunta dal ticket «Cruscotto all'opposizione». Le firme della sfiducia sono i seggi di tutta l'opposizione, non del
+  solo giocatore: sul 06 60 (34 suoi, 26 dell'Estrema destra) contro i 40 che servono. `firme_mancanti` vuole un governo con
+  almeno 361 seggi su 400 e non arriva in 6 posizioni (1,5-6,5) per 20 semi per 40 turni: `null`. Sul 06 voterebbero la
+  sfiducia Estrema sinistra (0 seggi), Estrema destra e giocatore, la stessa linea al governo e a ogni ministro; respinta 60-340
+  alla Camera e 28-172 al Senato, costa al giocatore 0,09 di valence (0,2658 → 0,1492, senza sfiducia 0,2392) e lascia
+  «incrinata» la fascia di tutti e quattro gli alleati. Al turno 4 (2027T4) Sinistra e Centrosinistra vanno in ultimatum
+  («norma_lontana», «emendamento_respinto») e la sfiducia al governo passerebbe, 217-183 alla Camera; ai ministri passerebbe su
+  Giustizia, Infrastrutture, Interno, Istruzione, Sanità e Sviluppo economico, non su Ambiente, Economia, Esteri e Lavoro. Il
+  referendum è ammesso già al turno 2. Il quesito si chiama «Tetto al contante: 1.000 €» in `referendum` (il gradino che
+  resterebbe) e «Tetto al contante: 5.000 €» in `esiti_referendum` (quello in vigore). Firme raccolte alla prima chiusura, voto
+  ad aprile-giugno 2028, esito alla quinta: quorum mancato, 12,4 mln di votanti su 46,3 (sì 5,09 mln, no 7,34). Il secondo
+  quesito si rifiuta con «un referendum è già in corso» solo su una disposizione che da sola sarebbe ammessa: la concorrenza nei
+  servizi, referendabile, dà «niente da abrogare». La percepita del giocatore resta a 1,5 per tre turni, poi salta a 1,91 in una
+  chiusura anche senza linea; la linea sì sulla misura 0 la porta a 1,94 (0,021 in più). Il giocatore all'opposizione vede gli
+  eventi del governo con opzioni e default. Nessun confermativo da chiedere in 6×20×40: `null`.
 
 - 26: aggiunta dal ticket «Campagna». Una dichiarazione con un partito non disponibile è un rifiuto, quindi la disponibilità
   vista dopo il comando è sempre quella di una coalizione ammessa: `prove.<stato>.coalizioni` le prova tutte, 128 sottoinsiemi

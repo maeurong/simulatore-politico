@@ -486,5 +486,13 @@ Ticket `.scratch/v1-piano-11-ui/issues/26-campagna.md`, un giro su un prototipo 
 - **L'avviso della campagna tagliata lo scrive la UI**, prima della chiusura: un acquisto fatto dopo la campagna abbassa la cassa, e la chiusura taglia le spese in ordine.
 - **Due dati al core:** le due anteprime, con le soglie di scissione nella Vista.
 
+## 2026-11-12: cruscotto all'opposizione
+Ticket `.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md`, un giro su un prototipo con tre forme e dieci stati giocati sotto un governo IA; anteprime della sfiducia e rifiuti presi dal core.
+
+- **Forma A · Ordine del giorno con le leve in testa:** sfiducia, posto riservato e referendum prima delle misure, perché le linee vanno quasi sempre al default e le leve sono le scelte rare che contano. Il controprogramma a due colonne e la maggioranza al centro scartati.
+- **Il secondo tracciato all'opposizione è «per farlo cadere»:** i sì che mancano alla sfiducia, dall'anteprima. Il margine in seggi inganna quando gli alleati sono in ultimatum: +140 alla Camera mentre la sfiducia passerebbe. Al turno zero, i seggi attesi.
+- **Niente conto delle linee al default** nella cornice; conferma sul posto per sfiducia e referendum, che non si ritirano.
+- **Quattro dati al core:** sfiducia presentata, di chi è il posto riservato, ammissibilità del referendum per disposizione, costo della linea.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.

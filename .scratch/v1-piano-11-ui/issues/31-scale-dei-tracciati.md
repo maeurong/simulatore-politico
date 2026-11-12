@@ -13,4 +13,8 @@ Da decidere: gli estremi e il passo di ogni tracciato; se la soglia è un numero
 
 Si parte dalle manopole in `dati/base` e da come il core fa cadere un governo per ciascuna delle tre vie; il passacarte `serie` (`crates/sim-core/src/partita.rs:2600`) porta già consenso, margini e spread per turno. Una scelta che riguarda cosa si vede va a Mario sul prototipo `prototipi/08-fondamenta.prototype.html`, non a parole.
 
+### Premesse dal 12/11/2026
+
+[Cruscotto all'opposizione](28-cruscotto-all-opposizione.md) ha deciso cosa mostrano i tracciati quando il giocatore non governa: il consenso del suo partito, «per farlo cadere» al posto della maggioranza (i sì che mancano alla sfiducia al governo, dall'anteprima, il minimo fra le due Camere; si riempie quando il governo è fragile), al turno zero i seggi attesi dalla proiezione contro la metà più uno della coalizione dichiarata. Servono scala e soglia anche per questi due. Sulla scala di prova del consenso, dal 25 al 75%, un partito d'opposizione fra il 5 e l'11% resta sempre a zero caselle.
+
 ## Answer
