@@ -70,6 +70,11 @@ Del 12/11/2026, ticket «Bilancio» della mappa del piano 11:
 
 - **Il bilancio in aula** nella Vista, e **i dicasteri chiesti** da ogni emendamento sul bilancio: tutti e due nella PR delle esposizioni, nella sezione «Bilancio in aula» qui sotto.
 
+Del 12/11/2026, ticket «Registro» della mappa del piano 11:
+
+- **I soggetti delle voci fuse.** Ogni riga di `dettagli` porta i soggetti della voce confluita, come campi accanto al testo: il registro segue un partito, un dicastero o una regione anche dentro una voce fusa, senza cercare nel testo (sezione «La voce dell'esito»).
+- **Le disposizioni nella voce.** Una voce su una misura porta anche gli id delle disposizioni che tocca: una legge ripresentata prende un id di misura nuovo, e senza le disposizioni il filo si spezzerebbe. Il bilancio, che non tocca disposizioni, si segue per misura.
+
 Dell'11/11/2026, ticket «Prima pagina» della mappa del piano 11:
 
 - **Una situazione accesa, una voce sola.** Quando nella stessa chiusura una situazione si accende e nasce il suo evento, l'esito aveva due voci quasi uguali, tutte e due in evidenza: `situazione_accesa` e `evento_nato` («Recessione: crescita del PIL −2,9% annuo», giocato col seme 1 all'opposizione, turno 18). Tace la prima (sezione «Eventi nuovi e apertura»).
@@ -122,8 +127,9 @@ Una voce porta:
 | `dicastero` | `Option<String>` | id |
 | `regione` | `Option<String>` | id |
 | `misura` | `Option<u32>` | id della misura in calendario o votata |
+| `disposizioni` | `Vec<String>` | id delle disposizioni che la misura tocca, nell'ordine dei suoi valori; vuoto senza misura e per il bilancio |
 | `famiglia` | `Option<Famiglia>` | la famiglia dell'evento (situazione, emergenza, scandalo, shock, debito), solo in `evento_risolto` ed `evento_nato`; vuota negli altri tipi |
-| `dettagli` | `Vec<String>` | vuoto, salvo nelle voci fuse: una riga «fatto: causa» per ogni voce confluita |
+| `dettagli` | `Vec<Dettaglio>` | vuoto, salvo nelle voci fuse: una riga per ogni voce confluita, col `testo` «fatto: causa» e i suoi `partito`, `dicastero`, `regione`, `misura` e `disposizioni`, gli stessi campi della voce |
 
 Regole comuni:
 
@@ -299,7 +305,7 @@ Il catalogo ha 92 tipi. Un fatto nuovo che un piano futuro aggiunge alla chiusur
 
 L'evidenza si compone alla fine della chiusura, sulle voci raccolte, in tre passi.
 
-1. **Fusione.** Per ogni tipo fondibile, le voci dello stesso tipo e della stessa criticità diventano una voce sola, messa al posto della prima. `dettagli` porta una riga per ogni voce confluita, nell'ordine. `fatto` è il riassunto col conteggio («Tre ministri perdono soddisfazione»), `causa` la più frequente fra le confluite, o «più cause» se nessuna prevale. `partito`, `dicastero`, `regione` e `misura` restano solo se sono uguali in tutte. Una voce sola di un tipo fondibile resta com'è.
+1. **Fusione.** Per ogni tipo fondibile, le voci dello stesso tipo e della stessa criticità diventano una voce sola, messa al posto della prima. `dettagli` porta una riga per ogni voce confluita, nell'ordine, coi soggetti di quella voce. `fatto` è il riassunto col conteggio («Tre ministri perdono soddisfazione»), `causa` la più frequente fra le confluite, o «più cause» se nessuna prevale. `partito`, `dicastero`, `regione`, `misura` e `disposizioni` restano solo se sono uguali in tutte; nelle righe dei dettagli restano sempre. Una voce sola di un tipo fondibile resta com'è.
 2. **Scelta.** Entrano le critiche. Se sono più di sette, restano le sette con la precedenza più alta (3, poi 2, poi 1); a parità, le prime nell'ordine della chiusura. Se sono meno di sette, i posti liberi vanno alle notevoli, le prime nell'ordine della chiusura. Le ordinarie non entrano mai: un turno quieto apre con meno di sette voci.
 3. **Ordine.** Niente si sposta: l'elenco resta nell'ordine della chiusura, e `in_evidenza` segna le scelte.
 
@@ -503,6 +509,8 @@ Esito:
 - Con nove critiche restano fuori le due di precedenza più bassa, e a parità le ultime nell'ordine della chiusura.
 - Con due critiche e otto notevoli entrano le due critiche e le prime cinque notevoli.
 - Dieci atti eseguiti in un turno sono una voce sola con dieci dettagli.
+- Tre ministri di dicasteri diversi che perdono soddisfazione sono una voce fusa senza `dicastero`; ognuna delle tre righe dei dettagli porta il suo.
+- Una legge respinta e ripresentata dà due voci con `misura` diversa e le stesse `disposizioni`.
 - Stesso seme e stessi comandi danno lo stesso esito, voce per voce.
 - Ogni fatto della ricerca che il catalogo copre ha un test che lo fa accadere e trova la sua voce. I primi da scrivere sono quelli che oggi non lasciano traccia: evento risolto per default, alleato che esce, governo caduto con ognuna delle sei origini, situazione spenta, valore non applicato per il memorandum.
 - Campagna tagliata: campagna pari alla cassa, poi un sondaggio privato; la voce porta il chiesto, lo speso e la somma degli acquisti. Senza taglio nessuna voce.

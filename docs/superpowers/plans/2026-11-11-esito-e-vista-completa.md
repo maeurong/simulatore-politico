@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (workspace `sim-core`, `sim-cli`, `app/src-tauri`), serde, ts-rs per i tipi in `app/src/lib/tipi/`. Nessuna dipendenza nuova.
 
-**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 138-297) è l'oracolo dei Task 1-7: il piano non lo ricopia.
+**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 144-303) è l'oracolo dei Task 1-7: il piano non lo ricopia.
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md` (i 135 fatti nell'ordine di `chiudi_turno`, con funzione e riga) e `docs/ricerca/sintesi/stato-per-le-esposizioni.md` (dove vive ogni dato da esporre), scritte per questo piano sul codice a `8952a06`.
 
@@ -21,11 +21,11 @@
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-75, e non si riaprono: il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
+Stanno nella spec, righe 39-80, e non si riaprono: i soggetti per riga nei dettagli delle voci fuse e le disposizioni nella voce, PR 1, Task 1 (ticket «Registro», 12/11/2026, spec «La voce dell'esito»); il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
 
 ## Scelte del piano
 
-Oltre alle 22 «Scelte mie» della spec (righe 77-102), prese scrivendo il piano:
+Oltre alle 22 «Scelte mie» della spec (righe 82-107), prese scrivendo il piano:
 
 1. **`precedenza` nella voce.** La scelta delle sette gira a fine chiusura su voci già raccolte nello stato: la precedenza (3, 2, 1, oppure 0) è un campo della voce, esportato.
 2. **Criticità condizionata.** `grado(tipo, al_governo)` rende il caso base del catalogo; nei sette tipi con una condizione («C2 se…») il punto del fatto la alza o la abbassa con `VoceEsito::con_grado`. L'elenco dei sette sta nel Task 1.
@@ -122,7 +122,13 @@ pub struct VoceEsito {
     pub tipo: TipoVoce, pub criticita: Criticita, pub precedenza: u8, pub in_evidenza: bool,
     pub tono: Tono, pub fatto: String, pub causa: String,
     pub partito: Option<String>, pub dicastero: Option<String>, pub regione: Option<String>,
-    pub misura: Option<u32>, pub famiglia: Option<Famiglia>, pub dettagli: Vec<String>,
+    pub misura: Option<u32>, pub disposizioni: Vec<String>,
+    pub famiglia: Option<Famiglia>, pub dettagli: Vec<Dettaglio>,
+}
+pub struct Dettaglio {
+    pub testo: String,
+    pub partito: Option<String>, pub dicastero: Option<String>, pub regione: Option<String>,
+    pub misura: Option<u32>, pub disposizioni: Vec<String>,
 }
 pub const MASSIMO_IN_EVIDENZA: usize = 7;
 pub(crate) enum Grado { C3, C2, C1, N, O }
@@ -136,7 +142,7 @@ impl VoceEsito {
 pub(crate) fn componi(voci: &mut Vec<VoceEsito>, giocatore: &str);
 ```
 
-`VoceEsito`, `TipoVoce` e `Criticita` derivano `Serialize, Deserialize` e si esportano in TypeScript come gli altri tipi della Vista.
+`VoceEsito`, `Dettaglio`, `TipoVoce` e `Criticita` derivano `Serialize, Deserialize` e si esportano in TypeScript come gli altri tipi della Vista.
 
 `grado` e `fondibile` sono `match` esaustivi sulle colonne G, O e F del catalogo. Per i sette tipi condizionati `grado` rende il caso base, e il punto del fatto usa `con_grado`:
 
@@ -150,7 +156,7 @@ pub(crate) fn componi(voci: &mut Vec<VoceEsito>, giocatore: &str);
 | `procedura_ue` | N / O | C2 al governo e N all'opposizione, se lo stato peggiora |
 | `ministro_esce` | C2 / O | N al governo, se le dimissioni le ha chieste il giocatore o per rimpasto |
 
-`componi`, nell'ordine: (1) alza a notevole ogni voce ordinaria con `partito == giocatore`, tranne `Sondaggio`, `Revisione`, `EntrateDiCassa`; (2) fonde, per ogni tipo fondibile, le voci con lo stesso tipo e la stessa criticità al posto della prima: `dettagli` = una riga «fatto: causa» per voce, `fatto` = `riassunto(tipo, n)`, `causa` = la più frequente o «più cause» se nessuna prevale, `partito`/`dicastero`/`regione`/`misura` solo se uguali in tutte, `tono` grave se una lo è; (3) segna `in_evidenza`: le critiche, e se sono più di sette le sette con `precedenza` più alta e a parità le prime; se sono meno, le prime notevoli fino a sette. Non riordina mai.
+`componi`, nell'ordine: (1) alza a notevole ogni voce ordinaria con `partito == giocatore`, tranne `Sondaggio`, `Revisione`, `EntrateDiCassa`; (2) fonde, per ogni tipo fondibile, le voci con lo stesso tipo e la stessa criticità al posto della prima: `dettagli` = un `Dettaglio` per voce, col `testo` «fatto: causa» e i soggetti di quella voce copiati così come sono, `fatto` = `riassunto(tipo, n)`, `causa` = la più frequente o «più cause» se nessuna prevale, `partito`/`dicastero`/`regione`/`misura`/`disposizioni` solo se uguali in tutte, `tono` grave se una lo è; (3) segna `in_evidenza`: le critiche, e se sono più di sette le sette con `precedenza` più alta e a parità le prime; se sono meno, le prime notevoli fino a sette. Non riordina mai.
 
 - [ ] **Step 1: test che falliscono**, in `esito.rs`:
   - `ogni_tipo_ha_un_grado`: `grado(FiduciaRespinta, true) == Some(C3)`, `grado(SoddisfazioneVariata, false) == None`, `grado(GuidaRifiutata, true) == None`, `grado(AttoEseguito, true) == Some(O)`; `TipoVoce` ha 92 varianti (conteggio da un array di tutte).
@@ -158,11 +164,14 @@ pub(crate) fn componi(voci: &mut Vec<VoceEsito>, giocatore: &str);
   - `due_critiche_e_otto_notevoli`: in evidenza le 2 critiche e le prime 5 notevoli.
   - `le_ordinarie_non_entrano_mai`: 3 ordinarie → nessuna in evidenza.
   - `dieci_atti_una_voce`: 10 `AttoEseguito` → 1 voce, `dettagli.len() == 10`, `fatto == "10 atti eseguiti"`, nel posto della prima.
+  - `i_soggetti_restano_nei_dettagli`: tre `SoddisfazioneVariata` con `dicastero` «sanita», «interno», «sanita» → una voce con `dicastero == None` e i tre `Dettaglio` con «sanita», «interno», «sanita» nell'ordine; con tre volte «sanita» anche la voce fusa ha `Some("sanita")`.
   - `una_fondibile_sola_resta_com_e`: `dettagli` vuoto, `fatto` invariato.
   - `criticita_diverse_non_si_fondono`: due `MinistroEsce`, una C2 e una N → restano due.
   - `il_soggetto_e_il_giocatore`: `PromessaVerificata` con `partito = Some("x")` e giocatore `"x"` → notevole, e non si fonde con quelle degli altri partiti; `EntrateDiCassa` del giocatore resta ordinaria e si fonde.
   - `causa_della_fusa`: tre voci con cause «a», «a», «b» → «a»; con «a», «b» → «più cause».
   - `l_ordine_non_cambia`: i tipi non fusi escono nell'ordine d'ingresso.
+Il campo `disposizioni` (aggiunto il 12/11/2026 dal ticket «Registro» della mappa del piano 11): ogni punto del fatto che scrive `misura` scrive anche gli id delle disposizioni della misura, dai suoi `valori` (`crates/sim-core/src/parlamento/mod.rs:64`) nell'ordine; il bilancio lo lascia vuoto. Test nel Task 4: `la_legge_ripresentata_tiene_le_disposizioni`, una legge respinta e ripresentata dà due voci con `misura` diversa e `disposizioni` uguali.
+
 - [ ] **Step 2:** `cargo test -p sim-core esito::` → falliscono (modulo assente).
 - [ ] **Step 3:** implementa `esito.rs` come da Interfaces. `riassunto`: una frase per tipo fondibile, «N <fatto al plurale>».
 - [ ] **Step 4:** verifiche globali verdi.
@@ -607,7 +616,7 @@ pub struct Vista { /* … */ pub regole_ue: VistaRegoleUe, pub debito: VistaDebi
 
 `debito_pil` aggiunto il 12/11/2026 dal ticket «Conti» della mappa del piano 11 (spec, sezione «Debito»): è `Economia::debito_e_disavanzo_pil().0` (`economia/spread.rs:21-27`), lo stesso numero con cui si calcola lo spread, letto in `vista()`. Nessuno stato nuovo.
 
-La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 416: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
+La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 422: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
 
 - [ ] **Step 1: test che falliscono:**
   - `la_proiezione_di_gennaio_coincide_col_controllo`: in gennaio-marzo, `proiezione.deviazione` è la `ultima_deviazione` dopo la chiusura di aprile-giugno, se nel mezzo non cambia nulla (entro 1e-9).
