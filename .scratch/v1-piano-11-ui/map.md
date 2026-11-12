@@ -17,6 +17,7 @@ Spec del piano 11 in `docs/superpowers/specs/`, divisa in fette ordinate sulla V
 - Knowledge base: si parte da `docs/ricerca/index.md`, sezione estetica (data-viz, movimento, tipografia, mappe, grafica italiana giocosa, tono). Ogni decisione che vale la pena tenere va anche in `docs/ricerca/sintesi/decisioni.md`.
 - Tracker: local-markdown in `.scratch/v1-piano-11-ui/`.
 - Pianificazione, non esecuzione: la mappa produce decisioni; il codice lo scrivono i piani nati dalla spec.
+- Spec del piano 11: [spec](../../docs/superpowers/specs/2026-11-12-v1-piano-11-ui.md) (12/11/2026, `ready-for-agent`); passo successivo `superpowers:writing-plans` sulla fetta 11a. I nove rimandi al core dei ticket 18, 24, 27, 31 e 32, che mancavano, sono nella spec e nel piano del core dal 12/11/2026 (Task 16g).
 
 ## Decisions so far
 
