@@ -35,11 +35,18 @@ const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id =
 /** In centesimi di punto: "4200" → 42. */
 const punti = (v: Vista, id: string) => Number(disposizione(v, id)) / 100;
 
-/** quota_fra_i_votanti: media sugli istituti di quote[j] / (1 − astensione). */
+/** quota_fra_i_votanti: media sugli istituti di quote[j] / (1 − astensione). NaN senza istituti o col partito fuori da `partiti`. */
 function quota(v: Vista, partito: string): number {
   const j = v.partiti.findIndex((p) => p.id === partito);
   const istituti = v.sondaggio.istituti;
+  if (j < 0) return NaN;
   return istituti.reduce((s, r) => s + r.quote[j] / (1 - r.quote[r.quote.length - 1]), 0) / istituti.length;
+}
+
+/** Il consenso: senza dato nel sondaggio, caselle tratteggiate e nessun rimando (manca il dato, non una fetta). */
+function consenso(nome: Chiave, q: number, scala: Scala, rosso: boolean, prima: PuntoSerie | undefined): Tracciato {
+  const c = { nome, ramo: null, scala, grigio: false, rimando: null, prima: prima ? prima.consenso * 100 : null };
+  return Number.isFinite(q) ? { ...c, valore: q * 100, testo: percentuale(q), rosso } : { ...c, valore: null, testo: "—", rosso: false };
 }
 
 /** Seggi della coalizione meno la metà più uno del ramo (voto.rs:106); null se il ramo non ha seggi. */
@@ -73,27 +80,24 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciat
   const stato = statoDi({ ...v, finita: false });
   const turnoZero = stato === "turno_zero";
   const alGoverno = stato === "trattativa" || stato === "crisi" || stato === "governo";
-  const conDichiarata = turnoZero || stato === "trattativa";
-  const coalizione = [v.giocatore, ...(conDichiarata ? v.coalizione : v.alleati.map((a) => a.partito))];
+  // Vista.coalizione è piena solo nel turno del voto; in trattativa gli alleati stanno nelle richieste
+  const coalizione = [
+    v.giocatore,
+    ...(turnoZero ? v.coalizione
+      : stato === "trattativa" ? [...v.coalizione, ...v.richieste.map((r) => r.partito)]
+      : v.alleati.map((a) => a.partito)),
+  ];
 
   let primo: Tracciato;
   if (alGoverno) {
     const stacco = disposizione(v, "premio") === "nessuno" ? 50 : punti(v, "soglia_premio");
-    const scala = { stacco, passo: 4, rovesciata: false };
-    const q = coalizione.reduce((s, p) => s + quota(v, p), 0);
     const p = v.proiezione && margini(v.proiezione, coalizione);
-    primo = {
-      nome: "tracciato.consenso_coalizione", valore: q * 100, testo: percentuale(q), ramo: null, scala,
-      rosso: !!p && ((p.camera ?? 0) < 0 || (p.senato ?? 0) < 0), grigio: false, rimando: null,
-      prima: prima ? prima.consenso * 100 : null,
-    };
+    primo = consenso("tracciato.consenso_coalizione", coalizione.reduce((s, x) => s + quota(v, x), 0),
+      { stacco, passo: 4, rovesciata: false }, !!p && ((p.camera ?? 0) < 0 || (p.senato ?? 0) < 0), prima);
   } else {
     const scala = { stacco: punti(v, "soglia_lista"), passo: 1, rovesciata: false };
     const q = quota(v, v.giocatore);
-    primo = {
-      nome: "tracciato.consenso_partito", valore: q * 100, testo: percentuale(q), ramo: null, scala,
-      rosso: sottoLoStacco(q * 100, scala), grigio: false, rimando: null, prima: prima ? prima.consenso * 100 : null,
-    };
+    primo = consenso("tracciato.consenso_partito", q, scala, sottoLoStacco(q * 100, scala), prima);
   }
 
   const secondo: Tracciato = turnoZero

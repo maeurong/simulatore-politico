@@ -6,6 +6,7 @@ import turnoZeroJson from "../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.
 import governoJson from "../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import opposizioneJson from "../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
+import trattativaJson from "../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 import registroJson from "../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import contiJson from "../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
@@ -14,6 +15,7 @@ import contiJson from "../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 const vista = (x: unknown) => x as Vista;
 const turnoZero = vista(turnoZeroJson);
 const governo = vista(governoJson);
+const trattativa = vista(trattativaJson);
 const crisi = vista(crisiJson);
 const opposizione = vista(opposizioneJson);
 const finita = vista(finitaJson);
@@ -105,5 +107,35 @@ describe("tracciatiDi", () => {
   it("la variazione viene dal punto della serie del turno prima", () => {
     expect(tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2].prima).toBe(196);
     expect(tracciatiDi(governo, [])[2].prima).toBeNull();
+  });
+
+  it("in trattativa la coalizione viene dalle richieste", () => {
+    const [consenso, maggioranza] = tracciatiDi(trattativa, []);
+    expect(consenso.testo).toBe("50,9%");
+    expect(caselle(consenso.valore!, consenso.scala!).piene).toBe(6);
+    expect(consenso.rosso).toBe(false);
+    expect(maggioranza.valore).toBe(14);
+    expect(maggioranza.ramo).toBe("Senato");
+    expect(caselle(maggioranza.valore!, maggioranza.scala!).piene).toBe(8);
+    expect(maggioranza.rosso).toBe(false);
+  });
+
+  it("senza premio lo stacco del consenso della coalizione è 50", () => {
+    const disposizioni = governo.disposizioni.map((d) => (d.id === "premio" ? { ...d, in_vigore: "nessuno" } : d));
+    const consenso = tracciatiDi({ ...governo, disposizioni }, [])[0];
+    expect(consenso.scala?.stacco).toBe(50);
+    expect(caselle(consenso.valore!, consenso.scala!).piene).toBe(5);
+  });
+
+  it("senza istituti il consenso manca: tratteggiato, senza rimando", () => {
+    const consenso = tracciatiDi({ ...governo, sondaggio: { ...governo.sondaggio, istituti: [] } }, [])[0];
+    expect(consenso.valore).toBeNull();
+    expect(consenso.rimando).toBeNull();
+  });
+
+  it("col partito fuori dal sondaggio il consenso manca", () => {
+    const consenso = tracciatiDi({ ...opposizione, partiti: opposizione.partiti.filter((p) => p.id !== opposizione.giocatore) }, [])[0];
+    expect(consenso.valore).toBeNull();
+    expect(consenso.rimando).toBeNull();
   });
 });
