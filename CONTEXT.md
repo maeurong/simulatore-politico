@@ -402,8 +402,12 @@ La regione su cui spende e rende un atto di Infrastrutture e Trasporti o di Svil
 _Evita_: bersaglio (da solo, che è quello della campagna), collegio
 
 **Livello**:
-Ciò che la mappa colora, uno alla volta: consenso, disoccupazione, reddito, affluenza, pericolosità naturale, oppure il risultato del voto.
+Ciò che la mappa colora, uno alla volta: consenso (di default quello della coalizione del giocatore), disoccupazione, reddito, affluenza, pericolosità naturale, oppure il risultato del voto.
 _Evita_: layer, filtro, vista
+
+**Segno**:
+Marca fissa sulla mappa, sopra ogni livello, nel punto interno della regione: atto in agenda, cantiere in corso, opera finita, emergenza aperta.
+_Evita_: icona, puntina, marker
 
 ## Economia
 

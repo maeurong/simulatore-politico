@@ -451,6 +451,15 @@ Ticket `.scratch/v1-piano-11-ui/issues/21-conti.md`, due giri su un prototipo co
 - **Il centro studi a ventagli:** la stima del trimestre accanto alla prima stima, quattro previsioni con la fascia di una e due sigma.
 - **Due dati al core:** i trimestri già passati oltre la soglia (la recessione ne chiede due, e a −4,2% può essere spenta) e il debito sul PIL, che oggi si legge solo pagando il centro studi.
 
+## 2026-11-12: paese
+Ticket `.scratch/v1-piano-11-ui/issues/23-paese.md`, un giro su un prototipo con tre forme, quattro stati giocati e il selettore dentro tre sezioni ospiti; le venti regioni calcolate con le regole della spec di core.
+
+- **Forma A · Atlante:** mappa e lista a pagina, il sondaggio nel dettaglio a lato finché non si sceglie una regione. Sondaggio a fronte e schede scartati: la mappa va letta accanto ai suoi numeri, e la scheda della regione ha bisogno del lato.
+- **Consenso della coalizione del giocatore** come livello di default: dice chi vince il seggio, e all'opposizione la sola quota del giocatore schiaccia le cinque classi.
+- **Otto colori dei partiti**, validati per i daltonici sulla carta, nella mappa del voto e nelle barre; il resto a inchiostro, col nome sempre accanto perché tre hanno contrasto basso.
+- **Il selettore di regione resta nella sezione che lo chiede**, nel dettaglio a lato: mappa piccola, lista da tastiera, bottone d'azione.
+- **Nessun dato nuovo al core:** regioni, voto per regione e opere sono già nella PR delle esposizioni.
+
 ## 2026-11-12: bilancio
 Ticket `.scratch/v1-piano-11-ui/issues/22-bilancio.md`, un giro su un prototipo con tre forme e sei stati giocati, coi riepiloghi veri del core per ogni modifica.
 

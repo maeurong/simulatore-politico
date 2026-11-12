@@ -39,11 +39,28 @@ Tutti gli stati raggiunti **giocando**, nessuno forzato col salvataggio. Nome de
 | `20-anteprima.json` | 4, 7 | 4,5 | 2, 8 | 301982 | anteprime sul 03, ciascuna con `valori` e `anteprima` o `rifiuto`: riforma, tre territoriali (decontribuzione rifiutata perché già in esame, ZES, autonomia), due disposizioni, costituzionale, elettorale, proposta sul nucleare, `accogli`; `gradini` con ogni gradino di salario minimo, ZES, autonomia e numero dei parlamentari; `test` comprato su salario minimo e ZES con cassa prima e dopo e il rifiuto del secondo; `decreto` e `decreto_grave`, primo decreto su disposizioni ammesso da un evento aperto, con la sua Vista (vedi sotto) |
 | `21-conti.json` | 4, 1, 25, 11 | 4,5 / 1,5 | 2-25 | 441110 | stati dei Conti, ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto_ripetuto`, `serie` e `vista` dopo `Compra { CentroStudi }`: `studi_03` (il 03), `studi_06` (il 06), `due_accese` (seme 4 turno 15), `vicina` (seme 1 turno 13, recessione al primo trimestre sotto), `spread_alto` (seme 25 turno 16, 205 pb), `senza_bilancio` (seme 11 turno 25, bilancio mai presentato) (vedi sotto) |
 | `22-bilancio.json` | 4, 1 | 4,5 / 1,5 | 2-13 | 464346 | stati del Bilancio, ciascuno con `come`, `serie` e `vista`: `bozza_04` (il 03 chiuso due volte, prima di `PresentaBilancio`) con `bozza`, `riepilogo_bozza` e i `varianti` di `riepilogo_bilancio` (indicizza tutto, soglie, ogni dicastero da solo, Iva al 24%, primo scaglione al 21%, margine della Sanità dal funzionamento o in disavanzo, Iva al 95% rifiutata); `presentato` con `riepilogo_presentato` e `se_accogli` per alleato; `emendamenti_decisi` (Centrodestra accolto, Destra respinta); `ripresentato` (indicizzato per tutto); `provvisorio` (seme 1 turno 13, bilancio mai presentato); `opposizione` (il 06 fino a ottobre-dicembre, con il rifiuto di `riepilogo_bilancio`); `fuori_stagione` (la bozza del 04 sul 03, rifiutata) (vedi sotto) |
+| `23-paese.json` | 4, 1 | 4,5 / 1,5 | 0, 2, 7 | 648759 | stati della sezione Paese: `governo` (il 03) e `opposizione` (il 06), ciascuno con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto`, `rifiuto_ripetuto` e `vista` dopo `Compra { SondaggioPrivato }`, più `campione` (`elettori_campione` dei 360 gruppi a chiave `regione\|condizione\|fascia`), `regioni` (20 `VoceRegione` della spec di core, calcolate in `genera/`) ed `elezioni_regioni` (`null`); `zero` (seme 4 a 4,5, turno zero) con `campione` e `regioni`; `grave` (lo stato dell'08) con `regioni`; `effetto_disegno` della manopola (2) per il margine (vedi sotto) |
 
 Semi 1-3 a 4,5: niente incarico al giocatore dopo il voto, scartati. 03 è il primo turno al
 governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].proposta` (qui 3).
 
 ## Stranezze notate
+
+- 23: aggiunta dal ticket «Paese». `regioni` segue la tabella `VoceRegione` della spec di core «esito e Vista completa»
+  (PR 2): disoccupazione vera della regione presa dalla partita al turno prima, reddito reale per elettore da
+  `reddito_prima` pesato sulle quote, 18 quote condizione × fascia (sommano a 1 entro 2·10⁻¹⁶). Il controllo della spec
+  tiene: la media pesata sulle forze di lavoro vale 5,693 nel 03 contro la riveduta pubblica 5,6925, 5,440 contro 5,4398
+  nel 06, 5,791 contro 5,7915 nell'08. Al turno zero non c'è una chiusura prima: disoccupazione e reddito sono quelli di
+  partenza (`reddito_prima` vale `reddito`). Nell'indice `totale` il sisma pesa poco, perché le sue probabilità a
+  trimestre sono piccole accanto alle emergenze idrogeologiche e agli incendi: l'Abruzzo ha `sisma` 1 e `totale` 0,26;
+  la regione più esposta è la Sicilia (incendi al tetto, 3,5 × 0,35 tagliato a 1), poi la Sardegna (sisma 0, totale
+  0,81). Il campione è uguale prima e dopo l'acquisto: legge solo il sondaggio pubblico (`genera/` lo controlla). Il
+  sondaggio privato costa 15.000 euro e ha 4.000 interviste, contro le 4.501 del pubblico sommate sulle regioni.
+  `elezioni_regioni` è `null`: il voto parte dalle `intenzioni_vere()` prese dentro la chiusura dopo il motore e le
+  consuma lì; prima e dopo la chiusura le intenzioni sono altre (la destra vale 0,259 prima, 0,227 dopo, 0,249 al voto,
+  seme 4), e `voti_per_regione` e `riparto_con` sono `pub(crate)`. `cantiere_finito` NON RAGGIUNTO: le agende dei
+  ministri si vedono solo al governo (02 e 06: nessuna agenda su 10 ministeri, cantieri visibili), quindi gli atti a un
+  turno eseguiti nella chiusura della trattativa, dopo il voto, non si ricostruiscono dalle Viste. Rimandi al core.
 
 - 22: aggiunta dal ticket «Bilancio». La perdita reale è uguale per tutti i dicasteri (1,0% nel 2027T4). Spostare
   il margine dal funzionamento lascia il riepilogo identico alla bozza. Ripresentando indicizzato per tutto dopo aver

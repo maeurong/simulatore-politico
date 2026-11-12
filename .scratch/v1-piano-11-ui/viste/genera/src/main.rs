@@ -1271,6 +1271,187 @@ fn prima_pagina(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Pericolosità della spec di core «esito e Vista completa» (PR 2, «Regioni»): per tipo le
+/// emergenze attese l'anno, con le probabilità di `eventi/emergenze.rs:40-60` sui quattro
+/// trimestri, divise per quelle della regione più esposta; `totale` fa lo stesso sulla somma.
+fn pericolosita(d: &DatiGioco) -> Vec<[f64; 4]> {
+    let m = d.manopola("emergenze_idro_anno");
+    let grezzi: Vec<[f64; 4]> = (d.regioni().iter())
+        .map(|r| {
+            let h = &r.pericolosita;
+            let sisma = 4.0 * h.sisma.clamp(0.0, 1.0);
+            let idro = 4.0 * (1.0 - (-m * h.idro / 4.0).exp()).clamp(0.0, 1.0);
+            // Solo il terzo trimestre.
+            let incendi = (3.5 * h.incendi).clamp(0.0, 1.0);
+            [sisma, idro, incendi, sisma + idro + incendi]
+        })
+        .collect();
+    let mut max = [0.0_f64; 4];
+    for g in &grezzi {
+        for (x, y) in max.iter_mut().zip(g) {
+            *x = x.max(*y);
+        }
+    }
+    (grezzi.iter())
+        .map(|g| std::array::from_fn(|k| if max[k] > 0.0 { g[k] / max[k] } else { 0.0 }))
+        .collect()
+}
+
+/// `VoceRegione` della spec (PR 2, «Regioni»), calcolata qui: `prima` è la partita al turno
+/// prima, da cui la disoccupazione della chiusura precedente.
+fn regioni(d: &DatiGioco, p: &Partita, prima: &Partita) -> Esito<serde_json::Value> {
+    use sim_core::elettorato::{Condizione, Fascia, indice_gruppo};
+    let gruppi = &p.elettorato().gruppi;
+    let mut out = Vec::new();
+    for (r, [sisma, idro, incendi, totale]) in d.regioni().iter().zip(pericolosita(d)) {
+        let manca = || format!("{}: regione assente", r.id);
+        let k = (d.elettorato().regioni.iter())
+            .position(|x| x.id == r.id)
+            .ok_or_else(manca)?;
+        let disoccupazione = (prima.economia().regioni.iter())
+            .find(|x| x.id == r.id)
+            .map(|x| x.disoccupazione)
+            .ok_or_else(manca)?;
+        let g = (Condizione::TUTTE.iter())
+            .flat_map(|&c| Fascia::TUTTE.map(|f| gruppi.get(indice_gruppo(k, c, f))))
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(manca)?;
+        let quota: f64 = g.iter().map(|x| x.quota).sum();
+        let reddito = g
+            .iter()
+            .map(|x| x.quota * x.reddito_prima.reale())
+            .sum::<f64>()
+            / quota;
+        out.push(serde_json::json!({
+            "id": r.id, "nome": r.nome, "macroarea": r.macroarea,
+            "pericolosita": { "sisma": sisma, "idro": idro, "incendi": incendi, "totale": totale },
+            "disoccupazione": disoccupazione, "reddito": reddito,
+            "gruppi": g.iter().map(|x| x.quota).collect::<Vec<_>>(),
+        }));
+    }
+    Ok(out.into())
+}
+
+/// Gli elettori campione di tutti i gruppi, a chiave `regione|condizione|fascia`.
+fn campione(d: &DatiGioco, p: &Partita) -> Esito<serde_json::Value> {
+    use sim_core::elettorato::{Condizione, Fascia};
+    let mut out = serde_json::Map::new();
+    for r in &d.elettorato().regioni {
+        for c in Condizione::TUTTE {
+            for f in Fascia::TUTTE {
+                let e = p
+                    .elettori_campione(&r.id, c, f)
+                    .map_err(|e| e.to_string())?;
+                let cf = serde_json::json!([c, f]);
+                let id = |i: usize| cf[i].as_str().unwrap_or_default().to_string();
+                let k = format!("{}|{}|{}", r.id, id(0), id(1));
+                out.insert(k, serde_json::to_value(e).map_err(|e| e.to_string())?);
+            }
+        }
+    }
+    Ok(out.into())
+}
+
+/// La media delle disoccupazioni di `regioni`, pesata sulle forze di lavoro dei dati.
+fn media_disoccupazione(d: &DatiGioco, regioni: &serde_json::Value) -> f64 {
+    let (mut s, mut w) = (0.0, 0.0);
+    for (r, v) in d
+        .regioni()
+        .iter()
+        .zip(regioni.as_array().into_iter().flatten())
+    {
+        s += r.forze_lavoro * v["disoccupazione"].as_f64().unwrap_or(0.0);
+        w += r.forze_lavoro;
+    }
+    s / w
+}
+
+/// La sezione «Paese» (ticket 23): regioni come `VoceRegione` della spec di core, elettori
+/// campione di tutti i gruppi e sondaggio privato comprato, sul 03, sul 06, al turno zero e
+/// sull'08 (tono grave).
+fn paese(d: &DatiGioco) -> Esito<Uscita> {
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let senza_voto = "null: `vota_parlamento` parte da `intenzioni_vere()` presa dentro \
+        `chiudi_turno` dopo motore, campagna e posizioni (partita.rs:595-610) e la consuma nella \
+        stessa chiusura (:641); fuori se ne vede solo il prima o il dopo, e `voti_per_regione` e \
+        `riparto_con` sono pub(crate) (legislatura/voto.rs:53, parlamento/regole.rs:118). Misurato sul seme 4: la destra fra i \
+        votanti vale 0,259 nelle `intenzioni_vere()` prima della chiusura, 0,227 dopo, 0,249 al voto";
+    let cassa = |p: &Partita| {
+        (p.vista().partiti.iter())
+            .find(|x| x.id == p.vista().giocatore)
+            .map(|x| x.cassa)
+    };
+    let compra = |prima: &Partita, mut p: Partita, come: &str| -> Esito<serde_json::Value> {
+        let cassa_prima = cassa(&p);
+        let campione_prima = campione(d, &p)?;
+        let acquisto = || Comando::Compra {
+            acquisto: Acquisto::SondaggioPrivato,
+        };
+        let rifiuto = p.comanda(acquisto()).err().map(|e| e.to_string());
+        let ripetuto = p.comanda(acquisto()).err().map(|e| e.to_string());
+        let campione = campione(d, &p)?;
+        if campione != campione_prima {
+            return Err(format!("{come}: il campione cambia col sondaggio privato"));
+        }
+        Ok(serde_json::json!({
+            "come": format!("{come}, poi Compra SondaggioPrivato; campione dopo l'acquisto (uguale a prima)"),
+            "cassa_prima": cassa_prima, "cassa_dopo": cassa(&p), "rifiuto": rifiuto,
+            "rifiuto_ripetuto": ripetuto, "campione": campione, "regioni": regioni(d, &p, prima)?,
+            "elezioni_regioni": null, "vista": p.vista(),
+        }))
+    };
+    let mut metti =
+        |k: &str, j: serde_json::Value, seme: u64| {
+            let v = &j["vista"];
+            note.push(format!(
+            "{k}: seme {seme}, turno {} {}T{}, disoccupazione media {:.3} (riveduta pubblica {})",
+            v["turno"], v["data"]["anno"], v["data"]["trimestre"],
+            media_disoccupazione(d, &j["regioni"]),
+            v["statistica"]["revisione"]["riveduta"]["disoccupazione"]
+        ));
+            out.insert(k.into(), j);
+        };
+    let mut prima = fonda(d, 4, 4.5)?;
+    con_la_destra(&mut prima)?;
+    prima.chiudi_turno();
+    let mut p = prima.clone();
+    p.chiudi_turno();
+    metti("governo", compra(&prima, p, "il 03")?, 4);
+    let mut prima = fonda(d, 1, 1.5)?;
+    prima.chiudi_turno();
+    let mut p = prima.clone();
+    p.chiudi_turno();
+    metti("opposizione", compra(&prima, p, "il 06 (seme 1, 1,5)")?, 1);
+    let zero = fonda(d, 4, 4.5)?;
+    let j = serde_json::json!({
+        "come": "fonda a 4,5, nessun comando; disoccupazione e reddito del turno zero, senza chiusure prima",
+        "campione": campione(d, &zero)?, "regioni": regioni(d, &zero, &zero)?, "vista": zero.vista(),
+    });
+    metti("zero", j, 4);
+    // L'08: `giocata` gioca come `al_governo`, la bozza a ogni bilancio fuori dalla crisi.
+    let prima = giocata(d, 4, 4.5, "Partito del giocatore", true, 6)?;
+    let p = giocata(d, 4, 4.5, "Partito del giocatore", true, 7)?;
+    if !p.vista().eventi.iter().any(|e| e.tono == Tono::Grave) {
+        return Err("grave: il turno 7 del seme 4 non ha un evento in tono grave".into());
+    }
+    let j = serde_json::json!({
+        "come": "l'08: seme 4 a 4,5 come il 05, turno 7, «Emergenza incendi» in tono grave",
+        "regioni": regioni(d, &p, &prima)?, "vista": p.vista(),
+    });
+    metti("grave", j, 4);
+    note.push(format!("elezioni_regioni: {senza_voto}"));
+    note.push("cantiere_finito: NON RAGGIUNTO".into());
+    out.insert(
+        "effetto_disegno".into(),
+        d.manopola("effetto_disegno").into(),
+    );
+    Ok(Uscita {
+        nome: "23-paese.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
 fn esegui() -> Esito<()> {
     let d = dati()?;
     let mut uscite = Vec::new();
@@ -1307,6 +1488,7 @@ fn esegui() -> Esito<()> {
     uscite.push(anteprima_misura(&d)?);
     uscite.push(conti(&d)?);
     uscite.push(bilancio(&d)?);
+    uscite.push(paese(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {
