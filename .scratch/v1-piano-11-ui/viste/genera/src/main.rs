@@ -1502,6 +1502,7 @@ macro_rules! json {
 
 // Dopo le macro: `esito!` vi entra solo per visibilità testuale.
 mod eredita;
+mod governo;
 mod opposizione;
 
 /// La campagna (ticket 26): il turno zero del seme 4 a 4,5 con dichiarazione, cessioni, anteprime,
@@ -1753,6 +1754,7 @@ fn esegui() -> Esito<()> {
     uscite.push(campagna(&d)?);
     uscite.push(opposizione::opposizione(&d)?);
     uscite.push(eredita::eredita(&d)?);
+    uscite.push(governo::governo(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {
