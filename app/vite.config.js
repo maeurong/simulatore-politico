@@ -7,6 +7,7 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [sveltekit()],
+  test: { include: ["src/**/*.test.ts"] },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -16,6 +17,7 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
+    fs: { allow: [".."] },
     host: host || "127.0.0.1",
     hmr: host
       ? {
