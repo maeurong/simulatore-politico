@@ -1,0 +1,59 @@
+/* Fondamenta visive: token, caratteri, regole di base.
+   Fonte: .scratch/v1-piano-11-ui/prototipi/08-fondamenta.prototype.html (forma A). */
+
+/* block: i file stanno sul disco dell'app, il periodo di blocco non si vede e il testo non salta dal ripiego al carattere vero */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces/Fraunces-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson/AtkinsonHyperlegibleNext-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson/AtkinsonHyperlegibleNext-Italic-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: block;
+}
+
+:root {
+  /* inchiostri */
+  --carta: #F4ECD8; --ink: #1F1A17; --grigio: #5E5750;
+  --rosso: #B3122B; --verde: #2E6B45; --biro: #1D4E89; --giallo: #FFD23F;
+  --velo: rgb(31 26 23 / .06);
+  --retino: repeating-linear-gradient(45deg, transparent 0 3px, rgb(31 26 23 / .3) 3px 4px);
+  /* caratteri */
+  --tit: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --txt: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --wonk: "SOFT" 100, "WONK" 1;
+  --c-min: 12px; --c-sec: 13px; --c-corpo: 14px; --c-lead: 16px; --c-num: 19px;
+  --c-riq: 18px; --c-sez: 23px; --c-pag: 30px; --c-apre: 44px; --c-test: 72px;
+  /* spazio: passo di 4 */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px;
+  --marg: 24px; --canale: 20px; --lato: clamp(300px, 30%, 440px);
+  /* filetti */
+  --filo: 1px solid var(--grigio); --bordo: 1.5px solid var(--ink); --forte: 2px solid var(--ink); --doppio: 3px double var(--ink);
+  /* movimento: durate per --k */
+  --k: 1; --t-press: 80ms; --e-work: cubic-bezier(.2, 0, .38, .9);
+  background: var(--carta); color: var(--ink); font: 400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric: tabular-nums lining-nums;
+  accent-color: var(--ink);
+}
+/* tono grave: tacciono colori, evidenziatore e ghiribizzi del titolo */
+:root.grave { --rosso: var(--ink); --verde: var(--ink); --biro: var(--ink); --giallo: transparent; --wonk: "SOFT" 0, "WONK" 0 }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: inherit }
+svg { display: block }
+
+::selection { background: var(--giallo); color: var(--ink) }
+:root.grave ::selection { background: var(--ink); color: var(--carta) }
+:focus-visible { outline: 2px solid var(--biro); outline-offset: 2px }

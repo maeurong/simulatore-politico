@@ -58,6 +58,9 @@
   "componenti.in_preavviso": "in preavviso",
   "componenti.nessun_atto": "Nessun atto in agenda",
   "componenti.nessuna_figura": "Nessuna figura: restano nome e partito.",
+  "componenti.sale": "sale di",
+  "componenti.scende": "scende di",
+  "componenti.pari": "invariato",
 
   "impostazioni.titolo": "Impostazioni",
   "impostazioni.chiudi": "Chiudi",
