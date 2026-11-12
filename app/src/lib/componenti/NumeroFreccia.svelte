@@ -37,7 +37,7 @@
 </script>
 
 <!-- tutto su una riga: uno spazio fra i tag staccherebbe la freccia dal numero -->
-<span class="nf"><span class:crit={sottoSoglia && !d}>{formato(valore)}</span>{#if d}<span class={["dl", d.giudizio ?? "muto", { crit: sottoSoglia }]}>{#if d.verso === "pari"}<span aria-hidden="true">=</span><span class="nascosto">{t("componenti.pari")}</span>{:else}<svg class="fr" class:giu={d.verso === "scende"} viewBox="0 0 10 10" role="img" aria-label={t(d.verso === "sale" ? "componenti.sale" : "componenti.scende")}><path d="M5 .5 9.5 9.5H.5Z" /></svg>{d.testo}{/if}</span>{/if}</span>
+<span class="nf"><span class:crit={sottoSoglia && !d}>{formato(valore)}</span>{#if d}<span class={["dl", d.giudizio ?? "muto", { crit: sottoSoglia }]}>{#if d.verso === "pari"}<span aria-hidden="true">=</span><span class="nascosto" data-tagli-ignora>{t("componenti.pari")}</span>{:else}<svg class="fr" class:giu={d.verso === "scende"} viewBox="0 0 10 10" role="img" aria-label={t(d.verso === "sale" ? "componenti.sale" : "componenti.scende")}><path d="M5 .5 9.5 9.5H.5Z" /></svg>{d.testo}{/if}</span>{/if}</span>
 
 <style>
   .nf { white-space: nowrap; font-weight: 700 }

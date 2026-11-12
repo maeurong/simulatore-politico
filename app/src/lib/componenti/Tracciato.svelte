@@ -21,7 +21,7 @@
     <span class="cas" class:inp={tr.rosso} class:fermo={tr.grigio} aria-hidden="true">
       <b class="oltre" class:su={!tr.rosso}>{pos.sotto ? "◂" : ""}</b>
       {#each { length: 10 }, i (i)}
-        <i class:per={stacco && i < 3 && !tr.grigio} class:sog={stacco && i === 2} class:on={i < pos.piene} style:--i={i}></i>
+        <i data-tagli-ignora class:per={stacco && i < 3 && !tr.grigio} class:sog={stacco && i === 2} class:on={i < pos.piene} style:--i={i}></i>
       {/each}
       <b class="oltre su">{pos.sopra ? "▸" : ""}</b>
     </span>
@@ -35,8 +35,8 @@
       {#if accanto}<small>{accanto}</small>{/if}
     </span>
   {:else}
-    <span class="cas vuoto" aria-hidden="true"><b class="oltre"></b>{#each { length: 10 }, i (i)}<i></i>{/each}<b class="oltre"></b></span>
-    <span class="v fermo">{tr.testo}{#if rimando}<span class="nascosto">{rimando}</span>{/if}</span>
+    <span class="cas vuoto" aria-hidden="true"><b class="oltre"></b>{#each { length: 10 }, i (i)}<i data-tagli-ignora></i>{/each}<b class="oltre"></b></span>
+    <span class="v fermo">{tr.testo}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}</span>
   {/if}
 </div>
 

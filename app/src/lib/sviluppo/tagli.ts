@@ -21,11 +21,11 @@ export function tagli(radice: HTMLElement): number {
     if (el.closest("svg") || el.closest(IGNORA)) continue;
     const b = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
-    if (cs.clipPath !== "none") continue; // ponytail: testo solo per lettori di schermo (clip-path: inset(50%)), nascosto apposta
+    // ponytail: .perche del sommario è ritagliato a 1x1 finché non prende il fuoco; chiuso non si conta, aperto sì
+    if (cs.clipPath !== "none" && b.width <= 2 && b.height <= 2) continue;
     const fuori = b.width > 0 && (b.right > L + 1 || (b.bottom > A + 1 && !scorre(el)));
     const stretto =
-      // ponytail: senza figli né testo c'è solo un pseudo-elemento (le caselle del tracciato coprono il bordo di 1,5 px apposta)
-      el.firstChild !== null && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && cs.display !== "inline" &&
+      el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && cs.display !== "inline" &&
       !/ellipsis/.test(cs.textOverflow) && (cs as CSSStyleDeclaration & { webkitLineClamp: string }).webkitLineClamp === "none";
     if (fuori || stretto) {
       n++;
@@ -46,13 +46,18 @@ export function avvia() {
   badge.setAttribute("data-tagli-ignora", "");
   document.body.append(badge);
   let t = 0;
+  const w = window as unknown as { __tagli?: number };
+  let ultimo = -1;
   const lancia = () => {
     const n = tagli(document.body);
     badge.textContent = `tagli: ${n}`;
-    (window as unknown as { __tagli: number }).__tagli = n;
-    console.info(`tagli: ${n}`);
+    w.__tagli = n;
+    if (n !== ultimo) console.info(`tagli: ${n}`);
+    ultimo = n;
   };
   const rinvia = () => {
+    w.__tagli = undefined; // chi misura aspetta un numero: quello vecchio non vale più
+    badge.textContent = "tagli: …";
     clearTimeout(t);
     t = window.setTimeout(lancia, 150);
   };

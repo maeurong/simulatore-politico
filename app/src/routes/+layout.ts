@@ -25,6 +25,6 @@ if (import.meta.env.DEV && new URL(location.href).searchParams.get("tagli") === 
   import("$lib/sviluppo/tagli").then((m) => m.avvia());
 }
 
-export const load =async () => {
+export const load = async () => {
   await finto;
 };
