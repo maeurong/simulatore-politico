@@ -17,7 +17,10 @@ Compito che una regola del gioco attribuisce a un dicastero, come prendersi la c
 _Evita_: competenza, delega
 
 **Spesa di funzionamento**:
-Quota del budget di un dicastero che tiene in piedi il servizio; se si taglia, l'indicatore di servizio peggiora con ritardo, senza bisogno di alcun atto.
+Quota del budget di un dicastero che tiene in piedi il servizio, fatta di salari e acquisti; se si taglia, l'indicatore di servizio peggiora con ritardo, senza bisogno di alcun atto. Spostarne una parte nel margine non cambia il saldo.
+
+**Resto della spesa**:
+Quota del budget di un dicastero fuori da funzionamento e margine (trasferimenti, investimenti); la legge di bilancio la lascia nominale o la indicizza, ma non la ritocca a voce.
 
 **Indicatore di servizio**:
 L'unica grandezza di un dicastero tenuta in piedi dalla spesa di funzionamento (per la Sanità, la qualità del servizio sanitario).
@@ -124,6 +127,10 @@ _Evita_: previsione (che è quella del centro studi), simulazione
 Legge annuale con cui il Presidente del Consiglio, insieme al ministro dell'Economia, fissa aliquote e budget di ogni dicastero; durante l'anno i fondi si spostano solo per decreto.
 _Evita_: manovra (come termine del modello), finanziaria
 
+**Bozza del bilancio**:
+Il punto da cui parte la legge di bilancio: le cifre nominali del bilancio in vigore, portate all'anno dopo (nell'esercizio provvisorio, all'anno in corso). Presentata così com'è, taglia in termini reali tutto ciò che non si indicizza.
+_Evita_: bilancio fotocopia (come termine del modello)
+
 **Legge elettorale**:
 Legge che trasforma i voti in seggi, fatta di disposizioni fuori da ogni dicastero: soglie, coalizioni, premio, tetto, formula di riparto. Si parte da quella reale (180/2026); la cambia solo il Presidente del Consiglio, o il governo avversario, e vale dal voto successivo.
 
@@ -147,7 +154,7 @@ Parlamentare che vota contro la linea del suo partito; prima del voto se ne cono
 _Evita_: dissidente, ribelle
 
 **Emendamento**:
-Attenuazione di una legge che un alleato chiede prima del voto; se il giocatore la accoglie, il partito vota compatto, se la respinge paga in intesa.
+Attenuazione di una legge che un alleato chiede prima del voto; se il giocatore la accoglie, il partito vota compatto, se la respinge paga in intesa. Sulla legge di bilancio l'alleato chiede di indicizzare i suoi dicasteri che perdono potere d'acquisto oltre una soglia.
 
 **Questione di fiducia**:
 Voto in cui il governo lega la propria sopravvivenza a una legge o a una conversione: niente emendamenti né franchi tiratori, voto nel turno stesso; se è respinta, il governo si dimette. Sulla legge elettorale copre solo gli articoli: il voto finale alla Camera resta segreto, con i suoi franchi tiratori.

@@ -1046,6 +1046,135 @@ fn conti(d: &DatiGioco) -> Esito<Uscita> {
     })
 }
 
+/// Gli stati del Bilancio (ticket 22): la bozza del 04 prima di presentarla, coi riepiloghi
+/// dell'indicizzazione per tutto e per voce, di un ritocco alle aliquote e di un margine
+/// allargato; il bilancio presentato con gli emendamenti degli alleati, accolti e respinti, e
+/// ripresentato; l'esercizio provvisorio; all'opposizione e fuori stagione i rifiuti.
+fn bilancio(d: &DatiGioco) -> Esito<Uscita> {
+    use sim_core::economia::Voce;
+    let mut out = serde_json::Map::new();
+    let mut note = Vec::new();
+    let riep = |p: &Partita, b: &sim_core::economia::Bilancio| match p.riepilogo_bilancio(b) {
+        Ok(r) => serde_json::json!({ "riepilogo": r }),
+        Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
+    };
+    // La bozza del 04: il 03 chiuso due volte, ottobre-dicembre.
+    let mut p = governo_03(d)?;
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let bozza = p.bozza_bilancio().ok_or("04: nessuna bozza")?;
+    let mut varianti = serde_json::Map::new();
+    for (k, voce) in [("tutto", Voce::Tutto), ("scaglioni", Voce::Scaglioni)] {
+        let b = p.indicizza(&bozza, &voce).map_err(|e| e.to_string())?;
+        let mut r = riep(&p, &b);
+        r["bilancio"] = serde_json::to_value(&b).map_err(|e| e.to_string())?;
+        varianti.insert(k.into(), r);
+    }
+    let mut per_dicastero = Vec::new();
+    for x in &bozza.dicasteri {
+        let b = p.indicizza(&bozza, &Voce::Dicastero { id: x.id.clone() }).map_err(|e| e.to_string())?;
+        let mut r = riep(&p, &b);
+        r["id"] = x.id.clone().into();
+        r["dicastero"] = serde_json::to_value(b.dicasteri.iter().find(|y| y.id == x.id)).map_err(|e| e.to_string())?;
+        per_dicastero.push(r);
+    }
+    varianti.insert("per_dicastero".into(), per_dicastero.into());
+    let mut b = bozza.clone();
+    b.aliquote.iva = 0.24;
+    varianti.insert("iva_24".into(), riep(&p, &b));
+    let mut b = bozza.clone();
+    b.aliquote.irpef[0].aliquota = 0.21;
+    varianti.insert("irpef_primo_21".into(), riep(&p, &b));
+    // Margine della Sanità raddoppiato togliendo agli acquisti (funzionamento): spesa uguale.
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    let m = s.margine;
+    s.margine += m;
+    s.acquisti -= m;
+    varianti.insert("margine_sanita_da_funzionamento".into(), riep(&p, &b));
+    // Lo stesso margine in disavanzo: spesa in più.
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    s.margine += m;
+    s.spesa += m;
+    varianti.insert("margine_sanita_in_disavanzo".into(), riep(&p, &b));
+    let mut b = bozza.clone();
+    b.aliquote.iva = 0.95;
+    varianti.insert("rifiuto_aliquota".into(), riep(&p, &b));
+    out.insert("bozza_04".into(), serde_json::json!({
+        "come": "il 03 chiuso due volte (2027T4), prima di PresentaBilancio",
+        "bozza": bozza, "riepilogo_bozza": riep(&p, &bozza), "varianti": varianti, "serie": p.serie(), "vista": p.vista(),
+    }));
+    note.push(format!("bozza_04: turno {}", p.vista().turno));
+    // Presentato: la bozza, poi gli emendamenti.
+    comanda(&mut p, Comando::PresentaBilancio { bilancio: bozza.clone() })?;
+    let id = (p.vista().calendario.iter()).find(|m| m.nome == "Legge di bilancio").map(|m| m.id).ok_or("bilancio in calendario")?;
+    out.insert("presentato".into(), serde_json::json!({
+        "come": "bozza_04, poi PresentaBilancio con la bozza", "misura": id,
+        "riepilogo_presentato": p.riepilogo_presentato(), "serie": p.serie(), "vista": p.vista(),
+    }));
+    let alleati: Vec<String> = (p.vista().calendario.iter()).filter(|m| m.id == id)
+        .flat_map(|m| m.emendamenti.iter().map(|e| e.partito.clone())).collect();
+    // Cosa costa accogliere ciascun emendamento da solo: il riepilogo del presentato dopo.
+    let mut se_accogli = serde_json::Map::new();
+    for a in &alleati {
+        let mut r = p.clone();
+        comanda(&mut r, Comando::Emendamento { misura: id, partito: a.clone(), accogli: true })?;
+        se_accogli.insert(a.clone(), serde_json::to_value(r.riepilogo_presentato()).map_err(|e| e.to_string())?);
+    }
+    out.get_mut("presentato").ok_or("presentato")?["se_accogli"] = se_accogli.into();
+    let mut q = p.clone();
+    if let Some(a) = alleati.first() {
+        comanda(&mut q, Comando::Emendamento { misura: id, partito: a.clone(), accogli: true })?;
+    }
+    if let Some(a) = alleati.get(1) {
+        comanda(&mut q, Comando::Emendamento { misura: id, partito: a.clone(), accogli: false })?;
+    }
+    out.insert("emendamenti_decisi".into(), serde_json::json!({
+        "come": format!("presentato, poi Emendamento accolto di {:?} e respinto di {:?}", alleati.first(), alleati.get(1)),
+        "riepilogo_presentato": q.riepilogo_presentato(), "serie": q.serie(), "vista": q.vista(),
+    }));
+    // Ripresentato tutto indicizzato: l'accolto si riapplica, nuovi emendamenti?
+    let tutto = q.indicizza(&bozza, &Voce::Tutto).map_err(|e| e.to_string())?;
+    comanda(&mut q, Comando::PresentaBilancio { bilancio: tutto })?;
+    out.insert("ripresentato".into(), serde_json::json!({
+        "come": "emendamenti_decisi, poi PresentaBilancio con la bozza indicizzata per tutto",
+        "riepilogo_presentato": q.riepilogo_presentato(), "serie": q.serie(), "vista": q.vista(),
+    }));
+    note.push(format!("presentato: misura {id}, alleati {alleati:?}"));
+    // Esercizio provvisorio, fuori dalla crisi.
+    match cerca_al_governo(d, false, |v| !v.crisi && v.bilancio.esercizio_provvisorio)? {
+        Some((s, p)) => {
+            let bozza = p.bozza_bilancio();
+            let r = bozza.as_ref().map(|b| riep(&p, b));
+            out.insert("provvisorio".into(), serde_json::json!({
+                "come": format!("seme {s}, come il 05, bilancio mai presentato"),
+                "bozza": bozza, "riepilogo_bozza": r, "serie": p.serie(), "vista": p.vista(),
+            }));
+            note.push(format!("provvisorio: seme {s}, turno {}", p.vista().turno));
+        }
+        None => note.push("provvisorio: NON RAGGIUNTO".into()),
+    }
+    // All'opposizione, in ottobre-dicembre: il bilancio del governo IA.
+    let mut o = fonda(d, 1, 1.5)?;
+    while !(o.vista().data.trimestre == 4 && o.vista().turno > 1) {
+        o.chiudi_turno();
+    }
+    let rifiuto = o.bozza_bilancio().map(|b| riep(&o, &b));
+    out.insert("opposizione".into(), serde_json::json!({
+        "come": "il 06 chiuso fino a ottobre-dicembre", "riepilogo_presentato": o.riepilogo_presentato(),
+        "rifiuto_riepilogo": rifiuto, "serie": o.serie(), "vista": o.vista(),
+    }));
+    // Fuori stagione: la bozza del 04 sul 03.
+    let p03 = governo_03(d)?;
+    out.insert("fuori_stagione".into(), riep(&p03, &bozza));
+    Ok(Uscita {
+        nome: "22-bilancio.json",
+        json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
+        nota: note.join("; "),
+    })
+}
+
 /// Perché «avanti fino a novità» si fermerebbe sul turno appena aperto, con le regole della spec
 /// di core «esito e Vista completa» (sezione «Fermate»). ponytail: senza la fermata `voto`, che
 /// chiede la quota degli elettori toccati sul sondaggio; la porterà il core.
@@ -1177,6 +1306,7 @@ fn esegui() -> Esito<()> {
     uscite.push(prima_pagina(&d)?);
     uscite.push(anteprima_misura(&d)?);
     uscite.push(conti(&d)?);
+    uscite.push(bilancio(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

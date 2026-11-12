@@ -451,5 +451,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/21-conti.md`, due giri su un prototipo co
 - **Il centro studi a ventagli:** la stima del trimestre accanto alla prima stima, quattro previsioni con la fascia di una e due sigma.
 - **Due dati al core:** i trimestri già passati oltre la soglia (la recessione ne chiede due, e a −4,2% può essere spenta) e il debito sul PIL, che oggi si legge solo pagando il centro studi.
 
+## 2026-11-12: bilancio
+Ticket `.scratch/v1-piano-11-ui/issues/22-bilancio.md`, un giro su un prototipo con tre forme e sei stati giocati, coi riepiloghi veri del core per ogni modifica.
+
+- **Forma B · Bilancia:** in testa il giogo della spesa netta contro il tetto UE, sotto entrate e spesa a fronte, i dicasteri a barre. Il prospetto unico e la legge per passi scartati: il primo lascia il saldo a lato, il secondo nasconde la tabella.
+- **Il costo accanto a ogni «Indicizza»:** la bozza ripete le cifre nominali, e indicizzare tutto nel 2027 costa 6,2 mld di spesa e 1,3 di gettito.
+- **Il funzionamento tagliato lo scrive la UI:** il riepilogo del core non lo vede, perché il saldo non cambia; la regola del ritardo sul servizio è fissa.
+- **All'opposizione la sezione resta barrata;** il riepilogo del bilancio del governo va in Aula.
+- **Due dati al core:** le cifre del bilancio in aula, che cambiano quando si accoglie un emendamento, e i dicasteri chiesti da ogni emendamento, per dire il costo prima di scegliere.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
