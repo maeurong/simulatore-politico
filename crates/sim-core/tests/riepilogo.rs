@@ -6,8 +6,9 @@
 mod comune;
 use comune::{chiudi_col_bilancio, con_ingresso, dati_base, file_base, file_vero, sostituisci};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::disposizioni::Norma;
 use sim_core::legislatura::{Fondazione, posizioni};
-use sim_core::riepilogo::{Avviso, RiepilogoScenario, riepilogo};
+use sim_core::riepilogo::{Avviso, RiepilogoScenario, catalogo, riepilogo};
 use sim_core::{Partita, SuMisura};
 
 #[test]
@@ -208,4 +209,79 @@ fn le_situazioni_accese_stanno_nell_ordine_dei_dati() {
         a.testo(),
         "Già accese al turno zero: Criminalità e Caro energia. Pesano finché non rientrano."
     );
+}
+
+#[test]
+fn il_catalogo_della_base() {
+    let c = catalogo(&dati_base()).unwrap();
+    let nomi: Vec<_> = c.cursori.iter().map(|x| x.nome.as_str()).collect();
+    assert_eq!(
+        nomi,
+        [
+            "debito_pil",
+            "disoccupazione",
+            "inflazione",
+            "ricchezza",
+            "eta_mediana",
+            "orientamento"
+        ]
+    );
+    assert_eq!(
+        (c.cursori[0].valore, c.cursori[0].min, c.cursori[0].max),
+        (136.7, 110.0, 160.0)
+    );
+    let leggi: Vec<_> = c.leggi_elettorali.keys().map(String::as_str).collect();
+    assert_eq!(
+        leggi,
+        ["legge_180", "proporzionale_3", "proporzionale_puro"]
+    );
+    assert_eq!(c.leggi_elettorali["legge_180"].len(), 9);
+    assert_eq!(c.legge_di_base, "legge_180");
+    assert_eq!(c.disposizioni.len(), 46);
+    assert_eq!(
+        c.disposizioni
+            .iter()
+            .filter(|d| d.norma == Norma::Ordinaria)
+            .count(),
+        35
+    );
+    assert_eq!(c.partiti.len(), 7);
+    assert_eq!(
+        (c.partiti[0].id.as_str(), c.partiti[0].posizione),
+        ("estrema_sinistra", 1.0)
+    );
+    let forfettario = c
+        .disposizioni
+        .iter()
+        .find(|d| d.id == "forfettario")
+        .unwrap();
+    assert_eq!(forfettario.dicastero.as_deref(), Some("Economia e Finanze"));
+    assert_eq!(forfettario.partenza, "85000");
+    assert_eq!(forfettario.gradini.len(), 4);
+}
+
+#[test]
+fn i_gradini_di_ogni_legge_coincidono_coi_dati_che_ne_fa_il_core() {
+    let dati = dati_base();
+    let c = catalogo(&dati).unwrap();
+    assert_eq!(c.leggi_elettorali.len(), 3);
+    for (legge, gradini) in &c.leggi_elettorali {
+        let mut s = SuMisura::base(&dati);
+        s.cursori.legge_elettorale.clone_from(legge);
+        let x = dati.con_su_misura(&s).unwrap();
+        let attesi: Vec<_> = x
+            .disposizioni()
+            .iter()
+            .filter(|d| d.norma == Norma::Elettorale)
+            .map(|d| (d.id.clone(), d.partenza.clone()))
+            .collect();
+        assert_eq!(attesi.len(), 9, "{legge}");
+        let trovati: Vec<_> = gradini
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        let mut attesi = attesi;
+        attesi.sort();
+        assert_eq!(trovati, attesi, "{legge}");
+    }
 }
