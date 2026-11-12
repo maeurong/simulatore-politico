@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (workspace `sim-core`, `sim-cli`, `app/src-tauri`), serde, ts-rs per i tipi in `app/src/lib/tipi/`. Nessuna dipendenza nuova.
 
-**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 148-307) è l'oracolo dei Task 1-7: il piano non lo ricopia.
+**Spec:** [`docs/superpowers/specs/2026-11-11-esito-e-vista-completa.md`](../specs/2026-11-11-esito-e-vista-completa.md). Il catalogo dei 92 tipi di voce (righe 152-311) è l'oracolo dei Task 1-7: il piano non lo ricopia.
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md` (i 135 fatti nell'ordine di `chiudi_turno`, con funzione e riga) e `docs/ricerca/sintesi/stato-per-le-esposizioni.md` (dove vive ogni dato da esporre), scritte per questo piano sul codice a `8952a06`.
 
@@ -17,15 +17,15 @@
 | PR | Branch | Task | Schema |
 |---|---|---|---|
 | 1. Logica nuova | `feat/esito-del-turno` | 1-10 | 17 → 18 |
-| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b, 16c, 16d e 16e | 18 → 19 |
+| 2. Esposizioni | `feat/vista-completa`, da `main` dopo il merge della 1 | 11-17, con 16b, 16c, 16d, 16e e 16f | 18 → 19 |
 
 ## Decisioni di Mario
 
-Stanno nella spec, righe 39-84, e non si riaprono: l'anteprima del riposizionamento con le soglie di scissione in `VistaCampagna` e l'anteprima delle promesse, PR 2, Task 16e (ticket «Campagna», 12/11/2026, spec «Riposizionamento e promesse»); i soggetti per riga nei dettagli delle voci fuse e le disposizioni nella voce, PR 1, Task 1 (ticket «Registro», 12/11/2026, spec «La voce dell'esito»); il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
+Stanno nella spec, righe 39-88, e non si riaprono: la sfiducia presentata e il posto riservato nella Vista, l'ammissibilità del referendum abrogativo per disposizione e il costo della linea per misura, PR 2, Task 16f (ticket «Cruscotto all'opposizione», 12/11/2026, spec «Cruscotto all'opposizione»); l'anteprima del riposizionamento con le soglie di scissione in `VistaCampagna` e l'anteprima delle promesse, PR 2, Task 16e (ticket «Campagna», 12/11/2026, spec «Riposizionamento e promesse»); i soggetti per riga nei dettagli delle voci fuse e le disposizioni nella voce, PR 1, Task 1 (ticket «Registro», 12/11/2026, spec «La voce dell'esito»); il bilancio in aula nella `VistaBilancio` e i dicasteri chiesti in `VoceEmendamento`, PR 2, Task 16d (ticket «Bilancio», 12/11/2026, spec «Bilancio in aula»); i trimestri oltre la soglia delle situazioni nella PR 2, Task 16c, e il debito sul PIL nella `Vista.debito`, Task 15 (ticket «Conti», 12/11/2026, spec «Situazioni» e «Debito»); l'anteprima della misura in calendario e le norme del decreto d'evento nella PR 2, Task 16b (ticket «Anteprima della misura», 12/11/2026, spec «Anteprima di una misura in calendario» e «Norme del decreto d'evento»); la famiglia dell'evento nelle voci `evento_risolto` ed `evento_nato` (ticket «Testi del Pungolo», 11/11/2026); criticità per tipo a tre livelli; le sette (prima le critiche, poi le notevoli, gemelle fuse, ordine della chiusura); fermata sul voto alla quota del 30% dei suoi elettori; le quattro voci minori nella PR 2; redditi per fascia subito ed esatti; forme delle esposizioni del 10/11; l'anteprima della proposta d'opposizione nella PR 2, Task 16 (ticket «Aula e calendario», 11/11/2026, spec «Anteprima della proposta d'opposizione»); una voce sola per una situazione accesa col suo evento nato, Task 7 (ticket «Prima pagina», 11/11/2026, spec «Situazione accesa ed evento nato»).
 
 ## Scelte del piano
 
-Oltre alle 22 «Scelte mie» della spec (righe 86-111), prese scrivendo il piano:
+Oltre alle 22 «Scelte mie» della spec (righe 90-115), prese scrivendo il piano:
 
 1. **`precedenza` nella voce.** La scelta delle sette gira a fine chiusura su voci già raccolte nello stato: la precedenza (3, 2, 1, oppure 0) è un campo della voce, esportato.
 2. **Criticità condizionata.** `grado(tipo, al_governo)` rende il caso base del catalogo; nei sette tipi con una condizione («C2 se…») il punto del fatto la alza o la abbassa con `VoceEsito::con_grado`. L'elenco dei sette sta nel Task 1.
@@ -67,7 +67,7 @@ Valgono i vincoli del piano 9 (`2026-11-01-v1-piano-9-eventi-e-informazione.md:7
 
 PR 1: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. I task 3-7 scrivono tutti dentro `chiudi_turno` e i suoi passi in `partita.rs`.
 
-PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 16c → 16d → 16e → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`, il 16c a `VoceSituazione`, il 16d a `VistaBilancio` e `VoceEmendamento`, il 16e a `VistaCampagna`, con due metodi nuovi della partita.
+PR 2: dopo il merge della 1, 11 → 12 → 13 → 14 → 15 → 16 → 16b → 16c → 16d → 16e → 16f → 17. Tutti aggiungono campi a `Vista` e alla funzione `vista()`; il 16b li aggiunge a `VoceMisura` e `VoceEvento`, il 16c a `VoceSituazione`, il 16d a `VistaBilancio` e `VoceEmendamento`, il 16e a `VistaCampagna`, con due metodi nuovi della partita, il 16f a `VoceMisura` e `VoceDisposizione`.
 
 Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponytail`, e copia la riga **Ricerca** del task. A fine PR, review in parallelo: `security-reviewer`, `code-reviewer`, `test-writer`, `craft-reviewer` (legge i testi delle voci elencati nella PR), `rust-reviewer` e `spec-reviewer` (questo piano e la spec), con i findings di quest'ultimo in un report a parte. Poi un solo giro di correzioni. Le decisioni prese in esecuzione si elencano nella PR. Il merge lo decide Mario.
 
@@ -107,7 +107,7 @@ Ogni task va a `rust-engineer`. Il brief nomina `skill-gate`, `caveman` e `ponyt
 - Modify: `crates/sim-core/src/lib.rs` (`pub mod esito;`)
 - Test: unit test in fondo a `esito.rs`
 
-**Ricerca:** `docs/ricerca/sistemi/feedback-visivo-dello-stato.md:36`, `:46` (gerarchia per impatto, niente notifica per singolo oggetto); spec righe 90-120 (la voce), 122-278 (catalogo), 280-288 (le sette).
+**Ricerca:** `docs/ricerca/sistemi/feedback-visivo-dello-stato.md:36`, `:46` (gerarchia per impatto, niente notifica per singolo oggetto); spec righe 119-151 (la voce), 152-311 (catalogo), 312-320 (le sette).
 
 **Interfaces:**
 - Consumes: `crate::eventi::{Famiglia, Tono}`.
@@ -231,7 +231,7 @@ Ognuna delle 25 chiamate di `mossa` diventa una chiamata di `voce` col tipo del 
 
 **Ricerca:** `docs/ricerca/sintesi/fatti-della-chiusura.md:44-79` (passi B, C, D: fatti 2-20), `:280-311` (quelli senza traccia).
 
-**Architect (11/11):** `esegui` può rendere i fatti senza rompere nessuno: ha un chiamante solo (`partita.rs:570`), `con_contesto` è generico sul ritorno (`:765`) e i cinque fatti stanno già nei rami di `ministri/agenda.rs:336-367`. La firma diventa `-> (Vec<EffettoAttivo>, Vec<FattoAtto>)`. Tre correzioni. (1) **Altre due firme cambiano e non sono in Interfaces:** `decidi_proposte` (`ministri/proposte.rs:278`, oggi rende `()`) deve dire respinte e decadute; `respingi_aperti` (`parlamento/emendamenti.rs:183`, oggi `Vec<usize>` di soli alleati) deve dire anche la misura, che la voce `emendamento_respinto` cita. (2) **`FattoAtto.tipo: TipoVoce` porta `crate::esito` dentro `ministri`**, contro la riga Architecture («i moduli sotto la partita non conoscono l'esito»). È un'enum senza dati e non crea cicli: si può tenere, ma allora la riga Architecture si corregge nello stesso commit; l'alternativa è un'enum locale di cinque varianti che la partita traduce. (3) **`indice_pericolosita`:** `probabilita` vuole un `Trimestre` e ne legge solo il numero (`eventi/emergenze.rs:40-60`); se il massimo fra le regioni è zero l'indice vale 0, non NaN, che nella Vista diventerebbe `null`. Il Task 11 chiede anche `totale`, che questa firma non sa rendere: l'atteso non normalizzato va in una funzione sua, così l'11 somma e divide senza riaprire il modulo. `atto_saltato` nasce solo per margine insufficiente o dimissioni chieste: l'atto fermato ha già lasciato la sua variazione al comando (spec riga 116) ed `esegui` lo scarta a `:348`. Riferimento in più, per la pericolosità a parole: `docs/ricerca/dati/pericolosita-naturale-regioni.md:121-124`.
+**Architect (11/11):** `esegui` può rendere i fatti senza rompere nessuno: ha un chiamante solo (`partita.rs:570`), `con_contesto` è generico sul ritorno (`:765`) e i cinque fatti stanno già nei rami di `ministri/agenda.rs:336-367`. La firma diventa `-> (Vec<EffettoAttivo>, Vec<FattoAtto>)`. Tre correzioni. (1) **Altre due firme cambiano e non sono in Interfaces:** `decidi_proposte` (`ministri/proposte.rs:278`, oggi rende `()`) deve dire respinte e decadute; `respingi_aperti` (`parlamento/emendamenti.rs:183`, oggi `Vec<usize>` di soli alleati) deve dire anche la misura, che la voce `emendamento_respinto` cita. (2) **`FattoAtto.tipo: TipoVoce` porta `crate::esito` dentro `ministri`**, contro la riga Architecture («i moduli sotto la partita non conoscono l'esito»). È un'enum senza dati e non crea cicli: si può tenere, ma allora la riga Architecture si corregge nello stesso commit; l'alternativa è un'enum locale di cinque varianti che la partita traduce. (3) **`indice_pericolosita`:** `probabilita` vuole un `Trimestre` e ne legge solo il numero (`eventi/emergenze.rs:40-60`); se il massimo fra le regioni è zero l'indice vale 0, non NaN, che nella Vista diventerebbe `null`. Il Task 11 chiede anche `totale`, che questa firma non sa rendere: l'atteso non normalizzato va in una funzione sua, così l'11 somma e divide senza riaprire il modulo. `atto_saltato` nasce solo per margine insufficiente o dimissioni chieste: l'atto fermato ha già lasciato la sua variazione al comando (spec riga 146) ed `esegui` lo scarta a `:348`. Riferimento in più, per la pericolosità a parole: `docs/ricerca/dati/pericolosita-naturale-regioni.md:121-124`.
 
 **Interfaces:**
 - Consumes: `Partita::voce`, `VoceEsito::con_grado`.
@@ -258,7 +258,7 @@ pub(crate) fn indice_pericolosita(dati: &DatiGioco, tipo: usize, r: usize) -> f6
 pub(crate) fn a_parole(indice: f64) -> &'static str;
 ```
 
-Tipi di questo task (13): le tabelle «Eventi risolti», «Default delle decisioni», «Atti dei ministri» del catalogo. `evento_risolto` per default al governo prende `con_grado(C1)`. Una voce nata da un evento di tono grave porta `tono = Tono::Grave`. `evento_risolto` porta `famiglia = Some(..)`, quella dell'evento; gli altri tipi `None`. La causa di `emergenza_lieve` dice la pericolosità con `a_parole(indice_pericolosita(..))`; per la siccità dice la stagione (spec riga 365).
+Tipi di questo task (13): le tabelle «Eventi risolti», «Default delle decisioni», «Atti dei ministri» del catalogo. `evento_risolto` per default al governo prende `con_grado(C1)`. Una voce nata da un evento di tono grave porta `tono = Tono::Grave`. `evento_risolto` porta `famiglia = Some(..)`, quella dell'evento; gli altri tipi `None`. La causa di `emergenza_lieve` dice la pericolosità con `a_parole(indice_pericolosita(..))`; per la siccità dice la stagione (spec riga 162).
 
 - [ ] **Step 1: test che falliscono.** Un'asserzione sull'esito per ciascuno dei 13 tipi, nel test che già fa accadere il fatto (Scelta 9). I primi, perché oggi non lasciano traccia: `evento_risolto_per_default_e_critico` (voce `EventoRisolto`, `criticita == Critica`, `fatto` contiene «per default», `famiglia` è quella dell'evento), `atto_eseguito_lascia_la_voce` (dicastero, regione ed euro giusti), `cantiere_finito_lascia_la_voce`, `proposta_respinta_per_silenzio`. In più `indice_di_pericolosita_fra_zero_e_uno`: per ogni tipo una regione vale 1, tutte stanno in 0-1.
 - [ ] **Step 2:** `cargo test -p sim-core --test eventi --test agenda --test proposte` → falliscono sulle voci mancanti.
@@ -278,7 +278,7 @@ Tipi di questo task (13): le tabelle «Eventi risolti», «Default delle decisio
 
 **Interfaces:**
 - Consumes: `Partita::voce`.
-- Produces: `Conteggio { pub si: u32, pub no: u32, pub franchi: u32 }`: i seggi che hanno votato contro la linea del loro partito. Zero dove il voto non li estrae (spec riga 343).
+- Produces: `Conteggio { pub si: u32, pub no: u32, pub franchi: u32 }`: i seggi che hanno votato contro la linea del loro partito. Zero dove il voto non li estrae (spec riga 375).
 
 Tipi di questo task (21): la tabella «Aula» del catalogo. Le voci dei voti si scrivono leggendo `EsitoVoto` ed `EsitoReferendum` nello stesso passo che li produce. `legge_respinta` del governo e `referendum_votato` perso dal governo prendono `con_grado(C2)` al governo. `bilancio_ricondotto` porta crescita e limite di `oltre_il_tetto_mes` e la quota tenuta.
 
@@ -367,7 +367,7 @@ pub(crate) struct Estratti { pub vincitore: Option<usize>, pub esclusi: Vec<usiz
 pub(crate) fn estrai(caso: &mut Caso, candidati: &[Candidato]) -> Estratti;
 ```
 
-`esclusi` = i candidati usciti e non vincitori, nell'ordine. Le uniformi estratte restano una per candidato, nello stesso ordine. La voce `shock_assorbito` nasce solo per gli esclusi con `Causa::Shock`; nessun effetto si applica (spec riga 76).
+`esclusi` = i candidati usciti e non vincitori, nell'ordine. Le uniformi estratte restano una per candidato, nello stesso ordine. La voce `shock_assorbito` nasce solo per gli esclusi con `Causa::Shock`; nessun effetto si applica (spec riga 105).
 
 Tipi di questo task (14): la tabella «Eventi nuovi e apertura», compreso `governo_dimissionario`. `evento_nato` porta la `famiglia` dell'evento, e il suo test la controlla. Quando l'evento nasce da una situazione accesa nella stessa chiusura, il passo toglie dall'esito la voce `situazione_accesa` di quella situazione (spec, «Situazione accesa ed evento nato»). Quelli già convertiti dal Task 2 (le mosse del governo avversario e dell'opposizione IA) qui prendono solo il test che manca.
 
@@ -408,7 +408,7 @@ impl Partita {
 
 Manopola nuova `fermata_quota_elettorato` = 0,30 (min 0, max 1, ticket `12`, `# decisione di Mario dell'11/11/2026`).
 
-Quando scatta ciascuna, in quest'ordine nella lista: `Fine` se la partita è finita (e nient'altro); `Governo` se `governa` (e nient'altro); poi `Campagna` se `turni_al_voto == 0`; `Incarico` se in trattativa `incarico` è del giocatore o è la guida; `PostoRiservato` se `posto_riservato`; `Crisi` e `Ultimatum { partito }` se l'esito ha `CrisiAperta` o `UltimatumPosto` (Scelta 6); `Referendum` secondo la spec riga 310; `Voto { misura }` per ogni misura del calendario col voto in questo turno e `quota_toccata ≥ fermata_quota_elettorato`. La formula di `quota_toccata` è nella spec, righe 317-324.
+Quando scatta ciascuna, in quest'ordine nella lista: `Fine` se la partita è finita (e nient'altro); `Governo` se `governa` (e nient'altro); poi `Campagna` se `turni_al_voto == 0`; `Incarico` se in trattativa `incarico` è del giocatore o è la guida; `PostoRiservato` se `posto_riservato`; `Crisi` e `Ultimatum { partito }` se l'esito ha `CrisiAperta` o `UltimatumPosto` (Scelta 6); `Referendum` secondo la spec riga 342; `Voto { misura }` per ogni misura del calendario col voto in questo turno e `quota_toccata ≥ fermata_quota_elettorato`. La formula di `quota_toccata` è nella spec, righe 349-356.
 
 - [ ] **Step 1: test che falliscono**, in `tests/fermate.rs`:
   - `al_governo_solo_governo`, `a_partita_finita_solo_fine`.
@@ -427,7 +427,7 @@ Quando scatta ciascuna, in quest'ordine nella lista: `Fine` se la partita è fin
 **Files:**
 - Modify: `crates/sim-core/src/partita.rs` (accanto a `carica` `:4487`), `crates/sim-core/tests/salvataggi.rs`, `app/src-tauri/src/archivio.rs` (accanto a `riavvolgi` `:359`), `app/src-tauri/src/lib.rs` (comando e `generate_handler!` `:412`)
 
-**Ricerca:** `docs/ricerca/tecnica/persistenza-dei-salvataggi.md:78-85` (uno snapshot per apertura, peso); spec righe 290-297.
+**Ricerca:** `docs/ricerca/tecnica/persistenza-dei-salvataggi.md:78-85` (uno snapshot per apertura, peso); spec righe 322-329.
 
 **Architect (11/11):** `rust-engineer` confermato: solo file `.rs`, e il guscio è nel workspace, quindi `cargo test -p app registro` vale quanto il `--manifest-path` dello Step 2 e rispetta il vincolo globale. Righe da correggere: col merge di `a02f6ad` (#49) nel branch (`c840da3`) quelle di `lib.rs` sono scese. `torna_a` è a `:148-164` (l'errore della partita di prova a `:151-153`), `generate_handler!` a `:412`, `chiudi` scrive lo snapshot a `:118-131`. Tre casi limite, presi dai difetti di questo repo. (1) **Disco un turno avanti.** Dopo una chiusura guasta a metà lo snapshot del turno N+1 può esistere mentre la partita in memoria è ancora al turno N (`lib.rs:114-117`, test `chiudi_guasta_a_meta_si_ripete` a `:581`). `registro(N)` leggerebbe l'esito di una chiusura che per il giocatore non è avvenuta. La spec riveduta lo chiede già (sezione «Registro»: errore per un turno che la partita in memoria non ha ancora chiuso), il piano no. `Archivio::registro(id, turno)` non vede la partita in memoria: il rifiuto sta nel comando di `lib.rs`, prima di toccare il disco, e il caso «turno in corso» di `registro_fuori_dai_turni_e_un_errore` si prova lì, sul disco lasciato un turno avanti, non in `archivio.rs`. (2) **Il messaggio.** Uno snapshot che manca esce da `apri` come errore di lettura col percorso (`archivio.rs:135`): il testo «nessun registro per il turno N» chiede di guardare prima `turni(cartella)` (`:257`). (3) **Schema e validazione.** La versione si legge per prima, come in `carica` (`partita.rs:4488-4502`): un salvataggio dello schema 17 non ha il campo `esito`, e letto in un colpo solo darebbe `SalvataggioIlleggibile` invece di `SchemaDiverso`. `esito_da_salvataggio` non passa da `controlla_coerenza`: i controlli dell'esito (causa non vuota, al massimo sette in evidenza) stanno in una funzione che usano sia lei sia `carica`.
 
@@ -501,7 +501,7 @@ pub struct IndiciPericolosita { pub sisma: f64, pub idro: f64, pub incendi: f64,
 pub struct Vista { /* … */ pub regioni: Vec<VoceRegione> }
 ```
 
-Stato nuovo: la disoccupazione regionale della chiusura precedente, copiata prima che il motore la aggiorni, come `grandezze.prima`. Al turno zero è uguale alla corrente. Le definizioni di `reddito` e degli indici stanno nella spec, righe 351-365; `totale` è l'indice sulla somma dei tre tipi.
+Stato nuovo: la disoccupazione regionale della chiusura precedente, copiata prima che il motore la aggiorni, come `grandezze.prima`. Al turno zero è uguale alla corrente. Le definizioni di `reddito` e degli indici stanno nella spec, righe 383-397; `totale` è l'indice sulla somma dei tre tipi.
 
 - [ ] **Step 1: test che falliscono**, in `tests/vista_completa.rs`:
   - `venti_regioni_nell_ordine_dei_dati`.
@@ -616,7 +616,7 @@ pub struct Vista { /* … */ pub regole_ue: VistaRegoleUe, pub debito: VistaDebi
 
 `debito_pil` aggiunto il 12/11/2026 dal ticket «Conti» della mappa del piano 11 (spec, sezione «Debito»): è `Economia::debito_e_disavanzo_pil().0` (`economia/spread.rs:21-27`), lo stesso numero con cui si calcola lo spread, letto in `vista()`. Nessuno stato nuovo.
 
-La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 426: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
+La deviazione di `controllo_annuale` diventa una funzione pura che controllo e proiezione usano entrambi. La regola della proiezione è nella spec, riga 430: anno già intero nel conto (anno chiuso, oppure il 2026) → numeri esatti; altrimenti annualizzato sui trimestri chiusi; anno mancante al conto → `None`.
 
 - [ ] **Step 1: test che falliscono:**
   - `la_proiezione_di_gennaio_coincide_col_controllo`: in gennaio-marzo, `proiezione.deviazione` è la `ultima_deviazione` dopo la chiusura di aprile-giugno, se nel mezzo non cambia nulla (entro 1e-9).
@@ -795,6 +795,48 @@ I rifiuti di `riposiziona` e di `prometti` si estraggono in due funzioni che com
 - [ ] **Step 3:** implementa.
 - [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`.
 - [ ] **Step 5:** commit `feat(core): anteprime del riposizionamento e delle promesse`.
+
+### Task 16f: sfiducia presentata, posto riservato, referendum ammesso, costo della linea
+
+Aggiunto il 12/11/2026 dal ticket «Cruscotto all'opposizione» della mappa del piano 11 (spec, sezione «Cruscotto all'opposizione»).
+
+**Files:**
+- Modify: `crates/sim-core/src/vista.rs` (`Vista.posto_riservato` `:59-61`, `VoceMisura` `:275-294`, `VoceDisposizione` `:367-381`), `crates/sim-core/src/partita.rs` (scivolamento in `vota` `:1004-1013`, `promuovi_referendum` `:1850-1864`, `finestra_referendum` `:1870-1887`, `posto_riservato` `:3837-3845`, `linea` `:3853-3865`, `vista()` `:4014-4019`), `crates/sim-core/src/parlamento/mod.rs` (`previsione` `:302-399`, `voci_calendario` `:912-958`), `crates/sim-core/src/parlamento/voto.rs` (accanto a `probabilita_franco` `:75-103`), `crates/sim-core/src/disposizioni/stato.rs` (`voci_vista` `:210-242`), `crates/sim-core/tests/opposizione.rs`, `app/src/lib/tipi/`
+
+**Ricerca:** `.scratch/v1-piano-11-ui/issues/28-cruscotto-all-opposizione.md:54-61` (sezione «Rimandi»); `docs/ricerca/modelli/iter-legislativo-italiano.md:131`, `:135` (finestra e blocchi del referendum, che `rifiuto_referendum` ripete) e `:142` (firme della sfiducia); `docs/ricerca/sintesi/stato-per-le-esposizioni.md:137` (posto riservato libero e `posto_riservato: bool`). Nessuna ricerca in `docs/ricerca/` copre il costo della linea.
+
+**Interfaces:**
+- Produces:
+
+```rust
+pub struct VoceSfiducia { pub dicastero: Option<String>, pub partito: String }
+pub struct CostoLinea { pub percepita: f64, pub franchi_camera: f64, pub franchi_senato: f64 }
+pub struct CostiLinea { pub si: CostoLinea, pub no: CostoLinea, pub default: CostoLinea }
+// Vista prende `pub sfiducia: Option<VoceSfiducia>` (`Parlamento.sfiducia` com'è) e
+// `pub posto_riservato_di: Option<String>` (`fn posto_riservato`, in fase ordinaria);
+// `posto_riservato: bool` resta.
+// VoceMisura prende `pub costo_linea: Option<CostiLinea>`;
+// VoceDisposizione prende `pub rifiuto_referendum: Option<String>` (`None` = ammesso).
+impl Partita {
+    fn abrogativo_ammesso(&self, promotore: &str, disposizione: &str) -> Result<Referendum, Errore>;
+}
+```
+
+`abrogativo_ammesso` è `finestra_referendum` seguita da `Parlamento::abrogativo`, che già non toccano nulla; `promuovi_referendum` la chiama e scrive il referendum, la Vista la chiama per ogni disposizione col giocatore come promotore dopo `all_opposizione`, nell'ordine del comando (`comando.rs:239-243`), e scrive `e.to_string()`. La guardia di `linea` (all'opposizione tutte le misure, al governo solo le proposte dell'opposizione) si estrae in una funzione che comando e Vista usano. `costo_linea` chiama `previsione` sulla misura con `linea_giocatore` a `Some(true)`, `Some(false)` e `None`: i franchi attesi sono `franchi_camera[g] · seggi_camera[g]` e `franchi[g] · seggi_senato[g]`, la percepita viene dallo scivolamento di `vota`, estratto in una funzione pura che `vota` e la Vista usano entrambi. Nessuna regola copiata, nessuno stato nuovo, nessun salto di schema.
+
+Le partite: seme 1 a 1,5, `fonda`, nessuna coalizione, poi chiusure senza comandi (il generatore `.scratch/v1-piano-11-ui/viste/genera/src/opposizione.rs`, voce «28» del README delle Viste). Al turno 2 (aprile-giugno 2027) è il 06 delle Viste.
+
+- [ ] **Step 1: test che falliscono:**
+  - `la_vista_dice_la_sfiducia_presentata`: al turno 2 `sfiducia` è `None`; dopo `Sfiducia { dicastero: None }` è `Some(VoceSfiducia { dicastero: None, partito: "giocatore" })`; dopo la chiusura (respinta 60-340 alla Camera, 28-172 al Senato) torna `None`.
+  - `di_chi_e_il_posto_riservato`: al turno zero `posto_riservato_di` è `None`; al turno 2 è `estrema_destra`, con `posto_riservato` falso; al turno 3 è `giocatore`, con `posto_riservato` vero; dopo `PresentaProposta` su `salario_minimo` a `11` resta `giocatore`, con `posto_riservato` falso.
+  - `il_rifiuto_del_referendum_e_quello_del_comando`: in quattro stati (turno 2; turno 2 dopo `PromuoviReferendum` su `tetto_contante`; turno 4; turno 19), per ogni disposizione `rifiuto_referendum` è `comanda(PromuoviReferendum)` su una copia della partita, `err().map(to_string)`. In particolare al turno 2 `tetto_contante` è `None`, `forfettario` dà «comando non ammesso: Regime forfettario degli autonomi non è referendabile», `concorrenza_servizi` dà «comando non ammesso: niente da abrogare: Concorrenza nei servizi»; dopo il comando `regime_pensioni` dà «comando non ammesso: un referendum è già in corso»; al turno 4 `tetto_contante` dà «comando non ammesso: fuori finestra: si chiede entro luglio-settembre»; al turno 19 ogni disposizione dà «comando non ammesso: Nessuna richiesta di referendum nell'ultimo anno della legislatura». Al governo (il 03 delle Viste, seme 4 a 4,5, turno 2) ogni disposizione porta il rifiuto della guardia dell'opposizione.
+  - `il_costo_della_linea`: al turno 2, misura 0 «Sgravio contributivo nel Mezzogiorno: 15%», entro 1e-9: `si` dà percepita 1,625, franchi 2,805 alla Camera e 1,485 al Senato; `no` 1,6, 2,38 e 1,26; `default` 1,6, 0,39667 e 0,21 (0,02 · (1 − 2,5/6) per seggio, su 34 e 18 seggi). Dopo `Linea { misura: 0, si: Some(true) }` `costo_linea` non cambia.
+  - `la_percepita_del_costo_e_quella_del_voto`: dopo `Linea` sì sulla misura 0 e le chiusure fino al suo voto, la percepita del giocatore è 1,9363 contro 1,9149 senza linea (entro 1e-4), e la differenza è `(si.percepita − default.percepita) · 0,95³` (entro 1e-4): seguono tre voti con posizione nella stessa chiusura.
+  - `costo_linea_solo_dove_si_sceglie`: all'opposizione ogni misura in calendario ha `costo_linea`; al governo (il 03) nessuna misura del governo lo ha.
+- [ ] **Step 2:** `cargo test -p sim-core --test opposizione` → non compila.
+- [ ] **Step 3:** implementa.
+- [ ] **Step 4:** verifiche globali verdi; tipi rigenerati, `npm --prefix app run check`. Restano verdi `la_percepita_del_giocatore_segue_anche_la_linea_di_default` (`partita.rs:5363`) e `la_linea_del_giocatore_ha_i_suoi_franchi_tiratori` (`parlamento/voto.rs:246`).
+- [ ] **Step 5:** commit `feat(core): sfiducia, posto riservato, referendum e costo della linea nella Vista`.
 
 ### Task 17: redditi per fascia e chiusura della PR 2
 
