@@ -827,8 +827,9 @@ pub(crate) mod tests {
         // Lo stesso nome si sovrascrive; uno che differisce solo per le maiuscole no.
         a.salva_scenario(&s, &base).unwrap();
         s.nome = "più DEBITO".into();
-        let e = a.salva_scenario(&s, &base).unwrap_err().testo;
-        assert!(e.contains("Più debito"), "{e}");
+        let e = a.salva_scenario(&s, &base).unwrap_err();
+        assert_eq!(e.specie, crate::errore::Specie::Rifiuto);
+        assert!(e.testo.contains("Più debito"), "{}", e.testo);
         assert_eq!(a.scenari(), ["Più debito"]);
 
         s.nome = "../fuori".into();

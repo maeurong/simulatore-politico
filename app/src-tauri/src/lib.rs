@@ -957,4 +957,43 @@ mod tests {
     fn serie_senza_partita_e_un_guasto() {
         assert_eq!(serie_in_corso(&Stato::default()), Err(guasto(NESSUNA)));
     }
+
+    #[test]
+    fn il_seme_tenuto_si_consuma_poi_torna_l_orologio() -> Result<(), ErroreGuscio> {
+        let seme = SemeFondazione::new(Some(SEME));
+        assert_eq!(seme_per_fondare(&seme)?, SEME);
+        let dopo = seme_per_fondare(&seme)?;
+        // Dall'orologio: nanosecondi dall'epoca, ben oltre ogni seme scelto a mano.
+        assert!(dopo > u64::from(u32::MAX), "{dopo}");
+        Ok(())
+    }
+
+    #[test]
+    fn l_anteprima_sovrascrive_il_seme_precedente() -> Result<(), String> {
+        let seme = SemeFondazione::new(Some(SEME));
+        anteprima_di_fondazione(&dati(), None, &seme)?;
+        let tenuto = *seme.lock().map_err(|e| e.to_string())?;
+        assert!(tenuto.is_some_and(|s| s != SEME), "{tenuto:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn anteprima_incoerente_e_un_rifiuto_che_lascia_il_seme() -> Result<(), String> {
+        let base = dati();
+        let mut s = SuMisura::base(&base);
+        s.cursori.debito_pil = 1e6;
+        let seme = SemeFondazione::new(Some(SEME));
+        let e = anteprima_di_fondazione(&base, Some(&s), &seme).err();
+        assert_eq!(e.map(|e| e.specie), Some(Specie::Rifiuto));
+        assert_eq!(*seme.lock().map_err(|e| e.to_string())?, Some(SEME));
+        Ok(())
+    }
+
+    #[test]
+    fn il_catalogo_dei_dati_di_base_si_costruisce() -> Result<(), String> {
+        let c = catalogo(&dati()).map_err(rifiuto)?;
+        assert_eq!(c.cursori.len(), 6);
+        assert_eq!(c.legge_di_base, "legge_180");
+        Ok(())
+    }
 }

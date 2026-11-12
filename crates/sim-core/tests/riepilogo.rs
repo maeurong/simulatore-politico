@@ -285,3 +285,19 @@ fn i_gradini_di_ogni_legge_coincidono_coi_dati_che_ne_fa_il_core() {
         assert_eq!(trovati, attesi, "{legge}");
     }
 }
+
+/// Oracolo: `.scratch/v1-piano-11-ui/viste/14-editor.json`, `leggi_elettorali`.
+#[test]
+fn due_leggi_elettorali_hanno_gradini_diversi() {
+    let c = catalogo(&dati_base()).unwrap();
+    let gradino = |legge: &str, id: &str| c.leggi_elettorali[legge][id].as_str();
+    let attesi = [
+        ("premio", "coalizione", "nessuno"),
+        ("soglia_lista", "300", "0"),
+        ("tetto", "5500_5650", "nessuno"),
+    ];
+    for (id, legge_180, puro) in attesi {
+        assert_eq!(gradino("legge_180", id), legge_180, "{id}");
+        assert_eq!(gradino("proporzionale_puro", id), puro, "{id}");
+    }
+}

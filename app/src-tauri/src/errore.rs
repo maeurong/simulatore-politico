@@ -49,3 +49,20 @@ impl From<ErroreGuscio> for String {
         e.testo
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn la_forma_serializzata_ha_la_specie_in_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&rifiuto("no")).ok().as_deref(),
+            Some(r#"{"specie":"rifiuto","testo":"no"}"#)
+        );
+        assert_eq!(
+            serde_json::to_string(&guasto("rotto")).ok().as_deref(),
+            Some(r#"{"specie":"guasto","testo":"rotto"}"#)
+        );
+    }
+}
