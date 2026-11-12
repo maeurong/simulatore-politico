@@ -69,9 +69,8 @@ governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].prop
   dicastero, non col partito: con la proposta avara Economia resta a Simone Gallo, del giocatore invece che della Destra.
   L'intesa di partenza è sempre 60 + 10 × (offerta − richiesta): 54,9 e 62,1 col default, 64,9 dando un punto al
   Centrodestra, 32,1 togliendo Economia alla Destra (ultimatum per «spartizione»). Il tecnico conta nella quota del
-  giocatore anche su un dicastero di un alleato. Senza premio un incarico senza maggioranza arriva solo con un'altra
-  legge: in 30 semi a quattro posti, con e senza la destra, la legge in vigore dà sempre la maggioranza a chi ha
-  l'incarico; con la proporzionale al 3% il seme 4 a 5,5 ha 188 seggi su 400. Senza allargare la chiusura dà il governo
+  giocatore anche su un dicastero di un alleato. Con la legge in vigore l'incarico senza maggioranza non si è trovato:
+  in 30 semi a quattro posti, con e senza la destra, chi ha l'incarico ha sempre la maggioranza; con la proporzionale al 3% il seme 4 a 5,5 ha 188 seggi su 400. Senza allargare la chiusura dà il governo
   alla Sinistra. Nel ribaltone del seme 2 la Sinistra cede la guida e poi chiede 8,2 punti su 14. Il rimpasto non ha
   comandi (`crates/sim-core/src/partita.rs:3474`): nessuno stato.
 
