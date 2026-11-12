@@ -45,7 +45,7 @@ Ricerca svolta da `/Users/mario/GitHub/simulatore-politico`, branch `docs/piano-
 
 ## 4. Cosa cambia fra sviluppo, rilascio e identifier
 
-- **Origine.** In sviluppo la pagina è `devUrl`; in rilascio, su macOS, `tauri://localhost` (fonti/tauri-2-12-3-dati-del-webview-sorgente.md:98-101, :116-134) [V]. `localStorage` è per origine, e lo schema fa parte dell'origine (fonti/mdn-window-localstorage.md:16, :39) [V]. Le due origini, e i due depositi del § 2, non si vedono: le impostazioni scelte in sviluppo non arrivano nel `.app` [INF].
+- **Origine.** In sviluppo la pagina è `devUrl`; in rilascio, su macOS, `tauri://localhost` (fonti/tauri-2-12-3-dati-del-webview-sorgente.md:98-101, :116-134) [V]. `localStorage` è per origine, e lo schema fa parte dell'origine (fonti/mdn-window-localstorage.md:16, :39) [V]. Le due origini, e i due depositi del § 2, non si vedono fra loro: le impostazioni scelte in sviluppo non arrivano nel `.app` [INF].
 - **Identifier.** Cambiarlo sposta il deposito di rilascio in `~/Library/WebKit/<nuovo-id>/` e lascia indietro il vecchio [INF, § 2]. Sposta anche `app_data_dir`: su questo i due approcci sono pari.
 - **Sviluppo.** Il deposito dipende dal nome del pacchetto cargo (`app`), non dall'identifier [M, § 2]. Cambiare `name` in `Cargo.toml` o la porta di `devUrl` azzera le impostazioni di sviluppo [INF]. Un altro binario non in bundle chiamato `app` condividerebbe la stessa cartella [INF].
 - **«Cancella dati del sito»** non c'è in un'app Tauri, ma l'utente può cancellare `~/Library/WebKit/<id>/`, e `WKWebsiteDataStore.removeData` la svuota da codice [INF]. Non è un rischio della v1.
@@ -60,6 +60,8 @@ Un `impostazioni.json` in `app_data_dir`, scritto con `std::fs` come i salvatagg
 
 - una chiave sola con versione dentro (`{"v":1,…}`), e un default sensato quando manca: in sviluppo e in rilascio, o dopo un cambio di identifier, si riparte da vuoto, e i default vanno trattati come caso normale. Il valore iniziale di `spento` viene da `prefersReducedMotion` (`docs/ricerca/tecnica/movimento-e-scala-in-wkwebview.md:85`);
 - se un giorno le impostazioni diventano dati che costa perdere (profilo, scorciatoie personalizzate), si spostano nel file del § 5.
+
+Deciso il 12/11/2026 nel ticket 33 (`.scratch/v1-piano-11-ui/issues/33-impostazioni-del-giocatore.md`): `localStorage`, una chiave con versione. Il movimento ha tre posizioni e «Come il sistema» segue `prefersReducedMotion` anche dopo il primo avvio, al posto del valore iniziale qui sopra.
 
 Resta aperto: provare il deposito di rilascio su un `.app` costruito (`ls ~/Library/WebKit/it.maeurong.simulatorepolitico/WebsiteData/Default/`) quando esiste il primo bundle.
 

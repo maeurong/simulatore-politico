@@ -548,7 +548,7 @@ Ticket `.scratch/v1-piano-11-ui/issues/27-trattativa-e-spartizione.md`, un giro 
 Ticket `.scratch/v1-piano-11-ui/issues/33-impostazioni-del-giocatore.md`, due giri e tre forme del prototipo; ricerca [[localstorage-in-wkwebview]].
 
 - **Per l'app, non per la partita:** scala, velocità e movimento sono preferenze di chi legge; valgono in edicola e in ogni partita.
-- **In `localStorage`, non in un file del guscio:** la lettura sincrona dà la scala giusta al primo disegno, e il guscio resta passacarte. ITP non cancella nulla in un gioco a click.
+- **In `localStorage`, non in un file del guscio:** la lettura sincrona dà la scala giusta al primo disegno, e il guscio resta passacarte. ITP non cancella nulla in un gioco che si gioca cliccando.
 - **Si salva la scelta, non il tetto:** la finestra stretta riduce la scala applicata; allargandola torna la scelta.
 - **Movimento a tre posizioni:** «Come il sistema» segue macOS anche a partita aperta, così non c'è uno stato nascosto.
 - **Nel dettaglio a lato:** la pagina sotto resta in vista e cambia mentre si sceglie.
