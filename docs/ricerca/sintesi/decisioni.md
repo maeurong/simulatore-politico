@@ -511,11 +511,11 @@ Ticket `.scratch/v1-piano-11-ui/issues/30-eredita.md`, un giro su un prototipo c
 - **La fine senza seggi si raggiunge giocando**: 17 partite su 720 senza leggi, tutte al secondo voto. Più leggi passano, meno il giocatore la raggiunge.
 
 ## 2026-11-12: scale dei tracciati
-Ticket `.scratch/v1-piano-11-ui/issues/31-scale-dei-tracciati.md`, un giro a parole e uno su un prototipo con otto stati dalle Viste campione.
+Ticket `.scratch/v1-piano-11-ui/issues/31-scale-dei-tracciati.md`, un giro a parole e uno su un prototipo con otto stati, sette dalle Viste campione e uno di prova.
 
 - **Lo stacco segna una regola del core, non un preavviso:** maggioranza persa, Aste scoperte a 550 pb, premio o soglia di lista mancati. Una zona di allarme prima della regola chiederebbe un numero che il core non ha.
 - **Scala ancorata alla soglia:** stacco sempre dopo la terza casella, passo fisso; se la legge elettorale cambia la soglia, la scala scorre.
-- **Il consenso al governo ha stacco e rosso staccati:** lo stacco sta al premio, il rosso viene dalla proiezione dei seggi. Una coalizione al 38,5% sotto il premio ha comunque 225 seggi su 400.
+- **Il consenso al governo ha stacco e rosso indipendenti:** lo stacco sta al premio, il rosso viene dalla proiezione dei seggi. Una coalizione al 38,5% sotto il premio ha comunque 225 seggi su 400.
 - **Un dato al core:** la soglia della crisi del debito nella Vista.
 
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.

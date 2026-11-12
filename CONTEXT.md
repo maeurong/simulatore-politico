@@ -489,7 +489,7 @@ La riga di dieci caselle con cui la cornice mostra un indicatore sintetico: si r
 _Evita_: barra, termometro, indicatore (che è il numero, non il disegno)
 
 **Stacco**:
-Nel tracciato, il punto in cui una regola del gioco scatta: la maggioranza persa, le Aste scoperte, il premio di maggioranza o la soglia di lista mancati. A sinistra dello stacco la regola è già scattata, o scatta alla chiusura del turno.
+Nel tracciato, il punto in cui scatta una regola del gioco (la maggioranza persa, le Aste scoperte, il premio di maggioranza o la soglia di lista mancati). A sinistra dello stacco la regola è già scattata, o scatta alla chiusura del turno.
 _Evita_: soglia di allarme, zona gialla, preavviso
 
 **Schema dello Stato**:

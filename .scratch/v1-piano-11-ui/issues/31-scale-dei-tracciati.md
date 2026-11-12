@@ -23,13 +23,13 @@ Si parte dalle manopole in `dati/base` e da come il core fa cadere un governo pe
 
 ## Answer
 
-Deciso con Mario il 12/11/2026 in due giri: il primo a parole, sul significato della soglia e della scala; il secondo su un prototipo navigabile, [31-tracciati.prototype.html](../prototipi/31-tracciati.prototype.html), con otto stati dalle Viste campione (03, 08, 05, 06 con [viste/28-opposizione.json](../viste/28-opposizione.json), 01, [viste/30-eredita.json](../viste/30-eredita.json)) e uno di prova dichiarato, lo spread a 1.000 pb. Si apre sulle varianti scelte.
+Deciso con Mario il 12/11/2026 in due giri: il primo a parole, sul significato della soglia e della scala; il secondo su un prototipo navigabile, [31-tracciati.prototype.html](../prototipi/31-tracciati.prototype.html), con otto stati: sette dalle Viste campione (03, 08, 05, 06 con [viste/28-opposizione.json](../viste/28-opposizione.json), 01, [viste/30-eredita.json](../viste/30-eredita.json)) e uno di prova dichiarato, lo spread a 1.000 pb. Si apre sulle varianti scelte.
 
 ### Da dove vengono i numeri
 
 Dal core, letto prima di decidere:
 
-- **Maggioranza:** la crisi si apre quando la coalizione perde la maggioranza in una qualunque delle due Camere (`crates/sim-core/src/partita.rs:3462-3467`); con un margine sopra zero la sfiducia è respinta.
+- **Maggioranza:** la crisi si apre quando la coalizione perde la maggioranza in una qualunque delle due Camere (`crates/sim-core/src/partita.rs:3462-3467`); con un margine da zero in su la maggioranza tiene.
 - **Conti:** lo spread sta fra 60 e 1.000 pb (`spread_minimo`, `spread_massimo` in `dati/base/manopole.toml:317-329`); le Aste scoperte scattano a `soglia_crisi_debito`, 550 pb (`manopole.toml:1542`, `partita.rs:397-425`), soglia compresa.
 - **Consenso:** nessuna regola fa cadere il governo per il consenso; pesa al voto. La Legge 180 dà il premio dal 42% e taglia le liste sotto il 3% (`dati/base/elezioni.toml:286-295`): tutte e due sono disposizioni che la Vista porta già.
 
@@ -37,7 +37,7 @@ Dal core, letto prima di decidere:
 
 - **Lo stacco segna una regola del core**, non un preavviso: a sinistra la regola è scattata, o scatta alla chiusura del turno. Nessun numero inventato dalla UI; quanto manca lo dicono il numero e la variazione accanto.
 - **Sempre dopo la terza casella**, in tutti i tracciati. Il passo per casella è fisso e gli estremi si ancorano alla soglia: se la legge elettorale cambia la soglia, la scala scorre.
-- **Una casella è piena se il valore ne raggiunge il limite basso**: la soglia stessa sta fuori dal pericolo dove la regola la ammette (margine 0, consenso al 42%, partito al 3%) e dentro dove la regola la comprende (spread a 550).
+- **Una casella è piena se il valore ne raggiunge il limite basso**: un valore esattamente alla soglia sta fuori dal pericolo dove la regola lo salva (margine 0, consenso al 42%, partito al 3%) e dentro dove la regola scatta già (spread a 550).
 - **Fuori scala, il segno:** un ◂ prima della prima casella quando il valore va oltre la caduta, rosso se è il lato del pericolo; un ▸ grigio dopo l'ultima quando va oltre il pieno. Il numero accanto dice il valore vero.
 
 ### I tracciati
@@ -51,8 +51,8 @@ Dal core, letto prima di decidere:
 | Per farlo cadere | all'opposizione | 15 seggi | 150→0 sì che mancano, pieno quando la sfiducia passa | nessuno | mai: per chi è all'opposizione la caduta del governo non è un pericolo |
 | Spread, rovesciato | sempre | 75 pb | 775→25 | 550 pb | da 550 in su |
 
-- **Il consenso al governo ha stacco e rosso staccati.** Nella Vista 03 tre partiti al 38,5% stanno sotto il premio, ma la proiezione dà 225 seggi su 400: con il rosso al premio un governo che sta bene sarebbe rosso dal secondo turno. Lo stacco dice dove sta il premio, il rosso dice «se si votasse oggi perderesti». Nella Vista 08 (30,1%, 165 seggi) si accende.
-- **Senza proiezione** (`null`, solo se il riparto rifiuta i voti) il consenso al governo non si accende: assunzione della sessione, Mario non l'ha discussa.
+- **Il consenso al governo ha stacco e rosso indipendenti.** Nella Vista 03 tre partiti al 38,5% stanno sotto il premio, ma la proiezione dà 225 seggi su 400: con il rosso al premio un governo che sta bene sarebbe rosso dal secondo turno. Lo stacco dice dove sta il premio, il rosso dice «se si votasse oggi perderesti». Nella Vista 08 (30,1%, 165 seggi) si accende.
+- **Senza proiezione** (`null`, solo se il riparto rifiuta i voti) il consenso al governo non si accende: assunzione proposta nel riepilogo e confermata da Mario.
 - **Il partito al 13,4% del turno zero** riempie la scala e prende il ▸: la scala del partito misura la distanza dalla soglia di lista, non la forza.
 - **A partita finita** i tracciati restano fermi in grigio all'ultimo voto, con le stesse scale e senza rosso ([Eredità](30-eredita.md)): il 2,4% sta sotto lo stacco e dice da solo perché la partita è finita.
 - **Tono grave:** niente di nuovo; il rosso diventa inchiostro come ovunque ([Fondamenta visive](08-fondamenta-visive.md)).
@@ -60,7 +60,7 @@ Dal core, letto prima di decidere:
 ### Dati e rimandi
 
 - Soglia del premio, soglia di lista e premio sì o no: dalle disposizioni della legge elettorale in vigore (`Vista.disposizioni`, `soglia_premio`, `soglia_lista`, `premio`). Proiezione: `Vista.proiezione`. Margini: `Vista.seggi`. Sì che mancano: dall'anteprima della sfiducia ([Cruscotto all'opposizione](28-cruscotto-all-opposizione.md)).
-- **Un rimando al core, PR delle esposizioni, in 11g:** durante la partita la Vista non porta `soglia_crisi_debito`. La porta solo l'avviso dello scenario (`Avviso.crisi_del_debito.soglia_pb`) e la causa dell'evento quando scatta. Fino ad allora il tracciato dello spread non ha uno stacco dai dati.
+- **Un rimando al core, PR delle esposizioni, in 11g:** durante la partita la Vista non porta `soglia_crisi_debito`. La porta solo l'avviso dello scenario (`Avviso.crisi_del_debito.soglia_pb`) e la causa dell'evento quando scatta. Fino ad allora lo stacco dello spread non ha un dato da cui leggersi.
 
 ### Scartato
 
