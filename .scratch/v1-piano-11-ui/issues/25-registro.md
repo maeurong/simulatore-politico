@@ -1,7 +1,7 @@
 Type: prototype
 Status: open
 Blocked by: 06, 08, esterno: spec del piano di core «esito e Vista completa»
-Assignee: -
+Assignee: Mario
 Label: wayfinder:prototype
 Map: ../map.md
 
