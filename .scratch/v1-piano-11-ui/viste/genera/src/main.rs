@@ -1504,6 +1504,7 @@ macro_rules! json {
 mod eredita;
 mod governo;
 mod opposizione;
+mod trattativa;
 
 /// La campagna (ticket 26): il turno zero del seme 4 a 4,5 con dichiarazione, cessioni, anteprime,
 /// riposizionamento, promesse, sondaggio e campagna tagliata; poi il turno del voto di fine
@@ -1755,6 +1756,7 @@ fn esegui() -> Esito<()> {
     uscite.push(opposizione::opposizione(&d)?);
     uscite.push(eredita::eredita(&d)?);
     uscite.push(governo::governo(&d)?);
+    uscite.push(trattativa::trattativa(&d)?);
     uscite.sort_by_key(|u| u.nome);
     let cartella = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     for u in &uscite {

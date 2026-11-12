@@ -535,5 +535,14 @@ Ticket `.scratch/v1-piano-11-ui/issues/18-governo.md`, un giro su tre forme del 
 - **La regione con mappa e lista** anche nel dettaglio a lato: la mappa dice dove il ministro non vuole andare, la lista dà il numero.
 - **Quattro dati al core:** i costi di Ferma e Dirotta; l'indicatore di servizio del dicastero; il perché dell'evidenza; le soglie della soddisfazione col costo d'intesa delle dimissioni.
 
+## 2026-11-12: trattativa e spartizione
+Ticket `.scratch/v1-piano-11-ui/issues/27-trattativa-e-spartizione.md`, un giro su tre forme del prototipo.
+
+- **Righe, non cesti:** un dicastero per riga coi bottoni «a chi»; il conto di ogni alleato (richiesta, punti dati, intesa di partenza) sta nel lato, non nella pagina.
+- **Allargare riporta la spartizione al default:** chi entra riceve la sua parte, come già fa il core.
+- **Il tecnico su qualunque dicastero:** conta sempre nella tua quota, e su un dicastero dell'alleato gli toglie il punto.
+- **Chiedere la guida è diretto:** non costa niente; restare fuori dal ribaltone ha la conferma sul posto.
+- **Tre dati al core:** la spartizione in corso per dicastero col peso; l'intesa di partenza per alleato; la coalizione del ribaltone col primo per seggi.
+
 - [[soggetti-reali-vs-fittizi]]: la raccomandazione di un paese fittizio non dipende dal prezzo, perché gli art. 96-97 L. 633/1941 vietano anche gli usi che ledono il decoro, non solo quelli a scopo di lucro.
 - [[distribuzione-e-aggiornamenti]]: anche un gioco gratuito su Steam paga l'iscrizione da 100 $, e su macOS serve comunque la notarizzazione Apple.
