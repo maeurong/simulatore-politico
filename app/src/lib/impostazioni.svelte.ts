@@ -101,7 +101,7 @@ let spegni: ReturnType<typeof setTimeout> | undefined;
 
 /** Cmd+ (= o +), Cmd− e Cmd0, anche con Ctrl. Vero se il tasto era suo. */
 export function scorciatoia(e: KeyboardEvent): boolean {
-  if (!(e.metaKey || e.ctrlKey)) return false;
+  if (!(e.metaKey || e.ctrlKey) || e.altKey || e.repeat) return false;
   const verso = e.key === "+" || e.key === "=" ? 1 : e.key === "-" ? -1 : e.key === "0" ? 0 : null;
   if (verso === null) return false;
   e.preventDefault();

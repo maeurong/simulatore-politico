@@ -1,6 +1,5 @@
 <script lang="ts">
   import { numero, t } from "$lib/testi/t";
-  import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import { GRADINI, PARTENZA, fattori, impostazioni, scalaApplicata, scegli, sistema, volte } from "$lib/impostazioni.svelte";
 
@@ -57,7 +56,7 @@
 
 <svelte:window onkeydown={tasto} />
 
-<Dettaglio aria-labelledby="{id}-titolo" tabindex={-1} {@attach (el) => el.focus()}>
+<aside class="lato" aria-labelledby="{id}-titolo" tabindex="-1" {@attach (el) => el.focus()}>
   <div class="capo">
     <h4 id="{id}-titolo" class="tit">{t("impostazioni.titolo")}</h4>
     <Pulsante forma="link" onclick={onchiudi}>{t("impostazioni.chiudi")}</Pulsante>
@@ -124,9 +123,11 @@
     </ul>
     <Pulsante forma="bordo" onclick={prova}>{t("impostazioni.prova_pulsante")}</Pulsante>
   </div>
-</Dettaglio>
+</aside>
 
 <style>
+  /* il lato del prototipo 33: un filetto forte a sinistra, la pagina sotto resta in vista */
+  .lato { min-height: 0; overflow: hidden auto; border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 10px; align-content: start }
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-riq) }
   :global(:root.grave) .tit { font-weight: 600 }
   .capo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: var(--doppio); padding-bottom: 3px; margin-bottom: 2px }

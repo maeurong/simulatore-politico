@@ -3,6 +3,7 @@ import type { Vista } from "$lib/tipi/Vista";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
 import { numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
+import { statoDi } from "$lib/ossatura";
 
 export type Scala = { stacco: number; passo: number; rovesciata: boolean };
 
@@ -68,10 +69,11 @@ function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], 
 
 export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciato, Tracciato] {
   const prima = serie.find((p) => p.turno === v.turno - 1);
-  // a partita finita valgono le regole dell'ultimo stato, nell'ordine di statoDi (piano 11a, Task 10)
-  const turnoZero = v.turno === 0;
-  const alGoverno = !turnoZero && (v.fase === "trattativa" || v.crisi || v.governa);
-  const conDichiarata = turnoZero || v.fase === "trattativa";
+  // a partita finita valgono le regole dell'ultimo stato
+  const stato = statoDi({ ...v, finita: false });
+  const turnoZero = stato === "turno_zero";
+  const alGoverno = stato === "trattativa" || stato === "crisi" || stato === "governo";
+  const conDichiarata = turnoZero || stato === "trattativa";
   const coalizione = [v.giocatore, ...(conDichiarata ? v.coalizione : v.alleati.map((a) => a.partito))];
 
   let primo: Tracciato;

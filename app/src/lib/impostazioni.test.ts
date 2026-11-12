@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PARTENZA, fattori, formaStretta, leggi, passo, scalaApplicata, scrivi } from "./impostazioni.svelte";
+import { PARTENZA, fattori, formaStretta, leggi, passo, scalaApplicata, scorciatoia, scrivi } from "./impostazioni.svelte";
 
 describe("leggi e scrivi", () => {
   it("assente, illeggibile, versione ignota o fuori elenco: valori di partenza", () => {
@@ -38,5 +38,13 @@ describe("fattori", () => {
     expect(fattori({ ...PARTENZA, velocita: "2", movimento: "acceso" }, false)).toEqual({ k: 0.5, muove: true });
     expect(fattori({ ...PARTENZA, movimento: "sistema" }, true).muove).toBe(false);
     expect(fattori({ ...PARTENZA, velocita: "istantaneo" }, false).k).toBe(0);
+  });
+});
+
+describe("scorciatoia", () => {
+  const tasto = (x: Partial<KeyboardEvent>) => ({ key: "+", metaKey: true, ctrlKey: false, altKey: false, repeat: false, preventDefault() {}, ...x }) as KeyboardEvent;
+  it("con Alt o in ripetizione il tasto non è suo", () => {
+    expect(scorciatoia(tasto({ altKey: true }))).toBe(false);
+    expect(scorciatoia(tasto({ repeat: true }))).toBe(false);
   });
 });

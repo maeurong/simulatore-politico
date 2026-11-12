@@ -21,7 +21,8 @@ export function trovaFile(nomi: string[], vista: string): string | undefined {
 }
 
 export function vistaDi(campione: any): Vista | null {
-  if (campione && typeof campione === "object" && "turno" in campione) return campione;
+  // "giocatore", non "turno": le voci del registro hanno un turno loro e la Vista in .prima
+  if (campione && typeof campione === "object" && "giocatore" in campione) return campione;
   return campione?.vista ?? campione?.prima ?? null;
 }
 

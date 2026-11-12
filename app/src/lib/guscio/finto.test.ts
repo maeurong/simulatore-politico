@@ -23,6 +23,10 @@ const c = {
 describe("vistaDi", () => {
   it("campione con turno", () => expect(vistaDi(turnoZero)?.turno).toBe(0));
   it("stato del cruscotto", () => expect(vistaDi(cruscotto["ultimatum"])).not.toBeNull());
+  it("voce del registro: ha un turno suo ma la Vista è in .prima", () => {
+    const voce = (registroJson as unknown as { prima: { giocatore: string } }[])[0];
+    expect(vistaDi(voce)).toBe(voce.prima);
+  });
 });
 
 describe("rispondi", () => {

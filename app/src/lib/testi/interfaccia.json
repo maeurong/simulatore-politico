@@ -6,6 +6,12 @@
   "cornice.si_vota_a_fine_turno": "si vota a fine turno",
   "cornice.turni_al_voto": { "one": "{n} turno al voto", "other": "{n} turni al voto" },
   "cornice.scelte_al_default": { "one": "{n} scelta al default ›", "other": "{n} scelte al default ›" },
+  "cornice.trimestre_1": "Gennaio–marzo {anno}",
+  "cornice.trimestre_2": "Aprile–giugno {anno}",
+  "cornice.trimestre_3": "Luglio–settembre {anno}",
+  "cornice.trimestre_4": "Ottobre–dicembre {anno}",
+  "cornice.nessun_turno": "Nessun turno da chiudere",
+  "cornice.rimasta_com_era": "La partita è rimasta com’era.",
   "cornice.banda_crisi": "CRISI DI GOVERNO · solo ordinaria amministrazione: allarga la maggioranza o dimettiti; senza scelta, a fine turno si vota la sfiducia",
 
   "stato.governo": "Al governo",
@@ -52,6 +58,7 @@
   "barrata.aula_sciolta": "Camere sciolte: niente aula fino al voto",
   "barrata.aula_finita": "Partita finita",
   "barrata.aula_trattativa": "Trattativa: l’aula riapre col governo nuovo",
+  "barrata.registro_finita": "Eredità confermata: non si torna a un turno",
 
   "segnaposto.arriva": "{sezione}: arriva con la fetta {fetta}.",
 

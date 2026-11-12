@@ -1,7 +1,6 @@
 <script lang="ts">
   // Pagina di prova dei componenti di base, caricata da /sviluppo/componenti solo in sviluppo:
   // i testi qui sono di prova e non stanno in interfaccia.json.
-  import "$lib/stile/fondamenta.css";
   import { numero, t } from "$lib/testi/t";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Conferma from "$lib/componenti/Conferma.svelte";
