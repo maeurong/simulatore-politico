@@ -9,4 +9,4 @@ export type Bilancio = { anno: number, dicasteri: Array<BudgetDicastero>, aliquo
 /**
  * Euro annui stanziati per le emergenze; non ancora spesi da alcun evento.
  */
-fondo_riserva: bigint, };
+fondo_riserva: number, };

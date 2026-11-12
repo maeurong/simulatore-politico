@@ -11,6 +11,7 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::errore::{ErroreGuscio, rifiuto};
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -466,19 +467,23 @@ impl Archivio {
     /// `scenari/<nome>.toml` col file di differenze dalla base. Lo stesso nome lo sovrascrive;
     /// un nome che differisce da uno presente solo per le maiuscole si rifiuta, perché su APFS
     /// sarebbe lo stesso file.
-    pub(crate) fn salva_scenario(&self, s: &SuMisura, base: &DatiGioco) -> Result<(), String> {
-        let percorso = self.percorso_scenario(&s.nome)?;
+    pub(crate) fn salva_scenario(
+        &self,
+        s: &SuMisura,
+        base: &DatiGioco,
+    ) -> Result<(), ErroreGuscio> {
+        let percorso = self.percorso_scenario(&s.nome).map_err(rifiuto)?;
         let minuscolo = s.nome.to_lowercase();
         if let Some(altro) =
             (self.scenari().into_iter()).find(|n| *n != s.nome && n.to_lowercase() == minuscolo)
         {
-            return Err(format!(
+            return Err(rifiuto(format!(
                 "impossibile salvare {}: c'è già lo scenario {}, che differisce solo per le maiuscole",
                 self.mostra(&percorso),
                 citato(&altro)
-            ));
+            )));
         }
-        self.scrivi(&percorso, s.in_toml(base).as_bytes())
+        Ok(self.scrivi(&percorso, s.in_toml(base).as_bytes())?)
     }
 
     pub(crate) fn carica_scenario(&self, nome: &str, base: &DatiGioco) -> Result<SuMisura, String> {
@@ -822,7 +827,7 @@ pub(crate) mod tests {
         // Lo stesso nome si sovrascrive; uno che differisce solo per le maiuscole no.
         a.salva_scenario(&s, &base).unwrap();
         s.nome = "più DEBITO".into();
-        let e = a.salva_scenario(&s, &base).unwrap_err();
+        let e = a.salva_scenario(&s, &base).unwrap_err().testo;
         assert!(e.contains("Più debito"), "{e}");
         assert_eq!(a.scenari(), ["Più debito"]);
 

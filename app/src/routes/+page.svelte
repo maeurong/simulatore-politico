@@ -1,6 +1,5 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
   import type { Vista } from "$lib/tipi/Vista";
 
   // Schermata provvisoria fino al piano 11: solo la Vista, nessuna logica di gioco.
@@ -10,7 +9,7 @@
   let errore = $state("");
   let occupato = $state(false);
 
-  async function chiama(comando: "nuova_partita" | "chiudi_turno") {
+  async function chiama(comando: "chiudi_turno") {
     occupato = true;
     try {
       vista = await invoke<Vista>(comando);
@@ -21,8 +20,6 @@
       occupato = false;
     }
   }
-
-  onMount(() => chiama("nuova_partita"));
 </script>
 
 <main>
@@ -35,14 +32,11 @@
       {/each}
     </ul>
     <button onclick={() => chiama("chiudi_turno")} disabled={occupato}>Chiudi turno</button>
-  {:else if !errore}
-    <p>Caricamento…</p>
+  {:else}
+    <p>Nessuna partita in corso.</p>
   {/if}
   {#if errore}
     <p role="alert">{errore}</p>
-    {#if !vista}
-      <button onclick={() => chiama("nuova_partita")} disabled={occupato}>Riprova</button>
-    {/if}
   {/if}
 </main>
 

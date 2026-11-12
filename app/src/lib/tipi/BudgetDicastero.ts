@@ -3,7 +3,7 @@
 /**
  * Euro annui.
  */
-export type BudgetDicastero = { id: string, spesa: bigint, salari: bigint, acquisti: bigint, margine: bigint, 
+export type BudgetDicastero = { id: string, spesa: number, salari: number, acquisti: number, margine: number, 
 /**
  * Il livello dei prezzi a cui la voce ha preso la sua cifra nominale.
  */

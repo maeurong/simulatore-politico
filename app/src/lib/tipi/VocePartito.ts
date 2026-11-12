@@ -14,7 +14,7 @@ leader: string, regola: Regola, sciolto: boolean,
 /**
  * Euro: pubblica.
  */
-cassa: bigint, 
+cassa: number, 
 /**
  * Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
  */

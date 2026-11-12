@@ -12,4 +12,4 @@ import type { VoceLinea } from "./VoceLinea";
  * stimate dal ministro proponente, leve che cambiano, gruppi toccati; linee, forbice e seggi
  * come in calendario. `proponente` è l'id del dicastero.
  */
-export type Anteprima = { nome: string, forma: FormaMisura, proponente: string | null, costo_annuo: bigint, effetti: Array<EffettoStimato>, leve: Array<VoceLeva>, gruppi: Array<Condizione>, linee: Array<VoceLinea>, forbice: Forbice, seggi: Array<VariazioneSeggi>, };
+export type Anteprima = { nome: string, forma: FormaMisura, proponente: string | null, costo_annuo: number, effetti: Array<EffettoStimato>, leve: Array<VoceLeva>, gruppi: Array<Condizione>, linee: Array<VoceLinea>, forbice: Forbice, seggi: Array<VariazioneSeggi>, };

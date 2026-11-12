@@ -5,4 +5,4 @@ import type { ValoreProposto } from "./ValoreProposto";
  * Il contenuto di un decreto. Il bilancio non è fra i contenuti possibili: il divieto vale per
  * costruzione.
  */
-export type Decreto = { "tipo": "fondi", da: string, a: string, importo: bigint, } | { "tipo": "disposizioni", valori: Array<ValoreProposto>, };
+export type Decreto = { "tipo": "fondi", da: string, a: string, importo: number, } | { "tipo": "disposizioni", valori: Array<ValoreProposto>, };

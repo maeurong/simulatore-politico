@@ -3,4 +3,4 @@
 /**
  * `atto` e `regione` sono id.
  */
-export type VoceCantiere = { atto: string, regione: string | null, turni_mancanti: number, rata: bigint, speso: bigint, };
+export type VoceCantiere = { atto: string, regione: string | null, turni_mancanti: number, rata: number, speso: number, };
