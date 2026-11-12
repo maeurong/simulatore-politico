@@ -26,7 +26,9 @@
 
   function tasto(e: KeyboardEvent) {
     if (aperta && e.key === "Escape") {
+      // un Esc annulla la conferma e basta: il pannello o l'editor che la contiene resta aperto
       e.preventDefault();
+      e.stopPropagation();
       apri(false);
     }
   }

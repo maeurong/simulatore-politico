@@ -7,9 +7,10 @@
     prima: number | undefined,
     formato: (x: number) => string,
     male: Verso | null | undefined,
+    formatoVariazione: (x: number) => string = formato,
   ): { verso: Verso | "pari"; giudizio: "bene" | "male" | null; testo: string } | null {
     if (prima === undefined) return null;
-    const testo = formato(Math.abs(valore - prima));
+    const testo = formatoVariazione(Math.abs(valore - prima));
     if (!/[1-9]/.test(testo)) return { verso: "pari", giudizio: null, testo: "" };
     const verso = valore > prima ? "sale" : "scende";
     return { verso, giudizio: male ? (verso === male ? "male" : "bene") : null, testo };
@@ -23,14 +24,16 @@
     valore: number;
     prima?: number;
     formato: (x: number) => string;
+    /** la variazione, se va scritta diversa dal valore («51 ▾2,7»); di base formato */
+    formatoVariazione?: (x: number) => string;
     /** il verso che fa male; null: freccia senza colore */
     male?: Verso | null;
     /** il critico va in negativo: si legge anche senza colore */
     sottoSoglia?: boolean;
   };
 
-  let { valore, prima, formato, male = null, sottoSoglia = false }: Props = $props();
-  const d = $derived(freccia(valore, prima, formato, male));
+  let { valore, prima, formato, formatoVariazione, male = null, sottoSoglia = false }: Props = $props();
+  const d = $derived(freccia(valore, prima, formato, male, formatoVariazione));
 </script>
 
 <!-- tutto su una riga: uno spazio fra i tag staccherebbe la freccia dal numero -->
