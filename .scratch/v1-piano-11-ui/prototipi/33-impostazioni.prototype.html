@@ -1,0 +1,353 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — ticket «Impostazioni del giocatore» (33), mappa v1-piano-11-ui.
+  Domanda: com'è fatta la pagina delle Impostazioni, e da dove si apre? Già deciso con Mario il 12/11/2026: valgono per
+  l'app, non per la partita; scala a gradini 1 · 1,1 · 1,25 · 1,4 · 1,6 · 1,8 · 2 con Cmd+ / Cmd− / Cmd0, partenza 1×;
+  il tetto dei 1024 px utili riduce la scala applicata ma la scelta resta salvata; movimento a tre posizioni (Come il
+  sistema, Acceso, Spento); velocità 1× / 2× / istantaneo (storia 158).
+  Tre forme via ?v=A|B|C (frecce ← →):
+    A  Pagina    — una pagina intera come lo Schema dello Stato: tre righe a sinistra, la prova a destra
+    B  Lato      — il dettaglio a lato sopra la sezione aperta: la pagina sotto resta in vista e cambia con te
+    C  Striscia  — una striscia sotto la cornice, tre comandi in fila; si chiude con Esc o con la voce
+  Barra: ?fin=1280|1440 ?sis=on|off (simula «Riduci movimento» di macOS) ?dove=partita|edicola.
+  Cmd+ / Cmd− / Cmd0 funzionano anche qui (Ctrl su altri sistemi). Lo stato salvato e quello applicato stanno nella barra.
+  Stile: 08-fondamenta (forma A), blocco copiato dal 27. Sezione sotto: Governo finta, solo per vedere la scala e il
+  movimento su qualcosa. Nessun salvataggio: si perde tutto ricaricando. Non è codice di produzione.
+
+  VERDETTO (Mario, 12/11/2026), nel ticket 33: B · Lato, con la prova dentro; Cmd+ / Cmd− fuori dalle Impostazioni
+  mostrano l'avviso breve. Il file si apre su questa forma. Scartate: A e C dalla barra.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Prototipo Impostazioni · piano 11</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:#F4ECD8}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+svg{display:block}
+
+/* ===== token: copiati da 08-fondamenta (forma A), nessun colore o misura a mano ===== */
+.vS{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px;
+  --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:44px; --c-test:72px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,440px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+  --k:1; --t-press:80ms; --e-work:cubic-bezier(.2,0,.38,.9);
+  background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);
+  font-variant-numeric:tabular-nums lining-nums;display:grid;min-height:0;position:relative;overflow:hidden;
+  accent-color:var(--ink);
+}
+.vS.g{--rosso:var(--ink);--verde:var(--ink);--biro:var(--ink);--giallo:transparent;--wonk:"SOFT" 0,"WONK" 0}
+.vS.g .solo-ord{display:none!important}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:700;line-height:1.1;text-wrap:balance}
+.g .tit{font-weight:600}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--rosso)}
+.muto{color:var(--grigio)} .bene{color:var(--verde)} .male{color:var(--rosso)}
+.sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.btn{border:var(--forte);padding:4px 11px;font-size:var(--c-corpo);font-weight:700;background:var(--carta);white-space:nowrap;
+  transition:transform calc(var(--t-press)*var(--k)) var(--e-work)}
+.btn:hover{background:var(--ink);color:var(--carta)}
+.btn:active{transform:scale(.97)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+.btn.pieno:hover{background:var(--carta);color:var(--ink)}
+.btn.p{padding:1px 7px;font-size:var(--c-min);border-width:1.5px}
+.btn.scelto{background:var(--giallo);color:var(--ink)}
+.g .btn.scelto{background:var(--ink);color:var(--carta)}
+.btn[aria-disabled=true]{border-style:dashed;border-color:var(--grigio);color:var(--grigio);cursor:default;background:var(--carta)}
+.btn.via{border-color:var(--rosso);color:var(--rosso)}
+.btn.via:hover,.btn.via.pieno{background:var(--rosso);color:var(--carta);border-color:var(--rosso)}
+.fr{display:inline-block;width:.62em;height:.62em;margin-right:.2em;fill:currentColor;vertical-align:.02em}
+.fr.giu{transform:rotate(180deg)}
+.dl{font-size:var(--c-min);font-weight:700;white-space:nowrap}
+.dl.crit{background:var(--rosso);color:var(--carta);padding:0 5px}
+.nf{white-space:nowrap;font-weight:700}
+.cas{display:flex;gap:2px}
+.cas i{width:var(--cw,9px);height:var(--ch,14px);border:1.5px solid var(--ink);flex:none}
+.cas i.per{background:var(--ret,none)}
+.cas i.sog{margin-right:4px}
+.cas i.on{background:var(--ink)}
+.cas.inp i.on{background:var(--rosso);border-color:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio);background:none}
+.trk{display:grid;align-items:center}
+.trk .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);white-space:nowrap}
+.trk .v{font-size:var(--c-num);font-weight:700;line-height:1.1;white-space:nowrap}
+.fascia{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fascia .cas{--cw:12px;--ch:8px}
+.voce{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:6px 0;border-top:var(--filo);font-size:var(--c-sec)}
+.voce:first-child{border-top:0}
+.voce small{grid-column:1/-1;color:var(--grigio);font-size:var(--c-min)}
+.voce small::before{content:"perché: ";font-style:italic}
+.box{border:var(--bordo);padding:var(--s2) var(--s3)}
+.ph{border:1.5px dashed var(--grigio);color:var(--grigio);padding:7px 11px;font-size:var(--c-sec)}
+.ph b{color:var(--ink)}
+.az{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.iniz{display:inline-grid;place-items:center;border:1.5px solid var(--ink);border-radius:50%;font-weight:700;letter-spacing:.02em;flex:none}
+.dati{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:var(--c-sec);align-items:center}
+.dati dt{color:var(--grigio)}
+
+/* cornice A · Gerenza */
+.nomino{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;color:var(--rosso);line-height:1;white-space:nowrap}
+.chi{font-size:var(--c-sec);line-height:1.3;color:var(--grigio);white-space:nowrap}
+.chi b{color:var(--ink)}
+.def{font-size:var(--c-min);color:var(--grigio);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.def.tutte{color:var(--verde)}
+.pila{display:flex;flex-direction:column;gap:3px}
+.pila .btn{text-align:center}
+.somm button{font-weight:700;color:var(--grigio);white-space:nowrap}
+.somm button:hover{color:var(--ink)}
+.somm button.qui{color:var(--ink)}
+.somm button.chiusa{text-decoration:line-through;font-weight:400;cursor:help}
+.perche{position:absolute;z-index:3;background:var(--ink);color:var(--carta);font-size:var(--c-min);padding:3px 8px;pointer-events:none;white-space:nowrap}
+.banda{background:var(--ink);color:var(--carta);padding:4px var(--marg);font-size:var(--c-sec);font-weight:700;letter-spacing:.04em}
+.cA{padding:8px var(--marg) 0;border-bottom:var(--doppio)}
+.c1{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;padding-bottom:6px}
+.c1 .c-sx{display:flex;align-items:center;gap:12px}
+.cA .nomino{font-size:27px}
+.c1 .trks{display:flex;justify-content:center}
+.c1 .trk{padding:0 12px;border-left:var(--filo);grid-template-columns:auto auto;gap:0 8px}
+.c1 .trk:last-child{border-right:var(--filo)}
+.c1 .trk .k{grid-column:1/-1}
+.c1 .c-dx{display:grid;gap:3px;justify-items:center}
+.cA .somm{display:flex;align-items:end;gap:2px;margin-top:2px}
+.cA .somm button{padding:4px 12px 5px;border:1.5px solid transparent;border-bottom:0}
+.cA .somm button.qui{border-color:var(--ink);background:var(--carta);margin-bottom:-3px;padding-bottom:8px}
+.somm .fuori{margin-left:auto;display:flex;gap:14px;padding-bottom:5px}
+.somm .fuori button{font-weight:400;text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);padding:0;border:0}
+.stretta .cA .nomino{display:none}
+.stretta .c1{gap:10px}
+.stretta .c1 .trk{padding:0 8px}
+.stretta .cA .somm button{padding-left:7px;padding-right:7px;font-size:var(--c-sec)}
+.stretta .somm .lungo{display:none}
+
+/* corpo */
+.corpo{padding:12px var(--marg) 14px;min-height:0;min-width:0;overflow:hidden auto;display:grid;gap:10px var(--canale);align-content:start;position:relative}
+.corpo>*{min-width:0}
+h3.tit{font-size:var(--c-sez);margin-bottom:4px}
+h4.tit{font-size:var(--c-riq)}
+.capo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:var(--doppio);padding-bottom:3px;margin-bottom:2px}
+.capo h3{margin:0}
+
+/* barra del prototipo */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto .lab{min-width:170px;text-align:center;font-weight:700;font-size:13px}
+#proto #avv{color:#ff8ad8;font-weight:700}
+
+/* ===== solo di questo prototipo ===== */
+.app{grid-template-rows:auto auto minmax(0,1fr)}
+.corpo.due{grid-template-columns:minmax(0,1fr) var(--lato)}
+.lato{border-left:var(--forte);padding-left:var(--canale);display:grid;gap:10px;align-content:start}
+.riga-set{display:grid;gap:5px;padding:8px 0;border-top:var(--filo)}
+.riga-set:first-of-type{border-top:0}
+.riga-set .k{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;color:var(--grigio);font-weight:700}
+.riga-set .scelte{display:flex;gap:4px;flex-wrap:wrap}
+.riga-set .nota{font-size:var(--c-sec);color:var(--grigio);max-width:58ch}
+.riga-set .nota b{color:var(--ink)}
+.riga-set .nota.avv{color:var(--rosso)}
+.btn.scelto[aria-disabled=true]{background:var(--giallo);color:var(--ink);border-style:dashed;border-color:var(--ink)}
+.pag{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--canale)}
+.pag .riga-set{padding:14px 0}
+.pag .riga-set .k{font-size:var(--c-sec)}
+.pag .btn.p{padding:3px 10px;font-size:var(--c-corpo)}
+.strip{border-bottom:var(--forte);padding:8px var(--marg);display:flex;gap:28px;align-items:start;background:var(--carta)}
+.strip .riga-set{border:0;padding:0}
+.strip .riga-set .nota{max-width:34ch;font-size:var(--c-min)}
+.strip .chiudi{margin-left:auto;align-self:center}
+.prova{display:grid;gap:10px;justify-items:start}
+.carta{width:150px;height:96px;perspective:600px}
+.carta .in{position:relative;width:100%;height:100%;transform-style:preserve-3d}
+.carta .f{position:absolute;inset:0;border:var(--bordo);display:grid;place-items:center;backface-visibility:hidden;padding:8px;text-align:center;font-size:var(--c-sec);background:var(--carta)}
+.carta .r{transform:rotateY(180deg);background:var(--ink);color:var(--carta)}
+.esito{font-size:var(--c-sec)}
+.esito li{list-style:none;padding:3px 0;border-top:var(--filo)}
+.riga-min{display:grid;grid-template-columns:150px 1fr auto;gap:10px;padding:7px 0;border-top:var(--filo);align-items:center;font-size:var(--c-sec)}
+.toast{position:absolute;top:110px;right:24px;z-index:5;background:var(--ink);color:var(--carta);font-size:var(--c-sec);padding:5px 10px;opacity:0;pointer-events:none}
+.ed-testa{display:flex;align-items:baseline;justify-content:space-between;padding:10px var(--marg) 6px;border-bottom:var(--doppio)}
+.ed-testa .nomino{font-size:30px}
+</style>
+</head>
+<body>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto">
+  <button id="prev" title="forma precedente (←)">‹</button><span class="lab" id="lab"></span><button id="next" title="forma successiva (→)">›</button>
+  <span class="cap">dove</span><span class="seg" data-k="dove"><button data-v="partita">in partita</button><button data-v="edicola">in edicola</button></span>
+  <span class="cap">finestra</span><span class="seg" data-k="fin"><button data-v="1280">1280×800</button><button data-v="1440">1440×900</button><button data-v="1100">1100×760</button></span>
+  <span class="cap">macOS «Riduci movimento»</span><span class="seg" data-k="sis"><button data-v="off">no</button><button data-v="on">sì</button></span>
+  <span id="avv"></span>
+</div>
+<script>
+const FORME = {B:'B · Lato'};
+const GRADINI = [1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
+const ALTEZZA = {1280:800, 1440:900, 1100:760};
+const q = new URLSearchParams(location.search);
+const P = {v:'B', fin:q.get('fin')||'1280', sis:q.get('sis')||'off', dove:q.get('dove')||'partita'};
+// salvato: ciò che l'app scriverebbe; parte con 1,4× per far vedere il tetto a 1280
+const S = {scala:1.4, vel:'1', mov:'sistema'};
+let aperto = true;
+const fmt = n => String(n).replace('.', ',') + '×';
+
+function tetto(){ return +P.fin / 1024; }
+function applicata(){ return Math.min(S.scala, tetto()); }
+function k(){ return {'1':1, '2':.5, 'ist':0}[S.vel]; }
+function movAcceso(){ return S.mov === 'acceso' || (S.mov === 'sistema' && P.sis === 'off'); }
+
+function btn(lab, on, fn, dis, tit){
+  return `<button class="btn p${on?' scelto':''}" ${dis?'aria-disabled="true"':''} ${tit?`title="${tit}"`:''} data-fn="${fn}">${lab}</button>`;
+}
+function controlli(stretto){
+  const t = tetto(), a = applicata();
+  const scala = GRADINI.map(g => btn(fmt(g), g===S.scala, 'scala:'+g, g > t + 1e-9,
+      g > t + 1e-9 ? `la finestra larga ${P.fin} regge fino a ${fmt(Math.floor(t*100)/100)}` : '')).join('');
+  const notaScala = S.scala > a + 1e-9
+    ? `<p class="nota avv">Applicata <b>${fmt(Math.round(a*100)/100)}</b>: la finestra è stretta. Allargala e torna ${fmt(S.scala)}.</p>`
+    : (stretto ? '' : `<p class="nota">Cmd+ e Cmd− salgono e scendono di un gradino, Cmd0 torna a 1×. I gradini tratteggiati non entrano in questa finestra.</p>`);
+  const vel = [['1','1×'],['2','2×'],['ist','Istantaneo']].map(([v,l]) => btn(l, S.vel===v, 'vel:'+v)).join('');
+  const notaVel = stretto ? '' : `<p class="nota">2× dimezza ogni movimento e i ritardi dell'esito; istantaneo li salta, l'esito arriva tutto insieme.</p>`;
+  const sisTxt = P.sis === 'on' ? 'macOS riduce il movimento: oggi è spento' : 'macOS non riduce il movimento: oggi è acceso';
+  const mov = [['sistema','Come il sistema'],['acceso','Acceso'],['spento','Spento']].map(([v,l]) => btn(l, S.mov===v, 'mov:'+v)).join('');
+  const notaMov = `<p class="nota">${S.mov==='sistema' ? sisTxt + '. ' : ''}${stretto ? '' : 'Spento lascia le dissolvenze: niente si sposta, le cose compaiono.'}</p>`;
+  return `
+    <div class="riga-set"><span class="k">Scala</span><div class="scelte">${scala}</div>${notaScala}</div>
+    <div class="riga-set"><span class="k">Velocità</span><div class="scelte">${vel}</div>${notaVel}</div>
+    <div class="riga-set"><span class="k">Movimento</span><div class="scelte">${mov}</div>${notaMov}</div>
+    ${stretto ? '' : `<div class="riga-set"><button class="link" data-fn="ripristina">Torna ai valori di partenza</button><p class="nota">1×, velocità 1×, come il sistema. Valgono per tutte le partite.</p></div>`}`;
+}
+function prova(){
+  return `<div class="prova">
+    <div class="carta"><div class="in" id="cin"><div class="f">Ministro dell'Interno<br><b>Silvia Moretti</b></div><div class="f r">«Ordine, prima di tutto»</div></div></div>
+    <div class="cas" id="pcas">${'<i></i>'.repeat(10)}</div>
+    <ul class="esito" id="pes"><li>Il decreto sulle accise passa alla Camera</li><li>Lo spread scende a 79</li><li>La Destra chiede l'Interno</li></ul>
+    <button class="btn" data-fn="prova">Prova ›</button></div>`;
+}
+function cornice(){
+  const voci = ['Prima pagina','Governo','Aula','Conti','Bilancio','Paese','Partiti','Registro','Campagna','Trattativa'];
+  const somm = voci.map(v => `<button class="${v==='Governo'?'qui':''}">${v}</button>`).join('');
+  const stretta = +P.fin / applicata() < 1150;
+  return `<header class="cornice cA"><div class="c1"><div class="c-sx"><span class="nomino">Il Pungolo</span>
+      <div class="chi"><b>Al governo</b><br>Inverno 2027 · turno 4<br>16 turni al voto</div></div>
+    <div class="trks"><div class="trk"><span class="k">Consenso</span><span class="v">31,4%</span></div>
+      <div class="trk"><span class="k">Spread</span><span class="v">83</span></div>
+      <div class="trk"><span class="k">Coalizione</span><span class="cas"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div></div>
+    <div class="c-dx"><button class="btn pieno">Chiudi il turno ›</button><span class="def">2 scelte al default ›</span></div></div>
+    <nav class="somm">${somm}<span class="fuori"><button><span class="lungo">Schema dello Stato</span><span class="${stretta?'':'nascosto'}" style="${stretta?'':'display:none'}">Schema</span></button>
+      <button data-fn="apri" style="${aperto?'font-weight:700;color:var(--ink)':''}">Impostazioni</button><button>Edicola</button></span></nav></header>`;
+}
+function governo(){
+  const d = [['Economia','Paolo Rinaldi'],['Interno','Silvia Moretti'],['Esteri','Marco Galli'],['Giustizia','Elena Conti'],['Difesa','Franco Serra'],['Istruzione','Laura Marchetti'],['Salute','Andrea Fontana'],['Lavoro','Giulia Pace'],['Infrastrutture','Roberto Villa'],['Ambiente','Sara Costa']];
+  return `<section><div class="capo"><h3 class="tit">Governo</h3><span class="muto sec">dieci dicasteri</span></div>
+    ${d.map(([a,b],i) => `<div class="riga-min"><b>${a}</b><span>${b}</span><span class="cas">${'<i class="on"></i>'.repeat(1+(i*3)%5)}${'<i></i>'.repeat(4-(i*3)%5)}</span></div>`).join('')}</section>`;
+}
+function edicola(){
+  const p = [['Legislatura del Pungolo','Turno 4 · inverno 2027'],['Prova col proporzionale','Turno 19 · estate 2031'],['Seme 2','Turno 5 · primavera 2028']];
+  return `<section><div class="capo"><h3 class="tit">Partite in corso</h3></div>
+    ${p.map(([a,b],i) => `<div class="riga-min"><b>${a}</b><span class="muto">${b}</span><button class="btn p${i?'':' pieno'}">${i?'Apri':'Riprendi'}</button></div>`).join('')}</section>`;
+}
+function testaEdicola(){
+  return `<header class="ed-testa"><span class="nomino">Il Pungolo · Edicola</span><button class="link" data-fn="apri" style="${aperto?'font-weight:700':''}">Impostazioni</button></header>`;
+}
+function sotto(){ return P.dove === 'partita' ? governo() : edicola(); }
+function render(){
+  const a = applicata(), W = +P.fin, H = ALTEZZA[P.fin];
+  const testa = P.dove === 'partita' ? cornice() : testaEdicola();
+  let strip = '', corpo;
+  if (aperto && P.v === 'A') {
+    corpo = `<main class="corpo"><div class="capo"><h3 class="tit">Impostazioni</h3><button class="link" data-fn="chiudi">‹ Torna ${P.dove==='partita'?'a Governo':'all\'edicola'}</button></div>
+      <div class="pag"><div>${controlli(false)}</div><div class="lato"><h4 class="tit">Prova</h4><p class="nota muto sec">Come si muove una carta, una fila di caselle e l'esito del turno con questi valori.</p>${prova()}</div></div></main>`;
+  } else if (aperto && P.v === 'B') {
+    corpo = `<main class="corpo due"><div>${sotto()}</div><aside class="lato"><div class="capo"><h4 class="tit">Impostazioni</h4><button class="link" data-fn="chiudi">Chiudi</button></div>${controlli(false)}${prova()}</aside></main>`;
+  } else {
+    if (aperto) strip = `<div class="strip">${controlli(true)}<button class="link chiudi" data-fn="chiudi">Chiudi (Esc)</button></div>`;
+    corpo = `<main class="corpo">${sotto()}${aperto && P.v==='C' ? `<div style="display:none">${prova()}</div>` : ''}</main>`;
+  }
+  const scr = document.getElementById('screen');
+  scr.style.width = W + 'px'; scr.style.height = H + 'px';
+  scr.innerHTML = `<div class="vS app${W/a < 1150 ? ' stretta' : ''}" id="app" style="zoom:${a};width:${W/a}px;height:${H/a}px">${testa}${strip}${corpo}<div class="toast" id="toast"></div></div>`;
+  scr.querySelector('#app').style.setProperty('--k', k());
+  adatta();
+  document.getElementById('lab').textContent = FORME[P.v];
+  document.querySelectorAll('#proto .seg').forEach(s => s.querySelectorAll('button').forEach(b => b.classList.toggle('on', P[s.dataset.k] === b.dataset.v)));
+  document.getElementById('avv').textContent =
+    `salvato {scala ${fmt(S.scala)}, velocità ${S.vel==='ist'?'istantaneo':S.vel+'×'}, movimento ${S.mov}} · applicato zoom ${fmt(Math.round(a*100)/100)}, k ${k()}, movimento ${movAcceso()?'acceso':'spento'} · larghezza utile ${Math.round(W/a)}`;
+}
+function adatta(){
+  const st = document.getElementById('stage'), scr = document.getElementById('screen');
+  const f = Math.min(1, st.clientWidth / scr.offsetWidth, st.clientHeight / scr.offsetHeight);
+  scr.style.transform = `scale(${f})`;
+}
+function toast(t){
+  const el = document.getElementById('toast'); if (!el) return;
+  el.textContent = t;
+  el.animate([{opacity:1},{opacity:1, offset:.8},{opacity:0}], {duration: 1600});
+}
+function proviamo(){
+  const kk = k(), mov = movAcceso();
+  const cin = document.getElementById('cin'), cas = [...document.querySelectorAll('#pcas i')], es = [...document.querySelectorAll('#pes li')];
+  cas.forEach(i => i.classList.remove('on'));
+  if (cin) {
+    if (mov) cin.animate([{transform:'rotateY(0)'},{transform:'rotateY(180deg)'},{transform:'rotateY(180deg)', offset:.7},{transform:'rotateY(0)'}], {duration: 1800*kk, easing:'cubic-bezier(.2,0,.38,.9)'});
+    else cin.animate([{opacity:1},{opacity:0},{opacity:1}], {duration: 600*kk});
+  }
+  cas.forEach((c, i) => setTimeout(() => c.classList.add('on'), (mov ? 90 : 0) * i * kk));
+  es.forEach((e, i) => e.animate(mov ? [{opacity:0, transform:'translateY(6px)'},{opacity:1, transform:'none'}] : [{opacity:0},{opacity:1}],
+    {duration: 260*kk, delay: 350*i*kk, fill:'backwards'}));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-fn]'); if (!b) return;
+  const [fn, v] = b.dataset.fn.split(':');
+  if (fn === 'scala') { if (b.getAttribute('aria-disabled') && +v !== S.scala) { S.scala = +v; } else S.scala = +v; }
+  if (fn === 'vel') S.vel = v;
+  if (fn === 'mov') S.mov = v;
+  if (fn === 'ripristina') Object.assign(S, {scala:1, vel:'1', mov:'sistema'});
+  if (fn === 'apri') aperto = !aperto;
+  if (fn === 'chiudi') aperto = false;
+  if (fn === 'prova') { if (P.v === 'C') { aperto = false; render(); } proviamo(); return; }
+  render();
+});
+document.querySelectorAll('#proto .seg').forEach(s => s.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  P[s.dataset.k] = b.dataset.v; scrivi(); render();
+}));
+function giro(d){ const l = Object.keys(FORME); P.v = l[(l.indexOf(P.v) + d + l.length) % l.length]; aperto = true; scrivi(); render(); }
+document.getElementById('prev').onclick = () => giro(-1);
+document.getElementById('next').onclick = () => giro(1);
+function scrivi(){ try { history.replaceState(null, '', '?' + new URLSearchParams(P)); } catch (_) {} }
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' && !e.metaKey) return giro(-1);
+  if (e.key === 'ArrowRight' && !e.metaKey) return giro(1);
+  if (e.key === 'Escape' && aperto) { aperto = false; return render(); }
+  if (!(e.metaKey || e.ctrlKey)) return;
+  const i = GRADINI.indexOf(S.scala);
+  let n = null;
+  if (e.key === '+' || e.key === '=') n = GRADINI[Math.min(GRADINI.length - 1, i + 1)];
+  if (e.key === '-') n = GRADINI[Math.max(0, i - 1)];
+  if (e.key === '0') n = 1;
+  if (n === null) return;
+  e.preventDefault(); S.scala = n; render();
+  toast(`Scala ${fmt(n)}${n > applicata() + 1e-9 ? ` · la finestra regge ${fmt(Math.round(applicata()*100)/100)}` : ''} · Cmd0 torna a 1×`);
+});
+addEventListener('resize', adatta);
+render();
+</script>
+</body>
+</html>

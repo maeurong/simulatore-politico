@@ -181,6 +181,7 @@ Schema e regole: [[CLAUDE]]. Cronologia: [[log]].
 - [[prestazioni-su-hardware-modesto]]: survey Steam di settembre 2026 e specifiche Deck. Bersagli: Intel UHD 620, 8 GB, 1280x800.
 - [[testi-esterni-svelte]]: testi della UI in JSON importato da Vite con chiavi tipizzate (`npm run check` le controlla, misurato); plurali e numeri con `Intl` (in italiano 1234 resta senza punto, serve `useGrouping:"always"`), varianti a seme con un hash, un file per registro; svelte-i18n ferma, Paraglide solo se arrivano le traduzioni.
 - [[movimento-e-scala-in-wkwebview]]: cosa regge WKWebView (Safari 27 sul Mac di Mario) per carta 3D, molle con linear(), caselle a scatti ed esito a ritmo; velocità come fattore --k e interruttore sopra prefers-reduced-motion (le transizioni Svelte ignorano il CSS); scala con CSS zoom, che equivale a setZoom di Tauri, e transform: scale escluso perché sfoca (bug WebKit 27684).
+- [[localstorage-in-wkwebview]]: dove salvare le impostazioni del giocatore (scala, velocità, movimento). localStorage regge: wry usa il defaultDataStore persistente, ITP è attivo nelle app WKWebView ma cancella solo dopo 30 giorni d'uso senza un clic; sviluppo (`~/Library/WebKit/app/`, http://localhost:1420) e rilascio (`~/Library/WebKit/<identifier>/`, tauri://localhost) sono depositi separati.
 
 ## estetica
 - [[riferimenti-minimalisti]]: Mini Metro, Mini Motorways, Dorfromantik, Townscaper, Bad North, Islanders, DEFCON. Cosa li rende memorabili, requisiti hardware misurati, cosa riprendere senza copiare.
