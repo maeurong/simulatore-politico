@@ -11,10 +11,12 @@
     spiegazione?: string;
     /** la forma del primo pulsante, prima della conferma: il link rosso dell'edicola (13-edicola.prototype.html:235) */
     forma?: "bordo" | "link";
+    /** il primo pulsante a riposo nero, non rosso: il rosso resta ai due della conferma (14-editor.prototype.html:299, 377) */
+    neutro?: boolean;
     onconferma: () => void;
   };
 
-  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", onconferma }: Props = $props();
+  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", neutro = false, onconferma }: Props = $props();
   const id = $props.id();
   let aperta = $state(false);
   let radice: HTMLSpanElement;
@@ -44,7 +46,7 @@
     <Pulsante forma="bordo" onclick={() => apri(false)}>{annulla}</Pulsante>
     {#if spiegazione}<span id="{id}-spieg" class="spieg">{spiegazione}</span>{/if}
   {:else}
-    <Pulsante {forma} distruttivo onclick={() => apri(true)}>{etichetta}</Pulsante>
+    <Pulsante {forma} distruttivo={!neutro} onclick={() => apri(true)}>{etichetta}</Pulsante>
   {/if}
 </span>
 

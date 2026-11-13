@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { alLimite, base, cambiaLegge, ritocca, scegli, ultimoVince } from "./editor.svelte";
+import { alLimite, base, cambiaLegge, codaRiepiloghi, editor, ritocca, scegli, ultimoVince } from "./editor.svelte";
 import editorJson from "../../../../.scratch/v1-piano-11-ui/viste/14-editor.json";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
 import type { ErroreGuscio } from "$lib/guscio/chiamate";
+import type { RiepilogoScenario } from "$lib/tipi/RiepilogoScenario";
 
 const c = editorJson as unknown as CatalogoScenario;
 const debito = c.cursori.find((x) => x.nome === "debito_pil")!;
@@ -105,11 +106,59 @@ describe("ultimoVince", () => {
     expect(tenuto()).toBe("C");
   });
 
+  it("un lancio sincrono di f arriva all'esito come errore e la coda prosegue", async () => {
+    const esiti: unknown[] = [];
+    const f = vi.fn((a: string) => {
+      if (a === "a") throw new Error("rotto");
+      return Promise.resolve(a.toUpperCase());
+    });
+    const chiedi = ultimoVince(f, (r, a) => esiti.push([a, r]));
+    chiedi("a");
+    await svuota();
+    expect(esiti).toEqual([["a", { specie: "guasto", testo: "Error: rotto" }]]);
+    chiedi("b");
+    await svuota();
+    expect(chiamate(f)).toEqual(["a", "b"]);
+    expect(esiti.at(-1)).toEqual(["b", "B"]);
+  });
+
   it("senza richieste in attesa non richiama f", async () => {
     const { f, attese, chiedi } = aMano();
     chiedi("a");
     attese[0].risolvi("A");
     await svuota();
     expect(chiamate(f)).toEqual(["a"]);
+  });
+});
+
+describe("codaRiepiloghi", () => {
+  const riepilogo = editorJson.riepiloghi[0].riepilogo as unknown as RiepilogoScenario;
+  const svuota = () => new Promise((r) => setTimeout(r, 0));
+
+  it("l'esito arriva nello stato; il successo toglie rifiuto e guasto", async () => {
+    editor.azzera();
+    editor.rifiuto = "vecchio";
+    editor.guasto = "vecchio";
+    codaRiepiloghi(() => Promise.resolve(riepilogo))(null);
+    await svuota();
+    expect(editor.riepilogo).toBe(riepilogo);
+    expect(editor.rifiuto).toBeNull();
+    expect(editor.guasto).toBeNull();
+  });
+
+  it("un esito arrivato dopo azzera() si scarta, anche quello in coda", async () => {
+    editor.azzera();
+    const attese: ((e: unknown) => void)[] = [];
+    const chiedi = codaRiepiloghi(() => new Promise((_, rifiuta) => attese.push(rifiuta)));
+    chiedi(null);
+    chiedi(base(c));
+    editor.azzera();
+    attese[0]({ specie: "rifiuto", testo: "no" });
+    await svuota();
+    attese[1]({ specie: "guasto", testo: "rotto" });
+    await svuota();
+    expect(editor.rifiuto).toBeNull();
+    expect(editor.guasto).toBeNull();
+    expect(editor.riepilogo).toBeNull();
   });
 });

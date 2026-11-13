@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataRelativa, hash, numero, percentuale, segnato, t, variante } from "./t";
+import { dataRelativa, elenco, hash, numero, percentuale, segnato, t, variante } from "./t";
 
 const ORA = new Date((1794000000 + 10 * 3600) * 1000);
 
@@ -66,5 +66,13 @@ describe("hash e variante", () => {
     expect(variante(4, "a", 3)).toBe(v);
     expect(v).toBeGreaterThanOrEqual(0);
     expect(v).toBeLessThan(4);
+  });
+});
+
+describe("elenco", () => {
+  it("come elenco() del core: «A», «A e B», «A, B e C»; il separatore solo fra le prime", () => {
+    expect(elenco(["A"], ", ")).toBe("A");
+    expect(elenco(["A", "B"], ", ")).toBe("A e B");
+    expect(elenco(["4,5", "5,5", "6,5"], "; ")).toBe("4,5; 5,5 e 6,5");
   });
 });

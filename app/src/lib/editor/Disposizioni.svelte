@@ -12,9 +12,11 @@
     scenario: SuMisura | null;
     voci: VoceCatalogo[];
     gruppi?: boolean;
+    /** spento (salvataggio in volo): i comandi restano nel Tab e non cambiano niente */
+    fermo?: boolean;
     onscenario: (s: SuMisura) => void;
   };
-  let { catalogo, scenario, voci, gruppi = false, onscenario }: Props = $props();
+  let { catalogo, scenario, voci, gruppi = false, fermo = false, onscenario }: Props = $props();
 
   const elenco = $derived.by(() => {
     if (!gruppi) return [{ nome: null as string | null, voci }];
@@ -48,14 +50,15 @@
       <div class={["param", { mosso: g !== p }]}>
         <span class="nm">{d.nome}{#if g !== p}{" "}<span class="era">{era(d, g, p)}</span>{/if}</span>
         {#if d.gradini.length > 4}
-          <select aria-label={d.nome} value={g} onchange={(e) => onscenario(scegli(scenario, catalogo, d, e.currentTarget.value))}>
+          <select aria-label={d.nome} value={g} aria-disabled={fermo || undefined}
+            onchange={(e) => (fermo ? (e.currentTarget.value = g) : onscenario(scegli(scenario, catalogo, d, e.currentTarget.value)))}>
             {#each d.gradini as x (x.id)}<option value={x.id}>{x.nome}{x.id === p ? " •" : ""}</option>{/each}
           </select>
         {:else}
           <span class="seg" role="group" aria-label={d.nome}>
             {#each d.gradini as x (x.id)}
-              <button type="button" class={{ part: x.id === p }} aria-pressed={x.id === g}
-                onclick={() => onscenario(scegli(scenario, catalogo, d, x.id))}>{x.nome}{#if x.id === p}<span class="nascosto">, {partenzaDetta(d)}</span>{/if}</button>
+              <button type="button" class={{ part: x.id === p }} aria-pressed={x.id === g} aria-disabled={fermo || undefined}
+                onclick={() => fermo || onscenario(scegli(scenario, catalogo, d, x.id))}>{x.nome}{#if x.id === p}<span class="nascosto">, {partenzaDetta(d)}</span>{/if}</button>
             {/each}
           </span>
         {/if}
@@ -74,6 +77,7 @@
   .seg button { padding: 1px 8px; font-size: var(--c-min); font-weight: 700; border-left: 1.5px solid var(--ink); white-space: nowrap }
   .seg button:first-child { border-left: 0 }
   .seg button:hover { background: var(--velo) }
+  .seg button[aria-disabled="true"], select[aria-disabled="true"] { opacity: .5; cursor: default }
   .seg button[aria-pressed="true"] { background: var(--ink); color: var(--carta) }
   .seg button.part::after { content: "•"; color: var(--rosso); margin-left: 3px }
   .seg button[aria-pressed="true"].part::after { color: var(--giallo) }

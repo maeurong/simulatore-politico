@@ -2,7 +2,7 @@
   // Il riepilogo dal vivo (14-editor.prototype.html:347-371): avvisi, i tre conti con lo scarto da oggi, il peso
   // delle disposizioni cambiate, i sei posti. I testi degli avvisi dai campi dell'Avviso, come Avviso::testo
   // (crates/sim-core/src/riepilogo.rs:73-96).
-  import { numero, percentuale, segnato, t } from "$lib/testi/t";
+  import { elenco, numero, percentuale, segnato, t } from "$lib/testi/t";
   import type { Avviso } from "$lib/tipi/Avviso";
   import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
   import type { PosizioneAttesa } from "$lib/tipi/PosizioneAttesa";
@@ -21,12 +21,12 @@
   function avviso(a: Avviso): { grave: boolean; titolo: string; nota: string } {
     switch (a.tipo) {
       case "senza_maggioranza": {
-        const posti = a.posizioni.map((x) => numero(x, 1)).join("; ");
+        const posti = elenco(a.posizioni.map((x) => numero(x, 1)), "; ");
         return { grave: true, titolo: t("editor.avviso_senza_maggioranza", { n: a.posizioni.length, posti }), nota: t("editor.avviso_senza_maggioranza_nota") };
       }
       case "situazioni_accese": {
         const n = a.nomi.length;
-        return { grave: false, titolo: t("editor.avviso_accese", { n, nomi: a.nomi.join(", ") }), nota: t("editor.avviso_accese_nota", { n }) };
+        return { grave: false, titolo: t("editor.avviso_accese", { n, nomi: elenco(a.nomi, ", ") }), nota: t("editor.avviso_accese_nota", { n }) };
       }
       case "crisi_del_debito":
         return { grave: true, titolo: t("editor.avviso_crisi", { spread: numero(a.spread_pb) }), nota: t("editor.avviso_crisi_nota", { soglia: numero(a.soglia_pb) }) };

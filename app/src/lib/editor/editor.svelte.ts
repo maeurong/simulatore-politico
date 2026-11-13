@@ -53,7 +53,14 @@ export function ultimoVince<A, R>(f: (a: A) => Promise<R>, esito: (r: R | Errore
   let prossima: { a: A } | null = null;
   const parti = (a: A) => {
     inVolo = true;
-    f(a)
+    let p: Promise<R>;
+    try {
+      p = f(a);
+    } catch (e) {
+      // un lancio sincrono passa dalla stessa strada di un rifiuto: inVolo torna falso nel finally
+      p = Promise.reject(e);
+    }
+    p
       .then((r) => esito(r, a), (e) => esito(comeErrore(e), a))
       .finally(() => {
         inVolo = false;
@@ -80,6 +87,23 @@ class Editor {
   riepilogo = $state.raw<RiepilogoScenario | null>(null);
   /** il testo del core se l'ultimo scenario chiesto non regge */
   rifiuto = $state<string | null>(null);
+  /** il testo del guasto dell'ultimo riepilogo chiesto */
+  guasto = $state<string | null>(null);
+  // azzera() lo fa avanzare: un esito chiesto prima dell'uscita appartiene all'editor lasciato e si scarta
+  #giro = 0;
+  get giro() {
+    return this.#giro;
+  }
+
+  /** Un esito di riepilogo_scenario chiesto al giro `giro`. */
+  esito(r: RiepilogoScenario | ErroreGuscio, giro: number) {
+    if (giro !== this.#giro) return;
+    if (!("specie" in r)) {
+      this.riepilogo = r;
+      this.rifiuto = this.guasto = null;
+    } else if (r.specie === "rifiuto") this.rifiuto = r.testo;
+    else this.guasto = r.testo;
+  }
 
   /** Si può fondare: l'ultimo riepilogo chiesto non è stato rifiutato. */
   get valido() {
@@ -92,7 +116,15 @@ class Editor {
     this.mosso = false;
     this.riepilogo = null;
     this.rifiuto = null;
+    this.guasto = null;
+    this.#giro++;
   }
 }
 
 export const editor = new Editor();
+
+/** La coda dei riepiloghi della pagina: ultimoVince che scrive in `editor`, col giro del momento della richiesta. */
+export function codaRiepiloghi(f: (s: SuMisura | null) => Promise<RiepilogoScenario>): (s: SuMisura | null) => void {
+  const chiedi = ultimoVince((x: { s: SuMisura | null; giro: number }) => f(x.s), (r, x) => editor.esito(r, x.giro));
+  return (s) => chiedi({ s, giro: editor.giro });
+}

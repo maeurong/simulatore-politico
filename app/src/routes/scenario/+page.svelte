@@ -16,7 +16,7 @@
   import Disposizioni from "$lib/editor/Disposizioni.svelte";
   import LeggeElettorale from "$lib/editor/LeggeElettorale.svelte";
   import Riepilogo from "$lib/editor/Riepilogo.svelte";
-  import { base, editor, ritocca, ultimoVince } from "$lib/editor/editor.svelte";
+  import { base, codaRiepiloghi, editor, ritocca } from "$lib/editor/editor.svelte";
 
   let catalogo = $state.raw<CatalogoScenario | null>(null);
   let salvati = $state.raw<string[]>([]);
@@ -35,13 +35,9 @@
   const daSalvare = $derived(editor.mosso && nome.trim() !== "");
 
   // una richiesta in volo per volta, l'ultima vince; il riepilogo resta l'ultimo valido finché non arriva il nuovo
-  const chiedi = ultimoVince(guscio.riepilogoScenario, (r) => {
-    if (!("specie" in r)) {
-      editor.riepilogo = r;
-      editor.rifiuto = null;
-    } else if (r.specie === "rifiuto") editor.rifiuto = r.testo;
-    else guasto = `${r.testo} ${t("editor.guasto_riepilogo")}`;
-  });
+  const chiedi = codaRiepiloghi(guscio.riepilogoScenario);
+  // il guasto del riepilogo sta in editor: il successo successivo lo toglie
+  const inTesta = $derived(guasto ?? (editor.guasto && `${editor.guasto} ${t("editor.guasto_riepilogo")}`));
 
   onMount(async () => {
     try {
@@ -51,10 +47,15 @@
       return;
     }
     if (editor.scenario) chiedi(editor.scenario);
-    else editor.riepilogo = oggi;
+    else {
+      editor.riepilogo = oggi;
+      editor.rifiuto = editor.guasto = null;
+    }
   });
 
+  // mentre il salvataggio è in volo i comandi dell'editor sono spenti: la risposta non deve coprire una modifica
   function parti(scenario: SuMisura | null, sorgente: string | null, mosso: boolean) {
+    if (salvataggio) return;
     guasto = rifiutoCarica = rifiutoSalva = null;
     editor.scenario = scenario;
     editor.sorgente = sorgente;
@@ -63,6 +64,7 @@
     chiedi(scenario);
   }
   const cambia = (s: SuMisura) => {
+    if (salvataggio) return;
     guasto = rifiutoSalva = null;
     editor.scenario = s;
     editor.mosso = true;
@@ -71,6 +73,7 @@
   const muovi = (k: string, v: number) => cambia(ritocca(editor.scenario, catalogo!, (s) => (s.cursori[k as keyof Omit<Cursori, "legge_elettorale">] = v)));
 
   async function carica(n: string) {
+    if (salvataggio) return;
     try {
       parti(await guscio.caricaScenario(n), n, false);
     } catch (e) {
@@ -84,10 +87,12 @@
     if (salvataggio || !editor.scenario) return;
     const n = nome.trim();
     const s = { ...editor.scenario, nome: n };
+    const giro = editor.giro;
     salvataggio = true;
     rifiutoSalva = guasto = null;
     try {
       await guscio.salvaScenario(s);
+      if (giro !== editor.giro) return;
       editor.scenario = s;
       editor.sorgente = n;
       editor.mosso = false;
@@ -113,7 +118,7 @@
 <div class="editor">
   <header class="testa">
     {#if editor.mosso}
-      <Conferma forma="link" etichetta={t("editor.torna_edicola")} conferma={t("editor.esci_comunque")} annulla={t("editor.resta")}
+      <Conferma forma="link" neutro etichetta={t("editor.torna_edicola")} conferma={t("editor.esci_comunque")} annulla={t("editor.resta")}
         spiegazione={t("editor.modifiche_perse")} onconferma={esci} />
     {:else}
       <Pulsante forma="link" onclick={esci}>{t("editor.torna_edicola")}</Pulsante>
@@ -127,7 +132,7 @@
         {t("editor.non_salvato")}{/if}
     </p>
   </header>
-  {#if guasto}<p class="guasto" role="alert">{guasto}</p>{/if}
+  {#if inTesta}<p class="guasto" role="alert">{inTesta}</p>{/if}
 
   <main class="corpo">
     {#if catalogo}
@@ -135,12 +140,12 @@
         <section aria-labelledby="titolo-scenario">
           <div class="titsez"><h2 id="titolo-scenario" class="tit">{t("editor.titolo_scenario")}</h2></div>
           <div class="chips">
-            <button type="button" class="chip" aria-pressed={!editor.scenario && !editor.mosso} onclick={() => parti(null, null, false)}>{t("editor.scenario_base")}</button>
+            <button type="button" class="chip" aria-pressed={!editor.scenario && !editor.mosso} aria-disabled={salvataggio || undefined} onclick={() => parti(null, null, false)}>{t("editor.scenario_base")}</button>
             <span class="min muto" aria-hidden="true">·</span>
             {#each salvati as n (n)}
-              <button type="button" class="chip" aria-pressed={editor.sorgente === n && !editor.mosso} onclick={() => carica(n)}>{n}</button>
+              <button type="button" class="chip" aria-pressed={editor.sorgente === n && !editor.mosso} aria-disabled={salvataggio || undefined} onclick={() => carica(n)}>{n}</button>
             {/each}
-            <button type="button" class="chip nuovo" onclick={() => parti(base(catalogo!), null, true)}>{t("editor.nuovo_su_misura")}</button>
+            <button type="button" class="chip nuovo" aria-disabled={salvataggio || undefined} onclick={() => parti(base(catalogo!), null, true)}>{t("editor.nuovo_su_misura")}</button>
           </div>
           {#if rifiutoCarica}<Rifiuto testo={rifiutoCarica} />{/if}
           <p class="min muto">{t("editor.nota_scenari")}</p>
@@ -150,21 +155,21 @@
           <div class="titsez"><h2 id="titolo-paese" class="tit">{t("editor.titolo_paese")}</h2><span class="dx min muto">{t("editor.valore_di_oggi")}</span></div>
           <div class="curs">
             {#each catalogo.cursori as cur (cur.nome)}
-              <Cursore {cur} valore={editor.scenario?.cursori[cur.nome as keyof Cursori] as number ?? cur.valore} onvalore={(v) => muovi(cur.nome, v)} />
+              <Cursore {cur} valore={editor.scenario?.cursori[cur.nome as keyof Cursori] as number ?? cur.valore} fermo={salvataggio} onvalore={(v) => muovi(cur.nome, v)} />
             {/each}
           </div>
         </section>
 
         <section aria-labelledby="titolo-regole">
           <div class="titsez"><h2 id="titolo-regole" class="tit">{t("editor.titolo_regole")}</h2></div>
-          <LeggeElettorale {catalogo} scenario={editor.scenario} rifiuto={editor.rifiuto} onscenario={cambia} />
+          <LeggeElettorale {catalogo} scenario={editor.scenario} rifiuto={editor.rifiuto} fermo={salvataggio} onscenario={cambia} />
         </section>
 
         <section aria-labelledby="titolo-leggi">
           <div class="titsez"><h2 id="titolo-leggi" class="tit">{t("editor.titolo_leggi")}</h2></div>
           <p class="min muto">{t("editor.disposizioni_nota", { n: ordinarie.length })}
             {#if cambiate}<b class="male">{t("editor.cambiate", { n: cambiate })}</b>{/if}</p>
-          <Disposizioni {catalogo} scenario={editor.scenario} voci={ordinarie} gruppi onscenario={cambia} />
+          <Disposizioni {catalogo} scenario={editor.scenario} voci={ordinarie} gruppi fermo={salvataggio} onscenario={cambia} />
         </section>
       </div>
 
@@ -180,7 +185,7 @@
               <input bind:this={campo} bind:value={nome} placeholder={t("editor.nome_scenario")} aria-label={t("editor.nome_scenario")}
                 aria-describedby={rifiutoSalva ? "rifiuto-salva" : undefined} oninput={() => (rifiutoSalva = null)} />
               {#if esiste && daSalvare}
-                <Conferma etichetta={t("editor.salva")} conferma={t("editor.conferma_sostituisci", { nome: nome.trim() })}
+                <Conferma neutro etichetta={t("editor.salva")} conferma={t("editor.conferma_sostituisci", { nome: nome.trim() })}
                   spiegazione={t("editor.esiste_gia")} onconferma={salva} />
               {:else}
                 <Pulsante forma="bordo" spento={!editor.mosso ? t("editor.salvato") : !daSalvare ? t("editor.manca_il_nome") : undefined}
@@ -227,6 +232,7 @@
   .chip { border: 1.5px solid var(--ink); padding: 3px 10px; font-size: var(--c-sec); font-weight: 700; background: var(--carta) }
   .chip:hover { background: var(--velo) }
   .chip[aria-pressed="true"] { background: var(--ink); color: var(--carta) }
+  .chip[aria-disabled="true"] { border-style: dashed; color: var(--grigio); cursor: default; background: var(--carta) }
   .chip.nuovo { border-style: dashed }
   .curs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px var(--canale) }
 
