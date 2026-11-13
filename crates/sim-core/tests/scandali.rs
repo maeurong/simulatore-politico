@@ -201,6 +201,8 @@ fn bersaglio_sparito_nessun_panic() {
     // Lo stesso esito, più la voce dello scandalo chiuso senza seguito.
     let v = voce_dello_scandalo(&con);
     assert!(v.fatto.ends_with("chiuso senza seguito"), "{}", v.fatto);
+    // Il ripiego sul Presidente del Consiglio vale solo per la valence: la voce non ha partito.
+    assert!(v.partito.is_none(), "{:?}", v.partito);
     let mut esito = con.vista().esito;
     esito.retain(|x| x != &v);
     assert_eq!(esito, senza.vista().esito);
@@ -324,6 +326,8 @@ fn ministro_sostituito_fra_nascita_e_chiusura_nessun_effetto() {
     assert!((con.partiti()[j].valence - senza.partiti()[j].valence).abs() < 1e-9);
     let m = con.ministri().dicasteri[d].ministro.as_ref().unwrap();
     assert_eq!(m.sotto_scandalo, 0);
+    // Il posto è di un altro: la voce non lo attribuisce al suo partito.
+    assert!(voce_dello_scandalo(&con).partito.is_none());
 }
 
 #[test]

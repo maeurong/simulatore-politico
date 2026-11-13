@@ -172,7 +172,11 @@ impl Partita {
             }
             _ => None,
         };
-        let id_partito = (aperto.bersaglio.is_some())
+        // Solo col bersaglio ancora al suo posto: il ripiego di `partito_evento` sul Presidente
+        // del Consiglio vale per la valence, non per il soggetto della voce.
+        let presente = (aperto.bersaglio.and_then(|b| self.nome_del(b)))
+            .is_some_and(|n| aperto.persona.as_ref().is_none_or(|p| *p == n));
+        let id_partito = presente
             .then(|| self.partiti.get(colpito).map(|p| p.id.clone()))
             .flatten();
         let (regione, al_governo) = (self.id_regione(aperto.regione), self.al_governo());
