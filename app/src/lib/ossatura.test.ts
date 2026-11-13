@@ -90,7 +90,7 @@ describe("fettaDi", () => {
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
     expect(fettaDi("bilancio", "governo")).toBe("11d");
-    expect(fettaDi("campagna", "turno_zero")).toBe("11b");
+    expect(fettaDi("campagna", "turno_zero")).toBeNull();
     expect(fettaDi("eredita", "finita")).toBe("11e");
     expect(fettaDi("schema", "governo")).toBe("11e");
   });

@@ -4,6 +4,7 @@
   import { apribile, casa, etichetta, fettaDi, statoDi } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
   import Cruscotto from "$lib/cruscotto/Cruscotto.svelte";
+  import Campagna from "$lib/campagna/Campagna.svelte";
   import Evento from "$lib/cruscotto/Evento.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
   import Cornice from "$lib/cornice/Cornice.svelte";
@@ -36,6 +37,8 @@
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
           {#if aperta === "cruscotto" && fetta === null}
             <Cruscotto vista={partita.vista} />
+          {:else if aperta === "campagna" && fetta === null}
+            <Campagna vista={partita.vista} />
           {:else}
             <!-- governo, crisi, opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (lettura 1) -->
             {#if aperta === "cruscotto"}
