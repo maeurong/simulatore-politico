@@ -93,7 +93,11 @@ fn promessa_mantenuta_da_valence() {
     assert!((con - senza - atteso).abs() < 1e-12, "{con} {senza}");
     assert!(atteso > 0.0);
     let attesa = (
-        format!("Promessa mantenuta: {}", nome(d, g)),
+        format!(
+            "Promessa mantenuta: {}; valence +0,10 a {}",
+            nome(d, g),
+            p.partiti()[p.giocatore()].nome
+        ),
         "la disposizione sta al gradino promesso".to_string(),
     );
     assert!(verificate.contains(&attesa), "{verificate:?}");
@@ -112,14 +116,18 @@ fn promessa_mancata_toglie_di_piu() {
     assert!((con - senza - atteso).abs() < 1e-12, "{con} {senza}");
     assert!(mancata > dati.manopola("valence_promessa_mantenuta"));
     let attesa = (
-        format!("Promessa mancata: {}", nome(d, g)),
+        format!(
+            "Promessa mancata: {}; valence -0,20 a {}",
+            nome(d, g),
+            p.partiti()[p.giocatore()].nome
+        ),
         "la disposizione non sta al gradino promesso".to_string(),
     );
     assert!(verificate.contains(&attesa), "{verificate:?}");
 }
 
 /// Con 2 turni chiusi da presidente, la chiusura del voto fa il terzo: sotto i 4 la promessa
-/// esce senza effetto e senza riga.
+/// esce senza effetto, con la riga delle promesse scadute.
 #[test]
 fn senza_quattro_turni_la_promessa_non_conta() {
     let p = in_campagna();
@@ -129,6 +137,13 @@ fn senza_quattro_turni_la_promessa_non_conta() {
     let (con, verificate) = al_voto_con(&p, &[(d, g)], 2);
     assert_eq!(con, senza);
     assert!(verificate.is_empty(), "{verificate:?}");
+    let chiuso = chiuso_con(&p, p.giocatore(), &[(d, g)], 2);
+    let scadute = voci_di(&chiuso, p.giocatore(), TipoVoce::PromesseScadute);
+    let attesa = (
+        format!("Esce senza verifica la promessa {}", nome(d, g)),
+        "ha presieduto il governo meno di 4 turni nella legislatura".to_string(),
+    );
+    assert_eq!(scadute, [attesa]);
 }
 
 /// Al voto le promesse della campagna restano in sospeso fino al voto dopo, e il contatore dei

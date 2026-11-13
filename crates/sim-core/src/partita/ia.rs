@@ -197,17 +197,21 @@ impl Partita {
         let voci = &self.disposizioni.voci;
         let promesse: Vec<_> = (self.partiti.iter().enumerate())
             .filter(|&(j, p)| j != self.giocatore && !p.sciolto)
-            .map(|(j, _)| {
+            .map(|(j, p)| {
                 let (programma, causa) =
                     if self.governo.presidente == j && !self.governo.programma.is_empty() {
                         (
                             self.governo.programma.clone(),
-                            "il programma del suo governo",
+                            "le prime voci del programma del suo governo non ancora in vigore"
+                                .to_string(),
                         )
                     } else {
                         (
                             legislatura::programma(&aula, &[j], &seggi),
-                            "il suo programma",
+                            format!(
+                                "i valori in vigore più lontani dalla sua posizione, {}",
+                                virgola(p.posizione_dichiarata)
+                            ),
                         )
                     };
                 let scelte: Vec<_> = (programma.into_iter())
@@ -220,7 +224,7 @@ impl Partita {
         for (j, scelte, causa) in promesse {
             if !scelte.is_empty() {
                 let fatto = format!("Promette {}", campagna::promesse(&self.dati, &scelte));
-                self.voce_di(j, TipoVoce::PromessaFatta, fatto, causa.into());
+                self.voce_di(j, TipoVoce::PromessaFatta, fatto, causa);
             }
             self.partiti[j].promesse_campagna = scelte;
         }
@@ -1885,13 +1889,22 @@ mod tests {
             "{riga}"
         );
         let id = p.partiti[pc].id.as_str();
-        let attesa = (Some(id), riga.as_str(), "il programma del suo governo");
+        let causa = "le prime voci del programma del suo governo non ancora in vigore";
+        let attesa = (Some(id), riga.as_str(), causa);
+        assert!(voci(&p, TipoVoce::PromessaFatta).contains(&attesa));
+        let x = &p.partiti[altro];
+        let riga = format!("Promette {}", campagna::promesse(&p.dati, &dell_altro));
+        let causa = format!(
+            "i valori in vigore più lontani dalla sua posizione, {}",
+            virgola(x.posizione_dichiarata)
+        );
+        let attesa = (Some(x.id.as_str()), riga.as_str(), causa.as_str());
         assert!(voci(&p, TipoVoce::PromessaFatta).contains(&attesa));
     }
 
-    /// Lo sciolto perde le promesse in sospeso al voto, senza effetto e senza riga.
+    /// Lo sciolto perde le promesse in sospeso al voto, senza effetto, con la riga delle scadute.
     #[test]
-    fn lo_sciolto_perde_le_promesse_senza_riga() {
+    fn lo_sciolto_perde_le_promesse_senza_effetto() {
         let mut p = all_opposizione();
         let j = p.governo.presidente;
         p.partiti[j].promesse = vec![(0, 0)];
@@ -1902,7 +1915,13 @@ mod tests {
         p.verifica_promesse();
         assert!(p.partiti[j].promesse.is_empty());
         assert_eq!(p.partiti[j].valence, valence);
-        assert!(p.esito.is_empty());
+        let nome = campagna::promesse(&p.dati, &[(0, 0)]);
+        let fatto = format!("Esce senza verifica la promessa {nome}");
+        let id = Some(p.partiti[j].id.as_str());
+        let sue: Vec<_> = (voci(&p, TipoVoce::PromesseScadute).into_iter())
+            .filter(|v| v.0 == id)
+            .collect();
+        assert_eq!(sue, [(id, fatto.as_str(), "il partito è sciolto")]);
     }
 
     /// Scelta 15 (sp2): anteprima e campagna IA leggono s_b dalla composizione dei dati, quella

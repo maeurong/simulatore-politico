@@ -5,7 +5,8 @@ use super::vita::virgola;
 use crate::disposizioni::data_di;
 use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
 use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, emergenze};
-use crate::legislatura::campagna::migliaia;
+use crate::legislatura::Spesa;
+use crate::legislatura::campagna::{self, migliaia};
 use crate::ministri::{FattoAtto, Proposta};
 use crate::parlamento::{
     self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
@@ -334,6 +335,42 @@ impl Partita {
             v.dicastero = Some(id);
             v.regione = regione;
         }
+    }
+
+    /// Fatto 56: la campagna del giocatore tagliata da `chiesto` a `speso` euro, con le spese
+    /// `cadute`; la causa dice gli `acquistato` euro d'informazione del turno e la scissione del
+    /// suo partito in questa chiusura.
+    pub(super) fn voce_tagliata(
+        &mut self,
+        chiesto: i64,
+        speso: i64,
+        cadute: &[Spesa],
+        acquistato: i64,
+    ) {
+        let id = self.id_di(Some(self.giocatore));
+        let scissa = (self.esito.iter())
+            .any(|v| v.tipo == TipoVoce::Scissione && v.partito.is_some() && v.partito == id);
+        let fatto = format!(
+            "Campagna tagliata: chiesti {} euro, spesi {}{}",
+            migliaia(chiesto),
+            migliaia(speso),
+            campagna::cadute(&self.dati, cadute)
+        );
+        let mut perche = Vec::new();
+        if acquistato > 0 {
+            perche.push(format!(
+                "acquisti d'informazione per {} euro",
+                migliaia(acquistato)
+            ));
+        }
+        if scissa {
+            perche.push("la scissione".to_string());
+        }
+        let mut causa = "la cassa è scesa dopo la decisione".to_string();
+        if !perche.is_empty() {
+            causa.push_str(&format!(", con {}", perche.join(" e ")));
+        }
+        self.voce_di(self.giocatore, TipoVoce::CampagnaTagliata, fatto, causa);
     }
 
     /// Il promotore (id) e le disposizioni della misura, nell'ordine dei valori.

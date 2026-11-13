@@ -552,6 +552,20 @@ impl Partita {
             return;
         }
         self.esito.clear();
+        // `Acquistati` non porta gli euro: la somma, per la campagna tagliata, si rifà dai prezzi.
+        let a = &self.acquisti;
+        let comprati = [
+            (
+                a.sondaggio_privato.is_some(),
+                TipoAcquisto::SondaggioPrivato,
+            ),
+            (a.test_misura.is_some(), TipoAcquisto::TestMisura),
+            (a.centro_studi.is_some(), TipoAcquisto::CentroStudi),
+        ];
+        let acquistato: i64 = (comprati.into_iter())
+            .filter(|&(c, _)| c)
+            .map(|(_, t)| t.prezzo(&self.dati))
+            .sum();
         self.acquisti = Acquistati::default();
         self.risolvi_eventi();
         if self.governo.presidente == self.giocatore {
@@ -602,7 +616,7 @@ impl Partita {
         if di_voto {
             self.verifica_promesse();
             self.campagna_ia();
-            self.spendi_campagne();
+            self.spendi_campagne(acquistato);
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         let innovazioni = self.motore(true);
@@ -2399,23 +2413,36 @@ impl Partita {
     }
 
     /// La spesa della campagna (scelta 14), prima del motore: ogni partito attivo paga la sua
-    /// dalla cassa, con una riga. Oltre la cassa, che la scissione può aver ridotto dopo il
-    /// comando, le spese si tagliano in ordine.
-    fn spendi_campagne(&mut self) {
+    /// dalla cassa, con una riga. Oltre la cassa, che gli `acquistato` euro d'informazione del
+    /// turno o la scissione possono aver ridotto dopo il comando, le spese si tagliano in ordine;
+    /// per il giocatore, con la voce del taglio.
+    fn spendi_campagne(&mut self, acquistato: i64) {
         for j in 0..self.partiti.len() {
             let p = &mut self.partiti[j];
             if p.sciolto {
                 continue;
             }
+            let chiesto: i64 = p.campagna.iter().map(|s| s.euro).sum();
             let mut resto = p.cassa;
+            let mut cadute = Vec::new();
             p.campagna.retain_mut(|s| {
+                let intera = s.clone();
                 s.euro = s.euro.min(resto);
                 resto -= s.euro;
+                if s.euro <= 0 {
+                    cadute.push(intera);
+                }
                 s.euro > 0
             });
-            if p.campagna.is_empty() {
+            let vuota = p.campagna.is_empty();
+            let speso = if vuota { 0 } else { p.cassa - resto };
+            if j == self.giocatore && speso < chiesto {
+                self.voce_tagliata(chiesto, speso, &cadute, acquistato);
+            }
+            if vuota {
                 continue;
             }
+            let p = &mut self.partiti[j];
             let (cassa, speso) = (p.cassa, p.cassa - resto);
             p.cassa = resto;
             let fatto = campagna::riga(&self.dati, &self.partiti[j].campagna, speso);
@@ -2611,7 +2638,8 @@ impl Partita {
     /// sospeso esce, mantenuta se la disposizione sta al gradino promesso, chiunque l'abbia portata
     /// lì. Conta solo per il partito che ha presieduto il governo almeno `turni_promessa` turni in
     /// questa legislatura: `+valence_promessa_mantenuta` o `−valence_promessa_mancata`, con una
-    /// riga. Lo sciolto le perde senza righe.
+    /// riga. Lo sciolto e chi ha presieduto meno le perdono senza effetto, con la riga delle
+    /// scadute.
     pub(super) fn verifica_promesse(&mut self) {
         let turni = self.dati.manopola("turni_promessa");
         let mantenuta = self.dati.manopola("valence_promessa_mantenuta");
@@ -2619,7 +2647,26 @@ impl Partita {
         for j in 0..self.partiti.len() {
             let p = &mut self.partiti[j];
             let promesse = std::mem::take(&mut p.promesse);
+            if promesse.is_empty() {
+                continue;
+            }
             if p.sciolto || f64::from(p.turni_da_presidente) < turni {
+                let causa = if p.sciolto {
+                    "il partito è sciolto".to_string()
+                } else {
+                    format!("ha presieduto il governo meno di {turni} turni nella legislatura")
+                };
+                let fatto = match promesse.len() {
+                    1 => "Esce senza verifica la promessa",
+                    _ => "Escono senza verifica le promesse",
+                };
+                let nomi = campagna::promesse(&self.dati, &promesse);
+                self.voce_di(
+                    j,
+                    TipoVoce::PromesseScadute,
+                    format!("{fatto} {nomi}"),
+                    causa,
+                );
                 continue;
             }
             for (d, g) in promesse {
@@ -2635,7 +2682,8 @@ impl Partita {
                 };
                 self.partiti[j].valence += delta;
                 let nome = campagna::promesse(&self.dati, &[(d, g)]);
-                let fatto = format!("Promessa {esito}: {nome}");
+                let partito = esito::valence(delta, &self.partiti[j].nome);
+                let fatto = format!("Promessa {esito}: {nome}; {partito}");
                 let causa = format!("la disposizione {sta} al gradino promesso");
                 self.voce_di(j, TipoVoce::PromessaVerificata, fatto, causa);
             }
@@ -6348,8 +6396,8 @@ mod tests {
         assert!(x.promesse.is_empty() && x.promesse_campagna.is_empty() && x.campagna.is_empty());
     }
 
-    /// t3: la cassa ridotta dopo il comando (dalla scissione) taglia le spese in ordine: la prima
-    /// intera, la seconda a quello che resta, la terza fuori.
+    /// t3: la cassa ridotta dopo il comando taglia le spese in ordine: la prima intera, la seconda
+    /// a quello che resta, la terza fuori; la voce del taglio dice la scissione del giocatore.
     #[test]
     fn campagna_oltre_la_cassa_si_taglia() {
         let mut p = Partita::nuova(dati_base(), 1);
@@ -6362,18 +6410,30 @@ mod tests {
         p.partiti[g].campagna = vec![spesa(0), spesa(1), spesa(2)];
         p.partiti[g].cassa = 1_500_000;
         p.esito.clear();
-        p.spendi_campagne();
+        let id = p.partiti[g].id.clone();
+        p.voce_di(g, TipoVoce::Scissione, "fatto".into(), "causa".into());
+        p.spendi_campagne(0);
         assert_eq!(p.partiti[g].cassa, 0);
         let euro: Vec<i64> = p.partiti[g].campagna.iter().map(|s| s.euro).collect();
         assert_eq!(euro, [1_000_000, 500_000]);
-        let id = p.partiti[g].id.clone();
-        let righe: Vec<(&str, &str)> = (p.esito.iter())
-            .filter(|v| v.partito.as_ref() == Some(&id))
-            .map(|v| (v.fatto.as_str(), v.causa.as_str()))
-            .collect();
-        let (a, b) = (&p.dati.regioni()[0].nome, &p.dati.regioni()[1].nome);
+        let (a, b, c) = (
+            &p.dati.regioni()[0].nome,
+            &p.dati.regioni()[1].nome,
+            &p.dati.regioni()[2].nome,
+        );
+        let tagliata = format!(
+            "Campagna tagliata: chiesti 3.000.000 euro, spesi 1.500.000; cade la spesa su {c}"
+        );
+        let causa = "la cassa è scesa dopo la decisione, con la scissione";
+        assert_eq!(
+            voci(&p, TipoVoce::CampagnaTagliata),
+            [(Some(id.as_str()), tagliata.as_str(), causa)]
+        );
         let fatto = format!("Spende 1.500.000 euro: persuade {a} e {b}");
-        assert_eq!(righe, [(fatto.as_str(), "cassa di 1.500.000 euro")]);
+        assert_eq!(
+            voci(&p, TipoVoce::SpesaDiCampagna),
+            [(Some(id.as_str()), fatto.as_str(), "cassa di 1.500.000 euro")]
+        );
     }
 
     #[test]

@@ -571,6 +571,9 @@ fn spese_al_turno_zero() {
         "{:?}",
         v.esito
     );
+    let spesa = &voci(&p, TipoVoce::SpesaDiCampagna)[0];
+    assert_eq!(spesa.criticita, sim_core::esito::Criticita::Notevole);
+    assert!(voci(&p, TipoVoce::CampagnaTagliata).is_empty());
     assert!(p.partiti()[g].campagna.is_empty());
     // Prima del primo voto le entrate leggono la quota vera fra i votanti da tutte e due le parti:
     // la quota al voto la ripete, a meno dell'arrotondamento dei voti.

@@ -7,7 +7,7 @@ mod comune;
 use comune::{chiudi_col_bilancio, dati_base, edita, file_base, ha_voce, partito, voci};
 use sim_core::Partita;
 use sim_core::dati::DatiGioco;
-use sim_core::esito::TipoVoce;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::Fine;
 
 fn al_turno(p: &mut Partita, t: u32) {
@@ -212,12 +212,26 @@ fn righe(p: &Partita, tipo: TipoVoce) -> usize {
     voci(p, tipo).len()
 }
 
-/// La causa della scissione e della minaccia, con la distanza `d`.
-fn distanza(d: f64) -> String {
+/// La causa della scissione e della minaccia, con la distanza `d` e la soglia (di scissione o
+/// di minaccia).
+fn distanza(d: f64, soglia: &str) -> String {
     format!(
-        "la posizione percepita dista {} punti dalla dichiarata",
+        "la posizione percepita dista {} punti dalla dichiarata, la soglia di {soglia}",
         virgola(d)
     )
+}
+
+/// Euro col punto delle migliaia.
+fn migliaia(euro: i64) -> String {
+    let cifre = euro.to_string();
+    let mut s = String::new();
+    for (k, c) in cifre.chars().enumerate() {
+        if k > 0 && (cifre.len() - k).is_multiple_of(3) {
+            s.push('.');
+        }
+        s.push(c);
+    }
+    s
 }
 
 fn virgola(x: f64) -> String {
@@ -282,28 +296,28 @@ fn a_un_punto_il_partito_si_scinde() {
     assert!(!p.governo().dicasteri.contains(&7));
     assert_eq!(p.legislatura().frange, vec![7]);
     let riga = format!(
-        "Scissione: nasce {} con {c} {} e {s} {}, sulla posizione {}",
+        "Scissione in {}: nasce {}, sulla posizione {}, con {c} {}, {s} {} e {} euro di cassa",
+        o.nome,
         f.nome,
+        virgola(x),
         if c == 1 { "deputato" } else { "deputati" },
         if s == 1 { "senatore" } else { "senatori" },
-        virgola(x)
+        migliaia((cassa as f64 * 0.12).round() as i64)
     );
+    let causa = distanza(1.0, "scissione è 1,0");
     assert!(
-        ha_voce(
-            &p,
-            TipoVoce::Scissione,
-            "centrodestra",
-            &riga,
-            &distanza(1.0)
-        ),
+        ha_voce(&p, TipoVoce::Scissione, "centrodestra", &riga, &causa),
         "{:?}",
         p.vista().esito
     );
+    // Partito di governo: critica, precedenza 2.
+    let v = &voci(&p, TipoVoce::Scissione)[0];
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
     assert_eq!(righe(&p, TipoVoce::FrangiaEsce), 0);
 }
 
 /// A 0,6 una riga di minaccia, nessuna nascita; il turno dopo, ancora sopra 0,5, nessuna riga
-/// ripetuta; tornata sotto, la minaccia si spegne.
+/// ripetuta; tornata sotto, la minaccia si spegne con la sua riga.
 #[test]
 fn a_mezzo_punto_solo_la_minaccia() {
     let p = Partita::nuova(dati_base(), 1);
@@ -312,27 +326,54 @@ fn a_mezzo_punto_solo_la_minaccia() {
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.partiti().len(), 7);
     let distanza = p.partiti()[CENTRODESTRA].posizione_percepita - d;
-    let causa = self::distanza(distanza);
+    let nome = p.partiti()[CENTRODESTRA].nome.clone();
+    let fatto = format!(
+        "Minaccia di scissione in {nome}, a {} punti dalla posizione dichiarata",
+        virgola(distanza)
+    );
+    let causa = self::distanza(distanza, "minaccia è 0,5");
     assert!(
         ha_voce(
             &p,
             TipoVoce::MinacciaDiScissione,
             "centrodestra",
-            "Minaccia di scissione",
+            &fatto,
             &causa
         ),
         "{:?}",
         p.vista().esito
     );
+    // Partito di governo, non del giocatore: notevole.
+    let v = &voci(&p, TipoVoce::MinacciaDiScissione)[0];
+    assert_eq!(v.criticita, Criticita::Notevole);
     assert!(p.partiti()[CENTRODESTRA].minaccia);
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     chiudi_col_bilancio(&mut p);
     assert!(p.partiti()[CENTRODESTRA].posizione_percepita - d >= 0.5);
     assert_eq!(righe(&p, TipoVoce::MinacciaDiScissione), 0);
+    assert_eq!(righe(&p, TipoVoce::MinacciaRientrata), 0);
     assert_eq!(p.partiti().len(), 7);
     let mut p = scivolata(&p, CENTRODESTRA, 0.0);
     chiudi_col_bilancio(&mut p);
     assert!(!p.partiti()[CENTRODESTRA].minaccia);
+    let x = &p.partiti()[CENTRODESTRA];
+    let distanza = (x.posizione_percepita - x.posizione_dichiarata).abs();
+    let fatto = format!("Rientra la minaccia di scissione in {nome}");
+    let causa = format!(
+        "la posizione percepita dista {} punti dalla dichiarata, sotto la soglia di minaccia di 0,5",
+        virgola(distanza)
+    );
+    assert!(
+        ha_voce(
+            &p,
+            TipoVoce::MinacciaRientrata,
+            "centrodestra",
+            &fatto,
+            &causa
+        ),
+        "{:?}",
+        p.vista().esito
+    );
 }
 
 /// La partita vera: il giocatore resta allo stesso indice e senza leader, la frangia è IA.
@@ -352,11 +393,10 @@ fn si_scinde_anche_il_partito_del_giocatore() {
     assert_eq!(f.id, format!("nuovo_{n}"));
     assert!(!f.leader.is_empty());
     assert_eq!(f.posizione_dichiarata, 3.5);
-    assert!(
-        (voci(&p, TipoVoce::Scissione).iter()).any(|v| v.partito.as_deref() == Some("giocatore")),
-        "{:?}",
-        p.vista().esito
-    );
+    let del_giocatore = (voci(&p, TipoVoce::Scissione).into_iter())
+        .find(|v| v.partito.as_deref() == Some("giocatore"));
+    let v = del_giocatore.unwrap_or_else(|| panic!("{:?}", p.vista().esito));
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
     assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
 }
 
@@ -480,6 +520,14 @@ fn senza_nomi_liberi_nessuna_nascita() {
     assert_eq!(p.partiti().len(), 7);
     assert!(p.partiti()[CENTRODESTRA].minaccia);
     assert_eq!(righe(&p, TipoVoce::MinacciaDiScissione), 1);
+    let causa = &voci(&p, TipoVoce::MinacciaDiScissione)[0].causa;
+    assert!(
+        causa.ends_with(
+            "; la scissione, alla soglia di 1,0, non nasce perché non resta un nome libero per \
+             la frangia"
+        ),
+        "{causa}"
+    );
     assert_eq!(righe(&p, TipoVoce::Scissione), 0);
     let dati = DatiGioco::da_testi(&un_nome()).unwrap();
     assert_eq!(scissione(Partita::nuova(dati, 1)).partiti().len(), 8);
