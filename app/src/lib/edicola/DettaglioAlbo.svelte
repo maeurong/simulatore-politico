@@ -19,6 +19,10 @@
     voce.elezioni.map((e) => S.findIndex((p) => p.data.anno === e.data.anno && p.data.trimestre === e.data.trimestre)).filter((i) => i >= 0),
   );
   const pb = (v: number) => `${numero(v)} ${t("tracciato.pb")}`;
+  // la durata al governo non va a capo: il testo si spezza sul segnaposto
+  const [primaDelGoverno, dopoIlGoverno] = $derived(
+    t("edicola.arco", { inizio: Periodo(voce.inizio), fine: periodo(voce.fine), turni: t("edicola.turni", { n: voce.turni }) }).split("{governo}"),
+  );
   let leggi = $state(false);
 </script>
 
@@ -26,7 +30,7 @@
   <p class="occ">{t("edicola.occhiello_albo", { scenario: voce.scenario })}</p>
   <h2 class="tit">{voce.nome}</h2>
   <p class="sec muto">
-    {t("edicola.arco", { inizio: Periodo(voce.inizio), fine: periodo(voce.fine), turni: t("edicola.turni", { n: voce.turni }), governo: anniAlGoverno(voce.anni_al_governo) })}
+    {primaDelGoverno}<span class="nw">{anniAlGoverno(voce.anni_al_governo)}</span>{dopoIlGoverno}
   </p>
 </div>
 <div class="esito">
@@ -44,29 +48,33 @@
 <div>
   <h3 class="sotto">{t("edicola.contro_il_turno_zero")}</h3>
   <table class="ind">
-    <thead><tr><th>{t("edicola.indicatore")}</th><th class="r">{t("edicola.turno_zero")}</th><th class="r">{t("edicola.fine")}</th></tr></thead>
+    <thead><tr><th>{t("edicola.indicatore")}</th><th class="r">{t("edicola.turno_zero")}</th><th class="r">{t("edicola.fine")}</th><th></th></tr></thead>
     <tbody>
       {#each voce.indicatori as i (i.id)}
         {@const decimali = i.id === "spread" ? 0 : 1}
         <tr>
           <td class="muto">{i.nome}</td>
           <td class="r">{numero(i.turno_zero, decimali)}</td>
-          <td class="r"><NumeroFreccia valore={i.fine} prima={i.turno_zero} formato={(x) => numero(x, decimali)} male={maleSe(i.id)} /></td>
+          <td class="r"><b>{numero(i.fine, decimali)}</b></td>
+          <!-- ponytail: lo scarto in colonna sua (13-edicola.prototype.html:115), col valore vuoto -->
+          <td class="r"><NumeroFreccia valore={i.fine} prima={i.turno_zero} formato={() => ""} formatoVariazione={(x) => numero(x, decimali)} male={maleSe(i.id)} /></td>
         </tr>
       {/each}
     </tbody>
   </table>
 </div>
 
-{#if S.length}
-  <div class="blocco">
-    <h3 class="sotto">{t("edicola.tre_indicatori")}</h3>
+<div class="blocco">
+  <h3 class="sotto">{t("edicola.tre_indicatori")}</h3>
+  {#if S.length < 2}
+    <p class="sec muto">{t("edicola.serie_corta")}</p>
+  {:else}
     <Grafico titolo={t("edicola.grafico_consenso")} linee={[{ valori: S.map((p) => p.consenso * 100) }]} formato={(v) => `${numero(v, 1)}%`} {etichette} {voti} />
     <Grafico titolo={t("edicola.grafico_margine")} zero formato={(v) => segnato(v)} {etichette} {voti}
       linee={[{ nome: t("edicola.camera"), valori: S.map((p) => p.margine_camera) }, { nome: t("edicola.senato"), valori: S.map((p) => p.margine_senato), tratteggiata: true }]} />
     <Grafico titolo={t("edicola.grafico_spread")} linee={[{ valori: S.map((p) => p.spread_pb) }]} formato={pb} {etichette} {voti} />
-  </div>
-{/if}
+  {/if}
+</div>
 
 {#if voce.elezioni.length}
   <div class="blocco">
@@ -81,7 +89,7 @@
           {#each e.voti as [n, q], j (j)}<i class:mio={n === voce.nome} style:flex={q / tot} title="{n} {percentuale(q)}"></i>{/each}
         </div>
         <div class="etich" aria-hidden="true">
-          {#each e.voti as [n, q], j (j)}<span class:mio={n === voce.nome} style:flex={q / tot}>{q > 0.07 ? `${n.split(" ").pop()} ${numero(q * 100)}` : ""}</span>{/each}
+          {#each e.voti as [n, q], j (j)}<span class:mio={n === voce.nome} style:flex={q / tot} data-tagli-ignora={n === voce.nome ? undefined : ""}>{q > 0.07 ? `${n.split(" ").pop()} ${numero(q * 100)}%` : ""}</span>{/each}
         </div>
         <p class="sec">{primaQuota}<b>{mio ? percentuale(mio[1]) : t("edicola.assente")}</b>{dopoQuota}</p>
       </div>
@@ -115,7 +123,13 @@
   .barra i { background: var(--grigio); min-width: 0 }
   .barra i:nth-child(even) { background: var(--ink) }
   .barra i.mio { background: var(--rosso) }
-  .etich { display: flex; gap: 2px; font-size: var(--c-min); color: var(--grigio) }
-  .etich span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
-  .etich span.mio { color: var(--rosso); font-weight: 700 }
+  /* contain: le etichette, che ci stiano o no, non allargano il dettaglio */
+  .etich { display: flex; gap: 2px; font-size: var(--c-min); color: var(--grigio); contain: inline-size }
+  /* un'etichetta che non ci sta non si mostra: va a capo dietro un primo elemento vuoto e l'altezza di una riga la taglia */
+  .etich span { min-width: 0; display: flex; flex-wrap: wrap; height: 1lh; overflow: hidden; white-space: nowrap }
+  .etich span::before { content: ""; height: 1lh }
+  /* quella del giocatore non si stringe */
+  .etich span.mio { min-width: max-content; color: var(--rosso); font-weight: 700 }
+  /* inline-block: WebKit non va a capo davanti a un nowrap in riga e lo lascia sporgere */
+  .nw { display: inline-block; white-space: nowrap }
 </style>

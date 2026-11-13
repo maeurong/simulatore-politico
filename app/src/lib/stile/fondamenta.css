@@ -57,6 +57,24 @@ svg { display: block }
 ::selection { background: var(--giallo); color: var(--ink) }
 :root.grave ::selection { background: var(--ink); color: var(--carta) }
 :focus-visible { outline: 2px solid var(--biro); outline-offset: 2px }
+/* Le tre pagine fuori dalla partita (edicola, editor, fondazione): testata, guasto in testa, corpo, titoli di sezione.
+   :where() porta la specificità a zero, così ogni pagina sovrascrive ciò che ha di diverso. */
+:where(:is(.edicola, .editor, .fondazione) > .testa) { flex: none; display: flex; align-items: end; gap: 16px; padding: 12px var(--marg) 8px; border-bottom: var(--doppio) }
+:where(:is(.edicola, .editor, .fondazione) > .testa > .nomino) { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 800; font-size: var(--c-pag); color: var(--rosso); line-height: 1; white-space: nowrap }
+:where(:is(.edicola, .editor, .fondazione) > .testa > .dove) { font-family: var(--tit); font-size: var(--c-sez); font-weight: 600; line-height: 1.1 }
+:where(:is(.edicola, .editor, .fondazione) > .testa > .fuori) { margin-left: auto; padding-bottom: 3px; text-align: right }
+:where(:is(.edicola, .editor, .fondazione) > .guasto) { flex: none; padding: 4px var(--marg); border-bottom: var(--filo); font-size: var(--c-sec); font-weight: 700; color: var(--rosso) }
+:where(:is(.edicola, .editor, .fondazione) > .corpo) {
+  flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); grid-template-rows: minmax(0, 1fr);
+  gap: 12px var(--canale); padding: 14px var(--marg) 16px; overflow: hidden;
+}
+:where(:is(.edicola, .editor, .fondazione) .titsez) { display: flex; align-items: baseline; gap: 12px; border-bottom: var(--forte); padding-bottom: 4px; margin-bottom: 6px }
+:where(:is(.edicola, .editor, .fondazione) .titsez .dx) { margin-left: auto }
+:where(:is(.edicola, .editor, .fondazione) .tit) { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-riq) }
+:where(:is(.edicola, .editor, .fondazione) .sec) { font-size: var(--c-sec) }
+:where(:is(.edicola, .editor, .fondazione) .min) { font-size: var(--c-min) }
+:where(:is(.edicola, .editor, .fondazione) .muto) { color: var(--grigio) }
+
 /* nascosto alla vista, letto dai lettori di schermo */
 .nascosto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap }
 

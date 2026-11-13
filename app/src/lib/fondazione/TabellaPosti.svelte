@@ -4,7 +4,7 @@
   import { numero, percentuale, t } from "$lib/testi/t";
   import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
   import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
-  import { fra } from "./fondazione";
+  import { fraTesto } from "./fondazione";
 
   type Props = { anteprima: AnteprimaFondazione; partiti: PartitoCatalogo[]; posto: number | null };
   let { anteprima, partiti, posto = $bindable() }: Props = $props();
@@ -17,12 +17,11 @@
   <thead><tr><th>{t("fondazione.posto")}</th><th class="n">{t("fondazione.atteso")}</th><th>{t("fondazione.alleati_disponibili")}</th></tr></thead>
   <tbody>
     {#each anteprima.posizioni as p (p.posizione)}
-      {@const [a, b] = fra(p.posizione, partiti)}
       {@const alleati = p.disponibilita.filter((d) => d.disponibile)}
       <!-- il clic sulla riga è comodità: da tastiera si sceglie sull'asse -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
       <tr class={{ qui: p.posizione === posto }} onclick={() => (posto = p.posizione)}>
-        <td><b>{numero(p.posizione, 1)}</b> <span class="muto">{t("fondazione.fra", { a: a.nome, b: b.nome })}</span></td>
+        <td><b>{numero(p.posizione, 1)}</b> <span class="muto">{fraTesto(p.posizione, partiti)}</span></td>
         <td class="n"><span class="qb" style:width="{(p.quota_attesa / massimo) * 70}px"></span>{percentuale(p.quota_attesa)}</td>
         <td>{#if alleati.length}{alleati.map((d) => nomeDi(d.partito)).join(", ")}{:else}<span class="muto">{t("fondazione.nessuno")}</span>{/if}</td>
       </tr>

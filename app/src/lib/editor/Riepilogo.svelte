@@ -112,16 +112,27 @@
   .conto .k { font-size: var(--c-min); color: var(--grigio); letter-spacing: .06em; text-transform: uppercase }
   .conto .n { font-family: var(--tit); font-weight: 700; font-size: var(--c-pag); line-height: 1.05 }
   .conto .d { font-size: var(--c-min) }
+  /* inline-block: WebKit non va a capo davanti a un nowrap in riga e lo lascia sporgere */
+  .conto .d span { display: inline-block; white-space: nowrap }
 
   .riep { container-type: inline-size }
-  .posti { width: 100%; border-collapse: collapse; font-size: var(--c-sec) }
+  /* fixed e colonne in percentuale: la tabella è larga quanto il pannello in ogni motore, qualunque sia la misura dei caratteri */
+  .posti { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--c-sec) }
+  /* misurate: in minuscolo a 300 px e in maiuscolo a 380 px ogni colonna sta nella sua quota */
+  .posti th:nth-child(1) { width: 13% }
+  .posti th:nth-child(2) { width: 21% }
+  .posti th:nth-child(3) { width: 22% }
+  .posti th:nth-child(4) { width: 16% }
+  .posti th:nth-child(5) { width: 15% }
+  .posti th:nth-child(6) { width: 13% }
   .posti th { font-size: var(--c-min); text-transform: uppercase; color: var(--grigio); font-weight: 700; text-align: right; padding: 2px 4px; border-bottom: var(--filo) }
   .posti th:first-child, .posti td:first-child { text-align: left }
   .posti td { padding: 3px 4px; border-bottom: var(--filo); text-align: right; white-space: nowrap }
   .posti tr.no td { background: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--rosso) 8%, transparent) 6px 7px) }
   .posti .co { font-size: var(--c-min); color: var(--grigio); text-align: left; white-space: normal }
-  /* il lato al minimo (scala alta, 1280): l'intestazione maiuscola non entra, scende in minuscolo e stringe */
-  @container (width < 352px) {
+  /* il lato stretto (scala alta, 1280): l'intestazione maiuscola non entra, scende in minuscolo e stringe.
+     In em (380 px sul corpo di 14 px): sotto zoom WebKit confronta la larghezza ingrandita, e con i px la regola non scattava */
+  @container (width < 27.2em) {
     .posti th { text-transform: none }
     .posti th, .posti td { padding: 2px }
   }

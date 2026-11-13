@@ -14,10 +14,12 @@
     inVolo: boolean;
     /** il rifiuto del guscio nato da questa scheda */
     rifiuto: string | null;
+    /** la conferma dell'abbandono è aperta: la stessa della riga */
+    inConferma: boolean;
     onriprendi: () => void;
     onabbandona: () => void;
   };
-  let { voce, ora, occupato, inVolo, rifiuto, onriprendi, onabbandona }: Props = $props();
+  let { voce, ora, occupato, inVolo, rifiuto, inConferma = $bindable(), onriprendi, onabbandona }: Props = $props();
 
   const testata = $derived(voce.indice.testata);
   const azione = $derived(azioneDi(voce));
@@ -33,7 +35,7 @@
 <dl class="dati">
   <dt>{t("edicola.campo_scenario")}</dt><dd>{testata.scenario}</dd>
   <dt>{t("edicola.campo_turno")}</dt><dd><b>{testata.turno}</b> · {periodo(testata.data)}</dd>
-  <dt>{t("edicola.campo_salvata")}</dt><dd>{dataRelativa(voce.indice.ultimo_salvataggio, ora)}</dd>
+  <dt>{t("edicola.campo_salvata")}</dt><dd class="nw">{dataRelativa(voce.indice.ultimo_salvataggio, ora)}</dd>
   <dt>{t("edicola.campo_riavvolgimenti")}</dt><dd>{voce.indice.riavvolgimenti}</dd>
   <dt>{t("edicola.campo_schema")}</dt><dd>{testata.versione_schema}</dd>
 </dl>
@@ -53,7 +55,7 @@
   {:else}
     <Pulsante forma="chiude" aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante>
     <Conferma forma="link" etichetta={t("edicola.abbandona")} conferma={t("edicola.conferma_abbandona")}
-      spiegazione={t("edicola.nota_abbandono")} onconferma={onabbandona} />
+      spiegazione={t("edicola.nota_abbandono")} bind:aperta={inConferma} onconferma={onabbandona} />
   {/if}
 </div>
 {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
@@ -63,6 +65,7 @@
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-sez) }
   .dati { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: var(--c-sec); align-items: baseline }
   .dati dt { color: var(--grigio) }
+  .nw { white-space: nowrap }
   .sec { font-size: var(--c-sec) }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }

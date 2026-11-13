@@ -45,6 +45,9 @@ export function scegli(s: SuMisura | null, c: CatalogoScenario, d: VoceCatalogo,
   });
 }
 
+/** Il rifiuto del core senza il prefisso che ripete il titolo (14-editor.prototype.html:332). */
+export const senzaPrefisso = (testo: string) => testo.replace(/^.*legge elettorale: /, "");
+
 export const alLimite = (v: number, cur: CursoreCatalogo) => v <= cur.min || v >= cur.max;
 
 /** Una richiesta in volo per volta; arrivata quella, parte l'ultima chiesta nel frattempo; l'esito vecchio non sovrascrive il nuovo. */

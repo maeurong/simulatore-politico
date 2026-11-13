@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conChiCorrere, cosaManca, fra, LUNGHEZZA_NOME, nomeValido } from "./fondazione";
+import { conChiCorrere, cosaManca, fra, fraTesto, LUNGHEZZA_NOME, nomeValido } from "./fondazione";
 import campione from "../../../../.scratch/v1-piano-11-ui/viste/15-fondazione.json";
 import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
 import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
@@ -46,22 +46,35 @@ describe("cosaManca", () => {
 
 describe("fra", () => {
   it("4,5 sta fra Centro e Centrodestra", () => {
-    expect(fra(4.5, partiti).map((p) => p.nome)).toEqual(["Centro", "Centrodestra"]);
+    expect(fra(4.5, partiti).map((p) => p?.nome)).toEqual(["Centro", "Centrodestra"]);
   });
   it("1,5 e 6,5: i due estremi dell'asse", () => {
-    expect(fra(1.5, partiti).map((p) => p.id)).toEqual(["estrema_sinistra", "sinistra"]);
-    expect(fra(6.5, partiti).map((p) => p.id)).toEqual(["destra", "estrema_destra"]);
+    expect(fra(1.5, partiti).map((p) => p?.id)).toEqual(["estrema_sinistra", "sinistra"]);
+    expect(fra(6.5, partiti).map((p) => p?.id)).toEqual(["destra", "estrema_destra"]);
   });
   it("ognuno dei sei posti sta fra i due partiti interi che lo chiudono", () => {
-    for (const k of [1, 2, 3, 4, 5, 6]) expect(fra(k + 0.5, partiti).map((p) => p.posizione)).toEqual([k, k + 1]);
+    for (const k of [1, 2, 3, 4, 5, 6]) expect(fra(k + 0.5, partiti).map((p) => p?.posizione)).toEqual([k, k + 1]);
   });
-  // oracolo: il tipo promette due partiti; un posto fuori dall'asse dà undefined e chi legge .nome si rompe
-  it.fails("un posto fuori dall'asse dà comunque due partiti", () => {
-    const [a, b] = fra(7.5, partiti);
-    expect(a && b).toBeTruthy();
+  // oracolo: fuori dall'asse un lato manca, e il tipo lo dice; chi scrive «fra X e Y» regge il lato mancante
+  it("un posto fuori dall'asse ha un lato solo", () => {
+    expect(fra(7.5, partiti).map((p) => p?.id)).toEqual(["estrema_destra", undefined]);
+    expect(fra(0.5, partiti).map((p) => p?.id)).toEqual([undefined, "estrema_sinistra"]);
   });
   it("comunque arrivino i partiti", () => {
-    expect(fra(1.5, [...partiti].reverse()).map((p) => p.id)).toEqual(["estrema_sinistra", "sinistra"]);
+    expect(fra(1.5, [...partiti].reverse()).map((p) => p?.id)).toEqual(["estrema_sinistra", "sinistra"]);
+  });
+});
+
+describe("fraTesto", () => {
+  it("dentro l'asse: «fra X e Y»", () => {
+    expect(fraTesto(4.5, partiti)).toBe("fra Centro e Centrodestra");
+  });
+  it("con un lato solo nomina quello, senza «undefined»", () => {
+    expect(fraTesto(7.5, partiti)).toBe("oltre Estrema destra");
+    expect(fraTesto(0.5, partiti)).toBe("oltre Estrema sinistra");
+  });
+  it("senza partiti, niente", () => {
+    expect(fraTesto(4.5, [])).toBe("");
   });
 });
 

@@ -13,12 +13,14 @@
     forma?: "bordo" | "link";
     /** il primo pulsante a riposo nero, non rosso: il rosso resta ai due della conferma (14-editor.prototype.html:299, 377) */
     neutro?: boolean;
+    /** aperta: legabile, per accendere insieme più conferme della stessa cosa; non passata, la tiene il componente */
+    aperta?: boolean;
     onconferma: () => void;
   };
 
-  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", neutro = false, onconferma }: Props = $props();
+  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", neutro = false, aperta = $bindable(false), onconferma }: Props =
+    $props();
   const id = $props.id();
-  let aperta = $state(false);
   let radice: HTMLSpanElement;
 
   async function apri(stato: boolean) {

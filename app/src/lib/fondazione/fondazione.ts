@@ -1,4 +1,4 @@
-import type { Chiave } from "$lib/testi/t";
+import { t, type Chiave } from "$lib/testi/t";
 import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
 import type { VocePosizione } from "$lib/tipi/VocePosizione";
 
@@ -24,10 +24,18 @@ export function cosaManca(nome: string, posto: number | null, anteprima: StatoAn
   return posto === null ? "fondazione.manca_il_posto" : null;
 }
 
-/** I partiti dei due lati del posto: «fra X e Y». */
-export function fra(posto: number, partiti: PartitoCatalogo[]): [PartitoCatalogo, PartitoCatalogo] {
+/** I partiti dei due lati del posto; fuori dall'asse un lato manca. */
+export function fra(posto: number, partiti: PartitoCatalogo[]): [PartitoCatalogo | undefined, PartitoCatalogo | undefined] {
   const ordinati = [...partiti].sort((a, b) => a.posizione - b.posizione);
-  return [ordinati.findLast((p) => p.posizione < posto)!, ordinati.find((p) => p.posizione > posto)!];
+  return [ordinati.findLast((p) => p.posizione < posto), ordinati.find((p) => p.posizione > posto)];
+}
+
+/** «fra X e Y»; con un lato solo «oltre X»; senza partiti, niente. */
+export function fraTesto(posto: number, partiti: PartitoCatalogo[]): string {
+  const [a, b] = fra(posto, partiti);
+  if (a && b) return t("fondazione.fra", { a: a.nome, b: b.nome });
+  const x = a ?? b;
+  return x ? t("fondazione.oltre", { a: x.nome }) : "";
 }
 
 /** «Con chi correre»: i sette, prima i disponibili, ciascuno con la causa del core; ordine dei dati a parità. */

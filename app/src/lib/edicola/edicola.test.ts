@@ -114,7 +114,7 @@ describe("anniAlGoverno", () => {
 
 describe("anniAlGoverno, arrotondamento dei mesi", () => {
   // oracolo: 1,99 anni sono due anni; «1 anno e 12 mesi» non si dice
-  it.fails("undici mesi e mezzo non diventano «12 mesi»: i mesi arrotondati a 12 portano un anno", () => {
+  it("undici mesi e mezzo non diventano «12 mesi»: i mesi arrotondati a 12 portano un anno", () => {
     expect(anniAlGoverno(1.99)).toBe("2 anni al governo");
   });
 });

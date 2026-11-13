@@ -54,7 +54,7 @@
 
   "barrata.governo": "Non governi: nessun ministro tuo",
   "barrata.campagna": "Si fa campagna solo nel turno prima del voto",
-  "barrata.bilancio": "La legge di bilancio si presenta in ottobre–dicembre",
+  "barrata.bilancio": "La legge di bilancio si presenta in ottobre–dicembre, al governo",
   "barrata.prima_pagina": "Turno zero: non c’è un turno prima",
   "barrata.registro": "Turno zero: nessun turno passato",
   "barrata.aula_sciolta": "Camere sciolte: niente aula fino al voto",
@@ -181,6 +181,8 @@
   "edicola.abbandono_in_corso": "Abbandono in corso…",
   "edicola.apertura_in_corso": "Apertura in corso…",
   "edicola.elenchi_non_caricati": "Gli elenchi delle partite non si sono caricati.",
+  "edicola.serie_corta": "Troppo pochi turni per i grafici: ne servono almeno due.",
+  "edicola.guasto_apertura": "La partita non si è aperta: riprovate.",
 
   "editor.dove": "Nuova partita · {sotto}",
   "editor.dove_scenario": "lo scenario",
@@ -298,6 +300,7 @@
   "fondazione.nota_asse": "elettori che si collocano su ogni punto, dalle regioni del sondaggio",
   "fondazione.occhiello_posto": "Il posto {posto} · {lato}",
   "fondazione.fra": "fra {a} e {b}",
+  "fondazione.oltre": "oltre {a}",
   "fondazione.a_sinistra": "a sinistra",
   "fondazione.al_centrosinistra": "al centrosinistra",
   "fondazione.al_centrodestra": "al centrodestra",
@@ -319,6 +322,7 @@
   "fondazione.non_disponibile": "non disponibile:",
   "fondazione.in_corso": "Fondazione in corso…",
   "fondazione.guasto_anteprima": "L’anteprima non si è caricata.",
+  "fondazione.guasto_apertura": "La partita è fondata, ma la sua pagina non si è aperta: la trovate nell’edicola.",
   "fondazione.anteprima_in_arrivo": "l’anteprima è in arrivo",
   "fondazione.anteprima_fallita": "manca l’anteprima di questo scenario"
 }

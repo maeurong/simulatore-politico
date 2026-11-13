@@ -27,8 +27,10 @@ export const periodo = (d: Trimestre) => t(`edicola.trimestre_${d.trimestre}` as
 /** Gli anni al governo sono a trimestri: «5 anni e 3 mesi al governo». */
 export function anniAlGoverno(a: number): string {
   if (!a) return t("edicola.mai_al_governo");
-  const n = Math.floor(a);
-  const m = Math.round((a - n) * 12);
+  // si arrotonda il totale in mesi, poi si divide: 1,99 anni sono «2 anni», non «1 anno e 12 mesi»
+  const totale = Math.round(a * 12);
+  const n = Math.floor(totale / 12);
+  const m = totale % 12;
   const anni = n ? t("edicola.anni", { n }) : "";
   const mesi = m ? t("edicola.mesi", { n: m }) : "";
   const durata = anni && mesi ? t("edicola.anni_e_mesi", { anni, mesi }) : anni || mesi;

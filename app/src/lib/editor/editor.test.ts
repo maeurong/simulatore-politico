@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { alLimite, base, cambiaLegge, codaRiepiloghi, editor, gradino, ritocca, scegli, ultimoVince } from "./editor.svelte";
+import { alLimite, base, cambiaLegge, codaRiepiloghi, editor, gradino, ritocca, scegli, senzaPrefisso, ultimoVince } from "./editor.svelte";
 import editorJson from "../../../../.scratch/v1-piano-11-ui/viste/14-editor.json";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
 import type { ErroreGuscio } from "$lib/guscio/chiamate";
@@ -266,5 +266,15 @@ describe("codaRiepiloghi", () => {
     expect(editor.rifiuto).toBeNull();
     expect(editor.guasto).toBeNull();
     expect(editor.riepilogo).toBeNull();
+  });
+});
+
+describe("senzaPrefisso", () => {
+  it("toglie il prefisso fino a «legge elettorale: », come il prototipo 14", () => {
+    expect(senzaPrefisso("scenario su misura non valido: legge elettorale: premio alla coalizione senza coalizioni"))
+      .toBe("premio alla coalizione senza coalizioni");
+  });
+  it("un testo senza prefisso resta com'è", () => {
+    expect(senzaPrefisso("premio alla coalizione senza coalizioni")).toBe("premio alla coalizione senza coalizioni");
   });
 });

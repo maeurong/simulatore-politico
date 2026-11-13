@@ -5,14 +5,13 @@
   import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
   import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
   import type { VocePosizione } from "$lib/tipi/VocePosizione";
-  import { conChiCorrere, fra } from "./fondazione";
+  import { conChiCorrere, fraTesto } from "./fondazione";
 
   type Props = { anteprima: AnteprimaFondazione; voce: VocePosizione; partiti: PartitoCatalogo[] };
   let { anteprima, voce, partiti }: Props = $props();
 
   const lato = (x: number): Chiave =>
     x < 3 ? "fondazione.a_sinistra" : x > 5 ? "fondazione.a_destra" : x < 4 ? "fondazione.al_centrosinistra" : "fondazione.al_centrodestra";
-  const lati = $derived(fra(voce.posizione, partiti));
   const voci = $derived(conChiCorrere(voce, partiti));
   const disponibili = $derived(voci.filter((v) => v.disponibile).length);
   // le due quote in neretto: il testo si spezza sui segnaposto
@@ -23,7 +22,7 @@
 
 <div>
   <p class="occ">{t("fondazione.occhiello_posto", { posto: numero(voce.posizione, 1), lato: t(lato(voce.posizione)) })}</p>
-  <h2 class="tit">{t("fondazione.fra", { a: lati[0].nome, b: lati[1].nome })}</h2>
+  <h2 class="tit">{fraTesto(voce.posizione, partiti)}</h2>
 </div>
 <div>
   <p class="grandenum">{percentuale(voce.quota_attesa)}</p>
@@ -53,7 +52,7 @@
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance }
   h2.tit { font-size: var(--c-sez) }
   h3.tit { font-size: var(--c-riq) }
-  .grandenum { font-family: var(--tit); font-weight: 800; font-size: var(--c-test); line-height: .95; color: var(--rosso) }
+  .grandenum { font-family: var(--tit); font-weight: 800; font-size: var(--c-test); line-height: 1; color: var(--rosso) }
   .nota { margin-top: 2px }
   .sec { font-size: var(--c-sec) }
   .min { font-size: var(--c-min) }

@@ -50,18 +50,19 @@
   /** l'anteprima di questo scenario è finita in un rifiuto o in un guasto */
   let fallita = $state(false);
 
-  // lo scenario non cambia mentre si sta qui: cambia solo tornando all'editor
-  const per = JSON.stringify(editor.scenario);
+  // lo scenario si prende una volta all'ingresso: chiave e richiesta dell'anteprima, testata e fondazione usano questo
+  const sc = editor.scenario;
+  const per = JSON.stringify(sc);
   const occupato = $derived(partita.occupato || fondazione);
   const statoAnteprima = $derived<StatoAnteprima>(m.anteprima && m.per === per ? "pronta" : fallita ? "fallita" : "in_arrivo");
   const manca = $derived(cosaManca(m.nome, m.posto, statoAnteprima));
+  const chi = $derived(nomeValido(m.nome) ? m.nome.trim() : t("fondazione.il_vostro_partito"));
   const voce = $derived(m.anteprima?.posizioni.find((p) => p.posizione === m.posto) ?? null);
-  const scenario = $derived(
-    !editor.scenario ? t("editor.scenario_base")
-    : !editor.mosso ? (editor.sorgente ?? editor.scenario.nome)
+  const scenario =
+    !sc ? t("editor.scenario_base")
+    : !editor.mosso ? (editor.sorgente ?? sc.nome)
     : editor.sorgente ? t("editor.nome_modificato", { nome: editor.sorgente })
-    : t("editor.nuovo_senza_nome"),
-  );
+    : t("editor.nuovo_senza_nome");
 
   onMount(async () => {
     if (m.giro !== editor.giro) azzera();
@@ -74,7 +75,7 @@
       if (!m.anteprima || m.per !== per) {
         m.anteprima = null;
         n = ++m.chiesta;
-        const a = await guscio.anteprimaFondazione(editor.scenario);
+        const a = await guscio.anteprimaFondazione(sc);
         // superata da un rientro con un altro scenario: si scarta
         if (n !== m.chiesta) return;
         m.anteprima = a;
@@ -96,13 +97,22 @@
     partita.guasto = null;
     fondazione = true;
     try {
-      const vista = await partita.fonda(editor.scenario, { nome: m.nome.trim(), posizione: m.posto! });
-      if (vista) {
-        await goto(`/partita/${casa(vista)}`);
-        azzera();
+      let vista;
+      try {
+        vista = await partita.fonda(sc, { nome: m.nome.trim(), posizione: m.posto! });
+      } catch (e) {
+        rifiuto = comeErrore(e).testo;
+        return;
       }
-    } catch (e) {
-      rifiuto = comeErrore(e).testo;
+      // fondata: lo stato si azzera comunque, e un errore della navigazione è un guasto, non un rifiuto
+      if (vista)
+        try {
+          await goto(`/partita/${casa(vista)}`);
+        } catch (e) {
+          guasto = `${comeErrore(e).testo} ${t("fondazione.guasto_apertura")}`;
+        } finally {
+          azzera();
+        }
     } finally {
       fondazione = false;
     }
@@ -159,8 +169,13 @@
       {/if}
       <div class="fonda">
         <p class="chi">
-          {#if m.posto === null}{nomeValido(m.nome) ? m.nome.trim() : t("fondazione.il_vostro_partito")}
-          {:else}{t("fondazione.chi_posto", { nome: nomeValido(m.nome) ? m.nome.trim() : t("fondazione.il_vostro_partito"), posto: numero(m.posto, 1) })}{/if}
+          {#if m.posto === null}{chi}
+          {:else}
+            <!-- «a 4,5» non va a capo: l'ultima parola prima del posto sta col numero -->
+            {@const [testa, coda] = t("fondazione.chi_posto", { nome: chi, posto: "\u0001" }).split("\u0001")}
+            {@const k = testa.trimEnd().lastIndexOf(" ") + 1}
+            {testa.slice(0, k)}<span class="nw">{testa.slice(k)}{numero(m.posto, 1)}</span>{coda}
+          {/if}
         </p>
         {#if !manca}<p class="min muto">{t("fondazione.si_vota_alla_chiusura")}</p>{/if}
         {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
@@ -176,23 +191,13 @@
 <style>
   /* la pagina sta ferma; scorrono la colonna di sinistra e, se non basta, il dettaglio */
   .fondazione { position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden }
-  .testa { flex: none; display: flex; align-items: end; gap: 16px; padding: 12px var(--marg) 8px; border-bottom: var(--doppio) }
-  .nomino { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 800; font-size: var(--c-pag); color: var(--rosso); line-height: 1; white-space: nowrap }
-  .dove { font-family: var(--tit); font-size: var(--c-sez); font-weight: 600; line-height: 1.1 }
-  .fuori { margin-left: auto; padding-bottom: 3px; text-align: right; font-size: var(--c-sec); color: var(--grigio) }
+  /* testata, guasto, corpo e titoli in comune con edicola ed editor: fondamenta.css */
+  .fuori { font-size: var(--c-sec); color: var(--grigio) }
   .fuori b { color: var(--ink) }
-  .guasto { flex: none; padding: 4px var(--marg); border-bottom: var(--filo); font-size: var(--c-sec); font-weight: 700; color: var(--rosso) }
 
-  .corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); grid-template-rows: minmax(0, 1fr); gap: 12px var(--canale); padding: 14px var(--marg) 16px; overflow: hidden }
   .sx { display: grid; gap: 18px; align-content: start; min-width: 0; min-height: 0; overflow: hidden auto; padding-right: 6px }
   /* il filetto finisce col dettaglio, come nel prototipo; oltre l'altezza del corpo il dettaglio scorre */
   .lato { align-self: start; max-height: 100%; border-left: var(--bordo); padding-left: var(--canale); display: grid; gap: 12px; align-content: start; min-width: 0; min-height: 0; overflow: hidden auto }
-
-  .titsez { display: flex; align-items: baseline; gap: 12px; border-bottom: var(--forte); padding-bottom: 4px; margin-bottom: 6px }
-  .titsez .dx { margin-left: auto }
-  .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-riq) }
-  .min { font-size: var(--c-min) }
-  .muto { color: var(--grigio) }
 
   .nome { display: flex; gap: 10px; align-items: baseline }
   .nome input { font-family: var(--tit); font-weight: 700; font-size: var(--c-sez); color: var(--ink); border: 0; border-bottom: var(--forte); background: transparent; padding: 2px; min-width: 0; flex: 1 }
@@ -201,5 +206,7 @@
 
   .vuoto { border: 1.5px dashed var(--grigio); color: var(--grigio); padding: 14px; font-size: var(--c-sec) }
   .fonda { border-top: var(--doppio); padding-top: 10px; display: grid; gap: 6px }
-  .chi { font-family: var(--tit); font-weight: 700; font-size: var(--c-riq); overflow-wrap: anywhere }
+  .chi { font-family: var(--tit); font-weight: 700; font-size: var(--c-riq); overflow-wrap: anywhere; text-wrap: balance }
+  /* inline-block: WebKit non va a capo davanti a un nowrap in riga e lo lascia sporgere */
+  .nw { display: inline-block; white-space: nowrap }
 </style>

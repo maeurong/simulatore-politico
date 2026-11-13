@@ -5,7 +5,7 @@
   import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
   import type { SuMisura } from "$lib/tipi/SuMisura";
   import Disposizioni from "./Disposizioni.svelte";
-  import { base, cambiaLegge } from "./editor.svelte";
+  import { base, cambiaLegge, senzaPrefisso } from "./editor.svelte";
 
   type Props = {
     catalogo: CatalogoScenario;
@@ -34,7 +34,7 @@
   </select>
 </div>
 {#if rifiuto}
-  <div class="rifiuto" role="alert">{t("editor.legge_non_regge")}<span>{t("editor.riepilogo_fermo", { testo: rifiuto })}</span></div>
+  <div class="rifiuto" role="alert">{t("editor.legge_non_regge")}<span>{t("editor.riepilogo_fermo", { testo: senzaPrefisso(rifiuto) })}</span></div>
 {/if}
 <Disposizioni {catalogo} {scenario} voci={elettorali} {fermo} {onscenario} />
 {#if ritocchi}<p class="nota">{t("editor.ritocchi", { n: ritocchi, legge: nomeLegge(legge) })}</p>{/if}

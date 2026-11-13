@@ -16,17 +16,19 @@
     occupato: boolean;
     /** l'abbandono di questa partita è in volo */
     inVolo: boolean;
+    /** la conferma dell'abbandono è aperta: la stessa del dettaglio */
+    inConferma: boolean;
     onscegli: () => void;
     onriprendi: () => void;
     onabbandona: () => void;
   };
-  let { voce, prima, scelta, ora, occupato, inVolo, onscegli, onriprendi, onabbandona }: Props = $props();
+  let { voce, prima, scelta, ora, occupato, inVolo, inConferma = $bindable(), onscegli, onriprendi, onabbandona }: Props = $props();
 
   const testata = $derived(voce.indice.testata);
   const azione = $derived(azioneDi(voce));
-  const [primaDelTurno, dopoIlTurno] = $derived(
-    t("edicola.riga", { scenario: testata.scenario, periodo: periodo(testata.data), quando: dataRelativa(voce.indice.ultimo_salvataggio, ora) }).split("{turno}"),
-  );
+  // turno in neretto e data che non va a capo: il testo si spezza sui due segnaposto
+  const [primaDelTurno, dopoIlTurno] = $derived(t("edicola.riga", { scenario: testata.scenario, periodo: periodo(testata.data) }).split("{turno}"));
+  const [primaDiQuando, dopoQuando] = $derived(dopoIlTurno.split("{quando}"));
 </script>
 
 <!-- il clic su tutta la riga è una comodità del puntatore: da tastiera si sceglie col nome, che è un pulsante -->
@@ -45,14 +47,14 @@
     {:else}
       <span class:pieno={!prima}
         ><Pulsante forma={prima ? "chiude" : "piccolo"} aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante></span>
-      <Conferma forma="link" etichetta={t("edicola.abbandona")} conferma={t("edicola.conferma_abbandona")} onconferma={onabbandona} />
+      <Conferma forma="link" etichetta={t("edicola.abbandona")} conferma={t("edicola.conferma_abbandona")} bind:aperta={inConferma} onconferma={onabbandona} />
     {/if}
   </span>
   <span class="m">
     {#if azione === "nessuna"}
       <span class="male">{voce.motivo}</span>
     {:else}
-      {#if azione === "eredita"}{t("edicola.senza_seggi_bozza")}{" · "}{/if}{primaDelTurno}<b>{testata.turno}</b>{dopoIlTurno}{#if voce.indice.riavvolgimenti > 0}
+      {#if azione === "eredita"}{t("edicola.senza_seggi_bozza")}{" · "}{/if}{primaDelTurno}<b>{testata.turno}</b>{primaDiQuando}<span class="nw">{dataRelativa(voce.indice.ultimo_salvataggio, ora)}</span>{dopoQuando}{#if voce.indice.riavvolgimenti > 0}
         · {t("edicola.riavvolgimenti", { n: voce.indice.riavvolgimenti })}{/if}
     {/if}
   </span>
@@ -68,6 +70,8 @@
   .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso); vertical-align: .2em; margin-left: 6px }
   .m { font-size: var(--c-sec); color: var(--grigio) }
   .m b { color: var(--ink); font-weight: 700 }
+  /* inline-block: WebKit non va a capo davanti a un nowrap in riga e lo lascia sporgere */
+  .nw { display: inline-block; white-space: nowrap }
   .azr { display: flex; gap: 8px; align-items: center; grid-row: span 2 }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }

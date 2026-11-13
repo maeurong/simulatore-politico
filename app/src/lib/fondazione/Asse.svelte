@@ -4,7 +4,7 @@
   import { numero, percentuale, t } from "$lib/testi/t";
   import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
   import type { PartitoCatalogo } from "$lib/tipi/PartitoCatalogo";
-  import { fra } from "./fondazione";
+  import { fraTesto } from "./fondazione";
 
   type Props = { anteprima: AnteprimaFondazione; partiti: PartitoCatalogo[]; posto: number | null; etichetta: string };
   let { anteprima, partiti, posto = $bindable(), etichetta }: Props = $props();
@@ -13,10 +13,6 @@
   const ordinati = $derived([...partiti].sort((a, b) => a.posizione - b.posizione));
   // i due punti interi accanto al mezzo punto scelto
   const vicini = $derived(posto === null ? [] : [Math.floor(posto), Math.ceil(posto)]);
-  const nome = (x: number) => {
-    const [a, b] = fra(x, partiti);
-    return t("fondazione.fra", { a: a.nome, b: b.nome });
-  };
 </script>
 
 <div class="asse" role="radiogroup" aria-labelledby={etichetta}>
@@ -28,7 +24,7 @@
   {#each anteprima.posizioni as p (p.posizione)}
     <label class={["slot", { qui: p.posizione === posto }]} style:left="{((p.posizione - 0.5) / 7) * 100}%">
       <input type="radio" class="nascosto" name="posto" value={p.posizione} bind:group={posto}
-        aria-label="{numero(p.posizione, 1)}, {nome(p.posizione)}: {percentuale(p.quota_attesa)}" />
+        aria-label="{numero(p.posizione, 1)}, {fraTesto(p.posizione, partiti)}: {percentuale(p.quota_attesa)}" />
       <span class="tasto" aria-hidden="true">{percentuale(p.quota_attesa)}<small>{numero(p.posizione, 1)}</small></span>
     </label>
   {/each}
@@ -60,7 +56,9 @@
   .slot:has(:focus-visible) .tasto { outline: 2px solid var(--biro); outline-offset: 2px }
 
   .sotto { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-size: var(--c-min); padding-top: 3px }
-  .sotto b { display: block; font-size: var(--c-sec) }
-  .sotto span { color: var(--grigio) }
+  /* le colonne sono alte quanto la più alta: il numero sta in fondo, e i sette restano in riga anche se un nome va a capo */
+  .sotto div { display: flex; flex-direction: column }
+  .sotto b { font-size: var(--c-sec) }
+  .sotto span { color: var(--grigio); margin-top: auto }
   .estremi { display: flex; justify-content: space-between; gap: var(--s3); font-size: var(--c-min); color: var(--grigio); margin-top: 2px }
 </style>

@@ -5,6 +5,7 @@
   import { goto } from "$app/navigation";
   import { comeErrore, guscio, type ErroreGuscio } from "$lib/guscio/chiamate";
   import { partita } from "$lib/partita.svelte";
+  import { editor } from "$lib/editor/editor.svelte";
   import { casa } from "$lib/ossatura";
   import { t } from "$lib/testi/t";
   import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
@@ -22,6 +23,8 @@
   let partite = $state.raw<VocePartita[] | null>(null);
   let albo = $state.raw<VoceAlbo[] | null>(null);
   let scelta = $state.raw<{ k: "p"; id: string } | { k: "a"; voce: VoceAlbo } | null>(null);
+  /** l'id della partita il cui abbandono è in conferma: riga e dettaglio si accendono insieme (13-edicola.prototype.html:241) */
+  let conferma = $state<string | null>(null);
   let guasto = $state<string | null>(null);
   let rifiuto = $state<{ id: string; testo: string } | null>(null);
   /** l'id della partita il cui abbandono è in volo */
@@ -51,6 +54,8 @@
     }
   }
   onMount(async () => {
+    // tornando qui senza passare dal sommario (tasto indietro) la partita lasciata non resta nello stato
+    partita.esci();
     const e = await carica();
     if (e) guasto = `${e.testo} ${t("edicola.elenchi_non_caricati")}`;
   });
@@ -68,10 +73,20 @@
     azzera(id);
     apertura = true;
     try {
-      const vista = await partita.riprendi(id);
-      if (vista) await goto(`/partita/${casa(vista)}`);
-    } catch (e) {
-      rifiuto = { id, testo: comeErrore(e).testo };
+      let vista;
+      try {
+        vista = await partita.riprendi(id);
+      } catch (e) {
+        rifiuto = { id, testo: comeErrore(e).testo };
+        return;
+      }
+      // un errore della navigazione è un guasto, non un rifiuto
+      if (vista)
+        try {
+          await goto(`/partita/${casa(vista)}`);
+        } catch (e) {
+          guasto = `${comeErrore(e).testo} ${t("edicola.guasto_apertura")}`;
+        }
     } finally {
       apertura = false;
     }
@@ -106,11 +121,26 @@
     document.querySelector<HTMLElement>('.edicola [aria-current="true"]')?.focus();
   }
 
+  /** Scegliere un'altra riga spegne la conferma; aprirla porta il dettaglio su quella partita. */
+  function scegli(s: NonNullable<typeof scelta>) {
+    scelta = s;
+    if (s.k !== "p" || s.id !== conferma) conferma = null;
+  }
+  function confermi(id: string, aperta: boolean) {
+    if (aperta) scegli({ k: "p", id });
+    conferma = aperta ? id : null;
+  }
+
   function chiudiImpostazioni() {
     impostazioni = false;
     document.getElementById("apri-impostazioni")?.focus();
   }
-  const nuova = () => goto("/scenario");
+  /** Da capo: l'editor si azzera, e con lui la fondazione (che riparte quando il giro dell'editor è avanzato). */
+  function nuova() {
+    if (occupato) return;
+    editor.azzera();
+    goto("/scenario");
+  }
 </script>
 
 <div class="edicola">
@@ -131,11 +161,12 @@
         <div class="titsez">
           <h2 id="titolo-in-corso" class="tit">{t("edicola.in_corso")}</h2>
           {#if ordinate.length}<span class="sec muto">{t("edicola.partite_in_corso", { n: ordinate.length })}</span>{/if}
-          <span class="dx"><Pulsante forma="chiude" onclick={nuova}>{t("edicola.nuova_partita")}</Pulsante></span>
+          <span class="dx"><Pulsante forma="chiude" aria-disabled={occupato ? "true" : undefined} onclick={nuova}>{t("edicola.nuova_partita")}</Pulsante></span>
         </div>
         {#each ordinate as voce, i (voce.indice.id)}
           <RigaPartita {voce} prima={i === 0} scelta={dettaglio?.voce === voce} {ora} {occupato} inVolo={inVolo === voce.indice.id}
-            onscegli={() => (scelta = { k: "p", id: voce.indice.id })}
+            bind:inConferma={() => conferma === voce.indice.id, (v) => confermi(voce.indice.id, v)}
+            onscegli={() => scegli({ k: "p", id: voce.indice.id })}
             onriprendi={() => riprendi(voce.indice.id)}
             onabbandona={() => abbandona(voce)} />
         {:else}
@@ -152,7 +183,7 @@
           {@const sel = dettaglio?.voce === a}
           <!-- come le righe delle partite: il clic sulla riga è comodità, da tastiera si sceglie col nome -->
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-          <div class={["rp", { sel }]} onclick={() => (scelta = { k: "a", voce: a })}>
+          <div class={["rp", { sel }]} onclick={() => scegli({ k: "a", voce: a })}>
             <span class="n"><button type="button" class="scegli" aria-current={sel ? "true" : undefined}>{a.nome}</button></span>
             <span class="azr"><span class="bollo" class:ink={a.esito !== "Senza seggi"}>{esitoTesto(a.esito)}</span></span>
             <span class="m">
@@ -172,6 +203,7 @@
         {#if dettaglio?.k === "p"}
           <DettaglioPartita voce={dettaglio.voce} {ora} {occupato} inVolo={inVolo === dettaglio.voce.indice.id}
             rifiuto={rifiuto?.id === dettaglio.voce.indice.id ? rifiuto.testo : null}
+            bind:inConferma={() => conferma === dettaglio.voce.indice.id, (v) => confermi(dettaglio.voce.indice.id, v)}
             onriprendi={() => riprendi(dettaglio.voce.indice.id)}
             onabbandona={() => abbandona(dettaglio.voce)} />
         {:else if dettaglio?.k === "a"}
@@ -181,7 +213,7 @@
             <p class="occ">{t("edicola.primo_numero")}</p>
             <p class="tit">{t("edicola.nessuna_partita")}</p>
             <p class="sec">{t("edicola.invito")}</p>
-            <span><Pulsante forma="chiude" onclick={nuova}>{t("edicola.nuova_partita")}</Pulsante></span>
+            <span><Pulsante forma="chiude" aria-disabled={occupato ? "true" : undefined} onclick={nuova}>{t("edicola.nuova_partita")}</Pulsante></span>
           </div>
         {/if}
       </Dettaglio>
@@ -192,21 +224,16 @@
 <style>
   /* la pagina sta ferma; il corpo scorre in verticale quando non basta, mai di lato */
   .edicola { position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden }
-  .testa { flex: none; display: flex; align-items: end; gap: 16px; padding: 12px var(--marg) 8px; border-bottom: var(--doppio) }
-  .nomino { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 800; font-size: var(--c-pag); color: var(--rosso); line-height: 1; white-space: nowrap }
-  .dove { font-family: var(--tit); font-size: var(--c-sez); font-weight: 600; line-height: 1.1 }
-  .fuori { margin-left: auto; display: flex; gap: 16px; align-items: center; padding-bottom: 3px }
-  .guasto { flex: none; padding: 4px var(--marg); border-bottom: var(--filo); font-size: var(--c-sec); font-weight: 700; color: var(--rosso) }
+  /* testata, guasto, corpo e titoli in comune con editor e fondazione: fondamenta.css */
+  .fuori { display: flex; gap: 16px; align-items: center }
 
-  .corpo { flex: 1; min-height: 0; display: flex; gap: var(--canale); padding: 14px var(--marg) 16px; overflow: hidden auto }
+  .corpo { display: flex; align-items: start; gap: var(--canale); overflow: hidden auto }
+  /* il dettaglio alto quanto il contenuto, come nella fondazione; oltre l'altezza del corpo scorre */
+  .corpo > :global(.dettaglio) { max-height: 100% }
   .elenchi { flex: 1; min-width: 0; display: grid; gap: 18px; align-content: start }
   .lato { flex: none; width: var(--lato); min-width: 0 }
 
-  .titsez { display: flex; align-items: baseline; gap: 12px; border-bottom: var(--forte); padding-bottom: 4px; margin-bottom: 2px }
-  .titsez .dx { margin-left: auto }
-  .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-riq) }
-  .sec { font-size: var(--c-sec) }
-  .muto { color: var(--grigio) }
+  .titsez { margin-bottom: 2px }
   .vuoto { font-size: var(--c-sec); color: var(--grigio); padding: 10px 8px }
 
   /* le righe dell'albo: la stessa riga di RigaPartita */
