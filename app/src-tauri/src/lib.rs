@@ -760,7 +760,12 @@ mod tests {
         avvia(&stato, dati(), 1)?;
         chiudi(&stato, &archivio)?;
         let e = registro_di(&stato, &archivio, 0).err();
-        assert_eq!(e.map(|e| e.specie), Some(Specie::Rifiuto));
+        assert_eq!(
+            e,
+            Some(rifiuto(
+                "la partita di prova non ha salvataggi: nessun registro"
+            ))
+        );
         Ok(())
     }
 

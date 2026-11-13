@@ -422,7 +422,8 @@ fn esito_da_salvataggio_rifiuta_un_altro_schema() {
 
 #[test]
 fn esito_da_salvataggio_rifiuta_il_json_rotto() {
-    for json in ["{", "[]", "{\"versione_schema\": 18}"] {
+    let senza_resto = format!("{{\"versione_schema\": {VERSIONE_SCHEMA}}}");
+    for json in ["{", "[]", senza_resto.as_str()] {
         let e = Partita::esito_da_salvataggio(json).unwrap_err();
         assert!(
             matches!(e, Errore::SalvataggioIlleggibile(_)),
