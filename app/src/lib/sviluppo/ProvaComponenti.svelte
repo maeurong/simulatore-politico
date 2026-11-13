@@ -8,6 +8,11 @@
   import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import Caselle from "$lib/componenti/Caselle.svelte";
+  import VoceCausa from "$lib/componenti/VoceCausa.svelte";
+  import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
+  import Faccia from "$lib/componenti/Faccia.svelte";
+  import { coalizioneDi, nomeDi } from "$lib/partiti";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
   import Tracciato from "$lib/componenti/Tracciato.svelte";
   import { tracciatiDi, type Tracciato as T } from "$lib/tracciati";
@@ -64,6 +69,11 @@
     ["Caselle larghe, col retino", [prova({ nome: "tracciato.maggioranza", valore: 2, testo: "+2", ramo: "Camera", scala: { stacco: 0, passo: 3, rovesciata: false } })]],
   ];
   let riempi = $state(2);
+
+  const v03t = v03 as unknown as Vista;
+  const camera = (v: Vista) => v.seggi.map((s) => ({ id: s.partito, nome: nomeDi(v, s.partito), seggi: s.camera }));
+  const coalCamera = (v: Vista) => v.seggi.filter((s) => coalizioneDi(v).includes(s.partito)).reduce((x, s) => x + s.camera, 0);
+  const totCamera = (v: Vista) => v.seggi.reduce((x, s) => x + s.camera, 0);
 </script>
 
 <div class="camp">
@@ -171,6 +181,24 @@
   </div>
 </section>
 
+<section class="nuovi">
+  <h3 class="tit">Fascia, voce con causa, barra dei seggi, faccia</h3>
+  <div class="stato"><b class="sec">Fascia a tre</b>
+    <div class="fila sec"><Caselle piene={3} su={3} nome="rischio alto" rosso /><Caselle piene={2} su={3} nome="intesa media" /><Caselle piene={0} su={3} nome="intesa assente" /></div></div>
+  <div class="stato"><b class="sec">Barra a dieci, filo dopo la quarta</b>
+    <div class="fila sec"><Caselle piene={7} su={10} filo={4} nome="intesa 70" /><Caselle piene={3} su={10} filo={4} nome="intesa 30" rosso /><Caselle piene={10} su={10} filo={4} nome="intesa 100" /><Caselle piene={0} su={10} filo={4} nome="intesa 0" /></div></div>
+  <div class="stato"><b class="sec">Voce con causa</b>
+    <div style="max-width:420px"><VoceCausa fatto="Sinistra porta nel posto riservato «Regime delle pensioni»" causa="nessun seggio dei partiti alleati la voterebbe" /><VoceCausa fatto="Senza causa: solo il fatto" /></div></div>
+  <div class="stato"><b class="sec">Barra dei seggi · Camera</b>
+    <div style="max-width:520px;display:grid;gap:16px">
+      <BarraSeggi righe={camera(v03t)} totale={totCamera(v03t)} segno={coalCamera(v03t)} />
+      <BarraSeggi righe={[...camera(v03t), { id: "nuovo_8", nome: "Voce del Paese", seggi: 12 }]} totale={totCamera(v03t) + 12} />
+      <BarraSeggi righe={[{ id: "destra", nome: "Destra", seggi: 0 }]} totale={400} />
+    </div></div>
+  <div class="stato"><b class="sec">Faccia · iniziali</b>
+    <div class="fila"><Faccia nome="Luca Benedetti" misura={34} /><Faccia nome="Luca Benedetti" misura={46} /><Faccia nome="Luca Benedetti" misura={62} /><Faccia nome="Luca Benedetti" misura={84} /><Faccia nome="" misura={34} /></div></div>
+</section>
+
 <div class="lato">
   <div class="corpo">
     <Segnaposto sezione={t("sommario.governo")} fetta="11b" />
@@ -222,6 +250,7 @@
   .grande { gap: 18px; font-size: 17px; margin-top: 0 }
   .contenitore { border: 1.5px dashed var(--grigio); padding: var(--s1) var(--s2) }
 
+  .nuovi { padding: 0 var(--marg) var(--s3) }
   .tracciati { padding: 0 var(--marg) var(--s3) }
   .stato { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) 0; border-top: var(--filo) }
   .trks { display: flex; flex-wrap: wrap; row-gap: var(--s2) }

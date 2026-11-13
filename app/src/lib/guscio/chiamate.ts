@@ -3,15 +3,20 @@ import type { Anteprima } from "$lib/tipi/Anteprima";
 import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
 import type { Comando } from "$lib/tipi/Comando";
+import type { Condizione } from "$lib/tipi/Condizione";
 import type { Decreto } from "$lib/tipi/Decreto";
+import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import type { Eredita } from "$lib/tipi/Eredita";
+import type { Fascia } from "$lib/tipi/Fascia";
 import type { Fondazione } from "$lib/tipi/Fondazione";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { RiepilogoScenario } from "$lib/tipi/RiepilogoScenario";
+import type { Spesa } from "$lib/tipi/Spesa";
 import type { SuMisura } from "$lib/tipi/SuMisura";
 import type { ValoreProposto } from "$lib/tipi/ValoreProposto";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
+import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
 import type { VocePartita } from "$lib/tipi/VocePartita";
 
 export type ErroreGuscio = { specie: "rifiuto" | "guasto"; testo: string };
@@ -24,6 +29,11 @@ export function comeErrore(e: unknown): ErroreGuscio {
     }
   }
   return { specie: "guasto", testo: String(e) };
+}
+
+/** Il testo del core senza «comando non ammesso: » in testa. */
+export function testoRifiuto(e: ErroreGuscio): string {
+  return e.testo.replace(/^comando non ammesso: /, "");
 }
 
 async function chiama<T>(comando: string, args?: Record<string, unknown>): Promise<T> {
@@ -57,4 +67,7 @@ export const guscio = {
   anteprimaFondazione: (scenario: SuMisura | null) =>
     chiama<AnteprimaFondazione>("anteprima_fondazione", { scenario }),
   catalogoScenario: () => chiama<CatalogoScenario>("catalogo_scenario"),
+  anteprimaCampagna: (spese: Spesa[]) => chiama<VoceAnteprimaCampagna[]>("anteprima_campagna", { spese }),
+  elettoriCampione: (regione: string, condizione: Condizione, fascia: Fascia) =>
+    chiama<ElettoreCampione[]>("elettori_campione", { regione, condizione, fascia }),
 };
