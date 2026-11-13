@@ -4,10 +4,10 @@
 // Per ogni pagina: 2 finestre × 2 scale → tagli, forma stretta, errori di console, screenshot;
 // poi movimento (spento; sistema + reduce) e giro di Tab a 1440×900.
 // Esce con 1 se una misura non vale: tagli diversi da zero, contatore muto, scala non applicata, pagina finita altrove;
-// o se il movimento spento (o «Come il sistema» sotto il movimento ridotto) anima altro che opacity, o il Tab non raggiunge un elemento.
+// o se il registro delle animazioni è muto, o se il movimento spento (o «Come il sistema» sotto il movimento ridotto) anima altro che opacity, o il Tab non raggiunge un elemento.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE, FINESTRE, altrove, attendi, avviaChrome, nonDissolvenze, pagine, REGISTRA_ANIMAZIONI, uscita } from "./comune.mjs";
+import { BASE, FINESTRE, altrove, attendi, avviaChrome, leggiRegistro, nonDissolvenze, pagine, REGISTRA_ANIMAZIONI, uscita } from "./comune.mjs";
 
 const elenco = await pagine("npm run verifica:chrome --");
 const out = uscita("chrome");
@@ -66,9 +66,10 @@ for (const [nome, percorso] of elenco) {
       await val(`(() => { const e = document.querySelectorAll('button, a[href], [role="radio"], input, select')[${i}]; if (!e || e.getAttribute('aria-disabled') === 'true' || e.closest('[data-tagli-ignora]')) return; if (e.tagName === 'A') { e.focus(); return } e.click() })()`);
       await attendi(40);
     }
-    const partite = JSON.parse(await val("JSON.stringify(window.__anim ?? [])"));
-    const tipi = [...new Set(partite.flat())];
-    esiti.push({ pagina: nome, movimento: etichetta, animazioni: partite.length, tipi, guasto: nonDissolvenze(tipi).length ? "MOVIMENTO" : null, errori: [...errori] });
+    const partite = await leggiRegistro(val);
+    const tipi = [...new Set((partite ?? []).flat())];
+    // un registro assente non vale zero: lo script iniettato non ha girato
+    esiti.push({ pagina: nome, movimento: etichetta, animazioni: partite?.length ?? 0, tipi, guasto: !partite ? "REGISTRO MUTO" : nonDissolvenze(tipi).length ? "MOVIMENTO" : null, errori: [...errori] });
   }
   await cmd("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   // passo 3: tastiera. Ogni comando visibile si raggiunge col Tab.

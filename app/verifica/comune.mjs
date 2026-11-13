@@ -19,12 +19,17 @@ export const CARICO = "Il sospetto più probabile è la macchina sotto carico, p
 export const nomeValido = (nome) => /^[A-Za-z0-9_-]+$/.test(nome);
 /** Col movimento spento restano solo le dissolvenze (spec, storia 55): le proprietà animate diverse da opacity. */
 export const nonDissolvenze = (proprieta) => [...new Set(proprieta)].filter((p) => p !== "opacity");
+/** Legge il registro dopo l'ultima animazione (transitionrun e animationstart partono al frame dopo il clic): null se lo script iniettato non ha girato. */
+export async function leggiRegistro(val) {
+  await attendi(250);
+  return JSON.parse(await val("JSON.stringify(window.__anim ?? null)"));
+}
 /** Registra ogni animazione che parte, con le proprietà che anima: window.__anim è un elenco di elenchi. Va iniettato a ogni nuovo documento. */
 export const REGISTRA_ANIMAZIONI = `(() => {
   window.__anim = [];
   const chiavi = (a) => [...new Set((a?.effect?.getKeyframes?.() ?? []).flatMap((k) => Object.keys(k)))].filter((p) => !["offset", "computedOffset", "easing", "composite"].includes(p));
   addEventListener("transitionrun", (e) => window.__anim.push([e.propertyName]), true);
-  addEventListener("animationstart", (e) => { const a = e.target.getAnimations?.().find((x) => x.animationName === e.animationName); window.__anim.push(a ? chiavi(a) : ["@" + e.animationName]); }, true);
+  addEventListener("animationstart", (e) => { const a = e.target.getAnimations?.({ subtree: true }).find((x) => x.animationName === e.animationName); window.__anim.push(a ? chiavi(a) : ["@" + e.animationName]); }, true);
   const animate = Element.prototype.animate;
   Element.prototype.animate = function (...args) { const a = animate.apply(this, args); window.__anim.push(chiavi(a)); return a; };
 })()`;
@@ -41,7 +46,7 @@ export async function controlla(percorsi) {
 export async function pagine(uso) {
   const voci = process.argv.slice(2).map((v) => [v.slice(0, Math.max(v.indexOf("="), 0)), v.slice(v.indexOf("=") + 1)]);
   if (!voci.length || voci.some(([nome, percorso]) => !nomeValido(nome) || !percorso.startsWith("/"))) {
-    esci(`Uso: ${uso} <nome>=<percorso> [<nome>=<percorso> ...]\n  il nome ha solo lettere, cifre, - e _\n  es. 'edicola=/?vista=13-edicola.json' scenario=/scenario`);
+    esci(`Uso: ${uso} <nome>=<percorso> [<nome>=<percorso> ...]\n  il nome ha solo lettere, cifre, - e _\n  il percorso comincia con /\n  es. 'edicola=/?vista=13-edicola.json' scenario=/scenario`);
   }
   await controlla(voci.map(([, percorso]) => percorso));
   return voci;
@@ -77,7 +82,10 @@ export async function avviaChrome(suEvento = () => {}) {
   if (!pagina) esci(`Chrome non ha aperto il canale di debug entro 30 secondi. ${CARICO}`);
   const ws = new WebSocket(pagina.webSocketDebuggerUrl);
   ws.onerror = () => esci("Il canale di debug di Chrome è caduto.");
-  await new Promise((r) => (ws.onopen = r));
+  await new Promise((r) => {
+    const tetto = setTimeout(() => esci(`Il canale di debug di Chrome non si è aperto entro 30 secondi. ${CARICO}`), 30_000);
+    ws.onopen = () => { clearTimeout(tetto); r(); };
+  });
   let n = 0; const attese = new Map();
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data);

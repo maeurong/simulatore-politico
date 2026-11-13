@@ -32,7 +32,10 @@ for (const [nome, percorso] of elenco) {
       const env = { ...process.env, WK_FOTO: join(out, `${nome}-${w}x${h}-x${scala}.png`) };
       let esito;
       try { esito = execFileSync(wk, [url, String(w), String(h), String(scala), ESPR], { env, encoding: "utf8", timeout: TETTO }).trim(); }
-      catch (e) { esci(`wk non ha risposto per ${nome} ${w}x${h} x${scala} (${e.code ?? "uscito con errore"}). ${CARICO}`); }
+      catch (e) {
+        esci(`wk ${nome} ${w}x${h} x${scala}: ` + (e.code === "ETIMEDOUT" ? `non ha risposto in ${TETTO / 1000} s. ${CARICO}`
+          : `uscito con ${e.status ?? e.signal ?? e.code}: ${String(e.stderr || e.message).trim().slice(0, 300)}`));
+      }
       // una misura vale se la pagina è quella chiesta, la scala è applicata e il contatore dà zero; un esito illeggibile non vale
       let guasto = "ILLEGGIBILE";
       try { const e = JSON.parse(esito); guasto = altrove(percorso, e.dove) ? "ALTROVE" : e.z !== scala ? "SCALA NON APPLICATA" : e.t !== 0 ? "TAGLI" : null; } catch {}
