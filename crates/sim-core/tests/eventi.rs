@@ -66,6 +66,50 @@ fn voce_di_prova(p: &Partita) -> VoceEsito {
         .unwrap()
 }
 
+/// `p` con lo scandalo certo a ogni chiusura e nessuno shock (soglia a 4 sigma): lo scandalo, il
+/// più grave degli altri candidati, nasce sempre.
+fn con_scandalo_certo(p: &Partita) -> Partita {
+    edita(p, |j| {
+        let m = &mut j["dati"]["manopole"];
+        m["scandalo_base"]["max"] = json!(1000.0);
+        m["scandalo_base"]["valore"] = json!(1000.0);
+        m["soglia_shock"]["valore"] = json!(4.0);
+    })
+    .unwrap()
+}
+
+/// Lo scandalo nato nella chiusura ha la sua voce: nome, bersaglio, causa della `VoceEvento`, la
+/// famiglia; critica al governo, notevole all'opposizione.
+#[test]
+fn evento_nato_porta_la_famiglia_e_la_causa() {
+    for (p, criticita) in [
+        (al_governo(), Criticita::Critica),
+        (all_opposizione(), Criticita::Notevole),
+    ] {
+        let mut p = con_scandalo_certo(&p);
+        chiudi_col_bilancio(&mut p);
+        let vista = p.vista();
+        let e = (vista.eventi.iter())
+            .find(|e| e.famiglia == Famiglia::Scandalo)
+            .expect("lo scandalo nato");
+        let nati = voci(&p, TipoVoce::EventoNato);
+        assert_eq!(nati.len(), 1, "{nati:?}");
+        let v = &nati[0];
+        let persona = e.bersaglio.as_deref().unwrap();
+        assert!(
+            v.fatto.starts_with(&format!("{} ({persona}, ", e.nome)),
+            "{}",
+            v.fatto
+        );
+        assert_eq!(v.causa, e.causa);
+        assert_eq!(v.causa, "rischio alto");
+        assert_eq!(v.famiglia, Some(Famiglia::Scandalo));
+        assert_eq!(v.criticita, criticita);
+        // Il soggetto: il dicastero del ministro o il partito del leader.
+        assert!(v.dicastero.is_some() != v.partito.is_some(), "{v:?}");
+    }
+}
+
 #[test]
 fn senza_scelta_vale_il_default() {
     let mut p = con_evento_di_prova();

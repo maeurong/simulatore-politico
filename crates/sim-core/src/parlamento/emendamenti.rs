@@ -72,7 +72,7 @@ fn proposta(
 
 /// `"{nome}: {gradino}"`, `"{nome}: in vigore fra {n} turni"` o `"{dicastero}: budget indicizzato
 /// all'inflazione"`, uniti da `"; "`.
-fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
+pub(crate) fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
     let turni = dati.manopola("turni_rinvio_regime");
     (proposta.iter())
         .filter_map(|&(d, x)| match x {
@@ -116,8 +116,10 @@ impl Parlamento {
     /// senza emendamenti già aperti e fuori dal posto riservato all'opposizione (scelta 15 del
     /// piano 7b), chiede un emendamento ogni alleato distante almeno `distanza_alleato` dalla
     /// misura, che tiene il dicastero proponente o che con la legge elettorale perde seggi attesi;
-    /// non chi ha già un emendamento deciso sulla misura.
-    pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
+    /// non chi ha già un emendamento deciso sulla misura. Rende le richieste nate, come (id della
+    /// misura, partito).
+    pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) -> Vec<(u32, usize)> {
+        let mut chiesti = Vec::new();
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
         for m in &mut self.misure {
@@ -157,9 +159,11 @@ impl Parlamento {
                     stato: StatoEmendamento::Aperto,
                     motivo,
                 });
+                chiesti.push((m.id, j));
             }
             m.emendamenti_aperti = true;
         }
+        chiesti
     }
 
     /// Gli emendamenti della legge di bilancio del turno: restano i decisi, gli aperti diventano

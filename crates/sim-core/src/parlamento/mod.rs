@@ -25,7 +25,7 @@ pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_centro_st
 pub use decreti::{Decreto, FondiDecreto};
 pub(crate) use decreti::{ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
-pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata};
+pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata, testo};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
 pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, riparto_con};

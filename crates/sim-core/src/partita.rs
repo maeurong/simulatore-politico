@@ -359,10 +359,15 @@ impl Partita {
             innovazioni,
             self.economia.pil_potenziale_annuo(),
         ));
-        let Some(i) = rischio::estrai(&mut self.caso, &candidati) else {
+        let estratti = rischio::estrai(&mut self.caso, &candidati);
+        // Spec, scelta 12: lo shock escluso dal tetto ha già mosso la serie nel motore; vale il
+        // default «Non intervenire», che non ha effetti, quindi resta solo la voce.
+        for c in estratti.esclusi.iter().filter_map(|&k| candidati.get(k)) {
+            self.voce_assorbito(c);
+        }
+        let Some(c) = estratti.vincitore.and_then(|i| candidati.get(i)) else {
             return;
         };
-        let c = &candidati[i];
         let aperto = EventoAperto {
             evento: c.evento,
             turno: self.turno.saturating_add(1),
@@ -388,6 +393,7 @@ impl Partita {
             self.eventi.lievi.push(aperto);
             return;
         }
+        self.voce_nato(&aperto);
         self.eventi.aperti.push(aperto);
     }
 
@@ -729,7 +735,9 @@ impl Partita {
         // Nel turno nuovo nessuna variazione c'è ancora: quelle dell'apertura sono tutte voci.
         lette = self.lette();
         self.data = self.data.successivo();
-        (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
+        let arrivati =
+            (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
+        self.voci_arrivi(arrivati);
         self.parlamento.apri(self.turno);
         // Le elettorali rese non valide dai voti e dagli arrivi decadono prima degli emendamenti.
         for m in std::mem::take(&mut self.parlamento.misure) {
@@ -751,7 +759,8 @@ impl Partita {
             giocatore: self.giocatore,
             ultimo_anno: self.legislatura.ultimo_anno(self.turno),
         };
-        self.parlamento.apri_emendamenti(&aula, self.turno);
+        let chiesti = self.parlamento.apri_emendamenti(&aula, self.turno);
+        self.voci_emendamenti_chiesti(&chiesti);
         let cx = Contesto {
             dati: &self.dati,
             governo: &self.governo,
@@ -5533,6 +5542,56 @@ mod tests {
         let della_coalizione: u32 = c.iter().map(|&j| p.parlamento.seggi_camera[j]).sum();
         let attesa = della_coalizione as i32 - (p.legislatura.totali.0 / 2 + 1) as i32;
         assert_eq!(dopo.margine_camera, attesa);
+    }
+
+    /// Una recessione che si accende nella chiusura: col suo evento nato, una voce sola,
+    /// `EventoNato`; con una situazione senza evento nei dati (che `valida` rifiuta, qui forzata),
+    /// resta `SituazioneAccesa`.
+    #[test]
+    fn situazione_accesa_tace_se_nasce_il_suo_evento() {
+        let in_recessione = |senza_evento: bool| {
+            let mut p = Partita::nuova(dati_base(), 1);
+            let r = (p.dati.situazioni().iter())
+                .position(|s| s.id == "recessione")
+                .unwrap();
+            if senza_evento {
+                p.dati.situazioni[r].evento = "assente".into();
+            }
+            // Un trimestre in calo già contato, e il PIL di prima più alto del 5%: la crescita vera
+            // del trimestre è ben sotto la soglia di −1% annuo.
+            p.eventi.contatori[r] = 1;
+            p.economia.pil_trimestrale *= 1.05;
+            p.chiudi_turno();
+            assert!(p.eventi.accese[r]);
+            let della_recessione: Vec<TipoVoce> = (p.esito.iter())
+                .filter(|v| v.fatto.contains("Recessione"))
+                .map(|v| v.tipo)
+                .collect();
+            (p, della_recessione)
+        };
+        let (p, voci) = in_recessione(false);
+        assert_eq!(voci, [TipoVoce::EventoNato], "{:?}", p.esito);
+        let v = (p.esito.iter())
+            .find(|v| v.tipo == TipoVoce::EventoNato && v.fatto == "Recessione")
+            .unwrap();
+        assert_eq!(v.famiglia, Some(Famiglia::Situazione));
+        assert!(v.causa.starts_with("crescita del PIL: "), "{}", v.causa);
+        assert!(v.causa.ends_with("% annuo (soglia -1,0%)"), "{}", v.causa);
+        let (p, voci) = in_recessione(true);
+        assert_eq!(voci, [TipoVoce::SituazioneAccesa], "{:?}", p.esito);
+        let v = (p.esito.iter())
+            .find(|v| v.tipo == TipoVoce::SituazioneAccesa)
+            .unwrap();
+        assert!(
+            v.fatto
+                .starts_with("Si accende la situazione «Recessione»: crescita del PIL a "),
+            "{}",
+            v.fatto
+        );
+        assert_eq!(
+            v.causa,
+            "oltrepassata la soglia di accensione di -1,0% annuo, per 2 trimestri di fila"
+        );
     }
 
     /// Scarto 0,25 nei dati: la fascia bassa delusa di 0,25 punti ha la voce, la media di 0,24 no.

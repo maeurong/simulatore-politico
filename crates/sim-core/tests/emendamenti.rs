@@ -44,6 +44,20 @@ fn alleato_lontano_chiede_un_emendamento_a_meta_strada() {
         "{}",
         e[0].motivo
     );
+    let c = voci(&p, TipoVoce::EmendamentoChiesto);
+    assert_eq!(c.len(), 1, "{c:?}");
+    assert_eq!(
+        c[0].fatto,
+        format!(
+            "Centrodestra chiede di emendare «{}»: Età pensionabile: 65 anni",
+            v.calendario[0].nome
+        )
+    );
+    assert_eq!(c[0].causa, e[0].motivo);
+    assert_eq!(c[0].criticita, Criticita::Notevole);
+    assert_eq!(c[0].partito.as_deref(), Some("centrodestra"));
+    assert_eq!(c[0].misura, Some(v.calendario[0].id));
+    assert_eq!(c[0].disposizioni, ["eta_pensionabile"]);
 }
 
 #[test]

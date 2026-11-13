@@ -6,7 +6,7 @@
 mod comune;
 use comune::{all_opposizione, edita, file_base, fondata, imposta, voci};
 use serde_json::json;
-use sim_core::esito::TipoVoce;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico, OrigineCaduta};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
 use sim_core::vista::VoceIncarico;
@@ -723,6 +723,22 @@ fn cade_per_la_crisi(mut p: Partita) {
     let v = voci(&p, TipoVoce::GovernoCaduto);
     assert_eq!(v.len(), 1, "{v:?}");
     assert_eq!(v[0].causa, "la crisi di governo senza uscita");
+}
+
+/// La voce del governo avversario che si dimette: del suo Presidente del Consiglio, critica di
+/// precedenza 3 all'opposizione, con uno dei tre motivi nella causa (gli altri tre test qui sotto
+/// li provocano uno per uno).
+#[test]
+fn il_governo_avversario_si_dimette_col_motivo() {
+    let p = in_crisi(all_opposizione(), 10.0);
+    let v = voci(&p, TipoVoce::GovernoDimissionario);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].fatto, DIMESSO);
+    let motivi = [SI_DIMETTE, SI_DIMETTE_ROTTURA, SI_DIMETTE_IN_PROVVISORIO];
+    assert!(motivi.contains(&v[0].causa.as_str()), "{}", v[0].causa);
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    let pc = &p.partiti()[p.governo().presidente].id;
+    assert_eq!(v[0].partito.as_ref(), Some(pc));
 }
 
 #[test]

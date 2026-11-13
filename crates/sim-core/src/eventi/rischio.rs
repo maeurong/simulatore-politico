@@ -172,19 +172,32 @@ pub(crate) fn livello(p: f64) -> Fascia3 {
     }
 }
 
+/// Gli indici dei candidati usciti: il vincitore del tetto e gli altri, esclusi, nell'ordine.
+pub(crate) struct Estratti {
+    pub vincitore: Option<usize>,
+    pub esclusi: Vec<usize>,
+}
+
 /// Una uniforme da `Flusso::Eventi` per candidato, nell'ordine, a prescindere dagli esiti: esce chi
-/// ha `u < p`. Restituisce l'indice del vincitore (gravità più alta, a parità il primo). Una `p` non
+/// ha `u < p`. Vince fra gli usciti la gravità più alta, a parità il primo. Una `p` non
 /// finita non è difesa qui: con NaN `u < p` è falso e il candidato non esce mai, `p >= 1` esce
 /// sempre, `p <= 0` mai; i candidati nascono dai dati validati, con `p` in 0-1.
-pub(crate) fn estrai(caso: &mut Caso, candidati: &[Candidato]) -> Option<usize> {
+pub(crate) fn estrai(caso: &mut Caso, candidati: &[Candidato]) -> Estratti {
+    let mut usciti = Vec::new();
     let mut vincitore: Option<usize> = None;
     for (i, c) in candidati.iter().enumerate() {
-        let uscito = caso.uniforme(Flusso::Eventi) < c.p;
-        if uscito && vincitore.is_none_or(|v| c.gravita > candidati[v].gravita) {
-            vincitore = Some(i);
+        if caso.uniforme(Flusso::Eventi) < c.p {
+            if vincitore.is_none_or(|v| c.gravita > candidati[v].gravita) {
+                vincitore = Some(i);
+            }
+            usciti.push(i);
         }
     }
-    vincitore
+    usciti.retain(|&i| Some(i) != vincitore);
+    Estratti {
+        vincitore,
+        esclusi: usciti,
+    }
 }
 
 #[cfg(test)]
@@ -215,14 +228,24 @@ mod tests {
     fn vince_il_piu_grave() {
         let mut caso = Caso::nuovo(1);
         let v = estrai(&mut caso, &[cand(1.0, 2), cand(1.0, 5), cand(1.0, 3)]);
-        assert_eq!(v, Some(1));
+        assert_eq!(v.vincitore, Some(1));
     }
 
     #[test]
     fn a_parita_vince_il_primo() {
         let mut caso = Caso::nuovo(1);
         let v = estrai(&mut caso, &[cand(1.0, 4), cand(1.0, 4)]);
-        assert_eq!(v, Some(0));
+        assert_eq!(v.vincitore, Some(0));
+    }
+
+    #[test]
+    fn estrai_rende_gli_esclusi() {
+        let mut caso = Caso::nuovo(1);
+        let v = estrai(&mut caso, &[cand(1.0, 8), cand(1.0, 12)]);
+        assert_eq!((v.vincitore, v.esclusi), (Some(1), vec![0]));
+        // Chi non esce non è escluso.
+        let v = estrai(&mut caso, &[cand(0.0, 8), cand(1.0, 12), cand(1.0, 3)]);
+        assert_eq!((v.vincitore, v.esclusi), (Some(1), vec![2]));
     }
 
     #[test]
@@ -230,7 +253,7 @@ mod tests {
         let mut a = Caso::nuovo(7);
         let mut b = Caso::nuovo(7);
         let v = estrai(&mut a, &[cand(1.0, 1), cand(0.0, 9), cand(1.0, 1)]);
-        assert_eq!(v, Some(0));
+        assert_eq!(v.vincitore, Some(0));
         for _ in 0..3 {
             b.uniforme(Flusso::Eventi);
         }
@@ -275,7 +298,7 @@ mod tests {
     fn shock_oltre_soglia_apre_un_evento() {
         let c = con_z([-3.0, 0.0, 0.0, 0.0, 0.0]);
         let mut caso = Caso::nuovo(1);
-        assert_eq!(estrai(&mut caso, &c), Some(0));
+        assert_eq!(estrai(&mut caso, &c).vincitore, Some(0));
         assert_eq!(
             c[0].causa,
             Causa::Shock {
@@ -295,14 +318,14 @@ mod tests {
         let c = candidati_shock(&dati, &z, 1e12);
         assert_eq!(c.len(), 5);
         assert!(c.iter().all(|x| x.p == 0.0));
-        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c).vincitore, None);
     }
 
     #[test]
     fn shock_sotto_soglia_niente() {
         let c = con_z([-2.4, -2.4, 2.4, -2.4, 2.4]);
         assert_eq!(c.len(), 5);
-        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c).vincitore, None);
     }
 
     #[test]
@@ -316,7 +339,7 @@ mod tests {
         // Innovazioni favorevoli oltre soglia: produttività su, energia giù, BCE giù.
         let c = con_z([3.0, 3.0, -3.0, 3.0, -3.0]);
         assert!(c.iter().all(|x| x.p == 0.0));
-        assert_eq!(estrai(&mut Caso::nuovo(1), &c), None);
+        assert_eq!(estrai(&mut Caso::nuovo(1), &c).vincitore, None);
     }
 
     /// Cinque normali da `Flusso::Economia` per chiusura, come nel passo; vale un evento per

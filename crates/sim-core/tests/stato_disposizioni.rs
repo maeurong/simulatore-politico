@@ -1,7 +1,8 @@
 mod comune;
-use comune::{con_arrivo, dati_base, edita, file_base, sostituisci};
+use comune::{con_arrivo, dati_base, edita, file_base, sostituisci, voci};
 use sim_core::dati::DatiGioco;
 use sim_core::disposizioni::Disposizioni;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::{Errore, Partita};
 
 #[test]
@@ -43,6 +44,56 @@ fn valore_in_arrivo_arriva_al_suo_turno() {
         ("vietato", "L. 169/2026, art. 1")
     );
     assert!(n.in_arrivo.is_empty());
+    let v: Vec<_> = (voci(&p, TipoVoce::ValoreInVigore).into_iter())
+        .filter(|v| v.fatto.starts_with("Nucleare "))
+        .collect();
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(
+        (v[0].fatto.as_str(), v[0].causa.as_str()),
+        (
+            "Nucleare passa a consentito: entra in vigore il valore in arrivo",
+            "valore fissato da «L. 169/2026, art. 1»"
+        )
+    );
+    let al_governo = p.governo().presidente == p.giocatore();
+    let attesa = if al_governo {
+        Criticita::Notevole
+    } else {
+        Criticita::Ordinaria
+    };
+    assert_eq!(v[0].criticita, attesa);
+}
+
+/// Un arrivo che renderebbe non valida la legge elettorale (coalizioni non ammesse col premio alla
+/// coalizione) si scarta all'apertura, con la voce.
+#[test]
+fn arrivo_elettorale_scartato_lascia_la_voce() {
+    let p = Partita::nuova(dati_base(), 1);
+    let d = dati_base();
+    let k = d.disposizione("coalizioni").unwrap();
+    let no = d.disposizioni()[k].gradino("no").unwrap();
+    let mut p = edita(&p, |j| {
+        j["disposizioni"]["voci"][k]["in_arrivo"] =
+            serde_json::json!([{ "gradino": no, "turno": 1, "legge": "L. 1/2027" }]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.in_vigore("coalizioni"), Some("si"));
+    let v = voci(&p, TipoVoce::ArrivoScartato);
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(
+        v[0].fatto,
+        "Coalizioni resta a ammesse, non a non ammesse: il valore in arrivo è scartato"
+    );
+    let motivo = "la legge elettorale che ne uscirebbe non sarebbe valida, ";
+    assert!(v[0].causa.starts_with(motivo), "{}", v[0].causa);
+    assert!(!v[0].causa.contains(": "), "{}", v[0].causa);
+    assert_eq!(v[0].criticita, Criticita::Ordinaria);
+    assert!(
+        voci(&p, TipoVoce::ValoreInVigore)
+            .iter()
+            .all(|x| !x.fatto.starts_with("Coalizioni "))
+    );
 }
 
 #[test]

@@ -7,6 +7,7 @@ mod comune;
 use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, file_vero, sostituisci, voci};
 use serde_json::json;
 use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
+use sim_core::eventi::Famiglia;
 use sim_core::{DatiGioco, Partita};
 
 fn accesa(p: &Partita, misura: &str) -> bool {
@@ -78,19 +79,23 @@ fn le_carceri_oltre_la_soglia_aprono_un_evento() {
     let e = (v.eventi.iter().find(|e| e.nome == "Emergenza carceri")).unwrap();
     assert!(e.causa.starts_with("Sovraffollamento"), "{}", e.causa);
     assert!(e.causa.ends_with("(soglia 117,0)"));
-    let accese = delle_carceri(&p, TipoVoce::SituazioneAccesa);
-    let fatto = format!(
-        "Si accende la situazione «Sovraffollamento delle carceri»: sovraffollamento delle \
-         carceri a {}",
-        ufficiale(&p, "sovraffollamento_carceri")
+    // L'evento è nato nella stessa chiusura: la sua voce porta valore ufficiale e soglia, e la
+    // situazione accesa tace (spec, «Situazione accesa ed evento nato»).
+    assert!(delle_carceri(&p, TipoVoce::SituazioneAccesa).is_empty());
+    let nati: Vec<VoceEsito> = (voci(&p, TipoVoce::EventoNato).into_iter())
+        .filter(|v| v.fatto == "Emergenza carceri")
+        .collect();
+    assert_eq!(nati.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(nati[0].causa, e.causa);
+    assert!(
+        nati[0]
+            .causa
+            .contains(&format!(": {} ", ufficiale(&p, "sovraffollamento_carceri"))),
+        "{}",
+        nati[0].causa
     );
-    assert_eq!(accese.len(), 1, "{:?}", p.vista().esito);
-    assert_eq!(accese[0].fatto, fatto);
-    assert_eq!(
-        accese[0].causa,
-        "oltrepassata la soglia di accensione di 117,0"
-    );
-    assert_eq!(accese[0].criticita, Criticita::Critica);
+    assert_eq!(nati[0].famiglia, Some(Famiglia::Situazione));
+    assert_eq!(nati[0].criticita, Criticita::Critica);
 }
 
 /// Accesa, resta accesa fra le due soglie senza voci, poi si spegne sotto lo spegnimento con la

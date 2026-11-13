@@ -3,12 +3,14 @@
 use super::ia::elenco;
 use super::vita::virgola;
 use super::{Partita, Trimestre};
+use crate::disposizioni::Arrivati;
 use crate::disposizioni::data_di;
 use crate::economia::Economia;
 use crate::elettorato::RedditoFascia;
 use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
+use crate::eventi::rischio::Candidato;
 use crate::eventi::situazioni::trimestri;
-use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
+use crate::eventi::{Bersaglio, Causa as EventoCausa, DatoOpzione, EventoAperto, Tono, emergenze};
 use crate::informazione::Sondaggio;
 use crate::legislatura::campagna::{self, migliaia};
 use crate::legislatura::{self, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
@@ -718,7 +720,7 @@ impl Partita {
     /// accese di ora, col valore `ufficiali` che la Vista mostra.
     pub(super) fn voci_situazioni(&mut self, accese_prima: &[bool], ufficiali: &[f64]) {
         let righe = (self.dati.situazioni().iter().enumerate()).zip(&self.eventi.accese);
-        let cambi: Vec<(TipoVoce, String, String)> = righe
+        let cambi: Vec<(usize, TipoVoce, String, String)> = righe
             .filter_map(|((i, s), &ora)| {
                 let (tipo, verbo, quale, soglia) = match (accese_prima.get(i)?, ora) {
                     (false, true) => (
@@ -746,11 +748,103 @@ impl Partita {
                     virgola(*ufficiali.get(i)?)
                 );
                 let causa = format!("{quale} di {}{unita}{fila}", virgola(soglia));
-                Some((tipo, fatto, causa))
+                Some((i, tipo, fatto, causa))
             })
             .collect();
-        for (tipo, fatto, causa) in cambi {
-            self.voce(tipo, fatto, causa);
+        for (i, tipo, fatto, causa) in cambi {
+            // Spec, «Situazione accesa ed evento nato»: se l'evento della situazione è nato ora,
+            // la sua voce porta già valore ufficiale e soglia, e la situazione tace.
+            match (tipo == TipoVoce::SituazioneAccesa)
+                .then(|| self.nato_dalla_situazione(i))
+                .flatten()
+            {
+                Some(aperto) => self.voce_nato(&aperto),
+                None => {
+                    self.voce(tipo, fatto, causa);
+                }
+            }
+        }
+    }
+
+    /// L'evento della situazione `i` aperto in questa chiusura (`situazioni::apri`), se c'è.
+    fn nato_dalla_situazione(&self, i: usize) -> Option<EventoAperto> {
+        let evento = self.dati.evento(&self.dati.situazioni().get(i)?.evento)?;
+        let turno = self.turno.saturating_add(1);
+        (self.eventi.aperti.iter())
+            .find(|a| a.evento == evento && a.turno == turno)
+            .cloned()
+    }
+
+    /// Fatto 113: l'evento `a` nato in questa chiusura, con la causa della `VoceEvento`.
+    pub(super) fn voce_nato(&mut self, a: &EventoAperto) {
+        let Some(e) = self.dati.eventi().get(a.evento) else {
+            return;
+        };
+        let (nome, famiglia) = (e.nome.clone(), e.famiglia);
+        let (mut dicastero, mut partito, mut di) = (None, None, None);
+        match a.bersaglio {
+            Some(Bersaglio::Ministro { dicastero: k }) => {
+                let d = self.dati.dicasteri().get(k);
+                dicastero = d.map(|d| d.id.clone());
+                di = d.map(|d| d.nome.clone());
+            }
+            Some(Bersaglio::Leader { partito: j }) => {
+                let p = self.partiti.get(j);
+                partito = p.map(|p| p.id.clone());
+                di = p.map(|p| p.nome.clone());
+            }
+            None => {}
+        }
+        let chi = match (&a.persona, di) {
+            (Some(persona), Some(di)) => format!(" ({persona}, {di})"),
+            (Some(persona), None) => format!(" ({persona})"),
+            _ => String::new(),
+        };
+        let mut fatto = format!("{nome}{}{chi}", self.in_regione(a.regione));
+        if a.costo > 0 {
+            fatto.push_str(&format!(
+                ", costo dell'intervento {} euro",
+                migliaia(a.costo)
+            ));
+        }
+        let causa = a.causa.testo(&self.dati);
+        let regione = self.id_regione(a.regione);
+        if let Some(v) = self.voce(TipoVoce::EventoNato, fatto, causa) {
+            v.tono = a.tono;
+            v.famiglia = Some(famiglia);
+            v.regione = regione;
+            v.dicastero = dicastero;
+            v.partito = partito;
+        }
+    }
+
+    /// Fatto 115: lo shock `c` uscito ma escluso dal tetto di un evento a turno. Gli altri esclusi
+    /// (emergenze, scandali) non sono nati e non sono voci.
+    pub(super) fn voce_assorbito(&mut self, c: &Candidato) {
+        let EventoCausa::Shock {
+            serie,
+            sigma,
+            soglia,
+        } = &c.causa
+        else {
+            return;
+        };
+        let Some(e) = self.dati.eventi().get(c.evento) else {
+            return;
+        };
+        let default = (e.opzioni.iter().find(|o| o.default)).map_or("", |o| o.nome.as_str());
+        let fatto = format!(
+            "{} senza evento: ne nasce uno solo a turno, la serie si muove lo stesso e vale \
+             «{default}»",
+            e.nome
+        );
+        let causa = format!(
+            "serie «{serie}», shock di {} sigma oltre la soglia di {} sigma",
+            virgola(*sigma),
+            virgola(*soglia)
+        );
+        if let Some(v) = self.voce(TipoVoce::ShockAssorbito, fatto, causa) {
+            v.tono = c.tono;
         }
     }
 
@@ -1020,6 +1114,70 @@ impl Partita {
                 }
             };
             self.voce_misura(tipo, m, fatto, causa);
+        }
+    }
+
+    /// Fatti 116 e 117: all'apertura, i valori in arrivo entrati in vigore e gli elettorali scartati.
+    pub(super) fn voci_arrivi(&mut self, a: Arrivati) {
+        // Il motivo viene dagli errori di `valida`: niente «: », perché la voce si fonde.
+        let motivo = a.motivo.replace(": ", ", ");
+        let righe = (a.entrati.into_iter().map(|x| (x, true)))
+            .chain(a.scartati.into_iter().map(|x| (x, false)));
+        for ((d, arrivo), entrato) in righe {
+            let Some(x) = self.dati.disposizioni().get(d) else {
+                continue;
+            };
+            let nuovo = x
+                .gradini
+                .get(arrivo.gradino)
+                .map_or("", |g| g.nome.as_str());
+            let (tipo, fatto, causa) = if entrato {
+                (
+                    TipoVoce::ValoreInVigore,
+                    format!(
+                        "{} passa a {nuovo}: entra in vigore il valore in arrivo",
+                        x.nome
+                    ),
+                    format!("valore fissato da «{}»", arrivo.legge),
+                )
+            } else {
+                let vigente = (self.disposizioni.voci.get(d))
+                    .and_then(|v| x.gradini.get(v.in_vigore))
+                    .map_or("", |g| g.nome.as_str());
+                (
+                    TipoVoce::ArrivoScartato,
+                    format!(
+                        "{} resta a {vigente}, non a {nuovo}: il valore in arrivo è scartato",
+                        x.nome
+                    ),
+                    format!("la legge elettorale che ne uscirebbe non sarebbe valida, {motivo}"),
+                )
+            };
+            self.voce(tipo, fatto, causa);
+        }
+    }
+
+    /// Fatto 122: gli emendamenti `chiesti` all'apertura, come (id della misura, alleato).
+    pub(super) fn voci_emendamenti_chiesti(&mut self, chiesti: &[(u32, usize)]) {
+        for &(id, j) in chiesti {
+            let Some(m) = self.parlamento.misure.iter().find(|m| m.id == id) else {
+                continue;
+            };
+            let Some(e) = m.emendamenti.iter().find(|e| e.partito == j) else {
+                continue;
+            };
+            let chi = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+            let fatto = format!(
+                "{chi} chiede di emendare «{}»: {}",
+                parlamento::nome_misura(&self.dati, m),
+                parlamento::testo(&self.dati, &e.proposta)
+            );
+            let causa = e.motivo.clone();
+            let disposizioni = self.disposizioni_di(&m.valori);
+            if let Some(v) = self.voce_di(j, TipoVoce::EmendamentoChiesto, fatto, causa) {
+                v.misura = Some(id);
+                v.disposizioni = disposizioni;
+            }
         }
     }
 

@@ -17,6 +17,16 @@ pub struct InArrivo {
     pub legge: String,
 }
 
+/// Ciò che `Disposizioni::arrivi` ha fatto, per disposizione: gli arrivi entrati che cambiano il
+/// gradino in vigore e gli elettorali scartati, con `motivo` la ragione per cui la legge
+/// elettorale non sarebbe valida (vuoto senza scarti).
+#[derive(Debug, Default)]
+pub struct Arrivati {
+    pub entrati: Vec<(usize, InArrivo)>,
+    pub scartati: Vec<(usize, InArrivo)>,
+    pub motivo: String,
+}
+
 /// Gradini per indice; `bloccati` = gradini abrogati da un referendum.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StatoDisposizione {
@@ -151,7 +161,12 @@ impl Disposizioni {
     /// Apertura del turno `turno`: ogni arrivo dovuto entra in vigore, in ordine, con la sua
     /// legge, ed esce dalla lista; gli effetti vanno in `effetti`. Gli arrivi elettorali del turno
     /// si scartano tutti se la legge elettorale che ne risulta non è valida.
-    pub fn arrivi(&mut self, dati: &DatiGioco, turno: u32, effetti: &mut Vec<EffettoAttivo>) {
+    pub fn arrivi(
+        &mut self,
+        dati: &DatiGioco,
+        turno: u32,
+        effetti: &mut Vec<EffettoAttivo>,
+    ) -> Arrivati {
         let mut arrivati: Vec<(usize, InArrivo)> = Vec::new();
         for (d, v) in self.voci.iter_mut().enumerate() {
             let dovuti = (v.in_arrivo.iter())
@@ -160,14 +175,20 @@ impl Disposizioni {
             arrivati.extend(v.in_arrivo.drain(..dovuti).map(|a| (d, a)));
         }
         let valori: Vec<(usize, usize)> = arrivati.iter().map(|(d, a)| (*d, a.gradino)).collect();
-        let menu = &dati.elezioni().menu;
-        if self.legge_con(dati, &valori).valida(menu).is_err() {
+        let mut fatti = Arrivati::default();
+        if let Some(motivo) = crate::parlamento::legge_non_valida(dati, self, &valori) {
             let prima = self.voci.len().saturating_sub(ELETTORALI);
-            arrivati.retain(|(d, _)| *d < prima);
+            (arrivati, fatti.scartati) = arrivati.into_iter().partition(|(d, _)| *d < prima);
+            fatti.motivo = motivo;
         }
         for (d, a) in arrivati {
+            let cambia = self.voci.get(d).is_some_and(|v| v.in_vigore != a.gradino);
             self.applica(dati, d, a.gradino, turno, &a.legge, effetti);
+            if cambia {
+                fatti.entrati.push((d, a));
+            }
         }
+        fatti
     }
 
     /// La legge elettorale dei gradini in vigore delle nove disposizioni elettorali.
