@@ -318,5 +318,7 @@
   "fondazione.si_disponibile": "disponibile:",
   "fondazione.non_disponibile": "non disponibile:",
   "fondazione.in_corso": "Fondazione in corso…",
-  "fondazione.guasto_anteprima": "L’anteprima non si è caricata."
+  "fondazione.guasto_anteprima": "L’anteprima non si è caricata.",
+  "fondazione.anteprima_in_arrivo": "l’anteprima è in arrivo",
+  "fondazione.anteprima_fallita": "manca l’anteprima di questo scenario"
 }

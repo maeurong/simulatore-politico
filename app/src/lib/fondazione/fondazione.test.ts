@@ -17,11 +17,17 @@ describe("nomeValido", () => {
 });
 
 describe("cosaManca", () => {
-  it("prima il nome, poi il posto", () => {
-    expect(cosaManca("", 4.5)).toBe("fondazione.manca_il_nome");
-    expect(cosaManca("  ", null)).toBe("fondazione.manca_il_nome");
-    expect(cosaManca("Patto", null)).toBe("fondazione.manca_il_posto");
-    expect(cosaManca("Patto", 4.5)).toBeNull();
+  it("con l'anteprima pronta: prima il nome, poi il posto", () => {
+    expect(cosaManca("", 4.5, "pronta")).toBe("fondazione.manca_il_nome");
+    expect(cosaManca("  ", null, "pronta")).toBe("fondazione.manca_il_nome");
+    expect(cosaManca("Patto", null, "pronta")).toBe("fondazione.manca_il_posto");
+    expect(cosaManca("Patto", 4.5, "pronta")).toBeNull();
+  });
+  it("senza l'anteprima dello scenario corrente non si fonda, anche con nome e posto in memoria", () => {
+    expect(cosaManca("Patto", 4.5, "in_arrivo")).toBe("fondazione.anteprima_in_arrivo");
+    expect(cosaManca("Patto", 4.5, "fallita")).toBe("fondazione.anteprima_fallita");
+    // l'anteprima viene prima: il nome da solo non basterebbe
+    expect(cosaManca("", null, "fallita")).toBe("fondazione.anteprima_fallita");
   });
 });
 
@@ -48,6 +54,12 @@ describe("conChiCorrere", () => {
       ["Centro", false],
       ["Estrema destra", false],
     ]);
+  });
+  it("un id che il catalogo non conosce resta, col nome grezzo", () => {
+    const strano = { ...v, disponibilita: [...v.disponibilita, { partito: "ignoto", disponibile: true, causa: "c" }] };
+    const r = conChiCorrere(strano, partiti);
+    expect(r).toHaveLength(8);
+    expect(r[2]).toMatchObject({ partito: { id: "ignoto", nome: "ignoto" }, disponibile: true, causa: "c" });
   });
   it("il Centro non è disponibile, con la causa del campione", () => {
     const centro = voci.find((x) => x.partito.id === "centro")!;

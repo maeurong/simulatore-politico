@@ -10,8 +10,16 @@ export function nomeValido(nome: string): boolean {
   return nome.trim() !== "";
 }
 
-/** Il motivo per cui «Fonda il partito» è spento, o null: prima il nome, poi il posto. */
-export function cosaManca(nome: string, posto: number | null): Chiave | null {
+/** L'anteprima dello scenario corrente: arrivata, in volo, o finita in un rifiuto o in un guasto. */
+export type StatoAnteprima = "pronta" | "in_arrivo" | "fallita";
+
+/**
+ * Il motivo per cui «Fonda il partito» è spento, o null. Prima l'anteprima: senza quella dello scenario corrente si
+ * fonderebbe una partita mai mostrata (il guscio riusa il seme dell'ultima anteprima). Poi il nome, poi il posto.
+ */
+export function cosaManca(nome: string, posto: number | null, anteprima: StatoAnteprima): Chiave | null {
+  if (anteprima === "in_arrivo") return "fondazione.anteprima_in_arrivo";
+  if (anteprima === "fallita") return "fondazione.anteprima_fallita";
   if (!nomeValido(nome)) return "fondazione.manca_il_nome";
   return posto === null ? "fondazione.manca_il_posto" : null;
 }
@@ -27,11 +35,12 @@ export function conChiCorrere(
   v: VocePosizione,
   partiti: PartitoCatalogo[],
 ): { partito: PartitoCatalogo; disponibile: boolean; causa: string }[] {
-  // ponytail: un id che il catalogo non conosce si salta; il core li prende dallo stesso scenario
-  const voci = v.disponibilita.flatMap((d) => {
-    const partito = partiti.find((p) => p.id === d.partito);
-    return partito ? [{ partito, disponibile: d.disponibile, causa: d.causa }] : [];
-  });
+  // un id che il catalogo non conosce resta, col nome grezzo, come in TabellaPosti
+  const voci = v.disponibilita.map((d) => ({
+    partito: partiti.find((p) => p.id === d.partito) ?? { id: d.partito, nome: d.partito, posizione: NaN },
+    disponibile: d.disponibile,
+    causa: d.causa,
+  }));
   // sort è stabile: a parità resta l'ordine dei dati
   return voci.sort((a, b) => Number(b.disponibile) - Number(a.disponibile));
 }

@@ -5,12 +5,14 @@
   // Sopravvive a «‹ Scenario», come l'editor: solo in memoria. `per` è lo scenario dell'anteprima: il guscio tiene il
   // seme dell'ultima anteprima e la fondazione lo riusa, quindi si richiede solo se lo scenario è cambiato.
   // `giro` è quello dell'editor: se è avanzato si è usciti all'edicola e si riparte da capo.
+  // `chiesta` numera le richieste d'anteprima: vale solo la risposta dell'ultima.
   const m = $state({
     nome: "",
     posto: null as number | null,
     anteprima: null as AnteprimaFondazione | null,
     per: "",
     giro: -1,
+    chiesta: 0,
     partiti: null as PartitoCatalogo[] | null,
   });
   function azzera() {
@@ -33,7 +35,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { editor } from "$lib/editor/editor.svelte";
-  import { cosaManca, LUNGHEZZA_NOME, nomeValido } from "$lib/fondazione/fondazione";
+  import { cosaManca, LUNGHEZZA_NOME, nomeValido, type StatoAnteprima } from "$lib/fondazione/fondazione";
   import Asse from "$lib/fondazione/Asse.svelte";
   import TabellaPosti from "$lib/fondazione/TabellaPosti.svelte";
   import DettaglioPosto from "$lib/fondazione/DettaglioPosto.svelte";
@@ -45,9 +47,14 @@
   let rifiuto = $state<string | null>(null);
   /** dal clic alla fine della navigazione: partita.occupato torna falso prima che goto finisca */
   let fondazione = $state(false);
+  /** l'anteprima di questo scenario è finita in un rifiuto o in un guasto */
+  let fallita = $state(false);
 
+  // lo scenario non cambia mentre si sta qui: cambia solo tornando all'editor
+  const per = JSON.stringify(editor.scenario);
   const occupato = $derived(partita.occupato || fondazione);
-  const manca = $derived(cosaManca(m.nome, m.posto));
+  const statoAnteprima = $derived<StatoAnteprima>(m.anteprima && m.per === per ? "pronta" : fallita ? "fallita" : "in_arrivo");
+  const manca = $derived(cosaManca(m.nome, m.posto, statoAnteprima));
   const voce = $derived(m.anteprima?.posizioni.find((p) => p.posizione === m.posto) ?? null);
   const scenario = $derived(
     !editor.scenario ? t("editor.scenario_base")
@@ -60,16 +67,22 @@
     if (m.giro !== editor.giro) azzera();
     m.giro = editor.giro;
     partita.guasto = null;
-    const per = JSON.stringify(editor.scenario);
+    let n = 0;
     try {
       // arrivando senza passare dall'editor (ricarica, URL diretto) il catalogo non c'è: si chiede al guscio
       m.partiti ??= (await guscio.catalogoScenario()).partiti;
       if (!m.anteprima || m.per !== per) {
         m.anteprima = null;
-        m.anteprima = await guscio.anteprimaFondazione(editor.scenario);
+        n = ++m.chiesta;
+        const a = await guscio.anteprimaFondazione(editor.scenario);
+        // superata da un rientro con un altro scenario: si scarta
+        if (n !== m.chiesta) return;
+        m.anteprima = a;
         m.per = per;
       }
     } catch (e) {
+      if (n && n !== m.chiesta) return;
+      fallita = true;
       const x = comeErrore(e);
       if (x.specie === "rifiuto") rifiutoAnteprima = x.testo;
       else guasto = `${x.testo} ${t("fondazione.guasto_anteprima")}`;
@@ -116,8 +129,8 @@
         <div class="titsez"><h2 id="titolo-nome" class="tit">{t("fondazione.il_nome")}</h2></div>
         <label class="nome">
           <input bind:value={m.nome} maxlength={LUNGHEZZA_NOME} placeholder={t("fondazione.segnaposto_nome")}
-            aria-label={t("fondazione.etichetta_nome")} aria-describedby="contatore" />
-          <span id="contatore" class="cnt">{t("fondazione.contatore", { n: m.nome.trim().length, max: LUNGHEZZA_NOME })}</span>
+            aria-label={t("fondazione.etichetta_nome")} aria-describedby="contatore" data-tagli-ignora />
+          <span id="contatore" class="cnt">{t("fondazione.contatore", { n: m.nome.length, max: LUNGHEZZA_NOME })}</span>
         </label>
       </section>
 
