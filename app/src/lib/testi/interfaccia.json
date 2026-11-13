@@ -6,6 +6,7 @@
   "cornice.si_vota_a_fine_turno": "si vota a fine turno",
   "cornice.turni_al_voto": { "one": "{n} turno al voto", "other": "{n} turni al voto" },
   "cornice.scelte_al_default": { "one": "{n} scelta al default ›", "other": "{n} scelte al default ›" },
+  "cornice.nessuna_scelta_al_default": "nessuna scelta al default",
   "cornice.trimestre_1": "Gennaio–marzo {anno}",
   "cornice.trimestre_2": "Aprile–giugno {anno}",
   "cornice.trimestre_3": "Luglio–settembre {anno}",
@@ -335,5 +336,21 @@
   "fondazione.guasto_anteprima": "L’anteprima non si è caricata.",
   "fondazione.guasto_apertura": "La partita è fondata, ma la sua pagina non si è aperta: la trovate nell’edicola.",
   "fondazione.anteprima_in_arrivo": "l’anteprima è in arrivo",
-  "fondazione.anteprima_fallita": "manca l’anteprima di questo scenario"
+  "fondazione.anteprima_fallita": "manca l’anteprima di questo scenario",
+
+  "evento.aperto": "Evento aperto",
+  "evento.tono_grave": "tono grave",
+  "evento.default": "default",
+  "evento.senza_scelta": "Senza scelta, alla chiusura: {nome}.",
+  "evento.scelto": "Scelto: {nome}. Si può cambiare fino alla chiusura.",
+  "evento.opzione_unica": "Nessuna scelta da fare: alla chiusura «{nome}».",
+
+  "cruscotto.da_decidere": "Da decidere",
+  "cruscotto.coalizione": "Dichiara la coalizione",
+  "cruscotto.coalizione_nessuna": "nessuna coalizione dichiarata",
+  "cruscotto.disponibili": "disponibili: {nomi}",
+  "cruscotto.nessun_disponibile": "nessuno",
+  "cruscotto.campagna": "Fai la campagna",
+  "cruscotto.nessuna_spesa": "nessuna spesa",
+  "cruscotto.spese": { "one": "{n} spesa, {euro} €", "other": "{n} spese, {euro} €" }
 }
