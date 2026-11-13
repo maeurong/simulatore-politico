@@ -394,3 +394,49 @@ fn l_albo_elenca_tutte_le_elezioni_la_piu_recente_per_prima() {
     let chiave = |t: &sim_core::Trimestre| (t.anno, t.trimestre);
     assert!(date.windows(2).all(|w| chiave(&w[0]) > chiave(&w[1])));
 }
+
+#[test]
+fn esito_da_salvataggio_rende_l_esito() {
+    let mut p = fondata(3.5);
+    for _ in 0..2 {
+        p.chiudi_turno();
+    }
+    let esito = Partita::esito_da_salvataggio(&p.salva().unwrap()).unwrap();
+    assert!(!esito.is_empty());
+    assert_eq!(esito, p.vista().esito);
+}
+
+#[test]
+fn esito_da_salvataggio_rifiuta_un_altro_schema() {
+    let p = fondata(3.5);
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    // Lo schema vecchio non ha il campo: la versione si legge per prima.
+    j["versione_schema"] = (VERSIONE_SCHEMA - 1).into();
+    j.as_object_mut().unwrap().remove("esito");
+    let e = Partita::esito_da_salvataggio(&j.to_string()).unwrap_err();
+    assert!(matches!(
+        e,
+        Errore::SchemaDiverso { trovata, attesa: VERSIONE_SCHEMA } if trovata == VERSIONE_SCHEMA - 1
+    ));
+}
+
+#[test]
+fn esito_da_salvataggio_rifiuta_il_json_rotto() {
+    for json in ["{", "[]", "{\"versione_schema\": 18}"] {
+        let e = Partita::esito_da_salvataggio(json).unwrap_err();
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{json}: {e:?}"
+        );
+    }
+}
+
+#[test]
+fn esito_da_salvataggio_rifiuta_una_voce_senza_causa() {
+    let mut p = fondata(3.5);
+    p.chiudi_turno();
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    j["esito"][0]["causa"] = "".into();
+    let e = Partita::esito_da_salvataggio(&j.to_string()).unwrap_err();
+    assert!(matches!(e, Errore::SalvataggioIlleggibile(m) if m.contains("senza causa")));
+}

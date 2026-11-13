@@ -4807,6 +4807,25 @@ impl Partita {
         }
     }
 
+    /// Legge dal testo di un salvataggio solo la versione dello schema e l'esito, senza caricare
+    /// la partita: l'esito della chiusura che ha prodotto quell'apertura.
+    ///
+    /// # Errors
+    /// Come `carica` per il JSON illeggibile e la versione (`SalvataggioIlleggibile`,
+    /// `SchemaDiverso`); `SalvataggioIlleggibile` anche per un esito mancante o che non passa i
+    /// controlli di `carica` (causa vuota, più di sette voci in evidenza).
+    pub fn esito_da_salvataggio(json: &str) -> Result<Vec<VoceEsito>, Errore> {
+        let mut valore = valore_con_schema_giusto(json)?;
+        let esito = valore
+            .get_mut("esito")
+            .map(serde_json::Value::take)
+            .ok_or_else(|| Errore::SalvataggioIlleggibile("esito mancante".into()))?;
+        let esito: Vec<VoceEsito> = serde_json::from_value(esito)
+            .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
+        controlla_esito(&esito)?;
+        Ok(esito)
+    }
+
     /// Ricostruisce una partita da uno snapshot JSON, validandolo.
     ///
     /// # Errors
@@ -4820,21 +4839,7 @@ impl Partita {
     /// `Parlamento::controlla`, `Intesa::controlla`), o serie degli indicatori che non arriva al
     /// turno (`controlla_serie`).
     pub fn carica(json: &str) -> Result<Partita, Errore> {
-        let valore: serde_json::Value = serde_json::from_str(json)
-            .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
-        let trovata = valore
-            .get("versione_schema")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| u32::try_from(v).ok())
-            .ok_or_else(|| {
-                Errore::SalvataggioIlleggibile("versione dello schema mancante o non intera".into())
-            })?;
-        if trovata != VERSIONE_SCHEMA {
-            return Err(Errore::SchemaDiverso {
-                trovata,
-                attesa: VERSIONE_SCHEMA,
-            });
-        }
+        let valore = valore_con_schema_giusto(json)?;
         let partita: Partita = serde_json::from_value(valore)
             .map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
         if !(1..=4).contains(&partita.data.trimestre) {
@@ -5149,12 +5154,8 @@ impl Partita {
                     &format!("esito: partito {id} sconosciuto"),
                 )?;
             }
-            ok(!v.causa.is_empty(), "esito: una voce senza causa")?;
         }
-        ok(
-            self.esito.iter().filter(|v| v.in_evidenza).count() <= MASSIMO_IN_EVIDENZA,
-            "esito: più di sette voci in evidenza",
-        )?;
+        controlla_esito(&self.esito)?;
         ok(
             self.legislatura.coalizioni.iter().flatten().all(|&j| j < n),
             "legislatura.coalizioni con un partito fuori dai partiti",
@@ -5333,6 +5334,39 @@ impl Partita {
 
 /// Tetto agli importi in euro di un salvataggio: oltre, le somme in `i64` rischiano di traboccare.
 pub(crate) const LIMITE_EURO: i64 = 1_000_000_000_000_000;
+
+/// Il testo di un salvataggio come valore JSON, dopo aver letto la versione dello schema.
+fn valore_con_schema_giusto(json: &str) -> Result<serde_json::Value, Errore> {
+    let valore: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| Errore::SalvataggioIlleggibile(e.to_string()))?;
+    let trovata = valore
+        .get("versione_schema")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|v| u32::try_from(v).ok())
+        .ok_or_else(|| {
+            Errore::SalvataggioIlleggibile("versione dello schema mancante o non intera".into())
+        })?;
+    if trovata != VERSIONE_SCHEMA {
+        return Err(Errore::SchemaDiverso {
+            trovata,
+            attesa: VERSIONE_SCHEMA,
+        });
+    }
+    Ok(valore)
+}
+
+/// Le voci dell'esito che non dipendono dal resto della partita: ogni voce ha la causa, e le voci
+/// in evidenza sono al massimo `MASSIMO_IN_EVIDENZA`.
+fn controlla_esito(esito: &[VoceEsito]) -> Result<(), Errore> {
+    ok(
+        esito.iter().all(|v| !v.causa.is_empty()),
+        "esito: una voce senza causa",
+    )?;
+    ok(
+        esito.iter().filter(|v| v.in_evidenza).count() <= MASSIMO_IN_EVIDENZA,
+        "esito: più di sette voci in evidenza",
+    )
+}
 
 fn ok(condizione: bool, messaggio: &str) -> Result<(), Errore> {
     if condizione {
