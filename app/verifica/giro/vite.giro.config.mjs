@@ -14,14 +14,18 @@ const telecomando = {
   name: "telecomando-verifica",
   apply: "serve", // mai in un build, nemmeno lanciato a mano con questa configurazione
   configureServer(server) {
+    const porta = server.config.server.port;
+    const ospiti = [`127.0.0.1:${porta}`, `localhost:${porta}`, `[::1]:${porta}`];
     server.middlewares.use(async (req, res, next) => {
       const u = req.url.split("?")[0];
       if (!["/__coda", "/__comando", "/__diario", "/__esito"].includes(u)) return next();
       const rifiuta = (codice) => { res.statusCode = codice; res.end(); };
       // Chi può pilotare l'app: solo questo Mac, e non una pagina qualunque aperta nel browser.
-      // Passa chi non ha origine (cmd.mjs) o ha quella del server; e tutto ciò che cambia la coda è POST,
+      // L'Host dev'essere uno dei nomi locali del server (un nome estraneo che punta qui è DNS rebinding);
+      // passa chi non ha origine (cmd.mjs) o ha quella del server; e tutto ciò che cambia la coda è POST,
       // che da un'altra origine porta sempre Origin: un <img> o un GET in no-cors non svuota la coda.
       if (!/^(::ffff:)?127\.|^::1$/.test(req.socket.remoteAddress ?? "")) return rifiuta(403);
+      if (!ospiti.includes(req.headers.host)) return rifiuta(403);
       const origine = req.headers.origin;
       if (origine && origine !== `http://${req.headers.host}`) return rifiuta(403);
       if (u !== "/__esito" && req.method !== "POST") return rifiuta(405);
