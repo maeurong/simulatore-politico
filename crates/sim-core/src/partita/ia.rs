@@ -676,9 +676,10 @@ impl Partita {
         let x = &self.dati.disposizioni()[d];
         let (nome, disposizione) = (x.nome.clone(), x.id.clone());
         let id = self.partiti[promotore].id.clone();
-        if self.promuovi_referendum(&id, &disposizione).is_ok() {
+        if self.promuovi_referendum(&id, &disposizione).is_ok()
+            && let Some(voto) = self.parlamento.referendum.as_ref().map(|r| r.voto)
+        {
             let percento = virgola(a.si / (a.si + a.no) * 100.0);
-            let voto = (self.parlamento.referendum.as_ref()).map_or(self.turno, |r| r.voto);
             let fatto = format!(
                 "Chiede il referendum su {nome}, si vota in {}",
                 parlamento::mese(data_di(voto))

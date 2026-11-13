@@ -816,6 +816,34 @@ fn al_governo_senza_quinto_contro_la_costituzionale_entra_subito_in_vigore() {
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
 }
 
+/// Al governo, il centrosinistra all'opposizione (140 su 400, 70 su 200) fa il quinto contro: la
+/// costituzionale aspetta il confermativo. Coi 300 deputati portati all'estremo (7,0) gli
+/// elettori la respingono, e il governo perde il referendum: voce critica, precedenza 2.
+#[test]
+fn al_governo_il_confermativo_respinto_e_critico() {
+    let k = dati_base().disposizione("numero_parlamentari").unwrap();
+    let estremo = edita(&al_governo(), |j| {
+        j["dati"]["disposizioni"][k]["gradini"][0]["posizione"] = 7.0.into();
+    })
+    .unwrap();
+    let cs = partito("centrosinistra");
+    let mut p = costituzionale_al_voto(&estremo, None, &[(cs, 140)], &[(cs, 70)]);
+    assert_eq!(
+        p.parlamento().confermativi.len(),
+        1,
+        "{:?}",
+        p.vista().esiti
+    );
+    p.chiudi_turno();
+    let r = &p.vista().esiti_referendum[0];
+    assert_eq!(r.tipo, TipoReferendum::Confermativo);
+    assert!(!r.approvato, "{r:?}");
+    let v = voci(&p, TipoVoce::ReferendumVotato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert!(v[0].fatto.contains("» respinto; "), "{}", v[0].fatto);
+}
+
 #[test]
 fn al_governo_il_confermativo_e_rifiutato_dalla_guardia() {
     let mut p = Partita::nuova(dati_base(), 1);

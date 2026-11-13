@@ -782,3 +782,26 @@ fn nel_turno_del_voto_dell_abrogativo_l_ia_non_chiede_il_successivo() {
         Some("licenziamento")
     );
 }
+
+/// La sfiducia dell'estrema sinistra contro il governo del giocatore, che ha la maggioranza, è
+/// respinta: al governo la voce dice l'intesa che ogni alleato riguadagna.
+#[test]
+fn la_sfiducia_dell_ia_respinta_ricompatta_gli_alleati() {
+    let p = al_governo();
+    assert!(!p.alleati().is_empty());
+    let es = partito("estrema_sinistra");
+    let mut p = edita(&p, |j| {
+        j["parlamento"]["sfiducia"] = serde_json::json!([null, es]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::SfiduciaRespinta);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].partito.as_deref(), Some("estrema_sinistra"));
+    assert!(
+        v[0].fatto
+            .contains("; ogni alleato guadagna 5,0 punti d'intesa; valence -0,10 a "),
+        "{}",
+        v[0].fatto
+    );
+}
