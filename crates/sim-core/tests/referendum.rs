@@ -2,9 +2,10 @@ mod comune;
 use comune::{
     al_governo, all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_arrivo,
     con_seggi, dati_base, edita, imposta, partito, presenta, senza_emergenze, senza_shock,
-    sostituisci,
+    sostituisci, voci,
 };
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{FormaMisura, TipoReferendum};
 use sim_core::{Comando, Errore, Partita};
 
@@ -50,6 +51,27 @@ fn abrogazione_riporta_al_valore_dopo_l_abrogazione_e_blocca_il_gradino() {
     assert_eq!(r.nome, "Licenziamento: tutele crescenti");
     assert!(r.quorum && r.approvato);
     assert_eq!(p.in_vigore("licenziamento"), Some("reintegro"));
+    // Al governo l'abrogativo approvato è perso: critico, con la valence di ogni partito di governo.
+    let v = voci(&p, TipoVoce::ReferendumVotato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
+    assert!(
+        v[0].fatto
+            .starts_with("Referendum abrogativo su «Licenziamento: tutele crescenti» approvato; ")
+            && v[0].fatto.contains(" sì e ")
+            && v[0].fatto.contains(" no, affluenza del ")
+            && v[0].fatto.contains("; valence -0,10 a Centrodestra")
+            && v[0].fatto.contains("; valence -0,10 a Destra"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(
+        v[0].causa.starts_with("affluenza del ")
+            && v[0].causa.ends_with("% contro il quorum del 50%"),
+        "{}",
+        v[0].causa
+    );
     let v = p.vista();
     let l = v
         .disposizioni
@@ -84,6 +106,14 @@ fn senza_quorum_paga_il_promotore() {
     assert!(!p.vista().esiti_referendum[0].quorum);
     assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
     assert!(valence(&p) < valence(&base));
+    let v = voci(&p, TipoVoce::ReferendumVotato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Notevole);
+    assert!(
+        v[0].fatto.contains("» fallito senza quorum; ") && v[0].fatto.ends_with(" a Sinistra"),
+        "{}",
+        v[0].fatto
+    );
 }
 
 #[test]
@@ -131,6 +161,14 @@ fn firme_in_chiusura_e_invito_una_volta() {
     assert_eq!(p.salva().unwrap(), prima);
     p.chiudi_turno();
     assert!(p.vista().referendum[0].firme);
+    let v = voci(&p, TipoVoce::FirmeRaccolte);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
+    assert_eq!(
+        v[0].fatto,
+        "Indetto il referendum abrogativo su Licenziamento, si vota in aprile 2028"
+    );
+    assert_eq!(v[0].causa, "firme depositate nei termini");
     p.comanda(Comando::InvitaAstensione).unwrap();
     assert!(p.vista().referendum[0].invito_astensione);
     let e = p.comanda(Comando::InvitaAstensione).unwrap_err();
@@ -470,6 +508,17 @@ fn un_valore_gia_abrogato_prima_del_voto_fa_decadere_il_quesito() {
         Some("Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe")
     );
     assert!(!e.quorum && !e.approvato);
+    let v = voci(&p, TipoVoce::ReferendumDecaduto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
+    assert_eq!(
+        v[0].fatto,
+        "Decade senza voto il referendum abrogativo su «Licenziamento: reintegro»"
+    );
+    assert_eq!(
+        v[0].causa,
+        "la disposizione ha già il valore che il quesito le darebbe"
+    );
 }
 
 #[test]
@@ -593,12 +642,26 @@ fn confermativo(p: &Partita, chiedi: bool) -> Comando {
 #[test]
 fn il_giocatore_rinuncia_al_confermativo() {
     let mut p = costituzionale_senza_due_terzi_all_opposizione();
+    let misura = p.parlamento().confermativi[0].misura;
     p.comanda(confermativo(&p, false)).unwrap();
     assert!(!p.vista().referendum[0].richiesto);
     p.chiudi_turno();
     assert!(p.parlamento().confermativi.is_empty());
     assert!(p.vista().esiti_referendum.is_empty());
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("300_150"));
+    let v = voci(&p, TipoVoce::ConfermativoSenzaVoto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        (v[0].misura, v[0].criticita),
+        (misura, Criticita::Ordinaria)
+    );
+    assert_eq!(v[0].disposizioni, ["numero_parlamentari"]);
+    assert!(
+        v[0].fatto.starts_with("Entra in vigore senza referendum «"),
+        "{}",
+        v[0].fatto
+    );
+    assert_eq!(v[0].causa, "nessuno ha chiesto il referendum confermativo");
 }
 
 /// Il giocatore (90 su 400, 45 su 200) e l'estrema sinistra (90 e 45), che perde 1 dalla legge,
@@ -657,9 +720,23 @@ fn il_giocatore_ci_ripensa_e_chiede_il_confermativo() {
 #[test]
 fn senza_scelta_vale_la_regola_dell_08() {
     let mut p = costituzionale_senza_due_terzi_all_opposizione();
+    let misura = p.parlamento().confermativi[0].misura;
     let v = p.vista();
     assert!(v.referendum[0].richiesto && v.referendum[0].scelta);
     p.chiudi_turno();
+    let v = voci(&p, TipoVoce::ReferendumVotato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].misura, v[0].criticita), (misura, Criticita::Notevole));
+    assert_eq!(v[0].disposizioni, ["numero_parlamentari"]);
+    assert!(
+        v[0].fatto.starts_with("Referendum confermativo su «"),
+        "{}",
+        v[0].fatto
+    );
+    assert_eq!(
+        v[0].causa,
+        "il confermativo non ha quorum, decide la maggioranza dei votanti"
+    );
     assert!(p.parlamento().confermativi.is_empty());
     let r = &p.vista().esiti_referendum[0];
     assert_eq!(r.tipo, TipoReferendum::Confermativo);

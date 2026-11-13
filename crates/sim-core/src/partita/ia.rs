@@ -6,7 +6,7 @@ use super::Partita;
 use super::vita::virgola;
 use crate::caso::Flusso;
 use crate::comando::Comando;
-use crate::disposizioni::Norma;
+use crate::disposizioni::{Norma, data_di};
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, Condizione, stima};
 use crate::esito::TipoVoce;
@@ -674,7 +674,11 @@ impl Partita {
         let id = self.partiti[promotore].id.clone();
         if self.promuovi_referendum(&id, &disposizione).is_ok() {
             let percento = virgola(a.si / (a.si + a.no) * 100.0);
-            let fatto = format!("Chiede il referendum su {nome}");
+            let voto = (self.parlamento.referendum.as_ref()).map_or(self.turno, |r| r.voto);
+            let fatto = format!(
+                "Chiede il referendum su {nome}, si vota in {}",
+                parlamento::mese(data_di(voto))
+            );
             let causa = format!(
                 "secondo il sondaggio il sì vincerebbe col {percento}% dei voti e il quorum \
                  sarebbe raggiunto"
@@ -1025,7 +1029,7 @@ impl Partita {
     }
 
     /// Gli alleati con un ultimatum in corso.
-    fn alleati_in_ultimatum(&self) -> Vec<usize> {
+    pub(super) fn alleati_in_ultimatum(&self) -> Vec<usize> {
         (self.alleati().into_iter())
             .filter(|&j| self.in_ultimatum(j))
             .collect()

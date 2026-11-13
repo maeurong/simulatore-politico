@@ -8,7 +8,8 @@ use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, emergenze};
 use crate::legislatura::campagna::migliaia;
 use crate::ministri::{FattoAtto, Proposta};
 use crate::parlamento::{
-    self, Attenuazione, Conteggio, EsitoVoto, FormaMisura, Misura, StatoEmendamento,
+    self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
+    StatoEmendamento, TipoReferendum,
 };
 
 /// «N euro dal fondo di riserva (Q% del costo)» o «N euro a debito».
@@ -337,13 +338,18 @@ impl Partita {
 
     /// Il promotore (id) e le disposizioni della misura, nell'ordine dei valori.
     fn soggetti(&self, m: &Misura) -> (Option<String>, Vec<String>) {
-        let promotore = (m.promotore)
-            .and_then(|j| self.partiti.get(j))
-            .map(|p| p.id.clone());
-        let disposizioni = (m.valori.iter())
+        (self.id_di(m.promotore), self.disposizioni_di(&m.valori))
+    }
+
+    fn id_di(&self, j: Option<usize>) -> Option<String> {
+        j.and_then(|j| self.partiti.get(j)).map(|p| p.id.clone())
+    }
+
+    /// Gli id delle disposizioni dei `valori`, nell'ordine.
+    fn disposizioni_di(&self, valori: &[(usize, usize)]) -> Vec<String> {
+        (valori.iter())
             .filter_map(|&(k, _)| self.dati.disposizioni().get(k).map(|x| x.id.clone()))
-            .collect();
-        (promotore, disposizioni)
+            .collect()
     }
 
     /// Come `voce`, coi soggetti della misura `m`.
@@ -565,5 +571,182 @@ impl Partita {
         let nome = parlamento::nome_misura(&self.dati, m);
         let fatto = format!("Decade senza voto «{nome}»");
         self.voce_misura(TipoVoce::MisuraDecaduta, m, fatto, causa);
+    }
+
+    /// Fatti 39, 41, 42: l'esito `e` del referendum `r`, con la valence persa (`persa`). Al governo
+    /// è critico se il governo perde: abrogativo approvato, confermativo respinto.
+    pub(super) fn voce_referendum_votato(
+        &mut self,
+        e: &EsitoReferendum,
+        r: &Referendum,
+        persa: Vec<String>,
+    ) {
+        let affluenza = virgola(e.votanti as f64 / e.aventi_diritto.max(1) as f64 * 100.0);
+        let confermativo = e.tipo == TipoReferendum::Confermativo;
+        let (quale, esito, causa) = if confermativo {
+            (
+                "confermativo",
+                if e.approvato { "approvato" } else { "respinto" },
+                "il confermativo non ha quorum, decide la maggioranza dei votanti".to_string(),
+            )
+        } else {
+            let esito = match (e.quorum, e.approvato) {
+                (false, _) => "fallito senza quorum",
+                (true, true) => "approvato",
+                (true, false) => "respinto",
+            };
+            let mut causa = format!("affluenza del {affluenza}% contro il quorum del 50%");
+            if r.invito_astensione {
+                causa.push_str(", con l'invito del governo all'astensione");
+            }
+            ("abrogativo", esito, causa)
+        };
+        let mut fatto = format!(
+            "Referendum {quale} su «{}» {esito}; {} sì e {} no, affluenza del {affluenza}%",
+            e.nome,
+            migliaia(e.si as i64),
+            migliaia(e.no as i64)
+        );
+        for parte in persa {
+            fatto.push_str("; ");
+            fatto.push_str(&parte);
+        }
+        let perso = e.approvato != confermativo;
+        let (al_governo, partito) = (self.al_governo(), self.id_di(r.promotore));
+        let disposizioni = self.disposizioni_di(&r.valori);
+        let Some(v) = self.voce(TipoVoce::ReferendumVotato, fatto, causa) else {
+            return;
+        };
+        if perso && al_governo {
+            v.con_grado(Grado::C2);
+        }
+        v.partito = partito;
+        // Solo il confermativo ha la sua legge; una voce senza misura non porta disposizioni.
+        if r.misura.is_some() {
+            v.misura = r.misura;
+            v.disposizioni = disposizioni;
+        }
+    }
+
+    /// Fatti 43 e 76: l'abrogativo `e` di `promotore` decaduto, o sospeso, senza voto.
+    pub(super) fn voce_referendum_decaduto(
+        &mut self,
+        e: &EsitoReferendum,
+        promotore: Option<usize>,
+        sospeso: bool,
+        causa: String,
+    ) {
+        let verbo = if sospeso { "Sospeso" } else { "Decade" };
+        let fatto = format!(
+            "{verbo} senza voto il referendum abrogativo su «{}»",
+            e.nome
+        );
+        let partito = self.id_di(promotore);
+        if let Some(v) = self.voce(TipoVoce::ReferendumDecaduto, fatto, causa) {
+            v.partito = partito;
+        }
+    }
+
+    /// Fatto 40: la costituzionale del confermativo `r`, che nessuno ha chiesto, in vigore.
+    pub(super) fn voce_senza_voto(&mut self, r: &Referendum) {
+        let nome = parlamento::nome(&self.dati, &r.valori);
+        let fatto = format!("Entra in vigore senza referendum «{nome}»");
+        let causa = "nessuno ha chiesto il referendum confermativo".to_string();
+        let disposizioni = self.disposizioni_di(&r.valori);
+        if let Some(v) = self.voce(TipoVoce::ConfermativoSenzaVoto, fatto, causa) {
+            v.misura = r.misura;
+            v.disposizioni = disposizioni;
+        }
+    }
+
+    /// Fatto 45: le firme dell'abrogativo `r`, chiesto nel turno, raccolte.
+    pub(super) fn voce_firme(&mut self, r: &Referendum) {
+        let nome = (r.valori.first())
+            .and_then(|&(d, _)| self.dati.disposizioni().get(d))
+            .map_or(String::new(), |x| x.nome.clone());
+        let fatto = format!(
+            "Indetto il referendum abrogativo su {nome}, si vota in {}",
+            parlamento::mese(data_di(r.voto))
+        );
+        let causa = "firme depositate nei termini".to_string();
+        let partito = self.id_di(r.promotore);
+        if let Some(v) = self.voce(TipoVoce::FirmeRaccolte, fatto, causa) {
+            v.partito = partito;
+        }
+    }
+
+    /// «al governo», «individuale a Nome (Sanità)», o «individuale su Sanità» senza ministro.
+    fn bersaglio(&self, dicastero: Option<usize>, ministro: Option<&str>) -> String {
+        match (
+            dicastero.and_then(|i| self.dati.dicasteri().get(i)),
+            ministro,
+        ) {
+            (Some(d), Some(m)) => format!("individuale a {m} ({})", d.nome),
+            (Some(d), None) => format!("individuale su {}", d.nome),
+            (None, _) => "al governo".to_string(),
+        }
+    }
+
+    /// Fatti 46, 47, 98: la sfiducia `e` votata con la `linea`, al governo o al `ministro` del
+    /// `dicastero`; `coda` segue i conteggi nel fatto.
+    pub(super) fn voce_sfiducia(
+        &mut self,
+        e: &EsitoVoto,
+        (dicastero, ministro): (Option<usize>, Option<&str>),
+        promotore: Option<usize>,
+        linea: &[bool],
+        coda: Vec<String>,
+    ) {
+        let verbo = if e.approvata { "Approvata" } else { "Respinta" };
+        let mut fatto = format!(
+            "{verbo} la sfiducia {}; {}",
+            self.bersaglio(dicastero, ministro),
+            conteggi(e)
+        );
+        for parte in coda {
+            fatto.push_str("; ");
+            fatto.push_str(&parte);
+        }
+        let mut causa = self.linee(e);
+        let in_ultimatum: Vec<&str> = (self.alleati_in_ultimatum().into_iter())
+            .filter(|&j| linea.get(j) == Some(&true))
+            .filter_map(|j| self.partiti.get(j).map(|p| p.nome.as_str()))
+            .collect();
+        if e.approvata && !in_ultimatum.is_empty() {
+            causa.push_str(&format!(
+                "; in ultimatum votano sì {}",
+                in_ultimatum.join(", ")
+            ));
+        }
+        let tipo = if e.approvata {
+            TipoVoce::SfiduciaApprovata
+        } else {
+            TipoVoce::SfiduciaRespinta
+        };
+        let id = dicastero.and_then(|i| self.dati.dicasteri().get(i).map(|d| d.id.clone()));
+        let partito = self.id_di(promotore);
+        if let Some(v) = self.voce(tipo, fatto, causa) {
+            v.dicastero = id;
+            v.partito = partito;
+        }
+    }
+
+    /// Fatto 48: la mozione di `promotore` sul `dicastero` (o sul governo) tolta senza voto.
+    pub(super) fn voce_sfiducia_scartata(
+        &mut self,
+        dicastero: Option<usize>,
+        promotore: Option<usize>,
+        causa: &str,
+    ) {
+        let fatto = format!(
+            "Tolta senza voto la mozione di sfiducia {}",
+            self.bersaglio(dicastero, None)
+        );
+        let id = dicastero.and_then(|i| self.dati.dicasteri().get(i).map(|d| d.id.clone()));
+        let partito = self.id_di(promotore);
+        if let Some(v) = self.voce(TipoVoce::SfiduciaScartata, fatto, causa.into()) {
+            v.dicastero = id;
+            v.partito = partito;
+        }
     }
 }

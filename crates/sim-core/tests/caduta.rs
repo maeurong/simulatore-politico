@@ -1,10 +1,11 @@
 mod comune;
 use comune::{
-    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, partito,
-    presenta, voci,
+    chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, ferma_tutti,
+    partito, presenta, voci,
 };
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Fase, Incarico};
+use sim_core::parlamento::{Decreto, FormaMisura};
 use sim_core::{Comando, Partita};
 
 /// La destra e il centrodestra in minoranza: 150 su 400, 75 su 200. Le prove chiudono con
@@ -56,6 +57,69 @@ fn fiducia_respinta_fa_dimettere() {
         v[0].fatto
     );
     assert!(voci(&p, TipoVoce::LeggeRespinta).is_empty());
+}
+
+/// La fiducia respinta sulla conversione: una voce sola, coi fondi tornati.
+#[test]
+fn fiducia_respinta_sul_decreto() {
+    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &MINORANZA_C, &MINORANZA_S);
+    let decreto = Decreto::Fondi {
+        da: "giustizia".into(),
+        a: "sanita".into(),
+        importo: 1_000_000,
+    };
+    p.comanda(Comando::EmanaDecreto { decreto }).unwrap();
+    ferma_tutti(&mut p);
+    let id = (p.vista().calendario.iter())
+        .find(|m| m.forma == FormaMisura::Conversione)
+        .unwrap()
+        .id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::FiduciaRespinta);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert!(
+        v[0].fatto
+            .starts_with("Respinta la fiducia su «Decreto: fondi da Giustizia a Sanità»; Camera ")
+            && v[0]
+                .fatto
+                .contains("; tornano 1.000.000 euro a Giustizia; ")
+            && v[0].fatto.ends_with("; il governo è dimissionario"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(voci(&p, TipoVoce::DecretoDecaduto).is_empty());
+}
+
+/// La fiducia respinta sul bilancio di ottobre: il bilancio presentato cade, e da gennaio si va in
+/// esercizio provvisorio.
+#[test]
+fn fiducia_respinta_sul_bilancio() {
+    let mut p = con_seggi(&Partita::nuova(dati_base(), 1), &MINORANZA_C, &MINORANZA_S);
+    for _ in 0..4 {
+        chiudi_senza_opposizione_ia(&mut p); // fino a ottobre-dicembre 2027
+    }
+    let b = p.bozza_bilancio().unwrap();
+    p.comanda(Comando::PresentaBilancio { bilancio: b })
+        .unwrap();
+    let id = (p.vista().calendario.iter())
+        .find(|m| m.forma == FormaMisura::Bilancio)
+        .unwrap()
+        .id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::FiduciaRespinta);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert!(
+        v[0].fatto.starts_with("Respinta la fiducia su «")
+            && v[0].fatto.ends_with(
+                "; il bilancio presentato cade, esercizio provvisorio da gennaio; il governo è \
+                 dimissionario"
+            ),
+        "{}",
+        v[0].fatto
+    );
+    assert!(voci(&p, TipoVoce::BilancioRespinto).is_empty());
 }
 
 #[test]

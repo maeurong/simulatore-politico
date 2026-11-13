@@ -111,6 +111,14 @@ fn il_voto_sospende_l_abrogativo_indetto() {
     );
     assert!(!r.approvato);
     assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
+    let v = voci(&p, TipoVoce::ReferendumDecaduto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
+    assert_eq!(
+        v[0].fatto,
+        "Sospeso senza voto il referendum abrogativo su «Licenziamento: tutele crescenti»"
+    );
+    assert_eq!(v[0].causa, "lo scioglimento delle Camere");
 }
 
 #[test]

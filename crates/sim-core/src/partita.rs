@@ -821,15 +821,27 @@ impl Partita {
             self.referendum_ia();
         }
         // Le firme dell'abrogativo chiesto nel turno sono raccolte.
-        if let Some(r) = &mut self.parlamento.referendum {
+        if let Some(r) = self.parlamento.referendum.as_mut().filter(|r| !r.firme) {
             r.firme = true;
+            let r = r.clone();
+            self.voce_firme(&r);
         }
         // Dopo `esegui`: il ministro sfiduciato non ha più un decreto in agenda. Sul governo già
         // dimissionario (fiducia respinta, `Dimettiti`) la mozione si scarta senza voto.
         let Some((dicastero, promotore)) = self.parlamento.sfiducia.take() else {
             return false;
         };
-        if self.legislatura.dimissioni {
+        // Il dicastero in interim: `sfiducia` non vota, come `voto_sfiducia`.
+        let interim = dicastero.is_some_and(|i| {
+            (self.ministri.dicasteri.get(i)).is_none_or(|st| st.ministro.is_none())
+        });
+        let scarto = match (self.legislatura.dimissioni, interim) {
+            (true, _) => Some("il governo è già dimissionario"),
+            (false, true) => Some("il dicastero è in interim"),
+            (false, false) => None,
+        };
+        if let Some(causa) = scarto {
+            self.voce_sfiducia_scartata(dicastero, Some(promotore), causa);
             return false;
         }
         self.sfiducia(dicastero, Some(promotore));
@@ -1032,14 +1044,20 @@ impl Partita {
                 coda.push(format!("tornano {} euro a {a}", campagna::migliaia(euro)));
             }
             coda.extend(persa);
+            if m.forma == FormaMisura::Bilancio {
+                let provvisorio = self.economia.esercizio_provvisorio(self.data);
+                // Con la fiducia respinta la voce è una sola: dice anche il bilancio che cade.
+                coda.push(match (fiducia_respinta, provvisorio) {
+                    (true, true) => "il bilancio presentato cade".into(),
+                    (true, false) => {
+                        "il bilancio presentato cade, esercizio provvisorio da gennaio".into()
+                    }
+                    (false, true) => "in esercizio provvisorio il governo cade".into(),
+                    (false, false) => "esercizio provvisorio da gennaio".into(),
+                });
+            }
             if fiducia_respinta {
                 coda.push("il governo è dimissionario".into());
-            } else if m.forma == FormaMisura::Bilancio {
-                coda.push(if self.economia.esercizio_provvisorio(self.data) {
-                    "in esercizio provvisorio il governo cade".into()
-                } else {
-                    "esercizio provvisorio da gennaio".into()
-                });
             }
         }
         // Il giocatore scivola a ogni voto verso la posizione che il suo voto sostiene, anche con
@@ -1329,8 +1347,12 @@ impl Partita {
                     );
                 }
             }
-            if let Some(esito) = esito {
-                self.parlamento.esiti_referendum.insert(0, esito);
+            match esito {
+                Some(esito) => {
+                    self.voce_referendum_votato(&esito, &r, Vec::new());
+                    self.parlamento.esiti_referendum.insert(0, esito);
+                }
+                None => self.voce_senza_voto(&r),
             }
         }
     }
@@ -1359,34 +1381,46 @@ impl Partita {
         let nome = parlamento::nome(&self.dati, &[(d, vigente)]);
         let memorandum = (self.economia.mes_in_corso(turno))
             .filter(|_| self.condizionalita().iter().any(|c| c.0 == d));
+        // Il testo dell'esito e la causa della voce.
         let decaduto = if let Some(fine) = memorandum {
-            Some(format!(
-                "Decaduto senza voto: la disposizione è vincolata dal memorandum del MES fino al \
-                 turno {fine}"
+            Some((
+                format!(
+                    "Decaduto senza voto: la disposizione è vincolata dal memorandum del MES fino \
+                     al turno {fine}"
+                ),
+                format!(
+                    "il vincolo del memorandum del MES, fino a {}",
+                    parlamento::mese(data_di(fine))
+                ),
             ))
         } else if vigente == dopo && self.disposizioni.voci[d].in_arrivo.is_empty() {
-            Some(
-                "Decaduto senza voto: la disposizione ha già il valore che il quesito le darebbe"
-                    .to_string(),
-            )
+            let gia = "la disposizione ha già il valore che il quesito le darebbe";
+            Some((format!("Decaduto senza voto: {gia}"), gia.to_string()))
         } else {
             parlamento::legge_non_valida(&self.dati, &self.disposizioni, &[(d, dopo)]).map(|m| {
-                format!(
-                    "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
-                     più applicabile ({m})"
+                (
+                    format!(
+                        "Decaduto senza voto: con le leggi già approvate l'abrogazione non sarebbe \
+                         più applicabile ({m})"
+                    ),
+                    format!(
+                        "l'abrogazione renderebbe non valida la legge elettorale, {}",
+                        m.replace(": ", ", ")
+                    ),
                 )
             })
         };
-        if decaduto.is_some() {
+        if let Some((testo, causa)) = decaduto {
             let nessuno = Affluenza {
                 si: 0.0,
                 no: 0.0,
                 astenuti: 0.0,
             };
             let esito = EsitoReferendum {
-                decaduto,
+                decaduto: Some(testo),
                 ..EsitoReferendum::da(r.tipo, nome, self.data, &nessuno)
             };
+            self.voce_referendum_decaduto(&esito, r.promotore, false, causa);
             self.parlamento.esiti_referendum.insert(0, esito);
             return;
         }
@@ -1428,11 +1462,13 @@ impl Partita {
                 bloccati.push(vigente);
             }
         }
+        let mut persa = Vec::new();
         if approvato {
             let perso = self.dati.manopola("valence_referendum_perso");
             for (j, p) in self.partiti.iter_mut().enumerate() {
                 if self.governo.al_governo(j) {
                     p.valence -= perso;
+                    persa.push(esito::valence(-perso, &p.nome));
                 }
             }
         } else if let Some(p) = r
@@ -1440,8 +1476,11 @@ impl Partita {
             .filter(|_| !quorum)
             .and_then(|j| self.partiti.get_mut(j))
         {
-            p.valence -= self.dati.manopola("valence_referendum_fallito");
+            let fallito = self.dati.manopola("valence_referendum_fallito");
+            p.valence -= fallito;
+            persa.push(esito::valence(-fallito, &p.nome));
         }
+        self.voce_referendum_votato(&esito, &r, persa);
         self.parlamento.esiti_referendum.insert(0, esito);
     }
 
@@ -2867,9 +2906,16 @@ impl Partita {
     /// comune nuovo, legislatura nuova in trattativa, incarico. Riparto rifiutato: seggi di prima,
     /// esito con le quote senza seggi. Il giocatore senza seggi in entrambe le Camere: fine.
     fn vota_parlamento(&mut self, vero: &Intenzioni) {
+        let sospeso = self.parlamento.referendum.as_ref().map(|r| r.promotore);
         let via = (self.parlamento).decadi_tutto(&self.dati, &self.disposizioni, self.data);
         for m in &via {
             self.voce_decaduta(m, "la fine della legislatura".into());
+        }
+        if let Some(promotore) = sospeso
+            && let Some(e) = self.parlamento.esiti_referendum.first().cloned()
+        {
+            let causa = "lo scioglimento delle Camere".to_string();
+            self.voce_referendum_decaduto(&e, promotore, true, causa);
         }
         for v in &mut self.disposizioni.voci {
             v.bloccati.clear();
@@ -3739,8 +3785,9 @@ impl Partita {
     /// `intesa_sfiducia_respinta` e il `promotore` perde `valence_sfiducia_respinta`. `true` se
     /// è passata. Un `dicastero` fuori dai dati o in interim: nessun voto, `false`.
     pub(crate) fn sfiducia(&mut self, dicastero: Option<usize>, promotore: Option<usize>) -> bool {
-        let tecnico = (dicastero.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref()))
-            .is_some_and(|m| m.tecnico);
+        let ministro = dicastero.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref());
+        let tecnico = ministro.is_some_and(|m| m.tecnico);
+        let ministro = ministro.map(|m| m.nome.clone());
         let Some((linea, camera, senato, approvata)) = self.voto_sfiducia(dicastero) else {
             return false;
         };
@@ -3763,9 +3810,12 @@ impl Partita {
             decaduta: None,
         };
         self.parlamento.prossima = self.parlamento.prossima.saturating_add(1);
-        self.parlamento.esiti.insert(0, esito);
+        let mut coda = Vec::new();
         match (approvata, dicastero) {
-            (true, None) => self.legislatura.dimissioni = true,
+            (true, None) => {
+                self.legislatura.dimissioni = true;
+                coda.push("il governo è dimissionario".to_string());
+            }
             (true, Some(i)) => {
                 if let Some(id) = self.dati.dicasteri().get(i).map(|d| d.id.clone()) {
                     self.dimissioni_chieste(&id);
@@ -3774,18 +3824,29 @@ impl Partita {
                 if let Some(st) = self.ministri.dicasteri.get_mut(i) {
                     st.rosa_tecnica = tecnico;
                 }
+                coda.push("il dicastero va in interim".to_string());
             }
             (false, _) => {
                 let delta = self.dati.manopola("intesa_sfiducia_respinta");
-                for j in self.alleati() {
+                let alleati = self.alleati();
+                // All'opposizione l'intesa degli alleati del governo avversario non si vede.
+                if self.al_governo() && !alleati.is_empty() {
+                    let punti = vita::virgola(delta);
+                    coda.push(format!("ogni alleato guadagna {punti} punti d'intesa"));
+                }
+                for j in alleati {
                     (self.intesa).varia(j, CausaIntesa::SfiduciaRespinta, delta, self.turno);
                 }
                 let valence = self.dati.manopola("valence_sfiducia_respinta");
                 if let Some(p) = promotore.and_then(|j| self.partiti.get_mut(j)) {
                     p.valence -= valence;
+                    coda.push(esito::valence(-valence, &p.nome));
                 }
             }
         }
+        let bersaglio = (dicastero, ministro.as_deref());
+        self.voce_sfiducia(&esito, bersaglio, promotore, &linea, coda);
+        self.parlamento.esiti.insert(0, esito);
         approvata
     }
 

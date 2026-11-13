@@ -224,6 +224,20 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
         p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
         chiudi_senza_opposizione_ia(&mut p);
         assert_eq!(p.in_vigore("coalizioni"), Some("si"));
+        if seconda {
+            let d = voci(&p, TipoVoce::MisuraDecaduta);
+            assert_eq!(d.len(), 1, "{d:?}");
+            assert_eq!(d[0].disposizioni, ["premio"]);
+            assert_eq!(
+                d[0].fatto,
+                "Decade senza voto «Premio di maggioranza: alla lista»"
+            );
+            assert_eq!(
+                d[0].causa,
+                "la legge elettorale non sarebbe più valida, premio alla lista con le coalizioni \
+                 attive"
+            );
+        }
         chiudi_senza_opposizione_ia(&mut p);
         p
     };

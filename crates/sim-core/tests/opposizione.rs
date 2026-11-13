@@ -1,8 +1,9 @@
 mod comune;
 use comune::{
     all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, fondata,
-    togli_eventi_nati,
+    togli_eventi_nati, voci,
 };
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
@@ -152,6 +153,22 @@ fn la_sfiducia_respinta_ricompatta_e_costa_valence() {
         dati.manopola("valence_sfiducia_respinta") * (1.0 - dati.manopola("ritorno_valence"));
     let persa = gemella.partiti()[g].valence - p.partiti()[g].valence;
     assert!((persa - atteso).abs() < 1e-9, "{persa}");
+    let v = voci(&p, TipoVoce::SfiduciaRespinta);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        (v[0].partito.as_deref(), v[0].criticita),
+        (Some("giocatore"), Criticita::Notevole)
+    );
+    // All'opposizione l'intesa degli alleati del governo avversario non si vede.
+    assert!(
+        v[0].fatto
+            .starts_with("Respinta la sfiducia al governo; Camera ")
+            && v[0].fatto.contains("; valence -")
+            && !v[0].fatto.contains("intesa"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(v[0].causa.starts_with("per il sì "), "{}", v[0].causa);
 }
 
 /// L'opposizione con 270 seggi su 400 alla Camera (giocatore 240, estrema destra 30).
@@ -172,6 +189,17 @@ fn la_sfiducia_approvata_fa_cadere_il_governo() {
         .unwrap();
     assert!(e.approvata);
     assert_ne!(p.legislatura().fase, Fase::Ordinaria); // trattativa o Camere sciolte
+    let v = voci(&p, TipoVoce::SfiduciaApprovata);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    assert!(
+        v[0].fatto
+            .starts_with("Approvata la sfiducia al governo; Camera ")
+            && v[0].fatto.ends_with("; il governo è dimissionario"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(v[0].causa.starts_with("per il sì "), "{}", v[0].causa);
 }
 
 #[test]
@@ -189,6 +217,55 @@ fn sfiducia_a_un_ministro_lo_manda_in_interim() {
     assert_eq!(st.causa_dimissioni, Some(Causa::Sfiduciato));
     assert_eq!(p.legislatura().fase, Fase::Ordinaria);
     assert_eq!(p.governo().presidente, presidente);
+    let v = voci(&p, TipoVoce::SfiduciaApprovata);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].dicastero.as_deref(), Some("sanita"));
+    assert!(
+        v[0].fatto
+            .starts_with("Approvata la sfiducia individuale a ")
+            && v[0].fatto.contains(" (Sanità); Camera ")
+            && v[0].fatto.ends_with("; il dicastero va in interim"),
+        "{}",
+        v[0].fatto
+    );
+}
+
+/// La mozione su un dicastero già in interim, o sul governo già dimissionario, si toglie senza
+/// voto e lascia la sua voce.
+#[test]
+fn la_sfiducia_scartata_lascia_la_voce() {
+    let p = all_opposizione();
+    let g = p.giocatore();
+    for (dicastero, causa) in [
+        (serde_json::json!(0), "il dicastero è in interim"),
+        (serde_json::Value::Null, "il governo è già dimissionario"),
+    ] {
+        let interim = dicastero.is_number();
+        let mut p = edita(&p, |j| {
+            if interim {
+                let d = &mut j["ministri"]["dicasteri"][0];
+                for campo in ["ministro", "agenda", "proposta"] {
+                    d[campo] = serde_json::Value::Null;
+                }
+            } else {
+                j["legislatura"]["dimissioni"] = true.into();
+            }
+            j["parlamento"]["sfiducia"] = serde_json::json!([dicastero, g]);
+        })
+        .unwrap();
+        p.chiudi_turno();
+        assert!(!(p.vista().esiti.iter()).any(|e| e.forma == FormaMisura::Sfiducia));
+        let v = voci(&p, TipoVoce::SfiduciaScartata);
+        assert_eq!(v.len(), 1, "{v:?}");
+        assert_eq!(v[0].partito.as_deref(), Some("giocatore"));
+        assert!(
+            v[0].fatto
+                .starts_with("Tolta senza voto la mozione di sfiducia "),
+            "{}",
+            v[0].fatto
+        );
+        assert_eq!(v[0].causa, causa);
+    }
 }
 
 #[test]
