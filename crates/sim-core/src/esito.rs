@@ -627,6 +627,12 @@ mod tests {
         }
     }
 
+    /// La fermata `Ultimatum` legge il `partito` della voce: fusa, lo perderebbe nei dettagli.
+    #[test]
+    fn l_ultimatum_posto_non_si_fonde() {
+        assert!(!fondibile(UltimatumPosto));
+    }
+
     #[test]
     fn i_tipi_vanno_in_snake_case() {
         let json = serde_json::to_string(&GovernoDimissionario).unwrap();

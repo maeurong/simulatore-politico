@@ -11,15 +11,16 @@ use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
 use crate::eventi::rischio::Candidato;
 use crate::eventi::situazioni::trimestri;
 use crate::eventi::{Bersaglio, Causa as EventoCausa, DatoOpzione, EventoAperto, Tono, emergenze};
-use crate::informazione::Sondaggio;
+use crate::informazione::{Incrocio, Sondaggio};
 use crate::legislatura::campagna::{self, migliaia};
-use crate::legislatura::{self, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
+use crate::legislatura::{self, Fase, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
 use crate::ministri::{Causa, FattoAtto, Ministro, Proposta, causa_peggiore};
 use crate::parlamento::{
     self, Attenuazione, CausaIntesa, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura,
     Referendum, StatoEmendamento, TipoReferendum,
 };
 use crate::scenario::StatoPde;
+use crate::vista::Fermata;
 
 /// «+1,2» o «-0,3»: una cifra decimale, col segno.
 fn segnato(x: f64) -> String {
@@ -1877,5 +1878,110 @@ impl Partita {
             let fatto = format!("{nome} {verbo} l'ultimatum al governo");
             self.voce_di(j, tipo, fatto, causa);
         }
+    }
+
+    /// Le fermate del turno appena aperto, nell'ordine della spec: `Fine` e `Governo` da sole.
+    /// Lettura pura: solo ciò che la Vista mostra, il voto stimato sul sondaggio pubblico.
+    pub(super) fn fermate(&self) -> Vec<Fermata> {
+        if self.finita() {
+            return vec![Fermata::Fine];
+        }
+        if self.governa() {
+            return vec![Fermata::Governo];
+        }
+        let (l, pl) = (&self.legislatura, &self.parlamento);
+        let mut fermate = Vec::new();
+        if self.turno_del_voto() <= self.turno {
+            fermate.push(Fermata::Campagna);
+        }
+        if l.fase == Fase::Trattativa
+            && matches!(
+                l.incarico,
+                Some(Incarico::Giocatore | Incarico::Guida { .. })
+            )
+        {
+            fermate.push(Fermata::Incarico);
+        }
+        if self.posto_riservato_mio() {
+            fermate.push(Fermata::PostoRiservato);
+        }
+        if self.esito.iter().any(|v| v.tipo == TipoVoce::CrisiAperta) {
+            fermate.push(Fermata::Crisi);
+        }
+        // `UltimatumPosto` non è fondibile: ogni voce porta il suo `partito`.
+        fermate.extend(
+            (self.esito.iter())
+                .filter(|v| v.tipo == TipoVoce::UltimatumPosto)
+                .filter_map(|v| v.partito.clone())
+                .map(|partito| Fermata::Ultimatum { partito }),
+        );
+        let opposizione = self.all_opposizione().is_ok();
+        let confermativo = opposizione
+            && (pl.confermativi.iter())
+                .any(|r| (r.misura).is_some_and(|id| self.esito_del_confermativo(id).is_some()));
+        // Luglio-settembre è l'ultimo trimestre in cui l'abrogativo si chiede per l'anno.
+        let abrogativo = opposizione
+            && self.data.trimestre == 3
+            && pl.referendum.is_none()
+            && !self.governo.al_governo(self.giocatore)
+            && self.finestra_referendum().is_ok();
+        if confermativo || abrogativo {
+            fermate.push(Fermata::Referendum);
+        }
+        let soglia = self.dati.manopola("fermata_quota_elettorato");
+        fermate.extend(
+            (pl.misure.iter())
+                .filter(|m| m.voto == self.turno)
+                .filter(|m| {
+                    let q = self.quota_toccata(m);
+                    q > 0.0 && q >= soglia
+                })
+                .map(|m| Fermata::Voto { misura: m.id }),
+        );
+        fermate
+    }
+
+    /// Quota degli elettori stimati del giocatore toccati dalla misura, 0-1, dal sondaggio
+    /// pubblico: la più alta fra le sue disposizioni. Per disposizione, la quota nelle condizioni
+    /// dei suoi `gruppi` per quella nelle regioni del `perimetro` pesate (1 se nazionale): il
+    /// sondaggio dà solo i margini. 0 senza elettori stimati.
+    pub fn quota_toccata(&self, m: &Misura) -> f64 {
+        let (s, g) = (&self.informazione.sondaggio, self.giocatore);
+        (m.valori.iter())
+            .filter_map(|&(d, _)| self.dati.disposizioni().get(d))
+            .map(|x| {
+                let condizioni = quota_pesata(&s.condizioni, g, |id| {
+                    if x.gruppi.iter().any(|c| c.to_string() == id) {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                });
+                let regioni = if x.perimetro.is_empty() {
+                    1.0
+                } else {
+                    quota_pesata(&s.regioni, g, |id| {
+                        x.perimetro.get(id).copied().unwrap_or(0.0)
+                    })
+                };
+                condizioni * regioni
+            })
+            .fold(0.0, f64::max)
+    }
+}
+
+/// Gli elettori stimati del partito `g` negli `incroci` (campione × quota), pesati per `peso`
+/// dell'id, sul totale; 0 se il totale è zero.
+fn quota_pesata(incroci: &[Incrocio], g: usize, peso: impl Fn(&str) -> f64) -> f64 {
+    let elettori = |i: &Incrocio| f64::from(i.campione) * i.quote.get(g).copied().unwrap_or(0.0);
+    let tutti: f64 = incroci.iter().map(elettori).sum();
+    if tutti > 0.0 {
+        incroci
+            .iter()
+            .map(|i| peso(&i.id) * elettori(i))
+            .sum::<f64>()
+            / tutti
+    } else {
+        0.0
     }
 }

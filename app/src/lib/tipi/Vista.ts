@@ -4,6 +4,7 @@ import type { EsitoElezioni } from "./EsitoElezioni";
 import type { EsitoReferendum } from "./EsitoReferendum";
 import type { EsitoVoto } from "./EsitoVoto";
 import type { Fase } from "./Fase";
+import type { Fermata } from "./Fermata";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
@@ -158,4 +159,8 @@ situazioni: Array<VoceSituazione>,
 /**
  * L'informazione comprata nel turno e i prezzi di quella comprabile.
  */
-acquisti: VistaAcquisti, };
+acquisti: VistaAcquisti, 
+/**
+ * Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
+ */
+fermate: Array<Fermata>, };

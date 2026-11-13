@@ -7,6 +7,7 @@ use comune::{
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{FormaMisura, TipoReferendum};
+use sim_core::vista::Fermata;
 use sim_core::{Comando, Errore, Partita};
 
 fn con(f: FileDati, nome: &str, valore: &str) -> FileDati {
@@ -715,6 +716,25 @@ fn il_giocatore_ci_ripensa_e_chiede_il_confermativo() {
         p.vista().esiti_referendum[0].tipo,
         TipoReferendum::Confermativo
     );
+}
+
+/// Il confermativo ancora da scegliere ferma «avanti fino a novità»: anche con un abrogativo in
+/// corso, che a luglio-settembre toglie l'altra ragione della fermata.
+#[test]
+fn il_confermativo_da_scegliere_ferma() {
+    let p = costituzionale_senza_due_terzi_all_opposizione();
+    let k = dati_base().disposizione("licenziamento").unwrap();
+    let (ed, voto) = (partito("estrema_destra"), p.vista().turno + 1);
+    let p = edita(&p, |j| {
+        j["parlamento"]["referendum"] = serde_json::json!({
+            "tipo": "abrogativo", "misura": null, "valori": [[k, 0]], "promotore": ed,
+            "del_giocatore": false, "voto": voto, "firme": true, "invito_astensione": false,
+            "richiesto": true,
+        });
+    })
+    .unwrap();
+    let fermate = p.vista().fermate;
+    assert!(fermate.contains(&Fermata::Referendum), "{fermate:?}");
 }
 
 #[test]

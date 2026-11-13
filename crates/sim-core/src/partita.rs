@@ -4309,9 +4309,7 @@ impl Partita {
                 .collect(),
             alleati: self.voci_alleati(),
             alleati_avversari: self.voci_avversari(),
-            posto_riservato: self.all_opposizione().is_ok()
-                && self.posto_riservato() == Some(self.giocatore)
-                && self.parlamento.posto_riservato_libero(self.turno),
+            posto_riservato: self.posto_riservato_mio(),
             calendario: self.parlamento.voci_calendario(&self.stato_aula()),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())
@@ -4398,7 +4396,15 @@ impl Partita {
                     })
                     .collect(),
             },
+            fermate: self.fermate(),
         }
+    }
+
+    /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero.
+    fn posto_riservato_mio(&self) -> bool {
+        self.all_opposizione().is_ok()
+            && self.posto_riservato() == Some(self.giocatore)
+            && self.parlamento.posto_riservato_libero(self.turno)
     }
 
     /// Le sei situazioni coi valori ufficiali e le soglie, mai la probabilità.
