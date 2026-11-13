@@ -7,8 +7,8 @@ use crate::economia::{
     perdita_reale, perdite_scaglioni,
 };
 use crate::elettorato::{
-    Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, Quesito,
-    RedditoFascia, condizione_di, indice_gruppo, toccati,
+    Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, PER_REGIONE,
+    Quesito, RedditoFascia, condizione_di, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
@@ -38,10 +38,11 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, PrezzoAcquisto, SeggiPartito, Vista, VistaAcquisti,
-    VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica, VoceAlleato, VoceBudget,
-    VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpzione,
-    VocePartito, VoceProgramma, VocePromessa, VoceSituazione,
+    Anteprima, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita, PrezzoAcquisto, SeggiPartito,
+    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica,
+    VoceAlleato, VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico,
+    VoceMinistero, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
+    VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
 
@@ -52,7 +53,7 @@ pub(crate) mod vita;
 #[cfg(test)]
 use ts_rs::TS;
 
-pub const VERSIONE_SCHEMA: u32 = 18;
+pub const VERSIONE_SCHEMA: u32 = 19;
 
 /// Trimestre di calendario: `trimestre` va da 1 a 4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -4445,7 +4446,48 @@ impl Partita {
                     .collect(),
             },
             fermate: self.fermate(),
+            regioni: self.voci_regioni(),
         }
+    }
+
+    /// Le regioni nell'ordine dei dati: la disoccupazione e il reddito della chiusura precedente,
+    /// le quote dei gruppi di oggi.
+    fn voci_regioni(&self) -> Vec<VoceRegione> {
+        let regioni = self.dati.regioni();
+        let indice = |tipo, r| emergenze::indice_pericolosita(&self.dati, tipo, r);
+        let somme: Vec<f64> = (0..regioni.len())
+            .map(|r| {
+                (0..3)
+                    .map(|tipo| emergenze::attese_pericolosita(&self.dati, tipo, r))
+                    .sum()
+            })
+            .collect();
+        let massimo = somme.iter().copied().fold(0.0, f64::max);
+        (regioni.iter().enumerate())
+            .zip(&self.economia.regioni)
+            .zip(self.elettorato.gruppi.chunks(PER_REGIONE))
+            .map(|(((r, dato), economia), gruppi)| VoceRegione {
+                id: dato.id.clone(),
+                nome: dato.nome.clone(),
+                macroarea: dato.macroarea,
+                pericolosita: IndiciPericolosita {
+                    sisma: indice(0, r),
+                    idro: indice(1, r),
+                    incendi: indice(2, r),
+                    totale: if massimo > 0.0 {
+                        somme[r] / massimo
+                    } else {
+                        0.0
+                    },
+                },
+                disoccupazione: economia.disoccupazione_prima,
+                reddito: gruppi
+                    .iter()
+                    .map(|g| g.quota * g.reddito_prima.reale())
+                    .sum(),
+                gruppi: gruppi.iter().map(|g| g.quota).collect(),
+            })
+            .collect()
     }
 
     /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero.
@@ -5532,6 +5574,10 @@ impl Economia {
         ok(
             self.sussidio_per_disoccupato >= 0,
             "economia.sussidio_per_disoccupato negativo",
+        )?;
+        ok(
+            (self.regioni.iter()).all(|r| (0.0..=100.0).contains(&r.disoccupazione_prima)),
+            "economia.regioni: una disoccupazione_prima non finita o fuori da 0-100",
         )?;
         ok(
             self.livello_prezzi.is_finite()

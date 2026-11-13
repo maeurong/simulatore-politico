@@ -36,6 +36,9 @@ use serde::{Deserialize, Serialize};
 pub struct EconomiaRegione {
     pub id: String,
     pub disoccupazione: f64,
+    /// `disoccupazione` della chiusura precedente, copiata prima di `okun`: quella che la Vista
+    /// mostra. Al turno zero è uguale alla corrente.
+    pub disoccupazione_prima: f64,
     pub disoccupazione_strutturale: f64,
     pub gap: f64,
 }
@@ -173,6 +176,7 @@ impl Economia {
                     EconomiaRegione {
                         id: r.id.clone(),
                         disoccupazione: u,
+                        disoccupazione_prima: u,
                         disoccupazione_strutturale: u,
                         gap,
                     }
@@ -356,6 +360,9 @@ impl Economia {
             .map(|(x, x0)| y + 100.0 * (x / x0 - tot / tot0))
             .collect();
 
+        for r in &mut self.regioni {
+            r.disoccupazione_prima = r.disoccupazione;
+        }
         self.okun(dati, misure);
         self.bce(dati, shock_bce);
         self.sfc(dati);

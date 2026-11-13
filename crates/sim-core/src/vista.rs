@@ -13,6 +13,7 @@ use crate::parlamento::{
 };
 use crate::partita::Trimestre;
 use crate::partiti::{Regola, Vocazione};
+use crate::struttura::Macroarea;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -103,6 +104,8 @@ pub struct Vista {
     pub acquisti: VistaAcquisti,
     /// Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
     pub fermate: Vec<Fermata>,
+    /// Una voce per regione, nell'ordine dei dati.
+    pub regioni: Vec<VoceRegione>,
 }
 
 /// Una ragione per fermarsi sul turno appena aperto. `misura` è l'id della misura in calendario,
@@ -519,6 +522,35 @@ pub struct VoceGrandezza {
     pub verso: Verso,
     /// Una voce, o una per regione.
     pub valori: Vec<f64>,
+}
+
+/// Una regione, nell'ordine dei dati (lo stesso di `VoceGrandezza.valori`). `id` è la chiave.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceRegione {
+    pub id: String,
+    pub nome: String,
+    pub macroarea: Macroarea,
+    pub pericolosita: IndiciPericolosita,
+    /// %, esatta, della chiusura precedente: in media, pesata sulle forze di lavoro, è la
+    /// disoccupazione riveduta della `statistica`.
+    pub disoccupazione: f64,
+    /// Euro annui reali per elettore, sui redditi della chiusura precedente pesati con le quote
+    /// di oggi.
+    pub reddito: f64,
+    /// Le 18 quote dei gruppi, che sommano a 1, nell'ordine condizione × fascia.
+    pub gruppi: Vec<f64>,
+}
+
+/// Da 0 a 1: emergenze attese l'anno nella regione diviso quelle della regione più esposta.
+/// `totale` fa lo stesso sulla somma dei tre tipi; la siccità non entra.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct IndiciPericolosita {
+    pub sisma: f64,
+    pub idro: f64,
+    pub incendi: f64,
+    pub totale: f64,
 }
 
 /// Il ministro (o l'interim con la sua rosa) di un dicastero.

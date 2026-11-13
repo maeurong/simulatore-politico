@@ -26,6 +26,7 @@ import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
 import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
+import type { VoceRegione } from "./VoceRegione";
 import type { VoceRichiesta } from "./VoceRichiesta";
 import type { VoceSituazione } from "./VoceSituazione";
 
@@ -163,4 +164,8 @@ acquisti: VistaAcquisti,
 /**
  * Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
  */
-fermate: Array<Fermata>, };
+fermate: Array<Fermata>, 
+/**
+ * Una voce per regione, nell'ordine dei dati.
+ */
+regioni: Array<VoceRegione>, };
