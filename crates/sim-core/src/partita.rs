@@ -24,8 +24,8 @@ use crate::informazione::{
 };
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
-    Fine, Incarico, Legislatura, Quadro, Spesa, VoceAnteprimaCampagna, VoceDisponibilita,
-    VoceRichiesta, VotiPartito, campagna, cassa, coalizioni_al_voto,
+    Fine, Incarico, Legislatura, OrigineCaduta, Quadro, Spesa, VoceAnteprimaCampagna,
+    VoceDisponibilita, VoceRichiesta, VotiPartito, campagna, cassa, coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
@@ -239,10 +239,9 @@ impl Partita {
                 incarico: None,
                 proposta: None,
                 allargati: Vec::new(),
-                dimissioni: false,
+                dimissioni: None,
                 maggioranza: None,
                 crisi: None,
-                voto_anticipato: false,
                 riposizionato: false,
                 protesta: false,
                 frange: Vec::new(),
@@ -266,10 +265,9 @@ impl Partita {
                 incarico: None,
                 proposta: None,
                 allargati: Vec::new(),
-                dimissioni: false,
+                dimissioni: None,
                 maggioranza: None,
                 crisi: None,
-                voto_anticipato: false,
                 riposizionato: false,
                 protesta: false,
                 frange: Vec::new(),
@@ -608,7 +606,8 @@ impl Partita {
         if self.legislatura.fase == Fase::Ordinaria
             && self.economia.esercizio_provvisorio(self.data)
         {
-            self.legislatura.dimissioni = true;
+            self.legislatura
+                .dimetti(OrigineCaduta::EsercizioProvvisorio);
         }
         let di_voto = self.legislatura.turno_di_voto(self.turno);
         // Dopo le scissioni, che portano via una parte della cassa (scelta 14 del piano 8b).
@@ -689,7 +688,7 @@ impl Partita {
         // l'ha già chiusa `vota_parlamento`. Con loro escono le frange di governo che lo vogliono
         // (scelta 8 del piano 8b).
         let l = &self.legislatura;
-        if l.fase == Fase::Ordinaria && !l.dimissioni && !di_voto {
+        if l.fase == Fase::Ordinaria && l.dimissioni.is_none() && !di_voto {
             self.frange_in_uscita(nate, &mut escono);
             self.uscite(&escono);
         }
@@ -699,8 +698,11 @@ impl Partita {
             self.fine_della_crisi(sfiducia_votata);
         }
         // Nel turno del voto vince il voto: le dimissioni si azzerano senza effetto.
-        if std::mem::take(&mut self.legislatura.dimissioni) && !di_voto {
-            self.capo_dello_stato();
+        if let Some(origine) = self.legislatura.dimissioni.take()
+            && !di_voto
+        {
+            self.voce_caduto(origine);
+            self.capo_dello_stato(origine == OrigineCaduta::VotoAnticipato);
         }
         if trattativa && !di_voto {
             self.forma_governo();
@@ -859,7 +861,7 @@ impl Partita {
         let interim = dicastero.is_some_and(|i| {
             (self.ministri.dicasteri.get(i)).is_none_or(|st| st.ministro.is_none())
         });
-        let scarto = match (self.legislatura.dimissioni, interim) {
+        let scarto = match (self.legislatura.dimissioni.is_some(), interim) {
             (true, _) => Some("il governo è già dimissionario"),
             (false, true) => Some("il dicastero è in interim"),
             (false, false) => None,
@@ -1030,7 +1032,7 @@ impl Partita {
             // La fiducia respinta fa cadere la misura senza blocco e il governo
             // (iter-legislativo-italiano:42: le dimissioni sono prassi, qui automatiche).
             if fiducia_respinta {
-                self.legislatura.dimissioni = true;
+                self.legislatura.dimetti(OrigineCaduta::FiduciaRespinta);
             } else {
                 let blocco = self.dati.manopola("turni_blocco_respinta") as u32;
                 let da = turno.saturating_add(1).saturating_add(blocco);
@@ -3055,7 +3057,6 @@ impl Partita {
         l.maggioranza = None;
         l.allargati.clear();
         l.crisi = None;
-        l.voto_anticipato = false;
         l.riposizionato = false;
         l.protesta = false;
         l.frange.clear();
@@ -3681,7 +3682,7 @@ impl Partita {
         let l = &mut self.legislatura;
         l.crisi = None;
         let allargati = std::mem::take(&mut l.allargati);
-        if l.dimissioni {
+        if l.dimissioni.is_some() {
             return;
         }
         let mut coalizione = self.governo.coalizione.clone();
@@ -3709,14 +3710,14 @@ impl Partita {
 
     /// `Dimettiti`: il governo cade alla chiusura del turno.
     pub(crate) fn dimettiti(&mut self) {
-        self.legislatura.dimissioni = true;
+        self.legislatura
+            .dimetti(OrigineCaduta::DimissioniDelPresidente);
     }
 
     /// Il Capo dello Stato dopo le dimissioni: la maggioranza contigua
     /// (formazione-di-coalizioni:13), senza il giocatore se presiedeva lui, senza il partito del
-    /// Presidente del Consiglio IA dimesso per il voto anticipato (decisione 2 di Mario, piano 8a),
-    /// con tutti per le altre cadute di un governo IA (scelta 11 del piano 7b); `voto_anticipato`
-    /// si azzera.
+    /// Presidente del Consiglio IA dimesso per il voto `anticipato` (decisione 2 di Mario, piano
+    /// 8a), con tutti per le altre cadute di un governo IA (scelta 11 del piano 7b).
     ///
     /// Senza il giocatore, l'incarico IA; col giocatore primo per seggi (Camera più Senato, a
     /// parità l'indice più basso), l'incarico a lui con quella maggioranza; col giocatore non
@@ -3726,7 +3727,7 @@ impl Partita {
     /// (iter-legislativo-italiano:80): una sua legge non costa al successore. La proposta
     /// dell'opposizione nel posto riservato non è del governo caduto e resta. I referendum
     /// restano.
-    fn capo_dello_stato(&mut self) {
+    fn capo_dello_stato(&mut self, anticipato: bool) {
         let decaduta = "Decaduta per la caduta del governo";
         let del_governo = |m: &Misura| m.promotore.is_none();
         let via = (self.parlamento).decadi_calendario(&self.dati, self.data, decaduta, del_governo);
@@ -3734,7 +3735,6 @@ impl Partita {
             self.voce_decaduta(m, "la caduta del governo".into());
         }
         let g = self.giocatore;
-        let anticipato = std::mem::take(&mut self.legislatura.voto_anticipato);
         let Some(coalizione) = self.maggioranza_del_capo(anticipato) else {
             self.legislatura.fase = Fase::Sciolta;
             return;
@@ -3875,7 +3875,7 @@ impl Partita {
         let mut coda = Vec::new();
         match (approvata, dicastero) {
             (true, None) => {
-                self.legislatura.dimissioni = true;
+                self.legislatura.dimetti(OrigineCaduta::Sfiducia);
                 coda.push("il governo è dimissionario".to_string());
             }
             (true, Some(i)) => {
@@ -4254,7 +4254,7 @@ impl Partita {
                 (Fase::Trattativa, _) => Some(VoceIncarico::CapoDelloStato),
                 _ => None,
             },
-            dimissioni: l.dimissioni,
+            dimissioni: l.dimissioni.is_some(),
             crisi: self.in_crisi(),
             esito: self.esito.clone(),
             programma: self
@@ -5155,9 +5155,24 @@ impl Partita {
              coalizione, fuori dalla trattativa e dalla crisi, o nella crisi del governo IA più \
              di uno, il giocatore o in esercizio provvisorio",
         )?;
+        // Fra due turni restano solo le dimissioni del comando e della crisi IA in apertura; le
+        // altre origini nascono e si consumano nella chiusura, e le prove le scrivono a mano.
         ok(
-            !l.voto_anticipato || l.dimissioni,
-            "legislatura.voto_anticipato senza dimissioni",
+            match l.dimissioni {
+                None => true,
+                Some(OrigineCaduta::CrisiSenzaUscita) => in_crisi_ia,
+                Some(OrigineCaduta::DimissioniDelPresidente) => {
+                    l.fase == Fase::Ordinaria && self.governo.presidente == self.giocatore
+                }
+                Some(
+                    OrigineCaduta::EsercizioProvvisorio
+                    | OrigineCaduta::FiduciaRespinta
+                    | OrigineCaduta::Sfiducia
+                    | OrigineCaduta::VotoAnticipato,
+                ) => l.fase == Fase::Ordinaria,
+            },
+            "legislatura.dimissioni fuori dalla fase ordinaria, per crisi senza uscita fuori dalla \
+             crisi del governo IA, o del Presidente del Consiglio che non è il giocatore",
         )?;
         ok(
             l.proposta.as_ref().is_none_or(|v| {
@@ -6144,7 +6159,7 @@ mod tests {
     #[test]
     fn niente_sfiducia_sul_governo_dimissionario() {
         let mut p = Partita::nuova(dati_base(), 1);
-        p.legislatura.dimissioni = true;
+        p.dimettiti();
         p.parlamento.sfiducia = Some((None, 0));
         assert!(!p.aula(false));
         assert!(p.parlamento.sfiducia.is_none());
@@ -6335,7 +6350,7 @@ mod tests {
         let chieste =
             (p.intesa.variazioni.iter()).any(|v| v.causa == CausaIntesa::DimissioniChieste);
         assert!(chieste);
-        assert!(!p.legislatura.dimissioni);
+        assert!(p.legislatura.dimissioni.is_none());
     }
 
     /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: niente
@@ -6356,7 +6371,7 @@ mod tests {
         let e = &p.parlamento.esiti[0];
         assert_eq!((e.camera.si, e.camera.no), (200, 200));
         assert!(e.senato.si < e.senato.no);
-        assert!(!e.approvata && !p.legislatura.dimissioni);
+        assert!(!e.approvata && p.legislatura.dimissioni.is_none());
         let d = |nome| p.dati.manopola(nome);
         assert_eq!(p.intesa.valori[4], intesa + d("intesa_sfiducia_respinta"));
         assert_eq!(

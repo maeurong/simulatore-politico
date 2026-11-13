@@ -277,7 +277,7 @@ fn due_cadute_nello_stesso_turno() {
             .any(|e| e.forma == FormaMisura::Sfiducia)
     );
     assert!(!p.governa());
-    assert!(!p.legislatura().dimissioni);
+    assert!(p.legislatura().dimissioni.is_none());
     assert_eq!(p.legislatura().crisi, None);
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
@@ -328,7 +328,7 @@ fn crisi_in_esercizio_provvisorio_senza_allargamento() {
     p.chiudi_turno();
     assert!(!p.governa());
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);
-    assert!(!p.legislatura().dimissioni && p.legislatura().crisi.is_none());
+    assert!(p.legislatura().dimissioni.is_none() && p.legislatura().crisi.is_none());
     // La sfiducia automatica è al governo: quella individuale dell'opposizione IA, nei turni
     // prima con un alleato in ultimatum, non conta.
     assert!(!(p.vista().esiti.iter()).any(|e| e.nome == "Mozione di sfiducia al governo"));

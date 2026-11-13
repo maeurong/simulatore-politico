@@ -448,7 +448,7 @@ fn la_frangia_non_esce_fuori_finestra() {
     let t = nata.vista().turno;
     for (chiave, valore) in [
         ("crisi", serde_json::json!(t)),
-        ("dimissioni", true.into()),
+        ("dimissioni", "dimissioni_del_presidente".into()),
         ("fase", "trattativa".into()),
     ] {
         let mut p = edita(&nata, |j| j["legislatura"][chiave] = valore).unwrap();

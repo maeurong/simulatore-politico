@@ -10,7 +10,7 @@ use crate::eventi::situazioni::trimestri;
 use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
 use crate::informazione::Sondaggio;
 use crate::legislatura::campagna::{self, migliaia};
-use crate::legislatura::{Spesa, quota_fra_i_votanti};
+use crate::legislatura::{OrigineCaduta, Spesa, quota_fra_i_votanti};
 use crate::ministri::{FattoAtto, Proposta};
 use crate::parlamento::{
     self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
@@ -1146,6 +1146,27 @@ impl Partita {
             v.dicastero = id;
             v.partito = partito;
         }
+    }
+
+    /// Fatti 51, 96, 100: il governo cade alla chiusura, per l'`origine` delle dimissioni.
+    pub(super) fn voce_caduto(&mut self, origine: OrigineCaduta) {
+        let pc = self.governo.presidente;
+        let nome = self.partiti.get(pc).map_or("", |p| p.nome.as_str());
+        let fatto = format!("Cade il governo di {nome}");
+        let causa = match origine {
+            OrigineCaduta::EsercizioProvvisorio => {
+                "l'esercizio provvisorio senza legge di bilancio approvata"
+            }
+            OrigineCaduta::FiduciaRespinta => "la fiducia respinta in aula",
+            OrigineCaduta::Sfiducia => "la mozione di sfiducia approvata",
+            OrigineCaduta::DimissioniDelPresidente => "le dimissioni del Presidente del Consiglio",
+            OrigineCaduta::CrisiSenzaUscita => "la crisi di governo senza uscita",
+            OrigineCaduta::VotoAnticipato => {
+                "le dimissioni per il voto anticipato: nei sondaggi il voto gli vale più che \
+                 restare al governo"
+            }
+        };
+        self.voce_di(pc, TipoVoce::GovernoCaduto, fatto, causa.into());
     }
 
     /// Fatto 48: la mozione di `promotore` sul `dicastero` (o sul governo) tolta senza voto.

@@ -7,7 +7,7 @@ mod comune;
 use comune::{all_opposizione, edita, file_base, fondata, ha_voce, imposta, voci};
 use serde_json::json;
 use sim_core::esito::TipoVoce;
-use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico};
+use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico, OrigineCaduta};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
 use sim_core::vista::VoceIncarico;
 use sim_core::{Comando, Partita};
@@ -714,6 +714,18 @@ fn dimissioni(p: &Partita) -> Vec<String> {
         .collect()
 }
 
+const IN_CRISI: Option<OrigineCaduta> = Some(OrigineCaduta::CrisiSenzaUscita);
+
+/// La chiusura del turno del governo IA dimesso in crisi: cade, e la voce dice la crisi senza
+/// uscita, uno qualunque dei tre motivi; in esercizio provvisorio, anche se quello la rialza.
+fn cade_per_la_crisi(mut p: Partita) {
+    p.chiudi_turno();
+    assert_ne!(p.legislatura().fase, Fase::Ordinaria);
+    let v = voci(&p, TipoVoce::GovernoCaduto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].causa, "la crisi di governo senza uscita");
+}
+
 #[test]
 fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
     // 24: col ritorno dell'intesa l'uscente risale sopra 25 prima della crisi, non sopra 40.
@@ -725,8 +737,9 @@ fn in_crisi_il_governo_ia_non_riprende_chi_e_uscito() {
         assert!(!l.allargati.contains(&uscente), "{intesa}");
         assert!(!l.allargati.contains(&p.giocatore()));
         // L'uscente (Destra) è l'unico vicino con seggi e ridarebbe la maggioranza: ha rotto.
-        assert!(l.dimissioni);
+        assert_eq!(l.dimissioni, IN_CRISI);
         assert_eq!(dimissioni(&p), [SI_DIMETTE_ROTTURA]);
+        cade_per_la_crisi(p);
     }
 }
 
@@ -742,8 +755,9 @@ fn senza_vicini_il_motivo_resta_nessun_partito() {
     let p = comune::con_seggi(&p, &ripartisci(400, 10), &ripartisci(200, 5));
     let p = edita(&p, |j| j["intesa"]["valori"] = json!(vec![100.0; n])).unwrap();
     let p = in_crisi(p, 10.0);
-    assert!(p.legislatura().dimissioni);
+    assert_eq!(p.legislatura().dimissioni, IN_CRISI);
     assert_eq!(dimissioni(&p), [SI_DIMETTE]);
+    cade_per_la_crisi(p);
 }
 
 /// L'estrema sinistra (0) con seggi tolti al giocatore, l'intesa alla base e vocazione governista
@@ -787,8 +801,9 @@ fn il_governo_ia_in_crisi_allarga_ma_non_in_esercizio_provvisorio() {
     assert_eq!(p.vista().data.trimestre, 1);
     assert!(p.economia().bilancio_presentato.is_none());
     let l = p.legislatura();
-    assert!(l.allargati.is_empty() && l.dimissioni);
+    assert!(l.allargati.is_empty() && l.dimissioni == IN_CRISI);
     assert_eq!(dimissioni(&p), [SI_DIMETTE_IN_PROVVISORIO]);
+    cade_per_la_crisi(p);
 }
 
 #[test]
@@ -796,12 +811,11 @@ fn col_voto_anticipato_il_capo_dello_stato_esclude_chi_si_dimette() {
     let p = all_opposizione();
     let pdc = p.governo().presidente;
     let mut p = edita(&p, |j| {
-        j["legislatura"]["dimissioni"] = true.into();
-        j["legislatura"]["voto_anticipato"] = true.into();
+        j["legislatura"]["dimissioni"] = "voto_anticipato".into();
     })
     .unwrap();
     p.chiudi_turno();
-    assert!(!p.legislatura().voto_anticipato);
+    assert!(p.legislatura().dimissioni.is_none());
     match &p.legislatura().incarico {
         Some(Incarico::Ia { coalizione } | Incarico::Guida { coalizione }) => {
             assert!(!coalizione.contains(&pdc));
@@ -893,11 +907,33 @@ fn il_governo_ia_presenta_il_bilancio_in_esercizio_provvisorio() {
     );
 }
 
+/// Le guardie di `carica` sull'origine delle dimissioni: solo in fase ordinaria, la crisi senza
+/// uscita solo nella crisi del governo IA, le dimissioni del Presidente del Consiglio solo se
+/// presiede il giocatore.
 #[test]
-fn voto_anticipato_solo_con_le_dimissioni() {
+fn carica_rifiuta_l_origine_fuori_posto() {
     let p = all_opposizione();
-    let e = edita(&p, |j| j["legislatura"]["voto_anticipato"] = true.into());
-    assert!(e.is_err());
+    let con = |origine: &str, crisi: bool| {
+        edita(&p, |j| {
+            j["legislatura"]["dimissioni"] = origine.into();
+            if crisi {
+                j["legislatura"]["crisi"] = j["turno"].clone();
+            }
+        })
+    };
+    assert!(con("crisi_senza_uscita", true).is_ok());
+    assert!(con("crisi_senza_uscita", false).is_err());
+    assert!(con("dimissioni_del_presidente", false).is_err());
+    let sciolta = edita(&p, |j| {
+        j["legislatura"]["fase"] = "sciolta".into();
+        j["legislatura"]["dimissioni"] = "sfiducia".into();
+    });
+    assert!(sciolta.is_err());
+    let g = comune::al_governo();
+    let dimesso = edita(&g, |j| {
+        j["legislatura"]["dimissioni"] = "dimissioni_del_presidente".into();
+    });
+    assert!(dimesso.is_ok());
 }
 
 /// Senza una maggioranza che convenga a tutti i membri (`peso_governare` a −100: al governo

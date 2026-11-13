@@ -12,7 +12,7 @@ use crate::elettorato::{Affluenza, Condizione, stima};
 use crate::esito::TipoVoce;
 use crate::informazione::indice;
 use crate::legislatura::{
-    self, Bersaglio, Dichiarazione, Fase, Leva, Quadro, Spesa, campagna, movimento,
+    self, Bersaglio, Dichiarazione, Fase, Leva, OrigineCaduta, Quadro, Spesa, campagna, movimento,
     quota_fra_i_votanti,
 };
 use crate::ministri::TipoProposta;
@@ -704,7 +704,7 @@ impl Partita {
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         if self.economia.esercizio_provvisorio(self.data) {
-            self.legislatura.dimissioni = true;
+            self.legislatura.dimetti(OrigineCaduta::CrisiSenzaUscita);
             let causa = "in esercizio provvisorio non allarga la coalizione";
             self.voce_di(
                 pc,
@@ -765,7 +765,7 @@ impl Partita {
                 self.voce_di(pc, TipoVoce::CoalizioneAllargata, fatto, causa);
             }
             None => {
-                self.legislatura.dimissioni = true;
+                self.legislatura.dimetti(OrigineCaduta::CrisiSenzaUscita);
                 let causa = if rotto {
                     "nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui"
                 } else {
@@ -850,14 +850,15 @@ impl Partita {
             && self.turno >= l.inizio.saturating_add(4)
             && l.scadenza.saturating_sub(self.turno) >= 2
             && l.crisi.is_none()
-            && !l.dimissioni
+            && l.dimissioni.is_none()
     }
 
     /// In chiusura, dopo il sondaggio (scelta 13 del piano): nella finestra, il governo IA si
     /// dimette per andare al voto se il valore atteso del voto per il partito del Presidente del
     /// Consiglio (`Quadro::valore` sul sondaggio pubblico, coalizioni dell'ultimo voto) supera di
     /// `margine_voto_anticipato` quello del restare. Il restare è `valore_al_governo` coi seggi
-    /// veri, con la guida: il termine `valore_guida` che spetta a chi presiede il governo.
+    /// veri, con la guida: il termine `valore_guida` che spetta a chi presiede il governo. La voce
+    /// della caduta nasce dal Capo dello Stato, nella stessa chiusura.
     pub(super) fn voto_anticipato(&mut self) {
         if !self.finestra_voto_anticipato() {
             return;
@@ -867,12 +868,7 @@ impl Partita {
         let restare =
             legislatura::valore_al_governo(&self.quadro_veri(), pc, &self.governo.coalizione, true);
         if voto > restare + self.dati.manopola("margine_voto_anticipato") {
-            self.legislatura.dimissioni = true;
-            self.legislatura.voto_anticipato = true;
-            let fatto = "Si dimette puntando al voto".to_string();
-            let causa = "nei sondaggi il voto gli vale più che restare al governo".to_string();
-            // provvisoria: il Task 6 la fonde con la voce scritta nel punto del fatto
-            self.voce_di(pc, TipoVoce::GovernoCaduto, fatto, causa);
+            self.legislatura.dimetti(OrigineCaduta::VotoAnticipato);
         }
     }
 
@@ -1188,10 +1184,16 @@ mod tests {
     use crate::parlamento::CausaIntesa;
     use crate::partiti::Vocazione;
 
-    const AL_VOTO: (&str, &str) = (
-        "Si dimette puntando al voto",
-        "nei sondaggi il voto gli vale più che restare al governo",
-    );
+    const IN_CRISI: Option<OrigineCaduta> = Some(OrigineCaduta::CrisiSenzaUscita);
+
+    /// Il governo è caduto per il voto anticipato in questa chiusura.
+    fn al_voto(p: &Partita) -> bool {
+        let causa = "le dimissioni per il voto anticipato: nei sondaggi il voto gli vale più che \
+                     restare al governo";
+        testi(p, TipoVoce::GovernoCaduto)
+            .iter()
+            .any(|&(_, c)| c == causa)
+    }
 
     /// Fatto e causa delle voci di `tipo`, senza il partito.
     fn testi(p: &Partita, tipo: TipoVoce) -> Vec<(&str, &str)> {
@@ -1224,12 +1226,12 @@ mod tests {
         p.parlamento.seggi_senato[0] = 1;
         p.parlamento.seggi_senato[7] += 4;
         p.crisi_ia();
-        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni == IN_CRISI);
         // Identitaria, la distanza dalla coalizione le toglie il guadagno.
         let mut p = in_crisi_senza_destra();
         p.partiti[0].vocazione = Vocazione::Identitaria;
         p.crisi_ia();
-        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni == IN_CRISI);
         // Resta la Destra, utile ma rotta (intesa 30): il motivo è la rottura.
         let riga = (
             DIMESSO,
@@ -1279,7 +1281,7 @@ mod tests {
         p.legislatura.crisi = Some(p.turno);
         assert!(p.legislatura.turno_di_voto(p.turno));
         p.apertura_ia();
-        assert!(p.legislatura.allargati.is_empty() && !p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni.is_none());
         let mut p = in_crisi_senza_destra();
         p.apertura_ia();
         assert_eq!(p.legislatura.allargati, [0]);
@@ -1310,7 +1312,7 @@ mod tests {
             f(&mut p);
             let si = p.finestra_voto_anticipato();
             p.legislatura.crisi = None;
-            p.legislatura.dimissioni = false;
+            p.legislatura.dimissioni = None;
             p.legislatura.fase = Fase::Ordinaria;
             si
         };
@@ -1320,7 +1322,7 @@ mod tests {
         assert!(!a(scadenza - 1, |_| {}));
         assert!(!a(scadenza, |_| {}));
         assert!(!a(inizio + 4, |p| p.legislatura.crisi = Some(p.turno)));
-        assert!(!a(inizio + 4, |p| p.legislatura.dimissioni = true));
+        assert!(!a(inizio + 4, |p| p.dimettiti()));
         assert!(!a(inizio + 4, |p| p.legislatura.fase = Fase::Sciolta));
         assert!(!a(inizio + 4, |p| p.governo.presidente = p.giocatore));
     }
@@ -1331,14 +1333,14 @@ mod tests {
         let destra = p.partiti.iter().position(|x| x.id == "destra").unwrap();
         p.intesa.valori[destra] = 10.0;
         p.chiudi_turno();
-        assert!(p.in_crisi() && p.legislatura.dimissioni);
+        assert!(p.in_crisi() && p.legislatura.dimissioni == IN_CRISI);
         assert!(p.legislatura.allargati.is_empty());
         let soglia = p.dati.manopola("soglia_ultimatum");
-        p.legislatura.dimissioni = false;
+        p.legislatura.dimissioni = None;
         p.intesa.valori[destra] = soglia - 1.0;
         p.crisi_ia();
-        assert!(p.legislatura.dimissioni && p.legislatura.allargati.is_empty());
-        p.legislatura.dimissioni = false;
+        assert!(p.legislatura.dimissioni == IN_CRISI && p.legislatura.allargati.is_empty());
+        p.legislatura.dimissioni = None;
         p.intesa.valori[destra] = soglia;
         p.crisi_ia();
         assert_eq!(p.legislatura.allargati, [destra]);
@@ -1362,7 +1364,7 @@ mod tests {
         assert_eq!(p.legislatura.fase, Fase::Ordinaria);
         let mut resta = Partita::carica(&p.salva().unwrap()).unwrap();
         resta.chiudi_turno();
-        assert!(!testi(&resta, TipoVoce::GovernoCaduto).contains(&AL_VOTO));
+        assert!(!al_voto(&resta));
         assert_eq!(resta.legislatura.fase, Fase::Ordinaria);
         assert_eq!(resta.governo.presidente, pc);
         for (j, x) in p.partiti.iter_mut().enumerate() {
@@ -1380,14 +1382,15 @@ mod tests {
             q
         };
         let q = chiudi(8.0);
-        assert!(!testi(&q, TipoVoce::GovernoCaduto).contains(&AL_VOTO));
+        assert!(!al_voto(&q));
         assert_eq!(q.legislatura.fase, Fase::Ordinaria);
         let p = chiudi(0.0);
-        let id = p.partiti[pc].id.as_str();
-        let riga = (Some(id), AL_VOTO.0, AL_VOTO.1);
-        assert!(voci(&p, TipoVoce::GovernoCaduto).contains(&riga));
-        // Dimissioni e voto anticipato li consuma il Capo dello Stato nella stessa chiusura.
-        assert!(!p.legislatura.dimissioni && !p.legislatura.voto_anticipato);
+        assert!(al_voto(&p), "{:?}", p.esito);
+        let caduto = voci(&p, TipoVoce::GovernoCaduto);
+        assert_eq!(caduto.len(), 1);
+        assert_eq!(caduto[0].0, Some(p.partiti[pc].id.as_str()));
+        // Le dimissioni le consuma il Capo dello Stato nella stessa chiusura.
+        assert!(p.legislatura.dimissioni.is_none());
         assert_ne!(p.legislatura.fase, Fase::Ordinaria);
     }
 

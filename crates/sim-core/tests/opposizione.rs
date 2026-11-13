@@ -248,7 +248,7 @@ fn la_sfiducia_scartata_lascia_la_voce() {
                     d[campo] = serde_json::Value::Null;
                 }
             } else {
-                j["legislatura"]["dimissioni"] = true.into();
+                j["legislatura"]["dimissioni"] = "fiducia_respinta".into();
             }
             j["parlamento"]["sfiducia"] = serde_json::json!([dicastero, g]);
         })
@@ -581,7 +581,7 @@ fn la_proposta_dell_opposizione_sopravvive_alla_caduta() {
     })
     .unwrap();
     let id = proposta_del_giocatore(&p);
-    let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = true.into()).unwrap();
+    let mut p = edita(&p, |j| j["legislatura"]["dimissioni"] = "sfiducia".into()).unwrap();
     p.chiudi_turno();
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);
     assert!(p.vista().calendario.iter().any(|m| m.id == id));
