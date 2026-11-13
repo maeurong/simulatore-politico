@@ -1,17 +1,68 @@
 //! Le voci dell'esito scritte dalla partita, nel punto del fatto.
 
-use super::Partita;
 use super::vita::virgola;
+use super::{Partita, Trimestre};
 use crate::disposizioni::data_di;
+use crate::economia::Economia;
 use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
-use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, emergenze};
-use crate::legislatura::Spesa;
+use crate::eventi::situazioni::trimestri;
+use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
+use crate::informazione::Sondaggio;
 use crate::legislatura::campagna::{self, migliaia};
+use crate::legislatura::{Spesa, quota_fra_i_votanti};
 use crate::ministri::{FattoAtto, Proposta};
 use crate::parlamento::{
     self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
     StatoEmendamento, TipoReferendum,
 };
+use crate::scenario::StatoPde;
+
+/// «+1,2» o «-0,3»: una cifra decimale, col segno.
+fn segnato(x: f64) -> String {
+    format!("{x:+.1}").replace('.', ",")
+}
+
+/// «luglio-settembre 2026».
+fn trimestre(t: Trimestre) -> String {
+    let mesi = match t.trimestre {
+        1 => "gennaio-marzo",
+        2 => "aprile-giugno",
+        3 => "luglio-settembre",
+        _ => "ottobre-dicembre",
+    };
+    format!("{mesi} {}", t.anno)
+}
+
+fn stato_pde(s: StatoPde) -> &'static str {
+    match s {
+        StatoPde::Nessuna => "nessuna",
+        StatoPde::Aperta => "aperta",
+        StatoPde::Sospesa => "sospesa",
+        StatoPde::Inadempiente => "inadempiente",
+        StatoPde::Intimata => "intimata",
+        StatoPde::Sanzionata => "sanzionata",
+    }
+}
+
+/// Più grave, più alto: la sospesa sta fra nessuna procedura e l'aperta, perché la sospensione è
+/// il premio di chi corregge.
+fn gravita(s: StatoPde) -> u8 {
+    match s {
+        StatoPde::Nessuna => 0,
+        StatoPde::Sospesa => 1,
+        StatoPde::Aperta => 2,
+        StatoPde::Inadempiente => 3,
+        StatoPde::Intimata => 4,
+        StatoPde::Sanzionata => 5,
+    }
+}
+
+/// `s` con la prima lettera minuscola: il nome di una grandezza dentro una frase.
+fn minuscola(s: &str) -> String {
+    let mut c = s.chars();
+    c.next()
+        .map_or(String::new(), |p| p.to_lowercase().chain(c).collect())
+}
 
 /// «N euro dal fondo di riserva (Q% del costo)» o «N euro a debito».
 pub(super) fn pagamento(costo: i64, quota: f64, dal_fondo: bool) -> String {
@@ -338,8 +389,9 @@ impl Partita {
     }
 
     /// Fatto 56: la campagna del giocatore tagliata da `chiesto` a `speso` euro, con le spese
-    /// `cadute`; la causa dice gli `acquistato` euro d'informazione del turno e la scissione del
-    /// suo partito in questa chiusura.
+    /// `cadute`; la causa dice la scissione del suo partito in questa chiusura e, senza
+    /// attribuirgli il taglio, gli `acquistato` euro d'informazione del turno: comprati prima del
+    /// comando «Campagna» non l'hanno tagliata.
     pub(super) fn voce_tagliata(
         &mut self,
         chiesto: i64,
@@ -356,21 +408,323 @@ impl Partita {
             migliaia(speso),
             campagna::cadute(&self.dati, cadute)
         );
-        let mut perche = Vec::new();
+        let mut causa = "la cassa è scesa dopo la decisione".to_string();
+        if scissa {
+            causa.push_str(", con la scissione");
+        }
         if acquistato > 0 {
-            perche.push(format!(
-                "acquisti d'informazione per {} euro",
+            causa.push_str(&format!(
+                "; nel turno gli acquisti d'informazione sono costati {} euro",
                 migliaia(acquistato)
             ));
         }
-        if scissa {
-            perche.push("la scissione".to_string());
-        }
-        let mut causa = "la cassa è scesa dopo la decisione".to_string();
-        if !perche.is_empty() {
-            causa.push_str(&format!(", con {}", perche.join(" e ")));
-        }
         self.voce_di(self.giocatore, TipoVoce::CampagnaTagliata, fatto, causa);
+    }
+
+    /// Fatti 57, 59-62, 66: le voci del motore, dal confronto con l'economia `prima` del passo.
+    /// Solo dalla chiusura vera: `motore` gira anche sulle copie di `avanza_copia`.
+    pub(super) fn voci_del_motore(&mut self, prima: &Economia) {
+        let m = |nome: &str| self.dati.manopola(nome).round();
+        let (durata, turni) = (m("durata_mes"), m("turni_ristrutturazione"));
+        if prima.programma_mes.is_some() && self.economia.programma_mes.is_none() {
+            self.voce(
+                TipoVoce::MesFinito,
+                "Finito il programma del MES: cadono i vincoli del memorandum".into(),
+                format!("la durata del programma, {durata} trimestri"),
+            );
+        }
+        // Cast: lo spread è limitato da `spread_massimo` e non è mai NaN.
+        let (ora, pb) = (
+            self.economia.spread.round() as i32,
+            prima.spread.round() as i32,
+        );
+        let fatto = format!("Spread a {ora} pb, {:+} pb sul trimestre prima", ora - pb);
+        self.voce(TipoVoce::Spread, fatto, "chiusura del trimestre".into());
+        self.voci_regole_ue(prima);
+        if prima.ristrutturazione.is_some() && self.economia.ristrutturazione.is_none() {
+            self.voce(
+                TipoVoce::RistrutturazioneFinita,
+                "Finita la ristrutturazione del debito: il premio sullo spread è rientrato e i \
+                 redditi delle fasce media e alta non calano più"
+                    .into(),
+                format!(
+                    "premio sotto 1 punto base e {turni} turni di perdita dei redditi trascorsi"
+                ),
+            );
+        }
+    }
+
+    /// Fatti 60-62: controllo annuale, procedura per disavanzo eccessivo e ammenda, dalle regole
+    /// UE `prima` del passo e da quelle di ora.
+    fn voci_regole_ue(&mut self, prima: &Economia) {
+        let m = |nome: &str| self.dati.manopola(nome);
+        let r = &self.economia.regole_ue;
+        let a1 = self.data.anno.saturating_sub(1);
+        // Le condizioni di `controllo_annuale`: senza un anno nei conti esce senza toccare nulla.
+        let conti = (
+            r.spesa_netta.get(&a1),
+            r.spesa_netta.get(&a1.saturating_sub(1)),
+            r.pil_annuo.get(&a1),
+            r.disavanzo_annuo.get(&a1),
+        );
+        let controllo = match conti {
+            (Some(&sn1), Some(&sn2), Some(&pil1), Some(&dis1)) if self.data.trimestre == 2 => {
+                Some((sn1 as f64, sn2 as f64, pil1 as f64, dis1 as f64))
+            }
+            _ => None,
+        };
+        let (deviazione, conto, pde) = (r.ultima_deviazione, r.conto_controllo, r.pde);
+        let rilevante = deviazione > m("deviazione_annua_rilevante")
+            || conto > m("deviazione_cumulata_rilevante");
+        let (pde_prima, ammende) = (prima.regole_ue.pde, self.economia.conti.spese.ammende);
+        if let Some((sn1, sn2, pil1, _)) = controllo {
+            let tetto = self.dati.scenario().tetto_spesa_netta(a1);
+            // `deviazione` è già al netto della clausola: la differenza dalla lorda è la clausola.
+            let clausola = (sn1 - sn2 * (1.0 + tetto / 100.0)) / pil1 * 100.0 - deviazione;
+            let netto = if clausola.abs() < 1e-9 {
+                ", senza clausola".to_string()
+            } else {
+                format!(", al netto della clausola di {} punti", virgola(clausola))
+            };
+            let verso = if deviazione > 0.0 { "oltre" } else { "sotto" };
+            let fatto = format!(
+                "Controllo UE sul {a1}: spesa netta {verso} il percorso di {} punti di PIL{netto}; \
+                 conto di controllo a {} punti di PIL",
+                virgola(deviazione.abs()),
+                virgola(conto)
+            );
+            let causa = format!(
+                "la spesa netta del {a1} cresce del {}% contro il tetto del {}%",
+                virgola((sn1 / sn2 - 1.0) * 100.0),
+                virgola(tetto)
+            );
+            self.voce(TipoVoce::ControlloUe, fatto, causa);
+        }
+        if pde != pde_prima {
+            let fatto = match (pde_prima, pde) {
+                (StatoPde::Nessuna, _) => "Aperta la procedura per disavanzo eccessivo".to_string(),
+                (a, StatoPde::Nessuna) => format!(
+                    "Chiusa la procedura per disavanzo eccessivo, che era {}",
+                    stato_pde(a)
+                ),
+                (a, b) => format!(
+                    "La procedura per disavanzo eccessivo passa da {} a {}",
+                    stato_pde(a),
+                    stato_pde(b)
+                ),
+            };
+            let deviazione = if rilevante {
+                "deviazione rilevante della spesa netta"
+            } else {
+                "deviazione non rilevante della spesa netta"
+            };
+            let causa = match (pde, controllo) {
+                (StatoPde::Intimata, _) => {
+                    "nessuna correzione entro l'anno dall'inadempienza (articolo 126.9)".to_string()
+                }
+                (StatoPde::Sanzionata, _) => {
+                    "nessuna correzione due turni dopo l'intimazione (articolo 126.11)".to_string()
+                }
+                (_, Some((_, _, pil1, dis1))) => format!(
+                    "{deviazione}, disavanzo del {a1} al {}% del PIL",
+                    virgola(dis1 / pil1 * 100.0)
+                ),
+                (_, None) => deviazione.to_string(),
+            };
+            let grado = if self.al_governo() {
+                Grado::C2
+            } else {
+                Grado::N
+            };
+            if let Some(v) = self.voce(TipoVoce::ProceduraUe, fatto, causa)
+                && gravita(pde) > gravita(pde_prima)
+            {
+                v.con_grado(grado);
+            }
+        }
+        if ammende > 0 {
+            // L'ammenda si calcola sul PIL di prima del passo, in `finanza`.
+            let quota = ammende as f64 / (prima.pil_trimestrale * 4.0 * 1e9) * 100.0;
+            let fatto = format!(
+                "Pagata un'ammenda UE di {} euro, pari a {}% del PIL",
+                migliaia(ammende),
+                format!("{quota:.2}").replace('.', ",")
+            );
+            let causa = match pde_prima {
+                StatoPde::Inadempiente => {
+                    "procedura per disavanzo eccessivo inadempiente, ammenda del primo turno"
+                }
+                _ => "procedura per disavanzo eccessivo sanzionata, ammenda semestrale",
+            };
+            self.voce(TipoVoce::AmmendaUe, fatto, causa.into());
+        }
+    }
+
+    /// Fatto 69: il sondaggio pubblico appena rilevato contro quello `prima`, per la coalizione
+    /// del giocatore o, se corre da solo, per il suo partito.
+    pub(super) fn voce_sondaggio(&mut self, prima: &Sondaggio) {
+        let g = self.giocatore;
+        let coalizione = (self.coalizioni_correnti().into_iter())
+            .find(|c| c.contains(&g))
+            .unwrap_or_else(|| vec![g]);
+        let quota = |s: &Sondaggio| {
+            100.0
+                * (coalizione.iter())
+                    .map(|&j| quota_fra_i_votanti(s, j))
+                    .sum::<f64>()
+        };
+        let (ora, prima) = (quota(&self.informazione.sondaggio), quota(prima));
+        let nomi: Vec<&str> = (coalizione.iter())
+            .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.as_str()))
+            .collect();
+        let chi = match nomi.as_slice() {
+            [nome] => nome.to_string(),
+            _ => format!("la coalizione di {}", nomi.join(", ")),
+        };
+        let fatto = format!(
+            "Sondaggio: {chi} al {}% fra i votanti, {} punti sul trimestre prima",
+            virgola(ora),
+            segnato(ora - prima)
+        );
+        let causa = format!(
+            "sondaggio pubblico del trimestre, media di {} istituti",
+            self.informazione.sondaggio.istituti.len()
+        );
+        self.voce_di(g, TipoVoce::Sondaggio, fatto, causa);
+    }
+
+    /// Fatto 70: la prima stima del trimestre chiuso e la revisione di quella prima.
+    pub(super) fn voci_statistica(&mut self) {
+        let s = &self.informazione.statistica;
+        let p = &s.prima_stima;
+        let fatto = format!(
+            "Prima stima di {}: PIL {}% annualizzato, inflazione {}% annualizzata e {}% \
+             sull'anno, disoccupazione {}%, disavanzo {}% del PIL",
+            trimestre(s.trimestre),
+            segnato(p.crescita_pil),
+            virgola(p.inflazione),
+            virgola(p.inflazione_annua),
+            virgola(p.disoccupazione),
+            virgola(p.disavanzo)
+        );
+        let revisione = s.revisione.as_ref().map(|r| {
+            let (a, b) = (&r.prima_stima, &r.riveduta);
+            format!(
+                "Revisione di {}: PIL da {}% a {}%, inflazione da {}% a {}%, disoccupazione da \
+                 {}% a {}%, disavanzo da {}% a {}% del PIL",
+                trimestre(r.trimestre),
+                segnato(a.crescita_pil),
+                segnato(b.crescita_pil),
+                virgola(a.inflazione),
+                virgola(b.inflazione),
+                virgola(a.disoccupazione),
+                virgola(b.disoccupazione),
+                virgola(a.disavanzo),
+                virgola(b.disavanzo)
+            )
+        });
+        let causa = "prima stima, riveduta fra un turno".to_string();
+        self.voce(TipoVoce::PrimaStima, fatto, causa);
+        if let Some(fatto) = revisione {
+            self.voce(
+                TipoVoce::Revisione,
+                fatto,
+                "revisione della prima stima".into(),
+            );
+        }
+    }
+
+    /// Il nome della misura di una situazione dentro una frase, con l'unità dei suoi valori.
+    fn misura_a_parole(&self, misura: &str) -> (String, &'static str) {
+        match misura {
+            "crescita_pil" => ("crescita del PIL".into(), "% annuo"),
+            "energia" => ("scarto dei prezzi dell'energia".into(), ""),
+            id => {
+                let nome = (self.dati.grandezza(id))
+                    .and_then(|k| self.dati.grandezze().get(k))
+                    .map_or(id, |g| g.nome.as_str());
+                (minuscola(nome), "")
+            }
+        }
+    }
+
+    /// Fatti 71 e 72: le situazioni accese o spente in questa chiusura, `accese_prima` contro le
+    /// accese di ora, col valore `ufficiali` che la Vista mostra.
+    pub(super) fn voci_situazioni(&mut self, accese_prima: &[bool], ufficiali: &[f64]) {
+        let righe = (self.dati.situazioni().iter().enumerate()).zip(&self.eventi.accese);
+        let cambi: Vec<(TipoVoce, String, String)> = righe
+            .filter_map(|((i, s), &ora)| {
+                let (tipo, verbo, quale, soglia) = match (accese_prima.get(i)?, ora) {
+                    (false, true) => (
+                        TipoVoce::SituazioneAccesa,
+                        "accende",
+                        "oltrepassata la soglia di accensione",
+                        s.accensione,
+                    ),
+                    (true, false) => (
+                        TipoVoce::SituazioneSpenta,
+                        "spegne",
+                        "raggiunta la soglia di spegnimento",
+                        s.spegnimento,
+                    ),
+                    _ => return None,
+                };
+                let (misura, unita) = self.misura_a_parole(&s.misura);
+                let fila = match trimestri(&s.misura) {
+                    1 => String::new(),
+                    n => format!(", per {n} trimestri di fila"),
+                };
+                let fatto = format!(
+                    "Si {verbo} la situazione «{}»: {misura} a {}{unita}",
+                    s.nome,
+                    virgola(*ufficiali.get(i)?)
+                );
+                let causa = format!("{quale} di {}{unita}{fila}", virgola(soglia));
+                Some((tipo, fatto, causa))
+            })
+            .collect();
+        for (tipo, fatto, causa) in cambi {
+            self.voce(tipo, fatto, causa);
+        }
+    }
+
+    /// Fatto 73: le «Aste scoperte» (`evento`) aperte con lo spread a `pb` e la `soglia`.
+    pub(super) fn voce_crisi(&mut self, evento: usize, pb: i32, soglia: i32) {
+        let nome = (self.dati.eventi().get(evento)).map_or("", |e| e.nome.as_str());
+        let fatto = format!("Spread a {pb} pb: si aprono le «{nome}»");
+        let causa = format!(
+            "lo spread ha raggiunto la soglia di crisi di {soglia} pb, senza programma del MES né \
+             ristrutturazione in corso"
+        );
+        if let Some(v) = self.voce(TipoVoce::CrisiDelDebito, fatto, causa) {
+            v.tono = Tono::Grave;
+        }
+    }
+
+    /// Fatto 74: le `entrate` del partito `j`, col 2 per mille sulla `quota` fra i votanti
+    /// dell'ultimo voto (sull'intenzione, prima del primo voto) e il resto in donazioni.
+    pub(super) fn voce_entrate(&mut self, j: usize, entrate: i64, quota: f64, primo_voto: bool) {
+        let m = |nome: &str| self.dati.manopola(nome);
+        let dpm = (m("due_per_mille_turno") * quota * m("quota_libera_entrate")).round() as i64;
+        let Some(p) = self.partiti.get(j).filter(|_| entrate > 0) else {
+            return;
+        };
+        let fatto = format!(
+            "{} incassa {} euro, {} dal 2 per mille e {} di donazioni",
+            p.nome,
+            migliaia(entrate),
+            migliaia(dpm),
+            migliaia(entrate - dpm)
+        );
+        let causa = if primo_voto {
+            "prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto".to_string()
+        } else {
+            format!(
+                "2 per mille sul {}% dell'ultimo voto, donazioni sulle intenzioni di voto",
+                virgola(quota * 100.0)
+            )
+        };
+        self.voce_di(j, TipoVoce::EntrateDiCassa, fatto, causa);
     }
 
     /// Il promotore (id) e le disposizioni della misura, nell'ordine dei valori.

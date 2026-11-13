@@ -9,7 +9,7 @@ use crate::grandezze::Grandezze;
 use crate::informazione::Statistica;
 
 /// Trimestri di fila dalla parte giusta della soglia che cambiano lo stato.
-fn trimestri(misura: &str) -> u8 {
+pub(crate) fn trimestri(misura: &str) -> u8 {
     if misura == "crescita_pil" { 2 } else { 1 }
 }
 

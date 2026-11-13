@@ -151,7 +151,8 @@ fn campagna_tagliata_dagli_acquisti() {
     );
     assert_eq!(
         v.causa,
-        "la cassa è scesa dopo la decisione, con acquisti d'informazione per 15.000 euro"
+        "la cassa è scesa dopo la decisione; nel turno gli acquisti d'informazione sono costati \
+         15.000 euro"
     );
     assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 1));
 }

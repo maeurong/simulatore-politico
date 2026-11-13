@@ -208,7 +208,8 @@ fn primo_voto_nessun_cambio() {
     assert_eq!(p.legislatura().elezioni.len(), 1);
     // Al turno zero i partiti IA promettono anche senza seggi (R28); le casse IA di `fondata` sono
     // vuote, quindi nessuno spende: oltre le promesse, nessuna voce dei partiti IA. Restano fuori
-    // gli eventi del caso, risolti e lievi, e gli atti dei ministri del governo uscente.
+    // gli eventi del caso, risolti e lievi, gli atti dei ministri del governo uscente e le voci di
+    // ogni chiusura: spread, sondaggio, prima stima, revisione, entrate di cassa.
     let esito = p.vista().esito;
     let fuori = |t: TipoVoce| {
         matches!(
@@ -220,6 +221,11 @@ fn primo_voto_nessun_cambio() {
                 | TipoVoce::CantiereAvviato
                 | TipoVoce::CantiereFermo
                 | TipoVoce::CantiereFinito
+                | TipoVoce::Spread
+                | TipoVoce::Sondaggio
+                | TipoVoce::PrimaStima
+                | TipoVoce::Revisione
+                | TipoVoce::EntrateDiCassa
         )
     };
     assert!(

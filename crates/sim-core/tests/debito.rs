@@ -95,6 +95,18 @@ fn spread_oltre_soglia_apre_le_aste_scoperte() {
     let v = p.vista();
     let e = v.eventi.iter().find(|e| e.nome == "Aste scoperte").unwrap();
     assert!(e.causa.contains("soglia 550 pb"), "{}", e.causa);
+    let crisi = voci(&p, TipoVoce::CrisiDelDebito);
+    assert_eq!(crisi.len(), 1, "{:?}", v.esito);
+    assert_eq!(
+        crisi[0].fatto,
+        format!("Spread a {} pb: si aprono le «Aste scoperte»", v.spread_pb)
+    );
+    assert_eq!(
+        crisi[0].causa,
+        "lo spread ha raggiunto la soglia di crisi di 550 pb, senza programma del MES né \
+         ristrutturazione in corso"
+    );
+    assert_eq!((crisi[0].tono, crisi[0].precedenza), (Tono::Grave, 2));
 }
 
 #[test]
@@ -604,8 +616,16 @@ fn il_programma_dura_durata_mes_chiusure() {
     if let Err(e) = presenta(&mut p, &[("eta_pensionabile", "67")]) {
         assert!(!e.to_string().contains("memorandum"), "{e}");
     }
+    assert!(voci(&p, TipoVoce::MesFinito).is_empty());
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.economia().programma_mes, None);
+    let finito = voci(&p, TipoVoce::MesFinito);
+    assert_eq!(finito.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(
+        finito[0].fatto,
+        "Finito il programma del MES: cadono i vincoli del memorandum"
+    );
+    assert_eq!(finito[0].causa, "la durata del programma, 8 trimestri");
 }
 
 fn eta_pensionabile() -> (usize, usize) {
@@ -924,5 +944,20 @@ fn la_perdita_di_reddito_finisce_dentro_la_partita() {
             i + 1 < turni,
             "{i}"
         );
+        let finita = voci(&con, TipoVoce::RistrutturazioneFinita);
+        if i + 1 == turni {
+            assert_eq!(finita.len(), 1, "{i}: {:?}", con.vista().esito);
+            assert_eq!(
+                finita[0].fatto,
+                "Finita la ristrutturazione del debito: il premio sullo spread è rientrato e i \
+                 redditi delle fasce media e alta non calano più"
+            );
+            assert_eq!(
+                finita[0].causa,
+                "premio sotto 1 punto base e 8 turni di perdita dei redditi trascorsi"
+            );
+        } else {
+            assert!(finita.is_empty(), "{i}");
+        }
     }
 }

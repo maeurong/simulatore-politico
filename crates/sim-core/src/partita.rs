@@ -409,14 +409,13 @@ impl Partita {
         {
             return;
         }
+        // Cast: lo spread è limitato da `spread_massimo` e non è mai NaN.
+        let (pb, soglia) = (self.economia.spread.round() as i32, soglia.round() as i32);
+        self.voce_crisi(evento, pb, soglia);
         self.eventi.aperti.push(EventoAperto {
             evento,
             turno: self.turno.saturating_add(1),
-            // Cast: lo spread è limitato da `spread_massimo` e non è mai NaN.
-            causa: crate::eventi::Causa::Spread {
-                pb: self.economia.spread.round() as i32,
-                soglia: soglia.round() as i32,
-            },
+            causa: crate::eventi::Causa::Spread { pb, soglia },
             regione: None,
             bersaglio: None,
             persona: None,
@@ -619,7 +618,10 @@ impl Partita {
             self.spendi_campagne(acquistato);
         }
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
+        // Le voci del motore nascono qui e non in `motore`, che gira anche sulle copie.
+        let economia_prima = self.economia.clone();
         let innovazioni = self.motore(true);
+        self.voci_del_motore(&economia_prima);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
         // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
@@ -631,6 +633,7 @@ impl Partita {
             .spingi_a_destra(spinte as f64 * self.dati.manopola("spinta_situazione"));
         self.elettorato.posizioni(&self.dati, &mut self.caso);
         let vero = self.intenzioni_vere();
+        let sondaggio_prima = self.informazione.sondaggio.clone();
         self.informazione.rileva(
             &self.dati,
             &mut self.caso,
@@ -638,6 +641,7 @@ impl Partita {
             &vero,
             &self.governo,
         );
+        self.voce_sondaggio(&sondaggio_prima);
         self.informazione.statistica.aggiorna(
             &self.dati,
             &mut self.caso,
@@ -645,9 +649,11 @@ impl Partita {
             reale_prima,
             self.data,
         );
+        self.voci_statistica();
         // Subito dopo la statistica e prima del `Contesto` di `ministri.apri`: l'innesco «evento
         // nel dicastero» delle proposte deve vedere gli eventi appena nati.
         let misure = self.misure_situazioni(false);
+        let accese_prima = self.eventi.accese.clone();
         let nuove = situazioni::aggiorna(&self.dati, &mut self.eventi, &misure);
         // L'innesco legge il vero, la causa mostrata il valore ufficiale (come `situazioni()`).
         let ufficiali = self.misure_situazioni(true);
@@ -658,6 +664,7 @@ impl Partita {
             &ufficiali,
             self.turno.saturating_add(1),
         );
+        self.voci_situazioni(&accese_prima, &ufficiali);
         self.crisi_del_debito();
         self.incassa(&vero);
         if di_voto {
@@ -2387,9 +2394,11 @@ impl Partita {
 
     /// Entrate della chiusura (scelta 10): 2 per mille sulla quota all'ultimo voto, abbinata per
     /// id (zero a chi non c'era), donazioni sull'intenzione vera. Prima del primo voto il 2 per
-    /// mille usa l'intenzione vera, come la cassa iniziale. Gli sciolti non incassano.
+    /// mille usa l'intenzione vera, come la cassa iniziale. Gli sciolti non incassano. Una voce
+    /// per partito che incassa.
     fn incassa(&mut self, vero: &Intenzioni) {
         let intenzione = quote_fra_i_votanti(vero);
+        let primo_voto = self.legislatura.elezioni.is_empty();
         let ultimo_voto: Vec<f64> = match self.legislatura.elezioni.first() {
             Some(e) => (self.partiti.iter())
                 .map(|p| e.quota(&p.id).unwrap_or(0.0))
@@ -2397,10 +2406,12 @@ impl Partita {
             None => intenzione.clone(),
         };
         let entrate = cassa::entrate(&self.dati, &ultimo_voto, &intenzione);
-        for (p, e) in self.partiti.iter_mut().zip(entrate) {
-            if !p.sciolto {
-                p.cassa = p.cassa.saturating_add(e);
-            }
+        for (j, (e, quota)) in entrate.into_iter().zip(ultimo_voto).enumerate() {
+            let Some(p) = self.partiti.get_mut(j).filter(|p| !p.sciolto) else {
+                continue;
+            };
+            p.cassa = p.cassa.saturating_add(e);
+            self.voce_entrate(j, e, quota, primo_voto);
         }
     }
 
