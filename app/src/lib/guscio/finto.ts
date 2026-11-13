@@ -5,7 +5,7 @@ import type { Vista } from "$lib/tipi/Vista";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Campioni = {
   campione: any; turnoZero?: any; edicola: any; editor: any; fondazione: any;
-  paese: any; campagna: any;
+  paese: any; campagna: any; trattativa: any;
   /** ?stato= dell'URL: sceglie la prova del 26 e lo stato del 23 */
   stato: string | null;
 };
@@ -84,6 +84,8 @@ function anteprimaCampagna(spese: any[], campagna: any): unknown {
 function dopoComando(cmd: any, c: Campioni): unknown {
   const { campione, campagna, paese, stato } = c;
   const v = vistaDi(campione);
+  // la trattativa sta nel campione in uso se è un 27, altrimenti nello stato del 27 che porta la voce
+  const di27 = (voce: string): any => (campione?.[voce] ? campione : Object.values(c.trattativa ?? {}).find((s: any) => s?.[voce]));
   switch (cmd.tipo) {
     case "dichiara_coalizione": {
       const ordine = (id: string) => v?.partiti.findIndex((p) => p.id === id) ?? 0;
@@ -113,18 +115,20 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       return voce ? { ...v, partiti: esito(voce, "comanda") } : undefined;
     }
     case "proponi_spartizione": {
-      const proposta = campione?.proposte?.find((p: any) => uguali(p.spartizione, cmd.dicasteri));
-      return proposta ? { ...v, richieste: (esito(proposta.esito, "comanda"), proposta.richieste) } : undefined;
+      const t = di27("proposte");
+      const proposta = t?.proposte.find((p: any) => uguali(p.spartizione, cmd.dicasteri));
+      return proposta ? { ...vistaDi(t), richieste: (esito(proposta.esito, "comanda"), proposta.richieste) } : undefined;
     }
     case "allarga": {
       const tutti = cmd.partiti.length > 1;
-      const voce = tutti ? campione?.allarga_tutti : campione?.allarga_uno?.find((e: any) => e.partito === cmd.partiti[0]);
+      const t = di27(tutti ? "allarga_tutti" : "allarga_uno");
+      const voce = tutti ? t?.allarga_tutti : t?.allarga_uno.find((e: any) => e.partito === cmd.partiti[0]);
       if (!voce) return undefined;
       esito(voce.esito, "comanda");
       return tutti ? voce.vista : voce.dopo;
     }
-    case "chiedi_guida": return campione?.dopo_chiedi ?? undefined;
-    case "rifiuta_ribaltone": return campione?.dopo_rifiuta ?? undefined;
+    case "chiedi_guida": return di27("dopo_chiedi")?.dopo_chiedi;
+    case "rifiuta_ribaltone": return di27("dopo_rifiuta")?.dopo_rifiuta;
     default: return undefined;
   }
 }
@@ -189,6 +193,7 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     fondazione: await carica("15-"),
     paese: await carica("23-"),
     campagna: await carica("26-"),
+    trattativa: await carica("27-"),
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");

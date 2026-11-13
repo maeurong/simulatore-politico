@@ -23,6 +23,7 @@ const c = {
   fondazione,
   paese,
   campagna,
+  trattativa,
   stato: "zero",
 };
 
@@ -209,6 +210,17 @@ describe("rispondi: la fetta 11b", () => {
     expect(v.richieste).toEqual(prima.richieste);
   });
 
+  it("da una Vista non-27 il ripiego è il 27: la Vista dopo che porta", () => {
+    expect(comanda({ tipo: "allarga", partiti: ["a", "b"] }, governo)).toEqual((t27["senza_maggioranza"]["allarga_tutti"] as { vista: unknown }).vista);
+    expect(comanda({ tipo: "chiedi_guida" }, governo)).toEqual(t27["guida"]["dopo_chiedi"]);
+    const giocata = (t27["premio"]["proposte"] as { spartizione: unknown; richieste: unknown }[])[1];
+    const v = comanda({ tipo: "proponi_spartizione", dicasteri: giocata.spartizione }, governo) as { richieste: unknown };
+    expect(v.richieste).toEqual(giocata.richieste);
+  });
+  it("da una Vista non-27 un comando che il 27 non ha giocato resta rifiuto", () => {
+    expect(() => comanda({ tipo: "allarga", partiti: ["inventato"] }, governo)).toThrow(rifiuta("non nel campione: comanda"));
+    expect(() => comanda({ tipo: "proponi_spartizione", dicasteri: [] }, governo)).toThrow(rifiuta("non nel campione: comanda"));
+  });
   it("un comando non giocato resta un rifiuto", () => {
     expect(() => comanda({ tipo: "dimettiti" }, zeroCampagna)).toThrow(rifiuta("non nel campione: comanda"));
   });
