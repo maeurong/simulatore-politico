@@ -67,7 +67,7 @@
               onclick={() => manda(r.id, cedi(vista, cessioni, r.id, seggi + PASSO_CESSIONE))}>+</button>
           </span>
           {#if seggi && r.dichiarato}
-            <div class="fatto">{t("campagna.entra", { n: seggi, senato: Math.floor(seggi / 2), causa: r.causa })}</div>
+            <div class="fatto">{t("campagna.entra", { n: seggi, causa: r.causa })}<br /><span class="min muto">{t("campagna.entra_senato_vuoto")}</span></div>
           {/if}
         </div>
       {/if}

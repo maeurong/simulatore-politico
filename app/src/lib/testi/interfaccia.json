@@ -371,7 +371,8 @@
   "campagna.alla_camera": "{n} alla Camera",
   "campagna.attesi": "i tuoi attesi sul sondaggio pubblico: {n}",
   "campagna.attesi_vuoto": "i tuoi attesi sul sondaggio pubblico: arriva con la fetta 11g",
-  "campagna.entra": "Con {n} seggi ceduti alla Camera (e {senato} al Senato) entra: «{causa}»",
+  "campagna.entra": "Con {n} seggi ceduti alla Camera entra: «{causa}»",
+  "campagna.entra_senato_vuoto": "Seggi ceduti al Senato: arriva con la fetta 11g",
   "campagna.cessioni_in_memoria": "Le cessioni fatte non restano nella partita: se esci da questa pagina e rientri, ripartono da zero.",
   "campagna.meno_seggi": "Cedi meno seggi a {nome}",
   "campagna.piu_seggi": "Cedi più seggi a {nome}"
