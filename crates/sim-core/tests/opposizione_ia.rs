@@ -613,7 +613,7 @@ fn l_opposizione_ia_chiede_solo_referendum_vincenti() {
         .expect("la voce del referendum chiesto");
     assert_eq!(voce.partito.as_ref(), Some(&p.partiti()[promotore].id));
     assert!(
-        voce.fatto.starts_with("Chiede il referendum su ") && voce.fatto.contains(", si vota in "),
+        voce.fatto.starts_with("Chiede il referendum su ") && voce.fatto.contains(", si vota a "),
         "{voce:?}"
     );
     // Le firme dell'abrogativo chiesto nel turno si raccolgono nella stessa chiusura.

@@ -75,7 +75,10 @@ fn turno_quieto_ha_prima_stima_e_sondaggio() {
     chiudi_col_bilancio(&mut p);
     let v = p.vista();
     let uno = |x: f64| format!("{x:.1}").replace('.', ",");
-    let segno = |x: f64| format!("{x:+.1}").replace('.', ",");
+    let segno = |x: f64| match format!("{x:+.1}").replace('.', ",") {
+        s if s == "+0,0" || s == "-0,0" => "0,0".to_string(),
+        s => s,
+    };
     let una = |t: TipoVoce| {
         let tutte = voci(&p, t);
         assert_eq!(tutte.len(), 1, "{t:?}: {:?}", v.esito);
@@ -87,7 +90,11 @@ fn turno_quieto_ha_prima_stima_e_sondaggio() {
     assert_eq!(
         (spread.fatto.as_str(), spread.causa.as_str()),
         (
-            format!("Spread a {} pb, {d:+} pb sul trimestre prima", v.spread_pb).as_str(),
+            match d {
+                0 => format!("Spread a {} pb, invariato sul trimestre prima", v.spread_pb),
+                _ => format!("Spread a {} pb, {d:+} pb sul trimestre prima", v.spread_pb),
+            }
+            .as_str(),
             "chiusura del trimestre"
         )
     );
@@ -157,9 +164,12 @@ fn turno_quieto_ha_prima_stima_e_sondaggio() {
     assert_eq!(
         sondaggio.fatto,
         format!(
-            "Sondaggio: {chi} al {}% fra i votanti, {} punti sul trimestre prima",
+            "Sondaggio: {chi} al {}% fra i votanti, {} sul trimestre prima",
             uno(ora),
-            segno(ora - prima)
+            match segno(ora - prima) {
+                s if s == "0,0" => "invariato".to_string(),
+                s => format!("{s} punti"),
+            }
         )
     );
     assert_eq!(

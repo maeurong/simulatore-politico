@@ -681,7 +681,7 @@ impl Partita {
         {
             let percento = virgola(a.si / (a.si + a.no) * 100.0);
             let fatto = format!(
-                "Chiede il referendum su {nome}, si vota in {}",
+                "Chiede il referendum su {nome}, si vota a {}",
                 parlamento::mese(data_di(voto))
             );
             let causa = format!(
@@ -924,7 +924,7 @@ impl Partita {
             let causa = match proposta.tipo {
                 TipoProposta::Fondi { atto, .. } => {
                     let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
-                    format!("fondi che non bastano per {atto}")
+                    format!("il dicastero chiede fondi, che non bastano per {atto}")
                 }
                 // Senza «: »: nel dettaglio di una voce fusa separa il fatto dalla causa.
                 TipoProposta::Riforma { .. } => proposta.tipo.testo(&self.dati),

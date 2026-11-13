@@ -888,7 +888,8 @@ fn il_governo_ia_accoglie_la_proposta_del_dicastero() {
     assert!(
         (voci(&p, TipoVoce::PropostaAccolta).iter())
             .any(|v| v.fatto == "Accoglie la proposta del dicastero Sanità"
-                && v.causa.starts_with("fondi che non bastano per ")),
+                && v.causa
+                    .starts_with("il dicastero chiede fondi, che non bastano per ")),
         "{:?}",
         v.esito
     );

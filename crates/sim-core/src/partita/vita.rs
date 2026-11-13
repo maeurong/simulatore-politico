@@ -344,7 +344,7 @@ impl Partita {
                 Some(_) => "Si scioglie; cade la sua coalizione".to_string(),
                 None => "Si scioglie".to_string(),
             };
-            let causa = format!("{ELEZIONI_SENZA_SEGGI} elezioni senza seggi");
+            let causa = format!("{ELEZIONI_SENZA_SEGGI} elezioni di fila senza seggi");
             self.voce_di(j, TipoVoce::PartitoSciolto, fatto, causa);
         }
         let l = &mut self.legislatura;

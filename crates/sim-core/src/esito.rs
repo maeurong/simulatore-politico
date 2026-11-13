@@ -397,87 +397,115 @@ pub(crate) fn grado(tipo: TipoVoce, al_governo: bool) -> Option<Grado> {
     if al_governo { governo } else { opposizione }
 }
 
+/// Il fatto al plurale della voce fusa; `None` per i tipi che non si fondono. Esaustiva: un tipo
+/// nuovo deve scegliere qui se si fonde.
+fn plurale(tipo: TipoVoce) -> Option<&'static str> {
+    use TipoVoce::*;
+    let p = match tipo {
+        EmergenzaLieve => "emergenze lievi",
+        PropostaRespinta => "proposte respinte",
+        PropostaDecaduta => "proposte decadute",
+        EmendamentoRespinto => "emendamenti respinti",
+        AttoEseguito => "atti eseguiti",
+        AttoSaltato => "atti saltati",
+        CantiereAvviato => "cantieri avviati",
+        CantiereFermo => "cantieri fermi",
+        CantiereFinito => "cantieri finiti",
+        ValoreRinviato => "valori rinviati",
+        ValoreNonApplicato => "valori non applicati",
+        MisuraDecaduta => "misure decadute",
+        PromessaVerificata => "promesse verificate",
+        PromesseScadute => "promesse scadute",
+        PromessaFatta => "promesse fatte",
+        SpesaDiCampagna => "spese di campagna",
+        RedditoDeluso => "fasce di reddito deluse",
+        EntrateDiCassa => "entrate di cassa",
+        PartitoSciolto => "partiti sciolti",
+        SoddisfazioneVariata => "ministri cambiano soddisfazione",
+        MinacciaDiDimissioni => "ministri minacciano le dimissioni",
+        MinistroEsce => "ministri escono",
+        IntesaVariata => "alleati cambiano intesa",
+        CambioDiLeader => "cambi di leader",
+        RotturaDellImpegno => "rotture dell'impegno",
+        ShockAssorbito => "shock assorbiti",
+        ValoreInVigore => "valori entrano in vigore",
+        ArrivoScartato => "valori in arrivo scartati",
+        PosizioneSpostata => "posizioni spostate",
+        CoalizioneIa => "coalizioni fra partiti IA",
+        EmendamentoChiesto => "emendamenti chiesti",
+        MisuraPresentata => "misure presentate",
+        PropostaAccolta => "proposte accolte",
+        EmendamentoDeciso => "emendamenti decisi",
+        EventoRisolto
+        | MesAvviato
+        | Ristrutturazione
+        | MargineEnergia
+        | LeggiSlittate
+        | LeggeApprovata
+        | LeggeRespinta
+        | DecretoConvertito
+        | DecretoDecaduto
+        | BilancioApprovato
+        | BilancioRicondotto
+        | BilancioRespinto
+        | FiduciaRespinta
+        | SfiduciaApprovata
+        | SfiduciaRespinta
+        | SfiduciaScartata
+        | ConfermativoInAttesa
+        | ConfermativoSenzaVoto
+        | ReferendumVotato
+        | ReferendumDecaduto
+        | ReferendumChiesto
+        | FirmeRaccolte
+        | Scissione
+        | MinacciaDiScissione
+        | MinacciaRientrata
+        | CampagnaTagliata
+        | MesFinito
+        | Spread
+        | ControlloUe
+        | ProceduraUe
+        | AmmendaUe
+        | RistrutturazioneFinita
+        | Sondaggio
+        | PrimaStima
+        | Revisione
+        | SituazioneAccesa
+        | SituazioneSpenta
+        | CrisiDelDebito
+        | RisultatoDelVoto
+        | Incarico
+        | FineDellaPartita
+        | UltimatumPosto
+        | UltimatumRitirato
+        | FrangiaEsce
+        | AlleatoEsce
+        | Rimpasto
+        | CrisiAperta
+        | CoalizioneAllargata
+        | GovernoCaduto
+        | CamereSciolte
+        | GuidaRifiutata
+        | GovernoFormato
+        | ProgrammaDichiarato
+        | EventoNato
+        | PartitoDiProtesta
+        | FiduciaPosta
+        | SfiduciaPresentata
+        | GovernoDimissionario => return None,
+    };
+    Some(p)
+}
+
 /// Se le gemelle (stesso tipo, stessa criticità) si fondono in una voce sola.
 pub(crate) fn fondibile(tipo: TipoVoce) -> bool {
-    matches!(
-        tipo,
-        TipoVoce::EmergenzaLieve
-            | TipoVoce::PropostaRespinta
-            | TipoVoce::PropostaDecaduta
-            | TipoVoce::EmendamentoRespinto
-            | TipoVoce::AttoEseguito
-            | TipoVoce::AttoSaltato
-            | TipoVoce::CantiereAvviato
-            | TipoVoce::CantiereFermo
-            | TipoVoce::CantiereFinito
-            | TipoVoce::ValoreRinviato
-            | TipoVoce::ValoreNonApplicato
-            | TipoVoce::MisuraDecaduta
-            | TipoVoce::PromessaVerificata
-            | TipoVoce::PromesseScadute
-            | TipoVoce::PromessaFatta
-            | TipoVoce::SpesaDiCampagna
-            | TipoVoce::RedditoDeluso
-            | TipoVoce::EntrateDiCassa
-            | TipoVoce::PartitoSciolto
-            | TipoVoce::SoddisfazioneVariata
-            | TipoVoce::MinacciaDiDimissioni
-            | TipoVoce::MinistroEsce
-            | TipoVoce::IntesaVariata
-            | TipoVoce::CambioDiLeader
-            | TipoVoce::RotturaDellImpegno
-            | TipoVoce::ShockAssorbito
-            | TipoVoce::ValoreInVigore
-            | TipoVoce::ArrivoScartato
-            | TipoVoce::PosizioneSpostata
-            | TipoVoce::CoalizioneIa
-            | TipoVoce::EmendamentoChiesto
-            | TipoVoce::MisuraPresentata
-            | TipoVoce::PropostaAccolta
-            | TipoVoce::EmendamentoDeciso
-    )
+    plurale(tipo).is_some()
 }
 
 /// «N <fatto al plurale>»: il `fatto` della voce fusa.
 pub(crate) fn riassunto(tipo: TipoVoce, n: usize) -> String {
-    let plurale = match tipo {
-        TipoVoce::EmergenzaLieve => "emergenze lievi",
-        TipoVoce::PropostaRespinta => "proposte respinte",
-        TipoVoce::PropostaDecaduta => "proposte decadute",
-        TipoVoce::EmendamentoRespinto => "emendamenti respinti",
-        TipoVoce::AttoEseguito => "atti eseguiti",
-        TipoVoce::AttoSaltato => "atti saltati",
-        TipoVoce::CantiereAvviato => "cantieri avviati",
-        TipoVoce::CantiereFermo => "cantieri fermi",
-        TipoVoce::CantiereFinito => "cantieri finiti",
-        TipoVoce::ValoreRinviato => "valori rinviati",
-        TipoVoce::ValoreNonApplicato => "valori non applicati",
-        TipoVoce::MisuraDecaduta => "misure decadute",
-        TipoVoce::PromessaVerificata => "promesse verificate",
-        TipoVoce::PromesseScadute => "promesse scadute",
-        TipoVoce::PromessaFatta => "promesse fatte",
-        TipoVoce::SpesaDiCampagna => "spese di campagna",
-        TipoVoce::RedditoDeluso => "fasce di reddito deluse",
-        TipoVoce::EntrateDiCassa => "entrate di cassa",
-        TipoVoce::PartitoSciolto => "partiti sciolti",
-        TipoVoce::SoddisfazioneVariata => "ministri cambiano soddisfazione",
-        TipoVoce::MinacciaDiDimissioni => "ministri minacciano le dimissioni",
-        TipoVoce::MinistroEsce => "ministri escono",
-        TipoVoce::IntesaVariata => "alleati cambiano intesa",
-        TipoVoce::CambioDiLeader => "cambi di leader",
-        TipoVoce::RotturaDellImpegno => "rotture dell'impegno",
-        TipoVoce::ShockAssorbito => "shock assorbiti",
-        TipoVoce::ValoreInVigore => "valori entrano in vigore",
-        TipoVoce::ArrivoScartato => "valori in arrivo scartati",
-        TipoVoce::PosizioneSpostata => "posizioni spostate",
-        TipoVoce::CoalizioneIa => "coalizioni fra partiti IA",
-        TipoVoce::EmendamentoChiesto => "emendamenti chiesti",
-        TipoVoce::MisuraPresentata => "misure presentate",
-        TipoVoce::PropostaAccolta => "proposte accolte",
-        TipoVoce::EmendamentoDeciso => "emendamenti decisi",
-        _ => "voci",
-    };
-    format!("{n} {plurale}")
+    format!("{n} {}", plurale(tipo).unwrap_or("voci"))
 }
 
 /// Il valore che hanno in comune tutte le voci, o il vuoto se differiscono.

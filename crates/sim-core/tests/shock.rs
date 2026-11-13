@@ -147,8 +147,8 @@ fn shock_escluso_voce_senza_effetti() {
     let v = voci(&p, TipoVoce::ShockAssorbito);
     assert!(
         v[0].fatto.ends_with(
-            " senza evento: ne nasce uno solo a turno, la serie si muove lo stesso e vale «Non \
-             intervenire»"
+            " non diventa un evento: ne nasce uno solo a turno. La serie si muove comunque, come \
+             con «Non intervenire»"
         ),
         "{v:?}"
     );

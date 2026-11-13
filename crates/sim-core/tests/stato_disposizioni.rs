@@ -96,6 +96,34 @@ fn arrivo_elettorale_scartato_lascia_la_voce() {
     );
 }
 
+/// Con la legge elettorale resa non valida si scartano tutti gli arrivi elettorali, ma solo quello
+/// che cambiava il vigente ha la voce: l'altro direbbe «resta a A, non a A».
+#[test]
+fn arrivo_scartato_uguale_al_vigente_senza_voce() {
+    let d = dati_base();
+    let k = d.disposizione("coalizioni").unwrap();
+    let no = d.disposizioni()[k].gradino("no").unwrap();
+    let n = d.disposizioni().len();
+    let altra = (n - 9..n).find(|&i| i != k).unwrap();
+    let p = Partita::nuova(dati_base(), 1);
+    let mut p = edita(&p, |j| {
+        let voci = &mut j["disposizioni"]["voci"];
+        let vigente = voci[altra]["in_vigore"].clone();
+        voci[k]["in_arrivo"] =
+            serde_json::json!([{ "gradino": no, "turno": 1, "legge": "L. 1/2027" }]);
+        voci[altra]["in_arrivo"] =
+            serde_json::json!([{ "gradino": vigente, "turno": 1, "legge": "L. 1/2027" }]);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::ArrivoScartato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        v[0].fatto,
+        "Coalizioni resta a ammesse, non a non ammesse: il valore in arrivo è scartato"
+    );
+}
+
 #[test]
 fn proiezione_con_la_legge_in_vigore() {
     let f = sostituisci(

@@ -26,6 +26,7 @@ mod soddisfazione;
 pub(crate) use agenda::FattoAtto;
 pub(crate) use agenda::penalizza;
 pub use agenda::{Agenda, Cantiere, StatoAgenda};
+pub(crate) use proposte::Tolta;
 pub use proposte::{Proposta, TipoProposta};
 
 /// Ciò che un comando sui ministri lascia da fare a chi possiede economia e calendario: un

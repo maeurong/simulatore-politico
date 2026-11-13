@@ -22,6 +22,13 @@ pub struct Proposta {
     pub rinviata: bool,
 }
 
+/// Come `decidi_proposte` ha tolto una proposta: respinta per silenzio, o decaduta col motivo.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Tolta {
+    Respinta,
+    Decaduta(&'static str),
+}
+
 /// Indici del catalogo.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -323,23 +330,20 @@ impl Ministri {
 
     /// Default delle decisioni: una proposta non decisa resta in sospeso un turno (due se
     /// rinviata), poi vale respinta. Una riforma che non [`tiene`] più decade senza costo.
-    /// Rende le proposte tolte, col dicastero: `None` respinta, `Some(motivo)` decaduta.
-    pub(crate) fn decidi_proposte(
-        &mut self,
-        cx: &Contesto,
-    ) -> Vec<(usize, Proposta, Option<&'static str>)> {
+    /// Rende le proposte tolte, col dicastero e come sono state tolte.
+    pub(crate) fn decidi_proposte(&mut self, cx: &Contesto) -> Vec<(usize, Proposta, Tolta)> {
         let mut tolte = Vec::new();
         for (i, st) in self.dicasteri.iter_mut().enumerate() {
             let (Some(p), Some(m)) = (st.proposta.as_mut(), st.ministro.as_ref()) else {
                 continue;
             };
             if let Some(motivo) = decade(cx, m, p.tipo) {
-                tolte.push((i, *p, Some(motivo)));
+                tolte.push((i, *p, Tolta::Decaduta(motivo)));
                 st.proposta = None;
             } else if p.turni_in_sospeso < 1 + u32::from(p.rinviata) {
                 p.turni_in_sospeso += 1;
             } else {
-                tolte.push((i, *p, None));
+                tolte.push((i, *p, Tolta::Respinta));
                 st.proposta = None;
                 let delta = -cx.dati.manopola("costo_respingere");
                 penalizza(st, Causa::PropostaRespinta, delta, cx.turno);

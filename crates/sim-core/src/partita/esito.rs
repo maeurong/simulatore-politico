@@ -14,7 +14,7 @@ use crate::eventi::{Bersaglio, Causa as EventoCausa, DatoOpzione, EventoAperto, 
 use crate::informazione::{Incrocio, Sondaggio};
 use crate::legislatura::campagna::{self, migliaia};
 use crate::legislatura::{self, Fase, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
-use crate::ministri::{Causa, FattoAtto, Ministro, Proposta, causa_peggiore};
+use crate::ministri::{Causa, FattoAtto, Ministro, Proposta, Tolta, causa_peggiore};
 use crate::parlamento::{
     self, Attenuazione, CausaIntesa, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura,
     Referendum, StatoEmendamento, TipoReferendum,
@@ -22,9 +22,27 @@ use crate::parlamento::{
 use crate::scenario::StatoPde;
 use crate::vista::Fermata;
 
-/// «+1,2» o «-0,3»: una cifra decimale, col segno.
+/// «+1,2» o «-0,3»: una cifra decimale, col segno; «0,0» senza segno se arrotonda a zero.
 fn segnato(x: f64) -> String {
-    format!("{x:+.1}").replace('.', ",")
+    con_segno(format!("{x:+.1}"))
+}
+
+/// Il numero già scritto col segno, con la virgola; senza segno se tutte le cifre sono zero
+/// («-0,00» diventa «0,00»).
+fn con_segno(s: String) -> String {
+    let s = s.replace('.', ",");
+    match s.strip_prefix(['+', '-']) {
+        Some(cifre) if cifre.chars().all(|c| matches!(c, '0' | ',')) => cifre.to_string(),
+        _ => s,
+    }
+}
+
+/// «+1,2 punti», o «invariato» se arrotonda a zero: la variazione sul trimestre prima.
+fn variazione(x: f64) -> String {
+    match segnato(x) {
+        s if s == "0,0" => "invariato".to_string(),
+        s => format!("{s} punti"),
+    }
 }
 
 /// «12 seggi», «1 seggio».
@@ -94,7 +112,7 @@ pub(super) fn pagamento(costo: i64, quota: f64, dal_fondo: bool) -> String {
 
 /// «valence -0,05 a {nome}», come nella voce dell'evento.
 pub(super) fn valence(delta: f64, nome: &str) -> String {
-    let segno = format!("{delta:+.2}").replace('.', ",");
+    let segno = con_segno(format!("{delta:+.2}"));
     format!("valence {segno} a {nome}")
 }
 
@@ -255,8 +273,7 @@ impl Partita {
         let partito = self.partiti.get(colpito);
         let delta = partito.map_or(0.0, |p| p.valence - prima);
         if let Some(p) = partito.filter(|_| delta != 0.0) {
-            let segno = format!("{delta:+.2}").replace('.', ",");
-            coda.push(format!("valence {segno} a {}", p.nome));
+            coda.push(valence(delta, &p.nome));
         }
         for parte in coda.iter().filter(|c| !c.is_empty()) {
             fatto.push_str("; ");
@@ -337,9 +354,9 @@ impl Partita {
     }
 
     /// Fatti 12 e 13: le proposte tolte da `decidi_proposte`, respinte per silenzio o decadute.
-    pub(super) fn voci_proposte(&mut self, tolte: Vec<(usize, Proposta, Option<&'static str>)>) {
+    pub(super) fn voci_proposte(&mut self, tolte: Vec<(usize, Proposta, Tolta)>) {
         let costo = virgola(self.dati.manopola("costo_respingere"));
-        for (i, p, decaduta) in tolte {
+        for (i, p, tolta) in tolte {
             let Some(d) = self.dati.dicasteri().get(i) else {
                 continue;
             };
@@ -348,8 +365,8 @@ impl Partita {
                 .map_or("", |m| m.nome.as_str());
             let chi = format!("{ministro} ({})", d.nome);
             let (id, testo) = (d.id.clone(), p.tipo.testo(&self.dati));
-            let (tipo, fatto, causa) = match decaduta {
-                None => (
+            let (tipo, fatto, causa) = match tolta {
+                Tolta::Respinta => (
                     TipoVoce::PropostaRespinta,
                     format!(
                         "Respinta la proposta di {chi}, {testo}; perde {costo} punti di soddisfazione"
@@ -359,7 +376,7 @@ impl Partita {
                         p.turni_in_sospeso + 1
                     ),
                 ),
-                Some(motivo) => (
+                Tolta::Decaduta(motivo) => (
                     TipoVoce::PropostaDecaduta,
                     format!("Decade senza costo la proposta di {chi}, {testo}"),
                     motivo.to_string(),
@@ -419,7 +436,10 @@ impl Partita {
                 "Finito il cantiere «{atto}»{dove} del dicastero {dicastero}, {euro} euro spesi \
                  in tutto; gli effetti partono"
             ),
-            _ => return,
+            altro => {
+                debug_assert!(false, "voce_atto: {altro:?} non è un tipo degli atti");
+                return;
+            }
         };
         let id = d.id.clone();
         // Il motivo dell'agenda porta «: », che nel dettaglio di una voce fusa separa il fatto
@@ -484,7 +504,11 @@ impl Partita {
             self.economia.spread.round() as i32,
             prima.spread.round() as i32,
         );
-        let fatto = format!("Spread a {ora} pb, {:+} pb sul trimestre prima", ora - pb);
+        let variato = match ora - pb {
+            0 => "invariato".to_string(),
+            d => format!("{d:+} pb"),
+        };
+        let fatto = format!("Spread a {ora} pb, {variato} sul trimestre prima");
         self.voce(TipoVoce::Spread, fatto, "chiusura del trimestre".into());
         self.voci_regole_ue(prima);
         if prima.ristrutturazione.is_some() && self.economia.ristrutturazione.is_none() {
@@ -505,7 +529,7 @@ impl Partita {
     pub(super) fn voci_reddito(&mut self, redditi: &[RedditoFascia], ricordate: usize) {
         let scarto = self.dati.manopola("scarto_reddito_deluso");
         // Due decimali: con una sola cifra uno scarto di 0,25 punti si leggerebbe 0,2 o 0,3.
-        let punti = |x: f64| format!("{x:+.2}").replace('.', ",");
+        let punti = |x: f64| con_segno(format!("{x:+.2}"));
         let causa = match ricordate {
             0 => "nessun trimestre passato da ricordare, l'attesa parte da zero".to_string(),
             1 => "l'attesa è la crescita reale del trimestre prima".to_string(),
@@ -651,9 +675,9 @@ impl Partita {
             _ => format!("la coalizione di {}", nomi.join(", ")),
         };
         let fatto = format!(
-            "Sondaggio: {chi} al {}% fra i votanti, {} punti sul trimestre prima",
+            "Sondaggio: {chi} al {}% fra i votanti, {} sul trimestre prima",
             virgola(ora),
-            segnato(ora - prima)
+            variazione(ora - prima)
         );
         let causa = format!(
             "sondaggio pubblico del trimestre, media di {} istituti",
@@ -835,8 +859,8 @@ impl Partita {
         };
         let default = (e.opzioni.iter().find(|o| o.default)).map_or("", |o| o.nome.as_str());
         let fatto = format!(
-            "{} senza evento: ne nasce uno solo a turno, la serie si muove lo stesso e vale \
-             «{default}»",
+            "{} non diventa un evento: ne nasce uno solo a turno. La serie si muove comunque, \
+             come con «{default}»",
             e.nome
         );
         let causa = format!(
@@ -1281,7 +1305,7 @@ impl Partita {
             .and_then(|&(d, _)| self.dati.disposizioni().get(d))
             .map_or(String::new(), |x| x.nome.clone());
         let fatto = format!(
-            "Indetto il referendum abrogativo su {nome}, si vota in {}",
+            "Indetto il referendum abrogativo su {nome}, si vota a {}",
             parlamento::mese(data_di(r.voto))
         );
         let causa = "firme depositate nei termini".to_string();
@@ -1983,5 +2007,26 @@ fn quota_pesata(incroci: &[Incrocio], g: usize, peso: impl Fn(&str) -> f64) -> f
             / tutti
     } else {
         0.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Lo zero arrotondato, da sopra o da sotto, non porta il segno e nella variazione è
+    /// «invariato».
+    #[test]
+    fn lo_zero_arrotondato_e_senza_segno() {
+        assert_eq!(segnato(0.04), "0,0");
+        assert_eq!(segnato(-0.04), "0,0");
+        assert_eq!(segnato(-0.06), "-0,1");
+        assert_eq!(segnato(1.26), "+1,3");
+        assert_eq!(con_segno(format!("{:+.2}", -0.004)), "0,00");
+        assert_eq!(con_segno(format!("{:+.2}", 0.004)), "0,00");
+        assert_eq!(con_segno(format!("{:+.2}", -0.25)), "-0,25");
+        assert_eq!(variazione(-0.04), "invariato");
+        assert_eq!(variazione(0.04), "invariato");
+        assert_eq!(variazione(0.5), "+0,5 punti");
     }
 }

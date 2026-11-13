@@ -34,7 +34,7 @@ fn due_elezioni_senza_seggi_sciolgono() {
     al_turno(&mut p, 39);
     chiudi_col_bilancio(&mut p);
     assert!(p.partiti()[0].sciolto);
-    let (fatto, causa) = ("Si scioglie", "2 elezioni senza seggi");
+    let (fatto, causa) = ("Si scioglie", "2 elezioni di fila senza seggi");
     assert!(
         ha_voce(
             &p,
@@ -103,7 +103,7 @@ fn lo_sciolto_esce_dalle_coalizioni() {
             TipoVoce::PartitoSciolto,
             "estrema_sinistra",
             fatto,
-            "2 elezioni senza seggi"
+            "2 elezioni di fila senza seggi"
         ),
         "{:?}",
         p.vista().esito

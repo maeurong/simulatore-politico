@@ -214,9 +214,11 @@ fn registro_di(
 ) -> Result<Vec<VoceEsito>, ErroreGuscio> {
     let guardia = blocca(stato)?;
     let c = guardia.as_ref().ok_or(NESSUNA)?;
-    let id =
-        c.id.as_deref()
-            .ok_or_else(|| rifiuto("la partita di prova non ha salvataggi: nessun registro"))?;
+    let id = c.id.as_deref().ok_or_else(|| {
+        rifiuto(format!(
+            "la partita di prova non ha salvataggi: nessun registro per il turno {turno}"
+        ))
+    })?;
     let in_corso = c.partita.testata().turno;
     if turno >= in_corso {
         return Err(rifiuto(format!(
@@ -763,7 +765,7 @@ mod tests {
         assert_eq!(
             e,
             Some(rifiuto(
-                "la partita di prova non ha salvataggi: nessun registro"
+                "la partita di prova non ha salvataggi: nessun registro per il turno 0"
             ))
         );
         Ok(())

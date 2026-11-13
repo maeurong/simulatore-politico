@@ -167,7 +167,7 @@ fn firme_in_chiusura_e_invito_una_volta() {
     assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
     assert_eq!(
         v[0].fatto,
-        "Indetto il referendum abrogativo su Licenziamento, si vota in aprile 2028"
+        "Indetto il referendum abrogativo su Licenziamento, si vota a aprile 2028"
     );
     assert_eq!(v[0].causa, "firme depositate nei termini");
     p.comanda(Comando::InvitaAstensione).unwrap();

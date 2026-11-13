@@ -110,8 +110,10 @@ impl Elettorato {
                 0.0
             };
             g.crescite.push(crescita);
+            // Solo il paniere di ora conta: con la base degenere il reddito di ora resta valido.
+            let reale = Some(ora.reale()).filter(|x| x.is_finite()).unwrap_or(0.0);
             let s = &mut somme[fascia_di(i) as usize];
-            for (somma, x) in s.iter_mut().zip([1.0, ora.reale(), crescita, aspettativa]) {
+            for (somma, x) in s.iter_mut().zip([1.0, reale, crescita, aspettativa]) {
                 *somma += w * x;
             }
             g.crescite
@@ -190,6 +192,26 @@ mod test {
     fn asimmetria_degli_autori() {
         assert!((asimmetrica(1.0, 1.0 / 3.0) - 0.5).abs() < 1e-12);
         assert!((asimmetrica(-1.0, 1.0 / 3.0) + 1.5).abs() < 1e-12);
+    }
+
+    /// Un paniere nuovo a zero dà un reddito reale infinito: la media della fascia resta finita.
+    #[test]
+    fn paniere_a_zero_non_guasta_la_fascia() {
+        let dati = crate::dati::dati_base();
+        let p = crate::Partita::nuova(dati.clone(), 1);
+        let mut el = p.elettorato().clone();
+        el.gruppi[0].reddito.paniere = 0.0;
+        let redditi = el.giudizio(
+            &dati,
+            p.economia(),
+            p.governo(),
+            p.grandezze(),
+            p.misure(),
+            p.misure(),
+        );
+        for r in &redditi {
+            assert!(r.reddito.is_finite(), "{r:?}");
+        }
     }
 
     #[test]

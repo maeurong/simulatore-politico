@@ -390,7 +390,10 @@ const ELENCO: &[(TipoVoce, &str)] = &[
         TipoVoce::MinacciaRientrata,
         "vita_dei_partiti::a_mezzo_punto_solo_la_minaccia",
     ),
-    (TipoVoce::PromessaVerificata, "promesse::al_voto_con"),
+    (
+        TipoVoce::PromessaVerificata,
+        "promesse::promessa_mantenuta_da_valence",
+    ),
     (
         TipoVoce::PromesseScadute,
         "promesse::senza_quattro_turni_la_promessa_non_conta",
@@ -524,7 +527,10 @@ const ELENCO: &[(TipoVoce, &str)] = &[
         TipoVoce::CoalizioneAllargata,
         "crisi::allargare_in_crisi_salva_il_governo",
     ),
-    (TipoVoce::GovernoCaduto, "governo_ia::cade_per_la_crisi"),
+    (
+        TipoVoce::GovernoCaduto,
+        "governo_ia::senza_vicini_il_motivo_resta_nessun_partito",
+    ),
     (
         TipoVoce::CamereSciolte,
         "caduta::senza_maggioranza_contigua_il_capo_dello_stato_scioglie",
@@ -603,12 +609,65 @@ const ELENCO: &[(TipoVoce, &str)] = &[
     ),
 ];
 
+/// Il sorgente del file di test nominato in `ELENCO` (`partita` e `partita/ia` sono i `mod tests`
+/// del core); `None` per un file che qui manca.
+fn sorgente(file: &str) -> Option<&'static str> {
+    Some(match file {
+        "acquisti" => include_str!("acquisti.rs"),
+        "agenda" => include_str!("agenda.rs"),
+        "bilancio" => include_str!("bilancio.rs"),
+        "bilancio_in_aula" => include_str!("bilancio_in_aula.rs"),
+        "caduta" => include_str!("caduta.rs"),
+        "campagna" => include_str!("campagna.rs"),
+        "cassa" => include_str!("cassa.rs"),
+        "coalizione" => include_str!("coalizione.rs"),
+        "conti" => include_str!("conti.rs"),
+        "crisi" => include_str!("crisi.rs"),
+        "debito" => include_str!("debito.rs"),
+        "decreti" => include_str!("decreti.rs"),
+        "emendamenti" => include_str!("emendamenti.rs"),
+        "emergenze" => include_str!("emergenze.rs"),
+        "esito" => include_str!("esito.rs"),
+        "eventi" => include_str!("eventi.rs"),
+        "governo_ia" => include_str!("governo_ia.rs"),
+        "intesa" => include_str!("intesa.rs"),
+        "ministri" => include_str!("ministri.rs"),
+        "norme" => include_str!("norme.rs"),
+        "opposizione" => include_str!("opposizione.rs"),
+        "opposizione_ia" => include_str!("opposizione_ia.rs"),
+        "partita" => include_str!("../src/partita.rs"),
+        "partita/ia" => include_str!("../src/partita/ia.rs"),
+        "partiti_ia" => include_str!("partiti_ia.rs"),
+        "promesse" => include_str!("promesse.rs"),
+        "proposte" => include_str!("proposte.rs"),
+        "referendum" => include_str!("referendum.rs"),
+        "ribaltone" => include_str!("ribaltone.rs"),
+        "shock" => include_str!("shock.rs"),
+        "situazioni" => include_str!("situazioni.rs"),
+        "sondaggi" => include_str!("sondaggi.rs"),
+        "stato_disposizioni" => include_str!("stato_disposizioni.rs"),
+        "vita_dei_partiti" => include_str!("vita_dei_partiti.rs"),
+        "voto" => include_str!("voto.rs"),
+        "voto_turno_zero" => include_str!("voto_turno_zero.rs"),
+        _ => return None,
+    })
+}
+
+/// `fn nome(` esiste nel sorgente ed è un test: la riga prima porta `#[test]`.
+fn e_un_test(sorgente: &str, nome: &str) -> bool {
+    let testa = format!("fn {nome}(");
+    let righe: Vec<&str> = sorgente.lines().map(str::trim).collect();
+    (1..righe.len()).any(|i| righe[i].starts_with(&testa) && righe[i - 1] == "#[test]")
+}
+
 #[test]
 fn ogni_tipo_e_coperto() {
     let mut visti = [false; ELENCO.len()];
     for (i, (tipo, test)) in ELENCO.iter().enumerate() {
         nell_elenco(*tipo);
-        assert!(!test.is_empty(), "{tipo:?}: nessun test nominato");
+        let (file, nome) = test.split_once("::").unwrap();
+        let s = sorgente(file).unwrap_or_else(|| panic!("{tipo:?}: file {file} sconosciuto"));
+        assert!(e_un_test(s, nome), "{tipo:?}: {test} non è un test");
         // Il cast dà il posto della variante nell'enum; l'elenco lo segue riga per riga.
         let posto = *tipo as usize;
         assert!(

@@ -160,7 +160,8 @@ impl Disposizioni {
 
     /// Apertura del turno `turno`: ogni arrivo dovuto entra in vigore, in ordine, con la sua
     /// legge, ed esce dalla lista; gli effetti vanno in `effetti`. Gli arrivi elettorali del turno
-    /// si scartano tutti se la legge elettorale che ne risulta non è valida.
+    /// si scartano tutti se la legge elettorale che ne risulta non è valida. Entrati e scartati
+    /// resi sono solo quelli che cambiano il vigente.
     pub fn arrivi(
         &mut self,
         dati: &DatiGioco,
@@ -179,6 +180,9 @@ impl Disposizioni {
         if let Some(motivo) = crate::parlamento::legge_non_valida(dati, self, &valori) {
             let prima = self.voci.len().saturating_sub(ELETTORALI);
             (arrivati, fatti.scartati) = arrivati.into_iter().partition(|(d, _)| *d < prima);
+            fatti
+                .scartati
+                .retain(|(d, a)| self.voci.get(*d).is_some_and(|v| v.in_vigore != a.gradino));
             fatti.motivo = motivo;
         }
         for (d, a) in arrivati {
