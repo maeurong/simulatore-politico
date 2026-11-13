@@ -1,6 +1,6 @@
 # Verifica della UI
 
-Ogni fetta della UI si chiude con una batteria: zero tagli, forma stretta, movimento spento e tastiera, a 1280×800 e 1440×900, a scala 1 e alla massima (`docs/superpowers/specs/2026-11-12-v1-piano-11-ui.md`, «Cosa controlla una fetta prima di dirsi finita»). Qui stanno gli strumenti che la eseguono. Sono nati durante la fetta 11a, non hanno dipendenze e non entrano né nel build né nel controllo dei tipi: vivono fuori da `src/`.
+Ogni fetta della UI si chiude con una batteria (`docs/superpowers/specs/2026-11-12-v1-piano-11-ui.md`, «Cosa controlla una fetta prima di dirsi finita»). Qui stanno gli strumenti che la eseguono: contano i tagli e controllano la forma stretta a 1280×800 e 1440×900, a scala 1 e alla massima; provano il movimento spento e la tastiera a 1440×900, a scala 1. Sono nati durante la fetta 11a, non hanno dipendenze e non entrano né nel build né nel controllo dei tipi: vivono fuori da `src/`. I loro test (`*.test.mjs`) girano con `npm test`.
 
 I comandi si lanciano da `app/`.
 
@@ -39,10 +39,10 @@ edicola tastiera 19/19 err=0
 
 - `classi` sono quelle della radice: `stretta` a 1280 con 1,25× e a 1440 con 1,4×, `grave` sulle Viste del tono grave.
 - `lato=true` vuol dire che la pagina scorre di lato.
-- `animazioni max` è il massimo contato dopo un clic su ciascuno dei primi 40 pulsanti, link e campi della pagina: prima col movimento spento, poi con «Come il sistema» sotto il movimento ridotto (`sistema+reduce`). Un numero sopra zero non è per forza un difetto: le dissolvenze di opacità restano. Per sapere quale animazione parte: `node verifica/anim-chi.mjs /scenario spento`.
-- `tastiera 19/19` conta gli elementi visibili raggiunti dal Tab; quelli mancati vengono elencati.
+- `animazioni max` è il massimo contato dopo aver toccato ciascuno dei primi 40 pulsanti, link e campi della pagina: pulsanti e campi li clicca, ai link dà solo il fuoco, per non lasciare la pagina. Lo fa prima col movimento spento, poi con «Come il sistema» sotto il movimento ridotto (`sistema+reduce`). Un numero sopra zero non è per forza un difetto: le dissolvenze di opacità restano. Per sapere quale animazione parte: `node verifica/anim-chi.mjs /scenario spento`. Per il controllo al contrario, cioè che col movimento acceso un'animazione parta davvero e lo zero non sia a vuoto: `node verifica/anim-accese.mjs '/?vista=13-edicola.json' Impostazioni 'Prova ›'`. Clicca in fila i pulsanti che contengono quei testi e misura dopo l'ultimo, col movimento acceso e poi spento; esce con 1 se acceso non parte nessuna animazione. Il conto può restare uguale nei due modi, perché spento una rotazione diventa una dissolvenza: la differenza si legge nei `tipi`, `transform` da una parte e solo `opacity` dall'altra.
+- `tastiera 19/19` conta gli elementi visibili raggiunti dal Tab; quelli mancati vengono elencati. Li conta soltanto: non li attiva e non legge l'albero di accessibilità. La spec (punto 4) chiede anche che ogni azione si attivi da tastiera, conferme sul posto comprese: questo si prova a mano nel browser e si scrive nella PR della fetta.
 
-La batteria li clicca davvero. Nel browser risponde il guscio finto, quindi non tocca nessun salvataggio.
+Pulsanti e campi la batteria li clicca davvero. Nel browser risponde il guscio finto, quindi non tocca nessun salvataggio.
 
 **In WebKit** una riga per misura: `t` i tagli, `s` le classi della radice, `z` la scala applicata, `dove` il percorso d'arrivo, `lato` lo scorrimento di lato, `chi` i primi elementi tagliati.
 
@@ -52,7 +52,7 @@ scenario 1280x800 x1.25 {"t":0,"s":"stretta","z":1.25,"dove":"/scenario","lato":
 
 Al primo uso compila `wk.swift` con `swiftc` (servono i Command Line Tools di Xcode). Movimento e tastiera qui non si misurano. Per una misura sola, con un'espressione tua, si lancia `verifica/uscita/wk` a mano: l'uso sta in testa a `wk.swift`.
 
-Screenshot, fotografie ed `esiti.json` finiscono in `verifica/uscita/chrome` e `verifica/uscita/webkit`, che git ignora. Quelli delle schermate della fetta vanno nella PR (spec, punto 6).
+Screenshot, fotografie ed `esiti.json` finiscono in `verifica/uscita/chrome` e `verifica/uscita/webkit`, che git ignora. Quelli delle schermate della fetta si committano in `docs/superpowers/verifiche/<fetta>/` e il corpo della PR li cita (spec, punto 6): così ha fatto la 11a.
 
 | Variabile | A cosa serve | Se manca |
 |---|---|---|
@@ -76,7 +76,7 @@ Il primo avvio compila il guscio da zero: su questo Mac, una dozzina di minuti. 
 npm run verifica:comando -- '{"passo":"stato"}' '{"passo":"clicca","testo":"Impostazioni"}'
 ```
 
-Il primo passo è sempre `stato`: annota `ls`, il valore delle impostazioni salvate, che a fine giro va rimesso. `NESSUNA RISPOSTA` vuol dire che il telecomando non è agganciato: il passo resta in coda e parte quando l'app arriva. Con un passo senza risposta, rifiutato o in errore, `verifica:comando` esce con 1.
+Il primo passo è sempre `stato`: annota `ls`, il valore delle impostazioni salvate, che a fine giro va rimesso. `NESSUNA RISPOSTA` vuol dire che il telecomando non è agganciato: il passo resta in coda e parte quando l'app arriva. Con un passo senza risposta, rifiutato, in errore o che non trova l'elemento (`NON TROVATO`), `verifica:comando` esce con 1. Se è il telecomando a rifiutare il comando (403 o 405), lo dice subito, senza aspettare.
 
 Un passo è un oggetto JSON: `passo`, poi chi cercare (`sel`, un selettore, oppure `testo`, il testo che l'elemento contiene; `n` sceglie fra più trovati) e `attesa`, i millisecondi da aspettare dopo il passo (500 se manca).
 
@@ -93,7 +93,7 @@ Per contare i tagli nell'app vera si naviga con `{"passo":"vai","url":"/scenario
 
 A fine giro, nell'ordine:
 
-1. Si rimette `ls` com'era all'inizio: `{"passo":"rimetti","ls":{"versione":1,"scala":1,"velocita":"1","movimento":"sistema"}}`, coi valori letti da `stato`. Se all'inizio era `null`, `{"passo":"rimetti"}`.
+1. Si rimette `ls` com'era all'inizio: `{"passo":"rimetti","ls":{"versione":1,"scala":1,"velocita":"1","movimento":"sistema"}}`, coi valori letti da `stato`. Se all'inizio era `null`, `{"passo":"rimetti"}`. La pagina tiene in memoria il valore di prima finché non si ricarica: `{"passo":"ricarica"}` e un ultimo `stato` confermano che `ls` è rimasto quello rimesso.
 2. Si chiude l'app e si cancella a mano la cartella di verifica: `rm -r ~/Library/Application\ Support/it.maeurong.simulatorepolitico.verifica`.
 3. Si ripristina `src-tauri/Cargo.toml`, di cui `tauri dev` riscrive due righe: `git checkout -- src-tauri/Cargo.toml`. Non si committano.
 
@@ -107,6 +107,7 @@ A fine giro, nell'ordine:
 
 Queste prove chiedono mani e occhi, e vanno scritte nella PR per Mario:
 
+- **L'attivazione da tastiera.** La batteria conta gli elementi che il Tab raggiunge. Non preme Invio o Spazio su nessuno, non prova le conferme sul posto e non legge l'albero di accessibilità: attivazione e conferme si provano a mano nel browser.
 - **Il Tab reale.** La tastiera è provata solo in Chrome. Nell'app vera il telecomando manda eventi sintetici, che non spostano il fuoco.
 - **Il trascinamento col puntatore.** `scrivi` assegna il valore a un cursore e lancia `input` e `change`: il gesto non c'è.
 - **Cmd+Q.** `tasto` non arriva al menu del sistema: l'uscita dall'app e ciò che il guscio fa in quel momento restano da provare.

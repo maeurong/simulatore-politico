@@ -14,10 +14,11 @@ const passi = {
   clicca: (c) => { const e = trova(c); if (!e) return "NON TROVATO"; e.scrollIntoView({ block: "center" }); e.click(); return (e.textContent || e.name || e.tagName).trim().slice(0, 60); },
   scrivi: (c) => { const e = trova(c); if (!e) return "NON TROVATO"; const p = e.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(p, "value").set.call(e, c.valore); e.dispatchEvent(new Event("input", { bubbles: true })); e.dispatchEvent(new Event("change", { bubbles: true })); return e.value; },
   tasto: (c) => { const e = new KeyboardEvent("keydown", { key: c.key, code: c.code, metaKey: !!c.meta, bubbles: true, cancelable: true }); (c.sel ? trova(c) : document.activeElement ?? document.body).dispatchEvent(e); return "prevenuto=" + e.defaultPrevented; },
-  fuoco: (c) => { trova(c)?.focus(); const a = document.activeElement; return a ? a.tagName + " «" + (a.textContent || a.value || "").trim().slice(0, 40) + "»" : null; },
-  rett: (c) => { const e = trova(c); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
+  // senza sel né testo legge chi ha il fuoco adesso; con un bersaglio che non c'è non descrive l'elemento di prima
+  fuoco: (c) => { if (c.sel || c.testo) { const e = trova(c); if (!e) return "NON TROVATO"; e.focus(); } const a = document.activeElement; return a ? a.tagName + " «" + (a.textContent || a.value || "").trim().slice(0, 40) + "»" : null; },
+  rett: (c) => { const e = trova(c); if (!e) return "NON TROVATO"; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
   elenco: (c) => [...document.querySelectorAll(c.sel)].map((e) => (e.innerText || e.value || e.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, c.max ?? 90)),
-  stile: (c) => { const e = trova(c); if (!e) return null; const s = getComputedStyle(e); return Object.fromEntries((c.prop ?? ["fontFamily", "fontSize"]).map((p) => [p, s[p]])); },
+  stile: (c) => { const e = trova(c); if (!e) return "NON TROVATO"; const s = getComputedStyle(e); return Object.fromEntries((c.prop ?? ["fontFamily", "fontSize"]).map((p) => [p, s[p]])); },
   // il localStorage delle impostazioni è lo stesso dell'app di sviluppo di Mario: a fine giro si rimette il valore letto da «stato» all'inizio
   rimetti: (c) => { if (c.ls == null) localStorage.removeItem("impostazioni"); else localStorage.setItem("impostazioni", typeof c.ls === "string" ? c.ls : JSON.stringify(c.ls)); return localStorage.getItem("impostazioni"); },
   ricarica: () => { dopo = () => location.reload(); return "ricarico"; },

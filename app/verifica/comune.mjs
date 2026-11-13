@@ -50,15 +50,16 @@ export async function avviaChrome(suEvento = () => {}) {
   });
   process.on("SIGINT", () => process.exit(130));
   let pagina;
-  for (let i = 0; i < 100 && !pagina; i++) {
+  for (let i = 0; i < 300 && !pagina; i++) {
     try {
       const porta = readFileSync(join(profilo, "DevToolsActivePort"), "utf8").split("\n")[0];
       pagina = (await (await fetch(`http://127.0.0.1:${porta}/json/list`)).json()).find((x) => x.type === "page");
     } catch {}
     if (!pagina) await attendi(100);
   }
-  if (!pagina) esci("Chrome non ha aperto il canale di debug entro 10 secondi.");
+  if (!pagina) esci("Chrome non ha aperto il canale di debug entro 30 secondi.");
   const ws = new WebSocket(pagina.webSocketDebuggerUrl);
+  ws.onerror = () => esci("Il canale di debug di Chrome è caduto.");
   await new Promise((r) => (ws.onopen = r));
   let n = 0; const attese = new Map();
   ws.onmessage = (m) => {
@@ -66,7 +67,13 @@ export async function avviaChrome(suEvento = () => {}) {
     if (d.id && attese.has(d.id)) { attese.get(d.id)(d); attese.delete(d.id); }
     suEvento(d);
   };
-  const cmd = (method, params = {}) => new Promise((r) => { const id = ++n; attese.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
+  const cmd = (method, params = {}) => new Promise((r) => {
+    const id = ++n;
+    // un comando senza risposta non lascia lo script appeso: esce dicendo quale
+    const tetto = setTimeout(() => esci(`Chrome non risponde a ${method} da 30 secondi.`), 30_000);
+    attese.set(id, (d) => { clearTimeout(tetto); r(d); });
+    ws.send(JSON.stringify({ id, method, params }));
+  });
   const val = async (e) => (await cmd("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true })).result?.result?.value;
   const chiudi = () => { ws.close(); chrome.kill(); };
   return { cmd, val, chiudi };

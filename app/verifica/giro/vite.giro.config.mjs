@@ -5,6 +5,7 @@ import base from "../../vite.config.js";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { uscita } from "../comune.mjs";
+import { rifiuto } from "./guardia.mjs";
 
 const diario = join(uscita("giro"), "diario.jsonl");
 mkdirSync(uscita("giro"), { recursive: true });
@@ -15,20 +16,13 @@ const telecomando = {
   apply: "serve", // mai in un build, nemmeno lanciato a mano con questa configurazione
   configureServer(server) {
     const porta = server.config.server.port;
-    const ospiti = [`127.0.0.1:${porta}`, `localhost:${porta}`, `[::1]:${porta}`];
     server.middlewares.use(async (req, res, next) => {
       const u = req.url.split("?")[0];
       if (!["/__coda", "/__comando", "/__diario", "/__esito"].includes(u)) return next();
       const rifiuta = (codice) => { res.statusCode = codice; res.end(); };
-      // Chi può pilotare l'app: solo questo Mac, e non una pagina qualunque aperta nel browser.
-      // L'Host dev'essere uno dei nomi locali del server (un nome estraneo che punta qui è DNS rebinding);
-      // passa chi non ha origine (cmd.mjs) o ha quella del server; e tutto ciò che cambia la coda è POST,
-      // che da un'altra origine porta sempre Origin: un <img> o un GET in no-cors non svuota la coda.
-      if (!/^(::ffff:)?127\.|^::1$/.test(req.socket.remoteAddress ?? "")) return rifiuta(403);
-      if (!ospiti.includes(req.headers.host)) return rifiuta(403);
-      const origine = req.headers.origin;
-      if (origine && origine !== `http://${req.headers.host}`) return rifiuta(403);
-      if (u !== "/__esito" && req.method !== "POST") return rifiuta(405);
+      // chi può pilotare l'app lo decide guardia.mjs, che ha i suoi test
+      const no = rifiuto({ remoteAddress: req.socket.remoteAddress, host: req.headers.host, origin: req.headers.origin, method: req.method }, u, porta);
+      if (no) return rifiuta(no);
       try {
         if (u === "/__coda") { coda.push(JSON.parse(await corpo(req))); res.end("ok"); }
         else if (u === "/__comando") { const c = coda.shift(); if (!c) rifiuta(204); else { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(c)); } }
