@@ -1,6 +1,7 @@
 mod comune;
-use comune::{con_ingresso, dati_base, file_base, imposta, senza_shock, sostituisci};
+use comune::{con_ingresso, dati_base, file_base, imposta, senza_shock, sostituisci, voci};
 use sim_core::economia::Economia;
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
 use sim_core::scenario::StatoPde;
 use sim_core::{DatiGioco, FileDati, Partita};
 
@@ -13,6 +14,17 @@ fn giocata(dati: DatiGioco, turni: u32) -> Partita {
 }
 fn base_senza_shock() -> DatiGioco {
     DatiGioco::da_testi(&senza_shock()).unwrap()
+}
+
+/// La voce di `tipo`, l'unica dell'esito.
+fn una(p: &Partita, tipo: TipoVoce) -> VoceEsito {
+    let tutte = voci(p, tipo);
+    assert_eq!(tutte.len(), 1, "{tipo:?}: {:?}", p.vista().esito);
+    tutte[0].clone()
+}
+
+fn uno(x: f64) -> String {
+    format!("{x:.1}").replace('.', ",")
 }
 
 #[test]
@@ -281,6 +293,11 @@ fn conto_di_controllo_si_muove_solo_ad_aprile_giugno() {
     for _ in 0..12 {
         p.chiudi_turno();
         let ora = p.economia().regole_ue.conto_controllo;
+        let controllo = p.vista().data.trimestre == 3;
+        assert_eq!(
+            voci(&p, TipoVoce::ControlloUe).len(),
+            usize::from(controllo)
+        );
         if ora != prima {
             assert_eq!(
                 p.vista().data.trimestre,
@@ -327,6 +344,12 @@ fn la_catena_delle_sanzioni_si_attraversa() {
     let mut conto_mosso = false;
     for _ in 0..16 {
         let prima = p.economia().regole_ue.clone();
+        // Il governo cade a fine chiusura, dopo il motore: conta chi presiede quando si apre.
+        let critica = if p.governo().presidente == p.giocatore() {
+            (Criticita::Critica, 2)
+        } else {
+            (Criticita::Notevole, 0)
+        };
         p.chiudi_turno();
         riferimento.chiudi_turno();
         let e = p.economia();
@@ -340,6 +363,24 @@ fn la_catena_delle_sanzioni_si_attraversa() {
         if prima.pde == Inadempiente && prima.turni_in_stato == 0 {
             ammenda_ingresso = e.conti.spese.ammende > 0;
         }
+        let ammende = voci(&p, TipoVoce::AmmendaUe);
+        assert_eq!(ammende.len(), usize::from(e.conti.spese.ammende > 0));
+        if let Some(a) = ammende.first() {
+            let causa = match prima.pde {
+                Inadempiente => {
+                    "procedura per disavanzo eccessivo inadempiente, ammenda del primo turno"
+                }
+                _ => "procedura per disavanzo eccessivo sanzionata, ammenda semestrale",
+            };
+            assert!(
+                a.fatto.starts_with("Pagata un'ammenda UE di "),
+                "{}",
+                a.fatto
+            );
+            assert!(a.fatto.ends_with("% del PIL"), "{}", a.fatto);
+            assert_eq!(a.causa, causa);
+            assert_eq!((a.criticita, a.precedenza), critica);
+        }
         if prima.pde == Sanzionata {
             ammende_sanzionata.push(e.conti.spese.ammende > 0);
         }
@@ -349,10 +390,39 @@ fn la_catena_delle_sanzioni_si_attraversa() {
                     < riferimento.economia().conti.entrate.fondi_coesione
             );
         }
+        let procedura = voci(&p, TipoVoce::ProceduraUe);
+        assert_eq!(procedura.len(), usize::from(e.regole_ue.pde != prima.pde));
         if e.regole_ue.pde != prima.pde {
             if e.regole_ue.pde == Intimata {
                 assert_eq!(trimestre, 1, "l'intimazione arriva chiudendo un T4");
             }
+            let v = &procedura[0];
+            let nome = |s: StatoPde| format!("{s:?}").to_lowercase();
+            assert_eq!(
+                v.fatto,
+                format!(
+                    "La procedura per disavanzo eccessivo passa da {} a {}",
+                    nome(prima.pde),
+                    nome(e.regole_ue.pde)
+                )
+            );
+            match e.regole_ue.pde {
+                Intimata => assert_eq!(
+                    v.causa,
+                    "nessuna correzione entro l'anno dall'inadempienza (articolo 126.9)"
+                ),
+                Sanzionata => assert_eq!(
+                    v.causa,
+                    "nessuna correzione due turni dopo l'intimazione (articolo 126.11)"
+                ),
+                _ => assert!(
+                    v.causa
+                        .starts_with("deviazione rilevante della spesa netta, disavanzo del "),
+                    "{}",
+                    v.causa
+                ),
+            }
+            assert_eq!((v.criticita, v.precedenza), critica);
             sequenza.push(e.regole_ue.pde);
         }
     }
@@ -421,6 +491,13 @@ fn pde_nessuna_si_apre_col_disavanzo_sopra_il_3() {
     let alto = giocata(dati(con_pde(disavanzo_alto(senza_shock()), "nessuna")), 3);
     assert!(disavanzo_2026(&alto) > 3.0, "{}", disavanzo_2026(&alto));
     assert_eq!(alto.economia().regole_ue.pde, StatoPde::Aperta);
+    let v = una(&alto, TipoVoce::ProceduraUe);
+    assert_eq!(v.fatto, "Aperta la procedura per disavanzo eccessivo");
+    assert!(v.causa.ends_with(&format!(
+        ", disavanzo del 2026 al {}% del PIL",
+        uno(disavanzo_2026(&alto))
+    )));
+    assert_eq!(v.criticita, Criticita::Critica);
     let base = giocata(dati(con_pde(senza_shock(), "nessuna")), 3);
     assert!(disavanzo_2026(&base) < 3.0);
     assert_eq!(base.economia().regole_ue.pde, StatoPde::Nessuna);
@@ -448,6 +525,19 @@ fn pde_nessuna_si_apre_con_debito_e_deviazione_rilevante() {
 fn pde_aperta_senza_deviazione_va_sospesa() {
     let p = giocata(dati(con_pde(senza_shock(), "aperta")), 3);
     assert_eq!(p.economia().regole_ue.pde, StatoPde::Sospesa);
+    let v = una(&p, TipoVoce::ProceduraUe);
+    assert_eq!(
+        v.fatto,
+        "La procedura per disavanzo eccessivo passa da aperta a sospesa"
+    );
+    assert_eq!(
+        v.causa,
+        format!(
+            "deviazione non rilevante della spesa netta, disavanzo del 2026 al {}% del PIL",
+            uno(disavanzo_2026(&p))
+        )
+    );
+    assert_eq!(v.criticita, Criticita::Notevole);
 }
 
 #[test]
@@ -460,6 +550,11 @@ fn pde_sospesa_rientra_a_nessuna_sotto_il_3() {
     let mobile = disavanzo_mobile(p.economia());
     assert!(disavanzo_2026(&p) < 3.0 && mobile < 3.0, "{mobile}");
     assert_eq!(p.economia().regole_ue.pde, StatoPde::Nessuna);
+    let v = una(&p, TipoVoce::ProceduraUe);
+    assert_eq!(
+        v.fatto,
+        "Chiusa la procedura per disavanzo eccessivo, che era sospesa"
+    );
     let alto = giocata(dati(disavanzo_alto(senza_shock())), 3);
     assert_eq!(alto.economia().regole_ue.pde, StatoPde::Sospesa);
 }
@@ -512,6 +607,26 @@ fn il_conto_di_controllo_non_scende_sotto_zero() {
     let r = &p.economia().regole_ue;
     assert_eq!(r.conto_controllo, 0.0);
     assert!(r.ultima_deviazione < 0.0, "{}", r.ultima_deviazione);
+    let v = una(&p, TipoVoce::ControlloUe);
+    assert_eq!(
+        v.fatto,
+        format!(
+            "Controllo UE sul 2026: spesa netta sotto il percorso di {} punti di PIL, al netto \
+             della clausola di 1,5 punti; conto di controllo a 0,0 punti di PIL",
+            uno(-r.ultima_deviazione)
+        )
+    );
+    let crescita = (r.spesa_netta[&2026] as f64 / r.spesa_netta[&2025] as f64 - 1.0) * 100.0;
+    let tetto = dati_base().scenario().tetto_spesa_netta(2026);
+    assert_eq!(
+        v.causa,
+        format!(
+            "la spesa netta del 2026 cresce del {}% contro il tetto del {}%",
+            uno(crescita),
+            uno(tetto)
+        )
+    );
+    assert_eq!(v.criticita, Criticita::Notevole);
 }
 
 #[test]

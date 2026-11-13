@@ -5,10 +5,11 @@ mod comune;
 
 use comune::{
     al_governo, chiudi_col_bilancio, dati_base, edita, file_base, indice, partito, scandalo_certo,
-    senza_emergenze,
+    senza_emergenze, voci,
 };
 use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
+use sim_core::esito::{TipoVoce, VoceEsito};
 use sim_core::eventi::Famiglia;
 use sim_core::parlamento::CausaIntesa;
 use sim_core::{Comando, Errore, Partita};
@@ -71,6 +72,12 @@ fn leader(partito: usize) -> Value {
     json!({ "tipo": "leader", "partito": partito })
 }
 
+fn voce_dello_scandalo(p: &Partita) -> VoceEsito {
+    (voci(p, TipoVoce::EventoRisolto).into_iter())
+        .find(|v| v.fatto.starts_with("Scandalo"))
+        .unwrap()
+}
+
 fn variazioni(p: &Partita, j: usize) -> usize {
     (p.intesa().variazioni.iter())
         .filter(|v| v.partito == j && v.causa == CausaIntesa::DimissioniChieste)
@@ -96,6 +103,15 @@ fn difenderlo_costa_valence() {
         f64::from(m.sotto_scandalo),
         dati_base().manopola("turni_scandalo")
     );
+    let v = voce_dello_scandalo(&con);
+    assert_eq!(v.famiglia, Some(Famiglia::Scandalo));
+    assert_eq!(v.dicastero.as_deref(), Some("ambiente_energia"));
+    assert_eq!(v.partito.as_deref(), Some(con.partiti()[j].id.as_str()));
+    assert!(
+        v.fatto.contains("«Difenderlo» per default") && v.fatto.contains(&m.nome),
+        "{}",
+        v.fatto
+    );
     // Cala a ogni chiusura.
     con.chiudi_turno();
     let m = con.ministri().dicasteri[d].ministro.as_ref().unwrap();
@@ -117,6 +133,14 @@ fn le_dimissioni_costano_meta_della_difesa() {
     let base = senza.partiti()[j].valence;
     // Il costo cade prima del ritorno della valence verso la base.
     let r = 1.0 - dati_base().manopola("ritorno_valence");
+    let mut dimesso = con_scandalo(&p, MINISTRO, ministro(d), Some(1));
+    dimesso.chiudi_turno();
+    let v = voce_dello_scandalo(&dimesso);
+    assert!(
+        v.fatto.contains("«Chiedere le dimissioni»") && v.fatto.contains("si dimette"),
+        "{}",
+        v.fatto
+    );
     let (difesa, dimissioni) = (valence(None), valence(Some(1)));
     assert!((base - difesa - 0.05 * r).abs() < 1e-9, "{base} {difesa}");
     assert!(
@@ -163,7 +187,7 @@ fn bersaglio_sparito_nessun_panic() {
     let p = Partita::nuova(dati_base(), 1);
     let d = indice("ambiente_energia");
     let j = p.ministri().dicasteri[d].ministro.as_ref().unwrap().partito;
-    // Il ministro non c'è più: nessuna chiusura fallisce, nessun effetto e nessuna riga nelle mosse.
+    // Il ministro non c'è più: nessuna chiusura fallisce, nessun effetto, lo stesso esito.
     let sparito = edita(&p, |x| {
         x["ministri"]["dicasteri"][d]["ministro"] = Value::Null;
         x["ministri"]["dicasteri"][d]["agenda"] = Value::Null;
@@ -174,7 +198,14 @@ fn bersaglio_sparito_nessun_panic() {
     let mut con = con_scandalo(&sparito, MINISTRO, ministro(d), None);
     senza.chiudi_turno();
     con.chiudi_turno();
-    assert_eq!(con.vista().mosse, senza.vista().mosse);
+    // Lo stesso esito, più la voce dello scandalo chiuso senza seguito.
+    let v = voce_dello_scandalo(&con);
+    assert!(v.fatto.ends_with("chiuso senza seguito"), "{}", v.fatto);
+    // Il ripiego sul Presidente del Consiglio vale solo per la valence: la voce non ha partito.
+    assert!(v.partito.is_none(), "{:?}", v.partito);
+    let mut esito = con.vista().esito;
+    esito.retain(|x| x != &v);
+    assert_eq!(esito, senza.vista().esito);
     assert!((con.partiti()[j].valence - senza.partiti()[j].valence).abs() < 1e-9);
 }
 
@@ -295,6 +326,8 @@ fn ministro_sostituito_fra_nascita_e_chiusura_nessun_effetto() {
     assert!((con.partiti()[j].valence - senza.partiti()[j].valence).abs() < 1e-9);
     let m = con.ministri().dicasteri[d].ministro.as_ref().unwrap();
     assert_eq!(m.sotto_scandalo, 0);
+    // Il posto è di un altro: la voce non lo attribuisce al suo partito.
+    assert!(voce_dello_scandalo(&con).partito.is_none());
 }
 
 #[test]

@@ -4,9 +4,10 @@
 )]
 
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, edita, presenta, senza_shock};
+use comune::{chiudi_col_bilancio, dati_base, edita, presenta, senza_shock, voci};
 use sim_core::Partita;
 use sim_core::dati::DatiGioco;
+use sim_core::esito::TipoVoce;
 use sim_core::legislatura::Fase;
 use sim_core::parlamento::TipoReferendum;
 
@@ -49,6 +50,10 @@ fn a_fine_legislatura_le_leggi_in_esame_decadono_e_i_gradini_si_sbloccano() {
     assert!(v.esiti.iter().any(|e| {
         e.decaduta.as_deref() == Some("Decaduta per la fine della legislatura") && !e.approvata
     }));
+    let d = voci(&p, TipoVoce::MisuraDecaduta);
+    assert_eq!(d.len(), 1, "{d:?}");
+    assert_eq!(d[0].disposizioni, ["tetto_contante"]);
+    assert_eq!(d[0].causa, "la fine della legislatura");
     assert!(
         v.disposizioni
             .iter()
@@ -106,6 +111,14 @@ fn il_voto_sospende_l_abrogativo_indetto() {
     );
     assert!(!r.approvato);
     assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
+    let v = voci(&p, TipoVoce::ReferendumDecaduto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].partito.as_deref(), Some("sinistra"));
+    assert_eq!(
+        v[0].fatto,
+        "Sospeso senza voto il referendum abrogativo su «Licenziamento: tutele crescenti»"
+    );
+    assert_eq!(v[0].causa, "lo scioglimento delle Camere");
 }
 
 #[test]
@@ -205,7 +218,9 @@ fn ogni_caduta_ha_la_sua_causa() {
                     && e.data == data
                     && e.approvata
             });
-            let dimissioni = (p.vista().mosse.iter()).any(|m| m.testo.starts_with("Si dimette"));
+            let dimissioni = [TipoVoce::GovernoDimissionario, TipoVoce::GovernoCaduto]
+                .into_iter()
+                .any(|t| !voci(&p, t).is_empty());
             casi += 1;
             assert!(
                 sfiducia || crisi || dimissioni || provvisorio,

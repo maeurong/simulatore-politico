@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use archivio::Archivio;
 use errore::{ErroreGuscio, guasto, rifiuto};
+use sim_core::esito::VoceEsito;
 use sim_core::legislatura::{AnteprimaFondazione, Eredita, Fine, Fondazione};
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
@@ -203,6 +204,30 @@ fn torna_a(stato: &Stato, archivio: &Archivio, turno: u32) -> Result<Vista, Erro
     Ok(c.partita.vista())
 }
 
+/// Il registro di un turno che la partita in memoria ha chiuso. Dopo un guasto a metà il disco può
+/// stare un turno avanti (vedi `chiudi`): quel turno per il giocatore non è chiuso, e si rifiuta
+/// prima di toccare il disco.
+fn registro_di(
+    stato: &Stato,
+    archivio: &Archivio,
+    turno: u32,
+) -> Result<Vec<VoceEsito>, ErroreGuscio> {
+    let guardia = blocca(stato)?;
+    let c = guardia.as_ref().ok_or(NESSUNA)?;
+    let id = c.id.as_deref().ok_or_else(|| {
+        rifiuto(format!(
+            "la partita di prova non ha salvataggi: nessun registro per il turno {turno}"
+        ))
+    })?;
+    let in_corso = c.partita.testata().turno;
+    if turno >= in_corso {
+        return Err(rifiuto(format!(
+            "nessun registro per il turno {turno}: il turno non è ancora chiuso"
+        )));
+    }
+    archivio.registro(id, turno)
+}
+
 /// La voce dell'albo della partita finita, poi la sua cartella cancellata.
 fn nell_albo(archivio: &Archivio, id: &str, partita: &Partita) -> Result<(), ErroreGuscio> {
     let voce = partita
@@ -328,6 +353,15 @@ async fn riavvolgi(
     archivio: State<'_, Archivio>,
 ) -> Result<Vista, ErroreGuscio> {
     torna_a(&stato, &archivio, turno)
+}
+
+#[tauri::command]
+async fn registro(
+    turno: u32,
+    stato: State<'_, Stato>,
+    archivio: State<'_, Archivio>,
+) -> Result<Vec<VoceEsito>, ErroreGuscio> {
+    registro_di(&stato, &archivio, turno)
 }
 
 #[tauri::command]
@@ -475,6 +509,7 @@ pub fn run() -> tauri::Result<()> {
             riprendi,
             comanda,
             riavvolgi,
+            registro,
             abbandona,
             conferma_eredita,
             albo,
@@ -689,6 +724,61 @@ mod tests {
 
         std::fs::remove_dir_all(&guasto).map_err(|e| e.to_string())?;
         assert_eq!(chiudi(&stato, &archivio)?.turno, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn registro_del_turno_in_corso_rifiutato() -> Result<(), String> {
+        let c = cartella("lib-registro-in-corso");
+        let (stato, archivio) = con_partita(&c.0)?;
+        // Il disco resta un turno avanti: su disco c'è `turno-001`, la memoria è al turno 0.
+        let guasto = guasta(&c.0, "bozza.json.gz")?;
+        assert!(chiudi(&stato, &archivio).is_err());
+        assert!(guasto.with_file_name("turno-001.json.gz").is_file());
+
+        let e = registro_di(&stato, &archivio, 0).err();
+        assert_eq!(
+            e,
+            Some(rifiuto(
+                "nessun registro per il turno 0: il turno non è ancora chiuso"
+            ))
+        );
+
+        std::fs::remove_dir_all(&guasto).map_err(|e| e.to_string())?;
+        chiudi(&stato, &archivio)?;
+        assert!(registro_di(&stato, &archivio, 0).is_ok());
+        assert_eq!(
+            registro_di(&stato, &archivio, 1).err().map(|e| e.specie),
+            Some(Specie::Rifiuto)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn registro_della_partita_di_prova_rifiutato() -> Result<(), String> {
+        let c = cartella("lib-registro-di-prova");
+        let archivio = Archivio::nuovo(c.0.clone())?;
+        let stato = Stato::default();
+        avvia(&stato, dati(), 1)?;
+        chiudi(&stato, &archivio)?;
+        let e = registro_di(&stato, &archivio, 0).err();
+        assert_eq!(
+            e,
+            Some(rifiuto(
+                "la partita di prova non ha salvataggi: nessun registro per il turno 0"
+            ))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn registro_senza_partita_e_un_guasto() -> Result<(), String> {
+        let c = cartella("lib-registro-senza-partita");
+        let archivio = Archivio::nuovo(c.0.clone())?;
+        assert_eq!(
+            registro_di(&Stato::default(), &archivio, 0),
+            Err(guasto(NESSUNA))
+        );
         Ok(())
     }
 

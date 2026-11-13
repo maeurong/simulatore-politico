@@ -22,6 +22,13 @@ pub struct Proposta {
     pub rinviata: bool,
 }
 
+/// Come `decidi_proposte` ha tolto una proposta: respinta per silenzio, o decaduta col motivo.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Tolta {
+    Respinta,
+    Decaduta(&'static str),
+}
+
 /// Indici del catalogo.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -59,6 +66,11 @@ fn aperta(cx: &Contesto, d: usize, g: usize) -> bool {
 /// Una riforma in corso tiene: è [`aperta`] e il suo innesco vale ancora (il prerequisito
 /// dell'atto manca, o la disposizione in vigore dista dal ministro almeno `distanza_alleato`).
 fn tiene(cx: &Contesto, m: &Ministro, tipo: TipoProposta) -> bool {
+    decade(cx, m, tipo).is_none()
+}
+
+/// Perché una riforma in corso non [`tiene`] più; `None` se tiene.
+fn decade(cx: &Contesto, m: &Ministro, tipo: TipoProposta) -> Option<&'static str> {
     let TipoProposta::Riforma {
         disposizione: d,
         gradino,
@@ -66,17 +78,60 @@ fn tiene(cx: &Contesto, m: &Ministro, tipo: TipoProposta) -> bool {
         evento,
     } = tipo
     else {
-        return true;
+        return None;
     };
-    let dati = cx.dati;
-    aperta(cx, d, gradino)
-        && match (sblocca, evento) {
-            (Some(k), _) => (dati.atti()[k].prerequisito_mancante(dati, cx.disposizioni)).is_some(),
-            // L'evento si chiude a fine turno, la proposta può restare: vale finché è [`aperta`].
-            (None, Some(_)) => true,
-            (None, None) => (dati.disposizioni()[d].posizione(cx.disposizioni.voci[d].in_vigore))
-                .is_some_and(|v| (v - m.posizione).abs() >= dati.manopola("distanza_alleato")),
+    let (dati, s) = (cx.dati, &cx.disposizioni.voci[d]);
+    if cx.parlamento.in_esame(d) {
+        return Some("la disposizione è già in esame in aula");
+    }
+    if cx.parlamento.respinta_da_poco(d, cx.turno).is_some() {
+        return Some("la disposizione è in una legge respinta da poco");
+    }
+    if s.in_vigore == gradino {
+        return Some("il gradino proposto è già in vigore");
+    }
+    if s.bloccati.contains(&gradino) {
+        return Some("il gradino proposto è bloccato dal referendum");
+    }
+    match (sblocca, evento) {
+        (Some(k), _)
+            if dati.atti()[k]
+                .prerequisito_mancante(dati, cx.disposizioni)
+                .is_none() =>
+        {
+            Some("il prerequisito dell'atto è ormai soddisfatto")
         }
+        // L'evento si chiude a fine turno, la proposta può restare: vale finché è [`aperta`].
+        (Some(_), _) | (None, Some(_)) => None,
+        (None, None) => (dati.disposizioni()[d].posizione(s.in_vigore))
+            .is_none_or(|v| (v - m.posizione).abs() < dati.manopola("distanza_alleato"))
+            .then_some("la disposizione in vigore è ormai vicina alla sua posizione"),
+    }
+}
+
+impl TipoProposta {
+    /// «fondi per {atto}» o «la riforma {disposizione} ({gradino})».
+    pub(crate) fn testo(&self, dati: &DatiGioco) -> String {
+        match *self {
+            TipoProposta::Fondi { atto, .. } => {
+                let atto = dati.atti().get(atto).map_or("", |a| a.nome.as_str());
+                format!("fondi per {atto}")
+            }
+            TipoProposta::Riforma {
+                disposizione,
+                gradino,
+                ..
+            } => {
+                let x = dati.disposizioni().get(disposizione);
+                let g = x.and_then(|x| x.gradini.get(gradino));
+                format!(
+                    "la riforma {} ({})",
+                    x.map_or("", |x| x.nome.as_str()),
+                    g.map_or("", |g| g.nome.as_str())
+                )
+            }
+        }
+    }
 }
 
 /// L'atto del dicastero `i` più sentito (`o > 0`, a parità il primo), fra quelli senza cantiere
@@ -275,21 +330,26 @@ impl Ministri {
 
     /// Default delle decisioni: una proposta non decisa resta in sospeso un turno (due se
     /// rinviata), poi vale respinta. Una riforma che non [`tiene`] più decade senza costo.
-    pub(crate) fn decidi_proposte(&mut self, cx: &Contesto) {
-        for st in &mut self.dicasteri {
+    /// Rende le proposte tolte, col dicastero e come sono state tolte.
+    pub(crate) fn decidi_proposte(&mut self, cx: &Contesto) -> Vec<(usize, Proposta, Tolta)> {
+        let mut tolte = Vec::new();
+        for (i, st) in self.dicasteri.iter_mut().enumerate() {
             let (Some(p), Some(m)) = (st.proposta.as_mut(), st.ministro.as_ref()) else {
                 continue;
             };
-            if !tiene(cx, m, p.tipo) {
+            if let Some(motivo) = decade(cx, m, p.tipo) {
+                tolte.push((i, *p, Tolta::Decaduta(motivo)));
                 st.proposta = None;
             } else if p.turni_in_sospeso < 1 + u32::from(p.rinviata) {
                 p.turni_in_sospeso += 1;
             } else {
+                tolte.push((i, *p, Tolta::Respinta));
                 st.proposta = None;
                 let delta = -cx.dati.manopola("costo_respingere");
                 penalizza(st, Causa::PropostaRespinta, delta, cx.turno);
             }
         }
+        tolte
     }
 
     /// L'atto e l'importo che `Accogli` della proposta di fondi del dicastero `i` spenderebbe,

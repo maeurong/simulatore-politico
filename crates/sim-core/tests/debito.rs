@@ -4,9 +4,12 @@ mod comune;
 
 use comune::{
     chiudi_col_bilancio, con_ingresso, dati_base, edita, file_base, imposta, presenta, sostituisci,
+    voci,
 };
 use serde_json::{Value, json};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
+use sim_core::eventi::{Famiglia, Tono};
 use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Partita};
 
@@ -92,6 +95,18 @@ fn spread_oltre_soglia_apre_le_aste_scoperte() {
     let v = p.vista();
     let e = v.eventi.iter().find(|e| e.nome == "Aste scoperte").unwrap();
     assert!(e.causa.contains("soglia 550 pb"), "{}", e.causa);
+    let crisi = voci(&p, TipoVoce::CrisiDelDebito);
+    assert_eq!(crisi.len(), 1, "{:?}", v.esito);
+    assert_eq!(
+        crisi[0].fatto,
+        format!("Spread a {} pb: si aprono le «Aste scoperte»", v.spread_pb)
+    );
+    assert_eq!(
+        crisi[0].causa,
+        "lo spread ha raggiunto la soglia di crisi di 550 pb, senza programma del MES né \
+         ristrutturazione in corso"
+    );
+    assert_eq!((crisi[0].tono, crisi[0].precedenza), (Tono::Grave, 2));
 }
 
 #[test]
@@ -119,6 +134,34 @@ fn il_mes_e_il_default() {
         assert_eq!(v.len(), 1, "alleato {j}");
         assert!((v[0].delta + 10.0).abs() < 1e-9, "{}", v[0].delta);
     }
+    let risolto = voci(&p, TipoVoce::EventoRisolto);
+    let aste = (risolto.iter())
+        .find(|v| v.fatto.starts_with("Aste scoperte"))
+        .unwrap();
+    assert_eq!(aste.tono, Tono::Grave);
+    assert_eq!(aste.famiglia, Some(Famiglia::Debito));
+    let mes = voci(&p, TipoVoce::MesAvviato);
+    assert_eq!(mes.len(), 1, "{mes:?}");
+    assert_eq!(
+        (mes[0].criticita, mes[0].precedenza),
+        (Criticita::Critica, 2)
+    );
+    assert_eq!(mes[0].tono, Tono::Grave);
+    assert!(
+        mes[0].fatto.contains("Età pensionabile")
+            && mes[0]
+                .fatto
+                .ends_with("ogni alleato perde 10,0 punti d'intesa"),
+        "{}",
+        mes[0].fatto
+    );
+    assert!(
+        mes[0]
+            .causa
+            .starts_with("la scelta nelle «Aste scoperte», spread a "),
+        "{}",
+        mes[0].causa
+    );
 }
 
 #[test]
@@ -254,12 +297,12 @@ fn il_mes_limita_la_legge_di_bilancio() {
         .unwrap();
 }
 
-#[test]
-fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
+/// Una legge su due disposizioni, una vincolata e una no, presentata prima del MES e votata col
+/// programma in corso.
+fn legge_votata_col_mes() -> Partita {
     let mut p = con_premio();
     chiudi_col_bilancio(&mut p);
     assert_eq!(aste(&p).len(), 1);
-    // In esame prima del MES: due disposizioni, una vincolata e una no.
     presenta(
         &mut p,
         &[("eta_pensionabile", "66"), ("pensione_minima", "piu_20")],
@@ -269,6 +312,31 @@ fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
     assert!(p.economia().programma_mes.is_some());
     // Nel turno del bilancio le leggi slittano: la votazione è alla chiusura dopo.
     chiudi_col_bilancio(&mut p);
+    p
+}
+
+#[test]
+fn valore_non_applicato_per_il_memorandum() {
+    let p = legge_votata_col_mes();
+    let v = voci(&p, TipoVoce::ValoreNonApplicato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Notevole);
+    assert_eq!(v[0].disposizioni, ["eta_pensionabile", "pensione_minima"]);
+    assert_eq!(
+        v[0].fatto,
+        "Età pensionabile resta a 70 anni, non a 66 anni, nonostante la legge approvata"
+    );
+    assert!(
+        v[0].causa
+            .starts_with("il vincolo del memorandum del MES, fino a "),
+        "{}",
+        v[0].causa
+    );
+}
+
+#[test]
+fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
+    let p = legge_votata_col_mes();
     assert!(p.economia().programma_mes.is_some());
     assert!(
         p.vista()
@@ -363,6 +431,18 @@ fn la_ristrutturazione_taglia_il_debito() {
     // Il premio entra intero nello spread del turno, poi decade di un passo.
     assert!(e.spread >= 300.0, "{}", e.spread);
     assert!((premio_dopo(&r) - 300.0 * 0.5_f64.powf(0.125)).abs() < 1e-9);
+    let v = voci(&r, TipoVoce::Ristrutturazione);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Critica);
+    assert!(
+        v[0].fatto.contains("premio di 300 pb sullo spread")
+            && v[0]
+                .fatto
+                .contains("fasce media e alta giù del 5% per 8 turni"),
+        "{}",
+        v[0].fatto
+    );
+    assert_eq!(v[0].causa, "la scelta nelle «Aste scoperte»");
 }
 
 #[test]
@@ -527,17 +607,27 @@ fn il_programma_dura_durata_mes_chiusure() {
     let mut p = col_mes();
     let fine = p.economia().programma_mes.unwrap();
     for _ in 1..durata() {
+        assert!(voci(&p, TipoVoce::MesFinito).is_empty());
         chiudi_col_bilancio(&mut p);
         assert_eq!(p.economia().programma_mes, Some(fine));
     }
     // Al turno `fine` il programma non è più in corso: il memorandum non vincola più (la legge
-    // può cadere per altro, per esempio un'altra già in esame).
+    // può cadere per altro, per esempio un'altra già in esame). L'esito che apre il turno lo dice.
     assert_eq!(p.vista().turno, fine);
+    let finito = voci(&p, TipoVoce::MesFinito);
+    assert_eq!(finito.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(
+        finito[0].fatto,
+        "Finito il programma del MES: cadono i vincoli del memorandum"
+    );
+    assert_eq!(finito[0].causa, "la durata del programma, 8 trimestri");
     if let Err(e) = presenta(&mut p, &[("eta_pensionabile", "67")]) {
         assert!(!e.to_string().contains("memorandum"), "{e}");
     }
+    // La chiusura dopo non la ripete.
     chiudi_col_bilancio(&mut p);
     assert_eq!(p.economia().programma_mes, None);
+    assert!(voci(&p, TipoVoce::MesFinito).is_empty());
 }
 
 fn eta_pensionabile() -> (usize, usize) {
@@ -594,8 +684,10 @@ fn al_bilancio_oltre_il_tetto() -> (Partita, sim_core::economia::Bilancio) {
     (p, b)
 }
 
-#[test]
-fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
+/// Il bilancio oltre il tetto presentato, poi il MES chiesto per default nella stessa chiusura:
+/// la partita chiusa, la sonda col programma sullo stato di prima, il limite e la crescita del
+/// presentato.
+fn ricondotto() -> (Partita, Partita, f64, f64, sim_core::economia::Bilancio) {
     let (p, b) = al_bilancio_oltre_il_tetto();
     let turno = p.vista().turno;
     // La sonda: il limite del programma e il riepilogo di un bilancio, sullo stesso stato.
@@ -604,7 +696,8 @@ fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
         .riepilogo_bilancio(&sonda.bozza_bilancio().unwrap())
         .unwrap();
     let limite = bozza.tetto.max(bozza.crescita_spesa_netta);
-    assert!(sonda.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta > limite);
+    let crescita = sonda.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta;
+    assert!(crescita > limite);
     let mut p = p;
     p.comanda(Comando::PresentaBilancio { bilancio: b })
         .unwrap();
@@ -621,13 +714,57 @@ fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
     .unwrap();
     let presidente = p.governo().presidente;
     p.chiudi_turno();
+    assert_eq!(p.governo().presidente, presidente);
+    (p, sonda, limite, crescita, presentato)
+}
+
+#[test]
+fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
+    let (p, sonda, limite, _, presentato) = ricondotto();
     assert!(p.economia().programma_mes.is_some());
     let approvato = p.economia().bilancio_approvato.clone().unwrap();
     assert_ne!(approvato, presentato);
     let r = sonda.riepilogo_bilancio(&approvato).unwrap();
     assert!(r.crescita_spesa_netta <= limite + 1e-6, "{r:?} {limite}");
     assert!(!p.vista().bilancio.esercizio_provvisorio);
-    assert_eq!(p.governo().presidente, presidente);
+}
+
+#[test]
+fn bilancio_ricondotto_lascia_la_voce() {
+    let (p, _, limite, crescita, _) = ricondotto();
+    let virgola = |x: f64| format!("{x:.1}").replace('.', ",");
+    let tipi: Vec<TipoVoce> = (p.vista().esito.iter())
+        .map(|v| v.tipo)
+        .filter(|t| {
+            matches!(
+                t,
+                TipoVoce::BilancioApprovato | TipoVoce::BilancioRicondotto
+            )
+        })
+        .collect();
+    assert_eq!(
+        tipi,
+        [TipoVoce::BilancioApprovato, TipoVoce::BilancioRicondotto]
+    );
+    let v = voci(&p, TipoVoce::BilancioRicondotto);
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert!(v[0].disposizioni.is_empty() && v[0].misura.is_some());
+    assert!(
+        v[0].fatto.starts_with(&format!(
+            "Legge di bilancio ricondotta al tetto del MES: la spesa netta presentata cresceva \
+             del {}%, il limite è del {}%; dei budget presentati resta il ",
+            virgola(crescita),
+            virgola(limite)
+        )) && v[0].fatto.ends_with("% dello scarto dalla bozza"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(
+        v[0].causa
+            .starts_with("il programma del MES, cominciato dopo la presentazione, finisce a "),
+        "{}",
+        v[0].causa
+    );
 }
 
 #[test]
@@ -690,7 +827,7 @@ fn il_governo_ia_col_mes_e_un_ultimatum_approva_il_bilancio() {
     assert!(
         p.economia().bilancio_presentato.is_some(),
         "{:?}",
-        p.vista().mosse
+        p.vista().esito
     );
     p.chiudi_turno();
     assert!(p.economia().bilancio_approvato.is_some());
@@ -809,5 +946,20 @@ fn la_perdita_di_reddito_finisce_dentro_la_partita() {
             i + 1 < turni,
             "{i}"
         );
+        let finita = voci(&con, TipoVoce::RistrutturazioneFinita);
+        if i + 1 == turni {
+            assert_eq!(finita.len(), 1, "{i}: {:?}", con.vista().esito);
+            assert_eq!(
+                finita[0].fatto,
+                "Finita la ristrutturazione del debito: il premio sullo spread è rientrato e i \
+                 redditi delle fasce media e alta non calano più"
+            );
+            assert_eq!(
+                finita[0].causa,
+                "premio sotto 1 punto base e 8 turni di perdita dei redditi trascorsi"
+            );
+        } else {
+            assert!(finita.is_empty(), "{i}");
+        }
     }
 }

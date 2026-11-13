@@ -2,8 +2,10 @@
 
 mod comune;
 
-use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita};
+use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita, voci};
 use serde_json::json;
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
+use sim_core::eventi::Famiglia;
 use sim_core::{Comando, Errore, Partita};
 
 /// L'evento `criminalita` (indice nel catalogo) aperto al turno corrente, nella partita al governo:
@@ -50,6 +52,64 @@ fn sicurezza(p: &Partita) -> f64 {
     j["grandezze"]["valori"][k][0].as_f64().unwrap()
 }
 
+/// Lo stato salvato senza l'esito, che porta la voce dell'evento di prova.
+fn senza_esito(p: &Partita) -> serde_json::Value {
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    j["esito"] = json!([]);
+    j
+}
+
+/// La voce dell'evento di prova nell'esito.
+fn voce_di_prova(p: &Partita) -> VoceEsito {
+    (voci(p, TipoVoce::EventoRisolto).into_iter())
+        .find(|v| v.fatto.starts_with("Ondata di criminalità"))
+        .unwrap()
+}
+
+/// `p` con lo scandalo certo a ogni chiusura e nessuno shock (soglia a 4 sigma): lo scandalo, il
+/// più grave degli altri candidati, nasce sempre.
+fn con_scandalo_certo(p: &Partita) -> Partita {
+    edita(p, |j| {
+        let m = &mut j["dati"]["manopole"];
+        m["scandalo_base"]["max"] = json!(1000.0);
+        m["scandalo_base"]["valore"] = json!(1000.0);
+        m["soglia_shock"]["valore"] = json!(4.0);
+    })
+    .unwrap()
+}
+
+/// Lo scandalo nato nella chiusura ha la sua voce: nome, bersaglio, causa della `VoceEvento`, la
+/// famiglia; critica al governo, notevole all'opposizione.
+#[test]
+fn evento_nato_porta_la_famiglia_e_la_causa() {
+    for (p, criticita) in [
+        (al_governo(), Criticita::Critica),
+        (all_opposizione(), Criticita::Notevole),
+    ] {
+        let mut p = con_scandalo_certo(&p);
+        chiudi_col_bilancio(&mut p);
+        let vista = p.vista();
+        let e = (vista.eventi.iter())
+            .find(|e| e.famiglia == Famiglia::Scandalo)
+            .expect("lo scandalo nato");
+        let nati = voci(&p, TipoVoce::EventoNato);
+        assert_eq!(nati.len(), 1, "{nati:?}");
+        let v = &nati[0];
+        let persona = e.bersaglio.as_deref().unwrap();
+        assert!(
+            v.fatto.starts_with(&format!("{} ({persona}, ", e.nome)),
+            "{}",
+            v.fatto
+        );
+        assert_eq!(v.causa, e.causa);
+        assert_eq!(v.causa, "rischio alto");
+        assert_eq!(v.famiglia, Some(Famiglia::Scandalo));
+        assert_eq!(v.criticita, criticita);
+        // Il soggetto: il dicastero del ministro o il partito del leader.
+        assert!(v.dicastero.is_some() != v.partito.is_some(), "{v:?}");
+    }
+}
+
 #[test]
 fn senza_scelta_vale_il_default() {
     let mut p = con_evento_di_prova();
@@ -59,8 +119,34 @@ fn senza_scelta_vale_il_default() {
     chiudi_col_bilancio(&mut q);
     // L'evento di prova è chiuso; quelli nuovi li fa nascere il caso (le emergenze), uguali in p e q.
     assert!((p.vista().eventi.iter()).all(|e| e.nome != "Ondata di criminalità"));
-    // Il default non ha effetti: la partita è identica a quella senza evento.
-    assert_eq!(p, q);
+    // Il default non ha effetti: la partita è identica a quella senza evento, voce a parte.
+    assert_eq!(senza_esito(&p), senza_esito(&q));
+}
+
+#[test]
+fn evento_risolto_per_default_e_critico() {
+    let mut p = con_evento_di_prova();
+    chiudi_col_bilancio(&mut p);
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Critica);
+    assert_eq!(v.precedenza, 1);
+    assert!(
+        v.fatto.contains("«Non intervenire» per default"),
+        "{}",
+        v.fatto
+    );
+    assert_eq!(v.famiglia, Some(Famiglia::Situazione));
+    assert_eq!(v.causa, "Sicurezza: 80,0 (soglia 85,0)");
+}
+
+/// All'opposizione l'evento vale il default del governo IA: la voce resta notevole.
+#[test]
+fn evento_risolto_all_opposizione_e_notevole() {
+    let mut p = con_evento(all_opposizione());
+    p.chiudi_turno();
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert!(v.fatto.contains("per default"), "{}", v.fatto);
 }
 
 #[test]
@@ -84,7 +170,11 @@ fn la_scelta_si_puo_cambiare_fino_alla_chiusura() {
     rispondi(&mut p, 0, "ordinaria").unwrap();
     chiudi_col_bilancio(&mut p);
     chiudi_col_bilancio(&mut q);
-    assert_eq!(p, q);
+    assert_eq!(senza_esito(&p), senza_esito(&q));
+    // Scelto, non per default: la voce è notevole.
+    let v = voce_di_prova(&p);
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert!(!v.fatto.contains("per default"), "{}", v.fatto);
 }
 
 #[test]

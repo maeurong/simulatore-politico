@@ -5,10 +5,11 @@
 
 mod comune;
 use comune::{
-    dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice, senza_shock,
+    dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice, senza_shock, voci,
 };
 use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
 
@@ -66,6 +67,55 @@ fn atto_eseguito_muove_la_grandezza_e_spende_il_margine() {
         sb += b.grandezza("qualita_servizio_sanitario").unwrap();
     }
     assert!(sa > sb);
+}
+
+/// La voce dell'atto della Sanità (nessuna regione) e quella di Infrastrutture e Trasporti, che ha
+/// la regione bersaglio: eseguito o cantiere avviato, secondo i turni dell'atto.
+#[test]
+fn atto_eseguito_lascia_la_voce() {
+    let d = dati_base();
+    let mut tipi = Vec::new();
+    for (dicastero, seme) in [("sanita", 3), ("infrastrutture_trasporti", 3)] {
+        let (mut p, _) = coppia(seme);
+        p.chiudi_turno();
+        let agenda = ministero(&p.vista(), dicastero).agenda.clone().unwrap();
+        assert_eq!(agenda.regione.is_some(), dicastero != "sanita");
+        let turni = d.atti().iter().find(|a| a.id == agenda.atto).unwrap().turni;
+        ferma_tranne(&mut p, dicastero);
+        p.chiudi_turno();
+        let tipo = if turni <= 1 {
+            TipoVoce::AttoEseguito
+        } else {
+            TipoVoce::CantiereAvviato
+        };
+        tipi.push(tipo);
+        let v = voci(&p, tipo);
+        assert_eq!(v.len(), 1, "{dicastero}: {v:?}");
+        assert_eq!(v[0].dicastero.as_deref(), Some(dicastero));
+        assert_eq!(v[0].regione, agenda.regione);
+        assert_eq!(v[0].criticita, Criticita::Ordinaria);
+        let euro = migliaia(agenda.costo);
+        assert!(
+            v[0].fatto.contains(&agenda.nome) && v[0].fatto.contains(&format!("{euro} euro")),
+            "{}",
+            v[0].fatto
+        );
+        assert_eq!(v[0].causa, agenda.motivo.replace(": ", ", "));
+    }
+    assert!(tipi.contains(&TipoVoce::AttoEseguito), "{tipi:?}");
+}
+
+/// `12.345.678`, come lo scrive il core.
+fn migliaia(euro: i64) -> String {
+    let cifre = euro.to_string();
+    let mut s = String::new();
+    for (n, c) in cifre.chars().enumerate() {
+        if n > 0 && (cifre.len() - n).is_multiple_of(3) {
+            s.push('.');
+        }
+        s.push(c);
+    }
+    s
 }
 
 #[test]
@@ -693,6 +743,35 @@ fn cantiere_finito_registra_effetti_una_volta_e_sparisce() {
 }
 
 #[test]
+fn cantiere_finito_lascia_la_voce() {
+    let d = dati_base();
+    let atto = d.atti().iter().find(|a| a.id == CASE).unwrap();
+    let mut p = cantiere_solo();
+    let mut ultimo = cantiere(&p, "sanita").unwrap();
+    while let Some(c) = cantiere(&p, "sanita") {
+        ultimo = c;
+        assert!(voci(&p, TipoVoce::CantiereFinito).is_empty());
+        ferma_tutti(&mut p);
+        p.chiudi_turno();
+    }
+    let v = voci(&p, TipoVoce::CantiereFinito);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].dicastero.as_deref(), Some("sanita"));
+    assert_eq!(v[0].regione, None);
+    assert_eq!(v[0].criticita, Criticita::Notevole);
+    let speso = migliaia(ultimo.speso + ultimo.rata);
+    assert!(
+        v[0].fatto.contains(&atto.nome) && v[0].fatto.contains(&format!("{speso} euro")),
+        "{}",
+        v[0].fatto
+    );
+    assert_eq!(
+        v[0].causa,
+        format!("la fine dei lavori dopo {} turni", atto.turni)
+    );
+}
+
+#[test]
 fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
     let s = indice("sanita");
     let mut p = Partita::nuova(fermare_gratis(), 7);
@@ -713,6 +792,15 @@ fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
     let f = cantiere(&p, "sanita").unwrap();
     assert_eq!((f.speso, f.turni_mancanti), (f.rata, 3));
     assert_eq!(residuo(&p, "sanita"), prima - f.rata);
+    let avviati = voci(&p, TipoVoce::CantiereAvviato);
+    assert_eq!(avviati.len(), 1, "{avviati:?}");
+    assert!(
+        avviati[0]
+            .fatto
+            .contains(&format!("{} euro a turno per 4 turni", migliaia(f.rata))),
+        "{}",
+        avviati[0].fatto
+    );
     // Margine pari alla rata, agenda annunciata: paga la rata, l'agenda non si esegue.
     let mut q = edita(&p, |j| {
         j["ministri"]["dicasteri"][s]["margine_residuo"] = json!(f.rata);
@@ -726,6 +814,18 @@ fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
     assert_eq!((m.margine_residuo, m.cantieri.len()), (0, 1));
     assert_eq!(m.cantieri[0].turni_mancanti, 2);
     assert!(effetti_di(&q, "sanita").is_empty());
+    // L'atto annunciato salta: la spesa supera il margine rimasto dopo la rata.
+    let saltati = voci(&q, TipoVoce::AttoSaltato);
+    assert_eq!(saltati.len(), 1, "{saltati:?}");
+    assert_eq!(saltati[0].dicastero.as_deref(), Some("sanita"));
+    assert_eq!(saltati[0].criticita, Criticita::Notevole);
+    assert!(
+        saltati[0]
+            .causa
+            .ends_with("contro un margine residuo di 0 euro"),
+        "{}",
+        saltati[0].causa
+    );
 }
 
 /// Il cantiere del turno 2 con il margine residuo editato a `margine`, agende ferme; chiude il turno.
@@ -748,6 +848,17 @@ fn cantiere_senza_fondi_resta_fermo_senza_perdere_quanto_speso() {
     let dopo = cantiere(&q, "sanita").unwrap();
     assert_eq!(dopo, prima);
     assert_eq!(residuo(&q, "sanita"), prima.rata - 1);
+    let fermi = voci(&q, TipoVoce::CantiereFermo);
+    assert_eq!(fermi.len(), 1, "{fermi:?}");
+    assert_eq!(fermi[0].criticita, Criticita::Notevole);
+    assert_eq!(
+        fermi[0].causa,
+        format!(
+            "rata di {} euro contro un margine residuo di {} euro",
+            migliaia(prima.rata),
+            migliaia(prima.rata - 1)
+        )
+    );
 }
 
 #[test]

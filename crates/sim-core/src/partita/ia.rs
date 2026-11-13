@@ -1,4 +1,4 @@
-//! I partiti IA: il registro delle mosse, il cambio di leader dopo una sconfitta, il governo
+//! I partiti IA: il cambio di leader dopo una sconfitta, il governo
 //! avversario che governa in apertura, affronta la crisi e va al voto anticipato, e l'opposizione
 //! che presenta la sfiducia, porta la proposta nel posto riservato e chiede il referendum.
 
@@ -6,30 +6,21 @@ use super::Partita;
 use super::vita::virgola;
 use crate::caso::Flusso;
 use crate::comando::Comando;
-use crate::disposizioni::Norma;
+use crate::disposizioni::{Norma, data_di};
 use crate::economia::{self, Bilancio};
 use crate::elettorato::{Affluenza, Condizione, stima};
+use crate::esito::TipoVoce;
 use crate::informazione::indice;
 use crate::legislatura::{
-    self, Bersaglio, Dichiarazione, Fase, Leva, Quadro, Spesa, campagna, movimento,
+    self, Bersaglio, Dichiarazione, Fase, Leva, OrigineCaduta, Quadro, Spesa, campagna, movimento,
     quota_fra_i_votanti,
 };
+use crate::ministri::TipoProposta;
 use crate::parlamento::{self, StatoEmendamento, ValoreProposto, voto};
 use crate::partiti::{Regola, Vocazione};
-use crate::vista::MossaIa;
 use std::cmp::Reverse;
 
 impl Partita {
-    /// Una riga nel registro del turno, col partito `j`.
-    pub(super) fn mossa(&mut self, j: usize, testo: String) {
-        if let Some(p) = self.partiti.get(j) {
-            self.mosse.push(MossaIa {
-                partito: p.id.clone(),
-                testo,
-            });
-        }
-    }
-
     /// Un nome di `nomi_partiti` dello scenario estratto da `Flusso::PartitiIa`, diverso dai nomi
     /// dei partiti; nessuno se in 100 estrazioni esce sempre un nome già usato.
     pub(super) fn nome_nuovo(&mut self) -> Option<String> {
@@ -74,7 +65,8 @@ impl Partita {
         };
         p.leader.clone_from(&nuovo);
         p.valence = p.valence_base + luna;
-        self.mossa(j, format!("Nuovo leader: {nuovo}, dopo {causa}"));
+        let fatto = format!("Nuovo leader: {nuovo}");
+        self.voce_di(j, TipoVoce::CambioDiLeader, fatto, causa.into());
     }
 
     /// Il calo di quota fra i votanti del partito `j` sull'elezione precedente, se arriva a
@@ -203,26 +195,36 @@ impl Partita {
         let seggi = self.seggi_per_partito();
         let aula = self.stato_aula();
         let voci = &self.disposizioni.voci;
-        let promesse: Vec<(usize, Vec<(usize, usize)>)> = (self.partiti.iter().enumerate())
+        let promesse: Vec<_> = (self.partiti.iter().enumerate())
             .filter(|&(j, p)| j != self.giocatore && !p.sciolto)
-            .map(|(j, _)| {
-                let programma =
+            .map(|(j, p)| {
+                let (programma, causa) =
                     if self.governo.presidente == j && !self.governo.programma.is_empty() {
-                        self.governo.programma.clone()
+                        (
+                            self.governo.programma.clone(),
+                            "le prime voci del programma del suo governo non ancora in vigore"
+                                .to_string(),
+                        )
                     } else {
-                        legislatura::programma(&aula, &[j], &seggi)
+                        (
+                            legislatura::programma(&aula, &[j], &seggi),
+                            format!(
+                                "i valori in vigore più lontani dalla sua posizione, {}",
+                                virgola(p.posizione_dichiarata)
+                            ),
+                        )
                     };
-                let scelte = (programma.into_iter())
+                let scelte: Vec<_> = (programma.into_iter())
                     .filter(|&(d, g)| voci.get(d).is_some_and(|v| v.in_vigore != g))
                     .take(2)
                     .collect();
-                (j, scelte)
+                (j, scelte, causa)
             })
             .collect();
-        for (j, scelte) in promesse {
+        for (j, scelte, causa) in promesse {
             if !scelte.is_empty() {
-                let testo = format!("Promette {}", campagna::promesse(&self.dati, &scelte));
-                self.mossa(j, testo);
+                let fatto = format!("Promette {}", campagna::promesse(&self.dati, &scelte));
+                self.voce_di(j, TipoVoce::PromessaFatta, fatto, causa);
             }
             self.partiti[j].promesse_campagna = scelte;
         }
@@ -336,18 +338,16 @@ impl Partita {
         }
         self.legislatura.coalizioni_ia = Some(al_voto(&gruppi));
         for (j, membri) in righe {
-            let testo = if membri.is_empty() {
-                "Corre da solo: nel valore atteso ci guadagna".to_string()
+            let fatto = if membri.is_empty() {
+                "Corre da solo".to_string()
             } else {
                 let nomi: Vec<String> = (membri.iter().filter_map(|&m| self.partiti.get(m)))
                     .map(|p| p.nome.clone())
                     .collect();
-                format!(
-                    "Entra in coalizione con {}: nel valore atteso ci guadagna",
-                    elenco(&nomi)
-                )
+                format!("Entra in coalizione con {}", elenco(&nomi))
             };
-            self.mossa(j, testo);
+            let causa = "nel valore atteso ci guadagna".to_string();
+            self.voce_di(j, TipoVoce::CoalizioneIa, fatto, causa);
         }
     }
 
@@ -392,7 +392,7 @@ impl Partita {
                 (Regola::Hunter, Some(false)) => "dopo una perdita al voto inverte lo spostamento",
                 (Regola::Hunter, None) => "alla prima legislatura va verso il centro",
                 (Regola::Governator, _) => "verso la posizione del governo",
-                (Regola::Sticker, _) => "",
+                (Regola::Sticker, _) => "la sua regola di movimento",
             };
             if let Some(p) = self.partiti.get_mut(j) {
                 p.sposta(nuova);
@@ -401,7 +401,8 @@ impl Partita {
             // Solo se si vede: il movimento resta anche quando le due cifre coincidono.
             let (da, a) = (virgola(x), virgola(nuova));
             if da != a {
-                self.mossa(j, format!("Sposta la posizione da {da} a {a}: {perche}"));
+                let fatto = format!("Sposta la posizione da {da} a {a}");
+                self.voce_di(j, TipoVoce::PosizioneSpostata, fatto, perche.into());
             }
         }
     }
@@ -499,10 +500,8 @@ impl Partita {
                 1 => format!("1 seggio {di} la voterebbe"),
                 _ => format!("{n} seggi {di} la voterebbero"),
             };
-            self.mossa(
-                j,
-                format!("Porta nel posto riservato {nome}; {voterebbero}"),
-            );
+            let fatto = format!("Porta nel posto riservato {nome}");
+            self.voce_di(j, TipoVoce::MisuraPresentata, fatto, voterebbero);
         }
     }
 
@@ -586,21 +585,17 @@ impl Partita {
                         .then(peso(b).cmp(&peso(a)))
                 })?;
             let nome = &self.dati.dicasteri().get(i)?.nome;
-            let testo = format!(
-                "Presenta la sfiducia a {}, {nome}: {}",
-                m.nome,
-                motivo(Some(i))?
-            );
-            Some((Some(i), testo))
+            let fatto = format!("Presenta la sfiducia a {}, {nome}", m.nome);
+            Some((Some(i), fatto, motivo(Some(i))?))
         };
         let scelta = match motivo(None).filter(|_| !self.rinascerebbe_uguale()) {
-            Some(m) => Some((None, format!("Presenta la sfiducia al governo: {m}"))),
+            Some(m) => Some((None, "Presenta la sfiducia al governo".to_string(), m)),
             // Se la sfiducia sul ministro sotto scandalo non passa, ripiega sul giudizio peggiore.
             None => individuale(true).or_else(|| individuale(false)),
         };
-        if let Some((dicastero, testo)) = scelta {
+        if let Some((dicastero, fatto, causa)) = scelta {
             self.parlamento.sfiducia = Some((dicastero, promotore));
-            self.mossa(promotore, testo);
+            self.voce_di(promotore, TipoVoce::SfiduciaPresentata, fatto, causa);
         }
     }
 
@@ -681,15 +676,19 @@ impl Partita {
         let x = &self.dati.disposizioni()[d];
         let (nome, disposizione) = (x.nome.clone(), x.id.clone());
         let id = self.partiti[promotore].id.clone();
-        if self.promuovi_referendum(&id, &disposizione).is_ok() {
+        if self.promuovi_referendum(&id, &disposizione).is_ok()
+            && let Some(voto) = self.parlamento.referendum.as_ref().map(|r| r.voto)
+        {
             let percento = virgola(a.si / (a.si + a.no) * 100.0);
-            self.mossa(
-                promotore,
-                format!(
-                    "Chiede il referendum su {nome}: secondo il sondaggio il sì vincerebbe col \
-                     {percento}% dei voti e il quorum sarebbe raggiunto"
-                ),
+            let fatto = format!(
+                "Chiede il referendum su {nome}, si vota a {}",
+                parlamento::mese(data_di(voto))
             );
+            let causa = format!(
+                "secondo il sondaggio il sì vincerebbe col {percento}% dei voti e il quorum \
+                 sarebbe raggiunto"
+            );
+            self.voce_di(promotore, TipoVoce::ReferendumChiesto, fatto, causa);
         }
     }
 
@@ -705,9 +704,14 @@ impl Partita {
     pub(super) fn crisi_ia(&mut self) {
         let pc = self.governo.presidente;
         if self.economia.esercizio_provvisorio(self.data) {
-            self.legislatura.dimissioni = true;
-            let testo = "Si dimette: in esercizio provvisorio non allarga la coalizione";
-            self.mossa(pc, testo.into());
+            self.legislatura.dimetti(OrigineCaduta::CrisiSenzaUscita);
+            let causa = "in esercizio provvisorio non allarga la coalizione";
+            self.voce_di(
+                pc,
+                TipoVoce::GovernoDimissionario,
+                DIMESSO.into(),
+                causa.into(),
+            );
             return;
         }
         let (scelto, rotto) = {
@@ -756,17 +760,23 @@ impl Partita {
         match scelto.and_then(|j| Some((j, self.partiti.get(j)?.nome.clone()))) {
             Some((j, nome)) => {
                 self.legislatura.allargati.push(j);
-                self.mossa(pc, format!("Allarga la coalizione a {nome}"));
+                let fatto = format!("Allarga la coalizione a {nome}");
+                let causa = "in crisi la coalizione non ha la maggioranza".to_string();
+                self.voce_di(pc, TipoVoce::CoalizioneAllargata, fatto, causa);
             }
             None => {
-                self.legislatura.dimissioni = true;
-                let testo = if rotto {
-                    "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in \
-                     intesa con lui"
+                self.legislatura.dimetti(OrigineCaduta::CrisiSenzaUscita);
+                let causa = if rotto {
+                    "nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui"
                 } else {
-                    "Si dimette: nessun partito contiguo gli ridà una maggioranza che gli convenga"
+                    "nessun partito contiguo gli ridà una maggioranza che gli convenga"
                 };
-                self.mossa(pc, testo.into());
+                self.voce_di(
+                    pc,
+                    TipoVoce::GovernoDimissionario,
+                    DIMESSO.into(),
+                    causa.into(),
+                );
             }
         }
     }
@@ -814,22 +824,6 @@ impl Partita {
             .map(|(_, _, _, w)| w.to_vec())
     }
 
-    /// La riga del formatore che forma il governo IA con `coalizione`.
-    pub(super) fn riga_del_formatore(&mut self, formatore: usize, coalizione: &[usize]) {
-        let nomi: Vec<String> = (coalizione.iter().filter(|&&j| j != formatore))
-            .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.clone()))
-            .collect();
-        let testo = if nomi.is_empty() {
-            "Forma il governo da solo: la maggioranza che gli vale di più".to_string()
-        } else {
-            format!(
-                "Forma il governo con {}: la maggioranza che gli vale di più",
-                elenco(&nomi)
-            )
-        };
-        self.mossa(formatore, testo);
-    }
-
     /// Il voto anticipato si decide: governo IA in carica, fase ordinaria, dal quinto turno della
     /// legislatura (`inizio + 4`) a due turni dalla scadenza, fuori dalla crisi (anche quella
     /// aperta per il turno dopo) e senza dimissioni in corso.
@@ -841,14 +835,15 @@ impl Partita {
             && self.turno >= l.inizio.saturating_add(4)
             && l.scadenza.saturating_sub(self.turno) >= 2
             && l.crisi.is_none()
-            && !l.dimissioni
+            && l.dimissioni.is_none()
     }
 
     /// In chiusura, dopo il sondaggio (scelta 13 del piano): nella finestra, il governo IA si
     /// dimette per andare al voto se il valore atteso del voto per il partito del Presidente del
     /// Consiglio (`Quadro::valore` sul sondaggio pubblico, coalizioni dell'ultimo voto) supera di
     /// `margine_voto_anticipato` quello del restare. Il restare è `valore_al_governo` coi seggi
-    /// veri, con la guida: il termine `valore_guida` che spetta a chi presiede il governo.
+    /// veri, con la guida: il termine `valore_guida` che spetta a chi presiede il governo. La voce
+    /// della caduta nasce dal Capo dello Stato, nella stessa chiusura.
     pub(super) fn voto_anticipato(&mut self) {
         if !self.finestra_voto_anticipato() {
             return;
@@ -858,11 +853,7 @@ impl Partita {
         let restare =
             legislatura::valore_al_governo(&self.quadro_veri(), pc, &self.governo.coalizione, true);
         if voto > restare + self.dati.manopola("margine_voto_anticipato") {
-            self.legislatura.dimissioni = true;
-            self.legislatura.voto_anticipato = true;
-            let testo = "Si dimette puntando al voto: nei sondaggi il voto gli vale più che \
-                         restare al governo";
-            self.mossa(pc, testo.into());
+            self.legislatura.dimetti(OrigineCaduta::VotoAnticipato);
         }
     }
 
@@ -876,10 +867,15 @@ impl Partita {
         let pc = self.governo.presidente;
         if (self.data.trimestre == 4 || self.economia.esercizio_provvisorio(self.data))
             && self.economia.bilancio_presentato.is_none()
-            && let Some((bilancio, _, testo)) = self.bilancio_ia()
+            && let Some((bilancio, _, fatto)) = self.bilancio_ia()
             && self.applica(Comando::PresentaBilancio { bilancio }).is_ok()
         {
-            self.mossa(pc, testo);
+            let causa = if self.economia.esercizio_provvisorio(self.data) {
+                "l'esercizio provvisorio"
+            } else {
+                "la sessione di bilancio del quarto trimestre"
+            };
+            self.voce_di(pc, TipoVoce::MisuraPresentata, fatto, causa.into());
         }
         // Col calendario pieno le voci che restano sono rifiutate una a una, senza righe.
         for (k, g) in self.governo.programma.clone() {
@@ -913,20 +909,30 @@ impl Partita {
             if self.applica(Comando::PresentaLegge { valori }).is_ok()
                 && let Some(m) = self.parlamento.misure.last()
             {
-                let testo = format!("Porta in aula: {}", parlamento::nome_misura(&self.dati, m));
-                self.mossa(pc, testo);
+                let fatto = format!("Porta in aula: {}", parlamento::nome_misura(&self.dati, m));
+                let causa = "una voce del programma di governo".to_string();
+                self.voce_di(pc, TipoVoce::MisuraPresentata, fatto, causa);
             }
         }
         for i in 0..self.ministri.dicasteri.len() {
             let Some(d) = self.dati.dicasteri().get(i) else {
                 continue;
             };
-            if self.ministri.dicasteri[i].proposta.is_none() {
+            let Some(proposta) = &self.ministri.dicasteri[i].proposta else {
                 continue;
-            }
+            };
+            let causa = match proposta.tipo {
+                TipoProposta::Fondi { atto, .. } => {
+                    let atto = self.dati.atti().get(atto).map_or("", |a| a.nome.as_str());
+                    format!("il dicastero chiede fondi, che non bastano per {atto}")
+                }
+                // Senza «: »: nel dettaglio di una voce fusa separa il fatto dalla causa.
+                TipoProposta::Riforma { .. } => proposta.tipo.testo(&self.dati),
+            };
             let (id, nome) = (d.id.clone(), d.nome.clone());
             if self.applica(Comando::Accogli { dicastero: id }).is_ok() {
-                self.mossa(pc, format!("Accoglie la proposta del dicastero {nome}"));
+                let fatto = format!("Accoglie la proposta del dicastero {nome}");
+                self.voce_di(pc, TipoVoce::PropostaAccolta, fatto, causa);
             }
         }
         let soglia = self.dati.manopola("soglia_ultimatum");
@@ -967,11 +973,14 @@ impl Partita {
                 && let Some(m) = self.parlamento.misure.iter().find(|m| m.id == misura)
             {
                 let legge = parlamento::nome_misura(&self.dati, m);
-                let testo = match motivo {
-                    Some(m) => format!("Accoglie l'emendamento di {nome} su {legge}: {m}"),
-                    None => format!("Respinge l'emendamento di {nome} su {legge}"),
+                let (fatto, causa) = match motivo {
+                    Some(m) => (format!("Accoglie l'emendamento di {nome} su {legge}"), m),
+                    None => (
+                        format!("Respinge l'emendamento di {nome} su {legge}"),
+                        format!("la sua intesa regge e la legge passa senza i voti di {nome}"),
+                    ),
                 };
-                self.mossa(pc, testo);
+                self.voce_di(pc, TipoVoce::EmendamentoDeciso, fatto, causa);
             }
         }
         if self.alleati().iter().any(|&j| self.in_ultimatum(j)) {
@@ -993,10 +1002,9 @@ impl Partita {
                 && self.in_bilico(misura, None)
                 && self.applica(Comando::PoniFiducia { misura }).is_ok()
             {
-                let testo = format!(
-                    "Pone la questione di fiducia su {nome}: la forbice include la sconfitta"
-                );
-                self.mossa(pc, testo);
+                let fatto = format!("Pone la questione di fiducia su {nome}");
+                let causa = "la forbice include la sconfitta".to_string();
+                self.voce_di(pc, TipoVoce::FiduciaPosta, fatto, causa);
             }
         }
     }
@@ -1007,7 +1015,7 @@ impl Partita {
     }
 
     /// Gli alleati con un ultimatum in corso.
-    fn alleati_in_ultimatum(&self) -> Vec<usize> {
+    pub(super) fn alleati_in_ultimatum(&self) -> Vec<usize> {
         (self.alleati().into_iter())
             .filter(|&j| self.in_ultimatum(j))
             .collect()
@@ -1087,6 +1095,9 @@ impl Partita {
     }
 }
 
+/// Il `fatto` del governo IA in crisi che si dimette: la `causa` porta uno dei tre motivi.
+const DIMESSO: &str = "Si dimette: il governo cade alla chiusura del turno";
+
 /// La quota più alta in [0, 1] per cui vale `entro`, che si suppone vero a 0: 1 se vale lì,
 /// altrimenti bisezione in 20 passi.
 pub(super) fn quota_massima(entro: impl Fn(f64) -> bool) -> f64 {
@@ -1106,7 +1117,7 @@ pub(super) fn quota_massima(entro: impl Fn(f64) -> bool) -> f64 {
 }
 
 /// I nomi in elenco: «A», «A e B», «A, B e C».
-fn elenco(nomi: &[String]) -> String {
+pub(super) fn elenco(nomi: &[String]) -> String {
     match nomi {
         [primi @ .., ultimo] if !primi.is_empty() => format!("{} e {ultimo}", primi.join(", ")),
         _ => nomi.join(""),
@@ -1153,13 +1164,26 @@ fn riparto_spesa(cassa: i64, rendimenti: &[f64]) -> Vec<i64> {
     reason = "nei test un unwrap che fallisce e' il fallimento voluto"
 )]
 mod tests {
-    use super::super::tests::all_opposizione;
+    use super::super::tests::{all_opposizione, voci};
     use super::*;
     use crate::parlamento::CausaIntesa;
     use crate::partiti::Vocazione;
 
-    const AL_VOTO: &str =
-        "Si dimette puntando al voto: nei sondaggi il voto gli vale più che restare al governo";
+    const IN_CRISI: Option<OrigineCaduta> = Some(OrigineCaduta::CrisiSenzaUscita);
+
+    /// Il governo è caduto per il voto anticipato in questa chiusura.
+    fn al_voto(p: &Partita) -> bool {
+        let causa = "le dimissioni per il voto anticipato: nei sondaggi il voto gli vale più che \
+                     restare al governo";
+        testi(p, TipoVoce::GovernoCaduto)
+            .iter()
+            .any(|&(_, c)| c == causa)
+    }
+
+    /// Fatto e causa delle voci di `tipo`, senza il partito.
+    fn testi(p: &Partita, tipo: TipoVoce) -> Vec<(&str, &str)> {
+        voci(p, tipo).into_iter().map(|(_, f, c)| (f, c)).collect()
+    }
 
     /// Uscita la Destra (5), in crisi: la coalizione 1-4 non ha la maggioranza al Senato (99 su
     /// 200). Vicini nella fila: l'estrema sinistra (0, a 1 dal membro accanto, governista, con
@@ -1173,7 +1197,7 @@ mod tests {
         p.partiti[0].vocazione = Vocazione::Governista;
         p.intesa.valori[5] = 30.0;
         p.legislatura.crisi = Some(p.turno);
-        p.mosse.clear();
+        p.esito.clear();
         p
     }
 
@@ -1187,16 +1211,22 @@ mod tests {
         p.parlamento.seggi_senato[0] = 1;
         p.parlamento.seggi_senato[7] += 4;
         p.crisi_ia();
-        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni == IN_CRISI);
         // Identitaria, la distanza dalla coalizione le toglie il guadagno.
         let mut p = in_crisi_senza_destra();
         p.partiti[0].vocazione = Vocazione::Identitaria;
         p.crisi_ia();
-        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni == IN_CRISI);
         // Resta la Destra, utile ma rotta (intesa 30): il motivo è la rottura.
-        let riga = "Si dimette: nessun partito contiguo che gli ridà la maggioranza è ancora in \
-                    intesa con lui";
-        assert!(p.mosse.iter().any(|m| m.testo == riga), "{:?}", p.mosse);
+        let riga = (
+            DIMESSO,
+            "nessun partito contiguo che gli ridà la maggioranza è ancora in intesa con lui",
+        );
+        assert!(
+            testi(&p, TipoVoce::GovernoDimissionario).contains(&riga),
+            "{:?}",
+            p.esito
+        );
     }
 
     /// L'estrema destra (6) sciolta, senza seggi, spostata fra l'estrema sinistra e la Sinistra:
@@ -1236,7 +1266,7 @@ mod tests {
         p.legislatura.crisi = Some(p.turno);
         assert!(p.legislatura.turno_di_voto(p.turno));
         p.apertura_ia();
-        assert!(p.legislatura.allargati.is_empty() && !p.legislatura.dimissioni);
+        assert!(p.legislatura.allargati.is_empty() && p.legislatura.dimissioni.is_none());
         let mut p = in_crisi_senza_destra();
         p.apertura_ia();
         assert_eq!(p.legislatura.allargati, [0]);
@@ -1267,7 +1297,7 @@ mod tests {
             f(&mut p);
             let si = p.finestra_voto_anticipato();
             p.legislatura.crisi = None;
-            p.legislatura.dimissioni = false;
+            p.legislatura.dimissioni = None;
             p.legislatura.fase = Fase::Ordinaria;
             si
         };
@@ -1277,7 +1307,7 @@ mod tests {
         assert!(!a(scadenza - 1, |_| {}));
         assert!(!a(scadenza, |_| {}));
         assert!(!a(inizio + 4, |p| p.legislatura.crisi = Some(p.turno)));
-        assert!(!a(inizio + 4, |p| p.legislatura.dimissioni = true));
+        assert!(!a(inizio + 4, |p| p.dimettiti()));
         assert!(!a(inizio + 4, |p| p.legislatura.fase = Fase::Sciolta));
         assert!(!a(inizio + 4, |p| p.governo.presidente = p.giocatore));
     }
@@ -1288,22 +1318,22 @@ mod tests {
         let destra = p.partiti.iter().position(|x| x.id == "destra").unwrap();
         p.intesa.valori[destra] = 10.0;
         p.chiudi_turno();
-        assert!(p.in_crisi() && p.legislatura.dimissioni);
+        assert!(p.in_crisi() && p.legislatura.dimissioni == IN_CRISI);
         assert!(p.legislatura.allargati.is_empty());
         let soglia = p.dati.manopola("soglia_ultimatum");
-        p.legislatura.dimissioni = false;
+        p.legislatura.dimissioni = None;
         p.intesa.valori[destra] = soglia - 1.0;
         p.crisi_ia();
-        assert!(p.legislatura.dimissioni && p.legislatura.allargati.is_empty());
-        p.legislatura.dimissioni = false;
+        assert!(p.legislatura.dimissioni == IN_CRISI && p.legislatura.allargati.is_empty());
+        p.legislatura.dimissioni = None;
         p.intesa.valori[destra] = soglia;
         p.crisi_ia();
         assert_eq!(p.legislatura.allargati, [destra]);
-        assert!(
-            p.mosse
-                .iter()
-                .any(|m| m.testo == "Allarga la coalizione a Destra")
+        let riga = (
+            "Allarga la coalizione a Destra",
+            "in crisi la coalizione non ha la maggioranza",
         );
+        assert!(testi(&p, TipoVoce::CoalizioneAllargata).contains(&riga));
         // `carica` ammette gli allargati del governo IA in crisi.
         assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     }
@@ -1319,7 +1349,7 @@ mod tests {
         assert_eq!(p.legislatura.fase, Fase::Ordinaria);
         let mut resta = Partita::carica(&p.salva().unwrap()).unwrap();
         resta.chiudi_turno();
-        assert!(resta.mosse.iter().all(|m| m.testo != AL_VOTO));
+        assert!(!al_voto(&resta));
         assert_eq!(resta.legislatura.fase, Fase::Ordinaria);
         assert_eq!(resta.governo.presidente, pc);
         for (j, x) in p.partiti.iter_mut().enumerate() {
@@ -1337,17 +1367,15 @@ mod tests {
             q
         };
         let q = chiudi(8.0);
-        assert!(q.mosse.iter().all(|m| m.testo != AL_VOTO));
+        assert!(!al_voto(&q));
         assert_eq!(q.legislatura.fase, Fase::Ordinaria);
         let p = chiudi(0.0);
-        let id = &p.partiti[pc].id;
-        assert!(
-            p.mosse
-                .iter()
-                .any(|m| m.testo == AL_VOTO && &m.partito == id)
-        );
-        // Dimissioni e voto anticipato li consuma il Capo dello Stato nella stessa chiusura.
-        assert!(!p.legislatura.dimissioni && !p.legislatura.voto_anticipato);
+        assert!(al_voto(&p), "{:?}", p.esito);
+        let caduto = voci(&p, TipoVoce::GovernoCaduto);
+        assert_eq!(caduto.len(), 1);
+        assert_eq!(caduto[0].0, Some(p.partiti[pc].id.as_str()));
+        // Le dimissioni le consuma il Capo dello Stato nella stessa chiusura.
+        assert!(p.legislatura.dimissioni.is_none());
         assert_ne!(p.legislatura.fase, Fase::Ordinaria);
     }
 
@@ -1365,7 +1393,7 @@ mod tests {
             g.giudizio.fill(0.0);
         }
         p.parlamento.sfiducia = None;
-        p.mosse.clear();
+        p.esito.clear();
         p
     }
 
@@ -1440,14 +1468,14 @@ mod tests {
             );
         };
         let ministro = &p.ministri.dicasteri[i].ministro.as_ref().unwrap().nome;
-        let attesa = format!(
-            "Presenta la sfiducia a {ministro}, {}: Centro in ultimatum e Centrodestra in \
-             ultimatum la voterebbero",
+        let fatto = format!(
+            "Presenta la sfiducia a {ministro}, {}",
             p.dati.dicasteri()[i].nome
         );
+        let causa = "Centro in ultimatum e Centrodestra in ultimatum la voterebbero";
         assert_eq!(
-            p.mosse.last().map(|m| m.testo.as_str()),
-            Some(attesa.as_str())
+            testi(&p, TipoVoce::SfiduciaPresentata),
+            [(fatto.as_str(), causa)]
         );
     }
 
@@ -1506,13 +1534,13 @@ mod tests {
         let mut p = sfiducia_al_limite();
         p.governo.coalizione.extend([0, 6]);
         p.sfiducia_ia();
-        assert!(p.parlamento.sfiducia.is_none() && p.mosse.is_empty());
+        assert!(p.parlamento.sfiducia.is_none() && p.esito.is_empty());
         let mut p = sfiducia_al_limite();
         for st in &mut p.ministri.dicasteri {
             st.ministro = None;
         }
         p.sfiducia_ia();
-        assert!(p.parlamento.sfiducia.is_none() && p.mosse.is_empty());
+        assert!(p.parlamento.sfiducia.is_none() && p.esito.is_empty());
     }
 
     /// Scelta 16 del piano: il promotore porta solo una proposta che gli conviene, anche se
@@ -1615,11 +1643,15 @@ mod tests {
         }
         assert_eq!(ia, [[4, 5]]);
         assert_eq!(p.partiti[1].posizione_dichiarata, 2.5);
-        let corre = "Corre da solo: nel valore atteso ci guadagna";
+        let corre = (
+            Some("sinistra"),
+            "Corre da solo",
+            "nel valore atteso ci guadagna",
+        );
         assert!(
-            (p.mosse.iter()).any(|m| m.partito == "sinistra" && m.testo == corre),
+            voci(&p, TipoVoce::CoalizioneIa).contains(&corre),
             "{:?}",
-            p.mosse
+            p.esito
         );
     }
 
@@ -1635,9 +1667,11 @@ mod tests {
         p.movimenti_ia();
         assert_eq!(p.partiti[3].posizione_dichiarata, 5.52);
         assert!(
-            p.mosse.iter().all(|m| m.partito != "centro"),
+            p.esito
+                .iter()
+                .all(|v| v.partito.as_deref() != Some("centro")),
             "{:?}",
-            p.mosse
+            p.esito
         );
     }
 
@@ -1652,11 +1686,11 @@ mod tests {
         let (mut sciolte, mut finita) = (a_camere_sciolte(), a_camere_sciolte());
         sciolte.apertura_campagna();
         assert!(sciolte.legislatura.coalizioni_ia.is_some());
-        assert!((sciolte.mosse.iter()).any(|m| m.testo.starts_with("Sposta la posizione")));
+        assert!(!voci(&sciolte, TipoVoce::PosizioneSpostata).is_empty());
         finita.fine = Some(crate::legislatura::Fine::Abbandono);
         finita.apertura_campagna();
         assert_eq!(finita.legislatura.coalizioni_ia, None);
-        assert!(finita.mosse.is_empty());
+        assert!(finita.esito.is_empty());
     }
 
     /// L'estrema destra Hunter al bordo 7 con l'ultimo passo +0,5 e un guadagno al voto: il passo
@@ -1685,29 +1719,27 @@ mod tests {
         p.movimenti_ia();
         assert_eq!(p.partiti[6].posizione_dichiarata, 7.0);
         assert_eq!(p.partiti[6].ultimo_passo, -0.5);
-        assert!(p.mosse.iter().all(|m| m.partito != "estrema_destra"));
+        assert!((p.esito.iter()).all(|v| v.partito.as_deref() != Some("estrema_destra")));
         p.movimenti_ia();
         assert_eq!(p.partiti[6].posizione_dichiarata, 6.5);
         assert_eq!(p.partiti[6].ultimo_passo, -0.5);
-        let riga =
-            "Sposta la posizione da 7,0 a 6,5: dopo un guadagno al voto ripete lo spostamento";
-        assert!(
-            p.mosse
-                .iter()
-                .any(|m| m.partito == "estrema_destra" && m.testo == riga)
+        let riga = (
+            Some("estrema_destra"),
+            "Sposta la posizione da 7,0 a 6,5",
+            "dopo un guadagno al voto ripete lo spostamento",
         );
+        assert!(voci(&p, TipoVoce::PosizioneSpostata).contains(&riga));
         // Dopo una perdita inverte: torna sul bordo.
         p.legislatura.elezioni = vec![esito(0.04), esito(0.05)];
-        p.mosse.clear();
+        p.esito.clear();
         p.movimenti_ia();
         assert_eq!(p.partiti[6].posizione_dichiarata, 7.0);
-        let riga =
-            "Sposta la posizione da 6,5 a 7,0: dopo una perdita al voto inverte lo spostamento";
-        assert!(
-            p.mosse
-                .iter()
-                .any(|m| m.partito == "estrema_destra" && m.testo == riga)
+        let riga = (
+            Some("estrema_destra"),
+            "Sposta la posizione da 6,5 a 7,0",
+            "dopo una perdita al voto inverte lo spostamento",
         );
+        assert!(voci(&p, TipoVoce::PosizioneSpostata).contains(&riga));
     }
 
     #[test]
@@ -1845,24 +1877,40 @@ mod tests {
             riga.starts_with("Promette «") && riga.contains("» e «"),
             "{riga}"
         );
-        let id = p.partiti[pc].id.clone();
-        assert!(p.mosse.iter().any(|m| m.partito == id && m.testo == riga));
+        let id = p.partiti[pc].id.as_str();
+        let causa = "le prime voci del programma del suo governo non ancora in vigore";
+        let attesa = (Some(id), riga.as_str(), causa);
+        assert!(voci(&p, TipoVoce::PromessaFatta).contains(&attesa));
+        let x = &p.partiti[altro];
+        let riga = format!("Promette {}", campagna::promesse(&p.dati, &dell_altro));
+        let causa = format!(
+            "i valori in vigore più lontani dalla sua posizione, {}",
+            virgola(x.posizione_dichiarata)
+        );
+        let attesa = (Some(x.id.as_str()), riga.as_str(), causa.as_str());
+        assert!(voci(&p, TipoVoce::PromessaFatta).contains(&attesa));
     }
 
-    /// Lo sciolto perde le promesse in sospeso al voto, senza effetto e senza riga.
+    /// Lo sciolto perde le promesse in sospeso al voto, senza effetto, con la riga delle scadute.
     #[test]
-    fn lo_sciolto_perde_le_promesse_senza_riga() {
+    fn lo_sciolto_perde_le_promesse_senza_effetto() {
         let mut p = all_opposizione();
         let j = p.governo.presidente;
         p.partiti[j].promesse = vec![(0, 0)];
         p.partiti[j].turni_da_presidente = 10;
         p.partiti[j].sciolto = true;
         let valence = p.partiti[j].valence;
-        p.mosse.clear();
+        p.esito.clear();
         p.verifica_promesse();
         assert!(p.partiti[j].promesse.is_empty());
         assert_eq!(p.partiti[j].valence, valence);
-        assert!(p.mosse.is_empty());
+        let nome = campagna::promesse(&p.dati, &[(0, 0)]);
+        let fatto = format!("Esce senza verifica la promessa {nome}");
+        let id = Some(p.partiti[j].id.as_str());
+        let sue: Vec<_> = (voci(&p, TipoVoce::PromesseScadute).into_iter())
+            .filter(|v| v.0 == id)
+            .collect();
+        assert_eq!(sue, [(id, fatto.as_str(), "il partito è sciolto")]);
     }
 
     /// Scelta 15 (sp2): anteprima e campagna IA leggono s_b dalla composizione dei dati, quella

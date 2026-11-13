@@ -1,8 +1,11 @@
 mod comune;
-use comune::{chiudi_senza_opposizione_ia, file_base, imposta, presenta, senza_shock};
+use comune::{
+    chiudi_senza_opposizione_ia, ferma_tutti, file_base, imposta, presenta, senza_shock, voci,
+};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::Causa;
-use sim_core::parlamento::FormaMisura;
+use sim_core::parlamento::{Conteggio, FormaMisura};
 use sim_core::{Comando, Partita};
 
 fn con(f: FileDati, nome: &str, valore: &str) -> FileDati {
@@ -38,6 +41,78 @@ fn legge_approvata_alla_fine_del_turno_dopo() {
         d.legge
     );
     assert!(v.calendario.is_empty());
+    let approvate = voci(&p, TipoVoce::LeggeApprovata);
+    assert_eq!(approvate.len(), 1, "{approvate:?}");
+    let a = &approvate[0];
+    assert_eq!(
+        (a.misura, a.criticita),
+        (Some(e.misura), Criticita::Notevole)
+    );
+    assert_eq!(a.disposizioni, ["eta_pensionabile"]);
+    assert!(
+        a.fatto
+            .starts_with("Approvata «Età pensionabile: 68 anni»; Camera "),
+        "{}",
+        a.fatto
+    );
+    assert!(a.causa.starts_with("per il sì "), "{}", a.causa);
+}
+
+/// `c` dice i franchi del ramo: almeno lo scarto dei sì dai seggi con la linea del sì, e della
+/// stessa parità (ogni franco sposta un voto da una parte all'altra).
+fn franchi_coerenti(c: &Conteggio, seggi_del_si: u32) {
+    let scarto = c.si.abs_diff(seggi_del_si);
+    assert!(
+        c.franchi >= scarto && (c.franchi - scarto).is_multiple_of(2),
+        "{c:?} {seggi_del_si}"
+    );
+}
+
+#[test]
+fn i_franchi_tiratori_si_contano() {
+    let mut p = partita(senza_shock(), 1);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    chiudi_senza_opposizione_ia(&mut p);
+    let v = p.vista();
+    let linea = &v.calendario[0].linee;
+    let del_si = |ramo: fn(&sim_core::vista::SeggiPartito) -> u32| -> u32 {
+        (v.seggi.iter())
+            .filter(|s| linea.iter().any(|l| l.si && l.partito == s.partito))
+            .map(ramo)
+            .sum()
+    };
+    let (camera, senato) = (del_si(|s| s.camera), del_si(|s| s.senato));
+    chiudi_senza_opposizione_ia(&mut p);
+    let e = p.vista().esiti[0].clone();
+    assert!(e.camera.franchi > 0 && e.senato.franchi > 0, "{e:?}");
+    franchi_coerenti(&e.camera, camera);
+    franchi_coerenti(&e.senato, senato);
+    let a = &voci(&p, TipoVoce::LeggeApprovata)[0];
+    let ramo = |nome: &str, c: &Conteggio| {
+        format!(
+            "{nome} {} sì e {} no, {} franchi tiratori",
+            c.si, c.no, c.franchi
+        )
+    };
+    assert!(a.fatto.contains(&ramo("Camera", &e.camera)), "{}", a.fatto);
+    assert!(a.fatto.contains(&ramo("Senato", &e.senato)), "{}", a.fatto);
+}
+
+#[test]
+fn sotto_fiducia_zero_franchi() {
+    let f = con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0");
+    let mut p = partita(f, 1);
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    chiudi_senza_opposizione_ia(&mut p);
+    let id = p.vista().calendario[0].id;
+    p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
+    chiudi_senza_opposizione_ia(&mut p);
+    let e = p.vista().esiti[0].clone();
+    assert!(e.fiducia && e.approvata, "{e:?}");
+    assert_eq!((e.camera.franchi, e.senato.franchi), (0, 0));
+    let a = &voci(&p, TipoVoce::LeggeApprovata)[0];
+    assert!(a.fatto.contains("» con la fiducia; Camera "), "{}", a.fatto);
+    assert!(!a.fatto.contains("franchi"), "{}", a.fatto);
 }
 
 #[test]
@@ -119,9 +194,83 @@ fn legge_respinta_si_ripresenta_dopo_due_turni() {
             .contains("Età pensionabile: legge respinta, si ripresenta da "),
         "{e}"
     );
+    let respinte = voci(&p, TipoVoce::LeggeRespinta);
+    assert_eq!(respinte.len(), 1, "{respinte:?}");
+    let r = &respinte[0];
+    assert_eq!((r.criticita, r.precedenza), (Criticita::Critica, 2));
+    assert!(
+        r.fatto
+            .starts_with("Respinta «Età pensionabile: 68 anni»; Camera ")
+            && r.fatto
+                .contains("; disposizioni bloccate per 2 turni; valence -0,05 a "),
+        "{}",
+        r.fatto
+    );
     p.chiudi_turno();
     p.chiudi_turno();
     presenta(&mut p, &[("eta_pensionabile", "69")]).unwrap();
+}
+
+/// Il «Ferma» lascia la sua variazione al comando e la chiusura non la ripete; la variazione nata
+/// in aula col voto (fatto 35) è una voce.
+#[test]
+fn la_variazione_del_comando_non_e_una_voce() {
+    let mut p = partita(
+        con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0"),
+        1,
+    );
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    ferma_tutti(&mut p);
+    let turno = p.vista().turno;
+    let fermate = (p.ministri().dicasteri.iter())
+        .flat_map(|st| &st.variazioni)
+        .filter(|v| v.causa == Causa::AttoFermato && v.turno == turno)
+        .count();
+    assert!(fermate > 0, "nessun atto fermato: la prova non prova nulla");
+    p.chiudi_turno();
+    assert!(!p.vista().esiti[0].approvata);
+    let variate = voci(&p, TipoVoce::SoddisfazioneVariata);
+    assert!(
+        (variate.iter()).all(|v| v.causa != "atto fermato dal Presidente del Consiglio"),
+        "{variate:?}"
+    );
+    let respinta: Vec<_> = (variate.iter())
+        .filter(|v| v.causa == "legge respinta in aula")
+        .collect();
+    assert_eq!(respinta.len(), 1, "{variate:?}");
+    assert_eq!(respinta[0].dicastero.as_deref(), Some("lavoro_welfare"));
+    assert!(
+        respinta[0].fatto.contains(" (Lavoro e Welfare) perde "),
+        "{}",
+        respinta[0].fatto
+    );
+}
+
+/// La legge respinta e ripresentata: due voci, due misure, le stesse disposizioni.
+#[test]
+fn la_legge_ripresentata_tiene_le_disposizioni() {
+    let mut p = partita(
+        con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0"),
+        1,
+    );
+    let mut viste = Vec::new();
+    for _ in 0..2 {
+        presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+        p.chiudi_turno();
+        p.chiudi_turno();
+        // Del governo: l'opposizione IA può avere la sua proposta respinta nella stessa chiusura.
+        let r: Vec<_> = (voci(&p, TipoVoce::LeggeRespinta).into_iter())
+            .filter(|v| v.partito.is_none())
+            .collect();
+        assert_eq!(r.len(), 1, "{r:?}");
+        viste.push(r[0].clone());
+        p.chiudi_turno();
+        p.chiudi_turno();
+    }
+    assert_ne!(viste[0].misura, viste[1].misura);
+    assert_eq!(viste[0].disposizioni, ["eta_pensionabile"]);
+    assert_eq!(viste[0].disposizioni, viste[1].disposizioni);
 }
 
 #[test]

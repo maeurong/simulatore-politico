@@ -1,6 +1,7 @@
 mod comune;
-use comune::{edita, imposta, partito, presenta, sanita_cara, senza_shock};
+use comune::{edita, imposta, partito, presenta, sanita_cara, senza_shock, voci};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{CausaIntesa, Decreto, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita};
 
@@ -43,6 +44,20 @@ fn alleato_lontano_chiede_un_emendamento_a_meta_strada() {
         "{}",
         e[0].motivo
     );
+    let c = voci(&p, TipoVoce::EmendamentoChiesto);
+    assert_eq!(c.len(), 1, "{c:?}");
+    assert_eq!(
+        c[0].fatto,
+        format!(
+            "Centrodestra chiede di emendare «{}»: Età pensionabile: 65 anni",
+            v.calendario[0].nome
+        )
+    );
+    assert_eq!(c[0].causa, e[0].motivo);
+    assert_eq!(c[0].criticita, Criticita::Notevole);
+    assert_eq!(c[0].partito.as_deref(), Some("centrodestra"));
+    assert_eq!(c[0].misura, Some(v.calendario[0].id));
+    assert_eq!(c[0].disposizioni, ["eta_pensionabile"]);
 }
 
 #[test]
@@ -64,6 +79,7 @@ fn emendamento_accolto_attenua_e_compatta() {
 #[test]
 fn emendamento_ignorato_vale_respinto_e_costa_intesa() {
     let mut p = al_voto(("eta_pensionabile", "62"));
+    let misura = p.vista().calendario[0].id;
     p.chiudi_turno();
     let a = &p.vista().alleati[0];
     assert!(
@@ -71,6 +87,14 @@ fn emendamento_ignorato_vale_respinto_e_costa_intesa() {
             .iter()
             .any(|x| x.causa == CausaIntesa::EmendamentoRespinto)
     );
+    let v = voci(&p, TipoVoce::EmendamentoRespinto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Critica);
+    assert_eq!(v[0].partito.as_deref(), Some("centrodestra"));
+    assert_eq!(v[0].misura, Some(misura));
+    assert_eq!(v[0].disposizioni, ["eta_pensionabile"]);
+    assert!(v[0].fatto.contains("Età pensionabile"), "{}", v[0].fatto);
+    assert_eq!(v[0].causa, "senza risposta prima del voto");
 }
 
 #[test]
@@ -85,6 +109,19 @@ fn regime_emendato_arriva_dopo_quattro_turni() {
     p.chiudi_turno();
     assert!(p.vista().esiti[0].approvata);
     assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
+    let r = voci(&p, TipoVoce::ValoreRinviato);
+    assert_eq!(r.len(), 1, "{r:?}");
+    assert_eq!(r[0].criticita, Criticita::Ordinaria);
+    assert_eq!(r[0].disposizioni, ["licenziamento"]);
+    assert_eq!(r[0].misura, Some(p.vista().esiti[0].misura));
+    assert_eq!(
+        r[0].fatto,
+        "Licenziamento passa a reintegro solo da gennaio 2028"
+    );
+    assert_eq!(
+        r[0].causa,
+        "l'emendamento accolto di Centrodestra, che rinvia il valore di 4 turni"
+    );
     for _ in 0..4 {
         p.chiudi_turno();
     }

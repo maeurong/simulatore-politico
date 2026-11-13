@@ -2,12 +2,25 @@
 //! prezzi, trasferimenti e imposte, una voce sola), sulla disoccupazione e sugli indicatori di
 //! servizio e l'occupazione pubblica, col responsabile per ruolo o per dicastero.
 
-use super::{Condizione, Elettorato, FINESTRA_MASSIMA, PER_REGIONE, condizione_di};
+use super::{
+    Condizione, Elettorato, FINESTRA_MASSIMA, Fascia, PER_REGIONE, condizione_di, fascia_di,
+};
 use crate::dati::{DatiGioco, Ruolo};
 use crate::economia::Economia;
 use crate::grandezze::Grandezze;
 use crate::misure::Misure;
 use crate::partiti::Governo;
+use serde::{Deserialize, Serialize};
+
+/// Una fascia nella chiusura: reddito reale per elettore, crescita reale del trimestre e crescita
+/// attesa in punti, medie dei gruppi pesate con gli elettori. Senza elettori, tutto zero.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RedditoFascia {
+    pub fascia: Fascia,
+    pub reddito: f64,
+    pub crescita: f64,
+    pub attesa: f64,
+}
 
 /// Coefficiente dell'asimmetria per il segno di `x`: `2ρ/(1+ρ)` se `x > 0`, altrimenti `2/(1+ρ)`.
 fn coefficiente(x: f64, rho: f64) -> f64 {
@@ -24,7 +37,8 @@ impl Elettorato {
     /// dalla disoccupazione contro `ultima_disoccupazione` e dalla variazione delle grandezze
     /// contro `prima`, poi accoda la crescita alle aspettative. Nella regione bersaglio di un
     /// atto, la parte di disoccupazione dovuta al suo merito (variazione di `merito` fra
-    /// `misure_prima` e `misure`) è tutta del partito del dicastero.
+    /// `misure_prima` e `misure`) è tutta del partito del dicastero. Rende reddito, crescita e
+    /// attesa di ogni fascia, nell'ordine di `Fascia::TUTTE`.
     pub fn giudizio(
         &mut self,
         dati: &DatiGioco,
@@ -33,8 +47,13 @@ impl Elettorato {
         grandezze: &Grandezze,
         misure_prima: &Misure,
         misure: &Misure,
-    ) {
+    ) -> Vec<RedditoFascia> {
         let d = dati.elettorato();
+        let pesi: Vec<f64> = (0..self.gruppi.len())
+            .map(|i| self.elettori(d, i))
+            .collect();
+        // Per fascia: elettori, poi reddito reale, crescita e attesa moltiplicati per gli elettori.
+        let mut somme = [[0.0_f64; 4]; Fascia::TUTTE.len()];
         let rho = dati.manopola("asimmetria_giudizio");
         let q = dati.manopola("quota_colpa_presidente");
         let (sigma_r, sigma_u) = (
@@ -72,7 +91,7 @@ impl Elettorato {
                     .collect()
             })
             .collect();
-        for (i, g) in self.gruppi.iter_mut().enumerate() {
+        for ((i, g), &w) in self.gruppi.iter_mut().enumerate().zip(&pesi) {
             let (r, c) = (i / PER_REGIONE, condizione_di(i));
             let (ora, prima) = (g.reddito, g.reddito_prima);
             let y0 = prima.netto();
@@ -85,11 +104,18 @@ impl Elettorato {
                 g.crescite.iter().sum::<f64>() / g.crescite.len() as f64
             };
             let crescita = 100.0 * (ora.reale() / prima.reale() - 1.0);
-            g.crescite.push(if sensato && crescita.is_finite() {
+            let crescita = if sensato && crescita.is_finite() {
                 crescita
             } else {
                 0.0
-            });
+            };
+            g.crescite.push(crescita);
+            // Solo il paniere di ora conta: con la base degenere il reddito di ora resta valido.
+            let reale = Some(ora.reale()).filter(|x| x.is_finite()).unwrap_or(0.0);
+            let s = &mut somme[fascia_di(i) as usize];
+            for (somma, x) in s.iter_mut().zip([1.0, reale, crescita, aspettativa]) {
+                *somma += w * x;
+            }
             g.crescite
                 .drain(..g.crescite.len().saturating_sub(finestra));
             let peso = |voce: &str| {
@@ -144,6 +170,17 @@ impl Elettorato {
                 }
             }
         }
+        (Fascia::TUTTE.into_iter().zip(somme))
+            .map(|(fascia, [n, reddito, crescita, attesa])| {
+                let media = |x: f64| if n > 0.0 { x / n } else { 0.0 };
+                RedditoFascia {
+                    fascia,
+                    reddito: media(reddito),
+                    crescita: media(crescita),
+                    attesa: media(attesa),
+                }
+            })
+            .collect()
     }
 }
 
@@ -155,6 +192,26 @@ mod test {
     fn asimmetria_degli_autori() {
         assert!((asimmetrica(1.0, 1.0 / 3.0) - 0.5).abs() < 1e-12);
         assert!((asimmetrica(-1.0, 1.0 / 3.0) + 1.5).abs() < 1e-12);
+    }
+
+    /// Un paniere nuovo a zero dà un reddito reale infinito: la media della fascia resta finita.
+    #[test]
+    fn paniere_a_zero_non_guasta_la_fascia() {
+        let dati = crate::dati::dati_base();
+        let p = crate::Partita::nuova(dati.clone(), 1);
+        let mut el = p.elettorato().clone();
+        el.gruppi[0].reddito.paniere = 0.0;
+        let redditi = el.giudizio(
+            &dati,
+            p.economia(),
+            p.governo(),
+            p.grandezze(),
+            p.misure(),
+            p.misure(),
+        );
+        for r in &redditi {
+            assert!(r.reddito.is_finite(), "{r:?}");
+        }
     }
 
     #[test]

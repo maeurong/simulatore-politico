@@ -72,7 +72,7 @@ fn proposta(
 
 /// `"{nome}: {gradino}"`, `"{nome}: in vigore fra {n} turni"` o `"{dicastero}: budget indicizzato
 /// all'inflazione"`, uniti da `"; "`.
-fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
+pub(crate) fn testo(dati: &DatiGioco, proposta: &[(usize, Attenuazione)]) -> String {
     let turni = dati.manopola("turni_rinvio_regime");
     (proposta.iter())
         .filter_map(|&(d, x)| match x {
@@ -116,8 +116,10 @@ impl Parlamento {
     /// senza emendamenti già aperti e fuori dal posto riservato all'opposizione (scelta 15 del
     /// piano 7b), chiede un emendamento ogni alleato distante almeno `distanza_alleato` dalla
     /// misura, che tiene il dicastero proponente o che con la legge elettorale perde seggi attesi;
-    /// non chi ha già un emendamento deciso sulla misura.
-    pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) {
+    /// non chi ha già un emendamento deciso sulla misura. Rende le richieste nate, come (id della
+    /// misura, partito).
+    pub(crate) fn apri_emendamenti(&mut self, aula: &StatoAula, turno: u32) -> Vec<(u32, usize)> {
+        let mut chiesti = Vec::new();
         let (dati, governo) = (aula.dati, aula.governo);
         let soglia = dati.manopola("distanza_alleato");
         for m in &mut self.misure {
@@ -157,9 +159,11 @@ impl Parlamento {
                     stato: StatoEmendamento::Aperto,
                     motivo,
                 });
+                chiesti.push((m.id, j));
             }
             m.emendamenti_aperti = true;
         }
+        chiesti
     }
 
     /// Gli emendamenti della legge di bilancio del turno: restano i decisi, gli aperti diventano
@@ -179,18 +183,17 @@ impl Parlamento {
     }
 
     /// Chiusura: ogni emendamento ancora aperto è respinto, tranne quelli delle leggi che
-    /// slittano nel turno del bilancio o di crisi (`occupato`); rende gli alleati che pagano.
-    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<usize> {
-        let aperti = (self.misure.iter_mut())
-            .filter(|m| !(occupato && slitta(m, turno)))
-            .flat_map(|m| m.emendamenti.iter_mut())
-            .filter(|e| e.stato == StatoEmendamento::Aperto);
-        (aperti)
-            .map(|e| {
+    /// slittano nel turno del bilancio o di crisi (`occupato`); rende gli alleati che pagano, con
+    /// la misura (id).
+    pub(crate) fn respingi_aperti(&mut self, turno: u32, occupato: bool) -> Vec<(usize, u32)> {
+        let mut respinti = Vec::new();
+        for m in (self.misure.iter_mut()).filter(|m| !(occupato && slitta(m, turno))) {
+            for e in (m.emendamenti.iter_mut()).filter(|e| e.stato == StatoEmendamento::Aperto) {
                 e.stato = StatoEmendamento::Respinto;
-                e.partito
-            })
-            .collect()
+                respinti.push((e.partito, m.id));
+            }
+        }
+        respinti
     }
 
     /// `Emendamento`: accolto, la misura prende il gradino a metà (il rinvio pesa al voto);

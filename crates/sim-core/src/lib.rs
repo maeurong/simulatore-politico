@@ -7,6 +7,7 @@ pub mod economia;
 pub mod elettorato;
 pub mod elezioni;
 pub mod errore;
+pub mod esito;
 pub mod eventi;
 pub mod grandezze;
 pub mod informazione;

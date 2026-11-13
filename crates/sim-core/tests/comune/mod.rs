@@ -1,4 +1,5 @@
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{TipoVoce, VoceEsito};
 use sim_core::ministri::StatoAgenda;
 use sim_core::parlamento::ValoreProposto;
 use sim_core::{Comando, Errore, Partita};
@@ -554,7 +555,7 @@ pub fn togli_opposizione_ia(p: &mut Partita) {
 
 /// La partita vera (posizione 4,5) nel turno dopo il voto, riportata con `edita` in fase
 /// ordinaria sotto il governo uscente (destra e centrodestra), con `incarico = null`, seggi
-/// scritti a mano e `dimissioni = true`; poi la chiusura, che chiama il Capo dello Stato.
+/// scritti a mano e le dimissioni per la sfiducia; poi la chiusura, che chiama il Capo dello Stato.
 #[allow(
     dead_code,
     reason = "ogni crate di test usa solo una parte degli helper"
@@ -565,7 +566,7 @@ pub fn caduto(camera: &[u32], senato: &[u32]) -> Partita {
     let p = edita(&p, |j| {
         j["legislatura"]["fase"] = "ordinaria".into();
         j["legislatura"]["incarico"] = serde_json::Value::Null;
-        j["legislatura"]["dimissioni"] = true.into();
+        j["legislatura"]["dimissioni"] = "sfiducia".into();
     })
     .unwrap();
     let mut p = con_seggi(&p, camera, senato);
@@ -589,4 +590,46 @@ pub fn all_opposizione() -> Partita {
     assert!(!p.governa());
     assert!(!p.governo().al_governo(p.giocatore()));
     p
+}
+
+/// Le voci di `tipo` nella `Vista.esito`, nell'ordine. Una voce fusa vale le sue confluite: una
+/// per dettaglio, coi soggetti del dettaglio e il suo «fatto: causa» diviso all'ultimo «: » (le
+/// cause delle fondibili non ne hanno).
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn voci(p: &Partita, tipo: TipoVoce) -> Vec<VoceEsito> {
+    let mut voci = Vec::new();
+    for v in p.vista().esito.into_iter().filter(|v| v.tipo == tipo) {
+        if v.dettagli.is_empty() {
+            voci.push(v);
+            continue;
+        }
+        for d in &v.dettagli {
+            let (fatto, causa) = d.testo.rsplit_once(": ").unwrap();
+            voci.push(VoceEsito {
+                fatto: fatto.into(),
+                causa: causa.into(),
+                partito: d.partito.clone(),
+                dicastero: d.dicastero.clone(),
+                regione: d.regione.clone(),
+                misura: d.misura,
+                disposizioni: d.disposizioni.clone(),
+                dettagli: Vec::new(),
+                ..v.clone()
+            });
+        }
+    }
+    voci
+}
+
+/// C'è una voce di `tipo` del `partito` (id) con questo fatto e questa causa.
+#[allow(
+    dead_code,
+    reason = "ogni crate di test usa solo una parte degli helper"
+)]
+pub fn ha_voce(p: &Partita, tipo: TipoVoce, partito: &str, fatto: &str, causa: &str) -> bool {
+    (voci(p, tipo).iter())
+        .any(|v| v.partito.as_deref() == Some(partito) && v.fatto == fatto && v.causa == causa)
 }

@@ -4,7 +4,8 @@
 )]
 
 mod comune;
-use comune::fondata;
+use comune::{fondata, vinta, voci};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::Cessione;
 use sim_core::{Comando, Partita};
 
@@ -175,6 +176,56 @@ fn salvare_con_la_coalizione_dichiarata() {
     a.chiudi_turno();
     b.chiudi_turno();
     assert_eq!(a.salva().unwrap(), b.salva().unwrap());
+}
+
+/// Fatti 79 e 105: vinto il voto l'incarico è del giocatore; chiusa la trattativa nasce il suo
+/// governo, con la spartizione.
+#[test]
+fn incarico_e_governo_del_giocatore() {
+    let mut p = vinta();
+    let v = voci(&p, TipoVoce::Incarico);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].fatto, "Incarico di formare il governo a Partito nuovo");
+    assert!(
+        v[0].causa
+            .starts_with("la tua coalizione ha la maggioranza in entrambe le Camere, con "),
+        "{}",
+        v[0].causa
+    );
+    assert_eq!(v[0].partito.as_deref(), Some("giocatore"));
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    p.chiudi_turno();
+    let g = p.governo();
+    let nome = |j: usize| p.partiti()[j].nome.clone();
+    let alleati: Vec<String> = (g.coalizione.iter())
+        .filter(|&&j| j != g.presidente)
+        .map(|&j| nome(j))
+        .collect();
+    let (ultimo, primi) = alleati.split_last().unwrap();
+    let con = if primi.is_empty() {
+        ultimo.clone()
+    } else {
+        format!("{} e {ultimo}", primi.join(", "))
+    };
+    let altri = (g.coalizione.iter().copied()).filter(|&j| j != g.presidente);
+    let dicasteri: Vec<String> = (std::iter::once(g.presidente).chain(altri))
+        .map(|j| (j, g.dicasteri.iter().filter(|&&d| d == j).count()))
+        .filter(|&(_, n)| n > 0)
+        .map(|(j, n)| format!("{n} a {}", nome(j)))
+        .collect();
+    let v = voci(&p, TipoVoce::GovernoFormato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        v[0].fatto,
+        format!(
+            "Nasce il governo di Partito nuovo dopo il voto, con {con}; dicasteri: {}",
+            dicasteri.join(", ")
+        )
+    );
+    assert_eq!(
+        v[0].causa,
+        "la tua coalizione ha la maggioranza in entrambe le Camere"
+    );
 }
 
 fn cedi_a_centrodestra(p: &mut Partita, seggi: u32) -> Result<(), sim_core::Errore> {

@@ -1,11 +1,12 @@
 mod comune;
 use comune::{
     all_opposizione, chiudi_col_bilancio, dati_base, edita, ferma_tutti, senza_emergenze,
-    senza_shock, sostituisci,
+    senza_shock, sostituisci, voci,
 };
 use sim_core::dati::DatiGioco;
 use sim_core::economia::Economia;
 use sim_core::elettorato::{Condizione, condizione_di};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::informazione::{Acquisto, Stima, VistaCentroStudi};
 use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 use sim_core::parlamento::{FormaMisura, ValoreProposto};
@@ -106,13 +107,78 @@ fn l_acquisto_toglie_alla_campagna() {
         p.comanda(SONDAGGIO).unwrap();
         chiudi_col_bilancio(&mut p);
         let id = p.vista().giocatore;
-        (p.vista().mosse.into_iter())
-            .find(|m| m.partito == id && m.testo.starts_with("Spende "))
-            .map(|m| m.testo)
+        (voci(&p, TipoVoce::SpesaDiCampagna).into_iter())
+            .find(|v| v.partito.as_ref() == Some(&id))
+            .map(|v| v.fatto)
     };
     let riga = spesa(3_000_000).unwrap();
     assert!(riga.starts_with("Spende 2.985.000 euro"), "{riga}");
     assert_eq!(spesa(PREZZO), None);
+}
+
+/// La partita di prova al turno del voto, con la cassa del giocatore a `cassa` e una campagna
+/// di `euro` su una regione sola.
+fn in_campagna_con(cassa: i64, euro: i64) -> Partita {
+    let mut p = Partita::nuova(dati_base(), 1);
+    while p.vista().turno < 19 {
+        chiudi_col_bilancio(&mut p);
+    }
+    let mut p = con_cassa(&p, cassa);
+    let spese = vec![Spesa {
+        bersaglio: Bersaglio::Regione(0),
+        leva: Leva::Persuadere,
+        euro,
+    }];
+    p.comanda(Comando::Campagna { spese }).unwrap();
+    p
+}
+
+/// Campagna pari alla cassa, poi un sondaggio privato: la voce critica dice chiesto, speso e gli
+/// acquisti che hanno tolto la differenza.
+#[test]
+fn campagna_tagliata_dagli_acquisti() {
+    let mut p = in_campagna_con(3_000_000, 3_000_000);
+    p.comanda(SONDAGGIO).unwrap();
+    chiudi_col_bilancio(&mut p);
+    let id = p.vista().giocatore;
+    let tagliate = voci(&p, TipoVoce::CampagnaTagliata);
+    assert_eq!(tagliate.len(), 1, "{:?}", p.vista().esito);
+    let v = &tagliate[0];
+    assert_eq!(v.partito.as_ref(), Some(&id));
+    assert_eq!(
+        v.fatto,
+        "Campagna tagliata: chiesti 3.000.000 euro, spesi 2.985.000"
+    );
+    assert_eq!(
+        v.causa,
+        "la cassa è scesa dopo la decisione; nel turno gli acquisti d'informazione sono costati \
+         15.000 euro"
+    );
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 1));
+}
+
+/// Cassa pari al prezzo: la campagna cade tutta, la voce dice il bersaglio caduto.
+#[test]
+fn campagna_caduta_tutta_ha_la_voce() {
+    let mut p = in_campagna_con(PREZZO, PREZZO);
+    p.comanda(SONDAGGIO).unwrap();
+    chiudi_col_bilancio(&mut p);
+    let regione = dati_base().regioni()[0].nome.clone();
+    let tagliate = voci(&p, TipoVoce::CampagnaTagliata);
+    let fatto =
+        format!("Campagna tagliata: chiesti 15.000 euro, spesi 0; cade la spesa su {regione}");
+    assert_eq!(tagliate.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(tagliate[0].fatto, fatto);
+}
+
+/// Campagna dentro la cassa anche dopo l'acquisto: nessuna voce di taglio.
+#[test]
+fn campagna_intera_nessuna_voce() {
+    let mut p = in_campagna_con(3_000_000, 2_000_000);
+    p.comanda(SONDAGGIO).unwrap();
+    chiudi_col_bilancio(&mut p);
+    assert!(voci(&p, TipoVoce::CampagnaTagliata).is_empty());
+    assert!(!voci(&p, TipoVoce::SpesaDiCampagna).is_empty());
 }
 
 #[test]

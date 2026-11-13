@@ -670,6 +670,20 @@ min = 1.0
 max = 4.0
 ticket = "09"
 
+# assunzione del piano «esito e Vista completa», nessuna fonte in docs/ricerca
+[scarto_reddito_deluso]
+valore = 0.25
+min = 0.0
+max = 2.0
+ticket = "09"
+
+# decisione di Mario dell'11/11/2026 (quota degli elettori stimati del giocatore toccati da una misura al voto oltre la quale «avanti fino a novità» si ferma)
+[fermata_quota_elettorato]
+valore = 0.30
+min = 0.0
+max = 1.0
+ticket = "12"
+
 # assunzione del piano 5, nessuna fonte in docs/ricerca
 [elasticita_riscossione]
 valore = 0.3

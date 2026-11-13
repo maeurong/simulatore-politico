@@ -4,8 +4,10 @@
 
 mod comune;
 
-use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, file_vero, sostituisci};
+use comune::{al_governo, chiudi_col_bilancio, dati_base, edita, file_vero, sostituisci, voci};
 use serde_json::json;
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
+use sim_core::eventi::Famiglia;
 use sim_core::{DatiGioco, Partita};
 
 fn accesa(p: &Partita, misura: &str) -> bool {
@@ -19,6 +21,21 @@ fn eventi_carceri(p: &Partita) -> usize {
     (p.vista().eventi.iter())
         .filter(|e| e.nome == "Emergenza carceri")
         .count()
+}
+
+/// Il valore ufficiale della situazione su `misura`, a una cifra decimale con la virgola.
+fn ufficiale(p: &Partita, misura: &str) -> String {
+    let s = (p.situazioni().into_iter())
+        .find(|s| s.misura == misura)
+        .unwrap();
+    format!("{:.1}", s.valore).replace('.', ",")
+}
+
+/// Le voci di `tipo` sulle carceri.
+fn delle_carceri(p: &Partita, tipo: TipoVoce) -> Vec<VoceEsito> {
+    (voci(p, tipo).into_iter())
+        .filter(|v| v.fatto.contains("«Sovraffollamento delle carceri»"))
+        .collect()
 }
 
 fn indice(misura: &str) -> usize {
@@ -62,6 +79,52 @@ fn le_carceri_oltre_la_soglia_aprono_un_evento() {
     let e = (v.eventi.iter().find(|e| e.nome == "Emergenza carceri")).unwrap();
     assert!(e.causa.starts_with("Sovraffollamento"), "{}", e.causa);
     assert!(e.causa.ends_with("(soglia 117,0)"));
+    // L'evento è nato nella stessa chiusura: la sua voce porta valore ufficiale e soglia, e la
+    // situazione accesa tace (spec, «Situazione accesa ed evento nato»).
+    assert!(delle_carceri(&p, TipoVoce::SituazioneAccesa).is_empty());
+    let nati: Vec<VoceEsito> = (voci(&p, TipoVoce::EventoNato).into_iter())
+        .filter(|v| v.fatto == "Emergenza carceri")
+        .collect();
+    assert_eq!(nati.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(nati[0].causa, e.causa);
+    assert!(
+        nati[0]
+            .causa
+            .contains(&format!(": {} ", ufficiale(&p, "sovraffollamento_carceri"))),
+        "{}",
+        nati[0].causa
+    );
+    assert_eq!(nati[0].famiglia, Some(Famiglia::Situazione));
+    assert_eq!(nati[0].criticita, Criticita::Critica);
+}
+
+/// Accesa, resta accesa fra le due soglie senza voci, poi si spegne sotto lo spegnimento con la
+/// voce che dice valore e soglia.
+#[test]
+fn situazione_spenta_lascia_la_voce() {
+    let mut p = con_valore(&al_governo(), "sovraffollamento_carceri", 118.0);
+    chiudi_col_bilancio(&mut p);
+    let mut p = con_valore(&p, "sovraffollamento_carceri", 113.0);
+    chiudi_col_bilancio(&mut p);
+    assert!(accesa(&p, "sovraffollamento_carceri"));
+    assert!(delle_carceri(&p, TipoVoce::SituazioneAccesa).is_empty());
+    assert!(delle_carceri(&p, TipoVoce::SituazioneSpenta).is_empty());
+    let mut p = con_valore(&p, "sovraffollamento_carceri", 105.0);
+    chiudi_col_bilancio(&mut p);
+    assert!(!accesa(&p, "sovraffollamento_carceri"));
+    let spente = delle_carceri(&p, TipoVoce::SituazioneSpenta);
+    let fatto = format!(
+        "Si spegne la situazione «Sovraffollamento delle carceri»: sovraffollamento delle \
+         carceri a {}",
+        ufficiale(&p, "sovraffollamento_carceri")
+    );
+    assert_eq!(spente.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(spente[0].fatto, fatto);
+    assert_eq!(
+        spente[0].causa,
+        "raggiunta la soglia di spegnimento di 110,0"
+    );
+    assert_eq!(spente[0].criticita, Criticita::Notevole);
 }
 
 #[test]

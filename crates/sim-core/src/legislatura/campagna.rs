@@ -307,6 +307,19 @@ pub(crate) fn riga(dati: &DatiGioco, spese: &[Spesa], euro: i64) -> String {
     format!("Spende {} euro: {}", migliaia(euro), parti.join(", "))
 }
 
+/// «; cade la spesa su a», «; cadono le spese su a e b», o niente senza spese.
+pub(crate) fn cadute(dati: &DatiGioco, spese: &[Spesa]) -> String {
+    let nomi: Vec<String> = spese
+        .iter()
+        .filter_map(|s| s.bersaglio.nome(dati))
+        .collect();
+    match nomi.len() {
+        0 => String::new(),
+        1 => format!("; cade la spesa su {}", elenco(&nomi)),
+        _ => format!("; cadono le spese su {}", elenco(&nomi)),
+    }
+}
+
 /// L'articolo davanti a un percento, eliso davanti ai numeri che si leggono con una vocale come
 /// in `partita::ia::indicizzati`: «l'» per 1, 8, 11, 80-89, 800-899, altrimenti «il ».
 fn articolo(percento: i64) -> &'static str {

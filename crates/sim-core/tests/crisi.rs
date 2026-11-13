@@ -1,5 +1,6 @@
 mod comune;
-use comune::{chiudi_col_bilancio, con_seggi, dati_base, edita, partito, presenta};
+use comune::{chiudi_col_bilancio, con_seggi, dati_base, edita, partito, presenta, voci};
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
 use sim_core::legislatura::Fase;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
@@ -42,6 +43,59 @@ fn un_alleato_sotto_25_esce_e_apre_la_crisi() {
     }
     assert_eq!(p.intesa().ultimatum[cd], None);
     assert!(p.vista().crisi);
+    let v = una(&p, TipoVoce::CrisiAperta);
+    assert_eq!(
+        v.fatto,
+        "Crisi di governo: senza Centrodestra la coalizione non ha la maggioranza"
+    );
+    assert_eq!(
+        v.causa,
+        "la coalizione ha 100 seggi su 400 alla Camera e 50 su 200 al Senato"
+    );
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 3));
+    assert!(voci(&p, TipoVoce::Rimpasto).is_empty());
+    // Fatto 93: i due ministri del centrodestra escono con lui.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    let dicasteri: Vec<_> = esce.iter().map(|v| v.dicastero.as_deref()).collect();
+    assert_eq!(
+        dicasteri,
+        [Some("ambiente_energia"), Some("esteri_difesa")],
+        "{esce:?}"
+    );
+    for v in &esce {
+        assert_eq!(v.causa, "l'uscita dal governo di Centrodestra");
+        assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
+    }
+}
+
+/// L'unica voce di `tipo` nell'esito.
+fn una(p: &Partita, tipo: TipoVoce) -> VoceEsito {
+    let v = voci(p, tipo);
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    v[0].clone()
+}
+
+/// Fatto 93: il centrodestra esce coi suoi due dicasteri in interim, e la causa dice la soglia e
+/// l'ultimatum, mai l'intesa in cifre.
+#[test]
+fn alleato_che_esce_lascia_la_voce() {
+    let p = in_crisi();
+    let v = una(&p, TipoVoce::AlleatoEsce);
+    assert_eq!(v.partito.as_deref(), Some("centrodestra"));
+    assert_eq!(
+        v.fatto,
+        "Centrodestra lascia il governo; dicasteri in interim: Ambiente ed Energia, Esteri e \
+         Difesa"
+    );
+    assert!(
+        v.causa.starts_with(
+            "l'intesa è scesa sotto la soglia d'uscita di 25,0, dopo l'ultimatum per "
+        ),
+        "{}",
+        v.causa
+    );
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
+    assert!(voci(&p, TipoVoce::FrangiaEsce).is_empty());
 }
 
 #[test]
@@ -164,6 +218,17 @@ fn allargare_in_crisi_salva_il_governo() {
     assert!(p.governo().al_governo(ed));
     assert_eq!(p.legislatura().crisi, None);
     assert!(p.legislatura().allargati.is_empty());
+    let v = una(&p, TipoVoce::CoalizioneAllargata);
+    assert_eq!(v.fatto, "Entra al governo Estrema destra");
+    assert_eq!(
+        v.causa,
+        "la crisi aperta dalla coalizione senza maggioranza"
+    );
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert_eq!(
+        una(&p, TipoVoce::Rimpasto).causa,
+        "l'allargamento a Estrema destra"
+    );
     // Il rimpasto dà dicasteri al nuovo alleato, in interim con una rosa del suo partito.
     assert!(p.governo().dicasteri.contains(&ed));
     for (k, &j) in p.governo().dicasteri.iter().enumerate() {
@@ -239,9 +304,34 @@ fn rimpasto_se_la_maggioranza_regge() {
         .filter(|&k| k != 3 && prima[k] != p.governo().dicasteri[k])
         .collect();
     assert_eq!(cambiati, [1, 2, 4, 8]);
-    for k in cambiati {
+    let v = una(&p, TipoVoce::Rimpasto);
+    assert_eq!(v.causa, "l'uscita dal governo di Centro");
+    assert_eq!(v.criticita, Criticita::Notevole);
+    assert!(v.fatto.starts_with("Rimpasto: "), "{}", v.fatto);
+    let dati = dati_base();
+    for &k in &cambiati {
+        let d = &dati.dicasteri()[k].nome;
+        let a = &p.partiti()[p.governo().dicasteri[k]].nome;
+        assert!(v.fatto.contains(&format!("{d} a {a}")), "{}", v.fatto);
+    }
+    for &k in &cambiati {
         assert!(p.ministri().dicasteri[k].ministro.is_none());
         assert_eq!(causa(k), Some(Causa::Rimpasto), "dicastero {k}");
+    }
+    // Fatto 94: chi esce col centro è critico, chi esce per il rimpasto notevole.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    assert_eq!(esce.len(), 1 + cambiati.len(), "{esce:?}");
+    assert_eq!(esce[0].causa, "l'uscita dal governo di Centro");
+    assert_eq!(esce[0].criticita, Criticita::Critica);
+    for (v, &k) in esce[1..].iter().zip(&cambiati) {
+        let d = &dati.dicasteri()[k];
+        let a = &p.partiti()[p.governo().dicasteri[k]].nome;
+        assert_eq!(v.dicastero.as_deref(), Some(d.id.as_str()));
+        assert_eq!(
+            v.causa,
+            format!("il rimpasto, che passa il dicastero a {a}")
+        );
+        assert_eq!(v.criticita, Criticita::Notevole);
     }
 }
 
@@ -277,7 +367,7 @@ fn due_cadute_nello_stesso_turno() {
             .any(|e| e.forma == FormaMisura::Sfiducia)
     );
     assert!(!p.governa());
-    assert!(!p.legislatura().dimissioni);
+    assert!(p.legislatura().dimissioni.is_none());
     assert_eq!(p.legislatura().crisi, None);
     assert!(Partita::carica(&p.salva().unwrap()).is_ok());
 }
@@ -328,7 +418,7 @@ fn crisi_in_esercizio_provvisorio_senza_allargamento() {
     p.chiudi_turno();
     assert!(!p.governa());
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);
-    assert!(!p.legislatura().dimissioni && p.legislatura().crisi.is_none());
+    assert!(p.legislatura().dimissioni.is_none() && p.legislatura().crisi.is_none());
     // La sfiducia automatica è al governo: quella individuale dell'opposizione IA, nei turni
     // prima con un alleato in ultimatum, non conta.
     assert!(!(p.vista().esiti.iter()).any(|e| e.nome == "Mozione di sfiducia al governo"));
@@ -349,6 +439,16 @@ fn sfiducia_pareggiata_riapre_la_crisi() {
     assert!(sfiducia.is_some_and(|e| !e.approvata));
     assert!(p.governa());
     assert_eq!(p.legislatura().crisi, Some(1));
+    let v = una(&p, TipoVoce::CrisiAperta);
+    assert_eq!(
+        v.fatto,
+        "Si riapre la crisi di governo: la coalizione non ha ancora la maggioranza"
+    );
+    assert_eq!(
+        v.causa,
+        "la sfiducia respinta, con la coalizione a 200 seggi su 400 alla Camera e 101 su 200 al \
+         Senato"
+    );
     p.comanda(Comando::Allarga {
         partiti: vec!["estrema_destra".into()],
     })

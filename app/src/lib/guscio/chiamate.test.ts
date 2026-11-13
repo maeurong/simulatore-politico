@@ -60,6 +60,7 @@ const tabella: [string, () => Promise<unknown>, Record<string, unknown>][] = [
   ["riprendi", () => guscio.riprendi("abc"), { id: "abc" }],
   ["comanda", () => guscio.comanda({ tipo: "c" } as never), { comando: { tipo: "c" } }],
   ["riavvolgi", () => guscio.riavvolgi(3), { turno: 3 }],
+  ["registro", () => guscio.registro(2), { turno: 2 }],
   ["abbandona", () => guscio.abbandona(), {}],
   ["conferma_eredita", () => guscio.confermaEredita(), {}],
   ["albo", () => guscio.albo(), {}],
@@ -77,7 +78,7 @@ const tabella: [string, () => Promise<unknown>, Record<string, unknown>][] = [
 
 describe("guscio: un comando Rust per funzione", () => {
   it("la tabella copre tutti i comandi registrati in lib.rs", () => {
-    expect(nomiRust).toHaveLength(19);
+    expect(nomiRust).toHaveLength(20);
     expect(tabella.map(([nome]) => nome).sort()).toEqual([...nomiRust].sort());
   });
   it.each(tabella)("%s: nome e argomenti", async (nome, chiama, args) => {

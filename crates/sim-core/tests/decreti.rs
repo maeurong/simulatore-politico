@@ -1,6 +1,7 @@
 mod comune;
-use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice};
+use comune::{dati_base, edita, ferma_tranne, ferma_tutti, file_base, imposta, indice, voci};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::{Causa, TipoProposta};
 use sim_core::parlamento::{Decreto, FormaMisura, ValoreProposto};
 use sim_core::{Comando, Errore, Partita};
@@ -81,9 +82,19 @@ fn accogli_apre_una_conversione_a_fine_turno() {
         p.vista()
             .esiti
             .iter()
-            .any(|e| e.forma == FormaMisura::Conversione)
+            .any(|e| e.forma == FormaMisura::Conversione && e.approvata)
     );
     assert_eq!(p.economia().decreti.iter().sum::<i64>(), 0);
+    let v = voci(&p, TipoVoce::DecretoConvertito);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Ordinaria);
+    assert!(
+        v[0].fatto
+            .starts_with("Convertito in legge «Decreto: fondi a Sanità per "),
+        "{}",
+        v[0].fatto
+    );
+    assert!(v[0].causa.starts_with("per il sì "), "{}", v[0].causa);
 }
 
 #[test]
@@ -367,6 +378,18 @@ fn spostamento_decaduto_torna_indietro_e_non_si_ripete() {
             .any(|e| e.forma == FormaMisura::Conversione && !e.approvata)
     );
     assert_eq!(p.economia().bilancio.dicasteri[8].margine, margine);
+    let v = voci(&p, TipoVoce::DecretoDecaduto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert!(
+        v[0].fatto
+            .starts_with("Decade «Decreto: fondi da Giustizia a Sanità»; Camera ")
+            && v[0]
+                .fatto
+                .contains("; tornano 1.000.000 euro a Giustizia; valence -0,05 a "),
+        "{}",
+        v[0].fatto
+    );
     let sanita = p.vista().ministeri[3].ministro.clone().unwrap();
     assert!(
         sanita
