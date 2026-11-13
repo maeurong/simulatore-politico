@@ -7,6 +7,8 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [sveltekit()],
+  // verifica/: gli strumenti di verifica della UI stanno fuori da src/, i loro test girano qui
+  test: { include: ["src/**/*.test.ts", "verifica/**/*.test.mjs"] },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -16,6 +18,7 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
+    fs: { allow: [".", "../.scratch/v1-piano-11-ui/viste"] },
     host: host || "127.0.0.1",
     hmr: host
       ? {
