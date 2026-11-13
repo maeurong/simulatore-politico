@@ -12,6 +12,7 @@ import type { SuMisura } from "$lib/tipi/SuMisura";
 import type { ValoreProposto } from "$lib/tipi/ValoreProposto";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
+import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VocePartita } from "$lib/tipi/VocePartita";
 
 export type ErroreGuscio = { specie: "rifiuto" | "guasto"; testo: string };
@@ -42,6 +43,7 @@ export const guscio = {
   riprendi: (id: string) => chiama<Vista>("riprendi", { id }),
   comanda: (comando: Comando) => chiama<Vista>("comanda", { comando }),
   riavvolgi: (turno: number) => chiama<Vista>("riavvolgi", { turno }),
+  registro: (turno: number) => chiama<VoceEsito[]>("registro", { turno }),
   abbandona: () => chiama<Eredita>("abbandona"),
   confermaEredita: () => chiama<void>("conferma_eredita"),
   albo: () => chiama<VoceAlbo[]>("albo"),
