@@ -18,6 +18,9 @@ pub struct Rilevazione {
     pub istituto: String,
     pub campione: u32,
     pub quote: Vec<f64>,
+    /// Margine dichiarato: `2·√(d·0,25/n)`. L'errore vero è circa il doppio (bias comune,
+    /// effetto istituto): la UI non lo presenta come forbice dell'errore.
+    pub margine: f64,
 }
 
 /// `posizione`: autocollocazione stimata sui 7 punti. `approvazione`: giudizio stimato del
@@ -30,6 +33,8 @@ pub struct Incrocio {
     pub quote: Vec<f64>,
     pub posizione: Vec<f64>,
     pub approvazione: f64,
+    /// Margine dichiarato, come in `Rilevazione`: non è la forbice dell'errore vero.
+    pub margine: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -70,6 +75,15 @@ fn campiona(
         })
         .collect();
     normalizza(q, vero)
+}
+
+/// `2·√(d·0,25/n)`; 0 se il campione è vuoto.
+fn margine(disegno: f64, n: f64) -> f64 {
+    if n > 0.0 {
+        2.0 * (disegno * 0.25 / n).sqrt()
+    } else {
+        0.0
+    }
 }
 
 /// Una rilevazione completa. Ordine delle estrazioni fisso: istituti × alternative; poi
@@ -166,6 +180,7 @@ fn rileva_con(
                 istituto: ist.nome.clone(),
                 campione: n as u32,
                 quote: campiona(&vero.nazionali, &sposta, n, disegno, z),
+                margine: margine(disegno, n),
             }
         })
         .collect();
@@ -209,6 +224,7 @@ fn rileva_con(
             quote,
             posizione,
             approvazione: gamma * giudizio + err_appr / n_s.sqrt() * z(),
+            margine: margine(disegno, n_s),
         }
     };
     let gruppi = 0..el.gruppi.len();
@@ -242,5 +258,16 @@ fn rileva_con(
         condizioni,
         fasce,
         regioni,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::margine;
+
+    /// Un istituto con campione 0 non passa la validazione dei dati: il caso si prova qui.
+    #[test]
+    fn campione_zero_margine_zero() {
+        assert_eq!(margine(1.0, 0.0), 0.0);
     }
 }
