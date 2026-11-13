@@ -12,7 +12,27 @@ export const uscita = (strumento) => join(process.env.VERIFICA_USCITA ?? join(im
 /** Finestre e scale della batteria: la minima e quella di partenza, ciascuna a scala 1 e alla massima che regge. */
 export const FINESTRE = [[1280, 800, [1, 1.25]], [1440, 900, [1, 1.4]]];
 export const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
-const esci = (testo) => { console.error(testo); process.exit(2); };
+export const esci = (testo) => { console.error(testo); process.exit(2); };
+/** Sotto carico (una compilazione di cargo, per esempio) Chrome e wk non rispondono in tempo: il sospetto più probabile. */
+export const CARICO = "Il sospetto più probabile è la macchina sotto carico, per esempio una compilazione di cargo: riprova a macchina scarica.";
+/** Il nome di una pagina finisce nel nome dei file: solo lettere, cifre, - e _, così non esce da `uscita`. */
+export const nomeValido = (nome) => /^[A-Za-z0-9_-]+$/.test(nome);
+/** Col movimento spento restano solo le dissolvenze (spec, storia 55): le proprietà animate diverse da opacity. */
+export const nonDissolvenze = (proprieta) => [...new Set(proprieta)].filter((p) => p !== "opacity");
+/** Legge il registro dopo l'ultima animazione (transitionrun e animationstart partono al frame dopo il clic): null se lo script iniettato non ha girato. */
+export async function leggiRegistro(val) {
+  await attendi(250);
+  return JSON.parse(await val("JSON.stringify(window.__anim ?? null)"));
+}
+/** Registra ogni animazione che parte, con le proprietà che anima: window.__anim è un elenco di elenchi. Va iniettato a ogni nuovo documento. */
+export const REGISTRA_ANIMAZIONI = `(() => {
+  window.__anim = [];
+  const chiavi = (a) => [...new Set((a?.effect?.getKeyframes?.() ?? []).flatMap((k) => Object.keys(k)))].filter((p) => !["offset", "computedOffset", "easing", "composite"].includes(p));
+  addEventListener("transitionrun", (e) => window.__anim.push([e.propertyName]), true);
+  addEventListener("animationstart", (e) => { const a = e.target.getAnimations?.({ subtree: true }).find((x) => x.animationName === e.animationName); window.__anim.push(a ? chiavi(a) : ["@" + e.animationName]); }, true);
+  const animate = Element.prototype.animate;
+  Element.prototype.animate = function (...args) { const a = animate.apply(this, args); window.__anim.push(chiavi(a)); return a; };
+})()`;
 
 /** Il server risponde, è quello di questo checkout e ogni percorso esiste: altrimenti esce dicendo perché. */
 export async function controlla(percorsi) {
@@ -25,8 +45,8 @@ export async function controlla(percorsi) {
 /** Le pagine dagli argomenti, nella forma nome=percorso. Senza pagine valide esce con l'uso. */
 export async function pagine(uso) {
   const voci = process.argv.slice(2).map((v) => [v.slice(0, Math.max(v.indexOf("="), 0)), v.slice(v.indexOf("=") + 1)]);
-  if (!voci.length || voci.some(([nome, percorso]) => !nome || !percorso.startsWith("/"))) {
-    esci(`Uso: ${uso} <nome>=<percorso> [<nome>=<percorso> ...]\n  es. 'edicola=/?vista=13-edicola.json' scenario=/scenario`);
+  if (!voci.length || voci.some(([nome, percorso]) => !nomeValido(nome) || !percorso.startsWith("/"))) {
+    esci(`Uso: ${uso} <nome>=<percorso> [<nome>=<percorso> ...]\n  il nome ha solo lettere, cifre, - e _\n  il percorso comincia con /\n  es. 'edicola=/?vista=13-edicola.json' scenario=/scenario`);
   }
   await controlla(voci.map(([, percorso]) => percorso));
   return voci;
@@ -50,17 +70,22 @@ export async function avviaChrome(suEvento = () => {}) {
   });
   process.on("SIGINT", () => process.exit(130));
   let pagina;
-  for (let i = 0; i < 300 && !pagina; i++) {
+  // 30 secondi d'orologio, fetch compresa: sotto carico una fetch può non tornare
+  const limite = Date.now() + 30_000;
+  while (!pagina && Date.now() < limite) {
     try {
       const porta = readFileSync(join(profilo, "DevToolsActivePort"), "utf8").split("\n")[0];
-      pagina = (await (await fetch(`http://127.0.0.1:${porta}/json/list`)).json()).find((x) => x.type === "page");
+      pagina = (await (await fetch(`http://127.0.0.1:${porta}/json/list`, { signal: AbortSignal.timeout(Math.max(1, limite - Date.now())) })).json()).find((x) => x.type === "page");
     } catch {}
     if (!pagina) await attendi(100);
   }
-  if (!pagina) esci("Chrome non ha aperto il canale di debug entro 30 secondi.");
+  if (!pagina) esci(`Chrome non ha aperto il canale di debug entro 30 secondi. ${CARICO}`);
   const ws = new WebSocket(pagina.webSocketDebuggerUrl);
   ws.onerror = () => esci("Il canale di debug di Chrome è caduto.");
-  await new Promise((r) => (ws.onopen = r));
+  await new Promise((r) => {
+    const tetto = setTimeout(() => esci(`Il canale di debug di Chrome non si è aperto entro 30 secondi. ${CARICO}`), 30_000);
+    ws.onopen = () => { clearTimeout(tetto); r(); };
+  });
   let n = 0; const attese = new Map();
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data);
@@ -70,7 +95,7 @@ export async function avviaChrome(suEvento = () => {}) {
   const cmd = (method, params = {}) => new Promise((r) => {
     const id = ++n;
     // un comando senza risposta non lascia lo script appeso: esce dicendo quale
-    const tetto = setTimeout(() => esci(`Chrome non risponde a ${method} da 30 secondi.`), 30_000);
+    const tetto = setTimeout(() => esci(`Chrome non risponde a ${method} da 30 secondi. ${CARICO}`), 30_000);
     attese.set(id, (d) => { clearTimeout(tetto); r(d); });
     ws.send(JSON.stringify({ id, method, params }));
   });

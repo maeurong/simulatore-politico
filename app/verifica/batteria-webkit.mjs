@@ -7,7 +7,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { BASE, FINESTRE, altrove, pagine, uscita } from "./comune.mjs";
+import { BASE, CARICO, FINESTRE, altrove, esci, pagine, uscita } from "./comune.mjs";
 
 const elenco = await pagine("npm run verifica:webkit --");
 const out = uscita("webkit");
@@ -23,13 +23,19 @@ if (eta(wk) < eta(sorgente)) {
 // t: tagli, s: classi della radice (stretta, grave), z: scala applicata, dove: percorso d'arrivo, lato: scorre di lato, chi: i primi elementi tagliati
 const ESPR = `(async () => { for (let i = 0; i < 50 && typeof window.__tagli !== "number"; i++) await new Promise((r) => setTimeout(r, 100)); const h = document.documentElement; return { t: window.__tagli ?? null, s: h.className, z: Number(h.style.zoom || 1), dove: location.pathname, lato: h.scrollWidth > h.clientWidth + 1, chi: [...document.querySelectorAll(".taglio")].slice(0, 8).map((e) => e.tagName + "." + e.className.replace(/ ?taglio/, "") + " «" + e.textContent.trim().slice(0, 30) + "»") }; })()`;
 
+const TETTO = 60_000;
 let male = false;
 for (const [nome, percorso] of elenco) {
   for (const [w, h, scale] of FINESTRE) {
     for (const scala of scale) {
       const url = BASE + percorso + (percorso.includes("?") ? "&" : "?") + "tagli=1";
       const env = { ...process.env, WK_FOTO: join(out, `${nome}-${w}x${h}-x${scala}.png`) };
-      const esito = execFileSync(wk, [url, String(w), String(h), String(scala), ESPR], { env, encoding: "utf8", timeout: 60_000 }).trim();
+      let esito;
+      try { esito = execFileSync(wk, [url, String(w), String(h), String(scala), ESPR], { env, encoding: "utf8", timeout: TETTO }).trim(); }
+      catch (e) {
+        esci(`wk ${nome} ${w}x${h} x${scala}: ` + (e.code === "ETIMEDOUT" ? `non ha risposto in ${TETTO / 1000} s. ${CARICO}`
+          : `uscito con ${e.status ?? e.signal ?? e.code}: ${String(e.stderr || e.message).trim().slice(0, 300)}`));
+      }
       // una misura vale se la pagina è quella chiesta, la scala è applicata e il contatore dà zero; un esito illeggibile non vale
       let guasto = "ILLEGGIBILE";
       try { const e = JSON.parse(esito); guasto = altrove(percorso, e.dove) ? "ALTROVE" : e.z !== scala ? "SCALA NON APPLICATA" : e.t !== 0 ? "TAGLI" : null; } catch {}

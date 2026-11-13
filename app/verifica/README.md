@@ -14,7 +14,7 @@ L'app gira su WebKit, quindi Chrome da solo non basta: nella 11a la batteria in 
 
 ## Le due batterie
 
-Serve il server di sviluppo acceso in un altro terminale (`npm run dev`). Le pagine si passano come `nome=percorso`; il nome finisce nei nomi dei file.
+Serve il server di sviluppo acceso in un altro terminale (`npm run dev`). Le pagine si passano come `nome=percorso`; il nome finisce nei nomi dei file e ha solo lettere, cifre, `-` e `_`, e il percorso comincia con `/`: altrimenti la batteria stampa l'uso ed esce con 2.
 
 ```bash
 npm run verifica:chrome -- 'edicola=/?vista=13-edicola.json' scenario=/scenario
@@ -26,21 +26,21 @@ npm run verifica:webkit -- 'edicola=/?vista=13-edicola.json' scenario=/scenario
 
 Le Viste campione stanno in `.scratch/v1-piano-11-ui/viste/` e si scelgono con `?vista=<file>`; `&stato=<chiave>` sceglie uno stato dentro il file. Si passano tutti gli stati che toccano le schermate della fetta, più il tono grave (`08-tono-grave.json`). `?tagli=1` lo aggiunge la batteria.
 
-Ogni pagina passa per quattro misure: 1280×800 a scala 1 e 1,25, 1440×900 a scala 1 e 1,4. Una misura vale se la pagina è rimasta quella chiesta, la scala è applicata e i tagli sono zero. Se una non vale, la riga dice perché (`← TAGLI`, `← SCALA NON APPLICATA`, `← ALTROVE`: una Vista che non esiste rimanda all'edicola) e la batteria esce con 1. Esce con 2, senza misurare, se il server non risponde, se è quello di un altro checkout o se una pagina dà errore. Il resto si legge sulle righe: `err`, `lato=true` e i `NON RAGGIUNTI` non cambiano il codice d'uscita.
+Ogni pagina passa per quattro misure: 1280×800 a scala 1 e 1,25, 1440×900 a scala 1 e 1,4. Una misura vale se la pagina è rimasta quella chiesta, la scala è applicata e i tagli sono zero. Se una non vale, la riga dice perché (`← TAGLI`, `← SCALA NON APPLICATA`, `← ALTROVE`: una Vista che non esiste rimanda all'edicola) e la batteria esce con 1. Esce con 2, senza misurare, se il server non risponde, se è quello di un altro checkout o se una pagina dà errore. In Chrome anche due controlli a 1440×900 portano a 1: `← MOVIMENTO`, se col movimento spento (o con «Come il sistema» sotto il movimento ridotto) parte l'animazione di una proprietà diversa da `opacity`, e `← TASTIERA`, se il Tab non raggiunge un elemento visibile. Porta a 1 anche `← REGISTRO MUTO`, se il registro delle animazioni non risponde: lo script iniettato non ha girato, e uno zero letto così non prova niente. Il resto si legge sulle righe: `err` e `lato=true` non cambiano il codice d'uscita.
 
 **In Chrome** una riga per misura, poi il movimento e la tastiera a 1440×900:
 
 ```
 edicola 1280x800 x1.25: tagli=0 classi=[stretta] zoom=1.25 lato=false err=0
-edicola movimento spento: animazioni max=1 err=0
-edicola movimento sistema+reduce: animazioni max=1 err=0
+edicola movimento spento: animazioni=4 tipi=[opacity] err=0
+edicola movimento sistema+reduce: animazioni=4 tipi=[opacity] err=0
 edicola tastiera 19/19 err=0
 ```
 
 - `classi` sono quelle della radice: `stretta` a 1280 con 1,25× e a 1440 con 1,4×, `grave` sulle Viste del tono grave.
 - `lato=true` vuol dire che la pagina scorre di lato.
-- `animazioni max` è il massimo contato dopo aver toccato ciascuno dei primi 40 pulsanti, link e campi della pagina: pulsanti e campi li clicca, ai link dà solo il fuoco, per non lasciare la pagina. Lo fa prima col movimento spento, poi con «Come il sistema» sotto il movimento ridotto (`sistema+reduce`). Un numero sopra zero non è per forza un difetto: le dissolvenze di opacità restano. Per sapere quale animazione parte: `node verifica/anim-chi.mjs /scenario spento`. Per il controllo al contrario, cioè che col movimento acceso un'animazione parta davvero e lo zero non sia a vuoto: `node verifica/anim-accese.mjs '/?vista=13-edicola.json' Impostazioni 'Prova ›'`. Clicca in fila i pulsanti che contengono quei testi e misura dopo l'ultimo, col movimento acceso e poi spento; esce con 1 se acceso non parte nessuna animazione. Il conto può restare uguale nei due modi, perché spento una rotazione diventa una dissolvenza: la differenza si legge nei `tipi`, `transform` da una parte e solo `opacity` dall'altra.
-- `tastiera 19/19` conta gli elementi visibili raggiunti dal Tab; quelli mancati vengono elencati. Li conta soltanto: non li attiva e non legge l'albero di accessibilità. La spec (punto 4) chiede anche che ogni azione si attivi da tastiera, conferme sul posto comprese: questo si prova a mano nel browser e si scrive nella PR della fetta.
+- `animazioni` conta ogni animazione partita dopo il caricamento e dopo aver toccato ciascuno dei primi 40 pulsanti, link e campi della pagina: pulsanti e campi li clicca, ai link dà solo il fuoco, per non lasciare la pagina. `tipi` sono le proprietà animate. Le registra uno script iniettato a ogni documento: ascolta `transitionrun` e `animationstart` e avvolge `Element.prototype.animate`. La misura si ripete prima col movimento spento, poi con «Come il sistema» sotto il movimento ridotto (`sistema+reduce`). Le dissolvenze di opacità restano ammesse (spec, storia 55); qualunque altra proprietà dà `← MOVIMENTO`. Per sapere quale elemento fa partire l'animazione: `node verifica/anim-chi.mjs /scenario spento`; campiona a istanti, quindi un'animazione breve che il registro ha contato può non comparirgli. Per il controllo al contrario, cioè che col movimento acceso un'animazione parta davvero e lo zero non sia a vuoto: `node verifica/anim-accese.mjs '/?vista=13-edicola.json' Impostazioni 'Prova ›'`. Legge lo stesso registro della batteria. Clicca in fila i pulsanti che contengono quei testi e misura dopo l'ultimo, col movimento acceso e poi spento; esce con 1 se acceso non parte nessuna animazione. Il conto può restare uguale nei due modi, perché spento una rotazione diventa una dissolvenza: la differenza si legge nei `tipi`, `transform` da una parte e solo `opacity` dall'altra. È la regola della spec (storia 55 e punto 4): col movimento spento restano solo le dissolvenze di opacità, e una transizione di colore o di ombra conta come movimento.
+- `tastiera 19/19` conta gli elementi visibili raggiunti dal Tab; quelli mancati vengono elencati e danno `← TASTIERA`. Li conta soltanto: non li attiva e non legge l'albero di accessibilità. La spec (punto 4) chiede anche che ogni azione si attivi da tastiera, conferme sul posto comprese: questo si prova a mano nel browser e si scrive nella PR della fetta.
 
 Pulsanti e campi la batteria li clicca davvero. Nel browser risponde il guscio finto, quindi non tocca nessun salvataggio.
 
@@ -99,9 +99,11 @@ A fine giro, nell'ordine:
 
 ## Fatti d'ambiente
 
-1. **`CARGO_TARGET_DIR`.** Su questo Mac `tauri dev` va in panico all'avvio («Failed to setup app: unknown path») perché `~/.cargo/config.toml` sposta la cartella di compilazione, e Tauri cerca le risorse sotto `target/debug` del repo. `verifica:giro` la imposta da sé; chi lancia `tauri dev` a mano deve passare `CARGO_TARGET_DIR=<repo>/target`.
+1. **`CARGO_TARGET_DIR`.** Se `~/.cargo/config.toml` sposta la cartella di compilazione con un `target-dir` globale, `tauri dev` va in panico all'avvio («Failed to setup app: unknown path»): Tauri cerca le risorse sotto `target/debug` del repo. Su questo Mac quella riga è stata tolta il 13/11/2026. `verifica:giro` imposta comunque la variabile da sé; dove un `target-dir` globale c'è, chi lancia `tauri dev` a mano passa `CARGO_TARGET_DIR=<repo>/target`.
 2. **L'identificativo di verifica.** Il giro parte con `it.maeurong.simulatorepolitico.verifica` (`giro/tauri.verifica.json`), quindi salva in una cartella sua sotto `~/Library/Application Support/`. I salvataggi di sviluppo di Mario, in `it.maeurong.simulatorepolitico/`, non si toccano.
 3. **Il `localStorage` delle impostazioni è condiviso.** Scala, velocità e movimento stanno in `~/Library/WebKit/app`, che non dipende dall'identificativo: il giro e l'app di sviluppo di Mario leggono lo stesso valore. Per questo `ls` si annota all'inizio e si rimette alla fine.
+4. **Le batterie non si lanciano mentre `cargo` compila.** Con una compilazione in corso, per esempio il primo `verifica:giro` o un `cargo test`, la macchina può essere così carica che Chrome non apre il canale di debug o `wk` non risponde in tempo. Gli strumenti escono con 2 e nominano il carico come sospetto: si aspetta la fine della compilazione e si rilancia.
+5. **Con una cartella di compilazione unica due worktree si scambiano i binari dei test.** Fino al 13/11/2026 `~/.cargo/config.toml` mandava tutti i checkout nella stessa cartella (`target-dir`): un `cargo test` lanciato da un worktree ha eseguito i test di un altro (1468 test invece di 1444, con nomi che nel sorgente non c'erano). La riga è stata tolta e ogni checkout compila nella propria `target/`. Se un `target-dir` globale torna, chi lancia `cargo test` da un worktree passa `CARGO_TARGET_DIR=<worktree>/target`; un conto dei test che cambia senza modifiche a Rust è questo scambio.
 
 ## Cosa non coprono
 

@@ -3,10 +3,11 @@
 //   es. 'cornice-01=/partita/cruscotto?vista=01-turno-zero.json'
 // Per ogni pagina: 2 finestre × 2 scale → tagli, forma stretta, errori di console, screenshot;
 // poi movimento (spento; sistema + reduce) e giro di Tab a 1440×900.
-// Esce con 1 se una misura non vale: tagli diversi da zero, contatore muto, scala non applicata, pagina finita altrove.
+// Esce con 1 se una misura non vale: tagli diversi da zero, contatore muto, scala non applicata, pagina finita altrove;
+// o se il registro delle animazioni è muto, o se il movimento spento (o «Come il sistema» sotto il movimento ridotto) anima altro che opacity, o il Tab non raggiunge un elemento.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE, FINESTRE, altrove, attendi, avviaChrome, pagine, uscita } from "./comune.mjs";
+import { BASE, FINESTRE, altrove, attendi, avviaChrome, leggiRegistro, nonDissolvenze, pagine, REGISTRA_ANIMAZIONI, uscita } from "./comune.mjs";
 
 const elenco = await pagine("npm run verifica:chrome --");
 const out = uscita("chrome");
@@ -18,6 +19,7 @@ const { cmd, val, chiudi } = await avviaChrome((d) => {
   if (d.method === "Log.entryAdded" && d.params.entry.level === "error") errori.push("log: " + d.params.entry.text.slice(0, 200));
 });
 await cmd("Page.enable"); await cmd("Runtime.enable"); await cmd("Log.enable");
+await cmd("Page.addScriptToEvaluateOnNewDocument", { source: REGISTRA_ANIMAZIONI });
 
 let scriptId = null;
 async function impostazioni(i) {
@@ -40,7 +42,7 @@ const tasto = async (key, code, kc, mod = 0) => {
   for (const type of ["keyDown", "keyUp"]) await cmd("Input.dispatchKeyEvent", { type, key, code, windowsVirtualKeyCode: kc, modifiers: mod, ...(key === "Enter" && type === "keyDown" ? { text: "\r" } : {}) });
   await attendi(60);
 };
-const stato = () => val(`JSON.stringify({ tagli: window.__tagli ?? null, stretta: document.documentElement.className, zoom: document.documentElement.style.zoom, scorreDiLato: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1, anim: document.getAnimations().length, url: location.pathname + location.search, percorso: location.pathname })`);
+const stato = () => val(`JSON.stringify({ tagli: window.__tagli ?? null, stretta: document.documentElement.className, zoom: document.documentElement.style.zoom, scorreDiLato: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1, url: location.pathname + location.search, percorso: location.pathname })`);
 
 const esiti = [];
 for (const [nome, percorso] of elenco) {
@@ -55,18 +57,19 @@ for (const [nome, percorso] of elenco) {
       esiti.push({ pagina: nome, finestra: `${w}x${h}`, scala, ...s, guasto, errori: [...errori] });
     }
   }
-  // passo 2: movimento, spento e poi «Come il sistema» col movimento ridotto. Conta il massimo di animazioni dopo ogni clic.
+  // passo 2: movimento, spento e poi «Come il sistema» col movimento ridotto. Conta ogni animazione partita dopo il caricamento e ogni clic.
   for (const [etichetta, imp, riduci] of [["spento", { scala: 1, movimento: "spento" }, false], ["sistema+reduce", { scala: 1, movimento: "sistema" }, true]]) {
     await cmd("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: riduci ? "reduce" : "no-preference" }] });
     await impostazioni(imp); await finestra(1440, 900); await apri(percorso);
-    let massimo = Number(await val("document.getAnimations().length"));
     const quanti = Number(await val(`document.querySelectorAll('button, a[href], [role="radio"], input, select').length`));
     for (let i = 0; i < Math.min(quanti, 40); i++) {
       await val(`(() => { const e = document.querySelectorAll('button, a[href], [role="radio"], input, select')[${i}]; if (!e || e.getAttribute('aria-disabled') === 'true' || e.closest('[data-tagli-ignora]')) return; if (e.tagName === 'A') { e.focus(); return } e.click() })()`);
       await attendi(40);
-      massimo = Math.max(massimo, Number(await val("document.getAnimations().length")));
     }
-    esiti.push({ pagina: nome, movimento: etichetta, animazioniMassime: massimo, errori: [...errori] });
+    const partite = await leggiRegistro(val);
+    const tipi = [...new Set((partite ?? []).flat())];
+    // un registro assente non vale zero: lo script iniettato non ha girato
+    esiti.push({ pagina: nome, movimento: etichetta, animazioni: partite?.length ?? 0, tipi, guasto: !partite ? "REGISTRO MUTO" : nonDissolvenze(tipi).length ? "MOVIMENTO" : null, errori: [...errori] });
   }
   await cmd("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   // passo 3: tastiera. Ogni comando visibile si raggiunge col Tab.
@@ -80,12 +83,12 @@ for (const [nome, percorso] of elenco) {
     if (k !== null) visti.add(Number(k));
   }
   const mancanti = attesi.map((t, i) => (visti.has(i) ? null : `${i}:${t}`)).filter(Boolean);
-  esiti.push({ pagina: nome, tastiera: `${visti.size}/${attesi.length}`, nonRaggiunti: mancanti, errori: [...errori] });
+  esiti.push({ pagina: nome, tastiera: `${visti.size}/${attesi.length}`, nonRaggiunti: mancanti, guasto: mancanti.length ? "TASTIERA" : null, errori: [...errori] });
 }
 writeFileSync(join(out, "esiti.json"), JSON.stringify(esiti, null, 1));
-const riga = (e) => e.finestra ? `${e.pagina} ${e.finestra} x${e.scala}: tagli=${e.tagli} classi=[${e.stretta}] zoom=${e.zoom || 1} lato=${e.scorreDiLato} err=${e.errori.length}${e.guasto ? " ← " + e.guasto : ""}`
-  : e.movimento ? `${e.pagina} movimento ${e.movimento}: animazioni max=${e.animazioniMassime} err=${e.errori.length}`
-  : `${e.pagina} tastiera ${e.tastiera}${e.nonRaggiunti.length ? " NON RAGGIUNTI: " + e.nonRaggiunti.join(" | ") : ""} err=${e.errori.length}`;
+const riga = (e) => (e.finestra ? `${e.pagina} ${e.finestra} x${e.scala}: tagli=${e.tagli} classi=[${e.stretta}] zoom=${e.zoom || 1} lato=${e.scorreDiLato} err=${e.errori.length}`
+  : e.movimento ? `${e.pagina} movimento ${e.movimento}: animazioni=${e.animazioni} tipi=[${e.tipi}] err=${e.errori.length}`
+  : `${e.pagina} tastiera ${e.tastiera}${e.nonRaggiunti.length ? " NON RAGGIUNTI: " + e.nonRaggiunti.join(" | ") : ""} err=${e.errori.length}`) + (e.guasto ? " ← " + e.guasto : "");
 console.log(esiti.map(riga).join("\n"));
 const tutti = [...new Set(esiti.flatMap((e) => e.errori))]; if (tutti.length) console.log("ERRORI:\n" + tutti.join("\n"));
 console.log(`screenshot ed esiti.json in ${out}`);
