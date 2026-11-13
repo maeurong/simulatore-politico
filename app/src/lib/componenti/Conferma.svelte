@@ -9,10 +9,12 @@
     annulla?: string;
     /** cosa si perde, scritto accanto ai due pulsanti */
     spiegazione?: string;
+    /** la forma del primo pulsante, prima della conferma: il link rosso dell'edicola (13-edicola.prototype.html:235) */
+    forma?: "bordo" | "link";
     onconferma: () => void;
   };
 
-  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, onconferma }: Props = $props();
+  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", onconferma }: Props = $props();
   const id = $props.id();
   let aperta = $state(false);
   let radice: HTMLSpanElement;
@@ -42,7 +44,7 @@
     <Pulsante forma="bordo" onclick={() => apri(false)}>{annulla}</Pulsante>
     {#if spiegazione}<span id="{id}-spieg" class="spieg">{spiegazione}</span>{/if}
   {:else}
-    <Pulsante forma="bordo" distruttivo onclick={() => apri(true)}>{etichetta}</Pulsante>
+    <Pulsante {forma} distruttivo onclick={() => apri(true)}>{etichetta}</Pulsante>
   {/if}
 </span>
 
