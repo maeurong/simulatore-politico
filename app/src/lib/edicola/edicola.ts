@@ -40,9 +40,20 @@ const ESITI: Record<string, Chiave> = { Abbandono: "edicola.esito_abbandono", "S
 export const esitoTesto = (esito: string) => (Object.hasOwn(ESITI, esito) ? t(ESITI[esito]) : esito);
 
 const quando = (d: Trimestre) => d.anno * 4 + d.trimestre;
-/** La voce d'albo che l'abbandono di `nome` ha appena scritto: la fine più recente fra quelle col suo nome. */
-export function voceNuova(albo: VoceAlbo[], nome: string): VoceAlbo | null {
-  return albo.filter((a) => a.nome === nome).reduce<VoceAlbo | null>((m, a) => (m && quando(m.fine) >= quando(a.fine) ? m : a), null);
+/** La voce d'albo che l'abbandono di `nome` ha appena scritto: quella che in `prima` non c'era. La voce non ha un id,
+ *  quindi il confronto è sul contenuto, contando i doppioni. Se le voci nuove non sono esattamente una, ricade sulla
+ *  fine più recente fra quelle col suo nome. */
+export function voceNuova(prima: VoceAlbo[], dopo: VoceAlbo[], nome: string): VoceAlbo | null {
+  const conte = new Map<string, number>();
+  for (const a of prima) conte.set(JSON.stringify(a), (conte.get(JSON.stringify(a)) ?? 0) + 1);
+  const nuove = dopo.filter((a) => {
+    const k = JSON.stringify(a);
+    const c = conte.get(k) ?? 0;
+    if (c) conte.set(k, c - 1);
+    return !c;
+  });
+  if (nuove.length === 1) return nuove[0];
+  return dopo.filter((a) => a.nome === nome).reduce<VoceAlbo | null>((m, a) => (m && quando(m.fine) >= quando(a.fine) ? m : a), null);
 }
 
 /** Le coordinate in [0, larghezza] × [0, altezza], il massimo in alto; con zero lo zero entra nell'intervallo.

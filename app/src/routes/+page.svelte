@@ -27,9 +27,11 @@
   /** l'id della partita il cui abbandono è in volo */
   let inVolo = $state<string | null>(null);
   let impostazioni = $state(false);
+  /** da «Riprendi ›» alla fine della navigazione: partita.occupato torna falso prima che goto finisca */
+  let apertura = $state(false);
 
   const ordinate = $derived(inOrdine(partite ?? []));
-  const occupato = $derived(partita.occupato || inVolo !== null);
+  const occupato = $derived(partita.occupato || apertura || inVolo !== null);
   // la riga scelta, se c'è ancora; altrimenti la prima partita, poi la prima voce d'albo
   const dettaglio = $derived.by(() => {
     const s = scelta;
@@ -64,11 +66,14 @@
   async function riprendi(id: string) {
     if (occupato) return;
     azzera(id);
+    apertura = true;
     try {
       const vista = await partita.riprendi(id);
       if (vista) await goto(`/partita/${casa(vista)}`);
     } catch (e) {
       rifiuto = { id, testo: comeErrore(e).testo };
+    } finally {
+      apertura = false;
     }
   }
 
@@ -78,6 +83,7 @@
     if (occupato) return;
     azzera(id);
     inVolo = id;
+    const alboPrima = albo ?? [];
     let errore: ErroreGuscio | null = null;
     try {
       await guscio.riprendi(id);
@@ -92,7 +98,7 @@
     else if (errore) guasto = `${errore.testo} ${t("cornice.rimasta_com_era")}`;
     else if (elenchi) guasto = `${elenchi.testo} ${t("edicola.elenchi_non_caricati")}`;
     else {
-      const nuova = voceNuova(albo ?? [], voce.indice.testata.nome);
+      const nuova = voceNuova(alboPrima, albo ?? [], voce.indice.testata.nome);
       if (nuova) scelta = { k: "a", voce: nuova };
     }
     // i pulsanti della conferma non ci sono più: il fuoco va alla riga scelta
@@ -116,6 +122,7 @@
         onclick={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))}>{t("sommario.impostazioni")}</Pulsante>
     </span>
   </header>
+  <p class="nascosto" role="status" data-tagli-ignora>{partita.occupato || apertura ? t("edicola.apertura_in_corso") : ""}</p>
   {#if partita.guasto ?? guasto}<p class="guasto" role="alert">{partita.guasto ?? guasto}</p>{/if}
 
   <main class="corpo">

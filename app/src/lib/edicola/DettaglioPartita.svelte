@@ -49,9 +49,9 @@
   {:else if inVolo}
     <span class="min muto" role="status">{t("edicola.abbandono_in_corso")}</span>
   {:else if azione === "eredita"}
-    <Pulsante forma="bordo" aria-busy={occupato} onclick={onriprendi}>{t("edicola.apri_eredita")}</Pulsante>
+    <Pulsante forma="bordo" aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.apri_eredita")}</Pulsante>
   {:else}
-    <Pulsante forma="chiude" aria-busy={occupato} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante>
+    <Pulsante forma="chiude" aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante>
     <Conferma forma="link" etichetta={t("edicola.abbandona")} conferma={t("edicola.conferma_abbandona")}
       spiegazione={t("edicola.nota_abbandono")} onconferma={onabbandona} />
   {/if}

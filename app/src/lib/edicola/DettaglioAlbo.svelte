@@ -78,10 +78,10 @@
       <div class="el">
         <p class="sec"><b>{t("edicola.voto_di", { periodo: periodo(e.data) })}</b> <span class="muto">{t("edicola.affluenza", { quota: percentuale(e.affluenza) })}</span></p>
         <div class="barra" role="img" aria-label={e.voti.map(([n, q]) => `${n} ${percentuale(q)}`).join(", ")}>
-          {#each e.voti as [n, q] (n)}<i class:mio={n === voce.nome} style:flex={q / tot} title="{n} {percentuale(q)}"></i>{/each}
+          {#each e.voti as [n, q], j (j)}<i class:mio={n === voce.nome} style:flex={q / tot} title="{n} {percentuale(q)}"></i>{/each}
         </div>
         <div class="etich" aria-hidden="true">
-          {#each e.voti as [n, q] (n)}<span class:mio={n === voce.nome} style:flex={q / tot}>{q > 0.07 ? `${n.split(" ").pop()} ${numero(q * 100)}` : ""}</span>{/each}
+          {#each e.voti as [n, q], j (j)}<span class:mio={n === voce.nome} style:flex={q / tot}>{q > 0.07 ? `${n.split(" ").pop()} ${numero(q * 100)}` : ""}</span>{/each}
         </div>
         <p class="sec">{primaQuota}<b>{mio ? percentuale(mio[1]) : t("edicola.assente")}</b>{dopoQuota}</p>
       </div>

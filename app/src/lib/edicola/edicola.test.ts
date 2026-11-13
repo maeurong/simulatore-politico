@@ -86,11 +86,23 @@ describe("anniAlGoverno", () => {
 describe("voceNuova", () => {
   const voce = (nome: string, anno: number, trimestre: number) =>
     ({ ...albo[0], nome, fine: { anno, trimestre } }) as VoceAlbo;
-  it("la voce con lo stesso nome e la fine più recente", () => {
+  it("la voce che prima non c'era, anche se un'omonima finisce dopo", () => {
+    const vecchia = voce("Patto Civico", 2035, 2);
+    const nuova = voce("Patto Civico", 2028, 2);
+    // copie: dopo l'abbandono il guscio rimanda oggetti nuovi, il confronto è sul contenuto
+    const prima = [vecchia, voce("Altro", 2040, 1)];
+    const dopo = [structuredClone(vecchia), structuredClone(prima[1]), nuova];
+    expect(voceNuova(prima, dopo, "Patto Civico")).toBe(nuova);
+  });
+  it("albo invariato: ricade sulla fine più recente fra le omonime", () => {
     const elenco = [voce("Patto Civico", 2027, 1), voce("Altro", 2040, 1), voce("Patto Civico", 2028, 2)];
-    expect(voceNuova(elenco, "Patto Civico")).toBe(elenco[2]);
+    expect(voceNuova(elenco, structuredClone(elenco), "Patto Civico")?.fine).toEqual({ anno: 2028, trimestre: 2 });
+  });
+  it("più d'una voce nuova: ricade sulla regola del nome", () => {
+    const dopo = [voce("Patto Civico", 2027, 1), voce("Patto Civico", 2028, 2)];
+    expect(voceNuova([], dopo, "Patto Civico")).toBe(dopo[1]);
   });
   it("nessuna voce con quel nome: null", () => {
-    expect(voceNuova(albo, "Patto Civico")).toBeNull();
+    expect(voceNuova(albo, albo, "Patto Civico")).toBeNull();
   });
 });

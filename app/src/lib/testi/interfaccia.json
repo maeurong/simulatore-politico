@@ -179,6 +179,7 @@
   "edicola.esito_giocatore": "{nome}: {quota}, {camera} seggi alla Camera, {senato} al Senato",
   "edicola.assente": "assente",
   "edicola.abbandono_in_corso": "Abbandono in corso…",
+  "edicola.apertura_in_corso": "Apertura in corso…",
   "edicola.elenchi_non_caricati": "Gli elenchi delle partite non si sono caricati.",
 
   "editor.dove": "Nuova partita · {sotto}",

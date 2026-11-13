@@ -41,10 +41,10 @@
     {:else if inVolo}
       <span class="min muto" role="status">{t("edicola.abbandono_in_corso")}</span>
     {:else if azione === "eredita"}
-      <Pulsante forma={prima ? "bordo" : "piccolo"} aria-busy={occupato} onclick={onriprendi}>{t("edicola.apri_eredita")}</Pulsante>
+      <Pulsante forma={prima ? "bordo" : "piccolo"} aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.apri_eredita")}</Pulsante>
     {:else}
       <span class:pieno={!prima}
-        ><Pulsante forma={prima ? "chiude" : "piccolo"} aria-busy={occupato} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante></span>
+        ><Pulsante forma={prima ? "chiude" : "piccolo"} aria-busy={occupato} aria-disabled={occupato ? "true" : undefined} onclick={onriprendi}>{t("edicola.riprendi")}</Pulsante></span>
       <Conferma forma="link" etichetta={t("edicola.abbandona")} conferma={t("edicola.conferma_abbandona")} onconferma={onabbandona} />
     {/if}
   </span>
@@ -78,7 +78,7 @@
   .spenta::before { content: ""; position: absolute; inset: 0; background: var(--retino); opacity: .18; pointer-events: none }
 
   /* nelle righe sotto la prima «Riprendi ›» è piccolo ma pieno, come nel prototipo (.btn.pieno.p) */
-  .pieno :global(.btn) { background: var(--ink); color: var(--carta) }
-  .pieno :global(.btn:hover) { background: var(--carta); color: var(--ink) }
+  .pieno :global(.btn:not([aria-disabled="true"])) { background: var(--ink); color: var(--carta) }
+  .pieno :global(.btn:not([aria-disabled="true"]):hover) { background: var(--carta); color: var(--ink) }
   .azr :global([aria-busy="true"]) { cursor: progress }
 </style>
