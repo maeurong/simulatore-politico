@@ -1,5 +1,7 @@
 mod comune;
-use comune::{chiudi_senza_opposizione_ia, file_base, imposta, presenta, senza_shock, voci};
+use comune::{
+    chiudi_senza_opposizione_ia, ferma_tutti, file_base, imposta, presenta, senza_shock, voci,
+};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::Causa;
@@ -207,6 +209,42 @@ fn legge_respinta_si_ripresenta_dopo_due_turni() {
     p.chiudi_turno();
     p.chiudi_turno();
     presenta(&mut p, &[("eta_pensionabile", "69")]).unwrap();
+}
+
+/// Il «Ferma» lascia la sua variazione al comando e la chiusura non la ripete; la variazione nata
+/// in aula col voto (fatto 35) è una voce.
+#[test]
+fn la_variazione_del_comando_non_e_una_voce() {
+    let mut p = partita(
+        con(con(senza_shock(), "ft_base", "0.9"), "ft_max", "1.0"),
+        1,
+    );
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    p.chiudi_turno();
+    ferma_tutti(&mut p);
+    let turno = p.vista().turno;
+    let fermate = (p.ministri().dicasteri.iter())
+        .flat_map(|st| &st.variazioni)
+        .filter(|v| v.causa == Causa::AttoFermato && v.turno == turno)
+        .count();
+    assert!(fermate > 0, "nessun atto fermato: la prova non prova nulla");
+    p.chiudi_turno();
+    assert!(!p.vista().esiti[0].approvata);
+    let variate = voci(&p, TipoVoce::SoddisfazioneVariata);
+    assert!(
+        (variate.iter()).all(|v| v.causa != "atto fermato dal Presidente del Consiglio"),
+        "{variate:?}"
+    );
+    let respinta: Vec<_> = (variate.iter())
+        .filter(|v| v.causa == "legge respinta in aula")
+        .collect();
+    assert_eq!(respinta.len(), 1, "{variate:?}");
+    assert_eq!(respinta[0].dicastero.as_deref(), Some("lavoro_welfare"));
+    assert!(
+        respinta[0].fatto.contains(" (Lavoro e Welfare) perde "),
+        "{}",
+        respinta[0].fatto
+    );
 }
 
 /// La legge respinta e ripresentata: due voci, due misure, le stesse disposizioni.

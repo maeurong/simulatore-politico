@@ -12,10 +12,10 @@ use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
 use crate::informazione::Sondaggio;
 use crate::legislatura::campagna::{self, migliaia};
 use crate::legislatura::{self, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
-use crate::ministri::{FattoAtto, Proposta};
+use crate::ministri::{Causa, FattoAtto, Ministro, Proposta, causa_peggiore};
 use crate::parlamento::{
-    self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
-    StatoEmendamento, TipoReferendum,
+    self, Attenuazione, CausaIntesa, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura,
+    Referendum, StatoEmendamento, TipoReferendum,
 };
 use crate::scenario::StatoPde;
 
@@ -93,6 +93,36 @@ pub(super) fn pagamento(costo: i64, quota: f64, dal_fondo: bool) -> String {
 pub(super) fn valence(delta: f64, nome: &str) -> String {
     let segno = format!("{delta:+.2}").replace('.', ",");
     format!("valence {segno} a {nome}")
+}
+
+/// «perde 1,25» o «guadagna 0,40»: una variazione di soddisfazione o d'intesa.
+fn perde_o_guadagna(delta: f64) -> String {
+    let verbo = if delta < 0.0 { "perde" } else { "guadagna" };
+    format!(
+        "{verbo} {}",
+        format!("{:.2}", delta.abs()).replace('.', ",")
+    )
+}
+
+/// Quante variazioni del turno corrente la chiusura ha già letto: di soddisfazione per dicastero,
+/// d'intesa in tutto. Le altre del turno sono nate dopo, e diventano voci. Basta il conto: le
+/// variazioni si accodano in ordine di turno, e i `retain` tolgono solo quelle di turni passati.
+pub(super) struct Lette {
+    ministri: Vec<usize>,
+    intesa: usize,
+}
+
+/// «{cosa} è scesa sotto la soglia {quale} di 40,0; la causa peggiore è «…»», o la sola soglia
+/// senza una causa.
+fn sotto_la_soglia(cosa: &str, quale: &str, soglia: f64, peggiore: Option<String>) -> String {
+    let mut causa = format!(
+        "{cosa} è scesa sotto la soglia {quale} di {}",
+        virgola(soglia)
+    );
+    if let Some(c) = peggiore {
+        causa.push_str(&format!("; la causa peggiore è «{c}»"));
+    }
+    causa
 }
 
 /// «Camera 230 sì e 170 no, 12 franchi tiratori; Senato …»: i franchi solo dove ce ne sono.
@@ -1496,6 +1526,194 @@ impl Partita {
         if let Some(v) = self.voce(TipoVoce::SfiduciaScartata, fatto, causa.into()) {
             v.dicastero = id;
             v.partito = partito;
+        }
+    }
+
+    /// I ministri in carica ora, per il confronto dopo un passo.
+    pub(super) fn in_carica(&self) -> Vec<Option<Ministro>> {
+        (self.ministri.dicasteri.iter())
+            .map(|st| st.ministro.clone())
+            .collect()
+    }
+
+    /// Il conto delle variazioni del turno corrente già nello stato.
+    pub(super) fn lette(&self) -> Lette {
+        let t = self.turno;
+        Lette {
+            ministri: (self.ministri.dicasteri.iter())
+                .map(|st| st.variazioni.iter().filter(|v| v.turno == t).count())
+                .collect(),
+            intesa: (self.intesa.variazioni.iter())
+                .filter(|v| v.turno == t)
+                .count(),
+        }
+    }
+
+    /// Fatti 6, 21, 23, 24, 31, 32, 35, 46, 84-86, 107, 108, 126: una voce per ogni variazione di
+    /// soddisfazione o d'intesa del turno oltre le `lette`, che poi le contano tutte. Solo i
+    /// ministri in carica: in interim la Vista non mostra le variazioni. Proposta ed emendamento
+    /// respinti per default (fatti 12 e 14) hanno già la loro voce, con la perdita nel fatto.
+    pub(super) fn voci_variate(&mut self, lette: &mut Lette) {
+        let t = self.turno;
+        let mut nuove = Vec::new();
+        let righe = (self.dati.dicasteri().iter())
+            .zip(&self.ministri.dicasteri)
+            .zip(&lette.ministri);
+        for ((d, st), &gia) in righe {
+            let Some(m) = &st.ministro else {
+                continue;
+            };
+            let variazioni = (st.variazioni.iter()).filter(|v| v.turno == t).skip(gia);
+            for v in variazioni.filter(|v| v.delta != 0.0 && v.causa != Causa::PropostaRespinta) {
+                let fatto = format!(
+                    "{} ({}) {} punti di soddisfazione",
+                    m.nome,
+                    d.nome,
+                    perde_o_guadagna(v.delta)
+                );
+                let tipo = TipoVoce::SoddisfazioneVariata;
+                nuove.push((tipo, None, Some(d.id.clone()), fatto, v.causa.to_string()));
+            }
+        }
+        let variazioni = (self.intesa.variazioni.iter())
+            .filter(|v| v.turno == t)
+            .skip(lette.intesa);
+        for v in
+            variazioni.filter(|v| v.delta != 0.0 && v.causa != CausaIntesa::EmendamentoRespinto)
+        {
+            let nome = self.partiti.get(v.partito).map_or("", |p| p.nome.as_str());
+            let fatto = format!("{nome} {} punti d'intesa", perde_o_guadagna(v.delta));
+            let tipo = TipoVoce::IntesaVariata;
+            nuove.push((tipo, Some(v.partito), None, fatto, v.causa.to_string()));
+        }
+        *lette = self.lette();
+        for (tipo, j, dicastero, fatto, causa) in nuove {
+            let v = match j {
+                Some(j) => self.voce_di(j, tipo, fatto, causa),
+                None => self.voce(tipo, fatto, causa),
+            };
+            if let Some(v) = v {
+                v.dicastero = dicastero;
+            }
+        }
+    }
+
+    /// Fatti 9, 47, 87, 93, 94: il ministro `m` lascia il dicastero `i` in interim; `causa` è la
+    /// sua `causa_dimissioni`. Al governo è notevole se le dimissioni le ha chieste il giocatore
+    /// o per il rimpasto.
+    pub(super) fn voce_ministro_esce(&mut self, i: usize, m: &Ministro, causa: Option<Causa>) {
+        let Some(d) = self.dati.dicasteri().get(i) else {
+            return;
+        };
+        let nome_di = |j: usize| self.partiti.get(j).map_or("", |p| p.nome.as_str());
+        let testo = match causa {
+            Some(Causa::DimissioniChieste) => {
+                "le dimissioni chieste dal Presidente del Consiglio".to_string()
+            }
+            Some(Causa::Sfiduciato) => "la sfiducia individuale approvata dalle Camere".to_string(),
+            Some(Causa::UscitaDalGoverno) => {
+                format!("l'uscita dal governo di {}", nome_di(m.partito))
+            }
+            Some(Causa::Rimpasto) => {
+                let a = self.governo.dicasteri.get(i).map_or("", |&j| nome_di(j));
+                format!("il rimpasto, che passa il dicastero a {a}")
+            }
+            peggiore => sotto_la_soglia(
+                "la soddisfazione",
+                "di dimissioni",
+                self.dati.manopola("soglia_dimissioni"),
+                peggiore.map(|c| c.to_string()),
+            ),
+        };
+        let fatto = format!(
+            "{} lascia il dicastero {}, che va in interim",
+            m.nome, d.nome
+        );
+        let id = d.id.clone();
+        let chieste = matches!(causa, Some(Causa::DimissioniChieste | Causa::Rimpasto));
+        let notevole = chieste && self.al_governo();
+        if let Some(v) = self.voce(TipoVoce::MinistroEsce, fatto, testo) {
+            if notevole {
+                v.con_grado(Grado::N);
+            }
+            v.dicastero = Some(id);
+        }
+    }
+
+    /// Le uscite del passo delle soglie: i ministri `prima` in carica che ora non ci sono più.
+    pub(super) fn voci_dimessi(&mut self, prima: &[Option<Ministro>]) {
+        for (i, m) in prima.iter().enumerate() {
+            let st = self.ministri.dicasteri.get(i);
+            if let (Some(m), Some(st)) = (m, st)
+                && st.ministro.is_none()
+            {
+                let causa = st.causa_dimissioni;
+                self.voce_ministro_esce(i, m, causa);
+            }
+        }
+    }
+
+    /// Fatto 88: i ministri `prima` sopra la soglia di minaccia, ancora in carica e ora sotto.
+    pub(super) fn voci_minaccia(&mut self, prima: &[Option<Ministro>]) {
+        let soglia = self.dati.manopola("soglia_minaccia");
+        let mut nuove = Vec::new();
+        let righe = (self.dati.dicasteri().iter())
+            .zip(&self.ministri.dicasteri)
+            .zip(prima);
+        for ((d, st), a) in righe {
+            let (Some(a), Some(b)) = (a, &st.ministro) else {
+                continue;
+            };
+            if a.nome == b.nome && a.soddisfazione >= soglia && b.soddisfazione < soglia {
+                let peggiore = causa_peggiore(st.variazioni.iter().map(|v| (v.causa, v.delta)));
+                let fatto = format!("{} ({}) minaccia le dimissioni", b.nome, d.nome);
+                let causa = sotto_la_soglia(
+                    "la soddisfazione",
+                    "di minaccia",
+                    soglia,
+                    peggiore.map(|c| c.to_string()),
+                );
+                nuove.push((d.id.clone(), fatto, causa));
+            }
+        }
+        for (id, fatto, causa) in nuove {
+            if let Some(v) = self.voce(TipoVoce::MinacciaDiDimissioni, fatto, causa) {
+                v.dicastero = Some(id);
+            }
+        }
+    }
+
+    /// Fatti 89, 90, 111: gli ultimatum posti contro quelli `prima`; con `ritiri`, anche quelli
+    /// ritirati da chi resta alleato, perché l'intesa è tornata alla soglia. Mai l'intesa in cifre.
+    pub(super) fn voci_ultimatum(&mut self, prima: &[Option<CausaIntesa>], ritiri: bool) {
+        let soglia = self.dati.manopola("soglia_ultimatum");
+        let alleati = self.alleati();
+        let cambi: Vec<(usize, TipoVoce, &str, String)> = (self.intesa.ultimatum.iter())
+            .zip(prima)
+            .enumerate()
+            .filter_map(|(j, (ora, prima))| match (prima, ora) {
+                (None, Some(c)) => Some((
+                    j,
+                    TipoVoce::UltimatumPosto,
+                    "pone",
+                    sotto_la_soglia("l'intesa", "d'ultimatum", soglia, Some(c.to_string())),
+                )),
+                (Some(_), None) if ritiri && alleati.contains(&j) => Some((
+                    j,
+                    TipoVoce::UltimatumRitirato,
+                    "ritira",
+                    format!(
+                        "l'intesa è tornata alla soglia d'ultimatum di {} o sopra",
+                        virgola(soglia)
+                    ),
+                )),
+                _ => None,
+            })
+            .collect();
+        for (j, tipo, verbo, causa) in cambi {
+            let nome = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+            let fatto = format!("{nome} {verbo} l'ultimatum al governo");
+            self.voce_di(j, tipo, fatto, causa);
         }
     }
 }

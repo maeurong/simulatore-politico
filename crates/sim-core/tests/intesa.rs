@@ -3,7 +3,7 @@ use comune::{
     calo_oltre_il_ritorno, con_seggi, dati_base, edita, in_trattativa, indice, partito, voci,
 };
 use serde_json::json;
-use sim_core::esito::TipoVoce;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::Assegnazione;
 use sim_core::parlamento::CausaIntesa;
 use sim_core::partiti::Partito;
@@ -56,6 +56,17 @@ fn ministri_scontenti_costano_intesa() {
     let p = ministri_del_centrodestra_a(30.0);
     let v = variazioni(&p, partito("centrodestra"), CausaIntesa::MinistriScontenti);
     assert!(v.len() == 1 && v[0] < 0.0, "{v:?}");
+    // Fatto 84: la variazione nata nella chiusura è una voce, con l'intesa del proprio alleato.
+    let scontenti: Vec<_> = (voci(&p, TipoVoce::IntesaVariata).into_iter())
+        .filter(|v| v.causa == "ministri del suo partito scontenti")
+        .collect();
+    assert_eq!(scontenti.len(), 1, "{scontenti:?}");
+    assert_eq!(scontenti[0].partito.as_deref(), Some("centrodestra"));
+    assert!(
+        scontenti[0].fatto.starts_with("Centrodestra perde "),
+        "{}",
+        scontenti[0].fatto
+    );
     // Alla soglia della minaccia, nessuna variazione.
     let minaccia = dati_base().manopola("soglia_minaccia");
     let p = ministri_del_centrodestra_a(minaccia);
@@ -158,9 +169,22 @@ fn ultimatum_si_ritira_alla_soglia_e_non_si_riscrive() {
     .unwrap();
     p.chiudi_turno();
     assert_eq!(p.intesa().ultimatum[cd], Some(CausaIntesa::Fiducia));
+    // Già posto prima della chiusura: nessuna voce.
+    assert!(voci(&p, TipoVoce::UltimatumPosto).is_empty());
     let mut p = edita(&p, |j| j["intesa"]["valori"][cd] = json!(41.0)).unwrap();
     p.chiudi_turno();
     assert_eq!(p.intesa().ultimatum[cd], None);
+    // Fatto 90.
+    let ritirati = voci(&p, TipoVoce::UltimatumRitirato);
+    assert_eq!(ritirati.len(), 1, "{ritirati:?}");
+    let v = &ritirati[0];
+    assert_eq!(v.partito.as_deref(), Some("centrodestra"));
+    assert_eq!(v.fatto, "Centrodestra ritira l'ultimatum al governo");
+    assert_eq!(
+        v.causa,
+        "l'intesa è tornata alla soglia d'ultimatum di 40,0 o sopra"
+    );
+    assert_eq!(v.criticita, Criticita::Notevole);
 }
 
 #[test]
@@ -181,6 +205,19 @@ fn l_ultimatum_resta_con_la_sua_causa() {
         .unwrap();
     assert!(a.ultimatum);
     assert_eq!(a.causa_ultimatum, Some(CausaIntesa::DimissioniChieste));
+    // Fatto 89: la causa dice la soglia, non l'intesa in cifre.
+    let posti = voci(&p, TipoVoce::UltimatumPosto);
+    assert_eq!(posti.len(), 1, "{posti:?}");
+    assert_eq!(posti[0].fatto, "Centrodestra pone l'ultimatum al governo");
+    assert_eq!(
+        posti[0].causa,
+        "l'intesa è scesa sotto la soglia d'ultimatum di 40,0; la causa peggiore è «dimissioni \
+         chieste a un suo ministro»"
+    );
+    assert_eq!(
+        (posti[0].criticita, posti[0].precedenza),
+        (Criticita::Critica, 2)
+    );
     assert!(p.governo().al_governo(cd)); // sopra 25: non esce
 }
 
@@ -290,6 +327,8 @@ fn la_formazione_azzera_l_ultimatum() {
     p.chiudi_turno();
     assert!(p.governa() && p.alleati() == vec![4]);
     assert_eq!(p.intesa().ultimatum[4], None);
+    // L'intesa riparte con il governo nuovo: non è un ritiro.
+    assert!(voci(&p, TipoVoce::UltimatumRitirato).is_empty());
 }
 
 /// Ogni dicastero al giocatore: il centrodestra entra sotto la soglia e pone l'ultimatum subito,
@@ -309,6 +348,21 @@ fn la_spartizione_avara_pone_l_ultimatum_alla_formazione() {
     assert!(p.governa() && p.alleati() == vec![4]);
     assert!(p.intesa().valori[4] < dati_base().manopola("soglia_ultimatum"));
     assert_eq!(p.intesa().ultimatum[4], Some(CausaIntesa::Spartizione));
+    // Fatti 107 e 111: la spartizione nata alla formazione, poi l'ultimatum.
+    let spartizione: Vec<_> = (voci(&p, TipoVoce::IntesaVariata).into_iter())
+        .filter(|v| v.causa == "quota dei dicasteri rispetto alla richiesta")
+        .collect();
+    assert_eq!(spartizione.len(), 1, "{spartizione:?}");
+    let posti = voci(&p, TipoVoce::UltimatumPosto);
+    assert_eq!(posti.len(), 1, "{posti:?}");
+    assert_eq!(posti[0].partito.as_deref(), Some("centrodestra"));
+    assert!(
+        posti[0]
+            .causa
+            .ends_with("la causa peggiore è «quota dei dicasteri rispetto alla richiesta»"),
+        "{}",
+        posti[0].causa
+    );
 }
 
 #[test]

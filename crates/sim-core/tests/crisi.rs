@@ -54,6 +54,18 @@ fn un_alleato_sotto_25_esce_e_apre_la_crisi() {
     );
     assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 3));
     assert!(voci(&p, TipoVoce::Rimpasto).is_empty());
+    // Fatto 93: i due ministri del centrodestra escono con lui.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    let dicasteri: Vec<_> = esce.iter().map(|v| v.dicastero.as_deref()).collect();
+    assert_eq!(
+        dicasteri,
+        [Some("ambiente_energia"), Some("esteri_difesa")],
+        "{esce:?}"
+    );
+    for v in &esce {
+        assert_eq!(v.causa, "l'uscita dal governo di Centrodestra");
+        assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
+    }
 }
 
 /// L'unica voce di `tipo` nell'esito.
@@ -302,9 +314,24 @@ fn rimpasto_se_la_maggioranza_regge() {
         let a = &p.partiti()[p.governo().dicasteri[k]].nome;
         assert!(v.fatto.contains(&format!("{d} a {a}")), "{}", v.fatto);
     }
-    for k in cambiati {
+    for &k in &cambiati {
         assert!(p.ministri().dicasteri[k].ministro.is_none());
         assert_eq!(causa(k), Some(Causa::Rimpasto), "dicastero {k}");
+    }
+    // Fatto 94: chi esce col centro è critico, chi esce per il rimpasto notevole.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    assert_eq!(esce.len(), 1 + cambiati.len(), "{esce:?}");
+    assert_eq!(esce[0].causa, "l'uscita dal governo di Centro");
+    assert_eq!(esce[0].criticita, Criticita::Critica);
+    for (v, &k) in esce[1..].iter().zip(&cambiati) {
+        let d = &dati.dicasteri()[k];
+        let a = &p.partiti()[p.governo().dicasteri[k]].nome;
+        assert_eq!(v.dicastero.as_deref(), Some(d.id.as_str()));
+        assert_eq!(
+            v.causa,
+            format!("il rimpasto, che passa il dicastero a {a}")
+        );
+        assert_eq!(v.criticita, Criticita::Notevole);
     }
 }
 

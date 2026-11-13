@@ -35,6 +35,26 @@ fn nessuna_causa_vuota_mai_piu_di_sette() {
     }
 }
 
+/// All'opposizione il catalogo dice «–»: soddisfazione dei ministri e intesa degli alleati del
+/// governo avversario non sono voci.
+#[test]
+fn all_opposizione_niente_soddisfazione_ne_intesa() {
+    let mut p = all_opposizione();
+    for turno in 0..6 {
+        chiudi_col_bilancio(&mut p);
+        assert!(!p.governo().al_governo(p.giocatore()));
+        let vietate: Vec<_> = (p.vista().esito.into_iter())
+            .filter(|v| {
+                matches!(
+                    v.tipo,
+                    TipoVoce::SoddisfazioneVariata | TipoVoce::IntesaVariata
+                )
+            })
+            .collect();
+        assert!(vietate.is_empty(), "turno {turno}: {vietate:?}");
+    }
+}
+
 #[test]
 fn stesso_seme_stesso_esito() {
     let (mut a, mut b) = (all_opposizione(), all_opposizione());

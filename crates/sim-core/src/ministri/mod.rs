@@ -527,14 +527,13 @@ impl Ministri {
 
     /// Il dicastero `i` va in interim per `causa` (uscita dal governo, rimpasto, sfiducia): la
     /// rosa si svuota e la riapre `apri`, col partito che ora tiene il dicastero. Già in interim,
-    /// resta la causa di prima.
+    /// resta la causa di prima. Rende il ministro uscito, `None` se era già in interim.
     // ponytail: niente ritiro del decreto: alla chiusura `Ministri::esegui` ha già preso le
     // agende. Un chiamante fuori dalla chiusura deve ritirarlo come `ritira`.
-    pub(crate) fn dimetti(&mut self, i: usize, causa: Causa) {
-        let Some(st) = self.dicasteri.get_mut(i) else {
-            return;
-        };
-        if st.ministro.take().is_some() {
+    pub(crate) fn dimetti(&mut self, i: usize, causa: Causa) -> Option<Ministro> {
+        let st = self.dicasteri.get_mut(i)?;
+        let uscito = st.ministro.take();
+        if uscito.is_some() {
             st.causa_dimissioni = Some(causa);
         }
         st.rosa.clear();
@@ -543,6 +542,7 @@ impl Ministri {
         st.dimissioni_chieste = false;
         st.proposta = None;
         st.agenda = None;
+        uscito
     }
 
     /// Le voci per la `Vista`, nell'ordine dei dicasteri.

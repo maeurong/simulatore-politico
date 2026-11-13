@@ -46,6 +46,7 @@ use crate::vista::{
 use serde::{Deserialize, Serialize};
 
 mod esito;
+use esito::Lette;
 mod ia;
 pub(crate) mod vita;
 #[cfg(test)]
@@ -549,6 +550,11 @@ impl Partita {
             return;
         }
         self.esito.clear();
+        // Le variazioni del turno già nello stato sono dei comandi e dell'apertura prima: non
+        // sono voci di questa chiusura. Le altre si leggono alla fine dei passi che le fanno.
+        let mut lette = self.lette();
+        // Per la minaccia nata in questa chiusura.
+        let in_carica = self.in_carica();
         // `Acquistati` non porta gli euro: la somma, per la campagna tagliata, si rifà dai prezzi.
         let a = &self.acquisti;
         let comprati = [
@@ -565,6 +571,7 @@ impl Partita {
             .sum();
         self.acquisti = Acquistati::default();
         self.risolvi_eventi();
+        self.voci_variate(&mut lette);
         if self.governo.presidente == self.giocatore {
             self.turni_al_governo = self.turni_al_governo.saturating_add(1);
         }
@@ -597,6 +604,7 @@ impl Partita {
         } else {
             self.aula(occupato)
         };
+        self.voci_variate(&mut lette);
         // Dopo l'aula, dove la percepita scivola coi voti, e prima del motore (scelta 7 del piano
         // 8b).
         let nate = self.partiti.len();
@@ -672,6 +680,7 @@ impl Partita {
         if di_voto {
             self.vota_parlamento(&vero);
         }
+        let (prima_delle_soglie, ultimatum) = (self.in_carica(), self.intesa.ultimatum.clone());
         // Prima delle soglie dei ministri: chi si dimette nel turno conta ancora nella media.
         self.pressioni_intesa();
         self.con_contesto(|ministri, cx, _| ministri.soglie(cx));
@@ -680,6 +689,10 @@ impl Partita {
         for p in &mut self.partiti {
             p.valence += ritorno * (p.valence_base - p.valence);
         }
+        self.voci_variate(&mut lette);
+        self.voci_dimessi(&prima_delle_soglie);
+        self.voci_minaccia(&in_carica);
+        self.voci_ultimatum(&ultimatum, true);
         // Dopo il ritorno: il leader nuovo chiude la chiusura con `valence_base` più la luna.
         if di_voto {
             self.leader_dopo_il_voto();
@@ -698,6 +711,7 @@ impl Partita {
         if self.legislatura.crisi == Some(self.turno) {
             self.fine_della_crisi(sfiducia_votata);
         }
+        self.voci_variate(&mut lette);
         // Nel turno del voto vince il voto: le dimissioni si azzerano senza effetto.
         if let Some(origine) = self.legislatura.dimissioni.take()
             && !di_voto
@@ -706,12 +720,14 @@ impl Partita {
             self.capo_dello_stato(origine == OrigineCaduta::VotoAnticipato);
         }
         if trattativa && !di_voto {
-            self.forma_governo();
+            self.forma_governo(&mut lette);
         }
         // Dopo uscite, crisi, dimissioni e governo nuovo: il bersaglio è chi occupa il posto a fine
         // turno. Prima del cambio di data: i candidati guardano il trimestre che si apre.
         self.nascono_i_puntuali(&innovazioni);
         self.turno = self.turno.saturating_add(1);
+        // Nel turno nuovo nessuna variazione c'è ancora: quelle dell'apertura sono tutte voci.
+        lette = self.lette();
         self.data = self.data.successivo();
         (self.disposizioni).arrivi(&self.dati, self.turno, &mut self.grandezze.effetti);
         self.parlamento.apri(self.turno);
@@ -757,6 +773,7 @@ impl Partita {
             self.costo_taglio(&perdite);
         }
         self.apertura_ia();
+        self.voci_variate(&mut lette);
         if !self.finita() {
             self.registra_punto();
         }
@@ -3471,8 +3488,9 @@ impl Partita {
     /// il voto appena passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi
     /// ministri tutti nuovi, giudizio da zero per chi entra al governo, l'ultimatum sul valore di
     /// partenza (l'alleato che entra sotto la soglia lo pone subito, chi non è più alleato non ne
-    /// ha), fase ordinaria.
-    fn forma_governo(&mut self) {
+    /// ha), fase ordinaria. Le variazioni nate fin qui diventano voci prima che `nuovo_governo`
+    /// svuoti quelle dei ministri: `lette` è il conto della chiusura.
+    fn forma_governo(&mut self, lette: &mut Lette) {
         // Il ribaltone senza scelta chiede la guida (decisione 1 di Mario); rifiutata, la voce
         // dice il perché e nulla cambia.
         if let Ok(coalizione) = self.guida_aperta() {
@@ -3588,7 +3606,10 @@ impl Partita {
             let causa = "la nascita del governo avversario".to_string();
             self.voce_di(presidente, TipoVoce::ProgrammaDichiarato, fatto, causa);
         }
+        self.voci_variate(lette);
         self.con_contesto(|ministri, cx, caso| ministri.nuovo_governo(cx, caso, &tecnici));
+        // `nuovo_governo` svuota le variazioni dei ministri: il conto torna a zero.
+        *lette = self.lette();
         // Il voto appena passato (turno == inizio) l'ha già fatto cambiare per il calo: una sola
         // sconfitta, un solo cambio.
         let gia_cambiato = self.turno <= self.legislatura.inizio && self.calo(uscente).is_some();
@@ -3596,7 +3617,9 @@ impl Partita {
             self.cambia_leader(uscente, "la perdita del governo");
         }
         let alleati = self.alleati();
+        let prima = self.intesa.ultimatum.clone();
         self.intesa.ultimatum(&self.dati, &alleati);
+        self.voci_ultimatum(&prima, false);
         let l = &mut self.legislatura;
         l.fase = Fase::Ordinaria;
         l.incarico = None;
@@ -3645,6 +3668,7 @@ impl Partita {
         }
         let g = &mut self.governo;
         let mut interim = false;
+        let mut usciti = Vec::new();
         for &j in escono {
             g.coalizione.retain(|&k| k != j);
             if let Some(u) = self.intesa.ultimatum.get_mut(j) {
@@ -3653,11 +3677,19 @@ impl Partita {
             for (i, d) in g.dicasteri.iter_mut().enumerate() {
                 if *d == j {
                     *d = g.presidente;
-                    self.ministri.dimetti(i, Causa::UscitaDalGoverno);
+                    usciti.extend(
+                        self.ministri
+                            .dimetti(i, Causa::UscitaDalGoverno)
+                            .map(|m| (i, m)),
+                    );
                     interim = true;
                 }
             }
         }
+        for (i, m) in usciti {
+            self.voce_ministro_esce(i, &m, Some(Causa::UscitaDalGoverno));
+        }
+        let g = &self.governo;
         let pl = &self.parlamento;
         if legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &g.coalizione) {
             if interim {
@@ -3688,16 +3720,20 @@ impl Partita {
             &tenuti,
         );
         let mut cambi = Vec::new();
+        let mut usciti = Vec::new();
         for (i, j) in v.into_iter().enumerate() {
             if let Some(d) = self.governo.dicasteri.get_mut(i)
                 && *d != j
             {
                 *d = j;
-                self.ministri.dimetti(i, Causa::Rimpasto);
+                usciti.extend(self.ministri.dimetti(i, Causa::Rimpasto).map(|m| (i, m)));
                 cambi.push((i, j));
             }
         }
         self.voce_rimpasto(&cambi, causa);
+        for (i, m) in usciti {
+            self.voce_ministro_esce(i, &m, Some(Causa::Rimpasto));
+        }
     }
 
     /// La fine della crisi (scelta 10 del piano 7b). Con la maggioranza, coalizione più allargati:
@@ -3741,7 +3777,9 @@ impl Partita {
         self.governo.coalizione = coalizione;
         self.rimpasto(causa);
         // Solo gli allargati: l'ultimatum posto dalle soglie agli altri resta.
+        let prima = self.intesa.ultimatum.clone();
         self.intesa.ultimatum_di(&self.dati, &allargati);
+        self.voci_ultimatum(&prima, false);
     }
 
     /// `Dimettiti`: il governo cade alla chiusura del turno.
@@ -3923,6 +3961,7 @@ impl Partita {
         };
         self.parlamento.prossima = self.parlamento.prossima.saturating_add(1);
         let mut coda = Vec::new();
+        let mut uscito = None;
         match (approvata, dicastero) {
             (true, None) => {
                 self.legislatura.dimetti(OrigineCaduta::Sfiducia);
@@ -3932,7 +3971,7 @@ impl Partita {
                 if let Some(id) = self.dati.dicasteri().get(i).map(|d| d.id.clone()) {
                     self.dimissioni_chieste(&id);
                 }
-                self.ministri.dimetti(i, Causa::Sfiduciato);
+                uscito = self.ministri.dimetti(i, Causa::Sfiduciato).map(|m| (i, m));
                 if let Some(st) = self.ministri.dicasteri.get_mut(i) {
                     st.rosa_tecnica = tecnico;
                 }
@@ -3958,6 +3997,9 @@ impl Partita {
         }
         let bersaglio = (dicastero, ministro.as_deref());
         self.voce_sfiducia(&esito, bersaglio, promotore, &linea, coda);
+        if let Some((i, m)) = uscito {
+            self.voce_ministro_esce(i, &m, Some(Causa::Sfiduciato));
+        }
         self.parlamento.esiti.insert(0, esito);
         approvata
     }
@@ -6401,6 +6443,13 @@ mod tests {
             (p.intesa.variazioni.iter()).any(|v| v.causa == CausaIntesa::DimissioniChieste);
         assert!(chieste);
         assert!(p.legislatura.dimissioni.is_none());
+        // Fatto 47: dopo la voce del voto, quella del ministro che esce.
+        let tipi: Vec<TipoVoce> = p.esito.iter().map(|v| v.tipo).collect();
+        assert_eq!(tipi, [TipoVoce::SfiduciaApprovata, TipoVoce::MinistroEsce]);
+        let v = &p.esito[1];
+        assert_eq!(v.causa, "la sfiducia individuale approvata dalle Camere");
+        assert_eq!(v.dicastero.as_deref(), Some("ambiente_energia"));
+        assert_eq!(v.criticita, crate::esito::Criticita::Critica);
     }
 
     /// Destra e centrodestra con 200 seggi su 400 alla Camera e 101 su 200 al Senato: niente
