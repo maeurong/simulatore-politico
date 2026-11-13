@@ -45,9 +45,9 @@ fn stato_pde(s: StatoPde) -> &'static str {
     }
 }
 
-/// Più grave, più alto: la sospesa sta fra nessuna procedura e l'aperta, perché la sospensione è
-/// il premio di chi corregge.
-fn gravita(s: StatoPde) -> u8 {
+/// Il rango dello stato della procedura, più alto se più avanti verso la sanzione: la sospesa sta
+/// fra nessuna procedura e l'aperta, perché la sospensione è il premio di chi corregge.
+fn rango_pde(s: StatoPde) -> u8 {
     match s {
         StatoPde::Nessuna => 0,
         StatoPde::Sospesa => 1,
@@ -427,7 +427,9 @@ impl Partita {
     pub(super) fn voci_del_motore(&mut self, prima: &Economia) {
         let m = |nome: &str| self.dati.manopola(nome).round();
         let (durata, turni) = (m("durata_mes"), m("turni_ristrutturazione"));
-        if prima.programma_mes.is_some() && self.economia.programma_mes.is_none() {
+        // Nella chiusura che apre il turno `fine`: già in quel turno i vincoli non valgono.
+        let dopo = self.turno.saturating_add(1);
+        if prima.mes_in_corso(self.turno).is_some() && self.economia.mes_in_corso(dopo).is_none() {
             self.voce(
                 TipoVoce::MesFinito,
                 "Finito il programma del MES: cadono i vincoli del memorandum".into(),
@@ -561,7 +563,7 @@ impl Partita {
                 Grado::N
             };
             if let Some(v) = self.voce(TipoVoce::ProceduraUe, fatto, causa)
-                && gravita(pde) > gravita(pde_prima)
+                && rango_pde(pde) > rango_pde(pde_prima)
             {
                 v.con_grado(grado);
             }

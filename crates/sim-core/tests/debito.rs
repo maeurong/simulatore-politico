@@ -607,18 +607,13 @@ fn il_programma_dura_durata_mes_chiusure() {
     let mut p = col_mes();
     let fine = p.economia().programma_mes.unwrap();
     for _ in 1..durata() {
+        assert!(voci(&p, TipoVoce::MesFinito).is_empty());
         chiudi_col_bilancio(&mut p);
         assert_eq!(p.economia().programma_mes, Some(fine));
     }
     // Al turno `fine` il programma non è più in corso: il memorandum non vincola più (la legge
-    // può cadere per altro, per esempio un'altra già in esame).
+    // può cadere per altro, per esempio un'altra già in esame). L'esito che apre il turno lo dice.
     assert_eq!(p.vista().turno, fine);
-    if let Err(e) = presenta(&mut p, &[("eta_pensionabile", "67")]) {
-        assert!(!e.to_string().contains("memorandum"), "{e}");
-    }
-    assert!(voci(&p, TipoVoce::MesFinito).is_empty());
-    chiudi_col_bilancio(&mut p);
-    assert_eq!(p.economia().programma_mes, None);
     let finito = voci(&p, TipoVoce::MesFinito);
     assert_eq!(finito.len(), 1, "{:?}", p.vista().esito);
     assert_eq!(
@@ -626,6 +621,13 @@ fn il_programma_dura_durata_mes_chiusure() {
         "Finito il programma del MES: cadono i vincoli del memorandum"
     );
     assert_eq!(finito[0].causa, "la durata del programma, 8 trimestri");
+    if let Err(e) = presenta(&mut p, &[("eta_pensionabile", "67")]) {
+        assert!(!e.to_string().contains("memorandum"), "{e}");
+    }
+    // La chiusura dopo non la ripete.
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.economia().programma_mes, None);
+    assert!(voci(&p, TipoVoce::MesFinito).is_empty());
 }
 
 fn eta_pensionabile() -> (usize, usize) {
