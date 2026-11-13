@@ -525,29 +525,55 @@ impl Partita {
         self.serie.push(punto);
     }
 
-    // Ordine della chiusura:
-    // svuotamento dell'esito del turno prima → eventi aperti risolti (opzione scelta o default,
-    // senza estrazioni) → turni da presidente, in fase ordinaria →
-    // default delle decisioni (proposte, emendamenti aperti respinti tranne quelli delle leggi che slittano) →
-    // atti dei ministri → aula (leggi slittate nel turno del bilancio → conversioni → bilancio →
-    // leggi, con le dimissioni dopo la fiducia respinta → referendum → abrogativo dell'opposizione
-    // IA, se nel turno nessuno ne ha chiesto uno → firme dell'abrogativo →
-    // sfiducia del giocatore all'opposizione) → scissioni → esercizio provvisorio senza bilancio,
-    // dimissioni → verifica delle promesse, campagna e promesse IA, spesa, nel turno del voto →
-    // motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che aggiorna ultima_disoccupazione], composizione,
-    // convincere della campagna, spinta delle situazioni accese, posizioni, sondaggio,
-    // statistica, situazioni e nascita degli eventi) → voto,
-    // nel turno del voto → soglie (ministri, ritorno dell'intesa, ritorno della valence) → cambio
-    // di leader per il calo al voto, dopo il ritorno della valence → uscite degli alleati e delle
-    // frange (rimpasto o crisi), fuori dal turno del voto e senza dimissioni → voto anticipato del
-    // governo IA, sul sondaggio appena rilevato (`voto_anticipato`) → fine della crisi
-    // (rimpasto o sfiducia automatica, se il giocatore non ha già votato la sua al governo) →
-    // Capo dello Stato se ci sono dimissioni, fuori dal turno del voto (che le azzera), col
-    // calendario del governo caduto che decade → governo nuovo, maggioranza contigua o
-    // scioglimento, nel turno di trattativa fuori dal turno del voto → calendario → apertura
-    // (valori in arrivo, esiti dei due turni prima, campagna nel turno del voto, emendamenti, rose,
-    // agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio) → mosse IA
-    // dell'apertura (`apertura_ia`) → composizione dell'esito (`esito::componi`).
+    // Ordine della chiusura, coi punti in cui nascono le voci (spec «esito e Vista completa»).
+    // Le variazioni già nello stato all'ingresso (comandi, apertura prima) non sono voci:
+    // `voci_variate` legge solo il delta di ogni tratto.
+    //  1. svuotamento dell'esito (`esito.clear()`), poi azzeramento degli acquisti: la somma spesa
+    //     si tiene per la campagna tagliata;
+    //  2. eventi aperti risolti, opzione scelta o default, senza estrazioni (`risolvi_eventi`:
+    //     eventi risolti, MES, ristrutturazione, margine energia) → `voci_variate` → turni al
+    //     governo e da presidente, in fase ordinaria;
+    //  3. default delle decisioni: proposte (`voci_proposte`) ed emendamenti aperti respinti, tranne
+    //     quelli delle leggi che slittano (`voce_emendamento_respinto`) → atti dei ministri
+    //     (`voce_atto`);
+    //  4. aula (`aula`; a Camere sciolte solo i confermativi): leggi slittate nel turno del
+    //     bilancio → conversioni → bilancio → leggi, con le dimissioni dopo la fiducia respinta →
+    //     referendum → abrogativo dell'opposizione IA, se nel turno nessuno ne ha chiesto uno →
+    //     firme dell'abrogativo → sfiducia del giocatore all'opposizione; le voci dell'aula
+    //     nascono qui → `voci_variate`;
+    //  5. scissioni (`scissioni`: scissione, minaccia, frangia, partito sciolto) → esercizio
+    //     provvisorio senza bilancio, dimissioni;
+    //  6. nel turno del voto: verifica delle promesse, campagna e promesse IA (`campagna_ia`),
+    //     spesa di campagna con la campagna tagliata;
+    //  7. motore (misure, economia, grandezze, redditi, giudizio [prima di composizione, che
+    //     aggiorna ultima_disoccupazione], composizione), poi `voci_del_motore` e `voci_reddito`:
+    //     il motore gira anche sulle copie, quindi le voci nascono fuori → convincere
+    //     della campagna, spinta delle situazioni accese, posizioni, sondaggio (`voce_sondaggio`),
+    //     statistica (`voci_statistica`);
+    //  8. situazioni: nuove accese e spente, e gli eventi delle situazioni (`situazioni::apri`),
+    //     con `voci_situazioni` → crisi del debito → `incassa` (entrate di cassa) → nel turno del
+    //     voto `vota_parlamento`;
+    //  9. soglie: ministri, ritorno dell'intesa, ritorno della valence → `voci_variate`, dimessi,
+    //     ultimatum → cambio di leader per il calo al voto, dopo il ritorno della valence;
+    // 10. uscite degli alleati e delle frange (rimpasto o crisi), fuori dal turno del voto e senza
+    //     dimissioni → voto anticipato del governo IA, sul sondaggio appena rilevato
+    //     (`voto_anticipato`) → fine della crisi (rimpasto o sfiducia automatica, se il giocatore
+    //     non ha già votato la sua al governo) → `voci_variate`;
+    // 11. dimissioni: la voce della caduta, poi il Capo dello Stato, fuori dal turno del voto
+    //     (che le azzera), col calendario del governo caduto che decade → governo nuovo,
+    //     maggioranza contigua o scioglimento, nel turno di trattativa fuori dal turno del voto
+    //     (`forma_governo`);
+    // 12. eventi puntuali (`nascono_i_puntuali`): dopo il governo nuovo, perché il bersaglio è chi
+    //     occupa il posto a fine turno, e prima del cambio di data; shock esclusi e voce dell'evento
+    //     nato;
+    // 13. turno e data avanzano; si rilegge `lette`: le variazioni dell'apertura sono tutte voci.
+    //     Apertura: valori in arrivo, calendario, esiti dei due turni prima, campagna nel turno del
+    //     voto (`apertura_campagna`: movimenti, protesta, coalizioni IA), emendamenti chiesti,
+    //     rose, agende, proposte; il costo del taglio se l'anno entra in esercizio provvisorio;
+    // 14. mosse IA dell'apertura (`apertura_ia`: governo, crisi, opposizione) → `voci_variate` →
+    //     `voci_minaccia`, a fine chiusura, dopo `apertura_ia`: anche il taglio dell'apertura può
+    //     portare un ministro sotto la soglia → punto della serie → composizione dell'esito
+    //     (`esito::componi`), per ultima.
     // A partita finita la chiusura non fa nulla; a Camere sciolte l'aula vota solo i
     // confermativi: alla caduta resta in calendario al più la proposta dell'opposizione, che
     // decade al voto, e nessuno può presentare.
