@@ -1,7 +1,7 @@
 <script lang="ts">
   // Pagina di prova dei componenti di base, caricata da /sviluppo/componenti solo in sviluppo:
   // i testi qui sono di prova e non stanno in interfaccia.json.
-  import { numero, t } from "$lib/testi/t";
+  import { numero, percentuale, t } from "$lib/testi/t";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
@@ -12,7 +12,10 @@
   import VoceCausa from "$lib/componenti/VoceCausa.svelte";
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
-  import { coalizioneDi, nomeDi } from "$lib/partiti";
+  import { coalizioneDi, nomeDi, quotaIncrocio } from "$lib/partiti";
+  import Mappa, { type Segno } from "$lib/mappa/Mappa.svelte";
+  import SelettoreRegione from "$lib/mappa/SelettoreRegione.svelte";
+  import { REGIONI } from "$lib/mappa/regioni";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
   import Tracciato from "$lib/componenti/Tracciato.svelte";
   import { tracciatiDi, type Tracciato as T } from "$lib/tracciati";
@@ -71,6 +74,18 @@
   let riempi = $state(2);
 
   const v03t = v03 as unknown as Vista;
+  // il consenso della coalizione per regione, dalla Vista 03; Molise e Sardegna senza dato, per vedere il tratteggio
+  const coalizione = coalizioneDi(v03t).map((id) => v03t.partiti.findIndex((p) => p.id === id));
+  const consenso: Record<string, number | null> = Object.fromEntries(
+    v03t.sondaggio.regioni.map((r) => [r.id, coalizione.reduce((s, j) => s + (quotaIncrocio(r, j) ?? 0), 0)]),
+  );
+  const conVuoti = { ...consenso, molise: null, sardegna: null };
+  const segniProva: Record<string, Segno[]> = {
+    liguria: ["cantiere", "atto", "emergenza"], valle_d_aosta: ["atto", "opera"], molise: ["cantiere", "emergenza"], lombardia: ["cantiere"], sicilia: ["emergenza"], toscana: ["opera"],
+  };
+  let regScelta = $state<string | null>(null);
+  let selScelta = $state<string | null>(null);
+  let spesa = $state("");
   const camera = (v: Vista) => v.seggi.map((s) => ({ id: s.partito, nome: nomeDi(v, s.partito), seggi: s.camera }));
   const coalCamera = (v: Vista) => v.seggi.filter((s) => coalizioneDi(v).includes(s.partito)).reduce((x, s) => x + s.camera, 0);
   const totCamera = (v: Vista) => v.seggi.reduce((x, s) => x + s.camera, 0);
@@ -199,6 +214,18 @@
     <div class="fila"><Faccia nome="Luca Benedetti" misura={34} /><Faccia nome="Luca Benedetti" misura={46} /><Faccia nome="Luca Benedetti" misura={62} /><Faccia nome="Luca Benedetti" misura={84} /><Faccia nome="" misura={34} /></div></div>
 </section>
 
+<section class="mappe">
+  <h3 class="tit">Mappa e selettore delle regioni</h3>
+  <div class="stato"><b class="sec">Mappa · consenso, con segni</b>
+    <div class="mp"><Mappa valori={conVuoti} segni={segniProva} scelta={regScelta} ordine={REGIONI.map((r) => r.id)} nome="Le venti regioni" formato={(x) => percentuale(x)} onscelta={(id) => (regScelta = id)} /></div>
+    <span class="min muto">Un Tab entra, le frecce girano le venti; Invio sceglie. Molise e Sardegna senza dato.</span></div>
+  <div class="stato"><b class="sec">Mappa · sola lettura</b>
+    <div class="mp"><Mappa valori={consenso} scelta={null} ordine={REGIONI.map((r) => r.id)} nome="Le venti regioni" solaLettura onscelta={() => {}} /></div><span></span></div>
+  <div class="stato"><b class="sec">Selettore</b>
+    <div class="sl"><SelettoreRegione valori={consenso} bind:scelta={selScelta} azione="Spendi in {REGIONI.find((r) => r.id === selScelta)?.nome ?? '…'}" onconferma={() => (spesa = selScelta ?? "")} onannulla={() => (selScelta = null)} /></div>
+    <span class="min muto">Confermato: {spesa || "nulla"}.</span></div>
+</section>
+
 <div class="lato">
   <div class="corpo">
     <Segnaposto sezione={t("sommario.governo")} fetta="11b" />
@@ -250,6 +277,9 @@
   .grande { gap: 18px; font-size: 17px; margin-top: 0 }
   .contenitore { border: 1.5px dashed var(--grigio); padding: var(--s1) var(--s2) }
 
+  .mappe { padding: 0 var(--marg) var(--s3) }
+  .mp { height: 420px }
+  .sl { max-width: 440px }
   .nuovi { padding: 0 var(--marg) var(--s3) }
   .tracciati { padding: 0 var(--marg) var(--s3) }
   .stato { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) 0; border-top: var(--filo) }

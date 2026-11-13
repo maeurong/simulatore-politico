@@ -64,6 +64,15 @@
 
   "segnaposto.arriva": "{sezione}: arriva con la fetta {fetta}.",
 
+  "mappa.regioni": "Le venti regioni",
+  "mappa.senza_dato": "senza dato",
+  "mappa.classe": "classe {n} di 5",
+  "mappa.segno_cantiere": "cantiere in corso",
+  "mappa.segno_atto": "atto in agenda",
+  "mappa.segno_opera": "opera finita",
+  "mappa.segno_emergenza": "emergenza aperta",
+  "mappa.scegli": "Scegli sulla carta o in lista.",
+
   "componenti.perche": "perché:",
   "componenti.ferma": "Ferma",
   "componenti.dirotta": "Dirotta",
