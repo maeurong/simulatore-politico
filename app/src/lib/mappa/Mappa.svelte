@@ -79,6 +79,13 @@
       ></path>
     {/each}
   </g>
+  <!-- gli anelli in coda: in SVG non c'è z-index, e il contorno di una regione finirebbe sotto le vicine; i segni ancora dopo, perché l'alone non li copra -->
+  {#if scelta}
+    <use href="#{pre}-{scelta}" class="alone" /><use href="#{pre}-{scelta}" class="anello" />
+  {/if}
+  {#if fuoco && daTastiera}
+    <use href="#{pre}-{fuoco}" class="alone" /><use href="#{pre}-{fuoco}" class="fuoco" />
+  {/if}
   <g aria-hidden="true" class="segni">
     {#each REGIONI as r (r.id)}
       {@const l = segni[r.id] ?? []}
@@ -87,13 +94,6 @@
       {/each}
     {/each}
   </g>
-  <!-- gli anelli in coda: in SVG non c'è z-index, e il contorno di una regione finirebbe sotto le vicine -->
-  {#if scelta}
-    <use href="#{pre}-{scelta}" class="alone" /><use href="#{pre}-{scelta}" class="anello" />
-  {/if}
-  {#if fuoco && daTastiera}
-    <use href="#{pre}-{fuoco}" class="alone" /><use href="#{pre}-{fuoco}" class="fuoco" />
-  {/if}
 </svg>
 
 <style>

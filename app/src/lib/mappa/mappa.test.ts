@@ -13,6 +13,10 @@ describe("regioni", () => {
     expect(new Set(REGIONI.map((r) => r.id)).size).toBe(20);
     expect(REGIONI.map((r) => r.id)).toEqual(v.sondaggio.regioni.map((r) => r.id));
   });
+  it("le ancore di Liguria, Valle d'Aosta e Molise non sono il punto interno del prototipo 23", () => {
+    const interno: Record<string, [number, number]> = { liguria: [73.9, 126.9], valle_d_aosta: [24.7, 62.3], molise: [264.7, 246.0] };
+    for (const [id, p] of Object.entries(interno)) expect(REGIONI.find((r) => r.id === id)!.ancora).not.toEqual(p);
+  });
 });
 
 describe("indice dei dati e id", () => {
