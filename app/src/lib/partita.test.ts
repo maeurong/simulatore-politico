@@ -106,4 +106,19 @@ describe("partita", () => {
     expect(goto).not.toHaveBeenCalled();
     expect(partita.occupato).toBe(false);
   });
+
+  it("esci con la serie in volo, comando già riuscito: la serie si scarta", async () => {
+    let rispondi!: (s: PuntoSerie[]) => void;
+    guscio.chiudiTurno.mockResolvedValue(dopo);
+    guscio.serie.mockReturnValue(new Promise<PuntoSerie[]>((r) => (rispondi = r)));
+    const inVolo = partita.chiudiTurno();
+    await vi.waitFor(() => expect(guscio.serie).toHaveBeenCalled());
+    partita.esci();
+    rispondi(serieNuova);
+    await inVolo;
+    expect(partita.vista).toBeNull();
+    expect(partita.serie).toEqual([]);
+    expect(goto).not.toHaveBeenCalled();
+    expect(partita.occupato).toBe(false);
+  });
 });

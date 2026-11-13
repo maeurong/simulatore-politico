@@ -13,7 +13,7 @@
   // senza partita si torna all'edicola; un nome ignoto, una sezione barrata o una casa d'altro stato tornano alla casa
   $effect(() => {
     if (!partita.vista) goto("/", { replaceState: true });
-    else if (!aperta) goto(`/partita/${casa(partita.vista)}`, { replaceState: true });
+    else if (!aperta) goto(`/partita/${casa(partita.vista)}`, { replaceState: true, keepFocus: true });
   });
 
   let impostazioni = $state(false);
