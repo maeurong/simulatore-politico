@@ -11,7 +11,11 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
-    "test": "TZ=Europe/Rome vitest run"
+    "test": "TZ=Europe/Rome vitest run",
+    "verifica:chrome": "node verifica/batteria.mjs",
+    "verifica:webkit": "node verifica/batteria-webkit.mjs",
+    "verifica:giro": "CARGO_TARGET_DIR=\"$PWD/../target\" tauri dev --config verifica/giro/tauri.verifica.json",
+    "verifica:comando": "node verifica/giro/cmd.mjs"
   },
   "license": "MIT",
   "dependencies": {

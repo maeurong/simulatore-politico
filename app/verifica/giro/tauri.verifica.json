@@ -1,0 +1,6 @@
+{
+  "identifier": "it.maeurong.simulatorepolitico.verifica",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --config verifica/giro/vite.giro.config.mjs"
+  }
+}

@@ -7,7 +7,8 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [sveltekit()],
-  test: { include: ["src/**/*.test.ts"] },
+  // verifica/: gli strumenti di verifica della UI stanno fuori da src/, i loro test girano qui
+  test: { include: ["src/**/*.test.ts", "verifica/**/*.test.mjs"] },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
