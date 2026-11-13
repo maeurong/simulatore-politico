@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anniAlGoverno, azioneDi, inOrdine, maleSe, tracce, voceNuova } from "./edicola";
+import { anniAlGoverno, azioneDi, esitoTesto, inOrdine, maleSe, periodo, tracce, voceNuova } from "./edicola";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
 import type { VocePartita } from "$lib/tipi/VocePartita";
@@ -14,6 +14,15 @@ describe("inOrdine", () => {
     expect(nome(ordinate[0])).toBe("Patto Civico");
     expect(ordinate[0].indice.ultimo_salvataggio).toBe(1794000000);
     expect(nome(ordinate.at(-1)!)).toBe("Unione dei Pendolari");
+  });
+  it("a parità di ultimo_salvataggio resta l'ordine di arrivo", () => {
+    const a = structuredClone(partite[0]);
+    const b = structuredClone(partite[1]);
+    a.indice.testata.nome = "A";
+    b.indice.testata.nome = "B";
+    b.indice.ultimo_salvataggio = a.indice.ultimo_salvataggio;
+    expect(inOrdine([a, b]).map(nome)).toEqual(["A", "B"]);
+    expect(inOrdine([b, a]).map(nome)).toEqual(["B", "A"]);
   });
   it("non tocca l'elenco che riceve", () => {
     const copia = [...partite].reverse();
@@ -34,7 +43,27 @@ describe("azioneDi", () => {
   });
 });
 
+describe("azioneDi, partita non apribile", () => {
+  it("anche se è finita: nessuna azione", () => {
+    const p = structuredClone(partite.find((x) => x.apribile && x.indice.testata.finita)!);
+    p.apribile = false;
+    expect(azioneDi(p)).toBe("nessuna");
+  });
+  it("ogni partita del campione ha l'azione che dicono apribile e finita", () => {
+    for (const p of partite) {
+      const atteso = !p.apribile ? "nessuna" : p.indice.testata.finita ? "eredita" : "riprendi";
+      expect(azioneDi(p), nome(p)).toBe(atteso);
+    }
+  });
+});
+
 describe("maleSe", () => {
+  it("ogni indicatore del campione d'albo: solo debito, spread e disoccupazione salgono male", () => {
+    const ids = new Set(albo.flatMap((a) => a.indicatori.map((i) => i.id)));
+    expect([...ids].sort()).toEqual(["debito_pil", "disoccupazione", "inflazione", "spread"]);
+    for (const id of ids) expect(maleSe(id), id).toBe(id === "inflazione" ? null : "sale");
+  });
+  it("un id ignoto non ha colore", () => expect(maleSe("pil")).toBeNull());
   it("inflazione senza colore, gli altri tre salgono male", () => {
     expect(maleSe("inflazione")).toBeNull();
     expect(maleSe("spread")).toBe("sale");
@@ -81,6 +110,31 @@ describe("anniAlGoverno", () => {
     [5.25, "5 anni e 3 mesi al governo"],
     [0.75, "9 mesi al governo"],
   ])("%d → %s", (a, atteso) => expect(anniAlGoverno(a)).toBe(atteso));
+});
+
+describe("anniAlGoverno, arrotondamento dei mesi", () => {
+  // oracolo: 1,99 anni sono due anni; «1 anno e 12 mesi» non si dice
+  it.fails("undici mesi e mezzo non diventano «12 mesi»: i mesi arrotondati a 12 portano un anno", () => {
+    expect(anniAlGoverno(1.99)).toBe("2 anni al governo");
+  });
+});
+
+describe("periodo", () => {
+  it.each([
+    [1, "gennaio–marzo 2028"],
+    [2, "aprile–giugno 2028"],
+    [3, "luglio–settembre 2028"],
+    [4, "ottobre–dicembre 2028"],
+  ])("trimestre %d", (trimestre, atteso) => expect(periodo({ anno: 2028, trimestre })).toBe(atteso));
+});
+
+describe("esitoTesto", () => {
+  it("i due esiti del formato v1 restano com'erano nel prototipo", () => {
+    expect(esitoTesto("Abbandono")).toBe("Abbandono");
+    expect(esitoTesto("Senza seggi")).toBe("Senza seggi");
+  });
+  it("un esito ignoto resta com'è", () => expect(esitoTesto("Dimissioni")).toBe("Dimissioni"));
+  it("un nome di proprietà dell'oggetto non è un esito", () => expect(esitoTesto("toString")).toBe("toString"));
 });
 
 describe("voceNuova", () => {

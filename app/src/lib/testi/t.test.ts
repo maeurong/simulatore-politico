@@ -71,6 +71,7 @@ describe("hash e variante", () => {
 
 describe("elenco", () => {
   it("come elenco() del core: «A», «A e B», «A, B e C»; il separatore solo fra le prime", () => {
+    expect(elenco([], ", ")).toBe("");
     expect(elenco(["A"], ", ")).toBe("A");
     expect(elenco(["A", "B"], ", ")).toBe("A e B");
     expect(elenco(["4,5", "5,5", "6,5"], "; ")).toBe("4,5; 5,5 e 6,5");

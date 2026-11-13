@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { alLimite, base, cambiaLegge, codaRiepiloghi, editor, ritocca, scegli, ultimoVince } from "./editor.svelte";
+import { alLimite, base, cambiaLegge, codaRiepiloghi, editor, gradino, ritocca, scegli, ultimoVince } from "./editor.svelte";
 import editorJson from "../../../../.scratch/v1-piano-11-ui/viste/14-editor.json";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
 import type { ErroreGuscio } from "$lib/guscio/chiamate";
@@ -43,6 +43,49 @@ describe("cambiaLegge", () => {
   });
 });
 
+describe("ogni legge del catalogo", () => {
+  const leggi = Object.keys(c.leggi_elettorali);
+  const elettorali = c.disposizioni.filter((d) => d.norma === "elettorale");
+  it("le leggi del catalogo sono tre e le disposizioni elettorali nove", () => {
+    expect(leggi).toHaveLength(3);
+    expect(elettorali).toHaveLength(9);
+  });
+  it.each(leggi)("%s: dopo cambiaLegge nessun ritocco elettorale resta, gli altri sì", (legge) => {
+    const sporco = ritocca(null, c, (s) => {
+      for (const d of elettorali) s.disposizioni[d.id] = d.gradini.find((g) => g.id !== d.partenza)!.id;
+      s.disposizioni.ticket = "alto";
+    });
+    const n = cambiaLegge(sporco, c, legge);
+    expect(n.cursori.legge_elettorale).toBe(legge);
+    expect(n.disposizioni).toEqual({ ticket: "alto" });
+  });
+  it.each(leggi)("%s: i gradini mostrati sono quelli della tabella della legge", (legge) => {
+    const n = cambiaLegge(base(c), c, legge);
+    for (const d of elettorali) {
+      expect(gradino(n, c, d), `${legge} ${d.id}`).toBe(c.leggi_elettorali[legge][d.id]);
+      expect(
+        d.gradini.map((g) => g.id),
+        `${legge} ${d.id}: il gradino della legge è fra quelli offerti`,
+      ).toContain(c.leggi_elettorali[legge][d.id]);
+    }
+  });
+  it.each(leggi)("%s: scegliere il gradino della legge non lascia ritocchi; un altro sì, e si rilegge", (legge) => {
+    const n = cambiaLegge(base(c), c, legge);
+    for (const d of elettorali) {
+      const suo = c.leggi_elettorali[legge][d.id];
+      expect(scegli(n, c, d, suo).disposizioni, `${legge} ${d.id}`).toEqual({});
+      const altro = d.gradini.find((g) => g.id !== suo)!.id;
+      const r = scegli(n, c, d, altro);
+      expect(r.disposizioni, `${legge} ${d.id}`).toEqual({ [d.id]: altro });
+      expect(gradino(r, c, d)).toBe(altro);
+    }
+  });
+  it("una disposizione non elettorale parte dal suo gradino di partenza, qualunque sia la legge", () => {
+    const ticket = disposizione("ticket");
+    for (const legge of leggi) expect(gradino(cambiaLegge(base(c), c, legge), c, ticket)).toBe(ticket.partenza);
+  });
+});
+
 describe("scegli", () => {
   it("il gradino senza ritocco toglie la voce: per le elettorali è quello della legge scelta", () => {
     const coalizioni = disposizione("coalizioni");
@@ -59,6 +102,23 @@ describe("alLimite", () => {
     expect(alLimite(160, debito)).toBe(true);
     expect(alLimite(110, debito)).toBe(true);
     expect(alLimite(150, debito)).toBe(false);
+  });
+  it.each(c.cursori.map((x) => [x.nome, x] as const))("%s: minimo e massimo sì, il passo dentro no", (_, cur) => {
+    const dentro = (cur.max - cur.min) / 100;
+    expect(alLimite(cur.min, cur)).toBe(true);
+    expect(alLimite(cur.max, cur)).toBe(true);
+    expect(alLimite(cur.min + dentro, cur)).toBe(false);
+    expect(alLimite(cur.max - dentro, cur)).toBe(false);
+  });
+  it("l'intervallo del campione è quello della ricerca per ognuno dei sei", () => {
+    expect(c.cursori.map((x) => [x.nome, x.min, x.max])).toEqual([
+      ["debito_pil", 110, 160],
+      ["disoccupazione", 4.7, 11.6],
+      ["inflazione", 0, 8],
+      ["ricchezza", -20, 20],
+      ["eta_mediana", -5, 3],
+      ["orientamento", -1, 1],
+    ]);
   });
 });
 
@@ -144,6 +204,52 @@ describe("codaRiepiloghi", () => {
     expect(editor.riepilogo).toBe(riepilogo);
     expect(editor.rifiuto).toBeNull();
     expect(editor.guasto).toBeNull();
+  });
+
+  it("un successo arrivato dopo azzera() si scarta: il riepilogo vecchio non rientra", async () => {
+    editor.azzera();
+    const attese: ((r: RiepilogoScenario) => void)[] = [];
+    const chiedi = codaRiepiloghi(() => new Promise((risolvi) => attese.push(risolvi)));
+    chiedi(null);
+    editor.azzera();
+    attese[0](riepilogo);
+    await svuota();
+    expect(editor.riepilogo).toBeNull();
+    expect(editor.rifiuto).toBeNull();
+    expect(editor.guasto).toBeNull();
+  });
+
+  it("dopo azzera() un esito chiesto nel giro nuovo si accetta", async () => {
+    editor.azzera();
+    const attese: ((r: RiepilogoScenario) => void)[] = [];
+    const chiedi = codaRiepiloghi(() => new Promise((risolvi) => attese.push(risolvi)));
+    chiedi(null);
+    editor.azzera();
+    chiedi(null);
+    attese[0](riepilogo);
+    await svuota();
+    attese[1](riepilogo);
+    await svuota();
+    expect(editor.riepilogo).toBe(riepilogo);
+  });
+
+  it("un rifiuto tiene fermo l'ultimo riepilogo e spegne valido; il successo successivo lo riaccende", async () => {
+    editor.azzera();
+    editor.esito(riepilogo, editor.giro);
+    editor.esito({ specie: "rifiuto", testo: "no" }, editor.giro);
+    expect(editor.riepilogo).toBe(riepilogo);
+    expect(editor.rifiuto).toBe("no");
+    expect(editor.valido).toBe(false);
+    editor.esito(riepilogo, editor.giro);
+    expect(editor.rifiuto).toBeNull();
+    expect(editor.valido).toBe(true);
+  });
+
+  it("un guasto non spegne valido: la partita resta com'era e si può ancora fondare", () => {
+    editor.azzera();
+    editor.esito({ specie: "guasto", testo: "rotto" }, editor.giro);
+    expect(editor.guasto).toBe("rotto");
+    expect(editor.valido).toBe(true);
   });
 
   it("un esito arrivato dopo azzera() si scarta, anche quello in coda", async () => {
