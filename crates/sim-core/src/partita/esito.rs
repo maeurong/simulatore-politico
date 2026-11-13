@@ -4,6 +4,7 @@ use super::vita::virgola;
 use super::{Partita, Trimestre};
 use crate::disposizioni::data_di;
 use crate::economia::Economia;
+use crate::elettorato::RedditoFascia;
 use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
 use crate::eventi::situazioni::trimestri;
 use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
@@ -451,6 +452,29 @@ impl Partita {
                     "premio sotto 1 punto base e {turni} turni di perdita dei redditi trascorsi"
                 ),
             );
+        }
+    }
+
+    /// Fatto 67: una voce per fascia con la crescita reale sotto l'attesa di almeno
+    /// `scarto_reddito_deluso` punti; l'attesa è la media delle `ricordate` crescite passate.
+    pub(super) fn voci_reddito(&mut self, redditi: &[RedditoFascia], ricordate: usize) {
+        let scarto = self.dati.manopola("scarto_reddito_deluso");
+        // Due decimali: con una sola cifra uno scarto di 0,25 punti si leggerebbe 0,2 o 0,3.
+        let punti = |x: f64| format!("{x:+.2}").replace('.', ",");
+        let causa = match ricordate {
+            0 => "nessun trimestre passato da ricordare, l'attesa parte da zero".to_string(),
+            1 => "l'attesa è la crescita reale del trimestre prima".to_string(),
+            n => format!("l'attesa è la media delle crescite reali degli ultimi {n} trimestri"),
+        };
+        for r in redditi.iter().filter(|r| r.attesa - r.crescita >= scarto) {
+            let fatto = format!(
+                "Reddito reale della fascia {} a {}% nel trimestre contro il {}% atteso, giudizio \
+                 sul governo in calo",
+                r.fascia,
+                punti(r.crescita),
+                punti(r.attesa)
+            );
+            self.voce(TipoVoce::RedditoDeluso, fatto, causa.clone());
         }
     }
 

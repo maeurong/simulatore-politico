@@ -792,6 +792,71 @@ fn base_degenere_lascia_giudizio_e_crescite_finiti() {
     assert!(el.gruppi[0].giudizio.iter().all(|x| x.is_finite()));
 }
 
+/// Fascia bassa: reddito reale da 100 a 102 (+2 punti) e attesa 1 in ogni gruppo, salvo un gruppo
+/// a base degenere che conta con crescita zero (non NaN) e attesa 3. Fascia alta senza elettori.
+#[test]
+fn reddito_per_fascia_pesato_sugli_elettori() {
+    let d = dati_base();
+    let p = Partita::nuova(dati_base(), 1);
+    let mut el = p.elettorato().clone();
+    let degenere = indice_gruppo(0, Condizione::DipendentePrivato, Fascia::Bassa);
+    let ora = Reddito {
+        primario: 102.0,
+        ..CENTO
+    };
+    for (i, g) in el.gruppi.iter_mut().enumerate() {
+        match sim_core::elettorato::fascia_di(i) {
+            Fascia::Bassa => {
+                g.reddito_prima = if i == degenere {
+                    Reddito::default()
+                } else {
+                    CENTO
+                };
+                g.reddito = ora;
+                g.crescite = vec![if i == degenere { 3.0 } else { 1.0 }];
+            }
+            Fascia::Alta => g.quota = 0.0,
+            Fascia::Media => {}
+        }
+    }
+    let pesi = |f: Fascia| -> f64 {
+        (0..el.gruppi.len())
+            .filter(|&i| sim_core::elettorato::fascia_di(i) == f)
+            .map(|i| el.elettori(d.elettorato(), i))
+            .sum()
+    };
+    let (w, wk) = (pesi(Fascia::Bassa), el.elettori(d.elettorato(), degenere));
+    assert!(wk > 0.0 && pesi(Fascia::Alta) == 0.0);
+    let redditi = el.giudizio(
+        &d,
+        p.economia(),
+        p.governo(),
+        p.grandezze(),
+        p.misure(),
+        p.misure(),
+    );
+    let fasce: Vec<Fascia> = redditi.iter().map(|r| r.fascia).collect();
+    assert_eq!(fasce, Fascia::TUTTE);
+    let bassa = &redditi[0];
+    assert!((bassa.reddito - 102.0).abs() < 1e-9, "{bassa:?}");
+    assert!(
+        (bassa.crescita - 2.0 * (w - wk) / w).abs() < 1e-9,
+        "{bassa:?}"
+    );
+    assert!(
+        (bassa.attesa - (1.0 + 2.0 * wk / w)).abs() < 1e-9,
+        "{bassa:?}"
+    );
+    let media = &redditi[1];
+    assert!(
+        [media.reddito, media.crescita, media.attesa]
+            .iter()
+            .all(|x| x.is_finite())
+    );
+    let alta = &redditi[2];
+    assert_eq!((alta.reddito, alta.crescita, alta.attesa), (0.0, 0.0, 0.0));
+}
+
 #[test]
 fn le_aspettative_ricordano_al_massimo_la_finestra() {
     let mut p = Partita::nuova(dati_base(), 2);

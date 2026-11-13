@@ -8,7 +8,7 @@ use crate::economia::{
 };
 use crate::elettorato::{
     Affluenza, BLOCCO_SONDAGGIO_PRIVATO, Condizione, Elettorato, Fascia, Intenzioni, Quesito,
-    condizione_di, indice_gruppo, toccati,
+    RedditoFascia, condizione_di, indice_gruppo, toccati,
 };
 use crate::elezioni::{Esito, LeggeElettorale, SeggiLista, Soggetto};
 use crate::errore::Errore;
@@ -620,8 +620,11 @@ impl Partita {
         let reale_prima = self.economia.pil_trimestrale / self.economia.livello_prezzi;
         // Le voci del motore nascono qui e non in `motore`, che gira anche sulle copie.
         let economia_prima = self.economia.clone();
-        let innovazioni = self.motore(true);
+        // Le crescite che fanno l'attesa: `giudizio` le legge prima di accodare quella del turno.
+        let ricordate = (self.elettorato.gruppi.first()).map_or(0, |g| g.crescite.len());
+        let (innovazioni, redditi) = self.motore(true);
         self.voci_del_motore(&economia_prima);
+        self.voci_reddito(&redditi, ricordate);
         campagna::convinci(&self.dati, &self.partiti, &mut self.elettorato);
         // Additiva: una sola spinta di `n * quota`, non `n` passate che si compongono e farebbero
         // fare due passi a una stessa massa. Le accese sono quelle della chiusura precedente:
@@ -1141,9 +1144,9 @@ impl Partita {
     }
 
     /// Il pezzo di motore della chiusura: misure, economia, grandezze, redditi, giudizio e
-    /// composizione, con le cinque innovazioni dell'economia. Senza `caso` niente shock né deriva
-    /// casuale, e le innovazioni sono zero (`avanza_copia`).
-    fn motore(&mut self, con_caso: bool) -> [f64; 5] {
+    /// composizione, con le cinque innovazioni dell'economia e i redditi per fascia del giudizio.
+    /// Senza `caso` niente shock né deriva casuale, e le innovazioni sono zero (`avanza_copia`).
+    fn motore(&mut self, con_caso: bool) -> ([f64; 5], Vec<RedditoFascia>) {
         let nuove = Misure::da(
             &self.dati,
             &self.grandezze,
@@ -1173,7 +1176,7 @@ impl Partita {
         let dopo = self.turno.saturating_add(1);
         self.economia.ristrutturazione = (self.economia.ristrutturazione)
             .filter(|r| r.premio >= 1.0 || r.perdita_in_corso(&self.dati, dopo));
-        self.elettorato.giudizio(
+        let redditi = self.elettorato.giudizio(
             &self.dati,
             &self.economia,
             &self.governo,
@@ -1183,7 +1186,7 @@ impl Partita {
         );
         self.elettorato
             .composizione(&self.dati, &self.economia, self.data);
-        innovazioni
+        (innovazioni, redditi)
     }
 
     /// Una copia della partita dopo `turni` chiusure del solo `motore`, senza caso, con gli arrivi
@@ -5423,6 +5426,36 @@ mod tests {
         let della_coalizione: u32 = c.iter().map(|&j| p.parlamento.seggi_camera[j]).sum();
         let attesa = della_coalizione as i32 - (p.legislatura.totali.0 / 2 + 1) as i32;
         assert_eq!(dopo.margine_camera, attesa);
+    }
+
+    /// Scarto 0,25 nei dati: la fascia bassa delusa di 0,25 punti ha la voce, la media di 0,24 no.
+    #[test]
+    fn reddito_deluso_sopra_lo_scarto() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        assert_eq!(p.dati.manopola("scarto_reddito_deluso"), 0.25);
+        let fascia = |fascia, crescita| RedditoFascia {
+            fascia,
+            reddito: 20_000.0,
+            crescita,
+            attesa: 1.0,
+        };
+        p.voci_reddito(
+            &[fascia(Fascia::Bassa, 0.75), fascia(Fascia::Media, 0.76)],
+            8,
+        );
+        let voci: Vec<_> = (p.esito.iter())
+            .filter(|v| v.tipo == TipoVoce::RedditoDeluso)
+            .collect();
+        assert_eq!(voci.len(), 1, "{voci:?}");
+        assert_eq!(
+            (voci[0].fatto.as_str(), voci[0].causa.as_str()),
+            (
+                "Reddito reale della fascia bassa a +0,75% nel trimestre contro il +1,00% \
+                 atteso, giudizio sul governo in calo",
+                "l'attesa è la media delle crescite reali degli ultimi 8 trimestri"
+            )
+        );
+        assert_eq!(voci[0].criticita, crate::esito::Criticita::Notevole);
     }
 
     /// Il consenso somma la coalizione una volta sola: l'alleato anche fra gli allargati conta

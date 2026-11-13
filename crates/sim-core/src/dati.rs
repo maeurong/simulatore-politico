@@ -312,6 +312,7 @@ const MANOPOLE_RICHIESTE: &[&str] = &[
     "turni_scandalo",
     "danno_stock_per_miliardo",
     "emivita_danno",
+    "scarto_reddito_deluso",
 ];
 
 /// Grandezze che il motore legge per nome, con il `regionale` atteso.
