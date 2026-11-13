@@ -71,6 +71,7 @@ impl fmt::Display for Condizione {
 /// Fascia di reddito.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub enum Fascia {
     Bassa,
     Media,

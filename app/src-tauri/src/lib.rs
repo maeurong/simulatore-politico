@@ -10,7 +10,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use archivio::Archivio;
 use errore::{ErroreGuscio, guasto, rifiuto};
-use sim_core::legislatura::{AnteprimaFondazione, Eredita, Fine, Fondazione};
+use sim_core::elettorato::{Condizione, Fascia};
+use sim_core::informazione::ElettoreCampione;
+use sim_core::legislatura::{
+    AnteprimaFondazione, Eredita, Fine, Fondazione, Spesa, VoceAnteprimaCampagna,
+};
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
 use sim_core::salvataggi::{PuntoSerie, VoceAlbo, VocePartita};
@@ -18,9 +22,9 @@ use sim_core::vista::Anteprima;
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
 
-/// La partita in corso. `id` è `None` solo nei test: in produzione ogni partita ha un id.
+/// La partita in corso.
 struct InCorso {
-    id: Option<String>,
+    id: String,
     partita: Partita,
 }
 
@@ -28,8 +32,8 @@ struct InCorso {
 /// sovrappongono.
 type Stato = Mutex<Option<InCorso>>;
 
-/// Il seme scelto dall'anteprima della fondazione, che la fondazione consuma: la partita fondata è
-/// quella che l'anteprima ha mostrato.
+/// Il seme scelto dall'anteprima della fondazione: la fondazione lo usa e lo azzera solo se riesce,
+/// così la partita fondata è quella che l'anteprima ha mostrato.
 type SemeFondazione = Mutex<Option<u64>>;
 
 const ERRORE_STATO: &str = "stato della partita non disponibile";
@@ -58,7 +62,7 @@ fn seme_da_orologio() -> Result<u64, String> {
 
 /// Il seme dell'anteprima, se c'è, senza toglierlo; altrimenti uno nuovo dall'orologio.
 fn seme_per_fondare(seme: &SemeFondazione) -> Result<u64, ErroreGuscio> {
-    let tenuto = *seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
+    let tenuto = *blocca_seme(seme);
     Ok(match tenuto {
         Some(s) => s,
         None => seme_da_orologio()?,
@@ -72,7 +76,7 @@ fn anteprima_di_fondazione(
     seme: &SemeFondazione,
 ) -> Result<AnteprimaFondazione, ErroreGuscio> {
     // Il lock sta per tutto il calcolo: l'ordine dei semi segue quello delle anteprime.
-    let mut tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
+    let mut tenuto = blocca_seme(seme);
     let dati = dati_di(base, scenario)?;
     let nuovo = seme_da_orologio()?;
     let risultato = Partita::anteprima_fondazione(&dati, nuovo);
@@ -87,6 +91,11 @@ fn blocca(stato: &Stato) -> Result<MutexGuard<'_, Option<InCorso>>, ErroreGuscio
 /// Il lock anche avvelenato, per chi tocca solo il disco o sostituisce lo stato per intero.
 fn blocca_comunque(stato: &Stato) -> MutexGuard<'_, Option<InCorso>> {
     stato.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Il lock del seme anche avvelenato: un `Option<u64>` è valido dopo un panico.
+fn blocca_seme(seme: &SemeFondazione) -> MutexGuard<'_, Option<u64>> {
+    seme.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// I dati di base, o una loro copia con lo scenario su misura.
@@ -111,10 +120,7 @@ fn fonda(
     let vista = partita.vista();
     let mut guardia = blocca_comunque(stato);
     archivio.crea(&partita, &id)?;
-    *guardia = Some(InCorso {
-        id: Some(id),
-        partita,
-    });
+    *guardia = Some(InCorso { id, partita });
     stato.clear_poison();
     Ok(vista)
 }
@@ -132,7 +138,7 @@ fn fonda_col_seme(
 ) -> Result<Vista, ErroreGuscio> {
     let usato = seme_per_fondare(seme)?;
     let vista = fonda(stato, archivio, base, scenario, fondazione, usato)?;
-    let mut tenuto = seme.lock().map_err(|_| guasto(ERRORE_STATO))?;
+    let mut tenuto = blocca_seme(seme);
     if *tenuto == Some(usato) {
         *tenuto = None;
     }
@@ -143,15 +149,12 @@ fn apri_partita(stato: &Stato, archivio: &Archivio, id: String) -> Result<Vista,
     let mut guardia = blocca_comunque(stato);
     let partita = archivio.riprendi(&id)?;
     let vista = partita.vista();
-    *guardia = Some(InCorso {
-        id: Some(id),
-        partita,
-    });
+    *guardia = Some(InCorso { id, partita });
     stato.clear_poison();
     Ok(vista)
 }
 
-/// Chiude il turno; con un id, lo snapshot della nuova apertura. Lo snapshot si scrive anche se la
+/// Chiude il turno e scrive lo snapshot della nuova apertura. Lo snapshot si scrive anche se la
 /// chiusura finisce la partita; se era già finita, no. Se lo snapshot non si scrive, errore e
 /// partita in memoria invariata. Il disco può restare un turno avanti, se il guasto arriva dopo
 /// il file del turno: la chiusura ripetuta lo riscrive.
@@ -161,25 +164,21 @@ fn chiudi(stato: &Stato, archivio: &Archivio) -> Result<Vista, ErroreGuscio> {
     let gia_finita = c.partita.finita();
     let mut nuova = c.partita.clone();
     nuova.chiudi_turno();
-    if let Some(id) = &c.id
-        && !gia_finita
-    {
-        archivio.snapshot(id, &nuova)?;
+    if !gia_finita {
+        archivio.snapshot(&c.id, &nuova)?;
     }
     c.partita = nuova;
     Ok(c.partita.vista())
 }
 
-/// Il comando; con un id, la bozza se è accettato. Un comando rifiutato non la scrive. Se la
+/// Il comando, e la bozza se è accettato. Un comando rifiutato non la scrive. Se la
 /// bozza non si scrive, errore e partita in memoria invariata.
 fn esegui(stato: &Stato, archivio: &Archivio, comando: Comando) -> Result<Vista, ErroreGuscio> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
     let mut nuova = c.partita.clone();
     nuova.comanda(comando).map_err(rifiuto)?;
-    if let Some(id) = &c.id {
-        archivio.bozza(id, &nuova)?;
-    }
+    archivio.bozza(&c.id, &nuova)?;
     c.partita = nuova;
     Ok(c.partita.vista())
 }
@@ -188,9 +187,7 @@ fn esegui(stato: &Stato, archivio: &Archivio, comando: Comando) -> Result<Vista,
 fn torna_a(stato: &Stato, archivio: &Archivio, turno: u32) -> Result<Vista, ErroreGuscio> {
     let mut guardia = blocca(stato)?;
     let c = guardia.as_mut().ok_or(NESSUNA)?;
-    let id =
-        c.id.as_deref()
-            .ok_or("la partita di prova non ha salvataggi a cui tornare")?;
+    let id = &c.id;
     match archivio.riavvolgi(id, turno) {
         Ok(p) => c.partita = p,
         Err(e) => {
@@ -211,7 +208,7 @@ fn nell_albo(archivio: &Archivio, id: &str, partita: &Partita) -> Result<(), Err
     Ok(archivio.chiudi_nell_albo(id, &voce)?)
 }
 
-/// L'abbandono: l'eredità subito definitiva, nell'albo con un id, poi lo stato vuoto. Ripetibile
+/// L'abbandono: l'eredità subito definitiva, nell'albo, poi lo stato vuoto. Ripetibile
 /// se l'albo non si scrive: la partita già abbandonata non si abbandona di nuovo.
 fn lascia(stato: &Stato, archivio: &Archivio) -> Result<Eredita, ErroreGuscio> {
     let mut guardia = blocca(stato)?;
@@ -221,15 +218,13 @@ fn lascia(stato: &Stato, archivio: &Archivio) -> Result<Eredita, ErroreGuscio> {
         Some(_) => return Err(rifiuto(SENZA_SEGGI)),
         None => c.partita.abbandona().map_err(rifiuto)?,
     };
-    if let Some(id) = &c.id {
-        nell_albo(archivio, id, &c.partita)?;
-    }
+    nell_albo(archivio, &c.id, &c.partita)?;
     *guardia = None;
     stato.clear_poison();
     Ok(eredita)
 }
 
-/// Conferma l'eredità in bozza della partita finita senza seggi: nell'albo con un id, poi lo
+/// Conferma l'eredità in bozza della partita finita senza seggi: nell'albo, poi lo
 /// stato vuoto.
 fn conferma(stato: &Stato, archivio: &Archivio) -> Result<(), ErroreGuscio> {
     let mut guardia = blocca(stato)?;
@@ -237,15 +232,13 @@ fn conferma(stato: &Stato, archivio: &Archivio) -> Result<(), ErroreGuscio> {
     if !c.partita.eredita().is_some_and(|e| e.bozza) {
         return Err(rifiuto("nessuna eredità in bozza da confermare"));
     }
-    if let Some(id) = &c.id {
-        nell_albo(archivio, id, &c.partita)?;
-    }
+    nell_albo(archivio, &c.id, &c.partita)?;
     *guardia = None;
     stato.clear_poison();
     Ok(())
 }
 
-/// All'uscita, la bozza della partita in corso, se ha un id e non è finita. Col lock avvelenato
+/// All'uscita, la bozza della partita in corso, se non è finita. Col lock avvelenato
 /// niente bozza: dopo un panic lo stato può essere a metà, e ogni comando accettato ha già scritto
 /// la sua. Un errore non blocca l'uscita.
 fn alla_chiusura(stato: &Stato, archivio: &Archivio) {
@@ -255,10 +248,7 @@ fn alla_chiusura(stato: &Stato, archivio: &Archivio) {
         );
         return;
     };
-    if let Some(InCorso {
-        id: Some(id),
-        partita,
-    }) = guardia.as_ref()
+    if let Some(InCorso { id, partita }) = guardia.as_ref()
         && !partita.finita()
         && let Err(e) = archivio.bozza(id, partita)
     {
@@ -438,6 +428,40 @@ async fn anteprima(
     sulla_partita(&stato, |p| p.anteprima(&valori))
 }
 
+fn anteprima_di_campagna(
+    stato: &Stato,
+    spese: &[Spesa],
+) -> Result<Vec<VoceAnteprimaCampagna>, ErroreGuscio> {
+    sulla_partita(stato, |p| p.anteprima_campagna(spese))
+}
+
+fn elettori_del_gruppo(
+    stato: &Stato,
+    regione: &str,
+    condizione: Condizione,
+    fascia: Fascia,
+) -> Result<Vec<ElettoreCampione>, ErroreGuscio> {
+    sulla_partita(stato, |p| p.elettori_campione(regione, condizione, fascia))
+}
+
+#[tauri::command]
+async fn anteprima_campagna(
+    spese: Vec<Spesa>,
+    stato: State<'_, Stato>,
+) -> Result<Vec<VoceAnteprimaCampagna>, ErroreGuscio> {
+    anteprima_di_campagna(&stato, &spese)
+}
+
+#[tauri::command]
+async fn elettori_campione(
+    regione: String,
+    condizione: Condizione,
+    fascia: Fascia,
+    stato: State<'_, Stato>,
+) -> Result<Vec<ElettoreCampione>, ErroreGuscio> {
+    elettori_del_gruppo(&stato, &regione, condizione, fascia)
+}
+
 #[tauri::command]
 async fn anteprima_decreto(
     decreto: Decreto,
@@ -485,6 +509,8 @@ pub fn run() -> tauri::Result<()> {
             anteprima,
             anteprima_decreto,
             anteprima_accogli,
+            anteprima_campagna,
+            elettori_campione,
             serie,
             anteprima_fondazione,
             catalogo_scenario
@@ -508,6 +534,7 @@ mod tests {
     use super::*;
     use crate::archivio::tests::{ID, cartella, dati, fondazione};
     use crate::errore::Specie;
+    use sim_core::elettorato::{Condizione, Fascia};
     use sim_core::legislatura::{Bersaglio, Leva, Spesa};
 
     /// Il seme che dà `ID`.
@@ -538,11 +565,14 @@ mod tests {
         Ok(())
     }
 
-    /// La partita di prova: senza id, quindi senza salvataggi.
+    /// La partita di prova: ha un id, ma nessuna cartella nell'archivio.
     fn avvia(stato: &Stato, dati: DatiGioco, seme: u64) -> Result<Vista, ErroreGuscio> {
         let partita = Partita::nuova(dati, seme);
         let vista = partita.vista();
-        *blocca_comunque(stato) = Some(InCorso { id: None, partita });
+        *blocca_comunque(stato) = Some(InCorso {
+            id: "prova".into(),
+            partita,
+        });
         Ok(vista)
     }
 
@@ -720,23 +750,15 @@ mod tests {
     }
 
     #[test]
-    fn avvia_e_chiudi_avanzano_il_turno() -> Result<(), String> {
-        let c = cartella("lib-avvia-e-chiudi");
-        let archivio = Archivio::nuovo(c.0.clone())?;
-        let stato = Stato::default();
-        assert_eq!(avvia(&stato, dati(), 1)?.turno, 0);
+    fn chiudi_avanza_il_turno() -> Result<(), String> {
+        let c = cartella("lib-chiudi-avanza");
+        let (stato, archivio) = con_partita(&c.0)?;
         let vista = chiudi(&stato, &archivio)?;
         assert_eq!(
             (vista.turno, vista.data.trimestre, vista.data.anno),
             (1, 1, 2027)
         );
         assert_eq!(vista.dicasteri.len(), 10);
-        // La partita di prova non si salva e non si riavvolge.
-        assert!(archivio.elenca().is_empty());
-        let e = torna_a(&stato, &archivio, 0)
-            .err()
-            .map_or_else(String::new, String::from);
-        assert!(e.contains("partita di prova"), "{e}");
         Ok(())
     }
 
@@ -811,12 +833,6 @@ mod tests {
         assert!(archivio.elenca().is_empty());
         assert!(blocca(&stato)?.is_none());
         assert_eq!(conferma(&stato, &archivio), Err(guasto(NESSUNA)));
-
-        // La partita di prova si abbandona senza albo.
-        avvia(&stato, dati(), 1)?;
-        lascia(&stato, &archivio)?;
-        assert_eq!(archivio.albo().len(), 1);
-        assert!(blocca(&stato)?.is_none());
         Ok(())
     }
 
@@ -886,13 +902,6 @@ mod tests {
         let c = cartella("lib-alla-chiusura");
         let bozza = c.0.join("partite").join(ID).join("bozza.json.gz");
 
-        // La partita di prova non si salva.
-        let stato = Stato::default();
-        let archivio = Archivio::nuovo(c.0.clone())?;
-        avvia(&stato, dati(), 1)?;
-        alla_chiusura(&stato, &archivio);
-        assert!(archivio.elenca().is_empty());
-
         // Una scelta fuori dai comandi del guscio: l'uscita la salva.
         let (stato, archivio) = con_partita(&c.0)?;
         nella_partita(&stato, |p| {
@@ -932,7 +941,7 @@ mod tests {
         let archivio = Archivio::nuovo(c.0.clone())?;
         let seme = SemeFondazione::new(Some(SEME));
         fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
-        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        let id = blocca(&stato)?.as_ref().map(|c| c.id.clone());
         assert_eq!(id.as_deref(), Some(ID));
         assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
         Ok(())
@@ -954,7 +963,7 @@ mod tests {
 
         let vista = fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
         assert_eq!(vista.turno, 0);
-        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        let id = blocca(&stato)?.as_ref().map(|c| c.id.clone());
         assert_eq!(id.as_deref(), Some(ID));
         assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
         Ok(())
@@ -967,7 +976,7 @@ mod tests {
         let archivio = Archivio::nuovo(c.0.clone())?;
         let seme = SemeFondazione::default();
         fonda_col_seme(&stato, &archivio, &dati(), None, &fondazione(), &seme)?;
-        let id = blocca(&stato)?.as_ref().and_then(|c| c.id.clone());
+        let id = blocca(&stato)?.as_ref().map(|c| c.id.clone());
         assert!(id.is_some_and(|i| i != ID));
         assert_eq!(*seme.lock().map_err(|e| e.to_string())?, None);
         Ok(())
@@ -1011,6 +1020,110 @@ mod tests {
     #[test]
     fn serie_senza_partita_e_un_guasto() {
         assert_eq!(serie_in_corso(&Stato::default()), Err(guasto(NESSUNA)));
+    }
+
+    fn spesa(bersaglio: Bersaglio) -> Spesa {
+        Spesa {
+            bersaglio,
+            leva: Leva::Mobilitare,
+            euro: 300_000,
+        }
+    }
+
+    #[test]
+    fn anteprima_di_campagna_senza_partita_e_un_guasto() {
+        let r = anteprima_di_campagna(&Stato::default(), &[]);
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn elettori_senza_partita_e_un_guasto() {
+        let r = elettori_del_gruppo(
+            &Stato::default(),
+            "piemonte",
+            Condizione::Pensionato,
+            Fascia::Media,
+        );
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn quattro_spese_sono_un_rifiuto() -> Result<(), String> {
+        let c = cartella("lib-quattro-spese");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let spese: Vec<Spesa> = [
+            Condizione::DipendentePrivato,
+            Condizione::DipendentePubblico,
+            Condizione::Autonomo,
+            Condizione::Pensionato,
+        ]
+        .map(|c| spesa(Bersaglio::Condizione(c)))
+        .into();
+        let e = anteprima_di_campagna(&stato, &spese)
+            .err()
+            .ok_or("quattro spese accettate")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert!(e.testo.contains("Al massimo 3 bersagli"), "{}", e.testo);
+        Ok(())
+    }
+
+    #[test]
+    fn una_spesa_da_la_sua_voce() -> Result<(), String> {
+        let c = cartella("lib-una-spesa");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let s = spesa(Bersaglio::Condizione(Condizione::Pensionato));
+        let voci = anteprima_di_campagna(&stato, std::slice::from_ref(&s))?;
+        assert_eq!(voci.len(), 1);
+        assert_eq!(
+            (voci[0].bersaglio, voci[0].leva, voci[0].euro),
+            (s.bersaglio, s.leva, s.euro)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn regione_sconosciuta_e_un_rifiuto() -> Result<(), String> {
+        let c = cartella("lib-regione-sconosciuta");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let e = elettori_del_gruppo(&stato, "atlantide", Condizione::Pensionato, Fascia::Media)
+            .err()
+            .ok_or("regione sconosciuta accettata")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        Ok(())
+    }
+
+    #[test]
+    fn tre_elettori_per_gruppo() -> Result<(), String> {
+        let c = cartella("lib-tre-elettori");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let chiedi = || {
+            elettori_del_gruppo(
+                &stato,
+                "piemonte",
+                Condizione::DipendentePrivato,
+                Fascia::Media,
+            )
+        };
+        let primi = chiedi()?;
+        assert_eq!(primi.len(), 3);
+        assert_eq!(primi, chiedi()?);
+        Ok(())
+    }
+
+    #[test]
+    fn il_seme_avvelenato_non_blocca_l_anteprima() -> Result<(), String> {
+        let seme = SemeFondazione::new(Some(SEME));
+        let _ = std::thread::scope(|s| {
+            s.spawn(|| {
+                let _guardia = seme.lock();
+                panic!("lock del seme avvelenato apposta");
+            })
+            .join()
+        });
+        assert!(seme.is_poisoned());
+        anteprima_di_fondazione(&dati(), None, &seme)?;
+        assert!(seme_per_fondare(&seme)? != SEME);
+        Ok(())
     }
 
     #[test]
