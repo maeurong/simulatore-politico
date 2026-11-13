@@ -683,6 +683,21 @@ fn la_rinuncia_non_toglie_il_quinto_degli_altri() {
     assert!(p.vista().referendum[0].richiesto);
 }
 
+/// Il testo della voce segue lo stato: col confermativo non ancora richiesto lo dice, e quando
+/// il quinto degli altri lo chiede dice «già richiesto» (tests/norme.rs lo prova).
+#[test]
+fn il_confermativo_in_attesa_dice_se_e_gia_richiesto() {
+    let p = costituzionale_col_si_del_giocatore();
+    assert!(!p.parlamento().confermativi[0].richiesto);
+    let v = voci(&p, TipoVoce::ConfermativoInAttesa);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert!(
+        v[0].fatto.ends_with(", non ancora richiesto"),
+        "{}",
+        v[0].fatto
+    );
+}
+
 /// Review Focus 5: il confermativo non richiesto, la sfiducia dell'opposizione IA presentata e
 /// l'abrogativo IA in corso tornano uguali da `carica(salva())`.
 #[test]

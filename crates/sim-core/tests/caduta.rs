@@ -6,6 +6,7 @@ use comune::{
 use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
 use sim_core::legislatura::{Fase, Incarico};
 use sim_core::parlamento::{Decreto, FormaMisura};
+use sim_core::vista::Fermata;
 use sim_core::{Comando, Partita};
 
 /// La destra e il centrodestra in minoranza: 150 su 400, 75 su 200. Le prove chiudono con
@@ -28,6 +29,8 @@ fn dimettersi_porta_al_ribaltone_o_al_voto() {
                 panic!("{:?}", l.incarico)
             };
             assert!(!coalizione.contains(&p.giocatore()));
+            // L'incarico dell'IA non ferma il giocatore.
+            assert!(!p.vista().fermate.contains(&Fermata::Incarico));
             let v = voci(&p, TipoVoce::Incarico);
             assert_eq!(v.len(), 1, "{v:?}");
             assert_eq!(v[0].fatto, "L'incarico passa al Capo dello Stato");

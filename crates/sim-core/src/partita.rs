@@ -5713,6 +5713,51 @@ mod tests {
         assert_eq!(voci[0].criticita, crate::esito::Criticita::Notevole);
     }
 
+    /// Dopo il voto l'incarico dice chi ha la maggioranza: l'IA che la trova, nessuno, o la
+    /// coalizione del giocatore che la manca e resta la prima alla Camera.
+    #[test]
+    fn l_incarico_dice_chi_ha_la_maggioranza() {
+        let mut p = Partita::nuova(dati_base(), 1);
+        let g = p.giocatore;
+        let n = p.partiti.len();
+        // Nessuna coalizione con la maggioranza: un seggio ogni partito, la coalizione è `[g]`.
+        p.parlamento.seggi_camera = vec![10; n];
+        p.parlamento.seggi_senato = vec![5; n];
+        p.legislatura.maggioranza = Some(vec![g]);
+        let mut dice = |incarico| {
+            p.legislatura.incarico = incarico;
+            p.esito.clear();
+            p.voce_incarico(false);
+            assert_eq!(p.esito.len(), 1, "{:?}", p.esito);
+            p.esito.remove(0)
+        };
+
+        let ia = dice(Some(Incarico::Ia { coalizione: vec![] }));
+        assert_eq!(ia.fatto, "L'incarico passa al Capo dello Stato");
+        assert!(
+            ia.causa
+                .starts_with("un'altra coalizione ha la maggioranza"),
+            "{}",
+            ia.causa
+        );
+        assert_eq!(ia.partito, None);
+
+        let nessuna = dice(None);
+        assert_eq!(
+            nessuna.causa,
+            "nessuna coalizione ha la maggioranza e la tua non è la prima alla Camera"
+        );
+
+        let mia = dice(Some(Incarico::Giocatore));
+        assert!(
+            mia.causa
+                .starts_with("senza maggioranza, la tua coalizione è la prima alla Camera, con "),
+            "{}",
+            mia.causa
+        );
+        assert_eq!(mia.partito.as_deref(), Some(p.partiti[g].id.as_str()));
+    }
+
     /// Il consenso somma la coalizione una volta sola: l'alleato anche fra gli allargati conta
     /// una volta, lo sciolto vale la sua quota zero, l'indice fuori dai partiti si salta.
     #[test]

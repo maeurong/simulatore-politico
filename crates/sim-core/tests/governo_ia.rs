@@ -9,7 +9,7 @@ use serde_json::json;
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico, OrigineCaduta};
 use sim_core::parlamento::{CausaIntesa, Decreto, TipoReferendum, ValoreProposto};
-use sim_core::vista::VoceIncarico;
+use sim_core::vista::{Fermata, VoceIncarico};
 use sim_core::{Comando, Partita};
 
 /// Proporzionale puro (`dati/base/elezioni.toml:307`): nessun premio, coalizioni facoltative.
@@ -739,6 +739,21 @@ fn il_governo_avversario_si_dimette_col_motivo() {
     assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
     let pc = &p.partiti()[p.governo().presidente].id;
     assert_eq!(v[0].partito.as_ref(), Some(pc));
+}
+
+#[test]
+fn la_crisi_del_governo_avversario_ferma() {
+    let p = in_crisi(all_opposizione(), 10.0);
+    assert!(
+        !voci(&p, TipoVoce::CrisiAperta).is_empty(),
+        "{:?}",
+        p.vista().esito
+    );
+    assert!(
+        p.vista().fermate.contains(&Fermata::Crisi),
+        "{:?}",
+        p.vista().fermate
+    );
 }
 
 #[test]

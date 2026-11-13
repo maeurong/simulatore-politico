@@ -7,7 +7,7 @@ use crate::disposizioni::Arrivati;
 use crate::disposizioni::data_di;
 use crate::economia::Economia;
 use crate::elettorato::RedditoFascia;
-use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
+use crate::esito::{Grado, TipoVoce, VoceEsito, fondibile, grado};
 use crate::eventi::rischio::Candidato;
 use crate::eventi::situazioni::trimestri;
 use crate::eventi::{Bersaglio, Causa as EventoCausa, DatoOpzione, EventoAperto, Tono, emergenze};
@@ -175,6 +175,13 @@ impl Partita {
         causa: String,
     ) -> Option<&mut VoceEsito> {
         let g = grado(tipo, self.al_governo())?;
+        debug_assert!(!causa.is_empty(), "{tipo:?}: la causa è vuota");
+        // Nel dettaglio di una voce fusa «: » separa il fatto dalla causa: una causa che lo porta
+        // sarebbe ambigua.
+        debug_assert!(
+            !fondibile(tipo) || !causa.contains(": "),
+            "{tipo:?}: la causa di un tipo fondibile non porta «: »: {causa}"
+        );
         self.esito.push(VoceEsito::nuova(tipo, g, fatto, causa));
         self.esito.last_mut()
     }
@@ -1904,7 +1911,8 @@ impl Partita {
         }
     }
 
-    /// Le fermate del turno appena aperto, nell'ordine della spec: `Fine` e `Governo` da sole.
+    /// Le fermate del turno appena aperto: `Fine` e `Governo` da sole; le altre nell'ordine in cui
+    /// si spingono (campagna, incarico, posto riservato, crisi, ultimatum, referendum, voti).
     /// Lettura pura: solo ciò che la Vista mostra, il voto stimato sul sondaggio pubblico.
     pub(super) fn fermate(&self) -> Vec<Fermata> {
         if self.finita() {

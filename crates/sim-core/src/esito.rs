@@ -835,6 +835,24 @@ mod tests {
         assert_eq!(voci[0].tono, Tono::Grave);
     }
 
+    /// La fusa critica conta una voce sola fra le sette, con la precedenza della sua più alta: C2
+    /// cede il posto a una settima C3.
+    #[test]
+    fn la_fusa_critica_vale_un_posto_fra_le_sette() {
+        let mut voci: Vec<_> = (0..5).map(|_| voce(MinistroEsce, C2)).collect();
+        voci.extend((0..6).map(|_| voce(FiduciaRespinta, C3)));
+        componi(&mut voci, "x");
+        assert_eq!(voci.len(), 7);
+        assert!(voci.iter().all(|v| v.in_evidenza));
+
+        let mut voci: Vec<_> = (0..5).map(|_| voce(MinistroEsce, C2)).collect();
+        voci.extend((0..7).map(|_| voce(FiduciaRespinta, C3)));
+        componi(&mut voci, "x");
+        assert_eq!(voci.len(), 8);
+        assert!(!voci[0].in_evidenza, "{:?}", voci[0]);
+        assert_eq!(voci.iter().filter(|v| v.in_evidenza).count(), 7);
+    }
+
     #[test]
     fn l_ordine_non_cambia() {
         let mut voci = vec![

@@ -39,20 +39,24 @@ fn nessuna_causa_vuota_mai_piu_di_sette() {
 /// governo avversario non sono voci.
 #[test]
 fn all_opposizione_niente_soddisfazione_ne_intesa() {
-    let mut p = all_opposizione();
+    let (mut p, mut q) = (all_opposizione(), al_governo());
+    let mut al_governo_ne_ha = false;
     for turno in 0..6 {
         chiudi_col_bilancio(&mut p);
+        chiudi_col_bilancio(&mut q);
         assert!(!p.governo().al_governo(p.giocatore()));
-        let vietate: Vec<_> = (p.vista().esito.into_iter())
-            .filter(|v| {
-                matches!(
-                    v.tipo,
-                    TipoVoce::SoddisfazioneVariata | TipoVoce::IntesaVariata
-                )
-            })
-            .collect();
+        let sono_vietate = |v: &sim_core::esito::VoceEsito| {
+            matches!(
+                v.tipo,
+                TipoVoce::SoddisfazioneVariata | TipoVoce::IntesaVariata
+            )
+        };
+        let vietate: Vec<_> = (p.vista().esito.into_iter()).filter(sono_vietate).collect();
         assert!(vietate.is_empty(), "turno {turno}: {vietate:?}");
+        al_governo_ne_ha |= q.vista().esito.iter().any(sono_vietate);
     }
+    // Controllo positivo: negli stessi turni, al governo, quelle voci nascono.
+    assert!(al_governo_ne_ha, "l'assenza all'opposizione sarebbe vacua");
 }
 
 #[test]
