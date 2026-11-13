@@ -312,5 +312,11 @@
   "fondazione.manca_il_posto": "manca il posto",
   "fondazione.il_vostro_partito": "Il vostro partito",
   "fondazione.si_vota_alla_chiusura": "Si vota alla chiusura del turno zero: il primo turno è la campagna.",
-  "fondazione.fonda_il_partito": "Fonda il partito ›"
+  "fondazione.fonda_il_partito": "Fonda il partito ›",
+  "fondazione.contatore": "{n}/{max}",
+  "fondazione.chi_posto": "{nome} · a {posto}",
+  "fondazione.si_disponibile": "disponibile:",
+  "fondazione.non_disponibile": "non disponibile:",
+  "fondazione.in_corso": "Fondazione in corso…",
+  "fondazione.guasto_anteprima": "L’anteprima non si è caricata."
 }
