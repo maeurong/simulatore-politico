@@ -1811,7 +1811,10 @@ impl Partita {
         }
     }
 
-    /// Fatto 88: i ministri `prima` sopra la soglia di minaccia, ancora in carica e ora sotto.
+    /// Fatto 88: i ministri `prima` (in testa alla chiusura) sopra la soglia di minaccia, ancora in
+    /// carica e ora sotto. Lo stesso ministro ha lo stesso nome ed è passato dalle soglie, che gli
+    /// contano un turno in carica: chi entra (governo nuovo, successore) riparte da zero, e un
+    /// omonimo non eredita la minaccia del vecchio.
     pub(super) fn voci_minaccia(&mut self, prima: &[Option<Ministro>]) {
         let soglia = self.dati.manopola("soglia_minaccia");
         let mut nuove = Vec::new();
@@ -1822,7 +1825,8 @@ impl Partita {
             let (Some(a), Some(b)) = (a, &st.ministro) else {
                 continue;
             };
-            if a.nome == b.nome && a.soddisfazione >= soglia && b.soddisfazione < soglia {
+            let stesso = a.nome == b.nome && b.turni_in_carica > a.turni_in_carica;
+            if stesso && a.soddisfazione >= soglia && b.soddisfazione < soglia {
                 let peggiore = causa_peggiore(st.variazioni.iter().map(|v| (v.causa, v.delta)));
                 let fatto = format!("{} ({}) minaccia le dimissioni", b.nome, d.nome);
                 let causa = sotto_la_soglia(

@@ -205,6 +205,11 @@ fn l_ultimatum_resta_con_la_sua_causa() {
         .unwrap();
     assert!(a.ultimatum);
     assert_eq!(a.causa_ultimatum, Some(CausaIntesa::DimissioniChieste));
+    // La variazione l'ha lasciata il comando, nel turno: la chiusura non la ripete.
+    let dal_comando: Vec<_> = (voci(&p, TipoVoce::IntesaVariata).into_iter())
+        .filter(|v| v.causa == CausaIntesa::DimissioniChieste.to_string())
+        .collect();
+    assert!(dal_comando.is_empty(), "{dal_comando:?}");
     // Fatto 89: la causa dice la soglia, non l'intesa in cifre.
     let posti = voci(&p, TipoVoce::UltimatumPosto);
     assert_eq!(posti.len(), 1, "{posti:?}");

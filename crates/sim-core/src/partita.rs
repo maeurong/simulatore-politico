@@ -697,7 +697,6 @@ impl Partita {
         }
         self.voci_variate(&mut lette);
         self.voci_dimessi(&prima_delle_soglie);
-        self.voci_minaccia(&in_carica);
         self.voci_ultimatum(&ultimatum, true);
         // Dopo il ritorno: il leader nuovo chiude la chiusura con `valence_base` più la luna.
         if di_voto {
@@ -783,6 +782,8 @@ impl Partita {
         }
         self.apertura_ia();
         self.voci_variate(&mut lette);
+        // A fine chiusura: anche il taglio dell'apertura può portare sotto la soglia (fatto 126).
+        self.voci_minaccia(&in_carica);
         if !self.finita() {
             self.registra_punto();
         }
