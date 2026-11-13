@@ -124,10 +124,11 @@ pub fn forbice(seggi: &[u32], linea: &[bool], q: &[f64]) -> [u32; 2] {
 /// Il voto di un ramo: un'uniforme per seggio, partiti in ordine; il seggio vota contro la
 /// linea se l'uniforme sta sotto la probabilità del suo partito.
 pub(crate) fn conta(caso: &mut Caso, seggi: &[u32], linea: &[bool], q: &[f64]) -> Conteggio {
-    let mut c = Conteggio { si: 0, no: 0 };
+    let mut c = Conteggio::ZERO;
     for ((&n, &si), &q) in seggi.iter().zip(linea).zip(q) {
         for _ in 0..n {
             let contro = caso.uniforme(Flusso::Parlamento) < q;
+            c.franchi += u32::from(contro);
             if si != contro {
                 c.si += 1;
             } else {
@@ -186,6 +187,16 @@ mod tests {
                 assert_eq!(dopo_il_voto(&seggi, &linea, &q), attesa);
             }
         }
+    }
+
+    /// Contro la linea con certezza i 10 seggi del primo partito, mai i 5 del secondo.
+    #[test]
+    fn i_franchi_sono_i_seggi_fuori_linea() {
+        let mut caso = Caso::nuovo(7);
+        let c = conta(&mut caso, &[10, 5], &[true, false], &[1.0, 0.0]);
+        assert_eq!((c.si, c.no, c.franchi), (0, 15, 10));
+        let c = conta(&mut caso, &[10, 5], &[true, false], &[0.0, 1.0]);
+        assert_eq!((c.si, c.no, c.franchi), (15, 0, 5));
     }
 
     #[test]

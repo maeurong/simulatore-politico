@@ -95,6 +95,19 @@ fn regime_emendato_arriva_dopo_quattro_turni() {
     p.chiudi_turno();
     assert!(p.vista().esiti[0].approvata);
     assert_eq!(p.in_vigore("licenziamento"), Some("tutele_crescenti"));
+    let r = voci(&p, TipoVoce::ValoreRinviato);
+    assert_eq!(r.len(), 1, "{r:?}");
+    assert_eq!(r[0].criticita, Criticita::Ordinaria);
+    assert_eq!(r[0].disposizioni, ["licenziamento"]);
+    assert_eq!(r[0].misura, Some(p.vista().esiti[0].misura));
+    assert_eq!(
+        r[0].fatto,
+        "Licenziamento passa a reintegro solo da gennaio 2028"
+    );
+    assert_eq!(
+        r[0].causa,
+        "l'emendamento accolto di Centrodestra, che rinvia il valore di 4 turni"
+    );
     for _ in 0..4 {
         p.chiudi_turno();
     }

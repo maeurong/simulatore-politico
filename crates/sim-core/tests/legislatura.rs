@@ -50,6 +50,10 @@ fn a_fine_legislatura_le_leggi_in_esame_decadono_e_i_gradini_si_sbloccano() {
     assert!(v.esiti.iter().any(|e| {
         e.decaduta.as_deref() == Some("Decaduta per la fine della legislatura") && !e.approvata
     }));
+    let d = voci(&p, TipoVoce::MisuraDecaduta);
+    assert_eq!(d.len(), 1, "{d:?}");
+    assert_eq!(d[0].disposizioni, ["tetto_contante"]);
+    assert_eq!(d[0].causa, "la fine della legislatura");
     assert!(
         v.disposizioni
             .iter()

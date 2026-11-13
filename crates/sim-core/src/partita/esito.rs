@@ -7,7 +7,9 @@ use crate::esito::{Grado, TipoVoce, VoceEsito, grado};
 use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, emergenze};
 use crate::legislatura::campagna::migliaia;
 use crate::ministri::{FattoAtto, Proposta};
-use crate::parlamento;
+use crate::parlamento::{
+    self, Attenuazione, Conteggio, EsitoVoto, FormaMisura, Misura, StatoEmendamento,
+};
 
 /// «N euro dal fondo di riserva (Q% del costo)» o «N euro a debito».
 pub(super) fn pagamento(costo: i64, quota: f64, dal_fondo: bool) -> String {
@@ -21,6 +23,29 @@ pub(super) fn pagamento(costo: i64, quota: f64, dal_fondo: bool) -> String {
     } else {
         format!("{} euro a debito", migliaia(pagato))
     }
+}
+
+/// «valence -0,05 a {nome}», come nella voce dell'evento.
+pub(super) fn valence(delta: f64, nome: &str) -> String {
+    let segno = format!("{delta:+.2}").replace('.', ",");
+    format!("valence {segno} a {nome}")
+}
+
+/// «Camera 230 sì e 170 no, 12 franchi tiratori; Senato …»: i franchi solo dove ce ne sono.
+fn conteggi(e: &EsitoVoto) -> String {
+    let ramo = |nome: &str, c: &Conteggio| {
+        let franchi = match c.franchi {
+            0 => String::new(),
+            1 => ", 1 franco tiratore".to_string(),
+            n => format!(", {n} franchi tiratori"),
+        };
+        format!("{nome} {} sì e {} no{franchi}", c.si, c.no)
+    };
+    format!(
+        "{}; {}",
+        ramo("Camera", &e.camera),
+        ramo("Senato", &e.senato)
+    )
 }
 
 impl Partita {
@@ -304,5 +329,237 @@ impl Partita {
             v.dicastero = Some(id);
             v.regione = regione;
         }
+    }
+
+    /// Il promotore (id) e le disposizioni della misura, nell'ordine dei valori.
+    fn soggetti(&self, m: &Misura) -> (Option<String>, Vec<String>) {
+        let promotore = (m.promotore)
+            .and_then(|j| self.partiti.get(j))
+            .map(|p| p.id.clone());
+        let disposizioni = (m.valori.iter())
+            .filter_map(|&(k, _)| self.dati.disposizioni().get(k).map(|x| x.id.clone()))
+            .collect();
+        (promotore, disposizioni)
+    }
+
+    /// Come `voce`, coi soggetti della misura `m`.
+    fn voce_misura(&mut self, tipo: TipoVoce, m: &Misura, fatto: String, causa: String) {
+        let (partito, disposizioni) = self.soggetti(m);
+        if let Some(v) = self.voce(tipo, fatto, causa) {
+            v.misura = Some(m.id);
+            v.partito = partito;
+            v.disposizioni = disposizioni;
+        }
+    }
+
+    /// «per il sì A, B; per il no C»: le linee dei partiti non sciolti.
+    fn linee(&self, e: &EsitoVoto) -> String {
+        let nomi = |si: bool| {
+            let nomi: Vec<&str> = (e.linee.iter())
+                .filter(|l| l.si == si)
+                .filter_map(|l| (self.partiti.iter()).find(|p| p.id == l.partito && !p.sciolto))
+                .map(|p| p.nome.as_str())
+                .collect();
+            if nomi.is_empty() {
+                "nessuno".to_string()
+            } else {
+                nomi.join(", ")
+            }
+        };
+        format!("per il sì {}; per il no {}", nomi(true), nomi(false))
+    }
+
+    /// Fatto 21: le leggi passate al turno dopo nel turno del bilancio o di crisi.
+    pub(super) fn voce_slittate(&mut self, slittate: &[Misura]) {
+        let k = slittate.iter().filter(|m| m.fiducia).count();
+        let mut fatto = match slittate.len() {
+            0 => return,
+            1 => "Slitta al turno dopo una legge".to_string(),
+            n => format!("Slittano al turno dopo {n} leggi"),
+        };
+        if k > 0 {
+            let quante = if k == 1 { "una".into() } else { k.to_string() };
+            fatto.push_str(&format!("; cade la fiducia su {quante}"));
+            // All'opposizione l'intesa degli alleati del governo avversario non si vede.
+            if self.al_governo() {
+                fatto.push_str(", e l'intesa che costava torna agli alleati");
+            }
+        }
+        let causa = match (self.turno_del_bilancio(), self.in_crisi()) {
+            (true, true) => "il turno della legge di bilancio e la crisi di governo",
+            (true, false) => "il turno della legge di bilancio",
+            _ => "la crisi di governo",
+        };
+        self.voce(TipoVoce::LeggiSlittate, fatto, causa.into());
+    }
+
+    /// Fatti 22-24, 27, 28, 33-36: il voto `e` della misura `m`. `coda` segue i conteggi nel
+    /// fatto; `in_attesa` dice, per la costituzionale che aspetta il confermativo, se è già
+    /// richiesto.
+    pub(super) fn voce_voto(
+        &mut self,
+        e: &EsitoVoto,
+        m: &Misura,
+        coda: Vec<String>,
+        in_attesa: Option<bool>,
+    ) {
+        use TipoVoce::*;
+        let tipo = match (e.forma, e.approvata) {
+            _ if e.fiducia_respinta => FiduciaRespinta,
+            (FormaMisura::Conversione, true) => DecretoConvertito,
+            (FormaMisura::Conversione, false) => DecretoDecaduto,
+            (FormaMisura::Bilancio, true) => BilancioApprovato,
+            (FormaMisura::Bilancio, false) => BilancioRespinto,
+            _ if in_attesa.is_some() => ConfermativoInAttesa,
+            (_, true) => LeggeApprovata,
+            (_, false) => LeggeRespinta,
+        };
+        let nome = &e.nome;
+        let mut fatto = match tipo {
+            FiduciaRespinta => format!("Respinta la fiducia su «{nome}»"),
+            DecretoConvertito => format!("Convertito in legge «{nome}»"),
+            DecretoDecaduto => format!("Decade «{nome}»"),
+            BilancioApprovato => "Approvata la legge di bilancio".into(),
+            BilancioRespinto => "Respinta la legge di bilancio".into(),
+            ConfermativoInAttesa => format!("Approvata senza i due terzi «{nome}»"),
+            LeggeApprovata => format!("Approvata «{nome}»"),
+            _ => format!("Respinta «{nome}»"),
+        };
+        if e.fiducia && tipo != FiduciaRespinta {
+            fatto.push_str(" con la fiducia");
+        }
+        if e.forma == FormaMisura::Costituzionale && tipo != ConfermativoInAttesa {
+            fatto.push_str(match e.deliberazione {
+                1 => " in prima deliberazione",
+                _ => " in seconda deliberazione",
+            });
+        }
+        let (causa, parti) = match in_attesa {
+            Some(richiesto) => {
+                let voto = parlamento::mese(data_di(self.turno.saturating_add(1)));
+                let chi = if richiesto {
+                    "già richiesto"
+                } else {
+                    "non ancora richiesto"
+                };
+                let causa = format!("seconda deliberazione, {}", conteggi(e));
+                (
+                    causa,
+                    vec![format!("referendum confermativo a {voto}, {chi}")],
+                )
+            }
+            None => (
+                self.linee(e),
+                [conteggi(e)].into_iter().chain(coda).collect(),
+            ),
+        };
+        for parte in parti {
+            fatto.push_str("; ");
+            fatto.push_str(&parte);
+        }
+        let del_governo = m.promotore.is_none() && self.al_governo();
+        let (partito, disposizioni) = self.soggetti(m);
+        let Some(v) = self.voce(tipo, fatto, causa) else {
+            return;
+        };
+        if tipo == LeggeRespinta && del_governo {
+            v.con_grado(Grado::C2);
+        }
+        v.misura = Some(m.id);
+        v.partito = partito;
+        v.disposizioni = disposizioni;
+    }
+
+    /// «budget tagliato in termini reali a Sanità (-1,2%), …»: i dicasteri con ministro e perdita
+    /// reale, quelli che il taglio costa.
+    pub(super) fn tagli_reali(&self, perdite: &[f64]) -> Option<String> {
+        let tagliati: Vec<String> = (self.dati.dicasteri().iter())
+            .zip(&self.ministri.dicasteri)
+            .zip(perdite)
+            .filter(|((_, st), p)| **p > 0.0 && st.ministro.is_some())
+            .map(|((d, _), &p)| format!("{} (-{}%)", d.nome, virgola(p)))
+            .collect();
+        (!tagliati.is_empty())
+            .then(|| format!("budget tagliato in termini reali a {}", tagliati.join(", ")))
+    }
+
+    /// Fatto 25: la legge di bilancio `misura` approvata e ricondotta al tetto del MES, con
+    /// crescita della spesa netta presentata, limite e quota tenuta.
+    pub(super) fn voce_ricondotto(
+        &mut self,
+        misura: u32,
+        (crescita, limite, resta): (f64, f64, f64),
+    ) {
+        let fine =
+            (self.economia.programma_mes).map_or(String::new(), |f| parlamento::mese(data_di(f)));
+        let fatto = format!(
+            "Legge di bilancio ricondotta al tetto del MES: la spesa netta presentata cresceva \
+             del {}%, il limite è del {}%; dei budget presentati resta il {:.0}% dello scarto \
+             dalla bozza",
+            virgola(crescita),
+            virgola(limite),
+            resta * 100.0
+        );
+        let causa =
+            format!("il programma del MES, cominciato dopo la presentazione, finisce a {fine}");
+        if let Some(v) = self.voce(TipoVoce::BilancioRicondotto, fatto, causa) {
+            v.misura = Some(misura);
+        }
+    }
+
+    /// Fatti 29 e 30: i valori della legge `m` che non entrano ora (`entra_in_vigore`).
+    pub(super) fn voci_fuori(&mut self, m: &Misura, fuori: Vec<(usize, usize, Option<u32>)>) {
+        let rinvio = self.dati.manopola("turni_rinvio_regime").round();
+        let fine = (self.economia.mes_in_corso(self.turno))
+            .map_or(String::new(), |f| parlamento::mese(data_di(f)));
+        for (d, g, arrivo) in fuori {
+            let Some(x) = self.dati.disposizioni().get(d) else {
+                continue;
+            };
+            let nuovo = x.gradini.get(g).map_or("", |g| g.nome.as_str());
+            let (tipo, fatto, causa) = match arrivo {
+                Some(t) => {
+                    let chi = (m.emendamenti.iter())
+                        .find(|e| {
+                            e.stato == StatoEmendamento::Accolto
+                                && e.proposta.contains(&(d, Attenuazione::Rinvio))
+                        })
+                        .and_then(|e| self.partiti.get(e.partito))
+                        .map_or("", |p| p.nome.as_str());
+                    (
+                        TipoVoce::ValoreRinviato,
+                        format!(
+                            "{} passa a {nuovo} solo da {}",
+                            x.nome,
+                            parlamento::mese(data_di(t))
+                        ),
+                        format!(
+                            "l'emendamento accolto di {chi}, che rinvia il valore di {rinvio} turni"
+                        ),
+                    )
+                }
+                None => {
+                    let vigente = (self.disposizioni.voci.get(d))
+                        .and_then(|v| x.gradini.get(v.in_vigore))
+                        .map_or("", |g| g.nome.as_str());
+                    (
+                        TipoVoce::ValoreNonApplicato,
+                        format!(
+                            "{} resta a {vigente}, non a {nuovo}, nonostante la legge approvata",
+                            x.nome
+                        ),
+                        format!("il vincolo del memorandum del MES, fino a {fine}"),
+                    )
+                }
+            };
+            self.voce_misura(tipo, m, fatto, causa);
+        }
+    }
+
+    /// Fatti 38, 75, 101: la misura `m` decaduta senza voto, con la `causa`.
+    pub(super) fn voce_decaduta(&mut self, m: &Misura, causa: String) {
+        let nome = parlamento::nome_misura(&self.dati, m);
+        let fatto = format!("Decade senza voto «{nome}»");
+        self.voce_misura(TipoVoce::MisuraDecaduta, m, fatto, causa);
     }
 }

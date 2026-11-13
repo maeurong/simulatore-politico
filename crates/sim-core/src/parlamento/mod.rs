@@ -74,11 +74,22 @@ pub struct Misura {
     pub fondi: Option<FondiDecreto>,
 }
 
+/// `franchi`: i seggi che hanno votato contro la linea del loro partito; zero dove il voto non li
+/// estrae (fiducia, sfiducia, voti a blocchi, misure decadute).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct Conteggio {
     pub si: u32,
     pub no: u32,
+    pub franchi: u32,
+}
+
+impl Conteggio {
+    pub(crate) const ZERO: Conteggio = Conteggio {
+        si: 0,
+        no: 0,
+        franchi: 0,
+    };
 }
 
 /// `partito` è un id.
@@ -861,19 +872,19 @@ impl Parlamento {
 
     /// Nel turno del bilancio o di crisi le leggi col voto nel turno passano al turno dopo e
     /// perdono la questione di fiducia; i loro emendamenti aperti restano aperti, e quelli caduti
-    /// con la fiducia si riaprono. Rende le slittate che avevano la questione di fiducia, il cui
-    /// costo si rimborsa.
+    /// con la fiducia si riaprono. Rende le slittate com'erano prima: quelle con la questione di
+    /// fiducia ne rimborsano il costo.
     pub(crate) fn slitta_leggi(&mut self, turno: u32) -> Vec<Misura> {
-        let mut con_fiducia = Vec::new();
+        let mut slittate = Vec::new();
         for m in self.misure.iter_mut().filter(|m| slitta(m, turno)) {
+            slittate.push(m.clone());
             if m.fiducia {
-                con_fiducia.push(m.clone());
                 m.emendamenti_aperti = false;
             }
             m.voto = turno.saturating_add(1);
             m.fiducia = false;
         }
-        con_fiducia
+        slittate
     }
 
     /// La conversione del decreto dei fondi accolti per `dicastero`, se c'è, esce dal calendario.
@@ -973,29 +984,29 @@ impl Parlamento {
     }
 
     /// Ogni misura in calendario per cui vale `decade` decade senza voto, senza costi e senza
-    /// blocco, con l'esito `decaduta`; le altre restano.
+    /// blocco, con l'esito `decaduta`; le altre restano. Rende le decadute, per la voce.
     pub(crate) fn decadi_calendario(
         &mut self,
         dati: &DatiGioco,
         data: Trimestre,
         decaduta: &str,
         decade: impl Fn(&Misura) -> bool,
-    ) {
+    ) -> Vec<Misura> {
         let (via, restano): (Vec<Misura>, Vec<Misura>) = std::mem::take(&mut self.misure)
             .into_iter()
             .partition(decade);
         self.misure = restano;
-        for m in via {
+        for m in &via {
             self.esiti.insert(
                 0,
                 EsitoVoto {
                     misura: m.id,
-                    nome: nome_misura(dati, &m),
+                    nome: nome_misura(dati, m),
                     forma: m.forma,
                     data,
                     deliberazione: m.deliberazione,
-                    camera: Conteggio { si: 0, no: 0 },
-                    senato: Conteggio { si: 0, no: 0 },
+                    camera: Conteggio::ZERO,
+                    senato: Conteggio::ZERO,
                     approvata: false,
                     fiducia: m.fiducia,
                     fiducia_respinta: false,
@@ -1004,6 +1015,7 @@ impl Parlamento {
                 },
             );
         }
+        via
     }
 
     /// Fine della legislatura, al voto prima del riparto (iter-legislativo-italiano:80, 135): ogni
@@ -1011,16 +1023,17 @@ impl Parlamento {
     /// solo riforme, leggi elettorali e costituzionali (decadono anche quelle), mai fiducie né
     /// conversioni: la fiducia posta (`poni_fiducia`) e la conversione aperta hanno `voto = turno`
     /// e si votano prima. Le respinte si dimenticano; l'abrogativo indetto e non ancora votato è
-    /// sospeso, senza valence. I confermativi restano.
+    /// sospeso, senza valence. I confermativi restano. Rende le misure decadute.
     pub(crate) fn decadi_tutto(
         &mut self,
         dati: &DatiGioco,
         disposizioni: &Disposizioni,
         data: Trimestre,
-    ) {
-        self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura", |_| {
-            true
-        });
+    ) -> Vec<Misura> {
+        let via =
+            self.decadi_calendario(dati, data, "Decaduta per la fine della legislatura", |_| {
+                true
+            });
         self.respinte.clear();
         if let Some(r) = self.referendum.take() {
             let vigente = (r.valori.iter())
@@ -1039,6 +1052,7 @@ impl Parlamento {
                 },
             );
         }
+        via
     }
 
     /// Apertura del turno `turno`: restano gli esiti dei due turni prima.

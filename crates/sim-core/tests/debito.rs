@@ -285,12 +285,12 @@ fn il_mes_limita_la_legge_di_bilancio() {
         .unwrap();
 }
 
-#[test]
-fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
+/// Una legge su due disposizioni, una vincolata e una no, presentata prima del MES e votata col
+/// programma in corso.
+fn legge_votata_col_mes() -> Partita {
     let mut p = con_premio();
     chiudi_col_bilancio(&mut p);
     assert_eq!(aste(&p).len(), 1);
-    // In esame prima del MES: due disposizioni, una vincolata e una no.
     presenta(
         &mut p,
         &[("eta_pensionabile", "66"), ("pensione_minima", "piu_20")],
@@ -300,6 +300,31 @@ fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
     assert!(p.economia().programma_mes.is_some());
     // Nel turno del bilancio le leggi slittano: la votazione è alla chiusura dopo.
     chiudi_col_bilancio(&mut p);
+    p
+}
+
+#[test]
+fn valore_non_applicato_per_il_memorandum() {
+    let p = legge_votata_col_mes();
+    let v = voci(&p, TipoVoce::ValoreNonApplicato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].criticita, Criticita::Notevole);
+    assert_eq!(v[0].disposizioni, ["eta_pensionabile", "pensione_minima"]);
+    assert_eq!(
+        v[0].fatto,
+        "Età pensionabile resta a 70 anni, non a 66 anni, nonostante la legge approvata"
+    );
+    assert!(
+        v[0].causa
+            .starts_with("il vincolo del memorandum del MES, fino a "),
+        "{}",
+        v[0].causa
+    );
+}
+
+#[test]
+fn una_legge_in_esame_prima_del_mes_non_muove_la_condizionalita() {
+    let p = legge_votata_col_mes();
     assert!(p.economia().programma_mes.is_some());
     assert!(
         p.vista()
@@ -637,8 +662,10 @@ fn al_bilancio_oltre_il_tetto() -> (Partita, sim_core::economia::Bilancio) {
     (p, b)
 }
 
-#[test]
-fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
+/// Il bilancio oltre il tetto presentato, poi il MES chiesto per default nella stessa chiusura:
+/// la partita chiusa, la sonda col programma sullo stato di prima, il limite e la crescita del
+/// presentato.
+fn ricondotto() -> (Partita, Partita, f64, f64, sim_core::economia::Bilancio) {
     let (p, b) = al_bilancio_oltre_il_tetto();
     let turno = p.vista().turno;
     // La sonda: il limite del programma e il riepilogo di un bilancio, sullo stesso stato.
@@ -647,7 +674,8 @@ fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
         .riepilogo_bilancio(&sonda.bozza_bilancio().unwrap())
         .unwrap();
     let limite = bozza.tetto.max(bozza.crescita_spesa_netta);
-    assert!(sonda.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta > limite);
+    let crescita = sonda.riepilogo_bilancio(&b).unwrap().crescita_spesa_netta;
+    assert!(crescita > limite);
     let mut p = p;
     p.comanda(Comando::PresentaBilancio { bilancio: b })
         .unwrap();
@@ -664,13 +692,57 @@ fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
     .unwrap();
     let presidente = p.governo().presidente;
     p.chiudi_turno();
+    assert_eq!(p.governo().presidente, presidente);
+    (p, sonda, limite, crescita, presentato)
+}
+
+#[test]
+fn il_bilancio_presentato_prima_del_mes_entra_ricondotto() {
+    let (p, sonda, limite, _, presentato) = ricondotto();
     assert!(p.economia().programma_mes.is_some());
     let approvato = p.economia().bilancio_approvato.clone().unwrap();
     assert_ne!(approvato, presentato);
     let r = sonda.riepilogo_bilancio(&approvato).unwrap();
     assert!(r.crescita_spesa_netta <= limite + 1e-6, "{r:?} {limite}");
     assert!(!p.vista().bilancio.esercizio_provvisorio);
-    assert_eq!(p.governo().presidente, presidente);
+}
+
+#[test]
+fn bilancio_ricondotto_lascia_la_voce() {
+    let (p, _, limite, crescita, _) = ricondotto();
+    let virgola = |x: f64| format!("{x:.1}").replace('.', ",");
+    let tipi: Vec<TipoVoce> = (p.vista().esito.iter())
+        .map(|v| v.tipo)
+        .filter(|t| {
+            matches!(
+                t,
+                TipoVoce::BilancioApprovato | TipoVoce::BilancioRicondotto
+            )
+        })
+        .collect();
+    assert_eq!(
+        tipi,
+        [TipoVoce::BilancioApprovato, TipoVoce::BilancioRicondotto]
+    );
+    let v = voci(&p, TipoVoce::BilancioRicondotto);
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert!(v[0].disposizioni.is_empty() && v[0].misura.is_some());
+    assert!(
+        v[0].fatto.starts_with(&format!(
+            "Legge di bilancio ricondotta al tetto del MES: la spesa netta presentata cresceva \
+             del {}%, il limite è del {}%; dei budget presentati resta il ",
+            virgola(crescita),
+            virgola(limite)
+        )) && v[0].fatto.ends_with("% dello scarto dalla bozza"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(
+        v[0].causa
+            .starts_with("il programma del MES, cominciato dopo la presentazione, finisce a "),
+        "{}",
+        v[0].causa
+    );
 }
 
 #[test]

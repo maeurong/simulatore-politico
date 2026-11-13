@@ -1,8 +1,9 @@
 mod comune;
 use comune::{
     chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, partito,
-    presenta,
+    presenta, voci,
 };
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Fase, Incarico};
 use sim_core::{Comando, Partita};
 
@@ -44,6 +45,17 @@ fn fiducia_respinta_fa_dimettere() {
     assert!(p.vista().esiti.iter().any(|e| e.fiducia_respinta));
     assert!(!p.governa());
     assert_ne!(p.legislatura().fase, Fase::Ordinaria);
+    let v = voci(&p, TipoVoce::FiduciaRespinta);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    assert_eq!(v[0].misura, Some(id));
+    assert!(
+        v[0].fatto.starts_with("Respinta la fiducia su «")
+            && v[0].fatto.ends_with("; il governo è dimissionario"),
+        "{}",
+        v[0].fatto
+    );
+    assert!(voci(&p, TipoVoce::LeggeRespinta).is_empty());
 }
 
 #[test]
@@ -143,6 +155,14 @@ fn alla_caduta_il_calendario_decade() {
         Some("Decaduta per la caduta del governo")
     );
     assert!(!e.approvata);
+    let d = voci(&p, TipoVoce::MisuraDecaduta);
+    assert_eq!(d.len(), 1, "{d:?}");
+    assert_eq!(
+        (d[0].misura, d[0].criticita),
+        (Some(id), Criticita::Notevole)
+    );
+    assert_eq!(d[0].disposizioni, ["tetto_contante"]);
+    assert_eq!(d[0].causa, "la caduta del governo");
 }
 
 /// Review Focus 1: a gennaio in esercizio provvisorio, senza bilancio, la fiducia respinta e il
