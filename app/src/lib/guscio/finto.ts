@@ -101,7 +101,8 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
   const c: Campioni = {
     campione,
     turnoZero: await carica("01-"),
-    edicola: await carica("13-"),
+    // ?edicola=vuota: il primo avvio, nessuna partita e albo vuoto
+    edicola: url.searchParams.get("edicola") === "vuota" ? { partite: [], albo: [] } : await carica("13-"),
     editor: await carica("14-"),
     fondazione: await carica("15-"),
   };

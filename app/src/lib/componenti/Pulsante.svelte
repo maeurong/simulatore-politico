@@ -26,7 +26,7 @@
     type="button"
     class={[forma === "link" ? "link" : ["btn", forma], { scelto, via: distruttivo }]}
     aria-pressed={scelto}
-    aria-disabled={spento ? "true" : undefined}
+    aria-disabled={spento ? "true" : resto["aria-disabled"]}
     aria-describedby={spento ? `${id}-motivo` : resto["aria-describedby"]}
     onclick={clic}>{@render children()}</button>
 {/snippet}

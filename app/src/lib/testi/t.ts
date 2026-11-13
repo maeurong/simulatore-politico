@@ -35,6 +35,12 @@ export function segnato(x: number, decimali = 0): string {
   return (x > 0 ? "+" : MENO) + assoluto;
 }
 
+/** «A», «A e B», «A, B e C», come elenco() di sim-core (riepilogo.rs): il separatore «; » per i numeri con la virgola. */
+export function elenco(voci: string[], separatore: string): string {
+  if (voci.length < 2) return voci.join("");
+  return `${voci.slice(0, -1).join(separatore)} e ${voci.at(-1)}`;
+}
+
 const giorno = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /** «oggi alle 22:20», «ieri alle …», giorno della settimana fino a sei giorni, poi «il 28 ottobre alle …». */

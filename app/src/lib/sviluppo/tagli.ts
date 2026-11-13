@@ -24,8 +24,9 @@ export function tagli(radice: HTMLElement): number {
     // ponytail: .perche del sommario è ritagliato a 1x1 finché non prende il fuoco; chiuso non si conta, aperto sì
     if (cs.clipPath !== "none" && b.width <= 2 && b.height <= 2) continue;
     const fuori = b.width > 0 && (b.right > L + 1 || (b.bottom > A + 1 && !scorre(el)));
+    // il <select> nativo di WebKit dichiara sotto zoom un contenuto 2 px più largo della scatola senza tagliare nulla (1440×900, scala 1,4)
     const stretto =
-      el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && cs.display !== "inline" &&
+      el.tagName !== "SELECT" && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && cs.display !== "inline" &&
       !/ellipsis/.test(cs.textOverflow) && (cs as CSSStyleDeclaration & { webkitLineClamp: string }).webkitLineClamp === "none";
     if (fuori || stretto) {
       n++;
