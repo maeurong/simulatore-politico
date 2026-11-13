@@ -1,7 +1,9 @@
 mod comune;
 
-use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita, fondata};
-use sim_core::esito::{Criticita, MASSIMO_IN_EVIDENZA};
+use comune::{al_governo, all_opposizione, chiudi_col_bilancio, dati_base, edita, fondata, voci};
+use sim_core::dati::DatiGioco;
+use sim_core::esito::{Criticita, MASSIMO_IN_EVIDENZA, TipoVoce};
+use sim_core::legislatura::Fondazione;
 use sim_core::{Errore, Partita};
 
 #[test]
@@ -84,6 +86,26 @@ fn l_esito_manomesso_e_rifiutato() {
     let mut sconosciuto = voce;
     sconosciuto["partito"] = "fantasma".into();
     assert!(errore(serde_json::json!([sconosciuto])).contains("fantasma"));
+}
+
+/// Fatto 81: lo sciolto resta in `partiti` con `sciolto = true`, quindi la voce che lo nomina passa
+/// il controllo di `carica` e il suo id si ritrova.
+#[test]
+fn partito_sciolto_e_salvataggio_ricaricabile() {
+    let f = comune::sostituisci_valence(comune::file_base(), "estrema_sinistra", -3.0);
+    let fondazione = Fondazione {
+        nome: "Partito nuovo".into(),
+        posizione: 4.5,
+    };
+    let p = Partita::fonda(DatiGioco::da_testi(&f).unwrap(), 7, &fondazione).unwrap();
+    let mut p = edita(&p, |j| j["partiti"][0]["senza_seggi"] = 1.into()).unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::PartitoSciolto);
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(v[0].partito.as_deref(), Some("estrema_sinistra"));
+    let q = Partita::carica(&p.salva().unwrap()).unwrap();
+    assert_eq!(q.vista().esito, p.vista().esito);
+    assert!(q.partiti()[0].id == "estrema_sinistra" && q.partiti()[0].sciolto);
 }
 
 #[test]

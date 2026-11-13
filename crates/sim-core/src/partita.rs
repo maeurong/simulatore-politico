@@ -689,6 +689,7 @@ impl Partita {
         // (scelta 8 del piano 8b).
         let l = &self.legislatura;
         if l.fase == Fase::Ordinaria && l.dimissioni.is_none() && !di_voto {
+            self.voci_alleati_usciti(&escono);
             self.frange_in_uscita(nate, &mut escono);
             self.uscite(&escono);
         }
@@ -3068,6 +3069,7 @@ impl Partita {
         if nessuno(&pl.seggi_camera) && nessuno(&pl.seggi_senato) {
             self.fine = Some(Fine::SenzaSeggi);
         }
+        self.voci_del_voto();
         self.scioglimenti();
     }
 
@@ -3461,53 +3463,72 @@ impl Partita {
     /// primo partito per seggi e la spartizione di default, e ogni alleato riparte da
     /// `intesa_base` senza variazione registrata. Senza maggioranza del giocatore (con
     /// gli allargati) né incarico IA, il formatore sceglie la maggioranza che gli vale di più
-    /// (`maggioranza_ia`, scelta 12 del piano 8b), governo IA come sopra con la sua riga; senza
-    /// quella, la maggioranza contigua a regole senza il giocatore (`maggioranza_contigua`), senza
-    /// riga; senza nemmeno questa le Camere si sciolgono: si vota nella chiusura del turno dopo.
+    /// (`maggioranza_ia`, scelta 12 del piano 8b), governo IA come sopra; senza quella, la
+    /// maggioranza contigua a regole senza il giocatore (`maggioranza_contigua`); senza nemmeno
+    /// questa le Camere si sciolgono: si vota nella chiusura del turno dopo. Ogni governo nato ha
+    /// la sua voce `governo_formato`, con la maggioranza che lo regge come causa.
     /// Se l'uscente resta fuori dal governo nuovo il suo partito IA cambia leader (`cambia_leader`), tranne che
     /// il voto appena passato l'abbia già cambiato per il calo: una sconfitta, un cambio. Poi
     /// ministri tutti nuovi, giudizio da zero per chi entra al governo, l'ultimatum sul valore di
     /// partenza (l'alleato che entra sotto la soglia lo pone subito, chi non è più alleato non ne
     /// ha), fase ordinaria.
     fn forma_governo(&mut self) {
-        // Il ribaltone senza scelta chiede la guida (decisione 1 di Mario); rifiutata, o senza
-        // `Guida` aperta, nulla cambia.
-        let _ = self.chiedi_guida();
+        // Il ribaltone senza scelta chiede la guida (decisione 1 di Mario); rifiutata, la voce
+        // dice il perché e nulla cambia.
+        if let Ok(coalizione) = self.guida_aperta() {
+            match self.rifiuto_della_guida(&coalizione) {
+                Some((l, causa)) => {
+                    let nome = self.partiti.get(l).map_or("", |p| p.nome.as_str());
+                    let fatto = format!("{nome} non ti cede la guida del ribaltone");
+                    self.voce_di(l, TipoVoce::GuidaRifiutata, fatto, causa);
+                }
+                None => self.cedi_la_guida(coalizione),
+            }
+        }
         let seggi = self.seggi_per_partito();
         let (camera, senato) = (&self.parlamento.seggi_camera, &self.parlamento.seggi_senato);
         let sua = self.coalizione_del_giocatore();
-        let (presidente, coalizione, assegnati) = if self.legislatura.incarico
+        let (presidente, coalizione, assegnati, perche) = if self.legislatura.incarico
             == Some(Incarico::Giocatore)
             && legislatura::maggioranza(camera, senato, &sua)
         {
-            (self.giocatore, sua, self.assegnati_dal_giocatore())
+            let perche = "la tua coalizione ha la maggioranza in entrambe le Camere";
+            (self.giocatore, sua, self.assegnati_dal_giocatore(), perche)
         } else {
+            let dal_capo = if self.turno <= self.legislatura.inizio {
+                "la coalizione con la maggioranza al voto"
+            } else {
+                "la maggioranza contigua trovata dal Capo dello Stato dopo la caduta"
+            };
             // Senza una maggioranza che convenga a tutti, la contigua a regole come prima dell'8b.
             let ia = match &self.legislatura.incarico {
-                Some(Incarico::Ia { coalizione }) => Some((coalizione.clone(), false)),
-                _ => (self.maggioranza_ia().map(|k| (k, true))).or_else(|| {
+                Some(Incarico::Ia { coalizione }) => Some((coalizione.clone(), dal_capo)),
+                _ => (self
+                    .maggioranza_ia()
+                    .map(|k| (k, "la maggioranza che gli vale di più")))
+                .or_else(|| {
                     let contigua = legislatura::maggioranza_contigua(
                         &self.partiti,
                         camera,
                         senato,
                         Some(self.giocatore),
                     );
-                    contigua.map(|k| (k, false))
+                    let perche =
+                        "la maggioranza contigua, senza una che convenga a tutti i suoi partiti";
+                    contigua.map(|k| (k, perche))
                 }),
             };
-            let Some((coalizione, scelta)) = ia else {
+            let Some((coalizione, perche)) = ia else {
                 let l = &mut self.legislatura;
                 l.fase = Fase::Sciolta;
                 l.incarico = None;
                 l.proposta = None;
                 l.allargati.clear();
                 l.maggioranza = None;
+                self.voce_sciolte("in trattativa nessun governo possibile");
                 return;
             };
             let guida = (self.primo_per_seggi(&coalizione)).unwrap_or(self.giocatore);
-            if scelta {
-                self.riga_del_formatore(guida, &coalizione);
-            }
             let nessuno = vec![None; self.dati.dicasteri().len()];
             let v = legislatura::spartizione_di_default(
                 &self.dati,
@@ -3516,8 +3537,9 @@ impl Partita {
                 &seggi,
                 &nessuno,
             );
-            (guida, coalizione, v.into_iter().map(Some).collect())
+            (guida, coalizione, v.into_iter().map(Some).collect(), perche)
         };
+        self.voce_formato(presidente, &coalizione, &assegnati, perche);
         if presidente == self.giocatore {
             let (base, per_punto) = (
                 self.dati.manopola("intesa_base"),
@@ -3609,6 +3631,7 @@ impl Partita {
             if j != presidente {
                 (self.intesa).varia(j, CausaIntesa::RotturaImpegno, -intesa, self.turno);
             }
+            self.voce_rottura(j, coalizione, entranti, presidente);
         }
     }
 
@@ -3638,17 +3661,20 @@ impl Partita {
         let pl = &self.parlamento;
         if legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &g.coalizione) {
             if interim {
-                self.rimpasto();
+                self.rimpasto(format!("l'uscita dal governo di {}", self.nomi(escono)));
             }
         } else if self.legislatura.crisi.is_none() {
             self.legislatura.crisi = Some(self.turno.saturating_add(1));
+            let coalizione = self.governo.coalizione.clone();
+            self.voce_crisi_di_governo(Some(escono), &coalizione);
         }
     }
 
     /// Il rimpasto (formazione-di-coalizioni:16, Gamson ricalcolata): gli alleati tengono i loro
     /// dicasteri, quelli del presidente si ridistribuiscono con la spartizione di default al netto
-    /// del tenuto. Il dicastero che cambia partito va in interim (`Rimpasto`).
-    fn rimpasto(&mut self) {
+    /// del tenuto. Il dicastero che cambia partito va in interim (`Rimpasto`); la voce porta la
+    /// `causa`.
+    fn rimpasto(&mut self, causa: String) {
         let g = &self.governo;
         let tenuti: Vec<Option<usize>> = (g.dicasteri.iter())
             .map(|&j| (j != g.presidente && g.coalizione.contains(&j)).then_some(j))
@@ -3661,14 +3687,17 @@ impl Partita {
             &seggi,
             &tenuti,
         );
+        let mut cambi = Vec::new();
         for (i, j) in v.into_iter().enumerate() {
             if let Some(d) = self.governo.dicasteri.get_mut(i)
                 && *d != j
             {
                 *d = j;
                 self.ministri.dimetti(i, Causa::Rimpasto);
+                cambi.push((i, j));
             }
         }
+        self.voce_rimpasto(&cambi, causa);
     }
 
     /// La fine della crisi (scelta 10 del piano 7b). Con la maggioranza, coalizione più allargati:
@@ -3693,9 +3722,16 @@ impl Partita {
             // crisi si riapre.
             if sfiducia_votata || !self.sfiducia(None, None) {
                 self.legislatura.crisi = Some(self.turno.saturating_add(1));
+                self.voce_crisi_di_governo(None, &coalizione);
             }
             return;
         }
+        let causa = if allargati.is_empty() {
+            "la fine della crisi con la maggioranza".to_string()
+        } else {
+            self.voce_allargata(&allargati);
+            format!("l'allargamento a {}", self.nomi(&allargati))
+        };
         let base = self.dati.manopola("intesa_base");
         for &j in &allargati {
             self.intesa.riparti(j, base);
@@ -3703,7 +3739,7 @@ impl Partita {
         self.giudizio_da_zero(&allargati);
         self.paga_rotture(&coalizione, &allargati, self.governo.presidente);
         self.governo.coalizione = coalizione;
-        self.rimpasto();
+        self.rimpasto(causa);
         // Solo gli allargati: l'ultimatum posto dalle soglie agli altri resta.
         self.intesa.ultimatum_di(&self.dati, &allargati);
     }
@@ -3737,6 +3773,12 @@ impl Partita {
         let g = self.giocatore;
         let Some(coalizione) = self.maggioranza_del_capo(anticipato) else {
             self.legislatura.fase = Fase::Sciolta;
+            self.voce_sciolte(if self.governo.presidente == g || anticipato {
+                "il Capo dello Stato non trova una maggioranza contigua senza il partito del \
+                 Presidente del Consiglio uscente"
+            } else {
+                "il Capo dello Stato non trova una maggioranza contigua"
+            });
             return;
         };
         let primo = self.primo_per_seggi(&coalizione);
@@ -3750,6 +3792,7 @@ impl Partita {
         } else {
             Incarico::Guida { coalizione }
         });
+        self.voce_incarico(true);
     }
 
     /// La maggioranza contigua che cerca `capo_dello_stato`: senza il Presidente del Consiglio se
@@ -3799,31 +3842,38 @@ impl Partita {
     /// identica.
     pub(crate) fn chiedi_guida(&mut self) -> Result<(), Errore> {
         let coalizione = self.guida_aperta()?;
-        let veri = self.quadro_veri();
+        if let Some((l, causa)) = self.rifiuto_della_guida(&coalizione) {
+            return Err(Errore::Comando(format!(
+                "{} non ti cede la guida: {causa}",
+                self.partiti.get(l).map_or("", |p| p.nome.as_str()),
+            )));
+        }
+        self.cedi_la_guida(coalizione);
+        Ok(())
+    }
+
+    /// Il primo per seggi della `coalizione` del ribaltone che non cede la guida, con la causa;
+    /// `None` se la cede.
+    fn rifiuto_della_guida(&self, coalizione: &[usize]) -> Option<(usize, String)> {
         let ribaltone = Dichiarazione {
             partiti: (coalizione.iter().copied())
                 .filter(|&j| j != self.giocatore)
                 .collect(),
             cessioni: Vec::new(),
         };
-        if let Some(l) = self.primo_per_seggi(&coalizione)
-            && let Err(causa) = veri.cede_la_guida(
-                &ribaltone,
-                &self.quadro(),
-                &self.dichiarazione_corrente(),
-                l,
-            )
-        {
-            return Err(Errore::Comando(format!(
-                "{} non ti cede la guida: {}",
-                self.partiti.get(l).map_or("", |p| p.nome.as_str()),
-                causa.testo(false)
-            )));
-        }
+        let l = self.primo_per_seggi(coalizione)?;
+        let d = self.dichiarazione_corrente();
+        let rifiuto = (self.quadro_veri()).cede_la_guida(&ribaltone, &self.quadro(), &d, l);
+        rifiuto
+            .err()
+            .map(|causa| (l, causa.testo(false).to_string()))
+    }
+
+    /// La guida ceduta: l'incarico passa al giocatore con la maggioranza del ribaltone.
+    fn cedi_la_guida(&mut self, coalizione: Vec<usize>) {
         let l = &mut self.legislatura;
         l.incarico = Some(Incarico::Giocatore);
         l.maggioranza = Some(coalizione);
-        Ok(())
     }
 
     /// `RifiutaRibaltone`: il giocatore resta fuori; la chiusura cerca la maggioranza contigua

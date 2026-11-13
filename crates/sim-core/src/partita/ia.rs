@@ -824,21 +824,6 @@ impl Partita {
             .map(|(_, _, _, w)| w.to_vec())
     }
 
-    /// La riga del formatore che forma il governo IA con `coalizione`.
-    pub(super) fn riga_del_formatore(&mut self, formatore: usize, coalizione: &[usize]) {
-        let nomi: Vec<String> = (coalizione.iter().filter(|&&j| j != formatore))
-            .filter_map(|&j| self.partiti.get(j).map(|p| p.nome.clone()))
-            .collect();
-        let fatto = if nomi.is_empty() {
-            "Forma il governo da solo".to_string()
-        } else {
-            format!("Forma il governo con {}", elenco(&nomi))
-        };
-        let causa = "la maggioranza che gli vale di più".to_string();
-        // provvisoria: il Task 6 la fonde con la voce scritta nel punto del fatto
-        self.voce_di(formatore, TipoVoce::GovernoFormato, fatto, causa);
-    }
-
     /// Il voto anticipato si decide: governo IA in carica, fase ordinaria, dal quinto turno della
     /// legislatura (`inizio + 4`) a due turni dalla scadenza, fuori dalla crisi (anche quella
     /// aperta per il turno dopo) e senza dimissioni in corso.
@@ -1132,7 +1117,7 @@ pub(super) fn quota_massima(entro: impl Fn(f64) -> bool) -> f64 {
 }
 
 /// I nomi in elenco: «A», «A e B», «A, B e C».
-fn elenco(nomi: &[String]) -> String {
+pub(super) fn elenco(nomi: &[String]) -> String {
     match nomi {
         [primi @ .., ultimo] if !primi.is_empty() => format!("{} e {ultimo}", primi.join(", ")),
         _ => nomi.join(""),

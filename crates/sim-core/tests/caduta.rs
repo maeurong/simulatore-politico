@@ -28,6 +28,13 @@ fn dimettersi_porta_al_ribaltone_o_al_voto() {
                 panic!("{:?}", l.incarico)
             };
             assert!(!coalizione.contains(&p.giocatore()));
+            let v = voci(&p, TipoVoce::Incarico);
+            assert_eq!(v.len(), 1, "{v:?}");
+            assert_eq!(v[0].fatto, "L'incarico passa al Capo dello Stato");
+            assert_eq!(
+                v[0].causa,
+                "la maggioranza contigua trovata dopo la caduta non ti comprende"
+            );
             p.chiudi_turno();
             assert!(!p.governa() && p.legislatura().fase == Fase::Ordinaria);
         }
@@ -198,6 +205,16 @@ fn senza_maggioranza_contigua_il_capo_dello_stato_scioglie() {
     p.chiudi_turno();
     assert_eq!(p.legislatura().fase, Fase::Sciolta);
     assert_eq!(p.legislatura().incarico, None);
+    let v = voci(&p, TipoVoce::CamereSciolte);
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    assert_eq!(v[0].fatto, "Camere sciolte, si vota a gennaio 2027");
+    assert_eq!(
+        v[0].causa,
+        "il Capo dello Stato non trova una maggioranza contigua senza il partito del Presidente \
+         del Consiglio uscente"
+    );
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    assert!(voci(&p, TipoVoce::Incarico).is_empty());
 }
 
 /// iter-legislativo-italiano:80: la legge del governo caduto decade senza voto, come a fine

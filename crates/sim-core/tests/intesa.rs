@@ -1,6 +1,9 @@
 mod comune;
-use comune::{calo_oltre_il_ritorno, con_seggi, dati_base, edita, in_trattativa, indice, partito};
+use comune::{
+    calo_oltre_il_ritorno, con_seggi, dati_base, edita, in_trattativa, indice, partito, voci,
+};
 use serde_json::json;
+use sim_core::esito::TipoVoce;
 use sim_core::legislatura::Assegnazione;
 use sim_core::parlamento::CausaIntesa;
 use sim_core::partiti::Partito;
@@ -222,6 +225,34 @@ fn allargare_all_altro_campo_rompe_l_impegno() {
         let calo = calo_oltre_il_ritorno(&prima, &p, j);
         assert!((calo - atteso).abs() < 1e-9, "{j}: {calo} {atteso}");
     }
+    // Fatto 108: una voce per chi rompe, fuse in una; l'intesa persa solo per gli alleati.
+    let testi: Vec<(String, String, String)> = (voci(&p, TipoVoce::RotturaDellImpegno).into_iter())
+        .map(|v| (v.partito.unwrap(), v.fatto, v.causa))
+        .collect();
+    let riga = |a: &str, b: &str, c: &str| (a.to_string(), b.to_string(), c.to_string());
+    assert_eq!(
+        testi,
+        [
+            riga(
+                "centrosinistra",
+                "Centrosinistra rompe l'impegno pre-elettorale con Sinistra, che resta fuori dal \
+                 governo; valence -0,30 a Centrosinistra; perde 10,0 punti d'intesa",
+                "la coalizione dichiarata prima del voto con Sinistra",
+            ),
+            riga(
+                "centro",
+                "Centro rompe l'impegno pre-elettorale governando con Centrosinistra; valence \
+                 -0,30 a Centro; perde 10,0 punti d'intesa",
+                "la coalizione dichiarata prima del voto con Partito nuovo",
+            ),
+            riga(
+                "giocatore",
+                "Partito nuovo rompe l'impegno pre-elettorale governando con Centrosinistra; \
+                 valence -0,30 a Partito nuovo",
+                "la coalizione dichiarata prima del voto con Centro",
+            ),
+        ]
+    );
 }
 
 /// Il giocatore che ha corso da solo paga la rottura se governa con chi ha corso contro di lui. I

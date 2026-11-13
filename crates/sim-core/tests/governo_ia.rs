@@ -4,7 +4,7 @@
 )]
 
 mod comune;
-use comune::{all_opposizione, edita, file_base, fondata, ha_voce, imposta, voci};
+use comune::{all_opposizione, edita, file_base, fondata, imposta, voci};
 use serde_json::json;
 use sim_core::esito::TipoVoce;
 use sim_core::legislatura::{Assegnazione, Fase, Fondazione, Incarico, OrigineCaduta};
@@ -282,13 +282,12 @@ fn il_formatore_sceglie_la_maggioranza_che_gli_vale_di_piu() {
         assert_eq!(p.governo().coalizione, attesa, "{posizione}");
         assert_eq!(p.governo().presidente, 5);
         let altro = &p.partiti()[if attesa[0] == 5 { 6 } else { 4 }].nome;
-        let fatto = format!("Forma il governo con {altro}");
-        let causa = "la maggioranza che gli vale di più";
-        assert!(
-            ha_voce(&p, TipoVoce::GovernoFormato, "destra", &fatto, causa),
-            "{:?}",
-            p.vista().esito
-        );
+        let v = voci(&p, TipoVoce::GovernoFormato);
+        assert_eq!(v.len(), 1, "{v:?}");
+        let fatto = format!("Nasce il governo di Destra dopo il voto, con {altro}; dicasteri: ");
+        assert!(v[0].fatto.starts_with(&fatto), "{}", v[0].fatto);
+        assert_eq!(v[0].causa, "la maggioranza che gli vale di più");
+        assert_eq!(v[0].partito.as_deref(), Some("destra"));
     }
 }
 
@@ -938,8 +937,9 @@ fn carica_rifiuta_l_origine_fuori_posto() {
 
 /// Senza una maggioranza che convenga a tutti i membri (`peso_governare` a −100: al governo
 /// ognuno ci perde) il Capo dello Stato ripiega sulla contigua a regole, come prima dell'8b,
-/// senza la riga del formatore: coi seggi del test sopra, centrodestra e destra. Senza nemmeno
-/// quella (il giocatore con la maggioranza dei seggi, o con tutti) le Camere si sciolgono.
+/// e la voce del governo lo dice: coi seggi del test sopra, centrodestra e destra. Senza nemmeno
+/// quella (il giocatore con la maggioranza dei seggi, o con tutti) le Camere si sciolgono, senza
+/// governo formato.
 #[test]
 fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
     let f = imposta(
@@ -967,7 +967,12 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
     assert_eq!(p.legislatura().fase, Fase::Ordinaria);
     assert_eq!(p.governo().coalizione, [4, 5]);
     assert_eq!(p.governo().presidente, 5);
-    assert!(!formatore(&p), "{:?}", p.vista().esito);
+    let v = voci(&p, TipoVoce::GovernoFormato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        v[0].causa,
+        "la maggioranza contigua, senza una che convenga a tutti i suoi partiti"
+    );
     for (camera, senato) in [
         (
             [20, 20, 20, 20, 20, 50, 49, 201],
@@ -984,6 +989,9 @@ fn senza_maggioranza_che_convenga_la_contigua_a_regole() {
         p.chiudi_turno();
         assert_eq!(p.legislatura().fase, Fase::Sciolta, "{camera:?}");
         assert!(!formatore(&p), "{:?}", p.vista().esito);
+        let v = voci(&p, TipoVoce::CamereSciolte);
+        assert_eq!(v.len(), 1, "{v:?}");
+        assert_eq!(v[0].causa, "in trattativa nessun governo possibile");
         assert_eq!(Partita::carica(&p.salva().unwrap()).unwrap(), p);
     }
 }

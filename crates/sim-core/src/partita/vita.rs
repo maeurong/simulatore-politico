@@ -330,8 +330,22 @@ impl Partita {
             }
         }
         for &j in &sciolti {
+            // Fatto 82: la coalizione dell'ultimo voto ridotta a meno di due partiti cade.
+            let caduta = (self.legislatura.coalizioni.iter())
+                .find(|c| c.len() >= 2 && c.contains(&j))
+                .map(|c| (c.iter().copied()).filter(|k| !sciolti.contains(k)))
+                .map(Iterator::collect::<Vec<usize>>)
+                .filter(|resto| resto.len() < 2);
+            let fatto = match caduta.as_deref() {
+                Some(&[k]) => format!(
+                    "Si scioglie; cade la coalizione con {}",
+                    self.partiti.get(k).map_or("", |p| p.nome.as_str())
+                ),
+                Some(_) => "Si scioglie; cade la sua coalizione".to_string(),
+                None => "Si scioglie".to_string(),
+            };
             let causa = format!("{ELEZIONI_SENZA_SEGGI} elezioni senza seggi");
-            self.voce_di(j, TipoVoce::PartitoSciolto, "Si scioglie".into(), causa);
+            self.voce_di(j, TipoVoce::PartitoSciolto, fatto, causa);
         }
         let l = &mut self.legislatura;
         // Una coalizione ridotta a un solo membro dallo scioglimento cade.

@@ -1,5 +1,6 @@
 //! Le voci dell'esito scritte dalla partita, nel punto del fatto.
 
+use super::ia::elenco;
 use super::vita::virgola;
 use super::{Partita, Trimestre};
 use crate::disposizioni::data_di;
@@ -10,7 +11,7 @@ use crate::eventi::situazioni::trimestri;
 use crate::eventi::{Bersaglio, DatoOpzione, EventoAperto, Tono, emergenze};
 use crate::informazione::Sondaggio;
 use crate::legislatura::campagna::{self, migliaia};
-use crate::legislatura::{OrigineCaduta, Spesa, quota_fra_i_votanti};
+use crate::legislatura::{self, Incarico, OrigineCaduta, Spesa, quota_fra_i_votanti};
 use crate::ministri::{FattoAtto, Proposta};
 use crate::parlamento::{
     self, Attenuazione, Conteggio, EsitoReferendum, EsitoVoto, FormaMisura, Misura, Referendum,
@@ -21,6 +22,15 @@ use crate::scenario::StatoPde;
 /// «+1,2» o «-0,3»: una cifra decimale, col segno.
 fn segnato(x: f64) -> String {
     format!("{x:+.1}").replace('.', ",")
+}
+
+/// «12 seggi», «1 seggio».
+fn seggi(n: u32) -> String {
+    if n == 1 {
+        "1 seggio".to_string()
+    } else {
+        format!("{n} seggi")
+    }
 }
 
 /// «luglio-settembre 2026».
@@ -1167,6 +1177,307 @@ impl Partita {
             }
         };
         self.voce_di(pc, TipoVoce::GovernoCaduto, fatto, causa.into());
+    }
+
+    /// I nomi dei partiti `js`, «A, B e C».
+    pub(super) fn nomi(&self, js: &[usize]) -> String {
+        let nomi: Vec<String> = (js.iter().filter_map(|&j| self.partiti.get(j)))
+            .map(|p| p.nome.clone())
+            .collect();
+        elenco(&nomi)
+    }
+
+    /// «N seggi su C alla Camera e M su S al Senato»: i seggi della `coalizione`.
+    fn seggi_di(&self, coalizione: &[usize]) -> String {
+        let pl = &self.parlamento;
+        let somma = |v: &[u32]| coalizione.iter().filter_map(|&j| v.get(j)).sum::<u32>();
+        let (c, s) = self.legislatura.totali;
+        format!(
+            "{} su {c} alla Camera e {} su {s} al Senato",
+            seggi(somma(&pl.seggi_camera)),
+            somma(&pl.seggi_senato)
+        )
+    }
+
+    /// Fatti 78-80, in coda al voto: il risultato, poi l'incarico o, col giocatore senza seggi,
+    /// la fine della partita.
+    pub(super) fn voci_del_voto(&mut self) {
+        let Some(e) = self.legislatura.elezioni.first() else {
+            return;
+        };
+        let pct = |x: f64| virgola(x * 100.0);
+        let nome = |id: &str| {
+            (self.partiti.iter().find(|p| p.id == id)).map_or(id.to_string(), |p| p.nome.clone())
+        };
+        let mio = self.partiti.get(self.giocatore);
+        let suo = mio.and_then(|g| e.voti.iter().find(|v| v.partito == g.id));
+        let (quota, camera, senato) = suo.map_or((0.0, 0, 0), |v| (v.quota, v.camera, v.senato));
+        let mio = mio.map_or(String::new(), |g| g.nome.clone());
+        let primo = (e.voti.iter())
+            .max_by(|a, b| a.quota.total_cmp(&b.quota))
+            .map_or(String::new(), |v| {
+                format!("primo partito {} al {}%", nome(&v.partito), pct(v.quota))
+            });
+        let premio = match &e.premio {
+            Some(ids) => {
+                let nomi: Vec<String> = ids.split('+').map(nome).collect();
+                format!("premio di maggioranza a {}", elenco(&nomi))
+            }
+            None => "nessun premio di maggioranza".to_string(),
+        };
+        let fatto = format!(
+            "Elezioni politiche: affluenza del {}%; {mio} al {}% con {} alla Camera e {senato} al \
+             Senato; {primo}; {premio}",
+            pct(e.affluenza),
+            pct(quota),
+            seggi(camera)
+        );
+        let fine = format!("al voto il {}% fra i votanti, nessun seggio", pct(quota));
+        self.voce(
+            TipoVoce::RisultatoDelVoto,
+            fatto,
+            "elezioni politiche".into(),
+        );
+        if self.fine.is_some() {
+            let fatto =
+                format!("{mio} resta senza seggi alla Camera e al Senato: la partita finisce");
+            self.voce_di(self.giocatore, TipoVoce::FineDellaPartita, fatto, fine);
+        } else {
+            self.voce_incarico(false);
+        }
+    }
+
+    /// Fatti 79 e 103: a chi va l'incarico, dopo il voto o `dopo_la_caduta`. La coalizione
+    /// dell'incarico IA non si dice: la Vista mostra solo il Capo dello Stato.
+    pub(super) fn voce_incarico(&mut self, dopo_la_caduta: bool) {
+        let g = self.giocatore;
+        let mio = self.partiti.get(g).map_or("", |p| p.nome.as_str());
+        let a_me = format!("Incarico di formare il governo a {mio}");
+        let capo = "L'incarico passa al Capo dello Stato".to_string();
+        let (fatto, causa, suo) = match (&self.legislatura.incarico, dopo_la_caduta) {
+            (Some(Incarico::Giocatore), true) => (
+                a_me,
+                "sei il primo per seggi della maggioranza contigua trovata dopo la caduta".into(),
+                true,
+            ),
+            (Some(Incarico::Giocatore), false) => {
+                let sua = self.coalizione_del_giocatore();
+                let pl = &self.parlamento;
+                let quale = if legislatura::maggioranza(&pl.seggi_camera, &pl.seggi_senato, &sua) {
+                    "la tua coalizione ha la maggioranza in entrambe le Camere"
+                } else {
+                    "senza maggioranza, la tua coalizione è la prima alla Camera"
+                };
+                (a_me, format!("{quale}, con {}", self.seggi_di(&sua)), true)
+            }
+            (Some(Incarico::Guida { coalizione }), _) => {
+                let primo: Vec<usize> = self.primo_per_seggi(coalizione).into_iter().collect();
+                let primo = self.nomi(&primo);
+                (
+                    format!("Ribaltone possibile, con la guida a {primo}"),
+                    format!(
+                        "nella maggioranza contigua trovata dopo la caduta {primo} ha più seggi di te"
+                    ),
+                    false,
+                )
+            }
+            (Some(Incarico::Ia { .. }), true) => (
+                capo,
+                "la maggioranza contigua trovata dopo la caduta non ti comprende".into(),
+                false,
+            ),
+            (Some(Incarico::Ia { .. }), false) => (
+                capo,
+                "un'altra coalizione ha la maggioranza in entrambe le Camere".into(),
+                false,
+            ),
+            (None, _) => (
+                capo,
+                "nessuna coalizione ha la maggioranza e la tua non è la prima alla Camera".into(),
+                false,
+            ),
+        };
+        if suo {
+            self.voce_di(g, TipoVoce::Incarico, fatto, causa);
+        } else {
+            self.voce(TipoVoce::Incarico, fatto, causa);
+        }
+    }
+
+    /// Fatto 93: gli alleati `escono` dal governo, coi dicasteri che lasciano in interim. La causa
+    /// dice la soglia e l'ultimatum, mai l'intesa in cifre.
+    pub(super) fn voci_alleati_usciti(&mut self, escono: &[usize]) {
+        let soglia = virgola(self.dati.manopola("soglia_uscita"));
+        for &j in escono {
+            let dicasteri: Vec<&str> = (self.dati.dicasteri().iter())
+                .zip(&self.governo.dicasteri)
+                .filter(|&(_, &k)| k == j)
+                .map(|(d, _)| d.nome.as_str())
+                .collect();
+            let nome = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+            let fatto = if dicasteri.is_empty() {
+                format!("{nome} lascia il governo, senza dicasteri")
+            } else {
+                format!(
+                    "{nome} lascia il governo; dicasteri in interim: {}",
+                    dicasteri.join(", ")
+                )
+            };
+            let mut causa = format!("l'intesa è scesa sotto la soglia d'uscita di {soglia}");
+            if let Some(Some(c)) = self.intesa.ultimatum.get(j) {
+                causa.push_str(&format!(", dopo l'ultimatum per {c}"));
+            }
+            self.voce_di(j, TipoVoce::AlleatoEsce, fatto, causa);
+        }
+    }
+
+    /// Fatto 94: i dicasteri che il rimpasto passa di partito, `(dicastero, partito)`.
+    pub(super) fn voce_rimpasto(&mut self, cambi: &[(usize, usize)], causa: String) {
+        let parti: Vec<String> = (cambi.iter())
+            .filter_map(|&(i, j)| {
+                let d = self.dati.dicasteri().get(i)?;
+                Some(format!("{} a {}", d.nome, self.partiti.get(j)?.nome))
+            })
+            .collect();
+        if !parti.is_empty() {
+            let fatto = format!("Rimpasto: {}", parti.join(", "));
+            self.voce(TipoVoce::Rimpasto, fatto, causa);
+        }
+    }
+
+    /// Fatti 95 e 99: la crisi aperta dall'uscita degli `usciti`, o riaperta (`None`) dalla
+    /// sfiducia respinta, con i seggi della `coalizione`.
+    pub(super) fn voce_crisi_di_governo(&mut self, usciti: Option<&[usize]>, coalizione: &[usize]) {
+        let seggi = self.seggi_di(coalizione);
+        let (fatto, causa) = match usciti {
+            Some(u) => (
+                format!(
+                    "Crisi di governo: senza {} la coalizione non ha la maggioranza",
+                    self.nomi(u)
+                ),
+                format!("la coalizione ha {seggi}"),
+            ),
+            None => (
+                "Si riapre la crisi di governo: la coalizione non ha ancora la maggioranza".into(),
+                format!("la sfiducia respinta, con la coalizione a {seggi}"),
+            ),
+        };
+        self.voce(TipoVoce::CrisiAperta, fatto, causa);
+    }
+
+    /// Fatto 97: gli `allargati` entrano al governo alla fine della crisi.
+    pub(super) fn voce_allargata(&mut self, allargati: &[usize]) {
+        let verbo = if allargati.len() == 1 {
+            "Entra"
+        } else {
+            "Entrano"
+        };
+        let fatto = format!("{verbo} al governo {}", self.nomi(allargati));
+        let causa = "la crisi aperta dalla coalizione senza maggioranza".to_string();
+        self.voce_di(
+            self.governo.presidente,
+            TipoVoce::CoalizioneAllargata,
+            fatto,
+            causa,
+        );
+    }
+
+    /// Fatti 102 e 112: le Camere sciolte, col voto nel turno dopo.
+    pub(super) fn voce_sciolte(&mut self, causa: &str) {
+        let voto = parlamento::mese(data_di(self.turno.saturating_add(1)));
+        let fatto = format!("Camere sciolte, si vota a {voto}");
+        self.voce(TipoVoce::CamereSciolte, fatto, causa.into());
+    }
+
+    /// Fatto 105: il governo del `presidente` con la `coalizione` e la spartizione `assegnati`
+    /// (`None` = tecnico), dopo il voto o per ribaltone; `perche` dice la maggioranza.
+    pub(super) fn voce_formato(
+        &mut self,
+        presidente: usize,
+        coalizione: &[usize],
+        assegnati: &[Option<usize>],
+        perche: &str,
+    ) {
+        let quando = if self.turno <= self.legislatura.inizio {
+            "dopo il voto"
+        } else {
+            "per ribaltone"
+        };
+        let altri: Vec<usize> = (coalizione.iter().copied())
+            .filter(|&j| j != presidente)
+            .collect();
+        let con = if altri.is_empty() {
+            "da solo".to_string()
+        } else {
+            format!("con {}", self.nomi(&altri))
+        };
+        let quanti = |a: Option<usize>| assegnati.iter().filter(|&&x| x == a).count();
+        let mut parti: Vec<String> = (std::iter::once(presidente).chain(altri))
+            .filter_map(|j| Some((quanti(Some(j)), &self.partiti.get(j)?.nome)))
+            .filter(|&(n, _)| n > 0)
+            .map(|(n, nome)| format!("{n} a {nome}"))
+            .collect();
+        if quanti(None) > 0 {
+            parti.push(format!("{} a tecnici", quanti(None)));
+        }
+        let pc = self.partiti.get(presidente).map_or("", |p| p.nome.as_str());
+        let fatto = format!(
+            "Nasce il governo di {pc} {quando}, {con}; dicasteri: {}",
+            parti.join(", ")
+        );
+        self.voce_di(presidente, TipoVoce::GovernoFormato, fatto, perche.into());
+    }
+
+    /// Fatto 108: `j` della `coalizione` rompe l'impegno pre-elettorale con gli `entranti`, come
+    /// lo decide `legislatura::rotture`. L'intesa persa si dice solo per gli alleati del giocatore.
+    pub(super) fn voce_rottura(
+        &mut self,
+        j: usize,
+        coalizione: &[usize],
+        entranti: &[usize],
+        presidente: usize,
+    ) {
+        let ultime = &self.legislatura.coalizioni;
+        let campo = |k: usize| (ultime.iter()).find(|c| c.len() >= 2 && c.contains(&k));
+        let mio = campo(j);
+        let fuori: Vec<usize> = (mio.into_iter().flatten().copied())
+            .filter(|k| entranti.contains(&j) && !coalizione.contains(k))
+            .collect();
+        let altri: Vec<usize> = (entranti.iter().copied())
+            .filter(|&k| k != j && campo(k).is_some_and(|c| Some(c) != mio))
+            .collect();
+        let compagni: Vec<usize> = (mio.into_iter().flatten().copied())
+            .filter(|&k| k != j)
+            .collect();
+        let nome = self.partiti.get(j).map_or("", |p| p.nome.as_str());
+        let mut fatto = if fuori.is_empty() {
+            format!(
+                "{nome} rompe l'impegno pre-elettorale governando con {}",
+                self.nomi(&altri)
+            )
+        } else {
+            let resta = if fuori.len() == 1 { "resta" } else { "restano" };
+            format!(
+                "{nome} rompe l'impegno pre-elettorale con {}, che {resta} fuori dal governo",
+                self.nomi(&fuori)
+            )
+        };
+        let m = |nome: &str| self.dati.manopola(nome);
+        fatto.push_str("; ");
+        fatto.push_str(&valence(-m("valence_rottura_impegno"), nome));
+        if j != presidente && presidente == self.giocatore {
+            let intesa = virgola(m("intesa_rottura_impegno"));
+            fatto.push_str(&format!("; perde {intesa} punti d'intesa"));
+        }
+        let causa = if compagni.is_empty() {
+            "ha corso da solo al voto".to_string()
+        } else {
+            format!(
+                "la coalizione dichiarata prima del voto con {}",
+                self.nomi(&compagni)
+            )
+        };
+        self.voce_di(j, TipoVoce::RotturaDellImpegno, fatto, causa);
     }
 
     /// Fatto 48: la mozione di `promotore` sul `dicastero` (o sul governo) tolta senza voto.

@@ -95,6 +95,19 @@ fn lo_sciolto_esce_dalle_coalizioni() {
         .to_vec();
     assert!(coalizioni.contains(&premessa), "{coalizioni:?}");
     assert!(p.partiti()[0].sciolto);
+    // Fatto 82: la coalizione ridotta al solo centrosinistra cade, e la voce lo dice.
+    let fatto = "Si scioglie; cade la coalizione con Centrosinistra";
+    assert!(
+        ha_voce(
+            &p,
+            TipoVoce::PartitoSciolto,
+            "estrema_sinistra",
+            fatto,
+            "2 elezioni senza seggi"
+        ),
+        "{:?}",
+        p.vista().esito
+    );
     let l = p.legislatura();
     assert!(l.coalizioni.iter().flatten().all(|&j| j != 0 && j != 2));
     assert!(l.coalizioni.iter().all(|c| c.len() >= 2));
