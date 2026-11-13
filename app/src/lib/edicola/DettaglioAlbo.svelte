@@ -48,7 +48,7 @@
 <div>
   <h3 class="sotto">{t("edicola.contro_il_turno_zero")}</h3>
   <table class="ind">
-    <thead><tr><th>{t("edicola.indicatore")}</th><th class="r">{t("edicola.turno_zero")}</th><th class="r">{t("edicola.fine")}</th><th></th></tr></thead>
+    <thead><tr><th>{t("edicola.indicatore")}</th><th class="r">{t("edicola.turno_zero")}</th><th class="r">{t("edicola.fine")}</th><th><span class="nascosto">{t("edicola.scarto")}</span></th></tr></thead>
     <tbody>
       {#each voce.indicatori as i (i.id)}
         {@const decimali = i.id === "spread" ? 0 : 1}
@@ -126,8 +126,9 @@
   /* contain: le etichette, che ci stiano o no, non allargano il dettaglio */
   .etich { display: flex; gap: 2px; font-size: var(--c-min); color: var(--grigio); contain: inline-size }
   /* un'etichetta che non ci sta non si mostra: va a capo dietro un primo elemento vuoto e l'altezza di una riga la taglia */
-  .etich span { min-width: 0; display: flex; flex-wrap: wrap; height: 1lh; overflow: hidden; white-space: nowrap }
-  .etich span::before { content: ""; height: 1lh }
+  /* 1.35em è l'interlinea della radice: il ripiego per un WebKit senza lh */
+  .etich span { min-width: 0; display: flex; flex-wrap: wrap; height: 1.35em; height: 1lh; overflow: hidden; white-space: nowrap }
+  .etich span::before { content: ""; height: 1.35em; height: 1lh }
   /* quella del giocatore non si stringe */
   .etich span.mio { min-width: max-content; color: var(--rosso); font-weight: 700 }
   /* inline-block: WebKit non va a capo davanti a un nowrap in riga e lo lascia sporgere */

@@ -244,6 +244,8 @@
   .scegli { text-align: left }
   .rp .m { font-size: var(--c-sec); color: var(--grigio) }
   .azr { display: flex; gap: 8px; align-items: center; grid-row: span 2 }
+  /* il timbro ruotato sporge di un pixel dalla sua scatola e WebKit lo conta: lo spazio sta nel padding, il margine negativo tiene ferma la riga */
+  .rp .azr { padding-right: 2px; margin-right: -2px }
   .bollo {
     display: inline-block; border: var(--doppio); border-color: var(--rosso); color: var(--rosso); font-weight: 700; letter-spacing: .12em;
     text-transform: uppercase; padding: 1px 9px; transform: rotate(-5deg); font-size: var(--c-min); white-space: nowrap;
