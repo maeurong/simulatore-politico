@@ -106,6 +106,22 @@ pub struct Vista {
     pub fermate: Vec<Fermata>,
     /// Una voce per regione, nell'ordine dei dati.
     pub regioni: Vec<VoceRegione>,
+    /// Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
+    pub opere: Vec<VoceOpera>,
+}
+
+/// Un'opera finita in una regione. `dicastero` e `regione` sono id, `atto` il nome dell'atto,
+/// `turno` quello della chiusura che l'ha finita, `euro` la spesa dell'atto o quanto il cantiere
+/// ha speso in tutto.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceOpera {
+    pub dicastero: String,
+    pub atto: String,
+    pub regione: String,
+    pub turno: u32,
+    pub cantiere: bool,
+    pub euro: i64,
 }
 
 /// Una ragione per fermarsi sul turno appena aperto. `misura` è l'id della misura in calendario,

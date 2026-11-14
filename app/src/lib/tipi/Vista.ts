@@ -24,6 +24,7 @@ import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
+import type { VoceOpera } from "./VoceOpera";
 import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
 import type { VoceRegione } from "./VoceRegione";
@@ -168,4 +169,8 @@ fermate: Array<Fermata>,
 /**
  * Una voce per regione, nell'ordine dei dati.
  */
-regioni: Array<VoceRegione>, };
+regioni: Array<VoceRegione>, 
+/**
+ * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
+ */
+opere: Array<VoceOpera>, };

@@ -772,6 +772,17 @@ fn cantiere_finito_lascia_la_voce() {
 }
 
 #[test]
+fn un_atto_senza_regione_non_e_un_opera() {
+    let mut p = cantiere_solo();
+    while cantiere(&p, "sanita").is_some() {
+        ferma_tutti(&mut p);
+        p.chiudi_turno();
+    }
+    assert_eq!(voci(&p, TipoVoce::CantiereFinito).len(), 1);
+    assert!(p.vista().opere.is_empty(), "{:?}", p.vista().opere);
+}
+
+#[test]
 fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
     let s = indice("sanita");
     let mut p = Partita::nuova(fermare_gratis(), 7);

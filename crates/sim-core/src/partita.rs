@@ -42,7 +42,7 @@ use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita, PrezzoAcquisto, SeggiPartito,
     Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica,
     VoceAlleato, VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico,
-    VoceMinistero, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
+    VoceMinistero, VoceOpera, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
     VoceSituazione,
 };
 use serde::{Deserialize, Serialize};
@@ -137,6 +137,20 @@ pub struct Partita {
     /// I riavvolgimenti della partita: li conta il guscio, che li reimposta dopo aver caricato
     /// il turno a cui torna.
     riavvolgimenti: u32,
+    /// Le opere finite dall'ultimo voto. Stanno sulla partita e non nei dicasteri: un governo
+    /// nuovo ricostruisce lo stato dei dicasteri da zero.
+    opere: Vec<OperaFinita>,
+}
+
+/// Un atto regionale eseguito o un cantiere finito. Indici nei dati; `atto` è il nome.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+struct OperaFinita {
+    dicastero: usize,
+    atto: String,
+    regione: usize,
+    turno: u32,
+    cantiere: bool,
+    euro: i64,
 }
 
 /// La quota di ogni partito fra i votanti nelle intenzioni nazionali (l'astensione è l'ultima);
@@ -324,6 +338,7 @@ impl Partita {
             acquisti: Acquistati::default(),
             serie: Vec::new(),
             riavvolgimenti: 0,
+            opere: Vec::new(),
         };
         // Il partito del giocatore non segue una regola IA (scelta 4 del piano 8b), nemmeno quando
         // viene dallo scenario: le sue frange nascono Sticker.
@@ -652,6 +667,18 @@ impl Partita {
         let (effetti, atti) = self.con_contesto(|ministri, cx, _| ministri.esegui(cx));
         self.grandezze.effetti.extend(effetti);
         for f in atti {
+            if let (TipoVoce::AttoEseguito | TipoVoce::CantiereFinito, Some(regione)) =
+                (f.tipo, f.regione)
+            {
+                self.opere.push(OperaFinita {
+                    dicastero: f.dicastero,
+                    atto: f.atto.clone(),
+                    regione,
+                    turno: self.turno,
+                    cantiere: f.tipo == TipoVoce::CantiereFinito,
+                    euro: f.euro,
+                });
+            }
             self.voce_atto(f);
         }
         let sfiducia_votata = if self.legislatura.fase == Fase::Sciolta {
@@ -3048,6 +3075,7 @@ impl Partita {
     /// comune nuovo, legislatura nuova in trattativa, incarico. Riparto rifiutato: seggi di prima,
     /// esito con le quote senza seggi. Il giocatore senza seggi in entrambe le Camere: fine.
     fn vota_parlamento(&mut self, vero: &Intenzioni) {
+        self.opere.clear();
         let sospeso = self.parlamento.referendum.as_ref().map(|r| r.promotore);
         let via = (self.parlamento).decadi_tutto(&self.dati, &self.disposizioni, self.data);
         for m in &via {
@@ -4469,7 +4497,25 @@ impl Partita {
             },
             fermate: self.fermate(),
             regioni: self.voci_regioni(),
+            opere: self.voci_opere(),
         }
+    }
+
+    /// Le opere finite dall'ultimo voto, con gli id dei dati.
+    fn voci_opere(&self) -> Vec<VoceOpera> {
+        let (dicasteri, regioni) = (self.dati.dicasteri(), self.dati.regioni());
+        (self.opere.iter())
+            .filter_map(|o| {
+                Some(VoceOpera {
+                    dicastero: dicasteri.get(o.dicastero)?.id.clone(),
+                    atto: o.atto.clone(),
+                    regione: regioni.get(o.regione)?.id.clone(),
+                    turno: o.turno,
+                    cantiere: o.cantiere,
+                    euro: o.euro,
+                })
+            })
+            .collect()
     }
 
     /// Le regioni nell'ordine dei dati: la disoccupazione e il reddito della chiusura precedente,
@@ -5036,6 +5082,7 @@ impl Partita {
             .ministri
             .controlla(&partita.dati, partita.partiti.len())?;
         partita.controlla_decreti()?;
+        partita.controlla_opere()?;
         partita.controlla_serie()?;
         let in_aula = (partita.parlamento.misure.iter())
             .filter(|m| m.forma == FormaMisura::Bilancio)
@@ -5085,6 +5132,19 @@ impl Partita {
     /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
     /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
     /// conversione.
+    fn controlla_opere(&self) -> Result<(), Errore> {
+        let (n_dicasteri, n_regioni) = (self.dati.dicasteri().len(), self.dati.regioni().len());
+        ok(
+            self.opere.iter().all(|o| {
+                o.dicastero < n_dicasteri
+                    && o.regione < n_regioni
+                    && o.turno <= self.turno
+                    && o.euro >= 0
+            }),
+            "opere: un dicastero o una regione fuori dai dati, un turno nel futuro o una spesa negativa",
+        )
+    }
+
     fn controlla_decreti(&self) -> Result<(), Errore> {
         let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
         for (i, (st, &x)) in dicasteri.enumerate() {
