@@ -183,9 +183,9 @@ describe("sessioneElettori", () => {
 
   it("cambiare casella o regione in volo mostra solo l'ultima scelta", async () => {
     const { leggi, attese, esiti, sessione } = aMano();
-    sessione.chiedi("abruzzo", "autonomo", "alta");
-    sessione.chiedi("abruzzo", "autonomo", "bassa");
-    sessione.chiedi("molise", "autonomo", "bassa");
+    sessione.chiedi("abruzzo", "autonomo", "alta", 3);
+    sessione.chiedi("abruzzo", "autonomo", "bassa", 3);
+    sessione.chiedi("molise", "autonomo", "bassa", 3);
     attese[0].risolvi([e("A")]);
     await svuota();
     expect(esiti).toEqual([]);
@@ -194,9 +194,21 @@ describe("sessioneElettori", () => {
     await svuota();
     expect(esiti).toEqual([{ elettori: [e("C")] }]);
   });
+  it("la stessa casella a un turno nuovo si rilegge: la risposta del turno vecchio non si mostra", async () => {
+    const { leggi, attese, esiti, sessione } = aMano();
+    sessione.chiedi("abruzzo", "autonomo", "alta", 3);
+    sessione.chiedi("abruzzo", "autonomo", "alta", 4);
+    attese[0].risolvi([e("vecchio")]);
+    await svuota();
+    expect(esiti).toEqual([]);
+    attese[1].risolvi([e("nuovo")]);
+    await svuota();
+    expect(leggi).toHaveBeenCalledTimes(2);
+    expect(esiti).toEqual([{ elettori: [e("nuovo")] }]);
+  });
   it("una risposta arrivata dopo l'annulla non si mostra", async () => {
     const { attese, esiti, sessione } = aMano();
-    sessione.chiedi("abruzzo", "autonomo", "alta");
+    sessione.chiedi("abruzzo", "autonomo", "alta", 3);
     sessione.annulla();
     attese[0].risolvi([e("A")]);
     await svuota();
@@ -204,10 +216,10 @@ describe("sessioneElettori", () => {
   });
   it("il rifiuto del core è un rifiuto senza prefisso, il guasto un guasto", async () => {
     const { attese, esiti, sessione } = aMano();
-    sessione.chiedi("atlantide", "autonomo", "alta");
+    sessione.chiedi("atlantide", "autonomo", "alta", 3);
     attese[0].rifiuta({ specie: "rifiuto", testo: "comando non ammesso: regione sconosciuta" });
     await svuota();
-    sessione.chiedi("abruzzo", "autonomo", "alta");
+    sessione.chiedi("abruzzo", "autonomo", "alta", 3);
     attese[1].rifiuta({ specie: "guasto", testo: "core non risponde" });
     await svuota();
     expect(esiti).toEqual([{ rifiuto: "regione sconosciuta" }, { guasto: "core non risponde" }]);

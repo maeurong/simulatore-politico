@@ -8,6 +8,7 @@ import { t } from "$lib/testi/t";
 import type { Condizione } from "$lib/tipi/Condizione";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import type { Fascia } from "$lib/tipi/Fascia";
+import type { Incrocio } from "$lib/tipi/Incrocio";
 import type { Sondaggio } from "$lib/tipi/Sondaggio";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceDisposizione } from "$lib/tipi/VoceDisposizione";
@@ -75,13 +76,20 @@ export function lista(valori: Record<string, number | null>, ordine: "nome" | "v
   );
 }
 
-/** La media degli istituti: una quota sui votanti per partito (dal più al meno votato) e l'astensione a parte. */
-export function media(v: Vista, s: Sondaggio): { partiti: { id: string; nome: string; quota: number }[]; astensione: number } {
-  const partiti = v.partiti
-    .map((p, j) => ({ id: p.id, nome: p.nome, quota: quotaVotanti(s, j), sciolto: p.sciolto }))
+export type QuotaPartito = { id: string; nome: string; quota: number };
+
+/** Una quota per partito attivo, dal più al meno votato. Un partito senza riga nel sondaggio (nato dopo) non c'è e non azzera gli altri. */
+function quotePerPartito(v: Vista, leggi: (j: number) => number | null): QuotaPartito[] {
+  return v.partiti
+    .map((p, j) => ({ id: p.id, nome: p.nome, quota: leggi(j), sciolto: p.sciolto }))
     .filter((p): p is typeof p & { quota: number } => p.quota !== null && !p.sciolto)
     .map(({ id, nome, quota }) => ({ id, nome, quota }))
     .sort((a, b) => b.quota - a.quota);
+}
+
+/** La media degli istituti: una quota sui votanti per partito (dal più al meno votato) e l'astensione a parte. */
+export function media(v: Vista, s: Sondaggio): { partiti: QuotaPartito[]; astensione: number } {
+  const partiti = quotePerPartito(v, (j) => quotaVotanti(s, j));
   const astensione = s.istituti.length ? s.istituti.reduce((a, r) => a + r.quote[r.quote.length - 1], 0) / s.istituti.length : 0;
   return { partiti, astensione };
 }
@@ -93,19 +101,17 @@ export const FASCE: readonly Fascia[] = ["bassa", "media", "alta"];
 export const disposizioniDi = (v: Vista, regione: string): VoceDisposizione[] => v.disposizioni.filter((d) => d.perimetro.includes(regione));
 
 /** Il sondaggio della regione: una quota per partito fra i votanti, dal sondaggio letto, dal più al meno votato. */
-export function sondaggioDi(v: Vista, regione: string): { id: string; nome: string; quota: number }[] {
+export function sondaggioDi(v: Vista, regione: string): QuotaPartito[] {
   const r = sondaggioLetto(v).sondaggio.regioni.find((x) => x.id === regione);
-  if (!r) return [];
-  return v.partiti
-    .map((p, j) => ({ id: p.id, nome: p.nome, quota: quotaIncrocio(r, j), sciolto: p.sciolto }))
-    .filter((p): p is typeof p & { quota: number } => p.quota !== null && !p.sciolto)
-    .map(({ id, nome, quota }) => ({ id, nome, quota }))
-    .sort((a, b) => b.quota - a.quota);
+  return r ? quoteDi(v, r) : [];
 }
+
+/** Le quote di un incrocio (una regione, una condizione), come nel sondaggio della regione. */
+export const quoteDi = (v: Vista, i: Incrocio): QuotaPartito[] => quotePerPartito(v, (j) => quotaIncrocio(i, j));
 
 export type EsitoElettori = { elettori: ElettoreCampione[] } | { rifiuto: string } | { guasto: string };
 
-/** Gli elettori della casella: una lettura in volo per volta, e si mostra solo l'ultima casella chiesta (o niente dopo `annulla`). */
+/** Gli elettori della casella: una lettura in volo per volta, e si mostra solo l'ultima casella chiesta (o niente dopo `annulla`). Il turno è nella chiave: il core estrae a ogni turno elettori nuovi. */
 export function sessioneElettori(
   leggi: (regione: string, condizione: Condizione, fascia: Fascia) => Promise<ElettoreCampione[]>,
   mostra: (esito: EsitoElettori) => void,
@@ -119,8 +125,8 @@ export function sessioneElettori(
     },
   );
   return {
-    chiedi(regione: string, condizione: Condizione, fascia: Fascia) {
-      ultima = `${regione}|${condizione}|${fascia}`;
+    chiedi(regione: string, condizione: Condizione, fascia: Fascia, turno: number) {
+      ultima = `${turno}|${regione}|${condizione}|${fascia}`;
       chiedi({ regione, condizione, fascia, chiave: ultima });
     },
     annulla() {

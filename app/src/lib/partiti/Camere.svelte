@@ -1,33 +1,22 @@
 <script lang="ts">
   // Le Camere nel dettaglio a lato (24-partiti.prototype.html): in carica e se si votasse oggi, a barre coi colori dei partiti.
   import { t, type Chiave } from "$lib/testi/t";
-  import { nomeDi } from "$lib/partiti";
-  import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
   import type { Vista } from "$lib/tipi/Vista";
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
+  import { RAMI, barreSeggi, maggioranza } from "$lib/componenti/seggi";
   import { TETTO_PARTITI } from "./schieramento";
 
   let { vista }: { vista: Vista } = $props();
 
-  const rami = ["camera", "senato"] as const;
-  /** I seggi di un elenco, ramo per ramo; il totale è la somma delle voci, e a zero la barra non si disegna. */
-  const barre = (elenco: SeggiPartito[] | null) =>
-    rami.flatMap((ramo) => {
-      const righe = (elenco ?? []).map((s) => ({ id: s.partito, nome: nomeDi(vista, s.partito), seggi: s[ramo] }));
-      const totale = righe.reduce((a, r) => a + r.seggi, 0);
-      return totale ? [{ ramo, righe, totale }] : [];
-    });
   const sciolte = $derived(vista.fase === "sciolta");
-  const carica = $derived(barre(vista.seggi));
-  const oggi = $derived(barre(vista.proiezione));
+  // a Camere sciolte i seggi in carica non ci sono, anche se la Vista ne porta ancora
+  const carica = $derived(sciolte ? [] : barreSeggi(vista, vista.seggi));
+  const oggi = $derived(barreSeggi(vista, vista.proiezione));
   const vivi = $derived(vista.partiti.filter((p) => !p.sciolto).length);
-  const maggioranza = (ramo: (typeof rami)[number]) => {
-    const tot = barre(vista.proiezione).concat(barre(vista.seggi)).find((b) => b.ramo === ramo)?.totale ?? 0;
-    return Math.floor(tot / 2) + 1;
-  };
+  const metaDi = (ramo: (typeof RAMI)[number]) => maggioranza((oggi.length ? oggi : carica).find((b) => b.ramo === ramo)?.totale ?? 0);
 </script>
 
-{#snippet gruppo(titolo: Chiave, nota: string, elenco: ReturnType<typeof barre>)}
+{#snippet gruppo(titolo: Chiave, nota: string, elenco: ReturnType<typeof barreSeggi>)}
   <h5 class="grp"><span>{t(titolo)}</span><span class="nota">{nota}</span></h5>
   {#each elenco as b (b.ramo)}
     <p class="ramo">{t(`edicola.${b.ramo}`)}</p>
@@ -48,7 +37,7 @@
   <p class="sec muto">{t("paese.senza_proiezione")}</p>
 {/if}
 <h5 class="grp"><span>{t("partiti.su_dieci", { n: vivi, tetto: TETTO_PARTITI })}</span></h5>
-{#if carica.length || oggi.length}<p class="min muto">{t("partiti.nota_filo", { camera: maggioranza("camera"), senato: maggioranza("senato"), tetto: TETTO_PARTITI })}</p>{/if}
+{#if carica.length || oggi.length}<p class="min muto">{t("partiti.nota_filo", { camera: metaDi("camera"), senato: metaDi("senato"), tetto: TETTO_PARTITI })}</p>{/if}
 
 <style>
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; font-size: var(--c-sez) }

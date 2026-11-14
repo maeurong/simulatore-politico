@@ -10,7 +10,7 @@
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import Avvisi from "./Avvisi.svelte";
   import AsseDeiPartiti from "./AsseDeiPartiti.svelte";
-  import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, ultimoVoto } from "./schieramento";
+  import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, staPerSciogliersi, ultimoVoto } from "./schieramento";
 
   let { vista, partito: p, indietro }: { vista: Vista; partito: VocePartito; indietro: () => void } = $props();
 
@@ -37,6 +37,7 @@
     <Avvisi {lista} />
   </div>
 </div>
+{#if p.sciolto}<p class="sec"><b>{t("partiti.s_sciolto")}</b> {t("partiti.s_sciolto_motivo")}</p>{/if}
 {#if colore === null}<Segnaposto sezione={t("partiti.ph_origine")} fetta="11f" />{/if}
 
 <h5 class="grp"><span>{t("partiti.s_posizione")}</span><span>{[t("partiti.s_dichiarata", { x: numero(p.posizione_dichiarata, 1) }), ...(!tu && mio ? [t("partiti.s_tu_a", { x: numero(mio.posizione_dichiarata, 1) })] : [])].join(" · ")}</span></h5>
@@ -52,7 +53,7 @@
 {#if intesa && "alleato" in intesa}
   {@const a = intesa.alleato}
   <h5 class="grp"><span>{t("partiti.s_intesa")}</span><span>{t("partiti.s_intesa_su", { n: numero(a.intesa, 1) })}</span></h5>
-  <Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} />
+  <span class="ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
   <Segnaposto sezione={t("partiti.ph_soglie")} fetta="11g" />
   {#if a.ultimatum}
     <p class="sec"><b>{a.causa_ultimatum ? t("partiti.s_ultimatum_per", { causa: causa(a.causa_ultimatum) }) : `${t("partiti.s_ultimatum")}.`}</b> <a class="vai" href="/partita/cruscotto">{t("partiti.s_rispondi")}</a></p>
@@ -66,7 +67,7 @@
 {:else if intesa}
   {@const f = intesa.fascia}
   <h5 class="grp"><span>{t("partiti.s_intesa_col_governo")}</span><span>{t("partiti.s_in_fasce")}</span></h5>
-  <Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} />
+  <span class="ints"><Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
   {#if f.causa_ultimatum}<p class="sec">{t("partiti.s_ultimatum_per", { causa: causa(f.causa_ultimatum) })}</p>{/if}
   <p class="min muto">{t("partiti.s_incrinato")}</p>
 {/if}
@@ -77,7 +78,7 @@
   <dt>{t("partiti.se_oggi")}</dt>
   <dd>{coppia(seggi.oggi)}{" "}{#if seggi.oggi && seggi.carica} <span class="muto min">{t("partiti.s_alla_camera", { n: segnato(seggi.oggi.camera - seggi.carica.camera) })}</span>{/if}</dd>
   <dt>{t("partiti.sondaggio")}</dt><dd>{sond === null ? "—" : percentuale(sond, 1)} <span class="muto min">{t("partiti.s_media")}</span></dd>
-  {#if voto}<dt>{t("partiti.s_ultimo_voto")}</dt><dd>{percentuale(voto.quota, 1)} · {vista.elezioni[0].data.anno}</dd>{/if}
+  {#if voto}<dt>{t("partiti.s_ultimo_voto")}</dt><dd>{percentuale(voto.quota, 1)} · {vista.elezioni[0].data.anno}{#if staPerSciogliersi(vista, p)}{" "}<span class="male min">· {t("partiti.s_senza_seggio")}</span>{/if}</dd>{/if}
   {#if !tu}<dt>{t("partiti.s_carisma")}</dt><dd>{segnato(p.valence, 2)} <span class="muto min">{t("partiti.s_carisma_nota")}</span></dd>{/if}
   <dt>{t("partiti.cassa")}</dt><dd><b>{cassaBreve(p.cassa)}</b></dd>
 </dl>
@@ -97,6 +98,8 @@
   .sec { font-size: var(--c-sec) }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }
+  .male { color: var(--rosso) }
+  .ints { font-size: var(--c-min); color: var(--grigio) }
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; font-size: var(--c-sez); display: flex; gap: 6px; align-items: baseline }
   .tit.sciolto { text-decoration: line-through; color: var(--grigio) }
   .sw { width: 10px; height: 10px; border: 1px solid var(--ink); flex: none }

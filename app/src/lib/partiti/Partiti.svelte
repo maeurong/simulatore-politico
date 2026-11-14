@@ -70,9 +70,9 @@
           <span class="rr largo"><span class="muto">{t("partiti.cassa")}</span><b>{cassaBreve(p.cassa)}</b></span>
           {#if !tu}<span class="ind largo">{t(indole[0])} · {t(indole[1])}</span>{/if}
           {#if a}
-            <span class="largo"><Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
+            <span class="largo ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
           {:else if f}
-            <span class="largo"><Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
+            <span class="largo ints"><Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
           {/if}
           {#if lista.length}<span class="largo"><Avvisi {lista} /></span>{/if}
         </article>
@@ -110,8 +110,10 @@
   .sch.sciolto { border-style: dashed; border-color: var(--grigio); color: var(--grigio) }
   .sch.sciolto .nm { text-decoration: line-through }
   .ld { font-size: var(--c-min); color: var(--grigio) }
-  .rr { display: flex; justify-content: space-between; gap: 4px; font-size: var(--c-min) }
+  .rr { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 4px; font-size: var(--c-min) }
   .rr > * { white-space: nowrap }
+  .rr b { margin-left: auto }
+  .ints { font-size: var(--c-min); color: var(--grigio) }
   .ind { font-size: var(--c-min); color: var(--grigio); line-height: 1.25 }
   /* forma stretta: la faccia sta sopra e il nome ha tutta la scheda, così nessuna parola si spezza */
   :global(:root.stretta) .sch > :not(.filo) { grid-column: 1 / -1 }

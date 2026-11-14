@@ -3,12 +3,13 @@
   // title e nell'elenco accanto (docs/ricerca/estetica/mappa-svg-delle-regioni.md:136).
   import { coloreDi } from "$lib/partiti";
   import { numero } from "$lib/testi/t";
+  import { maggioranza } from "./seggi";
 
   /** `segno`: i seggi della coalizione, un segno nero sotto la barra dal bordo sinistro. */
   let { righe, totale, segno }: { righe: { id: string; nome: string; seggi: number }[]; totale: number; segno?: number } = $props();
 
   const con = $derived(righe.filter((r) => r.seggi > 0));
-  const meta = $derived(((Math.floor(totale / 2) + 1) / totale) * 100);
+  const meta = $derived((maggioranza(totale) / totale) * 100);
 </script>
 
 <div class="barra">

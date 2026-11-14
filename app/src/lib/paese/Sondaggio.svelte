@@ -3,13 +3,15 @@
   import { t, numero, percentuale, type Chiave } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { acquistoSondaggio } from "$lib/acquisto.svelte";
-  import { coalizioneDi, coloreDi, nomeDi, quotaIncrocio } from "$lib/partiti";
+  import { coalizioneDi, coloreDi, quotaIncrocio } from "$lib/partiti";
   import type { Vista } from "$lib/tipi/Vista";
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { media, sondaggioLetto } from "./paese";
+  import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
+  import BarreQuote from "./BarreQuote.svelte";
+  import { media, quoteDi, sondaggioLetto } from "./paese";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -24,32 +26,19 @@
 
   const coalizione = $derived(coalizioneDi(vista));
   const rami = $derived(
-    (["camera", "senato"] as const).flatMap((ramo) => {
-      const righe = (vista.proiezione ?? []).map((s) => ({ id: s.partito, nome: nomeDi(vista, s.partito), seggi: s[ramo] }));
-      const tot = righe.reduce((a, r) => a + r.seggi, 0);
-      const n = righe.filter((r) => coalizione.includes(r.id)).reduce((a, r) => a + r.seggi, 0);
-      return tot ? [{ ramo, righe, tot, n, meta: Math.floor(tot / 2) + 1 }] : [];
-    }),
+    barreSeggi(vista, vista.proiezione).map((b) => ({ ...b, n: b.righe.filter((r) => coalizione.includes(r.id)).reduce((a, r) => a + r.seggi, 0), meta: maggioranza(b.totale) })),
   );
 
   let scelto = $state<string | null>(null);
   const incrocio = $derived(letto.sondaggio.condizioni.find((c) => c.id === scelto));
-  const quoteIncrocio = $derived(
-    incrocio
-      ? vista.partiti
-          .map((p, j) => ({ id: p.id, nome: p.nome, quota: quotaIncrocio(incrocio, j), sciolto: p.sciolto }))
-          .filter((p): p is typeof p & { quota: number } => p.quota !== null && !p.sciolto)
-          .sort((a, b) => b.quota - a.quota)
-      : [],
-  );
+  const quoteIncrocio = $derived(incrocio ? quoteDi(vista, incrocio) : []);
   const giocatore = $derived(vista.partiti.findIndex((p) => p.id === vista.giocatore));
   const picco = $derived(Math.max(0.0001, ...(incrocio?.posizione ?? [])));
   const pc = (x: number | null) => (x === null ? "—" : percentuale(x, 1));
-  const colore = (id: string) => coloreDi(id) ?? "var(--retino)";
 </script>
 
 {#snippet barra(id: string, quota: number, scala: number)}
-  <span class="b"><i style:width="{(quota / scala) * 100}%" style:background={colore(id)}></i></span>
+  <span class="b"><i style:width="{(quota / scala) * 100}%" style:background={coloreDi(id) ?? "var(--retino)"}></i></span>
 {/snippet}
 
 {#if incrocio}
@@ -57,13 +46,7 @@
   <h4 class="tit nome">{t(`condizione.${incrocio.id}` as Chiave)}</h4>
   <p class="sec">{t("paese.incrocio_campione", { n: numero(incrocio.campione) })}{letto.privato ? ` · ${t("paese.dal_privato")}` : ""}</p>
   <Segnaposto sezione={t("paese.margine")} fetta="11g" />
-  <div class="barre">
-    {#each quoteIncrocio as p (p.id)}
-      <span class="n" class:tu={p.id === vista.giocatore}>{p.nome}</span>
-      {@render barra(p.id, p.quota, Math.max(0.01, ...quoteIncrocio.map((x) => x.quota)))}
-      <span class="q" class:tu={p.id === vista.giocatore}>{pc(p.quota)}</span>
-    {/each}
-  </div>
+  <BarreQuote righe={quoteIncrocio} giocatore={vista.giocatore} />
   <p class="sec">{t("paese.approvazione")} <b>{numero(incrocio.approvazione, 2)}</b> <span class="muto">{t("paese.approvazione_nota")}</span></p>
   <h5 class="grp"><span>{t("paese.collocazione")}</span><span>{t("paese.collocazione_asse")}</span></h5>
   <svg width="100%" height="44" viewBox="0 0 280 44" preserveAspectRatio="none" role="img" aria-label={t("paese.collocazione_aria")}>
@@ -109,8 +92,8 @@
   <h5 class="grp"><span>{t("paese.seggi")}</span></h5>
   {#if rami.length}
     {#each rami as r (r.ramo)}
-      <p class="sec"><b>{t(`edicola.${r.ramo}`)}</b> · {t("paese.seggi_coalizione", { n: r.n, tot: r.tot, meta: r.meta })}</p>
-      <BarraSeggi righe={r.righe} totale={r.tot} segno={r.n} />
+      <p class="sec"><b>{t(`edicola.${r.ramo}`)}</b> · {t("paese.seggi_coalizione", { n: r.n, tot: r.totale, meta: r.meta })}</p>
+      <BarraSeggi righe={r.righe} totale={r.totale} segno={r.n} />
     {/each}
     <p class="min muto">{t("paese.seggi_nota")}</p>
   {:else}
@@ -140,8 +123,8 @@
   .nome::first-letter, .cond::first-letter { text-transform: uppercase }
   .cond { display: inline-block }
   .grp { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; padding-bottom: 2px; border-bottom: var(--bordo); font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--grigio) }
-  .barre { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; font-size: var(--c-sec) }
-  .barre.con-privato { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto auto }
+  .barre { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; font-size: var(--c-sec) }
+  .barre.con-privato { grid-template-columns: minmax(0, 150px) minmax(0, 1fr) auto auto }
   .n { overflow-wrap: anywhere }
   .b { display: block; height: 12px; position: relative }
   .b i { position: absolute; inset: 0 auto 0 0; border: 1px solid var(--ink) }

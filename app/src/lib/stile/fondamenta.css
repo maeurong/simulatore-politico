@@ -55,7 +55,7 @@
 /* tono grave: tacciono colori, evidenziatore e ghiribizzi del titolo */
 :root.grave {
   --p-estrema_sinistra: var(--grigio); --p-sinistra: var(--grigio); --p-centrosinistra: var(--grigio); --p-centro: var(--grigio);
-  --p-centrodestra: var(--grigio); --p-destra: var(--grigio); --p-estrema_destra: var(--grigio); --p-giocatore: var(--grigio);
+  --p-centrodestra: var(--grigio); --p-destra: var(--grigio); --p-estrema_destra: var(--grigio); --p-giocatore: var(--ink);
   --classe-0: #dcd4c2; --classe-1: #ada698; --classe-2: #817a70; --classe-3: #57514a; --classe-4: #312b27;
   --rosso: var(--ink); --verde: var(--ink); --biro: var(--ink); --giallo: transparent; --wonk: "SOFT" 0, "WONK" 0 }
 

@@ -1,8 +1,9 @@
 <script lang="ts">
   // Paese, forma A · Atlante (23-paese.prototype.html): i livelli, la mappa e la lista; il dettaglio a lato tiene il sondaggio, o la scheda della regione scelta.
+  import { tick } from "svelte";
   import { t, percentuale } from "$lib/testi/t";
   import type { Chiave } from "$lib/testi/t";
-  import { coalizioneDi, coloreDi } from "$lib/partiti";
+  import { coalizioneDi } from "$lib/partiti";
   import type { Vista } from "$lib/tipi/Vista";
   import Mappa from "$lib/mappa/Mappa.svelte";
   import FormaSegno from "$lib/mappa/FormaSegno.svelte";
@@ -19,11 +20,20 @@
   let chi = $state("coalizione");
   let ordine = $state<"nome" | "valore">("nome");
   let scelta = $state<string | null>(null);
+  // un partito sciolto o sparito dopo una Vista nuova non resta nel menu
+  $effect(() => { if (chi !== "coalizione" && !vista.partiti.some((p) => p.id === chi && !p.sciolto)) chi = "coalizione"; });
+  async function indietro() {
+    const id = scelta;
+    scelta = null;
+    await tick();
+    document.getElementById(`${pre}-r-${id}`)?.focus();
+  }
 
   const valori = $derived(livello === "affluenza" ? affluenzaPerRegione(vista) : consensoPerRegione(vista, chi === "coalizione" ? coalizioneDi(vista) : [chi]));
   const segni = $derived(segniPerRegione(vista));
   const righe = $derived(lista(valori, ordine));
-  const classe = $derived(Object.fromEntries(righe.map((r, i) => [r.id, classi(righe.map((x) => x.valore))[i]])));
+  const classiRighe = $derived(classi(righe.map((x) => x.valore)));
+  const classe = $derived(Object.fromEntries(righe.map((r, i) => [r.id, classiRighe[i]])));
   const limiti = $derived(estremi(righe.map((r) => r.valore)));
   const tipi = $derived([...new Set(Object.values(segni).flat())] as Segno[]);
   const nomeLivello = (l: Livello) => t(`paese.livello_${l}` as Chiave);
@@ -68,7 +78,7 @@
           <span class="dx">{t("paese.col_segni")}</span>
         </div>
         {#each righe as r (r.id)}
-          <button type="button" class="r" class:sel={scelta === r.id} aria-pressed={scelta === r.id} onclick={() => (scelta = r.id)}>
+          <button type="button" id="{pre}-r-{r.id}" class="r" class:sel={scelta === r.id} aria-pressed={scelta === r.id} onclick={() => (scelta = r.id)}>
             <span class="n"><i style:background={classe[r.id] === null ? "var(--carta)" : `var(--classe-${classe[r.id]})`}></i>{r.nome}</span>
             <span class="x">{r.valore === null ? "—" : pc(r.valore)}</span>
             <span class="s">
@@ -92,7 +102,7 @@
     </div>
   </div>
 
-  <aside class="lato">{#if scelta}<SchedaRegione {vista} regione={scelta} indietro={() => (scelta = null)} />{:else}<Sondaggio {vista} />{/if}</aside>
+  <aside class="lato">{#if scelta}<SchedaRegione {vista} regione={scelta} {indietro} />{:else}<Sondaggio {vista} />{/if}</aside>
 </div>
 
 <style>

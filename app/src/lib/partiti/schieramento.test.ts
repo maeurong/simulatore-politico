@@ -4,7 +4,7 @@ import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import { coloreDi } from "$lib/partiti";
 import { t } from "$lib/testi/t";
-import { CAUSE, TETTO_PARTITI, avvisi, caselleFascia, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
+import { CAUSE, TETTO_PARTITI, avvisi, staPerSciogliersi, caselleFascia, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
 import zeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
@@ -91,13 +91,29 @@ describe("avvisi", () => {
     } as Vista;
     expect(di(v, "nuovo_9")).toEqual(["avviso.senza_seggi", "avviso.al_governo", "avviso.nato"]);
   });
-  it("tutti gli avvisi insieme, nell'ordine del brief: ultimatum, sciolto, al governo, nato", () => {
+  it("tutti gli avvisi insieme, nell'ordine del brief: ultimatum al governo, sciolto, al governo, nato", () => {
     const v = {
-      ...ultimatum,
-      governa: false,
-      partiti: ultimatum.partiti.map((p) => (p.id === "sinistra" ? { ...p, sciolto: true, al_governo: true } : p)),
+      ...opposizione,
+      alleati_avversari: [{ partito: "nuovo_9", fascia: "ultimatum", causa_ultimatum: null }],
+      partiti: opposizione.partiti.map((p) => (p.id === "sinistra" ? { ...p, id: "nuovo_9", sciolto: true } : p)),
     } as Vista;
-    expect(di(v, "sinistra")).toEqual(["avviso.ultimatum", "avviso.sciolto", "avviso.al_governo"]);
+    expect(di(v, "nuovo_9")).toEqual(["avviso.ultimatum_governo", "avviso.sciolto", "avviso.al_governo", "avviso.nato"]);
+  });
+  it("«al governo» non va agli alleati del giocatore: sulla 30 centrodestra e nuovo_8 governano ma sono alleati", () => {
+    expect(eredita.governa).toBe(false);
+    for (const id of ["centrodestra", "nuovo_8", "giocatore"]) {
+      expect(eredita.partiti.find((p) => p.id === id)!.al_governo).toBe(true);
+      expect(di(eredita, id)).not.toContain("avviso.al_governo");
+    }
+  });
+  it("sulla 03 gli alleati al governo non hanno «al governo»", () => {
+    for (const id of ["centrodestra", "destra"]) expect(di(governo, id)).not.toContain("avviso.al_governo");
+  });
+  it("il chip «senza seggi» non va al giocatore nemmeno senza seggi", () => {
+    const voti = governo.elezioni[0].voti.map((x) => (x.partito === "giocatore" ? { ...x, camera: 0, senato: 0 } : x));
+    const v = { ...governo, elezioni: [{ ...governo.elezioni[0], voti }] } as Vista;
+    expect(di(v, "giocatore")).not.toContain("avviso.senza_seggi");
+    expect(staPerSciogliersi(v, v.partiti.find((p) => p.id === "giocatore")!)).toBe(false);
   });
   it("all'opposizione ogni partito di governo ha «al governo»; gli altri no, né il giocatore", () => {
     const [dentro, fuori] = [opposizione.partiti.filter((p) => p.al_governo), opposizione.partiti.filter((p) => !p.al_governo)];
@@ -109,6 +125,18 @@ describe("avvisi", () => {
     expect(avvisi(governo, governo.partiti.find((p) => p.id === governo.giocatore)!)).not.toContain("avviso.al_governo");
     const uscente = zero.partiti.find((p) => p.id === "destra")!;
     expect(avvisi(zero, uscente)).toEqual(["avviso.governo_uscente"]);
+  });
+});
+
+describe("staPerSciogliersi", () => {
+  const p = (v: Vista, id: string) => v.partiti.find((x) => x.id === id)!;
+  it("senza seggi all'ultimo voto e non sciolto: alla prossima si scioglie (03: Estrema sinistra, 0 · 0)", () => {
+    expect(staPerSciogliersi(governo, p(governo, "estrema_sinistra"))).toBe(true);
+    expect(staPerSciogliersi(governo, p(governo, "sinistra"))).toBe(false);
+  });
+  it("già sciolto, o mai votato: no (30: Estrema sinistra sciolta; 01: nessun voto)", () => {
+    expect(staPerSciogliersi(eredita, p(eredita, "estrema_sinistra"))).toBe(false);
+    expect(staPerSciogliersi(zero, p(zero, "estrema_sinistra"))).toBe(false);
   });
 });
 

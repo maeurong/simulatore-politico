@@ -1,10 +1,10 @@
 <script lang="ts">
   // La scheda della regione nel lato (23-paese.prototype.html, forma A): segni, sondaggio, i diciotto gruppi coi loro elettori, le disposizioni.
-  import { t, numero, percentuale, type Chiave } from "$lib/testi/t";
+  import { t, numero, type Chiave } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { guscio } from "$lib/guscio/chiamate";
   import { barrata } from "$lib/ossatura";
-  import { coloreDi, nomeDi } from "$lib/partiti";
+  import { nomeDi } from "$lib/partiti";
   import { REGIONI } from "$lib/mappa/regioni";
   import FormaSegno from "$lib/mappa/FormaSegno.svelte";
   import type { Condizione } from "$lib/tipi/Condizione";
@@ -13,6 +13,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import BarreQuote from "./BarreQuote.svelte";
   import { CONDIZIONI, FASCE, disposizioniDi, segniDi, sessioneElettori, sondaggioDi, sondaggioLetto, type EsitoElettori } from "./paese";
 
   let { vista, regione, indietro }: { vista: Vista; regione: string; indietro: () => void } = $props();
@@ -20,12 +21,10 @@
   const nome = $derived(REGIONI.find((r) => r.id === regione)?.nome ?? regione);
   const segni = $derived(segniDi(vista, regione));
   const quote = $derived(sondaggioDi(vista, regione));
-  const massimo = $derived(Math.max(0.01, ...quote.map((q) => q.quota)));
   const letto = $derived(sondaggioLetto(vista));
-  const campione = $derived(letto.sondaggio.regioni.find((r) => r.id === regione)?.campione ?? 0);
+  const riga = $derived(letto.sondaggio.regioni.find((r) => r.id === regione));
   const dispo = $derived(disposizioniDi(vista, regione));
   const aulaAperta = $derived(barrata("aula", vista) === null);
-  const pc = (x: number) => percentuale(x, 1);
 
   let casella = $state<{ condizione: Condizione; fascia: Fascia } | null>(null);
   let esito = $state.raw<EsitoElettori | null>(null);
@@ -36,7 +35,7 @@
   });
   $effect(() => {
     esito = null;
-    if (casella) sessione.chiedi(regione, casella.condizione, casella.fascia);
+    if (casella) sessione.chiedi(regione, casella.condizione, casella.fascia, vista.turno);
     else sessione.annulla();
     return sessione.annulla;
   });
@@ -57,15 +56,9 @@
 {/if}
 <Segnaposto sezione={t("paese.ph_territorio")} fetta="11g" />
 
-<h5 class="grp"><span>{letto.privato ? t("paese.privato_titolo") : t("paese.scheda_sondaggio")}</span><span>{t("paese.incrocio_campione", { n: numero(campione) })}</span></h5>
+<h5 class="grp"><span>{letto.privato ? t("paese.privato_titolo") : t("paese.scheda_sondaggio")}</span>{#if riga}<span>{t("paese.incrocio_campione", { n: numero(riga.campione) })}</span>{/if}</h5>
 <Segnaposto sezione={t("paese.margine")} fetta="11g" />
-<div class="barre">
-  {#each quote as p (p.id)}
-    <span class="n" class:tu={p.id === vista.giocatore}>{p.nome}</span>
-    <span class="b"><i style:width="{(p.quota / massimo) * 100}%" style:background={coloreDi(p.id) ?? "var(--retino)"}></i></span>
-    <span class="q" class:tu={p.id === vista.giocatore}>{pc(p.quota)}</span>
-  {/each}
-</div>
+{#if riga}<BarreQuote righe={quote} giocatore={vista.giocatore} />{:else}<p class="min muto">{t("mappa.senza_dato")}</p>{/if}
 
 <h5 class="grp"><span>{t("paese.gruppi")}</span></h5>
 <Segnaposto sezione={t("paese.gruppi_quota")} fetta="11g" />
@@ -124,12 +117,6 @@
   .elenco li { display: flex; gap: 6px; align-items: baseline; border-bottom: var(--filo); padding: 2px 0 }
   .elenco svg { flex: none; align-self: center }
   .grp { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; padding-bottom: 2px; border-bottom: var(--bordo); font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--grigio) }
-  .barre { display: grid; grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; font-size: var(--c-sec) }
-  .n { overflow-wrap: anywhere }
-  .b { display: block; height: 12px; position: relative }
-  .b i { position: absolute; inset: 0 auto 0 0; border: 1px solid var(--ink) }
-  .q { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums }
-  .tu { font-weight: 700 }
 
   .gruppi { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 52px); gap: 1px; font-size: var(--c-sec) }
   .hh { font-size: var(--c-min); color: var(--grigio); font-weight: 700; text-align: center; border-bottom: 1.5px solid var(--ink) }
