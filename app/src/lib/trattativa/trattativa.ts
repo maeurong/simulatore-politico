@@ -80,7 +80,7 @@ export type EsitoManda = "ok" | "occupato" | "guasto" | { rifiuto: string };
 export const passaggio = { fuoco: false };
 
 /**
- * Un comando del ribaltone. Il fuoco passa alla testa solo mentre il comando è in volo e fino a che la pagina nuova ha
+ * Un comando del ribaltone. Chi lo consuma lo azzera (l'onMount di Trattativa). Il fuoco passa alla testa solo mentre il comando è in volo e fino a che la pagina nuova ha
  * montato (`dopo`): riuscito senza rimontaggio, o guasto, o rifiuto, il flag torna spento e nessun montaggio futuro lo trova.
  */
 export async function mandaRibaltone(tipo: "chiedi_guida" | "rifiuta_ribaltone", manda: (c: Comando) => Promise<EsitoManda>, occupato: () => boolean, dopo: () => Promise<void>): Promise<EsitoManda> {
@@ -89,8 +89,11 @@ export async function mandaRibaltone(tipo: "chiedi_guida" | "rifiuta_ribaltone",
   try {
     return await manda({ tipo });
   } finally {
-    await dopo();
-    passaggio.fuoco = false;
+    try {
+      await dopo();
+    } finally {
+      passaggio.fuoco = false;
+    }
   }
 }
 export type StatoSpartizione = {

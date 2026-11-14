@@ -675,8 +675,8 @@
   "ribaltone.chiedi": "Chiedi la guida ›",
   "ribaltone.resta_fuori": "Resta fuori",
   "ribaltone.conferma_fuori": "Conferma: resta fuori",
-  "ribaltone.spiega_fuori": "Resti fuori: il Capo dello Stato cerca una maggioranza senza di te.",
+  "ribaltone.spiega_fuori": "Resti fuori: il Capo dello Stato cerca una maggioranza senza di te, altrimenti le Camere si sciolgono.",
   "ribaltone.occhiello_altri": "L’incarico",
-  "ribaltone.titolo_altri": "L’incarico va a un’altra coalizione.",
-  "ribaltone.testo_altri": "Non governi: a fine turno nasce il governo dell’altra coalizione."
+  "ribaltone.titolo_altri": "L’incarico non è tuo.",
+  "ribaltone.testo_altri": "Non governi: a fine turno nasce un governo senza di te, o le Camere si sciolgono e si torna al voto."
 }

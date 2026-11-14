@@ -41,7 +41,9 @@
   // la pagina si rimonta quando l'incarico cambia: se è stato un comando di Ribaltone, il fuoco riparte dalla testa
   let testa = $state<HTMLElement>();
   onMount(() => {
-    if (passaggio.fuoco) testa?.focus();
+    if (!passaggio.fuoco) return;
+    passaggio.fuoco = false;
+    testa?.focus();
   });
 
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));

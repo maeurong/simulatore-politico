@@ -337,6 +337,21 @@ describe("mandaRibaltone", () => {
     await esito;
     expect(passaggio.fuoco).toBe(false);
   });
+  it("chi consuma il fuoco lo azzera: il comando ancora in volo non lo riaccende", async () => {
+    const p = prova();
+    const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, pausa);
+    passaggio.fuoco = false;
+    p.rispondi("ok");
+    await esito;
+    expect(passaggio.fuoco).toBe(false);
+  });
+  it("un `dopo` che rigetta non lascia il fuoco acceso", async () => {
+    const p = prova();
+    const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, () => Promise.reject(new Error("tick")));
+    p.rispondi("ok");
+    await expect(esito).rejects.toThrow("tick");
+    expect(passaggio.fuoco).toBe(false);
+  });
   it("guasto e rifiuto: l'esito passa com'è e il fuoco si spegne", async () => {
     for (const e of ["guasto", { rifiuto: "Sinistra non ti cede la guida" }] as EsitoManda[]) {
       const p = prova();
