@@ -4,12 +4,13 @@
 )]
 
 mod comune;
-use comune::{all_opposizione, dati_base, edita, senza_shock, voci};
+use comune::{all_opposizione, dati_base, edita, file_vero, senza_shock, voci};
 use serde_json::json;
 use sim_core::dati::DatiGioco;
 use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Scaglione, Voce, irpef};
 use sim_core::elettorato::{Condizione, Fascia, fascia_di};
 use sim_core::esito::TipoVoce;
+use sim_core::legislatura::Fondazione;
 use sim_core::ministri::Causa;
 use sim_core::parlamento::FormaMisura;
 use sim_core::vista::VoceEmendamento;
@@ -801,12 +802,6 @@ fn emendamenti_del_bilancio(p: &Partita) -> Vec<VoceEmendamento> {
         .emendamenti
 }
 
-fn spese(b: &Bilancio) -> Vec<(String, i64)> {
-    (b.dicasteri.iter())
-        .map(|d| (d.id.clone(), d.spesa))
-        .collect()
-}
-
 #[test]
 fn in_aula_e_il_bilancio_presentato() {
     let mut p = al_bilancio_2028(4);
@@ -816,9 +811,38 @@ fn in_aula_e_il_bilancio_presentato() {
     assert_eq!(p.vista().bilancio.in_aula, Some(bozza));
 }
 
+/// La partita del ticket «Bilancio» (generatore delle Viste, `governo_03` + due chiusure): dati
+/// veri, seme 4, fondazione a 4,5, coalizione con la destra, quattro chiusure; la bozza del 2028
+/// è aperta.
+fn al_bilancio_del_ticket() -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione: 4.5,
+    };
+    let mut p = Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), 4, &f).unwrap();
+    let partiti = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti,
+        cessioni: vec![],
+    })
+    .unwrap();
+    for _ in 0..4 {
+        p.chiudi_turno();
+    }
+    p
+}
+
+const DICASTERI_CENTRODESTRA: [&str; 2] = ["lavoro_welfare", "infrastrutture_trasporti"];
+
 #[test]
 fn in_aula_porta_l_emendamento_accolto() {
-    let mut p = al_bilancio_2028(4);
+    let mut p = al_bilancio_del_ticket();
     let bozza = p.bozza_bilancio().unwrap();
     presenta(&mut p, bozza.clone()).unwrap();
     let presentato = p.vista().bilancio.in_aula.unwrap();
@@ -833,33 +857,37 @@ fn in_aula_porta_l_emendamento_accolto() {
     })
     .unwrap();
     let mut atteso = presentato.clone();
-    for id in ["ambiente_energia", "esteri_difesa"] {
+    for id in DICASTERI_CENTRODESTRA {
         let voce = Voce::Dicastero { id: id.into() };
         atteso = p.indicizza(&atteso, &voce).unwrap();
     }
     let in_aula = p.vista().bilancio.in_aula.unwrap();
     // L'aula riporta il bilancio alle regole (`bilancio_ammesso`): una voce indicizzata può
-    // scostarsi di un euro dall'`indicizza` nudo, le altre restano quelle presentate.
-    for ((id, aula), ((_, voluta), (_, prima))) in
-        (spese(&in_aula).into_iter()).zip(spese(&atteso).into_iter().zip(spese(&presentato)))
+    // scostarsi di un euro dall'`indicizza` nudo; le altre restano com'erano, per intero.
+    for ((aula, voluta), prima) in (in_aula.dicasteri.iter())
+        .zip(&atteso.dicasteri)
+        .zip(&presentato.dicasteri)
     {
-        if ["ambiente_energia", "esteri_difesa"].contains(&id.as_str()) {
-            assert!(aula > prima && (aula - voluta).abs() <= 1, "{id}");
+        if DICASTERI_CENTRODESTRA.contains(&aula.id.as_str()) {
+            assert!(aula.spesa > prima.spesa, "{}", aula.id);
+            assert!((aula.spesa - voluta.spesa).abs() <= 1, "{}", aula.id);
         } else {
-            assert_eq!(aula, prima, "{id}");
+            assert_eq!(aula, prima);
         }
     }
-    assert_eq!(spese(&presentato), spese(&bozza));
+    assert_eq!(presentato, bozza);
+    // Il costo che la spec dà all'emendamento accolto, sulla bozza.
+    assert_eq!(p.riepilogo_presentato().unwrap().costo_spesa, 981_850_113);
 }
 
 #[test]
 fn l_emendamento_sul_bilancio_dice_i_dicasteri() {
-    let mut p = al_bilancio_2028(4);
+    let mut p = al_bilancio_del_ticket();
     let bozza = p.bozza_bilancio().unwrap();
     presenta(&mut p, bozza).unwrap();
     let e = emendamenti_del_bilancio(&p);
     let cd = e.iter().find(|e| e.partito == "centrodestra").unwrap();
-    assert_eq!(cd.dicasteri, ["ambiente_energia", "esteri_difesa"]);
+    assert_eq!(cd.dicasteri, DICASTERI_CENTRODESTRA);
 }
 
 #[test]
