@@ -62,7 +62,7 @@
         {@const lista = avvisi(vista, p)}
         <article class="sch" class:sciolto={p.sciolto} class:scelta={scelta === p.id}>
           <span class="filo" class:nato={colore === null} style:background={colore ?? undefined}></span>
-          <span class="fz">{#if tu}<span class="tu" aria-hidden="true">{t("partiti.tu")}</span>{:else}<Faccia nome={p.leader} misura={46} />{/if}</span>
+          <span class="fz">{#if tu}<span class="tu" aria-hidden="true">{t("partiti.tu")}</span>{:else}<Faccia nome={p.leader} ruolo="leader" partito={p.id} misura={46} />{/if}</span>
           <h4 class="nm"><button type="button" id="{pre}-{p.id}" aria-pressed={scelta === p.id} onclick={() => (scelta = p.id)}>{tu ? t("partiti.tuo") : p.nome}</button></h4>
           <span class="ld">{tu ? t("partiti.tu_leader") : p.leader}</span>
           <span class="rr largo"><span class="muto">{t("partiti.sondaggio")}</span><b>{sondaggio(p)}</b></span>
