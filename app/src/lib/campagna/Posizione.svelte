@@ -56,7 +56,7 @@
   {#if scelta !== null}
     <div class="az">
       <Conferma etichetta={t("campagna.sposta_a", { posizione: numero(scelta, 2) })} conferma={t("campagna.conferma_spostamento")}
-        spiegazione={t("campagna.una_volta")} spento={partita.occupato} onconferma={sposta} />
+        spiegazione={t("campagna.una_volta")} spento={partita.occupato ? t("campagna.comando_in_corso") : undefined} onconferma={sposta} />
     </div>
   {/if}
   {#if rifiuto && rifiuto.vista === partita.vista}<div class="rif"><Rifiuto testo={rifiuto.testo} /></div>{/if}

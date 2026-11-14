@@ -6,12 +6,14 @@
   import { REGIONI } from "./regioni";
 
   let {
-    valori, scelta = $bindable(null), azione, formato = (x) => percentuale(x, 1), onconferma, onannulla,
+    valori, scelta = $bindable(null), azione, legenda, formato = (x) => percentuale(x, 1), onconferma, onannulla,
   }: {
     valori: Record<string, number | null>;
     scelta: string | null;
     /** «Spendi in {regione}», già composta */
     azione: string;
+    /** cosa dice la tinta, sotto la mappa */
+    legenda?: string;
     formato?: (x: number) => string;
     onconferma: () => void;
     onannulla: () => void;
@@ -24,6 +26,7 @@
 
 <div class="sel">
   <Mappa {valori} {scelta} {ordine} nome={t("mappa.regioni")} piccola {formato} onscelta={(id) => (scelta = id)} />
+  {#if legenda}<p class="min muto">{legenda}</p>{/if}
   <div class="lista">
     {#each REGIONI as r (r.id)}
       <button type="button" class="riga" class:sel={scelta === r.id} aria-pressed={scelta === r.id} onclick={() => (scelta = r.id)}>
@@ -41,6 +44,8 @@
 <style>
   .sel { display: grid; gap: var(--s2); justify-items: start }
   .sec { font-size: var(--c-sec) }
+  .min { font-size: var(--c-min) }
+  .muto { color: var(--grigio) }
   .lista { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--s4); width: 100%; font-size: var(--c-sec) }
   .riga { display: flex; justify-content: space-between; gap: var(--s2); padding: 2px var(--s1); border-top: var(--filo) }
   .riga:hover { background: var(--velo) }

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { t } from "$lib/testi/t";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
-import { LEVE, MASSIMO_PROMESSE, MASSIMO_SPESE, PASSI, PASSO_CESSIONE, cedi, conto, dichiara, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio, posizioniVicine, promesseFatte, prometti } from "./campagna";
+import { LEVE, MASSIMO_PROMESSE, MASSIMO_SPESE, PASSI, PASSO_CESSIONE, cedi, conto, dichiara, nomeBersaglio, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio, posizioniVicine, promesseFatte, prometti } from "./campagna";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import campagnaJson from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 
@@ -102,6 +103,22 @@ describe("conto", () => {
   });
 });
 
+describe("conto e taglio insieme", () => {
+  it("tagliata_prima: la somma dei pagamenti è la cassa e almeno una spesa non è intera", () => {
+    const tg = taglio(tagliata.campagna.spese, conto(tagliata, tagliata.campagna.spese).cassa);
+    expect(tg.reduce((a, x) => a + x.paga, 0)).toBe(985_000);
+    expect(tg.some((x) => x.esito !== "intera")).toBe(true);
+  });
+});
+
+describe("nomeBersaglio", () => {
+  it("la regione dal suo indice, la condizione al plurale, l'indice ignoto resta il numero", () => {
+    expect(nomeBersaglio(tagliata, { regione: 14 })).toBe("Campania");
+    expect(nomeBersaglio(tagliata, { condizione: "pensionato" })).toBe(t("condizione.pensionato"));
+    expect(nomeBersaglio(tagliata, { regione: 99 })).toBe("99");
+  });
+});
+
 describe("quotaNelBersaglio", () => {
   it("la regione 14 è la Campania: legge l'incrocio dei votanti, e senza privato la privata è null", () => {
     const q = quotaNelBersaglio({ ...tagliata, acquisti: { ...tagliata.acquisti, sondaggio_privato: null } }, { regione: 14 });
@@ -194,6 +211,32 @@ describe("sessioneSpese", () => {
     attese[0].risolvi([voce(5)]);
     await svuota();
     expect(manda).toHaveBeenCalledWith([spesa(5)]);
+  });
+
+  it("mossa discreta ripetuta con l'anteprima in volo: un comando solo, con l'ultima bozza", async () => {
+    const { attese, manda, mostra, sessione } = banco();
+    sessione.cambia([spesa(1)]);
+    sessione.esci();
+    sessione.cambia([spesa(2)]);
+    sessione.esci();
+    attese[0].risolvi([voce(1)]);
+    await svuota();
+    attese[1].risolvi([voce(2)]);
+    await svuota();
+    expect(manda).toHaveBeenCalledTimes(1);
+    expect(manda).toHaveBeenCalledWith([spesa(2)]);
+    expect(mostra).toHaveBeenCalledTimes(1);
+    expect(mostra).toHaveBeenCalledWith({ voci: [voce(2)] });
+  });
+
+  it("uscita con l'anteprima in volo, poi rifiutata: niente comando e il rifiuto è mostrato", async () => {
+    const { attese, manda, mostra, sessione } = banco();
+    sessione.cambia([spesa(5)]);
+    sessione.esci();
+    attese[0].rifiuta({ specie: "rifiuto", testo: "comando non ammesso: Spesa oltre la cassa" });
+    await svuota();
+    expect(manda).not.toHaveBeenCalled();
+    expect(mostra).toHaveBeenLastCalledWith({ rifiuto: "Spesa oltre la cassa" });
   });
 
   it("la lettura all'apertura chiede l'anteprima ma l'uscita non manda niente", async () => {

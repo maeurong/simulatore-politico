@@ -1,4 +1,5 @@
 // Partiti e coalizione: le formule che prima stavano copiate nei tracciati.
+import { statoDi } from "$lib/ossatura";
 import type { Incrocio } from "$lib/tipi/Incrocio";
 import type { Sondaggio } from "$lib/tipi/Sondaggio";
 import type { Vista } from "$lib/tipi/Vista";
@@ -26,10 +27,14 @@ export function quotaVotanti(s: Sondaggio, j: number): number | null {
 /** La stessa quota dentro un incrocio (una condizione, una regione). */
 export const quotaIncrocio = (i: Incrocio, j: number): number | null => fraVotanti(i.quote, j);
 
-/** {giocatore} ∪ coalizione al voto, ∪ richieste in trattativa, ∪ alleati al governo e in crisi. */
-export const coalizioneDi = (v: Vista): string[] => [
-  ...new Set([v.giocatore, ...v.coalizione, ...v.richieste.map((r) => r.partito), ...v.alleati.map((a) => a.partito)]),
-];
+/** {giocatore} ∪ coalizione al voto (turno zero), ∪ coalizione e richieste in trattativa, ∪ alleati altrove. */
+export function coalizioneDi(v: Vista): string[] {
+  const stato = statoDi(v);
+  const altri = stato === "turno_zero" ? v.coalizione
+    : stato === "trattativa" ? [...v.coalizione, ...v.richieste.map((r) => r.partito)]
+    : v.alleati.map((a) => a.partito);
+  return [...new Set([v.giocatore, ...altri])];
+}
 
 /** «Luca Benedetti» → «LB». */
 export const iniziali = (nome: string): string =>

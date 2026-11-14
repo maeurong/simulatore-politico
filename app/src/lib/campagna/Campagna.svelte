@@ -55,7 +55,7 @@
   const nomeScelta = $derived(REGIONI.find((r) => r.id === scelta)?.nome ?? "…");
   function spendi() {
     const i = scelta === null ? null : indiceDi(vista, scelta);
-    if (i === null || partita.occupato) return;
+    if (i === null) return;
     regione = false;
     scelta = null;
     modifica(aggiungiSpesa(spese, { regione: i }), spese.length);
@@ -78,7 +78,7 @@
   <aside class="lato">
     {#if regione}
       <h3 class="capo tit">{t("campagna.regione_titolo")}</h3>
-      <SelettoreRegione {valori} bind:scelta azione={t("campagna.spendi_in", { regione: nomeScelta })} onconferma={spendi} onannulla={() => (regione = false)} />
+      <SelettoreRegione {valori} bind:scelta legenda={t("campagna.tinta_quota")} azione={t("campagna.spendi_in", { regione: nomeScelta })} onconferma={spendi} onannulla={() => (regione = false)} />
     {:else}
       <h3 class="capo tit">{t("campagna.cassa")}</h3>
       <Cassa {vista} {spese} />

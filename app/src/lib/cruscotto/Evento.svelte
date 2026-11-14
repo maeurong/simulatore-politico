@@ -37,7 +37,7 @@
 
 <section class="evento" aria-label={t("evento.aperto")}>
   <div class="occ">{occhiello}</div>
-  <h2 class="tit">{evento.nome}{evento.costo ? `: ${numero(evento.costo)} €` : ""}</h2>
+  <h2 class="tit">{evento.nome}{evento.costo ? `: ${numero(evento.costo)}\u00A0€` : ""}</h2>
   <div class="sec muto"><i>{t("componenti.perche")}</i> {evento.causa}</div>
   {#if !unica}
     <div class="opz">

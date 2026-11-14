@@ -40,12 +40,12 @@
 </script>
 
 <dl class="conto">
-  <dt>{t("campagna.conto_cassa")}</dt><dd>{numero(c.cassa)} €</dd>
-  {#if c.sondaggio}<dt>{t("campagna.conto_sondaggio")}</dt><dd class="muto">{numero(c.sondaggio)} €</dd>{/if}
+  <dt>{t("campagna.conto_cassa")}</dt><dd>{numero(c.cassa)}&nbsp;€</dd>
+  {#if c.sondaggio}<dt>{t("campagna.conto_sondaggio")}</dt><dd class="muto">{numero(c.sondaggio)}&nbsp;€</dd>{/if}
   {#each spese as s, i (i)}
-    <dt>{nomeBersaglio(vista, s.bersaglio)} · {t(`leva.${s.leva}`).toLowerCase()}</dt><dd class="neg">−{numero(s.euro)} €</dd>
+    <dt>{nomeBersaglio(vista, s.bersaglio)} · {t(`leva.${s.leva}`).toLowerCase()}</dt><dd class="neg">−{numero(s.euro)}&nbsp;€</dd>
   {/each}
-  <dt class="tot">{t("campagna.conto_resta")}</dt><dd class="tot" class:neg={c.resto < 0}>{numero(c.resto)} €</dd>
+  <dt class="tot">{t("campagna.conto_resta")}</dt><dd class="tot" class:neg={c.resto < 0}>{numero(c.resto)}&nbsp;€</dd>
 </dl>
 
 {#if tagli.length}
@@ -69,7 +69,7 @@
 <h4 class="h5">{t("campagna.rivali")}</h4>
 <div class="riv">
   {#each rival as r (r.id)}
-    <span>{r.nome}</span><i class="b" style:width="{(r.cassa / massimo) * 100}%" style:background={coloreDi(r.id) ?? "var(--retino)"}></i><span class="x">{numero(r.cassa)} €</span>
+    <span>{r.nome}</span><i class="b" style:width="{(r.cassa / massimo) * 100}%" style:background={coloreDi(r.id) ?? "var(--retino)"}></i><span class="x">{numero(r.cassa)}&nbsp;€</span>
     {#if r.promesse.length}<span class="pm">{t("campagna.promesse_sospese", { voci: r.promesse.map((p) => `${p.disposizione}: ${p.gradino}`).join("; ") })}</span>{/if}
   {/each}
 </div>

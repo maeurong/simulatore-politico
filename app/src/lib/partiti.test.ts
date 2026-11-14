@@ -5,6 +5,7 @@ import type { Vista } from "$lib/tipi/Vista";
 import zero from "../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import incarico from "../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import campagna from "../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
+import governo from "../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import cruscotto from "../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 
 const v = (x: unknown) => x as Vista;
@@ -37,6 +38,12 @@ describe("coalizioneDi", () => {
     expect(coalizioneDi(v(campagna["dichiarata"]))).toEqual(["giocatore", "centrodestra", "destra"]));
   it("in trattativa: le richieste degli alleati", () =>
     expect(coalizioneDi(v(incarico))).toEqual(["giocatore", "centrodestra", "destra"]));
+  it("al governo: giocatore e alleati, la coalizione del voto non conta", () =>
+    expect(coalizioneDi(v({ ...governo, coalizione: ["sinistra"] }))).toEqual(["giocatore", "centrodestra", "destra"]));
+  it("in trattativa: anche la coalizione del voto", () =>
+    expect(coalizioneDi(v({ ...incarico, coalizione: ["sinistra"] }))).toEqual(["giocatore", "sinistra", "centrodestra", "destra"]));
+  it("al turno zero: le richieste e gli alleati non contano", () =>
+    expect(coalizioneDi(v({ ...zero, coalizione: ["destra"], alleati: [{ partito: "centro" }] }))).toEqual(["giocatore", "destra"]));
 });
 
 describe("colori e nomi", () => {

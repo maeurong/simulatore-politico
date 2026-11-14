@@ -32,7 +32,6 @@
 
   // le mosse discrete partono subito; l'importo parte all'uscita dal campo
   function subito(nuove: Spesa[], indice: number) {
-    if (partita.occupato) return;
     modifica(nuove, indice);
     esci();
   }
@@ -68,9 +67,9 @@
         <label class="euro">
           <input type="text" inputmode="numeric" autocomplete="off" aria-label={t("campagna.importo", { nome })} value={s.euro ? String(s.euro) : ""}
             oninput={(e) => modifica(con(i, { euro: euroDi(e.currentTarget.value) }), i)} onblur={esci}
-            onkeydown={(e) => e.key === "Enter" && (e.preventDefault(), esci())} /> €
+            onkeydown={(e) => e.key === "Enter" && (e.preventDefault(), esci())} />&nbsp;€
         </label>
-        <span class="min muto">{numero(s.euro)} €</span>
+        <span class="min muto">{numero(s.euro)}&nbsp;€</span>
         {#if voce}<Caselle piene={FASCE[voce.intensita]} su={3} nome={voce.intensita} />{/if}
       </div>
       {#if voce}<div class="min muto"><i>{t("componenti.perche")}</i> {voce.causa}</div>{/if}

@@ -87,10 +87,12 @@
   .pdot { width: 10px; height: 10px; border: 1px solid var(--ink); flex: none; display: inline-block }
   .n { font-weight: 700; font-size: var(--c-sec); min-width: 0; display: flex; gap: 0 6px; flex-wrap: wrap; align-items: baseline }
   .az { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 6px; align-items: center }
+  /* forma stretta: «non disponibile» (nowrap) non entra accanto al nome e scende sotto */
+  :global(:root.stretta) .az { grid-column: 2 / -1; justify-content: flex-start }
   .c { grid-column: 2 / -1; font-size: var(--c-min); color: var(--grigio) }
   .ces, .rif { grid-column: 2 / -1 }
   .ces { display: flex; gap: 4px 8px; align-items: center; flex-wrap: wrap }
-  .si, .no { font-weight: 700; font-size: var(--c-min); text-align: end }
+  .si, .no { white-space: nowrap; font-weight: 700; font-size: var(--c-min); text-align: end }
   .si { color: var(--verde) }
   .no { color: var(--rosso) }
   .step { display: inline-flex; align-items: center; border: var(--bordo) }

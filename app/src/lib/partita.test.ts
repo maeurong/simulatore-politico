@@ -126,6 +126,17 @@ describe("partita", () => {
     expect(partita.occupato).toBe(false);
   });
 
+  it("esci con un comando in volo, poi rifiutato: null, niente throw né guasto", async () => {
+    let rifiuta!: (e: unknown) => void;
+    guscio.comanda.mockReturnValue(new Promise<Vista>((_, r) => (rifiuta = r)));
+    const inVolo = partita.comanda({ tipo: "dimettiti" });
+    partita.esci();
+    rifiuta({ specie: "rifiuto", testo: "comando non ammesso: no" });
+    expect(await inVolo).toBeNull();
+    expect(partita.guasto).toBeNull();
+    expect(partita.occupato).toBe(false);
+  });
+
   it("esci con la serie in volo, comando già riuscito: la serie si scarta", async () => {
     let rispondi!: (s: PuntoSerie[]) => void;
     guscio.chiudiTurno.mockResolvedValue(dopo);

@@ -65,8 +65,8 @@
       {:else}
         <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={chiudi}>{t("cornice.chiudi_il_turno")}</Pulsante>
         {#if rifiuto?.vista === vista && rifiuto.sezione === sezione}<Rifiuto testo={rifiuto.testo} />{/if}
-        <!-- in trattativa la riga del default è del Task 16 -->
-        {#if stato !== "trattativa"}
+        <!-- in trattativa la riga del default è del Task 16; all'opposizione non c'è niente a cui rispondere (spec:400) -->
+        {#if stato !== "trattativa" && stato !== "opposizione"}
           {#if alDefault}<a class="def" href="/partita/cruscotto">{t("cornice.scelte_al_default", { n: alDefault })}</a>
           {:else}<span class="def tutte">{t("cornice.nessuna_scelta_al_default")}</span>{/if}
         {/if}

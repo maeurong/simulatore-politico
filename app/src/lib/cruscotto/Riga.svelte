@@ -7,7 +7,7 @@
 <li class="r">
   <span class="seg" class:fatto={fatta} class:urg={urgente && !fatta} aria-hidden="true"></span>
   <span class="t">{titolo}</span>
-  <a class="link" {href}>{rimando}</a>
+  <a class="link" {href} aria-label="{rimando.replace(/\s*›$/, '')}: {titolo}">{rimando}</a>
   <span class="s">{stato}</span>
 </li>
 

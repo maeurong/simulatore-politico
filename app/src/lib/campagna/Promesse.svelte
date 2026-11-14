@@ -83,7 +83,7 @@
     {#if scelte.length}
       <div class="az">
         <Conferma bind:aperta etichetta={t("campagna.prometti")} conferma={t(scelte.length === 1 ? "campagna.conferma_promessa" : "campagna.conferma_promesse")}
-          spiegazione={t("campagna.prometti_spiega", { voci: elenco(scelte.map((s) => `«${voce(s)}»`), ", ") })} spento={partita.occupato} onconferma={manda} />
+          spiegazione={t("campagna.prometti_spiega", { voci: elenco(scelte.map((s) => `«${voce(s)}»`), ", ") })} spento={partita.occupato ? t("campagna.comando_in_corso") : undefined} onconferma={manda} />
       </div>
     {/if}
     <p class="min muto">{t("campagna.promesse_nota")}</p>
