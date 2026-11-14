@@ -1,6 +1,6 @@
 mod comune;
 use comune::{
-    all_opposizione, chiudi_senza_opposizione_ia, dati_base, edita, file_base, presenta,
+    all_opposizione, chiudi_senza_opposizione_ia, dati_base, edita, file_base, indice, presenta,
     sostituisci,
 };
 use sim_core::ministri::Causa;
@@ -39,9 +39,20 @@ fn ministro(p: &Partita, dicastero: &str) -> VoceMinistro {
         .unwrap()
 }
 
+/// `p` col ministro del `dicastero` a `capacita`, fuori dal rodaggio.
+fn con_capacita(p: &Partita, dicastero: &str, capacita: u8) -> Partita {
+    let i = indice(dicastero);
+    edita(p, |j| {
+        let m = &mut j["ministri"]["dicasteri"][i]["ministro"];
+        m["capacita"] = capacita.into();
+        m["turni_in_carica"] = 1.into();
+    })
+    .unwrap()
+}
+
 /// Al governo la misura in calendario porta la stima dell'anteprima della stessa bozza, chiamata
 /// nello stesso turno prima di presentarla: stessa capacità del ministro, stessa chiave. Col seme 1
-/// il ministro della Sanità ha capacità 5, e la stima neutra del ticket alto sarebbe un'altra.
+/// il ministro della Sanità ha capacità 5, e la stima neutra del ticket alto è un'altra.
 #[test]
 fn la_misura_in_calendario_porta_l_anteprima() {
     let mut p = Partita::nuova(dati_base(), 1);
@@ -49,6 +60,9 @@ fn la_misura_in_calendario_porta_l_anteprima() {
     assert_eq!((chi.capacita, chi.rodaggio), (5, false));
     let legge = valori(&[("ticket", "alto")]);
     let a = p.anteprima(&legge).unwrap();
+    // La capacità neutra è 3: se desse la stessa stima, il test non distinguerebbe le due.
+    let neutra = con_capacita(&p, "sanita", 3).anteprima(&legge).unwrap();
+    assert_ne!(neutra.effetti, a.effetti);
     p.comanda(Comando::PresentaLegge { valori: legge }).unwrap();
     let m = in_calendario(&p, "ticket");
     assert!(!m.effetti.is_empty() && m.costo_annuo != 0, "{m:?}");
@@ -66,10 +80,10 @@ fn la_stima_in_calendario_non_si_ricampiona() {
     p.chiudi_turno();
     let chi = ministro(&p, "sviluppo_economico");
     assert_eq!((chi.capacita, chi.rodaggio), (1, false));
-    presenta(
-        &mut p,
-        &[("incentivo_investimenti", "10"), ("credito_zes", "0_75")],
-    )
+    let legge = valori(&[("incentivo_investimenti", "10"), ("credito_zes", "0_75")]);
+    p.comanda(Comando::PresentaLegge {
+        valori: legge.clone(),
+    })
     .unwrap();
     let prima = p.salva().unwrap();
     let m = in_calendario(&p, "credito_zes");
@@ -80,6 +94,14 @@ fn la_stima_in_calendario_non_si_ricampiona() {
     let dopo = in_calendario(&p, "credito_zes");
     assert!(!m.effetti.is_empty());
     assert_eq!(dopo.effetti, m.effetti);
+    // L'anteprima rifiuta la misura in esame: tolta dal calendario, la stessa legge al turno nuovo
+    // ha la chiave nuova, e una stima diversa. Se fosse uguale, il test non proverebbe nulla.
+    let id = m.id;
+    let senza = edita(&p, |j| {
+        (j["parlamento"]["misure"].as_array_mut().unwrap()).retain(|x| x["id"] != id);
+    })
+    .unwrap();
+    assert_ne!(senza.anteprima(&legge).unwrap().effetti, m.effetti);
 }
 
 /// La proposta del giocatore all'opposizione non ha ministro: la stima in calendario è quella
@@ -103,6 +125,24 @@ fn la_proposta_d_opposizione_ha_la_stima_neutra() {
     assert_eq!(m.promotore.as_deref(), Some("giocatore"));
     assert!(!m.effetti.is_empty(), "{m:?}");
     stima_uguale(&m, &a);
+    // La stessa misura, data al ministro dello Sviluppo economico di capacità 1 e poi 5, ha
+    // un'altra stima: se una delle due fosse la neutra, il test non la distinguerebbe.
+    let sviluppo = indice("sviluppo_economico");
+    let col_ministro = edita(&p, |j| {
+        let misure = j["parlamento"]["misure"].as_array_mut().unwrap();
+        for x in misure.iter_mut().filter(|x| x["id"] == m.id) {
+            x["proponente"] = sviluppo.into();
+        }
+    })
+    .unwrap();
+    for capacita in [1, 5] {
+        let q = con_capacita(&col_ministro, "sviluppo_economico", capacita);
+        assert_ne!(
+            in_calendario(&q, "credito_zes").effetti,
+            m.effetti,
+            "{capacita}"
+        );
+    }
 }
 
 #[test]

@@ -2162,14 +2162,11 @@ impl Partita {
         self.vincolo_mes(valori)?;
         let m =
             (self.parlamento).bozza(&self.dati, &self.disposizioni, self.turno, valori, true)?;
-        let capacita = (m.proponente)
-            .and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref())
-            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
         Ok(parlamento::anteprima(
             &self.parlamento,
             &self.stato_aula(),
             &m,
-            capacita,
+            self.capacita_proponente(m.proponente),
             &self.caso,
             self.economia.pil_potenziale_annuo(),
         ))
