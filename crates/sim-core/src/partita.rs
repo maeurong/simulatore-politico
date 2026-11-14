@@ -40,10 +40,11 @@ use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlb
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita, PrezzoAcquisto, SeggiPartito,
-    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito, VistaMes, VistaReferendum,
-    VistaRegoleUe, VistaRistrutturazione, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
-    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpera, VoceOpzione,
-    VocePartito, VoceProgramma, VocePromessa, VoceRegione, VoceSituazione, VoceVincolo,
+    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito, VistaMes, VistaPosti,
+    VistaReferendum, VistaRegoleUe, VistaRistrutturazione, VistaStatistica, VoceAlleato,
+    VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMenu,
+    VoceMinistero, VoceOpera, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
+    VoceSituazione, VoceVincolo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -2172,6 +2173,83 @@ impl Partita {
             &self.caso,
             self.economia.pil_potenziale_annuo(),
         ))
+    }
+
+    /// L'anteprima della proposta `valori` che `PresentaProposta` metterebbe nel posto riservato:
+    /// le regole di quel comando tranne il posto riservato, con la capacità neutra perché nessun
+    /// ministro la stima; la partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `PresentaProposta` tranne il posto riservato di un altro partito, di nessuno o
+    /// già occupato.
+    pub fn anteprima_proposta(&self, valori: &[ValoreProposto]) -> Result<Anteprima, Errore> {
+        self.all_opposizione()?;
+        let m = (self.parlamento).bozza_proposta(
+            &self.dati,
+            &self.disposizioni,
+            self.turno,
+            self.giocatore,
+            valori,
+        )?;
+        Ok(parlamento::anteprima(
+            &self.parlamento,
+            &self.stato_aula(),
+            &m,
+            CAPACITA_NEUTRA,
+            &self.caso,
+            self.economia.pil_potenziale_annuo(),
+        ))
+    }
+
+    /// Per ogni gradino di ogni disposizione della legge elettorale, nell'ordine dei dati: se la
+    /// bozza `valori`, con quel gradino al posto del valore della sua disposizione, farebbe una
+    /// legge elettorale applicabile, con la regola di `PresentaLegge` sui valori in vigore e su
+    /// quelli in arrivo. Non guarda chi governa, la crisi, il MES né il calendario: quelli li
+    /// dice `anteprima`. Le voci della bozza con disposizione o gradino sconosciuti si ignorano.
+    pub fn menu_elettorale(&self, valori: &[ValoreProposto]) -> Vec<VoceMenu> {
+        let catalogo = self.dati.disposizioni();
+        let bozza: Vec<(usize, usize)> = (valori.iter())
+            .filter_map(|v| {
+                let d = self.dati.disposizione(&v.disposizione)?;
+                Some((d, catalogo[d].gradino(&v.gradino)?))
+            })
+            .collect();
+        let mut menu = Vec::new();
+        for (d, x) in catalogo.iter().enumerate() {
+            if x.norma != Norma::Elettorale {
+                continue;
+            }
+            for (g, gradino) in x.gradini.iter().enumerate() {
+                let scelti: Vec<(usize, usize)> = (bozza.iter().copied())
+                    .filter(|&(e, _)| e != d)
+                    .chain([(d, g)])
+                    .collect();
+                let motivo =
+                    parlamento::elettorale_non_applicabile(&self.dati, &self.disposizioni, &scelti);
+                menu.push(VoceMenu {
+                    disposizione: x.id.clone(),
+                    gradino: gradino.id.clone(),
+                    ammesso: motivo.is_none(),
+                    motivo,
+                });
+            }
+        }
+        menu
+    }
+
+    /// Il costo di `Dirotta` sul `dicastero` verso l'`atto` e/o la `regione` (id): la variazione di
+    /// soddisfazione del ministro, negativa o zero, prima del limite a 0-100; la partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `Dirotta`.
+    pub fn costo_dirotta(
+        &self,
+        dicastero: &str,
+        atto: Option<&str>,
+        regione: Option<&str>,
+    ) -> Result<f64, Errore> {
+        self.di_governo()?;
+        (self.ministri).costo_dirotta(&self.contesto(), dicastero, atto, regione)
     }
 
     /// Il massimo spostabile da ogni dicastero: il margine residuo senza il decreto accolto in
@@ -4498,6 +4576,16 @@ impl Partita {
             opere: self.voci_opere(),
             regole_ue: self.vista_regole_ue(),
             debito: self.vista_debito(),
+            posti: {
+                let (ordinari, ordinari_occupati) = self.parlamento.posti(false);
+                let (costituzionali, costituzionali_occupati) = self.parlamento.posti(true);
+                VistaPosti {
+                    ordinari: ordinari as u32,
+                    ordinari_occupati: ordinari_occupati as u32,
+                    costituzionali: costituzionali as u32,
+                    costituzionali_occupati: costituzionali_occupati as u32,
+                }
+            },
         }
     }
 

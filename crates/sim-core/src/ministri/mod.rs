@@ -403,6 +403,19 @@ impl Ministri {
         Ok(i)
     }
 
+    /// Il `delta` di soddisfazione di `Dirotta` sul `dicastero` (id), coi rifiuti del comando;
+    /// non tocca nulla.
+    pub(crate) fn costo_dirotta(
+        &self,
+        cx: &Contesto,
+        dicastero: &str,
+        atto: Option<&str>,
+        regione: Option<&str>,
+    ) -> Result<f64, Errore> {
+        let i = self.ammesso(cx, dicastero, false, false)?;
+        (self.dirottamento(cx, i, atto, regione)).map(|(_, _, delta)| delta)
+    }
+
     /// Esegue un comando del giocatore; un rifiuto non tocca nulla. `Accogli` rende il decreto:
     /// lo spende e lo converte chi possiede economia e calendario; su una proposta di riforma
     /// rende la legge da presentare. `Ferma` sull'agenda col

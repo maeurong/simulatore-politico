@@ -106,6 +106,26 @@ pub(super) fn disponibile(st: &StatoDicastero) -> i64 {
     st.margine_residuo - st.cantieri.iter().map(|c| c.rata).sum::<i64>()
 }
 
+/// Il `delta` di soddisfazione di `Ferma` sull'agenda `ag` del dicastero `i`, prima del limite a
+/// 0-100: `−costo_fermare · attaccamento` all'atto annunciato.
+fn costo_ferma(dati: &DatiGioco, i: usize, ag: &Agenda) -> f64 {
+    let att = posizione(dati, i, ag.atto)
+        .and_then(|p| ag.attaccamenti.get(p))
+        .copied()
+        .unwrap_or(0.0);
+    -dati.manopola("costo_fermare") * att
+}
+
+/// Il `delta` di soddisfazione di `FermaCantiere` sul cantiere `f` del dicastero `i`, prima del
+/// limite a 0-100: l'attaccamento all'atto del ministro in carica, ricalcolato ora; 0 in interim.
+fn costo_ferma_cantiere(cx: &Contesto, i: usize, st: &StatoDicastero, f: &Cantiere) -> f64 {
+    let attaccamento = st.ministro.as_ref().map_or(0.0, |m| {
+        let (o, v) = parti(cx, i, m, &cx.dati.atti()[f.atto]);
+        o + v
+    });
+    -cx.dati.manopola("costo_fermare") * attaccamento
+}
+
 /// `(peso_obiettivo · o, peso_posizione · v)` di un atto per il ministro del dicastero `i`.
 pub(super) fn parti(cx: &Contesto, i: usize, m: &Ministro, a: &Atto) -> (f64, f64) {
     let dati = cx.dati;
@@ -446,12 +466,8 @@ impl Ministri {
         if ag.stato != StatoAgenda::Annunciata {
             return Err(Errore::Comando(format!("agenda già modificata: {nome}")));
         }
-        let att = posizione(dati, i, ag.atto)
-            .and_then(|p| ag.attaccamenti.get(p))
-            .copied()
-            .unwrap_or(0.0);
         ag.stato = StatoAgenda::Fermata;
-        let delta = -dati.manopola("costo_fermare") * att;
+        let delta = costo_ferma(dati, i, ag);
         penalizza(st, Causa::AttoFermato, delta, cx.turno);
         Ok(())
     }
@@ -464,6 +480,34 @@ impl Ministri {
         atto: Option<&str>,
         regione: Option<&str>,
     ) -> Result<(), Errore> {
+        let (cambia_atto, cambia_regione, delta) = self.dirottamento(cx, i, atto, regione)?;
+        let st = &mut self.dicasteri[i];
+        let motivo = match (cambia_regione, st.ministro.as_ref(), st.agenda.as_ref()) {
+            (Some(r), Some(m), Some(ag)) => {
+                let coda = motivo_regione(cx, &termini_regioni(cx, m.partito), r);
+                Some(format!("{}{coda}", senza_regione(&ag.motivo)))
+            }
+            _ => None,
+        };
+        if let Some(ag) = st.agenda.as_mut() {
+            ag.atto = cambia_atto.unwrap_or(ag.atto);
+            ag.regione = cambia_regione.or(ag.regione);
+            ag.stato = StatoAgenda::Dirottata;
+            ag.motivo = motivo.unwrap_or(std::mem::take(&mut ag.motivo));
+        }
+        penalizza(st, Causa::AttoDirottato, delta, cx.turno);
+        Ok(())
+    }
+
+    /// I rifiuti e il prezzo di `Dirotta` senza toccare nulla: l'atto e la regione che cambiano, e
+    /// il `delta` di soddisfazione prima del limite a 0-100.
+    pub(super) fn dirottamento(
+        &self,
+        cx: &Contesto,
+        i: usize,
+        atto: Option<&str>,
+        regione: Option<&str>,
+    ) -> Result<(Option<usize>, Option<usize>, f64), Errore> {
         let (dati, nome) = (cx.dati, &cx.dati.dicasteri()[i].nome);
         let ko = |m: String| Err(Errore::Comando(m));
         let st = &self.dicasteri[i];
@@ -522,22 +566,7 @@ impl Ministri {
             cambia_regione.map_or(0.0, |r| (ber(ag.regione) - ber(Some(r))).max(0.0));
         let delta = -dati.manopola("costo_fermare") * perdita_atto
             - dati.manopola("costo_dirottare_regione") * perdita_regione;
-        let motivo = match (cambia_regione, st.ministro.as_ref()) {
-            (Some(r), Some(m)) => {
-                let coda = motivo_regione(cx, &termini_regioni(cx, m.partito), r);
-                Some(format!("{}{coda}", senza_regione(&ag.motivo)))
-            }
-            _ => None,
-        };
-        let st = &mut self.dicasteri[i];
-        if let Some(ag) = st.agenda.as_mut() {
-            ag.atto = cambia_atto.unwrap_or(ag.atto);
-            ag.regione = cambia_regione.or(ag.regione);
-            ag.stato = StatoAgenda::Dirottata;
-            ag.motivo = motivo.unwrap_or(std::mem::take(&mut ag.motivo));
-        }
-        penalizza(st, Causa::AttoDirottato, delta, cx.turno);
-        Ok(())
+        Ok((cambia_atto, cambia_regione, delta))
     }
 
     /// `FermaCantiere`: quanto speso resta speso; costa l'attaccamento all'atto del ministro in
@@ -555,11 +584,7 @@ impl Ministri {
             return Err(Errore::Comando(format!("nessun cantiere {atto} in {nome}")));
         };
         let f = st.cantieri.remove(p);
-        let attaccamento = st.ministro.as_ref().map_or(0.0, |m| {
-            let (o, v) = parti(cx, i, m, &dati.atti()[f.atto]);
-            o + v
-        });
-        let delta = -dati.manopola("costo_fermare") * attaccamento;
+        let delta = costo_ferma_cantiere(cx, i, st, &f);
         penalizza(st, Causa::CantiereFermato, delta, cx.turno);
         Ok(())
     }
@@ -633,6 +658,7 @@ impl Ministri {
                 costo: costo_atto(cx, rif, i, atto),
                 motivo: ag.motivo.clone(),
                 stato: ag.stato,
+                costo_ferma: costo_ferma(dati, i, ag),
                 in_evidenza: minaccia
                     || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza")
                     || cx
@@ -681,6 +707,7 @@ impl Ministri {
                 turni_mancanti: f.turni_mancanti,
                 rata: f.rata,
                 speso: f.speso,
+                costo_ferma: costo_ferma_cantiere(cx, i, st, f),
             })
             .collect();
         VociGoverno {

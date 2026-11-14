@@ -10,6 +10,7 @@ use comune::{
 use serde_json::{Value, json};
 use sim_core::dati::DatiGioco;
 use sim_core::esito::{Criticita, TipoVoce};
+use sim_core::ministri::StatoAgenda;
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
 
@@ -1023,6 +1024,185 @@ fn ferma_e_dirotta_costano_in_proporzione_alla_perdita_di_attaccamento() {
     q.comanda(dirotta(IT, None, Some(&altra_id))).unwrap();
     let atteso = (prima - regione * 2.0).clamp(0.0, 100.0);
     assert!((soddisfazione(&q, IT) - atteso).abs() < 1e-9);
+}
+
+/// `p` con ogni ministro a soddisfazione 50: lontano da 0 e da 100, la variazione è il `delta`.
+fn a_meta(p: &Partita) -> Partita {
+    edita(p, |j| {
+        for st in j["ministri"]["dicasteri"].as_array_mut().unwrap() {
+            if st["ministro"].is_object() {
+                st["ministro"]["soddisfazione"] = json!(50.0);
+            }
+        }
+    })
+    .unwrap()
+}
+
+fn soddisfazione(p: &Partita, id: &str) -> f64 {
+    ministero(&p.vista(), id)
+        .ministro
+        .as_ref()
+        .unwrap()
+        .soddisfazione
+}
+
+/// `costo_ferma` di agenda e cantiere è la variazione di soddisfazione che `Ferma` e
+/// `FermaCantiere` applicano.
+#[test]
+fn il_costo_di_ferma_e_quello_vero() {
+    let p = a_meta(&con_cantiere());
+    let v = p.vista();
+    let mut costi = Vec::new();
+    for m in &v.ministeri {
+        let Some(ag) = m
+            .agenda
+            .as_ref()
+            .filter(|a| a.stato == StatoAgenda::Annunciata)
+        else {
+            continue;
+        };
+        let mut q = p.clone();
+        q.comanda(ferma(&m.dicastero)).unwrap();
+        let variazione = soddisfazione(&q, &m.dicastero) - 50.0;
+        assert!(
+            (variazione - ag.costo_ferma).abs() < 1e-9,
+            "{}: {variazione} {}",
+            m.dicastero,
+            ag.costo_ferma
+        );
+        costi.push(ag.costo_ferma);
+    }
+    assert!(
+        costi.len() > 5 && costi.iter().any(|&c| c < -1.0),
+        "{costi:?}"
+    );
+    let c = &ministero(&v, "sanita").cantieri[0];
+    assert!(c.costo_ferma < -1.0, "{}", c.costo_ferma);
+    let mut q = p.clone();
+    q.comanda(Comando::FermaCantiere {
+        dicastero: "sanita".into(),
+        atto: c.atto.clone(),
+    })
+    .unwrap();
+    let variazione = soddisfazione(&q, "sanita") - 50.0;
+    assert!(
+        (variazione - c.costo_ferma).abs() < 1e-9,
+        "{variazione} {}",
+        c.costo_ferma
+    );
+}
+
+/// `costo_dirotta` è la variazione di soddisfazione che `Dirotta` applica, sull'atto e sulla
+/// regione, e non tocca la partita.
+#[test]
+fn il_costo_di_dirotta_e_quello_vero() {
+    const IT: &str = "infrastrutture_trasporti";
+    let d = dati_base();
+    let (s, it) = (indice("sanita"), indice(IT));
+    let mut p = Partita::nuova(dati_base(), 5);
+    p.chiudi_turno();
+    let ag = p.ministri().dicasteri[it].agenda.clone().unwrap();
+    let (scelta, altra) = (
+        ag.regione.unwrap(),
+        (ag.regione.unwrap() + 1) % d.regioni().len(),
+    );
+    let p = a_meta(
+        &edita(&p, |j| {
+            j["ministri"]["dicasteri"][s]["agenda"]["attaccamenti"] = json!([1.0, 0.5, 0.2, -0.5]);
+            let mut bersaglio = vec![0.0; d.regioni().len()];
+            bersaglio[scelta] = 3.0;
+            bersaglio[altra] = 1.0;
+            j["ministri"]["dicasteri"][it]["agenda"]["bersaglio"] = json!(bersaglio);
+        })
+        .unwrap(),
+    );
+    let v = p.vista();
+    let m = ministero(&v, "sanita");
+    let annunciato = &m.agenda.as_ref().unwrap().atto;
+    let altra = d.regioni()[altra].id.clone();
+    let mut casi: Vec<(&str, Option<&str>, Option<&str>)> = (m.atti.iter())
+        .filter(|x| &x.id != annunciato && x.pagabile)
+        .map(|x| ("sanita", Some(x.id.as_str()), None))
+        .collect();
+    casi.push((IT, None, Some(&altra)));
+    let mut costi = Vec::new();
+    for (dicastero, atto, regione) in casi {
+        let prima = p.salva().unwrap();
+        let costo = p.costo_dirotta(dicastero, atto, regione).unwrap();
+        assert_eq!(p.salva().unwrap(), prima);
+        let mut q = p.clone();
+        q.comanda(dirotta(dicastero, atto, regione)).unwrap();
+        let variazione = soddisfazione(&q, dicastero) - 50.0;
+        assert!(
+            (variazione - costo).abs() < 1e-9,
+            "{dicastero} {atto:?}: {variazione} {costo}"
+        );
+        costi.push(costo);
+    }
+    assert!(
+        costi.iter().filter(|&&c| c < -1.0).count() >= 2,
+        "{costi:?}"
+    );
+}
+
+/// `costo_dirotta` rifiuta con lo stesso errore di `Dirotta`, e accetta dove il comando accetta.
+#[test]
+fn costo_dirotta_rifiuta_come_il_comando() {
+    const IT: &str = "infrastrutture_trasporti";
+    let stesso_esito = |p: &Partita, d: &str, atto: Option<&str>, regione: Option<&str>| {
+        let costo = p.costo_dirotta(d, atto, regione).map(|_| ());
+        let comando = p.clone().comanda(dirotta(d, atto, regione));
+        assert_eq!(
+            costo.map_err(|e| e.to_string()),
+            comando.map_err(|e| e.to_string()),
+            "{d} {atto:?} {regione:?}"
+        );
+    };
+    let mut p = Partita::nuova(dati_base(), 1);
+    let d = dati_base();
+    let di_giustizia = (d.atti().iter())
+        .find(|a| a.dicastero == "giustizia")
+        .unwrap()
+        .id
+        .clone();
+    let v = p.vista();
+    let regione = ministero(&v, IT).agenda.as_ref().unwrap().regione.clone();
+    let (caro, di) = (v.ministeri.iter())
+        .find_map(|m| {
+            let a = m.atti.iter().find(|a| !a.pagabile)?;
+            Some((a.id.clone(), m.dicastero.clone()))
+        })
+        .unwrap();
+    let sanita = ministero(&v, "sanita");
+    let annunciato = &sanita.agenda.as_ref().unwrap().atto;
+    let altro = (sanita.atti.iter())
+        .find(|a| a.pagabile && &a.id != annunciato)
+        .unwrap()
+        .id
+        .clone();
+    for (dicastero, atto, regione) in [
+        ("ignoto", None, None),
+        ("sanita", Some(di_giustizia.as_str()), None),
+        ("sanita", None, Some("lombardia")),
+        (IT, None, Some("atlantide")),
+        (IT, None, regione.as_deref()),
+        (di.as_str(), Some(caro.as_str()), None),
+        ("sanita", Some(altro.as_str()), None),
+        (IT, None, Some("calabria")),
+    ] {
+        stesso_esito(&p, dicastero, atto, regione);
+    }
+    p.comanda(ferma("sanita")).unwrap();
+    stesso_esito(&p, "sanita", Some(&altro), None);
+    p.comanda(Comando::ChiediDimissioni {
+        dicastero: "giustizia".into(),
+    })
+    .unwrap();
+    stesso_esito(&p, "giustizia", Some(&di_giustizia), None);
+    p.chiudi_turno();
+    stesso_esito(&p, "giustizia", Some(&di_giustizia), None);
+    let opposizione = comune::all_opposizione();
+    stesso_esito(&opposizione, "sanita", Some(&altro), None);
 }
 
 #[test]

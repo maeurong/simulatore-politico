@@ -3,4 +3,9 @@
 /**
  * `atto` e `regione` sono id.
  */
-export type VoceCantiere = { atto: string, regione: string | null, turni_mancanti: number, rata: number, speso: number, };
+export type VoceCantiere = { atto: string, regione: string | null, turni_mancanti: number, rata: number, speso: number, 
+/**
+ * La variazione di soddisfazione del ministro in carica con `FermaCantiere`, prima del
+ * limite a 0-100: negativa se tiene all'atto; 0 in interim.
+ */
+costo_ferma: number, };

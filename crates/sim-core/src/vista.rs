@@ -111,6 +111,31 @@ pub struct Vista {
     pub opere: Vec<VoceOpera>,
     pub regole_ue: VistaRegoleUe,
     pub debito: VistaDebito,
+    pub posti: VistaPosti,
+}
+
+/// I posti del calendario e quanti ne sono occupati, contati come li conta `PresentaLegge`: i
+/// posti ordinari per riforme ed elettorali, quello costituzionale per le norme costituzionali.
+/// Le proposte dell'opposizione hanno il loro posto, fuori da questi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaPosti {
+    pub ordinari: u32,
+    pub ordinari_occupati: u32,
+    pub costituzionali: u32,
+    pub costituzionali_occupati: u32,
+}
+
+/// Un gradino di una disposizione della legge elettorale: se la bozza con quel gradino al posto
+/// del suo valore farebbe una legge elettorale applicabile, e altrimenti perché. `disposizione` e
+/// `gradino` sono id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceMenu {
+    pub disposizione: String,
+    pub gradino: String,
+    pub ammesso: bool,
+    pub motivo: Option<String>,
 }
 
 /// Le regole fiscali UE. Tutto tranne `proiezione` è il verdetto su un anno chiuso e riveduto;
@@ -692,6 +717,9 @@ pub struct VoceAgenda {
     pub costo: i64,
     pub motivo: String,
     pub stato: StatoAgenda,
+    /// La variazione di soddisfazione del ministro con `Ferma`, prima del limite a 0-100:
+    /// negativa se tiene all'atto.
+    pub costo_ferma: f64,
     pub in_evidenza: bool,
 }
 
@@ -728,6 +756,9 @@ pub struct VoceCantiere {
     pub turni_mancanti: u32,
     pub rata: i64,
     pub speso: i64,
+    /// La variazione di soddisfazione del ministro in carica con `FermaCantiere`, prima del
+    /// limite a 0-100: negativa se tiene all'atto; 0 in interim.
+    pub costo_ferma: f64,
 }
 
 /// Il ministro com'è visibile al giocatore: soddisfazione, agende e capacità, non lo stato nascosto.

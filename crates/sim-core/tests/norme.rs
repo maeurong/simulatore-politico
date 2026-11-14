@@ -4,7 +4,7 @@ use comune::{
 };
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::esito::{Criticita, TipoVoce};
-use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum};
+use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum, ValoreProposto};
 use sim_core::vista::SeggiPartito;
 use sim_core::{Comando, Partita};
 
@@ -41,6 +41,60 @@ fn legge_elettorale_non_valida_rifiutata_col_motivo() {
             .contains("legge elettorale non applicabile: premio alla coalizione senza coalizioni"),
         "{e}"
     );
+}
+
+/// Con le coalizioni spente nella bozza il premio alla coalizione è spento col motivo; per ogni
+/// gradino `ammesso` dice ciò che risponde la regola della legge elettorale di `PresentaLegge`,
+/// letta dall'anteprima della bozza con quel gradino.
+#[test]
+fn il_menu_spegne_il_premio_senza_coalizioni() {
+    let p = partita(senza_shock());
+    let valore = |d: &str, g: &str| ValoreProposto {
+        disposizione: d.into(),
+        gradino: g.into(),
+    };
+    let bozza = vec![valore("coalizioni", "no")];
+    let prima = p.salva().unwrap();
+    let menu = p.menu_elettorale(&bozza);
+    assert_eq!(p.salva().unwrap(), prima);
+    let premio = (menu.iter())
+        .find(|v| v.disposizione == "premio" && v.gradino == "coalizione")
+        .unwrap();
+    assert!(!premio.ammesso);
+    assert_eq!(
+        premio.motivo.as_deref(),
+        Some("premio alla coalizione senza coalizioni")
+    );
+    let in_vigore = |d: &str| {
+        (p.vista().disposizioni.into_iter())
+            .find(|x| x.id == d)
+            .unwrap()
+            .in_vigore
+    };
+    let (mut provati, mut spenti) = (0, 0);
+    for v in &menu {
+        assert_eq!(v.ammesso, v.motivo.is_none(), "{v:?}");
+        let mut legge: Vec<ValoreProposto> = (bozza.iter())
+            .filter(|x| x.disposizione != v.disposizione)
+            .cloned()
+            .collect();
+        if v.gradino != in_vigore(&v.disposizione) {
+            legge.push(valore(&v.disposizione, &v.gradino));
+        }
+        if legge.is_empty() {
+            continue;
+        }
+        let rifiuto = p.anteprima(&legge).err().map(|e| e.to_string());
+        let motivo = rifiuto.as_deref().map(|e| {
+            e.split_once("legge elettorale non applicabile: ")
+                .unwrap_or_else(|| panic!("{v:?}: {e}"))
+                .1
+        });
+        assert_eq!(v.motivo.as_deref(), motivo, "{v:?}");
+        provati += 1;
+        spenti += usize::from(!v.ammesso);
+    }
+    assert!(provati > 20 && spenti >= 1, "{provati} {spenti}");
 }
 
 #[test]

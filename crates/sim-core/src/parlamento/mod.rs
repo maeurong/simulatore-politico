@@ -28,7 +28,9 @@ pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata, testo};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
-pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, riparto_con};
+pub(crate) use regole::{
+    due_terzi, elettorale_non_applicabile, legge_non_valida, proietta, quinto_contro, riparto_con,
+};
 
 /// Posti del calendario per riforme ed elettorali.
 pub const POSTI_ORDINARI: usize = 3;
@@ -594,21 +596,8 @@ impl Parlamento {
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
         let m = self.bozza(dati, disposizioni, turno, valori, true)?;
-        let (posti, occupati) = if m.forma == FormaMisura::Costituzionale {
-            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
-        } else {
-            (
-                POSTI_ORDINARI,
-                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
-            )
-        };
-        if self
-            .misure
-            .iter()
-            .filter(|m| occupati.contains(&m.forma) && m.promotore.is_none())
-            .count()
-            >= posti
-        {
+        let (posti, occupati) = self.posti(m.forma == FormaMisura::Costituzionale);
+        if occupati >= posti {
             return ko("calendario pieno".into());
         }
         let firma = (m.proponente)
@@ -626,6 +615,24 @@ impl Parlamento {
         self.misure.push(m);
         self.prossima = self.prossima.saturating_add(1);
         Ok(())
+    }
+
+    /// I posti del calendario e quanti ne sono occupati: quello costituzionale con `costituzionale`,
+    /// gli ordinari (riforme ed elettorali) altrimenti. Le proposte dell'opposizione non li
+    /// occupano.
+    pub(crate) fn posti(&self, costituzionale: bool) -> (usize, usize) {
+        let (posti, forme) = if costituzionale {
+            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
+        } else {
+            (
+                POSTI_ORDINARI,
+                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
+            )
+        };
+        let occupati = (self.misure.iter())
+            .filter(|m| forme.contains(&m.forma) && m.promotore.is_none())
+            .count();
+        (posti, occupati)
     }
 
     /// `PresentaProposta` del partito `promotore` nel posto riservato (scelta 15 del piano 7b),
@@ -777,14 +784,10 @@ impl Parlamento {
                 ));
             }
         }
-        if forma == FormaMisura::Elettorale {
-            // Dopo il voto e dopo gli arrivi elettorali in corso.
-            let con_arrivi = [disposizioni.arrivi_elettorali(), scelti.clone()].concat();
-            for v in [&scelti, &con_arrivi] {
-                if let Some(m) = legge_non_valida(dati, disposizioni, v) {
-                    return ko(format!("legge elettorale non applicabile: {m}"));
-                }
-            }
+        if forma == FormaMisura::Elettorale
+            && let Some(m) = elettorale_non_applicabile(dati, disposizioni, &scelti)
+        {
+            return ko(format!("legge elettorale non applicabile: {m}"));
         }
         let costituzionale = forma == FormaMisura::Costituzionale;
         let proponente =

@@ -8,4 +8,9 @@ export type VoceAgenda = { atto: string, nome: string, regione: string | null,
 /**
  * Euro per turno di lavori.
  */
-costo: number, motivo: string, stato: StatoAgenda, in_evidenza: boolean, };
+costo: number, motivo: string, stato: StatoAgenda, 
+/**
+ * La variazione di soddisfazione del ministro con `Ferma`, prima del limite a 0-100:
+ * negativa se tiene all'atto.
+ */
+costo_ferma: number, in_evidenza: boolean, };

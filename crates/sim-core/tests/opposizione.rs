@@ -571,6 +571,71 @@ fn il_posto_riservato_ha_le_sue_regole() {
     );
 }
 
+/// Col posto riservato del giocatore e libero, l'anteprima della proposta dà le linee e la forbice
+/// della misura che `PresentaProposta` mette in calendario nello stesso turno, e non tocca la
+/// partita.
+#[test]
+fn l_anteprima_della_proposta_e_quella_in_calendario() {
+    let mut p = all_opposizione();
+    al_posto_riservato(&mut p);
+    let legge = valori(&[("licenziamento", "reintegro")]);
+    let prima = p.salva().unwrap();
+    let a = p.anteprima_proposta(&legge).unwrap();
+    assert_eq!(p.salva().unwrap(), prima);
+    p.comanda(Comando::PresentaProposta { valori: legge })
+        .unwrap();
+    let id = proposta_del_giocatore(&p);
+    let v = p.vista();
+    let m = v.calendario.iter().find(|m| m.id == id).unwrap();
+    assert_eq!((&a.linee, &a.forbice), (&m.linee, &m.forbice));
+    assert_eq!((a.forma, &a.proponente), (m.forma, &m.proponente));
+}
+
+/// `anteprima_proposta` rifiuta come `PresentaProposta` al governo e con una norma costituzionale;
+/// col posto riservato di un altro partito, o già occupato, non rifiuta.
+#[test]
+fn anteprima_proposta_rifiuta_come_il_comando() {
+    let legge = valori(&[("licenziamento", "reintegro")]);
+    let stesso_rifiuto = |p: &Partita, legge: &[ValoreProposto]| {
+        let e = p.anteprima_proposta(legge).unwrap_err().to_string();
+        let comando = (p.clone())
+            .comanda(Comando::PresentaProposta {
+                valori: legge.to_vec(),
+            })
+            .unwrap_err()
+            .to_string();
+        assert_eq!(e, comando);
+        e
+    };
+    let governo = Partita::nuova(dati_base(), 1);
+    let e = stesso_rifiuto(&governo, &legge);
+    assert!(e.contains("solo all'opposizione: governi tu"), "{e}");
+    // Turno 2: il posto riservato è dell'estrema destra.
+    let mut p = all_opposizione();
+    assert!(p.anteprima_proposta(&legge).is_ok());
+    assert!(
+        p.clone()
+            .comanda(Comando::PresentaProposta {
+                valori: legge.clone()
+            })
+            .is_err()
+    );
+    al_posto_riservato(&mut p);
+    let e = stesso_rifiuto(&p, &valori(&[("durata_legislatura", "4")]));
+    assert!(
+        e.contains("una norma costituzionale non entra nel posto riservato"),
+        "{e}"
+    );
+    p.comanda(Comando::PresentaProposta {
+        valori: legge.clone(),
+    })
+    .unwrap();
+    assert!(
+        p.anteprima_proposta(&valori(&[("tetto_contante", "1000")]))
+            .is_ok()
+    );
+}
+
 /// La proposta dell'opposizione non è del governo caduto: alla caduta senza voto non decade.
 #[test]
 fn la_proposta_dell_opposizione_sopravvive_alla_caduta() {

@@ -12,6 +12,7 @@ import type { VistaAcquisti } from "./VistaAcquisti";
 import type { VistaBilancio } from "./VistaBilancio";
 import type { VistaCampagna } from "./VistaCampagna";
 import type { VistaDebito } from "./VistaDebito";
+import type { VistaPosti } from "./VistaPosti";
 import type { VistaReferendum } from "./VistaReferendum";
 import type { VistaRegoleUe } from "./VistaRegoleUe";
 import type { VistaStatistica } from "./VistaStatistica";
@@ -175,4 +176,4 @@ regioni: Array<VoceRegione>,
 /**
  * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
  */
-opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, };
+opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, };

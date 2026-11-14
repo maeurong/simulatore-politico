@@ -75,6 +75,34 @@ fn legge_presentata_occupa_il_calendario_fino_al_voto() {
     assert_eq!(p.vista().calendario[3].forma, FormaMisura::Costituzionale);
 }
 
+/// `Vista.posti` conta come `presenta`: col posto ordinario libero la legge entra, coi posti tutti
+/// occupati `presenta` rifiuta; lo stesso per il posto costituzionale.
+#[test]
+fn i_posti_contati_come_li_conta_presenta() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let posti = |p: &Partita| {
+        let v = p.vista().posti;
+        (
+            v.ordinari,
+            v.ordinari_occupati,
+            v.costituzionali,
+            v.costituzionali_occupati,
+        )
+    };
+    assert_eq!(posti(&p), (3, 0, 1, 0));
+    presenta(&mut p, &[("eta_pensionabile", "68")]).unwrap();
+    presenta(&mut p, &[("soglia_lista", "0")]).unwrap();
+    assert_eq!(posti(&p), (3, 2, 1, 0));
+    presenta(&mut p, &[("obbligo_scolastico", "18")]).unwrap();
+    assert_eq!(posti(&p), (3, 3, 1, 0));
+    let e = presenta(&mut p, &[("leva_militare", "obbligatoria")]).unwrap_err();
+    assert!(e.to_string().contains("calendario pieno"), "{e}");
+    presenta(&mut p, &[("numero_parlamentari", "630_315")]).unwrap();
+    assert_eq!(posti(&p), (3, 3, 1, 1));
+    let e = presenta(&mut p, &[("durata_legislatura", "4")]).unwrap_err();
+    assert!(e.to_string().contains("calendario pieno"), "{e}");
+}
+
 #[test]
 fn leggi_non_ammesse_rifiutate_col_nome() {
     let mut p = Partita::nuova(dati_base(), 1);

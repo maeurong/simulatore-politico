@@ -152,6 +152,18 @@ pub(crate) fn legge_non_valida(
     })
 }
 
+/// Perché una legge elettorale coi valori `scelti` non sarebbe applicabile, dopo il voto e dopo gli
+/// arrivi elettorali in corso: il motivo di `legge_non_valida`; `None` se lo è.
+pub(crate) fn elettorale_non_applicabile(
+    dati: &DatiGioco,
+    disposizioni: &Disposizioni,
+    scelti: &[(usize, usize)],
+) -> Option<String> {
+    let con_arrivi = [&disposizioni.arrivi_elettorali()[..], scelti].concat();
+    legge_non_valida(dati, disposizioni, scelti)
+        .or_else(|| legge_non_valida(dati, disposizioni, &con_arrivi))
+}
+
 /// Almeno due terzi dei `seggi` del ramo votano sì: `sì · 3 ≥ seggi · 2`.
 pub(crate) fn due_terzi(c: &Conteggio, seggi: &[u32]) -> bool {
     c.si * 3 >= seggi.iter().sum::<u32>() * 2
