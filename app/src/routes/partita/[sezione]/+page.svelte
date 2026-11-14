@@ -5,6 +5,7 @@
   import { partita } from "$lib/partita.svelte";
   import Cruscotto from "$lib/cruscotto/Cruscotto.svelte";
   import Campagna from "$lib/campagna/Campagna.svelte";
+  import Paese from "$lib/paese/Paese.svelte";
   import Evento from "$lib/cruscotto/Evento.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
   import Cornice from "$lib/cornice/Cornice.svelte";
@@ -39,6 +40,8 @@
             <Cruscotto vista={partita.vista} />
           {:else if aperta === "campagna" && fetta === null}
             <Campagna vista={partita.vista} />
+          {:else if aperta === "paese" && fetta === null}
+            <Paese vista={partita.vista} />
           {:else}
             <!-- governo, crisi, opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (lettura 1) -->
             {#if aperta === "cruscotto"}

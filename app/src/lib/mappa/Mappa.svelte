@@ -8,6 +8,7 @@
   import { numero, t } from "$lib/testi/t";
   import { REGIONI, TELA } from "./regioni";
   import { accanto, classi } from "./mappa";
+  import FormaSegno from "./FormaSegno.svelte";
 
   let {
     valori, segni = {}, scelta, ordine, nome, piccola = false, solaLettura = false, formato = (x) => numero(x, 1), onscelta,
@@ -50,13 +51,6 @@
   const x0 = (n: number, i: number) => (i - (n - 1) / 2) * 13;
 </script>
 
-{#snippet forma(s: Segno)}
-  {#if s === "cantiere"}<path d="M0,-6L6,5L-6,5Z" fill="var(--ink)" stroke="var(--carta)" stroke-width="1.2" />
-  {:else if s === "atto"}<circle r="5" fill="var(--ink)" stroke="var(--carta)" stroke-width="1.2" />
-  {:else if s === "opera"}<rect x="-5" y="-5" width="10" height="10" fill="var(--ink)" stroke="var(--carta)" stroke-width="1.2" />
-  {:else}<circle r="7" fill="var(--rosso)" stroke="var(--carta)" stroke-width="1.2" /><path d="M-3.5,0H3.5M0,-3.5V3.5" stroke="var(--carta)" stroke-width="2" />{/if}
-{/snippet}
-
 <svg viewBox="0 0 {TELA.w} {TELA.h}" class:piccola role="radiogroup" aria-label={nome} aria-readonly={solaLettura || undefined}>
   <defs>
     <pattern id="{pre}-tr" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -90,7 +84,7 @@
     {#each REGIONI as r (r.id)}
       {@const l = segni[r.id] ?? []}
       {#each l as s, i (i)}
-        <g transform="translate({r.ancora[0] + x0(l.length, i)} {r.ancora[1]})" class="segno">{@render forma(s)}</g>
+        <g transform="translate({r.ancora[0] + x0(l.length, i)} {r.ancora[1]})" class="segno"><FormaSegno {s} /></g>
       {/each}
     {/each}
   </g>
