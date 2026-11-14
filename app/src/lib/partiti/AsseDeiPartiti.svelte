@@ -1,0 +1,80 @@
+<script lang="ts">
+  // L'asse da 1 a 7 (24-partiti.prototype.html, forma A): quadrato sulla dichiarata, anello sulla percepita, la freccia fra i due.
+  // Il rosso e i fili di minaccia e scissione arrivano con la 11g (vista-per-schermata.md:160). Il colore non basta mai: il nome sta sopra.
+  import { t } from "$lib/testi/t";
+  import { coloreDi } from "$lib/partiti";
+  import type { VocePartito } from "$lib/tipi/VocePartito";
+
+  let { partiti, giocatore }: { partiti: VocePartito[]; giocatore: string } = $props();
+  const pre = $props.id();
+
+  const W = 820, L = 18, R = W - 18, PASSO = 16;
+  const X = (x: number) => L + ((x - 1) / 6) * (R - L);
+  const nome = (p: VocePartito) => (p.id === giocatore ? t("partiti.tu") : p.nome);
+  const colore = (p: VocePartito) => coloreDi(p.id) ?? "var(--grigio)";
+
+  // i nomi su più file: ognuno sulla prima fila in cui non tocca l'ultimo già messo (da sinistra)
+  const file = $derived.by(() => {
+    const fine: number[] = [];
+    return Object.fromEntries(partiti.map((p) => {
+      const x = X(p.posizione_dichiarata), mezzo = (nome(p).length * 7.2 + 14) / 2;
+      let k = 0;
+      while ((fine[k] ?? -1e9) > x - mezzo) k++;
+      fine[k] = x + mezzo;
+      return [p.id, k];
+    }));
+  });
+  const righe = $derived(Math.max(0, ...Object.values(file)) + 1);
+  const H = $derived(52 + righe * PASSO);
+  const y0 = $derived(H - 22);
+  const y = $derived(y0 - 6);
+  const ancora = (p: VocePartito) => {
+    const x = X(p.posizione_dichiarata), m = nome(p).length * 3.6 + 4;
+    return x - L < m ? "start" : R - x < m ? "end" : "middle";
+  };
+</script>
+
+<svg class="ax" width="100%" height={H} viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label={t("partiti.asse_aria")}>
+  <defs>
+    <marker id="{pre}-pt" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6Z" class="punta" /></marker>
+    <pattern id="{pre}-ret" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" class="carta" /><line x1="0" y1="0" x2="0" y2="4" class="tratto" /></pattern>
+  </defs>
+  <line x1={L} y1={y0} x2={R} y2={y0} class="base" />
+  {#each [1, 2, 3, 4, 5, 6, 7] as i (i)}
+    <line x1={X(i)} y1={y0} x2={X(i)} y2={y0 + 5} class="base" stroke-width="1" />
+    <text x={X(i)} y={y0 + 16} text-anchor="middle">{i}</text>
+  {/each}
+  <text x={L - 14} y={y0 + 16} text-anchor="start">◂</text>
+  <text x={R + 14} y={y0 + 16} text-anchor="end">▸</text>
+
+  {#each partiti as p (p.id)}
+    {@const xd = X(p.posizione_dichiarata)}
+    {@const xp = X(p.posizione_percepita)}
+    {@const yl = y - 14 - file[p.id] * PASSO}
+    {@const c = colore(p)}
+    {@const nato = coloreDi(p.id) === null}
+    <g opacity={p.sciolto ? 0.45 : 1}>
+      {#if Math.abs(xp - xd) > 2}
+        <line x1={xd} y1={y} x2={xp - Math.sign(xp - xd) * 4} y2={y} class="freccia" marker-end="url(#{pre}-pt)" />
+      {/if}
+      <circle cx={xp} cy={y} r="4.5" class="anello" style:stroke={c} />
+      <line x1={xd} y1={y - 5} x2={xd} y2={yl + 3} style:stroke={c} stroke-width="1" />
+      <text class="nm" class:sc={p.sciolto} x={xd + (ancora(p) === "start" ? -6 : ancora(p) === "end" ? 6 : 0)} y={yl} text-anchor={ancora(p)}>{nome(p)}</text>
+      <rect x={xd - 5} y={y - 5} width="10" height="10" class="quad" style:fill={nato ? `url(#${pre}-ret)` : c} />
+    </g>
+  {/each}
+</svg>
+
+<style>
+  .ax { display: block }
+  .base { stroke: var(--ink); stroke-width: 1.5 }
+  text { font: 400 11px var(--txt); fill: var(--grigio) }
+  .nm { font-weight: 700; font-size: 12px; fill: var(--ink) }
+  .nm.sc { text-decoration: line-through; fill: var(--grigio) }
+  .anello { fill: var(--carta); stroke-width: 2 }
+  .quad { stroke: var(--ink); stroke-width: 1 }
+  .freccia { stroke: var(--grigio); stroke-width: 1.5 }
+  .punta { fill: var(--grigio) }
+  .carta { fill: var(--carta) }
+  .tratto { stroke: var(--grigio); stroke-width: 1.2 }
+</style>
