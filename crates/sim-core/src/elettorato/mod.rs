@@ -18,6 +18,7 @@ mod redditi;
 mod referendum;
 mod voto;
 pub(crate) use composizione::{spostamenti_lavoro, spostamenti_pensione};
+pub use giudizio::RedditoFascia;
 pub use redditi::{Indici, Reddito};
 pub use referendum::{Affluenza, Quesito};
 pub(crate) use referendum::{stima, toccati};

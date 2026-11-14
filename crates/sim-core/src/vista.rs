@@ -1,6 +1,7 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::Aliquote;
 use crate::elettorato::Condizione;
+use crate::esito::VoceEsito;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
 use crate::informazione::{Revisione, Sondaggio, Stima, TipoAcquisto, VistaCentroStudi, VistaTest};
@@ -86,8 +87,9 @@ pub struct Vista {
     /// Turno di crisi: solo ordinaria amministrazione; `Allarga` ammesso col giocatore al governo,
     /// fuori dal turno del voto (che chiude la crisi).
     pub crisi: bool,
-    /// Le mosse dei partiti IA nell'ultima chiusura, nell'ordine in cui sono avvenute.
-    pub mosse: Vec<MossaIa>,
+    /// L'esito dell'ultima chiusura: tutte le voci, in evidenza e no, nell'ordine della chiusura;
+    /// vuoto al turno zero.
+    pub esito: Vec<VoceEsito>,
     /// Il programma pubblico del governo IA, nell'ordine in cui lo porta in aula; vuoto col
     /// giocatore Presidente del Consiglio.
     pub programma: Vec<VoceProgramma>,
@@ -99,6 +101,36 @@ pub struct Vista {
     pub situazioni: Vec<VoceSituazione>,
     /// L'informazione comprata nel turno e i prezzi di quella comprabile.
     pub acquisti: VistaAcquisti,
+    /// Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
+    pub fermate: Vec<Fermata>,
+}
+
+/// Una ragione per fermarsi sul turno appena aperto. `misura` è l'id della misura in calendario,
+/// `partito` l'id del partito.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "tipo", rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum Fermata {
+    /// Il giocatore governa: ogni turno chiede le sue scelte.
+    Governo,
+    /// La partita è finita.
+    Fine,
+    /// Una misura col voto in questo turno tocca almeno `fermata_quota_elettorato` degli elettori
+    /// stimati del giocatore.
+    Voto { misura: u32 },
+    /// Nell'ultima chiusura un alleato del governo ha posto un ultimatum.
+    Ultimatum { partito: String },
+    /// Nell'ultima chiusura il governo è entrato in crisi.
+    Crisi,
+    /// C'è un confermativo da scegliere, o a luglio-settembre il giocatore può ancora chiedere un
+    /// abrogativo.
+    Referendum,
+    /// È il turno del voto.
+    Campagna,
+    /// Trattativa con l'incarico, o la guida, al giocatore.
+    Incarico,
+    /// Il posto riservato del turno è del giocatore, ed è libero.
+    PostoRiservato,
 }
 
 /// L'informazione comprata: un campo vuoto è un tipo non comprato in questo turno. Prezzi in
@@ -175,14 +207,6 @@ pub struct VoceProgramma {
     pub nome: String,
     pub gradino: String,
     pub nome_gradino: String,
-}
-
-/// Una mossa di un partito IA: `partito` è l'id, `testo` il motivo, mai i valori attesi in cifre.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(test, derive(TS), ts(export))]
-pub struct MossaIa {
-    pub partito: String,
-    pub testo: String,
 }
 
 /// A chi va l'incarico in trattativa: al giocatore o al Capo dello Stato. `Guida`: dopo una

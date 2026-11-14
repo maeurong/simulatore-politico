@@ -4,8 +4,9 @@
 )]
 
 mod comune;
-use comune::{dati_base, file_base, imposta};
+use comune::{dati_base, edita, file_base, imposta, indice, voci};
 use sim_core::dati::DatiGioco;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::Causa;
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
@@ -73,6 +74,22 @@ fn dimissioni_chieste_portano_interim_rosa_e_rodaggio() {
     assert!(m.rosa.iter().all(|x| x.partito == "destra"));
     assert!(m.rosa.windows(2).all(|w| w[0].capacita >= w[1].capacita));
     assert!(!m.dimissioni_chieste && m.scelta.is_none());
+    // Fatti 9 e 87: chieste dal giocatore, notevole e non critica.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    assert_eq!(esce.len(), 1, "{esce:?}");
+    assert_eq!(esce[0].dicastero.as_deref(), Some("sanita"));
+    assert!(
+        esce[0]
+            .fatto
+            .ends_with(" lascia il dicastero Sanità, che va in interim"),
+        "{}",
+        esce[0].fatto
+    );
+    assert_eq!(
+        esce[0].causa,
+        "le dimissioni chieste dal Presidente del Consiglio"
+    );
+    assert_eq!(esce[0].criticita, Criticita::Notevole);
     let scelto = m.rosa[1].nome.clone();
     p.comanda(Comando::ScegliSuccessore {
         dicastero: "sanita".into(),
@@ -135,6 +152,56 @@ fn ministri_sotto_soglia_minacciano_e_si_dimettono_a_fine_turno() {
             .iter()
             .all(|m| m.ministro.is_none() && m.rosa.len() == 3 && m.causa_dimissioni.is_some())
     );
+    // Fatto 87: dieci uscite per soddisfazione, critiche e fuse in una voce.
+    let esce = voci(&p, TipoVoce::MinistroEsce);
+    assert_eq!(esce.len(), 10, "{esce:?}");
+    for v in &esce {
+        assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
+        assert!(
+            v.causa
+                .starts_with("la soddisfazione è scesa sotto la soglia di dimissioni di 35,0"),
+            "{}",
+            v.causa
+        );
+    }
+    // Già sotto la minaccia prima della chiusura, ed escono: nessuna minaccia nuova.
+    assert!(voci(&p, TipoVoce::MinacciaDiDimissioni).is_empty());
+}
+
+/// Fatto 88: con la base a 30 tutti minacciano già; la Sanità, a 41, scende sotto i 40 nella
+/// chiusura ed è l'unica voce.
+#[test]
+fn minaccia_nata_nella_chiusura() {
+    let f = imposta(
+        file_base(),
+        "manopole",
+        "[soddisfazione_base]\nvalore = ",
+        "30.0",
+    );
+    let f = imposta(f, "manopole", "[soglia_dimissioni]\nvalore = ", "15.0");
+    let p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let i = indice("sanita");
+    let mut p = edita(&p, |j| {
+        j["ministri"]["dicasteri"][i]["ministro"]["soddisfazione"] = serde_json::json!(41.0)
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let minacce = voci(&p, TipoVoce::MinacciaDiDimissioni);
+    assert_eq!(minacce.len(), 1, "{minacce:?}");
+    let v = &minacce[0];
+    assert_eq!(v.dicastero.as_deref(), Some("sanita"));
+    assert!(
+        v.fatto.ends_with(" (Sanità) minaccia le dimissioni"),
+        "{}",
+        v.fatto
+    );
+    assert!(
+        v.causa
+            .starts_with("la soddisfazione è scesa sotto la soglia di minaccia di 40,0"),
+        "{}",
+        v.causa
+    );
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 2));
 }
 
 #[test]

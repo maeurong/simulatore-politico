@@ -5,11 +5,12 @@ mod comune;
 
 use comune::{
     chiudi_col_bilancio, edita, file_base, file_vero, riscrivi, scandalo_certo, senza_emergenze,
-    sostituisci,
+    sostituisci, voci,
 };
 use serde_json::{Value, json};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::eventi::{Famiglia, Tono};
 
 const SISMICA: &str = "Emergenza sismica";
@@ -167,6 +168,23 @@ fn il_fondo_paga_e_non_va_sotto_zero() {
         .filter_map(|e| e["intensita"].as_f64())
         .sum();
     assert!((ripristino - 0.1).abs() < 1e-9, "{ripristino}");
+    let v = voci(&p, TipoVoce::EventoRisolto);
+    let sismiche: Vec<_> = (v.iter())
+        .filter(|v| v.fatto.starts_with(SISMICA))
+        .map(|v| v.fatto.as_str())
+        .collect();
+    assert_eq!(sismiche.len(), 2, "{v:?}");
+    assert!(
+        sismiche[0].contains("«Attingere al fondo di riserva» per default")
+            && sismiche[0].contains("; 50.000.000 euro dal fondo di riserva (5% del costo)"),
+        "{}",
+        sismiche[0]
+    );
+    assert!(
+        sismiche[1].contains("; 0 euro dal fondo di riserva (0% del costo)"),
+        "{}",
+        sismiche[1]
+    );
 }
 
 #[test]
@@ -227,7 +245,14 @@ fn con_vittime_il_tono_e_grave() {
         assert_eq!(e.nome, SISMICA);
         // Lo stock è a 100: nessuna prevenzione, 5 miliardi sono il livello con vittime.
         assert_eq!(e.tono == Tono::Grave, costo == 5_000_000_000, "seme {seme}");
-        if e.tono == Tono::Grave {
+        // La voce dell'evento risolto porta il tono dell'evento.
+        let tono = e.tono;
+        chiudi_col_bilancio(&mut p);
+        let risolta = (voci(&p, TipoVoce::EventoRisolto).into_iter())
+            .find(|v| v.fatto.starts_with(SISMICA))
+            .unwrap();
+        assert_eq!(risolta.tono, tono, "seme {seme}");
+        if tono == Tono::Grave {
             gravi += 1;
         } else {
             ordinarie += 1;
@@ -294,6 +319,16 @@ fn una_lieve_non_apre_evento_la_paga_il_fondo_e_non_va_sotto_zero() {
         assert_eq!(speso(&p), 0);
         chiudi_col_bilancio(&mut p);
         assert_eq!(speso(&p), fondo);
+        let v = voci(&p, TipoVoce::EmergenzaLieve);
+        assert_eq!(v.len(), 1, "{v:?}");
+        assert_eq!(v[0].regione.as_deref(), Some("piemonte"));
+        assert_eq!(v[0].criticita, Criticita::Ordinaria);
+        assert_eq!(
+            v[0].fatto,
+            "Emergenza sismica lieve in Piemonte, 50.000.000 euro dal fondo di riserva (50% del costo)"
+        );
+        // Il Piemonte è la sola regione col sisma: la più esposta.
+        assert_eq!(v[0].causa, "pericolosità sismica alta");
         // Nello stesso anno le altre emergenze non trovano più nulla.
         chiudi_col_bilancio(&mut p);
         assert_eq!(speso(&p), fondo, "seme {seme}");

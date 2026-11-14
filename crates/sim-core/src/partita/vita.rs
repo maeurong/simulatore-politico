@@ -5,6 +5,8 @@
 
 use super::Partita;
 use crate::elettorato::{PUNTI, softmax, utilita};
+use crate::esito::{Grado, TipoVoce};
+use crate::legislatura::campagna::migliaia;
 use crate::legislatura::{Incarico, partito_nuovo, valore_al_governo};
 use crate::partiti::{MASSIMO_PARTITI, Regola, Vocazione};
 
@@ -99,18 +101,16 @@ impl Partita {
         p.regola = Regola::Hunter;
         let j = self.aggiungi_partito(p);
         self.legislatura.protesta = true;
-        let testo = format!(
-            "Nasce {nome}, partito di protesta in posizione {}: elettori lontani dai partiti e \
-             astensione alta",
-            k + 1
-        );
-        self.mossa(j, testo);
+        let fatto = format!("Nasce {nome}, partito di protesta in posizione {}", k + 1);
+        let causa = "elettori lontani dai partiti e astensione alta".to_string();
+        self.voce_di(j, TipoVoce::PartitoDiProtesta, fatto, causa);
     }
 
     /// In chiusura, dopo l'aula (scelta 7 del piano 8b), per i partiti attivi in ordine d'indice,
     /// giocatore compreso, sullo stato vero: con la percepita a `soglia_scissione` dalla dichiarata
     /// e meno di `MASSIMO_PARTITI` attivi nasce la frangia (`scissione`); a `minaccia_scissione`,
-    /// o al tetto, una riga di minaccia, una sola finché la distanza non torna sotto.
+    /// o al tetto, una riga di minaccia, una sola finché la distanza non torna sotto, e allora la
+    /// riga del rientro.
     pub(super) fn scissioni(&mut self) {
         let m = |nome: &str| self.dati.manopola(nome);
         let (minaccia, soglia) = (m("minaccia_scissione"), m("soglia_scissione"));
@@ -118,20 +118,56 @@ impl Partita {
             let Some(p) = self.partiti.get(j).filter(|p| !p.sciolto) else {
                 continue;
             };
-            let d = (p.posizione_percepita - p.posizione_dichiarata).abs();
-            let gia = p.minaccia;
-            if d >= soglia && self.attivi() < MASSIMO_PARTITI && self.scissione(j) {
-                continue;
-            }
+            let (d, gia, nome) = (
+                (p.posizione_percepita - p.posizione_dichiarata).abs(),
+                p.minaccia,
+                p.nome.clone(),
+            );
+            let mancata = if d < soglia {
+                None
+            } else if self.attivi() >= MASSIMO_PARTITI {
+                Some(format!("ci sono già {MASSIMO_PARTITI} partiti attivi"))
+            } else {
+                match self.scissione(j, soglia) {
+                    Ok(()) => continue,
+                    Err(perche) => Some(perche.to_string()),
+                }
+            };
             if let Some(p) = self.partiti.get_mut(j) {
                 p.minaccia = d >= minaccia;
             }
+            let distanza = format!(
+                "la posizione percepita dista {} punti dalla dichiarata",
+                virgola(d)
+            );
             if d >= minaccia && !gia {
-                let testo = format!(
-                    "Minaccia di scissione: la posizione percepita dista {} punti dalla dichiarata",
+                let fatto = format!(
+                    "Minaccia di scissione in {nome}, a {} punti dalla posizione dichiarata",
                     virgola(d)
                 );
-                self.mossa(j, testo);
+                let mut causa =
+                    format!("{distanza}, la soglia di minaccia è {}", virgola(minaccia));
+                if let Some(perche) = mancata {
+                    causa.push_str(&format!(
+                        "; la scissione, alla soglia di {}, non nasce perché {perche}",
+                        virgola(soglia)
+                    ));
+                }
+                let (giocatore, di_governo) = (j == self.giocatore, self.governo.al_governo(j));
+                if let Some(v) = self.voce_di(j, TipoVoce::MinacciaDiScissione, fatto, causa) {
+                    if giocatore {
+                        v.con_grado(Grado::C2);
+                    } else if di_governo {
+                        v.con_grado(Grado::N);
+                    }
+                }
+            } else if gia && d < minaccia {
+                let fatto = format!("Rientra la minaccia di scissione in {nome}");
+                let causa = format!(
+                    "{distanza}, sotto la soglia di minaccia di {}",
+                    virgola(minaccia)
+                );
+                self.voce_di(j, TipoVoce::MinacciaRientrata, fatto, causa);
             }
         }
     }
@@ -142,8 +178,8 @@ impl Partita {
     /// più di quanti ne ha `j`) e del voto precedente di ogni gruppo, e l'intesa di `j`. Se `j` è
     /// al governo la frangia entra nella coalizione, senza dicasteri. `j` riparte con la percepita
     /// sulla dichiarata. Senza seggi per la frangia in nessuna Camera, o senza un nome libero, non
-    /// nasce: `false`.
-    fn scissione(&mut self, j: usize) -> bool {
+    /// nasce: l'errore dice perché. La voce porta la `soglia` di scissione.
+    fn scissione(&mut self, j: usize, soglia: f64) -> Result<(), &'static str> {
         let q = self.dati.manopola("quota_scissione");
         let pl = &self.parlamento;
         let presi = [&pl.seggi_camera, &pl.seggi_senato].map(|v| {
@@ -151,17 +187,19 @@ impl Partita {
             ((f64::from(n) * q).round() as u32).min(n)
         });
         if presi == [0, 0] {
-            return false;
+            return Err("la frangia non avrebbe seggi in nessuna Camera");
         }
         let Some(nome) = self.nome_nuovo() else {
-            return false;
+            return Err("non resta un nome libero per la frangia");
         };
         let leader = self.leader_nuovo();
         let luna = self.dati.manopola("luna_di_miele_leader");
         let Some(o) = self.partiti.get_mut(j) else {
-            return false;
+            return Err("il partito non c'è");
         };
+        let origine = o.nome.clone();
         let x = o.posizione_percepita;
+        let distanza = (x - o.posizione_dichiarata).abs();
         let cassa = ((o.cassa as f64 * q).round() as i64).clamp(0, o.cassa.max(0));
         o.cassa -= cassa;
         o.posizione_percepita = o.posizione_dichiarata;
@@ -213,12 +251,24 @@ impl Partita {
         let [c, s] = presi;
         let deputati = if c == 1 { "deputato" } else { "deputati" };
         let senatori = if s == 1 { "senatore" } else { "senatori" };
-        let testo = format!(
-            "Scissione: nasce {nome} con {c} {deputati} e {s} {senatori}, sulla posizione {}",
-            virgola(x)
+        let fatto = format!(
+            "Scissione in {origine}: nasce {nome}, sulla posizione {}, con {c} {deputati}, {s} \
+             {senatori} e {} euro di cassa",
+            virgola(x),
+            migliaia(cassa)
         );
-        self.mossa(j, testo);
-        true
+        let causa = format!(
+            "la posizione percepita dista {} punti dalla dichiarata, la soglia di scissione è {}",
+            virgola(distanza),
+            virgola(soglia)
+        );
+        let critica = j == self.giocatore || self.governo.al_governo(j);
+        if let Some(v) = self.voce_di(j, TipoVoce::Scissione, fatto, causa)
+            && critica
+        {
+            v.con_grado(Grado::C2);
+        }
+        Ok(())
     }
 
     /// In chiusura, nella finestra delle uscite degli alleati e fuori dalla crisi (scelta 8 del
@@ -244,9 +294,9 @@ impl Partita {
             })
             .collect();
         for &j in &nuove {
-            let testo = "Esce dalla maggioranza: nei sondaggi il voto gli vale più che restare al \
-                         governo";
-            self.mossa(j, testo.into());
+            let fatto = "Esce dalla maggioranza".to_string();
+            let causa = "nei sondaggi il voto gli vale più che restare al governo".to_string();
+            self.voce_di(j, TipoVoce::FrangiaEsce, fatto, causa);
         }
         escono.extend(nuove);
     }
@@ -280,8 +330,22 @@ impl Partita {
             }
         }
         for &j in &sciolti {
-            let testo = format!("Si scioglie dopo {ELEZIONI_SENZA_SEGGI} elezioni senza seggi");
-            self.mossa(j, testo);
+            // Fatto 82: la coalizione dell'ultimo voto ridotta a meno di due partiti cade.
+            let caduta = (self.legislatura.coalizioni.iter())
+                .find(|c| c.len() >= 2 && c.contains(&j))
+                .map(|c| (c.iter().copied()).filter(|k| !sciolti.contains(k)))
+                .map(Iterator::collect::<Vec<usize>>)
+                .filter(|resto| resto.len() < 2);
+            let fatto = match caduta.as_deref() {
+                Some(&[k]) => format!(
+                    "Si scioglie; cade la coalizione con {}",
+                    self.partiti.get(k).map_or("", |p| p.nome.as_str())
+                ),
+                Some(_) => "Si scioglie; cade la sua coalizione".to_string(),
+                None => "Si scioglie".to_string(),
+            };
+            let causa = format!("{ELEZIONI_SENZA_SEGGI} elezioni di fila senza seggi");
+            self.voce_di(j, TipoVoce::PartitoSciolto, fatto, causa);
         }
         let l = &mut self.legislatura;
         // Una coalizione ridotta a un solo membro dallo scioglimento cade.
@@ -414,8 +478,13 @@ mod tests {
         p.scissioni();
         assert_eq!(p.partiti.len(), 10);
         assert!(p.partiti[4].minaccia);
-        assert_eq!(p.mosse.len(), 1);
-        assert!(p.mosse[0].testo.starts_with("Minaccia di scissione"));
+        assert_eq!(p.esito.len(), 1);
+        assert_eq!(p.esito[0].tipo, TipoVoce::MinacciaDiScissione);
+        assert_eq!(
+            p.esito[0].causa,
+            "la posizione percepita dista 1,0 punti dalla dichiarata, la soglia di minaccia è \
+             0,5; la scissione, alla soglia di 1,0, non nasce perché ci sono già 10 partiti attivi"
+        );
     }
 
     /// Un punto oltre: la percepita del partito `j` a +1.
@@ -436,7 +505,12 @@ mod tests {
         assert!(p.partiti[4].minaccia);
         assert_eq!(p.partiti[4].cassa, cassa);
         assert_eq!(p.partiti[4].posizione_percepita, percepita);
-        assert!(p.mosse[0].testo.starts_with("Minaccia di scissione"));
+        assert_eq!(p.esito[0].tipo, TipoVoce::MinacciaDiScissione);
+        assert!(
+            (p.esito[0].causa).ends_with("perché la frangia non avrebbe seggi in nessuna Camera"),
+            "{}",
+            p.esito[0].causa
+        );
     }
 
     /// La sinistra, all'opposizione, con 5 deputati e 3 senatori: la frangia prende 1 deputato e
@@ -456,10 +530,19 @@ mod tests {
         assert_eq!(p.parlamento.seggi_senato[1], 3);
         assert!(!p.governo.coalizione.contains(&7));
         assert_eq!(p.legislatura.frange, [7]);
-        let nome = &p.partiti[7].nome;
-        let riga =
-            format!("Scissione: nasce {nome} con 1 deputato e 0 senatori, sulla posizione 3,0");
-        assert_eq!(p.mosse[0].testo, riga);
+        let (origine, nome) = (&p.partiti[1].nome, &p.partiti[7].nome);
+        let cassa = migliaia(p.partiti[7].cassa);
+        let riga = format!(
+            "Scissione in {origine}: nasce {nome}, sulla posizione 3,0, con 1 deputato, 0 \
+             senatori e {cassa} euro di cassa"
+        );
+        assert_eq!(p.esito[0].fatto, riga);
+        assert_eq!(
+            p.esito[0].causa,
+            "la posizione percepita dista 1,0 punti dalla dichiarata, la soglia di scissione è 1,0"
+        );
+        // All'opposizione, né del giocatore né di governo: notevole.
+        assert_eq!(p.esito[0].criticita, crate::esito::Criticita::Notevole);
     }
 
     /// Nella partita di prova il partito del giocatore (la destra, Aggregator nello scenario) è

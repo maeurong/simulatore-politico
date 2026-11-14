@@ -4,11 +4,12 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, senza_shock};
+use comune::{dati_base, edita, senza_shock, voci};
 use serde_json::json;
 use sim_core::dati::DatiGioco;
 use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Scaglione, Voce, irpef};
 use sim_core::elettorato::{Condizione, Fascia, fascia_di};
+use sim_core::esito::TipoVoce;
 use sim_core::ministri::Causa;
 use sim_core::{Comando, Errore, Partita};
 
@@ -617,6 +618,14 @@ fn ingresso_in_provvisorio_costa_la_perdita_del_bilancio_che_continua() {
     let tagli = tagli_sanita(&p, v.turno);
     assert_eq!(tagli.len(), 1, "{tagli:?}");
     assert!((tagli[0] + costo * continua).abs() < 1e-9);
+    // Fatto 126: il taglio nato in apertura è una voce di questa chiusura.
+    let taglio: Vec<_> = (voci(&p, TipoVoce::SoddisfazioneVariata).into_iter())
+        .filter(|x| {
+            x.dicastero.as_deref() == Some("sanita")
+                && x.causa == "spesa del dicastero tagliata in termini reali"
+        })
+        .collect();
+    assert_eq!(taglio.len(), 1, "{:?}", p.vista().esito);
     // Approvare nello stesso gennaio costa di nuovo, sulla perdita del bilancio nuovo (Ruling).
     let b = p.bozza_bilancio().unwrap();
     let nuova = perdita(&p.riepilogo_bilancio(&b).unwrap(), "sanita");
@@ -625,6 +634,59 @@ fn ingresso_in_provvisorio_costa_la_perdita_del_bilancio_che_continua() {
     let tagli = tagli_sanita(&p, v.turno);
     assert_eq!(tagli.len(), 2, "{tagli:?}");
     assert!((tagli[1] + costo * nuova).abs() < 1e-9);
+}
+
+/// Fatti 88 e 126: la Sanità, sopra la soglia di minaccia in testa e dopo le soglie, ci scende
+/// col taglio dell'apertura d'anno in esercizio provvisorio: la minaccia è di questa chiusura.
+#[test]
+fn il_taglio_d_apertura_fa_minacciare() {
+    let d = senza_shock_dati();
+    let (soglia, ritorno) = (
+        d.manopola("soglia_minaccia"),
+        d.manopola("ritorno_soddisfazione"),
+    );
+    let p = al_bilancio_2028(4);
+    let sodd = |p: &Partita| {
+        p.ministri().dicasteri[3]
+            .ministro
+            .as_ref()
+            .unwrap()
+            .soddisfazione
+    };
+    let turno = p.vista().turno + 1;
+    // Sonda: a soddisfazione invariata, dove la lasciano le soglie e quanto toglie il taglio.
+    let mut sonda = edita(&p, |_| {}).unwrap();
+    sonda.chiudi_turno();
+    let taglio = tagli_sanita(&sonda, turno)[0];
+    let dopo_le_soglie = sodd(&sonda) - taglio;
+    // Le soglie la lasciano a metà del taglio sopra la soglia: il taglio la porta sotto.
+    let x = sodd(&p) + (soglia - taglio / 2.0 - dopo_le_soglie) / (1.0 - ritorno);
+    assert!(
+        x >= soglia,
+        "{x}: già sotto la soglia in testa alla chiusura"
+    );
+    let mut p = edita(&p, |j| {
+        j["ministri"]["dicasteri"][3]["ministro"]["soddisfazione"] = json!(x)
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let finale = sodd(&p);
+    assert!(
+        finale < soglia && finale - taglio >= soglia,
+        "{finale} {taglio}"
+    );
+    // Il taglio tocca ogni dicastero: conta la sola Sanità, l'unica preparata al limite.
+    let minacce: Vec<_> = (voci(&p, TipoVoce::MinacciaDiDimissioni).into_iter())
+        .filter(|v| v.dicastero.as_deref() == Some("sanita"))
+        .collect();
+    assert_eq!(minacce.len(), 1, "{:?}", p.vista().esito);
+    assert!(
+        minacce[0]
+            .causa
+            .starts_with("la soddisfazione è scesa sotto la soglia di minaccia di 40,0"),
+        "{}",
+        minacce[0].causa
+    );
 }
 
 #[test]

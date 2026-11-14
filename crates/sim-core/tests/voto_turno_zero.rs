@@ -4,7 +4,8 @@
 )]
 
 mod comune;
-use comune::{edita, fondata};
+use comune::{edita, fondata, voci};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Cessione, Fase};
 use sim_core::{Comando, Partita};
 
@@ -80,6 +81,37 @@ fn il_voto_del_turno_zero_elegge_il_parlamento() {
         "{}",
         e.affluenza
     );
+    // Fatti 78-79: il risultato e l'incarico, una voce ciascuno.
+    let pct = |x: f64| format!("{:.1}", x * 100.0).replace('.', ",");
+    let nome = |id: &str| (p.partiti().iter().find(|x| x.id == id).unwrap().nome).clone();
+    let g = &e.voti[7];
+    let primo = (e.voti.iter())
+        .max_by(|a, b| a.quota.total_cmp(&b.quota))
+        .unwrap();
+    let premio = match &e.premio {
+        Some(ids) => format!(
+            "premio di maggioranza a {}",
+            ids.split('+').map(nome).collect::<Vec<_>>().join(" e ")
+        ),
+        None => "nessun premio di maggioranza".into(),
+    };
+    let fatto = format!(
+        "Elezioni politiche: affluenza del {}%; Partito nuovo al {}% con {} seggi alla Camera e \
+         {} al Senato; primo partito {} al {}%; {premio}",
+        pct(e.affluenza),
+        pct(g.quota),
+        g.camera,
+        g.senato,
+        nome(&primo.partito),
+        pct(primo.quota)
+    );
+    let v = voci(&p, TipoVoce::RisultatoDelVoto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].fatto, fatto);
+    assert_eq!(v[0].causa, "elezioni politiche");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 3));
+    assert_eq!(voci(&p, TipoVoce::Incarico).len(), 1);
+    assert!(voci(&p, TipoVoce::FineDellaPartita).is_empty());
 }
 
 #[test]
@@ -172,6 +204,20 @@ fn senza_seggi_la_partita_finisce() {
     dichiara(&mut p, &[]);
     p.chiudi_turno();
     assert!(p.finita());
+    let v = voci(&p, TipoVoce::FineDellaPartita);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        v[0].fatto,
+        "Partito nuovo resta senza seggi alla Camera e al Senato: la partita finisce"
+    );
+    let quota = p.vista().elezioni[0].voti[p.giocatore()].quota;
+    let quota = format!("{:.1}", quota * 100.0).replace('.', ",");
+    assert_eq!(
+        v[0].causa,
+        format!("al voto il {quota}% fra i votanti, nessun seggio")
+    );
+    assert_eq!(v[0].partito.as_deref(), Some("giocatore"));
+    assert!(voci(&p, TipoVoce::Incarico).is_empty());
     assert!(p.vista().disponibilita.is_empty());
     let prima = p.salva().unwrap();
     assert!(Partita::carica(&prima).is_ok());

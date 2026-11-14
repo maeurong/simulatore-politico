@@ -5,9 +5,10 @@
 mod comune;
 
 use comune::{
-    chiudi_col_bilancio, edita, file_base, imposta, senza_emergenze, senza_shock, sostituisci,
+    chiudi_col_bilancio, edita, file_base, imposta, senza_emergenze, senza_shock, sostituisci, voci,
 };
 use serde_json::json;
+use sim_core::esito::TipoVoce;
 use sim_core::{Comando, DatiGioco, Partita};
 
 fn deviazione_2027(fino_a_nazionale: u16, energia_fino_a: u16) -> f64 {
@@ -74,6 +75,13 @@ fn clausola_scelta(fino_a_nazionale: u16) -> Partita {
 fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
     let p = clausola_scelta(2025);
     assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 2026);
+    let v = voci(&p, TipoVoce::MargineEnergia);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(v[0].fatto, "Margine UE per l'energia chiesto per il 2026");
+    assert_eq!(
+        v[0].causa,
+        "la scelta nel «Rincaro improvviso dell'energia»"
+    );
 }
 
 /// Dentro la clausola nazionale l'energia è già coperta: l'opzione non segna nulla, e un
@@ -82,6 +90,7 @@ fn l_opzione_clausola_ricorda_l_anno_della_chiusura() {
 fn dentro_la_clausola_nazionale_l_energia_non_conta_due_volte() {
     let p = clausola_scelta(2028);
     assert_eq!(p.economia().regole_ue.clausola_energia_fino_a, 0);
+    assert!(voci(&p, TipoVoce::MargineEnergia).is_empty());
     let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(2026));
     assert!(m.contains("né 0 né dopo clausola_nazionale_fino_a"), "{m}");
 }
@@ -97,6 +106,72 @@ fn rifiutato(guasto: impl FnOnce(&mut serde_json::Value)) -> String {
 fn un_salvataggio_con_la_clausola_nel_futuro_e_rifiutato() {
     let m = rifiutato(|j| j["economia"]["regole_ue"]["clausola_energia_fino_a"] = json!(65535));
     assert!(m.contains("clausola_energia_fino_a"), "{m}");
+}
+
+/// Lo stato salvato senza l'esito e senza `soglia_shock`: ciò che uno shock escluso non deve toccare.
+fn senza_esito_ne_soglia(p: &Partita) -> serde_json::Value {
+    let mut j: serde_json::Value = serde_json::from_str(&p.salva().unwrap()).unwrap();
+    j.as_object_mut().unwrap().remove("esito");
+    (j["dati"]["manopole"].as_object_mut().unwrap()).remove("soglia_shock");
+    j
+}
+
+/// Lo scandalo nasce a ogni chiusura, più grave di ogni shock (gravità 9), e la soglia a 1 sigma fa
+/// uscire spesso uno shock: escluso dal tetto, lascia la voce e nient'altro. La stessa chiusura con
+/// la soglia a 4 sigma, dove lo shock non esce, dà lo stesso stato: l'uniforme si consuma lo stesso.
+#[test]
+fn shock_escluso_voce_senza_effetti() {
+    let f = sostituisci(
+        sostituisci(
+            comune::scandalo_certo(file_base()),
+            "eventi",
+            "gravita = 7",
+            "gravita = 9",
+        ),
+        "eventi",
+        "gravita = 6",
+        "gravita = 9",
+    );
+    let f = imposta(f, "manopole", "[soglia_shock]\nvalore = ", "1.0");
+    let mut p = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 1);
+    let mut prima = None;
+    for _ in 0..20 {
+        let copia = Partita::carica(&p.salva().unwrap()).unwrap();
+        chiudi_col_bilancio(&mut p);
+        if !voci(&p, TipoVoce::ShockAssorbito).is_empty() {
+            prima = Some(copia);
+            break;
+        }
+    }
+    let prima = prima.expect("uno shock escluso in 20 chiusure");
+    let v = voci(&p, TipoVoce::ShockAssorbito);
+    assert!(
+        v[0].fatto.ends_with(
+            " non diventa un evento: ne nasce uno solo a turno. La serie si muove comunque, come \
+             con «Non intervenire»"
+        ),
+        "{v:?}"
+    );
+    assert!(v[0].causa.starts_with("serie «"), "{}", v[0].causa);
+    assert!(
+        v[0].causa.ends_with(" sigma oltre la soglia di 1,0 sigma"),
+        "{}",
+        v[0].causa
+    );
+    // Nato è lo scandalo, non lo shock.
+    let nati = voci(&p, TipoVoce::EventoNato);
+    assert!(
+        nati.iter()
+            .all(|n| n.famiglia == Some(sim_core::eventi::Famiglia::Scandalo)),
+        "{nati:?}"
+    );
+    let mut alzata = edita(&prima, |j| {
+        j["dati"]["manopole"]["soglia_shock"]["valore"] = json!(4.0);
+    })
+    .unwrap();
+    chiudi_col_bilancio(&mut alzata);
+    assert!(voci(&alzata, TipoVoce::ShockAssorbito).is_empty());
+    assert_eq!(senza_esito_ne_soglia(&p), senza_esito_ne_soglia(&alzata));
 }
 
 /// Con la soglia a 1 sigma, senza emergenze né scandali, uno shock nasce presto: la causa nomina

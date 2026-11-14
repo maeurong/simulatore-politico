@@ -42,6 +42,18 @@ pub enum Fase {
     Ordinaria,
 }
 
+/// Perché il governo cade alla chiusura del turno: il primo punto che ha alzato le dimissioni.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrigineCaduta {
+    EsercizioProvvisorio,
+    FiduciaRespinta,
+    Sfiducia,
+    DimissioniDelPresidente,
+    CrisiSenzaUscita,
+    VotoAnticipato,
+}
+
 /// `coalizioni`: quelle dell'ultimo voto, indici di partito; alla nascita quelle dello scenario.
 /// `dichiarazione`: la coalizione pre-elettorale del turno del voto, cancellata dal voto.
 /// `elezioni`: gli esiti dei voti, il più recente per primo. `totali`: i seggi di Camera e Senato
@@ -49,10 +61,10 @@ pub enum Fase {
 /// proposta in trattativa, un partito per dicastero nell'ordine dei dati (`None` = un tecnico).
 /// `allargati`: i partiti entrati con `Allarga` nella coalizione del giocatore in trattativa o in
 /// crisi, fuori da `coalizioni`; vuoto altrove. `dimissioni`: il governo cade alla chiusura del
-/// turno. `maggioranza`: la coalizione del ribaltone col giocatore primo per seggi, in trattativa;
-/// sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in corso, dopo
-/// l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura. `voto_anticipato`: le
-/// `dimissioni` sono del governo IA che va al voto, e il Capo dello Stato esclude il suo partito.
+/// turno, con l'origine; col voto anticipato il Capo dello Stato esclude il partito del governo
+/// IA che va al voto. `maggioranza`: la coalizione del ribaltone col giocatore primo per seggi, in
+/// trattativa; sostituisce la sua coalizione dell'ultimo voto. `crisi`: il turno di crisi in
+/// corso, dopo l'uscita di un alleato senza maggioranza; si chiude nella sua chiusura.
 /// `riposizionato`: il giocatore ha già spostato la dichiarata in questa campagna; azzerato al voto.
 /// `protesta`: in questa legislatura è già nato un partito di protesta; azzerata al voto.
 /// `frange`: i partiti nati da una scissione in questa legislatura; azzerate al voto.
@@ -71,10 +83,9 @@ pub struct Legislatura {
     pub incarico: Option<Incarico>,
     pub proposta: Option<Vec<Option<usize>>>,
     pub allargati: Vec<usize>,
-    pub dimissioni: bool,
+    pub dimissioni: Option<OrigineCaduta>,
     pub maggioranza: Option<Vec<usize>>,
     pub crisi: Option<u32>,
-    pub voto_anticipato: bool,
     pub riposizionato: bool,
     pub protesta: bool,
     pub frange: Vec<usize>,
@@ -85,6 +96,12 @@ impl Legislatura {
     /// Si vota nella chiusura del `turno`: Camere sciolte o legislatura alla scadenza.
     pub fn turno_di_voto(&self, turno: u32) -> bool {
         self.fase == Fase::Sciolta || turno == self.scadenza
+    }
+
+    /// Il governo cade alla chiusura per l'`origine`, se nessun punto prima l'ha già fatto cadere:
+    /// vince la prima.
+    pub(crate) fn dimetti(&mut self, origine: OrigineCaduta) {
+        self.dimissioni.get_or_insert(origine);
     }
 
     /// Il `turno` cade negli ultimi quattro della legislatura.

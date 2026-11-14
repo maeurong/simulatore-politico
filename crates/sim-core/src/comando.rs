@@ -327,7 +327,7 @@ impl Partita {
 mod tests {
     use super::*;
     use crate::dati::dati_base;
-    use crate::legislatura::Fondazione;
+    use crate::legislatura::{Fondazione, OrigineCaduta};
 
     /// `applica` non guarda chi governa: l'opposizione che lo chiama con `Dimettiti` mette le
     /// dimissioni al governo IA, mentre `comanda` la respinge.
@@ -342,8 +342,11 @@ mod tests {
         p.chiudi_turno(); // trattativa
         assert!(!p.governa());
         assert!(p.comanda(Comando::Dimettiti).is_err());
-        assert!(!p.legislatura().dimissioni);
+        assert!(p.legislatura().dimissioni.is_none());
         p.applica(Comando::Dimettiti).unwrap();
-        assert!(p.legislatura().dimissioni);
+        assert_eq!(
+            p.legislatura().dimissioni,
+            Some(OrigineCaduta::DimissioniDelPresidente)
+        );
     }
 }

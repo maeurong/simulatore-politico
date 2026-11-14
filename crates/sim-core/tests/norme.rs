@@ -1,6 +1,9 @@
 mod comune;
-use comune::{chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock, sostituisci};
+use comune::{
+    chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock, sostituisci, voci,
+};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{CausaIntesa, Conteggio, TipoReferendum};
 use sim_core::vista::SeggiPartito;
 use sim_core::{Comando, Partita};
@@ -115,6 +118,12 @@ fn norma_costituzionale_in_due_deliberazioni() {
     assert_eq!(v.esiti[0].deliberazione, 1);
     assert!(v.esiti[0].approvata);
     assert_eq!(v.calendario[0].deliberazione, 2);
+    let a = &voci(&p, TipoVoce::LeggeApprovata)[0];
+    assert!(
+        a.fatto.contains("» in prima deliberazione; Camera "),
+        "{}",
+        a.fatto
+    );
     p.chiudi_turno();
     assert_eq!(p.vista().esiti[0].deliberazione, 2);
 }
@@ -170,6 +179,23 @@ fn senza_i_due_terzi_si_vota_il_referendum_confermativo() {
     // Il giocatore governa: il quinto contro lo chiede, lui non sceglie.
     assert!(v.referendum[0].richiesto && !v.referendum[0].scelta);
     assert_eq!(p.in_vigore("numero_parlamentari"), Some("400_200"));
+    assert!(voci(&p, TipoVoce::LeggeApprovata).is_empty());
+    let c = voci(&p, TipoVoce::ConfermativoInAttesa);
+    assert_eq!(c.len(), 1, "{c:?}");
+    assert_eq!(c[0].criticita, Criticita::Notevole);
+    assert_eq!(c[0].disposizioni, ["numero_parlamentari"]);
+    assert!(
+        c[0].fatto
+            .starts_with("Approvata senza i due terzi «Numero dei parlamentari")
+            && c[0].fatto.ends_with(", già richiesto"),
+        "{}",
+        c[0].fatto
+    );
+    assert!(
+        c[0].causa.starts_with("seconda deliberazione, Camera "),
+        "{}",
+        c[0].causa
+    );
     p.chiudi_turno();
     let r = &p.vista().esiti_referendum[0];
     assert_eq!(
@@ -198,6 +224,20 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
         p.comanda(Comando::PoniFiducia { misura: id }).unwrap();
         chiudi_senza_opposizione_ia(&mut p);
         assert_eq!(p.in_vigore("coalizioni"), Some("si"));
+        if seconda {
+            let d = voci(&p, TipoVoce::MisuraDecaduta);
+            assert_eq!(d.len(), 1, "{d:?}");
+            assert_eq!(d[0].disposizioni, ["premio"]);
+            assert_eq!(
+                d[0].fatto,
+                "Decade senza voto «Premio di maggioranza: alla lista»"
+            );
+            assert_eq!(
+                d[0].causa,
+                "la legge elettorale non sarebbe più valida, premio alla lista con le coalizioni \
+                 attive"
+            );
+        }
         chiudi_senza_opposizione_ia(&mut p);
         p
     };
@@ -206,8 +246,12 @@ fn elettorale_che_diventerebbe_non_valida_cade_senza_voto() {
     assert!(p.vista().calendario.is_empty());
     let e = &p.vista().esiti[0];
     assert!(!e.approvata && !e.fiducia_respinta);
-    assert_eq!(e.camera, Conteggio { si: 0, no: 0 });
-    assert_eq!(e.senato, Conteggio { si: 0, no: 0 });
+    let zero = Conteggio {
+        si: 0,
+        no: 0,
+        franchi: 0,
+    };
+    assert_eq!((&e.camera, &e.senato), (&zero, &zero));
     assert_eq!(
         e.decaduta.as_deref(),
         Some(
@@ -243,6 +287,22 @@ fn elettorale_non_piu_valida_decade_all_apertura_del_turno() {
     assert!(v.calendario.is_empty());
     assert_eq!(v.esiti[0].misura, seconda);
     assert!(v.esiti[0].decaduta.is_some());
+    let d = voci(&p, TipoVoce::MisuraDecaduta);
+    assert_eq!(d.len(), 1, "{d:?}");
+    assert_eq!(
+        (d[0].misura, d[0].criticita),
+        (Some(seconda), Criticita::Notevole)
+    );
+    assert_eq!(d[0].disposizioni, ["premio"]);
+    assert!(
+        d[0].fatto.starts_with("Decade senza voto «"),
+        "{}",
+        d[0].fatto
+    );
+    assert_eq!(
+        d[0].causa,
+        "la legge elettorale non sarebbe più valida, premio alla lista con le coalizioni attive"
+    );
     let salvata = p.salva().unwrap();
     let e = (p.comanda(Comando::PoniFiducia { misura: seconda })).unwrap_err();
     assert!(

@@ -1,7 +1,8 @@
 mod comune;
-use comune::{chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock};
+use comune::{chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock, voci};
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::economia::Voce;
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::parlamento::{CausaIntesa, FormaMisura, StatoEmendamento};
 use sim_core::{Comando, Errore, Partita, Trimestre};
 
@@ -38,6 +39,21 @@ fn bilancio_si_vota_e_passa_con_la_maggioranza() {
         .unwrap();
     assert!(e.approvata);
     assert!(!p.vista().bilancio.esercizio_provvisorio);
+    let v = voci(&p, TipoVoce::BilancioApprovato);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!(
+        (v[0].misura, v[0].criticita),
+        (Some(e.misura), Criticita::Notevole)
+    );
+    assert!(v[0].disposizioni.is_empty());
+    assert!(
+        v[0].fatto
+            .starts_with("Approvata la legge di bilancio; Camera "),
+        "{}",
+        v[0].fatto
+    );
+    assert!(v[0].causa.starts_with("per il sì "), "{}", v[0].causa);
+    assert!(voci(&p, TipoVoce::BilancioRicondotto).is_empty());
 }
 
 /// Franchi tiratori al 90%: la maggioranza vota quasi tutta no, l'opposizione quasi tutta sì.
@@ -56,6 +72,17 @@ fn bilancio_respinto_porta_l_esercizio_provvisorio() {
     presenta_bozza(&mut p);
     p.chiudi_turno();
     assert!(p.vista().bilancio.esercizio_provvisorio);
+    let v = voci(&p, TipoVoce::BilancioRespinto);
+    assert_eq!(v.len(), 1, "{v:?}");
+    assert_eq!((v[0].criticita, v[0].precedenza), (Criticita::Critica, 2));
+    assert!(
+        v[0].fatto
+            .starts_with("Respinta la legge di bilancio; Camera ")
+            && v[0].fatto.contains("; valence -0,05 a ")
+            && v[0].fatto.ends_with("; esercizio provvisorio da gennaio"),
+        "{}",
+        v[0].fatto
+    );
 }
 
 #[test]
@@ -223,6 +250,19 @@ fn slittata(fiducia: bool) -> Partita {
 #[test]
 fn fiducia_persa_nello_slittamento_si_rimborsa() {
     let (con, senza) = (slittata(true), slittata(false));
+    for (p, coda) in [
+        (
+            &con,
+            "; cade la fiducia su una, e l'intesa che costava torna agli alleati",
+        ),
+        (&senza, ""),
+    ] {
+        let v = voci(p, TipoVoce::LeggiSlittate);
+        assert_eq!(v.len(), 1, "{v:?}");
+        assert_eq!(v[0].criticita, Criticita::Ordinaria);
+        assert_eq!(v[0].fatto, format!("Slitta al turno dopo una legge{coda}"));
+        assert_eq!(v[0].causa, "il turno della legge di bilancio");
+    }
     for j in con.alleati() {
         let fiducia: Vec<f64> = (con.intesa().variazioni.iter())
             .filter(|v| v.partito == j && v.causa == CausaIntesa::Fiducia && v.turno == 4)

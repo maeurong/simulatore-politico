@@ -11,10 +11,11 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::errore::{ErroreGuscio, rifiuto};
+use crate::errore::{ErroreGuscio, guasto, rifiuto};
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
+use sim_core::esito::VoceEsito;
 use sim_core::salvataggi::{FORMATO_INDICE, IndicePartita, VoceAlbo, VocePartita};
 use sim_core::{DatiGioco, Errore, Partita, SuMisura, VERSIONE_SCHEMA};
 
@@ -193,8 +194,13 @@ impl Archivio {
         self.scrivi(percorso, &byte)
     }
 
+    /// Il testo di uno snapshot, entro il `TETTO`.
+    fn leggi_snapshot(&self, percorso: &Path) -> Result<String, String> {
+        self.leggi_da(GzDecoder::new(self.apri(percorso)?), percorso)
+    }
+
     fn leggi_partita(&self, percorso: &Path) -> Result<Partita, String> {
-        let json = self.leggi_da(GzDecoder::new(self.apri(percorso)?), percorso)?;
+        let json = self.leggi_snapshot(percorso)?;
         Partita::carica(&json)
             .map_err(|e| format!("impossibile aprire {}: {e}", self.mostra(percorso)))
     }
@@ -383,6 +389,31 @@ impl Archivio {
         p.imposta_riavvolgimenti(riavvolgimenti);
         self.scrivi_indice(&cartella, id, &p, riavvolgimenti)?;
         Ok(p)
+    }
+
+    /// Il registro del turno chiuso `turno`: le voci della sua chiusura, che stanno nello snapshot
+    /// del turno dopo. Un turno senza quello snapshot è un rifiuto; il file illeggibile o d'altro
+    /// schema, un guasto. La partita in memoria non si vede da qui: chi chiama rifiuta prima il
+    /// turno che non ha ancora chiuso.
+    pub(crate) fn registro(&self, id: &str, turno: u32) -> Result<Vec<VoceEsito>, ErroreGuscio> {
+        let cartella = self.cartella(id)?;
+        let non_chiuso = || {
+            rifiuto(format!(
+                "nessun registro per il turno {turno}: il turno non è ancora chiuso"
+            ))
+        };
+        let dopo = turno.checked_add(1).ok_or_else(non_chiuso)?;
+        if !self.turni(&cartella)?.contains(&dopo) {
+            return Err(non_chiuso());
+        }
+        let percorso = cartella.join(nome_turno(dopo));
+        let json = self.leggi_snapshot(&percorso)?;
+        Partita::esito_da_salvataggio(&json).map_err(|e| {
+            guasto(format!(
+                "impossibile aprire {}: {e}",
+                self.mostra(&percorso)
+            ))
+        })
     }
 
     /// Le partite in corso, dalla più recente: legge solo gli indici. Un indice d'altro formato o
@@ -615,6 +646,51 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn registro_del_turno_chiuso() {
+        let c = cartella("registro_del_turno_chiuso");
+        let (a, mut p) = con_partita(&c);
+        let mut visto = Vec::new();
+        for _ in 0..3 {
+            chiudi(&a, &mut p);
+            visto.push(p.vista().esito);
+        }
+        assert!(!visto[1].is_empty());
+        // `visto[i]` è l'esito all'apertura del turno i+1, cioè il registro del turno i.
+        for (turno, atteso) in (0..).zip(&visto) {
+            assert_eq!(&a.registro(ID, turno).unwrap(), atteso);
+        }
+    }
+
+    #[test]
+    fn registro_fuori_dai_turni_e_un_errore() {
+        let c = cartella("registro_fuori_dai_turni_e_un_errore");
+        let (a, mut p) = con_partita(&c);
+        for _ in 0..3 {
+            chiudi(&a, &mut p);
+        }
+        let atteso = |t: u32| {
+            rifiuto(format!(
+                "nessun registro per il turno {t}: il turno non è ancora chiuso"
+            ))
+        };
+        assert_eq!(a.registro(ID, u32::MAX).unwrap_err(), atteso(u32::MAX));
+        a.riavvolgi(ID, 2).unwrap();
+        assert_eq!(a.registro(ID, 2).unwrap_err(), atteso(2));
+        assert!(a.registro(ID, 1).is_ok());
+    }
+
+    #[test]
+    fn registro_guasto_e_un_guasto() {
+        let c = cartella("registro_guasto_e_un_guasto");
+        let (a, mut p) = con_partita(&c);
+        chiudi(&a, &mut p);
+        fs::write(file(&c, "turno-001.json.gz"), b"non e' gzip").unwrap();
+        let e = a.registro(ID, 0).unwrap_err();
+        assert_eq!(e.specie, crate::errore::Specie::Guasto);
+        assert!(e.testo.contains("turno-001.json.gz"), "{}", e.testo);
+    }
+
+    #[test]
     fn riavvolgi_rifiuta_lo_snapshot_d_altro_turno() {
         let c = cartella("riavvolgi_rifiuta_lo_snapshot_d_altro_turno");
         let (a, mut p) = con_partita(&c);
@@ -703,7 +779,11 @@ pub(crate) mod tests {
         let voce = |id: &str| elenco.iter().find(|v| v.indice.id == id).unwrap();
         assert!(!voce(ID).apribile);
         let motivo = voce(ID).motivo.clone().unwrap();
-        assert!(motivo.contains("10") && motivo.contains("17"), "{motivo}");
+        let attesa = VERSIONE_SCHEMA.to_string();
+        assert!(
+            motivo.contains("10") && motivo.contains(&attesa),
+            "{motivo}"
+        );
         assert!(!voce("futuro").apribile);
         assert_eq!(
             voce("futuro").motivo.as_deref(),

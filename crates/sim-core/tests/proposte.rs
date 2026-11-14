@@ -4,9 +4,10 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, file_base, indice, sostituisci};
+use comune::{dati_base, edita, file_base, indice, sostituisci, voci};
 use serde_json::{Value, json};
 use sim_core::dati::{DatiGioco, FileDati};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::{Causa, Proposta, TipoProposta};
 use sim_core::vista::{Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
@@ -136,6 +137,66 @@ fn proposta_ignorata_vale_respinta_dopo_un_turno() {
         x.variazioni
             .iter()
             .any(|v| v.causa == Causa::PropostaRespinta)
+    );
+}
+
+#[test]
+fn proposta_respinta_per_silenzio() {
+    let mut p = con_proposta(1);
+    let atto = ministero(&p.vista(), "sanita")
+        .proposta
+        .as_ref()
+        .unwrap()
+        .nome
+        .clone();
+    p.chiudi_turno();
+    assert!(voci(&p, TipoVoce::PropostaRespinta).is_empty());
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::PropostaRespinta);
+    let x = (v.iter())
+        .find(|x| x.dicastero.as_deref() == Some("sanita"))
+        .unwrap();
+    assert_eq!(x.criticita, Criticita::Critica);
+    assert_eq!(x.causa, "in sospeso da 2 turni senza risposta");
+    assert!(
+        x.fatto.contains(&format!("fondi per {atto}"))
+            && x.fatto.ends_with("perde 8,0 punti di soddisfazione"),
+        "{}",
+        x.fatto
+    );
+}
+
+/// Una riforma il cui gradino è già in vigore non tiene più: decade alla chiusura, senza costo.
+#[test]
+fn la_riforma_gia_in_vigore_decade_senza_costo() {
+    let s = indice("sanita");
+    let k = dati_base().disposizione("ticket").unwrap();
+    let mut p = edita(&con_proposta(1), |j| {
+        let g = j["disposizioni"]["voci"][k]["in_vigore"].clone();
+        j["ministri"]["dicasteri"][s]["proposta"] = json!({
+            "tipo": { "riforma": { "disposizione": k, "gradino": g, "sblocca": null, "evento": null } },
+            "turni_in_sospeso": 0,
+            "rinviata": false,
+        });
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = voci(&p, TipoVoce::PropostaDecaduta);
+    let x = (v.iter())
+        .find(|x| x.dicastero.as_deref() == Some("sanita"))
+        .unwrap();
+    assert_eq!(x.criticita, Criticita::Ordinaria);
+    assert_eq!(x.causa, "il gradino proposto è già in vigore");
+    assert!(
+        x.fatto.contains("la riforma Ticket sanitario ("),
+        "{}",
+        x.fatto
+    );
+    let m = ministero(&p.vista(), "sanita").ministro.clone().unwrap();
+    assert!(
+        m.variazioni
+            .iter()
+            .all(|v| v.causa != Causa::PropostaRespinta)
     );
 }
 

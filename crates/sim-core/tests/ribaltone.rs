@@ -1,8 +1,16 @@
 mod comune;
-use comune::{caduto, calo_oltre_il_ritorno, dati_base, edita, partito};
+use comune::{caduto, calo_oltre_il_ritorno, dati_base, edita, partito, voci};
 use serde_json::json;
-use sim_core::Comando;
+use sim_core::esito::{Criticita, TipoVoce, VoceEsito};
 use sim_core::legislatura::{Fase, Incarico};
+use sim_core::{Comando, Partita};
+
+/// L'unica voce di `tipo` nell'esito.
+fn una(p: &Partita, tipo: TipoVoce) -> VoceEsito {
+    let v = voci(p, tipo);
+    assert_eq!(v.len(), 1, "{:?}", p.vista().esito);
+    v[0].clone()
+}
 
 // Ordine sull'asse: 0 (1), 1 (2), 2 (3), 3 (4), giocatore 7 (4,5), 4 (5), 5 (6), 6 (7).
 /// Nessuna coppia ha la maggioranza; fra le terne vince (7, 4, 5), la più grande (240 e 120):
@@ -20,8 +28,26 @@ fn primo_nel_ribaltone_ottieni_l_incarico() {
     assert_eq!(p.legislatura().fase, Fase::Trattativa);
     assert_eq!(p.legislatura().incarico, Some(Incarico::Giocatore));
     assert!(p.richieste().iter().any(|r| r.partito == "centrodestra"));
+    let v = una(&p, TipoVoce::Incarico);
+    assert_eq!(v.fatto, "Incarico di formare il governo a Partito nuovo");
+    assert_eq!(
+        v.causa,
+        "sei il primo per seggi della maggioranza contigua trovata dopo la caduta"
+    );
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 3));
     p.chiudi_turno();
     assert!(p.governa());
+    let v = una(&p, TipoVoce::GovernoFormato);
+    assert!(
+        v.fatto
+            .starts_with("Nasce il governo di Partito nuovo per ribaltone, con "),
+        "{}",
+        v.fatto
+    );
+    assert_eq!(
+        v.causa,
+        "la tua coalizione ha la maggioranza in entrambe le Camere"
+    );
 }
 
 #[test]
@@ -31,6 +57,12 @@ fn secondo_nel_ribaltone_chiedi_la_guida() {
         p.legislatura().incarico,
         Some(Incarico::Guida { .. })
     ));
+    let v = una(&p, TipoVoce::Incarico);
+    assert_eq!(v.fatto, "Ribaltone possibile, con la guida a Centro");
+    assert_eq!(
+        v.causa,
+        "nella maggioranza contigua trovata dopo la caduta Centro ha più seggi di te"
+    );
     p.comanda(Comando::ChiediGuida).unwrap();
     assert_eq!(p.legislatura().incarico, Some(Incarico::Giocatore));
     p.chiudi_turno();
@@ -69,6 +101,20 @@ fn la_guida_ceduta_paga_le_rotture() {
     let rottura = dati_base().manopola("valence_rottura_impegno");
     let calo = calo_oltre_il_ritorno(&prima, &p, partito("centrosinistra"));
     assert!((calo - rottura).abs() < 1e-9, "{calo}");
+    let v = voci(&p, TipoVoce::RotturaDellImpegno);
+    let cs = (v.iter())
+        .find(|v| v.partito.as_deref() == Some("centrosinistra"))
+        .unwrap();
+    assert_eq!(
+        cs.fatto,
+        "Centrosinistra rompe l'impegno pre-elettorale con Sinistra, che resta fuori dal \
+         governo; valence -0,30 a Centrosinistra; perde 10,0 punti d'intesa"
+    );
+    assert_eq!(
+        cs.causa,
+        "la coalizione dichiarata prima del voto con Sinistra"
+    );
+    assert_eq!(cs.criticita, Criticita::Notevole);
 }
 
 /// La sinistra guida la sua coalizione dell'ultimo voto (sinistra e centrosinistra): nel
@@ -94,6 +140,12 @@ fn chi_guida_la_propria_coalizione_non_cede() {
     assert_eq!(p.salva().unwrap(), prima);
     p.chiudi_turno();
     assert!(!p.governa());
+    let v = una(&p, TipoVoce::GuidaRifiutata);
+    assert_eq!(v.partito.as_deref(), Some("sinistra"));
+    assert_eq!(v.fatto, "Sinistra non ti cede la guida del ribaltone");
+    let (_, causa) = e.split_once("la guida: ").unwrap();
+    assert_eq!(v.causa, causa);
+    assert_eq!((v.criticita, v.precedenza), (Criticita::Critica, 3));
 }
 
 #[test]

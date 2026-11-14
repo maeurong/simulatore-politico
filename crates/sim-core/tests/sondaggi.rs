@@ -4,9 +4,10 @@
 )]
 
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, file_base, imposta, riscrivi, senza_shock};
+use comune::{chiudi_col_bilancio, dati_base, file_base, imposta, riscrivi, senza_shock, voci};
 use sim_core::caso::Caso;
 use sim_core::elettorato::{Condizione, Fascia, PUNTI};
+use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::informazione::{ElettoreCampione, Motivo, Sondaggio, genera};
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Vista};
 
@@ -63,6 +64,123 @@ fn la_prima_stima_sbaglia_e_la_revisione_e_esatta() {
     let r = p.vista().statistica.revisione.unwrap();
     assert_eq!(r.riveduta, vera);
     assert_eq!(r.prima_stima, s.prima_stima);
+}
+
+/// Una chiusura senza fatti: l'esito porta comunque spread, sondaggio, prima stima e revisione,
+/// coi numeri che la Vista mostra.
+#[test]
+fn turno_quieto_ha_prima_stima_e_sondaggio() {
+    let mut p = giocata(&senza_shock(), 1);
+    let (spread_prima, sondaggio_prima) = (p.vista().spread_pb, p.vista().sondaggio);
+    chiudi_col_bilancio(&mut p);
+    let v = p.vista();
+    let uno = |x: f64| format!("{x:.1}").replace('.', ",");
+    let segno = |x: f64| match format!("{x:+.1}").replace('.', ",") {
+        s if s == "+0,0" || s == "-0,0" => "0,0".to_string(),
+        s => s,
+    };
+    let una = |t: TipoVoce| {
+        let tutte = voci(&p, t);
+        assert_eq!(tutte.len(), 1, "{t:?}: {:?}", v.esito);
+        tutte[0].clone()
+    };
+
+    let spread = una(TipoVoce::Spread);
+    let d = v.spread_pb - spread_prima;
+    assert_eq!(
+        (spread.fatto.as_str(), spread.causa.as_str()),
+        (
+            match d {
+                0 => format!("Spread a {} pb, invariato sul trimestre prima", v.spread_pb),
+                _ => format!("Spread a {} pb, {d:+} pb sul trimestre prima", v.spread_pb),
+            }
+            .as_str(),
+            "chiusura del trimestre"
+        )
+    );
+
+    let s = &v.statistica.prima_stima;
+    let stima = una(TipoVoce::PrimaStima);
+    assert_eq!(
+        stima.fatto,
+        format!(
+            "Prima stima di ottobre-dicembre 2026: PIL {}% annualizzato, inflazione {}% \
+             annualizzata e {}% sull'anno, disoccupazione {}%, disavanzo {}% del PIL",
+            segno(s.crescita_pil),
+            uno(s.inflazione),
+            uno(s.inflazione_annua),
+            uno(s.disoccupazione),
+            uno(s.disavanzo)
+        )
+    );
+    assert_eq!(stima.causa, "prima stima, riveduta fra un turno");
+    assert_eq!(stima.criticita, Criticita::Ordinaria);
+
+    let r = v.statistica.revisione.as_ref().unwrap();
+    let (a, b) = (&r.prima_stima, &r.riveduta);
+    let revisione = una(TipoVoce::Revisione);
+    assert_eq!(
+        revisione.fatto,
+        format!(
+            "Revisione di luglio-settembre 2026: PIL da {}% a {}%, inflazione da {}% a {}%, \
+             disoccupazione da {}% a {}%, disavanzo da {}% a {}% del PIL",
+            segno(a.crescita_pil),
+            segno(b.crescita_pil),
+            uno(a.inflazione),
+            uno(b.inflazione),
+            uno(a.disoccupazione),
+            uno(b.disoccupazione),
+            uno(a.disavanzo),
+            uno(b.disavanzo)
+        )
+    );
+    assert_eq!(revisione.causa, "revisione della prima stima");
+
+    // La coalizione del giocatore, o lui solo, fra i votanti: media degli istituti.
+    let g = p.giocatore();
+    let coalizione = (p.legislatura().coalizioni.iter())
+        .find(|c| c.contains(&g))
+        .cloned()
+        .unwrap_or(vec![g]);
+    let quota = |s: &Sondaggio| -> f64 {
+        let fra_i_votanti = |j: usize| {
+            (s.istituti.iter())
+                .map(|r| r.quote[j] / (1.0 - r.quote.last().unwrap()))
+                .sum::<f64>()
+                / s.istituti.len() as f64
+        };
+        100.0 * coalizione.iter().map(|&j| fra_i_votanti(j)).sum::<f64>()
+    };
+    let (ora, prima) = (quota(&v.sondaggio), quota(&sondaggio_prima));
+    let nomi: Vec<&str> = coalizione
+        .iter()
+        .map(|&j| p.partiti()[j].nome.as_str())
+        .collect();
+    let chi = match nomi.len() {
+        1 => nomi[0].to_string(),
+        _ => format!("la coalizione di {}", nomi.join(", ")),
+    };
+    let sondaggio = una(TipoVoce::Sondaggio);
+    assert_eq!(
+        sondaggio.fatto,
+        format!(
+            "Sondaggio: {chi} al {}% fra i votanti, {} sul trimestre prima",
+            uno(ora),
+            match segno(ora - prima) {
+                s if s == "0,0" => "invariato".to_string(),
+                s => format!("{s} punti"),
+            }
+        )
+    );
+    assert_eq!(
+        sondaggio.causa,
+        format!(
+            "sondaggio pubblico del trimestre, media di {} istituti",
+            v.sondaggio.istituti.len()
+        )
+    );
+    assert_eq!(sondaggio.partito.as_deref(), Some(v.giocatore.as_str()));
+    assert_eq!(sondaggio.criticita, Criticita::Ordinaria);
 }
 
 #[test]
