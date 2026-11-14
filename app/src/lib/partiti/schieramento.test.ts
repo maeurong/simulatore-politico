@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
+import type { FasciaIntesa } from "$lib/tipi/FasciaIntesa";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import { coloreDi } from "$lib/partiti";
@@ -180,7 +181,7 @@ describe("intesaDi", () => {
   it("sulla 03 un alleato dà l'intesa in cifre, sulla scala 0-100 della Vista", () => {
     const r = intesaDi(governo, "centrodestra");
     expect(r).toEqual({ alleato: governo.alleati.find((a) => a.partito === "centrodestra") });
-    expect(r && "alleato" in r && r.alleato.intesa).toBeGreaterThan(10);
+    expect(r && "alleato" in r && r.alleato.intesa).toBe(54.86607669616519);
   });
   it("sulla 06 un alleato del governo dà la fascia", () => {
     const f = opposizione.alleati_avversari[0];
@@ -219,7 +220,8 @@ describe("mosseDi", () => {
 
 describe("caselleFascia", () => {
   it("solida 3, incrinata 2, in ultimatum 1 su tre", () => {
-    expect(["solida", "incrinata", "ultimatum"].map((f) => caselleFascia(f as "solida"))).toEqual([3, 2, 1]);
+    const fasce: FasciaIntesa[] = ["solida", "incrinata", "ultimatum"];
+    expect(fasce.map(caselleFascia)).toEqual([3, 2, 1]);
   });
 });
 

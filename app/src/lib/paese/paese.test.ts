@@ -1,15 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { CONDIZIONI, FASCE, LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, lista, livelloManca, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, type EsitoElettori } from "./paese";
+import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, lista, livelloManca, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, type EsitoElettori } from "./paese";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import { coalizioneDi } from "$lib/partiti";
+import { REGIONI } from "$lib/mappa/regioni";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import paeseJson from "../../../../.scratch/v1-piano-11-ui/viste/23-paese.json";
+import cruscottoJson from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
+import ereditaJson from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 const zero = turnoZeroJson as unknown as Vista;
 const campione = paeseJson as unknown as Record<string, { vista: Vista }>;
 const governo = campione.governo.vista;
 const grave = campione.grave.vista;
+const dieci = (cruscottoJson as unknown as Record<string, { vista: Vista }>).crisi_provvisorio.vista;
+const eredita = (ereditaJson as unknown as { vista: Vista }).vista;
+
+/** La quota sui votanti di un partito, dal JSON grezzo: media degli istituti di quote[j] / (1 − astensione). */
+const quotaGrezza = (v: Vista, j: number) => v.sondaggio.istituti.reduce((a, r) => a + r.quote[j] / (1 - r.quote.at(-1)!), 0) / v.sondaggio.istituti.length;
+const somma = (l: { quota: number }[]) => l.reduce((a, x) => a + x.quota, 0);
 
 describe("livelloManca", () => {
   it("consenso e affluenza hanno i dati", () => {
@@ -40,6 +49,57 @@ describe("consensoPerRegione", () => {
   });
 });
 
+describe("un partito nato dopo il sondaggio", () => {
+  // `zero` ha nove quote: otto partiti e l'astensione. Il nono partito della Vista non ha riga e non deve prendere quella dell'astensione.
+  const nato = { ...zero.partiti[0], id: "nuovo_8", nome: "Nuovo" };
+  const v = { ...zero, partiti: [...zero.partiti, nato] } as Vista;
+  it("non è nella media né nel sondaggio della regione, e gli altri sommano ancora a uno", () => {
+    const m = media(v, v.sondaggio);
+    expect(m.partiti).toHaveLength(8);
+    expect(m.partiti.some((p) => p.id === "nuovo_8")).toBe(false);
+    expect(somma(m.partiti)).toBeCloseTo(1, 9);
+    const r = sondaggioDi(v, "toscana");
+    expect(r).toHaveLength(8);
+    expect(somma(r)).toBeCloseTo(1, 9);
+  });
+  it("sulla mappa non cambia il consenso degli altri", () => {
+    expect(consensoPerRegione(v, ["giocatore", "nuovo_8"])).toEqual(consensoPerRegione(v, ["giocatore"]));
+  });
+});
+
+describe("con dieci partiti, due nati", () => {
+  it("la media ha tutti e dieci i partiti, ognuno alla quota della sua posizione, e somma a uno", () => {
+    const m = media(dieci, dieci.sondaggio);
+    expect(m.partiti).toHaveLength(10);
+    expect(somma(m.partiti)).toBeCloseTo(1, 9);
+    for (const id of ["nuovo_8", "nuovo_9"]) {
+      expect(m.partiti.find((p) => p.id === id)!.quota).toBeCloseTo(quotaGrezza(dieci, dieci.partiti.findIndex((p) => p.id === id)), 12);
+    }
+  });
+  it("il sondaggio della regione e la mappa li contano", () => {
+    expect(sondaggioDi(dieci, "toscana")).toHaveLength(10);
+    const per = consensoPerRegione(dieci, ["nuovo_8", "nuovo_9"]);
+    expect(Object.values(per).every((x) => x !== null && x > 0)).toBe(true);
+  });
+});
+
+describe("un partito sciolto non compare", () => {
+  const sciolto = eredita.partiti.find((p) => p.sciolto)!;
+  it("sulla 30 l'Estrema sinistra, sciolta, non è nella media: gli altri nove sommano a uno", () => {
+    expect(sciolto.id).toBe("estrema_sinistra");
+    const m = media(eredita, eredita.sondaggio);
+    expect(m.partiti).toHaveLength(9);
+    expect(m.partiti.some((p) => p.id === sciolto.id)).toBe(false);
+    expect(somma(m.partiti)).toBeLessThan(1 + 1e-9);
+    expect(somma(m.partiti)).toBeCloseTo(1 - quotaGrezza(eredita, 0), 9);
+  });
+  it("e nemmeno nel sondaggio della regione", () => {
+    const r = sondaggioDi(eredita, "toscana");
+    expect(r).toHaveLength(9);
+    expect(r.some((p) => p.id === sciolto.id)).toBe(false);
+  });
+});
+
 describe("sondaggioLetto", () => {
   it("il privato comprato prende il posto del pubblico", () => {
     const l = sondaggioLetto(governo);
@@ -54,10 +114,15 @@ describe("sondaggioLetto", () => {
 });
 
 describe("affluenzaPerRegione", () => {
-  it("venti valori fra 0 e 1", () => {
-    const v = Object.values(affluenzaPerRegione(zero));
-    expect(v).toHaveLength(20);
-    for (const x of v) expect(x!).toBeGreaterThan(0), expect(x!).toBeLessThan(1);
+  it("uno meno l'astensione della regione: la Toscana, dal JSON grezzo", () => {
+    const toscana = zero.sondaggio.regioni.find((r) => r.id === "toscana")!;
+    const per = affluenzaPerRegione(zero);
+    expect(Object.keys(per)).toHaveLength(20);
+    expect(per.toscana).toBeCloseTo(1 - toscana.quote.at(-1)!, 12);
+  });
+  it("una regione senza quote non ha dato", () => {
+    const v = { ...zero, sondaggio: { ...zero.sondaggio, regioni: zero.sondaggio.regioni.map((r) => (r.id === "toscana" ? { ...r, quote: [] } : r)) } } as Vista;
+    expect(affluenzaPerRegione(v).toscana).toBeNull();
   });
 });
 
@@ -73,10 +138,16 @@ describe("segniPerRegione", () => {
     expect(segni.toscana).toBeUndefined();
     expect(segni.lazio).toEqual(["emergenza"]);
   });
-  it("cantieri e atti in agenda con regione danno i loro segni", () => {
-    const tutti = Object.values(segniPerRegione(governo)).flat();
-    const attesi = governo.ministeri.flatMap((m) => [...(m.agenda?.regione ? ["atto"] : []), ...m.cantieri.filter((c) => c.regione).map(() => "cantiere")]);
-    expect(tutti.filter((s) => s !== "emergenza").sort()).toEqual(attesi.sort());
+  it("sulla 23 governo: un atto in Sicilia, un cantiere in Umbria, un'emergenza nelle Marche", () => {
+    expect(segniPerRegione(governo)).toEqual({ sicilia: ["atto"], umbria: ["cantiere"], marche: ["emergenza"] });
+  });
+  it("ogni regione che il core nomina in un'emergenza trova il suo id, con l'apostrofo dritto o curvo", () => {
+    for (const r of REGIONI) {
+      for (const nome of [r.nome, r.nome.replace("’", "'"), r.nome.replace("'", "’")]) {
+        const v = { ...zero, eventi: [{ ...grave.eventi[0], famiglia: "emergenza", regione: nome }] } as Vista;
+        expect(segniPerRegione(v)[r.id], nome).toEqual(["emergenza"]);
+      }
+    }
   });
   it("senza atti, cantieri ed emergenze è vuoto", () => {
     expect(segniPerRegione(zero)).toEqual({});
@@ -111,14 +182,6 @@ describe("media", () => {
   });
   it("senza istituti non c'è niente da mostrare", () => {
     expect(media(zero, { ...zero.sondaggio, istituti: [] })).toEqual({ partiti: [], astensione: 0 });
-  });
-});
-
-describe("griglia condizione per fascia", () => {
-  it("sei condizioni per tre fasce: diciotto caselle", () => {
-    expect(CONDIZIONI).toHaveLength(6);
-    expect(FASCE).toEqual(["bassa", "media", "alta"]);
-    expect(CONDIZIONI.length * FASCE.length).toBe(18);
   });
 });
 
