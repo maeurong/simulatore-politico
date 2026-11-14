@@ -266,7 +266,8 @@ pub struct PrezzoAcquisto {
 
 /// Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello
 /// ufficiale (grandezze alla chiusura precedente, prima stima della crescita); `accensione` e
-/// `spegnimento` le due soglie dell'isteresi.
+/// `spegnimento` le due soglie dell'isteresi; `trimestri` quanti trimestri di fila dalla parte del
+/// cambio lo fanno scattare, `oltre` quanti ne sono già passati.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceSituazione {
@@ -276,6 +277,8 @@ pub struct VoceSituazione {
     pub accensione: f64,
     pub spegnimento: f64,
     pub accesa: bool,
+    pub trimestri: u8,
+    pub oltre: u8,
 }
 
 /// Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`

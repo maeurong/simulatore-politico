@@ -4708,14 +4708,16 @@ impl Partita {
     pub fn situazioni(&self) -> Vec<VoceSituazione> {
         let valori = self.misure_situazioni(true);
         (self.dati.situazioni().iter().zip(valori))
-            .zip(&self.eventi.accese)
-            .map(|((s, valore), &accesa)| VoceSituazione {
+            .zip(self.eventi.accese.iter().zip(&self.eventi.contatori))
+            .map(|((s, valore), (&accesa, &oltre))| VoceSituazione {
                 nome: s.nome.clone(),
                 misura: s.misura.clone(),
                 valore,
                 accensione: s.accensione,
                 spegnimento: s.spegnimento,
                 accesa,
+                trimestri: situazioni::trimestri(&s.misura),
+                oltre,
             })
             .collect()
     }
