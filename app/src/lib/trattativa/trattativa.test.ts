@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Comando } from "$lib/tipi/Comando";
-import { aChi, allarga, completa, defaultDellaChiusura, fuori, haLaMaggioranza, pesoDi, proponi, quota, richiesteDi, risultato, sessioneSpartizione, type Bozza, type EsitoManda, type StatoSpartizione } from "./trattativa";
+import { aChi, allarga, completa, defaultDellaChiusura, fuori, haLaMaggioranza, mandaRibaltone, passaggio, pesoDi, proponi, quota, richiesteDi, risultato, sessioneSpartizione, type Bozza, type EsitoManda, type StatoSpartizione } from "./trattativa";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import campioneJson from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativa.json";
@@ -303,5 +303,66 @@ describe("sessioneSpartizione", () => {
     p.s.riprova();
     expect(p.mandati).toHaveLength(1);
     expect(p.stato.esito).toBeNull();
+  });
+});
+
+describe("mandaRibaltone", () => {
+  beforeEach(() => { passaggio.fuoco = false; });
+  const pausa = () => Promise.resolve();
+  // manda a risposta manuale: finché è in volo il fuoco è atteso dalla pagina nuova
+  function prova(occupato = false) {
+    const mandati: Comando[] = [];
+    let rispondi!: (e: EsitoManda) => void;
+    const manda = (c: Comando) => { mandati.push(c); return new Promise<EsitoManda>((r) => (rispondi = r)); };
+    return { mandati, manda, occupato: () => occupato, rispondi: (e: EsitoManda) => rispondi(e) };
+  }
+
+  it("riuscito: il fuoco è atteso mentre il comando è in volo, poi spento anche senza rimontaggio", async () => {
+    const p = prova();
+    const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, pausa);
+    expect(passaggio.fuoco).toBe(true);
+    p.rispondi("ok");
+    expect(await esito).toBe("ok");
+    expect(p.mandati).toEqual([{ tipo: "chiedi_guida" }]);
+    expect(passaggio.fuoco).toBe(false);
+  });
+  it("il fuoco resta fino a che la pagina nuova ha montato (`dopo`)", async () => {
+    const p = prova();
+    let monta!: () => void;
+    const esito = mandaRibaltone("rifiuta_ribaltone", p.manda, p.occupato, () => new Promise<void>((r) => (monta = r)));
+    p.rispondi("ok");
+    await Promise.resolve(); await Promise.resolve();
+    expect(passaggio.fuoco).toBe(true);
+    monta();
+    await esito;
+    expect(passaggio.fuoco).toBe(false);
+  });
+  it("guasto e rifiuto: l'esito passa com'è e il fuoco si spegne", async () => {
+    for (const e of ["guasto", { rifiuto: "Sinistra non ti cede la guida" }] as EsitoManda[]) {
+      const p = prova();
+      const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, pausa);
+      p.rispondi(e);
+      expect(await esito).toEqual(e);
+      expect(passaggio.fuoco).toBe(false);
+    }
+  });
+  it("partita occupata: nessuna chiamata e il fuoco non si tocca", async () => {
+    const p = prova(true);
+    expect(await mandaRibaltone("chiedi_guida", p.manda, p.occupato, pausa)).toBe("occupato");
+    expect(p.mandati).toEqual([]);
+    expect(passaggio.fuoco).toBe(false);
+  });
+  it("due invii di fila: una chiamata sola, e il secondo non spegne il fuoco del primo", async () => {
+    const p = prova();
+    let occupato = false;
+    const guarda = () => occupato;
+    const manda = (c: Comando) => { occupato = true; return p.manda(c); };
+    const primo = mandaRibaltone("chiedi_guida", manda, guarda, pausa);
+    expect(await mandaRibaltone("chiedi_guida", manda, guarda, pausa)).toBe("occupato");
+    expect(passaggio.fuoco).toBe(true);
+    p.rispondi("ok");
+    await primo;
+    expect(p.mandati).toHaveLength(1);
+    expect(passaggio.fuoco).toBe(false);
   });
 });

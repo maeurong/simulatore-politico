@@ -1,18 +1,19 @@
 <script lang="ts">
   // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato sono le pagine di Ribaltone.
+  import { onMount } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
-    import { partita } from "$lib/partita.svelte";
+  import { etichetta } from "$lib/ossatura";
+  import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Evento from "$lib/cruscotto/Evento.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { onMount } from "svelte";
   import Camere from "$lib/partiti/Camere.svelte";
   import Alleati from "./Alleati.svelte";
-  import Ribaltone, { passaggio } from "./Ribaltone.svelte";
+  import Ribaltone from "./Ribaltone.svelte";
   import Risultato from "./Risultato.svelte";
   import Spartizione from "./Spartizione.svelte";
-  import { sessioneSpartizione, type EsitoManda, type Stato } from "./trattativa";
+  import { passaggio, sessioneSpartizione, type EsitoManda, type Stato } from "./trattativa";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -41,12 +42,14 @@
   let testa = $state<HTMLElement>();
   onMount(() => {
     if (passaggio.fuoco) testa?.focus();
-    passaggio.fuoco = false;
   });
 
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
 </script>
 
+{#if vista.incarico === null}
+  <Segnaposto sezione={etichetta("trattativa")} fetta="11b" />
+{:else}
 <div class="trt">
   <div class="capo">
     <h3 class="tit" tabindex="-1" bind:this={testa}>{t("trattativa.titolo")}</h3>
@@ -63,14 +66,14 @@
       <Alleati {vista} bozza={stato.s.bozza} {sessione} />
     </aside>
   {:else}
-    <div class="pag"><Ribaltone {vista} /></div>
+    <div class="pag"><Ribaltone {vista} {manda} /></div>
     <aside class="lato">
       {#if vista.incarico === "guida"}<Segnaposto sezione={t("ribaltone.ph_partiti")} fetta="11g" />{/if}
       <Camere {vista} />
-      {#if vista.incarico === "capo_dello_stato"}<p class="sec">{t("ribaltone.lato_altri")}</p>{/if}
     </aside>
   {/if}
 </div>
+{/if}
 
 <style>
   .trt { display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); gap: 10px var(--canale); align-content: start }
@@ -78,7 +81,6 @@
   .capo { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: var(--doppio); padding-bottom: 3px }
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance }
   h3.tit { font-size: var(--c-riq) }
-  h3.tit:focus { outline: none }
   .pag { display: grid; gap: 10px; align-content: start }
   .lato { border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 8px; align-content: start }
   .sec { font-size: var(--c-sec) }

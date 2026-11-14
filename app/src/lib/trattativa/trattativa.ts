@@ -75,6 +75,24 @@ export const defaultDellaChiusura = (v: Vista): Chiave | null =>
   v.incarico === "giocatore" ? "cornice.senza_proposta" : v.incarico === "guida" ? "cornice.senza_scelta_guida" : null;
 
 export type EsitoManda = "ok" | "occupato" | "guasto" | { rifiuto: string };
+
+/** Il fuoco che la pagina smontata da un comando lascia alla testa di quella nuova (Ribaltone → Trattativa). */
+export const passaggio = { fuoco: false };
+
+/**
+ * Un comando del ribaltone. Il fuoco passa alla testa solo mentre il comando è in volo e fino a che la pagina nuova ha
+ * montato (`dopo`): riuscito senza rimontaggio, o guasto, o rifiuto, il flag torna spento e nessun montaggio futuro lo trova.
+ */
+export async function mandaRibaltone(tipo: "chiedi_guida" | "rifiuta_ribaltone", manda: (c: Comando) => Promise<EsitoManda>, occupato: () => boolean, dopo: () => Promise<void>): Promise<EsitoManda> {
+  if (occupato()) return "occupato";
+  passaggio.fuoco = true;
+  try {
+    return await manda({ tipo });
+  } finally {
+    await dopo();
+    passaggio.fuoco = false;
+  }
+}
 export type StatoSpartizione = {
   bozza: Bozza;
   /** sotto la riga che il giocatore ha cliccato */
