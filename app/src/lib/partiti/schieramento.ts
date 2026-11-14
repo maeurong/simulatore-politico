@@ -17,7 +17,7 @@ export const perFila = (n: number): 4 | 5 => (n > 8 ? 5 : 4);
 /** L'indole in breve: vocazione · regola («mista · insegue i voti»). */
 export const indoleBreve = (p: VocePartito): [Chiave, Chiave] => [`partiti.voc_${p.vocazione}`, `partiti.reg_${p.regola}`];
 
-/** Gli avvisi di una scheda, nell'ordine: ultimatum, sciolto, senza seggi all'ultimo voto, governo uscente, guida il governo, nato in partita. */
+/** Gli avvisi di una scheda, nell'ordine: ultimatum, sciolto, senza seggi all'ultimo voto, governo uscente o al governo, nato in partita. Chi guida un governo IA non è nella Vista: arriva con la 11g. */
 export function avvisi(v: Vista, p: VocePartito): Chiave[] {
   const a: Chiave[] = [];
   if (v.alleati.some((x) => x.partito === p.id && x.ultimatum)) a.push("avviso.ultimatum");
@@ -26,11 +26,7 @@ export function avvisi(v: Vista, p: VocePartito): Chiave[] {
   const voto = v.elezioni[0]?.voti.find((x) => x.partito === p.id);
   if (!p.sciolto && voto && voto.camera + voto.senato === 0) a.push("avviso.senza_seggi");
   if (p.al_governo && v.fase === "sciolta") a.push("avviso.governo_uscente");
-  else if (p.al_governo && !v.governa && p.id !== v.giocatore) {
-    const camera = (id: string) => v.seggi.find((s) => s.partito === id)?.camera ?? 0;
-    const capo = v.partiti.filter((x) => x.al_governo && x.id !== v.giocatore).reduce((m, x) => (camera(x.id) > camera(m.id) ? x : m));
-    if (capo.id === p.id) a.push("avviso.guida");
-  }
+  else if (p.al_governo && !v.governa && p.id !== v.giocatore) a.push("avviso.al_governo");
   if (coloreDi(p.id) === null) a.push("avviso.nato");
   return a;
 }

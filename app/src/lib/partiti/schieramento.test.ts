@@ -55,9 +55,11 @@ describe("avvisi", () => {
     expect(di(ultimatum, "sinistra")).toContain("avviso.ultimatum");
     expect(di(ultimatum, "centro")).not.toContain("avviso.ultimatum");
   });
-  it("all'opposizione l'alleato in ultimatum col governo ha il suo avviso", () => {
-    const f = opposizione.alleati_avversari.find((x) => x.fascia === "ultimatum");
-    if (f) expect(di(opposizione, f.partito)).toContain("avviso.ultimatum_governo");
+  it("all'opposizione l'alleato in ultimatum col governo ha il suo avviso (Vista costruita: la 06 non ne ha)", () => {
+    expect(opposizione.alleati_avversari.some((x) => x.fascia === "ultimatum")).toBe(false);
+    const v = { ...opposizione, alleati_avversari: [{ partito: "sinistra", fascia: "ultimatum", causa_ultimatum: null }] } as Vista;
+    expect(di(v, "sinistra")).toEqual(["avviso.ultimatum_governo", "avviso.al_governo"]);
+    expect(di(v, "centro")).toEqual(["avviso.al_governo"]);
   });
   it("sulla 30 l'Estrema sinistra è sciolta", () => {
     expect(di(eredita, "estrema_sinistra")).toContain("avviso.sciolto");
@@ -76,15 +78,33 @@ describe("avvisi", () => {
     expect(di(v, "sinistra")).toContain("avviso.senza_seggi");
     expect(di(governo, "giocatore")).not.toContain("avviso.senza_seggi");
   });
-  it("l'ordine: ultimatum prima di sciolto prima di senza seggi", () => {
-    const p = ultimatum.partiti.find((x) => x.id === "sinistra")!;
-    const v = { ...ultimatum, partiti: ultimatum.partiti.map((x) => (x === p ? { ...x, sciolto: true } : x)) } as Vista;
-    const a = avvisi(v, v.partiti.find((x) => x.id === "sinistra")!);
-    expect(a.indexOf("avviso.ultimatum")).toBeLessThan(a.indexOf("avviso.sciolto"));
+  it("senza seggi, al governo e nato insieme, in quest'ordine", () => {
+    const voti = { partito: "sinistra", quota: 0.01, camera: 0, senato: 0 };
+    const v = {
+      ...opposizione,
+      partiti: opposizione.partiti.map((p) => (p.id === "sinistra" ? { ...p, id: "nuovo_9" } : p)),
+      elezioni: [{ ...opposizione.elezioni[0], voti: [{ ...voti, partito: "nuovo_9" }] }],
+    } as Vista;
+    expect(di(v, "nuovo_9")).toEqual(["avviso.senza_seggi", "avviso.al_governo", "avviso.nato"]);
   });
-  it("all'opposizione il partito di governo con più seggi guida il governo", () => {
-    const guida = opposizione.partiti.filter((p) => avvisi(opposizione, p).includes("avviso.guida"));
-    expect(guida).toHaveLength(1);
+  it("tutti gli avvisi insieme, nell'ordine del brief: ultimatum, sciolto, al governo, nato", () => {
+    const v = {
+      ...ultimatum,
+      governa: false,
+      partiti: ultimatum.partiti.map((p) => (p.id === "sinistra" ? { ...p, sciolto: true, al_governo: true } : p)),
+    } as Vista;
+    expect(di(v, "sinistra")).toEqual(["avviso.ultimatum", "avviso.sciolto", "avviso.al_governo"]);
+  });
+  it("all'opposizione ogni partito di governo ha «al governo»; gli altri no, né il giocatore", () => {
+    const [dentro, fuori] = [opposizione.partiti.filter((p) => p.al_governo), opposizione.partiti.filter((p) => !p.al_governo)];
+    expect(dentro.length).toBeGreaterThan(0);
+    for (const p of dentro) expect(avvisi(opposizione, p)).toContain("avviso.al_governo");
+    for (const p of fuori) expect(avvisi(opposizione, p)).not.toContain("avviso.al_governo");
+  });
+  it("il giocatore che governa non ha «al governo» su di sé, e a Camere sciolte vale «governo uscente»", () => {
+    expect(avvisi(governo, governo.partiti.find((p) => p.id === governo.giocatore)!)).not.toContain("avviso.al_governo");
+    const uscente = zero.partiti.find((p) => p.id === "destra")!;
+    expect(avvisi(zero, uscente)).toEqual(["avviso.governo_uscente"]);
   });
 });
 

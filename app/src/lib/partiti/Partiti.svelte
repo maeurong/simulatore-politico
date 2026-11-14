@@ -60,7 +60,7 @@
             <span class="largo"><Caselle piene={{ solida: 3, incrinata: 2, ultimatum: 1 }[f.fascia]} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
           {/if}
           {#if lista.length}
-            <span class="largo avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k.startsWith("avviso.ultimatum")} class:pieno={k === "avviso.guida"} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</span>
+            <span class="largo avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k.startsWith("avviso.ultimatum")} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</span>
           {/if}
         </article>
       {/each}
@@ -100,7 +100,6 @@
   .avvisi { display: flex; flex-wrap: wrap; gap: 3px }
   .chip { border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-min); font-weight: 700; line-height: 1.4 }
   .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
-  .chip.pieno { background: var(--ink); color: var(--carta) }
   .chip.tr { border-style: dashed; border-color: var(--grigio); color: var(--grigio) }
   /* forma stretta: la faccia sta sopra e il nome ha tutta la scheda, così nessuna parola si spezza */
   :global(:root.stretta) .sch > :not(.filo) { grid-column: 1 / -1 }
