@@ -118,6 +118,11 @@ impl Partito {
         self.posizione_dichiarata = nuova;
         self.posizione_percepita = (self.posizione_percepita + d / 2.0).clamp(1.0, 7.0);
     }
+
+    /// La distanza fra percepita e dichiarata, che le soglie di scissione misurano.
+    pub(crate) fn distanza_percepita(&self) -> f64 {
+        (self.posizione_percepita - self.posizione_dichiarata).abs()
+    }
 }
 
 /// Indici nei partiti; `dicasteri` è allineato a `DatiGioco::dicasteri()`; `coalizione` = i

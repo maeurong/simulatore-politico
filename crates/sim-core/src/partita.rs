@@ -39,12 +39,12 @@ use crate::partiti::{self, Governo, ID_GIOCATORE, Partito, Regola};
 use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlbo};
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
-    Anteprima, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita, PrezzoAcquisto, SeggiPartito,
-    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito, VistaMes, VistaPosti,
-    VistaReferendum, VistaRegoleUe, VistaRistrutturazione, VistaStatistica, VoceAlleato,
-    VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMenu,
-    VoceMinistero, VoceOpera, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
-    VoceSituazione, VoceVincolo,
+    Anteprima, AnteprimaRiposizionamento, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita,
+    PrezzoAcquisto, SeggiPartito, Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito,
+    VistaMes, VistaPosti, VistaReferendum, VistaRegoleUe, VistaRistrutturazione, VistaStatistica,
+    VoceAlleato, VoceBudget, VoceCostoPromessa, VoceDicastero, VoceEvento, VoceFascia,
+    VoceGrandezza, VoceIncarico, VoceMenu, VoceMinistero, VoceOpera, VoceOpzione, VocePartito,
+    VoceProgramma, VocePromessa, VoceRegione, VoceSituazione, VoceVincolo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -2780,6 +2780,84 @@ impl Partita {
     /// comando, con una disposizione o un gradino sconosciuti (con l'id), un gradino già in vigore
     /// o una disposizione ripetuta (col nome della disposizione).
     pub(crate) fn prometti(&mut self, promesse: &[(String, String)]) -> Result<(), Errore> {
+        let scelte = self.promesse_ammesse(promesse)?;
+        let mut intesa = self.intesa.clone();
+        self.costa_promesse(&scelte, &mut intesa);
+        self.intesa = intesa;
+        self.partiti[self.giocatore].promesse_campagna = scelte;
+        Ok(())
+    }
+
+    /// L'anteprima di `Prometti`: una voce per alleato contrario ad almeno una promessa, con
+    /// l'intesa che perderebbe; vuota fuori dal governo. La partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `Prometti`.
+    pub fn anteprima_promesse(
+        &self,
+        promesse: &[(String, String)],
+    ) -> Result<Vec<VoceCostoPromessa>, Errore> {
+        let scelte = self.promesse_ammesse(promesse)?;
+        let mut intesa = self.intesa.clone();
+        let prima = intesa.variazioni.len();
+        let colpite = self.costa_promesse(&scelte, &mut intesa);
+        let mut voci: Vec<VoceCostoPromessa> = Vec::new();
+        for (v, d) in intesa.variazioni[prima..].iter().zip(colpite) {
+            let (partito, disposizione) =
+                (&self.partiti[v.partito].id, &self.dati.disposizioni()[d].id);
+            match voci.iter_mut().find(|x| &x.partito == partito) {
+                Some(x) => {
+                    x.intesa += v.delta;
+                    x.disposizioni.push(disposizione.clone());
+                }
+                None => voci.push(VoceCostoPromessa {
+                    partito: partito.clone(),
+                    intesa: v.delta,
+                    disposizioni: vec![disposizione.clone()],
+                }),
+            }
+        }
+        Ok(voci)
+    }
+
+    /// Il costo di `Prometti` su `intesa`: col giocatore al governo, per ogni promessa in ordine,
+    /// ogni alleato la cui linea su di essa sarebbe no, con l'intesa già toccata dalle promesse
+    /// prima, perde `intesa_promessa` per il peso delle politiche. Rende la disposizione di ogni
+    /// variazione scritta, nell'ordine di `intesa.variazioni`.
+    fn costa_promesse(&self, scelte: &[(usize, usize)], intesa: &mut Intesa) -> Vec<usize> {
+        let mut colpite = Vec::new();
+        if !self.governa() {
+            return colpite;
+        }
+        let costo = self.dati.manopola("intesa_promessa");
+        for &promessa in scelte {
+            let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &[promessa]);
+            if posizioni.is_none() {
+                continue;
+            }
+            let aula = StatoAula {
+                intesa: &intesa.valori,
+                ultimatum: &intesa.ultimatum,
+                ..self.stato_aula()
+            };
+            let linea = aula.linea(&voto::guadagni(&self.partiti, posizioni), None);
+            for j in self.alleati() {
+                if linea.get(j) == Some(&false) {
+                    let delta = -costo * self.peso_politiche(j);
+                    intesa.varia(j, CausaIntesa::Promessa, delta, self.turno);
+                    colpite.push(promessa.0);
+                }
+            }
+        }
+        colpite
+    }
+
+    /// I rifiuti di `Prometti`, che il comando e la sua anteprima condividono: le promesse come
+    /// (disposizione, gradino) in indici.
+    fn promesse_ammesse(
+        &self,
+        promesse: &[(String, String)],
+    ) -> Result<Vec<(usize, usize)>, Errore> {
         let ko = |m: String| Err(Errore::Comando(m));
         if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
             return ko("Si promette solo in campagna elettorale".into());
@@ -2815,25 +2893,7 @@ impl Partita {
             }
             scelte.push((d, k));
         }
-        if self.governa() {
-            let costo = self.dati.manopola("intesa_promessa");
-            for &promessa in &scelte {
-                let posizioni = parlamento::posizioni(&self.dati, &self.disposizioni, &[promessa]);
-                if posizioni.is_none() {
-                    continue;
-                }
-                let linea =
-                    (self.stato_aula()).linea(&voto::guadagni(&self.partiti, posizioni), None);
-                for j in self.alleati() {
-                    if linea.get(j) == Some(&false) {
-                        let delta = -costo * self.peso_politiche(j);
-                        (self.intesa).varia(j, CausaIntesa::Promessa, delta, self.turno);
-                    }
-                }
-            }
-        }
-        self.partiti[g].promesse_campagna = scelte;
-        Ok(())
+        Ok(scelte)
     }
 
     /// Nella chiusura del voto, prima delle intenzioni (scelta 17 del piano 8b): ogni promessa in
@@ -3485,6 +3545,33 @@ impl Partita {
     /// 1-7, più lontana di `passo_movimento` dalla dichiarata, o se cambia il suo rango nella fila
     /// per (dichiarata, indice) rispetto a un partito attivo (col nome).
     pub(crate) fn riposiziona(&mut self, posizione: f64) -> Result<(), Errore> {
+        self.riposizionamento_ammesso(posizione)?;
+        self.partiti[self.giocatore].sposta(posizione);
+        self.legislatura.riposizionato = true;
+        Ok(())
+    }
+
+    /// L'anteprima di `Riposiziona` su `posizione`: la dichiarata, la percepita che lo spostamento
+    /// darebbe e la loro distanza; la partita non cambia.
+    ///
+    /// # Errors
+    /// Quelli di `Riposiziona`.
+    pub fn anteprima_riposizionamento(
+        &self,
+        posizione: f64,
+    ) -> Result<AnteprimaRiposizionamento, Errore> {
+        self.riposizionamento_ammesso(posizione)?;
+        let mut p = self.partiti[self.giocatore].clone();
+        p.sposta(posizione);
+        Ok(AnteprimaRiposizionamento {
+            dichiarata: p.posizione_dichiarata,
+            percepita: p.posizione_percepita,
+            distanza: p.distanza_percepita(),
+        })
+    }
+
+    /// I rifiuti di `Riposiziona`, che il comando e la sua anteprima condividono.
+    fn riposizionamento_ammesso(&self, posizione: f64) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::Comando(m.into()));
         if !self.legislatura.turno_di_voto(self.turno) {
             return ko("Il riposizionamento si decide solo in campagna elettorale");
@@ -3521,8 +3608,6 @@ impl Partita {
         if let Some(p) = scavalcato {
             return Err(Errore::Comando(format!("Non si scavalca {}", p.nome)));
         }
-        self.partiti[g].sposta(posizione);
-        self.legislatura.riposizionato = true;
         Ok(())
     }
 
@@ -4564,6 +4649,10 @@ impl Partita {
                 spese: (self.partiti.get(self.giocatore))
                     .map(|p| p.campagna.clone())
                     .unwrap_or_default(),
+                riposizionato: l.riposizionato,
+                passo: self.dati.manopola("passo_movimento"),
+                minaccia_scissione: self.dati.manopola("minaccia_scissione"),
+                soglia_scissione: self.dati.manopola("soglia_scissione"),
             },
             eventi: self.voci_eventi(),
             situazioni: self.situazioni(),

@@ -118,11 +118,7 @@ impl Partita {
             let Some(p) = self.partiti.get(j).filter(|p| !p.sciolto) else {
                 continue;
             };
-            let (d, gia, nome) = (
-                (p.posizione_percepita - p.posizione_dichiarata).abs(),
-                p.minaccia,
-                p.nome.clone(),
-            );
+            let (d, gia, nome) = (p.distanza_percepita(), p.minaccia, p.nome.clone());
             let mancata = if d < soglia {
                 None
             } else if self.attivi() >= MASSIMO_PARTITI {

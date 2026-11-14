@@ -309,12 +309,39 @@ pub struct VoceOpzione {
 }
 
 /// La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
-/// `spese` quella scelta, che la chiusura paga.
+/// `spese` quella scelta, che la chiusura paga. `riposizionato`: `Riposiziona` è già fatto in
+/// questa campagna; `passo` è `passo_movimento`, il massimo spostamento della dichiarata;
+/// `minaccia_scissione` e `soglia_scissione` le distanze fra percepita e dichiarata a cui il
+/// partito minaccia la scissione e si scinde.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaCampagna {
     pub attiva: bool,
     pub spese: Vec<Spesa>,
+    pub riposizionato: bool,
+    pub passo: f64,
+    pub minaccia_scissione: f64,
+    pub soglia_scissione: f64,
+}
+
+/// L'anteprima di `Riposiziona`: la dichiarata nuova, la percepita che lo spostamento darebbe e
+/// la loro distanza, quella che le soglie di scissione misurano.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct AnteprimaRiposizionamento {
+    pub dichiarata: f64,
+    pub percepita: f64,
+    pub distanza: f64,
+}
+
+/// L'intesa che un alleato perderebbe con `Prometti`: `partito` (id), `intesa` la somma delle
+/// variazioni, negativa, e `disposizioni` gli id delle promesse su cui è contrario.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceCostoPromessa {
+    pub partito: String,
+    pub intesa: f64,
+    pub disposizioni: Vec<String>,
 }
 
 /// Una voce del programma del governo IA: disposizione e gradino, con id e nomi dai dati.
