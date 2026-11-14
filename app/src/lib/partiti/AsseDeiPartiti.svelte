@@ -1,15 +1,18 @@
 <script lang="ts">
   // L'asse da 1 a 7 (24-partiti.prototype.html, forma A): quadrato sulla dichiarata, anello sulla percepita, la freccia fra i due.
   // Il rosso e i fili di minaccia e scissione arrivano con la 11g (vista-per-schermata.md:160). Il colore non basta mai: il nome sta sopra.
-  import { t } from "$lib/testi/t";
+  import { t, numero } from "$lib/testi/t";
   import { coloreDi } from "$lib/partiti";
   import type { VocePartito } from "$lib/tipi/VocePartito";
 
-  let { partiti, giocatore }: { partiti: VocePartito[]; giocatore: string } = $props();
+  // `onscelta`: i partiti si scelgono (clic, Invio, spazio) e ognuno ha il suo nome accessibile; senza, l'asse è un'immagine sola.
+  let { partiti, giocatore, larghezza = 820, scelto = null, onscelta }: { partiti: VocePartito[]; giocatore: string; larghezza?: number; scelto?: string | null; onscelta?: (id: string) => void } = $props();
   const pre = $props.id();
 
-  const W = 820, L = 18, R = W - 18, PASSO = 16;
+  const W = $derived(larghezza), L = 18, PASSO = 16;
+  const R = $derived(W - 18);
   const X = (x: number) => L + ((x - 1) / 6) * (R - L);
+  const aria = (p: VocePartito) => t("partiti.s_asse_aria", { nome: nome(p), d: numero(p.posizione_dichiarata, 2), p: numero(p.posizione_percepita, 2) });
   const nome = (p: VocePartito) => (p.id === giocatore ? t("partiti.tu") : p.nome);
   const colore = (p: VocePartito) => coloreDi(p.id) ?? "var(--grigio)";
 
@@ -34,7 +37,7 @@
   };
 </script>
 
-<svg class="ax" width="100%" height={H} viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label={t("partiti.asse_aria")}>
+<svg class="ax" width="100%" height={H} viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid meet" role={onscelta ? "group" : "img"} aria-label={t("partiti.asse_aria")}>
   <defs>
     <marker id="{pre}-pt" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6Z" class="punta" /></marker>
     <pattern id="{pre}-ret" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" class="carta" /><line x1="0" y1="0" x2="0" y2="4" class="tratto" /></pattern>
@@ -53,7 +56,7 @@
     {@const yl = y - 14 - file[p.id] * PASSO}
     {@const c = colore(p)}
     {@const nato = coloreDi(p.id) === null}
-    <g opacity={p.sciolto ? 0.45 : 1}>
+    {#snippet segno()}
       {#if Math.abs(xp - xd) > 2}
         <line x1={xd} y1={y} x2={xp - Math.sign(xp - xd) * 4} y2={y} class="freccia" marker-end="url(#{pre}-pt)" />
       {/if}
@@ -61,12 +64,20 @@
       <line x1={xd} y1={y - 5} x2={xd} y2={yl + 3} style:stroke={c} stroke-width="1" />
       <text class="nm" class:sc={p.sciolto} x={xd + (ancora(p) === "start" ? -6 : ancora(p) === "end" ? 6 : 0)} y={yl} text-anchor={ancora(p)}>{nome(p)}</text>
       <rect x={xd - 5} y={y - 5} width="10" height="10" class="quad" style:fill={nato ? `url(#${pre}-ret)` : c} />
-    </g>
+    {/snippet}
+    {#if onscelta}
+      <g opacity={p.sciolto ? 0.45 : 1} class="sceglie" class:scelto={scelto === p.id} role="button" tabindex="0" aria-label={aria(p)} aria-pressed={scelto === p.id}
+        onclick={() => onscelta(p.id)} onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onscelta(p.id))}>{@render segno()}</g>
+    {:else}
+      <g opacity={p.sciolto ? 0.45 : 1}>{@render segno()}</g>
+    {/if}
   {/each}
 </svg>
 
 <style>
   .ax { display: block }
+  .sceglie { cursor: pointer }
+  .sceglie:hover .nm, .scelto .nm { text-decoration: underline; text-underline-offset: 2px }
   .base { stroke: var(--ink); stroke-width: 1.5 }
   text { font: 400 11px var(--txt); fill: var(--grigio) }
   .nm { font-weight: 700; font-size: 12px; fill: var(--ink) }

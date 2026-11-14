@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import { coloreDi } from "$lib/partiti";
-import { TETTO_PARTITI, avvisi, cassaBreve, indoleBreve, inOrdine, perFila, seggiDi } from "./schieramento";
+import { t } from "$lib/testi/t";
+import { CAUSE, TETTO_PARTITI, avvisi, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
 import zeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
+import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import cruscottoJson from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import ereditaJson from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 const zero = zeroJson as unknown as Vista;
+const trattativa = trattativaJson as unknown as Vista;
 const governo = governoJson as unknown as Vista;
 const opposizione = opposizioneJson as unknown as Vista;
 const cruscotto = cruscottoJson as unknown as Record<string, { vista: Vista }>;
@@ -124,5 +127,67 @@ describe("cassaBreve", () => {
     expect(cassaBreve(1_200_000_000)).toBe("1,2 mld\u00a0€");
     expect(cassaBreve(2_500_000)).toBe("2,5 mln\u00a0€");
     expect(cassaBreve(340_000)).toBe("340 mila\u00a0€");
+  });
+});
+
+describe("distanza", () => {
+  const con = (dichiarata: number, percepita: number) => ({ ...zero.partiti[0], posizione_dichiarata: dichiarata, posizione_percepita: percepita }) as VocePartito;
+  it("percepita a destra della dichiarata: verso destra, la differenza in punti", () => {
+    const d = distanza(con(2, 2.76));
+    expect(d.verso).toBe("destra");
+    expect(d.punti).toBeCloseTo(0.76, 9);
+  });
+  it("percepita a sinistra: verso sinistra, i punti sono positivi", () => {
+    const d = distanza(con(5, 3.5));
+    expect(d.verso).toBe("sinistra");
+    expect(d.punti).toBeCloseTo(1.5, 9);
+  });
+  it("le due uguali: ferma, zero", () => {
+    expect(distanza(con(3, 3))).toEqual({ verso: "ferma", punti: 0 });
+  });
+});
+
+describe("intesaDi", () => {
+  it("sulla 03 un alleato dà l'intesa in cifre, sulla scala 0-100 della Vista", () => {
+    const r = intesaDi(governo, "centrodestra");
+    expect(r).toEqual({ alleato: governo.alleati.find((a) => a.partito === "centrodestra") });
+    expect(r && "alleato" in r && r.alleato.intesa).toBeGreaterThan(10);
+  });
+  it("sulla 06 un alleato del governo dà la fascia", () => {
+    const f = opposizione.alleati_avversari[0];
+    expect(intesaDi(opposizione, f.partito)).toEqual({ fascia: f });
+  });
+  it("il partito del giocatore e chi non è alleato danno null", () => {
+    expect(intesaDi(governo, "giocatore")).toBeNull();
+    expect(intesaDi(governo, "sinistra")).toBeNull();
+    expect(intesaDi(opposizione, "giocatore")).toBeNull();
+  });
+});
+
+describe("ultimoVoto", () => {
+  it("sulla 01 non si è ancora votato: null", () => {
+    expect(ultimoVoto(zero, "destra")).toBeNull();
+  });
+  it("sulla 02 Destra ha la quota e i seggi del campione (elezioni[0].voti)", () => {
+    expect(ultimoVoto(trattativa, "destra")).toEqual({ partito: "destra", quota: 0.24933003381413937, camera: 116, senato: 62 });
+  });
+  it("un partito senza riga nell'ultimo voto (un nato): null", () => {
+    expect(ultimoVoto(trattativa, "nuovo_9")).toBeNull();
+  });
+});
+
+describe("mosseDi", () => {
+  const voce = (partito: string | null, fatto: string) => ({ tipo: "x", criticita: "minore", precedenza: 0, in_evidenza: false, tono: "neutro", fatto, causa: "", partito, dicastero: null, regione: null, misura: null, disposizioni: [], famiglia: null, dettagli: [] });
+  it("le voci dell'esito del partito, nell'ordine della Vista, il testo del fatto", () => {
+    const v = { ...governo, esito: [voce("centro", "prima"), voce("destra", "altro"), voce(null, "di nessuno"), voce("centro", "seconda")] } as unknown as Vista;
+    expect(mosseDi(v, "centro")).toEqual(["prima", "seconda"]);
+    expect(mosseDi(v, "sinistra")).toEqual([]);
+  });
+});
+
+describe("CAUSE", () => {
+  it("ogni causa d'intesa ha la sua chiave di testo, e il testo si legge", () => {
+    expect(Object.keys(CAUSE)).toHaveLength(13);
+    for (const chiave of Object.values(CAUSE)) expect(typeof t(chiave)).toBe("string");
   });
 });
