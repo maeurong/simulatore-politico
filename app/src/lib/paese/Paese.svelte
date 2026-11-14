@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Paese, forma A · Atlante (23-paese.prototype.html): i livelli, la mappa e la lista; il dettaglio a lato tiene il sondaggio.
+  // Paese, forma A · Atlante (23-paese.prototype.html): i livelli, la mappa e la lista; il dettaglio a lato tiene il sondaggio, o la scheda della regione scelta.
   import { t, percentuale } from "$lib/testi/t";
   import type { Chiave } from "$lib/testi/t";
   import { coalizioneDi, coloreDi } from "$lib/partiti";
@@ -8,6 +8,7 @@
   import FormaSegno from "$lib/mappa/FormaSegno.svelte";
   import type { Segno } from "$lib/mappa/Mappa.svelte";
   import { classi, estremi } from "$lib/mappa/mappa";
+  import SchedaRegione from "./SchedaRegione.svelte";
   import Sondaggio from "./Sondaggio.svelte";
   import { LIVELLI, affluenzaPerRegione, consensoPerRegione, lista, livelloManca, segniPerRegione, type Livello } from "./paese";
 
@@ -91,7 +92,7 @@
     </div>
   </div>
 
-  <aside class="lato"><Sondaggio {vista} /></aside>
+  <aside class="lato">{#if scelta}<SchedaRegione {vista} regione={scelta} indietro={() => (scelta = null)} />{:else}<Sondaggio {vista} />{/if}</aside>
 </div>
 
 <style>

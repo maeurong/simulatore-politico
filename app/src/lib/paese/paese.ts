@@ -1,9 +1,16 @@
 // La sezione Paese: letture della Vista per la mappa, la lista e il sondaggio (la UI legge, il core decide).
+import { ultimoVince } from "$lib/editor/editor.svelte";
+import { testoRifiuto, type ErroreGuscio } from "$lib/guscio/chiamate";
 import type { Segno } from "$lib/mappa/Mappa.svelte";
 import { REGIONI } from "$lib/mappa/regioni";
 import { quotaIncrocio, quotaVotanti } from "$lib/partiti";
+import { t } from "$lib/testi/t";
+import type { Condizione } from "$lib/tipi/Condizione";
+import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
+import type { Fascia } from "$lib/tipi/Fascia";
 import type { Sondaggio } from "$lib/tipi/Sondaggio";
 import type { Vista } from "$lib/tipi/Vista";
+import type { VoceDisposizione } from "$lib/tipi/VoceDisposizione";
 
 export const LIVELLI = ["consenso", "disoccupazione", "reddito", "affluenza", "pericolosita", "voto"] as const;
 export type Livello = (typeof LIVELLI)[number];
@@ -36,17 +43,29 @@ export function affluenzaPerRegione(v: Vista): Record<string, number | null> {
 
 const senzaAccento = (n: string) => n.replace("’", "'");
 
-/** Cantieri, atti in agenda ed emergenze aperte, per id di regione. Le opere finite arrivano in 11g. */
-export function segniPerRegione(v: Vista): Record<string, Segno[]> {
-  const fuori: Record<string, Segno[]> = {};
-  const aggiungi = (id: string | null | undefined, s: Segno) => id && (fuori[id] ??= []).push(s);
+/** Cantieri, atti in agenda ed emergenze aperte, per regione, col testo per esteso. Le opere finite arrivano in 11g. */
+function vociSegni(v: Vista): { regione: string; segno: Segno; testo: string }[] {
+  const fuori: { regione: string; segno: Segno; testo: string }[] = [];
+  const aggiungi = (regione: string | null | undefined, segno: Segno, testo: string) => regione && fuori.push({ regione, segno, testo: `${t(`mappa.segno_${segno}`)}: ${testo}` });
   for (const m of v.ministeri) {
-    aggiungi(m.agenda?.regione, "atto");
-    for (const c of m.cantieri) aggiungi(c.regione, "cantiere");
+    if (m.agenda) aggiungi(m.agenda.regione, "atto", m.agenda.nome);
+    for (const c of m.cantieri) aggiungi(c.regione, "cantiere", m.atti.find((a) => a.id === c.atto)?.nome ?? c.atto);
   }
-  for (const e of v.eventi.filter((e) => e.famiglia === "emergenza")) aggiungi(REGIONI.find((r) => e.regione && senzaAccento(r.nome) === senzaAccento(e.regione))?.id, "emergenza");
+  for (const e of v.eventi.filter((e) => e.famiglia === "emergenza")) {
+    aggiungi(REGIONI.find((r) => e.regione && senzaAccento(r.nome) === senzaAccento(e.regione))?.id, "emergenza", `${e.nome} · ${e.causa}`);
+  }
   return fuori;
 }
+
+/** Cantieri, atti in agenda ed emergenze aperte, per id di regione. */
+export function segniPerRegione(v: Vista): Record<string, Segno[]> {
+  const fuori: Record<string, Segno[]> = {};
+  for (const x of vociSegni(v)) (fuori[x.regione] ??= []).push(x.segno);
+  return fuori;
+}
+
+/** I segni di una regione col testo per esteso, per la scheda. */
+export const segniDi = (v: Vista, regione: string) => vociSegni(v).filter((x) => x.regione === regione);
 
 /** La lista delle venti regioni, per nome o per valore (decrescente, i senza dato in fondo). */
 export function lista(valori: Record<string, number | null>, ordine: "nome" | "valore"): { id: string; nome: string; valore: number | null }[] {
@@ -65,4 +84,47 @@ export function media(v: Vista, s: Sondaggio): { partiti: { id: string; nome: st
     .sort((a, b) => b.quota - a.quota);
   const astensione = s.istituti.length ? s.istituti.reduce((a, r) => a + r.quote[r.quote.length - 1], 0) / s.istituti.length : 0;
   return { partiti, astensione };
+}
+
+export const CONDIZIONI: readonly Condizione[] = ["dipendente_privato", "dipendente_pubblico", "autonomo", "pensionato", "disoccupato_inattivo", "studente"];
+export const FASCE: readonly Fascia[] = ["bassa", "media", "alta"];
+
+/** Le disposizioni territoriali che valgono nella regione: quelle col perimetro che la contiene. */
+export const disposizioniDi = (v: Vista, regione: string): VoceDisposizione[] => v.disposizioni.filter((d) => d.perimetro.includes(regione));
+
+/** Il sondaggio della regione: una quota per partito fra i votanti, dal sondaggio letto, dal più al meno votato. */
+export function sondaggioDi(v: Vista, regione: string): { id: string; nome: string; quota: number }[] {
+  const r = sondaggioLetto(v).sondaggio.regioni.find((x) => x.id === regione);
+  if (!r) return [];
+  return v.partiti
+    .map((p, j) => ({ id: p.id, nome: p.nome, quota: quotaIncrocio(r, j), sciolto: p.sciolto }))
+    .filter((p): p is typeof p & { quota: number } => p.quota !== null && !p.sciolto)
+    .map(({ id, nome, quota }) => ({ id, nome, quota }))
+    .sort((a, b) => b.quota - a.quota);
+}
+
+export type EsitoElettori = { elettori: ElettoreCampione[] } | { rifiuto: string } | { guasto: string };
+
+/** Gli elettori della casella: una lettura in volo per volta, e si mostra solo l'ultima casella chiesta (o niente dopo `annulla`). */
+export function sessioneElettori(
+  leggi: (regione: string, condizione: Condizione, fascia: Fascia) => Promise<ElettoreCampione[]>,
+  mostra: (esito: EsitoElettori) => void,
+) {
+  let ultima = "";
+  const chiedi = ultimoVince(
+    (a: { regione: string; condizione: Condizione; fascia: Fascia; chiave: string }) => leggi(a.regione, a.condizione, a.fascia),
+    (r, a) => {
+      if (a.chiave !== ultima) return;
+      mostra(Array.isArray(r) ? { elettori: r } : (r as ErroreGuscio).specie === "rifiuto" ? { rifiuto: testoRifiuto(r as ErroreGuscio) } : { guasto: (r as ErroreGuscio).testo });
+    },
+  );
+  return {
+    chiedi(regione: string, condizione: Condizione, fascia: Fascia) {
+      ultima = `${regione}|${condizione}|${fascia}`;
+      chiedi({ regione, condizione, fascia, chiave: ultima });
+    },
+    annulla() {
+      ultima = "";
+    },
+  };
 }
