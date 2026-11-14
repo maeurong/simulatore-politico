@@ -2,6 +2,7 @@
 import { coloreDi } from "$lib/partiti";
 import { t, type Chiave } from "$lib/testi/t";
 import type { CausaIntesa } from "$lib/tipi/CausaIntesa";
+import type { FasciaIntesa } from "$lib/tipi/FasciaIntesa";
 import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceAlleato } from "$lib/tipi/VoceAlleato";
@@ -79,8 +80,11 @@ export function intesaDi(v: Vista, id: string): { alleato: VoceAlleato } | { fas
   return fascia ? { fascia } : null;
 }
 
-/** Le mosse del partito nell'ultima chiusura, nell'ordine della Vista. Le Viste campione anteriori allo schema 18 non hanno `esito`. */
-export const mosseDi = (v: Vista, id: string): string[] => (v.esito ?? []).filter((e) => e.partito === id).map((e) => e.fatto);
+/** Le mosse del partito nell'ultima chiusura, nell'ordine della Vista. */
+export const mosseDi = (v: Vista, id: string): string[] => v.esito.filter((e) => e.partito === id).map((e) => e.fatto);
 
 /** L'ultimo voto del partito: quota e seggi; null se non c'era o non si è ancora votato. */
 export const ultimoVoto = (v: Vista, id: string): VotiPartito | null => v.elezioni[0]?.voti.find((x) => x.partito === id) ?? null;
+
+/** Le caselle piene, su tre, della fascia dell'alleato del governo avversario. */
+export const caselleFascia = (f: FasciaIntesa): 1 | 2 | 3 => ({ solida: 3, incrinata: 2, ultimatum: 1 } as const)[f];

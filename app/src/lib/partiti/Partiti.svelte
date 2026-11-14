@@ -7,16 +7,19 @@
   import type { VocePartito } from "$lib/tipi/VocePartito";
   import Caselle from "$lib/componenti/Caselle.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
+  import Avvisi from "./Avvisi.svelte";
   import AsseDeiPartiti from "./AsseDeiPartiti.svelte";
   import Camere from "./Camere.svelte";
   import SchedaPartito from "./SchedaPartito.svelte";
-  import { TETTO_PARTITI, avvisi, cassaBreve, indoleBreve, inOrdine, perFila, seggiDi } from "./schieramento";
+  import { TETTO_PARTITI, avvisi, caselleFascia, cassaBreve, indoleBreve, inOrdine, perFila, seggiDi } from "./schieramento";
 
   let { vista }: { vista: Vista } = $props();
 
   const pre = $props.id();
   let scelta = $state<string | null>(null);
   const scelto = $derived(vista.partiti.find((p) => p.id === scelta));
+  // un partito che sparisce dalla Vista non lascia la scelta appesa
+  $effect(() => { if (scelta && !scelto) scelta = null; });
   async function indietro() {
     const id = scelta;
     scelta = null;
@@ -69,11 +72,9 @@
           {#if a}
             <span class="largo"><Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
           {:else if f}
-            <span class="largo"><Caselle piene={{ solida: 3, incrinata: 2, ultimatum: 1 }[f.fascia]} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
+            <span class="largo"><Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} /></span>
           {/if}
-          {#if lista.length}
-            <span class="largo avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k.startsWith("avviso.ultimatum")} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</span>
-          {/if}
+          {#if lista.length}<span class="largo"><Avvisi {lista} /></span>{/if}
         </article>
       {/each}
     </div>
@@ -112,10 +113,6 @@
   .rr { display: flex; justify-content: space-between; gap: 4px; font-size: var(--c-min) }
   .rr > * { white-space: nowrap }
   .ind { font-size: var(--c-min); color: var(--grigio); line-height: 1.25 }
-  .avvisi { display: flex; flex-wrap: wrap; gap: 3px }
-  .chip { border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-min); font-weight: 700; line-height: 1.4 }
-  .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
-  .chip.tr { border-style: dashed; border-color: var(--grigio); color: var(--grigio) }
   /* forma stretta: la faccia sta sopra e il nome ha tutta la scheda, così nessuna parola si spezza */
   :global(:root.stretta) .sch > :not(.filo) { grid-column: 1 / -1 }
   /* dieci caselle in una scheda stretta: più piccole di quelle del componente */

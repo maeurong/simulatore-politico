@@ -8,8 +8,9 @@
   import Faccia from "$lib/componenti/Faccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import Avvisi from "./Avvisi.svelte";
   import AsseDeiPartiti from "./AsseDeiPartiti.svelte";
-  import { CAUSE, avvisi, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, ultimoVoto } from "./schieramento";
+  import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, ultimoVoto } from "./schieramento";
 
   let { vista, partito: p, indietro }: { vista: Vista; partito: VocePartito; indietro: () => void } = $props();
 
@@ -33,7 +34,7 @@
   <div class="chi">
     <h4 class="tit" class:sciolto={p.sciolto}><i class="sw" class:nato={colore === null} style:background={colore ?? undefined}></i>{tu ? t("partiti.tuo") : p.nome}</h4>
     <p class="ld">{#if tu}{t("partiti.s_leader_tu")}{:else}{t("partiti.s_leader")} <b>{p.leader}</b>{/if}</p>
-    {#if lista.length}<p class="avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k.startsWith("avviso.ultimatum")} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</p>{/if}
+    <Avvisi {lista} />
   </div>
 </div>
 {#if colore === null}<Segnaposto sezione={t("partiti.ph_origine")} fetta="11f" />{/if}
@@ -65,7 +66,7 @@
 {:else if intesa}
   {@const f = intesa.fascia}
   <h5 class="grp"><span>{t("partiti.s_intesa_col_governo")}</span><span>{t("partiti.s_in_fasce")}</span></h5>
-  <Caselle piene={{ solida: 3, incrinata: 2, ultimatum: 1 }[f.fascia]} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} />
+  <Caselle piene={caselleFascia(f.fascia)} su={3} rosso={f.fascia === "ultimatum"} nome={t("partiti.col_governo", { fascia: t(`partiti.fascia_${f.fascia}` as Chiave) })} />
   {#if f.causa_ultimatum}<p class="sec">{t("partiti.s_ultimatum_per", { causa: causa(f.causa_ultimatum) })}</p>{/if}
   <p class="min muto">{t("partiti.s_incrinato")}</p>
 {/if}
@@ -104,10 +105,6 @@
   .chi { display: grid; gap: 3px; min-width: 0 }
   .ld { font-size: var(--c-min); color: var(--grigio) }
   .ld b { color: var(--ink) }
-  .avvisi { display: flex; flex-wrap: wrap; gap: 3px }
-  .chip { border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-min); font-weight: 700; line-height: 1.4 }
-  .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
-  .chip.tr { border-style: dashed; border-color: var(--grigio); color: var(--grigio) }
   .grp { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; padding-bottom: 2px; border-bottom: var(--bordo); font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--grigio) }
   .grp > :last-child:not(:first-child) { letter-spacing: 0; text-transform: none; font-weight: 400; text-align: right }
   .vai { color: inherit; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap }

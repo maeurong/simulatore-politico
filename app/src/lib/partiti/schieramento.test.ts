@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
+import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import { coloreDi } from "$lib/partiti";
 import { t } from "$lib/testi/t";
-import { CAUSE, TETTO_PARTITI, avvisi, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
+import { CAUSE, TETTO_PARTITI, avvisi, caselleFascia, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
 import zeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
@@ -177,11 +178,20 @@ describe("ultimoVoto", () => {
 });
 
 describe("mosseDi", () => {
-  const voce = (partito: string | null, fatto: string) => ({ tipo: "x", criticita: "minore", precedenza: 0, in_evidenza: false, tono: "neutro", fatto, causa: "", partito, dicastero: null, regione: null, misura: null, disposizioni: [], famiglia: null, dettagli: [] });
-  it("le voci dell'esito del partito, nell'ordine della Vista, il testo del fatto", () => {
-    const v = { ...governo, esito: [voce("centro", "prima"), voce("destra", "altro"), voce(null, "di nessuno"), voce("centro", "seconda")] } as unknown as Vista;
+  const voce = (partito: string | null, fatto: string): VoceEsito => ({ tipo: "misura_presentata", criticita: "ordinaria", precedenza: 0, in_evidenza: false, tono: "ordinario", fatto, causa: "", partito, dicastero: null, regione: null, misura: null, disposizioni: [], famiglia: null, dettagli: [] });
+  it("sulla 03 il Centro ha la sola mossa del posto riservato; un partito senza voci ha []", () => {
+    expect(mosseDi(governo, "centro")).toEqual(["Porta nel posto riservato Sgravio contributivo nel Mezzogiorno: 15%"]);
+    expect(mosseDi(governo, "sinistra")).toEqual([]);
+  });
+  it("le voci del partito, nell'ordine dell'esito; quelle senza partito non sono di nessuno", () => {
+    const v = { ...governo, esito: [voce("centro", "prima"), voce("destra", "altro"), voce(null, "di nessuno"), voce("centro", "seconda")] } as Vista;
     expect(mosseDi(v, "centro")).toEqual(["prima", "seconda"]);
-    expect(mosseDi(v, "sinistra")).toEqual([]);
+  });
+});
+
+describe("caselleFascia", () => {
+  it("solida 3, incrinata 2, in ultimatum 1 su tre", () => {
+    expect(["solida", "incrinata", "ultimatum"].map((f) => caselleFascia(f as "solida"))).toEqual([3, 2, 1]);
   });
 });
 
