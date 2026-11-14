@@ -60,11 +60,11 @@
   <p class="sec">{t("campagna.sondaggio_comprato", { n: numero(privato.istituti[0]?.campione ?? 0) })}</p>
 {:else}
   <p class="sec">{t("campagna.sondaggio_spiega")}</p>
-  {#if prezzo !== undefined}
-    <Pulsante forma="bordo" style="white-space: normal; text-align: left" aria-disabled={partita.occupato ? "true" : undefined} onclick={compra}>{t("campagna.compra_sondaggio", { euro: numero(prezzo) })}</Pulsante>
-  {/if}
-  {#if rifiuto && rifiuto.vista === partita.vista}<div class="rif"><Rifiuto testo={rifiuto.testo} /></div>{/if}
 {/if}
+{#if prezzo !== undefined}
+  <Pulsante forma="bordo" style="white-space: normal; text-align: left" aria-disabled={partita.occupato ? "true" : undefined} onclick={compra}>{t("campagna.compra_sondaggio", { euro: numero(prezzo) })}</Pulsante>
+{/if}
+{#if rifiuto && rifiuto.vista === partita.vista}<div class="rif"><Rifiuto testo={rifiuto.testo} /></div>{/if}
 
 <h4 class="h5">{t("campagna.rivali")}</h4>
 <div class="riv">

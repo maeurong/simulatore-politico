@@ -13,7 +13,7 @@
   import Cassa from "./Cassa.svelte";
   import Coalizione from "./Coalizione.svelte";
   import Spese from "./Spese.svelte";
-  import { nomeBersaglio, quotaNelBersaglio, sessioneSpese } from "./campagna";
+  import { aggiungiSpesa, quotaNelBersaglio, sessioneSpese } from "./campagna";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -26,7 +26,9 @@
   let regione = $state(false);
   let scelta = $state<string | null>(null);
 
+  /** false: la partita è occupata, il comando non parte e la sessione lo ripropone quando si libera */
   async function manda(inviate: Spesa[]) {
+    if (partita.occupato) return false;
     try {
       await partita.comanda({ tipo: "campagna", spese: inviate });
     } catch (e) {
@@ -38,6 +40,9 @@
     rifiuto = "rifiuto" in esito ? { indice: ultima, testo: esito.rifiuto, vista: partita.vista } : null;
   });
   untrack(() => spese.length && sessione.cambia(spese, false));
+  $effect(() => {
+    if (!partita.occupato) sessione.riprova();
+  });
   function modifica(nuove: Spesa[], indice: number) {
     ultima = indice;
     spese = nuove;
@@ -51,7 +56,7 @@
     if (i === null || partita.occupato) return;
     regione = false;
     scelta = null;
-    modifica([...spese, { bersaglio: { regione: i }, leva: "persuadere", euro: 100_000 }], spese.length);
+    modifica(aggiungiSpesa(spese, { regione: i }), spese.length);
     sessione.esci();
   }
 </script>

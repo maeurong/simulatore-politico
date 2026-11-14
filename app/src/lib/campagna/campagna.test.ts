@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
-import { LEVE, MASSIMO_SPESE, PASSO_CESSIONE, cedi, conto, dichiara, quotaNelBersaglio, rivali, righeCoalizione, seggiAttesi, sessioneSpese, taglio } from "./campagna";
+import { LEVE, MASSIMO_SPESE, PASSO_CESSIONE, cedi, conto, dichiara, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio } from "./campagna";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import campagnaJson from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 
@@ -126,6 +126,16 @@ describe("rivali", () => {
   });
 });
 
+describe("aggiungiSpesa", () => {
+  it("in coda, persuadere, 100.000 €", () => {
+    expect(aggiungiSpesa([spesa(5)], { regione: 14 })).toEqual([spesa(5), { bersaglio: { regione: 14 }, leva: "persuadere", euro: 100_000 }]);
+  });
+  it("un bersaglio già preso si aggiunge lo stesso: il rifiuto «Bersaglio ripetuto» è del core", () => {
+    const una = aggiungiSpesa([], { regione: 14 });
+    expect(aggiungiSpesa(una, { regione: 14 })).toHaveLength(2);
+  });
+});
+
 describe("sessioneSpese", () => {
   // anteprime risolte a mano, una per chiamata, nell'ordine
   function banco() {
@@ -194,6 +204,35 @@ describe("sessioneSpese", () => {
     expect(anteprima).toHaveBeenCalledTimes(1);
     expect(mostra).toHaveBeenCalledWith({ voci: [voce(5)] });
     expect(manda).not.toHaveBeenCalled();
+  });
+
+  it("comando non partito (occupato): la bozza resta sporca e riparte una volta sola, quando si riprova", async () => {
+    const { attese, manda, sessione } = banco();
+    manda.mockReturnValueOnce(Promise.resolve(false));
+    sessione.cambia([spesa(5)]);
+    attese[0].risolvi([voce(5)]);
+    await svuota();
+    sessione.esci();
+    await svuota();
+    expect(manda).toHaveBeenCalledTimes(1);
+    sessione.riprova();
+    sessione.riprova();
+    await svuota();
+    expect(manda).toHaveBeenCalledTimes(2);
+    expect(manda).toHaveBeenLastCalledWith([spesa(5)]);
+  });
+
+  it("una modifica dopo il comando non partito prende il posto della vecchia: riprova non manda la vecchia", async () => {
+    const { attese, manda, sessione } = banco();
+    manda.mockReturnValueOnce(Promise.resolve(false));
+    sessione.cambia([spesa(5)]);
+    attese[0].risolvi([voce(5)]);
+    await svuota();
+    sessione.esci();
+    await svuota();
+    sessione.cambia([spesa(6)]);
+    sessione.riprova();
+    expect(manda).toHaveBeenCalledTimes(1);
   });
 
   it("uscita senza modifiche: niente comando", () => {

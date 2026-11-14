@@ -88,6 +88,9 @@ export const rivali = (v: Vista): { id: string; nome: string; cassa: number; pro
     .map((p) => ({ id: p.id, nome: p.nome, cassa: p.cassa, promesse: p.promesse }))
     .sort((a, b) => b.cassa - a.cassa);
 
+/** La spesa nuova in coda alla bozza: persuadere, 100.000 €. Un bersaglio già preso entra lo stesso: il rifiuto è del core. */
+export const aggiungiSpesa = (spese: Spesa[], bersaglio: Bersaglio): Spesa[] => [...spese, { bersaglio, leva: "persuadere", euro: 100_000 }];
+
 export type EsitoAnteprima = { voci: VoceAnteprimaCampagna[] } | { rifiuto: string };
 
 /**
@@ -96,7 +99,8 @@ export type EsitoAnteprima = { voci: VoceAnteprimaCampagna[] } | { rifiuto: stri
  */
 export function sessioneSpese(
   anteprima: (spese: Spesa[]) => Promise<VoceAnteprimaCampagna[]>,
-  manda: (spese: Spesa[]) => void,
+  /** `false`: il comando non è partito (la partita era occupata); il rifiuto del core o il guasto sono un esito, non un `false` */
+  manda: (spese: Spesa[]) => Promise<boolean | void> | boolean | void,
   mostra: (esito: EsitoAnteprima) => void,
 ) {
   let giro = 0;
@@ -104,13 +108,18 @@ export function sessioneSpese(
   let sporca = false;
   let riuscita: boolean | null = null;
   let alloArrivo = false;
+  let pendente = false;
+  const parti = (spese: Spesa[]) =>
+    void Promise.resolve(manda(spese)).then((ok) => {
+      if (ok === false && spese === bozza) sporca = pendente = true;
+    });
   const chiedi = ultimoVince(
     (a: { spese: Spesa[]; giro: number }) => anteprima(a.spese),
     (r, a) => {
       if (a.giro !== giro) return;
       riuscita = Array.isArray(r);
       mostra(Array.isArray(r) ? { voci: r } : { rifiuto: testoRifiuto(comeErrore(r)) });
-      if (alloArrivo && riuscita) manda(a.spese);
+      if (alloArrivo && riuscita) parti(a.spese);
       alloArrivo = false;
     },
   );
@@ -121,13 +130,20 @@ export function sessioneSpese(
       sporca ||= modificata;
       riuscita = null;
       alloArrivo = false;
+      pendente = false;
       chiedi({ spese, giro: ++giro });
     },
     esci() {
       if (!sporca) return;
       sporca = false;
       if (riuscita === null) alloArrivo = true;
-      else if (riuscita) manda(bozza);
+      else if (riuscita) parti(bozza);
+    },
+    /** Da chiamare quando la partita smette di essere occupata: rimanda la bozza che il comando non ha portato. */
+    riprova() {
+      if (!pendente) return;
+      pendente = false;
+      this.esci();
     },
   };
 }

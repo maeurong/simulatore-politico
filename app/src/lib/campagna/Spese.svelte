@@ -9,11 +9,10 @@
   import Caselle from "$lib/componenti/Caselle.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { LEVE, MASSIMO_SPESE, conto, nomeBersaglio, quotaNelBersaglio, taglio } from "./campagna";
+  import { LEVE, MASSIMO_SPESE, aggiungiSpesa, conto, nomeBersaglio, quotaNelBersaglio, taglio } from "./campagna";
 
   const CONDIZIONI: Condizione[] = ["dipendente_privato", "dipendente_pubblico", "autonomo", "pensionato", "disoccupato_inattivo", "studente"];
   const FASCE = { poco: 1, medio: 2, molto: 3 };
-  const EURO_NUOVA = 100_000;
 
   let { vista, spese, voci, rifiuto, modifica, esci, apriRegione }: {
     vista: Vista;
@@ -40,13 +39,13 @@
   const con = (i: number, parte: Partial<Spesa>) => spese.map((s, k) => (k === i ? { ...s, ...parte } : s));
   const aggiungi = (condizione: Condizione) => {
     const bersaglio = { condizione };
-    if (!presi.has(JSON.stringify(bersaglio))) subito([...spese, { bersaglio, leva: "persuadere", euro: EURO_NUOVA }], spese.length);
+    if (!presi.has(JSON.stringify(bersaglio))) subito(aggiungiSpesa(spese, bersaglio), spese.length);
   };
   const euroDi = (testo: string) => Number(testo.replace(/\D/g, ""));
 </script>
 
 <section aria-label={t("campagna.spesa")}>
-  {#each spese as s, i (JSON.stringify(s.bersaglio))}
+  {#each spese as s, i (i)}
     {@const nome = nomeBersaglio(vista, s.bersaglio)}
     {@const q = quotaNelBersaglio(vista, s.bersaglio)}
     {@const voce = voci?.length === spese.length ? voci[i] : null}
