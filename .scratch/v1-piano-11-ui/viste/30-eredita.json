@@ -2497,6 +2497,7 @@
       {
         "approvata": false,
         "camera": {
+          "franchi": 0,
           "no": 0,
           "si": 0
         },
@@ -2513,6 +2514,7 @@
         "misura": 80,
         "nome": "Export di armi: restrittivo",
         "senato": {
+          "franchi": 0,
           "no": 0,
           "si": 0
         }
@@ -2520,6 +2522,7 @@
       {
         "approvata": true,
         "camera": {
+          "franchi": 0,
           "no": 107,
           "si": 293
         },
@@ -2577,6 +2580,7 @@
         "misura": 81,
         "nome": "Mozione di sfiducia individuale: Interno",
         "senato": {
+          "franchi": 0,
           "no": 49,
           "si": 151
         }
@@ -2584,6 +2588,7 @@
       {
         "approvata": true,
         "camera": {
+          "franchi": 16,
           "no": 183,
           "si": 217
         },
@@ -2641,6 +2646,7 @@
         "misura": 79,
         "nome": "Concorrenza nei servizi: licenze chiuse",
         "senato": {
+          "franchi": 8,
           "no": 97,
           "si": 103
         }
@@ -2648,6 +2654,7 @@
       {
         "approvata": false,
         "camera": {
+          "franchi": 8,
           "no": 243,
           "si": 157
         },
@@ -2705,14 +2712,882 @@
         "misura": 78,
         "nome": "Leva militare: obbligatoria",
         "senato": {
+          "franchi": 6,
           "no": 127,
           "si": 73
         }
       }
     ],
     "esiti_referendum": [],
+    "esito": [
+      {
+        "causa": "pericolosità idrogeologica media",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Emergenza idrogeologica lieve in Toscana, 0 euro dal fondo di riserva (0% del costo)",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": "toscana",
+        "tipo": "emergenza_lieve",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "in sospeso da 2 turni senza risposta",
+        "criticita": "critica",
+        "dettagli": [],
+        "dicastero": "ambiente_energia",
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Respinta la proposta di Anna Bianchi (Ambiente ed Energia), fondi per Riempimento accelerato delle riserve di gas; perde 8,0 punti di soddisfazione",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 1,
+        "regione": null,
+        "tipo": "proposta_respinta",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "vicino alla sua posizione",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": "sviluppo_economico",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": "sicilia",
+            "testo": "Il dicastero Sviluppo economico esegue «Zone economiche speciali con burocrazia ridotta» in Sicilia con 105.479.434 euro: vicino alla sua posizione; Sicilia, ne ha bisogno"
+          },
+          {
+            "dicastero": "sanita",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Il dicastero Sanità esegue «Piano straordinario sulle liste d'attesa» con 651.713.981 euro: vicino alla sua posizione"
+          },
+          {
+            "dicastero": "giustizia",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Il dicastero Giustizia esegue «Processo telematico e filtri sui ricorsi» con 26.150.418 euro: vicino alla sua posizione"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "3 atti eseguiti",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "atto_eseguito",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "rata di 221.716.371 euro contro un margine residuo di 215.863.284 euro",
+        "criticita": "notevole",
+        "dettagli": [],
+        "dicastero": "ambiente_energia",
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Il cantiere «Rigassificatori e nuove centrali» del dicastero Ambiente ed Energia resta fermo un turno",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "cantiere_fermo",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "la crisi di governo",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Slitta al turno dopo una legge",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "leggi_slittate",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "ha presieduto il governo meno di 4 turni nella legislatura",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_sinistra",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»: ha presieduto il governo meno di 4 turni nella legislatura"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrosinistra",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: quota base universale»: ha presieduto il governo meno di 4 turni nella legislatura"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centro",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Concorrenza nei servizi: gare» e «Salario minimo legale: 7 €/h»: ha presieduto il governo meno di 4 turni nella legislatura"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrodestra",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Nucleare: consentito» e «Autonomia differenziata: prime materie»: ha presieduto il governo meno di 4 turni nella legislatura"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "destra",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Nucleare: consentito» e «Autonomia differenziata: intese complete»: ha presieduto il governo meno di 4 turni nella legislatura"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_destra",
+            "regione": null,
+            "testo": "Escono senza verifica le promesse «Nucleare: consentito» e «Autonomia differenziata: intese complete»: ha presieduto il governo meno di 4 turni nella legislatura"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "6 promesse scadute",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "promesse_scadute",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "la disposizione non sta al gradino promesso",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Promessa mancata: «Concorrenza nei servizi: mercato libero»; valence -0,20 a Sinistra: la disposizione non sta al gradino promesso"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Promessa mancata: «Regime delle pensioni: retributivo»; valence -0,20 a Sinistra: la disposizione non sta al gradino promesso"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "2 promesse verificate",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": "sinistra",
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "promessa_verificata",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "più cause",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_sinistra",
+            "regione": null,
+            "testo": "Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»: i valori in vigore più lontani dalla sua posizione, 1,0"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»: i valori in vigore più lontani dalla sua posizione, 2,5"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrosinistra",
+            "regione": null,
+            "testo": "Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»: i valori in vigore più lontani dalla sua posizione, 3,0"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centro",
+            "regione": null,
+            "testo": "Promette «Autonomia differenziata: prime materie» e «Detrazione edilizia: 36-50%»: i valori in vigore più lontani dalla sua posizione, 4,5"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrodestra",
+            "regione": null,
+            "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»: i valori in vigore più lontani dalla sua posizione, 5,0"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "destra",
+            "regione": null,
+            "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»: i valori in vigore più lontani dalla sua posizione, 5,5"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_destra",
+            "regione": null,
+            "testo": "Promette «Autonomia differenziata: intese complete» e «Incentivo fiscale agli investimenti: 40% del costo»: i valori in vigore più lontani dalla sua posizione, 7,0"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_8",
+            "regione": null,
+            "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»: i valori in vigore più lontani dalla sua posizione, 4,7"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_9",
+            "regione": null,
+            "testo": "Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»: i valori in vigore più lontani dalla sua posizione, 3,2"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "9 promesse fatte",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "promessa_fatta",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "più cause",
+        "criticita": "notevole",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_sinistra",
+            "regione": null,
+            "testo": "Spende 760.891 euro: persuade dipendenti pubblici, Basilicata e autonomi: cassa di 760.891 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Spende 7.324.593 euro: persuade dipendenti privati, pensionati e Campania: cassa di 7.324.593 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrosinistra",
+            "regione": null,
+            "testo": "Spende 1.444.726 euro: persuade pensionati, Lombardia e dipendenti privati: cassa di 1.444.726 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centro",
+            "regione": null,
+            "testo": "Spende 1.021.859 euro: persuade dipendenti privati, pensionati e Campania: cassa di 1.021.859 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrodestra",
+            "regione": null,
+            "testo": "Spende 1.760.343 euro: persuade autonomi, pensionati e Sicilia: cassa di 1.760.343 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "destra",
+            "regione": null,
+            "testo": "Spende 6.530.041 euro: persuade pensionati, dipendenti privati e Lombardia: cassa di 6.530.041 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_destra",
+            "regione": null,
+            "testo": "Spende 1.695.477 euro: persuade dipendenti privati, pensionati e Lombardia: cassa di 1.695.477 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_8",
+            "regione": null,
+            "testo": "Spende 1.359.405 euro: persuade pensionati, dipendenti privati e Lombardia: cassa di 1.359.405 euro"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_9",
+            "regione": null,
+            "testo": "Spende 1.241.692 euro: persuade dipendenti privati, pensionati e Lombardia: cassa di 1.241.692 euro"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "9 spese di campagna",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "spesa_di_campagna",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "chiusura del trimestre",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Spread a 108 pb, +23 pb sul trimestre prima",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "spread",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "l'attesa è la media delle crescite reali degli ultimi 8 trimestri",
+        "criticita": "notevole",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Reddito reale della fascia bassa a -0,77% nel trimestre contro il +0,38% atteso, giudizio sul governo in calo: l'attesa è la media delle crescite reali degli ultimi 8 trimestri"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Reddito reale della fascia media a -0,61% nel trimestre contro il +0,56% atteso, giudizio sul governo in calo: l'attesa è la media delle crescite reali degli ultimi 8 trimestri"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Reddito reale della fascia alta a -0,61% nel trimestre contro il +0,21% atteso, giudizio sul governo in calo: l'attesa è la media delle crescite reali degli ultimi 8 trimestri"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "3 fasce di reddito deluse",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "reddito_deluso",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "sondaggio pubblico del trimestre, media di 4 istituti",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Sondaggio: Partito del giocatore al 1,8% fra i votanti, -1,5 punti sul trimestre prima",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": "giocatore",
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "sondaggio",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "prima stima, riveduta fra un turno",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Prima stima di ottobre-dicembre 2031: PIL +1,6% annualizzato, inflazione 5,5% annualizzata e 1,4% sull'anno, disoccupazione 5,8%, disavanzo 1,2% del PIL",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "prima_stima",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "revisione della prima stima",
+        "criticita": "ordinaria",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Revisione di luglio-settembre 2031: PIL da +0,4% a +2,0%, inflazione da 1,6% a 1,5%, disoccupazione da 5,8% a 5,8%, disavanzo da 1,4% a 1,3% del PIL",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "revisione",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "2 per mille sul 0,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_sinistra",
+            "regione": null,
+            "testo": "Estrema sinistra incassa 31.870 euro, 20.185 dal 2 per mille e 11.685 di donazioni: 2 per mille sul 2,5% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Sinistra incassa 399.914 euro, 266.332 dal 2 per mille e 133.582 di donazioni: 2 per mille sul 32,7% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrosinistra",
+            "regione": null,
+            "testo": "Centrosinistra incassa 70.071 euro, 46.989 dal 2 per mille e 23.082 di donazioni: 2 per mille sul 5,8% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centro",
+            "regione": null,
+            "testo": "Centro incassa 47.092 euro, 32.146 dal 2 per mille e 14.946 di donazioni: 2 per mille sul 3,9% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "centrodestra",
+            "regione": null,
+            "testo": "Centrodestra incassa 79.354 euro, 55.461 dal 2 per mille e 23.893 di donazioni: 2 per mille sul 6,8% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "destra",
+            "regione": null,
+            "testo": "Destra incassa 336.492 euro, 215.535 dal 2 per mille e 120.957 di donazioni: 2 per mille sul 26,5% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "estrema_destra",
+            "regione": null,
+            "testo": "Estrema destra incassa 80.985 euro, 47.715 dal 2 per mille e 33.270 di donazioni: 2 per mille sul 5,9% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "giocatore",
+            "regione": null,
+            "testo": "Partito del giocatore incassa 143.511 euro, 130.242 dal 2 per mille e 13.269 di donazioni: 2 per mille sul 16,0% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_8",
+            "regione": null,
+            "testo": "Orizzonte Comune incassa 67.464 euro, 0 dal 2 per mille e 67.464 di donazioni: 2 per mille sul 0,0% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "nuovo_9",
+            "regione": null,
+            "testo": "Voce del Paese incassa 107.852 euro, 0 dal 2 per mille e 107.852 di donazioni: 2 per mille sul 0,0% dell'ultimo voto, donazioni sulle intenzioni di voto"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "10 entrate di cassa",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "entrate_di_cassa",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "la fine della legislatura",
+        "criticita": "notevole",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [
+          "export_armi"
+        ],
+        "famiglia": null,
+        "fatto": "Decade senza voto «Export di armi: restrittivo»",
+        "in_evidenza": false,
+        "misura": 80,
+        "partito": "nuovo_9",
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "misura_decaduta",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "elezioni politiche",
+        "criticita": "critica",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Elezioni politiche: affluenza del 78,0%; Partito del giocatore al 2,4% con 0 seggi alla Camera e 0 al Senato; primo partito Sinistra al 24,3%; premio di maggioranza a Sinistra, Centrosinistra e Voce del Paese",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 3,
+        "regione": null,
+        "tipo": "risultato_del_voto",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "al voto il 2,4% fra i votanti, nessun seggio",
+        "criticita": "critica",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Partito del giocatore resta senza seggi alla Camera e al Senato: la partita finisce",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": "giocatore",
+        "precedenza": 3,
+        "regione": null,
+        "tipo": "fine_della_partita",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "2 elezioni di fila senza seggi",
+        "criticita": "notevole",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Si scioglie",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": "estrema_sinistra",
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "partito_sciolto",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "spesa del dicastero tagliata in termini reali",
+        "criticita": "ordinaria",
+        "dettagli": [
+          {
+            "dicastero": "sviluppo_economico",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Davide Gallo (Sviluppo economico) perde 8,63 punti di soddisfazione: indicatore di servizio in calo"
+          },
+          {
+            "dicastero": "lavoro_welfare",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Francesca Bruno (Lavoro e Welfare) perde 6,66 punti di soddisfazione: indicatore di servizio in calo"
+          },
+          {
+            "dicastero": "infrastrutture_trasporti",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Elena Marino (Infrastrutture e Trasporti) perde 0,31 punti di soddisfazione: indicatore di servizio in calo"
+          },
+          {
+            "dicastero": "economia_finanze",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Giulia Gallo (Economia e Finanze) perde 5,10 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "sviluppo_economico",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Davide Gallo (Sviluppo economico) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "lavoro_welfare",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Francesca Bruno (Lavoro e Welfare) perde 5,10 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "sanita",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Luca Ricci (Sanità) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "istruzione_ricerca",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Simone Gallo (Istruzione e Ricerca) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "infrastrutture_trasporti",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Elena Marino (Infrastrutture e Trasporti) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "interno",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Filippo Romano (Interno) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "giustizia",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Simone Barbieri (Giustizia) perde 10,12 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          },
+          {
+            "dicastero": "esteri_difesa",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Anna Bruno (Esteri e Difesa) perde 5,10 punti di soddisfazione: spesa del dicastero tagliata in termini reali"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "12 ministri cambiano soddisfazione",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "soddisfazione_variata",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "la soddisfazione è scesa sotto la soglia di dimissioni di 25,0; la causa peggiore è «indicatore di servizio in calo»",
+        "criticita": "critica",
+        "dettagli": [],
+        "dicastero": "ambiente_energia",
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "Anna Bianchi lascia il dicastero Ambiente ed Energia, che va in interim",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 2,
+        "regione": null,
+        "tipo": "ministro_esce",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "più cause",
+        "criticita": "notevole",
+        "dettagli": [
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "sinistra",
+            "regione": null,
+            "testo": "Nuovo leader: Marco Ferraro: il calo di 8,4 punti percentuali al voto"
+          },
+          {
+            "dicastero": null,
+            "disposizioni": [],
+            "misura": null,
+            "partito": "destra",
+            "regione": null,
+            "testo": "Nuovo leader: Fabio Bruno: il calo di 4,5 punti percentuali al voto"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "2 cambi di leader",
+        "in_evidenza": false,
+        "misura": null,
+        "partito": null,
+        "precedenza": 0,
+        "regione": null,
+        "tipo": "cambio_di_leader",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "rischio alto",
+        "criticita": "critica",
+        "dettagli": [],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": "emergenza",
+        "fatto": "Emergenza idrogeologica in Emilia-Romagna, costo dell'intervento 1.000.000.000 euro",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 1,
+        "regione": "emilia_romagna",
+        "tipo": "evento_nato",
+        "tono": "ordinario"
+      },
+      {
+        "causa": "più cause",
+        "criticita": "critica",
+        "dettagli": [
+          {
+            "dicastero": "sviluppo_economico",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Davide Gallo (Sviluppo economico) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «spesa del dicastero tagliata in termini reali»"
+          },
+          {
+            "dicastero": "lavoro_welfare",
+            "disposizioni": [],
+            "misura": null,
+            "partito": null,
+            "regione": null,
+            "testo": "Francesca Bruno (Lavoro e Welfare) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «indicatore di servizio in calo»"
+          }
+        ],
+        "dicastero": null,
+        "disposizioni": [],
+        "famiglia": null,
+        "fatto": "2 ministri minacciano le dimissioni",
+        "in_evidenza": true,
+        "misura": null,
+        "partito": null,
+        "precedenza": 2,
+        "regione": null,
+        "tipo": "minaccia_di_dimissioni",
+        "tono": "ordinario"
+      }
+    ],
     "eventi": [],
     "fase": "trattativa",
+    "fermate": [
+      {
+        "tipo": "fine"
+      }
+    ],
     "finita": true,
     "giocatore": "giocatore",
     "governa": false,
@@ -4033,100 +4908,6 @@
         "proposta": null,
         "rosa": [],
         "scelta": null
-      }
-    ],
-    "mosse": [
-      {
-        "partito": "sinistra",
-        "testo": "Promessa mancata: «Concorrenza nei servizi: mercato libero»"
-      },
-      {
-        "partito": "sinistra",
-        "testo": "Promessa mancata: «Regime delle pensioni: retributivo»"
-      },
-      {
-        "partito": "estrema_sinistra",
-        "testo": "Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»"
-      },
-      {
-        "partito": "sinistra",
-        "testo": "Promette «Detrazione edilizia: 110%» e «Export di armi: restrittivo»"
-      },
-      {
-        "partito": "centrosinistra",
-        "testo": "Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»"
-      },
-      {
-        "partito": "centro",
-        "testo": "Promette «Autonomia differenziata: prime materie» e «Detrazione edilizia: 36-50%»"
-      },
-      {
-        "partito": "centrodestra",
-        "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"
-      },
-      {
-        "partito": "destra",
-        "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"
-      },
-      {
-        "partito": "estrema_destra",
-        "testo": "Promette «Autonomia differenziata: intese complete» e «Incentivo fiscale agli investimenti: 40% del costo»"
-      },
-      {
-        "partito": "nuovo_8",
-        "testo": "Promette «Autonomia differenziata: prime materie» e «Incentivo fiscale agli investimenti: 40% del costo»"
-      },
-      {
-        "partito": "nuovo_9",
-        "testo": "Promette «Detrazione edilizia: 65%» e «Export di armi: restrittivo»"
-      },
-      {
-        "partito": "estrema_sinistra",
-        "testo": "Spende 760.891 euro: persuade dipendenti pubblici, Basilicata e autonomi"
-      },
-      {
-        "partito": "sinistra",
-        "testo": "Spende 7.324.593 euro: persuade dipendenti privati, pensionati e Campania"
-      },
-      {
-        "partito": "centrosinistra",
-        "testo": "Spende 1.444.726 euro: persuade pensionati, Lombardia e dipendenti privati"
-      },
-      {
-        "partito": "centro",
-        "testo": "Spende 1.021.859 euro: persuade dipendenti privati, pensionati e Campania"
-      },
-      {
-        "partito": "centrodestra",
-        "testo": "Spende 1.760.343 euro: persuade autonomi, pensionati e Sicilia"
-      },
-      {
-        "partito": "destra",
-        "testo": "Spende 6.530.041 euro: persuade pensionati, dipendenti privati e Lombardia"
-      },
-      {
-        "partito": "estrema_destra",
-        "testo": "Spende 1.695.477 euro: persuade dipendenti privati, pensionati e Lombardia"
-      },
-      {
-        "partito": "nuovo_8",
-        "testo": "Spende 1.359.405 euro: persuade pensionati, dipendenti privati e Lombardia"
-      },
-      {
-        "partito": "nuovo_9",
-        "testo": "Spende 1.241.692 euro: persuade dipendenti privati, pensionati e Lombardia"
-      },
-      {
-        "partito": "estrema_sinistra",
-        "testo": "Si scioglie dopo 2 elezioni senza seggi"
-      },
-      {
-        "partito": "sinistra",
-        "testo": "Nuovo leader: Marco Ferraro, dopo il calo di 8,4 punti percentuali al voto"
-      },
-      {
-        "partito": "destra",
-        "testo": "Nuovo leader: Fabio Bruno, dopo il calo di 4,5 punti percentuali al voto"
       }
     ],
     "partiti": [

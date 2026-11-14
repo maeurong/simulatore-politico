@@ -4076,7 +4076,7 @@
   "incarico": null,
   "dimissioni": false,
   "crisi": false,
-  "mosse": [],
+  "esito": [],
   "programma": [],
   "campagna": {
     "attiva": true,
@@ -4151,5 +4151,10 @@
         "euro": 150000
       }
     ]
-  }
+  },
+  "fermate": [
+    {
+      "tipo": "campagna"
+    }
+  ]
 }
