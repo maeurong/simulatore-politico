@@ -10,6 +10,7 @@
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Tracciato from "$lib/componenti/Tracciato.svelte";
   import { scelteAlDefault } from "$lib/cruscotto/cruscotto";
+  import { defaultDellaChiusura } from "$lib/trattativa/trattativa";
   import Sommario from "./Sommario.svelte";
 
   type Props = { vista: Vista; sezione: string; impostazioni: boolean; onimpostazioni: () => void };
@@ -32,6 +33,7 @@
     return () => document.documentElement.classList.remove("grave");
   });
   const alDefault = $derived(scelteAlDefault(vista));
+  const inTrattativa = $derived(defaultDellaChiusura(vista));
   // sulla prima pagina la testata grande c'è già
   const testatina = $derived(sezione !== "prima-pagina" && !grave);
 
@@ -65,8 +67,10 @@
       {:else}
         <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={chiudi}>{t("cornice.chiudi_il_turno")}</Pulsante>
         {#if rifiuto?.vista === vista && rifiuto.sezione === sezione}<Rifiuto testo={rifiuto.testo} />{/if}
-        <!-- in trattativa la riga del default è del Task 16; all'opposizione non c'è niente a cui rispondere (spec:400) -->
-        {#if stato !== "trattativa" && stato !== "opposizione"}
+        <!-- in trattativa la riga dice cosa vale senza scelta; all'opposizione non c'è niente a cui rispondere (spec:400) -->
+        {#if stato === "trattativa"}
+          {#if inTrattativa}<span class="def">{t(inTrattativa)}</span>{:else}<span class="def tutte">{t("cornice.nessuna_scelta_da_fare")}</span>{/if}
+        {:else if stato !== "opposizione"}
           {#if alDefault}<a class="def" href="/partita/cruscotto">{t("cornice.scelte_al_default", { n: alDefault })}</a>
           {:else}<span class="def tutte">{t("cornice.nessuna_scelta_al_default")}</span>{/if}
         {/if}
