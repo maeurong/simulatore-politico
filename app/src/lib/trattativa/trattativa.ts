@@ -11,6 +11,12 @@ export function pesoDi(dicastero: string): 1 | 2 | 3 {
   return dicastero === "economia_finanze" ? 3 : dicastero === "interno" || dicastero === "esteri_difesa" ? 2 : 1;
 }
 
+/** I dicasteri che la bozza dà a `a` (il giocatore, un alleato, null il tecnico): quanti e quanti punti di peso. */
+export function quota(v: Vista, b: Bozza, a: string | null) {
+  const mie = v.dicasteri.filter((d) => b[d.id] === a);
+  return { n: mie.length, punti: mie.reduce((s, d) => s + pesoDi(d.id), 0) };
+}
+
 /** A chi si può dare un dicastero: il giocatore, il tecnico (null), poi gli alleati di Vista.richieste. */
 export const aChi = (v: Vista): (string | null)[] => ["giocatore", null, ...v.richieste.map((r) => r.partito)];
 
@@ -45,6 +51,25 @@ export function risultato(v: Vista) {
   };
 }
 
+/** Per alleato: richiesta, offerta e scarto in punti, dalla Vista. */
+export const richiesteDi = (v: Vista) =>
+  v.richieste.map((r) => ({ id: r.partito, nome: nomeDi(v, r.partito), richiesta: r.richiesta, offerta: r.offerta, scarto: r.offerta - r.richiesta }));
+
+/** La coalizione ha la metà più uno in tutte e due le Camere. */
+export function haLaMaggioranza(v: Vista): boolean {
+  const r = risultato(v);
+  return !!r && r.camera.seggi >= r.camera.soglia && r.senato.seggi >= r.senato.soglia;
+}
+
+/** I partiti fuori dalla coalizione: seggi dell'ultimo voto, disponibilità e causa del core. */
+export const fuori = (v: Vista) =>
+  v.disponibilita.map((d) => {
+    const x = v.elezioni.at(-1)?.voti.find((y) => y.partito === d.partito);
+    return { id: d.partito, nome: nomeDi(v, d.partito), camera: x?.camera ?? 0, senato: x?.senato ?? 0, disponibile: d.disponibile, causa: d.causa };
+  });
+
+export const allarga = (partiti: string[]): Comando => ({ tipo: "allarga", partiti });
+
 /** Il default accanto a «Chiudi il turno», secondo l'incarico. */
 export const defaultDellaChiusura = (v: Vista): Chiave | null =>
   v.incarico === "giocatore" ? "cornice.senza_proposta" : v.incarico === "guida" ? "cornice.senza_scelta_guida" : null;
@@ -71,6 +96,11 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
   let pendente = false;
   let ultimo = "";
   const dai = () => mostra({ bozza, rifiuto, esito: pendente ? "pendente" : esito });
+  // le scelte che non stanno più in aChi (un alleato è uscito) non valgono
+  const pulisci = (b: Bozza): Bozza => {
+    const valide = new Set(aChi(vista()));
+    return Object.fromEntries(Object.entries(b).filter(([, x]) => x !== undefined && valide.has(x)));
+  };
   const indietro = (inviata: Bozza, dicastero: string) => {
     if (bozza[dicastero] !== inviata[dicastero]) return;
     const { [dicastero]: _, ...resto } = bozza;
@@ -91,8 +121,8 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     const r = await manda(comando);
     if (r === "occupato") pendente = true;
     else if (r === "ok") {
-      accettata = inviata;
-      esito = bozza === inviata ? "partita" : "pendente";
+      accettata = pulisci(inviata);
+      esito = bozza === inviata ? "partita" : pendente ? "pendente" : null;
     } else {
       indietro(inviata, dicastero);
       if (typeof r === "object") rifiuto = { dicastero, testo: r.rifiuto };
@@ -114,10 +144,17 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
       rifiuto = null;
       return invia();
     },
+    /** «Torna alla spartizione di default»: la bozza riparte da zero; la proposta già fatta resta nel core finché non ne parte un'altra. */
+    svuota() {
+      bozza = {};
+      accettata = {};
+      rifiuto = null;
+      esito = null;
+      pendente = false;
+      dai();
+    },
     /** La Vista è cambiata: le scelte che non stanno più in aChi (un alleato è uscito) si scartano, senza mandare niente. */
     aggiorna() {
-      const valide = new Set(aChi(vista()));
-      const pulisci = (b: Bozza): Bozza => Object.fromEntries(Object.entries(b).filter(([, x]) => x !== undefined && valide.has(x)));
       const nuova = pulisci(bozza);
       accettata = pulisci(accettata);
       if (Object.keys(nuova).length === Object.keys(bozza).filter((k) => bozza[k] !== undefined).length) return;
@@ -129,3 +166,7 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     },
   };
 }
+
+export type Sessione = ReturnType<typeof sessioneSpartizione>;
+/** Ciò che la pagina tiene della sessione: lo stato e la Vista della partita in cui è nato (il rifiuto vale solo per quella). */
+export type Stato = { s: StatoSpartizione; vista: Vista | null };

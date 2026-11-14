@@ -28,6 +28,8 @@
   /* inchiostri */
   --carta: #F4ECD8; --ink: #1F1A17; --grigio: #5E5750;
   --rosso: #B3122B; --verde: #2E6B45; --biro: #1D4E89; --giallo: #FFD23F;
+  /* bianco e nero puri: solo il testo sul pieno di centrosinistra e giocatore, dove né carta né inchiostro arrivano a 4,5:1 */
+  --bianco: #FFFFFF; --nero: #000000;
   /* i due inchiostri sovrapposti, solo nelle caricature (ticket 32): stampa a due passaggi, ciascuno al suo retino e moltiplicati sulla carta.
      Terra chiara = giallo 42% su rosso 16%; arancio = giallo su rosso 50%; oliva = giallo su biro 50% */
   --terra: #EFC084; --arancio: #DE7126; --oliva: #8F8C34;

@@ -1,14 +1,40 @@
 <script lang="ts">
-  // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato arrivano coi Task 17-18.
+  // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato arrivano col Task 18.
   import { t, type Chiave } from "$lib/testi/t";
   import { etichetta } from "$lib/ossatura";
+  import { partita } from "$lib/partita.svelte";
+  import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Evento from "$lib/cruscotto/Evento.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import Alleati from "./Alleati.svelte";
   import Risultato from "./Risultato.svelte";
   import Spartizione from "./Spartizione.svelte";
+  import { sessioneSpartizione, type EsitoManda, type Stato } from "./trattativa";
 
   let { vista }: { vista: Vista } = $props();
+
+  // la bozza vive in memoria: al rientro vale ciò che dice la Vista (spec:250). raw: il rifiuto vale per la Vista in cui è nato.
+  let stato = $state.raw<Stato>({ s: { bozza: {}, rifiuto: null, esito: null }, vista: null });
+
+  /** «occupato»: la sessione tiene la bozza pendente e la rimanda quando la partita si libera. */
+  async function manda(comando: Parameters<typeof partita.comanda>[0]): Promise<EsitoManda> {
+    if (partita.occupato) return "occupato";
+    try {
+      return (await partita.comanda(comando)) ? "ok" : "guasto";
+    } catch (e) {
+      return { rifiuto: testoRifiuto(comeErrore(e)) };
+    }
+  }
+  const sessione = sessioneSpartizione(() => vista, manda, (s) => (stato = { s, vista: partita.vista }));
+  $effect(() => {
+    vista.richieste;
+    sessione.aggiorna();
+  });
+  $effect(() => {
+    if (!partita.occupato) sessione.riprova();
+  });
+
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
 </script>
 
@@ -22,11 +48,10 @@
       {#if vista.eventi.length}<p class="evt">{t("trattativa.nessuno_risponde")}</p>{/if}
       {#each vista.eventi as evento, i (i)}<Evento {evento} indice={i} puoRispondere={false} />{/each}
       <Risultato {vista} />
-      <Spartizione {vista} />
+      <Spartizione {vista} {stato} {sessione} />
     </div>
     <aside class="lato">
-      <h4 class="tit">{t("trattativa.gli_alleati")}</h4>
-      <Segnaposto sezione={t("trattativa.ph_intesa")} fetta="11g" />
+      <Alleati {vista} bozza={stato.s.bozza} {sessione} />
     </aside>
   </div>
 {:else}
@@ -41,7 +66,6 @@
   h3.tit { font-size: var(--c-riq) }
   .pag { display: grid; gap: 10px; align-content: start }
   .lato { border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 8px; align-content: start }
-  .lato .tit { font-size: var(--c-sez) }
   .sec { font-size: var(--c-sec) }
   .muto { color: var(--grigio) }
   .evt { font-size: var(--c-sec); border-left: 3px solid var(--rosso); padding-left: 8px }

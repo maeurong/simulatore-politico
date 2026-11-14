@@ -3,36 +3,15 @@
   import { t, numero } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { coloreDi, nomeDi, testoSu } from "$lib/partiti";
-  import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { aChi, completa, pesoDi, sessioneSpartizione, type EsitoManda, type StatoSpartizione } from "./trattativa";
+  import { aChi, completa, pesoDi, type Sessione, type Stato } from "./trattativa";
 
-  let { vista }: { vista: Vista } = $props();
+  let { vista, stato, sessione }: { vista: Vista; stato: Stato; sessione: Sessione } = $props();
 
-  // la bozza vive in memoria: al rientro vale ciò che dice la Vista (spec:250). raw: il rifiuto vale per la Vista in cui è nato.
-  let stato = $state.raw<{ s: StatoSpartizione; vista: Vista | null }>({ s: { bozza: {}, rifiuto: null, esito: null }, vista: null });
   const bozza = $derived(stato.s.bozza);
   const rifiuto = $derived(stato.vista === partita.vista ? stato.s.rifiuto : null);
-
-  /** «occupato»: la sessione tiene la bozza pendente e la rimanda quando la partita si libera. */
-  async function manda(comando: Parameters<typeof partita.comanda>[0]): Promise<EsitoManda> {
-    if (partita.occupato) return "occupato";
-    try {
-      return (await partita.comanda(comando)) ? "ok" : "guasto";
-    } catch (e) {
-      return { rifiuto: testoRifiuto(comeErrore(e)) };
-    }
-  }
-  const sessione = sessioneSpartizione(() => vista, manda, (s) => (stato = { s, vista: partita.vista }));
-  $effect(() => {
-    vista.richieste;
-    sessione.aggiorna();
-  });
-  $effect(() => {
-    if (!partita.occupato) sessione.riprova();
-  });
 
   const assegnati = $derived(vista.dicasteri.filter((d) => bozza[d.id] !== undefined).length);
   const chi = $derived(aChi(vista));

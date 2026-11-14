@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Comando } from "$lib/tipi/Comando";
-import { aChi, completa, defaultDellaChiusura, pesoDi, proponi, risultato, sessioneSpartizione, type Bozza, type EsitoManda, type StatoSpartizione } from "./trattativa";
+import { aChi, allarga, completa, defaultDellaChiusura, fuori, haLaMaggioranza, pesoDi, proponi, quota, richiesteDi, risultato, sessioneSpartizione, type Bozza, type EsitoManda, type StatoSpartizione } from "./trattativa";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import campioneJson from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativa.json";
 
 const turnoZero = turnoZeroJson as unknown as Vista;
 const v02 = trattativaJson as unknown as Vista;
-const campione = campioneJson as unknown as { premio: { pesi: number[] }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
+const campione = campioneJson as unknown as { premio: { pesi: number[] }; senza_maggioranza: { vista: Vista }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
 const ids = v02.dicasteri.map((d) => d.id);
 const piena = (b: Bozza = {}): Bozza => Object.fromEntries(ids.map((id) => [id, id in b ? b[id] : "giocatore"]));
 
@@ -46,6 +46,16 @@ describe("completa e proponi", () => {
   });
 });
 
+describe("quota", () => {
+  it("dicasteri e punti per titolare; i non assegnati non contano", () => {
+    const b = piena({ [ids[0]]: null, [ids[1]]: "destra" });
+    expect(quota(v02, b, "giocatore")).toEqual({ n: 8, punti: 10 });
+    expect(quota(v02, b, null)).toEqual({ n: 1, punti: 3 });
+    expect(quota(v02, b, "destra")).toEqual({ n: 1, punti: 1 });
+    expect(quota(v02, {}, "giocatore")).toEqual({ n: 0, punti: 0 });
+  });
+});
+
 describe("risultato", () => {
   it("02: affluenza, premio di tre membri, seggi e soglie della coalizione", () => {
     const r = risultato(v02)!;
@@ -62,6 +72,38 @@ describe("risultato", () => {
   it("senza voto letto è null", () => {
     expect(risultato(turnoZero)).toBeNull();
   });
+});
+
+describe("richiesteDi", () => {
+  it("02: richiesta, offerta e scarto per alleato, a due decimali", () => {
+    const [cd, d] = richiesteDi(v02);
+    expect([cd.id, cd.offerta]).toEqual(["centrodestra", 2]);
+    expect(cd.richiesta).toBeCloseTo(2.51, 2);
+    expect(cd.scarto).toBeCloseTo(-0.51, 2);
+    expect([d.id, d.offerta]).toEqual(["destra", 7]);
+    expect(d.richiesta).toBeCloseTo(6.79, 2);
+    expect(d.scarto).toBeCloseTo(0.21, 2);
+    expect(cd.nome).toBe("Centrodestra");
+  });
+});
+
+describe("haLaMaggioranza e fuori", () => {
+  const senza = campione.senza_maggioranza.vista;
+  it("vera sulla 02, falsa senza maggioranza", () => {
+    expect(haLaMaggioranza(v02)).toBe(true);
+    expect(haLaMaggioranza(senza)).toBe(false);
+  });
+  it("fuori: i disponibili e no, coi seggi dell'ultimo voto e la causa del core", () => {
+    const f = fuori(senza);
+    expect(f.filter((x) => x.disponibile).map((x) => x.id)).toEqual(["centrosinistra", "centro"]);
+    expect(f.filter((x) => !x.disponibile).map((x) => x.id)).toEqual(["estrema_sinistra", "sinistra", "estrema_destra"]);
+    expect(f.find((x) => x.id === "centro")).toMatchObject({ nome: "Centro", camera: 17, senato: 6, causa: "più probabilità di governare con te" });
+    expect(f.find((x) => x.id === "sinistra")).toMatchObject({ camera: 147, senato: 76, causa: "posizione troppo lontana dalla tua" });
+  });
+});
+
+describe("allarga", () => {
+  it("è il comando del core", () => expect(allarga(["centro"])).toEqual({ tipo: "allarga", partiti: ["centro"] }));
 });
 
 describe("defaultDellaChiusura", () => {
@@ -203,5 +245,32 @@ describe("sessioneSpartizione", () => {
     expect(completa(p.vista({ ...v02, richieste: v02.richieste.filter((r) => r.partito !== "destra") }), p.stato.bozza)).toBe(false);
     expect(p.stato.esito).toBeNull();
     expect(p.mandati).toHaveLength(1);
+  });
+
+  it("la Vista cambia con il comando in volo: l'alleato uscito non rientra e «sta partendo» non resta per sempre", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "destra");
+    p.vista({ ...v02, richieste: v02.richieste.filter((r) => r.partito !== "destra") });
+    p.s.aggiorna();
+    await p.risolvi("ok");
+    expect(p.stato.esito).toBeNull();
+    p.s.scegli(ids[9], "giocatore");
+    await p.risolvi({ rifiuto: "no" });
+    expect(p.stato.bozza[ids[9]]).toBeUndefined();
+  });
+
+  it("svuota: bozza vuota, niente rifiuto né esito, e una bozza nuova riparte", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    await p.risolvi("ok");
+    p.s.svuota();
+    expect(p.stato.bozza).toEqual({});
+    expect(p.stato.esito).toBeNull();
+    expect(p.stato.rifiuto).toBeNull();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    expect(p.mandati).toHaveLength(2);
   });
 });

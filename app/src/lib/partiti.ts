@@ -13,7 +13,7 @@ export const COLORI: Record<string, string> = Object.fromEntries(OTTO.map((id) =
  * né inchiostro arrivano a 4,5:1 (4,14 e 4,04): bianco e nero puri (4,88 e 4,93). Nel tono grave i pieni sono grigi: il CSS rimette la carta.
  */
 const TESTO_SU: Record<string, string> = {
-  sinistra: "var(--ink)", centro: "var(--ink)", centrodestra: "var(--ink)", centrosinistra: "#ffffff", giocatore: "#000000",
+  sinistra: "var(--ink)", centro: "var(--ink)", centrodestra: "var(--ink)", centrosinistra: "var(--bianco)", giocatore: "var(--nero)",
 };
 export const testoSu = (id: string): string => TESTO_SU[id] ?? (id in COLORI ? "var(--carta)" : "var(--ink)");
 
