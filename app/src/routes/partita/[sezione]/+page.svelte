@@ -47,7 +47,8 @@
           {:else if aperta === "partiti" && fetta === null}
             <Partiti vista={partita.vista} />
           {:else if aperta === "trattativa" && fetta === null}
-            <Trattativa vista={partita.vista} />
+            <!-- la bozza è dell'incarico: al cambio (giocatore, guida) si rimonta -->
+            {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
           {:else}
             <!-- governo, crisi, opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (lettura 1) -->
             {#if aperta === "cruscotto"}

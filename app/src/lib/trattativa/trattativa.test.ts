@@ -273,4 +273,35 @@ describe("sessioneSpartizione", () => {
     p.s.scegli(ids[9], "giocatore");
     expect(p.mandati).toHaveLength(2);
   });
+
+  it("svuota con un invio in volo: la risposta tardiva, ok o rifiuto, non tocca la sessione", async () => {
+    for (const e of ["ok", { rifiuto: "no" }] as EsitoManda[]) {
+      const p = prova();
+      nove(p);
+      p.s.scegli(ids[9], "giocatore");
+      p.s.svuota();
+      await p.risolvi(e);
+      expect(p.stato.bozza).toEqual({});
+      expect(p.stato.rifiuto).toBeNull();
+      expect(p.stato.esito).toBeNull();
+      // accettata è vuota: un rifiuto successivo non riporta niente alla scelta dell'invio scartato
+      nove(p);
+      p.s.scegli(ids[9], "destra");
+      await p.risolvi({ rifiuto: "no" });
+      expect(p.stato.bozza[ids[9]]).toBeUndefined();
+      expect(p.stato.bozza[ids[0]]).toBe("giocatore");
+    }
+  });
+
+  it("svuota con un invio che sta per riprovare: «occupato» tardivo non lascia pendente", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    p.s.scegli(ids[1], "destra");
+    p.s.svuota();
+    await p.risolvi("ok");
+    p.s.riprova();
+    expect(p.mandati).toHaveLength(1);
+    expect(p.stato.esito).toBeNull();
+  });
 });

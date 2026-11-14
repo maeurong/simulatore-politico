@@ -95,6 +95,8 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
   let esito: "pendente" | "partita" | null = null;
   let pendente = false;
   let ultimo = "";
+  // svuota() lo fa avanzare: la risposta di un invio partito prima appartiene a una bozza che non c'è più e si scarta
+  let giro = 0;
   const dai = () => mostra({ bozza, rifiuto, esito: pendente ? "pendente" : esito });
   // le scelte che non stanno più in aChi (un alleato è uscito) non valgono
   const pulisci = (b: Bozza): Bozza => {
@@ -111,6 +113,7 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     pendente = false;
     const inviata = bozza;
     const dicastero = ultimo;
+    const mio = giro;
     const comando = proponi(vista(), inviata);
     if (!comando) {
       esito = null;
@@ -119,6 +122,7 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     esito = "pendente";
     dai();
     const r = await manda(comando);
+    if (mio !== giro) return;
     if (r === "occupato") pendente = true;
     else if (r === "ok") {
       accettata = pulisci(inviata);
@@ -146,6 +150,7 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     },
     /** «Torna alla spartizione di default»: la bozza riparte da zero; la proposta già fatta resta nel core finché non ne parte un'altra. */
     svuota() {
+      giro++;
       bozza = {};
       accettata = {};
       rifiuto = null;
