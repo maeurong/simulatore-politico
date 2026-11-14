@@ -665,5 +665,20 @@
   "trattativa.tuoi_punti": "{n} su {tot} punti",
   "trattativa.dicasteri_tecnici": { "one": "{n} dicastero a un tecnico", "other": "{n} dicasteri a tecnici" },
   "trattativa.torna_default": "Torna alla spartizione di default",
-  "trattativa.torna_default_nota": "La proposta già fatta resta finché non ne parte un’altra."
+  "trattativa.torna_default_nota": "La proposta già fatta resta finché non ne parte un’altra.",
+  "trattativa.ribaltone_a": "ribaltone: la guida è da chiedere",
+  "trattativa.incarico_altrui": "incarico a un’altra coalizione",
+  "ribaltone.occhiello": "Il ribaltone",
+  "ribaltone.titolo": "Il governo è caduto, e tu stai nella nuova maggioranza.",
+  "ribaltone.testo": "Il primo per seggi avrebbe la guida. Puoi chiederla come condizione per entrare, o restare fuori.",
+  "ribaltone.ph_partiti": "I partiti del ribaltone e il primo per seggi, a cui spetta la guida",
+  "ribaltone.chiedi": "Chiedi la guida ›",
+  "ribaltone.resta_fuori": "Resta fuori",
+  "ribaltone.conferma_fuori": "Conferma: resta fuori",
+  "ribaltone.spiega_fuori": "Resti fuori: il Capo dello Stato cerca una maggioranza senza di te, e non si torna indietro in questo turno.",
+  "ribaltone.senza_scelta": "Senza scelta, a fine turno la chiusura chiede la guida per te.",
+  "ribaltone.occhiello_altri": "L’incarico",
+  "ribaltone.titolo_altri": "L’incarico va a un’altra coalizione.",
+  "ribaltone.testo_altri": "Nessuna maggioranza ti comprende: il Capo dello Stato dà l’incarico, e il governo nasce a fine turno senza di te.",
+  "ribaltone.lato_altri": "Il voto non ti dà una maggioranza: dal turno dopo sei all’opposizione."
 }
