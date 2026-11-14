@@ -7,6 +7,7 @@ use super::finanza::{MLD, euro};
 use crate::dati::DatiGioco;
 use crate::partita::Trimestre;
 use crate::scenario::StatoPde;
+use crate::vista::ProiezioneUe;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -56,6 +57,55 @@ impl RegoleUe {
             _ => 0.0,
         };
         euro(pct / 100.0 * pil_annuo)
+    }
+
+    /// Deviazione del controllo sull'anno `anno` (% del PIL, al netto della clausola) e conto di
+    /// controllo che ne segue. Spesa netta e PIL di `anno` contano per `fattore` (1 con l'anno
+    /// intero nel conto); `None` se al conto manca un anno.
+    fn controllo(&self, dati: &DatiGioco, anno: u16, fattore: f64) -> Option<(f64, f64)> {
+        let s = dati.scenario();
+        let (Some(&sn1), Some(&sn2), Some(&pil1)) = (
+            self.spesa_netta.get(&anno),
+            self.spesa_netta.get(&anno.saturating_sub(1)),
+            self.pil_annuo.get(&anno),
+        ) else {
+            return None;
+        };
+        let clausola = if anno <= s.clausola_nazionale_fino_a {
+            s.clausola_nazionale_margine.valore
+        } else if anno <= self.clausola_energia_fino_a {
+            dati.manopola("clausola_energia_margine")
+        } else {
+            0.0
+        };
+        let tetto = s.tetto_spesa_netta(anno);
+        let deviazione = (fattore * sn1 as f64 - sn2 as f64 * (1.0 + tetto / 100.0))
+            / (fattore * pil1 as f64)
+            * 100.0
+            - clausola;
+        Some((deviazione, (self.conto_controllo + deviazione).max(0.0)))
+    }
+
+    /// Ciò che rileverebbe il prossimo controllo (chiusura di aprile-giugno), coi soli trimestri
+    /// chiusi: l'anno intero se il conto lo ha (anno chiuso, o quello del turno zero), se no
+    /// spesa netta e PIL dell'anno annualizzati sui trimestri chiusi prima di `data`.
+    pub(crate) fn proiezione(&self, dati: &DatiGioco, data: Trimestre) -> Option<ProiezioneUe> {
+        let anno = if data.trimestre <= 2 {
+            data.anno.saturating_sub(1)
+        } else {
+            data.anno
+        };
+        let fattore = if anno < data.anno || anno == Trimestre::TURNO_ZERO.anno {
+            1.0
+        } else {
+            4.0 / f64::from(data.trimestre - 1)
+        };
+        let (deviazione, conto) = self.controllo(dati, anno, fattore)?;
+        Some(ProiezioneUe {
+            anno,
+            deviazione,
+            conto,
+        })
     }
 
     fn cambia(&mut self, pde: StatoPde) {
@@ -142,28 +192,15 @@ impl Economia {
     /// Controllo dell'anno `anno - 1`; aggiorna il conto e dice lo stato che ne segue.
     fn controllo_annuale(&mut self, dati: &DatiGioco, anno: u16) -> StatoPde {
         let r = &self.regole_ue;
-        let s = dati.scenario();
-        let (a1, a2) = (anno.saturating_sub(1), anno.saturating_sub(2));
-        let (Some(&sn1), Some(&sn2), Some(&pil1), Some(&dis1)) = (
-            r.spesa_netta.get(&a1),
-            r.spesa_netta.get(&a2),
+        let a1 = anno.saturating_sub(1);
+        let (Some((deviazione, conto)), Some(&pil1), Some(&dis1)) = (
+            r.controllo(dati, a1, 1.0),
             r.pil_annuo.get(&a1),
             r.disavanzo_annuo.get(&a1),
         ) else {
             return r.pde;
         };
-        let clausola = if a1 <= s.clausola_nazionale_fino_a {
-            s.clausola_nazionale_margine.valore
-        } else if a1 <= r.clausola_energia_fino_a {
-            dati.manopola("clausola_energia_margine")
-        } else {
-            0.0
-        };
-        let tetto = s.tetto_spesa_netta(a1);
         let pil1 = pil1 as f64;
-        let deviazione =
-            (sn1 as f64 - sn2 as f64 * (1.0 + tetto / 100.0)) / pil1 * 100.0 - clausola;
-        let conto = (r.conto_controllo + deviazione).max(0.0);
         let rilevante = deviazione > dati.manopola("deviazione_annua_rilevante")
             || conto > dati.manopola("deviazione_cumulata_rilevante");
         let disavanzo_anno = dis1 as f64 / pil1 * 100.0;

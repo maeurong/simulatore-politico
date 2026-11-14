@@ -1,7 +1,7 @@
 mod comune;
 
-use comune::{dati_base, edita};
-use sim_core::{Errore, Partita, VERSIONE_SCHEMA};
+use comune::{al_governo, all_opposizione, dati_base, edita, file_base, sostituisci};
+use sim_core::{DatiGioco, Errore, Partita, VERSIONE_SCHEMA};
 
 /// Media pesata sulle forze di lavoro, nell'ordine dei dati.
 fn media_forze_lavoro(valori: impl Iterator<Item = f64>) -> f64 {
@@ -140,4 +140,66 @@ fn disoccupazione_regionale_manomessa_rifiutata() {
         errore.to_string().contains("disoccupazione_prima"),
         "{errore}"
     );
+}
+
+#[test]
+fn la_minaccia_sta_nel_partito() {
+    let p = Partita::nuova(dati_base(), 7);
+    assert!(p.vista().partiti.iter().all(|x| !x.minaccia));
+    let p = edita(&p, |j| j["partiti"][1]["minaccia"] = true.into()).unwrap();
+    let minacce: Vec<bool> = p.vista().partiti.iter().map(|x| x.minaccia).collect();
+    assert!(minacce[1], "{minacce:?}");
+    assert_eq!(minacce.iter().filter(|&&m| m).count(), 1, "{minacce:?}");
+}
+
+#[test]
+fn vista_completa_al_turno_zero() {
+    let nuova = Partita::nuova(dati_base(), 7);
+    let v = nuova.vista();
+    assert!(
+        v.elezioni.iter().all(|e| e.regioni.is_empty()),
+        "nessun voto"
+    );
+    let r = &v.regole_ue;
+    assert_eq!(r.procedura, nuova.economia().regole_ue.pde);
+    assert!(!r.coesione_sospesa);
+    assert_eq!(r.margine_energia, None);
+    // Con la clausola nazionale finita nel 2025 il margine per l'energia del 2026 conta.
+    let f = sostituisci(
+        file_base(),
+        "scenario",
+        "clausola_nazionale_fino_a = 2028",
+        "clausola_nazionale_fino_a = 2025",
+    );
+    let corta = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 7);
+    assert_eq!(corta.vista().regole_ue.margine_energia, None);
+    let margine = edita(&corta, |j| {
+        j["economia"]["regole_ue"]["clausola_energia_fino_a"] = 2026.into();
+    })
+    .unwrap();
+    assert_eq!(margine.vista().regole_ue.margine_energia, Some(2026));
+    for (nome, p) in [
+        ("al governo", al_governo()),
+        ("all'opposizione", all_opposizione()),
+    ] {
+        let v = p.vista();
+        assert!(!v.elezioni.is_empty(), "{nome}");
+        for e in &v.elezioni {
+            assert_eq!(e.regioni.len(), v.regioni.len(), "{nome}: {:?}", e.data);
+        }
+        assert_eq!(
+            (v.debito.mes, v.debito.ristrutturazione),
+            (None, None),
+            "{nome}"
+        );
+        let anno = v.regole_ue.proiezione.expect("proiezione").anno;
+        let senza = edita(&p, |j| {
+            let conto = j["economia"]["regole_ue"]["spesa_netta"]
+                .as_object_mut()
+                .unwrap();
+            assert!(conto.remove(&anno.to_string()).is_some(), "{nome}: {anno}");
+        })
+        .unwrap();
+        assert_eq!(senza.vista().regole_ue.proiezione, None, "{nome}");
+    }
 }

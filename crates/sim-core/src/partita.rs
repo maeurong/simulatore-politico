@@ -40,10 +40,10 @@ use crate::salvataggi::{ElezioneAlbo, FORMATO_ALBO, PuntoSerie, Testata, VoceAlb
 use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita, PrezzoAcquisto, SeggiPartito,
-    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaReferendum, VistaStatistica,
-    VoceAlleato, VoceBudget, VoceDicastero, VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico,
-    VoceMinistero, VoceOpera, VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione,
-    VoceSituazione,
+    Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito, VistaMes, VistaReferendum,
+    VistaRegoleUe, VistaRistrutturazione, VistaStatistica, VoceAlleato, VoceBudget, VoceDicastero,
+    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMinistero, VoceOpera, VoceOpzione,
+    VocePartito, VoceProgramma, VocePromessa, VoceRegione, VoceSituazione, VoceVincolo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -4331,6 +4331,7 @@ impl Partita {
                         })
                     })
                     .collect(),
+                minaccia: p.minaccia,
             })
             .collect()
     }
@@ -4495,6 +4496,49 @@ impl Partita {
             fermate: self.fermate(),
             regioni: self.voci_regioni(),
             opere: self.voci_opere(),
+            regole_ue: self.vista_regole_ue(),
+            debito: self.vista_debito(),
+        }
+    }
+
+    fn vista_regole_ue(&self) -> VistaRegoleUe {
+        let r = &self.economia.regole_ue;
+        let nazionale = self.dati.scenario().clausola_nazionale_fino_a;
+        VistaRegoleUe {
+            procedura: r.pde,
+            turni_in_stato: r.turni_in_stato,
+            conto_controllo: r.conto_controllo,
+            ultima_deviazione: r.ultima_deviazione,
+            coesione_sospesa: r.pde.e_inadempiente(),
+            margine_energia: Some(r.clausola_energia_fino_a).filter(|&a| a > nazionale),
+            proiezione: r.proiezione(&self.dati, self.data),
+        }
+    }
+
+    fn vista_debito(&self) -> VistaDebito {
+        let e = &self.economia;
+        let disposizioni = self.dati.disposizioni();
+        VistaDebito {
+            debito_pil: e.debito_e_disavanzo_pil().0,
+            mes: e.mes_in_corso(self.turno).map(|fine| VistaMes {
+                fine: data_di(fine),
+                vincoli: (self.condizionalita().into_iter())
+                    .filter_map(|(d, g)| {
+                        let x = disposizioni.get(d)?;
+                        Some(VoceVincolo {
+                            disposizione: x.nome.clone(),
+                            gradino: x.gradini.get(g)?.nome.clone(),
+                        })
+                    })
+                    .collect(),
+            }),
+            ristrutturazione: e.ristrutturazione.map(|r| VistaRistrutturazione {
+                taglio: data_di(r.turno),
+                // Cast: il premio sta fra 1 e `premio_ristrutturazione` (`controlla_coerenza`).
+                premio_pb: r.premio.round() as i32,
+                fine_perdita: (r.perdita_in_corso(&self.dati, self.turno))
+                    .then(|| data_di(r.fine_perdita(&self.dati))),
+            }),
         }
     }
 

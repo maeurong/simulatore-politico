@@ -7,6 +7,8 @@ use crate::partiti::{DatoGoverno, DatoPartito};
 use crate::su_misura::NOMI_CURSORI_SINTETICI;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+#[cfg(test)]
+use ts_rs::TS;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ingresso {
@@ -18,6 +20,7 @@ pub struct Ingresso {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub enum StatoPde {
     Nessuna,
     Aperta,

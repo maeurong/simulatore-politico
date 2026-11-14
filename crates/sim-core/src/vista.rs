@@ -13,6 +13,7 @@ use crate::parlamento::{
 };
 use crate::partita::Trimestre;
 use crate::partiti::{Regola, Vocazione};
+use crate::scenario::StatoPde;
 use crate::struttura::Macroarea;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -108,6 +109,73 @@ pub struct Vista {
     pub regioni: Vec<VoceRegione>,
     /// Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
     pub opere: Vec<VoceOpera>,
+    pub regole_ue: VistaRegoleUe,
+    pub debito: VistaDebito,
+}
+
+/// Le regole fiscali UE. Tutto tranne `proiezione` è il verdetto su un anno chiuso e riveduto;
+/// `conto_controllo` e `ultima_deviazione` sono in % del PIL, dopo l'ultimo controllo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRegoleUe {
+    pub procedura: StatoPde,
+    pub turni_in_stato: u32,
+    pub conto_controllo: f64,
+    pub ultima_deviazione: f64,
+    pub coesione_sospesa: bool,
+    /// L'ultimo anno per cui il giocatore ha chiesto il margine UE per l'energia, solo se viene
+    /// dopo `clausola_nazionale_fino_a` dello scenario (prima la clausola nazionale copre già
+    /// l'energia); `None` se mai chiesto o se non conta.
+    pub margine_energia: Option<u16>,
+    /// `None` se al conto manca un anno.
+    pub proiezione: Option<ProiezioneUe>,
+}
+
+/// Ciò che rileverebbe il prossimo controllo: l'anno giudicato, la deviazione e il conto di
+/// controllo che ne uscirebbe, in % del PIL. Con l'anno non ancora chiuso, spesa netta e PIL sono
+/// annualizzati sui trimestri chiusi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct ProiezioneUe {
+    pub anno: u16,
+    pub deviazione: f64,
+    pub conto: f64,
+}
+
+/// `debito_pil`: il debito in % del PIL degli ultimi quattro trimestri, quello dello spread.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaDebito {
+    pub debito_pil: f64,
+    pub mes: Option<VistaMes>,
+    pub ristrutturazione: Option<VistaRistrutturazione>,
+}
+
+/// Il programma del MES in corso: `fine` è il primo trimestre senza vincoli.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaMes {
+    pub fine: Trimestre,
+    pub vincoli: Vec<VoceVincolo>,
+}
+
+/// Una disposizione vincolata dal memorandum e il gradino a cui la tiene, coi nomi del catalogo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceVincolo {
+    pub disposizione: String,
+    pub gradino: String,
+}
+
+/// La ristrutturazione del debito: `taglio` è il trimestre in cui il debito è stato tagliato,
+/// `premio_pb` il premio di oggi sullo spread, `fine_perdita` il primo trimestre in cui i redditi
+/// dei detentori non calano più, `None` se la perdita è già finita.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRistrutturazione {
+    pub taglio: Trimestre,
+    pub premio_pb: i32,
+    pub fine_perdita: Option<Trimestre>,
 }
 
 /// Un'opera finita in una regione. `dicastero` e `regione` sono id, `atto` il nome dell'atto,
@@ -502,6 +570,9 @@ pub struct VocePartito {
     pub cassa: i64,
     /// Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
     pub promesse: Vec<VocePromessa>,
+    /// Ha minacciato la scissione e la distanza fra le posizioni non è ancora tornata sotto la
+    /// soglia di minaccia.
+    pub minaccia: bool,
 }
 
 /// Una promessa di campagna coi nomi del catalogo.

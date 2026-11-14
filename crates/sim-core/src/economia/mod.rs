@@ -129,7 +129,13 @@ impl Ristrutturazione {
     /// A `turno` i redditi dei detentori calano ancora: per `turni_ristrutturazione` turni dal
     /// taglio.
     pub(crate) fn perdita_in_corso(&self, dati: &DatiGioco, turno: u32) -> bool {
-        f64::from(turno) < f64::from(self.turno) + dati.manopola("turni_ristrutturazione")
+        turno < self.fine_perdita(dati)
+    }
+
+    /// Il primo turno in cui i redditi dei detentori non calano più.
+    pub(crate) fn fine_perdita(&self, dati: &DatiGioco) -> u32 {
+        // Cast: la manopola sta nel suo intervallo, positivo e finito.
+        (f64::from(self.turno) + dati.manopola("turni_ristrutturazione")).ceil() as u32
     }
 }
 

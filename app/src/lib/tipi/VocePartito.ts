@@ -18,4 +18,9 @@ cassa: number,
 /**
  * Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
  */
-promesse: Array<VocePromessa>, };
+promesse: Array<VocePromessa>, 
+/**
+ * Ha minacciato la scissione e la distanza fra le posizioni non è ancora tornata sotto la
+ * soglia di minaccia.
+ */
+minaccia: boolean, };
