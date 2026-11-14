@@ -16,29 +16,29 @@
   const nome = (p: VocePartito) => (p.id === giocatore ? t("partiti.tu") : p.nome);
   const colore = (p: VocePartito) => coloreDi(p.id) ?? "var(--grigio)";
 
-  // due dichiarate più vicine di un quadrato si affiancano di poco, centrate sul punto vero: i due quadrati si vedono e ognuno ha il suo gambo
+  // due dichiarate che si toccano si impilano: ognuno resta alla sua ascissa vera, il giocatore sta in basso e si disegna per ultimo
   const POSTO = 11;
-  const posto = $derived.by(() => {
-    const dx: Record<string, number> = {};
-    let gruppo: VocePartito[] = [];
-    const chiudi = () => {
-      const media = gruppo.reduce((a, p) => a + X(p.posizione_dichiarata), 0) / gruppo.length;
-      gruppo.forEach((p, i) => (dx[p.id] = media + (i - (gruppo.length - 1) / 2) * POSTO));
-      gruppo = [];
-    };
-    for (const p of [...partiti].sort((a, b) => a.posizione_dichiarata - b.posizione_dichiarata)) {
-      if (gruppo.length && X(p.posizione_dichiarata) - X(gruppo[gruppo.length - 1].posizione_dichiarata) >= POSTO) chiudi();
-      gruppo.push(p);
+  const livello = $derived.by(() => {
+    const per: number[][] = [];
+    const lv: Record<string, number> = {};
+    const ordine = [...partiti].sort((a, b) => Number(b.id === giocatore) - Number(a.id === giocatore) || a.posizione_dichiarata - b.posizione_dichiarata);
+    for (const p of ordine) {
+      const x = X(p.posizione_dichiarata);
+      let k = 0;
+      while (per[k]?.some((o) => Math.abs(o - x) < POSTO)) k++;
+      (per[k] ??= []).push(x);
+      lv[p.id] = k;
     }
-    if (gruppo.length) chiudi();
-    return dx;
+    return lv;
   });
+  const sopra = $derived(Math.max(0, ...Object.values(livello)) * POSTO);
+  const disegno = $derived([...partiti.filter((p) => p.id !== giocatore), ...partiti.filter((p) => p.id === giocatore)]);
 
   // i nomi su più file: ognuno sulla prima fila in cui non tocca l'ultimo già messo (da sinistra)
   const file = $derived.by(() => {
     const fine: number[] = [];
-    return Object.fromEntries([...partiti].sort((a, b) => posto[a.id] - posto[b.id]).map((p) => {
-      const x = posto[p.id], mezzo = (nome(p).length * 7.2 + 14) / 2;
+    return Object.fromEntries([...partiti].sort((a, b) => a.posizione_dichiarata - b.posizione_dichiarata).map((p) => {
+      const x = X(p.posizione_dichiarata), mezzo = (nome(p).length * 7.2 + 14) / 2;
       let k = 0;
       while ((fine[k] ?? -1e9) > x - mezzo) k++;
       fine[k] = x + mezzo;
@@ -46,11 +46,11 @@
     }));
   });
   const righe = $derived(Math.max(0, ...Object.values(file)) + 1);
-  const H = $derived(52 + righe * PASSO);
+  const H = $derived(52 + righe * PASSO + sopra);
   const y0 = $derived(H - 22);
   const y = $derived(y0 - 6);
   const ancora = (p: VocePartito) => {
-    const x = posto[p.id], m = nome(p).length * 3.6 + 4;
+    const x = X(p.posizione_dichiarata), m = nome(p).length * 3.6 + 4;
     return x - L < m ? "start" : R - x < m ? "end" : "middle";
   };
 </script>
@@ -69,24 +69,23 @@
   <text x={R + 14} y={y0 + 16} text-anchor="end">▸</text>
 
   <!-- i gambi prima, i nomi dopo: il nome di un partito non lo taglia il gambo di un altro -->
-  {#each partiti as p (p.id)}
-    <line x1={posto[p.id]} y1={y - 5} x2={posto[p.id]} y2={y - 14 - file[p.id] * PASSO + 3} opacity={p.sciolto ? 0.45 : 1} style:stroke={colore(p)} stroke-width="1" />
+  {#each disegno as p (p.id)}
+    <line x1={X(p.posizione_dichiarata)} y1={y - livello[p.id] * POSTO - 5} x2={X(p.posizione_dichiarata)} y2={y - sopra - 14 - file[p.id] * PASSO + 3} opacity={p.sciolto ? 0.45 : 1} style:stroke={colore(p)} stroke-width="1" />
   {/each}
-  {#each partiti as p (p.id)}
-    {@const xd = posto[p.id]}
-    {@const delta = X(p.posizione_percepita) - X(p.posizione_dichiarata)}
-    {@const ferma = Math.abs(delta) <= 2}
-    {@const xp = ferma ? xd : X(p.posizione_percepita)}
-    {@const yl = y - 14 - file[p.id] * PASSO}
+  {#each disegno as p (p.id)}
+    {@const xd = X(p.posizione_dichiarata)}
+    {@const xp = X(p.posizione_percepita)}
+    {@const yq = y - livello[p.id] * POSTO}
+    {@const yl = y - sopra - 14 - file[p.id] * PASSO}
     {@const c = colore(p)}
     {@const nato = coloreDi(p.id) === null}
     {#snippet segno()}
-      {#if !ferma}
-        <line x1={xd} y1={y} x2={xp - Math.sign(xp - xd) * 4} y2={y} class="freccia" marker-end="url(#{pre}-pt)" />
+      {#if Math.abs(xp - xd) > 2}
+        <line x1={xd} y1={yq} x2={xp - Math.sign(xp - xd) * 4} y2={yq} class="freccia" marker-end="url(#{pre}-pt)" />
       {/if}
-      <circle cx={xp} cy={y} r="4.5" class="anello" style:stroke={c} />
+      <circle cx={xp} cy={yq} r="4.5" class="anello" style:stroke={c} />
       <text class="nm" class:sc={p.sciolto} x={xd + (ancora(p) === "start" ? -6 : ancora(p) === "end" ? 6 : 0)} y={yl} text-anchor={ancora(p)}>{nome(p)}</text>
-      <rect x={xd - 5} y={y - 5} width="10" height="10" class="quad" style:fill={nato ? `url(#${pre}-ret)` : c} />
+      <rect x={xd - 5} y={yq - 5} width="10" height="10" class="quad" style:fill={nato ? `url(#${pre}-ret)` : c} />
     {/snippet}
     {#if onscelta}
       <g opacity={p.sciolto ? 0.45 : 1} class="sceglie" class:scelto={scelto === p.id} role="button" tabindex="0" aria-label={aria(p)} aria-pressed={scelto === p.id}
