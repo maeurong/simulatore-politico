@@ -3108,10 +3108,7 @@ impl Partita {
                     .and_then(|e| e.senato_per_regione.get(&r.id))
                     .cloned()
                     .unwrap_or_else(|| vec![0; n]);
-                // `>` stretto: a parità resta il primo nell'ordine dei partiti.
-                let (primo, _) = (voti.iter().enumerate()).fold((0, 0), |m, (j, &v)| {
-                    if v > m.1 || j == 0 { (j, v) } else { m }
-                });
+                let primo = legislatura::primo_partito(voti);
                 Some(VotoRegione {
                     regione: r.id.clone(),
                     voti: voti.iter().map(|&v| v as f64 / votanti).collect(),
@@ -5383,6 +5380,21 @@ impl Partita {
                 })
             }),
             "legislatura.elezioni con una regione che non è nei dati o con voti e seggi non lunghi quanto i partiti dell'esito",
+        )?;
+        ok(
+            l.elezioni.iter().all(|e| {
+                e.regioni
+                    .iter()
+                    .all(|r| e.voti.iter().any(|v| v.partito == r.primo))
+            }),
+            "legislatura.elezioni con una regione il cui primo partito non è fra i partiti dell'esito",
+        )?;
+        ok(
+            l.elezioni.iter().all(|e| {
+                let mut viste = std::collections::BTreeSet::new();
+                e.regioni.iter().all(|r| viste.insert(r.regione.as_str()))
+            }),
+            "legislatura.elezioni con una regione ripetuta",
         )?;
         ok(
             l.fase == Fase::Sciolta || self.turno <= l.scadenza,

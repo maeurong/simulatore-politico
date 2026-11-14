@@ -88,6 +88,13 @@ pub(crate) fn voti_per_regione(
         .collect()
 }
 
+/// L'indice del partito con più voti; a parità il più basso, cioè il primo nell'ordine dei partiti.
+pub(crate) fn primo_partito(voti: &[u64]) -> usize {
+    (voti.iter().enumerate())
+        .fold((0, 0), |m, (j, &v)| if v > m.1 { (j, v) } else { m })
+        .0
+}
+
 /// La prima di `coalizioni` (la prima è del giocatore) con più della metà dei seggi in entrambe le
 /// Camere; i partiti fuori da ogni coalizione contano da soli. Senza maggioranza, `Giocatore` se
 /// la sua coalizione ha più seggi alla Camera di ogni altra (scelta 9 del piano 7); altrimenti
@@ -125,6 +132,13 @@ pub(crate) fn incarico(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_parita_di_voti_il_primo_e_il_primo_nell_ordine_dei_partiti() {
+        assert_eq!(primo_partito(&[5, 9, 9, 2]), 1);
+        assert_eq!(primo_partito(&[0, 0, 0]), 0);
+        assert_eq!(primo_partito(&[3, 4, 5]), 2);
+    }
 
     #[test]
     fn incarico_a_chi_ha_la_maggioranza_in_entrambe_le_camere() {

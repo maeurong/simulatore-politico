@@ -1,6 +1,6 @@
 mod comune;
 
-use comune::{dati_base, file_base, fondata, sostituisci};
+use comune::{dati_base, edita, file_base, fondata, imposta, sostituisci};
 use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::elezioni::{
@@ -8,7 +8,7 @@ use sim_core::elezioni::{
     Soggetto, Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
 };
 use sim_core::errore::Errore;
-use sim_core::legislatura::EsitoElezioni;
+use sim_core::legislatura::{EsitoElezioni, Fondazione};
 use sim_core::struttura::Macroarea;
 use std::collections::BTreeMap;
 
@@ -1050,7 +1050,8 @@ fn dopo_il_voto() -> (Partita, EsitoElezioni) {
 #[test]
 fn i_voti_per_regione_sommano_al_nazionale() {
     let (p, e) = dopo_il_voto();
-    assert_eq!(e.regioni.len(), p.vista().regioni.len());
+    assert!(!e.regioni.is_empty());
+    assert!((e.regioni.iter().map(|r| &r.regione)).eq(p.vista().regioni.iter().map(|r| &r.id)));
     for (j, v) in e.voti.iter().enumerate() {
         let somma: f64 = e.regioni.iter().map(|r| r.voti[j]).sum();
         assert!(
@@ -1062,23 +1063,41 @@ fn i_voti_per_regione_sommano_al_nazionale() {
     }
 }
 
+/// Proporzionale puro: nessun premio, quindi i seggi del Senato sono proporzionali, speciali ed
+/// estero, e tutti fuori dall'estero stanno nelle regioni. L'oracolo del riparto stesso
+/// (`Σ senato_per_regione = proporzionali + speciali`) è `senato_per_regione_somma_ai_seggi`.
 #[test]
 fn i_seggi_del_senato_per_regione() {
-    let (p, e) = dopo_il_voto();
-    let estero = dati_base().elezioni().senato.estero;
-    let totale: u32 = e.regioni.iter().flat_map(|r| &r.seggi_senato).sum();
-    let seggi: u32 = e.voti.iter().map(|v| v.senato).sum();
-    // Mancano il premio e l'estero: il resto non sta nelle regioni.
-    assert!(
-        totale + estero <= seggi,
-        "{totale} + {estero} contro {seggi}"
+    let f = imposta(
+        file_base(),
+        "scenario",
+        "legge_elettorale = \"",
+        "proporzionale_puro\"",
     );
-    if e.premio.is_none() {
-        assert_eq!(totale + estero, seggi);
+    let mut p = Partita::fonda(
+        DatiGioco::da_testi(&f).unwrap(),
+        7,
+        &Fondazione {
+            nome: "Partito nuovo".into(),
+            posizione: 3.5,
+        },
+    )
+    .unwrap();
+    while p.legislatura().elezioni.is_empty() {
+        p.chiudi_turno();
     }
-    for r in &e.regioni {
-        assert_eq!(r.seggi_senato.len(), p.partiti().len());
+    let e = &p.legislatura().elezioni[0];
+    assert_eq!(e.premio, None);
+    assert!(!e.regioni.is_empty());
+    let estero = dati_base().elezioni().senato.estero;
+    let mut dall_estero = 0;
+    for (j, v) in e.voti.iter().enumerate() {
+        let nelle_regioni: u32 = e.regioni.iter().map(|r| r.seggi_senato[j]).sum();
+        let fuori = v.senato.checked_sub(nelle_regioni);
+        dall_estero +=
+            fuori.unwrap_or_else(|| panic!("{}: {nelle_regioni} > {}", v.partito, v.senato));
     }
+    assert_eq!(dall_estero, estero);
 }
 
 #[test]
@@ -1101,4 +1120,20 @@ fn l_albo_non_porta_le_regioni() {
     let elezioni = v["elezioni"].as_array().unwrap();
     assert!(!elezioni.is_empty());
     assert!(elezioni.iter().all(|e| e.get("regioni").is_none()));
+}
+
+#[test]
+fn le_regioni_manomesse_dell_esito_sono_rifiutate() {
+    let (p, _) = dopo_il_voto();
+    let primo = edita(&p, |j| {
+        j["legislatura"]["elezioni"][0]["regioni"][0]["primo"] = "atlantide".into();
+    })
+    .unwrap_err();
+    assert!(primo.to_string().contains("primo partito"), "{primo}");
+    let doppia = edita(&p, |j| {
+        let r = j["legislatura"]["elezioni"][0]["regioni"][0]["regione"].clone();
+        j["legislatura"]["elezioni"][0]["regioni"][1]["regione"] = r;
+    })
+    .unwrap_err();
+    assert!(doppia.to_string().contains("ripetuta"), "{doppia}");
 }
