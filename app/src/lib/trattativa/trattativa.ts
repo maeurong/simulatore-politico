@@ -48,3 +48,84 @@ export function risultato(v: Vista) {
 /** Il default accanto a «Chiudi il turno», secondo l'incarico. */
 export const defaultDellaChiusura = (v: Vista): Chiave | null =>
   v.incarico === "giocatore" ? "cornice.senza_proposta" : v.incarico === "guida" ? "cornice.senza_scelta_guida" : null;
+
+export type EsitoManda = "ok" | "occupato" | "guasto" | { rifiuto: string };
+export type StatoSpartizione = {
+  bozza: Bozza;
+  /** sotto la riga che il giocatore ha cliccato */
+  rifiuto: { dicastero: string; testo: string } | null;
+  /** «partita» solo se l'ultimo comando è riuscito; «pendente» finché un comando è in volo o aspetta di partire */
+  esito: "pendente" | "partita" | null;
+};
+
+/**
+ * La bozza della spartizione: ogni scelta a bozza completa manda il comando. La bozza resta l'ultima che il core ha
+ * accettato: un rifiuto o un guasto riportano il dicastero cliccato alla scelta accettata. Un clic con un comando in volo
+ * (`manda` dà «occupato») resta pendente e `riprova()`, da chiamare quando la partita si libera, lo manda una volta sola.
+ */
+export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => Promise<EsitoManda>, mostra: (s: StatoSpartizione) => void) {
+  let bozza: Bozza = {};
+  let accettata: Bozza = {};
+  let rifiuto: StatoSpartizione["rifiuto"] = null;
+  let esito: "pendente" | "partita" | null = null;
+  let pendente = false;
+  let ultimo = "";
+  const dai = () => mostra({ bozza, rifiuto, esito: pendente ? "pendente" : esito });
+  const indietro = (inviata: Bozza, dicastero: string) => {
+    if (bozza[dicastero] !== inviata[dicastero]) return;
+    const { [dicastero]: _, ...resto } = bozza;
+    bozza = accettata[dicastero] === undefined ? resto : { ...resto, [dicastero]: accettata[dicastero] };
+  };
+
+  async function invia() {
+    pendente = false;
+    const inviata = bozza;
+    const dicastero = ultimo;
+    const comando = proponi(vista(), inviata);
+    if (!comando) {
+      esito = null;
+      return dai();
+    }
+    esito = "pendente";
+    dai();
+    const r = await manda(comando);
+    if (r === "occupato") pendente = true;
+    else if (r === "ok") {
+      accettata = inviata;
+      esito = bozza === inviata ? "partita" : "pendente";
+    } else {
+      indietro(inviata, dicastero);
+      if (typeof r === "object") rifiuto = { dicastero, testo: r.rifiuto };
+      esito = null;
+    }
+    dai();
+  }
+
+  return {
+    scegli(dicastero: string, a: string | null) {
+      if (bozza[dicastero] === a) return;
+      rifiuto = null;
+      ultimo = dicastero;
+      bozza = { ...bozza, [dicastero]: a };
+      return invia();
+    },
+    riprova() {
+      if (!pendente) return;
+      rifiuto = null;
+      return invia();
+    },
+    /** La Vista è cambiata: le scelte che non stanno più in aChi (un alleato è uscito) si scartano, senza mandare niente. */
+    aggiorna() {
+      const valide = new Set(aChi(vista()));
+      const pulisci = (b: Bozza): Bozza => Object.fromEntries(Object.entries(b).filter(([, x]) => x !== undefined && valide.has(x)));
+      const nuova = pulisci(bozza);
+      accettata = pulisci(accettata);
+      if (Object.keys(nuova).length === Object.keys(bozza).filter((k) => bozza[k] !== undefined).length) return;
+      bozza = nuova;
+      rifiuto = null;
+      esito = null;
+      pendente = false;
+      dai();
+    },
+  };
+}

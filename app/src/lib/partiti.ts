@@ -8,6 +8,15 @@ const OTTO = ["estrema_sinistra", "sinistra", "centrosinistra", "centro", "centr
 /** id → variabile CSS (fondamenta.css), per gli otto dello scenario. */
 export const COLORI: Record<string, string> = Object.fromEntries(OTTO.map((id) => [id, `var(--p-${id})`]));
 
+/**
+ * Il testo sul pieno del colore del partito: inchiostro sui chiari, carta sugli scuri. Su centrosinistra e giocatore né carta
+ * né inchiostro arrivano a 4,5:1 (4,14 e 4,04): bianco e nero puri (4,88 e 4,93). Nel tono grave i pieni sono grigi: il CSS rimette la carta.
+ */
+const TESTO_SU: Record<string, string> = {
+  sinistra: "var(--ink)", centro: "var(--ink)", centrodestra: "var(--ink)", centrosinistra: "#ffffff", giocatore: "#000000",
+};
+export const testoSu = (id: string): string => TESTO_SU[id] ?? (id in COLORI ? "var(--carta)" : "var(--ink)");
+
 /** Il colore del partito, o null: un nato in partita va a retino grigio. */
 export const coloreDi = (id: string): string | null => COLORI[id] ?? null;
 

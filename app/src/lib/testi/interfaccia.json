@@ -643,6 +643,8 @@
   "trattativa.gli_alleati": "Gli alleati",
   "trattativa.assegnati": "Assegnati {n} su {tot}. La proposta parte quando sono tutti assegnati; da lì ogni clic la sostituisce.",
   "trattativa.proposta_in_corso": "Tutti assegnati: la proposta è partita, ogni clic la sostituisce.",
+  "trattativa.sta_partendo": "La proposta sta partendo.",
+  "trattativa.ultima_accettata": "Tutti assegnati: resta l’ultima proposta accettata.",
   "trattativa.ph_default": "La spartizione di default per dicastero e il segno sulle righe cambiate",
   "trattativa.ph_intesa": "L’intesa di partenza degli alleati, con «entra in ultimatum» e «può uscire»"
 }
