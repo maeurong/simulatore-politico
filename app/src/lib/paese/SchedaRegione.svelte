@@ -26,6 +26,7 @@
   const dispo = $derived(disposizioniDi(vista, regione));
   const aulaAperta = $derived(barrata("aula", vista) === null);
 
+  const turno = $derived(vista.turno);
   let casella = $state<{ condizione: Condizione; fascia: Fascia } | null>(null);
   let esito = $state.raw<EsitoElettori | null>(null);
   const sessione = sessioneElettori(guscio.elettoriCampione, (e) => {
@@ -35,7 +36,7 @@
   });
   $effect(() => {
     esito = null;
-    if (casella) sessione.chiedi(regione, casella.condizione, casella.fascia, vista.turno);
+    if (casella) sessione.chiedi(regione, casella.condizione, casella.fascia, turno);
     else sessione.annulla();
     return sessione.annulla;
   });

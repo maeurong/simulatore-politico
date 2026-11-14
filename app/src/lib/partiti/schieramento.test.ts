@@ -100,6 +100,13 @@ describe("avvisi", () => {
     } as Vista;
     expect(di(v, "nuovo_9")).toEqual(["avviso.ultimatum_governo", "avviso.sciolto", "avviso.al_governo", "avviso.nato"]);
   });
+  it("l'ultimatum dell'alleato del giocatore viene prima dello sciolto", () => {
+    const v = {
+      ...ultimatum,
+      partiti: ultimatum.partiti.map((p) => (p.id === "sinistra" ? { ...p, sciolto: true } : p)),
+    } as Vista;
+    expect(di(v, "sinistra")).toEqual(["avviso.ultimatum", "avviso.sciolto"]);
+  });
   it("«al governo» non va agli alleati del giocatore: sulla 30 centrodestra e nuovo_8 governano ma sono alleati", () => {
     expect(eredita.governa).toBe(false);
     for (const id of ["centrodestra", "nuovo_8", "giocatore"]) {

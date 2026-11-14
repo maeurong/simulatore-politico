@@ -74,12 +74,14 @@
   {/each}
   {#each partiti as p (p.id)}
     {@const xd = posto[p.id]}
-    {@const xp = X(p.posizione_percepita)}
+    {@const delta = X(p.posizione_percepita) - X(p.posizione_dichiarata)}
+    {@const ferma = Math.abs(delta) <= 2}
+    {@const xp = ferma ? xd : X(p.posizione_percepita)}
     {@const yl = y - 14 - file[p.id] * PASSO}
     {@const c = colore(p)}
     {@const nato = coloreDi(p.id) === null}
     {#snippet segno()}
-      {#if Math.abs(xp - xd) > 2}
+      {#if !ferma}
         <line x1={xd} y1={y} x2={xp - Math.sign(xp - xd) * 4} y2={y} class="freccia" marker-end="url(#{pre}-pt)" />
       {/if}
       <circle cx={xp} cy={y} r="4.5" class="anello" style:stroke={c} />
