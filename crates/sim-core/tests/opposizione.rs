@@ -1,14 +1,16 @@
 mod comune;
+use std::collections::BTreeMap;
+
 use comune::{
-    all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, fondata,
-    togli_eventi_nati, voci,
+    all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, file_vero, fondata,
+    presenta, togli_eventi_nati, voci,
 };
 use sim_core::esito::{Criticita, TipoVoce};
-use sim_core::legislatura::Fase;
+use sim_core::legislatura::{Fase, Fondazione};
 use sim_core::ministri::Causa;
 use sim_core::parlamento::{CausaIntesa, FormaMisura, ValoreProposto};
-use sim_core::vista::FasciaIntesa;
-use sim_core::{Comando, Partita};
+use sim_core::vista::{CostiLinea, FasciaIntesa, VoceSfiducia};
+use sim_core::{Comando, DatiGioco, Partita};
 
 /// Chiude finché il posto riservato è del giocatore, senza le mosse dell'opposizione IA.
 fn al_posto_riservato(p: &mut Partita) {
@@ -678,4 +680,242 @@ fn in_crisi_la_sfiducia_del_giocatore_sostituisce_quella_automatica() {
         assert_eq!(ricompattati, 1, "{j}");
     }
     assert_eq!(p.legislatura().crisi, Some(turno + 1));
+}
+
+/// La partita del ticket «Cruscotto all'opposizione» (generatore delle Viste, `opposizione.rs`):
+/// dati veri, seme 1, fondazione a 1,5, nessuna coalizione, `chiusure` chiusure senza comandi.
+/// Con due chiusure è il 06 delle Viste: aprile-giugno 2027, sotto un governo IA.
+fn del_ticket(chiusure: u32) -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione: 1.5,
+    };
+    let mut p = Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), 1, &f).unwrap();
+    for _ in 0..chiusure {
+        p.chiudi_turno();
+    }
+    assert_eq!(p.vista().turno, chiusure);
+    p
+}
+
+/// Il 03 delle Viste (`governo_03` del generatore): dati veri, seme 4, fondazione a 4,5,
+/// coalizione con la destra disponibile, due chiusure; il giocatore governa.
+fn governo_03() -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione: 4.5,
+    };
+    let mut p = Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), 4, &f).unwrap();
+    let partiti = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti,
+        cessioni: vec![],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert!(p.governa());
+    p
+}
+
+#[test]
+fn la_vista_dice_la_sfiducia_presentata() {
+    let mut p = del_ticket(2);
+    assert_eq!(p.vista().sfiducia, None);
+    p.comanda(Comando::Sfiducia { dicastero: None }).unwrap();
+    assert_eq!(
+        p.vista().sfiducia,
+        Some(VoceSfiducia {
+            dicastero: None,
+            partito: "giocatore".into(),
+        })
+    );
+    p.chiudi_turno();
+    let v = p.vista();
+    let e = (v.esiti.iter())
+        .find(|e| e.forma == FormaMisura::Sfiducia)
+        .unwrap();
+    assert!(!e.approvata);
+    assert_eq!((e.camera.si, e.camera.no), (60, 340));
+    assert_eq!((e.senato.si, e.senato.no), (28, 172));
+    assert_eq!(v.sfiducia, None);
+}
+
+#[test]
+fn di_chi_e_il_posto_riservato() {
+    assert_eq!(del_ticket(0).vista().posto_riservato_di, None);
+    let p = del_ticket(1);
+    assert_eq!(p.legislatura().fase, Fase::Trattativa);
+    assert_eq!(p.vista().posto_riservato_di, None);
+    let v = del_ticket(2).vista();
+    assert_eq!(v.posto_riservato_di.as_deref(), Some("estrema_destra"));
+    assert!(!v.posto_riservato);
+    let mut p = del_ticket(3);
+    let v = p.vista();
+    assert_eq!(v.posto_riservato_di.as_deref(), Some("giocatore"));
+    assert!(v.posto_riservato);
+    p.comanda(Comando::PresentaProposta {
+        valori: valori(&[("salario_minimo", "11")]),
+    })
+    .unwrap();
+    let v = p.vista();
+    assert_eq!(v.posto_riservato_di.as_deref(), Some("giocatore"));
+    assert!(!v.posto_riservato);
+}
+
+/// Per ogni disposizione, `rifiuto_referendum` è ciò che `PromuoviReferendum` renderebbe ora; i
+/// rifiuti per id.
+fn rifiuti_come_il_comando(p: &Partita) -> BTreeMap<String, Option<String>> {
+    (p.vista().disposizioni.into_iter())
+        .map(|d| {
+            let comando = (p.clone())
+                .comanda(Comando::PromuoviReferendum {
+                    disposizione: d.id.clone(),
+                })
+                .err()
+                .map(|e| e.to_string());
+            assert_eq!(d.rifiuto_referendum, comando, "{}", d.id);
+            (d.id, d.rifiuto_referendum)
+        })
+        .collect()
+}
+
+#[test]
+fn il_rifiuto_del_referendum_e_quello_del_comando() {
+    let mut p = del_ticket(2);
+    let r = rifiuti_come_il_comando(&p);
+    assert_eq!(r["tetto_contante"], None);
+    assert_eq!(
+        r["forfettario"].as_deref(),
+        Some("comando non ammesso: Regime forfettario degli autonomi non è referendabile")
+    );
+    assert_eq!(
+        r["concorrenza_servizi"].as_deref(),
+        Some("comando non ammesso: niente da abrogare: Concorrenza nei servizi")
+    );
+    p.comanda(Comando::PromuoviReferendum {
+        disposizione: "tetto_contante".into(),
+    })
+    .unwrap();
+    let r = rifiuti_come_il_comando(&p);
+    assert_eq!(
+        r["regime_pensioni"].as_deref(),
+        Some("comando non ammesso: un referendum è già in corso")
+    );
+    let r = rifiuti_come_il_comando(&del_ticket(4));
+    assert_eq!(
+        r["tetto_contante"].as_deref(),
+        Some("comando non ammesso: fuori finestra: si chiede entro luglio-settembre")
+    );
+    let r = rifiuti_come_il_comando(&del_ticket(19));
+    for rifiuto in r.values() {
+        assert_eq!(
+            rifiuto.as_deref(),
+            Some(
+                "comando non ammesso: Nessuna richiesta di referendum nell'ultimo anno della \
+                 legislatura"
+            )
+        );
+    }
+    let r = rifiuti_come_il_comando(&governo_03());
+    for rifiuto in r.values() {
+        assert_eq!(
+            rifiuto.as_deref(),
+            Some("comando non ammesso: solo all'opposizione: governi tu")
+        );
+    }
+}
+
+fn costi_della_misura_0(p: &Partita) -> CostiLinea {
+    let m = (p.vista().calendario.into_iter())
+        .find(|m| m.id == 0)
+        .unwrap();
+    assert_eq!(m.nome, "Sgravio contributivo nel Mezzogiorno: 15%");
+    m.costo_linea.unwrap()
+}
+
+fn vicino(a: f64, b: f64, tolleranza: f64) {
+    assert!((a - b).abs() < tolleranza, "{a} contro {b}");
+}
+
+#[test]
+fn il_costo_della_linea() {
+    let mut p = del_ticket(2);
+    let c = costi_della_misura_0(&p);
+    for (costo, [percepita, camera, senato]) in [
+        (&c.si, [1.625, 2.805, 1.485]),
+        (&c.no, [1.6, 2.38, 1.26]),
+        (&c.default, [1.6, 0.02 * (1.0 - 2.5 / 6.0) * 34.0, 0.21]),
+    ] {
+        vicino(costo.percepita, percepita, 1e-9);
+        vicino(costo.franchi_camera, camera, 1e-9);
+        vicino(costo.franchi_senato, senato, 1e-9);
+    }
+    vicino(c.default.franchi_camera, 0.39667, 1e-5);
+    p.comanda(Comando::Linea {
+        misura: 0,
+        si: Some(true),
+    })
+    .unwrap();
+    assert_eq!(costi_della_misura_0(&p), c);
+}
+
+/// La percepita del giocatore, dalla Vista.
+fn percepita(p: &Partita) -> f64 {
+    let v = p.vista();
+    (v.partiti.iter())
+        .find(|x| x.id == v.giocatore)
+        .unwrap()
+        .posizione_percepita
+}
+
+#[test]
+fn la_percepita_del_costo_e_quella_del_voto() {
+    let mut con = del_ticket(2);
+    let c = costi_della_misura_0(&con);
+    let mut senza = con.clone();
+    con.comanda(Comando::Linea {
+        misura: 0,
+        si: Some(true),
+    })
+    .unwrap();
+    // La misura si vota nella chiusura del suo trimestre: una chiusura in più se non è arrivata.
+    for _ in 0..2 {
+        if (con.vista().esiti.iter()).any(|e| e.misura == 0) {
+            break;
+        }
+        con.chiudi_turno();
+        senza.chiudi_turno();
+    }
+    assert!((con.vista().esiti.iter()).any(|e| e.misura == 0));
+    vicino(percepita(&con), 1.9363, 1e-4);
+    vicino(percepita(&senza), 1.9149, 1e-4);
+    vicino(
+        percepita(&con) - percepita(&senza),
+        (c.si.percepita - c.default.percepita) * 0.95_f64.powi(3),
+        1e-4,
+    );
+}
+
+#[test]
+fn costo_linea_solo_dove_si_sceglie() {
+    let v = del_ticket(2).vista();
+    assert!(!v.calendario.is_empty());
+    assert!(v.calendario.iter().all(|m| m.costo_linea.is_some()));
+    // Il calendario del 03 è vuoto: una legge del giocatore al governo perché la prova non sia
+    // vuota.
+    let mut p = governo_03();
+    presenta(&mut p, &[("salario_minimo", "9")]).unwrap();
+    let v = p.vista();
+    let del_governo: Vec<_> = (v.calendario.iter())
+        .filter(|m| m.promotore.is_none())
+        .collect();
+    assert!(!del_governo.is_empty());
+    assert!(del_governo.iter().all(|m| m.costo_linea.is_none()));
 }

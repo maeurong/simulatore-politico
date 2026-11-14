@@ -62,6 +62,11 @@ pub struct Vista {
     /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
     /// proposta dell'opposizione è già in calendario.
     pub posto_riservato: bool,
+    /// Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
+    /// `None` altrove o senza partiti fuori dal governo con seggi alla Camera.
+    pub posto_riservato_di: Option<String>,
+    /// La mozione di sfiducia presentata nel turno, votata in chiusura; `None` = nessuna.
+    pub sfiducia: Option<VoceSfiducia>,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
     /// I referendum in attesa del voto.
@@ -468,6 +473,37 @@ pub struct VoceMisura {
     pub effetti: Vec<EffettoStimato>,
     pub leve: Vec<VoceLeva>,
     pub gruppi: Vec<Condizione>,
+    /// Dove il giocatore sceglie la linea (la guardia di `Linea`), ciò che ogni linea costa al
+    /// suo partito; `None` altrove.
+    pub costo_linea: Option<CostiLinea>,
+}
+
+/// La sfiducia del turno: `dicastero` è l'id (`None` = al governo), `partito` l'id di chi l'ha
+/// presentata.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSfiducia {
+    pub dicastero: Option<String>,
+    pub partito: String,
+}
+
+/// Una linea del giocatore su una misura: la sua percepita dopo il voto, calcolata su quella di
+/// oggi, e i franchi tiratori attesi del suo partito in ogni ramo (probabilità per seggi).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CostoLinea {
+    pub percepita: f64,
+    pub franchi_camera: f64,
+    pub franchi_senato: f64,
+}
+
+/// Il costo della linea sì, no e di default.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CostiLinea {
+    pub si: CostoLinea,
+    pub no: CostoLinea,
+    pub default: CostoLinea,
 }
 
 /// Una legge prima della presentazione: costo annuo esatto in euro, effetti nominali a fasce
@@ -555,6 +591,8 @@ pub struct VoceDisposizione {
     pub precedente: String,
     pub in_arrivo: Vec<VoceArrivo>,
     pub referendabile: bool,
+    /// Il rifiuto che `PromuoviReferendum` del giocatore darebbe ora; `None` = ammesso.
+    pub rifiuto_referendum: Option<String>,
     /// Le regioni; vuoto = tutto il Paese.
     pub perimetro: Vec<String>,
     pub gradini: Vec<VoceGradino>,

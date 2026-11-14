@@ -10,7 +10,7 @@ use crate::ministri::{Causa, Ministri, penalizza};
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use crate::scenario::Scenario;
-use crate::vista::{Forbice, VariazioneSeggi, VoceMisura};
+use crate::vista::{CostiLinea, CostoLinea, Forbice, VariazioneSeggi, VoceMisura};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -925,11 +925,12 @@ impl Parlamento {
 
     /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto;
     /// costo, effetti, leve e gruppi da `anteprima`, con la `capacita` di chi stima la misura e il
-    /// PIL potenziale annuo `pil_annuo`.
+    /// PIL potenziale annuo `pil_annuo`; il costo della linea dove `linea_ammessa`.
     pub(crate) fn voci_calendario(
         &self,
         aula: &StatoAula,
         capacita: impl Fn(&Misura) -> f64,
+        linea_ammessa: impl Fn(&Misura) -> bool,
         caso: &Caso,
         pil_annuo: f64,
     ) -> Vec<VoceMisura> {
@@ -980,9 +981,42 @@ impl Parlamento {
                     effetti: a.effetti,
                     leve: a.leve,
                     gruppi: a.gruppi,
+                    costo_linea: linea_ammessa(m).then(|| self.costi_linea(aula, m)),
                 }
             })
             .collect()
+    }
+
+    /// `previsione` della misura con la linea del giocatore a sì, a no e di default: la sua
+    /// percepita dopo il voto (`voto::percepita_dopo`, come in `vota`) e i franchi tiratori
+    /// attesi del suo partito per ramo.
+    fn costi_linea(&self, aula: &StatoAula, m: &Misura) -> CostiLinea {
+        let g = aula.giocatore;
+        let costo = |linea_giocatore: Option<bool>| {
+            let p = aula.previsione(&Misura {
+                linea_giocatore,
+                ..m.clone()
+            });
+            let attesi = |q: &[f64], seggi: &[u32]| {
+                (q.get(g).zip(seggi.get(g))).map_or(0.0, |(q, &n)| q * f64::from(n))
+            };
+            let percepita = aula.partiti.get(g).map_or(0.0, |x| x.posizione_percepita);
+            CostoLinea {
+                percepita: match (p.posizioni, p.linea.get(g)) {
+                    (Some(posizioni), Some(&si)) => {
+                        voto::percepita_dopo(aula.dati, percepita, posizioni, si)
+                    }
+                    _ => percepita,
+                },
+                franchi_camera: attesi(&p.franchi_camera, &self.seggi_camera),
+                franchi_senato: attesi(&p.franchi, &self.seggi_senato),
+            }
+        };
+        CostiLinea {
+            si: costo(Some(true)),
+            no: costo(Some(false)),
+            default: costo(None),
+        }
     }
 
     /// I sì attesi ± 2σ per ramo con la linea e i franchi tiratori della previsione.

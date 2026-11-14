@@ -44,7 +44,7 @@ use crate::vista::{
     VistaMes, VistaPosti, VistaReferendum, VistaRegoleUe, VistaRistrutturazione, VistaStatistica,
     VoceAlleato, VoceBudget, VoceCostoPromessa, VoceDicastero, VoceEvento, VoceFascia,
     VoceGrandezza, VoceIncarico, VoceMenu, VoceMinistero, VoceOpera, VoceOpzione, VocePartito,
-    VoceProgramma, VocePromessa, VoceRegione, VoceSituazione, VoceVincolo,
+    VoceProgramma, VocePromessa, VoceRegione, VoceSfiducia, VoceSituazione, VoceVincolo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1194,13 +1194,12 @@ impl Partita {
         }
         // Il giocatore scivola a ogni voto verso la posizione che il suo voto sostiene, anche con
         // la linea di default: la nuova col sì, la vigente col no (ticket 12, riga 44).
-        if let Some((vigore, nuova)) = p.posizioni {
-            let s = self.dati.manopola("scivolamento_percepita");
+        if let Some(posizioni) = p.posizioni {
             let g = self.giocatore;
             let voti = self.partiti.iter_mut().zip(&p.linea).enumerate();
             for (_, (x, &si)) in voti.filter(|&(j, (_, &si))| si || j == g) {
-                let sostenuta = if si { nuova } else { vigore };
-                x.posizione_percepita += s * (sostenuta - x.posizione_percepita);
+                x.posizione_percepita =
+                    voto::percepita_dopo(&self.dati, x.posizione_percepita, posizioni, si);
             }
         }
         self.voce_voto(&esito, &m, coda, in_attesa);
@@ -2080,15 +2079,22 @@ impl Partita {
         promotore: &str,
         disposizione: &str,
     ) -> Result<(), Errore> {
-        self.finestra_referendum()?;
-        let r = (self.parlamento).abrogativo(
-            &self.stato_aula(),
-            self.turno,
-            promotore,
-            disposizione,
-        )?;
-        self.parlamento.referendum = Some(r);
+        self.parlamento.referendum = Some(self.abrogativo_ammesso(promotore, disposizione)?);
         Ok(())
+    }
+
+    /// Il referendum che `promuovi_referendum` scriverebbe: la finestra, poi
+    /// `Parlamento::abrogativo`. Non tocca nulla.
+    ///
+    /// # Errors
+    /// Quelli di `promuovi_referendum`, nello stesso ordine.
+    fn abrogativo_ammesso(
+        &self,
+        promotore: &str,
+        disposizione: &str,
+    ) -> Result<Referendum, Errore> {
+        self.finestra_referendum()?;
+        (self.parlamento).abrogativo(&self.stato_aula(), self.turno, promotore, disposizione)
     }
 
     /// Le guardie di `promuovi_referendum` che non guardano né promotore né disposizione.
@@ -4409,6 +4415,16 @@ impl Partita {
     /// `Comando` dalla guardia dell'opposizione, al governo su una misura che non è una proposta
     /// dell'opposizione, o con la misura sconosciuta.
     pub(crate) fn linea(&mut self, misura: u32, si: Option<bool>) -> Result<(), Errore> {
+        self.linea_ammessa(misura)?;
+        self.parlamento.linea(misura, si)
+    }
+
+    /// La guardia di `Linea`, che la Vista usa per il costo della linea.
+    ///
+    /// # Errors
+    /// `Comando` dalla guardia dell'opposizione, o al governo su una misura che non è una
+    /// proposta dell'opposizione.
+    fn linea_ammessa(&self, misura: u32) -> Result<(), Errore> {
         if !self.governa() {
             self.all_opposizione()?;
         } else if (self.parlamento.misure.iter()).any(|m| m.id == misura && m.promotore.is_none()) {
@@ -4418,7 +4434,7 @@ impl Partita {
                     .into(),
             ));
         }
-        self.parlamento.linea(misura, si)
+        Ok(())
     }
 
     /// `PresentaProposta`: la legge del giocatore nel posto riservato, nel turno in cui è suo.
@@ -4560,7 +4576,16 @@ impl Partita {
                 revisione: s.revisione.clone(),
             },
             bilancio: self.vista_bilancio(),
-            disposizioni: self.disposizioni.voci_vista(&self.dati),
+            disposizioni: {
+                let promotore = (self.partiti.get(self.giocatore)).map_or("", |p| p.id.as_str());
+                // Le guardie di `PromuoviReferendum`, nell'ordine del comando.
+                self.disposizioni.voci_vista(&self.dati, |d| {
+                    (self.all_opposizione())
+                        .and_then(|()| self.abrogativo_ammesso(promotore, d))
+                        .err()
+                        .map(|e| e.to_string())
+                })
+            },
             seggi: (self.partiti.iter())
                 .zip(&self.parlamento.seggi_camera)
                 .zip(&self.parlamento.seggi_senato)
@@ -4573,9 +4598,22 @@ impl Partita {
             alleati: self.voci_alleati(),
             alleati_avversari: self.voci_avversari(),
             posto_riservato: self.posto_riservato_mio(),
+            posto_riservato_di: (self.posto_riservato())
+                .filter(|_| l.fase == Fase::Ordinaria)
+                .and_then(|j| self.partiti.get(j))
+                .map(|p| p.id.clone()),
+            sfiducia: self.parlamento.sfiducia.map(|(i, j)| VoceSfiducia {
+                dicastero: i
+                    .and_then(|i| self.dati.dicasteri().get(i))
+                    .map(|d| d.id.clone()),
+                partito: (self.partiti.get(j))
+                    .map(|p| p.id.clone())
+                    .unwrap_or_default(),
+            }),
             calendario: self.parlamento.voci_calendario(
                 &self.stato_aula(),
                 |m| self.capacita_proponente(m.proponente),
+                |m| self.linea_ammessa(m.id).is_ok(),
                 &self.caso,
                 self.economia.pil_potenziale_annuo(),
             ),

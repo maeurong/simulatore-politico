@@ -32,6 +32,7 @@ import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
 import type { VoceRegione } from "./VoceRegione";
 import type { VoceRichiesta } from "./VoceRichiesta";
+import type { VoceSfiducia } from "./VoceSfiducia";
 import type { VoceSituazione } from "./VoceSituazione";
 
 /**
@@ -96,7 +97,16 @@ alleati_avversari: Array<VoceFascia>,
  * Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
  * proposta dell'opposizione è già in calendario.
  */
-posto_riservato: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
+posto_riservato: boolean, 
+/**
+ * Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
+ * `None` altrove o senza partiti fuori dal governo con seggi alla Camera.
+ */
+posto_riservato_di: string | null, 
+/**
+ * La mozione di sfiducia presentata nel turno, votata in chiusura; `None` = nessuna.
+ */
+sfiducia: VoceSfiducia | null, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
 /**
  * I referendum in attesa del voto.
  */

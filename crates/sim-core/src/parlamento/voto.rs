@@ -102,6 +102,18 @@ pub fn probabilita_franco(
         .collect()
 }
 
+/// La percepita dopo un voto (ticket 12, riga 44): scivola di `scivolamento_percepita` verso la
+/// posizione che il voto sostiene, la nuova col sì, la vigente col no.
+pub(crate) fn percepita_dopo(
+    dati: &DatiGioco,
+    percepita: f64,
+    (vigore, nuova): (f64, f64),
+    si: bool,
+) -> f64 {
+    let sostenuta = if si { nuova } else { vigore };
+    percepita + dati.manopola("scivolamento_percepita") * (sostenuta - percepita)
+}
+
 /// Sì necessari in un ramo di `seggi` seggi: tutti votano, passa con `sì > no`.
 pub fn maggioranza(seggi: u32) -> u32 {
     seggi / 2 + 1

@@ -9,6 +9,10 @@ import type { VoceGradino } from "./VoceGradino";
  */
 export type VoceDisposizione = { id: string, nome: string, dicastero: string | null, norma: Norma, tipo: TipoDisposizione, in_vigore: string, legge: string, precedente: string, in_arrivo: Array<VoceArrivo>, referendabile: boolean, 
 /**
+ * Il rifiuto che `PromuoviReferendum` del giocatore darebbe ora; `None` = ammesso.
+ */
+rifiuto_referendum: string | null, 
+/**
  * Le regioni; vuoto = tutto il Paese.
  */
 perimetro: Array<string>, gradini: Array<VoceGradino>, };
