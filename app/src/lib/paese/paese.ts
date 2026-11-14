@@ -44,7 +44,7 @@ export function segniPerRegione(v: Vista): Record<string, Segno[]> {
     aggiungi(m.agenda?.regione, "atto");
     for (const c of m.cantieri) aggiungi(c.regione, "cantiere");
   }
-  for (const e of v.eventi) aggiungi(REGIONI.find((r) => e.regione && senzaAccento(r.nome) === senzaAccento(e.regione))?.id, "emergenza");
+  for (const e of v.eventi.filter((e) => e.famiglia === "emergenza")) aggiungi(REGIONI.find((r) => e.regione && senzaAccento(r.nome) === senzaAccento(e.regione))?.id, "emergenza");
   return fuori;
 }
 

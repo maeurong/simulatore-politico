@@ -65,6 +65,13 @@ describe("segniPerRegione", () => {
     expect(grave.eventi[0].regione).toBe("Lazio");
     expect(segniPerRegione(grave).lazio).toContain("emergenza");
   });
+  it("solo la famiglia emergenza dà il segno: shock, scandalo e gli altri con regione no", () => {
+    const altri = (["situazione", "scandalo", "shock", "debito"] as const).map((famiglia) => ({ ...grave.eventi[0], famiglia, regione: "Toscana" }));
+    const v = { ...grave, eventi: [...grave.eventi, ...altri] };
+    const segni = segniPerRegione(v);
+    expect(segni.toscana).toBeUndefined();
+    expect(segni.lazio).toEqual(["emergenza"]);
+  });
   it("cantieri e atti in agenda con regione danno i loro segni", () => {
     const tutti = Object.values(segniPerRegione(governo)).flat();
     const attesi = governo.ministeri.flatMap((m) => [...(m.agenda?.regione ? ["atto"] : []), ...m.cantieri.filter((c) => c.regione).map(() => "cantiere")]);
