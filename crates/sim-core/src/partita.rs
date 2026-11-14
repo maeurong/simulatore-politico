@@ -25,7 +25,8 @@ use crate::informazione::{
 use crate::legislatura::{
     self, Assegnazione, Cessione, ConfrontoIndicatore, Dichiarazione, Eredita, EsitoElezioni, Fase,
     Fine, Incarico, Legislatura, OrigineCaduta, Quadro, Spesa, VoceAnteprimaCampagna,
-    VoceDisponibilita, VoceRichiesta, VotiPartito, campagna, cassa, coalizioni_al_voto,
+    VoceDisponibilita, VoceRichiesta, VotiPartito, VotoRegione, campagna, cassa,
+    coalizioni_al_voto,
 };
 use crate::ministri::{Causa, Contesto, Ministri, TipoProposta, causa_peggiore, penalizza};
 use crate::misure::{CAPACITA_NEUTRA, Misure};
@@ -3070,7 +3071,27 @@ impl Partita {
             .collect();
         let votanti = per_partito.iter().sum::<u64>().max(1) as f64;
         let legge = self.legge_elettorale();
+        let per_regione = voti.clone();
         let riparto = parlamento::riparto_con(&self.dati, &legge, &leve, &coalizioni, voti);
+        let regioni = (self.dati.regioni().iter())
+            .filter_map(|r| {
+                let voti = per_regione.get(&r.id)?;
+                let seggi_senato = (riparto.as_ref().ok())
+                    .and_then(|e| e.senato_per_regione.get(&r.id))
+                    .cloned()
+                    .unwrap_or_else(|| vec![0; n]);
+                // `>` stretto: a parità resta il primo nell'ordine dei partiti.
+                let (primo, _) = (voti.iter().enumerate()).fold((0, 0), |m, (j, &v)| {
+                    if v > m.1 || j == 0 { (j, v) } else { m }
+                });
+                Some(VotoRegione {
+                    regione: r.id.clone(),
+                    voti: voti.iter().map(|&v| v as f64 / votanti).collect(),
+                    seggi_senato,
+                    primo: (self.partiti.get(primo)).map_or_else(String::new, |p| p.id.clone()),
+                })
+            })
+            .collect();
         let eletti = riparto.as_ref().ok().map(|e| {
             let totali = |v: &[SeggiLista]| v.iter().map(SeggiLista::totale).collect::<Vec<_>>();
             let (mut camera, mut senato) = (totali(&e.camera), totali(&e.senato));
@@ -3101,6 +3122,7 @@ impl Partita {
                 .collect(),
             premio,
             coalizioni: coalizioni.iter().map(|c| ids(c)).collect(),
+            regioni,
         };
         // ponytail: col riparto rifiutato restano i seggi di prima; al turno zero le Camere restano
         // vuote in Trattativa, la partita finisce senza seggi e `salva` fallisce. Non deve
@@ -5292,6 +5314,17 @@ impl Partita {
             "legislatura.elezioni con una quota fuori da 0-1",
         )?;
         ok(
+            // I partiti nascono nel corso della partita: la lunghezza è quella dell'esito stesso.
+            l.elezioni.iter().all(|e| {
+                (e.regioni.iter()).all(|r| {
+                    r.voti.len() == e.voti.len()
+                        && r.seggi_senato.len() == e.voti.len()
+                        && self.dati.regioni().iter().any(|d| d.id == r.regione)
+                })
+            }),
+            "legislatura.elezioni con una regione che non è nei dati o con voti e seggi non lunghi quanto i partiti dell'esito",
+        )?;
+        ok(
             l.fase == Fase::Sciolta || self.turno <= l.scadenza,
             "legislatura: turno oltre la scadenza fuori dalla fase sciolta",
         )?;
@@ -6897,6 +6930,7 @@ mod tests {
             voti,
             premio: None,
             coalizioni: Vec::new(),
+            regioni: Vec::new(),
         };
         let ids = (p.partiti.iter()).map(|x| x.id.clone()).collect::<Vec<_>>();
         let prima = esito(ids.iter().map(|id| voce(id, 0.10)).collect());

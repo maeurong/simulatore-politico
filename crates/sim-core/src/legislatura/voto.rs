@@ -20,8 +20,23 @@ pub struct VotiPartito {
     pub senato: u32,
 }
 
+/// Il voto in una regione (id): `voti` come le quote di `EsitoElezioni.voti` (stesso ordine, stessi
+/// votanti nazionali al denominatore, quindi sommano alla quota del partito). `seggi_senato` per
+/// partito non somma ai seggi del partito: mancano il premio e l'estero, e vengono prima delle
+/// cessioni in coalizione; col riparto rifiutato sono zeri. `primo` = id del partito con più voti,
+/// a parità il primo nell'ordine dei partiti.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VotoRegione {
+    pub regione: String,
+    pub voti: Vec<f64>,
+    pub seggi_senato: Vec<u32>,
+    pub primo: String,
+}
+
 /// L'esito di un voto: `affluenza` fra gli aventi diritto, una voce per partito, `premio` = gli
-/// id dei membri di chi l'ha preso uniti da `+`, `coalizioni` = quelle al voto (id).
+/// id dei membri di chi l'ha preso uniti da `+`, `coalizioni` = quelle al voto (id), `regioni` =
+/// il voto in ogni regione, nell'ordine dei dati.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct EsitoElezioni {
@@ -30,6 +45,7 @@ pub struct EsitoElezioni {
     pub voti: Vec<VotiPartito>,
     pub premio: Option<String>,
     pub coalizioni: Vec<Vec<String>>,
+    pub regioni: Vec<VotoRegione>,
 }
 
 impl EsitoElezioni {

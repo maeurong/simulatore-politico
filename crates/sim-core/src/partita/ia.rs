@@ -1712,6 +1712,7 @@ mod tests {
             }],
             premio: None,
             coalizioni: Vec::new(),
+            regioni: Vec::new(),
         };
         p.legislatura.elezioni = vec![esito(0.06), esito(0.05)];
         let ed = &mut p.partiti[6];

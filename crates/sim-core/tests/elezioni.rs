@@ -1,12 +1,14 @@
 mod comune;
 
-use comune::{dati_base, file_base, sostituisci};
+use comune::{dati_base, file_base, fondata, sostituisci};
+use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::elezioni::{
     Esito, Formula, LeggeElettorale, Premio, QuoteTetto, Ramo, SeggiCircoscrizione, SeggiLista,
     Soggetto, Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
 };
 use sim_core::errore::Errore;
+use sim_core::legislatura::EsitoElezioni;
 use sim_core::struttura::Macroarea;
 use std::collections::BTreeMap;
 
@@ -1030,4 +1032,73 @@ fn coalizione_di_una_lista_vale_lista_sola() {
     let senza = esito(&legge_180(), &uniformi(&millesimi, vec![]));
     assert_eq!(con, senza);
     assert_eq!(con.premio, Some(Soggetto::Lista(0)));
+}
+
+/// Una partita al primo voto vero, con l'esito più recente.
+fn dopo_il_voto() -> (Partita, EsitoElezioni) {
+    let mut p = fondata(3.5);
+    for _ in 0..60 {
+        if !p.legislatura().elezioni.is_empty() {
+            break;
+        }
+        p.chiudi_turno();
+    }
+    let e = p.legislatura().elezioni[0].clone();
+    (p, e)
+}
+
+#[test]
+fn i_voti_per_regione_sommano_al_nazionale() {
+    let (p, e) = dopo_il_voto();
+    assert_eq!(e.regioni.len(), p.vista().regioni.len());
+    for (j, v) in e.voti.iter().enumerate() {
+        let somma: f64 = e.regioni.iter().map(|r| r.voti[j]).sum();
+        assert!(
+            (somma - v.quota).abs() < 1e-9,
+            "{}: {somma} contro {}",
+            v.partito,
+            v.quota
+        );
+    }
+}
+
+#[test]
+fn i_seggi_del_senato_per_regione() {
+    let (p, e) = dopo_il_voto();
+    let estero = dati_base().elezioni().senato.estero;
+    let totale: u32 = e.regioni.iter().flat_map(|r| &r.seggi_senato).sum();
+    let seggi: u32 = e.voti.iter().map(|v| v.senato).sum();
+    // Mancano il premio e l'estero: il resto non sta nelle regioni.
+    assert!(
+        totale + estero <= seggi,
+        "{totale} + {estero} contro {seggi}"
+    );
+    if e.premio.is_none() {
+        assert_eq!(totale + estero, seggi);
+    }
+    for r in &e.regioni {
+        assert_eq!(r.seggi_senato.len(), p.partiti().len());
+    }
+}
+
+#[test]
+fn il_primo_partito_ha_piu_voti() {
+    let (p, e) = dopo_il_voto();
+    for r in &e.regioni {
+        let j = p.partiti().iter().position(|x| x.id == r.primo).unwrap();
+        assert!(r.voti.iter().all(|&v| v <= r.voti[j]), "{}", r.regione);
+        // A parità vince il primo nell'ordine dei partiti.
+        assert!(r.voti[..j].iter().all(|&v| v < r.voti[j]), "{}", r.regione);
+    }
+}
+
+#[test]
+fn l_albo_non_porta_le_regioni() {
+    let (mut p, _) = dopo_il_voto();
+    p.chiudi_turno();
+    p.abbandona().unwrap();
+    let v = serde_json::to_value(p.voce_albo().unwrap()).unwrap();
+    let elezioni = v["elezioni"].as_array().unwrap();
+    assert!(!elezioni.is_empty());
+    assert!(elezioni.iter().all(|e| e.get("regioni").is_none()));
 }
