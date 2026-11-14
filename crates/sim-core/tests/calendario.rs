@@ -1,9 +1,109 @@
 mod comune;
-use comune::{dati_base, edita, file_base, presenta, sostituisci};
+use comune::{
+    all_opposizione, chiudi_senza_opposizione_ia, dati_base, edita, file_base, presenta,
+    sostituisci,
+};
 use sim_core::ministri::Causa;
-use sim_core::parlamento::FormaMisura;
-use sim_core::vista::SeggiPartito;
-use sim_core::{DatiGioco, Errore, Partita, Trimestre};
+use sim_core::parlamento::{FormaMisura, ValoreProposto};
+use sim_core::vista::{Anteprima, SeggiPartito, VoceMinistro, VoceMisura};
+use sim_core::{Comando, DatiGioco, Errore, Partita, Trimestre};
+
+fn valori(v: &[(&str, &str)]) -> Vec<ValoreProposto> {
+    v.iter()
+        .map(|(d, g)| ValoreProposto {
+            disposizione: (*d).into(),
+            gradino: (*g).into(),
+        })
+        .collect()
+}
+
+/// La misura in calendario con la disposizione `id`.
+fn in_calendario(p: &Partita, id: &str) -> VoceMisura {
+    (p.vista().calendario.into_iter())
+        .find(|m| m.valori.iter().any(|v| v.disposizione == id))
+        .unwrap()
+}
+
+/// Costo, effetti, leve e gruppi della misura in calendario sono quelli dell'anteprima.
+fn stima_uguale(m: &VoceMisura, a: &Anteprima) {
+    assert_eq!(
+        (m.costo_annuo, &m.effetti, &m.leve, &m.gruppi),
+        (a.costo_annuo, &a.effetti, &a.leve, &a.gruppi)
+    );
+}
+
+fn ministro(p: &Partita, dicastero: &str) -> VoceMinistro {
+    (p.vista().ministeri.into_iter())
+        .find(|m| m.dicastero == dicastero)
+        .and_then(|m| m.ministro)
+        .unwrap()
+}
+
+/// Al governo la misura in calendario porta la stima dell'anteprima della stessa bozza, chiamata
+/// nello stesso turno prima di presentarla: stessa capacità del ministro, stessa chiave. Col seme 1
+/// il ministro della Sanità ha capacità 5, e la stima neutra del ticket alto sarebbe un'altra.
+#[test]
+fn la_misura_in_calendario_porta_l_anteprima() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let chi = ministro(&p, "sanita");
+    assert_eq!((chi.capacita, chi.rodaggio), (5, false));
+    let legge = valori(&[("ticket", "alto")]);
+    let a = p.anteprima(&legge).unwrap();
+    p.comanda(Comando::PresentaLegge { valori: legge }).unwrap();
+    let m = in_calendario(&p, "ticket");
+    assert!(!m.effetti.is_empty() && m.costo_annuo != 0, "{m:?}");
+    stima_uguale(&m, &a);
+}
+
+/// La stima ha la chiave del turno di presentazione: fra un turno e l'altro, con lo stesso
+/// ministro fuori dal rodaggio, gli effetti non cambiano; due viste di fila danno la stessa misura
+/// e non toccano la partita.
+#[test]
+fn la_stima_in_calendario_non_si_ricampiona() {
+    // Col seme 5, dopo una chiusura, il ministro dello Sviluppo economico ha capacità 1: una stima
+    // ricampionata al turno dopo sarebbe un'altra.
+    let mut p = Partita::nuova(dati_base(), 5);
+    p.chiudi_turno();
+    let chi = ministro(&p, "sviluppo_economico");
+    assert_eq!((chi.capacita, chi.rodaggio), (1, false));
+    presenta(
+        &mut p,
+        &[("incentivo_investimenti", "10"), ("credito_zes", "0_75")],
+    )
+    .unwrap();
+    let prima = p.salva().unwrap();
+    let m = in_calendario(&p, "credito_zes");
+    assert_eq!(in_calendario(&p, "credito_zes"), m);
+    assert_eq!(p.salva().unwrap(), prima);
+    p.chiudi_turno();
+    assert_eq!(ministro(&p, "sviluppo_economico").nome, chi.nome);
+    let dopo = in_calendario(&p, "credito_zes");
+    assert!(!m.effetti.is_empty());
+    assert_eq!(dopo.effetti, m.effetti);
+}
+
+/// La proposta del giocatore all'opposizione non ha ministro: la stima in calendario è quella
+/// neutra di `anteprima_proposta`.
+#[test]
+fn la_proposta_d_opposizione_ha_la_stima_neutra() {
+    let mut p = all_opposizione();
+    for _ in 0..8 {
+        if p.vista().posto_riservato {
+            break;
+        }
+        chiudi_senza_opposizione_ia(&mut p);
+    }
+    // Due disposizioni: sulla prima una stima di capacità 5 sarebbe un'altra, sulla seconda una
+    // di capacità 1.
+    let legge = valori(&[("incentivo_investimenti", "20"), ("credito_zes", "0")]);
+    let a = p.anteprima_proposta(&legge).unwrap();
+    p.comanda(Comando::PresentaProposta { valori: legge })
+        .unwrap();
+    let m = in_calendario(&p, "credito_zes");
+    assert_eq!(m.promotore.as_deref(), Some("giocatore"));
+    assert!(!m.effetti.is_empty(), "{m:?}");
+    stima_uguale(&m, &a);
+}
 
 #[test]
 fn parlamento_uscente_con_la_maggioranza() {

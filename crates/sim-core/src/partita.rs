@@ -15,7 +15,7 @@ use crate::errore::Errore;
 use crate::esito::{MASSIMO_IN_EVIDENZA, TipoVoce, VoceEsito};
 use crate::eventi::{
     ASTE_SCOPERTE, Bersaglio, DatoOpzione, EffettoOpzione, Eventi, EventoAperto, Famiglia, Tono,
-    emergenze, rischio, situazioni,
+    emergenze, inneschi, rischio, situazioni,
 };
 use crate::grandezze::{EffettoAttivo, Grandezze};
 use crate::informazione::{
@@ -2318,16 +2318,21 @@ impl Partita {
         Ok(self.anteprima_conversione(&self.parlamento.conversione(self.turno, fondi), Some(i)))
     }
 
+    /// La capacità effettiva del ministro che oggi guida il dicastero `proponente`: neutra senza
+    /// dicastero (una proposta d'opposizione) e all'interim.
+    fn capacita_proponente(&self, proponente: Option<usize>) -> f64 {
+        (proponente.and_then(|i| self.ministri.dicasteri.get(i)))
+            .and_then(|st| st.ministro.as_ref())
+            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati))
+    }
+
     /// L'anteprima della conversione `m`, con la capacità del ministro del dicastero `proponente`.
     fn anteprima_conversione(&self, m: &Misura, proponente: Option<usize>) -> Anteprima {
-        let capacita = (proponente.and_then(|i| self.ministri.dicasteri.get(i)))
-            .and_then(|st| st.ministro.as_ref())
-            .map_or(CAPACITA_NEUTRA, |x| x.capacita_effettiva(&self.dati));
         parlamento::anteprima(
             &self.parlamento,
             &self.stato_aula(),
             m,
-            capacita,
+            self.capacita_proponente(proponente),
             &self.caso,
             self.economia.pil_potenziale_annuo(),
         )
@@ -4485,7 +4490,12 @@ impl Partita {
             alleati: self.voci_alleati(),
             alleati_avversari: self.voci_avversari(),
             posto_riservato: self.posto_riservato_mio(),
-            calendario: self.parlamento.voci_calendario(&self.stato_aula()),
+            calendario: self.parlamento.voci_calendario(
+                &self.stato_aula(),
+                |m| self.capacita_proponente(m.proponente),
+                &self.caso,
+                self.economia.pil_potenziale_annuo(),
+            ),
             esiti: self.parlamento.esiti.clone(),
             referendum: (self.parlamento.referendum.iter())
                 .chain(&self.parlamento.confermativi)
@@ -4739,6 +4749,13 @@ impl Partita {
                         })
                         .collect(),
                     scelta: a.scelta,
+                    norme: {
+                        let inneschi = inneschi(&self.dati, std::slice::from_ref(a));
+                        (self.dati.disposizioni().iter().enumerate())
+                            .filter(|&(k, _)| parlamento::ammessa(&self.dati, &inneschi, k).is_ok())
+                            .map(|(_, x)| x.id.clone())
+                            .collect()
+                    },
                 }
             })
             .collect()

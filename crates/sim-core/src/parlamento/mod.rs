@@ -1,5 +1,6 @@
 //! Il parlamento in carica: seggi per partito, misure in calendario, esiti dei voti.
 
+use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
 use crate::elettorato::Affluenza;
@@ -23,7 +24,7 @@ pub mod voto;
 
 pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_centro_studi, chiave_test};
 pub use decreti::{Decreto, FondiDecreto};
-pub(crate) use decreti::{ammetti, ammetti_disposizioni};
+pub(crate) use decreti::{ammessa, ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata, testo};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
@@ -922,12 +923,21 @@ impl Parlamento {
         }
     }
 
-    /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.
-    pub(crate) fn voci_calendario(&self, aula: &StatoAula) -> Vec<VoceMisura> {
+    /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto;
+    /// costo, effetti, leve e gruppi da `anteprima`, con la `capacita` di chi stima la misura e il
+    /// PIL potenziale annuo `pil_annuo`.
+    pub(crate) fn voci_calendario(
+        &self,
+        aula: &StatoAula,
+        capacita: impl Fn(&Misura) -> f64,
+        caso: &Caso,
+        pil_annuo: f64,
+    ) -> Vec<VoceMisura> {
         let dati = aula.dati;
         let catalogo = dati.disposizioni();
         (self.misure.iter())
             .map(|m| {
+                let a = anteprima(self, aula, m, capacita(m), caso, pil_annuo);
                 let p = aula.previsione(m);
                 let nuova = p.posizioni.map(|(_, n)| n);
                 // L'ultimatum è lo stato della chiusura precedente: il costo della fiducia non lo
@@ -966,6 +976,10 @@ impl Parlamento {
                         })
                         .map(|(_, (p, _))| p.id.clone())
                         .collect(),
+                    costo_annuo: a.costo_annuo,
+                    effetti: a.effetti,
+                    leve: a.leve,
+                    gruppi: a.gruppi,
                 }
             })
             .collect()

@@ -292,6 +292,9 @@ pub struct VoceEvento {
     pub costo: i64,
     pub opzioni: Vec<VoceOpzione>,
     pub scelta: Option<usize>,
+    /// Le disposizioni (id) che il decreto innescato da questo evento ammette, nell'ordine del
+    /// catalogo: vuota se l'evento non ammette decreto.
+    pub norme: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -427,6 +430,12 @@ pub struct VoceMisura {
     pub alleati_contro_fiducia: Vec<String>,
     /// Solo per le leggi elettorali: una voce per partito.
     pub seggi: Vec<VariazioneSeggi>,
+    /// Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero proponente (neutra
+    /// senza ministro e per una proposta d'opposizione), con la chiave del turno di presentazione.
+    pub costo_annuo: i64,
+    pub effetti: Vec<EffettoStimato>,
+    pub leve: Vec<VoceLeva>,
+    pub gruppi: Vec<Condizione>,
 }
 
 /// Una legge prima della presentazione: costo annuo esatto in euro, effetti nominali a fasce
