@@ -4,4 +4,9 @@ import type { StatoEmendamento } from "./StatoEmendamento";
 /**
  * L'emendamento di un alleato; `partito` è un id.
  */
-export type VoceEmendamento = { partito: string, testo: string, motivo: string, stato: StatoEmendamento, };
+export type VoceEmendamento = { partito: string, testo: string, motivo: string, stato: StatoEmendamento, 
+/**
+ * Gli id dei dicasteri indicizzati dalla proposta, in ordine; vuoto sugli emendamenti delle
+ * leggi.
+ */
+dicasteri: Array<string>, };

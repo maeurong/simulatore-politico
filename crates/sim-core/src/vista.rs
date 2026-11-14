@@ -1,5 +1,5 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
-use crate::economia::Aliquote;
+use crate::economia::{Aliquote, Bilancio};
 use crate::elettorato::Condizione;
 use crate::esito::VoceEsito;
 use crate::eventi::{Famiglia, Tono};
@@ -495,6 +495,9 @@ pub struct VoceEmendamento {
     pub testo: String,
     pub motivo: String,
     pub stato: StatoEmendamento,
+    /// Gli id dei dicasteri indicizzati dalla proposta, in ordine; vuoto sugli emendamenti delle
+    /// leggi.
+    pub dicasteri: Vec<String>,
 }
 
 /// Sì attesi ± 2σ per ramo, prima del voto; `maggioranza_*` = sì necessari; `in_bilico` se una
@@ -564,6 +567,9 @@ pub struct VistaBilancio {
     pub presentabile: bool,
     /// Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.
     pub presentato: bool,
+    /// Il bilancio presentato com'è in aula, emendamenti accolti compresi; `None` senza legge
+    /// presentata.
+    pub in_aula: Option<Bilancio>,
     /// Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
     pub esercizio_provvisorio: bool,
 }

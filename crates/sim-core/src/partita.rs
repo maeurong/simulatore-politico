@@ -2395,6 +2395,7 @@ impl Partita {
             fondo_residuo: (b.fondo_riserva - e.fondo_speso).max(0),
             presentabile: self.bozza_bilancio().is_some(),
             presentato: e.bilancio_presentato.is_some(),
+            in_aula: e.bilancio_presentato.clone(),
             esercizio_provvisorio: e.esercizio_provvisorio(self.data),
         }
     }

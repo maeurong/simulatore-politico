@@ -4,13 +4,15 @@
 )]
 
 mod comune;
-use comune::{dati_base, edita, senza_shock, voci};
+use comune::{all_opposizione, dati_base, edita, senza_shock, voci};
 use serde_json::json;
 use sim_core::dati::DatiGioco;
 use sim_core::economia::{Aliquote, Bilancio, RiepilogoBilancio, Scaglione, Voce, irpef};
 use sim_core::elettorato::{Condizione, Fascia, fascia_di};
 use sim_core::esito::TipoVoce;
 use sim_core::ministri::Causa;
+use sim_core::parlamento::FormaMisura;
+use sim_core::vista::VoceEmendamento;
 use sim_core::{Comando, Errore, Partita};
 
 fn perdita(r: &RiepilogoBilancio, voce: &str) -> f64 {
@@ -789,4 +791,86 @@ fn indice_prezzi_non_positivo_o_non_numerico_nel_salvataggio_rifiutato() {
         });
         assert!(matches!(r, Err(Errore::SalvataggioIlleggibile(_))), "{r:?}");
     }
+}
+
+/// Gli emendamenti del bilancio in calendario.
+fn emendamenti_del_bilancio(p: &Partita) -> Vec<VoceEmendamento> {
+    (p.vista().calendario.into_iter())
+        .find(|m| m.forma == FormaMisura::Bilancio)
+        .unwrap()
+        .emendamenti
+}
+
+fn spese(b: &Bilancio) -> Vec<(String, i64)> {
+    (b.dicasteri.iter())
+        .map(|d| (d.id.clone(), d.spesa))
+        .collect()
+}
+
+#[test]
+fn in_aula_e_il_bilancio_presentato() {
+    let mut p = al_bilancio_2028(4);
+    assert_eq!(p.vista().bilancio.in_aula, None);
+    let bozza = p.bozza_bilancio().unwrap();
+    presenta(&mut p, bozza.clone()).unwrap();
+    assert_eq!(p.vista().bilancio.in_aula, Some(bozza));
+}
+
+#[test]
+fn in_aula_porta_l_emendamento_accolto() {
+    let mut p = al_bilancio_2028(4);
+    let bozza = p.bozza_bilancio().unwrap();
+    presenta(&mut p, bozza.clone()).unwrap();
+    let presentato = p.vista().bilancio.in_aula.unwrap();
+    let misura = (p.vista().calendario.into_iter())
+        .find(|m| m.forma == FormaMisura::Bilancio)
+        .unwrap()
+        .id;
+    p.comanda(Comando::Emendamento {
+        misura,
+        partito: "centrodestra".into(),
+        accogli: true,
+    })
+    .unwrap();
+    let mut atteso = presentato.clone();
+    for id in ["ambiente_energia", "esteri_difesa"] {
+        let voce = Voce::Dicastero { id: id.into() };
+        atteso = p.indicizza(&atteso, &voce).unwrap();
+    }
+    let in_aula = p.vista().bilancio.in_aula.unwrap();
+    // L'aula riporta il bilancio alle regole (`bilancio_ammesso`): una voce indicizzata può
+    // scostarsi di un euro dall'`indicizza` nudo, le altre restano quelle presentate.
+    for ((id, aula), ((_, voluta), (_, prima))) in
+        (spese(&in_aula).into_iter()).zip(spese(&atteso).into_iter().zip(spese(&presentato)))
+    {
+        if ["ambiente_energia", "esteri_difesa"].contains(&id.as_str()) {
+            assert!(aula > prima && (aula - voluta).abs() <= 1, "{id}");
+        } else {
+            assert_eq!(aula, prima, "{id}");
+        }
+    }
+    assert_eq!(spese(&presentato), spese(&bozza));
+}
+
+#[test]
+fn l_emendamento_sul_bilancio_dice_i_dicasteri() {
+    let mut p = al_bilancio_2028(4);
+    let bozza = p.bozza_bilancio().unwrap();
+    presenta(&mut p, bozza).unwrap();
+    let e = emendamenti_del_bilancio(&p);
+    let cd = e.iter().find(|e| e.partito == "centrodestra").unwrap();
+    assert_eq!(cd.dicasteri, ["ambiente_energia", "esteri_difesa"]);
+}
+
+#[test]
+fn in_aula_si_vede_all_opposizione() {
+    let mut p = all_opposizione();
+    while p.vista().data.trimestre != 4 {
+        p.chiudi_turno();
+    }
+    assert!(p.economia().bilancio_presentato.is_some());
+    assert_eq!(
+        p.vista().bilancio.in_aula,
+        p.economia().bilancio_presentato.clone()
+    );
 }
