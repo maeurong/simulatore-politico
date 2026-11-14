@@ -147,3 +147,21 @@ export function sessioneSpese(
     },
   };
 }
+
+export const PASSI = [-0.5, -0.25, 0.25, 0.5] as const;
+export const MASSIMO_PROMESSE = 2;
+
+/** Le quattro posizioni raggiungibili dalla dichiarata di oggi. */
+export const posizioniVicine = (v: Vista): number[] => {
+  const d = v.partiti.find((p) => p.id === v.giocatore)?.posizione_dichiarata ?? 0;
+  return PASSI.map((p) => d + p);
+};
+
+/** Le promesse della campagna in corso: quelle del giocatore non in sospeso. */
+export const promesseFatte = (v: Vista): VocePromessa[] => v.partiti.find((p) => p.id === v.giocatore)?.promesse.filter((p) => !p.in_sospeso) ?? [];
+
+/** Il comando con le coppie (id della disposizione, id del gradino). */
+export const prometti = (scelte: { disposizione: string; gradino: string }[]): Comando => ({
+  tipo: "prometti",
+  promesse: scelte.map((s) => [s.disposizione, s.gradino]),
+});

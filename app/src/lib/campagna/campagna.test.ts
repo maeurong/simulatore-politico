@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
-import { LEVE, MASSIMO_SPESE, PASSO_CESSIONE, cedi, conto, dichiara, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio } from "./campagna";
+import { LEVE, MASSIMO_PROMESSE, MASSIMO_SPESE, PASSI, PASSO_CESSIONE, cedi, conto, dichiara, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio, posizioniVicine, promesseFatte, prometti } from "./campagna";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import campagnaJson from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 
 const turnoZero = turnoZeroJson as unknown as Vista;
 const tagliata = (campagnaJson as unknown as { tagliata_prima: Vista }).tagliata_prima;
+const piano = campagnaJson as unknown as { piano_scelto: Vista; piano_dopo: Vista };
 const dichiarata = (campagnaJson as unknown as { dichiarata: Vista }).dichiarata;
 
 describe("dichiara", () => {
@@ -239,5 +240,21 @@ describe("sessioneSpese", () => {
     const { manda, sessione } = banco();
     sessione.esci();
     expect(manda).not.toHaveBeenCalled();
+  });
+});
+
+describe("posizione e promesse", () => {
+  it("quattro passi dalla dichiarata di oggi: da 4,5 si arriva a 4, 4,25, 4,75, 5", () => {
+    expect(PASSI).toEqual([-0.5, -0.25, 0.25, 0.5]);
+    expect(posizioniVicine(turnoZero)).toEqual([4, 4.25, 4.75, 5]);
+  });
+  it("promesseFatte: nessuna al turno zero; due in campagna (piano_scelto); dopo il voto (piano_dopo) sono in sospeso, quindi nessuna", () => {
+    expect(promesseFatte(turnoZero)).toEqual([]);
+    expect(promesseFatte(piano.piano_scelto).map((p) => `${p.disposizione}: ${p.gradino}`)).toEqual(["Reddito minimo: universale", "Età pensionabile: 64 anni"]);
+    expect(promesseFatte(piano.piano_dopo)).toEqual([]);
+  });
+  it("prometti: le coppie (disposizione, gradino) nel comando; il massimo è due", () => {
+    expect(prometti([{ disposizione: "a", gradino: "b" }])).toEqual({ tipo: "prometti", promesse: [["a", "b"]] });
+    expect(MASSIMO_PROMESSE).toBe(2);
   });
 });

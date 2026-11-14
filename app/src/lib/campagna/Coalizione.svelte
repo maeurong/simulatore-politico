@@ -82,15 +82,15 @@
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }
   .attesi { margin: 2px 0 6px }
-  .pr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 5px 2px 6px; border-top: var(--filo) }
+  .pr { display: grid; grid-template-columns: auto minmax(min-content, 1fr) auto; gap: 2px 8px; align-items: center; padding: 5px 2px 6px; border-top: var(--filo) }
   .pr.dentro { background: var(--velo) }
   .pdot { width: 10px; height: 10px; border: 1px solid var(--ink); flex: none; display: inline-block }
   .n { font-weight: 700; font-size: var(--c-sec); min-width: 0; display: flex; gap: 0 6px; flex-wrap: wrap; align-items: baseline }
-  .az { display: flex; gap: 6px; align-items: center }
+  .az { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 6px; align-items: center }
   .c { grid-column: 2 / -1; font-size: var(--c-min); color: var(--grigio) }
   .ces, .rif { grid-column: 2 / -1 }
   .ces { display: flex; gap: 4px 8px; align-items: center; flex-wrap: wrap }
-  .si, .no { font-weight: 700; font-size: var(--c-min); white-space: nowrap }
+  .si, .no { font-weight: 700; font-size: var(--c-min); text-align: end }
   .si { color: var(--verde) }
   .no { color: var(--rosso) }
   .step { display: inline-flex; align-items: center; border: var(--bordo) }
