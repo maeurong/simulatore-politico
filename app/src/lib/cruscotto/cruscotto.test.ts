@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { defaultDi, fondoBasta, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, scelteAlDefault } from "./cruscotto";
+import { fuori } from "$lib/trattativa/trattativa";
+import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, scelteAlDefault, testa } from "./cruscotto";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
 import cruscottoJson from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
+import governoSchedaJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
 import aulaJson from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import campagnaJson from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 
@@ -114,5 +116,44 @@ describe("righeDelVoto", () => {
     const spesa = { bersaglio: { tipo: "regione", nome: "Lazio" }, leva: "comizi", euro: 200000 };
     const v = { ...turnoZero, campagna: { attiva: true, spese: [spesa, spesa, spesa] } } as unknown as Vista;
     expect(righeDelVoto(v).campagna).toEqual({ spese: 3, euro: 600000 });
+  });
+});
+
+describe("testa", () => {
+  const c = cruscottoJson as unknown as Record<"crisi_provvisorio" | "dimissioni", { vista: Vista }>;
+  it("crisi da allargare, crisi in esercizio provvisorio, dimissioni annunciate, o niente", () => {
+    expect(testa(crisi)).toBe("crisi");
+    expect(testa(c.crisi_provvisorio.vista)).toBe("crisi_provvisorio");
+    expect(testa(c.dimissioni.vista)).toBe("dimissioni");
+    expect(testa(governo)).toBeNull();
+  });
+  it("chi non governa non ha riquadro", () => {
+    expect(testa(opposizione)).toBeNull();
+    expect(testa(turnoZero)).toBeNull();
+  });
+});
+
+describe("inEvidenza", () => {
+  it("sulla 03: Economia, Sviluppo economico e Ambiente, nessuno in preavviso", () => {
+    const e = inEvidenza(governo);
+    expect(e.map((x) => x.dicastero)).toEqual(["economia_finanze", "sviluppo_economico", "ambiente_energia"]);
+    expect(e.some((x) => x.preavviso)).toBe(false);
+  });
+  it("i ministri con minaccia sono in preavviso", () => {
+    const scontenti = (governoSchedaJson as unknown as { scontenti: { vista: Vista } }).scontenti.vista;
+    const e = inEvidenza(scontenti);
+    expect(e.filter((x) => x.preavviso).map((x) => x.dicastero)).toEqual(scontenti.ministeri.filter((m) => m.ministro?.minaccia).map((m) => m.dicastero));
+    expect(e.filter((x) => x.preavviso).length).toBe(6);
+  });
+  it("fuori dal governo nessuno", () => {
+    expect(inEvidenza(opposizione)).toEqual([]);
+  });
+});
+
+describe("disponibili della crisi", () => {
+  it("Sinistra e Centrodestra, gli altri con la causa del core", () => {
+    const f = fuori(crisi);
+    expect(f.filter((x) => x.disponibile).map((x) => x.id)).toEqual(["sinistra", "centrodestra"]);
+    expect(f.find((x) => x.id === "destra")?.causa).toBe("guiderebbe la propria coalizione");
   });
 });

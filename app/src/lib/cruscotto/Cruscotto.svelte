@@ -1,13 +1,17 @@
 <script lang="ts">
   // Cruscotto, forma A · Ordine del giorno (17-cruscotto.prototype.html): gli eventi in testa; al turno zero le due scelte del voto, al governo i gruppi con il conto al default.
-  import { tick } from "svelte";
+  import { tick, untrack } from "svelte";
   import { t, elenco, numero, type Chiave } from "$lib/testi/t";
-  import { etichetta } from "$lib/ossatura";
+  import { apribile, etichetta } from "$lib/ossatura";
+  import { chiaveDi } from "$lib/caricature/caricatura";
+  import Faccia from "$lib/componenti/Faccia.svelte";
   import type { Vista } from "$lib/tipi/Vista";
+  import Crisi from "./Crisi.svelte";
+  import DettaglioVoce from "./DettaglioVoce.svelte";
   import Evento from "./Evento.svelte";
   import Riga from "./Riga.svelte";
   import Voce from "./Voce.svelte";
-  import { ordineDelGiorno, righeDelVoto, risponde, type Gruppo } from "./cruscotto";
+  import { inEvidenza, ordineDelGiorno, righeDelVoto, risponde, testa, type Gruppo } from "./cruscotto";
 
   let { vista }: { vista: Vista } = $props();
   const voto = $derived(righeDelVoto(vista));
@@ -27,6 +31,23 @@
     ["si_vota", "cruscotto.si_vota"], ["occhio", "cruscotto.occhio"],
   ];
   const gruppi = $derived(GRUPPI.map(([g, titolo]) => ({ titolo, voci: odg.filter((x) => x.gruppo === g) })).filter((g) => g.voci.length));
+  const riquadro = $derived(testa(vista));
+  const evidenza = $derived(inEvidenza(vista));
+  const dicastero = (id: string) => vista.dicasteri.find((d) => d.id === id)?.nome ?? id;
+  // la riga scelta e il decreto d'evento scelto (uno solo dei due): solo in memoria, al turno nuovo si azzerano.
+  // `turno` è un derived: una Vista nuova dello stesso turno (dopo un comando) non li tocca.
+  let scelta = $state<string | null>(null);
+  let norma = $state<string | null>(null);
+  const turno = $derived(vista.turno);
+  $effect.pre(() => {
+    void turno;
+    untrack(() => {
+      scelta = null;
+      norma = null;
+    });
+  });
+  const corrente = $derived(odg.find((x) => x.chiave === scelta) ?? odg[0] ?? null);
+  const normaViva = $derived(norma && vista.eventi.some((e) => e.norme.includes(norma!)) ? norma : null);
   let corpo: HTMLElement | undefined = $state();
   // se la voce su cui stava il fuoco sparisce con la sua risposta, il fuoco passa alla prima azione che resta; altrimenti non si tocca
   async function riporta(da: Element | null) {
@@ -36,19 +57,42 @@
   }
 </script>
 
-{#each vista.eventi as evento, i (i)}<Evento {vista} {evento} indice={i} puoRispondere={governo} />{/each}
 {#if governo}
-  <div class="odg" bind:this={corpo} tabindex="-1">
-    {#each gruppi as g (g.titolo)}
-      {@const n = g.voci.filter((x) => x.alDefault).length}
+  <div class="cr">
+    <div class="odg" bind:this={corpo} tabindex="-1">
+      {#if riquadro}<Crisi {vista} tipo={riquadro} />{/if}
+      {#each vista.eventi as evento, i (i)}
+        <Evento {vista} {evento} indice={i} puoRispondere={governo} norma={normaViva} onnorma={(id) => { norma = id; }} />
+      {/each}
+      {#each gruppi as g (g.titolo)}
+        {@const n = g.voci.filter((x) => x.alDefault).length}
+        <section>
+          <h2 class="grp"><span>{t(g.titolo)}</span>{#if n}<span>{t("cruscotto.al_default", { n })}</span>{/if}</h2>
+          <ul>{#each g.voci as voce (voce.chiave)}<Voce {voce} {vista} {riporta} scelta={!normaViva && corrente?.chiave === voce.chiave} onscegli={() => { scelta = voce.chiave; norma = null; }} />{/each}</ul>
+        </section>
+      {/each}
+      {#if !gruppi.length && !vista.eventi.length && !riquadro}<p class="muto">{t("cruscotto.nessuna_scelta")}</p>{/if}
       <section>
-        <h2 class="grp"><span>{t(g.titolo)}</span>{#if n}<span>{t("cruscotto.al_default", { n })}</span>{/if}</h2>
-        <ul>{#each g.voci as voce (voce.chiave)}<Voce {voce} {vista} {riporta} />{/each}</ul>
+        <h2 class="grp"><span>{t("cruscotto.evidenza")}</span>{#if apribile("governo", vista)}<a class="link" href="/partita/governo">{etichetta("governo")} ›</a>{/if}</h2>
+        {#if evidenza.length}
+          <ul class="minis">
+            {#each evidenza as m (m.dicastero)}
+              <li>
+                <Faccia nome={m.ministro.nome} ruolo={m.ministro.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.ministro.partito)} dicastero={m.dicastero} misura={34} />
+                <span><b>{dicastero(m.dicastero)}</b> · {m.ministro.nome}<br />
+                  <span class="muto">{#if m.preavviso}<span class="male">{t("cruscotto.preavviso", { n: numero(Math.round(m.ministro.soddisfazione)) })}</span>{#if m.agenda}{" · "}{/if}{/if}{m.agenda?.nome ?? ""}</span></span>
+              </li>
+            {/each}
+          </ul>
+        {:else}<p class="muto">{t("cruscotto.evidenza_nessuno")}</p>{/if}
       </section>
-    {/each}
-    {#if !gruppi.length && !vista.eventi.length}<p class="muto">{t("cruscotto.nessuna_scelta")}</p>{/if}
+    </div>
+    <aside class="lato" aria-label={t("aula.dettaglio")}>
+      {#key `${vista.turno}:${normaViva ?? corrente?.chiave}`}<DettaglioVoce {vista} voce={corrente} norma={normaViva} {riporta} />{/key}
+    </aside>
   </div>
 {:else}
+{#each vista.eventi as evento, i (i)}<Evento {vista} {evento} indice={i} puoRispondere={governo} />{/each}
 <section class="odg">
   <h2 class="grp">{t("cruscotto.da_decidere")}</h2>
   <ul>
@@ -63,7 +107,13 @@
 
 <style>
   .odg { outline: none }
-  div.odg { display: grid; gap: 10px }
+  div.odg { display: grid; gap: 10px; align-content: start; min-width: 0 }
+  .cr { display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); gap: 10px var(--canale); align-items: start }
+  .lato { border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 8px; align-content: start; position: sticky; top: 0; max-height: 80vh; overflow: hidden auto; padding-bottom: 8px }
+  .minis { display: grid; gap: 6px; padding-top: 6px }
+  .minis li { display: flex; gap: 8px; align-items: center; font-size: var(--c-sec) }
+  .male { color: var(--rosso); font-weight: 700 }
+  .link { color: inherit; text-decoration: underline; text-underline-offset: 2px; font-size: var(--c-sec); text-transform: none; letter-spacing: 0; font-weight: 400 }
   .muto { color: var(--grigio) }
   .grp { display: flex; justify-content: space-between; gap: 8px; font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--grigio); padding-bottom: 2px; border-bottom: 1.5px solid var(--ink) }
   ul { list-style: none }

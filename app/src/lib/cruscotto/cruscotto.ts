@@ -6,6 +6,8 @@ import { t, numero, type Chiave } from "$lib/testi/t";
 import { votaOra } from "$lib/aula/aula";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEvento } from "$lib/tipi/VoceEvento";
+import type { VoceAgenda } from "$lib/tipi/VoceAgenda";
+import type { VoceMinistro } from "$lib/tipi/VoceMinistro";
 import type { VoceOpzione } from "$lib/tipi/VoceOpzione";
 
 /** Una sola opzione: niente da scegliere, la chiusura la prende. */
@@ -113,4 +115,17 @@ export function righeDelVoto(v: Vista) {
     },
     campagna: { spese: v.campagna.spese.length, euro: v.campagna.spese.reduce((a, s) => a + s.euro, 0) },
   };
+}
+
+/** I ministri in evidenza (agenda in evidenza o ministro in preavviso), nell'ordine della Vista; solo chi governa. */
+export const inEvidenza = (v: Vista): { dicastero: string; ministro: VoceMinistro; agenda: VoceAgenda | null; preavviso: boolean }[] =>
+  v.governa
+    ? v.ministeri.flatMap((m) =>
+        m.ministro && (m.agenda?.in_evidenza || m.ministro.minaccia) ? [{ dicastero: m.dicastero, ministro: m.ministro, agenda: m.agenda, preavviso: m.ministro.minaccia }] : [])
+    : [];
+
+/** Il riquadro di testa: crisi da allargare, crisi in esercizio provvisorio (caduta certa), dimissioni annunciate, o niente. */
+export function testa(v: Vista): "crisi" | "crisi_provvisorio" | "dimissioni" | null {
+  if (statoDi(v) === "crisi") return v.bilancio.esercizio_provvisorio ? "crisi_provvisorio" : "crisi";
+  return v.governa && v.dimissioni ? "dimissioni" : null;
 }

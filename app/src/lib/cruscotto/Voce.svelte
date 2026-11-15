@@ -14,8 +14,8 @@
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import type { VoceOdg } from "./cruscotto";
 
-  type Props = { voce: VoceOdg; vista: Vista; riporta: (da: Element | null) => void };
-  let { voce, vista, riporta }: Props = $props();
+  type Props = { voce: VoceOdg; vista: Vista; riporta: (da: Element | null) => void; scelta: boolean; onscegli: () => void };
+  let { voce, vista, riporta, scelta, onscegli }: Props = $props();
 
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
   const ministero = $derived(vista.ministeri.find((m) => m.dicastero === voce.dicastero));
@@ -41,9 +41,9 @@
   }
 </script>
 
-<li class="r">
+<li class="r" class:sel={scelta}>
   <span class="seg" class:fatto={voce.fatta} class:urg={voce.urgente && !voce.fatta} aria-hidden="true"></span>
-  <span class="t">{voce.titolo}</span>
+  <button type="button" class="t" aria-pressed={scelta} onclick={onscegli}>{voce.titolo}</button>
   <span class="a" role="group" aria-label={voce.titolo}>
     {#if voce.azioni === "proposta" && voce.dicastero}
       {@const dicastero = voce.dicastero}
@@ -83,7 +83,9 @@
   .seg { width: 14px; height: 14px; border: 1.5px solid var(--ink) }
   .seg.fatto { background: var(--ink) }
   .seg.urg { border-color: var(--rosso); background: var(--retino) }
-  .t { font-weight: 700; line-height: 1.2 }
+  .r.sel { background: var(--velo); box-shadow: inset 0 0 0 1.5px var(--ink) }
+  .t { font-weight: 700; line-height: 1.2; text-align: left }
+  .t:hover { text-decoration: underline; text-underline-offset: 2px }
   .a { grid-row: 1 / span 2; grid-column: 3; display: flex; gap: 4px 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap }
   .a :global(.btn small) { font-weight: 400; margin-left: 4px }
   .s { grid-column: 2; font-size: var(--c-min); color: var(--grigio); line-height: 1.25 }

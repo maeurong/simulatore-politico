@@ -21,10 +21,11 @@
   import { cosaCambia, notaRiforma, nomeGrandezza, perimetro, quando, spesa as spesaDi, stimatore, verso, votano as votanoDi, type Misurabile } from "./anteprima";
   import { oscilla } from "./oscilla";
 
-  let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false, inCalcolo = false }: {
-    vista: Vista; misura: Misurabile; valori: ValoreProposto[]; indietro: string; ontorna: (e: MouseEvent) => void;
+  // `indietro` e `ontorna` mancano dove il cartellino sta già al suo posto (il dettaglio del cruscotto); `nota` sostituisce la riga sulla forma
+  let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false, inCalcolo = false, nota: notaData }: {
+    vista: Vista; misura: Misurabile; valori: ValoreProposto[]; indietro?: string; ontorna?: (e: MouseEvent) => void;
     manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null; fuoco?: boolean;
-    inCalcolo?: boolean;
+    inCalcolo?: boolean; nota?: string;
   } = $props();
 
   const nome = (id: string) => nomeDi(vista, id);
@@ -41,7 +42,7 @@
   const senato = $derived(vista.seggi.reduce((s, x) => s + x.senato, 0));
   const partiti = $derived(inOrdine(vista));
   const votano = (si: boolean) => votanoDi(vista, misura.linee, si);
-  const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? notaRiforma(vista, misura) : "");
+  const nota = $derived(notaData ?? (misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? notaRiforma(vista, misura) : ""));
   const vuoto = $derived(t(misura.forma === "elettorale" ? "anteprima.nessun_effetto_elettorale" : misura.forma === "costituzionale" ? "anteprima.nessun_effetto_costituzionale" : "anteprima.nessun_effetto"));
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : inCalcolo ? t("aula.ante_in_calcolo") : undefined);
 
@@ -64,7 +65,7 @@
 
 <div class="cart" class:vecchia={inCalcolo} aria-busy={inCalcolo} bind:this={foglio}>
   <i class="spillo" aria-hidden="true"></i>
-  <div class="capo"><Pulsante forma="link" onclick={ontorna}>{indietro}</Pulsante></div>
+  {#if indietro && ontorna}<div class="capo"><Pulsante forma="link" onclick={ontorna}>{indietro}</Pulsante></div>{/if}
   <span class="occ">{t("anteprima.occhiello", { forma: formaDi({ forma: misura.forma, deliberazione: "deliberazione" in misura ? misura.deliberazione : 1 }) })}</span>
   <h4 class="tit">{misura.nome}</h4>
 
