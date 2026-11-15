@@ -257,6 +257,28 @@ pub(crate) struct Inneschi {
     pub tutte: bool,
 }
 
+/// Gli inneschi degli eventi `aperti`: tutti quelli della partita per il comando, uno solo per la
+/// sua voce nella Vista.
+pub(crate) fn inneschi(dati: &DatiGioco, aperti: &[EventoAperto]) -> Inneschi {
+    let aperti = || {
+        (aperti.iter())
+            .filter_map(|a| dati.eventi().get(a.evento))
+            .filter(|e| e.decreto)
+    };
+    let dicasteri = (aperti().filter(|e| e.norme.is_empty()))
+        .flat_map(|e| &e.dicasteri)
+        .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
+        .collect();
+    let disposizioni = (aperti().flat_map(|e| &e.norme))
+        .filter_map(|id| dati.disposizione(id))
+        .collect();
+    Inneschi {
+        dicasteri,
+        disposizioni,
+        tutte: aperti().any(|e| e.famiglia == Famiglia::Debito),
+    }
+}
+
 impl Eventi {
     /// Gli eventi aperti con un dicastero `id` fra i loro, come indici del catalogo.
     pub(crate) fn nel_dicastero<'a>(
@@ -270,23 +292,7 @@ impl Eventi {
     }
 
     pub(crate) fn inneschi(&self, dati: &DatiGioco) -> Inneschi {
-        let aperti = || {
-            (self.aperti.iter())
-                .filter_map(|a| dati.eventi().get(a.evento))
-                .filter(|e| e.decreto)
-        };
-        let dicasteri = (aperti().filter(|e| e.norme.is_empty()))
-            .flat_map(|e| &e.dicasteri)
-            .filter_map(|id| dati.dicasteri().iter().position(|d| &d.id == id))
-            .collect();
-        let disposizioni = (aperti().flat_map(|e| &e.norme))
-            .filter_map(|id| dati.disposizione(id))
-            .collect();
-        Inneschi {
-            dicasteri,
-            disposizioni,
-            tutte: aperti().any(|e| e.famiglia == Famiglia::Debito),
-        }
+        inneschi(dati, &self.aperti)
     }
 
     pub fn iniziali(dati: &DatiGioco) -> Eventi {

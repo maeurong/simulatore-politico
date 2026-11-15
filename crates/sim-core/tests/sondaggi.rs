@@ -704,3 +704,19 @@ fn la_proiezione_assegna_tutti_i_seggi() {
     assert_eq!(s.iter().map(|x| x.camera).sum::<u32>(), 400);
     assert_eq!(s.iter().map(|x| x.senato).sum::<u32>(), 200);
 }
+
+#[test]
+fn il_margine_e_quello_dichiarato() {
+    let f = riscrivi(file_base(), "elettorato", "campione = ", "campione = 1000");
+    let f = con_manopola(f, "effetto_disegno", "1.0");
+    let s = giocata(&f, 4).vista().sondaggio;
+    for r in &s.istituti {
+        assert_eq!(r.campione, 1000);
+        assert!((r.margine - 0.0316).abs() < 1e-4, "{}", r.margine);
+    }
+    let vda = s.regioni.iter().find(|i| i.id == "valle_d_aosta");
+    let vda = vda.unwrap();
+    assert!(vda.margine > s.istituti[0].margine, "{}", vda.margine);
+    let atteso = 2.0 * (0.25 / f64::from(vda.campione)).sqrt();
+    assert!((vda.margine - atteso).abs() < 1e-12);
+}

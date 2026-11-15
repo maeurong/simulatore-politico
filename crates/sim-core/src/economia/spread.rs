@@ -18,7 +18,7 @@ const EMIVITA_RISTRUTTURAZIONE: f64 = 8.0;
 
 impl Economia {
     /// Debito e disavanzo in % del PIL degli ultimi 4 trimestri.
-    pub(crate) fn debito_e_disavanzo_pil(&self) -> (f64, f64) {
+    pub fn debito_e_disavanzo_pil(&self) -> (f64, f64) {
         let da = self.storico.len().saturating_sub(ANNO_MOBILE);
         let ultimi = &self.storico[da..];
         let pil = ultimi.iter().map(|t| t.pil as f64).sum::<f64>();

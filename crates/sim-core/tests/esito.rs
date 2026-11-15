@@ -141,7 +141,7 @@ fn schema_17_rifiutato() {
         Partita::carica(&json.to_string()),
         Err(Errore::SchemaDiverso {
             trovata: 17,
-            attesa: 18
+            attesa: sim_core::VERSIONE_SCHEMA
         })
     );
 }

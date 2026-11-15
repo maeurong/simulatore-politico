@@ -17,6 +17,7 @@ pub struct Settore {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
 pub enum Macroarea {
     Nord,
     Centro,

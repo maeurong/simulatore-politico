@@ -4,4 +4,8 @@
  * `posizione`: autocollocazione stimata sui 7 punti. `approvazione`: giudizio stimato del
  * sottocampione sul partito del presidente del consiglio, in unità d'utilità.
  */
-export type Incrocio = { id: string, campione: number, quote: Array<number>, posizione: Array<number>, approvazione: number, };
+export type Incrocio = { id: string, campione: number, quote: Array<number>, posizione: Array<number>, approvazione: number, 
+/**
+ * Margine dichiarato, come in `Rilevazione`: non è la forbice dell'errore vero.
+ */
+margine: number, };

@@ -3,6 +3,7 @@
 /**
  * Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello
  * ufficiale (grandezze alla chiusura precedente, prima stima della crescita); `accensione` e
- * `spegnimento` le due soglie dell'isteresi.
+ * `spegnimento` le due soglie dell'isteresi; `trimestri` quanti trimestri di fila dalla parte del
+ * cambio lo fanno scattare, `oltre` quanti ne sono già passati.
  */
-export type VoceSituazione = { nome: string, misura: string, valore: number, accensione: number, spegnimento: number, accesa: boolean, };
+export type VoceSituazione = { nome: string, misura: string, valore: number, accensione: number, spegnimento: number, accesa: boolean, trimestri: number, oltre: number, };

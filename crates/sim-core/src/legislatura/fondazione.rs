@@ -66,6 +66,7 @@ pub(crate) fn partito_nuovo(dati: &DatiGioco, nome: &str, posizione: f64) -> Par
         valence_base: base,
         vocazione: Vocazione::Mista,
         leader: String::new(),
+        genere_leader: None,
         regola: Regola::Sticker,
         sciolto: false,
         cassa: dati.manopola("dote_partito_nuovo").round() as i64,

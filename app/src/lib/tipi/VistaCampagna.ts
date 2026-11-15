@@ -3,6 +3,9 @@ import type { Spesa } from "./Spesa";
 
 /**
  * La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
- * `spese` quella scelta, che la chiusura paga.
+ * `spese` quella scelta, che la chiusura paga. `riposizionato`: `Riposiziona` è già fatto in
+ * questa campagna; `passo` è `passo_movimento`, il massimo spostamento della dichiarata;
+ * `minaccia_scissione` e `soglia_scissione` le distanze fra percepita e dichiarata a cui il
+ * partito minaccia la scissione e si scinde.
  */
-export type VistaCampagna = { attiva: boolean, spese: Array<Spesa>, };
+export type VistaCampagna = { attiva: boolean, spese: Array<Spesa>, riposizionato: boolean, passo: number, minaccia_scissione: number, soglia_scissione: number, };

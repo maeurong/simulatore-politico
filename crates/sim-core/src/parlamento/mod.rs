@@ -1,5 +1,6 @@
 //! Il parlamento in carica: seggi per partito, misure in calendario, esiti dei voti.
 
+use crate::caso::Caso;
 use crate::dati::DatiGioco;
 use crate::disposizioni::{DatoDisposizione, Disposizioni, Norma, data_di};
 use crate::elettorato::Affluenza;
@@ -9,7 +10,7 @@ use crate::ministri::{Causa, Ministri, penalizza};
 use crate::partita::Trimestre;
 use crate::partiti::{Governo, Partito};
 use crate::scenario::Scenario;
-use crate::vista::{Forbice, VariazioneSeggi, VoceMisura};
+use crate::vista::{CostiLinea, CostoLinea, Forbice, VariazioneSeggi, VoceMisura};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -23,12 +24,14 @@ pub mod voto;
 
 pub(crate) use anteprima::{CHIAVE_ATTI, CHIAVE_TEST, anteprima, chiave_centro_studi, chiave_test};
 pub use decreti::{Decreto, FondiDecreto};
-pub(crate) use decreti::{ammetti, ammetti_disposizioni};
+pub(crate) use decreti::{ammessa, ammetti, ammetti_disposizioni};
 pub use emendamenti::{Attenuazione, RichiestaEmendamento, StatoEmendamento};
 pub(crate) use emendamenti::{costo_fiducia, richiesta_bilancio, rinviata, testo};
 pub use intesa::{CausaIntesa, Intesa, VariazioneIntesa};
 pub use regole::{EsitoReferendum, Referendum, TipoReferendum};
-pub(crate) use regole::{due_terzi, legge_non_valida, proietta, quinto_contro, riparto_con};
+pub(crate) use regole::{
+    due_terzi, elettorale_non_applicabile, legge_non_valida, proietta, quinto_contro, riparto_con,
+};
 
 /// Posti del calendario per riforme ed elettorali.
 pub const POSTI_ORDINARI: usize = 3;
@@ -594,21 +597,8 @@ impl Parlamento {
         valori: &[ValoreProposto],
     ) -> Result<(), Errore> {
         let m = self.bozza(dati, disposizioni, turno, valori, true)?;
-        let (posti, occupati) = if m.forma == FormaMisura::Costituzionale {
-            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
-        } else {
-            (
-                POSTI_ORDINARI,
-                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
-            )
-        };
-        if self
-            .misure
-            .iter()
-            .filter(|m| occupati.contains(&m.forma) && m.promotore.is_none())
-            .count()
-            >= posti
-        {
+        let (posti, occupati) = self.posti(m.forma == FormaMisura::Costituzionale);
+        if occupati >= posti {
             return ko("calendario pieno".into());
         }
         let firma = (m.proponente)
@@ -626,6 +616,24 @@ impl Parlamento {
         self.misure.push(m);
         self.prossima = self.prossima.saturating_add(1);
         Ok(())
+    }
+
+    /// I posti del calendario e quanti ne sono occupati: quello costituzionale con `costituzionale`,
+    /// gli ordinari (riforme ed elettorali) altrimenti. Le proposte dell'opposizione non li
+    /// occupano.
+    pub(crate) fn posti(&self, costituzionale: bool) -> (usize, usize) {
+        let (posti, forme) = if costituzionale {
+            (POSTI_COSTITUZIONALI, &[FormaMisura::Costituzionale][..])
+        } else {
+            (
+                POSTI_ORDINARI,
+                &[FormaMisura::Riforma, FormaMisura::Elettorale][..],
+            )
+        };
+        let occupati = (self.misure.iter())
+            .filter(|m| forme.contains(&m.forma) && m.promotore.is_none())
+            .count();
+        (posti, occupati)
     }
 
     /// `PresentaProposta` del partito `promotore` nel posto riservato (scelta 15 del piano 7b),
@@ -777,14 +785,10 @@ impl Parlamento {
                 ));
             }
         }
-        if forma == FormaMisura::Elettorale {
-            // Dopo il voto e dopo gli arrivi elettorali in corso.
-            let con_arrivi = [disposizioni.arrivi_elettorali(), scelti.clone()].concat();
-            for v in [&scelti, &con_arrivi] {
-                if let Some(m) = legge_non_valida(dati, disposizioni, v) {
-                    return ko(format!("legge elettorale non applicabile: {m}"));
-                }
-            }
+        if forma == FormaMisura::Elettorale
+            && let Some(m) = elettorale_non_applicabile(dati, disposizioni, &scelti)
+        {
+            return ko(format!("legge elettorale non applicabile: {m}"));
         }
         let costituzionale = forma == FormaMisura::Costituzionale;
         let proponente =
@@ -919,12 +923,22 @@ impl Parlamento {
         }
     }
 
-    /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto.
-    pub(crate) fn voci_calendario(&self, aula: &StatoAula) -> Vec<VoceMisura> {
+    /// Le misure in calendario per la `Vista`: linee e forbice, nessun franco tiratore estratto;
+    /// costo, effetti, leve e gruppi da `anteprima`, con la `capacita` di chi stima la misura e il
+    /// PIL potenziale annuo `pil_annuo`; il costo della linea dove `linea_ammessa`.
+    pub(crate) fn voci_calendario(
+        &self,
+        aula: &StatoAula,
+        capacita: impl Fn(&Misura) -> f64,
+        linea_ammessa: impl Fn(&Misura) -> bool,
+        caso: &Caso,
+        pil_annuo: f64,
+    ) -> Vec<VoceMisura> {
         let dati = aula.dati;
         let catalogo = dati.disposizioni();
         (self.misure.iter())
             .map(|m| {
+                let a = anteprima(self, aula, m, capacita(m), caso, pil_annuo);
                 let p = aula.previsione(m);
                 let nuova = p.posizioni.map(|(_, n)| n);
                 // L'ultimatum è lo stato della chiusura precedente: il costo della fiducia non lo
@@ -963,9 +977,46 @@ impl Parlamento {
                         })
                         .map(|(_, (p, _))| p.id.clone())
                         .collect(),
+                    costo_annuo: a.costo_annuo,
+                    effetti: a.effetti,
+                    leve: a.leve,
+                    gruppi: a.gruppi,
+                    costo_linea: linea_ammessa(m).then(|| self.costi_linea(aula, m)),
                 }
             })
             .collect()
+    }
+
+    /// `previsione` della misura con la linea del giocatore a sì, a no e di default: la sua
+    /// percepita dopo il voto (`voto::percepita_dopo`, come in `vota`) e i franchi tiratori
+    /// attesi del suo partito per ramo.
+    fn costi_linea(&self, aula: &StatoAula, m: &Misura) -> CostiLinea {
+        let g = aula.giocatore;
+        let costo = |linea_giocatore: Option<bool>| {
+            let p = aula.previsione(&Misura {
+                linea_giocatore,
+                ..m.clone()
+            });
+            let attesi = |q: &[f64], seggi: &[u32]| {
+                (q.get(g).zip(seggi.get(g))).map_or(0.0, |(q, &n)| q * f64::from(n))
+            };
+            let percepita = aula.partiti.get(g).map_or(0.0, |x| x.posizione_percepita);
+            CostoLinea {
+                percepita: match (p.posizioni, p.linea.get(g)) {
+                    (Some(posizioni), Some(&si)) => {
+                        voto::percepita_dopo(aula.dati, percepita, posizioni, si)
+                    }
+                    _ => percepita,
+                },
+                franchi_camera: attesi(&p.franchi_camera, &self.seggi_camera),
+                franchi_senato: attesi(&p.franchi, &self.seggi_senato),
+            }
+        };
+        CostiLinea {
+            si: costo(Some(true)),
+            no: costo(Some(false)),
+            default: costo(None),
+        }
     }
 
     /// I sì attesi ± 2σ per ramo con la linea e i franchi tiratori della previsione.

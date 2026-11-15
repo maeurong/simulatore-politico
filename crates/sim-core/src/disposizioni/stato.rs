@@ -231,8 +231,12 @@ impl Disposizioni {
             .posizione(self.voci.get(d)?.in_vigore)
     }
 
-    /// Le voci per la `Vista`, nell'ordine dei dati.
-    pub(crate) fn voci_vista(&self, dati: &DatiGioco) -> Vec<VoceDisposizione> {
+    /// Le voci per la `Vista`, nell'ordine dei dati; `rifiuto` dà quello del referendum per id.
+    pub(crate) fn voci_vista(
+        &self,
+        dati: &DatiGioco,
+        rifiuto: impl Fn(&str) -> Option<String>,
+    ) -> Vec<VoceDisposizione> {
         (dati.disposizioni().iter().zip(&self.voci))
             .map(|(d, v)| {
                 let id = |g: usize| d.gradini.get(g).map(|x| x.id.clone()).unwrap_or_default();
@@ -252,6 +256,7 @@ impl Disposizioni {
                         })
                         .collect(),
                     referendabile: d.referendabile,
+                    rifiuto_referendum: rifiuto(&d.id),
                     perimetro: d.perimetro.keys().cloned().collect(),
                     gradini: (d.gradini.iter().enumerate())
                         .map(|(k, g)| VoceGradino {

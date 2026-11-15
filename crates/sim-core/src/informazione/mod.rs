@@ -196,10 +196,14 @@ fn controlla_sondaggio(
 ) -> Result<(), String> {
     let d = dati.elettorato();
     let giusta = |v: &[f64], n: usize| v.len() == n && v.iter().all(|x| x.is_finite());
+    let margine = |m: f64| m.is_finite() && m >= 0.0;
     if s.istituti.len() != n_istituti || !s.istituti.iter().all(|r| giusta(&r.quote, alt)) {
         return Err(format!(
             "istituti: servono {n_istituti} rilevazioni di {alt} valori finiti"
         ));
+    }
+    if !s.istituti.iter().all(|r| margine(r.margine)) {
+        return Err("istituti: margine non finito o negativo".into());
     }
     let incroci = [
         (&s.condizioni, Condizione::TUTTE.len(), "condizioni"),
@@ -209,7 +213,10 @@ fn controlla_sondaggio(
     for (v, n, nome) in incroci {
         let ok = v.len() == n
             && v.iter().all(|i| {
-                giusta(&i.quote, alt) && giusta(&i.posizione, PUNTI) && i.approvazione.is_finite()
+                giusta(&i.quote, alt)
+                    && giusta(&i.posizione, PUNTI)
+                    && i.approvazione.is_finite()
+                    && margine(i.margine)
             });
         if !ok {
             return Err(format!("{nome}: forma o valori non validi"));

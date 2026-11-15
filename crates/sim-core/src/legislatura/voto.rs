@@ -20,8 +20,23 @@ pub struct VotiPartito {
     pub senato: u32,
 }
 
+/// Il voto in una regione (id): `voti` come le quote di `EsitoElezioni.voti` (stesso ordine, stessi
+/// votanti nazionali al denominatore, quindi sommano alla quota del partito). `seggi_senato` per
+/// partito non somma ai seggi del partito: mancano il premio e l'estero, e vengono prima delle
+/// cessioni in coalizione; col riparto rifiutato sono zeri. `primo` = id del partito con più voti,
+/// a parità il primo nell'ordine dei partiti.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VotoRegione {
+    pub regione: String,
+    pub voti: Vec<f64>,
+    pub seggi_senato: Vec<u32>,
+    pub primo: String,
+}
+
 /// L'esito di un voto: `affluenza` fra gli aventi diritto, una voce per partito, `premio` = gli
-/// id dei membri di chi l'ha preso uniti da `+`, `coalizioni` = quelle al voto (id).
+/// id dei membri di chi l'ha preso uniti da `+`, `coalizioni` = quelle al voto (id), `regioni` =
+/// il voto in ogni regione, nell'ordine dei dati.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct EsitoElezioni {
@@ -30,6 +45,7 @@ pub struct EsitoElezioni {
     pub voti: Vec<VotiPartito>,
     pub premio: Option<String>,
     pub coalizioni: Vec<Vec<String>>,
+    pub regioni: Vec<VotoRegione>,
 }
 
 impl EsitoElezioni {
@@ -72,6 +88,13 @@ pub(crate) fn voti_per_regione(
         .collect()
 }
 
+/// L'indice del partito con più voti; a parità il più basso, cioè il primo nell'ordine dei partiti.
+pub(crate) fn primo_partito(voti: &[u64]) -> usize {
+    (voti.iter().enumerate())
+        .fold((0, 0), |m, (j, &v)| if v > m.1 { (j, v) } else { m })
+        .0
+}
+
 /// La prima di `coalizioni` (la prima è del giocatore) con più della metà dei seggi in entrambe le
 /// Camere; i partiti fuori da ogni coalizione contano da soli. Senza maggioranza, `Giocatore` se
 /// la sua coalizione ha più seggi alla Camera di ogni altra (scelta 9 del piano 7); altrimenti
@@ -109,6 +132,13 @@ pub(crate) fn incarico(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_parita_di_voti_il_primo_e_il_primo_nell_ordine_dei_partiti() {
+        assert_eq!(primo_partito(&[5, 9, 9, 2]), 1);
+        assert_eq!(primo_partito(&[0, 0, 0]), 0);
+        assert_eq!(primo_partito(&[3, 4, 5]), 2);
+    }
 
     #[test]
     fn incarico_a_chi_ha_la_maggioranza_in_entrambe_le_camere() {
