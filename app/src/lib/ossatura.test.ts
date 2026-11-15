@@ -94,6 +94,7 @@ describe("fettaDi", () => {
     expect(fettaDi("paese", "governo")).toBeNull();
     expect(fettaDi("partiti", "governo")).toBeNull();
     expect(fettaDi("governo", "governo")).toBeNull();
+    expect(fettaDi("aula", "governo")).toBeNull();
     expect(fettaDi("trattativa", "trattativa")).toBeNull();
     expect(fettaDi("partiti", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "turno_zero")).toBeNull();

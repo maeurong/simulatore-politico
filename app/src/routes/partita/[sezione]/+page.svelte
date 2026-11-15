@@ -5,6 +5,7 @@
   import { partita } from "$lib/partita.svelte";
   import Cruscotto from "$lib/cruscotto/Cruscotto.svelte";
   import Governo from "$lib/governo/Governo.svelte";
+  import Aula from "$lib/aula/Aula.svelte";
   import Campagna from "$lib/campagna/Campagna.svelte";
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
@@ -35,7 +36,7 @@
 {#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
-    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo"}>
+    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula"}>
       <div class="pagina">
         {#if aperta}
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
@@ -43,6 +44,8 @@
             <Cruscotto vista={partita.vista} />
           {:else if aperta === "governo" && fetta === null}
             <Governo vista={partita.vista} />
+          {:else if aperta === "aula" && fetta === null}
+            <Aula vista={partita.vista} />
           {:else if aperta === "campagna" && fetta === null}
             <Campagna vista={partita.vista} />
           {:else if aperta === "paese" && fetta === null}
@@ -75,7 +78,7 @@
   }
   .corpo.due { grid-template-columns: minmax(0, 1fr) var(--lato) }
   .corpo > * { min-width: 0 }
-  /* Governo: la pagina sta nel corpo e non scorre; l'album e il dettaglio scorrono ciascuno per conto suo */
+  /* Governo e Aula: la pagina sta nel corpo e non scorre; l'album e il dettaglio scorrono ciascuno per conto suo */
   .corpo.fisso { overflow: hidden; grid-template-rows: minmax(0, 1fr) }
   .corpo.fisso .pagina { grid-template-rows: minmax(0, 1fr); align-content: stretch; min-height: 0 }
   .pagina { display: grid; gap: 10px; align-content: start }
