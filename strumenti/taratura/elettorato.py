@@ -96,6 +96,7 @@ ALIQUOTE = {"bassa": 0.15, "media": 0.25, "alta": 0.33}  # assunzione: aliquote 
 ASTENSIONE_FASCIA = {"bassa": 0.3, "media": 0.0, "alta": -0.2}  # assunzione: la fascia bassa vota meno
 ISTITUTI = (("Istituto A", 1000), ("Istituto B", 800), ("Istituto C", 1200), ("Istituto D", 1500))  # segnaposto
 NOMI = ["Giulia", "Marco", "Francesca", "Luca", "Chiara", "Simone", "Sara", "Filippo", "Elena", "Davide", "Anna", "Fabio"]
+GENERI = ["donna", "uomo", "donna", "uomo", "donna", "uomo", "donna", "uomo", "donna", "uomo", "donna", "uomo"]  # uno per nome, stesso ordine
 COGNOMI = ["Rossi", "Esposito", "Bianchi", "Romano", "Barbieri", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Ferraro", "Caruso"]
 
 
@@ -669,7 +670,7 @@ def scrivi(d):
     t += f"aliquote = {tabella(ALIQUOTE)}\n"
     t += f"astensione_condizione = {tabella(dict.fromkeys(CONDIZIONI, 0.0))}\n"
     t += f"astensione_fascia = {tabella(ASTENSIONE_FASCIA)}\n"
-    t += f"nomi = {s(NOMI, ensure_ascii=False)}\ncognomi = {s(COGNOMI, ensure_ascii=False)}\n\n[paniere]\n"
+    t += f"nomi = {s(NOMI, ensure_ascii=False)}\ngeneri = {s(GENERI)}\ncognomi = {s(COGNOMI, ensure_ascii=False)}\n\n[paniere]\n"
     t += "".join(f"{f} = [{', '.join(f'{x:.6f}' for x in d['panieri'][f])}]\n" for f in FASCE)
     for c, pesi in INTERESSI.items():
         t += f"\n[interessi.{c}]\n" + "".join(f"{k} = {w:.2f}\n" for k, w in pesi.items())

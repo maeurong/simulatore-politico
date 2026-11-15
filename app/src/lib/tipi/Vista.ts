@@ -5,13 +5,19 @@ import type { EsitoReferendum } from "./EsitoReferendum";
 import type { EsitoVoto } from "./EsitoVoto";
 import type { Fase } from "./Fase";
 import type { Fermata } from "./Fermata";
+import type { RedditoFascia } from "./RedditoFascia";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
 import type { VistaAcquisti } from "./VistaAcquisti";
 import type { VistaBilancio } from "./VistaBilancio";
 import type { VistaCampagna } from "./VistaCampagna";
+import type { VistaDebito } from "./VistaDebito";
+import type { VistaPosti } from "./VistaPosti";
 import type { VistaReferendum } from "./VistaReferendum";
+import type { VistaRegoleUe } from "./VistaRegoleUe";
+import type { VistaRibaltone } from "./VistaRibaltone";
+import type { VistaSoglie } from "./VistaSoglie";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
@@ -24,10 +30,14 @@ import type { VoceGrandezza } from "./VoceGrandezza";
 import type { VoceIncarico } from "./VoceIncarico";
 import type { VoceMinistero } from "./VoceMinistero";
 import type { VoceMisura } from "./VoceMisura";
+import type { VoceOpera } from "./VoceOpera";
 import type { VocePartito } from "./VocePartito";
 import type { VoceProgramma } from "./VoceProgramma";
+import type { VoceRegione } from "./VoceRegione";
 import type { VoceRichiesta } from "./VoceRichiesta";
+import type { VoceSfiducia } from "./VoceSfiducia";
 import type { VoceSituazione } from "./VoceSituazione";
+import type { VoceSpartizione } from "./VoceSpartizione";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -91,7 +101,16 @@ alleati_avversari: Array<VoceFascia>,
  * Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
  * proposta dell'opposizione è già in calendario.
  */
-posto_riservato: boolean, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
+posto_riservato: boolean, 
+/**
+ * Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
+ * `None` altrove, a partita finita o senza partiti fuori dal governo con seggi alla Camera.
+ */
+posto_riservato_di: string | null, 
+/**
+ * La mozione di sfiducia presentata nel turno, votata in chiusura; `None` = nessuna.
+ */
+sfiducia: VoceSfiducia | null, calendario: Array<VoceMisura>, esiti: Array<EsitoVoto>, 
 /**
  * I referendum in attesa del voto.
  */
@@ -117,6 +136,15 @@ coalizione: Array<string>,
  * altrove.
  */
 richieste: Array<VoceRichiesta>, 
+/**
+ * In trattativa con l'incarico al giocatore, una voce per dicastero nell'ordine dei dati: la
+ * spartizione proposta o, senza proposta, quella di default; vuota altrove.
+ */
+spartizione: Array<VoceSpartizione>, 
+/**
+ * In trattativa con `Guida`, la coalizione del ribaltone e il primo per seggi; `None` altrove.
+ */
+ribaltone: VistaRibaltone | null, 
 /**
  * Gli esiti dei voti, il più recente per primo.
  */
@@ -163,4 +191,25 @@ acquisti: VistaAcquisti,
 /**
  * Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
  */
-fermate: Array<Fermata>, };
+fermate: Array<Fermata>, 
+/**
+ * Una voce per regione, nell'ordine dei dati.
+ */
+regioni: Array<VoceRegione>, 
+/**
+ * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
+ */
+opere: Array<VoceOpera>, 
+/**
+ * Lo stato della procedura UE, l'esito dell'ultimo controllo e la proiezione del prossimo.
+ */
+regole_ue: VistaRegoleUe, 
+/**
+ * Il debito in % del PIL, il programma del MES e la ristrutturazione, se in corso.
+ */
+debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, 
+/**
+ * Reddito reale, crescita del trimestre e crescita attesa (punti) per fascia nell'ultima
+ * chiusura, medie dei gruppi pesate con gli elettori; tre voci nell'ordine delle fasce.
+ */
+redditi: Array<RedditoFascia>, };

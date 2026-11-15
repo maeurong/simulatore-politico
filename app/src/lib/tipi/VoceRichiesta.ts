@@ -2,6 +2,6 @@
 
 /**
  * Un alleato (id) in trattativa: la sua richiesta e l'offerta della spartizione proposta, in
- * punti di peso dei dicasteri.
+ * punti di peso dei dicasteri, e l'intesa da cui ripartirebbe alla formazione del governo.
  */
-export type VoceRichiesta = { partito: string, richiesta: number, offerta: number, };
+export type VoceRichiesta = { partito: string, richiesta: number, offerta: number, intesa_partenza: number, };

@@ -827,3 +827,106 @@ fn la_pensione_minima_fa_da_pavimento() {
     let p = giocata(dati(f), 2);
     assert_eq!(annata_2027(&p).importo, 20_000);
 }
+
+/// La deviazione del controllo sull'anno `anno`, ricalcolata dai conti: spesa netta e PIL
+/// dell'anno per `fattore`, contro la spesa netta dell'anno prima e il tetto; meno la clausola
+/// nazionale (nessun margine per l'energia in queste partite).
+fn deviazione_attesa(p: &Partita, anno: u16, fattore: f64) -> f64 {
+    let dati = base_senza_shock();
+    let s = dati.scenario();
+    let r = &p.economia().regole_ue;
+    let clausola = if anno <= s.clausola_nazionale_fino_a {
+        s.clausola_nazionale_margine.valore
+    } else {
+        0.0
+    };
+    let sn1 = r.spesa_netta[&anno] as f64 * fattore;
+    let sn2 = r.spesa_netta[&(anno - 1)] as f64;
+    let pil1 = r.pil_annuo[&anno] as f64 * fattore;
+    (sn1 - sn2 * (1.0 + s.tetto_spesa_netta(anno) / 100.0)) / pil1 * 100.0 - clausola
+}
+
+/// La proiezione della Vista contro l'oracolo, col conto che ne uscirebbe.
+fn proiezione_come(p: &Partita, anno: u16, fattore: f64) {
+    let v = p.vista();
+    let proiezione = v.regole_ue.proiezione.expect("proiezione");
+    assert_eq!(proiezione.anno, anno, "{:?}", v.data);
+    let attesa = deviazione_attesa(p, anno, fattore);
+    assert!(
+        (proiezione.deviazione - attesa).abs() < 1e-9,
+        "{:?}: {} contro {attesa}",
+        v.data,
+        proiezione.deviazione
+    );
+    let conto = (p.economia().regole_ue.conto_controllo + attesa).max(0.0);
+    assert!(
+        (proiezione.conto - conto).abs() < 1e-9,
+        "{:?}: conto {} contro {conto}",
+        v.data,
+        proiezione.conto
+    );
+}
+
+#[test]
+fn la_proiezione_di_gennaio_coincide_col_controllo() {
+    // Gennaio 2027 giudica il 2026 del turno zero, gennaio 2028 il 2027 accumulato.
+    for (turni, anno) in [(1, 2026), (5, 2027)] {
+        let mut p = giocata(base_senza_shock(), turni);
+        assert_eq!(p.vista().data.trimestre, 1);
+        let gennaio = p.vista().regole_ue.proiezione.expect("proiezione");
+        assert_eq!(gennaio.anno, anno);
+        p.chiudi_turno();
+        assert_eq!(
+            p.vista().regole_ue.proiezione,
+            Some(gennaio.clone()),
+            "aprile"
+        );
+        p.chiudi_turno();
+        let r = &p.economia().regole_ue;
+        assert!(
+            (gennaio.deviazione - r.ultima_deviazione).abs() < 1e-9,
+            "{anno}: {} contro {}",
+            gennaio.deviazione,
+            r.ultima_deviazione
+        );
+        assert!(
+            (gennaio.conto - r.conto_controllo).abs() < 1e-9,
+            "{anno}: conto {} contro {}",
+            gennaio.conto,
+            r.conto_controllo
+        );
+    }
+}
+
+#[test]
+fn al_turno_zero_la_proiezione_non_annualizza() {
+    let p = Partita::nuova(base_senza_shock(), 1);
+    assert_eq!(p.vista().data.trimestre, 4);
+    proiezione_come(&p, 2026, 1.0);
+}
+
+#[test]
+fn in_luglio_settembre_annualizza_su_due_trimestri() {
+    let mut p = giocata(base_senza_shock(), 3);
+    assert_eq!(p.vista().data.trimestre, 3);
+    proiezione_come(&p, 2027, 2.0);
+    // Ottobre-dicembre: tre trimestri chiusi.
+    p.chiudi_turno();
+    proiezione_come(&p, 2027, 4.0 / 3.0);
+}
+
+#[test]
+fn il_debito_sul_pil_e_quello_dello_spread() {
+    let mut p = Partita::nuova(dati_base(), 1);
+    let zero = p.vista().debito.debito_pil;
+    assert!((zero - 136.7).abs() < 0.1, "{zero}");
+    for turno in 0..2 {
+        let atteso = p.economia().debito_e_disavanzo_pil().0;
+        let v = p.vista().debito.debito_pil;
+        assert!(
+            (v - atteso).abs() < 1e-9,
+            "turno {turno}: {v} contro {atteso}"
+        );
+        p.chiudi_turno();
+    }
+}

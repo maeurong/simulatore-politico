@@ -19,6 +19,11 @@ ministro: VoceMinistro | null, rosa: Array<VoceMinistro>,
  */
 dimissioni_chieste: boolean, 
 /**
+ * L'intesa che l'alleato perderebbe con `ChiediDimissioni`; 0 col ministro del giocatore,
+ * col tecnico, in interim, con le dimissioni già chieste e quando il giocatore non governa.
+ */
+prezzo_dimissioni: number, 
+/**
  * Indice nella rosa del successore scelto; `None` = il primo.
  */
 scelta: number | null, 

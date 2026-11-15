@@ -8,7 +8,7 @@ use crate::caso::Flusso;
 use crate::comando::Comando;
 use crate::disposizioni::{Norma, data_di};
 use crate::economia::{self, Bilancio};
-use crate::elettorato::{Affluenza, Condizione, stima};
+use crate::elettorato::{Affluenza, Condizione, Genere, stima};
 use crate::esito::TipoVoce;
 use crate::informazione::indice;
 use crate::legislatura::{
@@ -32,12 +32,12 @@ impl Partita {
             .cloned()
     }
 
-    /// Nome e cognome di un leader nuovo, estratti da `Flusso::PartitiIa`.
-    pub(super) fn leader_nuovo(&mut self) -> String {
+    /// Nome e cognome di un leader nuovo, estratti da `Flusso::PartitiIa`, col genere del nome.
+    pub(super) fn leader_nuovo(&mut self) -> (String, Genere) {
         let el = self.dati.elettorato();
-        let n = &el.nomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len())];
+        let k = indice(self.caso.uniforme(Flusso::PartitiIa), el.nomi.len());
         let c = &el.cognomi[indice(self.caso.uniforme(Flusso::PartitiIa), el.cognomi.len())];
-        format!("{n} {c}")
+        (format!("{} {c}", el.nomi[k]), el.generi[k])
     }
 
     /// Il partito IA `j` cambia leader: nome nuovo estratto da `Flusso::PartitiIa`; la valence
@@ -51,12 +51,12 @@ impl Partita {
         let mut nuovo = None;
         for _ in 0..100 {
             let candidato = self.leader_nuovo();
-            if uscente.as_ref() != Some(&candidato) {
+            if uscente.as_ref() != Some(&candidato.0) {
                 nuovo = Some(candidato);
                 break;
             }
         }
-        let Some(nuovo) = nuovo else {
+        let Some((nuovo, genere)) = nuovo else {
             return;
         };
         let luna = self.dati.manopola("luna_di_miele_leader");
@@ -64,6 +64,7 @@ impl Partita {
             return;
         };
         p.leader.clone_from(&nuovo);
+        p.genere_leader = Some(genere);
         p.valence = p.valence_base + luna;
         let fatto = format!("Nuovo leader: {nuovo}");
         self.voce_di(j, TipoVoce::CambioDiLeader, fatto, causa.into());
@@ -1712,6 +1713,7 @@ mod tests {
             }],
             premio: None,
             coalizioni: Vec::new(),
+            regioni: Vec::new(),
         };
         p.legislatura.elezioni = vec![esito(0.06), esito(0.05)];
         let ed = &mut p.partiti[6];

@@ -29,7 +29,7 @@ describe("quotaVotanti", () => {
 
 describe("quotaIncrocio", () => {
   it("quote[j] / (1 − astensione); null fuori riga", () => {
-    const i = { id: "x", campione: 1, quote: [0.3, 0.3, 0.4], posizione: [], approvazione: 0 };
+    const i = { id: "x", campione: 1, quote: [0.3, 0.3, 0.4], posizione: [], approvazione: 0, margine: 0 };
     expect(quotaIncrocio(i, 0)).toBeCloseTo(0.5);
     expect(quotaIncrocio(i, 2)).toBeNull();
   });

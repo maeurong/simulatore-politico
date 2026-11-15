@@ -121,21 +121,32 @@ pub(crate) fn ammetti_disposizioni(
         let Some(k) = dati.disposizione(&v.disposizione) else {
             return ko(format!("disposizione sconosciuta: {}", v.disposizione));
         };
-        let x = &dati.disposizioni()[k];
-        if x.norma != Norma::Ordinaria {
-            return ko(format!("materia esclusa dal decreto: {}", x.nome));
-        }
-        let dicastero =
-            (x.dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|d| &d.id == id));
-        if !inneschi.tutte
-            && !inneschi.disposizioni.contains(&k)
-            && dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i))
-        {
-            return ko(format!(
-                "decreto senza innesco: nessun evento aperto per «{}»",
-                x.nome
-            ));
-        }
+        ammessa(dati, inneschi, k)?;
+    }
+    Ok(())
+}
+
+/// La disposizione `k` (indice di catalogo) è ammessa dagli `inneschi` se è ordinaria e ci sta,
+/// come disposizione o per il suo dicastero. È la regola di `ammetti_disposizioni`, che la Vista
+/// chiama con gli inneschi di un solo evento.
+///
+/// # Errors
+/// `Comando`, nell'ordine: materia esclusa (elettorale e costituzionale), decreto senza innesco.
+pub(crate) fn ammessa(dati: &DatiGioco, inneschi: &Inneschi, k: usize) -> Result<(), Errore> {
+    let x = &dati.disposizioni()[k];
+    if x.norma != Norma::Ordinaria {
+        return ko(format!("materia esclusa dal decreto: {}", x.nome));
+    }
+    let dicastero =
+        (x.dicastero.as_ref()).and_then(|id| dati.dicasteri().iter().position(|d| &d.id == id));
+    if !inneschi.tutte
+        && !inneschi.disposizioni.contains(&k)
+        && dicastero.is_none_or(|i| !inneschi.dicasteri.contains(&i))
+    {
+        return ko(format!(
+            "decreto senza innesco: nessun evento aperto per «{}»",
+            x.nome
+        ));
     }
     Ok(())
 }

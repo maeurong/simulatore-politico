@@ -788,6 +788,54 @@ fn la_siccita_ammette_gli_appalti_non_le_accise() {
     assert!(e.to_string().contains("decreto senza innesco"), "{e}");
 }
 
+/// Col solo evento `id` aperto: le `norme` della sua voce, nell'ordine del catalogo, dopo aver
+/// provato `EmanaDecreto` su ogni disposizione: `ammetti_disposizioni` la ferma se e solo se non
+/// sta fra le norme.
+fn norme_provate(id: &str) -> Vec<String> {
+    let dati = dati_base();
+    let p = con_evento_aperto(&Partita::nuova(dati_base(), 1), id);
+    let eventi = p.vista().eventi;
+    assert_eq!(eventi.len(), 1);
+    let norme = eventi[0].norme.clone();
+    let indici: Vec<usize> = (norme.iter())
+        .map(|n| dati.disposizione(n).unwrap())
+        .collect();
+    assert!(
+        indici.is_sorted(),
+        "fuori dall'ordine del catalogo: {norme:?}"
+    );
+    for x in dati.disposizioni() {
+        let gradino = (x.gradini.iter())
+            .find(|g| p.in_vigore(&x.id) != Some(g.id.as_str()))
+            .unwrap();
+        let e = (p.clone().comanda(emana(decreto_su(&x.id, &gradino.id))))
+            .err()
+            .map(|e| e.to_string())
+            .unwrap_or_default();
+        let fermata = e.contains("decreto senza innesco") || e.contains("materia esclusa");
+        assert_eq!(fermata, !norme.contains(&x.id), "{id}, {}: {e}", x.id);
+    }
+    norme
+}
+
+/// `VoceEvento.norme` è la regola di `EmanaDecreto` con quel solo evento aperto: le norme
+/// dell'emergenza, le ordinarie dei dicasteri della situazione, tutte le ordinarie per il debito,
+/// nessuna senza decreto.
+#[test]
+fn le_norme_dell_evento_sono_quelle_ammesse() {
+    let mut sisma = norme_provate("emergenza_sismica");
+    sisma.sort();
+    assert_eq!(sisma, ["accise", "codice_appalti", "detrazione_edilizia"]);
+    let interno = norme_provate("criminalita");
+    let ha = |n: &str| interno.iter().any(|x| x == n);
+    assert!(
+        ha("decreto_flussi") && ha("cittadinanza") && !ha("ticket"),
+        "{interno:?}"
+    );
+    assert!(norme_provate("aste_scoperte").len() > interno.len());
+    assert!(norme_provate("emergenza_incendi").is_empty());
+}
+
 #[test]
 fn la_situazione_apre_ancora_il_ministero() {
     let p = con_evento_interno(&Partita::nuova(dati_base(), 1));
