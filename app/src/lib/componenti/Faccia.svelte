@@ -6,11 +6,11 @@
   import { iniziali } from "$lib/partiti";
   import Caricatura from "$lib/caricature/Caricatura.svelte";
   import { leveDi, type Ruolo } from "$lib/caricature/caricatura";
-  let { nome, misura, ruolo, partito = "", salto = 0, fondo = "carta" }: { nome: string; misura: 34 | 46 | 62 | 84; ruolo?: Ruolo; partito?: string; salto?: number; fondo?: "carta" | "giallo" | "rosso" } = $props();
+  let { nome, misura, ruolo, partito = "", salto = 0, fondo = "carta", dicastero }: { nome: string; misura: 34 | 46 | 62 | 84; ruolo?: Ruolo; partito?: string; salto?: number; fondo?: "carta" | "giallo" | "rosso"; dicastero?: string } = $props();
   const disegna = $derived(ruolo !== undefined && nome !== "");
 </script>
 
-{#if disegna}<span class="disegno" aria-hidden="true"><Caricatura ruolo={ruolo!} {partito} {nome} {misura} {fondo} leve={leveDi(ruolo!, partito, nome, salto)} /></span>{/if}
+{#if disegna}<span class="disegno" aria-hidden="true"><Caricatura ruolo={ruolo!} {partito} {nome} {misura} {fondo} {dicastero} leve={leveDi(ruolo!, partito, nome, salto)} /></span>{/if}
 <span class="iniz" class:solo={!disegna} style:width="{misura}px" style:height="{misura}px" style:font-size="{Math.max(12, Math.round(misura * 0.36))}px" aria-hidden="true">{iniziali(nome)}</span>
 
 <style>

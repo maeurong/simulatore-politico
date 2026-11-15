@@ -22,6 +22,7 @@
   const causa = (c: string) => t(`governo.causa_${c}` as Chiave);
   const regione = (id: string | null) => (id ? (REGIONI.find((r) => r.id === id)?.nome ?? id) : null);
   const pc = (x: number) => Math.min(10, Math.max(0, x)) * 10;
+  // shortcut: copia riduzione_rodaggio del core (ministri/mod.rs:128-133); passare a una capacità effettiva nella Vista quando il core la espone
   const capacita = $derived(m ? (m.rodaggio ? Math.max(1, m.capacita - 1) : m.capacita) : 0);
   const motivi = $derived(elenco(f.evidenza.map((e) => t(`governo.evidenza_${e}` as Chiave)), ", "));
 </script>
@@ -42,7 +43,7 @@
 {:else}
   <div class="carta">
     <div class="su">
-      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} />
+      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <div>
         <div class="occ">{f.nomeDicastero}</div>
         <h4 class="tit">{m.nome}</h4>

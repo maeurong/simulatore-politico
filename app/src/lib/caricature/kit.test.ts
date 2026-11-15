@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { VARIANTI, type Leve } from "./caricatura";
 import { render } from "svelte/server";
 import Caricatura from "./Caricatura.svelte";
-import { FANTASIE, profilo } from "./kit";
+import { FANTASIE, OGGETTI, profilo } from "./kit";
 import fonte from "./kit.ts?raw";
 
 const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
@@ -67,5 +67,19 @@ describe("kit", () => {
     FANTASIE.forEach((f, c) => expect(colletto("ministro", c)).toContain(`url(#fantasia-${f})`));
     expect(colletto("tecnico", 2)).toContain("grigio");
     expect(colletto("tecnico", 2)).not.toContain("url(#fantasia");
+  });
+
+  it("l'oggetto del dicastero c'è solo con un id noto, e mai sul leader", () => {
+    const corpo = (props: Record<string, unknown>) => render(Caricatura, { props: { ruolo: "ministro", partito: "Centro", nome: "", misura: 62, ...props } as never }).body;
+    expect(corpo({ dicastero: "sanita" })).toContain('class="ogg"');
+    expect(corpo({})).not.toContain("ogg");
+    expect(corpo({ dicastero: "inesistente" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "toString" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "sanita", ruolo: "leader" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "sanita", fondo: "rosso" })).toMatch(/class="car[^"]* rosso/);
+  });
+
+  it("ogni dicastero ha il suo oggetto", () => {
+    expect(Object.keys(OGGETTI)).toHaveLength(10);
   });
 });

@@ -31,7 +31,7 @@
   </div>
   {#if f.stati.length}<div class="stati">{#each f.stati as s (s)}<span class="chip" class:rosso={soglia(s)}>{t(`governo.stato_${s}` as Chiave)}</span>{/each}</div>{/if}
   <div class="fz">
-    {#if m}<Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} />
+    {#if m}<Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
     {:else}<span class="vuoto" aria-hidden="true">—</span>{/if}
   </div>
   <h4 class="nm"><button type="button" {id} aria-pressed={scelta} onclick={onscelta}>{m ? m.nome : t("governo.senza_ministro")}</button></h4>
