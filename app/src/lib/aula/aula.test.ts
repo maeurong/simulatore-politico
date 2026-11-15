@@ -98,20 +98,28 @@ describe("rifiutoPer", () => {
 });
 
 describe("riportaFuoco", () => {
-  const corpo = {};
-  const prova = (attivo: unknown, prossimo: { focus: () => void } | null) => {
+  const prova = (da: { isConnected: boolean } | null, prossimo: { focus: (o?: unknown) => void } | null) => {
     const chiamate: string[] = [];
-    const lato = { querySelector: () => prossimo, focus: () => chiamate.push("lato") } as unknown as HTMLElement;
-    riportaFuoco(lato, { activeElement: attivo, body: corpo } as unknown as Document);
-    return chiamate;
+    let selettore = "";
+    const lato = { querySelector: (q: string) => ((selettore = q), prossimo), focus: () => chiamate.push("lato") } as unknown as HTMLElement;
+    riportaFuoco(lato, da as unknown as Element);
+    return { chiamate, selettore };
   };
-  it("fuoco su body: al prossimo emendamento aperto, se no al dettaglio", () => {
-    const c: string[] = [];
-    prova(corpo, { focus: () => c.push("emendamento") });
-    expect(c).toEqual(["emendamento"]);
-    expect(prova(corpo, null)).toEqual(["lato"]);
+  it("bottone smontato: al prossimo emendamento aperto e abilitato senza scroll, se no al dettaglio", () => {
+    const c: unknown[] = [];
+    const r = prova({ isConnected: false }, { focus: (o) => c.push(o) });
+    expect(c).toEqual([{ preventScroll: true }]);
+    expect(r.selettore).toContain(":not([aria-disabled=\"true\"])");
+    expect(prova({ isConnected: false }, null).chiamate).toEqual(["lato"]);
   });
-  it("fuoco già su un elemento: non lo tocca", () => {
-    expect(prova({}, null)).toEqual([]);
+  it("bottone ancora montato (linea Sì/No col clic): non si sposta il fuoco", () => {
+    const c: unknown[] = [];
+    expect(prova({ isConnected: true }, { focus: () => c.push(1) }).chiamate).toEqual([]);
+    expect(c).toEqual([]);
+  });
+  it("fuoco su body o fuori dal dettaglio (da nullo): non si sposta", () => {
+    const c: unknown[] = [];
+    expect(prova(null, { focus: () => c.push(1) }).chiamate).toEqual([]);
+    expect(c).toEqual([]);
   });
 });

@@ -67,8 +67,9 @@ export const formaDi = (m: { forma: string; deliberazione: number }): string =>
 export const rifiutoPer = <R extends { vista: Vista | null; misura: number | null }>(r: R | null, v: Vista, misura: number | null): R | null =>
   r && r.vista === v && r.misura === misura ? r : null;
 
-/** Se il bottone premuto è sparito col suo effetto il fuoco è su body: passa al prossimo emendamento aperto, o al dettaglio. */
-export function riportaFuoco(lato: HTMLElement, doc: Document = document): void {
-  if (doc.activeElement !== doc.body) return;
-  (lato.querySelector<HTMLElement>(".az button") ?? lato).focus();
+/** `da` è l'elemento col fuoco prima del comando, se stava nel dettaglio. Se è sparito col suo effetto il fuoco passa al primo emendamento
+ *  aperto e abilitato, o al dettaglio; se è ancora montato, o il fuoco stava altrove, non si tocca niente. */
+export function riportaFuoco(lato: HTMLElement, da: Element | null): void {
+  if (!da || da.isConnected) return;
+  (lato.querySelector<HTMLElement>('.az button:not([disabled]):not([aria-disabled="true"])') ?? lato).focus({ preventScroll: true });
 }

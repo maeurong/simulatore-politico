@@ -42,10 +42,11 @@
     rifiutato = null;
     // la misura della chiamata, non quella scelta quando arriva la risposta
     const misura = corrente?.id ?? null;
+    const da = lato.contains(document.activeElement) ? document.activeElement : null;
     try {
       const ok = (await partita.comanda(c)) !== null;
       await tick();
-      if (ok) riportaFuoco(lato);
+      if (ok) riportaFuoco(lato, da);
       return ok;
     } catch (e) {
       rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista };
@@ -97,7 +98,6 @@
   .schede button { padding: 4px 12px; font-weight: 700; color: var(--grigio); border: 1.5px solid transparent; border-bottom: 0; white-space: nowrap }
   .schede button.qui { color: var(--ink); border-color: var(--ink); background: var(--carta); margin-bottom: -2px; padding-bottom: 6px }
   .schede small { font-weight: 400; margin-left: 4px }
-  .lato:focus-visible { outline-offset: -2px }
   .lato { border-left: var(--forte); padding-left: var(--canale); min-height: 0; overflow: hidden auto; padding-bottom: 8px; display: grid; gap: 8px; align-content: start }
   .lato:focus-visible { outline-offset: -2px }
 </style>
