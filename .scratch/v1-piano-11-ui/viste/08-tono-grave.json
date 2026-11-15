@@ -16,43 +16,53 @@
   "dicasteri": [
     {
       "id": "economia_finanze",
-      "nome": "Economia e Finanze"
+      "nome": "Economia e Finanze",
+      "indicatore": "efficienza_riscossione"
     },
     {
       "id": "sviluppo_economico",
-      "nome": "Sviluppo economico"
+      "nome": "Sviluppo economico",
+      "indicatore": "sostegno_imprese"
     },
     {
       "id": "lavoro_welfare",
-      "nome": "Lavoro e Welfare"
+      "nome": "Lavoro e Welfare",
+      "indicatore": "copertura_welfare"
     },
     {
       "id": "sanita",
-      "nome": "Sanità"
+      "nome": "Sanità",
+      "indicatore": "qualita_servizio_sanitario"
     },
     {
       "id": "istruzione_ricerca",
-      "nome": "Istruzione e Ricerca"
+      "nome": "Istruzione e Ricerca",
+      "indicatore": "qualita_scuola"
     },
     {
       "id": "infrastrutture_trasporti",
-      "nome": "Infrastrutture e Trasporti"
+      "nome": "Infrastrutture e Trasporti",
+      "indicatore": "qualita_trasporti"
     },
     {
       "id": "ambiente_energia",
-      "nome": "Ambiente ed Energia"
+      "nome": "Ambiente ed Energia",
+      "indicatore": "sicurezza_energetica"
     },
     {
       "id": "interno",
-      "nome": "Interno"
+      "nome": "Interno",
+      "indicatore": "sicurezza"
     },
     {
       "id": "giustizia",
-      "nome": "Giustizia"
+      "nome": "Giustizia",
+      "indicatore": "durata_processi"
     },
     {
       "id": "esteri_difesa",
-      "nome": "Esteri e Difesa"
+      "nome": "Esteri e Difesa",
+      "indicatore": "prontezza_difesa"
     }
   ],
   "grandezze": [
@@ -293,6 +303,7 @@
       "al_governo": false,
       "vocazione": "identitaria",
       "leader": "Anna Ferrucci",
+      "genere_leader": "donna",
       "regola": "sticker",
       "sciolto": false,
       "cassa": 248600,
@@ -307,7 +318,8 @@
           "gradino": "retributivo",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "sinistra",
@@ -318,6 +330,7 @@
       "al_governo": false,
       "vocazione": "mista",
       "leader": "Luca Benedetti",
+      "genere_leader": "uomo",
       "regola": "aggregator",
       "sciolto": false,
       "cassa": 3163247,
@@ -332,7 +345,8 @@
           "gradino": "retributivo",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "centrosinistra",
@@ -343,6 +357,7 @@
       "al_governo": false,
       "vocazione": "mista",
       "leader": "Chiara Lombardo",
+      "genere_leader": "donna",
       "regola": "hunter",
       "sciolto": false,
       "cassa": 562058,
@@ -357,7 +372,8 @@
           "gradino": "quota base universale",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "centro",
@@ -368,6 +384,7 @@
       "al_governo": false,
       "vocazione": "governista",
       "leader": "Giorgio Valli",
+      "genere_leader": "uomo",
       "regola": "governator",
       "sciolto": false,
       "cassa": 402171,
@@ -382,7 +399,8 @@
           "gradino": "7 €/h",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "centrodestra",
@@ -393,6 +411,7 @@
       "al_governo": true,
       "vocazione": "mista",
       "leader": "Silvia Moretti",
+      "genere_leader": "donna",
       "regola": "hunter",
       "sciolto": false,
       "cassa": 679256,
@@ -407,7 +426,8 @@
           "gradino": "prime materie",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "destra",
@@ -418,6 +438,7 @@
       "al_governo": true,
       "vocazione": "mista",
       "leader": "Davide Ranieri",
+      "genere_leader": "uomo",
       "regola": "aggregator",
       "sciolto": false,
       "cassa": 2432780,
@@ -432,7 +453,8 @@
           "gradino": "intese complete",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "estrema_destra",
@@ -443,6 +465,7 @@
       "al_governo": false,
       "vocazione": "identitaria",
       "leader": "Bruno Castellani",
+      "genere_leader": "uomo",
       "regola": "sticker",
       "sciolto": false,
       "cassa": 589043,
@@ -457,7 +480,8 @@
           "gradino": "intese complete",
           "in_sospeso": true
         }
-      ]
+      ],
+      "minaccia": false
     },
     {
       "id": "giocatore",
@@ -468,10 +492,12 @@
       "al_governo": true,
       "vocazione": "mista",
       "leader": "",
+      "genere_leader": null,
       "regola": "sticker",
       "sciolto": false,
       "cassa": 2475083,
-      "promesse": []
+      "promesse": [],
+      "minaccia": false
     }
   ],
   "ministeri": [
@@ -479,6 +505,7 @@
       "dicastero": "economia_finanze",
       "ministro": {
         "nome": "Simone Gallo",
+        "genere": "uomo",
         "partito": "destra",
         "capacita": 4,
         "posizione": 5.925495650975252,
@@ -492,6 +519,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": {
@@ -501,6 +529,8 @@
         "costo": 148756294,
         "motivo": "Efficienza della riscossione: avvicina l'obiettivo",
         "stato": "annunciata",
+        "costo_ferma": -28.93626087256187,
+        "evidenza": [],
         "in_evidenza": false
       },
       "motivo_senza_agenda": null,
@@ -583,6 +613,7 @@
       "dicastero": "sviluppo_economico",
       "ministro": {
         "nome": "Marco Bianchi",
+        "genere": "uomo",
         "partito": "giocatore",
         "capacita": 2,
         "posizione": 4.093665205507699,
@@ -602,6 +633,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 0.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": {
@@ -611,6 +643,8 @@
         "costo": 102864162,
         "motivo": "vicino alla sua posizione; Campania: ne ha bisogno",
         "stato": "annunciata",
+        "costo_ferma": -11.48416301376925,
+        "evidenza": [],
         "in_evidenza": false
       },
       "motivo_senza_agenda": null,
@@ -693,6 +727,7 @@
       "dicastero": "lavoro_welfare",
       "ministro": {
         "nome": "Simone Ricci",
+        "genere": "uomo",
         "partito": "centrodestra",
         "capacita": 2,
         "posizione": 4.148357754004794,
@@ -712,6 +747,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": null,
@@ -793,7 +829,8 @@
           "regione": null,
           "turni_mancanti": 3,
           "rata": 97516557,
-          "speso": 97516557
+          "speso": 97516557,
+          "costo_ferma": -25.540920786482133
         }
       ],
       "margine_residuo": 45285606,
@@ -811,6 +848,7 @@
       "dicastero": "sanita",
       "ministro": {
         "nome": "Sara Ferraro",
+        "genere": "donna",
         "partito": "destra",
         "capacita": 2,
         "posizione": 5.9442048619243755,
@@ -830,6 +868,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": {
@@ -839,6 +878,10 @@
         "costo": 635555293,
         "motivo": "vicino alla sua posizione",
         "stato": "annunciata",
+        "costo_ferma": -25.236050250841057,
+        "evidenza": [
+          "minaccia"
+        ],
         "in_evidenza": true
       },
       "motivo_senza_agenda": null,
@@ -916,6 +959,7 @@
       "dicastero": "istruzione_ricerca",
       "ministro": {
         "nome": "Chiara Caruso",
+        "genere": "donna",
         "partito": "giocatore",
         "capacita": 4,
         "posizione": 4.688820886998696,
@@ -929,6 +973,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 0.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": {
@@ -938,6 +983,8 @@
         "costo": 525189116,
         "motivo": "vicino alla sua posizione",
         "stato": "annunciata",
+        "costo_ferma": -25.57448367213868,
+        "evidenza": [],
         "in_evidenza": false
       },
       "motivo_senza_agenda": null,
@@ -1020,6 +1067,7 @@
       "dicastero": "infrastrutture_trasporti",
       "ministro": {
         "nome": "Filippo Ricci",
+        "genere": "uomo",
         "partito": "centrodestra",
         "capacita": 3,
         "posizione": 4.881342685865796,
@@ -1033,6 +1081,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": null,
@@ -1129,6 +1178,7 @@
       "dicastero": "ambiente_energia",
       "ministro": {
         "nome": "Luca Romano",
+        "genere": "uomo",
         "partito": "destra",
         "capacita": 1,
         "posizione": 5.650713015749754,
@@ -1148,6 +1198,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": null,
@@ -1234,7 +1285,8 @@
           "regione": null,
           "turni_mancanti": 1,
           "rata": 209261745,
-          "speso": 837046980
+          "speso": 837046980,
+          "costo_ferma": -29.345762140089576
         }
       ],
       "margine_residuo": 2093231,
@@ -1252,6 +1304,7 @@
       "dicastero": "interno",
       "ministro": {
         "nome": "Filippo Barbieri",
+        "genere": "uomo",
         "partito": "giocatore",
         "capacita": 5,
         "posizione": 4.1706903810313225,
@@ -1271,6 +1324,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 0.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": null,
@@ -1357,14 +1411,16 @@
           "regione": null,
           "turni_mancanti": 1,
           "rata": 173050085,
-          "speso": 519150255
+          "speso": 519150255,
+          "costo_ferma": -26.676725952578305
         },
         {
           "atto": "interno_accoglienza",
           "regione": null,
           "turni_mancanti": 1,
           "rata": 116634288,
-          "speso": 233268576
+          "speso": 233268576,
+          "costo_ferma": -19.69691577093895
         }
       ],
       "margine_residuo": 58146806,
@@ -1382,6 +1438,7 @@
       "dicastero": "giustizia",
       "ministro": {
         "nome": "Simone Bianchi",
+        "genere": "uomo",
         "partito": "giocatore",
         "capacita": 3,
         "posizione": 5.361004718070735,
@@ -1395,6 +1452,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 0.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": {
@@ -1404,6 +1462,8 @@
         "costo": 25502041,
         "motivo": "Durata dei processi: avvicina l'obiettivo",
         "stato": "annunciata",
+        "costo_ferma": -29.652511795176835,
+        "evidenza": [],
         "in_evidenza": false
       },
       "motivo_senza_agenda": null,
@@ -1481,6 +1541,7 @@
       "dicastero": "esteri_difesa",
       "ministro": {
         "nome": "Giulia Rossi",
+        "genere": "donna",
         "partito": "destra",
         "capacita": 3,
         "posizione": 5.81386483779669,
@@ -1500,6 +1561,7 @@
       },
       "rosa": [],
       "dimissioni_chieste": false,
+      "prezzo_dimissioni": 10.0,
       "scelta": null,
       "causa_dimissioni": null,
       "agenda": null,
@@ -1576,7 +1638,8 @@
           "regione": null,
           "turni_mancanti": 7,
           "rata": 256891119,
-          "speso": 256891119
+          "speso": 256891119,
+          "costo_ferma": -29.215337905508274
         }
       ],
       "margine_residuo": 125729046,
@@ -1606,7 +1669,8 @@
           0.02786003313266046,
           0.08712088325664011,
           0.3514671643123351
-        ]
+        ],
+        "margine": 0.044721359549995794
       },
       {
         "istituto": "Istituto B",
@@ -1621,7 +1685,8 @@
           0.029073695692357113,
           0.13640733697890772,
           0.3450898294590186
-        ]
+        ],
+        "margine": 0.05
       },
       {
         "istituto": "Istituto C",
@@ -1636,7 +1701,8 @@
           0.014121764970745396,
           0.07670735965443763,
           0.3849927387214289
-        ]
+        ],
+        "margine": 0.040824829046386304
       },
       {
         "istituto": "Istituto D",
@@ -1651,7 +1717,8 @@
           0.0,
           0.08246156789037278,
           0.33168286199922076
-        ]
+        ],
+        "margine": 0.03651483716701107
       }
     ],
     "condizioni": [
@@ -1678,7 +1745,8 @@
           0.18882109782314882,
           0.038582136464175534
         ],
-        "approvazione": -0.23311111834562842
+        "approvazione": -0.23311111834562842,
+        "margine": 0.03587480016670876
       },
       {
         "id": "dipendente_pubblico",
@@ -1703,7 +1771,8 @@
           0.2445880461996337,
           0.09163584906683442
         ],
-        "approvazione": -0.4431572526332448
+        "approvazione": -0.4431572526332448,
+        "margine": 0.07918075824648958
       },
       {
         "id": "autonomo",
@@ -1728,7 +1797,8 @@
           0.2974695549621695,
           0.06955844849139373
         ],
-        "approvazione": -0.0762622507372344
+        "approvazione": -0.0762622507372344,
+        "margine": 0.062257280636469035
       },
       {
         "id": "pensionato",
@@ -1753,7 +1823,8 @@
           0.26303643866980836,
           0.05360649700039329
         ],
-        "approvazione": -1.0616675029954092
+        "approvazione": -1.0616675029954092,
+        "margine": 0.03724194613619293
       },
       {
         "id": "disoccupato_inattivo",
@@ -1778,7 +1849,8 @@
           0.24997080139737485,
           0.04644593957339583
         ],
-        "approvazione": -0.05899709268047123
+        "approvazione": -0.05899709268047123,
+        "margine": 0.06975801064151557
       },
       {
         "id": "studente",
@@ -1803,7 +1875,8 @@
           0.19550825235834896,
           0.03155191397297111
         ],
-        "approvazione": -0.1421328128266518
+        "approvazione": -0.1421328128266518,
+        "margine": 0.08787495503274936
       }
     ],
     "fasce": [
@@ -1830,7 +1903,8 @@
           0.1767223192275248,
           0.06649028645857417
         ],
-        "approvazione": -0.40210233740306905
+        "approvazione": -0.40210233740306905,
+        "margine": 0.0379458141198112
       },
       {
         "id": "media",
@@ -1855,7 +1929,8 @@
           0.22132685592761955,
           0.04889678418277981
         ],
-        "approvazione": -0.48839041593724347
+        "approvazione": -0.48839041593724347,
+        "margine": 0.03345435965894823
       },
       {
         "id": "alta",
@@ -1880,7 +1955,8 @@
           0.27363322926747585,
           0.03394986209980476
         ],
-        "approvazione": -0.4261629075404791
+        "approvazione": -0.4261629075404791,
+        "margine": 0.038866103716823586
       }
     ],
     "regioni": [
@@ -1907,7 +1983,8 @@
           0.20439841395204641,
           0.0914301718478915
         ],
-        "approvazione": -0.49378024015356664
+        "approvazione": -0.49378024015356664,
+        "margine": 0.07856742013183861
       },
       {
         "id": "valle_d_aosta",
@@ -1932,7 +2009,8 @@
           0.2505164999148312,
           0.21737744936371226
         ],
-        "approvazione": -0.3302959276359799
+        "approvazione": -0.3302959276359799,
+        "margine": 0.4714045207910317
       },
       {
         "id": "liguria",
@@ -1957,7 +2035,8 @@
           0.31308221445635115,
           0.07203432975229203
         ],
-        "approvazione": -0.600003360696426
+        "approvazione": -0.600003360696426,
+        "margine": 0.1307440900921227
       },
       {
         "id": "lombardia",
@@ -1982,7 +2061,8 @@
           0.25736039717522724,
           0.09805082131916694
         ],
-        "approvazione": -0.45444391085312286
+        "approvazione": -0.45444391085312286,
+        "margine": 0.05227083734893167
       },
       {
         "id": "trentino_alto_adige",
@@ -2007,7 +2087,8 @@
           0.2504783694355308,
           0.0648469946126566
         ],
-        "approvazione": -0.4718103836107281
+        "approvazione": -0.4718103836107281,
+        "margine": 0.15911145683514602
       },
       {
         "id": "veneto",
@@ -2032,7 +2113,8 @@
           0.15510189054162918,
           0.051384950615710336
         ],
-        "approvazione": -0.43994531111245955
+        "approvazione": -0.43994531111245955,
+        "margine": 0.07422696190252055
       },
       {
         "id": "friuli_venezia_giulia",
@@ -2057,7 +2139,8 @@
           0.16591229764600535,
           0.11840094457019354
         ],
-        "approvazione": -0.6441421081803776
+        "approvazione": -0.6441421081803776,
+        "margine": 0.14824986333222023
       },
       {
         "id": "emilia_romagna",
@@ -2082,7 +2165,8 @@
           0.20414621917288356,
           0.032778348670575934
         ],
-        "approvazione": -0.46339902555958357
+        "approvazione": -0.46339902555958357,
+        "margine": 0.07844645405527362
       },
       {
         "id": "toscana",
@@ -2107,7 +2191,8 @@
           0.2403654297749306,
           0.03282164658878299
         ],
-        "approvazione": -0.4672751923179524
+        "approvazione": -0.4672751923179524,
+        "margine": 0.0854357657716761
       },
       {
         "id": "umbria",
@@ -2132,7 +2217,8 @@
           0.34323850353059515,
           0.0
         ],
-        "approvazione": -0.5854958363479361
+        "approvazione": -0.5854958363479361,
+        "margine": 0.17541160386140583
       },
       {
         "id": "marche",
@@ -2157,7 +2243,8 @@
           0.30300575389920775,
           0.04862766139281584
         ],
-        "approvazione": -0.6379693845327943
+        "approvazione": -0.6379693845327943,
+        "margine": 0.13245323570650439
       },
       {
         "id": "lazio",
@@ -2182,7 +2269,8 @@
           0.30147212907239335,
           0.05073265820857967
         ],
-        "approvazione": -0.39731608086926035
+        "approvazione": -0.39731608086926035,
+        "margine": 0.06835859270246632
       },
       {
         "id": "abruzzo",
@@ -2207,7 +2295,8 @@
           0.1971858292742117,
           0.0131165179735779
         ],
-        "approvazione": -0.504371004458323
+        "approvazione": -0.504371004458323,
+        "margine": 0.1414213562373095
       },
       {
         "id": "molise",
@@ -2232,7 +2321,8 @@
           0.2500958138331043,
           0.0491242974325664
         ],
-        "approvazione": -0.7028005578632998
+        "approvazione": -0.7028005578632998,
+        "margine": 0.28867513459481287
       },
       {
         "id": "campania",
@@ -2257,7 +2347,8 @@
           0.20762763489583522,
           0.04059663759290839
         ],
-        "approvazione": -0.3372388593664106
+        "approvazione": -0.3372388593664106,
+        "margine": 0.0674967307062827
       },
       {
         "id": "puglia",
@@ -2282,7 +2373,8 @@
           0.2549776613672361,
           0.056331432468434625
         ],
-        "approvazione": -0.37194780279562845
+        "approvazione": -0.37194780279562845,
+        "margine": 0.07993607669774315
       },
       {
         "id": "basilicata",
@@ -2307,7 +2399,8 @@
           0.11099267729032097,
           0.10055877144943175
         ],
-        "approvazione": -0.29677902236490566
+        "approvazione": -0.29677902236490566,
+        "margine": 0.21566554640687682
       },
       {
         "id": "calabria",
@@ -2332,7 +2425,8 @@
           0.1882958005549894,
           0.03618550760943684
         ],
-        "approvazione": -0.375439820590031
+        "approvazione": -0.375439820590031,
+        "margine": 0.11704114719613055
       },
       {
         "id": "sicilia",
@@ -2357,7 +2451,8 @@
           0.1638501967848791,
           0.014336741572818728
         ],
-        "approvazione": -0.3632030181645277
+        "approvazione": -0.3632030181645277,
+        "margine": 0.07216878364870322
       },
       {
         "id": "sardegna",
@@ -2382,7 +2477,8 @@
           0.17334135875821713,
           0.011618455338499608
         ],
-        "approvazione": -0.36176233885100534
+        "approvazione": -0.36176233885100534,
+        "margine": 0.1235604126430431
       }
     ]
   },
@@ -2575,6 +2671,7 @@
     "fondo_residuo": 105700000,
     "presentabile": false,
     "presentato": false,
+    "in_aula": null,
     "esercizio_provvisorio": false
   },
   "disposizioni": [
@@ -2589,6 +2686,7 @@
       "precedente": "65000",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2628,6 +2726,7 @@
       "precedente": "0",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2661,6 +2760,7 @@
       "precedente": "36_50",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2700,6 +2800,7 @@
       "precedente": "1000",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2747,6 +2848,7 @@
         }
       ],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2786,6 +2888,7 @@
       "precedente": "licenze_chiuse",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2819,6 +2922,7 @@
       "precedente": "retributivo",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2852,6 +2956,7 @@
       "precedente": "67",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2921,6 +3026,7 @@
       "precedente": "bloccata_sopra_soglia",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2954,6 +3060,7 @@
       "precedente": "attuale",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -2987,6 +3094,7 @@
       "precedente": "assicurativo",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3020,6 +3128,7 @@
       "precedente": "universale",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3053,6 +3162,7 @@
       "precedente": "nessuno",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3092,6 +3202,7 @@
       "precedente": "reintegro",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3125,6 +3236,7 @@
       "precedente": "20",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [
         "abruzzo",
         "basilicata",
@@ -3173,6 +3285,7 @@
       "precedente": "attuale",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3206,6 +3319,7 @@
       "precedente": "numero_chiuso",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3239,6 +3353,7 @@
       "precedente": "attuale",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3272,6 +3387,7 @@
       "precedente": "16",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3299,6 +3415,7 @@
       "precedente": "per_isee",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3332,6 +3449,7 @@
       "precedente": "rigido",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3365,6 +3483,7 @@
       "precedente": "a_gara",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3398,6 +3517,7 @@
       "precedente": "vietato",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3425,6 +3545,7 @@
       "precedente": "attuali",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3458,6 +3579,7 @@
       "precedente": "ordinarie",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3485,6 +3607,7 @@
       "precedente": "attuali",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3518,6 +3641,7 @@
       "precedente": "ius_sanguinis",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3551,6 +3675,7 @@
       "precedente": "centri",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3578,6 +3703,7 @@
       "precedente": "bloccata",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3611,6 +3737,7 @@
       "precedente": "attuali",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3644,6 +3771,7 @@
       "precedente": "ampie",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3671,6 +3799,7 @@
       "precedente": "obbligatoria",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3704,6 +3833,7 @@
       "precedente": "restrittivo",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3731,6 +3861,7 @@
       "precedente": "1",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [
         "abruzzo",
         "basilicata",
@@ -3781,6 +3912,7 @@
       "precedente": "non_attuata",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [
         "liguria",
         "lombardia",
@@ -3819,6 +3951,7 @@
       "precedente": "5",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3852,6 +3985,7 @@
       "precedente": "630_315",
       "in_arrivo": [],
       "referendabile": false,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3885,6 +4019,7 @@
       "precedente": "300",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3924,6 +4059,7 @@
       "precedente": "si",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3951,6 +4087,7 @@
       "precedente": "1000",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -3978,6 +4115,7 @@
       "precedente": "no",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4005,6 +4143,7 @@
       "precedente": "nessuno",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4038,6 +4177,7 @@
       "precedente": "4200",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4071,6 +4211,7 @@
       "precedente": "1750",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4098,6 +4239,7 @@
       "precedente": "nessuno",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4131,6 +4273,7 @@
       "precedente": "hare",
       "in_arrivo": [],
       "referendabile": true,
+      "rifiuto_referendum": "comando non ammesso: solo all'opposizione: governi tu",
       "perimetro": [],
       "gradini": [
         {
@@ -4224,6 +4367,8 @@
   ],
   "alleati_avversari": [],
   "posto_riservato": false,
+  "posto_riservato_di": "estrema_destra",
+  "sfiducia": null,
   "calendario": [
     {
       "id": 5,
@@ -4293,7 +4438,37 @@
       },
       "emendamenti": [],
       "alleati_contro_fiducia": [],
-      "seggi": []
+      "seggi": [],
+      "costo_annuo": -8540064330,
+      "effetti": [],
+      "leve": [
+        {
+          "leva": "cuneo",
+          "da": 7.0,
+          "a": 3.0
+        }
+      ],
+      "gruppi": [
+        "dipendente_privato",
+        "dipendente_pubblico"
+      ],
+      "costo_linea": {
+        "si": {
+          "percepita": 4.43664671875,
+          "franchi_camera": 2.47,
+          "franchi_senato": 1.235
+        },
+        "no": {
+          "percepita": 4.461646718749999,
+          "franchi_camera": 1.52,
+          "franchi_senato": 0.76
+        },
+        "default": {
+          "percepita": 4.461646718749999,
+          "franchi_camera": 1.3933333333333333,
+          "franchi_senato": 0.6966666666666667
+        }
+      }
     },
     {
       "id": 6,
@@ -4363,7 +4538,37 @@
       },
       "emendamenti": [],
       "alleati_contro_fiducia": [],
-      "seggi": []
+      "seggi": [],
+      "costo_annuo": 7320055140,
+      "effetti": [
+        {
+          "grandezza": "prontezza_difesa",
+          "migliora": true,
+          "fascia": "medio",
+          "ritardo": 8
+        }
+      ],
+      "leve": [],
+      "gruppi": [
+        "studente"
+      ],
+      "costo_linea": {
+        "si": {
+          "percepita": 4.536646718749999,
+          "franchi_camera": 4.369999999999999,
+          "franchi_senato": 2.1849999999999996
+        },
+        "no": {
+          "percepita": 4.411646718749999,
+          "franchi_camera": 3.42,
+          "franchi_senato": 1.71
+        },
+        "default": {
+          "percepita": 4.411646718749999,
+          "franchi_camera": 1.14,
+          "franchi_senato": 0.57
+        }
+      }
     }
   ],
   "esiti": [
@@ -4548,6 +4753,8 @@
   "disponibilita": [],
   "coalizione": [],
   "richieste": [],
+  "spartizione": [],
+  "ribaltone": null,
   "elezioni": [
     {
       "data": {
@@ -4616,6 +4823,488 @@
           "sinistra",
           "centrosinistra"
         ]
+      ],
+      "regioni": [
+        {
+          "regione": "piemonte",
+          "voti": [
+            0.0020601397895237596,
+            0.021597036947240317,
+            0.0037350892468897496,
+            0.002918720216905547,
+            0.005676178996509084,
+            0.020227296741923716,
+            0.005304072082442334,
+            0.012372381152178976
+          ],
+          "seggi_senato": [
+            0,
+            3,
+            1,
+            0,
+            1,
+            3,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "valle_d_aosta",
+          "voti": [
+            0.00004828476237748006,
+            0.0006145882770700528,
+            0.00010536230689003315,
+            0.0000834861066639408,
+            0.00016017367043993854,
+            0.0005744013346657672,
+            0.00014606291697918562,
+            0.0003482666903396966
+          ],
+          "seggi_senato": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "liguria",
+          "voti": [
+            0.0005956127884761495,
+            0.007642438462686892,
+            0.0013216971689084685,
+            0.0010385454115621822,
+            0.001996716938315793,
+            0.007097225538820027,
+            0.0018583892523557782,
+            0.004343725021964581
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "lombardia",
+          "voti": [
+            0.003281097660705996,
+            0.05822326517577542,
+            0.009345216622274196,
+            0.006776787550701644,
+            0.011391185226844866,
+            0.05591523540468417,
+            0.010625911023631826,
+            0.025300943544084034
+          ],
+          "seggi_senato": [
+            0,
+            9,
+            1,
+            1,
+            2,
+            8,
+            1,
+            4
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "trentino_alto_adige",
+          "voti": [
+            0.0005171424956762023,
+            0.007033258804181025,
+            0.0010924805184731972,
+            0.0007558166746622567,
+            0.0011438170712137095,
+            0.0036926965550151537,
+            0.000931521238632874,
+            0.0028055018160116686
+          ],
+          "seggi_senato": [
+            0,
+            4,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "veneto",
+          "voti": [
+            0.002500443642693121,
+            0.03384565440311256,
+            0.005293647650014155,
+            0.0036229283971117737,
+            0.0055130441829446195,
+            0.01769769490417786,
+            0.004543481319885433,
+            0.013601739000796094
+          ],
+          "seggi_senato": [
+            0,
+            5,
+            1,
+            0,
+            1,
+            3,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "friuli_venezia_giulia",
+          "voti": [
+            0.0005988760890623622,
+            0.008118396896335244,
+            0.001274530389139228,
+            0.0008757127554594036,
+            0.0013334208784218993,
+            0.004248243264071692,
+            0.001098221510245238,
+            0.003258224340856339
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "emilia_romagna",
+          "voti": [
+            0.0022671478665250836,
+            0.03070370025351313,
+            0.004801372713434739,
+            0.003290736483733791,
+            0.005031616699239744,
+            0.016110884778385782,
+            0.004172854977380945,
+            0.01238978542197211
+          ],
+          "seggi_senato": [
+            0,
+            4,
+            1,
+            0,
+            1,
+            2,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "toscana",
+          "voti": [
+            0.0011761479196141498,
+            0.016730035633127298,
+            0.003200995717612943,
+            0.002640554057677085,
+            0.005465152225267332,
+            0.01940971908209277,
+            0.004567351759358655,
+            0.012041125926932222
+          ],
+          "seggi_senato": [
+            0,
+            3,
+            0,
+            0,
+            1,
+            3,
+            1,
+            2
+          ],
+          "primo": "destra"
+        },
+        {
+          "regione": "umbria",
+          "voti": [
+            0.00027550717356562154,
+            0.0038988888068699247,
+            0.0007488670530434705,
+            0.0006176098516869164,
+            0.0012796368502417275,
+            0.0045056814214284695,
+            0.001076556820242326,
+            0.0028090370583133987
+          ],
+          "seggi_senato": [
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "primo": "destra"
+        },
+        {
+          "regione": "marche",
+          "voti": [
+            0.0004839353906368715,
+            0.0068540492136548465,
+            0.0013168626495214867,
+            0.0010811798294061274,
+            0.00223599543222522,
+            0.007873075253192089,
+            0.0018659129731517685,
+            0.004919969517146635
+          ],
+          "seggi_senato": [
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+          ],
+          "primo": "destra"
+        },
+        {
+          "regione": "lazio",
+          "voti": [
+            0.001732359375086398,
+            0.024156461726454612,
+            0.004750398749648251,
+            0.0038726917549417174,
+            0.00796677428206103,
+            0.02806949150253146,
+            0.006658190746989749,
+            0.0175473715669889
+          ],
+          "seggi_senato": [
+            0,
+            4,
+            1,
+            0,
+            1,
+            5,
+            1,
+            3
+          ],
+          "primo": "destra"
+        },
+        {
+          "regione": "abruzzo",
+          "voti": [
+            0.0006292126982156725,
+            0.008457326921108833,
+            0.001386872533394216,
+            0.0009596520983158741,
+            0.0014613543476999034,
+            0.0045311230797024605,
+            0.001155389701996297,
+            0.003604557223441243
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "molise",
+          "voti": [
+            0.00013621258372821033,
+            0.0018149692251114484,
+            0.0003037286804871274,
+            0.0002090627477407913,
+            0.00031569411596990717,
+            0.0009664808569499857,
+            0.00024970292633760653,
+            0.0007748223790023286
+          ],
+          "seggi_senato": [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "campania",
+          "voti": [
+            0.0024221546443701854,
+            0.030961470784077766,
+            0.005657324370899855,
+            0.003679945510131989,
+            0.005528454213490624,
+            0.01670834072737822,
+            0.004372701922540303,
+            0.01385766637084444
+          ],
+          "seggi_senato": [
+            0,
+            6,
+            1,
+            1,
+            1,
+            3,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "puglia",
+          "voti": [
+            0.0018029735738825001,
+            0.0235143771203711,
+            0.004107830691626041,
+            0.0027147337145210864,
+            0.0040547416256077485,
+            0.012312191385811055,
+            0.004266312280280536,
+            0.010164577011129093
+          ],
+          "seggi_senato": [
+            0,
+            4,
+            1,
+            0,
+            1,
+            2,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "basilicata",
+          "voti": [
+            0.000254144641024396,
+            0.00340262539179625,
+            0.0005715308387797467,
+            0.00039162628609168903,
+            0.0005955523569838123,
+            0.0018417403762168599,
+            0.0004735713897010294,
+            0.0014636507444087197
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "calabria",
+          "voti": [
+            0.0011183149814473809,
+            0.009822051312561439,
+            0.0017618499433469867,
+            0.0011707090853037953,
+            0.0017685276232502552,
+            0.0053370374615123155,
+            0.0014084767919047907,
+            0.004355630025955024
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "sicilia",
+          "voti": [
+            0.0020556678590908017,
+            0.02671996563140168,
+            0.005078571968785805,
+            0.003500161820428606,
+            0.00551745568188524,
+            0.01673045865357366,
+            0.003992708698723538,
+            0.013815515404939192
+          ],
+          "seggi_senato": [
+            0,
+            4,
+            1,
+            0,
+            1,
+            3,
+            1,
+            2
+          ],
+          "primo": "sinistra"
+        },
+        {
+          "regione": "sardegna",
+          "voti": [
+            0.0006596701703536575,
+            0.008715701766596837,
+            0.0015641785319117712,
+            0.0011401911816734732,
+            0.0018132469275798362,
+            0.005481015492005865,
+            0.0012895778307312087,
+            0.004389199719948379
+          ],
+          "seggi_senato": [
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1
+          ],
+          "primo": "sinistra"
+        }
       ]
     }
   ],
@@ -5114,7 +5803,11 @@
   "programma": [],
   "campagna": {
     "attiva": false,
-    "spese": []
+    "spese": [],
+    "riposizionato": false,
+    "passo": 0.5,
+    "minaccia_scissione": 0.5,
+    "soglia_scissione": 1.0
   },
   "eventi": [
     {
@@ -5142,7 +5835,8 @@
           "default": false
         }
       ],
-      "scelta": null
+      "scelta": null,
+      "norme": []
     }
   ],
   "situazioni": [
@@ -5152,7 +5846,9 @@
       "valore": 0.606866037763671,
       "accensione": -1.0,
       "spegnimento": 0.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 2,
+      "oltre": 0
     },
     {
       "nome": "Criminalità",
@@ -5160,7 +5856,9 @@
       "valore": 99.73710173846993,
       "accensione": 85.0,
       "spegnimento": 92.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 1,
+      "oltre": 0
     },
     {
       "nome": "Liste d'attesa",
@@ -5168,7 +5866,9 @@
       "valore": 109.5036368227166,
       "accensione": 90.0,
       "spegnimento": 95.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 1,
+      "oltre": 0
     },
     {
       "nome": "Sovraffollamento delle carceri",
@@ -5176,7 +5876,9 @@
       "valore": 106.72426502815779,
       "accensione": 117.0,
       "spegnimento": 110.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 1,
+      "oltre": 0
     },
     {
       "nome": "Caro energia",
@@ -5184,7 +5886,9 @@
       "valore": 4.559307352452171,
       "accensione": 10.0,
       "spegnimento": 5.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 1,
+      "oltre": 0
     },
     {
       "nome": "Ondata di sbarchi",
@@ -5192,7 +5896,9 @@
       "valore": 44.48011000885302,
       "accensione": 250.0,
       "spegnimento": 175.0,
-      "accesa": false
+      "accesa": false,
+      "trimestri": 1,
+      "oltre": 0
     }
   ],
   "acquisti": {
@@ -5217,6 +5923,793 @@
   "fermate": [
     {
       "tipo": "governo"
+    }
+  ],
+  "regioni": [
+    {
+      "id": "piemonte",
+      "nome": "Piemonte",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.07194094296260185,
+        "idro": 0.21796723272793944,
+        "incendi": 0.08750000000000001,
+        "totale": 0.22384140977215977
+      },
+      "disoccupazione": 5.590638771270987,
+      "reddito": 16857.278671533517,
+      "gruppi": [
+        0.0926880992123609,
+        0.17052589303590673,
+        0.09571981357718769,
+        0.01946997127092176,
+        0.03485405760070891,
+        0.019272805186813624,
+        0.0348269740866901,
+        0.04982067293643596,
+        0.037273209556073425,
+        0.06269619029432388,
+        0.12745295412321542,
+        0.16082752447295998,
+        0.019424381014775564,
+        0.013176236520741836,
+        0.003227152952160382,
+        0.022970340374210512,
+        0.02133487361369557,
+        0.014438850170817821
+      ]
+    },
+    {
+      "id": "valle_d_aosta",
+      "nome": "Valle d'Aosta",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.07194094296260185,
+        "idro": 0.029002329389328757,
+        "incendi": 0.0,
+        "totale": 0.023137574941124155
+      },
+      "disoccupazione": 3.380750650695318,
+      "reddito": 15622.406063878578,
+      "gruppi": [
+        0.08919174048673771,
+        0.163558589952443,
+        0.1489022972813429,
+        0.018720895444675326,
+        0.033495036594792756,
+        0.03003438899352688,
+        0.08850851233158687,
+        0.022446284329259637,
+        0.023181834481220565,
+        0.03686666233221287,
+        0.16534849317868944,
+        0.09825274066245827,
+        0.013038930334464655,
+        0.004749749909183025,
+        0.006861772932194771,
+        0.0027287450290646767,
+        0.012622768570331499,
+        0.04149055715581512
+      ]
+    },
+    {
+      "id": "liguria",
+      "nome": "Liguria",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.07194094296260185,
+        "idro": 0.28690297211245247,
+        "incendi": 0.1295,
+        "totale": 0.30537075569659844
+      },
+      "disoccupazione": 4.279246846931896,
+      "reddito": 16189.53270180217,
+      "gruppi": [
+        0.10061249376229833,
+        0.13789689590453738,
+        0.11283100163786568,
+        0.021027764430981713,
+        0.028253849755717177,
+        0.02277005264303427,
+        0.07669479621237807,
+        0.023987901384984064,
+        0.0276538344513988,
+        0.04769748970381323,
+        0.17182046869129527,
+        0.1412023676595706,
+        0.014448109310131999,
+        0.005493425415033029,
+        0.007369289239126119,
+        0.029720622924905734,
+        0.018215714702067308,
+        0.0123039221708613
+      ]
+    },
+    {
+      "id": "lombardia",
+      "nome": "Lombardia",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.07194094296260185,
+        "idro": 0.22721851835457316,
+        "incendi": 0.0455,
+        "totale": 0.19550313841794967
+      },
+      "disoccupazione": 2.573170398446973,
+      "reddito": 19026.01447446293,
+      "gruppi": [
+        0.10620215737801697,
+        0.1527989946020934,
+        0.13967733808897512,
+        0.02220240004341753,
+        0.03133554268331182,
+        0.028187026578672433,
+        0.006311366034307439,
+        0.045346085683726084,
+        0.06353969054362675,
+        0.07096447966651453,
+        0.1441927604485919,
+        0.11399737589757009,
+        0.01130757041492103,
+        0.005337128272730954,
+        0.0017181576584869662,
+        0.02689865590281933,
+        0.01807848213669688,
+        0.011904787965520856
+      ]
+    },
+    {
+      "id": "trentino_alto_adige",
+      "nome": "Trentino-Alto Adige",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.07194094296260185,
+        "idro": 0.11497250485224987,
+        "incendi": 0.0,
+        "totale": 0.08162357070847735
+      },
+      "disoccupazione": 1.5280372928987263,
+      "reddito": 17343.80005559489,
+      "gruppi": [
+        0.07133607996310043,
+        0.1794767198190361,
+        0.1616323123090148,
+        0.015086924002795208,
+        0.03682411464667413,
+        0.03260204044123326,
+        0.04014281879121315,
+        0.02201531846191686,
+        0.043435408219457114,
+        0.10128897242430052,
+        0.11187447904316192,
+        0.1160066680527289,
+        0.004434758345924293,
+        0.006921778712603427,
+        0.0009674409989640243,
+        0.025084279742672005,
+        0.017732520277650564,
+        0.013137365747553288
+      ]
+    },
+    {
+      "id": "veneto",
+      "nome": "Veneto",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.14374260045964202,
+        "idro": 0.20869742601514055,
+        "incendi": 0.08750000000000001,
+        "totale": 0.22093563786671885
+      },
+      "disoccupazione": 2.9704760276808475,
+      "reddito": 17677.669347064762,
+      "gruppi": [
+        0.09773158764984102,
+        0.18187583597910872,
+        0.11064281384065507,
+        0.02052529131963458,
+        0.03718704197643422,
+        0.022278248522159712,
+        0.01733479020180654,
+        0.02094740682607745,
+        0.07530819112563991,
+        0.07895032879282401,
+        0.16063682616493455,
+        0.09799550647047972,
+        0.010316047429653639,
+        0.007874121903178466,
+        0.002629870428764925,
+        0.027609179880216637,
+        0.019093879406051797,
+        0.011063032082538962
+      ]
+    },
+    {
+      "id": "friuli_venezia_giulia",
+      "nome": "Friuli-Venezia Giulia",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.2872066299881607,
+        "idro": 0.048240766469323834,
+        "incendi": 0.08750000000000001,
+        "totale": 0.11857052972995272
+      },
+      "disoccupazione": 4.154171701434248,
+      "reddito": 17205.76741397937,
+      "gruppi": [
+        0.10535028076015256,
+        0.1529469491204453,
+        0.11526254812549236,
+        0.022021087751681306,
+        0.0313016453929636,
+        0.023242769861451688,
+        0.0004489141500460482,
+        0.03959369927995366,
+        0.06185605566682693,
+        0.10461100400303053,
+        0.1369414531561441,
+        0.12050046271090502,
+        0.006728394625103844,
+        0.017244871000036972,
+        0.002697542798453241,
+        0.008000282702985707,
+        0.03817982282028652,
+        0.013072216074040606
+      ]
+    },
+    {
+      "id": "emilia_romagna",
+      "nome": "Emilia-Romagna",
+      "macroarea": "nord",
+      "pericolosita": {
+        "sisma": 0.5731596907862664,
+        "idro": 1.0,
+        "incendi": 0.0,
+        "totale": 0.7074505165658234
+      },
+      "disoccupazione": 3.8531938851038707,
+      "reddito": 17486.329141787955,
+      "gruppi": [
+        0.07897023799763855,
+        0.17784872399813767,
+        0.12220748903063701,
+        0.016683559693529484,
+        0.0364643133323072,
+        0.024671854884910485,
+        0.054956111770285185,
+        0.018267996475323095,
+        0.05015327266711078,
+        0.060750431696018105,
+        0.14776721284356129,
+        0.129280533434949,
+        0.014978316423082744,
+        0.008120912316085598,
+        0.0027944955071575613,
+        0.013337340982087538,
+        0.028566613394250876,
+        0.014180583552927804
+      ]
+    },
+    {
+      "id": "toscana",
+      "nome": "Toscana",
+      "macroarea": "centro",
+      "pericolosita": {
+        "sisma": 0.5731596907862664,
+        "idro": 0.6291653039350802,
+        "incendi": 0.1295,
+        "totale": 0.5619514964139873
+      },
+      "disoccupazione": 3.7239589659850543,
+      "reddito": 16067.345561916016,
+      "gruppi": [
+        0.07705885813536634,
+        0.1685773917023405,
+        0.12981777801424194,
+        0.01623048618077412,
+        0.03451203094899509,
+        0.02615740764582253,
+        0.07374843275908738,
+        0.025994153513409567,
+        0.026441398984866374,
+        0.06593854159707567,
+        0.1639886418214122,
+        0.10844494774954724,
+        0.014587091507028527,
+        0.010016369651448148,
+        0.0010509209663424458,
+        0.0205991231591565,
+        0.02407372764317765,
+        0.012762698019907726
+      ]
+    },
+    {
+      "id": "umbria",
+      "nome": "Umbria",
+      "macroarea": "centro",
+      "pericolosita": {
+        "sisma": 0.5731596907862664,
+        "idro": 0.057831165801731164,
+        "incendi": 0.0,
+        "totale": 0.06648773904051475
+      },
+      "disoccupazione": 4.207554153922894,
+      "reddito": 15895.19393375824,
+      "gruppi": [
+        0.09625818543086526,
+        0.17591408001453965,
+        0.08467356482946006,
+        0.020228019511641594,
+        0.03594559245022863,
+        0.017036523260019778,
+        0.02957493577982679,
+        0.050200317741769,
+        0.05147968902194428,
+        0.08806787643616178,
+        0.14920854981141443,
+        0.11525437455039048,
+        0.014761420620151677,
+        0.00889578387443467,
+        0.0037208473153450324,
+        0.02922562573450866,
+        0.0195492766074903,
+        0.010005337009807913
+      ]
+    },
+    {
+      "id": "marche",
+      "nome": "Marche",
+      "macroarea": "centro",
+      "pericolosita": {
+        "sisma": 0.43032244585277524,
+        "idro": 0.08172341572610546,
+        "incendi": 0.0455,
+        "totale": 0.11349496376481552
+      },
+      "disoccupazione": 4.797889943345478,
+      "reddito": 15667.351894153782,
+      "gruppi": [
+        0.0749532660668789,
+        0.17222750843095144,
+        0.11062458642204265,
+        0.015839033683450004,
+        0.03529380191328463,
+        0.022317345808007705,
+        0.049428322310048706,
+        0.03920083425413735,
+        0.03825773789128556,
+        0.09729411418903071,
+        0.16699853615349255,
+        0.08770439069727287,
+        0.015212559482582303,
+        0.013148480550769295,
+        0.002330923836533109,
+        0.0261663208726364,
+        0.02423369185810582,
+        0.00876854557949004
+      ]
+    },
+    {
+      "id": "lazio",
+      "nome": "Lazio",
+      "macroarea": "centro",
+      "pericolosita": {
+        "sisma": 0.2872066299881607,
+        "idro": 0.21796723272793944,
+        "incendi": 0.217,
+        "totale": 0.34081832039258875
+      },
+      "disoccupazione": 5.1448728703909525,
+      "reddito": 16810.904733156454,
+      "gruppi": [
+        0.08602604740804211,
+        0.15374988147221136,
+        0.13280355603341154,
+        0.018083965793421024,
+        0.03157505520934343,
+        0.02683474536715949,
+        0.03944370051737358,
+        0.03338116915123349,
+        0.04427693479404582,
+        0.0857486515018438,
+        0.1040002071697971,
+        0.11050930800073808,
+        0.058288946526168,
+        0.015622309796248618,
+        0.0035421589010605596,
+        0.027170341027467963,
+        0.016832076550962586,
+        0.012110944779471422
+      ]
+    },
+    {
+      "id": "abruzzo",
+      "nome": "Abruzzo",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 1.0,
+        "idro": 0.15268756128685057,
+        "incendi": 0.1295,
+        "totale": 0.2580161753281634
+      },
+      "disoccupazione": 6.175050074166951,
+      "reddito": 14977.030693165176,
+      "gruppi": [
+        0.0700400513699488,
+        0.19883944280189733,
+        0.07307923429765086,
+        0.014888514938964124,
+        0.040626150402748105,
+        0.014673044581818919,
+        0.033567507652747006,
+        0.04851336330726499,
+        0.049596084384199296,
+        0.16091208144933256,
+        0.08689726533675676,
+        0.09542793414571864,
+        0.024694211618727417,
+        0.018054263221063238,
+        0.00882954272776649,
+        0.03200834744946748,
+        0.020657106995625008,
+        0.00869585331830288
+      ]
+    },
+    {
+      "id": "molise",
+      "nome": "Molise",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.14374260045964202,
+        "idro": 0.033819155476232654,
+        "incendi": 0.0455,
+        "totale": 0.06733298983123563
+      },
+      "disoccupazione": 5.9496878861460765,
+      "reddito": 13815.576284840517,
+      "gruppi": [
+        0.07561830280490504,
+        0.15420599946457805,
+        0.07648668083667422,
+        0.015949432938564226,
+        0.031571476393059544,
+        0.015417263877868244,
+        0.06702551866073315,
+        0.0270038490507824,
+        0.04154787206431627,
+        0.15743881567205792,
+        0.13657499525525316,
+        0.07678064738258686,
+        0.03448916739539827,
+        0.022601271459763393,
+        0.0023606410980818167,
+        0.03714124316622795,
+        0.018210151988868533,
+        0.00957667049028099
+      ]
+    },
+    {
+      "id": "campania",
+      "nome": "Campania",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.5731596907862664,
+        "idro": 0.5654021972869293,
+        "incendi": 0.2625,
+        "totale": 0.6282410100792429
+      },
+      "disoccupazione": 13.67101945808168,
+      "reddito": 12527.219598792555,
+      "gruppi": [
+        0.06775044574893231,
+        0.11908469287819173,
+        0.07932026131389384,
+        0.014250950802591023,
+        0.02443108185263625,
+        0.016025307068545214,
+        0.03988604721606052,
+        0.031434064284051905,
+        0.02798377586808247,
+        0.07229748532367852,
+        0.10824509478741026,
+        0.07678509751778612,
+        0.1736618218598957,
+        0.07071938334797126,
+        0.024272600286892376,
+        0.031195345900012716,
+        0.015240878706248448,
+        0.007415665237119243
+      ]
+    },
+    {
+      "id": "puglia",
+      "nome": "Puglia",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.14374260045964202,
+        "idro": 0.1620692757840195,
+        "incendi": 0.4375,
+        "totale": 0.4778140206627134
+      },
+      "disoccupazione": 9.786790682974708,
+      "reddito": 12862.424892670773,
+      "gruppi": [
+        0.06687495827301795,
+        0.12445975019434967,
+        0.08891998561498143,
+        0.014086129362544508,
+        0.02556015611330559,
+        0.017978504689242964,
+        0.05281847193420447,
+        0.03585326276233482,
+        0.025797843768944954,
+        0.11045436574999602,
+        0.14176107230281026,
+        0.0598158525453738,
+        0.11389715976054908,
+        0.04508350722524195,
+        0.017188182287825343,
+        0.033894879114764846,
+        0.01862715838939331,
+        0.006928759911119111
+      ]
+    },
+    {
+      "id": "basilicata",
+      "nome": "Basilicata",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.2872066299881607,
+        "idro": 0.07218084870991946,
+        "incendi": 0.1295,
+        "totale": 0.16948907604745742
+      },
+      "disoccupazione": 4.994639388074099,
+      "reddito": 13254.025033960197,
+      "gruppi": [
+        0.09707324791358714,
+        0.12911083414806374,
+        0.09715664225949365,
+        0.02029256996166717,
+        0.02645993974304981,
+        0.019611161969242782,
+        0.03442821190005871,
+        0.07017416268328289,
+        0.009706186501711903,
+        0.11286843599626434,
+        0.14494116253241637,
+        0.0789458842413152,
+        0.06312948577478829,
+        0.028085741061602932,
+        0.0063460539029338145,
+        0.04342696720069234,
+        0.01146334548075453,
+        0.006779966729074301
+      ]
+    },
+    {
+      "id": "calabria",
+      "nome": "Calabria",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.8579984678598788,
+        "idro": 0.18077650819604457,
+        "incendi": 0.525,
+        "totale": 0.5965177927717754
+      },
+      "disoccupazione": 9.580315635289578,
+      "reddito": 12137.300998960309,
+      "gruppi": [
+        0.10885246586163641,
+        0.11411436664745661,
+        0.03568618693200405,
+        0.02272348128664362,
+        0.02328817819112591,
+        0.0071671871915004685,
+        0.036048933839120806,
+        0.035340610953294035,
+        0.033961498405214445,
+        0.10629162664385171,
+        0.11347450354695197,
+        0.10033109183588859,
+        0.1398650200078353,
+        0.05709221298221314,
+        0.0061655207379917604,
+        0.02865251146810676,
+        0.02240145338055584,
+        0.008543150088608554
+      ]
+    },
+    {
+      "id": "sicilia",
+      "nome": "Sicilia",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.5731596907862664,
+        "idro": 0.21796723272793944,
+        "incendi": 1.0,
+        "totale": 1.0
+      },
+      "disoccupazione": 11.984010764268682,
+      "reddito": 12277.963406243327,
+      "gruppi": [
+        0.08035309047587091,
+        0.11719446228309162,
+        0.07473123780276945,
+        0.016805018904939985,
+        0.023966558648168663,
+        0.01505760525127439,
+        0.04174754102225774,
+        0.033048449406902165,
+        0.02018825440869839,
+        0.09107336882717444,
+        0.12010419681347839,
+        0.07338534257622997,
+        0.1391344424494301,
+        0.06988386838499969,
+        0.02608875929095571,
+        0.03479885565918307,
+        0.014885470699338823,
+        0.007553477095236387
+      ]
+    },
+    {
+      "id": "sardegna",
+      "nome": "Sardegna",
+      "macroarea": "mezzogiorno",
+      "pericolosita": {
+        "sisma": 0.0,
+        "idro": 0.08172341572610546,
+        "incendi": 0.9205000000000001,
+        "totale": 0.8146143137759587
+      },
+      "disoccupazione": 9.003514741140656,
+      "reddito": 13893.482638283383,
+      "gruppi": [
+        0.09736959190595444,
+        0.12050393795806366,
+        0.09784594979516291,
+        0.020345826199438425,
+        0.02472055457422082,
+        0.019774757474793108,
+        0.055898162767957164,
+        0.037751575452697014,
+        0.03268042820855713,
+        0.08838713166474527,
+        0.16738368776566362,
+        0.07230723310751878,
+        0.05966068061279898,
+        0.036333617246158,
+        0.007435549367591014,
+        0.02784309817180334,
+        0.026405568917583222,
+        0.0073526488092931835
+      ]
+    }
+  ],
+  "opere": [
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Commesse pubbliche alle imprese del territorio",
+      "regione": "toscana",
+      "turno": 1,
+      "cantiere": false,
+      "euro": 298945350
+    },
+    {
+      "dicastero": "infrastrutture_trasporti",
+      "atto": "Manutenzione straordinaria delle strade locali",
+      "regione": "toscana",
+      "turno": 1,
+      "cantiere": false,
+      "euro": 434945220
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Commesse pubbliche alle imprese del territorio",
+      "regione": "sicilia",
+      "turno": 2,
+      "cantiere": false,
+      "euro": 302229941
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Zone economiche speciali con burocrazia ridotta",
+      "regione": "sicilia",
+      "turno": 3,
+      "cantiere": false,
+      "euro": 101218103
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Zone economiche speciali con burocrazia ridotta",
+      "regione": "campania",
+      "turno": 4,
+      "cantiere": false,
+      "euro": 101613010
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Commesse pubbliche alle imprese del territorio",
+      "regione": "molise",
+      "turno": 5,
+      "cantiere": false,
+      "euro": 305815952
+    },
+    {
+      "dicastero": "infrastrutture_trasporti",
+      "atto": "Manutenzione straordinaria delle strade locali",
+      "regione": "sicilia",
+      "turno": 5,
+      "cantiere": false,
+      "euro": 444941479
+    },
+    {
+      "dicastero": "sviluppo_economico",
+      "atto": "Commesse pubbliche alle imprese del territorio",
+      "regione": "valle_d_aosta",
+      "turno": 6,
+      "cantiere": false,
+      "euro": 308836120
+    },
+    {
+      "dicastero": "infrastrutture_trasporti",
+      "atto": "Potenziamento delle linee ferroviarie locali",
+      "regione": "umbria",
+      "turno": 6,
+      "cantiere": true,
+      "euro": 1436296395
+    }
+  ],
+  "regole_ue": {
+    "procedura": "nessuna",
+    "turni_in_stato": 0,
+    "conto_controllo": 0.0,
+    "ultima_deviazione": -0.48299422557052474,
+    "coesione_sospesa": false,
+    "margine_energia": null,
+    "proiezione": {
+      "anno": 2028,
+      "deviazione": -0.9882873676528328,
+      "conto": 0.0
+    }
+  },
+  "debito": {
+    "debito_pil": 136.10758579338733,
+    "mes": null,
+    "ristrutturazione": null
+  },
+  "posti": {
+    "ordinari": 3,
+    "ordinari_occupati": 0,
+    "costituzionali": 1,
+    "costituzionali_occupati": 0
+  },
+  "soglie": {
+    "minaccia": 40.0,
+    "dimissioni": 25.0,
+    "ultimatum": 40.0,
+    "uscita": 25.0,
+    "crisi_debito_pb": 550.0
+  },
+  "redditi": [
+    {
+      "fascia": "bassa",
+      "reddito": 5458.09911405448,
+      "crescita": 0.007758647629136032,
+      "attesa": 0.029729098642241186
+    },
+    {
+      "fascia": "media",
+      "reddito": 14011.711528863474,
+      "crescita": 0.005767940659177074,
+      "attesa": 0.08666086228240985
+    },
+    {
+      "fascia": "alta",
+      "reddito": 29053.799523832065,
+      "crescita": -0.00791868649314443,
+      "attesa": 0.04012991062029485
     }
   ]
 }
