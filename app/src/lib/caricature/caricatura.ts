@@ -52,7 +52,7 @@ export function rosa(candidati: Candidato[], ruolo: Ruolo = "ministro"): Leve[] 
 
 /**
  * Il salto di ogni leader, dalla lista dei partiti della Vista nell'ordine della Vista (gli sciolti restano in lista, i nati si
- * accodano: i salti già dati non cambiano). Il partito del giocatore non si disegna e non entra nel conto: rinominarlo non muove nessuno.
+ * accodano: i salti già dati non cambiano). Se un leader cambia (successione), la sua coppia può spostare la faccia di chi viene dopo nell'ordine. Il partito del giocatore non si disegna e non entra nel conto: rinominarlo non muove nessuno.
  */
 export function saltiDeiLeader(v: { giocatore: string; partiti: { id: string; nome: string; leader: string }[] }): Record<string, number> {
   const ps = v.partiti.filter((p) => p.id !== v.giocatore && p.leader);
