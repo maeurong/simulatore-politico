@@ -3,7 +3,7 @@ import type { Vista } from "$lib/tipi/Vista";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import { cosaCambia, perimetro, quando, stimatore, type Misurabile } from "./anteprima";
-import { oscilla } from "./oscilla";
+import { ampiezzaPer, oscilla } from "./oscilla";
 
 const v03 = ordinario as unknown as Vista;
 const piena = (aula as unknown as Record<string, { vista: Vista }>).piena.vista;
@@ -66,12 +66,23 @@ describe("oscilla", () => {
     oscilla(e2, 0.5);
     expect((e2.animate.mock.calls[0] as unknown as [unknown, { duration: number }])[1].duration).toBe(600);
   });
-  it("su un foglio alto il fondo non si sposta oltre il margine della colonna", () => {
+  it("su un foglio alto il fondo non si sposta oltre il margine della colonna (32 px, spillo a 20 px)", () => {
     const e = Object.assign(el(), { offsetHeight: 1200 });
     oscilla(e, 1);
     const passi = e.animate.mock.calls[0][0] as { transform: string }[];
     const gradi = Math.max(...passi.map((p) => Math.abs(parseFloat(p.transform.slice(7)))));
-    expect(1200 * Math.sin((gradi * Math.PI) / 180)).toBeLessThanOrEqual(9);
+    expect(1220 * Math.sin((gradi * Math.PI) / 180)).toBeLessThanOrEqual(32.2);
+  });
+  it("un foglio di 500-700 px oscilla in modo che si veda: picco di almeno 2,5° e dentro il margine", () => {
+    for (const h of [500, 600, 700]) {
+      const e = Object.assign(el(), { offsetHeight: h });
+      oscilla(e, 1);
+      const passi = e.animate.mock.calls[0][0] as { transform: string }[];
+      const picco = Math.max(...passi.map((p) => Math.abs(parseFloat(p.transform.slice(7)))));
+      expect(picco, `${h} px`).toBeGreaterThanOrEqual(2.4);
+      expect((h + 20) * Math.sin((picco * Math.PI) / 180), `${h} px`).toBeLessThanOrEqual(32.2);
+      expect(ampiezzaPer(h)).toBeGreaterThanOrEqual(2.5);
+    }
   });
   it("col movimento spento (k = 0) non parte", () => {
     const e = el();
