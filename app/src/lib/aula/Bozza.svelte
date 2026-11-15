@@ -71,6 +71,14 @@
         inCalcolo = false;
         return;
       }
+      // in crisi il core rifiuta l'anteprima di una legge: non si chiede, il motivo sta dove starebbe il rifiuto
+      const crisi = vista.governa ? motivoCrisi(vista) : undefined;
+      if (crisi) {
+        ante = null;
+        errore = crisi;
+        inCalcolo = false;
+        return;
+      }
       inCalcolo = true;
       chiedi({ b, n });
     });

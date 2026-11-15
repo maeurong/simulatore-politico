@@ -29,6 +29,7 @@
   const nome = (id: string) => nomeDi(vista, id);
   const ministero = $derived(vista.ministeri.find((m) => m.dicastero === voce?.dicastero));
   const proposta = $derived(voce?.azioni === "proposta" ? (ministero?.proposta ?? null) : null);
+  const crisi = $derived(motivoCrisi(vista));
   const fondi = $derived(!!proposta && !proposta.disposizione);
   const misura = $derived(vista.calendario.find((m) => m.id === voce?.misura));
   const disposizione = $derived(vista.disposizioni.find((d) => d.id === norma));
@@ -66,8 +67,8 @@
     },
   );
   const richiesta = $derived.by((): (() => Promise<Anteprima | ErroreGuscio>) | null => {
-    // in crisi il core rifiuta anteprima_decreto e anteprima_accogli: non si chiedono
-    if (motivoCrisi(vista) && (norma || (proposta && !proposta.disposizione))) return null;
+    // in crisi il core rifiuta ogni anteprima (decreto, accogli, legge): non si chiedono, al loro posto sta il motivo
+    if (crisi) return null;
     if (norma) return bozza.length ? () => guscio.anteprimaDecreto({ tipo: "disposizioni", valori: bozza }) : null;
     if (!proposta || !voce?.dicastero) return null;
     const dicastero = voce.dicastero;
@@ -154,7 +155,9 @@
   </div>
   <p class="min muto">{t("cruscotto.se_ignori", { default: voce.default })}</p>
   {#if rifiuto && rifiuto.tipo !== "compra"}<Rifiuto testo={rifiuto.testo} />{/if}
-  {#if fondi}
+  {#if crisi}
+    <p class="sec muto">{crisi}</p>
+  {:else if fondi}
     {@render cartellino([])}
   {:else if aperto}
     {@render cartellino([{ disposizione: proposta.disposizione!, gradino: proposta.gradino! }], t("anteprima.nota_proposta"), t("anteprima.torna_alla_proposta"))}
