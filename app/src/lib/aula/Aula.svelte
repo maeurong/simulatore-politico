@@ -1,17 +1,18 @@
 <script lang="ts">
   // Aula, forma D · Misto (19-aula.prototype.html): il calendario dei posti in testa, sotto quattro schede (In aula, Disposizioni, Legge elettorale,
-  // Referendum), la misura scelta nel dettaglio a lato. Le ultime due schede arrivano col Task 9; con Disposizioni il dettaglio a lato è la bozza. La pagina sta ferma, il corpo e il dettaglio scorrono.
+  // Referendum), la misura scelta nel dettaglio a lato. Con Disposizioni e Legge elettorale il dettaglio a lato è la bozza. La pagina sta ferma, il corpo e il dettaglio scorrono.
   import { tick, untrack } from "svelte";
   import { t } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { riportaFuoco, rifiutoPer } from "./aula";
   import { cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
   import Bozza from "./Bozza.svelte";
   import Disposizioni from "./Disposizioni.svelte";
+  import Elettorale from "./Elettorale.svelte";
+  import Referendum from "./Referendum.svelte";
   import Calendario from "./Calendario.svelte";
   import InAula from "./InAula.svelte";
   import Misura from "./Misura.svelte";
@@ -76,7 +77,7 @@
   async function presenta(c: Comando): Promise<boolean> {
     const da = lato.contains(document.activeElement) ? document.activeElement : null;
     const ok = await manda(c, null);
-    if (ok) {
+    if (ok && "valori" in c) {
       bozza = [];
       await tick();
       riportaFuoco(lato, da);
@@ -102,13 +103,16 @@
     {#if scheda === "in_aula"}
       <InAula {vista} scelta={corrente?.id ?? null} onscelta={(id) => (scelta = id)} />
     {:else if scheda === "disposizioni"}
-      <Disposizioni {vista} {bozza} aperta={rigaAperta} onapri={(id) => (rigaAperta = id)} oncambia={(d, g) => (bozza = cambia(vista, bozza, d, g))} />
+      <Disposizioni {vista} {bozza} aperta={rigaAperta} onapri={(id) => (rigaAperta = id)} oncambia={(d, g) => (bozza = cambia(vista, bozza, d, g))}
+        manda={(c) => manda(c, null)} rifiuto={rifiutoPer(rifiutato, vista, null)} />
+    {:else if scheda === "elettorale"}
+      <Elettorale {vista} {bozza} oncambia={(d, g) => (bozza = cambia(vista, bozza, d, g))} onbozza={(b) => (bozza = b)} />
     {:else}
-      <Segnaposto sezione={t(`aula.scheda_${scheda}`)} fetta="11c" />
+      <Referendum {vista} manda={(c) => manda(c, null)} rifiuto={rifiutoPer(rifiutato, vista, null)} />
     {/if}
   </div>
   <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
-    {#if scheda === "disposizioni"}
+    {#if scheda === "disposizioni" || scheda === "elettorale"}
       <Bozza
         {vista} {bozza} manda={presenta} rifiuto={rifiutoDellaBozza(rifiutato, vista, bozza)}
         ontoglie={(d, g) => nellaBozza(() => (bozza = cambia(vista, bozza, d, g)))} onsvuota={() => nellaBozza(() => (bozza = []))}

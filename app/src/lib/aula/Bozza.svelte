@@ -1,7 +1,8 @@
 <script lang="ts">
   // La bozza della legge nel dettaglio a lato (storia 108): i valori scelti con «ora …» accanto, l'anteprima (una in volo per volta, vince l'ultima),
-  // il bottone della forma, il rifiuto del core sul posto col rimando alla misura in esame se il testo la nomina.
-  import { untrack } from "svelte";
+  // il bottone della forma, il rifiuto del core sul posto col rimando alla misura in esame se il testo la nomina. «Anteprima della misura ›» apre
+  // il cartellino al posto della bozza, come Misura.svelte: cambiato un gradino, oscilla.
+  import { tick, untrack } from "svelte";
   import { t, numero, elenco } from "$lib/testi/t";
   import { nomeDi } from "$lib/partiti";
   import { inOrdine } from "$lib/partiti/schieramento";
@@ -13,6 +14,7 @@
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
+  import Cartellino from "$lib/anteprima/Cartellino.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { comandoBozza, etichettaBozza, forma, misuraNominata, type Bozza } from "./bozza";
 
@@ -66,6 +68,24 @@
     });
   });
 
+  // il cartellino vale finché c'è una bozza con la sua anteprima; svuotata la bozza si richiude
+  let apertoCartellino = $state(false);
+  let piede = $state<HTMLElement>();
+  let daFuoco = $state(false);
+  $effect(() => {
+    if (!bozza.length) apertoCartellino = false;
+  });
+  // il fuoco si sposta solo se stava sul bottone che sparisce: in WKWebView un clic non lo dà
+  async function scambia(e: MouseEvent, apri: boolean) {
+    const aveva = e.currentTarget === document.activeElement;
+    daFuoco = aveva;
+    apertoCartellino = apri;
+    if (aveva && !apri) {
+      await tick();
+      piede?.querySelector("button")?.focus({ preventScroll: true });
+    }
+  }
+
   const dice = (si: boolean) => elenco(partiti.filter((p) => ante?.linee.some((l) => l.partito === p.id && l.si === si)).map((p) => p.nome), ", ") || t("aula.nessuno");
   const effetto = (e: Anteprima["effetti"][number]) =>
     t("aula.ante_effetto", {
@@ -75,7 +95,9 @@
   const ramo = ([da, a]: [number, number], n: number) => t("aula.ante_forbice", { da: numero(da), a: numero(a), n: numero(n) });
 </script>
 
-{#if !f || !etichetta}
+{#if f && etichetta && apertoCartellino && ante}
+  <Cartellino {vista} misura={ante} valori={bozza} indietro={t("anteprima.torna_alla_bozza")} ontorna={(e) => scambia(e, false)} {manda} {rifiuto} fuoco={daFuoco} />
+{:else if !f || !etichetta}
   <div class="bozza vuota sec">{t("aula.bozza_vuota", { azione: t(vista.governa ? "aula.cambia" : "aula.proponi") })}</div>
 {:else}
   <section class="bozza" aria-label={t("aula.bozza")}>
@@ -99,6 +121,7 @@
           <dt>{t("edicola.senato")}</dt><dd class="sec">{ramo(ante.forbice.senato, ante.forbice.maggioranza_senato)}</dd>
         </dl>
         {#if ante.forbice.in_bilico}<span class="chip rosso">{t("aula.in_bilico")}</span>{/if}
+        <div bind:this={piede}><Pulsante forma="link" onclick={(e) => scambia(e, true)}>{t("aula.anteprima")}</Pulsante></div>
       {:else}
         <p class="sec muto">{t("aula.ante_in_calcolo")}</p>
       {/if}
