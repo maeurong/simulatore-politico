@@ -28,8 +28,9 @@ alleati_contro_fiducia: Array<string>,
  */
 seggi: Array<VariazioneSeggi>, 
 /**
- * Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero proponente (neutra
- * senza ministro e per una proposta d'opposizione), con la chiave del turno di presentazione:
+ * In euro l'anno. Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero
+ * proponente (capacità neutra senza ministro e per una proposta d'opposizione), con la chiave
+ * del turno di presentazione:
  * il rumore della stima non si ricampiona, ma costo, leve ed effetti partono dal gradino in
  * vigore, e il costo dal PIL potenziale dell'anno, quindi cambiano quando cambiano quelli.
  */

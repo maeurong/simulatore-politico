@@ -63,7 +63,7 @@ pub struct Vista {
     /// proposta dell'opposizione è già in calendario.
     pub posto_riservato: bool,
     /// Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
-    /// `None` altrove o senza partiti fuori dal governo con seggi alla Camera.
+    /// `None` altrove, a partita finita o senza partiti fuori dal governo con seggi alla Camera.
     pub posto_riservato_di: Option<String>,
     /// La mozione di sfiducia presentata nel turno, votata in chiusura; `None` = nessuna.
     pub sfiducia: Option<VoceSfiducia>,
@@ -119,7 +119,9 @@ pub struct Vista {
     pub regioni: Vec<VoceRegione>,
     /// Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
     pub opere: Vec<VoceOpera>,
+    /// Lo stato della procedura UE, l'esito dell'ultimo controllo e la proiezione del prossimo.
     pub regole_ue: VistaRegoleUe,
+    /// Il debito in % del PIL, il programma del MES e la ristrutturazione, se in corso.
     pub debito: VistaDebito,
     pub posti: VistaPosti,
     pub soglie: VistaSoglie,
@@ -156,7 +158,10 @@ pub struct VoceSpartizione {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaRibaltone {
+    /// Nell'ordine del core: per posizione dichiarata, da sinistra a destra, come la cerca il
+    /// Capo dello Stato.
     pub coalizione: Vec<String>,
+    /// `None` solo con la coalizione vuota.
     pub primo: Option<String>,
 }
 
@@ -184,8 +189,9 @@ pub struct VoceMenu {
     pub motivo: Option<String>,
 }
 
-/// Le regole fiscali UE. Tutto tranne `proiezione` è il verdetto su un anno chiuso e riveduto;
-/// `conto_controllo` e `ultima_deviazione` sono in % del PIL, dopo l'ultimo controllo.
+/// Le regole fiscali UE. `conto_controllo` e `ultima_deviazione` sono il verdetto dell'ultimo
+/// controllo su un anno chiuso e riveduto, in % del PIL; `procedura`, `turni_in_stato` e
+/// `coesione_sospesa` seguono lo stato della procedura, che cambia anche fuori dal controllo.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaRegoleUe {
@@ -198,13 +204,14 @@ pub struct VistaRegoleUe {
     /// dopo `clausola_nazionale_fino_a` dello scenario (prima la clausola nazionale copre già
     /// l'energia); `None` se mai chiesto o se non conta.
     pub margine_energia: Option<u16>,
-    /// `None` se al conto manca un anno.
+    /// `None` se al conto manca un anno o se il PIL dell'anno non è positivo.
     pub proiezione: Option<ProiezioneUe>,
 }
 
 /// Ciò che rileverebbe il prossimo controllo: l'anno giudicato, la deviazione e il conto di
 /// controllo che ne uscirebbe, in % del PIL. Con l'anno non ancora chiuso, spesa netta e PIL sono
-/// annualizzati sui trimestri chiusi.
+/// annualizzati sui trimestri chiusi. Il PIL dei trimestri chiusi è quello vero, non la prima
+/// stima.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct ProiezioneUe {
@@ -218,7 +225,10 @@ pub struct ProiezioneUe {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaDebito {
     pub debito_pil: f64,
+    /// `None` senza un programma del MES in corso.
     pub mes: Option<VistaMes>,
+    /// `None` senza una ristrutturazione in corso: mai fatta, o col premio sotto 1 punto base e
+    /// la perdita dei redditi finita.
     pub ristrutturazione: Option<VistaRistrutturazione>,
 }
 
@@ -381,7 +391,8 @@ pub struct AnteprimaRiposizionamento {
 }
 
 /// L'intesa che un alleato perderebbe con `Prometti`: `partito` (id), `intesa` la somma delle
-/// variazioni, negativa, e `disposizioni` gli id delle promesse su cui è contrario.
+/// variazioni, negativa o zero (l'intesa non scende sotto 0), e `disposizioni` gli id delle
+/// promesse su cui è contrario.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceCostoPromessa {
@@ -506,8 +517,9 @@ pub struct VoceMisura {
     pub alleati_contro_fiducia: Vec<String>,
     /// Solo per le leggi elettorali: una voce per partito.
     pub seggi: Vec<VariazioneSeggi>,
-    /// Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero proponente (neutra
-    /// senza ministro e per una proposta d'opposizione), con la chiave del turno di presentazione:
+    /// In euro l'anno. Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero
+    /// proponente (capacità neutra senza ministro e per una proposta d'opposizione), con la chiave
+    /// del turno di presentazione:
     /// il rumore della stima non si ricampiona, ma costo, leve ed effetti partono dal gradino in
     /// vigore, e il costo dal PIL potenziale dell'anno, quindi cambiano quando cambiano quelli.
     pub costo_annuo: i64,
@@ -529,7 +541,8 @@ pub struct VoceSfiducia {
 }
 
 /// Una linea del giocatore su una misura: la sua percepita dopo il voto, calcolata su quella di
-/// oggi, e i franchi tiratori attesi del suo partito in ogni ramo (probabilità per seggi).
+/// oggi, e in ogni ramo il numero atteso di franchi tiratori del suo partito (probabilità ×
+/// seggi).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct CostoLinea {
@@ -556,6 +569,7 @@ pub struct Anteprima {
     pub nome: String,
     pub forma: FormaMisura,
     pub proponente: Option<String>,
+    /// In euro l'anno.
     pub costo_annuo: i64,
     pub effetti: Vec<EffettoStimato>,
     pub leve: Vec<VoceLeva>,
@@ -632,7 +646,8 @@ pub struct VoceDisposizione {
     pub precedente: String,
     pub in_arrivo: Vec<VoceArrivo>,
     pub referendabile: bool,
-    /// Il rifiuto che `PromuoviReferendum` del giocatore darebbe ora; `None` = ammesso.
+    /// Il testo dell'errore che `PromuoviReferendum` del giocatore darebbe ora, col suo prefisso;
+    /// `None` = ammesso. Col giocatore al governo è sempre `Some`.
     pub rifiuto_referendum: Option<String>,
     /// Le regioni; vuoto = tutto il Paese.
     pub perimetro: Vec<String>,
@@ -806,7 +821,7 @@ pub struct VoceMinistero {
     /// Il ministro uscirà a fine turno: nessun comando sul dicastero fino al successore.
     pub dimissioni_chieste: bool,
     /// L'intesa che l'alleato perderebbe con `ChiediDimissioni`; 0 col ministro del giocatore,
-    /// col tecnico e in interim.
+    /// col tecnico, in interim, con le dimissioni già chieste e quando il giocatore non governa.
     pub prezzo_dimissioni: f64,
     /// Indice nella rosa del successore scelto; `None` = il primo.
     pub scelta: Option<u8>,

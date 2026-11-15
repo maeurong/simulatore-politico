@@ -1,8 +1,11 @@
 mod comune;
 
-use comune::{al_governo, all_opposizione, dati_base, edita, file_base, file_vero, sostituisci};
+use comune::{
+    al_governo, all_opposizione, dati_base, edita, file_base, file_vero, presenta, sostituisci,
+};
 use sim_core::elettorato::Genere;
 use sim_core::legislatura::{Assegnazione, Fondazione};
+use sim_core::parlamento::CausaIntesa;
 use sim_core::vista::{Vista, VoceIncarico};
 use sim_core::{Comando, DatiGioco, Errore, Partita, VERSIONE_SCHEMA};
 
@@ -198,6 +201,31 @@ fn disoccupazione_regionale_manomessa_rifiutata() {
 }
 
 #[test]
+fn margini_e_voti_regionali_manomessi_rifiutati() {
+    let p = trattativa_02();
+    type Guasto = fn(&mut serde_json::Value);
+    let guasti: [(&str, Guasto); 4] = [
+        ("istituti: margine", |j| {
+            j["informazione"]["sondaggio"]["istituti"][0]["margine"] = (-0.01).into();
+        }),
+        ("condizioni: forma o valori", |j| {
+            j["informazione"]["sondaggio"]["condizioni"][0]["margine"] = (-0.01).into();
+        }),
+        ("voto regionale fuori da 0-1", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["voti"][0] = 1.5.into();
+        }),
+        ("voto regionale fuori da 0-1", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["voti"][0] = (-0.1).into();
+        }),
+    ];
+    let accolti: Vec<_> = (guasti.into_iter())
+        .map(|(atteso, guasto)| (atteso, edita(&p, guasto).err().map(|e| e.to_string())))
+        .filter(|(atteso, e)| !e.as_deref().is_some_and(|e| e.contains(atteso)))
+        .collect();
+    assert!(accolti.is_empty(), "{accolti:?}");
+}
+
+#[test]
 fn la_minaccia_sta_nel_partito() {
     let p = Partita::nuova(dati_base(), 7);
     assert!(p.vista().partiti.iter().all(|x| !x.minaccia));
@@ -318,6 +346,39 @@ fn il_prezzo_delle_dimissioni_e_quello_del_comando() {
         let tecnico = sanita.ministro.as_ref().unwrap().tecnico;
         assert_eq!(tecnico, nome != "03", "{nome}");
     }
+    // Sotto un governo IA il comando si rifiuta: nessun prezzo.
+    let mut ia = del_ticket(1, 1.5);
+    ia.chiudi_turno();
+    ia.chiudi_turno();
+    assert!(!ia.governa() && ia.vista().ministeri.iter().any(|m| m.ministro.is_some()));
+    assert!(
+        ia.vista()
+            .ministeri
+            .iter()
+            .all(|m| m.prezzo_dimissioni == 0.0)
+    );
+    // Dimissioni già chieste: il comando si rifiuta su quel dicastero, gli altri restano.
+    let mut p = governo_03();
+    let v = p.vista();
+    let m = (v.ministeri.iter())
+        .find(|m| m.prezzo_dimissioni > 0.0)
+        .unwrap();
+    let altri = (v.ministeri.iter()).filter(|x| x.dicastero != m.dicastero);
+    let altri: Vec<_> = altri
+        .map(|x| (x.dicastero.clone(), x.prezzo_dimissioni))
+        .collect();
+    let dimissioni = Comando::ChiediDimissioni {
+        dicastero: m.dicastero.clone(),
+    };
+    p.comanda(dimissioni.clone()).unwrap();
+    assert!(p.clone().comanda(dimissioni).is_err());
+    let dopo = p.vista();
+    for x in &dopo.ministeri {
+        let atteso = (altri.iter())
+            .find(|(d, _)| *d == x.dicastero)
+            .map_or(0.0, |a| a.1);
+        assert_eq!(x.prezzo_dimissioni, atteso, "{}", x.dicastero);
+    }
 }
 
 #[test]
@@ -403,6 +464,110 @@ fn l_intesa_di_partenza_e_quella_della_chiusura() {
             d.intesa_partenza
         );
     }
+}
+
+#[test]
+fn l_intesa_di_partenza_paga_la_rottura_dell_impegno() {
+    let p = trattativa_02();
+    let rotta = |q: &Partita| {
+        (q.intesa().variazioni.iter())
+            .filter(|v| v.causa == CausaIntesa::RotturaImpegno)
+            .count()
+    };
+    let mut provati = Vec::new();
+    let allargata = (p.disponibilita().into_iter())
+        .filter(|d| d.disponibile)
+        .find_map(|d| {
+            let mut q = p.clone();
+            q.comanda(Comando::Allarga {
+                partiti: vec![d.partito.clone()],
+            })
+            .ok()?;
+            let mut chiusa = q.clone();
+            chiusa.chiudi_turno();
+            provati.push(d.partito);
+            (chiusa.governa() && rotta(&chiusa) > rotta(&q)).then_some((q, chiusa))
+        });
+    let Some((q, chiusa)) = allargata else {
+        panic!("nessun allargamento rompe l'impegno: {provati:?}");
+    };
+    let richieste = q.vista().richieste;
+    let alleati = chiusa.vista().alleati;
+    assert_eq!(richieste.len(), alleati.len());
+    for r in &richieste {
+        let a = alleati.iter().find(|a| a.partito == r.partito).unwrap();
+        assert!(
+            (r.intesa_partenza - a.intesa).abs() < 1e-9,
+            "{}: {} contro {}",
+            r.partito,
+            r.intesa_partenza,
+            a.intesa
+        );
+    }
+}
+
+#[test]
+fn a_partita_finita_la_vista_non_offre_cio_che_il_comando_rifiuta() {
+    // Al governo, con una proposta dell'opposizione in calendario: la linea si sceglie.
+    let mut p = governo_03();
+    presenta(&mut p, &[("salario_minimo", "9")]).unwrap();
+    let id = p.parlamento().misure.last().unwrap().id;
+    let sinistra = (p.partiti().iter()).position(|x| x.id == "sinistra");
+    let mut p = edita(&p, |j| {
+        for m in j["parlamento"]["misure"].as_array_mut().unwrap() {
+            if m["id"] == id {
+                m["promotore"] = sinistra.into();
+                m["proponente"] = serde_json::Value::Null;
+            }
+        }
+    })
+    .unwrap();
+    let costo = |p: &Partita| {
+        (p.vista().calendario.into_iter())
+            .find(|m| m.id == id)
+            .and_then(|m| m.costo_linea)
+    };
+    assert!(costo(&p).is_some());
+    p.abbandona().unwrap();
+    assert_eq!(costo(&p), None);
+    let linea = Comando::Linea {
+        misura: id,
+        si: Some(true),
+    };
+    assert!(p.clone().comanda(linea).is_err());
+
+    // All'opposizione col posto riservato di un partito IA.
+    let mut p = del_ticket(1, 1.5);
+    p.chiudi_turno();
+    p.chiudi_turno();
+    assert!(p.vista().posto_riservato_di.is_some());
+    p.abbandona().unwrap();
+    let v = p.vista();
+    assert_eq!(v.posto_riservato_di, None);
+    for d in &v.disposizioni {
+        let comando = (p.clone())
+            .comanda(Comando::PromuoviReferendum {
+                disposizione: d.id.clone(),
+            })
+            .err()
+            .map(|e| e.to_string());
+        assert_eq!(d.rifiuto_referendum, comando, "{}", d.id);
+        assert_eq!(
+            comando.as_deref(),
+            Some("comando non ammesso: La partita è finita")
+        );
+    }
+
+    // In campagna elettorale, al turno zero: restare sulla dichiarata è ammesso.
+    let mut p = del_ticket(4, 4.5);
+    assert!(p.anteprima_riposizionamento(4.5).is_ok());
+    p.abbandona().unwrap();
+    assert!(p.anteprima_riposizionamento(4.5).is_err());
+    assert!(
+        p.clone()
+            .comanda(Comando::Riposiziona { posizione: 4.5 })
+            .is_err()
+    );
 }
 
 #[test]

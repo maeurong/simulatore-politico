@@ -61,7 +61,7 @@ impl RegoleUe {
 
     /// Deviazione del controllo sull'anno `anno` (% del PIL, al netto della clausola) e conto di
     /// controllo che ne segue. Spesa netta e PIL di `anno` contano per `fattore` (1 con l'anno
-    /// intero nel conto); `None` se al conto manca un anno.
+    /// intero nel conto); `None` se al conto manca un anno o se il PIL di `anno` non è positivo.
     fn controllo(&self, dati: &DatiGioco, anno: u16, fattore: f64) -> Option<(f64, f64)> {
         let s = dati.scenario();
         let (Some(&sn1), Some(&sn2), Some(&pil1)) = (
@@ -71,6 +71,9 @@ impl RegoleUe {
         ) else {
             return None;
         };
+        if pil1 <= 0 {
+            return None;
+        }
         let clausola = if anno <= s.clausola_nazionale_fino_a {
             s.clausola_nazionale_margine.valore
         } else if anno <= self.clausola_energia_fino_a {

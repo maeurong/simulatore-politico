@@ -5,4 +5,13 @@ import type { VistaRistrutturazione } from "./VistaRistrutturazione";
 /**
  * `debito_pil`: il debito in % del PIL degli ultimi quattro trimestri, quello dello spread.
  */
-export type VistaDebito = { debito_pil: number, mes: VistaMes | null, ristrutturazione: VistaRistrutturazione | null, };
+export type VistaDebito = { debito_pil: number, 
+/**
+ * `None` senza un programma del MES in corso.
+ */
+mes: VistaMes | null, 
+/**
+ * `None` senza una ristrutturazione in corso: mai fatta, o col premio sotto 1 punto base e
+ * la perdita dei redditi finita.
+ */
+ristrutturazione: VistaRistrutturazione | null, };

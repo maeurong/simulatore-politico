@@ -402,8 +402,9 @@ pub struct Elettorato {
     /// Aliquota media IRPEF al turno zero, con gli scaglioni dello scenario.
     pub aliquota_irpef_0: f64,
     /// Reddito, crescita e attesa per fascia dell'ultima chiusura, come li rende `giudizio`
-    /// (crescita ripulita, mai la grezza); tre voci nell'ordine di `Fascia::TUTTE`, a zero al
-    /// turno zero. L'attesa non si rifà dallo stato a finestra piena: si conserva.
+    /// (crescita ripulita, mai la grezza); tre voci nell'ordine di `Fascia::TUTTE`. Al turno
+    /// zero il reddito della partenza, crescita e attesa a zero. L'attesa non si rifà dallo stato
+    /// a finestra piena: si conserva.
     pub redditi_fasce: Vec<RedditoFascia>,
 }
 
@@ -418,14 +419,7 @@ impl Elettorato {
         let mut el = Elettorato {
             base: Indici::da(e, dati, &neutre.leve),
             aliquota_irpef_0: 0.0,
-            redditi_fasce: Fascia::TUTTE
-                .map(|fascia| RedditoFascia {
-                    fascia,
-                    reddito: 0.0,
-                    crescita: 0.0,
-                    attesa: 0.0,
-                })
-                .to_vec(),
+            redditi_fasce: Vec::new(),
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()
@@ -448,6 +442,14 @@ impl Elettorato {
         el.aggiorna_redditi(dati, e, &neutre, 0);
         el.aggiorna_redditi(dati, e, &neutre, 0);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
+        el.redditi_fasce = (Fascia::TUTTE.into_iter().zip(el.redditi_reali(dati)))
+            .map(|(fascia, reddito)| RedditoFascia {
+                fascia,
+                reddito,
+                crescita: 0.0,
+                attesa: 0.0,
+            })
+            .collect();
         el
     }
 

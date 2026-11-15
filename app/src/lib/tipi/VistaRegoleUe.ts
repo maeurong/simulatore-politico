@@ -3,8 +3,9 @@ import type { ProiezioneUe } from "./ProiezioneUe";
 import type { StatoPde } from "./StatoPde";
 
 /**
- * Le regole fiscali UE. Tutto tranne `proiezione` è il verdetto su un anno chiuso e riveduto;
- * `conto_controllo` e `ultima_deviazione` sono in % del PIL, dopo l'ultimo controllo.
+ * Le regole fiscali UE. `conto_controllo` e `ultima_deviazione` sono il verdetto dell'ultimo
+ * controllo su un anno chiuso e riveduto, in % del PIL; `procedura`, `turni_in_stato` e
+ * `coesione_sospesa` seguono lo stato della procedura, che cambia anche fuori dal controllo.
  */
 export type VistaRegoleUe = { procedura: StatoPde, turni_in_stato: number, conto_controllo: number, ultima_deviazione: number, coesione_sospesa: boolean, 
 /**
@@ -14,6 +15,6 @@ export type VistaRegoleUe = { procedura: StatoPde, turni_in_stato: number, conto
  */
 margine_energia: number | null, 
 /**
- * `None` se al conto manca un anno.
+ * `None` se al conto manca un anno o se il PIL dell'anno non è positivo.
  */
 proiezione: ProiezioneUe | null, };

@@ -2,6 +2,7 @@
 
 /**
  * Una linea del giocatore su una misura: la sua percepita dopo il voto, calcolata su quella di
- * oggi, e i franchi tiratori attesi del suo partito in ogni ramo (probabilità per seggi).
+ * oggi, e in ogni ramo il numero atteso di franchi tiratori del suo partito (probabilità ×
+ * seggi).
  */
 export type CostoLinea = { percepita: number, franchi_camera: number, franchi_senato: number, };

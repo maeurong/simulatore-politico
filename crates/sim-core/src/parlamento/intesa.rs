@@ -57,7 +57,7 @@ pub struct VariazioneIntesa {
     pub turno: u32,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Intesa {
     /// Una voce per partito.
     pub valori: Vec<f64>,

@@ -5,4 +5,16 @@ import type { Fascia } from "./Fascia";
  * Una fascia nella chiusura: reddito reale per elettore, crescita reale del trimestre e crescita
  * attesa in punti, medie dei gruppi pesate con gli elettori. Senza elettori, tutto zero.
  */
-export type RedditoFascia = { fascia: Fascia, reddito: number, crescita: number, attesa: number, };
+export type RedditoFascia = { fascia: Fascia, 
+/**
+ * Euro annui reali per elettore, ai prezzi del paniere della fascia.
+ */
+reddito: number, 
+/**
+ * Variazione % del reddito reale sul trimestre prima.
+ */
+crescita: number, 
+/**
+ * Media in % delle crescite della finestra delle aspettative.
+ */
+attesa: number, };

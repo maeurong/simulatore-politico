@@ -9,7 +9,7 @@ use comune::{
     senza_shock, sostituisci,
 };
 use sim_core::caso::{Caso, Flusso};
-use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo, intenzioni};
+use sim_core::elettorato::{Condizione, Fascia, Reddito, fascia_di, indice_gruppo, intenzioni};
 use sim_core::esito::TipoVoce;
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
 
@@ -1153,13 +1153,23 @@ fn elettorato_resta_valido_dopo_200_turni() {
 
 #[test]
 fn tre_fasce_al_turno_zero() {
-    let v = Partita::nuova(dati_base(), 1).vista();
+    let p = Partita::nuova(dati_base(), 1);
+    let v = p.vista();
     assert_eq!(
         v.redditi.iter().map(|r| r.fascia).collect::<Vec<_>>(),
         Fascia::TUTTE
     );
+    // Il reddito è la media dei redditi reali dei gruppi della fascia, pesata con gli elettori.
+    let el = p.elettorato();
+    let d = dati_base();
     for r in &v.redditi {
         assert_eq!((r.crescita, r.attesa), (0.0, 0.0), "{r:?}");
+        let (n, somma) = (0..el.gruppi.len())
+            .filter(|&i| fascia_di(i) == r.fascia)
+            .map(|i| (el.elettori(d.elettorato(), i), el.gruppi[i].reddito.reale()))
+            .fold((0.0, 0.0), |(n, s), (w, x)| (n + w, s + w * x));
+        assert!(r.reddito > 0.0, "{r:?}");
+        assert!((r.reddito - somma / n).abs() < 1e-9, "{r:?}: {}", somma / n);
     }
 }
 

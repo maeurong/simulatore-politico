@@ -2,6 +2,7 @@
 
 /**
  * L'intesa che un alleato perderebbe con `Prometti`: `partito` (id), `intesa` la somma delle
- * variazioni, negativa, e `disposizioni` gli id delle promesse su cui è contrario.
+ * variazioni, negativa o zero (l'intesa non scende sotto 0), e `disposizioni` gli id delle
+ * promesse su cui è contrario.
  */
 export type VoceCostoPromessa = { partito: string, intesa: number, disposizioni: Array<string>, };

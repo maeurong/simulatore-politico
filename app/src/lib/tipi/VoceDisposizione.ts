@@ -9,7 +9,8 @@ import type { VoceGradino } from "./VoceGradino";
  */
 export type VoceDisposizione = { id: string, nome: string, dicastero: string | null, norma: Norma, tipo: TipoDisposizione, in_vigore: string, legge: string, precedente: string, in_arrivo: Array<VoceArrivo>, referendabile: boolean, 
 /**
- * Il rifiuto che `PromuoviReferendum` del giocatore darebbe ora; `None` = ammesso.
+ * Il testo dell'errore che `PromuoviReferendum` del giocatore darebbe ora, col suo prefisso;
+ * `None` = ammesso. Col giocatore al governo è sempre `Some`.
  */
 rifiuto_referendum: string | null, 
 /**

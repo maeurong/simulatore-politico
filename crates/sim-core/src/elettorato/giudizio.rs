@@ -20,8 +20,11 @@ use ts_rs::TS;
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct RedditoFascia {
     pub fascia: Fascia,
+    /// Euro annui reali per elettore, ai prezzi del paniere della fascia.
     pub reddito: f64,
+    /// Variazione % del reddito reale sul trimestre prima.
     pub crescita: f64,
+    /// Media in % delle crescite della finestra delle aspettative.
     pub attesa: f64,
 }
 
@@ -36,6 +39,24 @@ pub(crate) fn asimmetrica(x: f64, rho: f64) -> f64 {
 }
 
 impl Elettorato {
+    /// Reddito reale per elettore di ogni fascia, nell'ordine di `Fascia::TUTTE`: la media dei
+    /// gruppi pesata con gli elettori, col reddito non finito a zero; senza elettori, zero.
+    pub(crate) fn redditi_reali(&self, dati: &DatiGioco) -> [f64; Fascia::TUTTE.len()] {
+        let d = dati.elettorato();
+        let mut somme = [[0.0_f64; 2]; Fascia::TUTTE.len()];
+        for (i, g) in self.gruppi.iter().enumerate() {
+            // Solo il paniere di ora conta: con la base degenere il reddito di ora resta valido.
+            let reale = Some(g.reddito.reale())
+                .filter(|x| x.is_finite())
+                .unwrap_or(0.0);
+            let w = self.elettori(d, i);
+            let s = &mut somme[fascia_di(i) as usize];
+            s[0] += w;
+            s[1] += w * reale;
+        }
+        somme.map(|[n, reddito]| if n > 0.0 { reddito / n } else { 0.0 })
+    }
+
     /// Aggiorna il giudizio sui partiti di governo dalla variazione `reddito_prima → reddito` e
     /// dalla disoccupazione contro `ultima_disoccupazione` e dalla variazione delle grandezze
     /// contro `prima`, poi accoda la crescita alle aspettative. Nella regione bersaglio di un
@@ -55,8 +76,9 @@ impl Elettorato {
         let pesi: Vec<f64> = (0..self.gruppi.len())
             .map(|i| self.elettori(d, i))
             .collect();
-        // Per fascia: elettori, poi reddito reale, crescita e attesa moltiplicati per gli elettori.
-        let mut somme = [[0.0_f64; 4]; Fascia::TUTTE.len()];
+        let redditi = self.redditi_reali(dati);
+        // Per fascia: elettori, poi crescita e attesa moltiplicate per gli elettori.
+        let mut somme = [[0.0_f64; 3]; Fascia::TUTTE.len()];
         let rho = dati.manopola("asimmetria_giudizio");
         let q = dati.manopola("quota_colpa_presidente");
         let (sigma_r, sigma_u) = (
@@ -113,10 +135,8 @@ impl Elettorato {
                 0.0
             };
             g.crescite.push(crescita);
-            // Solo il paniere di ora conta: con la base degenere il reddito di ora resta valido.
-            let reale = Some(ora.reale()).filter(|x| x.is_finite()).unwrap_or(0.0);
             let s = &mut somme[fascia_di(i) as usize];
-            for (somma, x) in s.iter_mut().zip([1.0, reale, crescita, aspettativa]) {
+            for (somma, x) in s.iter_mut().zip([1.0, crescita, aspettativa]) {
                 *somma += w * x;
             }
             g.crescite
@@ -173,12 +193,12 @@ impl Elettorato {
                 }
             }
         }
-        self.redditi_fasce = (Fascia::TUTTE.into_iter().zip(somme))
-            .map(|(fascia, [n, reddito, crescita, attesa])| {
+        self.redditi_fasce = (Fascia::TUTTE.into_iter().zip(somme).zip(redditi))
+            .map(|((fascia, [n, crescita, attesa]), reddito)| {
                 let media = |x: f64| if n > 0.0 { x / n } else { 0.0 };
                 RedditoFascia {
                     fascia,
-                    reddito: media(reddito),
+                    reddito,
                     crescita: media(crescita),
                     attesa: media(attesa),
                 }

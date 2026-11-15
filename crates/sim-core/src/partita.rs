@@ -1825,8 +1825,13 @@ impl Partita {
             .then(|| (m.partito, self.dati.manopola("costo_dimissioni_chieste")))
     }
 
-    /// L'intesa che l'alleato perderebbe con `ChiediDimissioni` sul dicastero `i`; 0 se non paga.
+    /// L'intesa che l'alleato perderebbe con `ChiediDimissioni` sul dicastero `i`; 0 se non paga
+    /// o se il comando si rifiuta.
     fn prezzo_dimissioni(&self, i: usize) -> f64 {
+        let chieste = (self.ministri.dicasteri.get(i)).is_some_and(|st| st.dimissioni_chieste);
+        if chieste || self.di_governo().is_err() {
+            return 0.0;
+        }
         self.chi_paga_le_dimissioni(i).map_or(0.0, |(j, costo)| {
             let x = self.intesa.valori.get(j).copied().unwrap_or(0.0);
             x - Intesa::dopo(x, -costo)
@@ -3562,9 +3567,9 @@ impl Partita {
     /// giocatore va su `posizione`, la percepita a metà strada.
     ///
     /// # Errors
-    /// `Comando` fuori dalla campagna elettorale, al secondo comando, con la posizione fuori da
-    /// 1-7, più lontana di `passo_movimento` dalla dichiarata, o se cambia il suo rango nella fila
-    /// per (dichiarata, indice) rispetto a un partito attivo (col nome).
+    /// `Comando` a partita finita o fuori dalla campagna elettorale, al secondo comando, con la
+    /// posizione fuori da 1-7, più lontana di `passo_movimento` dalla dichiarata, o se cambia il
+    /// suo rango nella fila per (dichiarata, indice) rispetto a un partito attivo (col nome).
     pub(crate) fn riposiziona(&mut self, posizione: f64) -> Result<(), Errore> {
         self.riposizionamento_ammesso(posizione)?;
         self.partiti[self.giocatore].sposta(posizione);
@@ -3594,7 +3599,7 @@ impl Partita {
     /// I rifiuti di `Riposiziona`, che il comando e la sua anteprima condividono.
     fn riposizionamento_ammesso(&self, posizione: f64) -> Result<(), Errore> {
         let ko = |m: &str| Err(Errore::Comando(m.into()));
-        if !self.legislatura.turno_di_voto(self.turno) {
+        if self.finita() || !self.legislatura.turno_di_voto(self.turno) {
             return ko("Il riposizionamento si decide solo in campagna elettorale");
         }
         if self.legislatura.riposizionato {
@@ -3758,22 +3763,44 @@ impl Partita {
         )
     }
 
+    /// Alla formazione del governo del giocatore ogni alleato riparte da `intesa_base` con la
+    /// variazione della spartizione `assegnati` (`partenza_e_spartizione`).
+    fn riparti_alleati(&self, intesa: &mut Intesa, assegnati: &[Option<usize>]) {
+        for (j, richiesta, offerta) in self.quote(assegnati) {
+            let (base, delta) = self.partenza_e_spartizione(richiesta, offerta);
+            intesa.riparti(j, base);
+            intesa.varia(j, CausaIntesa::Spartizione, delta, self.turno);
+        }
+    }
+
+    /// Chi dei `rotti` non è il `presidente` perde `intesa_rottura_impegno`.
+    fn intesa_delle_rotture(&self, intesa: &mut Intesa, rotti: &[usize], presidente: usize) {
+        let perde = self.dati.manopola("intesa_rottura_impegno");
+        for &j in rotti.iter().filter(|&&j| j != presidente) {
+            intesa.varia(j, CausaIntesa::RotturaImpegno, -perde, self.turno);
+        }
+    }
+
     /// In trattativa con l'incarico al giocatore, una voce per alleato: richiesta e offerta della
     /// proposta in corso o, senza, di quella di default che la chiusura applicherà, e l'intesa da
-    /// cui l'alleato ripartirebbe; vuota altrove.
+    /// cui l'alleato ripartirebbe, coi passi di `forma_governo`: la spartizione, poi la rottura
+    /// dell'impegno; vuota altrove.
     pub fn richieste(&self) -> Vec<VoceRichiesta> {
         if !self.con_incarico() {
             return Vec::new();
         }
-        (self.quote(&self.assegnati_dal_giocatore()).into_iter())
-            .map(|(j, richiesta, offerta)| {
-                let (base, delta) = self.partenza_e_spartizione(richiesta, offerta);
-                VoceRichiesta {
-                    partito: self.partiti[j].id.clone(),
-                    richiesta,
-                    offerta,
-                    intesa_partenza: Intesa::dopo(base, delta),
-                }
+        let assegnati = self.assegnati_dal_giocatore();
+        let coalizione = self.coalizione_del_giocatore();
+        let mut dopo = self.intesa.clone();
+        self.riparti_alleati(&mut dopo, &assegnati);
+        let rotti = legislatura::rotture(&self.legislatura.coalizioni, &coalizione, &coalizione);
+        self.intesa_delle_rotture(&mut dopo, &rotti, self.giocatore);
+        (self.quote(&assegnati).into_iter())
+            .map(|(j, richiesta, offerta)| VoceRichiesta {
+                partito: self.partiti[j].id.clone(),
+                richiesta,
+                offerta,
+                intesa_partenza: dopo.valori.get(j).copied().unwrap_or_default(),
             })
             .collect()
     }
@@ -3883,11 +3910,9 @@ impl Partita {
         };
         self.voce_formato(presidente, &coalizione, &assegnati, perche);
         if presidente == self.giocatore {
-            for (j, richiesta, offerta) in self.quote(&assegnati) {
-                let (base, delta) = self.partenza_e_spartizione(richiesta, offerta);
-                self.intesa.riparti(j, base);
-                (self.intesa).varia(j, CausaIntesa::Spartizione, delta, self.turno);
-            }
+            let mut intesa = std::mem::take(&mut self.intesa);
+            self.riparti_alleati(&mut intesa, &assegnati);
+            self.intesa = intesa;
         } else {
             let base = self.dati.manopola("intesa_base");
             for &j in coalizione.iter().filter(|&&j| j != presidente) {
@@ -3963,16 +3988,14 @@ impl Partita {
     /// gli `entranti` perde `valence_rottura_impegno`; l'alleato del `presidente` anche
     /// `intesa_rottura_impegno`. Paga anche il giocatore.
     fn paga_rotture(&mut self, coalizione: &[usize], entranti: &[usize], presidente: usize) {
-        let (valence, intesa) = (
-            self.dati.manopola("valence_rottura_impegno"),
-            self.dati.manopola("intesa_rottura_impegno"),
-        );
-        for j in legislatura::rotture(&self.legislatura.coalizioni, coalizione, entranti) {
+        let valence = self.dati.manopola("valence_rottura_impegno");
+        let rotti = legislatura::rotture(&self.legislatura.coalizioni, coalizione, entranti);
+        let mut intesa = std::mem::take(&mut self.intesa);
+        self.intesa_delle_rotture(&mut intesa, &rotti, presidente);
+        self.intesa = intesa;
+        for j in rotti {
             if let Some(p) = self.partiti.get_mut(j) {
                 p.valence -= valence;
-            }
-            if j != presidente {
-                (self.intesa).varia(j, CausaIntesa::RotturaImpegno, -intesa, self.turno);
             }
             self.voce_rottura(j, coalizione, entranti, presidente);
         }
@@ -4646,7 +4669,7 @@ impl Partita {
             alleati_avversari: self.voci_avversari(),
             posto_riservato: self.posto_riservato_mio(),
             posto_riservato_di: (self.posto_riservato())
-                .filter(|_| l.fase == Fase::Ordinaria)
+                .filter(|_| l.fase == Fase::Ordinaria && !self.finita())
                 .and_then(|j| self.partiti.get(j))
                 .map(|p| p.id.clone()),
             sfiducia: self.parlamento.sfiducia.map(|(i, j)| VoceSfiducia {
@@ -5468,9 +5491,8 @@ impl Partita {
         )
     }
 
-    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
-    /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
-    /// conversione.
+    /// Ogni opera ha dicastero e regione nei dati, un turno non nel futuro e una spesa non
+    /// negativa.
     fn controlla_opere(&self) -> Result<(), Errore> {
         let (n_dicasteri, n_regioni) = (self.dati.dicasteri().len(), self.dati.regioni().len());
         ok(
@@ -5484,6 +5506,9 @@ impl Partita {
         )
     }
 
+    /// Il decreto di ogni agenda è quello di `economia.decreti`, entro il margine residuo, e la
+    /// conversione in calendario porta il suo atto e il suo importo; senza decreto, nessuna
+    /// conversione.
     fn controlla_decreti(&self) -> Result<(), Errore> {
         let dicasteri = self.ministri.dicasteri.iter().zip(&self.economia.decreti);
         for (i, (st, &x)) in dicasteri.enumerate() {
@@ -5715,6 +5740,14 @@ impl Partita {
         ok(
             (l.elezioni.iter().flat_map(|e| &e.voti)).all(|v| (0.0..=1.0).contains(&v.quota)),
             "legislatura.elezioni con una quota fuori da 0-1",
+        )?;
+        ok(
+            (l.elezioni
+                .iter()
+                .flat_map(|e| &e.regioni)
+                .flat_map(|r| &r.voti))
+            .all(|v| (0.0..=1.0).contains(v)),
+            "legislatura.elezioni con un voto regionale fuori da 0-1",
         )?;
         ok(
             // I partiti nascono nel corso della partita: la lunghezza è quella dell'esito stesso.

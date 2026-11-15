@@ -3,6 +3,7 @@
 /**
  * Ciò che rileverebbe il prossimo controllo: l'anno giudicato, la deviazione e il conto di
  * controllo che ne uscirebbe, in % del PIL. Con l'anno non ancora chiuso, spesa netta e PIL sono
- * annualizzati sui trimestri chiusi.
+ * annualizzati sui trimestri chiusi. Il PIL dei trimestri chiusi è quello vero, non la prima
+ * stima.
  */
 export type ProiezioneUe = { anno: number, deviazione: number, conto: number, };

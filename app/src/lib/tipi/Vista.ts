@@ -104,7 +104,7 @@ alleati_avversari: Array<VoceFascia>,
 posto_riservato: boolean, 
 /**
  * Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
- * `None` altrove o senza partiti fuori dal governo con seggi alla Camera.
+ * `None` altrove, a partita finita o senza partiti fuori dal governo con seggi alla Camera.
  */
 posto_riservato_di: string | null, 
 /**
@@ -199,7 +199,15 @@ regioni: Array<VoceRegione>,
 /**
  * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
  */
-opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, 
+opere: Array<VoceOpera>, 
+/**
+ * Lo stato della procedura UE, l'esito dell'ultimo controllo e la proiezione del prossimo.
+ */
+regole_ue: VistaRegoleUe, 
+/**
+ * Il debito in % del PIL, il programma del MES e la ristrutturazione, se in corso.
+ */
+debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, 
 /**
  * Reddito reale, crescita del trimestre e crescita attesa (punti) per fascia nell'ultima
  * chiusura, medie dei gruppi pesate con gli elettori; tre voci nell'ordine delle fasce.

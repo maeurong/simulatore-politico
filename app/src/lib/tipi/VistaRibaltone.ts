@@ -3,4 +3,13 @@
 /**
  * Il ribaltone: la coalizione (id) e il primo per seggi, che cede o no la guida.
  */
-export type VistaRibaltone = { coalizione: Array<string>, primo: string | null, };
+export type VistaRibaltone = { 
+/**
+ * Nell'ordine del core: per posizione dichiarata, da sinistra a destra, come la cerca il
+ * Capo dello Stato.
+ */
+coalizione: Array<string>, 
+/**
+ * `None` solo con la coalizione vuota.
+ */
+primo: string | null, };
