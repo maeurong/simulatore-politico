@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { salti, leveDi, chiaveDi } from "$lib/caricature/caricatura";
-import { sulRetro, attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, molla, obiettivo, posizioni, prezzoDimissioni } from "./governo";
+import { sulRetro, attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, type Figurina, molla, obiettivo, posizioni, prezzoDimissioni, ruota, statoPrincipale, totaleDirotta } from "./governo";
 import ordinarioJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
@@ -118,6 +118,11 @@ describe("dirotta", () => {
     expect(r).toEqual({ atti: { a: -5, b: "niente da dirottare" }, regioni: { lazio: -2 } });
     expect(chiamate).toEqual(["a/null", "b/null", "null/lazio"]);
   });
+  it("un guasto si rilancia a chi ha aperto Dirotta, non diventa testo", async () => {
+    const guasto = { specie: "guasto", testo: "disco pieno" };
+    const chiedi = async () => { throw guasto; };
+    await expect(costiDirotta(chiedi, ["a"], [])).rejects.toEqual(guasto);
+  });
   it("una nuova apertura ferma la vecchia", async () => {
     let n = 0;
     const r = await costiDirotta(async () => (n++, -1), ["a", "b", "c"], [], () => n < 1);
@@ -126,7 +131,47 @@ describe("dirotta", () => {
   });
 });
 
+describe("statoPrincipale", () => {
+  it("uno solo, con la precedenza interim, dimissioni, preavviso, tecnico, rodaggio", () => {
+    const con = (...stati: Figurina["stati"]) => ({ stati }) as Figurina;
+    expect(statoPrincipale(con("interim"))).toBe("interim");
+    expect(statoPrincipale(con("dimissioni_chieste", "rodaggio"))).toBe("dimissioni_chieste");
+    expect(statoPrincipale(con("preavviso", "rodaggio"))).toBe("preavviso");
+    expect(statoPrincipale(con("rodaggio", "tecnico"))).toBe("tecnico");
+    expect(statoPrincipale(con("rodaggio"))).toBe("rodaggio");
+    expect(statoPrincipale(con())).toBeNull();
+  });
+  it("sulle viste vere è sempre uno degli stati della carta", () => {
+    for (const { vista } of Object.values(stati).filter((x) => x.vista)) {
+      for (const f of figurine(vista)) {
+        const s = statoPrincipale(f);
+        expect(s === null ? f.stati.length : f.stati.includes(s)).toBe(s === null ? 0 : true);
+      }
+    }
+  });
+});
+
+describe("totaleDirotta", () => {
+  it("somma i valori del core e arrotonda una volta: 1,4 + 1,4 costa 3, non 2", () => {
+    expect(totaleDirotta(-1.4, -1.4)).toBe(-3);
+    expect(totaleDirotta(-1.4, null)).toBe(-1);
+  });
+  it("un guadagno resta un guadagno; niente costi dà zero", () => {
+    expect(totaleDirotta(2.6, null)).toBe(3);
+    expect(totaleDirotta(null, null)).toBe(0);
+    expect(Object.is(totaleDirotta(-0.2, null), 0)).toBe(true);
+  });
+});
+
 describe("prezzoDimissioni", () => {
+  it("un alleato a prezzo 0 si paga: 0 punti, non «del tuo partito»", () => {
+    const m = { ...min(ordinario, "economia_finanze"), prezzo_dimissioni: 0 };
+    expect(prezzoDimissioni(ordinario, m)).toMatch(/^Costa 0 punti d.intesa a Destra/);
+  });
+  it("un punto solo al singolare", () => {
+    const m = { ...min(ordinario, "economia_finanze"), prezzo_dimissioni: 1 };
+    expect(prezzoDimissioni(ordinario, m)).toMatch(/^Costa 1 punto d.intesa/);
+  });
   it("N punti d'intesa all'alleato, niente col tuo partito, gratis col tecnico", () => {
     expect(prezzoDimissioni(ordinario, min(ordinario, "economia_finanze"))).toMatch(/10 punti d.intesa a Destra/);
     expect(prezzoDimissioni(ordinario, min(ordinario, "interno"))).toMatch(/^niente/i);
@@ -162,5 +207,30 @@ describe("sulRetro", () => {
     expect(sulRetro(di(v, "istruzione_ricerca"))).toBe(false);
     expect(sulRetro(di(ordinario, "lavoro_welfare"))).toBe(false);
     expect(sulRetro(di(ordinario, "esteri_difesa"))).toBe(false);
+  });
+});
+
+describe("ruota", () => {
+  const el = () => ({ animate: vi.fn(() => "anim") }) as unknown as HTMLElement & { animate: ReturnType<typeof vi.fn> };
+  it("avanti da 0 a 180 gradi, 520 ms alla velocità piena", () => {
+    const e = el();
+    expect(ruota(e, 1, { muove: true, k: 1 })).toBe("anim");
+    const [fotogrammi, opzioni] = e.animate.mock.calls[0] as unknown as [{ transform: string }[], { duration: number; easing: string }];
+    expect(fotogrammi.map((x) => x.transform)).toEqual(["rotateY(0deg)", "rotateY(180deg)"]);
+    expect(opzioni.duration).toBe(520);
+    expect(opzioni.easing).toMatch(/^linear\(/);
+  });
+  it("indietro con verso −1; la durata segue k", () => {
+    const e = el();
+    ruota(e, -1, { muove: true, k: 0.5 });
+    const [fotogrammi, opzioni] = e.animate.mock.calls[0] as unknown as [{ transform: string }[], { duration: number }];
+    expect(fotogrammi.map((x) => x.transform)).toEqual(["rotateY(180deg)", "rotateY(0deg)"]);
+    expect(opzioni.duration).toBe(260);
+  });
+  it("col movimento spento o k a zero non anima", () => {
+    const e = el();
+    expect(ruota(e, 1, { muove: false, k: 1 })).toBeUndefined();
+    expect(ruota(e, 1, { muove: true, k: 0 })).toBeUndefined();
+    expect(e.animate).not.toHaveBeenCalled();
   });
 });

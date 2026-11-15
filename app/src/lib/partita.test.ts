@@ -112,6 +112,17 @@ describe("partita", () => {
     expect(partita.vista).toBe(dopo);
   });
 
+  it("comanda: con il primo ancora in volo il secondo dà null e il guscio è chiamato una volta", async () => {
+    let rispondi!: (v: Vista) => void;
+    guscio.comanda.mockReturnValue(new Promise<Vista>((r) => (rispondi = r)));
+    const comando = { tipo: "ferma", dicastero: "sanita" } as never;
+    const primo = partita.comanda(comando);
+    expect(await partita.comanda(comando)).toBeNull();
+    expect(guscio.comanda).toHaveBeenCalledTimes(1);
+    rispondi(dopo);
+    expect(await primo).toBe(dopo);
+  });
+
   it("esci con un comando in volo: la risposta che arriva dopo si scarta", async () => {
     let rispondi!: (v: Vista) => void;
     guscio.chiudiTurno.mockReturnValue(new Promise<Vista>((r) => (rispondi = r)));
