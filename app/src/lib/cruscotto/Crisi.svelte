@@ -23,7 +23,9 @@
     void turno;
     untrack(() => (spuntati = []));
   });
-  const nomi = $derived(spuntati.flatMap((id) => disponibilita.find((x) => x.id === id)?.nome ?? []));
+  // solo chi è ancora disponibile nella Vista di adesso: l'etichetta e il comando dicono la stessa cosa
+  const scelti = $derived(disponibilita.filter((x) => x.disponibile && spuntati.includes(x.id)));
+  const nomi = $derived(scelti.map((x) => x.nome));
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
   const metti = (id: string) => (spuntati = spuntati.includes(id) ? spuntati.filter((x) => x !== id) : [...spuntati, id]);
 
@@ -76,9 +78,9 @@
     </ul>
     <div class="az">
       {#if nomi.length}
-        {#key spuntati.join("+")}
+        {#key scelti.map((x) => x.id).join("+")}
           <Conferma neutro etichetta={t("cruscotto.allarga_a", { chi })} conferma={t("trattativa.conferma_allarga")} spento={occupato}
-            spiegazione={t("cruscotto.allarga_spiega", { n: nomi.length, chi })} onconferma={() => manda(allarga(spuntati))} />
+            spiegazione={t("cruscotto.allarga_spiega", { n: nomi.length, chi })} onconferma={() => manda(allarga(scelti.map((x) => x.id)))} />
         {/key}
       {:else}
         <Pulsante forma="bordo" spento={t("cruscotto.allarga_scegli")}>{t("cruscotto.allarga")}</Pulsante>

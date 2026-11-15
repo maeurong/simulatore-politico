@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { fuori } from "$lib/trattativa/trattativa";
-import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, scelteAlDefault, testa } from "./cruscotto";
+import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, motivoCrisi, scelteAlDefault, testa } from "./cruscotto";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
@@ -155,5 +155,27 @@ describe("disponibili della crisi", () => {
     const f = fuori(crisi);
     expect(f.filter((x) => x.disponibile).map((x) => x.id)).toEqual(["sinistra", "centrodestra"]);
     expect(f.find((x) => x.id === "destra")?.causa).toBe("guiderebbe la propria coalizione");
+  });
+});
+
+describe("dimissioni date in crisi", () => {
+  // il core non azzera `crisi` con Dimettiti: la Vista porta tutte e due
+  const dimessa = { ...crisi, dimissioni: true } as Vista;
+  it("il riquadro è quello delle dimissioni, non più l'allargamento", () => {
+    expect(testa(dimessa)).toBe("dimissioni");
+    expect(testa({ ...stati.crisi_provvisorio.vista, dimissioni: true } as Vista)).toBe("dimissioni");
+  });
+  it("la crisi non conta più fra le scelte al default", () => {
+    expect(scelteAlDefault(dimessa)).toBe(scelteAlDefault(crisi) - 1);
+  });
+});
+
+describe("motivoCrisi", () => {
+  it("in crisi, per chi governa, il motivo; altrove niente", () => {
+    expect(motivoCrisi(crisi)).toBe("in crisi: solo ordinaria amministrazione");
+    expect(motivoCrisi(stati.crisi_provvisorio.vista)).toBeDefined();
+    expect(motivoCrisi(governo)).toBeUndefined();
+    expect(motivoCrisi(stati.esercizio_provvisorio.vista)).toBeUndefined();
+    expect(motivoCrisi(opposizione)).toBeUndefined();
   });
 });

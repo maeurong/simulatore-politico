@@ -21,7 +21,7 @@
   import Faccia from "$lib/componenti/Faccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import type { VoceOdg } from "./cruscotto";
+  import { motivoCrisi, type VoceOdg } from "./cruscotto";
 
   let { vista, voce, norma, riporta }: { vista: Vista; voce: VoceOdg | null; norma: string | null; riporta: (da: Element | null) => void } = $props();
 
@@ -66,6 +66,8 @@
     },
   );
   const richiesta = $derived.by((): (() => Promise<Anteprima | ErroreGuscio>) | null => {
+    // in crisi il core rifiuta anteprima_decreto e anteprima_accogli: non si chiedono
+    if (motivoCrisi(vista) && (norma || (proposta && !proposta.disposizione))) return null;
     if (norma) return bozza.length ? () => guscio.anteprimaDecreto({ tipo: "disposizioni", valori: bozza }) : null;
     if (!proposta || !voce?.dicastero) return null;
     const dicastero = voce.dicastero;
@@ -110,7 +112,7 @@
   const dettaglio = (azione: string) => t("cruscotto.dal_dettaglio", { azione });
   const ministro = $derived(ministero?.ministro ?? null);
   const emana = $derived<Comando>({ tipo: "emana_decreto", decreto: { tipo: "disposizioni", valori: bozza } });
-  const nonEmanabile = $derived(occupato ?? (inCalcolo ? t("aula.ante_in_calcolo") : !bozza.length ? t("cruscotto.decreto_scegli_gradino") : !ante ? t("cruscotto.decreto_rifiutato") : undefined));
+  const nonEmanabile = $derived(motivoCrisi(vista) ?? occupato ?? (inCalcolo ? t("aula.ante_in_calcolo") : !bozza.length ? t("cruscotto.decreto_scegli_gradino") : !ante ? t("cruscotto.decreto_rifiutato") : undefined));
 </script>
 
 {#snippet cartellino(valori: Bozza, nota?: string, indietro?: string)}
@@ -146,7 +148,7 @@
   </div>
   <p class="sec"><i class="muto">{t("componenti.perche")}</i> {proposta.motivo}</p>
   <div class="az" role="group" aria-label={dettaglio(voce.titolo)}>
-    <Pulsante forma="piccolo" spento={occupato} aria-label={dettaglio(t("cruscotto.accogli_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
+    <Pulsante forma="piccolo" spento={motivoCrisi(vista) ?? occupato} aria-label={dettaglio(t("cruscotto.accogli_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
     <Pulsante forma="piccolo" spento={proposta.rinviata ? t("cruscotto.gia_rinviata") : occupato} aria-label={dettaglio(t("cruscotto.rinvia_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "rinvia", dicastero })}>{t("cruscotto.rinvia")}</Pulsante>
     <Pulsante forma="piccolo" spento={occupato} aria-label={dettaglio(t("cruscotto.respingi_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "respingi", dicastero })}>{t("aula.respingi")}</Pulsante>
   </div>

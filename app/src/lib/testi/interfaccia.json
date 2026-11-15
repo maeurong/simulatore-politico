@@ -382,6 +382,7 @@
   "cruscotto.ultimatum_sotto": "intesa {n}: sotto {soglia} a fine turno esce dal governo",
   "cruscotto.fondo": "fondo di riserva rimasto: {euro}",
   "cruscotto.norme": "decreto possibile:",
+  "cruscotto.in_crisi": "in crisi: solo ordinaria amministrazione",
   "cruscotto.crisi_occ": "Crisi di governo · solo ordinaria amministrazione",
   "cruscotto.crisi_tit": "Allarga la maggioranza o dimettiti",
   "cruscotto.crisi_sotto": "Senza scelta, a fine turno si vota la sfiducia. Entrano tutti o nessuno, se ciascuno è disponibile coi seggi di oggi.",

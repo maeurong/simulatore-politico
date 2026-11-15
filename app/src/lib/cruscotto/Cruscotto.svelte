@@ -49,11 +49,11 @@
   const corrente = $derived(odg.find((x) => x.chiave === scelta) ?? odg[0] ?? null);
   const normaViva = $derived(norma && vista.eventi.some((e) => e.norme.includes(norma!)) ? norma : null);
   let corpo: HTMLElement | undefined = $state();
-  // se la voce su cui stava il fuoco sparisce con la sua risposta, il fuoco passa alla prima azione che resta; altrimenti non si tocca
+  // se la voce su cui stava il fuoco sparisce con la sua risposta, il fuoco passa al corpo, che non è un'azione: un secondo Invio non ne fa un'altra; altrimenti non si tocca
   async function riporta(da: Element | null) {
     await tick();
     if (!da || da.isConnected) return;
-    (corpo?.querySelector<HTMLElement>('.a button:not([aria-disabled="true"]), .a a') ?? corpo)?.focus({ preventScroll: true });
+    corpo?.focus({ preventScroll: true });
   }
 </script>
 
@@ -107,9 +107,9 @@
 
 <style>
   .odg { outline: none }
-  div.odg { display: grid; gap: 10px; align-content: start; min-width: 0 }
-  .cr { display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); gap: 10px var(--canale); align-items: start }
-  .lato { border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 8px; align-content: start; position: sticky; top: 0; max-height: 80vh; overflow: hidden auto; padding-bottom: 8px }
+  div.odg { display: grid; gap: 10px; align-content: start; min-width: 0; min-height: 0; overflow: hidden auto }
+  .cr { display: grid; grid-template-columns: minmax(0, 1fr) var(--lato); grid-template-rows: minmax(0, 1fr); gap: 10px var(--canale); height: 100%; min-height: 0 }
+  .lato { border-left: var(--forte); padding-left: var(--canale); display: grid; gap: 8px; align-content: start; min-height: 0; overflow: hidden auto; padding-bottom: 8px }
   .minis { display: grid; gap: 6px; padding-top: 6px }
   .minis li { display: flex; gap: 8px; align-items: center; font-size: var(--c-sec) }
   .male { color: var(--rosso); font-weight: 700 }

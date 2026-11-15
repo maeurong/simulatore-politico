@@ -12,7 +12,7 @@
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import type { VoceOdg } from "./cruscotto";
+  import { motivoCrisi, type VoceOdg } from "./cruscotto";
 
   type Props = { voce: VoceOdg; vista: Vista; riporta: (da: Element | null) => void; scelta: boolean; onscegli: () => void };
   let { voce, vista, riporta, scelta, onscegli }: Props = $props();
@@ -47,7 +47,7 @@
   <span class="a" role="group" aria-label={voce.titolo}>
     {#if voce.azioni === "proposta" && voce.dicastero}
       {@const dicastero = voce.dicastero}
-      <Pulsante forma="piccolo" spento={occupato} aria-label={t("cruscotto.accogli_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
+      <Pulsante forma="piccolo" spento={motivoCrisi(vista) ?? occupato} aria-label={t("cruscotto.accogli_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
       <Pulsante forma="piccolo" spento={rinviata ? t("cruscotto.gia_rinviata") : occupato} aria-label={t("cruscotto.rinvia_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "rinvia", dicastero })}>{t("cruscotto.rinvia")}</Pulsante>
       <Pulsante forma="piccolo" spento={occupato} aria-label={t("cruscotto.respingi_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "respingi", dicastero })}>{t("aula.respingi")}</Pulsante>
     {:else if voce.azioni === "emendamento" && voce.misura !== undefined && voce.partito}

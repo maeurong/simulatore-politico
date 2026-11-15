@@ -7,16 +7,18 @@
   import type { VoceEvento } from "$lib/tipi/VoceEvento";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { defaultDi, fondoBasta, opzioneUnica } from "./cruscotto";
+  import { defaultDi, fondoBasta, motivoCrisi, opzioneUnica } from "./cruscotto";
 
   // `norma`/`onnorma`: il decreto d'evento scelto, che il dettaglio a lato mostra coi suoi gradini
   type Props = { vista: Vista; evento: VoceEvento; indice: number; puoRispondere: boolean; norma?: string | null; onnorma?: (id: string) => void };
   let { vista, evento, indice, puoRispondere, norma = null, onnorma }: Props = $props();
+  const id = $props.id();
 
   const occhiello = $derived([evento.famiglia, evento.regione, evento.tono === "grave" ? t("evento.tono_grave") : null].filter(Boolean).join(" · "));
   // la quota coperta la dice il core: qui solo quanto resta nel fondo, in rosso se non basta
   const fondo = $derived(puoRispondere && evento.costo > 0);
   const norme = $derived(evento.norme.map((id) => ({ id, nome: vista.disposizioni.find((d) => d.id === id)?.nome ?? id })));
+  const crisi = $derived(motivoCrisi(vista));
   const unica = $derived(opzioneUnica(evento));
   const scelta = $derived(evento.scelta === null ? null : evento.opzioni[evento.scelta]);
   // la conseguenza si legge prima della scelta (docs/ricerca/estetica/interfacce-di-giochi-gestionali.md:48)
@@ -46,7 +48,8 @@
     {#if fondo} · <span class:male={!fondoBasta(vista, evento)}>{t("cruscotto.fondo", { euro: `${numero(vista.bilancio.fondo_residuo)}\u00A0€` })}</span>{/if}</div>
   {#if puoRispondere && onnorma && norme.length}
     <div class="norme sec muto">{t("cruscotto.norme")}
-      {#each norme as n (n.id)}<Pulsante forma="piccolo" scelto={norma === n.id} onclick={() => onnorma(n.id)}>{n.nome}</Pulsante>{/each}
+      {#each norme as n (n.id)}<Pulsante forma="piccolo" scelto={norma === n.id} aria-disabled={crisi ? "true" : undefined} aria-describedby={crisi ? `${id}-crisi` : undefined} onclick={() => !crisi && onnorma(n.id)}>{n.nome}</Pulsante>{/each}
+      {#if crisi}<span id="{id}-crisi" class="min">{crisi}</span>{/if}
     </div>
   {/if}
   {#if !unica}

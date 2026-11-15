@@ -95,7 +95,7 @@ export function ordineDelGiorno(v: Vista): VoceOdg[] {
 export const scelteAlDefault = (v: Vista): number =>
   v.eventi.filter((e) => !opzioneUnica(e) && e.scelta === null).length +
   ordineDelGiorno(v).filter((x) => x.alDefault).length +
-  (statoDi(v) === "crisi" && !v.bilancio.esercizio_provvisorio ? 1 : 0);
+  (statoDi(v) === "crisi" && !v.bilancio.esercizio_provvisorio && !v.dimissioni ? 1 : 0);
 
 /** Il fondo di riserva rimasto basta a coprire il costo dell'evento. */
 export const fondoBasta = (v: Vista, e: VoceEvento): boolean => v.bilancio.fondo_residuo >= e.costo;
@@ -126,6 +126,11 @@ export const inEvidenza = (v: Vista): { dicastero: string; ministro: VoceMinistr
 
 /** Il riquadro di testa: crisi da allargare, crisi in esercizio provvisorio (caduta certa), dimissioni annunciate, o niente. */
 export function testa(v: Vista): "crisi" | "crisi_provvisorio" | "dimissioni" | null {
+  // il core non azzera `crisi` con Dimettiti: dimissioni date e crisi insieme valgono dimissioni
+  if (v.governa && v.dimissioni) return "dimissioni";
   if (statoDi(v) === "crisi") return v.bilancio.esercizio_provvisorio ? "crisi_provvisorio" : "crisi";
-  return v.governa && v.dimissioni ? "dimissioni" : null;
+  return null;
 }
+
+/** Il motivo per cui in crisi restano spenti Accogli, il decreto d'evento e la presentazione di una legge: il core li rifiuta (comando.rs, `applica`). */
+export const motivoCrisi = (v: Vista): string | undefined => (v.governa && v.crisi ? t("cruscotto.in_crisi") : undefined);
