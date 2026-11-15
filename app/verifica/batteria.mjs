@@ -72,9 +72,9 @@ for (const [nome, percorso] of elenco) {
     esiti.push({ pagina: nome, movimento: etichetta, animazioni: partite?.length ?? 0, tipi, guasto: !partite ? "REGISTRO MUTO" : nonDissolvenze(tipi).length ? "MOVIMENTO" : null, errori: [...errori] });
   }
   await cmd("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
-  // passo 3: tastiera. Ogni comando visibile si raggiunge col Tab.
+  // passo 3: tastiera. Ogni comando visibile si raggiunge col Tab. Quel che sta dentro [inert] non conta: è la faccia nascosta di una carta girata, e il browser la esclude dal Tab di proposito.
   await impostazioni({ scala: 1 }); await finestra(1440, 900); await apri(percorso);
-  const attesi = JSON.parse(await val(`JSON.stringify([...document.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')].filter(e => e.tabIndex >= 0 && !e.closest('[data-tagli-ignora]') && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !(e.type === 'radio' && !e.checked && (document.querySelector('input[type=radio][name="' + e.name + '"]:checked') || document.querySelector('input[type=radio][name="' + e.name + '"]') !== e))).map((e, i) => { e.dataset.bt = i; return (e.getAttribute('aria-label') || e.textContent.trim() || e.name || e.tagName).slice(0, 40) }))`));
+  const attesi = JSON.parse(await val(`JSON.stringify([...document.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')].filter(e => e.tabIndex >= 0 && !e.closest('[data-tagli-ignora]') && !e.closest('[inert]') && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !(e.type === 'radio' && !e.checked && (document.querySelector('input[type=radio][name="' + e.name + '"]:checked') || document.querySelector('input[type=radio][name="' + e.name + '"]') !== e))).map((e, i) => { e.dataset.bt = i; return (e.getAttribute('aria-label') || e.textContent.trim() || e.name || e.tagName).slice(0, 40) }))`));
   const visti = new Set();
   await val("document.activeElement?.blur()");
   for (let i = 0; i < attesi.length + 15; i++) {

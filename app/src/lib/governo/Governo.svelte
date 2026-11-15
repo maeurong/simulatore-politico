@@ -31,10 +31,17 @@
   async function manda(c: Comando): Promise<boolean> {
     if (partita.occupato) return false;
     rifiutato = null;
+    const da = document.activeElement as HTMLElement | null;
+    const carta = da?.closest(".g3d");
     try {
       const ok = (await partita.comanda(c)) !== null;
       if (ok && (c.tipo === "ferma" || c.tipo === "dirotta")) {
         gira = c.dicastero;
+        // un nuovo atto fermato dopo un «rigira» deve rigirare di nuovo
+        volte[c.dicastero] = false;
+        // il bottone premuto sparisce con l'atto e il fronte diventa inert: il fuoco passa al «rigira» della stessa carta
+        await tick();
+        if (da && !da.isConnected) carta?.querySelector<HTMLElement>(".retro .link")?.focus();
         // le carte lo leggono appena montate o al cambio: poi si spegne, così un rimontaggio non rigira
         setTimeout(() => (gira = null), 200);
       }
