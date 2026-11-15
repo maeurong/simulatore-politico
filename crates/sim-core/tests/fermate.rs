@@ -4,6 +4,7 @@ use comune::{al_governo, all_opposizione, dati_base, edita, fondata, togli_oppos
 use serde_json::json;
 use sim_core::Partita;
 use sim_core::elettorato::Condizione;
+use sim_core::esito::TipoVoce;
 use sim_core::vista::Fermata;
 
 const ID: u32 = 9999;
@@ -248,6 +249,42 @@ fn l_ultimatum_ferma_una_volta() {
     );
     p.chiudi_turno();
     assert!(!p.vista().fermate.contains(&ultimatum));
+}
+
+#[test]
+fn l_ultimatum_non_ferma_se_il_governo_del_giocatore_cade() {
+    let p = al_governo();
+    let gov = p.governo().clone();
+    let alleati: Vec<usize> = (0..p.partiti().len())
+        .filter(|&j| j != gov.presidente && gov.al_governo(j))
+        .collect();
+    assert!(alleati.len() >= 2, "{alleati:?}");
+    let (esce, ultimatum) = (alleati[0], alleati[1]);
+    let id = p.partiti()[ultimatum].id.clone();
+    // Prima chiusura: l'alleato esce, il governo perde la maggioranza e la crisi è per il turno dopo.
+    let mut p = edita(&p, |j| j["intesa"]["valori"][esce] = json!(0.0)).unwrap();
+    p.chiudi_turno();
+    // Seconda: l'altro alleato pone l'ultimatum, poi la fine della crisi fa cadere il governo.
+    let mut p = edita(&p, |j| {
+        j["intesa"]["valori"][ultimatum] = json!(35.0);
+        j["intesa"]["ultimatum"][ultimatum] = json!(null);
+    })
+    .unwrap();
+    p.chiudi_turno();
+    let v = p.vista();
+    let nate = |tipo| v.esito.iter().any(|x| x.tipo == tipo);
+    assert!(nate(TipoVoce::GovernoCaduto), "{:?}", v.esito);
+    assert!(
+        (v.esito.iter())
+            .any(|x| x.tipo == TipoVoce::UltimatumPosto && x.partito.as_ref() == Some(&id)),
+        "{:?}",
+        v.esito
+    );
+    assert!(
+        !v.fermate.contains(&Fermata::Ultimatum { partito: id }),
+        "{:?}",
+        v.fermate
+    );
 }
 
 #[test]

@@ -403,6 +403,25 @@ fn uno_scandalo_ammette_solo_le_dimissioni_del_ministro() {
 }
 
 #[test]
+fn le_dimissioni_non_possono_essere_l_opzione_di_default() {
+    // Scambia i default dello scandalo sul ministro: una scelta mai fatta finirebbe al giocatore.
+    let f = sostituisci(
+        file_base(),
+        "eventi",
+        "nome = \"Difenderlo\"\ndefault = true\neffetti = []\n\n[[evento.opzioni]]\nid = \"dimissioni\"\nnome = \"Chiedere le dimissioni\"\ndefault = false",
+        "nome = \"Difenderlo\"\ndefault = false\neffetti = []\n\n[[evento.opzioni]]\nid = \"dimissioni\"\nnome = \"Chiedere le dimissioni\"\ndefault = true",
+    );
+    let e = DatiGioco::da_testi(&f).unwrap_err();
+    assert!(
+        matches!(e, Errore::Eventi(_))
+            && e.to_string().contains(
+                "Scandalo su un ministro: le dimissioni non possono essere l'opzione di default"
+            ),
+        "{e}"
+    );
+}
+
+#[test]
 fn evento_richiesto_di_un_altra_famiglia_nomina_quella_attesa() {
     let f = sostituisci(
         file_base(),

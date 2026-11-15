@@ -250,7 +250,7 @@ Norma lontana e seggi persi (fatti 31, 32) sono variazioni d'intesa e stanno in 
 | `situazione_accesa` | 71 | situazione, misura, valore ufficiale | la soglia di accensione | C1 | N | no |
 | `situazione_spenta` | 72 | situazione, valore ufficiale | la soglia di spegnimento | N | o | no |
 | `crisi_del_debito` | 73 | spread: si aprono le «Aste scoperte» | la soglia dello spread | C2 | N | no |
-| `entrate_di_cassa` | 74 | partito, 2 per mille e donazioni del trimestre | i voti dell'ultima elezione | o | o | sì |
+| `entrate_di_cassa` | 74 | il partito del giocatore, 2 per mille e donazioni del trimestre. Le donazioni seguono l'intenzione di voto vera: una voce per ogni partito le metterebbe in fila. La cassa pubblica dei partiti lascia ancora ricavare le entrate, nei turni senza spese | i voti dell'ultima elezione | o | o | sì |
 
 Le voci la cui causa è una frase fissa («–» più il testo fra parentesi) la portano comunque nel campo `causa`: una voce non ha mai la causa vuota.
 
@@ -599,7 +599,7 @@ Esposizioni:
 - Un cantiere finito resta in `opere` fino al voto successivo, anche attraverso un ribaltone, e poi sparisce.
 - La proiezione di gennaio-marzo coincide con la deviazione che il controllo di aprile-giugno registra, se nel mezzo non cambia nulla. Al turno zero la proiezione sul 2026 non annualizza: usa l'anno già intero.
 - Gli indici di pericolosità stanno fra 0 e 1, e per ogni tipo una regione vale 1.
-- La voce `entrate_di_cassa` del partito del giocatore resta ordinaria e si fonde con le altre; in un turno quieto nessuna voce è in evidenza per la sola regola del soggetto.
+- La voce `entrate_di_cassa` nasce solo per il partito del giocatore e resta ordinaria; in un turno quieto nessuna voce è in evidenza per la sola regola del soggetto.
 - Uno shock escluso dal tetto lascia la voce `shock_assorbito` e nessun effetto: stesso stato, voce a parte, di una chiusura senza quello shock.
 - `costo_ferma` è la variazione di soddisfazione che `Ferma` applica davvero, salvo il limite a 0-100.
 - `menu_elettorale` segna non ammesso il premio alla coalizione con le coalizioni spente, col motivo.

@@ -41,7 +41,8 @@ fn le_entrate_seguono_voti_e_intenzioni() {
         .min_by(|&a, &b| quota(a).total_cmp(&quota(b)))
         .unwrap();
     assert!(delta[primo] > delta[ultimo]);
-    // Una voce per partito: il 2 per mille sulla quota dell'ultimo voto, il resto donazioni.
+    // Una voce sola, del giocatore: il 2 per mille sulla quota dell'ultimo voto, il resto
+    // donazioni. Le intenzioni vere degli altri partiti non si leggono dalle voci.
     let d = dati_base();
     let m = |n: &str| d.manopola(n);
     let punti = |x: i64| {
@@ -57,29 +58,27 @@ fn le_entrate_seguono_voti_e_intenzioni() {
         s
     };
     let entrate = voci(&p, TipoVoce::EntrateDiCassa);
-    assert_eq!(entrate.len(), ids.len(), "{:?}", p.vista().esito);
-    for (j, id) in ids.iter().enumerate() {
-        let v = (entrate.iter())
-            .find(|v| v.partito.as_ref() == Some(id))
-            .unwrap();
-        let dpm = (m("due_per_mille_turno") * quota(j) * m("quota_libera_entrate")).round() as i64;
-        let fatto = format!(
-            "{} incassa {} euro, {} dal 2 per mille e {} di donazioni",
-            p.partiti()[j].nome,
-            punti(delta[j]),
-            punti(dpm),
-            punti(delta[j] - dpm)
-        );
-        let quota_voto = format!("{:.1}", quota(j) * 100.0).replace('.', ",");
-        let causa = format!(
-            "2 per mille sul {quota_voto}% dell'ultimo voto, donazioni sulle intenzioni di voto"
-        );
-        assert_eq!(
-            (v.fatto.as_str(), v.causa.as_str()),
-            (fatto.as_str(), causa.as_str())
-        );
-        assert_eq!(v.criticita, Criticita::Ordinaria);
-    }
+    assert_eq!(entrate.len(), 1, "{:?}", p.vista().esito);
+    let j = p.giocatore();
+    let v = &entrate[0];
+    assert_eq!(v.partito.as_ref(), Some(&ids[j]));
+    let dpm = (m("due_per_mille_turno") * quota(j) * m("quota_libera_entrate")).round() as i64;
+    let fatto = format!(
+        "{} incassa {} euro, {} dal 2 per mille e {} di donazioni",
+        p.partiti()[j].nome,
+        punti(delta[j]),
+        punti(dpm),
+        punti(delta[j] - dpm)
+    );
+    let quota_voto = format!("{:.1}", quota(j) * 100.0).replace('.', ",");
+    let causa = format!(
+        "2 per mille sul {quota_voto}% dell'ultimo voto, donazioni sulle intenzioni di voto"
+    );
+    assert_eq!(
+        (v.fatto.as_str(), v.causa.as_str()),
+        (fatto.as_str(), causa.as_str())
+    );
+    assert_eq!(v.criticita, Criticita::Ordinaria);
 }
 
 /// Le quote fra i votanti sommano a 1: le entrate del turno zero valgono
