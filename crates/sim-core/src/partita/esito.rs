@@ -1940,13 +1940,16 @@ impl Partita {
         if self.esito.iter().any(|v| v.tipo == TipoVoce::CrisiAperta) {
             fermate.push(Fermata::Crisi);
         }
-        // `UltimatumPosto` non è fondibile: ogni voce porta il suo `partito`.
-        fermate.extend(
-            (self.esito.iter())
-                .filter(|v| v.tipo == TipoVoce::UltimatumPosto)
-                .filter_map(|v| v.partito.clone())
-                .map(|partito| Fermata::Ultimatum { partito }),
-        );
+        // `UltimatumPosto` non è fondibile: ogni voce porta il suo `partito`. Il governo del
+        // giocatore caduto nella stessa chiusura tiene il presidente: l'ultimatum non ha più destinatario.
+        if self.governo.presidente != self.giocatore {
+            fermate.extend(
+                (self.esito.iter())
+                    .filter(|v| v.tipo == TipoVoce::UltimatumPosto)
+                    .filter_map(|v| v.partito.clone())
+                    .map(|partito| Fermata::Ultimatum { partito }),
+            );
+        }
         let opposizione = self.all_opposizione().is_ok();
         let confermativo = opposizione
             && (pl.confermativi.iter())
