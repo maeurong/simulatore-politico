@@ -81,7 +81,7 @@ describe("casa", () => {
 
 describe("fettaDi", () => {
   it("il cruscotto cambia fetta con lo stato", () => {
-    expect(fettaDi("cruscotto", "turno_zero")).toBe("11b");
+    expect(fettaDi("cruscotto", "turno_zero")).toBeNull();
     expect(fettaDi("cruscotto", "trattativa")).toBe("11b");
     expect(fettaDi("cruscotto", "governo")).toBe("11c");
     expect(fettaDi("cruscotto", "crisi")).toBe("11c");
@@ -90,7 +90,7 @@ describe("fettaDi", () => {
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
     expect(fettaDi("bilancio", "governo")).toBe("11d");
-    expect(fettaDi("campagna", "turno_zero")).toBe("11b");
+    expect(fettaDi("campagna", "turno_zero")).toBeNull();
     expect(fettaDi("eredita", "finita")).toBe("11e");
     expect(fettaDi("schema", "governo")).toBe("11e");
   });

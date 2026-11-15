@@ -4,6 +4,7 @@ import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
 import { numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
 import { statoDi } from "$lib/ossatura";
+import { coalizioneDi, quotaVotanti } from "$lib/partiti";
 
 export type Scala = { stacco: number; passo: number; rovesciata: boolean };
 
@@ -36,12 +37,9 @@ const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id =
 /** In centesimi di punto: "4200" → 42. */
 const punti = (v: Vista, id: string) => Number(disposizione(v, id)) / 100;
 
-/** quota_fra_i_votanti: media sugli istituti di quote[j] / (1 − astensione). NaN senza istituti o col partito fuori da `partiti`. */
+/** NaN senza istituti o col partito fuori da `partiti`: il consenso lo legge come dato mancante. */
 function quota(v: Vista, partito: string): number {
-  const j = v.partiti.findIndex((p) => p.id === partito);
-  const istituti = v.sondaggio.istituti;
-  if (j < 0) return NaN;
-  return istituti.reduce((s, r) => s + r.quote[j] / (1 - r.quote[r.quote.length - 1]), 0) / istituti.length;
+  return quotaVotanti(v.sondaggio, v.partiti.findIndex((p) => p.id === partito)) ?? NaN;
 }
 
 /** Il consenso: senza dato nel sondaggio, caselle tratteggiate e nessun rimando (manca il dato, non una fetta). */
@@ -81,13 +79,7 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciat
   const stato = v.finita ? (v.alleati.length ? "governo" : "opposizione") : statoDi(v);
   const turnoZero = stato === "turno_zero";
   const alGoverno = stato === "trattativa" || stato === "crisi" || stato === "governo";
-  // Vista.coalizione è piena solo nel turno del voto; in trattativa gli alleati stanno nelle richieste
-  const coalizione = [
-    v.giocatore,
-    ...(turnoZero ? v.coalizione
-      : stato === "trattativa" ? [...v.coalizione, ...v.richieste.map((r) => r.partito)]
-      : v.alleati.map((a) => a.partito)),
-  ];
+  const coalizione = coalizioneDi(v);
 
   // la serie è della coalizione: senza incarico, in trattativa, la coalizione qui è il solo giocatore e non si confronta
   const primaCoalizione = stato === "trattativa" && v.richieste.length === 0 ? undefined : prima;

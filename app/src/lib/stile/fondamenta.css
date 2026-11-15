@@ -28,6 +28,11 @@
   /* inchiostri */
   --carta: #F4ECD8; --ink: #1F1A17; --grigio: #5E5750;
   --rosso: #B3122B; --verde: #2E6B45; --biro: #1D4E89; --giallo: #FFD23F;
+  /* i colori dei partiti: unica eccezione all'inchiostro unico, sempre col nome accanto */
+  --p-estrema_sinistra: #A3242F; --p-sinistra: #E36B4F; --p-centrosinistra: #B8478A; --p-centro: #C99A1E;
+  --p-centrodestra: #3E8FD6; --p-destra: #2D55A6; --p-estrema_destra: #9A5A1C; --p-giocatore: #1F8A70;
+  /* la rampa della mappa: cinque classi a passi uguali di luminosità, OKLab dalla carta a un rosso scuro (rampa() del prototipo 23) */
+  --classe-0: #e6d4c2; --classe-1: #c8a798; --classe-2: #ab7a70; --classe-3: #8c504a; --classe-4: #6c2527;
   --velo: rgb(31 26 23 / .06);
   --retino: repeating-linear-gradient(45deg, transparent 0 3px, rgb(31 26 23 / .3) 3px 4px);
   /* caratteri */
@@ -48,7 +53,11 @@
   accent-color: var(--ink);
 }
 /* tono grave: tacciono colori, evidenziatore e ghiribizzi del titolo */
-:root.grave { --rosso: var(--ink); --verde: var(--ink); --biro: var(--ink); --giallo: transparent; --wonk: "SOFT" 0, "WONK" 0 }
+:root.grave {
+  --p-estrema_sinistra: var(--grigio); --p-sinistra: var(--grigio); --p-centrosinistra: var(--grigio); --p-centro: var(--grigio);
+  --p-centrodestra: var(--grigio); --p-destra: var(--grigio); --p-estrema_destra: var(--grigio); --p-giocatore: var(--grigio);
+  --classe-0: #dcd4c2; --classe-1: #ada698; --classe-2: #817a70; --classe-3: #57514a; --classe-4: #312b27;
+  --rosso: var(--ink); --verde: var(--ink); --biro: var(--ink); --giallo: transparent; --wonk: "SOFT" 0, "WONK" 0 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: inherit }
