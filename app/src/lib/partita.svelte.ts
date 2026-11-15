@@ -3,6 +3,7 @@ import { goto } from "$app/navigation";
 import { comeErrore, guscio } from "$lib/guscio/chiamate";
 import { casa } from "$lib/ossatura";
 import { t } from "$lib/testi/t";
+import type { Comando } from "$lib/tipi/Comando";
 import type { Fondazione } from "$lib/tipi/Fondazione";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SuMisura } from "$lib/tipi/SuMisura";
@@ -57,6 +58,8 @@ class Partita {
 
   fonda = (scenario: SuMisura | null, fondazione: Fondazione) => this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
   riprendi = (id: string) => this.#esegui(() => guscio.riprendi(id));
+  /** Come fonda e riprendi: Vista nuova, o null davanti a un guasto; il rifiuto si rilancia al chiamante. */
+  comanda = (comando: Comando) => this.#esegui(() => guscio.comanda(comando));
 
   /** Fino a 11f il turno nuovo si apre sulla sua casa (spec:290). keepFocus: il pulsante resta nella cornice, e il fuoco con lui. */
   chiudiTurno = async () => {

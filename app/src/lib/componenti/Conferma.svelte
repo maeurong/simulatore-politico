@@ -15,10 +15,12 @@
     neutro?: boolean;
     /** aperta: legabile, per accendere insieme più conferme della stessa cosa; non passata, la tiene il componente */
     aperta?: boolean;
+    /** il motivo per cui è spenta (la partita è occupata): i pulsanti restano al loro posto, il clic non parte e il motivo gli sta accanto */
+    spento?: string;
     onconferma: () => void;
   };
 
-  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", neutro = false, aperta = $bindable(false), onconferma }: Props =
+  let { etichetta, conferma, annulla = t("componenti.annulla"), spiegazione, forma = "bordo", neutro = false, aperta = $bindable(false), spento, onconferma }: Props =
     $props();
   const id = $props.id();
   let radice: HTMLSpanElement;
@@ -43,12 +45,12 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <span class="conferma" bind:this={radice} onkeydown={tasto}>
   {#if aperta}
-    <Pulsante forma="chiude" distruttivo aria-describedby={spiegazione ? `${id}-spieg` : undefined}
+    <Pulsante forma="chiude" distruttivo {spento} aria-describedby={spiegazione ? `${id}-spieg` : undefined}
       onclick={() => { onconferma(); apri(false); }}>{conferma}</Pulsante>
     <Pulsante forma="bordo" onclick={() => apri(false)}>{annulla}</Pulsante>
     {#if spiegazione}<span id="{id}-spieg" class="spieg">{spiegazione}</span>{/if}
   {:else}
-    <Pulsante {forma} distruttivo={!neutro} onclick={() => apri(true)}>{etichetta}</Pulsante>
+    <Pulsante {forma} distruttivo={!neutro} {spento} onclick={() => apri(true)}>{etichetta}</Pulsante>
   {/if}
 </span>
 

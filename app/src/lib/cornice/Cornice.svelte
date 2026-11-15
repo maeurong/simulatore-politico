@@ -9,6 +9,8 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Tracciato from "$lib/componenti/Tracciato.svelte";
+  import { scelteAlDefault } from "$lib/cruscotto/cruscotto";
+  import { defaultDellaChiusura } from "$lib/trattativa/trattativa";
   import Sommario from "./Sommario.svelte";
 
   type Props = { vista: Vista; sezione: string; impostazioni: boolean; onimpostazioni: () => void };
@@ -30,6 +32,8 @@
     document.documentElement.classList.toggle("grave", grave);
     return () => document.documentElement.classList.remove("grave");
   });
+  const alDefault = $derived(scelteAlDefault(vista));
+  const inTrattativa = $derived(defaultDellaChiusura(vista));
   // sulla prima pagina la testata grande c'è già
   const testatina = $derived(sezione !== "prima-pagina" && !grave);
 
@@ -63,6 +67,13 @@
       {:else}
         <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={chiudi}>{t("cornice.chiudi_il_turno")}</Pulsante>
         {#if rifiuto?.vista === vista && rifiuto.sezione === sezione}<Rifiuto testo={rifiuto.testo} />{/if}
+        <!-- in trattativa la riga dice cosa vale senza scelta; all'opposizione non c'è niente a cui rispondere (spec:400) -->
+        {#if stato === "trattativa"}
+          {#if inTrattativa}<span class="def">{t(inTrattativa)}</span>{:else}<span class="def tutte">{t("cornice.nessuna_scelta_da_fare")}</span>{/if}
+        {:else if stato !== "opposizione"}
+          {#if alDefault}<a class="def" href="/partita/cruscotto">{t("cornice.scelte_al_default", { n: alDefault })}</a>
+          {:else}<span class="def tutte">{t("cornice.nessuna_scelta_al_default")}</span>{/if}
+        {/if}
       {/if}
     </div>
   </div>
@@ -85,6 +96,9 @@
   .c-dx { position: relative; display: grid; justify-items: end }
   /* pointer-events: none: i link del sommario che copre restano cliccabili */
   .c-dx :global(.rifiuto) { position: absolute; top: 100%; right: 0; z-index: 3; width: max-content; max-width: 44ch; background: var(--carta); text-align: right; pointer-events: none }
+  .def { font-size: var(--c-min); color: var(--grigio); white-space: nowrap }
+  a.def { text-decoration: underline; text-underline-offset: 2px }
+  .def.tutte { color: var(--verde) }
   .nessuno { font-size: var(--c-sec); color: var(--grigio); white-space: nowrap }
 
   .banda { flex: none; background: var(--ink); color: var(--carta); padding: 4px var(--marg); font-size: var(--c-sec); font-weight: 700; letter-spacing: .04em }

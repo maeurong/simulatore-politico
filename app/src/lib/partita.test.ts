@@ -4,7 +4,7 @@ import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import { t } from "$lib/testi/t";
 
 const { guscio, goto } = vi.hoisted(() => ({
-  guscio: { chiudiTurno: vi.fn(), riprendi: vi.fn(), fondaPartita: vi.fn(), serie: vi.fn() },
+  guscio: { chiudiTurno: vi.fn(), riprendi: vi.fn(), fondaPartita: vi.fn(), comanda: vi.fn(), serie: vi.fn() },
   goto: vi.fn(),
 }));
 vi.mock("$app/navigation", () => ({ goto }));
@@ -42,6 +42,25 @@ describe("partita", () => {
     expect(await partita.fonda(null, fondazione)).toBe(zero);
     expect(guscio.fondaPartita).toHaveBeenCalledWith(null, fondazione);
     expect(partita.vista).toBe(zero);
+  });
+
+  it("comanda: la Vista nuova; un rifiuto si rilancia e la Vista resta com'era", async () => {
+    guscio.comanda.mockResolvedValueOnce(dopo);
+    expect(await partita.comanda({ tipo: "dimettiti" })).toBe(dopo);
+    expect(partita.vista).toBe(dopo);
+    partita.vista = prima;
+    const rifiuto = { specie: "rifiuto", testo: "comando non ammesso: no" };
+    guscio.comanda.mockRejectedValueOnce(rifiuto);
+    await expect(partita.comanda({ tipo: "dimettiti" })).rejects.toEqual(rifiuto);
+    expect(partita.vista).toBe(prima);
+    expect(partita.occupato).toBe(false);
+  });
+
+  it("due comanda sovrapposti: una chiamata sola", async () => {
+    guscio.comanda.mockResolvedValue(dopo);
+    const [a, b] = await Promise.all([partita.comanda({ tipo: "dimettiti" }), partita.comanda({ tipo: "dimettiti" })]);
+    expect(guscio.comanda).toHaveBeenCalledTimes(1);
+    expect([a, b]).toEqual([dopo, null]);
   });
 
   it("un guasto del comando lascia la Vista com'era e lo dice", async () => {
@@ -104,6 +123,17 @@ describe("partita", () => {
     expect(partita.serie).toEqual([]);
     expect(partita.guasto).toBeNull();
     expect(goto).not.toHaveBeenCalled();
+    expect(partita.occupato).toBe(false);
+  });
+
+  it("esci con un comando in volo, poi rifiutato: null, niente throw né guasto", async () => {
+    let rifiuta!: (e: unknown) => void;
+    guscio.comanda.mockReturnValue(new Promise<Vista>((_, r) => (rifiuta = r)));
+    const inVolo = partita.comanda({ tipo: "dimettiti" });
+    partita.esci();
+    rifiuta({ specie: "rifiuto", testo: "comando non ammesso: no" });
+    expect(await inVolo).toBeNull();
+    expect(partita.guasto).toBeNull();
     expect(partita.occupato).toBe(false);
   });
 

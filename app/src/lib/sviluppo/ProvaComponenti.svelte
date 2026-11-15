@@ -1,13 +1,21 @@
 <script lang="ts">
   // Pagina di prova dei componenti di base, caricata da /sviluppo/componenti solo in sviluppo:
   // i testi qui sono di prova e non stanno in interfaccia.json.
-  import { numero, t } from "$lib/testi/t";
+  import { numero, percentuale, t } from "$lib/testi/t";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
   import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import Caselle from "$lib/componenti/Caselle.svelte";
+  import VoceCausa from "$lib/componenti/VoceCausa.svelte";
+  import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
+  import Faccia from "$lib/componenti/Faccia.svelte";
+  import { coalizioneDi, nomeDi, quotaIncrocio } from "$lib/partiti";
+  import Mappa, { type Segno } from "$lib/mappa/Mappa.svelte";
+  import SelettoreRegione from "$lib/mappa/SelettoreRegione.svelte";
+  import { REGIONI } from "$lib/mappa/regioni";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
   import Tracciato from "$lib/componenti/Tracciato.svelte";
   import { tracciatiDi, type Tracciato as T } from "$lib/tracciati";
@@ -64,6 +72,23 @@
     ["Caselle larghe, col retino", [prova({ nome: "tracciato.maggioranza", valore: 2, testo: "+2", ramo: "Camera", scala: { stacco: 0, passo: 3, rovesciata: false } })]],
   ];
   let riempi = $state(2);
+
+  const v03t = v03 as unknown as Vista;
+  // il consenso della coalizione per regione, dalla Vista 03; Molise e Sardegna senza dato, per vedere il tratteggio
+  const coalizione = coalizioneDi(v03t).map((id) => v03t.partiti.findIndex((p) => p.id === id));
+  const consenso: Record<string, number | null> = Object.fromEntries(
+    v03t.sondaggio.regioni.map((r) => [r.id, coalizione.reduce((s, j) => s + (quotaIncrocio(r, j) ?? 0), 0)]),
+  );
+  const conVuoti = { ...consenso, molise: null, sardegna: null };
+  const segniProva: Record<string, Segno[]> = {
+    liguria: ["cantiere", "atto", "emergenza"], valle_d_aosta: ["atto", "opera"], molise: ["cantiere", "emergenza"], lombardia: ["cantiere"], sicilia: ["emergenza"], toscana: ["opera"],
+  };
+  let regScelta = $state<string | null>(null);
+  let selScelta = $state<string | null>(null);
+  let spesa = $state("");
+  const camera = (v: Vista) => v.seggi.map((s) => ({ id: s.partito, nome: nomeDi(v, s.partito), seggi: s.camera }));
+  const coalCamera = (v: Vista) => v.seggi.filter((s) => coalizioneDi(v).includes(s.partito)).reduce((x, s) => x + s.camera, 0);
+  const totCamera = (v: Vista) => v.seggi.reduce((x, s) => x + s.camera, 0);
 </script>
 
 <div class="camp">
@@ -171,6 +196,38 @@
   </div>
 </section>
 
+<section class="nuovi">
+  <h3 class="tit">Fascia, voce con causa, barra dei seggi, faccia</h3>
+  <div class="stato"><b class="sec">Fascia a tre</b>
+    <div class="fila sec"><Caselle piene={3} su={3} nome="rischio alto" rosso /><Caselle piene={2} su={3} nome="intesa media" /><Caselle piene={0} su={3} nome="intesa assente" /></div></div>
+  <div class="stato"><b class="sec">Barra a dieci, filo dopo la quarta</b>
+    <div class="fila sec"><Caselle piene={7} su={10} filo={4} nome="intesa 70" /><Caselle piene={3} su={10} filo={4} nome="intesa 30" rosso /><Caselle piene={10} su={10} filo={4} nome="intesa 100" /><Caselle piene={0} su={10} filo={4} nome="intesa 0" /></div></div>
+  <div class="stato"><b class="sec">Voce con causa</b>
+    <div style="max-width:420px"><VoceCausa fatto="Sinistra porta nel posto riservato «Regime delle pensioni»" causa="nessun seggio dei partiti alleati la voterebbe" /><VoceCausa fatto="Senza causa: solo il fatto" /></div></div>
+  <div class="stato"><b class="sec">Barra dei seggi · Camera</b>
+    <div style="max-width:520px;display:grid;gap:16px">
+      <BarraSeggi righe={camera(v03t)} totale={totCamera(v03t)} segno={coalCamera(v03t)} />
+      <BarraSeggi righe={[...camera(v03t), { id: "nuovo_8", nome: "Voce del Paese", seggi: 12 }]} totale={totCamera(v03t) + 12} />
+      <BarraSeggi righe={[{ id: "destra", nome: "Destra", seggi: 0 }]} totale={400} />
+    </div></div>
+  <div class="stato"><b class="sec">Faccia · iniziali</b>
+    <div class="fila"><Faccia nome="Luca Benedetti" misura={34} /><Faccia nome="Luca Benedetti" misura={46} /><Faccia nome="Luca Benedetti" misura={62} /><Faccia nome="Luca Benedetti" misura={84} /><Faccia nome="" misura={34} /></div></div>
+  <div class="stato"><b class="sec">Faccia · caricatura di un leader (col tono grave: iniziali)</b>
+    <div class="fila"><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={34} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={46} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={62} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={84} /></div></div>
+</section>
+
+<section class="mappe">
+  <h3 class="tit">Mappa e selettore delle regioni</h3>
+  <div class="stato"><b class="sec">Mappa · consenso, con segni</b>
+    <div class="mp"><Mappa valori={conVuoti} segni={segniProva} scelta={regScelta} ordine={REGIONI.map((r) => r.id)} nome="Le venti regioni" formato={(x) => percentuale(x)} onscelta={(id) => (regScelta = id)} /></div>
+    <span class="min muto">Un Tab entra, le frecce girano le venti; Invio sceglie. Molise e Sardegna senza dato.</span></div>
+  <div class="stato"><b class="sec">Mappa · sola lettura</b>
+    <div class="mp"><Mappa valori={consenso} scelta={null} ordine={REGIONI.map((r) => r.id)} nome="Le venti regioni" solaLettura onscelta={() => {}} /></div><span></span></div>
+  <div class="stato"><b class="sec">Selettore</b>
+    <div class="sl"><SelettoreRegione valori={consenso} bind:scelta={selScelta} azione="Spendi in {REGIONI.find((r) => r.id === selScelta)?.nome ?? '…'}" onconferma={() => (spesa = selScelta ?? "")} onannulla={() => (selScelta = null)} /></div>
+    <span class="min muto">Confermato: {spesa || "nulla"}.</span></div>
+</section>
+
 <div class="lato">
   <div class="corpo">
     <Segnaposto sezione={t("sommario.governo")} fetta="11b" />
@@ -222,6 +279,10 @@
   .grande { gap: 18px; font-size: 17px; margin-top: 0 }
   .contenitore { border: 1.5px dashed var(--grigio); padding: var(--s1) var(--s2) }
 
+  .mappe { padding: 0 var(--marg) var(--s3) }
+  .mp { height: 420px }
+  .sl { max-width: 440px }
+  .nuovi { padding: 0 var(--marg) var(--s3) }
   .tracciati { padding: 0 var(--marg) var(--s3) }
   .stato { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) 0; border-top: var(--filo) }
   .trks { display: flex; flex-wrap: wrap; row-gap: var(--s2) }

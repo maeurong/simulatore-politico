@@ -4566,34 +4566,451 @@
   "incarico": null,
   "dimissioni": false,
   "crisi": false,
-  "mosse": [
+  "esito": [
     {
-      "partito": "destra",
-      "testo": "Forma il governo con Sinistra, Centrosinistra, Centro e Centrodestra: la maggioranza che gli vale di più"
+      "tipo": "atto_eseguito",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "9 atti eseguiti",
+      "causa": "vicino alla sua posizione",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il dicastero Economia e Finanze esegue «Riscossione affidata a concessionari privati» con 143.490.292 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "economia_finanze",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sviluppo economico esegue «Commesse pubbliche alle imprese del territorio» in Valle d'Aosta con 297.668.251 euro: Sostegno alle imprese, avvicina l'obiettivo; Valle d'Aosta, ci votano",
+          "partito": null,
+          "dicastero": "sviluppo_economico",
+          "regione": "valle_d_aosta",
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Lavoro e Welfare esegue «Bonus straordinario per le famiglie in difficoltà» con 140.985.370 euro: Copertura del welfare, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sanità esegue «Convenzioni col privato accreditato» con 613.056.507 euro: Qualità del servizio sanitario, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Istruzione e Ricerca esegue «Premi di merito agli istituti» con 506.597.315 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "istruzione_ricerca",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Infrastrutture e Trasporti esegue «Manutenzione straordinaria delle strade locali» in Valle d'Aosta con 433.087.127 euro: Qualità dei trasporti, avvicina l'obiettivo; Valle d'Aosta, ci votano",
+          "partito": null,
+          "dicastero": "infrastrutture_trasporti",
+          "regione": "valle_d_aosta",
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Ambiente ed Energia esegue «Riempimento accelerato delle riserve di gas» con 138.911.851 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Giustizia esegue «Processo telematico e filtri sui ricorsi» con 24.599.263 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "giustizia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Esteri e Difesa esegue «Rifornimento urgente delle scorte» con 187.535.173 euro: Prontezza della difesa, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "destra",
-      "testo": "Programma di governo: 1 disposizione, Sgravio contributivo nel Mezzogiorno"
+      "tipo": "cantiere_avviato",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Il dicastero Interno avvia il cantiere «Videosorveglianza e centri di rimpatrio», 172.310.813 euro a turno per 4 turni",
+      "causa": "vicino alla sua posizione",
+      "partito": null,
+      "dicastero": "interno",
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Porta in aula: Sgravio contributivo nel Mezzogiorno: 15%"
+      "tipo": "spread",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Spread a 75 pb, +5 pb sul trimestre prima",
+      "causa": "chiusura del trimestre",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Accoglie la proposta del dicastero Economia e Finanze"
+      "tipo": "sondaggio",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Sondaggio: Partito del giocatore al 5,7% fra i votanti, -3,5 punti sul trimestre prima",
+      "causa": "sondaggio pubblico del trimestre, media di 4 istituti",
+      "partito": "giocatore",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Accoglie la proposta del dicastero Infrastrutture e Trasporti"
+      "tipo": "prima_stima",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Prima stima di gennaio-marzo 2027: PIL -1,9% annualizzato, inflazione 1,5% annualizzata e 2,7% sull'anno, disoccupazione 5,3%, disavanzo 3,0% del PIL",
+      "causa": "prima stima, riveduta fra un turno",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Accoglie la proposta del dicastero Interno"
+      "tipo": "revisione",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Revisione di ottobre-dicembre 2026: PIL da +4,8% a +3,3%, inflazione da 2,1% a 1,8%, disoccupazione da 5,9% a 5,4%, disavanzo da 2,9% a 2,9% del PIL",
+      "causa": "revisione della prima stima",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "estrema_destra",
-      "testo": "Porta nel posto riservato Autonomia differenziata: intese complete; 250 seggi fra Camera e Senato dei partiti di governo la voterebbero"
+      "tipo": "situazione_spenta",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Si spegne la situazione «Caro energia»: scarto dei prezzi dell'energia a 3,9",
+      "causa": "raggiunta la soglia di spegnimento di 5,0",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "entrate_di_cassa",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "8 entrate di cassa",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Estrema sinistra incassa 32.300 euro, 19.025 dal 2 per mille e 13.275 di donazioni: 2 per mille sul 2,3% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sinistra incassa 423.610 euro, 263.747 dal 2 per mille e 159.863 di donazioni: 2 per mille sul 32,4% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrosinistra incassa 78.945 euro, 48.391 dal 2 per mille e 30.554 di donazioni: 2 per mille sul 5,9% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centro incassa 54.385 euro, 32.868 dal 2 per mille e 21.517 di donazioni: 2 per mille sul 4,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra incassa 97.833 euro, 61.285 dal 2 per mille e 36.548 di donazioni: 2 per mille sul 7,5% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra incassa 476.649 euro, 267.843 dal 2 per mille e 208.806 di donazioni: 2 per mille sul 32,9% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Estrema destra incassa 85.048 euro, 53.904 dal 2 per mille e 31.144 di donazioni: 2 per mille sul 6,6% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Partito del giocatore incassa 115.834 euro, 67.543 dal 2 per mille e 48.291 di donazioni: 2 per mille sul 8,3% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "giocatore",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "governo_formato",
+      "criticita": "critica",
+      "precedenza": 3,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Nasce il governo di Destra dopo il voto, con Sinistra, Centrosinistra, Centro e Centrodestra; dicasteri: 3 a Destra, 2 a Sinistra, 2 a Centrosinistra, 1 a Centro, 2 a Centrodestra",
+      "causa": "la maggioranza che gli vale di più",
+      "partito": "destra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "rottura_dell_impegno",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "5 rotture dell'impegno",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Sinistra rompe l'impegno pre-elettorale governando con Centrodestra e Destra; valence -0,30 a Sinistra: la coalizione dichiarata prima del voto con Centrosinistra",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrosinistra rompe l'impegno pre-elettorale governando con Centrodestra e Destra; valence -0,30 a Centrosinistra: la coalizione dichiarata prima del voto con Sinistra",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centro rompe l'impegno pre-elettorale governando con Sinistra, Centrosinistra, Centrodestra e Destra; valence -0,30 a Centro: ha corso da solo al voto",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra rompe l'impegno pre-elettorale governando con Sinistra e Centrosinistra; valence -0,30 a Centrodestra: la coalizione dichiarata prima del voto con Destra",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra rompe l'impegno pre-elettorale governando con Sinistra e Centrosinistra; valence -0,30 a Destra: la coalizione dichiarata prima del voto con Centrodestra",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "programma_dichiarato",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Programma di governo: 1 disposizione, Sgravio contributivo nel Mezzogiorno",
+      "causa": "la nascita del governo avversario",
+      "partito": "destra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "evento_nato",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Emergenza idrogeologica in Lombardia, costo dell'intervento 1.000.000.000 euro",
+      "causa": "rischio basso",
+      "partito": null,
+      "dicastero": null,
+      "regione": "lombardia",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": "emergenza",
+      "dettagli": []
+    },
+    {
+      "tipo": "misura_presentata",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "2 misure presentate",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Porta in aula: Sgravio contributivo nel Mezzogiorno: 15%: una voce del programma di governo",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Porta nel posto riservato Autonomia differenziata: intese complete: 250 seggi fra Camera e Senato dei partiti di governo la voterebbero",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "proposta_accolta",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "3 proposte accolte",
+      "causa": "più cause",
+      "partito": "destra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Accoglie la proposta del dicastero Economia e Finanze: la riforma Regime forfettario degli autonomi (assente)",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Accoglie la proposta del dicastero Infrastrutture e Trasporti: il dicastero chiede fondi, che non bastano per Manutenzione straordinaria delle strade locali",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Accoglie la proposta del dicastero Interno: la riforma Ingressi per lavoro (bassi)",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     }
   ],
   "programma": [
@@ -4705,5 +5122,6 @@
         "euro": 150000
       }
     ]
-  }
+  },
+  "fermate": []
 }

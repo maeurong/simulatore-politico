@@ -4378,11 +4378,13 @@
       "deliberazione": 0,
       "camera": {
         "si": 133,
-        "no": 267
+        "no": 267,
+        "franchi": 9
       },
       "senato": {
         "si": 69,
-        "no": 131
+        "no": 131,
+        "franchi": 6
       },
       "approvata": false,
       "fiducia": false,
@@ -4434,11 +4436,13 @@
       "deliberazione": 0,
       "camera": {
         "si": 120,
-        "no": 280
+        "no": 280,
+        "franchi": 4
       },
       "senato": {
         "si": 65,
-        "no": 135
+        "no": 135,
+        "franchi": 4
       },
       "approvata": false,
       "fiducia": false,
@@ -4490,11 +4494,13 @@
       "deliberazione": 0,
       "camera": {
         "si": 167,
-        "no": 233
+        "no": 233,
+        "franchi": 7
       },
       "senato": {
         "si": 89,
-        "no": 111
+        "no": 111,
+        "franchi": 4
       },
       "approvata": false,
       "fiducia": false,
@@ -4616,10 +4622,493 @@
   "incarico": null,
   "dimissioni": false,
   "crisi": false,
-  "mosse": [
+  "esito": [
     {
+      "tipo": "emergenza_lieve",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Emergenza idrogeologica lieve in Puglia, 100.000.000 euro dal fondo di riserva (100% del costo)",
+      "causa": "pericolosità idrogeologica bassa",
+      "partito": null,
+      "dicastero": null,
+      "regione": "puglia",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "atto_eseguito",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "5 atti eseguiti",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il dicastero Economia e Finanze esegue «Riscossione affidata a concessionari privati» con 148.873.737 euro: Efficienza della riscossione, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "economia_finanze",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sviluppo economico esegue «Commesse pubbliche alle imprese del territorio» in Valle d'Aosta con 308.836.120 euro: Sostegno alle imprese, avvicina l'obiettivo; Valle d'Aosta, ci votano",
+          "partito": null,
+          "dicastero": "sviluppo_economico",
+          "regione": "valle_d_aosta",
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sanità esegue «Piano straordinario sulle liste d'attesa» con 636.057.062 euro: Qualità del servizio sanitario, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Istruzione e Ricerca esegue «Assunzione straordinaria di supplenti» con 788.405.626 euro: Qualità della scuola, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "istruzione_ricerca",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Giustizia esegue «Processo telematico e filtri sui ricorsi» con 25.522.175 euro: Durata dei processi, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "giustizia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "cantiere_avviato",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Il dicastero Lavoro e Welfare avvia il cantiere «Centri per l'impiego rinnovati», 97.516.557 euro a turno per 4 turni",
+      "causa": "Copertura del welfare, avvicina l'obiettivo",
+      "partito": null,
+      "dicastero": "lavoro_welfare",
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "cantiere_finito",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Finito il cantiere «Potenziamento delle linee ferroviarie locali» in Umbria del dicastero Infrastrutture e Trasporti, 1.436.296.395 euro spesi in tutto; gli effetti partono",
+      "causa": "la fine dei lavori dopo 5 turni",
+      "partito": null,
+      "dicastero": "infrastrutture_trasporti",
+      "regione": "umbria",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "cantiere_fermo",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "3 cantieri fermi",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il cantiere «Videosorveglianza e centri di rimpatrio» del dicastero Interno resta fermo un turno: rata di 173.050.085 euro contro un margine residuo di 58.146.806 euro",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Accoglienza diffusa e corridoi umanitari» del dicastero Interno resta fermo un turno: rata di 116.634.288 euro contro un margine residuo di 58.146.806 euro",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Ammodernamento dei mezzi» del dicastero Esteri e Difesa resta fermo un turno: rata di 256.891.119 euro contro un margine residuo di 125.729.046 euro",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "legge_respinta",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Respinta «Concorrenza nei servizi: mercato libero»; Camera 133 sì e 267 no, 9 franchi tiratori; Senato 69 sì e 131 no, 6 franchi tiratori; disposizioni bloccate per 2 turni",
+      "causa": "per il sì Estrema sinistra, Sinistra, Centrosinistra; per il no Centro, Centrodestra, Destra, Estrema destra, Partito del giocatore",
+      "partito": "centrosinistra",
+      "dicastero": null,
+      "regione": null,
+      "misura": 4,
+      "disposizioni": [
+        "concorrenza_servizi"
+      ],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "spread",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Spread a 62 pb, -2 pb sul trimestre prima",
+      "causa": "chiusura del trimestre",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "controllo_ue",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Controllo UE sul 2027: spesa netta sotto il percorso di 0,5 punti di PIL, al netto della clausola di 0,6 punti; conto di controllo a 0,0 punti di PIL",
+      "causa": "la spesa netta del 2027 cresce del 2,2% contro il tetto del 1,9%",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "procedura_ue",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Chiusa la procedura per disavanzo eccessivo, che era sospesa",
+      "causa": "deviazione non rilevante della spesa netta, disavanzo del 2027 al 2,8% del PIL",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "sondaggio",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Sondaggio: la coalizione di Partito del giocatore, Centrodestra, Destra al 46,5% fra i votanti, -4,0 punti sul trimestre prima",
+      "causa": "sondaggio pubblico del trimestre, media di 4 istituti",
+      "partito": "giocatore",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "prima_stima",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Prima stima di aprile-giugno 2028: PIL +0,6% annualizzato, inflazione -0,3% annualizzata e 1,7% sull'anno, disoccupazione 5,7%, disavanzo 1,5% del PIL",
+      "causa": "prima stima, riveduta fra un turno",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "revisione",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Revisione di gennaio-marzo 2028: PIL da +3,5% a +3,2%, inflazione da 4,0% a 4,3%, disoccupazione da 5,7% a 5,8%, disavanzo da 3,1% a 2,9% del PIL",
+      "causa": "revisione della prima stima",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "entrate_di_cassa",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "8 entrate di cassa",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Estrema sinistra incassa 37.598 euro, 20.052 dal 2 per mille e 17.546 di donazioni: 2 per mille sul 2,5% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sinistra incassa 464.179 euro, 271.122 dal 2 per mille e 193.057 di donazioni: 2 per mille sul 33,3% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrosinistra incassa 83.183 euro, 46.773 dal 2 per mille e 36.410 di donazioni: 2 per mille sul 5,7% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centro incassa 59.881 euro, 33.676 dal 2 per mille e 26.205 di donazioni: 2 per mille sul 4,1% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra incassa 103.131 euro, 57.225 dal 2 per mille e 45.906 di donazioni: 2 per mille sul 7,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra incassa 321.357 euro, 203.105 dal 2 per mille e 118.252 di donazioni: 2 per mille sul 24,9% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Estrema destra incassa 89.987 euro, 48.923 dal 2 per mille e 41.064 di donazioni: 2 per mille sul 6,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Partito del giocatore incassa 205.290 euro, 133.729 dal 2 per mille e 71.561 di donazioni: 2 per mille sul 16,4% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "giocatore",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "soddisfazione_variata",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "6 ministri cambiano soddisfazione",
+      "causa": "indicatore di servizio in calo",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Marco Bianchi (Sviluppo economico) perde 3,35 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "sviluppo_economico",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Simone Ricci (Lavoro e Welfare) perde 6,43 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sara Ferraro (Sanità) perde 12,88 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Luca Romano (Ambiente ed Energia) perde 3,39 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Barbieri (Interno) guadagna 10,00 punti di soddisfazione: obiettivo raggiunto",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Giulia Rossi (Esteri e Difesa) perde 2,54 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "intesa_variata",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "2 alleati cambiano intesa",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Centrodestra perde 1,03 punti d'intesa: dicasteri sotto la sua richiesta",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra perde 0,31 punti d'intesa: calo nei sondaggi al governo",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "evento_nato",
+      "criticita": "critica",
+      "precedenza": 1,
+      "in_evidenza": true,
+      "tono": "grave",
+      "fatto": "Emergenza incendi in Lazio, costo dell'intervento 5.000.000.000 euro",
+      "causa": "rischio alto",
+      "partito": null,
+      "dicastero": null,
+      "regione": "lazio",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": "emergenza",
+      "dettagli": []
+    },
+    {
+      "tipo": "misura_presentata",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Porta nel posto riservato Leva militare: obbligatoria",
+      "causa": "225 seggi fra Camera e Senato dei partiti alleati la voterebbero",
       "partito": "estrema_destra",
-      "testo": "Porta nel posto riservato Leva militare: obbligatoria; 225 seggi fra Camera e Senato dei partiti alleati la voterebbero"
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "minaccia_di_dimissioni",
+      "criticita": "critica",
+      "precedenza": 2,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Sara Ferraro (Sanità) minaccia le dimissioni",
+      "causa": "la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «indicatore di servizio in calo»",
+      "partito": null,
+      "dicastero": "sanita",
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     }
   ],
   "programma": [],
@@ -4724,5 +5213,10 @@
         "euro": 150000
       }
     ]
-  }
+  },
+  "fermate": [
+    {
+      "tipo": "governo"
+    }
+  ]
 }

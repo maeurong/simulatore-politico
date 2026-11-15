@@ -4320,62 +4320,516 @@
   "incarico": "giocatore",
   "dimissioni": false,
   "crisi": false,
-  "mosse": [
+  "esito": [
     {
-      "partito": "estrema_sinistra",
-      "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»"
+      "tipo": "atto_eseguito",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "7 atti eseguiti",
+      "causa": "vicino alla sua posizione",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il dicastero Economia e Finanze esegue «Riscossione affidata a concessionari privati» con 142.761.982 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "economia_finanze",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sviluppo economico esegue «Zone economiche speciali con burocrazia ridotta» in Umbria con 98.719.128 euro: vicino alla sua posizione; Umbria, ci votano",
+          "partito": null,
+          "dicastero": "sviluppo_economico",
+          "regione": "umbria",
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sanità esegue «Convenzioni col privato accreditato» con 609.944.832 euro: Qualità del servizio sanitario, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Istruzione e Ricerca esegue «Premi di merito agli istituti» con 504.025.992 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "istruzione_ricerca",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Ambiente ed Energia esegue «Riempimento accelerato delle riserve di gas» con 138.206.779 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Interno esegue «Agenti di quartiere» con 114.290.813 euro: Sicurezza, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Giustizia esegue «Processo telematico e filtri sui ricorsi» con 24.474.406 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "giustizia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "sinistra",
-      "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»"
+      "tipo": "cantiere_avviato",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "3 cantieri avviati",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il dicastero Lavoro e Welfare avvia il cantiere «Centri per l'impiego rinnovati», 93.513.183 euro a turno per 4 turni: Copertura del welfare, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Infrastrutture e Trasporti avvia il cantiere «Potenziamento delle linee ferroviarie locali» in Umbria, 287.259.279 euro a turno per 5 turni: Qualità dei trasporti, avvicina l'obiettivo; Umbria, ci votano",
+          "partito": null,
+          "dicastero": "infrastrutture_trasporti",
+          "regione": "umbria",
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Esteri e Difesa avvia il cantiere «Difesa comune europea e addestramenti congiunti», 124.388.871 euro a turno per 4 turni: Prontezza della difesa, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "centrosinistra",
-      "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: quota base universale»"
+      "tipo": "promessa_fatta",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "7 promesse fatte",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»: i valori in vigore più lontani dalla sua posizione, 1,0",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: retributivo»: i valori in vigore più lontani dalla sua posizione, 2,0",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Concorrenza nei servizi: mercato libero» e «Regime delle pensioni: quota base universale»: i valori in vigore più lontani dalla sua posizione, 3,0",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Concorrenza nei servizi: gare» e «Salario minimo legale: 7 €/h»: i valori in vigore più lontani dalla sua posizione, 4,0",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: prime materie»: i valori in vigore più lontani dalla sua posizione, 5,0",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: intese complete»: i valori in vigore più lontani dalla sua posizione, 6,0",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: intese complete»: i valori in vigore più lontani dalla sua posizione, 7,0",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "centro",
-      "testo": "Promette «Concorrenza nei servizi: gare» e «Salario minimo legale: 7 €/h»"
+      "tipo": "spesa_di_campagna",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "7 spese di campagna",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Spende 758.560 euro: persuade Calabria, Piemonte e autonomi: cassa di 758.560 euro",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 8.135.300 euro: persuade dipendenti privati, pensionati e Lombardia: cassa di 8.135.300 euro",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 1.603.240 euro: persuade Lombardia, disoccupati e inattivi e pensionati: cassa di 1.603.240 euro",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 1.113.760 euro: persuade dipendenti privati, pensionati e Lombardia: cassa di 1.113.760 euro",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 1.834.280 euro: persuade pensionati, dipendenti privati e autonomi: cassa di 1.834.280 euro",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 7.071.820 euro: persuade dipendenti privati, pensionati e Lombardia: cassa di 7.071.820 euro",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Spende 1.614.560 euro: persuade pensionati, autonomi e Puglia: cassa di 1.614.560 euro",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "centrodestra",
-      "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: prime materie»"
+      "tipo": "spread",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Spread a 83 pb, -1 pb sul trimestre prima",
+      "causa": "chiusura del trimestre",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: intese complete»"
+      "tipo": "reddito_deluso",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "3 fasce di reddito deluse",
+      "causa": "nessun trimestre passato da ricordare, l'attesa parte da zero",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Reddito reale della fascia bassa a -0,59% nel trimestre contro il 0,00% atteso, giudizio sul governo in calo: nessun trimestre passato da ricordare, l'attesa parte da zero",
+          "partito": null,
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Reddito reale della fascia media a -0,62% nel trimestre contro il 0,00% atteso, giudizio sul governo in calo: nessun trimestre passato da ricordare, l'attesa parte da zero",
+          "partito": null,
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Reddito reale della fascia alta a -0,65% nel trimestre contro il 0,00% atteso, giudizio sul governo in calo: nessun trimestre passato da ricordare, l'attesa parte da zero",
+          "partito": null,
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "estrema_destra",
-      "testo": "Promette «Nucleare: consentito» e «Autonomia differenziata: intese complete»"
+      "tipo": "sondaggio",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Sondaggio: la coalizione di Partito del giocatore, Centrodestra, Destra al 50,9% fra i votanti, -3,0 punti sul trimestre prima",
+      "causa": "sondaggio pubblico del trimestre, media di 4 istituti",
+      "partito": "giocatore",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "estrema_sinistra",
-      "testo": "Spende 758.560 euro: persuade Calabria, Piemonte e autonomi"
+      "tipo": "prima_stima",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Prima stima di ottobre-dicembre 2026: PIL +0,5% annualizzato, inflazione 3,8% annualizzata e 3,7% sull'anno, disoccupazione 5,8%, disavanzo 2,5% del PIL",
+      "causa": "prima stima, riveduta fra un turno",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "sinistra",
-      "testo": "Spende 8.135.300 euro: persuade dipendenti privati, pensionati e Lombardia"
+      "tipo": "revisione",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Revisione di luglio-settembre 2026: PIL da 0,0% a 0,0%, inflazione da 4,2% a 4,2%, disoccupazione da 5,6% a 5,6%, disavanzo da 2,9% a 2,9% del PIL",
+      "causa": "revisione della prima stima",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "centrosinistra",
-      "testo": "Spende 1.603.240 euro: persuade Lombardia, disoccupati e inattivi e pensionati"
+      "tipo": "entrate_di_cassa",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "8 entrate di cassa",
+      "causa": "prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Estrema sinistra incassa 33.590 euro, 20.052 dal 2 per mille e 13.538 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sinistra incassa 454.176 euro, 271.122 dal 2 per mille e 183.054 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrosinistra incassa 78.353 euro, 46.773 dal 2 per mille e 31.580 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centro incassa 56.414 euro, 33.677 dal 2 per mille e 22.737 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra incassa 95.862 euro, 57.225 dal 2 per mille e 38.637 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra incassa 340.237 euro, 203.105 dal 2 per mille e 137.132 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Estrema destra incassa 81.954 euro, 48.923 dal 2 per mille e 33.031 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Partito del giocatore incassa 224.019 euro, 133.729 dal 2 per mille e 90.290 di donazioni: prima del primo voto, 2 per mille e donazioni sulle intenzioni di voto",
+          "partito": "giocatore",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     },
     {
-      "partito": "centro",
-      "testo": "Spende 1.113.760 euro: persuade dipendenti privati, pensionati e Lombardia"
+      "tipo": "risultato_del_voto",
+      "criticita": "critica",
+      "precedenza": 3,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Elezioni politiche: affluenza del 71,4%; Partito del giocatore al 16,4% con 76 seggi alla Camera e 38 al Senato; primo partito Sinistra al 33,3%; premio di maggioranza a Partito del giocatore, Centrodestra e Destra",
+      "causa": "elezioni politiche",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "centrodestra",
-      "testo": "Spende 1.834.280 euro: persuade pensionati, dipendenti privati e autonomi"
+      "tipo": "incarico",
+      "criticita": "critica",
+      "precedenza": 3,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Incarico di formare il governo a Partito del giocatore",
+      "causa": "la tua coalizione ha la maggioranza in entrambe le Camere, con 224 seggi su 400 alla Camera e 115 su 200 al Senato",
+      "partito": "giocatore",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     },
     {
-      "partito": "destra",
-      "testo": "Spende 7.071.820 euro: persuade dipendenti privati, pensionati e Lombardia"
+      "tipo": "evento_nato",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": true,
+      "tono": "grave",
+      "fatto": "Emergenza idrogeologica in Emilia-Romagna, costo dell'intervento 5.000.000.000 euro",
+      "causa": "rischio alto",
+      "partito": null,
+      "dicastero": null,
+      "regione": "emilia_romagna",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": "emergenza",
+      "dettagli": []
     },
     {
-      "partito": "estrema_destra",
-      "testo": "Spende 1.614.560 euro: persuade pensionati, autonomi e Puglia"
+      "tipo": "valore_in_vigore",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Credito d'imposta nella ZES unica passa a 1 miliardo: entra in vigore il valore in arrivo",
+      "causa": "valore fissato da «DL 124/2023, art. 16»",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
     }
   ],
   "programma": [],
@@ -4480,5 +4934,10 @@
         "euro": 150000
       }
     ]
-  }
+  },
+  "fermate": [
+    {
+      "tipo": "incarico"
+    }
+  ]
 }

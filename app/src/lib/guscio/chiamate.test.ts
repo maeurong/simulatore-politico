@@ -1,7 +1,7 @@
 import libRs from "../../../src-tauri/src/lib.rs?raw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { comeErrore, guscio } from "./chiamate";
+import { comeErrore, guscio, testoRifiuto } from "./chiamate";
 
 // mockIPC scrive su `window`: in Node basta farlo coincidere con globalThis.
 beforeEach(() => {
@@ -20,6 +20,12 @@ describe("comeErrore", () => {
   it("trasforma un Error in guasto", () => {
     expect(comeErrore(new Error("y"))).toEqual({ specie: "guasto", testo: "Error: y" });
   });
+});
+
+describe("testoRifiuto", () => {
+  it("toglie il prefisso del core", () =>
+    expect(testoRifiuto({ specie: "rifiuto", testo: "comando non ammesso: Al massimo 3 bersagli" })).toBe("Al massimo 3 bersagli"));
+  it("senza prefisso resta com'è", () => expect(testoRifiuto({ specie: "rifiuto", testo: "altro" })).toBe("altro"));
 });
 
 describe("guscio", () => {
@@ -74,11 +80,13 @@ const tabella: [string, () => Promise<unknown>, Record<string, unknown>][] = [
   ["serie", () => guscio.serie(), {}],
   ["anteprima_fondazione", () => guscio.anteprimaFondazione(null), { scenario: null }],
   ["catalogo_scenario", () => guscio.catalogoScenario(), {}],
+  ["anteprima_campagna", () => guscio.anteprimaCampagna([]), { spese: [] }],
+  ["elettori_campione", () => guscio.elettoriCampione("abruzzo", "autonomo", "alta"), { regione: "abruzzo", condizione: "autonomo", fascia: "alta" }],
 ];
 
 describe("guscio: un comando Rust per funzione", () => {
   it("la tabella copre tutti i comandi registrati in lib.rs", () => {
-    expect(nomiRust).toHaveLength(20);
+    expect(nomiRust).toHaveLength(22);
     expect(tabella.map(([nome]) => nome).sort()).toEqual([...nomiRust].sort());
   });
   it.each(tabella)("%s: nome e argomenti", async (nome, chiama, args) => {
