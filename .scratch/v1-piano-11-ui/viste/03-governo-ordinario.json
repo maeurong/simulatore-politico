@@ -5251,80 +5251,15 @@
       "precedenza": 0,
       "in_evidenza": false,
       "tono": "ordinario",
-      "fatto": "8 entrate di cassa",
-      "causa": "più cause",
-      "partito": null,
+      "fatto": "Partito del giocatore incassa 222.436 euro, 133.729 dal 2 per mille e 88.707 di donazioni",
+      "causa": "2 per mille sul 16,4% dell'ultimo voto, donazioni sulle intenzioni di voto",
+      "partito": "giocatore",
       "dicastero": null,
       "regione": null,
       "misura": null,
       "disposizioni": [],
       "famiglia": null,
-      "dettagli": [
-        {
-          "testo": "Estrema sinistra incassa 34.308 euro, 20.052 dal 2 per mille e 14.256 di donazioni: 2 per mille sul 2,5% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "estrema_sinistra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Sinistra incassa 435.714 euro, 271.122 dal 2 per mille e 164.592 di donazioni: 2 per mille sul 33,3% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "sinistra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Centrosinistra incassa 76.866 euro, 46.773 dal 2 per mille e 30.093 di donazioni: 2 per mille sul 5,7% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "centrosinistra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Centro incassa 54.385 euro, 33.676 dal 2 per mille e 20.709 di donazioni: 2 per mille sul 4,1% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "centro",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Centrodestra incassa 91.134 euro, 57.225 dal 2 per mille e 33.909 di donazioni: 2 per mille sul 7,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "centrodestra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Destra incassa 372.161 euro, 203.105 dal 2 per mille e 169.056 di donazioni: 2 per mille sul 24,9% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "destra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Estrema destra incassa 77.603 euro, 48.923 dal 2 per mille e 28.680 di donazioni: 2 per mille sul 6,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "estrema_destra",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        },
-        {
-          "testo": "Partito del giocatore incassa 222.436 euro, 133.729 dal 2 per mille e 88.707 di donazioni: 2 per mille sul 16,4% dell'ultimo voto, donazioni sulle intenzioni di voto",
-          "partito": "giocatore",
-          "dicastero": null,
-          "regione": null,
-          "misura": null,
-          "disposizioni": []
-        }
-      ]
+      "dettagli": []
     },
     {
       "tipo": "governo_formato",
