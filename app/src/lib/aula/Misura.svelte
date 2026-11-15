@@ -1,6 +1,7 @@
 <script lang="ts">
   // Il dettaglio a lato di una misura (storia 106): i due emicicli, la linea di ogni partito, i seggi di una legge elettorale, la regola
   // delle due deliberazioni, gli emendamenti degli alleati (Accogli · Respingi, diretti), la fiducia (conferma sul posto) e la linea del giocatore.
+  import { tick } from "svelte";
   import { t, numero, segnato, elenco } from "$lib/testi/t";
   import { nomeDi } from "$lib/partiti";
   import { inOrdine } from "$lib/partiti/schieramento";
@@ -13,11 +14,27 @@
   import Emiciclo from "$lib/componenti/Emiciclo.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
+  import Cartellino from "$lib/anteprima/Cartellino.svelte";
   import { chiLaPorta, fiduciaPonibile, formaDi, lineaScelta, quando } from "./aula";
 
-  let { vista, m, manda, rifiuto, onanteprima }: {
-    vista: Vista; m: VoceMisura; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null; onanteprima?: () => void;
+  let { vista, m, manda, rifiuto }: {
+    vista: Vista; m: VoceMisura; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
   } = $props();
+
+  // il cartellino sta al posto del dettaglio; Aula rimonta Misura a ogni misura e a ogni turno, quindi lì si richiude
+  let anteprima = $state(false);
+  let piede = $state<HTMLElement>();
+  let daFuoco = $state(false);
+  // il fuoco si sposta solo se stava sul bottone che sparisce: in WKWebView un clic non lo dà
+  async function scambia(e: MouseEvent, apri: boolean) {
+    const aveva = e.currentTarget === document.activeElement;
+    daFuoco = aveva;
+    anteprima = apri;
+    if (aveva && !apri) {
+      await tick();
+      piede?.querySelector("button")?.focus({ preventScroll: true });
+    }
+  }
 
   const nome = (id: string) => nomeDi(vista, id);
   const partiti = $derived(inOrdine(vista));
@@ -32,6 +49,9 @@
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
 </script>
 
+{#if anteprima}
+  <Cartellino {vista} misura={m} valori={m.valori} indietro={t("anteprima.torna_alla_misura")} ontorna={(e) => scambia(e, false)} {manda} {rifiuto} fuoco={daFuoco} />
+{:else}
 <span class="occ">{formaDi(m)}</span>
 <h4 class="tit">{m.nome}</h4>
 <p class="sec muto">{chiLaPorta(vista, m, nome)} · {quando(vista, m.voto)}</p>
@@ -117,7 +137,8 @@
   </div>
 {/if}
 
-<Pulsante forma="link" onclick={onanteprima} spento={onanteprima ? undefined : t("aula.anteprima_arriva")}>{t("aula.anteprima")}</Pulsante>
+<div bind:this={piede}><Pulsante forma="link" onclick={(e) => scambia(e, true)}>{t("aula.anteprima")}</Pulsante></div>
+{/if}
 
 <style>
   .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso) }

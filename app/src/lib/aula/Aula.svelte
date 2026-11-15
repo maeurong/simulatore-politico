@@ -33,9 +33,11 @@
     referendum: vista.referendum.length || null,
   });
 
-  // al turno nuovo il calendario è un altro: la scelta di prima non vale
+  // al turno nuovo il calendario è un altro: la scelta di prima non vale. `turno` è un derived: una Vista nuova dello stesso turno
+  // (dopo un comando) non fa rigirare l'effetto, e la misura scelta e il cartellino aperto restano.
+  const turno = $derived(vista.turno);
   $effect.pre(() => {
-    void vista.turno;
+    void turno;
     untrack(() => {
       scelta = null;
       bozza = [];
