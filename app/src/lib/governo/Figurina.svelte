@@ -37,13 +37,13 @@
 <div class="fr" class:ev={f.evidenza.length > 0} class:sel={scelta}>
   <div class="cima">
     <div class="sx"><span class="n">{t("governo.numero", { n: f.indice })}</span>
-      {#if stato}<span class="chip" class:rosso={soglia(stato)}>{t(`governo.stato_${stato}` as Chiave)}</span>{/if}
+      <span class="chip" class:rosso={soglia(stato ?? "interim")} class:vano={!stato} aria-hidden={stato ? undefined : "true"}>{stato ? t(`governo.stato_${stato}` as Chiave) : "·"}</span>
     </div>
     {#if m && f.voto !== null}
       <span class="voto" class:basso={m.minaccia} title={t("governo.voto", { n: f.voto })}>
         <NumeroFreccia valore={m.soddisfazione} prima={Math.abs(f.freccia) >= 0.5 ? m.soddisfazione - f.freccia : undefined} formato={(x) => numero(x)} male="scende" sottoSoglia={m.soddisfazione < vista.soglie.dimissioni} />
       </span>
-    {/if}
+    {:else}<span class="voto vano" aria-hidden="true">0</span>{/if}
   </div>
   <div class="fz">
     {#if m}<Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
@@ -106,6 +106,7 @@
   .sx .chip { grid-row: 2; grid-column: 1 / -1; justify-self: start }
   .cima .voto { grid-row: 1; grid-column: 2 }
   .chip { display: inline-block; border: 1.5px solid var(--ink); padding: 0 3px; font-size: var(--c-min); font-weight: 700; line-height: 1.3; color: var(--ink); max-width: 100%; overflow-wrap: anywhere }
+  .vano { visibility: hidden }
   .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
   .voto { font-size: var(--c-num); font-weight: 700; line-height: 1; white-space: nowrap; color: var(--ink) }
   .voto.basso { color: var(--rosso) }
