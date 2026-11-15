@@ -24,9 +24,10 @@
   const soglia = $derived(disposizioni.find((d) => d.id === "soglia_premio")?.gradini[0]?.nome);
 
   let leggi = $state.raw<Record<string, LeggePronta>>({});
-  let errore = $state<string | null>(null);
+  let erroreCatalogo = $state<string | null>(null);
+  let erroreMenu = $state<string | null>(null);
   onMount(() => {
-    guscio.catalogoScenario().then((c) => (leggi = c.leggi_elettorali), (e) => (errore = testoRifiuto(e)));
+    guscio.catalogoScenario().then((c) => (leggi = c.leggi_elettorali), (e) => (erroreCatalogo = testoRifiuto(e)));
   });
   // una pronta già composta dalla bozza la toglie, un'altra prende il posto della parte elettorale
   const scegli = (legge: LeggePronta) => onbozza(conLegge(vista, bozza, eLegge(vista, bozza, legge) ? {} : legge));
@@ -39,10 +40,10 @@
       if (JSON.stringify(b) !== ultima) return;
       if ("specie" in r) {
         spento = {};
-        errore = testoRifiuto(r);
+        erroreMenu = testoRifiuto(r);
       } else {
         spento = spenti(r);
-        errore = null;
+        erroreMenu = null;
       }
     },
   );
@@ -60,7 +61,8 @@
       <Pulsante forma="piccolo" scelto={eLegge(vista, bozza, legge)} onclick={() => scegli(legge)}>{nomeLegge(n)}</Pulsante>
     {/each}
   </div>
-  {#if errore}<Rifiuto testo={errore} />{/if}
+  {#if erroreCatalogo}<Rifiuto testo={erroreCatalogo} />{/if}
+  {#if erroreMenu}<Rifiuto testo={erroreMenu} />{/if}
   <div class="tb" role="group" aria-label={t("aula.elettorali")}>
     {#each disposizioni as d (d.id)}
       <div class="dr">

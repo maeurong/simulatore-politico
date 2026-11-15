@@ -12,7 +12,7 @@
   {#each d.gradini as gr (gr.id)}
     {@const s = statoGradino(d, bozza, gr)}
     {@const motivo = s === "in_bozza" || s === "bloccato" ? undefined : spenti[`${d.id}|${gr.id}`]}
-    {@const stato = motivo !== undefined ? t("aula.gradino_spento", { motivo }) : t(`aula.gradino_${s}` as Chiave)}
+    {@const stato = motivo === undefined ? t(`aula.gradino_${s}` as Chiave) : [s === "in_vigore" || s === "in_arrivo" ? t(`aula.gradino_${s}` as Chiave) : "", t("aula.gradino_spento", { motivo })].filter(Boolean).join(", ")}
     <button
       type="button"
       class="gr {s}"

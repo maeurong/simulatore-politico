@@ -16,7 +16,7 @@
 
   let { vista, bozza, aperta, onapri, oncambia, manda, rifiuto }: {
     vista: Vista; bozza: Bozza; aperta: string | null; onapri: (id: string | null) => void; oncambia: (disposizione: string, gradino: string) => void;
-    manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
+    manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"]; disposizione?: string | null } | null;
   } = $props();
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
 
@@ -52,7 +52,7 @@
         {#if aperto}
           <Scala {d} {bozza} onscegli={(g) => scegli(d, g)} />
         {:else}
-          <span><b>{nomeGradino(d, d.in_vigore)}</b>{#each d.in_arrivo as a (a.gradino)} <span class="arr">{t("aula.disp_arrivo", { gradino: nomeGradino(d, a.gradino), periodo: periodo(a.data) })}</span>{/each}</span>
+          <span class="vig"><b>{nomeGradino(d, d.in_vigore)}</b>{#each d.in_arrivo as a (a.gradino)}<span class="arr">{t("aula.disp_arrivo", { gradino: nomeGradino(d, a.gradino), periodo: periodo(a.data) })}</span>{/each}</span>
         {/if}
         <span class="x">
           {#if inEsame(d)}<span class="chip">{t("aula.in_esame")}</span>{/if}
@@ -65,7 +65,7 @@
             {:else}
               <Conferma etichetta={t("aula.referendum_promuovi")} conferma={t("aula.referendum_promuovi_conferma")} spento={occupato}
                 onconferma={() => promuovi(d)} />
-              {#if rifiuto?.tipo === "promuovi_referendum" && aperta === d.id}<Rifiuto testo={rifiuto.testo} />{/if}
+              {#if rifiuto?.tipo === "promuovi_referendum" && rifiuto.disposizione === d.id}<Rifiuto testo={rifiuto.testo} />{/if}
             {/if}
           </div>
         {/if}
@@ -82,7 +82,8 @@
   .dr.sel { background: var(--velo) }
   .nm { font-weight: 700; line-height: 1.2 }
   .nm small { display: block; font-weight: 400; color: var(--grigio); font-size: var(--c-min) }
-  .arr { color: var(--biro); font-weight: 700; white-space: nowrap; margin-left: 8px }
+  .arr { color: var(--biro); font-weight: 700; display: inline-block }
+  .vig { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline }
   .ref { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }

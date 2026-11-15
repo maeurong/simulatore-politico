@@ -8,7 +8,7 @@
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import { riportaFuoco, rifiutoPer } from "./aula";
-  import { cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
+  import { bozzaDelComando, cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
   import Bozza from "./Bozza.svelte";
   import Disposizioni from "./Disposizioni.svelte";
   import Elettorale from "./Elettorale.svelte";
@@ -47,7 +47,7 @@
   });
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
-  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null; bozza: string | null } | null>(null);
+  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null; bozza: string | null; disposizione: string | null } | null>(null);
   const rifiuto = $derived(rifiutoPer(rifiutato, vista, corrente?.id ?? null));
   let lato: HTMLElement;
   // `misura`: quella a cui il rifiuto si lega; la bozza non ne ha (null)
@@ -62,7 +62,7 @@
       if (ok) riportaFuoco(lato, da);
       return ok;
     } catch (e) {
-      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista, bozza: "valori" in c ? JSON.stringify(c.valori) : null };
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista, bozza: bozzaDelComando(c), disposizione: c.tipo === "promuovi_referendum" ? c.disposizione : null };
       return false;
     }
   }

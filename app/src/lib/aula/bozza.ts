@@ -63,3 +63,8 @@ export function misuraNominata(v: Vista, testo: string): VoceMisura | null {
 /** Il rifiuto vale per la Vista e per la bozza in cui è nato (`bozza` è il suo JSON): cambiata la bozza non resta sotto un'altra legge. */
 export const rifiutoDellaBozza = <R extends { vista: Vista | null; misura: number | null; bozza?: string | null }>(r: R | null, v: Vista, b: Bozza): R | null =>
   r && r.vista === v && r.misura === null && r.bozza === JSON.stringify(b) ? r : null;
+
+/** Il JSON dei valori che un comando porta: la legge o la proposta, o la misura di «Compra il test» (`valori` sta dentro l'acquisto). */
+export const bozzaDelComando = (c: Comando): string | null =>
+  "valori" in c ? JSON.stringify(c.valori)
+  : c.tipo === "compra" && typeof c.acquisto === "object" && "test_misura" in c.acquisto ? JSON.stringify(c.acquisto.test_misura.valori) : null;

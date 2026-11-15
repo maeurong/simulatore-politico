@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
-import { cambia, comandoBozza, etichettaBozza, forma, misuraNominata, perDicastero, rifiutoDellaBozza, statoGradino } from "./bozza";
+import { bozzaDelComando, cambia, comandoBozza, etichettaBozza, forma, misuraNominata, perDicastero, rifiutoDellaBozza, statoGradino } from "./bozza";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const v03 = ((ordinario as unknown as { vista?: Vista }).vista ?? ordinario) as unknown as Vista;
@@ -94,5 +94,21 @@ describe("rifiutoDellaBozza", () => {
     expect(rifiutoDellaBozza(r, v03, [])).toBeNull();
     expect(rifiutoDellaBozza(r, v03, [{ disposizione: "regime_pensioni", gradino: "retributivo" }])).toBeNull();
     expect(rifiutoDellaBozza(r, stati.piena.vista, [salario])).toBeNull();
+  });
+});
+
+describe("bozzaDelComando, rifiutoDellaBozza", () => {
+  const valori = [salario];
+  const compra = { tipo: "compra", acquisto: { test_misura: { valori } } } as const;
+  it("il compra porta il JSON dei valori come la presentazione", () => {
+    expect(bozzaDelComando(compra)).toBe(JSON.stringify(valori));
+    expect(bozzaDelComando({ tipo: "presenta_legge", valori })).toBe(JSON.stringify(valori));
+    expect(bozzaDelComando({ tipo: "compra", acquisto: "centro_studi" })).toBeNull();
+    expect(bozzaDelComando({ tipo: "dimettiti" })).toBeNull();
+  });
+  it("il rifiuto del compra resta visibile sulla stessa bozza e sparisce se cambia", () => {
+    const r = { vista: v03, misura: null, bozza: bozzaDelComando(compra) };
+    expect(rifiutoDellaBozza(r, v03, valori)).toBe(r);
+    expect(rifiutoDellaBozza(r, v03, [])).toBeNull();
   });
 });
