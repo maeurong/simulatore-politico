@@ -83,8 +83,8 @@ describe("fettaDi", () => {
   it("il cruscotto cambia fetta con lo stato", () => {
     expect(fettaDi("cruscotto", "turno_zero")).toBeNull();
     expect(fettaDi("cruscotto", "trattativa")).toBe("11b");
-    expect(fettaDi("cruscotto", "governo")).toBe("11c");
-    expect(fettaDi("cruscotto", "crisi")).toBe("11c");
+    expect(fettaDi("cruscotto", "governo")).toBeNull();
+    expect(fettaDi("cruscotto", "crisi")).toBeNull();
     expect(fettaDi("cruscotto", "opposizione")).toBe("11e");
   });
   it("le altre sezioni hanno una fetta sola", () => {

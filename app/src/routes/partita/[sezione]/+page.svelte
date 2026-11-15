@@ -56,9 +56,9 @@
             <!-- la bozza è dell'incarico: al cambio (giocatore, guida) si rimonta -->
             {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
           {:else}
-            <!-- governo, crisi, opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (lettura 1) -->
+            <!-- opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (11e) -->
             {#if aperta === "cruscotto"}
-              {#each partita.vista.eventi as evento, i (i)}<Evento {evento} indice={i} puoRispondere={risponde(partita.vista)} />{/each}
+              {#each partita.vista.eventi as evento, i (i)}<Evento vista={partita.vista} {evento} indice={i} puoRispondere={risponde(partita.vista)} />{/each}
             {/if}
             {#if fetta}<Segnaposto sezione={etichetta(aperta)} {fetta} />{/if}
           {/if}

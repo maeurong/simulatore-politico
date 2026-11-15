@@ -7,12 +7,15 @@
   import type { VoceEvento } from "$lib/tipi/VoceEvento";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { defaultDi, opzioneUnica } from "./cruscotto";
+  import { defaultDi, fondoBasta, opzioneUnica } from "./cruscotto";
 
-  type Props = { evento: VoceEvento; indice: number; puoRispondere: boolean };
-  let { evento, indice, puoRispondere }: Props = $props();
+  type Props = { vista: Vista; evento: VoceEvento; indice: number; puoRispondere: boolean };
+  let { vista, evento, indice, puoRispondere }: Props = $props();
 
   const occhiello = $derived([evento.famiglia, evento.regione, evento.tono === "grave" ? t("evento.tono_grave") : null].filter(Boolean).join(" · "));
+  // la quota coperta la dice il core: qui solo quanto resta nel fondo, in rosso se non basta
+  const fondo = $derived(puoRispondere && evento.costo > 0);
+  const norme = $derived(evento.norme.map((id) => vista.disposizioni.find((d) => d.id === id)?.nome ?? id));
   const unica = $derived(opzioneUnica(evento));
   const scelta = $derived(evento.scelta === null ? null : evento.opzioni[evento.scelta]);
   // la conseguenza si legge prima della scelta (docs/ricerca/estetica/interfacce-di-giochi-gestionali.md:48)
@@ -38,7 +41,9 @@
 <section class="evento" aria-label={t("evento.aperto")}>
   <div class="occ">{occhiello}</div>
   <h2 class="tit">{evento.nome}{evento.costo ? `: ${numero(evento.costo)}\u00A0€` : ""}</h2>
-  <div class="sec muto"><i>{t("componenti.perche")}</i> {evento.causa}</div>
+  <div class="sec muto"><i>{t("componenti.perche")}</i> {evento.causa}
+    {#if fondo} · <span class:male={!fondoBasta(vista, evento)}>{t("cruscotto.fondo", { euro: `${numero(vista.bilancio.fondo_residuo)}\u00A0€` })}</span>{/if}</div>
+  {#if puoRispondere && norme.length}<div class="sec muto">{t("cruscotto.norme", { norme: norme.join(", ") })}</div>{/if}
   {#if !unica}
     <div class="opz">
       {#each evento.opzioni as o, i (o.id)}
@@ -65,6 +70,7 @@
   .sec { font-size: var(--c-sec) }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }
+  .male { color: var(--rosso); font-weight: 700 }
   .opz { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
   .opz :global(.btn small), .chip small { font-weight: 400; font-size: var(--c-min); margin-left: 5px }
   .opz :global(.btn.scelto small), .opz :global(.btn:hover small) { color: inherit }
