@@ -52,7 +52,7 @@
   .car :global(.sottile) { stroke-width: 1.9 }
   .car :global(.sottile.fine) { stroke-width: 1.5 }
   .car.giallo { --d: var(--giallo) } .car.rosso { --f: var(--carta); --d: var(--rosso) }
-  .car { --f: var(--ink); --d: var(--carta) } .car :global(.ogg) { fill: var(--f) } .car :global(.od) { fill: var(--d) }
-  .car :global(.sf), .car :global(.sd) { fill: none; stroke-linecap: round; stroke-width: 1.5 } .car :global(.sf) { stroke: var(--f) } .car :global(.sd) { stroke: var(--d) }
+  .car { --f: var(--ink); --d: var(--carta) } .car :global(.ogg) { fill: var(--f); stroke-width: 1.5 } .car :global(.od) { fill: var(--d) }
+  .car :global(.sf), .car :global(.sd) { fill: none; stroke-linecap: round } .car :global(.s14) { stroke-width: 1.4 } .car :global(.sf) { stroke: var(--f) } .car :global(.sd) { stroke: var(--d) }
   .car :global(.coll) { stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round }
 </style>

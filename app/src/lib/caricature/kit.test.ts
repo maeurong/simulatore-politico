@@ -4,6 +4,7 @@ import { render } from "svelte/server";
 import Caricatura from "./Caricatura.svelte";
 import { FANTASIE, OGGETTI, profilo } from "./kit";
 import fonte from "./kit.ts?raw";
+import stile from "./Caricatura.svelte?raw";
 
 const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
 
@@ -81,5 +82,16 @@ describe("kit", () => {
 
   it("ogni dicastero ha il suo oggetto", () => {
     expect(Object.keys(OGGETTI)).toHaveLength(10);
+  });
+
+  it("gli spessori del prototipo valgono: la croce della sanità 3,2, il default 1,5 solo ereditato dal gruppo", () => {
+    const corpo = (dicastero: string) => render(Caricatura, { props: { ruolo: "ministro", partito: "Centro", nome: "", misura: 62, dicastero } as never }).body;
+    expect(corpo("sanita")).toContain('d="M8 3.4v9.2M3.4 8h9.2" stroke-width="3.2"');
+    expect(corpo("lavoro_welfare")).toContain('stroke-width="3.6"');
+    expect(corpo("giustizia")).toContain('stroke-width="2.8"');
+    // senza attributo sullo stesso elemento, lo spessore è quello ereditato: nessuna regola sf/sd lo impone sopra gli attributi
+    expect(OGGETTI.sviluppo_economico).toContain('<path class="sd" d="M1.6 9.8h12.8"/>');
+    expect(stile).toMatch(/\.ogg\) \{[^}]*stroke-width: 1\.5/);
+    expect(stile).not.toMatch(/:global\(\.s[fd]\)[^{]*\{[^}]*stroke-width/);
   });
 });
