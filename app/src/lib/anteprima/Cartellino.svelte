@@ -173,13 +173,13 @@
 </div>
 
 <style>
-  .cart { position: relative; border: var(--forte); background: var(--carta); padding: 14px 14px 12px; margin: 30px 10px 0; display: grid; gap: 9px; align-content: start; min-width: 0;
+  .cart { position: relative; border: var(--forte); background: var(--carta); padding: 14px 14px 12px; margin: 30px 10px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; align-content: start; min-width: 0;
     transform-origin: 50% -20px; box-shadow: 3px 4px 0 rgb(31 26 23 / .16) }
   .cart::before { content: ""; position: absolute; left: 50%; top: -20px; width: 1.5px; height: 20px; background: var(--ink) }
   .spillo { position: absolute; left: calc(50% - 6px); top: -27px; width: 13px; height: 13px; border-radius: 50%; background: var(--rosso); border: 1.5px solid var(--ink) }
   :global(:root.grave) .cart { box-shadow: none }
   .capo { justify-self: start }
-  .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso) }
+  .occ { overflow-wrap: anywhere; font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso) }
   .occ.nero { color: var(--ink) }
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-riq) }
   .sec { font-size: var(--c-sec) }
@@ -192,8 +192,8 @@
   .led th.tito { color: var(--ink) }
   .led th:nth-child(n + 2), .led td:nth-child(n + 2) { text-align: right }
   .led th[colspan] { text-align: left }
-  .led td { padding: 4px 6px 4px 0; border-top: var(--filo); vertical-align: top }
-  .led td.n { font-weight: 700; white-space: nowrap }
+  .led td { overflow-wrap: anywhere; padding: 4px 6px 4px 0; border-top: var(--filo); vertical-align: top }
+  .led td.n { font-weight: 700 }
   .led td .ink { display: block; color: var(--ink); font-weight: 400 }
   .led td :global(.fascia) { font-weight: 700 }
   .blocco { border-top: var(--filo); padding-top: 6px; display: grid; gap: 4px }
