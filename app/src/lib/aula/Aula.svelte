@@ -1,6 +1,6 @@
 <script lang="ts">
   // Aula, forma D · Misto (19-aula.prototype.html): il calendario dei posti in testa, sotto quattro schede (In aula, Disposizioni, Legge elettorale,
-  // Referendum), la misura scelta nel dettaglio a lato. Le ultime tre schede arrivano coi Task 8 e 9. La pagina sta ferma, il corpo e il dettaglio scorrono.
+  // Referendum), la misura scelta nel dettaglio a lato. Le ultime due schede arrivano col Task 9; con Disposizioni il dettaglio a lato è la bozza. La pagina sta ferma, il corpo e il dettaglio scorrono.
   import { tick, untrack } from "svelte";
   import { t } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
@@ -9,6 +9,9 @@
   import type { Vista } from "$lib/tipi/Vista";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { riportaFuoco, rifiutoPer } from "./aula";
+  import { cambia, type Bozza as TipoBozza } from "./bozza";
+  import Bozza from "./Bozza.svelte";
+  import Disposizioni from "./Disposizioni.svelte";
   import Calendario from "./Calendario.svelte";
   import InAula from "./InAula.svelte";
   import Misura from "./Misura.svelte";
@@ -18,6 +21,9 @@
   const SCHEDE = ["in_aula", "disposizioni", "elettorale", "referendum"] as const;
   let scheda = $state<(typeof SCHEDE)[number]>("in_aula");
   let scelta = $state<number | null>(null);
+  // la legge in composizione e la riga aperta: solo in memoria, al rientro vale la Vista
+  let bozza = $state<TipoBozza>([]);
+  let rigaAperta = $state<string | null>(null);
   // senza scelta: il bilancio nel suo turno (occupa il calendario), altrimenti la prima misura
   const corrente = $derived(vista.calendario.find((m) => m.id === scelta) ?? vista.calendario.find((m) => m.forma === "bilancio") ?? vista.calendario[0] ?? null);
   const numeri = $derived({
@@ -30,18 +36,22 @@
   // al turno nuovo il calendario è un altro: la scelta di prima non vale
   $effect.pre(() => {
     void vista.turno;
-    untrack(() => (scelta = null));
+    untrack(() => {
+      scelta = null;
+      bozza = [];
+      rigaAperta = null;
+    });
   });
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
   let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null } | null>(null);
   const rifiuto = $derived(rifiutoPer(rifiutato, vista, corrente?.id ?? null));
   let lato: HTMLElement;
-  async function manda(c: Comando): Promise<boolean> {
+  // `misura`: quella a cui il rifiuto si lega; la bozza non ne ha (null)
+  async function manda(c: Comando, misura: number | null = corrente?.id ?? null): Promise<boolean> {
     if (partita.occupato) return false;
     rifiutato = null;
     // la misura della chiamata, non quella scelta quando arriva la risposta
-    const misura = corrente?.id ?? null;
     const da = lato.contains(document.activeElement) ? document.activeElement : null;
     try {
       const ok = (await partita.comanda(c)) !== null;
@@ -52,6 +62,24 @@
       rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista };
       return false;
     }
+  }
+
+  // un cambio della bozza che smonta il bottone col fuoco lo porta al dettaglio; la bozza va svuotata solo se il comando è riuscito
+  async function nellaBozza(f: () => void) {
+    const da = lato.contains(document.activeElement) ? document.activeElement : null;
+    f();
+    await tick();
+    riportaFuoco(lato, da);
+  }
+  async function presenta(c: Comando): Promise<boolean> {
+    const da = lato.contains(document.activeElement) ? document.activeElement : null;
+    const ok = await manda(c, null);
+    if (ok) {
+      bozza = [];
+      await tick();
+      riportaFuoco(lato, da);
+    }
+    return ok;
   }
 </script>
 
@@ -71,12 +99,19 @@
     </div>
     {#if scheda === "in_aula"}
       <InAula {vista} scelta={corrente?.id ?? null} onscelta={(id) => (scelta = id)} />
+    {:else if scheda === "disposizioni"}
+      <Disposizioni {vista} {bozza} aperta={rigaAperta} onapri={(id) => (rigaAperta = id)} oncambia={(d, g) => (bozza = cambia(vista, bozza, d, g))} />
     {:else}
       <Segnaposto sezione={t(`aula.scheda_${scheda}`)} fetta="11c" />
     {/if}
   </div>
   <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
-    {#if corrente}
+    {#if scheda === "disposizioni"}
+      <Bozza
+        {vista} {bozza} manda={presenta} rifiuto={rifiutoPer(rifiutato, vista, null)}
+        ontoglie={(d, g) => nellaBozza(() => (bozza = cambia(vista, bozza, d, g)))} onsvuota={() => nellaBozza(() => (bozza = []))}
+        onapri={(id) => { scelta = id; scheda = "in_aula"; }} />
+    {:else if corrente}
       {#key `${vista.turno}:${corrente.id}`}
         <Misura {vista} m={corrente} {manda} {rifiuto} />
       {/key}
