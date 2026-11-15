@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { salti, leveDi, chiaveDi } from "$lib/caricature/caricatura";
-import { attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, molla, obiettivo, posizioni, prezzoDimissioni } from "./governo";
+import { sulRetro, attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, molla, obiettivo, posizioni, prezzoDimissioni } from "./governo";
 import ordinarioJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
@@ -151,5 +151,16 @@ describe("molla", () => {
     expect(m).toMatch(/^linear\(0,/);
     expect(m).toMatch(/, 1\)$/);
     expect(Math.max(...m.slice(7, -1).split(", ").map(Number))).toBeGreaterThan(1);
+  });
+});
+
+describe("sulRetro", () => {
+  it("fermata o dirottata sì, annunciata e senza agenda no", () => {
+    const v = stati.scelte.vista;
+    expect(sulRetro(di(v, "lavoro_welfare"))).toBe(true);
+    expect(sulRetro(di(v, "sviluppo_economico"))).toBe(true);
+    expect(sulRetro(di(v, "istruzione_ricerca"))).toBe(false);
+    expect(sulRetro(di(ordinario, "lavoro_welfare"))).toBe(false);
+    expect(sulRetro(di(ordinario, "esteri_difesa"))).toBe(false);
   });
 });

@@ -32,12 +32,21 @@
     if (partita.occupato) return false;
     rifiutato = null;
     try {
-      return (await partita.comanda(c)) !== null;
+      const ok = (await partita.comanda(c)) !== null;
+      if (ok && (c.tipo === "ferma" || c.tipo === "dirotta")) {
+        gira = c.dicastero;
+        // le carte lo leggono appena montate o al cambio: poi si spegne, così un rimontaggio non rigira
+        setTimeout(() => (gira = null), 200);
+      }
+      return ok;
     } catch (e) {
       rifiutato = { testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
       return false;
     }
   }
+  // Le carte girate «rigirate» da chi ha premuto «rigira»; e il dicastero la cui carta gira ora, dopo Ferma o Dirotta riusciti.
+  let volte = $state<Record<string, boolean>>({});
+  let gira = $state<string | null>(null);
   const sceglie = (d: string) => { scelta = d; dirotta = null; };
   async function chiudiDirotta() {
     const d = dirotta;
@@ -54,14 +63,17 @@
   </div>
   <div class="album" role="group" aria-label={t("governo.album")}>
     {#each carte as f (f.dicastero)}
-      <Figurina {vista} {f} {grave} id="{pre}-{f.dicastero}" scelta={corrente.dicastero === f.dicastero} onscelta={() => sceglie(f.dicastero)} {manda} ondirotta={() => (dirotta = f.dicastero)} />
+      <Figurina {vista} {f} {grave} id="{pre}-{f.dicastero}" scelta={corrente.dicastero === f.dicastero} onscelta={() => sceglie(f.dicastero)} {manda} ondirotta={() => (dirotta = f.dicastero)} anima={gira === f.dicastero} volta={!!volte[f.dicastero]} onrigira={() => (volte[f.dicastero] = true)} />
     {/each}
   </div>
   <aside class="lato">
     {#if dirotta === corrente.dicastero && corrente.ministro && corrente.agenda?.stato === "annunciata"}
-      <Dirotta {vista} f={corrente} {manda} {rifiuto} onchiudi={chiudiDirotta} />
+      {#key corrente.dicastero}
+        <Dirotta {vista} f={corrente} {manda} {rifiuto} onchiudi={chiudiDirotta} />
+      {/key}
     {:else}
-      <CartaMinistro {vista} f={corrente} {grave} {manda} {rifiuto} ondirotta={() => (dirotta = corrente.dicastero)} />
+      <CartaMinistro {vista} f={corrente} {grave} {manda} {rifiuto} ondirotta={() => (dirotta = corrente.dicastero)}
+        anima={gira === corrente.dicastero} volta={!!volte[corrente.dicastero]} onrigira={() => (volte[corrente.dicastero] = true)} />
     {/if}
   </aside>
 </div>

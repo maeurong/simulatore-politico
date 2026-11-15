@@ -101,3 +101,13 @@ export function molla(punti = 40): string {
   const v = Array.from({ length: punti - 1 }, (_, i) => +x((i + 1) / punti).toFixed(3));
   return `linear(0, ${v.join(", ")}, 1)`;
 }
+
+/** La carta sta sul retro quando l'atto in agenda è fermato o dirottato (agenda.stato): al rientro nella pagina è già girata. */
+export const sulRetro = (f: Figurina): boolean => !!f.ministro && !!f.agenda && f.agenda.stato !== "annunciata";
+
+/** Gira la carta di 180° con la molla; durata per `fattori`; col movimento spento o a velocità istantanea non fa niente. */
+export function ruota(el: HTMLElement, verso: 1 | -1, moto: { muove: boolean; k: number }): Animation | undefined {
+  if (!moto.muove || moto.k <= 0) return undefined;
+  const [da, a] = verso > 0 ? [0, 180] : [180, 0];
+  return el.animate([{ transform: `rotateY(${da}deg)` }, { transform: `rotateY(${a}deg)` }], { duration: 520 * moto.k, easing: molla() });
+}

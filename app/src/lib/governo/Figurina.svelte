@@ -11,12 +11,14 @@
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
   import { partita } from "$lib/partita.svelte";
   import type { Comando } from "$lib/tipi/Comando";
+  import Girevole from "./Girevole.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
-  import { etichettaFerma, euro, type Figurina, type StatoCarta } from "./governo";
+  import { etichettaFerma, euro, sulRetro, type Figurina, type StatoCarta } from "./governo";
 
-  let { vista, f, scelta, grave, id, onscelta, manda, ondirotta }: {
+  let { vista, f, scelta, grave, id, onscelta, manda, ondirotta, anima, volta, onrigira }: {
     vista: Vista; f: Figurina; scelta: boolean; grave: boolean; id: string; onscelta: () => void;
     manda: (c: Comando) => Promise<boolean>; ondirotta: () => void;
+    anima: boolean; volta: boolean; onrigira: () => void;
   } = $props();
 
   const m = $derived(f.ministro);
@@ -24,24 +26,29 @@
   const regione = $derived(f.agenda?.regione ? (REGIONI.find((r) => r.id === f.agenda!.regione)?.nome ?? f.agenda.regione) : null);
   const rosa = $derived(vista.ministeri.find((x) => x.dicastero === f.dicastero)?.rosa.length ?? 0);
   const puo = $derived(!!m && f.agenda?.stato === "annunciata" && !f.stati.includes("dimissioni_chieste"));
+  const girata = $derived(!grave && sulRetro(f) && !volta);
   const soglia = (s: StatoCarta) => s === "preavviso" || s === "dimissioni_chieste";
 </script>
 
-<article class="fig" class:ev={f.evidenza.length > 0} class:sel={scelta}>
+<article class="fig">
+<Girevole {girata} {anima} conRetro={!grave && sulRetro(f)} chiave={f.dicastero}>
+{#snippet fronte()}
+<div class="fr" class:ev={f.evidenza.length > 0} class:sel={scelta}>
   <div class="cima">
-    <span>{t("governo.numero", { n: f.indice })}</span>
+    <div class="sx"><span>{t("governo.numero", { n: f.indice })}</span>
+      {#each f.stati as s (s)}<span class="chip" class:rosso={soglia(s)}>{t(`governo.stato_${s}` as Chiave)}</span>{/each}
+    </div>
     {#if m && f.voto !== null}
       <span class="voto" class:basso={m.minaccia} title={t("governo.voto", { n: f.voto })}>
         <NumeroFreccia valore={m.soddisfazione} prima={Math.abs(f.freccia) >= 0.5 ? m.soddisfazione - f.freccia : undefined} formato={(x) => numero(x)} male="scende" sottoSoglia={m.soddisfazione < vista.soglie.dimissioni} />
       </span>
     {/if}
   </div>
-  {#if f.stati.length}<div class="stati">{#each f.stati as s (s)}<span class="chip" class:rosso={soglia(s)}>{t(`governo.stato_${s}` as Chiave)}</span>{/each}</div>{/if}
   <div class="fz">
     {#if m}<Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
     {:else}<span class="vuoto" aria-hidden="true">—</span>{/if}
   </div>
-  <h4 class="nm"><button type="button" {id} aria-pressed={scelta} onclick={onscelta}>{m ? m.nome : t("governo.senza_ministro")}</button></h4>
+  <h4 class="nm"><button type="button" id={girata ? undefined : id} aria-pressed={scelta} onclick={onscelta}>{m ? m.nome : t("governo.senza_ministro")}</button></h4>
   <span class="dc">{f.nomeDicastero}{m ? ` · ${nomeDi(vista, m.partito)}` : ""}</span>
   {#if motto}<span class="motto">{t("governo.motto", { motto })}</span>{/if}
   <div class="at">
@@ -63,16 +70,37 @@
       <Pulsante forma="piccolo" aria-disabled={partita.occupato ? "true" : undefined} onclick={() => { onscelta(); ondirotta(); }}>{t("governo.dirotta")}</Pulsante>
     </div>
   {/if}
+</div>
+{/snippet}
+{#snippet retro()}
+  {#if m && f.agenda}
+    <div class="rt" class:sel={scelta}>
+      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={46} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
+      <button type="button" class="nome" id={girata ? id : undefined} aria-pressed={scelta} onclick={onscelta}>{m.nome}</button>
+      <span class="bollo" class:biro={f.agenda.stato === "dirottata"}>{t(f.agenda.stato === "fermata" ? "governo.atto_fermato" : "governo.atto_dirottato")}</span>
+      <span class="min"><b>{f.agenda.nome}</b>{regione ? ` · ${regione}` : ""}</span>
+      <span class="voto" class:basso={m.minaccia}>
+        <NumeroFreccia valore={m.soddisfazione} prima={Math.abs(f.freccia) >= 0.5 ? m.soddisfazione - f.freccia : undefined} formato={(x) => numero(x)} male="scende" sottoSoglia={m.soddisfazione < vista.soglie.dimissioni} />
+      </span>
+      <button type="button" class="link" onclick={onrigira}>{t("governo.rigira_corto")}</button>
+    </div>
+  {/if}
+{/snippet}
+</Girevole>
 </article>
 
 <style>
-  .fig { position: relative; border: var(--bordo); padding: 6px 8px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; align-content: start; min-width: 0; background: var(--carta) }
-  .fig.ev { box-shadow: inset 0 4px 0 var(--rosso) }
-  .fig.sel { border-width: 3px; padding: 4.5px 6.5px 6.5px }
-  .fig:hover:not(.sel) { box-shadow: inset 0 0 0 1.5px var(--ink) }
-  .fig.ev:hover:not(.sel) { box-shadow: inset 0 4px 0 var(--rosso), inset 0 0 0 1.5px var(--ink) }
+  .fig { min-width: 0 }
+  .fr, .rt { position: relative; border: var(--bordo); padding: 6px 8px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; align-content: start; min-width: 0; background: var(--carta) }
+  .rt { place-content: center; justify-items: center; text-align: center; gap: 6px }
+  .nome { font-size: var(--c-sec); font-weight: 700; line-height: 1.15 }
+  .link { text-decoration: underline; text-underline-offset: 2px; font-size: var(--c-min) }
+  .fr.ev { box-shadow: inset 0 4px 0 var(--rosso) }
+  .fr.sel, .rt.sel { border-width: 3px; padding: 4.5px 6.5px 6.5px }
+  .fr:hover:not(.sel) { box-shadow: inset 0 0 0 1.5px var(--ink) }
+  .fr.ev:hover:not(.sel) { box-shadow: inset 0 4px 0 var(--rosso), inset 0 0 0 1.5px var(--ink) }
   .cima { display: flex; justify-content: space-between; align-items: start; gap: 4px; font-size: var(--c-min); color: var(--grigio) }
-  .stati { display: flex; flex-wrap: wrap; align-items: start; gap: 2px 4px; min-width: 0 }
+  .sx { display: flex; flex-wrap: wrap; align-items: start; gap: 2px 4px; min-width: 0 }
   .voto { flex: none }
   .chip { display: inline-block; border: 1.5px solid var(--ink); padding: 0 3px; font-size: var(--c-min); font-weight: 700; line-height: 1.3; color: var(--ink); max-width: 100%; overflow-wrap: anywhere }
   .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
@@ -87,6 +115,7 @@
   .motto { font-size: var(--c-min); color: var(--biro); line-height: 1.25 }
   .at { font-size: var(--c-min); line-height: 1.25; border-top: var(--filo); padding-top: 3px; margin-top: 2px }
   .az { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px }
+  .az :global(.btn) { padding: 1px 4px }
   .muto { color: var(--grigio) }
   .fermo { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--grigio) }
   .vuota { display: inline-block; border: 1.5px dashed var(--grigio); color: var(--grigio); padding: 1px 4px }

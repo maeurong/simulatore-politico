@@ -717,6 +717,7 @@
   "governo.effetto_fra": {"one": "fra {n} turno", "other": "fra {n} turni"},
   "governo.retro_voto": "{n} di soddisfazione",
   "governo.rigira": "rigira la carta",
+  "governo.rigira_corto": "rigira",
   "governo.cantieri": "Cantieri",
   "governo.cantiere_stato": "ancora {t} · {rata} a turno · spesi {speso}",
   "governo.cantiere_turni": {"one": "{n} turno", "other": "{n} turni"},

@@ -7,20 +7,23 @@
   import { chiaveDi, fondoDi } from "$lib/caricature/caricatura";
   import { REGIONI } from "$lib/mappa/regioni";
   import { mottoDi } from "$lib/testi/pungolo";
-  import { fattori, impostazioni, sistema } from "$lib/impostazioni.svelte";
   import { partita } from "$lib/partita.svelte";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import Conferma from "$lib/componenti/Conferma.svelte";
+  import Girevole from "./Girevole.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Cantieri from "./Cantieri.svelte";
   import Rosa from "./Rosa.svelte";
-  import { etichettaFerma, euro, molla, obiettivo, posizioni, prezzoDimissioni, type Figurina } from "./governo";
+  import { etichettaFerma, euro, obiettivo, posizioni, prezzoDimissioni, sulRetro, type Figurina } from "./governo";
 
-  let { vista, f, grave, manda, rifiuto, ondirotta }: { vista: Vista; f: Figurina; grave: boolean; manda: (c: Comando) => Promise<boolean>; rifiuto: string | null; ondirotta: () => void } = $props();
+  let { vista, f, grave, manda, rifiuto, ondirotta, anima, volta, onrigira }: {
+    vista: Vista; f: Figurina; grave: boolean; manda: (c: Comando) => Promise<boolean>; rifiuto: string | null; ondirotta: () => void;
+    anima: boolean; volta: boolean; onrigira: () => void;
+  } = $props();
 
   const m = $derived(f.ministro);
   const min = $derived(vista.ministeri.find((x) => x.dicastero === f.dicastero)!);
@@ -36,20 +39,7 @@
   const puo = $derived(!!m && f.agenda?.stato === "annunciata" && !min.dimissioni_chieste);
   const stato = $derived(f.agenda?.stato ?? "annunciata");
 
-  let volta = $state<Record<string, boolean>>({});
-  const girata = $derived(!grave && stato !== "annunciata" && !volta[f.dicastero]);
-  const moto = $derived(fattori(impostazioni, sistema.riduce));
-  let giro = $state<HTMLElement>();
-  let prima: { d: string; g: boolean } | null = null;
-  let anim: Animation | undefined;
-  $effect(() => {
-    const d = f.dicastero, g = girata;
-    if (prima && prima.d === d && prima.g !== g && giro && moto.muove && moto.k > 0) {
-      anim?.cancel();
-      anim = giro.animate([{ transform: `rotateY(${g ? 0 : 180}deg)` }, { transform: `rotateY(${g ? 180 : 0}deg)` }], { duration: 520 * moto.k, easing: molla() });
-    }
-    prima = { d, g };
-  });
+  const girata = $derived(!grave && sulRetro(f) && !volta);
   const motivi = $derived(elenco(f.evidenza.map((e) => t(`governo.evidenza_${e}` as Chiave)), ", "));
 </script>
 
@@ -69,9 +59,9 @@
     {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
   </div>
 {:else}
-  <div class="carta3d" class:piatta={!moto.muove}>
-  <div class="giro" class:dietro={girata} bind:this={giro}>
-  <div class="carta fronte" inert={girata}>
+  <Girevole {girata} {anima} conRetro={!grave && sulRetro(f)} chiave={f.dicastero}>
+  {#snippet fronte()}
+  <div class="carta">
     <div class="su">
       <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <div>
@@ -146,29 +136,22 @@
         onconferma={() => manda({ tipo: "chiedi_dimissioni", dicastero: f.dicastero })} /></div>
     {/if}
   </div>
-  {#if !grave && f.agenda && stato !== "annunciata"}
-    <div class="carta retro" inert={!girata}>
+  {/snippet}
+  {#snippet retro()}
+    <div class="carta retro">
       <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <span class="bollo" class:biro={stato === "dirottata"}>{t(stato === "fermata" ? "governo.atto_fermato" : "governo.atto_dirottato")}</span>
-      <b>{f.agenda.nome}{#if f.agenda.regione} · {regione(f.agenda.regione)}{/if}</b>
+      <b>{f.agenda?.nome}{#if f.agenda?.regione} · {regione(f.agenda.regione)}{/if}</b>
       <span class="sec">{t("governo.retro_voto", { n: numero(m.soddisfazione) })}</span>
-      <button type="button" class="link" onclick={() => (volta[f.dicastero] = true)}>{t("governo.rigira")}</button>
+      <button type="button" class="link" onclick={onrigira}>{t("governo.rigira")}</button>
     </div>
-  {/if}
-  </div>
-  </div>
+  {/snippet}
+  </Girevole>
 {/if}
 
 <style>
-  .carta3d { perspective: 900px }
-  .giro { position: relative; transform-style: preserve-3d }
-  .giro.dietro { transform: rotateY(180deg) }
-  .fronte, .retro { backface-visibility: hidden; -webkit-backface-visibility: hidden }
-  .retro { position: absolute; inset: 0; transform: rotateY(180deg); place-content: center; justify-items: center; text-align: center; gap: 8px }
-  .retro .bollo { font-size: var(--c-sez); padding: 2px 12px }
-  .piatta .giro.dietro { transform: none }
-  .piatta .retro { transform: none }
-  .piatta .giro.dietro .fronte, .piatta .giro:not(.dietro) .retro { visibility: hidden }
+  .carta.retro { place-content: center; justify-items: center; text-align: center; gap: 8px }
+  .carta.retro .bollo { font-size: var(--c-sez); padding: 2px 12px }
   .bollo { display: inline-block; border: 2px solid var(--rosso); color: var(--rosso); font-family: var(--tit); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-4deg); white-space: nowrap }
   .bollo.biro { border-color: var(--biro); color: var(--biro) }
   :global(:root.grave) .bollo { transform: none }
