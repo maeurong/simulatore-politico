@@ -2611,8 +2611,9 @@ impl Partita {
 
     /// Entrate della chiusura (scelta 10): 2 per mille sulla quota all'ultimo voto, abbinata per
     /// id (zero a chi non c'era), donazioni sull'intenzione vera. Prima del primo voto il 2 per
-    /// mille usa l'intenzione vera, come la cassa iniziale. Gli sciolti non incassano. Una voce
-    /// per partito che incassa.
+    /// mille usa l'intenzione vera, come la cassa iniziale. Gli sciolti non incassano. Una voce sola,
+    /// del giocatore: le donazioni seguono l'intenzione vera, che dei partiti IA si legge solo nei
+    /// sondaggi.
     fn incassa(&mut self, vero: &Intenzioni) {
         let intenzione = quote_fra_i_votanti(vero);
         let primo_voto = self.legislatura.elezioni.is_empty();
@@ -2628,7 +2629,9 @@ impl Partita {
                 continue;
             };
             p.cassa = p.cassa.saturating_add(e);
-            self.voce_entrate(j, e, quota, primo_voto);
+            if j == self.giocatore {
+                self.voce_entrate(j, e, quota, primo_voto);
+            }
         }
     }
 
