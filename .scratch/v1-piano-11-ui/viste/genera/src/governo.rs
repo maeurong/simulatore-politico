@@ -63,23 +63,27 @@ fn costi(p: &Partita) -> Value {
 }
 
 /// Il costo di Dirotta dal core, per ogni atto (senza regione) e ogni regione (senza atto) di ogni
-/// ministro, o il rifiuto; dove `costi` ha la misura, i due numeri devono coincidere (SCARTO su stderr).
-fn costo_dirotta(p: &Partita) -> Value {
+/// ministro, o il rifiuto; dove `costi` ha la misura, i due devono coincidere: numeri entro 1e-9,
+/// rifiuti con lo stesso testo. Uno scarto, o nessun costo numerico, è un errore.
+fn costo_dirotta(p: &Partita) -> Esito<Value> {
     let v = p.vista();
     let misurati = costi(p);
     let dal_core = |d: &str, atto: Option<&str>, regione: Option<&str>| match p.costo_dirotta(d, atto, regione) {
         Ok(x) => serde_json::json!(x),
         Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
     };
-    let controlla = |d: &str, gruppo: &str, k: &str, core: &Value| {
+    let mut scarti = Vec::new();
+    let mut numerici = 0;
+    let mut controlla = |d: &str, gruppo: &str, k: &str, core: &Value| {
+        numerici += usize::from(core.is_number());
         let Some(m) = misurati[d][gruppo].get(k) else { return };
         let uguali = match (core.as_f64(), m.as_f64()) {
             (Some(a), Some(b)) => (a - b).abs() <= 1e-9,
-            (None, None) => true,
+            (None, None) => core["rifiuto"] == m["rifiuto"],
             _ => false,
         };
         if !uguali {
-            eprintln!("SCARTO costo_dirotta {d} {k}: core {core}, misurato {m}");
+            scarti.push(format!("costo_dirotta {d} {k}: core {core}, misurato {m}"));
         }
     };
     let mut out = serde_json::Map::new();
@@ -101,7 +105,10 @@ fn costo_dirotta(p: &Partita) -> Value {
             .collect();
         out.insert(d.into(), serde_json::json!({ "atti": atti, "regioni": regioni }));
     }
-    Value::Object(out)
+    if numerici == 0 {
+        scarti.push("costo_dirotta: nessun costo numerico, ogni Dirotta è rifiutata".into());
+    }
+    if scarti.is_empty() { Ok(Value::Object(out)) } else { Err(format!("SCARTO {}", scarti.join("; "))) }
 }
 
 fn intese(p: &Partita) -> Value {
@@ -113,7 +120,7 @@ pub fn governo(d: &DatiGioco) -> Esito<Uscita> {
     let mut note = Vec::new();
     let p03 = governo_03(d)?;
     out.insert("costi_03".into(), costi(&p03));
-    out.insert("costo_dirotta_03".into(), costo_dirotta(&p03));
+    out.insert("costo_dirotta_03".into(), costo_dirotta(&p03)?);
     out.insert("intese_03".into(), intese(&p03));
 
     // Le quattro mosse sul borsino, una per ministro.

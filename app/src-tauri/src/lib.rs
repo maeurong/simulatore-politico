@@ -1196,6 +1196,108 @@ mod tests {
         Ok(())
     }
 
+    /// Una partita fondata a `posizione`, con chi vuole in coalizione, chiusa due volte (voto,
+    /// trattativa): al governo se `destra`, altrimenti all'opposizione.
+    fn dopo_il_voto(seme: u64, posizione: f64, destra: bool) -> Result<Stato, String> {
+        let f = Fondazione {
+            nome: "Partito di prova".into(),
+            posizione,
+        };
+        let mut p = Partita::fonda(dati(), seme, &f).map_err(|e| e.to_string())?;
+        if destra {
+            let partiti = (p.disponibilita().into_iter())
+                .filter(|v| {
+                    v.disponibile
+                        && ["destra", "centrodestra", "estrema_destra"]
+                            .contains(&v.partito.as_str())
+                })
+                .map(|v| v.partito)
+                .collect();
+            p.comanda(Comando::DichiaraCoalizione {
+                partiti,
+                cessioni: vec![],
+            })
+            .map_err(|e| e.to_string())?;
+        }
+        p.chiudi_turno();
+        p.chiudi_turno();
+        assert_eq!(p.governa(), destra, "governo non come voluto");
+        let stato = Stato::default();
+        *blocca_comunque(&stato) = Some(InCorso {
+            id: "prova".into(),
+            partita: p,
+        });
+        Ok(stato)
+    }
+
+    #[test]
+    fn costo_dirotta_al_governo_e_quello_del_core() -> Result<(), String> {
+        let stato = dopo_il_voto(4, 4.5, true)?;
+        let (p, v) = {
+            let g = blocca_comunque(&stato);
+            let p = g.as_ref().ok_or(NESSUNA)?.partita.clone();
+            let v = p.vista();
+            (p, v)
+        };
+        let (d, atto) = (v.ministeri.iter())
+            .flat_map(|m| {
+                m.atti
+                    .iter()
+                    .map(move |a| (m.dicastero.as_str(), a.id.as_str()))
+            })
+            .find(|&(d, a)| p.costo_dirotta(d, Some(a), None).is_ok())
+            .ok_or("nessun atto dirottabile")?;
+        let (dr, regione) = (v.ministeri.iter())
+            .flat_map(|m| {
+                v.sondaggio
+                    .regioni
+                    .iter()
+                    .map(move |r| (m.dicastero.as_str(), r.id.as_str()))
+            })
+            .find(|&(d, r)| p.costo_dirotta(d, None, Some(r)).is_ok())
+            .ok_or("nessuna regione dirottabile")?;
+        for (d, a, r) in [(d, Some(atto), None), (dr, None, Some(regione))] {
+            let atteso = p.costo_dirotta(d, a, r).map_err(|e| e.to_string())?;
+            let letto = costo_del_dirotta(&stato, d, a, r).map_err(|e| e.testo)?;
+            assert!(
+                (atteso - letto).abs() < 1e-12,
+                "{a:?} {r:?}: core {atteso}, guscio {letto}"
+            );
+        }
+        // Scambiati, atto e regione non sono ammessi: il guscio non li può invertire.
+        assert!(costo_del_dirotta(&stato, d, Some(regione), None).is_err());
+        assert!(costo_del_dirotta(&stato, dr, None, Some(atto)).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn il_menu_con_valori_e_quello_del_core() -> Result<(), String> {
+        let c = cartella("lib-menu-valori");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let valori = bozza_cittadinanza();
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .menu_elettorale(&valori);
+        assert_eq!(menu_del_governo(&stato, &valori), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn l_anteprima_della_proposta_all_opposizione_e_quella_del_core() -> Result<(), String> {
+        let stato = dopo_il_voto(7, 1.5, false)?;
+        let valori = bozza_cittadinanza();
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_proposta(&valori)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(anteprima_della_proposta(&stato, &valori), Ok(atteso));
+        Ok(())
+    }
+
     #[test]
     fn il_menu_e_quello_del_core() -> Result<(), String> {
         let c = cartella("lib-menu");
@@ -1211,24 +1313,21 @@ mod tests {
     }
 
     #[test]
-    fn l_anteprima_della_proposta_e_quella_del_core() -> Result<(), String> {
+    fn l_anteprima_della_proposta_al_turno_zero_e_un_rifiuto() -> Result<(), String> {
         let c = cartella("lib-anteprima-proposta");
         let (stato, _archivio) = con_partita(&c.0)?;
-        let valori = bozza_cittadinanza();
         let atteso = blocca_comunque(&stato)
             .as_ref()
             .ok_or(NESSUNA)?
             .partita
-            .anteprima_proposta(&valori);
-        let dal_guscio = anteprima_della_proposta(&stato, &valori);
-        match (atteso, dal_guscio) {
-            (Ok(a), Ok(b)) => assert_eq!(a, b),
-            (Err(a), Err(b)) => {
-                assert_eq!(b.specie, Specie::Rifiuto);
-                assert_eq!(b.testo, a.to_string());
-            }
-            (a, b) => return Err(format!("core {a:?}, guscio {b:?}")),
-        }
+            .anteprima_proposta(&bozza_cittadinanza())
+            .err()
+            .ok_or("proposta ammessa al turno zero")?;
+        let e = anteprima_della_proposta(&stato, &bozza_cittadinanza())
+            .err()
+            .ok_or("anteprima data al turno zero")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso.to_string());
         Ok(())
     }
 
