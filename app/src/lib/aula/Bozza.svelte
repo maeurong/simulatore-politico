@@ -3,25 +3,23 @@
   // il bottone della forma, il rifiuto del core sul posto col rimando alla misura in esame se il testo la nomina. «Anteprima della misura ›» apre
   // il cartellino al posto della bozza, come Misura.svelte: cambiato un gradino, oscilla.
   import { tick, untrack } from "svelte";
-  import { t, numero, elenco } from "$lib/testi/t";
-  import { nomeDi } from "$lib/partiti";
-  import { inOrdine } from "$lib/partiti/schieramento";
+  import { t, numero } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { guscio } from "$lib/guscio/chiamate";
   import { ultimoVince } from "$lib/editor/editor.svelte";
-  import { euro } from "$lib/governo/governo";
   import type { Anteprima } from "$lib/tipi/Anteprima";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VoceMisura } from "$lib/tipi/VoceMisura";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Cartellino from "$lib/anteprima/Cartellino.svelte";
+  import { forbice, rigaEffetto, spesa, votano } from "$lib/anteprima/anteprima";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { riportaFuoco } from "./aula";
   import { comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, type Bozza } from "./bozza";
 
-  let { vista, bozza, manda, rifiuto, ontoglie, onsvuota, onapri }: {
-    vista: Vista; bozza: Bozza; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
+  let { vista, bozza, scheda, manda, rifiuto, ontoglie, onsvuota, onapri }: {
+    vista: Vista; bozza: Bozza; scheda: "disposizioni" | "elettorale"; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
     ontoglie: (disposizione: string, gradino: string) => void; onsvuota: () => void; onapri: (misura: number) => void;
   } = $props();
 
@@ -31,8 +29,6 @@
     const d = vista.disposizioni.find((y) => y.id === x.disposizione);
     return d ? [{ d, nuovo: d.gradini.find((g) => g.id === x.gradino)?.nome ?? x.gradino, ora: d.gradini.find((g) => g.id === d.in_vigore)?.nome ?? d.in_vigore }] : [];
   }));
-  const partiti = $derived(inOrdine(vista));
-  const grandezza = (id: string) => vista.grandezze.find((g) => g.id === id)?.nome ?? id;
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
   const nominata = $derived(rifiuto && (rifiuto.tipo === "presenta_legge" || rifiuto.tipo === "presenta_proposta") ? misuraNominata(vista, rifiuto.testo) : null);
 
@@ -95,13 +91,8 @@
     }
   }
 
-  const dice = (si: boolean) => elenco(partiti.filter((p) => ante?.linee.some((l) => l.partito === p.id && l.si === si)).map((p) => p.nome), ", ") || t("aula.nessuno");
-  const effetto = (e: Anteprima["effetti"][number]) =>
-    t("aula.ante_effetto", {
-      nome: grandezza(e.grandezza), fascia: e.fascia, verso: t(e.migliora ? "governo.effetto_meglio" : "governo.effetto_peggio"),
-      quando: e.ritardo ? t("governo.effetto_fra", { n: e.ritardo }) : t("governo.effetto_subito"),
-    });
-  const ramo = ([da, a]: [number, number], n: number) => t("aula.ante_forbice", { da: numero(da), a: numero(a), n: numero(n) });
+  const ramo = (si: [number, number], n: number) => t("aula.ante_forbice", { si: forbice(si), n: numero(n) });
+  const senzaChevron = (chiave: "aula.cambia" | "aula.proponi") => t(chiave).replace(/ ›$/, "");
 </script>
 
 {#snippet rimando(m: VoceMisura)}
@@ -111,7 +102,7 @@
 {#if f && etichetta && apertoCartellino && ante}
   <Cartellino {vista} misura={ante} valori={anteDi} {inCalcolo} indietro={t("anteprima.torna_alla_bozza")} ontorna={(e) => scambia(e, false)} {manda} {rifiuto} fuoco={daFuoco} />
 {:else if !f || !etichetta}
-  <div class="bozza vuota sec">{t("aula.bozza_vuota", { azione: t(vista.governa ? "aula.cambia" : "aula.proponi") })}</div>
+  <div class="bozza vuota sec">{scheda === "elettorale" ? t("aula.bozza_vuota_elettorale") : t("aula.bozza_vuota", { azione: senzaChevron(vista.governa ? "aula.cambia" : "aula.proponi") })}</div>
 {:else}
   <section class="bozza" aria-label={t("aula.bozza")}>
     <span class="occ">{t(`aula.bozza_${f}`)}</span>
@@ -127,10 +118,11 @@
         {#if nominataAnte}{@render rimando(nominataAnte)}{/if}
       {:else if ante}
         <dl class="dati">
-          <dt>{t("aula.ante_costo")}</dt><dd><b>{euro(ante.costo_annuo)}</b></dd>
-          <dt>{t("aula.ante_effetti")}</dt>
-          <dd class="sec">{#each ante.effetti as e (e.grandezza)}<span class="riga">{effetto(e)}</span>{:else}—{/each}</dd>
-          <dt>{t("aula.ante_linee")}</dt><dd class="sec">{t("aula.ante_linee_dice", { si: dice(true), no: dice(false) })}</dd>
+          <dt>{t("anteprima.spesa")}</dt><dd><b>{spesa(ante.costo_annuo)}</b></dd>
+          <dt>{t("anteprima.effetti")}</dt>
+          <dd class="sec">{#each ante.effetti as e (e.grandezza)}<span class="riga">{rigaEffetto(vista, e)}</span>{:else}—{/each}</dd>
+          <dt>{t("anteprima.voto")}</dt>
+          <dd class="sec">{#if votano(vista, ante.linee, true)}<span class="riga">{t("anteprima.linea_si", { nomi: votano(vista, ante.linee, true) })}</span>{/if}{#if votano(vista, ante.linee, false)}<span class="riga">{t("anteprima.linea_no", { nomi: votano(vista, ante.linee, false) })}</span>{/if}</dd>
           <dt>{t("edicola.camera")}</dt><dd class="sec">{ramo(ante.forbice.camera, ante.forbice.maggioranza_camera)}</dd>
           <dt>{t("edicola.senato")}</dt><dd class="sec">{ramo(ante.forbice.senato, ante.forbice.maggioranza_senato)}</dd>
         </dl>

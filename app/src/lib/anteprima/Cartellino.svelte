@@ -8,7 +8,6 @@
   import { partita } from "$lib/partita.svelte";
   import { fattori, impostazioni, sistema } from "$lib/impostazioni.svelte";
   import { formaDi } from "$lib/aula/aula";
-  import { euro } from "$lib/governo/governo";
   import { REGIONI } from "$lib/mappa/regioni";
   import Mappa from "$lib/mappa/Mappa.svelte";
   import type { Comando } from "$lib/tipi/Comando";
@@ -19,7 +18,7 @@
   import Emiciclo from "$lib/componenti/Emiciclo.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { cosaCambia, perimetro, quando, stimatore, type Misurabile } from "./anteprima";
+  import { cosaCambia, nomeGrandezza, perimetro, quando, spesa as spesaDi, stimatore, verso, votano as votanoDi, type Misurabile } from "./anteprima";
   import { oscilla } from "./oscilla";
 
   let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false, inCalcolo = false }: {
@@ -30,10 +29,8 @@
 
   const nome = (id: string) => nomeDi(vista, id);
   const righe = $derived(cosaCambia(vista, valori));
-  const grandezza = (id: string) => (vista.grandezze.find((g) => g.id === id)?.nome ?? id).replace(/ \(.*\)$/, "");
-  const fascia = (f: Fascia3) => t(`anteprima.fascia_${f}` as Chiave);
   const piene = (f: Fascia3) => ({ poco: 1, medio: 2, molto: 3 })[f];
-  const spesa = $derived(misura.costo_annuo === 0 ? t("anteprima.saldo_zero") : `${misura.costo_annuo > 0 ? "+" : "−"}${euro(Math.abs(misura.costo_annuo))}`);
+  const spesa = $derived(spesaDi(misura.costo_annuo));
   const chi = $derived(stimatore(vista, misura.proponente));
   const regioni = $derived(perimetro(vista, valori));
   const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "test_misura")?.euro);
@@ -43,7 +40,7 @@
   const camera = $derived(vista.seggi.reduce((s, x) => s + x.camera, 0));
   const senato = $derived(vista.seggi.reduce((s, x) => s + x.senato, 0));
   const partiti = $derived(inOrdine(vista));
-  const votano = (si: boolean) => elenco(partiti.filter((p) => (misura.linee.find((l) => l.partito === p.id)?.si ?? false) === si).map((p) => p.nome), ", ");
+  const votano = (si: boolean) => votanoDi(vista, misura.linee, si);
   const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? t("anteprima.nota_riforma") : "");
   const vuoto = $derived(t(misura.forma === "elettorale" ? "anteprima.nessun_effetto_elettorale" : misura.forma === "costituzionale" ? "anteprima.nessun_effetto_costituzionale" : "anteprima.nessun_effetto"));
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : inCalcolo ? t("aula.ante_in_calcolo") : undefined);
@@ -88,8 +85,8 @@
         {#each misura.effetti as e (e.grandezza)}
           <tr>
             <td class={e.migliora ? "bene" : "male"}>
-              <span class="ink">{grandezza(e.grandezza)}</span>
-              <Caselle piene={piene(e.fascia)} su={3} rosso={!e.migliora} nome={t(e.migliora ? "anteprima.migliora" : "anteprima.peggiora", { fascia: fascia(e.fascia) })} />
+              <span class="ink">{nomeGrandezza(vista, e.grandezza)}</span>
+              <Caselle piene={piene(e.fascia)} su={3} rosso={!e.migliora} nome={verso(e)} />
             </td>
             <td class="muto">{quando(e.ritardo)}</td>
           </tr>
@@ -194,7 +191,7 @@
   .led th.tito { color: var(--ink) }
   .led th:nth-child(n + 2), .led td:nth-child(n + 2) { text-align: right }
   .led th[colspan] { text-align: left }
-  .led td { overflow-wrap: anywhere; padding: 4px 6px 4px 0; border-top: var(--filo); vertical-align: top }
+  .led td { overflow-wrap: break-word; padding: 4px 6px 4px 0; border-top: var(--filo); vertical-align: top }
   .led td.n { font-weight: 700 }
   .led td .ink { display: block; color: var(--ink); font-weight: 400 }
   .led td :global(.fascia) { font-weight: 700 }

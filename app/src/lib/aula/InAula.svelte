@@ -6,6 +6,7 @@
   import { inOrdine } from "$lib/partiti/schieramento";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VoceLinea } from "$lib/tipi/VoceLinea";
+  import { forbice } from "$lib/anteprima/anteprima";
   import { chiLaPorta, formaDi, quando, ultimiVoti } from "./aula";
 
   let { vista, scelta, onscelta }: { vista: Vista; scelta: number | null; onscelta: (id: number) => void } = $props();
@@ -26,8 +27,7 @@
   {#each vista.calendario as m (m.id)}
     {@const n = aperti(m)}
     <button type="button" class="r" class:sel={scelta === m.id} aria-pressed={scelta === m.id} onclick={() => onscelta(m.id)}>
-      <span class="seg" class:urg={m.forbice.in_bilico} aria-hidden="true"></span>
-      <span class="t" title={m.nome}><span class="nm">{m.nome}</span> <small>· {formaDi(m)}</small></span>
+      <span class="t" title={m.nome}><span class="nm">{m.nome}</span> <small>{formaDi(m)}</small></span>
       <span class="a">
         <span class="lin" role="img" aria-label={dice(m.linee)}>
           {#each partiti as p (p.id)}
@@ -35,7 +35,7 @@
             <i data-tagli-ignora class:si class:g={p.id === "giocatore"} title="{p.nome}: {si ? t('aula.si') : t('aula.no')}"></i>
           {/each}
         </span>
-        <span class="fb" role="img" aria-label={t("aula.emiciclo", { ramo: "Camera", da: numero(m.forbice.camera[0]), a: numero(m.forbice.camera[1]), n: numero(m.forbice.maggioranza_camera) })}>
+        <span class="fb" role="img" aria-label={t("aula.emiciclo", { ramo: "Camera", si: forbice(m.forbice.camera), n: numero(m.forbice.maggioranza_camera) })}>
           <i style:left="{(m.forbice.camera[0] / camera) * 100}%" style:width="{Math.max(1, ((m.forbice.camera[1] - m.forbice.camera[0]) / camera) * 100)}%"></i>
           <b style:left="{(m.forbice.maggioranza_camera / camera) * 100}%"></b>
         </span>
@@ -63,16 +63,14 @@
 
 <style>
   .righe { display: grid }
-  .r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 6px; border-bottom: var(--filo); cursor: pointer; text-align: left }
+  .r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 6px; border-bottom: var(--filo); cursor: pointer; text-align: left }
   .r:hover { background: var(--velo) }
   .r.sel { background: var(--velo); box-shadow: inset 0 0 0 1.5px var(--ink) }
-  .seg { width: 14px; height: 14px; border: 1.5px solid var(--ink) }
-  .seg.urg { border-color: var(--rosso); background: var(--retino) }
   .t { font-weight: 700; line-height: 1.2 }
   .nm { overflow: hidden; display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
   .t small { font-weight: 400; color: var(--grigio); font-size: var(--c-sec) }
-  .s { grid-column: 2; font-size: var(--c-min); color: var(--grigio); line-height: 1.25 }
-  .a { grid-row: 1 / span 2; grid-column: 3; display: flex; gap: 4px; align-items: center; white-space: nowrap }
+  .s { grid-column: 1; font-size: var(--c-min); color: var(--grigio); line-height: 1.25 }
+  .a { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 4px; align-items: center; white-space: nowrap }
   .lin { display: inline-flex; gap: 2px }
   .lin i { width: 11px; height: 11px; border: 1.5px solid var(--ink); flex: none }
   .lin i.si { background: var(--ink) }

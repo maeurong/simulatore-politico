@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
-import { cosaCambia, perimetro, quando, stimatore, type Misurabile } from "./anteprima";
+import { cosaCambia, forbice, perimetro, quando, spesa, stimatore, verso, type Misurabile } from "./anteprima";
 import { ampiezzaPer, oscilla } from "./oscilla";
 
 const v03 = ordinario as unknown as Vista;
@@ -95,5 +95,21 @@ describe("oscilla", () => {
     expect(oscilla(e, 1)).toBeNull();
     expect(e.animate).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("formati comuni a bozza e cartellino", () => {
+  it("spesa col segno, saldo zero", () => {
+    expect(spesa(0)).toBe("Saldo zero");
+    expect(spesa(275e6)).toBe("+275 mln €");
+    expect(spesa(-710e6)).toBe("−710 mln €");
+  });
+  it("verso passa da una chiave, non dall'enum", () => {
+    expect(verso({ migliora: true, fascia: "molto" })).toBe("migliora · molto");
+    expect(verso({ migliora: false, fascia: "poco" })).toBe("peggiora · poco");
+  });
+  it("forbice a un valore se è un punto", () => {
+    expect(forbice([205, 205])).toBe("205");
+    expect(forbice([220, 235])).toBe("220–235");
   });
 });

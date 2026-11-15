@@ -95,7 +95,7 @@
     <Calendario {vista} scelta={corrente?.id ?? null} onscelta={(id) => (scelta = id)} />
     <div class="schede" role="group" aria-label={t("aula.schede")}>
       {#each SCHEDE as s (s)}
-        <button type="button" class:qui={scheda === s} aria-pressed={scheda === s} onclick={() => (scheda = s)}>
+        <button type="button" class:qui={scheda === s} aria-pressed={scheda === s} aria-label={numeri[s] !== null ? `${t(`aula.scheda_${s}`)}, ${numeri[s]}` : undefined} onclick={() => (scheda = s)}>
           {t(`aula.scheda_${s}`)}{#if numeri[s] !== null}<small>{numeri[s]}</small>{/if}
         </button>
       {/each}
@@ -114,7 +114,7 @@
   <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
     {#if scheda === "disposizioni" || scheda === "elettorale"}
       <Bozza
-        {vista} {bozza} manda={presenta} rifiuto={rifiutoDellaBozza(rifiutato, vista, bozza)}
+        {vista} {bozza} scheda={scheda} manda={presenta} rifiuto={rifiutoDellaBozza(rifiutato, vista, bozza)}
         ontoglie={(d, g) => nellaBozza(() => (bozza = cambia(vista, bozza, d, g)))} onsvuota={() => nellaBozza(() => (bozza = []))}
         onapri={(id) => { scelta = id; scheda = "in_aula"; }} />
     {:else if corrente}
