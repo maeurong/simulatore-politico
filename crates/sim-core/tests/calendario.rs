@@ -243,6 +243,27 @@ fn i_posti_contati_come_li_conta_presenta() {
     assert!(e.to_string().contains("calendario pieno"), "{e}");
 }
 
+/// La proposta del giocatore all'opposizione ha il suo posto: i posti del governo non cambiano.
+#[test]
+fn la_proposta_dell_opposizione_non_occupa_un_posto() {
+    let mut p = all_opposizione();
+    for _ in 0..8 {
+        if p.vista().posto_riservato {
+            break;
+        }
+        chiudi_senza_opposizione_ia(&mut p);
+    }
+    assert!(p.vista().posto_riservato);
+    let (prima, misure) = (p.vista().posti, p.vista().calendario.len());
+    p.comanda(Comando::PresentaProposta {
+        valori: valori(&[("incentivo_investimenti", "20")]),
+    })
+    .unwrap();
+    let v = p.vista();
+    assert_eq!(v.calendario.len(), misure + 1);
+    assert_eq!(v.posti, prima);
+}
+
 #[test]
 fn leggi_non_ammesse_rifiutate_col_nome() {
     let mut p = Partita::nuova(dati_base(), 1);

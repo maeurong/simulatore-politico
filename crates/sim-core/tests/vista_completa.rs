@@ -1,7 +1,8 @@
 mod comune;
 
 use comune::{
-    al_governo, all_opposizione, dati_base, edita, file_base, file_vero, presenta, sostituisci,
+    al_governo, all_opposizione, dati_base, edita, file_base, file_vero, fondata, presenta,
+    sostituisci,
 };
 use sim_core::elettorato::Genere;
 use sim_core::legislatura::{Assegnazione, Fondazione};
@@ -394,6 +395,17 @@ fn le_soglie_sono_le_manopole() {
         ),
         (40.0, 25.0, 40.0, 25.0, 550.0)
     );
+    // Dimissioni e uscita valgono 25 entrambe: una manopola sola le separa.
+    let f = sostituisci(
+        file_base(),
+        "manopole",
+        "[soglia_dimissioni]\nvalore = 25.0",
+        "[soglia_dimissioni]\nvalore = 20.0",
+    );
+    let s = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 7)
+        .vista()
+        .soglie;
+    assert_eq!((s.dimissioni, s.uscita), (20.0, 25.0));
     let f = sostituisci(
         file_base(),
         "manopole",
@@ -676,4 +688,166 @@ fn il_genere_non_cambia_i_nomi() {
             assert_eq!(x.genere_leader, Some(g), "{}", x.leader);
         }
     }
+}
+
+#[test]
+fn redditi_fasce_manomesse_rifiutate() {
+    let p = Partita::nuova(dati_base(), 7);
+    type Guasto = fn(&mut serde_json::Value);
+    let guasti: [(&str, Guasto); 3] = [
+        ("due voci", |j| {
+            j["elettorato"]["redditi_fasce"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("ordine invertito", |j| {
+            j["elettorato"]["redditi_fasce"]
+                .as_array_mut()
+                .unwrap()
+                .reverse();
+        }),
+        ("campo tolto", |j| {
+            j["elettorato"]
+                .as_object_mut()
+                .unwrap()
+                .remove("redditi_fasce");
+        }),
+    ];
+    for (nome, guasto) in guasti {
+        let e = edita(&p, guasto).expect_err(nome);
+        assert!(
+            matches!(e, Errore::SalvataggioIlleggibile(_)),
+            "{nome}: {e}"
+        );
+    }
+    let e = edita(&p, |j| {
+        j["elettorato"]["redditi_fasce"]
+            .as_array_mut()
+            .unwrap()
+            .pop();
+    })
+    .unwrap_err();
+    assert!(e.to_string().contains("redditi_fasce"), "{e}");
+}
+
+#[test]
+fn opere_manomesse_rifiutate() {
+    let p = Partita::nuova(dati_base(), 7);
+    let opera = |dicastero: i64, regione: i64, turno: i64, euro: i64| {
+        serde_json::json!([{
+            "dicastero": dicastero, "atto": "x", "regione": regione,
+            "turno": turno, "cantiere": false, "euro": euro
+        }])
+    };
+    let valida = opera(0, 0, 0, 0);
+    let q = edita(&p, |j| j["opere"] = valida).unwrap();
+    assert_eq!(q.vista().opere.len(), 1);
+    for (nome, guasto) in [
+        ("dicastero", opera(99, 0, 0, 0)),
+        ("regione", opera(0, 99, 0, 0)),
+        ("turno nel futuro", opera(0, 0, 5, 0)),
+        ("spesa negativa", opera(0, 0, 0, -1)),
+    ] {
+        let e = edita(&p, |j| j["opere"] = guasto).expect_err(nome);
+        assert!(e.to_string().contains("opere"), "{nome}: {e}");
+    }
+    let e = edita(&p, |j| {
+        j.as_object_mut().unwrap().remove("opere");
+    })
+    .unwrap_err();
+    assert!(matches!(e, Errore::SalvataggioIlleggibile(_)), "{e}");
+}
+
+#[test]
+fn genere_leader_manomesso_rifiutato() {
+    let p = fondata(3.5);
+    let e = edita(&p, |j| {
+        j["partiti"][0]["genere_leader"] = serde_json::Value::Null
+    })
+    .expect_err("un leader senza genere");
+    assert!(e.to_string().contains("genere_leader"), "{e}");
+    let g = p.giocatore();
+    let e = edita(&p, |j| j["partiti"][g]["genere_leader"] = "donna".into())
+        .expect_err("il giocatore con un genere");
+    assert!(e.to_string().contains("non ha un leader"), "{e}");
+}
+
+/// Il reddito regionale è quello della chiusura precedente (`reddito_prima`), non quello di oggi:
+/// la Vista non anticipa.
+#[test]
+fn il_reddito_regionale_e_quello_della_chiusura_precedente() {
+    let mut p = Partita::nuova(dati_base(), 7);
+    p.chiudi_turno();
+    p.chiudi_turno();
+    let v = p.vista();
+    let (mut diversi, mut regioni) = (0, 0);
+    for (r, voce) in v.regioni.iter().enumerate() {
+        let gruppi = &p.elettorato().gruppi[r * 18..(r + 1) * 18];
+        let prima: f64 = gruppi
+            .iter()
+            .map(|g| g.quota * g.reddito_prima.reale())
+            .sum();
+        let oggi: f64 = gruppi.iter().map(|g| g.quota * g.reddito.reale()).sum();
+        assert!((voce.reddito - prima).abs() < 1e-9, "{}", voce.id);
+        diversi += usize::from((prima - oggi).abs() > 1e-6);
+        regioni += 1;
+    }
+    assert!(
+        diversi > 0,
+        "reddito_prima e reddito coincidono: {regioni} regioni"
+    );
+}
+
+#[test]
+fn le_regole_ue_riportano_lo_stato() {
+    let p = Partita::nuova(dati_base(), 7);
+    let q = edita(&p, |j| {
+        let r = &mut j["economia"]["regole_ue"];
+        r["pde"] = "inadempiente".into();
+        r["turni_in_stato"] = 3.into();
+        r["conto_controllo"] = 1.25.into();
+        r["ultima_deviazione"] = 0.5.into();
+    })
+    .unwrap();
+    let r = q.vista().regole_ue;
+    assert!(r.coesione_sospesa);
+    assert_eq!(
+        (r.turni_in_stato, r.conto_controllo, r.ultima_deviazione),
+        (3, 1.25, 0.5)
+    );
+    let aperta = edita(&p, |j| j["economia"]["regole_ue"]["pde"] = "aperta".into()).unwrap();
+    assert!(!aperta.vista().regole_ue.coesione_sospesa);
+}
+
+/// L'intesa di un alleato sotto il prezzo: si perde solo quella che c'è.
+#[test]
+fn il_prezzo_delle_dimissioni_si_ferma_all_intesa() {
+    let p = governo_03();
+    let v = p.vista();
+    let m = (v.ministeri.iter())
+        .find(|m| m.prezzo_dimissioni > 0.0)
+        .unwrap();
+    let j = (p.partiti().iter())
+        .position(|x| x.id == m.ministro.as_ref().unwrap().partito)
+        .unwrap();
+    let q = edita(&p, |x| x["intesa"]["valori"][j] = 4.0.into()).unwrap();
+    let dopo = q.vista();
+    let m = dopo
+        .ministeri
+        .iter()
+        .find(|x| x.dicastero == m.dicastero)
+        .unwrap();
+    assert!(
+        (m.prezzo_dimissioni - 4.0).abs() < 1e-9,
+        "{}",
+        m.prezzo_dimissioni
+    );
+    let mut r = q.clone();
+    r.comanda(Comando::ChiediDimissioni {
+        dicastero: m.dicastero.clone(),
+    })
+    .unwrap();
+    let a = |v: &Vista| v.alleati.iter().map(|a| a.intesa).sum::<f64>();
+    assert!((a(&dopo) - a(&r.vista()) - 4.0).abs() < 1e-9);
 }

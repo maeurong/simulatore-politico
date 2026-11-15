@@ -1137,3 +1137,30 @@ fn le_regioni_manomesse_dell_esito_sono_rifiutate() {
     .unwrap_err();
     assert!(doppia.to_string().contains("ripetuta"), "{doppia}");
 }
+
+#[test]
+fn le_regioni_dell_esito_con_misure_sbagliate_sono_rifiutate() {
+    let (p, _) = dopo_il_voto();
+    type Guasto = fn(&mut serde_json::Value);
+    let guasti: [(&str, Guasto); 3] = [
+        ("voti", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["voti"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("seggi_senato", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["seggi_senato"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("regione", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["regione"] = "atlantide".into();
+        }),
+    ];
+    for (nome, guasto) in guasti {
+        let e = edita(&p, guasto).expect_err(nome);
+        assert!(e.to_string().contains("regione"), "{nome}: {e}");
+    }
+}

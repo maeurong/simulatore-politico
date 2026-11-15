@@ -784,6 +784,33 @@ fn un_atto_senza_regione_non_e_un_opera() {
 }
 
 #[test]
+fn l_atto_regionale_eseguito_e_un_opera() {
+    let mut p = Partita::nuova(dati_base(), 5);
+    let mut trovate = 0;
+    for _ in 0..6 {
+        p.chiudi_turno();
+        let turno = p.vista().turno - 1;
+        for voce in voci(&p, TipoVoce::AttoEseguito) {
+            let Some(ref regione) = voce.regione else {
+                continue;
+            };
+            let opere = p.vista().opere;
+            assert!(
+                opere.iter().any(|o| {
+                    !o.cantiere
+                        && o.turno == turno
+                        && Some(&o.dicastero) == voce.dicastero.as_ref()
+                        && &o.regione == regione
+                }),
+                "{voce:?} non è fra {opere:?}"
+            );
+            trovate += 1;
+        }
+    }
+    assert!(trovate > 0, "nessun atto regionale eseguito in 6 turni");
+}
+
+#[test]
 fn avvio_cantiere_paga_una_sola_rata_e_le_rate_precedono_l_agenda() {
     let s = indice("sanita");
     let mut p = Partita::nuova(fermare_gratis(), 7);

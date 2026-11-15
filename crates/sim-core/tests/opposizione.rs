@@ -2,8 +2,8 @@ mod comune;
 use std::collections::BTreeMap;
 
 use comune::{
-    all_opposizione, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita, file_vero, fondata,
-    presenta, togli_eventi_nati, voci,
+    all_opposizione, chiudi_col_bilancio, chiudi_senza_opposizione_ia, con_seggi, dati_base, edita,
+    file_vero, fondata, presenta, togli_eventi_nati, voci,
 };
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::legislatura::{Fase, Fondazione};
@@ -745,6 +745,48 @@ fn la_vista_dice_la_sfiducia_presentata() {
     assert_eq!((e.camera.si, e.camera.no), (60, 340));
     assert_eq!((e.senato.si, e.senato.no), (28, 172));
     assert_eq!(v.sfiducia, None);
+}
+
+#[test]
+fn la_vista_dice_il_dicastero_della_sfiducia() {
+    let mut p = del_ticket(2);
+    let id = (p.vista().ministeri.iter())
+        .find(|m| m.ministro.is_some())
+        .map(|m| m.dicastero.clone())
+        .unwrap();
+    p.comanda(Comando::Sfiducia {
+        dicastero: Some(id.clone()),
+    })
+    .unwrap();
+    assert_eq!(
+        p.vista().sfiducia,
+        Some(VoceSfiducia {
+            dicastero: Some(id),
+            partito: "giocatore".into(),
+        })
+    );
+}
+
+/// Al governo la linea si sceglie sulle proposte dell'opposizione, non sulle leggi del governo.
+#[test]
+fn costo_linea_al_governo_sulle_proposte_dell_opposizione() {
+    let mut p = governo_03();
+    for _ in 0..12 {
+        if (p.vista().calendario.iter()).any(|m| m.promotore.is_some()) {
+            break;
+        }
+        chiudi_col_bilancio(&mut p);
+    }
+    assert!(p.governa());
+    let proposta = (p.vista().calendario.into_iter())
+        .find(|m| m.promotore.is_some())
+        .expect("nessuna proposta d'opposizione in 12 turni");
+    assert!(proposta.costo_linea.is_some(), "{proposta:?}");
+    p.comanda(Comando::Linea {
+        misura: proposta.id,
+        si: Some(true),
+    })
+    .unwrap();
 }
 
 #[test]

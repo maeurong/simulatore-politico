@@ -674,6 +674,25 @@ fn l_anteprima_del_riposizionamento_e_lo_spostamento() {
     );
 }
 
+/// L'oracolo della spec (seme 1 a 1,5, turno 20, all'opposizione): dichiarata 1,5, percepita
+/// 2,11, distanza 0,61 con la minaccia accesa; a 2 la distanza scende, a 1 sale.
+#[test]
+fn l_anteprima_del_riposizionamento_all_opposizione_al_turno_20() {
+    let p = opposizione_al_voto();
+    assert_eq!(p.vista().turno, 20);
+    let g = &p.partiti()[p.giocatore()];
+    let d = DatiGioco::da_testi(&file_vero()).unwrap();
+    assert_eq!(g.posizione_dichiarata, 1.5);
+    let distanza = (g.posizione_percepita - g.posizione_dichiarata).abs();
+    assert!(distanza >= d.manopola("minaccia_scissione"), "{distanza}");
+    assert!((g.posizione_percepita - 2.11).abs() < 0.005, "{g:?}");
+    assert!((distanza - 0.61).abs() < 0.005, "{distanza}");
+    for (verso, attesa) in [(2.0, 0.36), (1.0, 0.86)] {
+        let a = p.anteprima_riposizionamento(verso).unwrap();
+        assert!((a.distanza - attesa).abs() < 0.005, "{verso}: {a:?}");
+    }
+}
+
 #[test]
 fn anteprima_riposizionamento_rifiuta_come_il_comando() {
     let stesso_rifiuto = |p: &Partita, posizione: f64, atteso: &str| {

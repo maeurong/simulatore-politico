@@ -365,9 +365,6 @@ fn il_perche_dell_evidenza() {
     for seme in 1..=20 {
         let p = Partita::nuova(dati_base(), seme);
         let v = p.vista();
-        for a in v.ministeri.iter().filter_map(|m| m.agenda.as_ref()) {
-            assert_eq!(a.evidenza.is_empty(), !a.in_evidenza, "seme {seme}: {a:?}");
-        }
         // Le coppie di `evento_nel_dicastero_mette_in_evidenza`.
         for (evento, dicastero) in [
             ("criminalita", "interno"),
@@ -391,4 +388,59 @@ fn il_perche_dell_evidenza() {
         }
     }
     assert!(provate > 0);
+}
+
+/// `Distanza` è la regola della distanza dal Presidente, `Minaccia` quella della soddisfazione
+/// sotto la soglia: due motivi, due etichette, nessuna scambiata.
+#[test]
+fn l_evidenza_dice_minaccia_e_distanza() {
+    let dati = dati_base();
+    let soglia = dati.manopola("soglia_minaccia");
+    let distanza = dati.manopola("distanza_evidenza");
+    let (mut lontani, mut vicini) = (0, 0);
+    for seme in 1..=20 {
+        let p = Partita::nuova(dati_base(), seme);
+        let presidente = p.partiti()[p.governo().presidente].posizione_dichiarata;
+        let con_soddisfazione = |x: f64| {
+            comune::edita(&p, |j| {
+                for st in j["ministri"]["dicasteri"].as_array_mut().unwrap() {
+                    if st["ministro"].is_object() {
+                        st["ministro"]["soddisfazione"] = x.into();
+                    }
+                }
+            })
+            .unwrap()
+            .vista()
+        };
+        let (minacciati, tranquilli) = (con_soddisfazione(soglia - 5.0), con_soddisfazione(100.0));
+        for m in &p.vista().ministeri {
+            let Some(a) = &m.agenda else { continue };
+            let atto = dati.atti().iter().find(|x| x.id == a.atto).unwrap();
+            let lontano = (atto.posizione - presidente).abs() >= distanza;
+            assert_eq!(
+                a.evidenza.contains(&MotivoEvidenza::Distanza),
+                lontano,
+                "seme {seme}, {}",
+                m.dicastero
+            );
+            lontani += usize::from(lontano);
+            vicini += usize::from(!lontano);
+            let evidenza = |v: &Vista| {
+                ministero(v, &m.dicastero)
+                    .agenda
+                    .as_ref()
+                    .unwrap()
+                    .evidenza
+                    .clone()
+            };
+            assert!(evidenza(&minacciati).contains(&MotivoEvidenza::Minaccia));
+            assert!(!evidenza(&tranquilli).contains(&MotivoEvidenza::Minaccia));
+            // La soddisfazione non cambia la distanza.
+            assert_eq!(
+                evidenza(&minacciati).contains(&MotivoEvidenza::Distanza),
+                lontano
+            );
+        }
+    }
+    assert!(lontani > 0 && vicini > 0, "{lontani} {vicini}");
 }

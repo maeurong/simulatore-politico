@@ -1,6 +1,7 @@
 mod comune;
 use comune::{
-    chiudi_senza_opposizione_ia, edita, imposta, presenta, senza_shock, sostituisci, voci,
+    chiudi_senza_opposizione_ia, dati_base, edita, imposta, presenta, senza_shock, sostituisci,
+    voci,
 };
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::esito::{Criticita, TipoVoce};
@@ -95,6 +96,40 @@ fn il_menu_spegne_il_premio_senza_coalizioni() {
         spenti += usize::from(!v.ammesso);
     }
     assert!(provati > 20 && spenti >= 1, "{provati} {spenti}");
+}
+
+/// Una legge elettorale in arrivo conta come una in vigore: con le coalizioni spente in arrivo, il
+/// premio alla coalizione è spento nel menu e rifiutato dal comando, e prima dell'arrivo no.
+#[test]
+fn il_menu_conta_gli_arrivi_elettorali() {
+    let p = partita(senza_shock());
+    let premio = |p: &Partita| {
+        let menu = p.menu_elettorale(&[]);
+        let v = menu
+            .iter()
+            .find(|v| v.disposizione == "premio" && v.gradino == "coalizione")
+            .unwrap();
+        (v.ammesso, v.motivo.clone())
+    };
+    assert_eq!(premio(&p), (true, None));
+    let dati = dati_base();
+    let k = dati.disposizione("coalizioni").unwrap();
+    let no = dati.disposizioni()[k]
+        .gradini
+        .iter()
+        .position(|g| g.id == "no")
+        .unwrap();
+    let con_arrivo = edita(&p, |j| {
+        j["disposizioni"]["voci"][k]["in_arrivo"] =
+            serde_json::json!([{ "gradino": no, "turno": 30, "legge": "L. 1/2030" }]);
+    })
+    .unwrap();
+    let motivo = "premio alla coalizione senza coalizioni";
+    assert_eq!(premio(&con_arrivo), (false, Some(motivo.into())));
+    // Il comando lo rifiuta con lo stesso motivo, su una legge che non tocca il premio.
+    presenta(&mut p.clone(), &[("soglia_lista", "0")]).unwrap();
+    let e = presenta(&mut con_arrivo.clone(), &[("soglia_lista", "0")]).unwrap_err();
+    assert!(e.to_string().contains(motivo), "{e}");
 }
 
 #[test]

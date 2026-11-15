@@ -1185,6 +1185,27 @@ fn i_redditi_della_vista_sono_quelli_della_voce() {
             p.chiudi_turno();
             let v = p.vista();
             assert_eq!(v.redditi.len(), 3);
+            assert!(v.redditi.iter().all(|r| r.reddito > 0.0), "{:?}", v.redditi);
+            // Il segno della crescita, da fuori: la media per fascia, pesata con gli elettori, di
+            // quanto il reddito reale di ogni gruppo è cresciuto sul trimestre prima. La cifra non
+            // torna al decimo (i pesi sono quelli di prima del passo): il segno sì.
+            let (d, el) = (dati_base(), p.elettorato());
+            for r in &v.redditi {
+                let (n, somma) = (0..el.gruppi.len())
+                    .filter(|&i| fascia_di(i) == r.fascia)
+                    .map(|i| (el.elettori(d.elettorato(), i), &el.gruppi[i]))
+                    .fold((0.0, 0.0), |(n, s), (w, g)| {
+                        let c = 100.0 * (g.reddito.reale() / g.reddito_prima.reale() - 1.0);
+                        (n + w, s + w * c)
+                    });
+                // I pesi della chiusura sono quelli di prima del suo passo: la cifra torna a meno
+                // di qualche centesimo di punto, il segno no se la crescita è più che rumore.
+                let fuori = somma / n;
+                assert!(
+                    fuori.abs() < 0.2 || r.crescita * fuori > 0.0,
+                    "{r:?}: {fuori}"
+                );
+            }
             assert!(
                 v.redditi
                     .iter()
@@ -1202,6 +1223,12 @@ fn i_redditi_della_vista_sono_quelli_della_voce() {
                         .contains(&format!("{}% nel trimestre", cifre(r.crescita)))
                 );
                 assert!(voce.fatto.contains(&format!("{}% atteso", cifre(r.attesa))));
+                // Il segno, che `cifre` cancella: la fascia è delusa se l'attesa supera la
+                // crescita di almeno `scarto` punti.
+                assert!(
+                    r.attesa - r.crescita >= dati_base().manopola("scarto_reddito_deluso"),
+                    "{r:?}"
+                );
                 trovata = true;
             }
         }
