@@ -4,7 +4,7 @@ import type { VoceMisura } from "$lib/tipi/VoceMisura";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import crisi from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
-import { calendario, fiduciaPonibile, lineaScelta, ultimiVoti, votaOra } from "./aula";
+import { calendario, fiduciaPonibile, rifiutoPer, lineaScelta, ultimiVoti, votaOra } from "./aula";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const piena = stati.piena.vista;
@@ -44,6 +44,15 @@ describe("fiduciaPonibile", () => {
     expect(fiduciaPonibile(piena, per(piena, 0))).toBe(false);
     expect(fiduciaPonibile(piena, per(piena, 3))).toBe(true);
   });
+  it("nel turno del bilancio non sulle riforme del governo, sì sulle conversioni; mai se già posta", () => {
+    const b = bilancio as unknown as Vista;
+    const riforma = piena.calendario.find((m) => m.id === 3)!;
+    expect(fiduciaPonibile(piena, riforma)).toBe(true);
+    expect(fiduciaPonibile({ ...piena, calendario: [...piena.calendario, b.calendario.find((m) => m.forma === "bilancio")!] }, riforma)).toBe(false);
+    const decreto = { ...riforma, forma: "conversione" as const };
+    expect(fiduciaPonibile({ ...piena, calendario: [...piena.calendario, b.calendario.find((m) => m.forma === "bilancio")!] }, decreto)).toBe(true);
+    expect(fiduciaPonibile(piena, { ...riforma, fiducia: true })).toBe(false);
+  });
   it("falso su ogni misura della crisi, del bilancio, della costituzionale e dell'opposizione", () => {
     const c = crisi as unknown as Vista;
     expect(c.calendario.length).toBeGreaterThan(0);
@@ -75,5 +84,15 @@ describe("ultimiVoti", () => {
     const v = stati.dopo_voto.vista;
     const [a, b] = [v.esiti[0], { ...v.esiti[0], data: { anno: 2030, trimestre: 1 }, nome: "nuovo" }];
     expect(ultimiVoti({ ...v, esiti: [a, b] })[0].nome).toBe("nuovo");
+  });
+});
+
+describe("rifiutoPer", () => {
+  it("il rifiuto di una misura non compare sotto un'altra, né in un'altra Vista", () => {
+    const r = { testo: "no", vista: piena, misura: 3 };
+    expect(rifiutoPer(r, piena, 3)).toBe(r);
+    expect(rifiutoPer(r, piena, 0)).toBeNull();
+    expect(rifiutoPer(r, { ...piena }, 3)).toBeNull();
+    expect(rifiutoPer(null, piena, 3)).toBeNull();
   });
 });

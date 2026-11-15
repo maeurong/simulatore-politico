@@ -58,6 +58,17 @@ describe("Misura, emendamenti", () => {
   });
 });
 
+describe("Misura, linea", () => {
+  const v = stati.opposizione_proposta.vista;
+  const con = (si: boolean | null) => ({ ...v, calendario: [{ ...v.calendario[0], linea_giocatore: si }] });
+  it("«Come da posizione (x)» solo senza scelta del giocatore: la linea nella Vista riflette la scelta, non il default", () => {
+    expect(render(Aula, { props: { vista: con(null) } }).body).toMatch(/Come da posizione \(/);
+    const scelta = render(Aula, { props: { vista: con(true) } }).body;
+    expect(scelta).toContain("Come da posizione");
+    expect(scelta).not.toMatch(/Come da posizione \(/);
+  });
+});
+
 describe("Emiciclo", () => {
   it("il nome accessibile dice la frase della didascalia e i seggi sono tanti quanto il totale", () => {
     const { body } = render(Emiciclo, { props: { totale: 400, si: [179, 193], maggioranza: 201, ramo: "Camera" } });

@@ -30,9 +30,13 @@ export function calendario(v: Vista): Posto[] {
 /** Si vota alla chiusura di questo turno. */
 export const votaOra = (v: Vista, m: VoceMisura): boolean => m.voto.anno === v.data.anno && m.voto.trimestre === v.data.trimestre;
 
-/** La fiducia si pone solo sulle misure del governo, fuori dal bilancio e fuori dalla crisi. */
-export const fiduciaPonibile = (v: Vista, m: VoceMisura): boolean =>
-  v.governa && !v.crisi && m.promotore === null && (m.forma === "riforma" || m.forma === "elettorale" || m.forma === "conversione");
+/** La fiducia si pone solo sulle misure del governo, fuori dalla crisi, non due volte; non sulla costituzionale né sul bilancio, e
+ *  nel turno del bilancio solo sulle conversioni (parlamento/emendamenti.rs:247-277). */
+export const fiduciaPonibile = (v: Vista, m: VoceMisura): boolean => {
+  if (!v.governa || v.crisi || m.promotore !== null || m.fiducia) return false;
+  if (m.forma === "conversione") return true;
+  return (m.forma === "riforma" || m.forma === "elettorale") && !v.calendario.some((x) => x.forma === "bilancio");
+};
 
 /** La linea del giocatore si sceglie all'opposizione su ogni misura, al governo sulle proposte dell'opposizione. */
 export const lineaScelta = (v: Vista, m: VoceMisura): boolean => !v.governa || (m.promotore !== null && m.promotore !== "giocatore");
@@ -58,3 +62,7 @@ export function chiLaPorta(v: Vista, m: VoceMisura, nomeDi: (id: string) => stri
 /** La forma in parole; la costituzionale dice a che deliberazione è. */
 export const formaDi = (m: { forma: string; deliberazione: number }): string =>
   m.forma === "costituzionale" ? t("aula.forma_costituzionale", { n: m.deliberazione || 1 }) : t(`aula.forma_${m.forma}` as Chiave);
+
+/** Il rifiuto vale per la Vista e per la misura in cui è nato: cambiando l'una o l'altra non resta appeso a un'altra misura. */
+export const rifiutoPer = <R extends { vista: Vista | null; misura: number | null }>(r: R | null, v: Vista, misura: number | null): R | null =>
+  r && r.vista === v && r.misura === misura ? r : null;

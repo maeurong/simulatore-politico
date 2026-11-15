@@ -110,7 +110,7 @@
       <span class="min muto">{costo(c.si)}</span>
       <Pulsante forma="piccolo" scelto={sceltaLinea === false} onclick={() => manda({ tipo: "linea", misura: m.id, si: false })}>{t("aula.no_maiuscolo")}</Pulsante>
       <span class="min muto">{costo(c.no)}</span>
-      <Pulsante forma="piccolo" scelto={sceltaLinea === null} onclick={() => manda({ tipo: "linea", misura: m.id, si: null })}>{t("aula.come_da_posizione", { linea: t(linea("giocatore") ? "aula.si" : "aula.no") })}</Pulsante>
+      <Pulsante forma="piccolo" scelto={sceltaLinea === null} onclick={() => manda({ tipo: "linea", misura: m.id, si: null })}>{sceltaLinea === null ? t("aula.come_da_posizione", { linea: t(linea("giocatore") ? "aula.si" : "aula.no") }) : t("aula.come_da_posizione_nuda")}</Pulsante>
       <span class="min muto">{costo(c.default)}</span>
     </div>
     {#if rifiuto?.tipo === "linea"}<Rifiuto testo={rifiuto.testo} />{/if}

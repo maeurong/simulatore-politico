@@ -1,13 +1,14 @@
 <script lang="ts">
   // Aula, forma D · Misto (19-aula.prototype.html): il calendario dei posti in testa, sotto quattro schede (In aula, Disposizioni, Legge elettorale,
   // Referendum), la misura scelta nel dettaglio a lato. Le ultime tre schede arrivano coi Task 8 e 9. La pagina sta ferma, il corpo e il dettaglio scorrono.
-  import { tick, untrack } from "svelte";
+  import { untrack } from "svelte";
   import { t } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import { rifiutoPer } from "./aula";
   import Calendario from "./Calendario.svelte";
   import InAula from "./InAula.svelte";
   import Misura from "./Misura.svelte";
@@ -33,22 +34,16 @@
   });
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
-  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; vista: Vista | null } | null>(null);
-  const rifiuto = $derived(rifiutato?.vista === vista ? rifiutato : null);
-  let lato: HTMLElement;
+  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null } | null>(null);
+  const rifiuto = $derived(rifiutoPer(rifiutato, vista, corrente?.id ?? null));
   async function manda(c: Comando): Promise<boolean> {
     if (partita.occupato) return false;
     rifiutato = null;
-    const da = document.activeElement as HTMLElement | null;
     try {
       return (await partita.comanda(c)) !== null;
     } catch (e) {
-      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, vista: partita.vista };
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura: corrente?.id ?? null, vista: partita.vista };
       return false;
-    } finally {
-      // il bottone premuto sparisce con la scelta, o si rimonta mentre la partita è occupata: il fuoco passa alla prossima azione del dettaglio, o al dettaglio
-      await tick();
-      if (da && !da.isConnected && document.activeElement === document.body) (lato.querySelector<HTMLElement>(".az button, .linee button, .conf button") ?? lato).focus();
     }
   }
 </script>
@@ -73,7 +68,7 @@
       <Segnaposto sezione={t(`aula.scheda_${scheda}`)} fetta="11c" />
     {/if}
   </div>
-  <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
+  <aside class="lato" aria-label={t("aula.dettaglio")}>
     {#if corrente}
       {#key `${vista.turno}:${corrente.id}`}
         <Misura {vista} m={corrente} {manda} {rifiuto} />

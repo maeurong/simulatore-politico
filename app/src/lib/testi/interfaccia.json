@@ -859,6 +859,7 @@
   "aula.si_maiuscolo": "Sì",
   "aula.no_maiuscolo": "No",
   "aula.come_da_posizione": "Come da posizione ({linea})",
+  "aula.come_da_posizione_nuda": "Come da posizione",
   "aula.costo_linea": "sposta la tua posizione di {p} punti · franchi attesi: {c} alla Camera, {s} al Senato",
   "aula.anteprima": "Anteprima della misura ›",
   "aula.anteprima_arriva": "arriva con la fetta 11c"
