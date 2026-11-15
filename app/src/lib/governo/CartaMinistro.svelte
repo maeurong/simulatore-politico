@@ -1,17 +1,26 @@
 <script lang="ts">
   // La carta del ministro nel dettaglio a lato (storia 100): chi è, quanto è soddisfatto e perché, dove sta rispetto a te, cosa vuole, cosa ha in agenda.
-  // Ferma, Dirotta, cantieri, dimissioni e rosa li aggiunge il Task 5 sotto «In agenda».
+  // Sotto «In agenda»: Ferma e Dirotta (diretti), cantieri, dimissioni. Dopo Ferma o Dirotta riusciti la carta gira (Web Animations con la molla del prototipo 18)
+  // e sul retro dice cosa è successo; lo stato del retro si legge da agenda.stato, quindi al rientro la carta è già girata. Nel tono grave e col movimento spento il retro compare senza rotazione.
   import { t, numero, segnato, elenco, type Chiave } from "$lib/testi/t";
   import { nomeDi } from "$lib/partiti";
   import { chiaveDi, fondoDi } from "$lib/caricature/caricatura";
   import { REGIONI } from "$lib/mappa/regioni";
   import { mottoDi } from "$lib/testi/pungolo";
+  import { fattori, impostazioni, sistema } from "$lib/impostazioni.svelte";
+  import { partita } from "$lib/partita.svelte";
+  import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
+  import Conferma from "$lib/componenti/Conferma.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
-  import { euro, obiettivo, posizioni, type Figurina } from "./governo";
+  import Pulsante from "$lib/componenti/Pulsante.svelte";
+  import Rifiuto from "$lib/componenti/Rifiuto.svelte";
+  import Cantieri from "./Cantieri.svelte";
+  import Rosa from "./Rosa.svelte";
+  import { etichettaFerma, euro, molla, obiettivo, posizioni, prezzoDimissioni, type Figurina } from "./governo";
 
-  let { vista, f, grave }: { vista: Vista; f: Figurina; grave: boolean } = $props();
+  let { vista, f, grave, manda, rifiuto, ondirotta }: { vista: Vista; f: Figurina; grave: boolean; manda: (c: Comando) => Promise<boolean>; rifiuto: string | null; ondirotta: () => void } = $props();
 
   const m = $derived(f.ministro);
   const min = $derived(vista.ministeri.find((x) => x.dicastero === f.dicastero)!);
@@ -24,6 +33,23 @@
   const pc = (x: number) => Math.min(10, Math.max(0, x)) * 10;
   // shortcut: copia riduzione_rodaggio del core (ministri/mod.rs:128-133); passare a una capacità effettiva nella Vista quando il core la espone
   const capacita = $derived(m ? (m.rodaggio ? Math.max(1, m.capacita - 1) : m.capacita) : 0);
+  const puo = $derived(!!m && f.agenda?.stato === "annunciata" && !min.dimissioni_chieste);
+  const stato = $derived(f.agenda?.stato ?? "annunciata");
+
+  let volta = $state<Record<string, boolean>>({});
+  const girata = $derived(!grave && stato !== "annunciata" && !volta[f.dicastero]);
+  const moto = $derived(fattori(impostazioni, sistema.riduce));
+  let giro = $state<HTMLElement>();
+  let prima: { d: string; g: boolean } | null = null;
+  let anim: Animation | undefined;
+  $effect(() => {
+    const d = f.dicastero, g = girata;
+    if (prima && prima.d === d && prima.g !== g && giro && moto.muove && moto.k > 0) {
+      anim?.cancel();
+      anim = giro.animate([{ transform: `rotateY(${g ? 0 : 180}deg)` }, { transform: `rotateY(${g ? 180 : 0}deg)` }], { duration: 520 * moto.k, easing: molla() });
+    }
+    prima = { d, g };
+  });
   const motivi = $derived(elenco(f.evidenza.map((e) => t(`governo.evidenza_${e}` as Chiave)), ", "));
 </script>
 
@@ -38,10 +64,14 @@
       </div>
     </div>
     <p class="sec">{t("governo.interim_nota")}</p>
-    {#if min.rosa.length}<p class="sec muto">{t("governo.interim_rosa", { n: min.rosa.length })}</p>{/if}
+    <Rosa {vista} {min} {manda} />
+    <Cantieri {min} puoFermare={false} {manda} />
+    {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
   </div>
 {:else}
-  <div class="carta">
+  <div class="carta3d" class:piatta={!moto.muove}>
+  <div class="giro" class:dietro={girata} bind:this={giro}>
+  <div class="carta fronte" inert={girata}>
     <div class="su">
       <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <div>
@@ -97,13 +127,52 @@
     {:else}
       <p class="sec"><span class="vuota">{f.senzaAgenda ? t(`governo.senza_agenda_${f.senzaAgenda.replace(" ", "_")}` as Chiave) : t("componenti.nessun_atto")}</span></p>
     {/if}
+    {#if puo}
+      <div class="az">
+        <Pulsante forma="bordo" aria-disabled={partita.occupato ? "true" : undefined} title={t("governo.ferma_titolo")} onclick={() => manda({ tipo: "ferma", dicastero: f.dicastero })}>{etichettaFerma(f.agenda!.costo_ferma)}</Pulsante>
+        <Pulsante forma="bordo" aria-disabled={partita.occupato ? "true" : undefined} onclick={ondirotta}>{t("governo.dirotta")}</Pulsante>
+      </div>
+    {/if}
+    {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
     <p class="min muto">
       {t("governo.margine", { euro: euro(min.margine_residuo) })}{#if min.proposta} · {t("governo.proposta", { motivo: min.proposta.motivo })} <a class="link" href="/partita/cruscotto">{t("governo.cruscotto")}</a>{/if}
     </p>
+    <Cantieri {min} puoFermare={!min.dimissioni_chieste} {manda} />
+    {#if min.dimissioni_chieste}
+      <p class="sec"><b>{t("governo.dimissioni_chieste")}</b></p>
+    {:else}
+      <div><Conferma etichetta={t("governo.dimissioni_chiedi")} conferma={t("governo.dimissioni_conferma")}
+        spiegazione={t("governo.dimissioni_spiega", { prezzo: prezzoDimissioni(vista, min), atto: min.agenda ? t("governo.dimissioni_atto") : "" })}
+        onconferma={() => manda({ tipo: "chiedi_dimissioni", dicastero: f.dicastero })} /></div>
+    {/if}
+  </div>
+  {#if !grave && f.agenda && stato !== "annunciata"}
+    <div class="carta retro" inert={!girata}>
+      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
+      <span class="bollo" class:biro={stato === "dirottata"}>{t(stato === "fermata" ? "governo.atto_fermato" : "governo.atto_dirottato")}</span>
+      <b>{f.agenda.nome}{#if f.agenda.regione} · {regione(f.agenda.regione)}{/if}</b>
+      <span class="sec">{t("governo.retro_voto", { n: numero(m.soddisfazione) })}</span>
+      <button type="button" class="link" onclick={() => (volta[f.dicastero] = true)}>{t("governo.rigira")}</button>
+    </div>
+  {/if}
+  </div>
   </div>
 {/if}
 
 <style>
+  .carta3d { perspective: 900px }
+  .giro { position: relative; transform-style: preserve-3d }
+  .giro.dietro { transform: rotateY(180deg) }
+  .fronte, .retro { backface-visibility: hidden; -webkit-backface-visibility: hidden }
+  .retro { position: absolute; inset: 0; transform: rotateY(180deg); place-content: center; justify-items: center; text-align: center; gap: 8px }
+  .retro .bollo { font-size: var(--c-sez); padding: 2px 12px }
+  .piatta .giro.dietro { transform: none }
+  .piatta .retro { transform: none }
+  .piatta .giro.dietro .fronte, .piatta .giro:not(.dietro) .retro { visibility: hidden }
+  .bollo { display: inline-block; border: 2px solid var(--rosso); color: var(--rosso); font-family: var(--tit); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-4deg); white-space: nowrap }
+  .bollo.biro { border-color: var(--biro); color: var(--biro) }
+  :global(:root.grave) .bollo { transform: none }
+  .az { display: flex; gap: 6px; flex-wrap: wrap }
   .carta { border: var(--forte); background: var(--carta); padding: 10px 12px; display: grid; gap: 7px; align-content: start }
   .su { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center }
   .su .tit { font-size: var(--c-sez) }

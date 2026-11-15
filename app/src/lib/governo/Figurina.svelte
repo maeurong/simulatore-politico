@@ -1,6 +1,6 @@
 <script lang="ts">
   // Forma B · Figurine (18-governo.prototype.html): la carta del ministro nell'album, col filo rosso se l'atto è in evidenza.
-  // I bottoni di Ferma e Dirotta stanno sopra il pulsante del nome (z-index): li porta il Task 5.
+  // I bottoni di Ferma e Dirotta stanno sopra il pulsante del nome (z-index); il clic sceglie anche la carta, così il dettaglio mostra cosa è successo.
   import { t, numero, type Chiave } from "$lib/testi/t";
   import { nomeDi } from "$lib/partiti";
   import { chiaveDi, fondoDi } from "$lib/caricature/caricatura";
@@ -9,14 +9,21 @@
   import type { Vista } from "$lib/tipi/Vista";
   import Faccia from "$lib/componenti/Faccia.svelte";
   import NumeroFreccia from "$lib/componenti/NumeroFreccia.svelte";
-  import { euro, type Figurina, type StatoCarta } from "./governo";
+  import { partita } from "$lib/partita.svelte";
+  import type { Comando } from "$lib/tipi/Comando";
+  import Pulsante from "$lib/componenti/Pulsante.svelte";
+  import { etichettaFerma, euro, type Figurina, type StatoCarta } from "./governo";
 
-  let { vista, f, scelta, grave, id, onscelta }: { vista: Vista; f: Figurina; scelta: boolean; grave: boolean; id: string; onscelta: () => void } = $props();
+  let { vista, f, scelta, grave, id, onscelta, manda, ondirotta }: {
+    vista: Vista; f: Figurina; scelta: boolean; grave: boolean; id: string; onscelta: () => void;
+    manda: (c: Comando) => Promise<boolean>; ondirotta: () => void;
+  } = $props();
 
   const m = $derived(f.ministro);
   const motto = $derived(m && !grave ? mottoDi(m.nome, f.dicastero) : null);
   const regione = $derived(f.agenda?.regione ? (REGIONI.find((r) => r.id === f.agenda!.regione)?.nome ?? f.agenda.regione) : null);
   const rosa = $derived(vista.ministeri.find((x) => x.dicastero === f.dicastero)?.rosa.length ?? 0);
+  const puo = $derived(!!m && f.agenda?.stato === "annunciata" && !f.stati.includes("dimissioni_chieste"));
   const soglia = (s: StatoCarta) => s === "preavviso" || s === "dimissioni_chieste";
 </script>
 
@@ -50,6 +57,12 @@
       <span class="vuota">{t("componenti.nessun_atto")}</span>
     {/if}
   </div>
+  {#if puo}
+    <div class="az">
+      <Pulsante forma="piccolo" aria-disabled={partita.occupato ? "true" : undefined} title={t("governo.ferma_titolo")} onclick={() => { onscelta(); manda({ tipo: "ferma", dicastero: f.dicastero }); }}>{etichettaFerma(f.agenda!.costo_ferma)}</Pulsante>
+      <Pulsante forma="piccolo" aria-disabled={partita.occupato ? "true" : undefined} onclick={() => { onscelta(); ondirotta(); }}>{t("governo.dirotta")}</Pulsante>
+    </div>
+  {/if}
 </article>
 
 <style>
@@ -73,6 +86,7 @@
   .dc { font-size: var(--c-min); color: var(--grigio); line-height: 1.2 }
   .motto { font-size: var(--c-min); color: var(--biro); line-height: 1.25 }
   .at { font-size: var(--c-min); line-height: 1.25; border-top: var(--filo); padding-top: 3px; margin-top: 2px }
+  .az { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px }
   .muto { color: var(--grigio) }
   .fermo { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--grigio) }
   .vuota { display: inline-block; border: 1.5px dashed var(--grigio); color: var(--grigio); padding: 1px 4px }

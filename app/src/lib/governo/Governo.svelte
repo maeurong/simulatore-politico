@@ -1,9 +1,14 @@
 <script lang="ts">
   // Governo, forma B · Figurine (18-governo.prototype.html): l'album dei dieci ministri sotto la cornice, la carta del ministro a lato.
   // L'album resta fermo, il dettaglio scorre da solo; senza scelta il dettaglio mostra il primo ministro in evidenza, o il primo dell'album.
+  import { tick } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
+  import { partita } from "$lib/partita.svelte";
+  import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
+  import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import CartaMinistro from "./CartaMinistro.svelte";
+  import Dirotta from "./Dirotta.svelte";
   import Figurina from "./Figurina.svelte";
   import { figurine, type Figurina as Carta } from "./governo";
 
@@ -17,6 +22,29 @@
   const grave = $derived(vista.eventi.some((e) => e.tono === "grave"));
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
   const n = $derived(carte.filter(evidenza).length);
+
+  // Dirotta apre a lato al posto della carta; il comando va diretto. partita.occupato fa passare un solo clic per volta.
+  let dirotta = $state<string | null>(null);
+  // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
+  let rifiutato = $state.raw<{ testo: string; vista: Vista | null } | null>(null);
+  const rifiuto = $derived(rifiutato?.vista === vista ? rifiutato.testo : null);
+  async function manda(c: Comando): Promise<boolean> {
+    if (partita.occupato) return false;
+    rifiutato = null;
+    try {
+      return (await partita.comanda(c)) !== null;
+    } catch (e) {
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
+      return false;
+    }
+  }
+  const sceglie = (d: string) => { scelta = d; dirotta = null; };
+  async function chiudiDirotta() {
+    const d = dirotta;
+    dirotta = null;
+    await tick();
+    document.getElementById(`${pre}-${d}`)?.focus();
+  }
 </script>
 
 <div class="gov">
@@ -26,10 +54,16 @@
   </div>
   <div class="album" role="group" aria-label={t("governo.album")}>
     {#each carte as f (f.dicastero)}
-      <Figurina {vista} {f} {grave} id="{pre}-{f.dicastero}" scelta={corrente.dicastero === f.dicastero} onscelta={() => (scelta = f.dicastero)} />
+      <Figurina {vista} {f} {grave} id="{pre}-{f.dicastero}" scelta={corrente.dicastero === f.dicastero} onscelta={() => sceglie(f.dicastero)} {manda} ondirotta={() => (dirotta = f.dicastero)} />
     {/each}
   </div>
-  <aside class="lato"><CartaMinistro {vista} f={corrente} {grave} /></aside>
+  <aside class="lato">
+    {#if dirotta === corrente.dicastero && corrente.ministro && corrente.agenda?.stato === "annunciata"}
+      <Dirotta {vista} f={corrente} {manda} {rifiuto} onchiudi={chiudiDirotta} />
+    {:else}
+      <CartaMinistro {vista} f={corrente} {grave} {manda} {rifiuto} ondirotta={() => (dirotta = corrente.dicastero)} />
+    {/if}
+  </aside>
 </div>
 
 <style>
