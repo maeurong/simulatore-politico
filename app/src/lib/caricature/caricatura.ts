@@ -29,18 +29,35 @@ export function leveDi(ruolo: Ruolo, partito: string, nome: string, salto = 0): 
   return { naso: leva(n), mento: leva(m), fronte: leva(f), nuca: leva(u), occhio: leva(o), colletto: leva(c) };
 }
 
-/** La rosa: chi ripete naso e colletto di uno già dentro passa alla combinazione successiva, finché è libera. */
-export function rosa(candidati: { partito: string; nome: string }[]): Leve[] {
+type Candidato = { partito: string; nome: string };
+
+/** I salti della rosa: chi ripete naso e colletto di uno già dentro passa alla combinazione successiva, finché è libera. */
+export function salti(ruolo: Ruolo, candidati: Candidato[]): number[] {
   const visti = new Set<string>();
   const coppie = VARIANTI.naso * VARIANTI.colletto;
   return candidati.map((c) => {
     let salto = 0;
-    let l = leveDi("ministro", c.partito, c.nome);
+    let l = leveDi(ruolo, c.partito, c.nome);
     // shortcut: con più candidati delle coppie possibili (36) nessuna è libera, si tiene la faccia di partenza; da rivedere se le rose superano 36.
-    while (visti.size < coppie && visti.has(`${l.naso}:${l.colletto}`)) l = leveDi("ministro", c.partito, c.nome, ++salto);
+    while (visti.size < coppie && visti.has(`${l.naso}:${l.colletto}`)) l = leveDi(ruolo, c.partito, c.nome, ++salto);
     visti.add(`${l.naso}:${l.colletto}`);
-    return l;
+    return salto;
   });
+}
+
+export function rosa(candidati: Candidato[], ruolo: Ruolo = "ministro"): Leve[] {
+  const s = salti(ruolo, candidati);
+  return candidati.map((c, i) => leveDi(ruolo, c.partito, c.nome, s[i]));
+}
+
+/**
+ * Il salto di ogni leader, dalla lista dei partiti della Vista nell'ordine della Vista (gli sciolti restano in lista, i nati si
+ * accodano: i salti già dati non cambiano). Il partito del giocatore non si disegna e non entra nel conto: rinominarlo non muove nessuno.
+ */
+export function saltiDeiLeader(v: { giocatore: string; partiti: { id: string; nome: string; leader: string }[] }): Record<string, number> {
+  const ps = v.partiti.filter((p) => p.id !== v.giocatore && p.leader);
+  const s = salti("leader", ps.map((p) => ({ partito: p.nome, nome: p.leader })));
+  return Object.fromEntries(ps.map((p, i) => [p.id, s[i]]));
 }
 
 /** Il fondo del riquadro dalla soddisfazione: carta, giallo sotto 40, rosso sotto 25. */

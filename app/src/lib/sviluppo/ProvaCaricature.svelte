@@ -3,14 +3,15 @@
   // numero → nome sta in fondo, ripiegata. Caricata da /sviluppo/caricature solo in sviluppo; i testi di prova non stanno in interfaccia.json.
   import Caricatura from "$lib/caricature/Caricatura.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
-  import { leveDi, rosa, type Ruolo } from "$lib/caricature/caricatura";
+  import { leveDi, rosa, saltiDeiLeader, type Ruolo } from "$lib/caricature/caricatura";
   import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
   import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 
-  type Pers = { ruolo: Ruolo; partito: string; nome: string };
+  type Pers = { ruolo: Ruolo; partito: string; nome: string; salto?: number };
   const MISURE = [34, 46, 62, 84] as const;
   const FONDI = ["carta", "giallo", "rosso"] as const;
-  const leader: Pers[] = v01.partiti.filter((p) => p.leader).map((p) => ({ ruolo: "leader" as const, partito: p.nome, nome: p.leader }));
+  const saltiL = saltiDeiLeader(v01);
+  const leader: Pers[] = v01.partiti.filter((p) => p.leader).map((p) => ({ ruolo: "leader" as const, partito: p.nome, nome: p.leader, salto: saltiL[p.id] }));
   const ministri: Pers[] = v03.ministeri.map((m) => ({ ruolo: "ministro" as const, partito: v03.partiti.find((p) => p.id === m.ministro.partito)?.nome ?? m.ministro.partito, nome: m.ministro.nome }));
   // nessuna Vista ha un tecnico: tre inventati, per vedere il cartellino
   const tecnici: Pers[] = [["Destra", "Elena Marino"], ["Partito del giocatore", "Fabio Greco"], ["Destra", "Francesca Bruno"]].map(([partito, nome]) => ({ ruolo: "tecnico" as const, partito, nome }));
@@ -30,12 +31,12 @@
 
 <main class="pag">
   <h2>Caricature · campione senza nomi</h2>
-  <p class="muto">Per ogni faccia: a chi somiglia? Quattro misure, in riga: 34, 46, 62, 84 px. Tre gruppi: sette leader (1–7), dieci ministri (8–17), tre tecnici inventati (18–20).</p>
+  <p class="muto">Per ogni faccia: a chi somiglia? Quattro misure, in riga: 34, 46, 62, 84 px. Tre gruppi: sette leader (1–7, con la rosa dell'app), dieci ministri (8–17), tre tecnici inventati (18–20).</p>
 
   <section class="gruppo" aria-label="Campione">
     {#each campione as p, i (i)}
       <figure>
-        <div class="riga">{#each MISURE as m}<Caricatura ruolo={p.ruolo} partito={p.partito} nome="" leve={leveDi(p.ruolo, p.partito, p.nome)} misura={m} />{/each}</div>
+        <div class="riga">{#each MISURE as m}<Caricatura ruolo={p.ruolo} partito={p.partito} nome="" leve={leveDi(p.ruolo, p.partito, p.nome, p.salto)} misura={m} />{/each}</div>
         <figcaption>{numero(p)}</figcaption>
       </figure>
     {/each}
@@ -59,7 +60,7 @@
   <section>
     <h3>Tono grave</h3>
     <label class="muto"><input type="checkbox" bind:checked={grave} /> tono grave: iniziali nel cerchio, stesso riquadro</label>
-    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" partito="Estrema sinistra" misura={m} />{/each}</div>
+    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" partito="Estrema sinistra" salto={saltiL.estrema_sinistra} misura={m} />{/each}</div>
   </section>
 
   <details>

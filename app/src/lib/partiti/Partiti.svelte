@@ -3,6 +3,7 @@
   import { tick } from "svelte";
   import { t, percentuale, type Chiave } from "$lib/testi/t";
   import { coloreDi, quotaVotanti } from "$lib/partiti";
+  import { saltiDeiLeader } from "$lib/caricature/caricatura";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VocePartito } from "$lib/tipi/VocePartito";
   import Caselle from "$lib/componenti/Caselle.svelte";
@@ -28,6 +29,7 @@
   }
 
   const ordine = $derived(inOrdine(vista));
+  const salti = $derived(saltiDeiLeader(vista));
   const vivi = $derived(vista.partiti.filter((p) => !p.sciolto).length);
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
   const sondaggio = (p: VocePartito) => {
@@ -62,7 +64,7 @@
         {@const lista = avvisi(vista, p)}
         <article class="sch" class:sciolto={p.sciolto} class:scelta={scelta === p.id}>
           <span class="filo" class:nato={colore === null} style:background={colore ?? undefined}></span>
-          <span class="fz">{#if tu}<span class="tu" aria-hidden="true">{t("partiti.tu")}</span>{:else}<Faccia nome={p.leader} ruolo="leader" partito={p.nome} misura={46} />{/if}</span>
+          <span class="fz">{#if tu}<span class="tu" aria-hidden="true">{t("partiti.tu")}</span>{:else}<Faccia nome={p.leader} ruolo="leader" partito={p.nome} salto={salti[p.id]} misura={46} />{/if}</span>
           <h4 class="nm"><button type="button" id="{pre}-{p.id}" aria-pressed={scelta === p.id} onclick={() => (scelta = p.id)}>{tu ? t("partiti.tuo") : p.nome}</button></h4>
           <span class="ld">{tu ? t("partiti.tu_leader") : p.leader}</span>
           <span class="rr largo"><span class="muto">{t("partiti.sondaggio")}</span><b>{sondaggio(p)}</b></span>

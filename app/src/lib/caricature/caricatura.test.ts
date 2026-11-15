@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { fondoDi, leveDi, rosa, VARIANTI, type Leve } from "./caricatura";
+import { fondoDi, leveDi, rosa, saltiDeiLeader, VARIANTI, type Leve } from "./caricatura";
+import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
+import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
+import v17 from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 
 const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
 const coppia = (l: Leve) => `${l.naso}:${l.colletto}`;
@@ -72,6 +75,46 @@ describe("rosa", () => {
   it("oltre le 36 coppie possibili termina", () => {
     const c = Array.from({ length: 40 }, (_, i) => ({ partito: "P", nome: `N${i}` }));
     expect(rosa(c)).toHaveLength(40);
+  });
+});
+
+describe("saltiDeiLeader", () => {
+  const s01 = saltiDeiLeader(v01);
+  const facce = (v: { partiti: { id: string; nome: string; leader: string }[] }, s:Record<string, number>) =>
+    v.partiti.filter((p) => p.leader).map((p) => ({ id: p.id, l: leveDi("leader", p.nome, p.leader, s[p.id]) }));
+
+  it("sui sette leader della Vista 03 nessuna coppia ha lo stesso naso e lo stesso colletto", () => {
+    const l = facce(v03, saltiDeiLeader(v03));
+    expect(l).toHaveLength(7);
+    expect(new Set(l.map((x) => coppia(x.l))).size).toBe(7);
+  });
+
+  it("il salto è lo stesso dalla Vista 01 e dalla 03", () => {
+    expect(saltiDeiLeader(v03)).toEqual(s01);
+  });
+
+  it("chi non collide tiene la faccia del prototipo; chi collide cambia", () => {
+    const mosso = Object.entries(s01).filter(([, n]) => n > 0).map(([id]) => id);
+    expect(mosso.length).toBeGreaterThan(0);
+    for (const x of facce(v01, s01)) {
+      const p = v01.partiti.find((q) => q.id === x.id)!;
+      expect(s01[x.id] > 0 ? x.l : leveDi("leader", p.nome, p.leader)).toEqual(x.l);
+    }
+  });
+
+  it("il partito del giocatore non entra: rinominarlo non muove nessuno", () => {
+    const rinominato = { ...v01, partiti: v01.partiti.map((p) => (p.id === v01.giocatore ? { ...p, nome: "Altro nome" } : p)) };
+    expect(saltiDeiLeader(rinominato)).toEqual(s01);
+    expect(s01[v01.giocatore]).toBeUndefined();
+  });
+
+  it("i nati si accodano e gli sciolti restano: i salti già dati non cambiano", () => {
+    const s17 = saltiDeiLeader(v17.crisi_provvisorio.vista);
+    expect(Object.keys(s17)).toHaveLength(9);
+    const base = v17.crisi_provvisorio.vista.partiti.filter((p) => !p.id.startsWith("nuovo_"));
+    expect(saltiDeiLeader({ ...v17.crisi_provvisorio.vista, partiti: base })).toEqual(
+      Object.fromEntries(Object.entries(s17).filter(([id]) => !id.startsWith("nuovo_"))),
+    );
   });
 });
 

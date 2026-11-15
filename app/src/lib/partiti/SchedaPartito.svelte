@@ -2,6 +2,7 @@
   // La scheda del partito nel lato (24-partiti.prototype.html, forma A): chi è, dove sta, che indole ha, che intesa ha con te, i seggi, il carisma, la cassa.
   import { t, numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
   import { coloreDi, quotaVotanti } from "$lib/partiti";
+  import { saltiDeiLeader } from "$lib/caricature/caricatura";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VocePartito } from "$lib/tipi/VocePartito";
   import Caselle from "$lib/componenti/Caselle.svelte";
@@ -30,7 +31,7 @@
 
 <Pulsante forma="link" onclick={indietro}>‹ {t("partiti.camere")}</Pulsante>
 <div class="testa">
-  <Faccia nome={tu ? t("partiti.tu") : p.leader} ruolo={tu ? undefined : "leader"} partito={p.nome} misura={84} />
+  <Faccia nome={tu ? t("partiti.tu") : p.leader} ruolo={tu ? undefined : "leader"} partito={p.nome} salto={saltiDeiLeader(vista)[p.id]} misura={84} />
   <div class="chi">
     <h4 class="tit" class:sciolto={p.sciolto}><i class="sw" class:nato={colore === null} style:background={colore ?? undefined}></i>{tu ? t("partiti.tuo") : p.nome}</h4>
     <p class="ld">{#if tu}{t("partiti.s_leader_tu")}{:else}{t("partiti.s_leader")} <b>{p.leader}</b>{/if}</p>

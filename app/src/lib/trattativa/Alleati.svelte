@@ -3,6 +3,7 @@
   import { t, numero, elenco } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { coloreDi } from "$lib/partiti";
+  import { saltiDeiLeader } from "$lib/caricature/caricatura";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Caselle from "$lib/componenti/Caselle.svelte";
@@ -22,6 +23,7 @@
   const totale = $derived(vista.dicasteri.reduce((s, d) => s + pesoDi(d.id), 0));
   const mio = $derived(quota(vista, bozza, "giocatore"));
   const tecnici = $derived(quota(vista, bozza, null));
+  const salti = $derived(saltiDeiLeader(vista));
   const leader = (id: string) => vista.partiti.find((p) => p.id === id)?.leader ?? "";
   const spento = $derived(partita.occupato ? t("trattativa.comando_in_corso") : undefined);
 
@@ -83,7 +85,7 @@
   <h4 class="sez-l" id="ali-t">{t("trattativa.gli_alleati")}</h4>
   {#each alleati as a (a.id)}
     <div class="all" style:--pc={coloreDi(a.id) ?? undefined} class:nato={coloreDi(a.id) === null}>
-      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} misura={34} /></span>
+      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} salto={salti[a.id]} misura={34} /></span>
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
