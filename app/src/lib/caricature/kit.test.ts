@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { VARIANTI, type Leve } from "./caricatura";
-import { COLLETTI, profilo } from "./kit";
+import { render } from "svelte/server";
+import Caricatura from "./Caricatura.svelte";
+import { FANTASIE, profilo } from "./kit";
 import fonte from "./kit.ts?raw";
 
 const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
 
 describe("kit", () => {
-  it("ha un colletto per leva e il file sta sotto i 60 KB", () => {
-    expect(COLLETTI).toHaveLength(VARIANTI.colletto);
+  it("ha una fantasia per leva colletto e il file sta sotto i 60 KB", () => {
+    expect(FANTASIE).toHaveLength(6);
+    expect(FANTASIE).toHaveLength(VARIANTI.colletto);
     expect(fonte.length).toBeLessThan(60 * 1024);
   });
 
@@ -55,5 +58,14 @@ describe("kit", () => {
     const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0 };
     expect(profilo({ ...base, naso: 1 }).pennino).not.toBe(profilo(base).pennino);
     expect(profilo({ ...base, mento: 2 }).filo).not.toBe(profilo(base).filo);
+  });
+
+  it("il colletto riempie con la fantasia della leva, quello del tecnico col grigio", () => {
+    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0 };
+    const colletto = (ruolo: "ministro" | "tecnico", c: number) =>
+      render(Caricatura, { props: { ruolo, partito: "Centro", nome: "", leve: { ...base, colletto: c }, misura: 62 } }).body.match(/<path class="coll[^"]*"[^>]*>/)![0];
+    FANTASIE.forEach((f, c) => expect(colletto("ministro", c)).toContain(`url(#fantasia-${f})`));
+    expect(colletto("tecnico", 2)).toContain("grigio");
+    expect(colletto("tecnico", 2)).not.toContain("url(#fantasia");
   });
 });

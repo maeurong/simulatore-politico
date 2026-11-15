@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fondoDi, leveDi, rosa, saltiDeiLeader, VARIANTI, type Leve } from "./caricatura";
+import type { Vista } from "$lib/tipi/Vista";
+import { chiaveDi, fondoDi, leveDi, rosa, saltiDeiLeader, VARIANTI, type Leve } from "./caricatura";
 import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import v30j from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
@@ -120,11 +121,28 @@ describe("saltiDeiLeader", () => {
   });
 });
 
+const soglie = v03.soglie as Vista["soglie"];
+
 describe("fondoDi", () => {
-  it("carta, giallo sotto 40, rosso sotto 25", () => {
-    expect(fondoDi(39.9)).toBe("giallo");
-    expect(fondoDi(40)).toBe("carta");
-    expect(fondoDi(24.9)).toBe("rosso");
-    expect(fondoDi(null)).toBe("carta");
+  it("carta, giallo sotto soglie.minaccia, rosso sotto soglie.dimissioni", () => {
+    expect(fondoDi(39.9, soglie)).toBe("giallo");
+    expect(fondoDi(40, soglie)).toBe("carta");
+    expect(fondoDi(24.9, soglie)).toBe("rosso");
+    expect(fondoDi(null, soglie)).toBe("carta");
+  });
+  it("segue le soglie della Vista, non numeri scritti nel codice", () => {
+    expect(fondoDi(45, { ...soglie, minaccia: 50 })).toBe("giallo");
+  });
+});
+
+describe("chiaveDi", () => {
+  it("giocatore per il partito del giocatore, il nome visualizzato per gli altri", () => {
+    const v = v03 as unknown as Vista;
+    expect(chiaveDi(v, "giocatore")).toBe("giocatore");
+    expect(chiaveDi(v, "destra")).toBe("Destra");
+  });
+  it("segue v.giocatore, non la parola", () => {
+    const v = { ...v03, giocatore: "destra" } as unknown as Vista;
+    expect(chiaveDi(v, "destra")).toBe("giocatore");
   });
 });

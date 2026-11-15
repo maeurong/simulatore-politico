@@ -3,16 +3,25 @@
   // numero → nome sta in fondo, ripiegata. Caricata da /sviluppo/caricature solo in sviluppo; i testi di prova non stanno in interfaccia.json.
   import Caricatura from "$lib/caricature/Caricatura.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
-  import { leveDi, rosa, saltiDeiLeader, type Ruolo } from "$lib/caricature/caricatura";
+  import { chiaveDi, fondoDi, leveDi, rosa, salti, saltiDeiLeader, type Ruolo } from "$lib/caricature/caricatura";
   import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
   import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
+  import v18 from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
+  import type { Vista } from "$lib/tipi/Vista";
+  import { mottoDi } from "$lib/testi/pungolo";
 
-  type Pers = { ruolo: Ruolo; partito: string; nome: string; salto?: number };
+  type Pers = { ruolo: Ruolo; partito: string; nome: string; salto?: number; fondo?: "carta" | "giallo" | "rosso"; motto?: string | null };
   const MISURE = [34, 46, 62, 84] as const;
   const FONDI = ["carta", "giallo", "rosso"] as const;
   const saltiL = saltiDeiLeader(v01);
   const leader: Pers[] = v01.partiti.filter((p) => p.leader).map((p) => ({ ruolo: "leader" as const, partito: p.nome, nome: p.leader, salto: saltiL[p.id] }));
-  const ministri: Pers[] = v03.ministeri.map((m) => ({ ruolo: "ministro" as const, partito: v03.partiti.find((p) => p.id === m.ministro.partito)?.nome ?? m.ministro.partito, nome: m.ministro.nome }));
+  const vista03 = v03 as unknown as Vista;
+  const ministri: Pers[] = v03.ministeri.map((m) => ({ ruolo: "ministro" as const, partito: chiaveDi(vista03, m.ministro.partito), nome: m.ministro.nome, fondo: fondoDi(m.ministro.soddisfazione, vista03.soglie), motto: mottoDi(m.ministro.nome, m.dicastero) }));
+  // la rosa dell'interim: il primo dicastero che ne ha una, sulla stessa chiave e con i salti della rosa
+  const vista18 = v18.interim.vista as unknown as Vista;
+  const conRosa = vista18.ministeri.find((m) => m.rosa.length);
+  const candidatiInterim = (conRosa?.rosa ?? []).map((c) => ({ partito: chiaveDi(vista18, c.partito), nome: c.nome }));
+  const saltiInterim = salti("ministro", candidatiInterim);
   // nessuna Vista ha un tecnico: tre inventati, per vedere il cartellino
   const tecnici: Pers[] = [["Destra", "Elena Marino"], ["Partito del giocatore", "Fabio Greco"], ["Destra", "Francesca Bruno"]].map(([partito, nome]) => ({ ruolo: "tecnico" as const, partito, nome }));
   const campione = [...leader, ...ministri, ...tecnici];
@@ -50,6 +59,29 @@
         <figure><div class="riga">{#each serie as l, i (i)}<Caricatura ruolo="ministro" partito="Partito del giocatore" nome="" leve={l} misura={62} />{/each}</div><figcaption>{k ? "con la rosa" : "senza"}</figcaption></figure>
       {/each}
     </div>
+  </section>
+
+  <section>
+    <h3>Ministri della 03: chiave fissa, fondo e motto</h3>
+    <div class="gruppo">
+      {#each ministri as p (p.nome)}
+        <figure><Faccia ruolo={p.ruolo} partito={p.partito} nome={p.nome} salto={0} fondo={p.fondo} misura={62} /><figcaption>{p.nome}<br /><small class="muto">{p.motto}</small></figcaption></figure>
+      {/each}
+    </div>
+  </section>
+
+  <section>
+    <h3>La rosa dell'interim ({conRosa?.dicastero})</h3>
+    <div class="gruppo">
+      {#each candidatiInterim as c, i (c.nome)}
+        <figure><Faccia ruolo="ministro" partito={c.partito} nome={c.nome} salto={saltiInterim[i]} misura={62} /><figcaption>{c.nome}</figcaption></figure>
+      {/each}
+    </div>
+  </section>
+
+  <section>
+    <h3>Le sei fantasie a 34 px</h3>
+    <div class="riga">{#each [0, 1, 2, 3, 4, 5] as c}<Caricatura ruolo="ministro" partito="Destra" nome="" leve={{ ...leveDi("ministro", "Destra", "Simone Gallo"), colletto: c }} misura={34} />{/each}</div>
   </section>
 
   <section>

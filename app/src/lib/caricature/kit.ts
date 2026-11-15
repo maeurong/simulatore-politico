@@ -32,8 +32,8 @@ const NUCHE = [
 const SPALLE = { d: "M2.4 64C3.4 56.4 10 53.4 21 53.2M38 53.2C50 53.2 57.6 57 60.6 64", pen: "M18 617l1-5 8-11 14-16 45-32 18-11 33-11 42-8 12 0 11 5 12 1-8 6-16 2-30 8-50 8-20 6-20 7-9 11-23 36-9 17-1 7-8 6 1-7zM376 535l8-6 16-1 39-6 21 2 27 5 28 7 19 7 19 10 18 11 16 13 10 10 4 5 5 31 4 14-8 6-3-6-5-6-27-15-14-15-16-13-18-11-19-10-20-7-27-7-48-7-17-10z" };
 const ORECCHIO = { d: "M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36", pen: "M231 329l1-14 2-6 6-13 4-5 32-23 13 2-6 4-7 0-13 5-8 15-2 13 1 14 4 13 4 6 10 9 6 8 7 1-6 4-17 1-10 0-7-4-8-10-3-6z" };
 
-/** I sei colletti: quattro inchiostri e due sovrapposti (arancio, oliva). Il tecnico lo ha sempre grigio. */
-export const COLLETTI = ["rosso", "verde", "biro", "giallo", "arancio", "oliva"] as const;
+/** Le sei fantasie del colletto, in inchiostro su carta (`Fantasie.svelte`): l'indice è la leva colletto. Il tecnico lo ha sempre grigio. */
+export const FANTASIE = ["pieno", "vuoto", "righe", "pois", "quadretti", "tratteggio"] as const;
 
 /** Le parti disegnate dalle sei leve: tracciati e poligoni da stendere nella tela 64 × 64. */
 export function profilo(l: Leve) {

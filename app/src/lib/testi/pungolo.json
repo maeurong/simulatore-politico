@@ -1,0 +1,64 @@
+{
+  "motti": {
+    "economia_finanze": [
+      "Il centesimo è sacro, il resto si vedrà",
+      "Ogni euro ha la sua copertura. Quasi ogni euro",
+      "Rinvio la spesa, anticipo il comunicato",
+      "Taglio dove non si vede, annuncio dove si vede"
+    ],
+    "sviluppo_economico": [
+      "Ne parliamo al prossimo tavolo",
+      "Ho convocato un tavolo sui tavoli",
+      "Incentivo tutto, anche gli incentivi",
+      "L’impresa viene prima. Dopo la riunione"
+    ],
+    "lavoro_welfare": [
+      "Il lavoro nobilita, la riforma pure",
+      "Ascolto le parti, a turno, a lungo",
+      "Rinnovo il contratto e il comunicato",
+      "Creo posti di lavoro: uno lo occupo io"
+    ],
+    "sanita": [
+      "Prima il paziente, poi il bilancio, poi la lettera",
+      "Le liste d’attesa le aspetto anch’io",
+      "Curo prima il comunicato, poi il reparto",
+      "Ho un piano per ogni reparto. Il personale arriva col prossimo"
+    ],
+    "istruzione_ricerca": [
+      "Chi non studia ripete. Anche il ministro",
+      "Riformo la scuola ogni anno, perché nessuno si annoi",
+      "La ricerca è il futuro: la finanzierò in futuro",
+      "Promuovo tutti, a cominciare dalla riforma"
+    ],
+    "infrastrutture_trasporti": [
+      "Ogni cantiere merita due inaugurazioni",
+      "Il ponte lo vedo già, sul plastico",
+      "Poso la prima pietra; la seconda può aspettare",
+      "Il treno arriva. Io arrivo prima, per la foto"
+    ],
+    "ambiente_energia": [
+      "Il futuro è verde, il bilancio un po’ meno",
+      "Ogni transizione ha la sua proroga",
+      "Spengo la luce quando esco dal convegno",
+      "Risparmio energia: firmo una volta sola"
+    ],
+    "interno": [
+      "Ordine, disciplina e un caffè",
+      "Ho tutto sotto controllo, tranne il controllo",
+      "La sicurezza è percepita. Io la percepisco benissimo",
+      "Presidio il territorio dalla scrivania"
+    ],
+    "giustizia": [
+      "Mi riservo di rispondere, in tre gradi",
+      "La riforma è pronta, in attesa di giudizio",
+      "I tempi della giustizia sono certi: lunghi",
+      "Le sentenze non le commento. Le aspetto"
+    ],
+    "esteri_difesa": [
+      "Dipende. In sei lingue",
+      "Esprimo preoccupazione con fermezza",
+      "Una stretta di mano costa meno di un trattato",
+      "Sto al fianco di tutti. Un po’ di lato, per prudenza"
+    ]
+  }
+}
