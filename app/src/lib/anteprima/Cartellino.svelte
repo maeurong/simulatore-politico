@@ -22,9 +22,10 @@
   import { cosaCambia, perimetro, quando, stimatore, type Misurabile } from "./anteprima";
   import { oscilla } from "./oscilla";
 
-  let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false }: {
+  let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false, inCalcolo = false }: {
     vista: Vista; misura: Misurabile; valori: ValoreProposto[]; indietro: string; ontorna: (e: MouseEvent) => void;
     manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null; fuoco?: boolean;
+    inCalcolo?: boolean;
   } = $props();
 
   const nome = (id: string) => nomeDi(vista, id);
@@ -43,9 +44,9 @@
   const senato = $derived(vista.seggi.reduce((s, x) => s + x.senato, 0));
   const partiti = $derived(inOrdine(vista));
   const votano = (si: boolean) => elenco(partiti.filter((p) => (misura.linee.find((l) => l.partito === p.id)?.si ?? false) === si).map((p) => p.nome), ", ");
-  const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : "");
+  const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? t("anteprima.nota_riforma") : "");
   const vuoto = $derived(t(misura.forma === "elettorale" ? "anteprima.nessun_effetto_elettorale" : misura.forma === "costituzionale" ? "anteprima.nessun_effetto_costituzionale" : "anteprima.nessun_effetto"));
-  const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
+  const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : inCalcolo ? t("aula.ante_in_calcolo") : undefined);
 
   const moto = $derived(fattori(impostazioni, sistema.riduce));
   let foglio = $state<HTMLElement>();
@@ -64,7 +65,7 @@
   });
 </script>
 
-<div class="cart" bind:this={foglio}>
+<div class="cart" class:vecchia={inCalcolo} aria-busy={inCalcolo} bind:this={foglio}>
   <i class="spillo" aria-hidden="true"></i>
   <div class="capo"><Pulsante forma="link" onclick={ontorna}>{indietro}</Pulsante></div>
   <span class="occ">{t("anteprima.occhiello", { forma: formaDi({ forma: misura.forma, deliberazione: "deliberazione" in misura ? misura.deliberazione : 1 }) })}</span>
@@ -175,6 +176,7 @@
 <style>
   .cart { position: relative; border: var(--forte); background: var(--carta); padding: 14px 14px 12px; margin: 30px 10px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; align-content: start; min-width: 0;
     transform-origin: 50% -20px; box-shadow: 3px 4px 0 rgb(31 26 23 / .16) }
+  .cart.vecchia { opacity: .5 }
   .cart::before { content: ""; position: absolute; left: 50%; top: -20px; width: 1.5px; height: 20px; background: var(--ink) }
   .spillo { position: absolute; left: calc(50% - 6px); top: -27px; width: 13px; height: 13px; border-radius: 50%; background: var(--rosso); border: 1.5px solid var(--ink) }
   :global(:root.grave) .cart { box-shadow: none }

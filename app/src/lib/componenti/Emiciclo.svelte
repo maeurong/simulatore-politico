@@ -9,7 +9,7 @@
   const W = 560;
   const file = $derived(ramo === "Camera" ? 9 : 6);
   const raggio = $derived(ramo === "Camera" ? W / 90 : W / 62);
-  const frase = $derived(t("aula.emiciclo", { ramo, da: numero(si[0]), a: numero(si[1]), n: numero(maggioranza) }));
+  const frase = $derived(t("aula.emiciclo", { ramo, si: si[0] === si[1] ? numero(si[0]) : `${numero(si[0])}–${numero(si[1])}`, n: numero(maggioranza) }));
 
   // i seggi su file concentriche, ordinati dall'angolo di sinistra a quello di destra
   const seggi = $derived.by(() => {

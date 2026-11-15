@@ -7,16 +7,18 @@
   import { nomeDi } from "$lib/partiti";
   import { inOrdine } from "$lib/partiti/schieramento";
   import { partita } from "$lib/partita.svelte";
-  import { guscio, testoRifiuto } from "$lib/guscio/chiamate";
+  import { guscio } from "$lib/guscio/chiamate";
   import { ultimoVince } from "$lib/editor/editor.svelte";
   import { euro } from "$lib/governo/governo";
   import type { Anteprima } from "$lib/tipi/Anteprima";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
+  import type { VoceMisura } from "$lib/tipi/VoceMisura";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Cartellino from "$lib/anteprima/Cartellino.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { comandoBozza, etichettaBozza, forma, misuraNominata, type Bozza } from "./bozza";
+  import { riportaFuoco } from "./aula";
+  import { comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, type Bozza } from "./bozza";
 
   let { vista, bozza, manda, rifiuto, ontoglie, onsvuota, onapri }: {
     vista: Vista; bozza: Bozza; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
@@ -36,25 +38,32 @@
 
   // una anteprima in volo per volta: chi cambia gradino in fretta lascia l'ultima, e una risposta vecchia non copre la nuova
   let ante = $state.raw<Anteprima | null>(null);
+  // la bozza a cui `ante` risponde: il cartellino mostra quella, non la bozza già cambiata che aspetta la sua risposta
+  let anteDi = $state.raw<Bozza>([]);
   let errore = $state<string | null>(null);
   let inCalcolo = $state(false);
   let ultima = "";
+  const nominataAnte = $derived(errore ? misuraNominata(vista, errore) : null);
   const chiedi = ultimoVince(
     (b: Bozza) => (vista.governa ? guscio.anteprima(b) : guscio.anteprimaProposta(b)),
-    (r, b) => {
+    async (r, b) => {
       if (JSON.stringify(b) !== ultima) return;
       inCalcolo = false;
-      if ("specie" in r) {
-        ante = null;
-        errore = r.specie === "rifiuto" ? testoRifiuto(r) : r.testo;
-      } else {
-        ante = r;
-        errore = null;
+      ({ ante, errore } = leggiAnteprima(r));
+      anteDi = b;
+      // un rifiuto chiude il cartellino e lo azzera: la correzione dopo non lo riapre; il fuoco, se stava lì, passa al dettaglio
+      if (!ante && apertoCartellino) {
+        const da = document.activeElement;
+        const lato = da?.closest<HTMLElement>("aside");
+        apertoCartellino = false;
+        await tick();
+        if (lato && da && !da.isConnected) riportaFuoco(lato, da);
       }
     },
   );
   $effect(() => {
     const b = bozza;
+    void vista; // una Vista nuova (un comando riuscito) cambia ciò che il core risponde, anche a bozza ferma
     ultima = JSON.stringify(b);
     untrack(() => {
       if (!b.length) {
@@ -95,8 +104,12 @@
   const ramo = ([da, a]: [number, number], n: number) => t("aula.ante_forbice", { da: numero(da), a: numero(a), n: numero(n) });
 </script>
 
+{#snippet rimando(m: VoceMisura)}
+  <Pulsante forma="link" onclick={() => onapri(m.id)}>{t("aula.apri_misura", { nome: m.nome })}</Pulsante>
+{/snippet}
+
 {#if f && etichetta && apertoCartellino && ante}
-  <Cartellino {vista} misura={ante} valori={bozza} indietro={t("anteprima.torna_alla_bozza")} ontorna={(e) => scambia(e, false)} {manda} {rifiuto} fuoco={daFuoco} />
+  <Cartellino {vista} misura={ante} valori={anteDi} {inCalcolo} indietro={t("anteprima.torna_alla_bozza")} ontorna={(e) => scambia(e, false)} {manda} {rifiuto} fuoco={daFuoco} />
 {:else if !f || !etichetta}
   <div class="bozza vuota sec">{t("aula.bozza_vuota", { azione: t(vista.governa ? "aula.cambia" : "aula.proponi") })}</div>
 {:else}
@@ -111,6 +124,7 @@
     <div class="ante" class:vecchia={inCalcolo && ante} aria-busy={inCalcolo}>
       {#if errore}
         <Rifiuto testo={errore} />
+        {#if nominataAnte}{@render rimando(nominataAnte)}{/if}
       {:else if ante}
         <dl class="dati">
           <dt>{t("aula.ante_costo")}</dt><dd><b>{euro(ante.costo_annuo)}</b></dd>
@@ -132,7 +146,7 @@
     </div>
     {#if rifiuto && (rifiuto.tipo === "presenta_legge" || rifiuto.tipo === "presenta_proposta")}
       <Rifiuto testo={rifiuto.testo} />
-      {#if nominata}<Pulsante forma="link" onclick={() => onapri(nominata.id)}>{t("aula.apri_misura", { nome: nominata.nome })}</Pulsante>{/if}
+      {#if nominata}{@render rimando(nominata)}{/if}
     {/if}
   </section>
 {/if}

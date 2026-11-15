@@ -49,15 +49,15 @@
       {@const aperto = aperta === d.id || forzata}
       <div class="dr" class:sel={aperto}>
         <span class="nm">{d.nome}<small>{d.legge}{d.precedente !== d.in_vigore ? ` · ${t("aula.disp_prima", { gradino: nomeGradino(d, d.precedente) })}` : ""}</small></span>
+        <span class="x">
+          {#if inEsame(d)}<span class="chip">{t("aula.in_esame")}</span>{/if}
+          {#if !forzata}<Pulsante forma="link" data-riga={d.id} aria-label={t(aperto ? "aula.chiudi_di" : vista.governa ? "aula.cambia_di" : "aula.proponi_di", { nome: d.nome })} onclick={() => onapri(aperto ? null : d.id)}>{aperto ? t("aula.chiudi_riga") : t(vista.governa ? "aula.cambia" : "aula.proponi")}</Pulsante>{/if}
+        </span>
         {#if aperto}
           <Scala {d} {bozza} onscegli={(g) => scegli(d, g)} />
         {:else}
           <span class="vig"><b>{nomeGradino(d, d.in_vigore)}</b>{#each d.in_arrivo as a (a.gradino)}<span class="arr">{t("aula.disp_arrivo", { gradino: nomeGradino(d, a.gradino), periodo: periodo(a.data) })}</span>{/each}</span>
         {/if}
-        <span class="x">
-          {#if inEsame(d)}<span class="chip">{t("aula.in_esame")}</span>{/if}
-          {#if !forzata}<Pulsante forma="link" data-riga={d.id} aria-label={t(aperto ? "aula.chiudi_di" : vista.governa ? "aula.cambia_di" : "aula.proponi_di", { nome: d.nome })} onclick={() => onapri(aperto ? null : d.id)}>{aperto ? t("aula.chiudi_riga") : t(vista.governa ? "aula.cambia" : "aula.proponi")}</Pulsante>{/if}
-        </span>
         {#if aperto && !vista.governa}
           <div class="ref">
             {#if d.rifiuto_referendum !== null}
@@ -80,13 +80,14 @@
   .cg:first-child { margin-top: 0 }
   .dr { display: grid; grid-template-columns: minmax(150px, 24%) minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 5px 4px; border-bottom: var(--filo); font-size: var(--c-sec) }
   .dr.sel { background: var(--velo) }
-  .nm { font-weight: 700; line-height: 1.2 }
+  .nm { font-weight: 700; line-height: 1.2; grid-area: 1 / 1 }
+  .dr > :global(.scala), .vig { grid-area: 1 / 2 }
   .nm small { display: block; font-weight: 400; color: var(--grigio); font-size: var(--c-min) }
   .arr { color: var(--biro); font-weight: 700; display: inline-block }
   .vig { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline }
   .ref { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }
-  .x { display: flex; gap: 8px; align-items: center; justify-content: flex-end; font-size: var(--c-min); white-space: nowrap }
+  .x { grid-area: 1 / 3; display: flex; gap: 8px; align-items: center; justify-content: flex-end; font-size: var(--c-min); white-space: nowrap }
   .chip { border: 1.5px solid var(--ink); padding: 0 6px; font-weight: 700; line-height: 1.4 }
 </style>

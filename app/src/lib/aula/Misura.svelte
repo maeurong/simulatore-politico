@@ -95,8 +95,8 @@
           <span class="chip">{t(e.stato === "accolto" ? "aula.accolto" : "aula.respinto")}</span>
         {:else if vista.governa}
           <span class="az">
-            <Pulsante forma="piccolo" onclick={() => manda({ tipo: "emendamento", misura: m.id, partito: e.partito, accogli: true })}>{t("aula.accogli")}</Pulsante>
-            <Pulsante forma="piccolo" onclick={() => manda({ tipo: "emendamento", misura: m.id, partito: e.partito, accogli: false })}>{t("aula.respingi")}</Pulsante>
+            <Pulsante forma="piccolo" aria-label={t("aula.accogli_di", { nome: nome(e.partito) })} onclick={() => manda({ tipo: "emendamento", misura: m.id, partito: e.partito, accogli: true })}>{t("aula.accogli")}</Pulsante>
+            <Pulsante forma="piccolo" aria-label={t("aula.respingi_di", { nome: nome(e.partito) })} onclick={() => manda({ tipo: "emendamento", misura: m.id, partito: e.partito, accogli: false })}>{t("aula.respingi")}</Pulsante>
           </span>
         {/if}
         <small>{e.motivo}</small>

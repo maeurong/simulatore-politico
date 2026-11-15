@@ -25,9 +25,19 @@ describe("calendario", () => {
     expect(calendario(v).filter((p) => p.tipo === "ordinaria").every((p) => p.misura)).toBe(true);
     expect(calendario(v).find((p) => p.tipo === "decreti")!.misura!.forma).toBe("conversione");
   });
-  it("i posti si contano da Vista.posti, non dalle misure", () => {
-    const v = { ...piena, posti: { ...piena.posti, ordinari: 4, ordinari_occupati: 1 } };
-    expect(calendario(v).filter((p) => p.tipo === "ordinaria").map((p) => p.misura?.id ?? null)).toEqual([1, null, null, null]);
+  it("i posti si contano da Vista.posti: più posti che misure restano liberi", () => {
+    const v = { ...piena, posti: { ...piena.posti, ordinari: 4, ordinari_occupati: 2 } };
+    expect(calendario(v).filter((p) => p.tipo === "ordinaria").map((p) => p.misura?.id ?? null)).toEqual([1, 3, null, null]);
+  });
+  it("ogni ordinaria della Vista compare in un posto, anche se ordinari_occupati ne conta meno", () => {
+    const v = { ...piena, posti: { ...piena.posti, ordinari: 3, ordinari_occupati: 1 } };
+    const ordinarie = piena.calendario.filter((m) => (m.forma === "riforma" || m.forma === "elettorale") && m.promotore === null).map((m) => m.id);
+    expect(ordinarie.length).toBeGreaterThan(1);
+    expect(calendario(v).flatMap((p) => (p.tipo === "ordinaria" && p.misura ? [p.misura.id] : []))).toEqual(ordinarie);
+  });
+  it("calendario pieno: nessun posto libero fra le ordinarie", () => {
+    const v = { ...piena, posti: { ...piena.posti, ordinari: 2, ordinari_occupati: 2 } };
+    expect(calendario(v).filter((p) => p.tipo === "ordinaria").map((p) => p.misura?.id ?? null)).toEqual([1, 3]);
   });
 });
 

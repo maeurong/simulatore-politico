@@ -50,7 +50,10 @@ describe("Misura, emendamenti", () => {
   });
   it("aperti: Accogli e Respingi e il default; accolti: solo il segno, niente pulsanti", () => {
     const aperti = render(Aula, { props: { vista: conStato("aperto") } }).body;
-    expect(aperti.match(/Accogli/g)).toHaveLength(2);
+    expect(aperti.match(/>Accogli</g)).toHaveLength(2);
+    const nomi = [...aperti.matchAll(/aria-label="(Accogli|Respingi): emendamento di ([^"]+)"/g)].map((x) => x[0]);
+    expect(nomi).toHaveLength(4);
+    expect(new Set(nomi).size).toBe(4);
     expect(aperti).toContain("Senza scelta: resta aperto");
     const accolti = render(Aula, { props: { vista: conStato("accolto") } }).body;
     expect(accolti).not.toContain("Accogli");
@@ -74,5 +77,17 @@ describe("Emiciclo", () => {
     const { body } = render(Emiciclo, { props: { totale: 400, si: [179, 193], maggioranza: 201, ramo: "Camera" } });
     expect(body).toContain('aria-label="Camera · 179–193 sì · ne servono 201"');
     expect(body.match(/<circle/g)).toHaveLength(400);
+  });
+});
+
+describe("Emiciclo, forbice degenere", () => {
+  const fig = (si: [number, number]) => render(Emiciclo, { props: { ramo: "Camera", totale: 400, si, maggioranza: 201 } }).body;
+  it("con i due valori uguali ne scrive uno solo, anche nel nome accessibile", () => {
+    const b = fig([205, 205]);
+    expect(b).not.toContain("205–205");
+    expect(b.match(/Camera · 205 sì · ne servono 201/g)).toHaveLength(2);
+  });
+  it("con una forbice vera scrive i due estremi", () => {
+    expect(fig([190, 215])).toContain("Camera · 190–215 sì");
   });
 });

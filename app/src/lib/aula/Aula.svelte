@@ -8,7 +8,7 @@
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import { riportaFuoco, rifiutoPer } from "./aula";
-  import { bozzaDelComando, cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
+  import { bozzaDelComando, bozzaInvariata, cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
   import Bozza from "./Bozza.svelte";
   import Disposizioni from "./Disposizioni.svelte";
   import Elettorale from "./Elettorale.svelte";
@@ -77,7 +77,7 @@
   async function presenta(c: Comando): Promise<boolean> {
     const da = lato.contains(document.activeElement) ? document.activeElement : null;
     const ok = await manda(c, null);
-    if (ok && "valori" in c) {
+    if (ok && bozzaInvariata(c, bozza)) {
       bozza = [];
       await tick();
       riportaFuoco(lato, da);

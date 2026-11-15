@@ -1,6 +1,8 @@
 // La legge in composizione: i valori scelti nelle Disposizioni, la sua forma, il bottone e il comando (storie 107-108).
 // La UI non ripete le regole sulle miscele (un dicastero per legge, la costituzionale da sola): le dice il core col suo rifiuto.
 import { t, type Chiave } from "$lib/testi/t";
+import { testoRifiuto, type ErroreGuscio } from "$lib/guscio/chiamate";
+import type { Anteprima } from "$lib/tipi/Anteprima";
 import type { Comando } from "$lib/tipi/Comando";
 import type { ValoreProposto } from "$lib/tipi/ValoreProposto";
 import type { Vista } from "$lib/tipi/Vista";
@@ -68,3 +70,10 @@ export const rifiutoDellaBozza = <R extends { vista: Vista | null; misura: numbe
 export const bozzaDelComando = (c: Comando): string | null =>
   "valori" in c ? JSON.stringify(c.valori)
   : c.tipo === "compra" && typeof c.acquisto === "object" && "test_misura" in c.acquisto ? JSON.stringify(c.acquisto.test_misura.valori) : null;
+
+/** Il comando di «Presenta» ha mandato proprio la bozza di adesso: solo allora si svuota (cambiata in volo, resta). */
+export const bozzaInvariata = (c: Comando, b: Bozza): boolean => "valori" in c && JSON.stringify(c.valori) === JSON.stringify(b);
+
+/** La risposta dell'anteprima: o l'anteprima, o il testo del rifiuto (che può nominare la misura in esame: `misuraNominata`). */
+export const leggiAnteprima = (r: Anteprima | ErroreGuscio): { ante: Anteprima | null; errore: string | null } =>
+  "specie" in r ? { ante: null, errore: testoRifiuto(r) } : { ante: r, errore: null };

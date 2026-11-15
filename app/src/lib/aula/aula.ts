@@ -18,11 +18,12 @@ export function calendario(v: Vista): Posto[] {
   const decreti = libere.filter((m) => m.forma === "conversione");
   const ordinarie = libere.filter((m) => m.forma === "riforma" || m.forma === "elettorale");
   const costituzionali = libere.filter((m) => m.forma === "costituzionale");
-  const { ordinari, ordinari_occupati: occ, costituzionali: cos, costituzionali_occupati: cosOcc } = v.posti;
+  // le misure in calendario contano più dei conteggi: una che eccede i posti ne prende uno in più, non sparisce
+  const ordinari = Math.max(v.posti.ordinari, ordinarie.length), cos = Math.max(v.posti.costituzionali, costituzionali.length);
   return [
     ...(decreti.length ? decreti.map((misura) => ({ tipo: "decreti" as const, misura })) : [{ tipo: "decreti" as const, misura: null }]),
-    ...Array.from({ length: ordinari }, (_, i) => ({ tipo: "ordinaria" as const, misura: i < occ ? (ordinarie[i] ?? null) : null, numero: i + 1, di: ordinari })),
-    ...Array.from({ length: cos }, (_, i) => ({ tipo: "costituzionale" as const, misura: i < cosOcc ? (costituzionali[i] ?? null) : null })),
+    ...Array.from({ length: ordinari }, (_, i) => ({ tipo: "ordinaria" as const, misura: ordinarie[i] ?? null, numero: i + 1, di: ordinari })),
+    ...Array.from({ length: cos }, (_, i) => ({ tipo: "costituzionale" as const, misura: costituzionali[i] ?? null })),
     { tipo: "opposizione", misura: v.calendario.find((m) => m.promotore !== null) ?? null },
   ];
 }
