@@ -18,6 +18,7 @@ import type { Vista } from "$lib/tipi/Vista";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
+import type { VoceMenu } from "$lib/tipi/VoceMenu";
 import type { VocePartita } from "$lib/tipi/VocePartita";
 
 export type ErroreGuscio = { specie: "rifiuto" | "guasto"; testo: string };
@@ -65,6 +66,10 @@ export const guscio = {
   anteprima: (valori: ValoreProposto[]) => chiama<Anteprima>("anteprima", { valori }),
   anteprimaDecreto: (decreto: Decreto) => chiama<Anteprima>("anteprima_decreto", { decreto }),
   anteprimaAccogli: (dicastero: string) => chiama<Anteprima>("anteprima_accogli", { dicastero }),
+  costoDirotta: (dicastero: string, atto: string | null, regione: string | null) =>
+    chiama<number>("costo_dirotta", { dicastero, atto, regione }),
+  menuElettorale: (valori: ValoreProposto[]) => chiama<VoceMenu[]>("menu_elettorale", { valori }),
+  anteprimaProposta: (valori: ValoreProposto[]) => chiama<Anteprima>("anteprima_proposta", { valori }),
   serie: () => chiama<PuntoSerie[]>("serie"),
   anteprimaFondazione: (scenario: SuMisura | null) =>
     chiama<AnteprimaFondazione>("anteprima_fondazione", { scenario }),

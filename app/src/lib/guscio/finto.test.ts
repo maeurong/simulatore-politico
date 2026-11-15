@@ -9,6 +9,9 @@ import cruscottoJson from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscott
 import paese from "../../../../.scratch/v1-piano-11-ui/viste/23-paese.json";
 import campagna from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 import trattativa from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativa.json";
+import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
+import aulaJson from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
+import anteprimeJson from "../../../../.scratch/v1-piano-11-ui/viste/20-anteprima.json";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -223,5 +226,88 @@ describe("rispondi: la fetta 11b", () => {
   });
   it("un comando non giocato resta un rifiuto", () => {
     expect(() => comanda({ tipo: "dimettiti" }, zeroCampagna)).toThrow(rifiuta("non nel campione: comanda"));
+  });
+});
+
+describe("rispondi: la fetta 11c", () => {
+  const rifiuta = (testo: string) => expect.objectContaining({ specie: "rifiuto", testo });
+  const gov: any = governoJson;
+  const aula: any = aulaJson;
+  const ante: any = anteprimeJson;
+  const cc = { ...c, campione: governo, cruscotto, governo: gov, aula, anteprime: ante, stato: null };
+  const comanda = (comando: unknown, campione: unknown = governo) =>
+    rispondi("comanda", { comando }, { ...cc, campione });
+
+  it("costo_dirotta: il numero del campione, sotto atti o regioni", () => {
+    const d = gov.costo_dirotta_03.sanita;
+    expect(rispondi("costo_dirotta", { dicastero: "sanita", atto: "sanita_case_comunita", regione: null }, cc)).toBe(d.atti.sanita_case_comunita);
+    expect(() => rispondi("costo_dirotta", { dicastero: "sanita", atto: null, regione: "abruzzo" }, cc)).toThrow(rifiuta(d.regioni.abruzzo.rifiuto));
+    expect(() => rispondi("costo_dirotta", { dicastero: "sanita", atto: null, regione: null }, cc)).toThrow(rifiuta("non nel campione: costo_dirotta"));
+  });
+  it("menu_elettorale: vuoto dà menu_03, la proporzionale il suo, il resto è rifiuto", () => {
+    expect(rispondi("menu_elettorale", { valori: [] }, cc)).toHaveLength(aula.menu_03.length);
+    const prop = aula.piena.vista.calendario[1].valori;
+    expect(rispondi("menu_elettorale", { valori: prop }, cc)).toEqual(aula.menu_proporzionale);
+    expect(() => rispondi("menu_elettorale", { valori: [{ disposizione: "x", gradino: "y" }] }, cc)).toThrow(rifiuta("non nel campione: menu_elettorale"));
+  });
+  it("anteprima_proposta: gli stessi valori danno l'anteprima, altri un rifiuto", () => {
+    expect(rispondi("anteprima_proposta", { valori: aula.anteprima_proposta.valori }, cc)).toEqual(aula.anteprima_proposta.ok);
+    expect(() => rispondi("anteprima_proposta", { valori: [] }, cc)).toThrow(rifiuta("non nel campione: anteprima_proposta"));
+  });
+  it("anteprima: la voce con gli stessi valori, o il suo rifiuto", () => {
+    expect(rispondi("anteprima", { valori: ante.anteprime.riforma.valori }, cc)).toEqual(ante.anteprime.riforma.anteprima);
+    const r = ante.anteprime.territoriale_decontribuzione;
+    expect(() => rispondi("anteprima", { valori: r.valori }, cc)).toThrow(rifiuta(r.rifiuto));
+    expect(rispondi("anteprima", { valori: ante.gradini[0].valori }, cc)).toEqual(ante.gradini[0].anteprima);
+  });
+  it("anteprima_accogli: infrastrutture dal 17", () => {
+    expect(rispondi("anteprima_accogli", { dicastero: "infrastrutture_trasporti" }, cc)).toEqual(cruscotto.anteprima_accogli_03);
+    expect(() => rispondi("anteprima_accogli", { dicastero: "sanita" }, cc)).toThrow(rifiuta("non nel campione: anteprima_accogli"));
+  });
+  it("anteprima_decreto: disposizioni con gli stessi valori", () => {
+    expect(rispondi("anteprima_decreto", { decreto: { tipo: "disposizioni", valori: ante.decreto.valori } }, cc)).toEqual(ante.decreto.anteprima);
+    expect(() => rispondi("anteprima_decreto", { decreto: { tipo: "fondi", da: "a", a: "b", importo: 1 } }, cc)).toThrow(rifiuta("non nel campione: anteprima_decreto"));
+  });
+  it("ferma su Lavoro: l'agenda di Lavoro fermata", () => {
+    const v: any = comanda({ tipo: "ferma", dicastero: "lavoro_welfare" });
+    expect(v).toEqual(gov.scelte.vista);
+    const lavoro = v.ministeri.find((m: any) => m.dicastero === "lavoro_welfare");
+    expect(lavoro.agenda.stato).toBe("fermata");
+  });
+  it("dirotta e chiedi_dimissioni giocati: la Vista delle scelte; non giocati: rifiuto", () => {
+    expect(comanda({ tipo: "dirotta", dicastero: "sanita", atto: "sanita_case_comunita", regione: null })).toEqual(gov.scelte.vista);
+    expect(comanda({ tipo: "dirotta", dicastero: "sviluppo_economico", atto: null, regione: "calabria" })).toEqual(gov.scelte.vista);
+    expect(comanda({ tipo: "chiedi_dimissioni", dicastero: "ambiente_energia" })).toEqual(gov.scelte.vista);
+    expect(() => comanda({ tipo: "ferma", dicastero: "sanita" })).toThrow(rifiuta("non nel campione: comanda"));
+  });
+  it("scegli_successore: la Vista del campione", () => {
+    expect(comanda({ tipo: "scegli_successore", dicastero: "ambiente_energia", indice: 0 })).toEqual(gov.successore_scelto.vista);
+  });
+  it("dimettiti: dimissioni vere", () => {
+    expect((comanda({ tipo: "dimettiti" }) as any).dimissioni).toBe(true);
+  });
+  it("rinvia su Ambiente e rispondi_evento debito: scelte_fatte", () => {
+    expect(comanda({ tipo: "rinvia", dicastero: "ambiente_energia" })).toEqual(cruscotto.scelte_fatte.vista);
+    expect(comanda({ tipo: "rispondi_evento", evento: 0, opzione: "debito" })).toEqual(cruscotto.scelte_fatte.vista);
+    expect(() => comanda({ tipo: "rinvia", dicastero: "sanita" })).toThrow(rifiuta("non nel campione: comanda"));
+  });
+  it("presenta_legge: una delle tre misure dà la piena, la seconda costituzionale il rifiuto", () => {
+    const cal = aula.piena.vista.calendario;
+    expect(comanda({ tipo: "presenta_legge", valori: cal[3].valori })).toEqual(aula.piena.vista);
+    expect(comanda({ tipo: "presenta_legge", valori: cal[2].valori })).toEqual(aula.piena.vista);
+    expect(() => comanda({ tipo: "presenta_legge", valori: cal[2].valori }, aula.piena)).toThrow(rifiuta(aula.rifiuto_calendario_costituzionale));
+    expect(aula.rifiuto_calendario_costituzionale).toContain("calendario pieno");
+    expect(() => comanda({ tipo: "presenta_legge", valori: [] })).toThrow(rifiuta("non nel campione: comanda"));
+  });
+  it("presenta_proposta e linea: la Vista dell'opposizione", () => {
+    expect(comanda({ tipo: "presenta_proposta", valori: [] })).toEqual(aula.opposizione_proposta.vista);
+    expect(comanda({ tipo: "linea", misura: 1, si: false })).toEqual(aula.opposizione_proposta.vista);
+  });
+  it("compra il test della misura: l'esito della voce con gli stessi valori, il secondo è rifiuto", () => {
+    const valori = ante.anteprime.riforma.valori;
+    const v: any = comanda({ tipo: "compra", acquisto: { test_misura: { valori } } });
+    expect(v.acquisti.test_misura).toEqual(ante.test.riforma.acquisti.test_misura);
+    expect(() => comanda({ tipo: "compra", acquisto: { test_misura: { valori } } }, v)).toThrow(rifiuta(ante.test.riforma.rifiuto_ripetuto));
+    expect(() => comanda({ tipo: "compra", acquisto: { test_misura: { valori: [] } } })).toThrow(rifiuta("non nel campione: comanda"));
   });
 });
