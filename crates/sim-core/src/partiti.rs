@@ -1,6 +1,7 @@
 //! Partiti e governo uscente: dati dello scenario e stato della partita.
 
 use crate::dati::{DatiGioco, Dicastero, Ruolo};
+use crate::elettorato::Genere;
 use crate::errore::Errore;
 use crate::legislatura::Spesa;
 use crate::scenario::{Ingresso, Scenario};
@@ -64,6 +65,7 @@ pub struct DatoPartito {
     pub posizione: f64,
     pub valence: Ingresso,
     pub vocazione: Vocazione,
+    pub genere_leader: Genere,
     pub leader: String,
     pub regola: Regola,
 }
@@ -86,6 +88,8 @@ pub struct Partito {
     pub valence_base: f64,
     pub vocazione: Vocazione,
     pub leader: String,
+    /// Il genere del leader; `None` senza leader (il partito fondato dal giocatore).
+    pub genere_leader: Option<Genere>,
     pub regola: Regola,
     /// Resta al suo indice, senza voti.
     pub sciolto: bool,
@@ -117,6 +121,11 @@ impl Partito {
         let d = nuova - self.posizione_dichiarata;
         self.posizione_dichiarata = nuova;
         self.posizione_percepita = (self.posizione_percepita + d / 2.0).clamp(1.0, 7.0);
+    }
+
+    /// La distanza fra percepita e dichiarata, che le soglie di scissione misurano.
+    pub(crate) fn distanza_percepita(&self) -> f64 {
+        (self.posizione_percepita - self.posizione_dichiarata).abs()
     }
 }
 
@@ -166,6 +175,7 @@ pub fn iniziali(dati: &DatiGioco) -> (Vec<Partito>, Governo) {
             valence_base: p.valence.valore,
             vocazione: p.vocazione,
             leader: p.leader.clone(),
+            genere_leader: Some(p.genere_leader),
             regola: p.regola,
             sciolto: false,
             cassa: 0,

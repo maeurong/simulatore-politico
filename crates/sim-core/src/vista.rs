@@ -1,6 +1,6 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
-use crate::economia::Aliquote;
-use crate::elettorato::Condizione;
+use crate::economia::{Aliquote, Bilancio};
+use crate::elettorato::{Condizione, Genere, RedditoFascia};
 use crate::esito::VoceEsito;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
@@ -13,6 +13,8 @@ use crate::parlamento::{
 };
 use crate::partita::Trimestre;
 use crate::partiti::{Regola, Vocazione};
+use crate::scenario::StatoPde;
+use crate::struttura::Macroarea;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -60,6 +62,11 @@ pub struct Vista {
     /// Il posto riservato all'opposizione di questo turno è del giocatore, e libero: nessuna
     /// proposta dell'opposizione è già in calendario.
     pub posto_riservato: bool,
+    /// Il partito (id) a cui la rotazione dà il posto riservato del turno, in fase ordinaria;
+    /// `None` altrove, a partita finita o senza partiti fuori dal governo con seggi alla Camera.
+    pub posto_riservato_di: Option<String>,
+    /// La mozione di sfiducia presentata nel turno, votata in chiusura; `None` = nessuna.
+    pub sfiducia: Option<VoceSfiducia>,
     pub calendario: Vec<VoceMisura>,
     pub esiti: Vec<EsitoVoto>,
     /// I referendum in attesa del voto.
@@ -78,6 +85,11 @@ pub struct Vista {
     /// l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
     /// altrove.
     pub richieste: Vec<VoceRichiesta>,
+    /// In trattativa con l'incarico al giocatore, una voce per dicastero nell'ordine dei dati: la
+    /// spartizione proposta o, senza proposta, quella di default; vuota altrove.
+    pub spartizione: Vec<VoceSpartizione>,
+    /// In trattativa con `Guida`, la coalizione del ribaltone e il primo per seggi; `None` altrove.
+    pub ribaltone: Option<VistaRibaltone>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
     /// In trattativa a chi va l'incarico; `None` altrove.
@@ -103,6 +115,162 @@ pub struct Vista {
     pub acquisti: VistaAcquisti,
     /// Perché «avanti fino a novità» non concatena un'altra chiusura da questo turno; vuota = può.
     pub fermate: Vec<Fermata>,
+    /// Una voce per regione, nell'ordine dei dati.
+    pub regioni: Vec<VoceRegione>,
+    /// Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
+    pub opere: Vec<VoceOpera>,
+    /// Lo stato della procedura UE, l'esito dell'ultimo controllo e la proiezione del prossimo.
+    pub regole_ue: VistaRegoleUe,
+    /// Il debito in % del PIL, il programma del MES e la ristrutturazione, se in corso.
+    pub debito: VistaDebito,
+    pub posti: VistaPosti,
+    pub soglie: VistaSoglie,
+    /// Reddito reale, crescita del trimestre e crescita attesa (punti) per fascia nell'ultima
+    /// chiusura, medie dei gruppi pesate con gli elettori; tre voci nell'ordine delle fasce.
+    pub redditi: Vec<RedditoFascia>,
+}
+
+/// Le soglie che le regole leggono dalle manopole: soddisfazione del ministro (`minaccia`,
+/// `dimissioni`), intesa dell'alleato (`ultimatum`, `uscita`) e spread della crisi del debito, in
+/// punti base.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaSoglie {
+    pub minaccia: f64,
+    pub dimissioni: f64,
+    pub ultimatum: f64,
+    pub uscita: f64,
+    pub crisi_debito_pb: f64,
+}
+
+/// Un dicastero (id) nella spartizione in corso: `peso` è `peso_spartizione`, `partito` l'id di chi
+/// lo prende (`None` = un tecnico), `di_default` quello della spartizione di default.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSpartizione {
+    pub dicastero: String,
+    pub peso: u8,
+    pub partito: Option<String>,
+    pub di_default: String,
+}
+
+/// Il ribaltone: la coalizione (id) e il primo per seggi, che cede o no la guida.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRibaltone {
+    /// Nell'ordine del core: per posizione dichiarata, da sinistra a destra, come la cerca il
+    /// Capo dello Stato.
+    pub coalizione: Vec<String>,
+    /// `None` solo con la coalizione vuota.
+    pub primo: Option<String>,
+}
+
+/// I posti del calendario e quanti ne sono occupati, contati come li conta `PresentaLegge`: i
+/// posti ordinari per riforme ed elettorali, quello costituzionale per le norme costituzionali.
+/// Le proposte dell'opposizione hanno il loro posto, fuori da questi.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaPosti {
+    pub ordinari: u32,
+    pub ordinari_occupati: u32,
+    pub costituzionali: u32,
+    pub costituzionali_occupati: u32,
+}
+
+/// Un gradino di una disposizione della legge elettorale: se la bozza con quel gradino al posto
+/// del suo valore farebbe una legge elettorale applicabile, e altrimenti perché. `disposizione` e
+/// `gradino` sono id.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceMenu {
+    pub disposizione: String,
+    pub gradino: String,
+    pub ammesso: bool,
+    pub motivo: Option<String>,
+}
+
+/// Le regole fiscali UE. `conto_controllo` e `ultima_deviazione` sono il verdetto dell'ultimo
+/// controllo su un anno chiuso e riveduto, in % del PIL; `procedura`, `turni_in_stato` e
+/// `coesione_sospesa` seguono lo stato della procedura, che cambia anche fuori dal controllo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRegoleUe {
+    pub procedura: StatoPde,
+    pub turni_in_stato: u32,
+    pub conto_controllo: f64,
+    pub ultima_deviazione: f64,
+    pub coesione_sospesa: bool,
+    /// L'ultimo anno per cui il giocatore ha chiesto il margine UE per l'energia, solo se viene
+    /// dopo `clausola_nazionale_fino_a` dello scenario (prima la clausola nazionale copre già
+    /// l'energia); `None` se mai chiesto o se non conta.
+    pub margine_energia: Option<u16>,
+    /// `None` se al conto manca un anno o se il PIL dell'anno non è positivo.
+    pub proiezione: Option<ProiezioneUe>,
+}
+
+/// Ciò che rileverebbe il prossimo controllo: l'anno giudicato, la deviazione e il conto di
+/// controllo che ne uscirebbe, in % del PIL. Con l'anno non ancora chiuso, spesa netta e PIL sono
+/// annualizzati sui trimestri chiusi. Il PIL dei trimestri chiusi è quello vero, non la prima
+/// stima.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct ProiezioneUe {
+    pub anno: u16,
+    pub deviazione: f64,
+    pub conto: f64,
+}
+
+/// `debito_pil`: il debito in % del PIL degli ultimi quattro trimestri, quello dello spread.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaDebito {
+    pub debito_pil: f64,
+    /// `None` senza un programma del MES in corso.
+    pub mes: Option<VistaMes>,
+    /// `None` senza una ristrutturazione in corso: mai fatta, o col premio sotto 1 punto base e
+    /// la perdita dei redditi finita.
+    pub ristrutturazione: Option<VistaRistrutturazione>,
+}
+
+/// Il programma del MES in corso: `fine` è il primo trimestre senza vincoli.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaMes {
+    pub fine: Trimestre,
+    pub vincoli: Vec<VoceVincolo>,
+}
+
+/// Una disposizione vincolata dal memorandum e il gradino a cui la tiene, coi nomi del catalogo.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceVincolo {
+    pub disposizione: String,
+    pub gradino: String,
+}
+
+/// La ristrutturazione del debito: `taglio` è il trimestre in cui il debito è stato tagliato,
+/// `premio_pb` il premio di oggi sullo spread, `fine_perdita` il primo trimestre in cui i redditi
+/// dei detentori non calano più, `None` se la perdita è già finita.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRistrutturazione {
+    pub taglio: Trimestre,
+    pub premio_pb: i32,
+    pub fine_perdita: Option<Trimestre>,
+}
+
+/// Un'opera finita in una regione. `dicastero` e `regione` sono id, `atto` il nome dell'atto,
+/// `turno` quello della chiusura che l'ha finita, `euro` la spesa dell'atto o quanto il cantiere
+/// ha speso in tutto.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceOpera {
+    pub dicastero: String,
+    pub atto: String,
+    pub regione: String,
+    pub turno: u32,
+    pub cantiere: bool,
+    pub euro: i64,
 }
 
 /// Una ragione per fermarsi sul turno appena aperto. `misura` è l'id della misura in calendario,
@@ -154,7 +322,8 @@ pub struct PrezzoAcquisto {
 
 /// Una situazione: `misura` è l'id della grandezza o della misura del motore; `valore` quello
 /// ufficiale (grandezze alla chiusura precedente, prima stima della crescita); `accensione` e
-/// `spegnimento` le due soglie dell'isteresi.
+/// `spegnimento` le due soglie dell'isteresi; `trimestri` quanti trimestri di fila dalla parte del
+/// cambio lo fanno scattare, `oltre` quanti ne sono già passati.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceSituazione {
@@ -164,6 +333,8 @@ pub struct VoceSituazione {
     pub accensione: f64,
     pub spegnimento: f64,
     pub accesa: bool,
+    pub trimestri: u8,
+    pub oltre: u8,
 }
 
 /// Un evento aperto: `causa` è il testo con i valori ufficiali, `scelta` l'indice in `opzioni`
@@ -180,6 +351,9 @@ pub struct VoceEvento {
     pub costo: i64,
     pub opzioni: Vec<VoceOpzione>,
     pub scelta: Option<usize>,
+    /// Le disposizioni (id) che il decreto innescato da questo evento ammette, nell'ordine del
+    /// catalogo: vuota se l'evento non ammette decreto.
+    pub norme: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -191,12 +365,40 @@ pub struct VoceOpzione {
 }
 
 /// La campagna del giocatore: `attiva` nel turno del voto, quando `Comando::Campagna` è ammesso;
-/// `spese` quella scelta, che la chiusura paga.
+/// `spese` quella scelta, che la chiusura paga. `riposizionato`: `Riposiziona` è già fatto in
+/// questa campagna; `passo` è `passo_movimento`, il massimo spostamento della dichiarata;
+/// `minaccia_scissione` e `soglia_scissione` le distanze fra percepita e dichiarata a cui il
+/// partito minaccia la scissione e si scinde.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VistaCampagna {
     pub attiva: bool,
     pub spese: Vec<Spesa>,
+    pub riposizionato: bool,
+    pub passo: f64,
+    pub minaccia_scissione: f64,
+    pub soglia_scissione: f64,
+}
+
+/// L'anteprima di `Riposiziona`: la dichiarata nuova, la percepita che lo spostamento darebbe e
+/// la loro distanza, quella che le soglie di scissione misurano.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct AnteprimaRiposizionamento {
+    pub dichiarata: f64,
+    pub percepita: f64,
+    pub distanza: f64,
+}
+
+/// L'intesa che un alleato perderebbe con `Prometti`: `partito` (id), `intesa` la somma delle
+/// variazioni, negativa o zero (l'intesa non scende sotto 0), e `disposizioni` gli id delle
+/// promesse su cui è contrario.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceCostoPromessa {
+    pub partito: String,
+    pub intesa: f64,
+    pub disposizioni: Vec<String>,
 }
 
 /// Una voce del programma del governo IA: disposizione e gradino, con id e nomi dai dati.
@@ -315,6 +517,47 @@ pub struct VoceMisura {
     pub alleati_contro_fiducia: Vec<String>,
     /// Solo per le leggi elettorali: una voce per partito.
     pub seggi: Vec<VariazioneSeggi>,
+    /// In euro l'anno. Come in `Anteprima`, stimati dal ministro che oggi guida il dicastero
+    /// proponente (capacità neutra senza ministro e per una proposta d'opposizione), con la chiave
+    /// del turno di presentazione:
+    /// il rumore della stima non si ricampiona, ma costo, leve ed effetti partono dal gradino in
+    /// vigore, e il costo dal PIL potenziale dell'anno, quindi cambiano quando cambiano quelli.
+    pub costo_annuo: i64,
+    pub effetti: Vec<EffettoStimato>,
+    pub leve: Vec<VoceLeva>,
+    pub gruppi: Vec<Condizione>,
+    /// Dove il giocatore sceglie la linea (la guardia di `Linea`), ciò che ogni linea costa al
+    /// suo partito; `None` altrove.
+    pub costo_linea: Option<CostiLinea>,
+}
+
+/// La sfiducia del turno: `dicastero` è l'id (`None` = al governo), `partito` l'id di chi l'ha
+/// presentata.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSfiducia {
+    pub dicastero: Option<String>,
+    pub partito: String,
+}
+
+/// Una linea del giocatore su una misura: la sua percepita dopo il voto, calcolata su quella di
+/// oggi, e in ogni ramo il numero atteso di franchi tiratori del suo partito (probabilità ×
+/// seggi).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CostoLinea {
+    pub percepita: f64,
+    pub franchi_camera: f64,
+    pub franchi_senato: f64,
+}
+
+/// Il costo della linea sì, no e di default.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct CostiLinea {
+    pub si: CostoLinea,
+    pub no: CostoLinea,
+    pub default: CostoLinea,
 }
 
 /// Una legge prima della presentazione: costo annuo esatto in euro, effetti nominali a fasce
@@ -326,6 +569,7 @@ pub struct Anteprima {
     pub nome: String,
     pub forma: FormaMisura,
     pub proponente: Option<String>,
+    /// In euro l'anno.
     pub costo_annuo: i64,
     pub effetti: Vec<EffettoStimato>,
     pub leve: Vec<VoceLeva>,
@@ -371,6 +615,9 @@ pub struct VoceEmendamento {
     pub testo: String,
     pub motivo: String,
     pub stato: StatoEmendamento,
+    /// Gli id dei dicasteri indicizzati dalla proposta, in ordine; vuoto sugli emendamenti delle
+    /// leggi.
+    pub dicasteri: Vec<String>,
 }
 
 /// Sì attesi ± 2σ per ramo, prima del voto; `maggioranza_*` = sì necessari; `in_bilico` se una
@@ -399,6 +646,9 @@ pub struct VoceDisposizione {
     pub precedente: String,
     pub in_arrivo: Vec<VoceArrivo>,
     pub referendabile: bool,
+    /// Il testo dell'errore che `PromuoviReferendum` del giocatore darebbe ora, col suo prefisso;
+    /// `None` = ammesso. Col giocatore al governo è sempre `Some`.
+    pub rifiuto_referendum: Option<String>,
     /// Le regioni; vuoto = tutto il Paese.
     pub perimetro: Vec<String>,
     pub gradini: Vec<VoceGradino>,
@@ -440,6 +690,9 @@ pub struct VistaBilancio {
     pub presentabile: bool,
     /// Una legge di bilancio è già presentata nel turno: l'aula la vota in chiusura.
     pub presentato: bool,
+    /// Il bilancio presentato com'è in aula, emendamenti accolti compresi; `None` senza legge
+    /// presentata.
+    pub in_aula: Option<Bilancio>,
     /// Gennaio-marzo senza bilancio approvato per l'anno: niente agende né proposte.
     pub esercizio_provvisorio: bool,
 }
@@ -477,12 +730,17 @@ pub struct VocePartito {
     pub vocazione: Vocazione,
     /// Vuoto per il partito del giocatore.
     pub leader: String,
+    /// `None` per il partito del giocatore, che non ha leader.
+    pub genere_leader: Option<Genere>,
     pub regola: Regola,
     pub sciolto: bool,
     /// Euro: pubblica.
     pub cassa: i64,
     /// Pubbliche: prima quelle in sospeso dal voto prima, poi quelle della campagna in corso.
     pub promesse: Vec<VocePromessa>,
+    /// Ha minacciato la scissione e la distanza fra le posizioni non è ancora tornata sotto la
+    /// soglia di minaccia.
+    pub minaccia: bool,
 }
 
 /// Una promessa di campagna coi nomi del catalogo.
@@ -509,6 +767,8 @@ pub struct VistaStatistica {
 pub struct VoceDicastero {
     pub id: String,
     pub nome: String,
+    /// L'indicatore di servizio: l'id di una voce di `Vista.grandezze`.
+    pub indicatore: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -521,6 +781,35 @@ pub struct VoceGrandezza {
     pub valori: Vec<f64>,
 }
 
+/// Una regione, nell'ordine dei dati (lo stesso di `VoceGrandezza.valori`). `id` è la chiave.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceRegione {
+    pub id: String,
+    pub nome: String,
+    pub macroarea: Macroarea,
+    pub pericolosita: IndiciPericolosita,
+    /// %, esatta, della chiusura precedente: in media, pesata sulle forze di lavoro, è la
+    /// disoccupazione riveduta della `statistica`.
+    pub disoccupazione: f64,
+    /// Euro annui reali per elettore, sui redditi della chiusura precedente pesati con le quote
+    /// di oggi.
+    pub reddito: f64,
+    /// Le 18 quote dei gruppi, che sommano a 1, nell'ordine condizione × fascia.
+    pub gruppi: Vec<f64>,
+}
+
+/// Da 0 a 1: emergenze attese l'anno nella regione diviso quelle della regione più esposta.
+/// `totale` fa lo stesso sulla somma dei tre tipi; la siccità non entra.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct IndiciPericolosita {
+    pub sisma: f64,
+    pub idro: f64,
+    pub incendi: f64,
+    pub totale: f64,
+}
+
 /// Il ministro (o l'interim con la sua rosa) di un dicastero.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
@@ -531,6 +820,9 @@ pub struct VoceMinistero {
     pub rosa: Vec<VoceMinistro>,
     /// Il ministro uscirà a fine turno: nessun comando sul dicastero fino al successore.
     pub dimissioni_chieste: bool,
+    /// L'intesa che l'alleato perderebbe con `ChiediDimissioni`; 0 col ministro del giocatore,
+    /// col tecnico, in interim, con le dimissioni già chieste e quando il giocatore non governa.
+    pub prezzo_dimissioni: f64,
     /// Indice nella rosa del successore scelto; `None` = il primo.
     pub scelta: Option<u8>,
     /// Perché il ministro è uscito; `Some` solo in interim.
@@ -573,7 +865,24 @@ pub struct VoceAgenda {
     pub costo: i64,
     pub motivo: String,
     pub stato: StatoAgenda,
+    /// La variazione di soddisfazione del ministro con `Ferma`, prima del limite a 0-100:
+    /// negativa se tiene all'atto.
+    pub costo_ferma: f64,
+    /// Perché l'atto è in evidenza, nell'ordine della regola; vuota = non lo è.
+    pub evidenza: Vec<MotivoEvidenza>,
+    /// `!evidenza.is_empty()`.
     pub in_evidenza: bool,
+}
+
+/// Una ragione dell'evidenza di un atto: il ministro in minaccia, l'atto a `distanza_evidenza` o
+/// più dalla posizione del Presidente del Consiglio, un evento aperto nel dicastero.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum MotivoEvidenza {
+    Minaccia,
+    Distanza,
+    Evento,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -609,6 +918,9 @@ pub struct VoceCantiere {
     pub turni_mancanti: u32,
     pub rata: i64,
     pub speso: i64,
+    /// La variazione di soddisfazione del ministro in carica con `FermaCantiere`, prima del
+    /// limite a 0-100: negativa se tiene all'atto; 0 in interim.
+    pub costo_ferma: f64,
 }
 
 /// Il ministro com'è visibile al giocatore: soddisfazione, agende e capacità, non lo stato nascosto.
@@ -616,6 +928,7 @@ pub struct VoceCantiere {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceMinistro {
     pub nome: String,
+    pub genere: Genere,
     /// Id del partito.
     pub partito: String,
     pub capacita: u8,

@@ -57,7 +57,7 @@ pub struct VariazioneIntesa {
     pub turno: u32,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Intesa {
     /// Una voce per partito.
     pub valori: Vec<f64>,
@@ -83,6 +83,11 @@ impl Intesa {
         }
     }
 
+    /// L'intesa `x` dopo una variazione di `delta`: limitata a 0-100, come la applica `varia`.
+    pub(crate) fn dopo(x: f64, delta: f64) -> f64 {
+        (x + delta).clamp(0.0, 100.0)
+    }
+
     /// L'intesa del partito `j` cambia di `delta`, limitata a 0-100, e resta la variazione
     /// applicata, non quella chiesta.
     pub(crate) fn varia(&mut self, j: usize, causa: CausaIntesa, delta: f64, turno: u32) {
@@ -90,7 +95,7 @@ impl Intesa {
             return;
         };
         let prima = *x;
-        *x = (*x + delta).clamp(0.0, 100.0);
+        *x = Intesa::dopo(*x, delta);
         self.variazioni.push(VariazioneIntesa {
             partito: j,
             causa,

@@ -76,6 +76,7 @@ mod test {
         StatoDicastero {
             ministro: Some(Ministro {
                 nome: "Test Prova".into(),
+                genere: crate::elettorato::Genere::Uomo,
                 partito: 0,
                 capacita: 3,
                 posizione: 4.0,

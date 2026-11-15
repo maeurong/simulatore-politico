@@ -3,4 +3,9 @@
 /**
  * Quote: una per partito, poi l'astensione.
  */
-export type Rilevazione = { istituto: string, campione: number, quote: Array<number>, };
+export type Rilevazione = { istituto: string, campione: number, quote: Array<number>, 
+/**
+ * Margine dichiarato: `2·√(d·0,25/n)`. L'errore vero è circa il doppio (bias comune,
+ * effetto istituto): la UI non lo presenta come forbice dell'errore.
+ */
+margine: number, };

@@ -287,6 +287,7 @@ mod test {
             },
             ultima_disoccupazione: vec![],
             aliquota_irpef_0: 0.2,
+            redditi_fasce: vec![],
         }
     }
 

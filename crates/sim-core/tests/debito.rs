@@ -11,6 +11,7 @@ use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::eventi::{Famiglia, Tono};
 use sim_core::parlamento::{CausaIntesa, Decreto, FormaMisura, ValoreProposto};
+use sim_core::vista::VoceVincolo;
 use sim_core::{Comando, Partita};
 
 fn json_di(p: &Partita) -> Value {
@@ -961,5 +962,71 @@ fn la_perdita_di_reddito_finisce_dentro_la_partita() {
         } else {
             assert!(finita.is_empty(), "{i}");
         }
+    }
+}
+
+#[test]
+fn il_mes_dice_fine_e_vincoli() {
+    let p = col_mes();
+    let v = p.vista();
+    let fine = p.economia().programma_mes.unwrap();
+    let mes = v.debito.mes.unwrap();
+    let attesa = (v.turno..fine).fold(v.data, |t, _| t.successivo());
+    assert_eq!(mes.fine, attesa);
+    let d = dati_base();
+    let vincoli: Vec<VoceVincolo> = (d.condizionalita().iter())
+        .map(|c| {
+            let x = &d.disposizioni()[d.disposizione(&c.disposizione).unwrap()];
+            let g = x.gradini.iter().find(|g| g.id == c.gradino).unwrap();
+            VoceVincolo {
+                disposizione: x.nome.clone(),
+                gradino: g.nome.clone(),
+            }
+        })
+        .collect();
+    assert!(!vincoli.is_empty());
+    assert_eq!(mes.vincoli, vincoli);
+    // Nel turno `fine` il programma è già finito.
+    let finito = con_mes(&p, v.turno);
+    assert_eq!(finito.economia().programma_mes, Some(v.turno));
+    assert_eq!(finito.vista().debito.mes, None);
+}
+
+#[test]
+fn la_ristrutturazione_dice_premio_e_fine_della_perdita() {
+    let mut p = ristrutturata();
+    let r = p.economia().ristrutturazione.unwrap();
+    let v = p.vista();
+    assert_eq!(r.turno + 1, v.turno);
+    let x = v.debito.ristrutturazione.unwrap();
+    assert_eq!(x.taglio, v.data.precedente());
+    assert_eq!(x.premio_pb, r.premio.round() as i32);
+    // La perdita vale per gli 8 turni dal taglio: finisce 7 trimestri dopo quello in corso.
+    let turni = dati_base().manopola("turni_ristrutturazione") as u32;
+    assert_eq!(turni, 8);
+    let fine = (1..turni).fold(v.data, |t, _| t.successivo());
+    assert_eq!(x.fine_perdita, Some(fine));
+    for _ in 2..turni {
+        chiudi_col_bilancio(&mut p);
+    }
+    let ultimo = p.vista().debito.ristrutturazione.unwrap();
+    assert_eq!(ultimo.fine_perdita, Some(fine), "ultimo turno di perdita");
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(p.vista().data, fine);
+    let dopo = p.vista().debito.ristrutturazione.unwrap();
+    assert_eq!(dopo.fine_perdita, None);
+    assert_eq!(dopo.taglio, x.taglio);
+    assert_eq!(dopo.premio_pb, premio_dopo(&p).round() as i32);
+    assert!(dopo.premio_pb < x.premio_pb);
+}
+
+#[test]
+fn senza_mes_ne_ristrutturazione_tutto_vuoto() {
+    let mut nuova = Partita::nuova(dati_base(), 1);
+    chiudi_col_bilancio(&mut nuova);
+    // Con le Aste scoperte aperte la scelta non è ancora fatta.
+    for p in [nuova, in_crisi()] {
+        let d = p.vista().debito;
+        assert_eq!((d.mes, d.ristrutturazione), (None, None));
     }
 }

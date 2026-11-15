@@ -228,6 +228,7 @@ mod tests {
                     quote: Vec::new(),
                     posizione: media_pesata(&pesi, posizioni, PUNTI),
                     approvazione: 0.0,
+                    margine: 0.0,
                 }
             })
             .collect();

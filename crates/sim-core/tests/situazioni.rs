@@ -292,3 +292,48 @@ fn accensione_e_spegnimento_uguali_sono_rifiutati() {
         "{e}"
     );
 }
+
+/// La recessione di `p`: trimestri richiesti, trimestri già oltre la soglia, accesa.
+fn recessione(p: &Partita) -> (u8, u8, bool) {
+    let s = (p.situazioni().into_iter())
+        .find(|s| s.misura == "crescita_pil")
+        .unwrap();
+    (s.trimestri, s.oltre, s.accesa)
+}
+
+/// `p` con il PIL del trimestre gonfiato del 5%: la chiusura che segue lo riporta al potenziale e
+/// la crescita del trimestre esce molto sotto −1%.
+fn con_pil_gonfiato(p: &Partita) -> Partita {
+    edita(p, |j| {
+        let pil = &mut j["economia"]["pil_trimestrale"];
+        *pil = json!(pil.as_f64().unwrap() * 1.05);
+    })
+    .unwrap()
+}
+
+#[test]
+fn la_recessione_dice_il_primo_trimestre_sotto() {
+    let mut p = con_pil_gonfiato(&al_governo());
+    assert_eq!(recessione(&p), (2, 0, false));
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(recessione(&p), (2, 1, false));
+    let mut p = con_pil_gonfiato(&p);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(recessione(&p), (2, 0, true));
+}
+
+#[test]
+fn le_altre_situazioni_chiedono_un_trimestre() {
+    for s in al_governo().situazioni() {
+        assert_eq!(s.trimestri, if s.misura == "crescita_pil" { 2 } else { 1 });
+    }
+}
+
+#[test]
+fn oltre_torna_a_zero() {
+    let mut p = con_pil_gonfiato(&al_governo());
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(recessione(&p).1, 1);
+    chiudi_col_bilancio(&mut p);
+    assert_eq!(recessione(&p), (2, 0, false));
+}

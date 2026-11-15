@@ -107,6 +107,10 @@ pub(crate) fn voci(
             testo: testo(dati, &e.proposta),
             motivo: e.motivo.clone(),
             stato: e.stato,
+            dicasteri: (e.proposta.iter())
+                .filter(|(_, x)| *x == Attenuazione::Indicizza)
+                .filter_map(|&(d, _)| dati.dicasteri().get(d).map(|d| d.id.clone()))
+                .collect(),
         })
         .collect()
 }

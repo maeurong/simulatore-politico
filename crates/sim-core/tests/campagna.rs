@@ -1,11 +1,13 @@
 mod comune;
-use comune::{chiudi_col_bilancio, dati_base, edita, fondata, ha_voce, voci};
+use comune::{chiudi_col_bilancio, dati_base, edita, file_vero, fondata, ha_voce, voci};
 use serde_json::json;
 use sim_core::elettorato::{Condizione, condizione_di};
 use sim_core::esito::TipoVoce;
-use sim_core::legislatura::{Bersaglio, Intensita, Leva, Spesa};
+use sim_core::legislatura::{Bersaglio, Fondazione, Intensita, Leva, Spesa};
+use sim_core::parlamento::CausaIntesa;
 use sim_core::partiti::{Regola, Vocazione};
-use sim_core::{Comando, Partita};
+use sim_core::{Comando, DatiGioco, Partita};
+use std::collections::BTreeMap;
 
 fn al_turno(p: &mut Partita, t: u32) {
     while p.vista().turno < t {
@@ -588,4 +590,221 @@ fn spese_al_turno_zero() {
     let atteso = dote - 400_000 + entrate.round() as i64;
     let cassa = p.partiti()[g].cassa;
     assert!((cassa - atteso).abs() <= 2, "{cassa} {atteso}");
+}
+
+/// Il turno zero del ticket «Campagna» (generatore delle Viste, `campagna`): dati veri, seme 4,
+/// giocatore fondato a 4,5.
+fn zero_del_ticket() -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione: 4.5,
+    };
+    Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), 4, &f).unwrap()
+}
+
+/// La fine legislatura al governo del ticket: dal turno zero la coalizione coi partiti della
+/// destra disponibili, poi la bozza del bilancio a ogni turno di governo fuori dalla crisi, fino
+/// al turno del voto col giocatore al governo.
+fn governo_al_voto() -> Partita {
+    let mut p = zero_del_ticket();
+    let partiti = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti,
+        cessioni: vec![],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    while !p.finita() && !(p.vista().campagna.attiva && p.governa()) {
+        if p.governa()
+            && !p.vista().crisi
+            && let Some(bilancio) = p.bozza_bilancio()
+        {
+            p.comanda(Comando::PresentaBilancio { bilancio }).unwrap();
+        }
+        p.chiudi_turno();
+    }
+    assert_eq!(p.vista().turno, 20);
+    p
+}
+
+/// La fine legislatura all'opposizione del ticket: seme 1, giocatore a 1,5, nessuna coalizione,
+/// fino al turno del voto.
+fn opposizione_al_voto() -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione: 1.5,
+    };
+    let mut p = Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), 1, &f).unwrap();
+    p.chiudi_turno();
+    while !p.finita() && !p.vista().campagna.attiva {
+        p.chiudi_turno();
+    }
+    assert!(!p.governa());
+    p
+}
+
+fn coppie(c: &[(&str, &str)]) -> Vec<(String, String)> {
+    (c.iter())
+        .map(|(a, b)| ((*a).to_string(), (*b).to_string()))
+        .collect()
+}
+
+#[test]
+fn l_anteprima_del_riposizionamento_e_lo_spostamento() {
+    let mut p = zero_del_ticket();
+    let prima = p.salva().unwrap();
+    let a = p.anteprima_riposizionamento(4.0).unwrap();
+    assert_eq!(p.salva().unwrap(), prima);
+    assert_eq!(a.dichiarata, 4.0);
+    assert!((a.percepita - 4.25).abs() < 1e-12, "{a:?}");
+    assert!((a.distanza - 0.25).abs() < 1e-12, "{a:?}");
+    riposiziona(&mut p, 4.0).unwrap();
+    let g = &p.partiti()[p.giocatore()];
+    assert_eq!(g.posizione_dichiarata, a.dichiarata);
+    assert_eq!(g.posizione_percepita, a.percepita);
+    assert_eq!(
+        (g.posizione_percepita - g.posizione_dichiarata).abs(),
+        a.distanza
+    );
+}
+
+/// L'oracolo della spec (seme 1 a 1,5, turno 20, all'opposizione): dichiarata 1,5, percepita
+/// 2,11, distanza 0,61 con la minaccia accesa; a 2 la distanza scende, a 1 sale.
+#[test]
+fn l_anteprima_del_riposizionamento_all_opposizione_al_turno_20() {
+    let p = opposizione_al_voto();
+    assert_eq!(p.vista().turno, 20);
+    let g = &p.partiti()[p.giocatore()];
+    let d = DatiGioco::da_testi(&file_vero()).unwrap();
+    assert_eq!(g.posizione_dichiarata, 1.5);
+    let distanza = (g.posizione_percepita - g.posizione_dichiarata).abs();
+    assert!(distanza >= d.manopola("minaccia_scissione"), "{distanza}");
+    assert!((g.posizione_percepita - 2.11).abs() < 0.005, "{g:?}");
+    assert!((distanza - 0.61).abs() < 0.005, "{distanza}");
+    for (verso, attesa) in [(2.0, 0.36), (1.0, 0.86)] {
+        let a = p.anteprima_riposizionamento(verso).unwrap();
+        assert!((a.distanza - attesa).abs() < 0.005, "{verso}: {a:?}");
+    }
+}
+
+#[test]
+fn anteprima_riposizionamento_rifiuta_come_il_comando() {
+    let stesso_rifiuto = |p: &Partita, posizione: f64, atteso: &str| {
+        let e = (p.anteprima_riposizionamento(posizione))
+            .unwrap_err()
+            .to_string();
+        assert_eq!(e, riposiziona(&mut p.clone(), posizione).unwrap_err());
+        assert!(e.contains(atteso), "{e}");
+    };
+    let mut p = zero_del_ticket();
+    stesso_rifiuto(&p, 3.5, "Al massimo 0,5 punti dalla posizione dichiarata");
+    stesso_rifiuto(&p, 5.0, "Non si scavalca");
+    let mut fuori = p.clone();
+    fuori.chiudi_turno();
+    stesso_rifiuto(
+        &fuori,
+        4.0,
+        "Il riposizionamento si decide solo in campagna elettorale",
+    );
+    riposiziona(&mut p, 4.0).unwrap();
+    stesso_rifiuto(&p, 4.25, "Già riposizionato in questa campagna elettorale");
+}
+
+#[test]
+fn la_vista_dice_le_soglie_e_se_e_gia_fatto() {
+    let d = DatiGioco::da_testi(&file_vero()).unwrap();
+    let mut p = zero_del_ticket();
+    let c = p.vista().campagna;
+    assert_eq!(c.minaccia_scissione, d.manopola("minaccia_scissione"));
+    assert_eq!(c.soglia_scissione, d.manopola("soglia_scissione"));
+    assert_eq!(c.passo, d.manopola("passo_movimento"));
+    assert!(!c.riposizionato);
+    riposiziona(&mut p, 4.0).unwrap();
+    assert!(p.vista().campagna.riposizionato);
+}
+
+#[test]
+fn l_anteprima_delle_promesse_e_l_intesa_persa() {
+    let promesse = coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]);
+    let mut p = governo_al_voto();
+    let salvata = p.salva().unwrap();
+    let voci = p.anteprima_promesse(&promesse).unwrap();
+    assert_eq!(p.salva().unwrap(), salvata);
+    let prima = p.intesa().variazioni.len();
+    p.comanda(Comando::Prometti {
+        promesse: promesse.clone(),
+    })
+    .unwrap();
+    let mut scritte: BTreeMap<String, f64> = BTreeMap::new();
+    for v in &p.intesa().variazioni[prima..] {
+        assert_eq!(v.causa, CausaIntesa::Promessa);
+        *scritte
+            .entry(p.partiti()[v.partito].id.clone())
+            .or_default() += v.delta;
+    }
+    let anteprima: BTreeMap<String, f64> = (voci.iter())
+        .map(|v| (v.partito.clone(), v.intesa))
+        .collect();
+    assert_eq!(anteprima, scritte);
+    let attese = [("centrodestra", -10.0), ("destra", -10.0)];
+    assert_eq!(voci.len(), attese.len(), "{voci:?}");
+    for (id, intesa) in attese {
+        let v = voci.iter().find(|v| v.partito == id).unwrap();
+        assert!((v.intesa - intesa).abs() < 1e-9, "{v:?}");
+        assert_eq!(
+            v.disposizioni,
+            ["reddito_minimo", "eta_pensionabile"],
+            "{v:?}"
+        );
+    }
+
+    for q in [opposizione_al_voto(), zero_del_ticket()] {
+        assert!(!q.governa());
+        assert_eq!(q.anteprima_promesse(&promesse).unwrap(), vec![]);
+    }
+}
+
+#[test]
+fn anteprima_promesse_rifiuta_come_il_comando() {
+    let stesso_rifiuto = |p: &Partita, promesse: &[(&str, &str)], atteso: &str| {
+        let e = (p.anteprima_promesse(&coppie(promesse)))
+            .unwrap_err()
+            .to_string();
+        let comando = (p.clone())
+            .comanda(Comando::Prometti {
+                promesse: coppie(promesse),
+            })
+            .unwrap_err()
+            .to_string();
+        assert_eq!(e, comando);
+        assert!(e.contains(atteso), "{e}");
+    };
+    let mut p = zero_del_ticket();
+    let due = [("reddito_minimo", "universale"), ("eta_pensionabile", "64")];
+    let tre = [
+        ("reddito_minimo", "universale"),
+        ("eta_pensionabile", "64"),
+        ("cuneo_fiscale", "3"),
+    ];
+    stesso_rifiuto(&p, &tre, "Al massimo 2 promesse");
+    stesso_rifiuto(&p, &[("cuneo_fiscale", "7")], "Già in vigore");
+    stesso_rifiuto(
+        &p,
+        &[
+            ("reddito_minimo", "universale"),
+            ("reddito_minimo", "universale"),
+        ],
+        "Due promesse sulla stessa disposizione",
+    );
+    p.comanda(Comando::Prometti {
+        promesse: coppie(&due),
+    })
+    .unwrap();
+    stesso_rifiuto(&p, &due, "Promesse già fatte in questa campagna elettorale");
 }
