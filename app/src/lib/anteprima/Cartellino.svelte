@@ -35,7 +35,7 @@
   const spesa = $derived(misura.costo_annuo === 0 ? t("anteprima.saldo_zero") : `${misura.costo_annuo > 0 ? "+" : "−"}${euro(Math.abs(misura.costo_annuo))}`);
   const chi = $derived(stimatore(vista, misura.proponente));
   const regioni = $derived(perimetro(vista, valori));
-  const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "test_misura")?.euro ?? 0);
+  const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "test_misura")?.euro);
   const cassa = $derived(vista.partiti.find((p) => p.id === vista.giocatore)?.cassa ?? 0);
   const euroEsatti = (c: number) => `${numero(c)} €`;
   const test = $derived(vista.acquisti.test_misura?.misura === misura.nome ? vista.acquisti.test_misura : null);
@@ -115,16 +115,18 @@
         {/each}
       </tbody>
     </table>
-    <p class="min muto">{t("anteprima.test_nota", { prezzo: euroEsatti(prezzo), cassa: euroEsatti(cassa) })}</p>
+    {#if prezzo !== undefined}<p class="min muto">{t("anteprima.test_nota", { prezzo: euroEsatti(prezzo), cassa: euroEsatti(cassa) })}</p>{/if}
   {:else}
     <div class="blocco">
       <span class="occ nero">{t("anteprima.gruppi")}</span>
       <div>{#each misura.gruppi as g (g)}<span class="chip">{t(`condizione.${g}` as Chiave)}</span>{:else}<span class="sec muto">{t("anteprima.gruppi_nessuno")}</span>{/each}</div>
       <p class="min muto">{t("anteprima.gruppi_nota")}</p>
+      {#if prezzo !== undefined}
       <div class="conf">
         <Pulsante forma="piccolo" spento={occupato} onclick={() => manda({ tipo: "compra", acquisto: { test_misura: { valori } } })}>{t("anteprima.compra_test", { prezzo: euroEsatti(prezzo) })}</Pulsante>
         <span class="min muto">{t("anteprima.cassa_test", { cassa: euroEsatti(cassa) })}</span>
       </div>
+      {/if}
       {#if rifiuto?.tipo === "compra"}<Rifiuto testo={rifiuto.testo} />{/if}
     </div>
   {/if}
@@ -171,7 +173,7 @@
 </div>
 
 <style>
-  .cart { position: relative; border: var(--forte); background: var(--carta); padding: 14px 14px 12px; margin-top: 30px; display: grid; gap: 9px; align-content: start; min-width: 0;
+  .cart { position: relative; border: var(--forte); background: var(--carta); padding: 14px 14px 12px; margin: 30px 10px 0; display: grid; gap: 9px; align-content: start; min-width: 0;
     transform-origin: 50% -20px; box-shadow: 3px 4px 0 rgb(31 26 23 / .16) }
   .cart::before { content: ""; position: absolute; left: 50%; top: -20px; width: 1.5px; height: 20px; background: var(--ink) }
   .spillo { position: absolute; left: calc(50% - 6px); top: -27px; width: 13px; height: 13px; border-radius: 50%; background: var(--rosso); border: 1.5px solid var(--ink) }

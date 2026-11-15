@@ -66,6 +66,13 @@ describe("oscilla", () => {
     oscilla(e2, 0.5);
     expect((e2.animate.mock.calls[0] as unknown as [unknown, { duration: number }])[1].duration).toBe(600);
   });
+  it("su un foglio alto il fondo non si sposta oltre il margine della colonna", () => {
+    const e = Object.assign(el(), { offsetHeight: 1200 });
+    oscilla(e, 1);
+    const passi = e.animate.mock.calls[0][0] as { transform: string }[];
+    const gradi = Math.max(...passi.map((p) => Math.abs(parseFloat(p.transform.slice(7)))));
+    expect(1200 * Math.sin((gradi * Math.PI) / 180)).toBeLessThanOrEqual(9);
+  });
   it("col movimento spento (k = 0) non parte", () => {
     const e = el();
     expect(oscilla(e, 0)).toBeNull();
