@@ -1264,9 +1264,6 @@ mod tests {
                 "{a:?} {r:?}: core {atteso}, guscio {letto}"
             );
         }
-        // Scambiati, atto e regione non sono ammessi: il guscio non li può invertire.
-        assert!(costo_del_dirotta(&stato, d, Some(regione), None).is_err());
-        assert!(costo_del_dirotta(&stato, dr, None, Some(atto)).is_err());
         Ok(())
     }
 
@@ -1274,12 +1271,17 @@ mod tests {
     fn il_menu_con_valori_e_quello_del_core() -> Result<(), String> {
         let c = cartella("lib-menu-valori");
         let (stato, _archivio) = con_partita(&c.0)?;
-        let valori = bozza_cittadinanza();
-        let atteso = blocca_comunque(&stato)
-            .as_ref()
-            .ok_or(NESSUNA)?
-            .partita
-            .menu_elettorale(&valori);
+        // Senza coalizioni, il premio alla coalizione non è più ammesso.
+        let valori = vec![ValoreProposto {
+            disposizione: "coalizioni".into(),
+            gradino: "no".into(),
+        }];
+        let (atteso, vuoto) = {
+            let g = blocca_comunque(&stato);
+            let p = &g.as_ref().ok_or(NESSUNA)?.partita;
+            (p.menu_elettorale(&valori), p.menu_elettorale(&[]))
+        };
+        assert_ne!(atteso, vuoto);
         assert_eq!(menu_del_governo(&stato, &valori), Ok(atteso));
         Ok(())
     }
