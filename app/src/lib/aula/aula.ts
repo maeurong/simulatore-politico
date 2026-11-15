@@ -66,3 +66,9 @@ export const formaDi = (m: { forma: string; deliberazione: number }): string =>
 /** Il rifiuto vale per la Vista e per la misura in cui è nato: cambiando l'una o l'altra non resta appeso a un'altra misura. */
 export const rifiutoPer = <R extends { vista: Vista | null; misura: number | null }>(r: R | null, v: Vista, misura: number | null): R | null =>
   r && r.vista === v && r.misura === misura ? r : null;
+
+/** Se il bottone premuto è sparito col suo effetto il fuoco è su body: passa al prossimo emendamento aperto, o al dettaglio. */
+export function riportaFuoco(lato: HTMLElement, doc: Document = document): void {
+  if (doc.activeElement !== doc.body) return;
+  (lato.querySelector<HTMLElement>(".az button") ?? lato).focus();
+}

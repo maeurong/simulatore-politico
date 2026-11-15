@@ -4,7 +4,7 @@ import type { VoceMisura } from "$lib/tipi/VoceMisura";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import crisi from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
-import { calendario, fiduciaPonibile, rifiutoPer, lineaScelta, ultimiVoti, votaOra } from "./aula";
+import { calendario, fiduciaPonibile, rifiutoPer, riportaFuoco, lineaScelta, ultimiVoti, votaOra } from "./aula";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const piena = stati.piena.vista;
@@ -94,5 +94,24 @@ describe("rifiutoPer", () => {
     expect(rifiutoPer(r, piena, 0)).toBeNull();
     expect(rifiutoPer(r, { ...piena }, 3)).toBeNull();
     expect(rifiutoPer(null, piena, 3)).toBeNull();
+  });
+});
+
+describe("riportaFuoco", () => {
+  const corpo = {};
+  const prova = (attivo: unknown, prossimo: { focus: () => void } | null) => {
+    const chiamate: string[] = [];
+    const lato = { querySelector: () => prossimo, focus: () => chiamate.push("lato") } as unknown as HTMLElement;
+    riportaFuoco(lato, { activeElement: attivo, body: corpo } as unknown as Document);
+    return chiamate;
+  };
+  it("fuoco su body: al prossimo emendamento aperto, se no al dettaglio", () => {
+    const c: string[] = [];
+    prova(corpo, { focus: () => c.push("emendamento") });
+    expect(c).toEqual(["emendamento"]);
+    expect(prova(corpo, null)).toEqual(["lato"]);
+  });
+  it("fuoco già su un elemento: non lo tocca", () => {
+    expect(prova({}, null)).toEqual([]);
   });
 });

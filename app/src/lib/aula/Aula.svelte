@@ -1,14 +1,14 @@
 <script lang="ts">
   // Aula, forma D · Misto (19-aula.prototype.html): il calendario dei posti in testa, sotto quattro schede (In aula, Disposizioni, Legge elettorale,
   // Referendum), la misura scelta nel dettaglio a lato. Le ultime tre schede arrivano coi Task 8 e 9. La pagina sta ferma, il corpo e il dettaglio scorrono.
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { t } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { rifiutoPer } from "./aula";
+  import { riportaFuoco, rifiutoPer } from "./aula";
   import Calendario from "./Calendario.svelte";
   import InAula from "./InAula.svelte";
   import Misura from "./Misura.svelte";
@@ -36,13 +36,19 @@
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
   let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null } | null>(null);
   const rifiuto = $derived(rifiutoPer(rifiutato, vista, corrente?.id ?? null));
+  let lato: HTMLElement;
   async function manda(c: Comando): Promise<boolean> {
     if (partita.occupato) return false;
     rifiutato = null;
+    // la misura della chiamata, non quella scelta quando arriva la risposta
+    const misura = corrente?.id ?? null;
     try {
-      return (await partita.comanda(c)) !== null;
+      const ok = (await partita.comanda(c)) !== null;
+      await tick();
+      if (ok) riportaFuoco(lato);
+      return ok;
     } catch (e) {
-      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura: corrente?.id ?? null, vista: partita.vista };
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista };
       return false;
     }
   }
@@ -68,7 +74,7 @@
       <Segnaposto sezione={t(`aula.scheda_${scheda}`)} fetta="11c" />
     {/if}
   </div>
-  <aside class="lato" aria-label={t("aula.dettaglio")}>
+  <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
     {#if corrente}
       {#key `${vista.turno}:${corrente.id}`}
         <Misura {vista} m={corrente} {manda} {rifiuto} />
@@ -91,6 +97,7 @@
   .schede button { padding: 4px 12px; font-weight: 700; color: var(--grigio); border: 1.5px solid transparent; border-bottom: 0; white-space: nowrap }
   .schede button.qui { color: var(--ink); border-color: var(--ink); background: var(--carta); margin-bottom: -2px; padding-bottom: 6px }
   .schede small { font-weight: 400; margin-left: 4px }
+  .lato:focus-visible { outline-offset: -2px }
   .lato { border-left: var(--forte); padding-left: var(--canale); min-height: 0; overflow: hidden auto; padding-bottom: 8px; display: grid; gap: 8px; align-content: start }
   .lato:focus-visible { outline-offset: -2px }
 </style>
