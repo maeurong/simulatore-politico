@@ -658,7 +658,7 @@
   "trattativa.conferma_allarga": "Conferma: allarga",
   "trattativa.spiega_allarga": { "one": "{chi} entra nella coalizione e ci resta fino al governo. La spartizione torna al default coi nuovi alleati dentro.", "other": "{chi} entrano nella coalizione, tutti insieme, e ci restano fino al governo. La spartizione torna al default coi nuovi alleati dentro." },
   "trattativa.comando_in_corso": "Un comando è ancora in corso.",
-  "trattativa.chiede_offri": { "one": "chiede {x} punto, ne offri {o}", "other": "chiede {x} punti, ne offri {o}" },
+  "trattativa.chiede_offri": "chiede {x} punti, ne offri {o}",
   "trattativa.il_tuo_partito": "Il tuo partito",
   "trattativa.tuoi_dicasteri": { "one": "{n} dicastero", "other": "{n} dicasteri" },
   "trattativa.tuoi_punti": "{n} su {tot} punti",

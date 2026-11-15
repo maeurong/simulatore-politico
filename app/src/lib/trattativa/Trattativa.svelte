@@ -1,6 +1,6 @@
 <script lang="ts">
   // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato sono le pagine di Ribaltone.
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
   import { etichetta } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
@@ -18,7 +18,7 @@
   let { vista }: { vista: Vista } = $props();
 
   // la bozza vive in memoria: al rientro vale ciò che dice la Vista (spec:250). raw: il rifiuto vale per la Vista in cui è nato.
-  let stato = $state.raw<Stato>({ s: { bozza: {}, rifiuto: null, esito: null }, vista: null });
+  let stato = $state.raw<Stato>({ s: { bozza: {}, rifiuto: null, esito: null, fatta: false }, vista: null });
 
   /** «occupato»: la sessione tiene la bozza pendente e la rimanda quando la partita si libera. */
   async function manda(comando: Parameters<typeof partita.comanda>[0]): Promise<EsitoManda> {
@@ -40,6 +40,8 @@
     const attesa = setTimeout(() => sessione.riprova());
     return () => clearTimeout(attesa);
   });
+  // la pagina smontata con un invio in volo: la sua risposta non fa partire altro
+  onDestroy(sessione.chiudi);
 
   // la pagina si rimonta quando l'incarico cambia: se è stato un comando di Ribaltone, il fuoco riparte dalla testa
   let testa = $state<HTMLElement>();
@@ -68,7 +70,7 @@
       <Spartizione {vista} {stato} {sessione} />
     </div>
     <aside class="lato">
-      <Alleati {vista} bozza={stato.s.bozza} {sessione} />
+      <Alleati {vista} bozza={stato.s.bozza} fatta={stato.s.fatta} {sessione} />
     </aside>
   {:else}
     <div class="pag"><Ribaltone {vista} {manda} /></div>

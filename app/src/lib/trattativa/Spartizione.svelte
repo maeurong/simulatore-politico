@@ -47,7 +47,6 @@
     {/each}
   </tbody>
 </table>
-<p class="min muto">{t("trattativa.nota")}</p>
 <Segnaposto sezione={t("trattativa.ph_default")} fetta="11g" />
 
 <style>

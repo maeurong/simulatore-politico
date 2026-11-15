@@ -13,7 +13,7 @@
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { allarga, fuori, haLaMaggioranza, pesoDi, quota, richiesteDi, type Bozza, type Sessione } from "./trattativa";
 
-  let { vista, bozza, sessione }: { vista: Vista; bozza: Bozza; sessione: Sessione } = $props();
+  let { vista, bozza, fatta, sessione }: { vista: Vista; bozza: Bozza; fatta: boolean; sessione: Sessione } = $props();
 
   const maggioranza = $derived(haLaMaggioranza(vista));
   const fuoriCoalizione = $derived(fuori(vista));
@@ -85,7 +85,7 @@
     <div class="all" style:--pc={coloreDi(a.id) ?? undefined} class:nato={coloreDi(a.id) === null}>
       <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} misura={34} /></span>
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
-      <span class="sec">{t("trattativa.chiede_offri", { n: Number(a.richiesta.toFixed(1)), x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
+      <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
     </div>
   {/each}
@@ -102,10 +102,8 @@
     <div class="az">
       <Pulsante forma="piccolo" {spento} onclick={() => sessione.svuota()}>{t("trattativa.svuota")}</Pulsante>
     </div>
-    <p class="min muto">{t("trattativa.svuota_nota")}</p>
-  {:else}
-    <p class="min muto">{t("trattativa.nota")}</p>
   {/if}
+  <p class="min muto">{t(fatta ? "trattativa.svuota_nota" : "trattativa.nota")}</p>
 </section>
 
 <style>

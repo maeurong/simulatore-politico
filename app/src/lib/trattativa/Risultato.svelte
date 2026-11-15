@@ -8,8 +8,8 @@
   import { risultato } from "./trattativa";
 
   let { vista }: { vista: Vista } = $props();
-  // nel ribaltone la coalizione dell'ultimo voto non è quella in cui sta il giocatore: niente seggi «della tua coalizione»
-  const guida = $derived(vista.incarico === "guida");
+  // senza l'incarico (ribaltone, incarico altrui, dopo «Resta fuori») i seggi «della tua coalizione» non dicono niente di vero
+  const fuori = $derived(vista.incarico !== "giocatore");
   const r = $derived(risultato(vista));
   const data = $derived(vista.elezioni.at(-1)?.data);
   const periodo = $derived(data ? t(`cornice.trimestre_${data.trimestre}` as Chiave, { anno: data.anno }).toLowerCase() : "");
@@ -27,15 +27,15 @@
     <div>
       <ul class="vt">
         {#each r.voti as x (x.partito)}
-          <li><i class="sw" style:background={coloreDi(x.partito) ?? undefined} class:nato={coloreDi(x.partito) === null}></i>{#if x.miei && !guida}<b>{x.nome}</b>{:else}{x.nome}{/if} {percentuale(x.quota, 1)}</li>
+          <li><i class="sw" style:background={coloreDi(x.partito) ?? undefined} class:nato={coloreDi(x.partito) === null}></i>{#if x.miei && !fuori}<b>{x.nome}</b>{:else}{x.nome}{/if} {percentuale(x.quota, 1)}</li>
         {/each}
       </ul>
       {#each rami as b (b.ramo)}
-        <p class="ramo"><b>{t(`edicola.${b.ramo}`)}</b>{guida ? "" : ` · ${t("paese.seggi_coalizione", { n: b.seggi, tot: b.totale, meta: b.soglia })}`}</p>
-        <BarraSeggi righe={b.righe} totale={b.totale} segno={guida ? undefined : b.seggi} />
+        <p class="ramo"><b>{t(`edicola.${b.ramo}`)}</b>{fuori ? "" : ` · ${t("paese.seggi_coalizione", { n: b.seggi, tot: b.totale, meta: b.soglia })}`}</p>
+        <BarraSeggi righe={b.righe} totale={b.totale} segno={fuori ? undefined : b.seggi} />
       {/each}
     </div>
-    <p class="mg">{#if guida}<span class="min muto">{t("trattativa.filo_solo")}</span>{:else}{frase}<br /><span class="min muto">{t("trattativa.filo")}</span>{/if}</p>
+    <p class="mg">{#if fuori}<span class="min muto">{t("trattativa.filo_solo")}</span>{:else}{frase}<br /><span class="min muto">{t("trattativa.filo")}</span>{/if}</p>
   </section>
 {/if}
 
