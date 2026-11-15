@@ -36,14 +36,15 @@ export function leveDi(ruolo: Ruolo, partito: string, nome: string, salto = 0): 
 type Candidato = { partito: string; nome: string };
 
 /** I salti della rosa: chi ripete naso e colletto di uno già dentro passa alla combinazione successiva, finché è libera. */
-export function salti(ruolo: Ruolo, candidati: Candidato[]): number[] {
+export function salti(ruolo: Ruolo | Ruolo[], candidati: Candidato[]): number[] {
   const visti = new Set<string>();
   const coppie = VARIANTI.naso * VARIANTI.colletto;
-  return candidati.map((c) => {
+  return candidati.map((c, i) => {
+    const r = Array.isArray(ruolo) ? ruolo[i] : ruolo;
     let salto = 0;
-    let l = leveDi(ruolo, c.partito, c.nome);
+    let l = leveDi(r, c.partito, c.nome);
     // shortcut: con più candidati delle coppie possibili (36) nessuna è libera, si tiene la faccia di partenza; da rivedere se le rose superano 36.
-    while (visti.size < coppie && visti.has(`${l.naso}:${l.colletto}`)) l = leveDi(ruolo, c.partito, c.nome, ++salto);
+    while (visti.size < coppie && visti.has(`${l.naso}:${l.colletto}`)) l = leveDi(r, c.partito, c.nome, ++salto);
     visti.add(`${l.naso}:${l.colletto}`);
     return salto;
   });

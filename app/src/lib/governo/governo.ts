@@ -22,6 +22,12 @@ export type Figurina = {
   agenda: VoceAgenda | null; senzaAgenda: string | null;
 };
 
+const PRECEDENZA: StatoCarta[] = ["interim", "dimissioni_chieste", "preavviso", "tecnico", "rodaggio"];
+/** Lo stato che la carta dell'album mostra, uno solo (due chip vanno a capo e sfalsano la riga); gli altri restano nel dettaglio. */
+export function statoPrincipale(f: Figurina): StatoCarta | null {
+  return PRECEDENZA.find((s) => f.stati.includes(s)) ?? null;
+}
+
 /** Le dieci carte nell'ordine di Vista.dicasteri. */
 export function figurine(v: Vista): Figurina[] {
   return v.dicasteri.map((d, i) => {
@@ -69,6 +75,11 @@ export function etichettaFerma(costo: number): string {
   return r === 0 ? t("governo.ferma") : `${t("governo.ferma")} ${segnato(r)}`;
 }
 
+/** Il costo di Dirotta in punti con segno (negativo = soddisfazione persa), come etichettaFerma: si sommano i valori del core e si arrotonda una volta. */
+export function totaleDirotta(costoAtto: number | null, costoRegione: number | null): number {
+  return Math.round((costoAtto ?? 0) + (costoRegione ?? 0)) + 0;
+}
+
 /** Gli atti di Dirotta: gli altri tre del dicastero. */
 export const attiDirotta = (m: VoceMinistero): VoceAtto[] => m.atti.filter((a) => a.id !== m.agenda?.atto);
 
@@ -76,11 +87,15 @@ export const attiDirotta = (m: VoceMinistero): VoceAtto[] => m.atti.filter((a) =
 export const conRegione = (m: VoceMinistero): boolean => m.dicastero === "sviluppo_economico" || m.dicastero === "infrastrutture_trasporti";
 
 type Costi = Record<string, number | string>;
-/** I costi di Dirotta, uno per atto o per regione, in sequenza; un rifiuto resta come testo. `vivo` falso ferma il giro (una nuova apertura annulla la vecchia). */
+/** I costi di Dirotta, uno per atto o per regione, in sequenza; un rifiuto resta come testo, un guasto si rilancia a chi ha aperto Dirotta. `vivo` falso ferma il giro (una nuova apertura annulla la vecchia). */
 export async function costiDirotta(
   chiedi: (atto: string | null, regione: string | null) => Promise<number>, atti: string[], regioni: string[], vivo: () => boolean = () => true,
 ): Promise<{ atti: Costi; regioni: Costi }> {
-  const una = async (a: string | null, r: string | null) => chiedi(a, r).catch((e) => testoRifiuto(comeErrore(e)));
+  const una = async (a: string | null, r: string | null) => chiedi(a, r).catch((e) => {
+    const errore = comeErrore(e);
+    if (errore.specie !== "rifiuto") throw errore;
+    return testoRifiuto(errore);
+  });
   const fuori = { atti: {} as Costi, regioni: {} as Costi };
   for (const a of atti) if (vivo()) fuori.atti[a] = await una(a, null);
   for (const r of regioni) if (vivo()) fuori.regioni[r] = await una(null, r);
@@ -90,7 +105,7 @@ export async function costiDirotta(
 /** Il prezzo delle dimissioni chieste, in parole: gratis col tecnico, niente col tuo partito, N punti d'intesa all'alleato. */
 export function prezzoDimissioni(v: Vista, m: VoceMinistero): string {
   if (m.ministro?.tecnico) return t("governo.dimissioni_tecnico");
-  if (m.prezzo_dimissioni <= 0 || !m.ministro) return t("governo.dimissioni_tuo");
+  if (!m.ministro || m.ministro.partito === v.giocatore) return t("governo.dimissioni_tuo");
   return t("governo.dimissioni_alleato", { n: numero(m.prezzo_dimissioni), partito: nomeDi(v, m.ministro.partito) });
 }
 

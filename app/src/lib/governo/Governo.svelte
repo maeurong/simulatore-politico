@@ -1,7 +1,7 @@
 <script lang="ts">
   // Governo, forma B · Figurine (18-governo.prototype.html): l'album dei dieci ministri sotto la cornice, la carta del ministro a lato.
   // L'album resta fermo, il dettaglio scorre da solo; senza scelta il dettaglio mostra il primo ministro in evidenza, o il primo dell'album.
-  import { tick } from "svelte";
+  import { tick, untrack } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
@@ -54,6 +54,11 @@
   // Le carte girate «rigirate» da chi ha premuto «rigira»; e il dicastero la cui carta gira ora, dopo Ferma o Dirotta riusciti.
   let volte = $state<Record<string, boolean>>({});
   let gira = $state<string | null>(null);
+  // Al turno nuovo Dirotta aperta e le carte rigirate non valgono più: l'agenda è un'altra e le carte tornano a leggere agenda.stato.
+  $effect.pre(() => {
+    void vista.turno;
+    untrack(() => { dirotta = null; volte = {}; });
+  });
   const sceglie = (d: string) => { scelta = d; dirotta = null; };
   async function chiudiDirotta() {
     const d = dirotta;
@@ -66,7 +71,7 @@
 <div class="gov">
   <div class="capo">
     <h3 class="tit">{t(grave ? "governo.titolo_grave" : "governo.titolo")}</h3>
-    <span class="sec muto">{t(vista.crisi ? "governo.testata_crisi" : "governo.testata", { periodo, n })}</span>
+    <span class="sec muto">{t("governo.testata", { periodo, n })}</span>
   </div>
   <div class="album" role="group" aria-label={t("governo.album")}>
     {#each carte as f (f.dicastero)}

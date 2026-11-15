@@ -131,7 +131,7 @@
     {#if min.dimissioni_chieste}
       <p class="sec"><b>{t("governo.dimissioni_chieste")}</b></p>
     {:else}
-      <div><Conferma etichetta={t("governo.dimissioni_chiedi")} conferma={t("governo.dimissioni_conferma")}
+      <div><Conferma etichetta={t("governo.dimissioni_chiedi")} spento={partita.occupato ? t("trattativa.comando_in_corso") : undefined} conferma={t("governo.dimissioni_conferma")}
         spiegazione={t("governo.dimissioni_spiega", { prezzo: prezzoDimissioni(vista, min), atto: min.agenda ? t("governo.dimissioni_atto") : "" })}
         onconferma={() => manda({ tipo: "chiedi_dimissioni", dicastero: f.dicastero })} /></div>
     {/if}
