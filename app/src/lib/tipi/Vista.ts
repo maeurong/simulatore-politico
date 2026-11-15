@@ -5,6 +5,7 @@ import type { EsitoReferendum } from "./EsitoReferendum";
 import type { EsitoVoto } from "./EsitoVoto";
 import type { Fase } from "./Fase";
 import type { Fermata } from "./Fermata";
+import type { RedditoFascia } from "./RedditoFascia";
 import type { SeggiPartito } from "./SeggiPartito";
 import type { Sondaggio } from "./Sondaggio";
 import type { Trimestre } from "./Trimestre";
@@ -198,4 +199,9 @@ regioni: Array<VoceRegione>,
 /**
  * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
  */
-opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, };
+opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, 
+/**
+ * Reddito reale, crescita del trimestre e crescita attesa (punti) per fascia nell'ultima
+ * chiusura, medie dei gruppi pesate con gli elettori; tre voci nell'ordine delle fasce.
+ */
+redditi: Array<RedditoFascia>, };

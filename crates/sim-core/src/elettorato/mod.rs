@@ -401,6 +401,10 @@ pub struct Elettorato {
     pub ultima_disoccupazione: Vec<f64>,
     /// Aliquota media IRPEF al turno zero, con gli scaglioni dello scenario.
     pub aliquota_irpef_0: f64,
+    /// Reddito, crescita e attesa per fascia dell'ultima chiusura, come li rende `giudizio`
+    /// (crescita ripulita, mai la grezza); tre voci nell'ordine di `Fascia::TUTTE`, a zero al
+    /// turno zero. L'attesa non si rifà dallo stato a finestra piena: si conserva.
+    pub redditi_fasce: Vec<RedditoFascia>,
 }
 
 impl Elettorato {
@@ -414,6 +418,14 @@ impl Elettorato {
         let mut el = Elettorato {
             base: Indici::da(e, dati, &neutre.leve),
             aliquota_irpef_0: 0.0,
+            redditi_fasce: Fascia::TUTTE
+                .map(|fascia| RedditoFascia {
+                    fascia,
+                    reddito: 0.0,
+                    crescita: 0.0,
+                    attesa: 0.0,
+                })
+                .to_vec(),
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()
@@ -536,6 +548,15 @@ impl Elettorato {
             return ko(format!(
                 "elettorato.ultima_disoccupazione: servono {regioni} valori finiti"
             ));
+        }
+        let fasce_ok = (self.redditi_fasce.iter().map(|r| r.fascia)).eq(Fascia::TUTTE)
+            && (self.redditi_fasce.iter()).all(|r| {
+                [r.reddito, r.crescita, r.attesa]
+                    .iter()
+                    .all(|x| x.is_finite())
+            });
+        if !fasce_ok {
+            return ko("elettorato.redditi_fasce: servono tre voci finite, una per fascia".into());
         }
         if !self.base.e_finito() {
             return ko("elettorato.base non finita".into());

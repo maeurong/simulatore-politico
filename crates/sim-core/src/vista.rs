@@ -1,6 +1,6 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::{Aliquote, Bilancio};
-use crate::elettorato::{Condizione, Genere};
+use crate::elettorato::{Condizione, Genere, RedditoFascia};
 use crate::esito::VoceEsito;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
@@ -123,6 +123,9 @@ pub struct Vista {
     pub debito: VistaDebito,
     pub posti: VistaPosti,
     pub soglie: VistaSoglie,
+    /// Reddito reale, crescita del trimestre e crescita attesa (punti) per fascia nell'ultima
+    /// chiusura, medie dei gruppi pesate con gli elettori; tre voci nell'ordine delle fasce.
+    pub redditi: Vec<RedditoFascia>,
 }
 
 /// Le soglie che le regole leggono dalle manopole: soddisfazione del ministro (`minaccia`,

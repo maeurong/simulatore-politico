@@ -10,6 +10,7 @@ use comune::{
 };
 use sim_core::caso::{Caso, Flusso};
 use sim_core::elettorato::{Condizione, Fascia, Reddito, indice_gruppo, intenzioni};
+use sim_core::esito::TipoVoce;
 use sim_core::{DatiGioco, Errore, FileDati, Partita, Trimestre};
 
 /// Messaggio dell'errore, dopo aver verificato che la variante e' quella attesa.
@@ -1148,4 +1149,55 @@ fn elettorato_resta_valido_dopo_200_turni() {
     assert!(v.proiezione.is_some());
     let salvato = p.salva().expect("il salvataggio riesce");
     assert!(Partita::carica(&salvato).unwrap() == p);
+}
+
+#[test]
+fn tre_fasce_al_turno_zero() {
+    let v = Partita::nuova(dati_base(), 1).vista();
+    assert_eq!(
+        v.redditi.iter().map(|r| r.fascia).collect::<Vec<_>>(),
+        Fascia::TUTTE
+    );
+    for r in &v.redditi {
+        assert_eq!((r.crescita, r.attesa), (0.0, 0.0), "{r:?}");
+    }
+}
+
+/// Dopo ogni chiusura la Vista porta tre fasce finite; nel turno di una voce `RedditoDeluso`
+/// crescita e attesa della sua fascia sono le cifre del suo `fatto` (due decimali).
+#[test]
+fn i_redditi_della_vista_sono_quelli_della_voce() {
+    let cifre = |x: f64| format!("{:.2}", x.abs()).replace('.', ",");
+    let mut trovata = false;
+    for seme in 1..=6 {
+        let mut p = Partita::nuova(dati_base(), seme);
+        for _ in 0..60 {
+            p.chiudi_turno();
+            let v = p.vista();
+            assert_eq!(v.redditi.len(), 3);
+            assert!(
+                v.redditi
+                    .iter()
+                    .all(|r| r.crescita.is_finite() && r.attesa.is_finite())
+            );
+            // Il riassunto «3 fasce di reddito deluse» ha lo stesso tipo e nessuna cifra.
+            let singole = (v.esito.iter())
+                .filter(|e| e.tipo == TipoVoce::RedditoDeluso && e.fatto.starts_with("Reddito"));
+            for voce in singole {
+                let r = (v.redditi.iter())
+                    .find(|r| voce.fatto.contains(&format!("fascia {} ", r.fascia)))
+                    .unwrap();
+                assert!(
+                    voce.fatto
+                        .contains(&format!("{}% nel trimestre", cifre(r.crescita)))
+                );
+                assert!(voce.fatto.contains(&format!("{}% atteso", cifre(r.attesa))));
+                trovata = true;
+            }
+        }
+    }
+    assert!(
+        trovata,
+        "nessuna voce RedditoDeluso in 6 partite da 60 turni"
+    );
 }

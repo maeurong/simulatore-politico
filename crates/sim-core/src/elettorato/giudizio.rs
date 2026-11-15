@@ -11,10 +11,13 @@ use crate::grandezze::Grandezze;
 use crate::misure::Misure;
 use crate::partiti::Governo;
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use ts_rs::TS;
 
 /// Una fascia nella chiusura: reddito reale per elettore, crescita reale del trimestre e crescita
 /// attesa in punti, medie dei gruppi pesate con gli elettori. Senza elettori, tutto zero.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub struct RedditoFascia {
     pub fascia: Fascia,
     pub reddito: f64,
@@ -170,7 +173,7 @@ impl Elettorato {
                 }
             }
         }
-        (Fascia::TUTTE.into_iter().zip(somme))
+        self.redditi_fasce = (Fascia::TUTTE.into_iter().zip(somme))
             .map(|(fascia, [n, reddito, crescita, attesa])| {
                 let media = |x: f64| if n > 0.0 { x / n } else { 0.0 };
                 RedditoFascia {
@@ -180,7 +183,8 @@ impl Elettorato {
                     attesa: media(attesa),
                 }
             })
-            .collect()
+            .collect();
+        self.redditi_fasce.clone()
     }
 }
 

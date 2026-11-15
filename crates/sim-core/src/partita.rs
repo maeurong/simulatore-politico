@@ -4786,6 +4786,7 @@ impl Partita {
                     crisi_debito_pb: d("soglia_crisi_debito"),
                 }
             },
+            redditi: self.elettorato.redditi_fasce.clone(),
         }
     }
 
