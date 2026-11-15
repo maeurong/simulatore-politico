@@ -3,7 +3,8 @@
   // Atto e regione si scelgono insieme; il costo di ognuno lo dà il core (costoDirotta) e il totale è la somma. Una nuova apertura annulla il giro di richieste della vecchia.
   import { onMount, untrack } from "svelte";
   import { t, segnato } from "$lib/testi/t";
-  import { guscio } from "$lib/guscio/chiamate";
+  import { comeErrore, guscio } from "$lib/guscio/chiamate";
+  import { partita } from "$lib/partita.svelte";
   import { chiaveDi, fondoDi } from "$lib/caricature/caricatura";
   import { REGIONI } from "$lib/mappa/regioni";
   import type { Comando } from "$lib/tipi/Comando";
@@ -12,7 +13,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import SelettoreRegione from "$lib/mappa/SelettoreRegione.svelte";
-  import { attiDirotta, conRegione, costiDirotta, euro, type Figurina } from "./governo";
+  import { attiDirotta, conRegione, costiDirotta, euro, totaleDirotta, type Figurina } from "./governo";
 
   let { vista, f, manda, rifiuto, onchiudi }: { vista: Vista; f: Figurina; manda: (c: Comando) => Promise<boolean>; rifiuto: string | null; onchiudi: () => void } = $props();
 
@@ -31,22 +32,26 @@
     let vivo = true;
     costi = null;
     untrack(() => costiDirotta((x, r) => guscio.costoDirotta(d, x, r), attiDirotta(min).map((x) => x.id), cr ? REGIONI.map((r) => r.id).filter((r) => r !== a.regione) : [], () => vivo))
-      .then((c) => { if (vivo) costi = c; });
+      .then((c) => { if (vivo) costi = c; })
+      .catch((e) => { if (vivo) { partita.guasto = comeErrore(e).testo; onchiudi(); } });
     return () => { vivo = false; };
   });
 
-  // il costo è una variazione negativa: la soddisfazione persa è il suo opposto
+  // il costo è una variazione (negativa = soddisfazione persa); con segno e arrotondato una volta, come «Ferma»
+  const num = (c: number | string | undefined) => (typeof c === "number" ? c : null);
+  const voce = (n: number) => (n === 0 ? t("governo.dirotta_gratis") : segnato(n));
+  const etichetta = (c: number | string | undefined) => (c === undefined ? "…" : typeof c === "number" ? voce(totaleDirotta(c, null)) : "");
+  // la mappa tinge per soddisfazione persa: un guadagno è classe zero
   const persa = (c: number | string | undefined) => (typeof c === "number" ? Math.max(0, Math.round(-c)) : null);
-  const etichetta = (c: number | string | undefined) => (c === undefined ? "…" : persa(c) === null ? "" : persa(c)! > 0 ? segnato(-persa(c)!) : t("governo.dirotta_gratis"));
   const grandezza = (id: string) => vista.grandezze.find((g) => g.id === id)?.nome ?? id;
   const effetto = (e: { grandezza: string; migliora: boolean; ritardo: number }) =>
     t("governo.effetto", { nome: grandezza(e.grandezza), verso: t(e.migliora ? "governo.effetto_meglio" : "governo.effetto_peggio"), quando: e.ritardo ? t("governo.effetto_fra", { n: e.ritardo }) : t("governo.effetto_subito") });
 
   const cambia = $derived(atto !== a.atto || (cr && regione !== a.regione));
-  const totale = $derived((atto !== a.atto ? (persa(costi?.atti[atto]) ?? 0) : 0) + (cr && regione && regione !== a.regione ? (persa(costi?.regioni[regione]) ?? 0) : 0));
+  const totale = $derived(totaleDirotta(atto !== a.atto ? num(costi?.atti[atto]) : null, cr && regione && regione !== a.regione ? num(costi?.regioni[regione]) : null));
   const rifiutoRegione = $derived(cr && regione && typeof costi?.regioni[regione] === "string" ? (costi!.regioni[regione] as string) : undefined);
   const blocco = $derived(!costi ? t("governo.dirotta_calcolo") : rifiutoRegione ?? (cambia ? undefined : t("governo.dirotta_scegli")));
-  const azione = $derived(t("governo.dirotta_atto", { costo: totale > 0 ? segnato(-totale) : t("governo.dirotta_gratis") }));
+  const azione = $derived(t("governo.dirotta_atto", { costo: voce(totale) }));
   const valoriRegioni = $derived(Object.fromEntries(REGIONI.map((r) => [r.id, r.id === a.regione ? null : persa(costi?.regioni[r.id])])));
 
   const fai = () => manda({ tipo: "dirotta", dicastero: f.dicastero, atto: atto !== a.atto ? atto : null, regione: cr && regione !== a.regione ? regione : null }).then((ok) => ok && onchiudi());
@@ -72,7 +77,7 @@
       <button type="button" class="atto" class:on={atto === x.id} aria-pressed={atto === x.id} aria-disabled={no ? "true" : undefined} onclick={() => { if (!no) atto = x.id; }}>
         <span><b>{x.nome}</b>{#if cur} <span class="chip">{t("governo.dirotta_in_agenda")}</span>{/if}</span>
         <span class="nf">{cur || no ? "" : etichetta(costi?.atti[x.id])}</span>
-        <small>{euro(x.costo)}{x.turni > 1 ? ` · ${t("governo.dirotta_cantiere", { n: x.turni })}` : ""} · {x.effetti.map(effetto).join(", ")}{#if no} · <span class="male">{no}</span>{/if}</small>
+        <small>{euro(x.costo)}{x.turni > 1 ? ` · ${t("governo.dirotta_cantiere", { n: x.turni })}` : ""} · {x.effetti.map(effetto).join(" · ")}{#if no} · <span class="male">{no}</span>{/if}</small>
       </button>
     {/each}
   </div>
@@ -80,14 +85,13 @@
   {#if cr}
     <div class="sez"><span>{t("governo.dirotta_regione")}</span><span>{t("governo.dirotta_regione_sua", { regione: REGIONI.find((r) => r.id === a.regione)?.nome ?? "" })}</span></div>
     <p class="min muto">{a.motivo}</p>
-    <SelettoreRegione valori={valoriRegioni} bind:scelta={regione} {azione} spento={blocco} legenda={t("governo.dirotta_legenda")} formato={(x) => (x >= 1 ? segnato(-x) : t("governo.dirotta_gratis"))} onconferma={fai} onannulla={onchiudi} />
-  {:else}
-    <div class="az">
-      <Pulsante forma="bordo" spento={blocco} onclick={fai}>{azione}</Pulsante>
-      <Pulsante forma="link" onclick={onchiudi}>{t("governo.dirotta_chiudi")}</Pulsante>
-    </div>
+    <SelettoreRegione valori={valoriRegioni} bind:scelta={regione} {azione} spento={blocco} legenda={t("governo.dirotta_legenda")} formato={(x) => (x >= 1 ? segnato(-x) : t("governo.dirotta_gratis"))} senzaAzioni onconferma={fai} onannulla={onchiudi} />
   {/if}
   {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
+  <div class="az">
+    <Pulsante forma="bordo" spento={cr && !regione ? t("mappa.scegli") : blocco} onclick={fai}>{azione}</Pulsante>
+    <Pulsante forma="link" onclick={onchiudi}>{t("governo.dirotta_chiudi")}</Pulsante>
+  </div>
 </section>
 
 <style>
@@ -111,5 +115,5 @@
   .atto[aria-disabled="true"]:hover { background: none }
   .nf { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap }
   .chip { display: inline-block; border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-min); font-weight: 700; line-height: 1.4 }
-  .az { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap }
+  .az { position: sticky; bottom: 0; z-index: 1; display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; background: var(--carta); border-top: var(--forte); padding: 6px 0 2px; margin-top: 2px }
 </style>

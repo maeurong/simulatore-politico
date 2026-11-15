@@ -6,7 +6,7 @@
   import { REGIONI } from "./regioni";
 
   let {
-    valori, scelta = $bindable(null), azione, legenda, spento, formato = (x) => percentuale(x, 1), onconferma, onannulla,
+    valori, scelta = $bindable(null), azione, legenda, spento, formato = (x) => percentuale(x, 1), senzaAzioni = false, onconferma, onannulla,
   }: {
     valori: Record<string, number | null>;
     scelta: string | null;
@@ -17,6 +17,8 @@
     /** il motivo per cui l'azione è spenta, oltre alla scelta mancante */
     spento?: string;
     formato?: (x: number) => string;
+    /** chi lo usa tiene altrove i due pulsanti (una barra fissa in fondo al pannello) */
+    senzaAzioni?: boolean;
     onconferma: () => void;
     onannulla: () => void;
   } = $props();
@@ -37,10 +39,10 @@
     {/each}
   </div>
   {#if scelta}<p class="sec"><b>{REGIONI.find((r) => r.id === scelta)?.nome}</b>: {val(scelta)}</p>{/if}
-  <div class="az">
+  {#if !senzaAzioni}<div class="az">
     <Pulsante forma="bordo" spento={scelta ? spento : t("mappa.scegli")} onclick={onconferma}>{azione}</Pulsante>
     <Pulsante forma="link" onclick={onannulla}>{t("componenti.annulla")}</Pulsante>
-  </div>
+  </div>{/if}
 </div>
 
 <style>

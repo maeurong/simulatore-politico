@@ -13,7 +13,7 @@
   import type { Comando } from "$lib/tipi/Comando";
   import Girevole from "./Girevole.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
-  import { etichettaFerma, euro, sulRetro, type Figurina, type StatoCarta } from "./governo";
+  import { etichettaFerma, euro, statoPrincipale, sulRetro, type Figurina, type StatoCarta } from "./governo";
 
   let { vista, f, scelta, grave, id, onscelta, manda, ondirotta, anima, volta, onrigira }: {
     vista: Vista; f: Figurina; scelta: boolean; grave: boolean; id: string; onscelta: () => void;
@@ -27,6 +27,7 @@
   const rosa = $derived(vista.ministeri.find((x) => x.dicastero === f.dicastero)?.rosa.length ?? 0);
   const puo = $derived(!!m && f.agenda?.stato === "annunciata" && !f.stati.includes("dimissioni_chieste"));
   const girata = $derived(!grave && sulRetro(f) && !volta);
+  const stato = $derived(statoPrincipale(f));
   const soglia = (s: StatoCarta) => s === "preavviso" || s === "dimissioni_chieste";
 </script>
 
@@ -36,7 +37,7 @@
 <div class="fr" class:ev={f.evidenza.length > 0} class:sel={scelta}>
   <div class="cima">
     <div class="sx"><span>{t("governo.numero", { n: f.indice })}</span>
-      {#each f.stati as s (s)}<span class="chip" class:rosso={soglia(s)}>{t(`governo.stato_${s}` as Chiave)}</span>{/each}
+      {#if stato}<span class="chip" class:rosso={soglia(stato)}>{t(`governo.stato_${stato}` as Chiave)}</span>{/if}
     </div>
     {#if m && f.voto !== null}
       <span class="voto" class:basso={m.minaccia} title={t("governo.voto", { n: f.voto })}>
