@@ -368,7 +368,7 @@
   "cruscotto.successore": "{dicastero}: scegli il successore",
   "cruscotto.successore_default": "il primo della rosa, {nome}",
   "cruscotto.successore_di": "{nome}: successore, {dicastero}",
-  "cruscotto.proposta_default": "al turno dopo vale respinta",
+  "cruscotto.proposta_default": "senza scelta resta in sospeso al più un turno, poi vale respinta",
   "cruscotto.proposta_default_rinviata": "resta in sospeso, poi vale respinta",
   "cruscotto.rinvia": "Rinvia",
   "cruscotto.gia_rinviata": "già rinviata una volta",
