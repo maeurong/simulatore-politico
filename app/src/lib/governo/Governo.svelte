@@ -98,5 +98,5 @@
   .sec { font-size: var(--c-sec) }
   .muto { color: var(--grigio) }
   .album { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-content: start; min-height: 0; overflow: hidden auto }
-  .lato { border-left: var(--forte); padding-left: var(--canale); min-height: 0; overflow: hidden auto; padding-bottom: 8px; align-content: start }
+  .lato { border-left: var(--forte); padding-left: var(--canale); min-height: 0; overflow: hidden auto; padding-bottom: 8px; scroll-padding-bottom: 80px; align-content: start }
 </style>

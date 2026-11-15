@@ -85,7 +85,7 @@
   {#if cr}
     <div class="sez"><span>{t("governo.dirotta_regione")}</span><span>{t("governo.dirotta_regione_sua", { regione: REGIONI.find((r) => r.id === a.regione)?.nome ?? "" })}</span></div>
     <p class="min muto">{a.motivo}</p>
-    <SelettoreRegione valori={valoriRegioni} bind:scelta={regione} {azione} spento={blocco} legenda={t("governo.dirotta_legenda")} formato={(x) => (x >= 1 ? segnato(-x) : t("governo.dirotta_gratis"))} senzaAzioni onconferma={fai} onannulla={onchiudi} />
+    <SelettoreRegione valori={valoriRegioni} bind:scelta={regione} {azione} spento={blocco} legenda={t("governo.dirotta_legenda")} formato={(_, id) => etichetta(costi?.regioni[id])} senzaAzioni onconferma={fai} onannulla={onchiudi} />
   {/if}
   {#if rifiuto}<Rifiuto testo={rifiuto} />{/if}
   <div class="az">

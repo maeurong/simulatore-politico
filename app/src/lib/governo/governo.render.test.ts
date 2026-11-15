@@ -32,10 +32,10 @@ describe("Governo, render", () => {
 });
 
 describe("CartaMinistro, interim", () => {
-  const vista = stati.interim.vista;
-  const f = figurine(vista).find((x) => x.dicastero === "ambiente_energia")!;
-  const { body } = render(CartaMinistro, { props: { vista, f, grave: false, manda: async () => true, rifiuto: null, ondirotta: () => {}, anima: false, volta: false, onrigira: () => {} } });
   it("tre candidati, niente Ferma, Dirotta né dimissioni", () => {
+    const vista = stati.interim.vista;
+    const f = figurine(vista).find((x) => x.dicastero === "ambiente_energia")!;
+    const { body } = render(CartaMinistro, { props: { vista, f, grave: false, manda: async () => true, rifiuto: null, ondirotta: () => {}, anima: false, volta: false, onrigira: () => {} } });
     expect(body.match(/class="cand/g)).toHaveLength(3);
     expect(body).not.toMatch(/Ferma/);
     expect(body).not.toMatch(/Dirotta/);

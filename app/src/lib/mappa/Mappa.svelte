@@ -20,7 +20,7 @@
     nome: string;
     piccola?: boolean;
     solaLettura?: boolean;
-    formato?: (x: number) => string;
+    formato?: (x: number, id: string) => string;
     onscelta: (id: string) => void;
   } = $props();
 
@@ -34,7 +34,7 @@
 
   const nomeAccessibile = (id: string, nomeReg: string) => {
     const x = valori[id] ?? null, c = classe[id];
-    const dove = x === null || c === null ? t("mappa.senza_dato") : `${formato(x)}, ${t("mappa.classe", { n: c + 1 })}`;
+    const dove = x === null || c === null ? t("mappa.senza_dato") : `${formato(x, id)}, ${t("mappa.classe", { n: c + 1 })}`;
     return [nomeReg, dove, ...(segni[id] ?? []).map((s) => t(`mappa.segno_${s}`))].join(", ");
   };
 

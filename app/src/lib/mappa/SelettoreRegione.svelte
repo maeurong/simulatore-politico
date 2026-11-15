@@ -16,7 +16,7 @@
     legenda?: string;
     /** il motivo per cui l'azione è spenta, oltre alla scelta mancante */
     spento?: string;
-    formato?: (x: number) => string;
+    formato?: (x: number, id: string) => string;
     /** chi lo usa tiene altrove i due pulsanti (una barra fissa in fondo al pannello) */
     senzaAzioni?: boolean;
     onconferma: () => void;
@@ -25,7 +25,7 @@
 
   const ordine = REGIONI.map((r) => r.id);
   const dato = (id: string) => valori[id] ?? null;
-  const val = (id: string) => (dato(id) === null ? "—" : formato(dato(id)!));
+  const val = (id: string) => (dato(id) === null ? "—" : formato(dato(id)!, id));
 </script>
 
 <div class="sel">
