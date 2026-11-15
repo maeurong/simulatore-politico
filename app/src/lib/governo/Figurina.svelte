@@ -36,7 +36,7 @@
 {#snippet fronte()}
 <div class="fr" class:ev={f.evidenza.length > 0} class:sel={scelta}>
   <div class="cima">
-    <div class="sx"><span>{t("governo.numero", { n: f.indice })}</span>
+    <div class="sx"><span class="n">{t("governo.numero", { n: f.indice })}</span>
       {#if stato}<span class="chip" class:rosso={soglia(stato)}>{t(`governo.stato_${stato}` as Chiave)}</span>{/if}
     </div>
     {#if m && f.voto !== null}
@@ -100,9 +100,11 @@
   .fr.sel, .rt.sel { border-width: 3px; padding: 4.5px 6.5px 6.5px }
   .fr:hover:not(.sel) { box-shadow: inset 0 0 0 1.5px var(--ink) }
   .fr.ev:hover:not(.sel) { box-shadow: inset 0 4px 0 var(--rosso), inset 0 0 0 1.5px var(--ink) }
-  .cima { display: flex; justify-content: space-between; align-items: start; gap: 4px; font-size: var(--c-min); color: var(--grigio) }
-  .sx { display: flex; flex-wrap: wrap; align-items: start; gap: 2px 4px; min-width: 0 }
-  .voto { flex: none }
+  .cima { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 2px 4px; font-size: var(--c-min); color: var(--grigio) }
+  .sx { display: contents }
+  .n { white-space: nowrap }
+  .sx .chip { grid-row: 2; grid-column: 1 / -1; justify-self: start }
+  .cima .voto { grid-row: 1; grid-column: 2 }
   .chip { display: inline-block; border: 1.5px solid var(--ink); padding: 0 3px; font-size: var(--c-min); font-weight: 700; line-height: 1.3; color: var(--ink); max-width: 100%; overflow-wrap: anywhere }
   .chip.rosso { border-color: var(--rosso); color: var(--rosso) }
   .voto { font-size: var(--c-num); font-weight: 700; line-height: 1; white-space: nowrap; color: var(--ink) }

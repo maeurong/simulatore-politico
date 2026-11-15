@@ -115,5 +115,5 @@
   .atto[aria-disabled="true"]:hover { background: none }
   .nf { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap }
   .chip { display: inline-block; border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-min); font-weight: 700; line-height: 1.4 }
-  .az { position: sticky; bottom: 0; z-index: 1; display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; background: var(--carta); border-top: var(--forte); padding: 6px 0 2px; margin-top: 2px }
+  .az { position: sticky; bottom: -8px; z-index: 1; display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; background: var(--carta); border-top: var(--forte); padding: 6px 0 2px; margin-top: 2px }
 </style>
