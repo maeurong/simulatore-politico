@@ -1940,8 +1940,9 @@ impl Partita {
         if self.esito.iter().any(|v| v.tipo == TipoVoce::CrisiAperta) {
             fermate.push(Fermata::Crisi);
         }
-        // `UltimatumPosto` non è fondibile: ogni voce porta il suo `partito`. Il governo del
-        // giocatore caduto nella stessa chiusura tiene il presidente: l'ultimatum non ha più destinatario.
+        // `UltimatumPosto` non è fondibile: ogni voce porta il suo `partito`. Chi governa è già
+        // uscito con `Governo`: qui `presidente == giocatore` vuol dire governo del giocatore
+        // caduto o dimissionario, e l'ultimatum di un suo alleato non ferma.
         if self.governo.presidente != self.giocatore {
             fermate.extend(
                 (self.esito.iter())

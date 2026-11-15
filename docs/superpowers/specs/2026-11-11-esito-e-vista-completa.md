@@ -250,7 +250,7 @@ Norma lontana e seggi persi (fatti 31, 32) sono variazioni d'intesa e stanno in 
 | `situazione_accesa` | 71 | situazione, misura, valore ufficiale | la soglia di accensione | C1 | N | no |
 | `situazione_spenta` | 72 | situazione, valore ufficiale | la soglia di spegnimento | N | o | no |
 | `crisi_del_debito` | 73 | spread: si aprono le «Aste scoperte» | la soglia dello spread | C2 | N | no |
-| `entrate_di_cassa` | 74 | il partito del giocatore, 2 per mille e donazioni del trimestre: le donazioni seguono l'intenzione di voto vera, e una voce per ogni partito la rivelerebbe | i voti dell'ultima elezione | o | o | sì |
+| `entrate_di_cassa` | 74 | il partito del giocatore, 2 per mille e donazioni del trimestre. Le donazioni seguono l'intenzione di voto vera: una voce per ogni partito le metterebbe in fila. La cassa pubblica dei partiti lascia ancora ricavare le entrate, nei turni senza spese | i voti dell'ultima elezione | o | o | sì |
 
 Le voci la cui causa è una frase fissa («–» più il testo fra parentesi) la portano comunque nel campo `causa`: una voce non ha mai la causa vuota.
 
