@@ -4425,11 +4425,13 @@
       "deliberazione": 0,
       "camera": {
         "si": 219,
-        "no": 181
+        "no": 181,
+        "franchi": 17
       },
       "senato": {
         "si": 114,
-        "no": 86
+        "no": 86,
+        "franchi": 7
       },
       "approvata": true,
       "fiducia": false,
@@ -4481,11 +4483,13 @@
       "deliberazione": 0,
       "camera": {
         "si": 17,
-        "no": 383
+        "no": 383,
+        "franchi": 5
       },
       "senato": {
         "si": 4,
-        "no": 196
+        "no": 196,
+        "franchi": 2
       },
       "approvata": false,
       "fiducia": false,
@@ -4639,14 +4643,621 @@
   "incarico": null,
   "dimissioni": false,
   "crisi": false,
-  "mosse": [
+  "esito": [
     {
-      "partito": "sinistra",
-      "testo": "Presenta la sfiducia a Filippo Barbieri, Interno: Centrodestra in ultimatum la voterebbe"
+      "tipo": "evento_risolto",
+      "criticita": "critica",
+      "precedenza": 1,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Emergenza idrogeologica in Lazio, «Attingere al fondo di riserva» per default; 0 euro dal fondo di riserva (0% del costo)",
+      "causa": "rischio basso",
+      "partito": null,
+      "dicastero": null,
+      "regione": "lazio",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": "emergenza",
+      "dettagli": []
     },
     {
+      "tipo": "proposta_respinta",
+      "criticita": "critica",
+      "precedenza": 1,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Respinta la proposta di Simone Ricci (Lavoro e Welfare), fondi per Bonus straordinario per le famiglie in difficoltà; perde 8,0 punti di soddisfazione",
+      "causa": "in sospeso da 2 turni senza risposta",
+      "partito": null,
+      "dicastero": "lavoro_welfare",
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "emendamento_respinto",
+      "criticita": "critica",
+      "precedenza": 1,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "2 emendamenti respinti",
+      "causa": "senza risposta prima del voto",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": 8,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Respinto l'emendamento di Centrodestra su Legge di bilancio; perde 5,0 punti d'intesa: senza risposta prima del voto",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": 8,
+          "disposizioni": []
+        },
+        {
+          "testo": "Respinto l'emendamento di Destra su Legge di bilancio; perde 5,0 punti d'intesa: senza risposta prima del voto",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": 8,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "atto_eseguito",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "3 atti eseguiti",
+      "causa": "vicino alla sua posizione",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il dicastero Economia e Finanze esegue «Riscossione affidata a concessionari privati» con 148.009.947 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "economia_finanze",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Sanità esegue «Accorpamento delle ASL e premi ai primari» con 316.183.276 euro: vicino alla sua posizione",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il dicastero Giustizia esegue «Squadre di giudici a termine per l'arretrato» con 76.122.272 euro: Durata dei processi, avvicina l'obiettivo",
+          "partito": null,
+          "dicastero": "giustizia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "cantiere_fermo",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "5 cantieri fermi",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Il cantiere «Centri per l'impiego rinnovati» del dicastero Lavoro e Welfare resta fermo un turno: rata di 97.516.557 euro contro un margine residuo di 45.285.606 euro",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Rigassificatori e nuove centrali» del dicastero Ambiente ed Energia resta fermo un turno: rata di 209.261.745 euro contro un margine residuo di 2.093.231 euro",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Videosorveglianza e centri di rimpatrio» del dicastero Interno resta fermo un turno: rata di 173.050.085 euro contro un margine residuo di 58.146.806 euro",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Accoglienza diffusa e corridoi umanitari» del dicastero Interno resta fermo un turno: rata di 116.634.288 euro contro un margine residuo di 58.146.806 euro",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Il cantiere «Ammodernamento dei mezzi» del dicastero Esteri e Difesa resta fermo un turno: rata di 256.891.119 euro contro un margine residuo di 125.729.046 euro",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "leggi_slittate",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Slitta al turno dopo una legge",
+      "causa": "il turno della legge di bilancio",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "bilancio_approvato",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Approvata la legge di bilancio; Camera 219 sì e 181 no, 17 franchi tiratori; Senato 114 sì e 86 no, 7 franchi tiratori; budget tagliato in termini reali a Economia e Finanze (-1,7%), Sviluppo economico (-1,7%), Lavoro e Welfare (-1,7%), Sanità (-1,7%), Istruzione e Ricerca (-1,7%), Infrastrutture e Trasporti (-1,7%), Ambiente ed Energia (-1,7%), Interno (-1,7%), Giustizia (-1,7%), Esteri e Difesa (-1,7%)",
+      "causa": "per il sì Centrodestra, Destra, Partito del giocatore; per il no Estrema sinistra, Sinistra, Centrosinistra, Centro, Estrema destra",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": 8,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "soddisfazione_variata",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "14 ministri cambiano soddisfazione",
+      "causa": "spesa del dicastero tagliata in termini reali",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Simone Gallo (Economia e Finanze) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "economia_finanze",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Marco Bianchi (Sviluppo economico) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "sviluppo_economico",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Simone Ricci (Lavoro e Welfare) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sara Ferraro (Sanità) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "sanita",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Chiara Caruso (Istruzione e Ricerca) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "istruzione_ricerca",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Ricci (Infrastrutture e Trasporti) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "infrastrutture_trasporti",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Luca Romano (Ambiente ed Energia) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Barbieri (Interno) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Simone Bianchi (Giustizia) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "giustizia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Giulia Rossi (Esteri e Difesa) perde 3,43 punti di soddisfazione: spesa del dicastero tagliata in termini reali",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Simone Ricci (Lavoro e Welfare) perde 3,29 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Ricci (Infrastrutture e Trasporti) perde 3,59 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "infrastrutture_trasporti",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Barbieri (Interno) perde 5,01 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Giulia Rossi (Esteri e Difesa) perde 1,50 punti di soddisfazione: indicatore di servizio in calo",
+          "partito": null,
+          "dicastero": "esteri_difesa",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "spread",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Spread a 62 pb, -2 pb sul trimestre prima",
+      "causa": "chiusura del trimestre",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "sondaggio",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Sondaggio: la coalizione di Partito del giocatore, Centrodestra, Destra al 48,7% fra i votanti, +2,2 punti sul trimestre prima",
+      "causa": "sondaggio pubblico del trimestre, media di 4 istituti",
+      "partito": "giocatore",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "prima_stima",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Prima stima di ottobre-dicembre 2028: PIL +1,4% annualizzato, inflazione 1,1% annualizzata e 0,7% sull'anno, disoccupazione 5,6%, disavanzo 2,3% del PIL",
+      "causa": "prima stima, riveduta fra un turno",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "revisione",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Revisione di luglio-settembre 2028: PIL da -0,6% a -0,9%, inflazione da -2,0% a -2,3%, disoccupazione da 6,0% a 5,9%, disavanzo da 2,1% a 2,0% del PIL",
+      "causa": "revisione della prima stima",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "entrate_di_cassa",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "8 entrate di cassa",
+      "causa": "più cause",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Estrema sinistra incassa 37.433 euro, 20.052 dal 2 per mille e 17.381 di donazioni: 2 per mille sul 2,5% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Sinistra incassa 461.947 euro, 271.122 dal 2 per mille e 190.825 di donazioni: 2 per mille sul 33,3% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "sinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrosinistra incassa 82.572 euro, 46.773 dal 2 per mille e 35.799 di donazioni: 2 per mille sul 5,7% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrosinistra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centro incassa 59.233 euro, 33.676 dal 2 per mille e 25.557 di donazioni: 2 per mille sul 4,1% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centro",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra incassa 99.238 euro, 57.225 dal 2 per mille e 42.013 di donazioni: 2 per mille sul 7,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Destra incassa 336.821 euro, 203.105 dal 2 per mille e 133.716 di donazioni: 2 per mille sul 24,9% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Estrema destra incassa 88.098 euro, 48.923 dal 2 per mille e 39.175 di donazioni: 2 per mille sul 6,0% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "estrema_destra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Partito del giocatore incassa 199.263 euro, 133.729 dal 2 per mille e 65.534 di donazioni: 2 per mille sul 16,4% dell'ultimo voto, donazioni sulle intenzioni di voto",
+          "partito": "giocatore",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "intesa_variata",
+      "criticita": "ordinaria",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "2 alleati cambiano intesa",
+      "causa": "più cause",
+      "partito": "centrodestra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Centrodestra perde 0,58 punti d'intesa: ministri del suo partito scontenti",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Centrodestra perde 1,03 punti d'intesa: dicasteri sotto la sua richiesta",
+          "partito": "centrodestra",
+          "dicastero": null,
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
+    },
+    {
+      "tipo": "ultimatum_posto",
+      "criticita": "critica",
+      "precedenza": 2,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Centrodestra pone l'ultimatum al governo",
+      "causa": "l'intesa è scesa sotto la soglia d'ultimatum di 40,0; la causa peggiore è «emendamento respinto»",
+      "partito": "centrodestra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "evento_nato",
+      "criticita": "critica",
+      "precedenza": 1,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Emergenza idrogeologica in Liguria, costo dell'intervento 1.000.000.000 euro",
+      "causa": "rischio medio",
+      "partito": null,
+      "dicastero": null,
+      "regione": "liguria",
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": "emergenza",
+      "dettagli": []
+    },
+    {
+      "tipo": "sfiducia_presentata",
+      "criticita": "critica",
+      "precedenza": 3,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "Presenta la sfiducia a Filippo Barbieri, Interno",
+      "causa": "Centrodestra in ultimatum la voterebbe",
+      "partito": "sinistra",
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "misura_presentata",
+      "criticita": "notevole",
+      "precedenza": 0,
+      "in_evidenza": false,
+      "tono": "ordinario",
+      "fatto": "Porta nel posto riservato Concorrenza nei servizi: mercato libero",
+      "causa": "nessun seggio fra Camera e Senato dei partiti alleati la voterebbe",
       "partito": "centrosinistra",
-      "testo": "Porta nel posto riservato Concorrenza nei servizi: mercato libero; nessun seggio fra Camera e Senato dei partiti alleati la voterebbe"
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": []
+    },
+    {
+      "tipo": "minaccia_di_dimissioni",
+      "criticita": "critica",
+      "precedenza": 2,
+      "in_evidenza": true,
+      "tono": "ordinario",
+      "fatto": "4 ministri minacciano le dimissioni",
+      "causa": "la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «indicatore di servizio in calo»",
+      "partito": null,
+      "dicastero": null,
+      "regione": null,
+      "misura": null,
+      "disposizioni": [],
+      "famiglia": null,
+      "dettagli": [
+        {
+          "testo": "Simone Ricci (Lavoro e Welfare) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «proposta del ministro respinta»",
+          "partito": null,
+          "dicastero": "lavoro_welfare",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Ricci (Infrastrutture e Trasporti) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «indicatore di servizio in calo»",
+          "partito": null,
+          "dicastero": "infrastrutture_trasporti",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Luca Romano (Ambiente ed Energia) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «spesa del dicastero tagliata in termini reali»",
+          "partito": null,
+          "dicastero": "ambiente_energia",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        },
+        {
+          "testo": "Filippo Barbieri (Interno) minaccia le dimissioni: la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «indicatore di servizio in calo»",
+          "partito": null,
+          "dicastero": "interno",
+          "regione": null,
+          "misura": null,
+          "disposizioni": []
+        }
+      ]
     }
   ],
   "programma": [],
@@ -4723,5 +5334,10 @@
         "euro": 150000
       }
     ]
-  }
+  },
+  "fermate": [
+    {
+      "tipo": "fine"
+    }
+  ]
 }

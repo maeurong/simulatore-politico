@@ -91,6 +91,10 @@ describe("fettaDi", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
     expect(fettaDi("bilancio", "governo")).toBe("11d");
     expect(fettaDi("campagna", "turno_zero")).toBeNull();
+    expect(fettaDi("paese", "governo")).toBeNull();
+    expect(fettaDi("partiti", "governo")).toBeNull();
+    expect(fettaDi("partiti", "turno_zero")).toBeNull();
+    expect(fettaDi("paese", "turno_zero")).toBeNull();
     expect(fettaDi("eredita", "finita")).toBe("11e");
     expect(fettaDi("schema", "governo")).toBe("11e");
   });
