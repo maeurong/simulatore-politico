@@ -471,6 +471,11 @@ pub(crate) fn valida(dati: &DatiGioco) -> Result<(), Errore> {
                         "{nome}: lo scandalo ammette solo le dimissioni, e solo sul ministro"
                     ));
                 }
+                if o.default && *effetto == EffettoOpzione::Dimissioni {
+                    return ko(format!(
+                        "{nome}: le dimissioni non possono essere l'opzione di default"
+                    ));
+                }
                 let fuori_posto = match effetto {
                     EffettoOpzione::Mes | EffettoOpzione::Ristrutturazione
                         if e.famiglia != Famiglia::Debito =>
