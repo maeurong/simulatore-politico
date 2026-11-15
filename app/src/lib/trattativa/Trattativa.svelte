@@ -35,7 +35,10 @@
     sessione.aggiorna();
   });
   $effect(() => {
-    if (!partita.occupato) sessione.riprova();
+    if (partita.occupato) return;
+    // shortcut: dopo le continuazioni del comando appena finito; se cambia il guscio, il riprovo passa alla sessione
+    const attesa = setTimeout(() => sessione.riprova());
+    return () => clearTimeout(attesa);
   });
 
   // la pagina si rimonta quando l'incarico cambia: se è stato un comando di Ribaltone, il fuoco riparte dalla testa

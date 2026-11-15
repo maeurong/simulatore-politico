@@ -100,6 +100,11 @@ describe("haLaMaggioranza e fuori", () => {
     expect(f.find((x) => x.id === "centro")).toMatchObject({ nome: "Centro", camera: 17, senato: 6, causa: "più probabilità di governare con te" });
     expect(f.find((x) => x.id === "sinistra")).toMatchObject({ camera: 147, senato: 76, causa: "posizione troppo lontana dalla tua" });
   });
+  it("fuori senza elezioni: i partiti restano, con zero seggi", () => {
+    const f = fuori({ ...senza, elezioni: [] });
+    expect(f.map((x) => x.id)).toEqual(fuori(senza).map((x) => x.id));
+    expect(f.every((x) => x.camera === 0 && x.senato === 0)).toBe(true);
+  });
 });
 
 describe("allarga", () => {
@@ -136,7 +141,15 @@ describe("sessioneSpartizione", () => {
       attese.shift()!(e);
       await new Promise((r) => setTimeout(r));
     };
-    return { s, mandati, risolvi, vista: (x: Vista) => (corrente = x), get stato() { return stato; } };
+    // l'ordine di Svelte: la partita si libera e l'effetto chiama riprova() prima che la risposta arrivi a chi l'aspetta
+    const risolviERiprova = async (e: EsitoManda) => {
+      // prima i clic arrivano alla sessione («occupato» li lascia pendenti), poi risponde il core
+      await new Promise((r) => setTimeout(r));
+      attese.shift()!(e);
+      s.riprova();
+      await new Promise((r) => setTimeout(r));
+    };
+    return { s, mandati, risolvi, risolviERiprova, vista: (x: Vista) => (corrente = x), get stato() { return stato; } };
   }
   const nove = (p: ReturnType<typeof prova>) => ids.slice(0, 9).forEach((id) => p.s.scegli(id, "giocatore"));
 
@@ -210,7 +223,7 @@ describe("sessioneSpartizione", () => {
     expect(p.stato.esito).toBe("partita");
   });
 
-  it("il rifiuto si azzera quando riparte il pendente", async () => {
+  it("il rifiuto resta mentre riparte il pendente, e si azzera quando un comando riesce", async () => {
     const p = prova();
     nove(p);
     p.s.scegli(ids[9], "giocatore");
@@ -218,10 +231,68 @@ describe("sessioneSpartizione", () => {
     p.s.scegli(ids[2], "destra");
     p.s.scegli(ids[1], "destra");
     await p.risolvi({ rifiuto: "no" });
-    expect(p.stato.rifiuto).not.toBeNull();
-    p.s.riprova();
-    expect(p.stato.rifiuto).toBeNull();
     expect(p.mandati).toHaveLength(3);
+    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
+    p.s.riprova();
+    expect(p.mandati).toHaveLength(3);
+    await p.risolvi("ok");
+    expect(p.stato.rifiuto).toBeNull();
+    expect(p.stato.esito).toBe("partita");
+  });
+
+  it("riprova() prima della risposta (l'ordine di Svelte): rifiuto di A con B pendente, B riparte senza A e il rifiuto resta sotto A", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    await p.risolvi("ok");
+    p.s.scegli(ids[2], "destra");
+    p.s.scegli(ids[1], "destra");
+    await p.risolviERiprova({ rifiuto: "no" });
+    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
+    expect(p.mandati).toHaveLength(3);
+    const d = (p.mandati[2] as { dicasteri: { dicastero: string; partito: string | null }[] }).dicasteri;
+    expect(d[2].partito).toBe("giocatore");
+    expect(d[1].partito).toBe("destra");
+    // il secondo rifiuto è di B: riporta indietro B, non A, e si legge sotto B
+    await p.risolvi({ rifiuto: "neanche" });
+    expect(p.stato.bozza[ids[1]]).toBe("giocatore");
+    expect(p.stato.bozza[ids[2]]).toBe("giocatore");
+    expect(p.stato.rifiuto).toEqual({ dicastero: ids[1], testo: "neanche" });
+  });
+
+  it("riprova() prima della risposta (l'ordine di Svelte): ok con un clic pendente, riparte una volta sola con l'ultima bozza", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    p.s.scegli(ids[1], "destra");
+    await p.risolviERiprova("ok");
+    expect(p.mandati).toHaveLength(2);
+    expect((p.mandati[1] as { dicasteri: { partito: string | null }[] }).dicasteri[1].partito).toBe("destra");
+    await p.risolvi("ok");
+    expect(p.stato.esito).toBe("partita");
+  });
+
+  it("una Vista in cui un alleato è entrato svuota la sessione come svuota(), anche con un clic pendente, e non manda niente", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    await p.risolvi("ok");
+    // l'invio di ids[2] fa da comando in volo (nell'app è l'allargamento): il clic su ids[1] resta pendente
+    p.s.scegli(ids[2], "destra");
+    p.s.scegli(ids[1], "destra");
+    expect(p.stato.esito).toBe("pendente");
+    p.vista({ ...v02, richieste: [...v02.richieste, { ...v02.richieste[0], partito: "centro" }] });
+    p.s.aggiorna();
+    expect(p.stato).toEqual({ bozza: {}, rifiuto: null, esito: null });
+    await p.risolviERiprova("ok");
+    p.s.riprova();
+    expect(p.mandati).toHaveLength(2);
+    expect(p.stato).toEqual({ bozza: {}, rifiuto: null, esito: null });
+    // anche accettata è vuota: un rifiuto dopo non riporta ids[9] alla scelta accettata prima dell'allargamento
+    nove(p);
+    p.s.scegli(ids[9], "destra");
+    await p.risolvi({ rifiuto: "no" });
+    expect(p.stato.bozza[ids[9]]).toBeUndefined();
   });
 
   it("un guasto riporta la scelta indietro e non dice «partita»", async () => {
@@ -300,9 +371,31 @@ describe("sessioneSpartizione", () => {
     p.s.scegli(ids[1], "destra");
     p.s.svuota();
     await p.risolvi("ok");
+    // senza la guardia `giro` l'«occupato» tardivo qui rimette «pendente»
+    expect(p.stato.esito).toBeNull();
     p.s.riprova();
     expect(p.mandati).toHaveLength(1);
     expect(p.stato.esito).toBeNull();
+  });
+
+  it("rifiuto di A con B pendente: A torna alla scelta accettata, B riparte da sé e il rifiuto di A resta finché B non riesce", async () => {
+    const p = prova();
+    nove(p);
+    p.s.scegli(ids[9], "giocatore");
+    await p.risolvi("ok");
+    p.s.scegli(ids[2], "destra");
+    p.s.scegli(ids[1], "destra");
+    await p.risolvi({ rifiuto: "no" });
+    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
+    expect(p.stato.esito).toBe("pendente");
+    expect(p.stato.bozza[ids[2]]).toBe("giocatore");
+    expect(p.stato.bozza[ids[1]]).toBe("destra");
+    expect(p.mandati).toHaveLength(3);
+    // un clic su un'altra riga non cancella il rifiuto di A; ricliccare A sì
+    p.s.scegli(ids[3], "destra");
+    expect(p.stato.rifiuto?.dicastero).toBe(ids[2]);
+    p.s.scegli(ids[2], "centrodestra");
+    expect(p.stato.rifiuto).toBeNull();
   });
 });
 
@@ -337,11 +430,16 @@ describe("mandaRibaltone", () => {
     await esito;
     expect(passaggio.fuoco).toBe(false);
   });
-  it("chi consuma il fuoco lo azzera: il comando ancora in volo non lo riaccende", async () => {
+  it("chi consuma il fuoco lo azzera: la risposta del comando non lo riaccende mentre `dopo` è ancora in attesa", async () => {
     const p = prova();
-    const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, pausa);
-    passaggio.fuoco = false;
+    let monta!: () => void;
+    const esito = mandaRibaltone("chiedi_guida", p.manda, p.occupato, () => new Promise<void>((r) => (monta = r)));
+    passaggio.fuoco = false; // l'onMount della pagina nuova
     p.rispondi("ok");
+    await Promise.resolve(); await Promise.resolve();
+    // qui il `finally` non ha ancora girato: se restasse acceso, lo avrebbe riacceso la risposta
+    expect(passaggio.fuoco).toBe(false);
+    monta();
     await esito;
     expect(passaggio.fuoco).toBe(false);
   });

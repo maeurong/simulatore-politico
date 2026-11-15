@@ -29,7 +29,7 @@
   let rifiuto = $state.raw<{ chi: string; testo: string; vista: Vista | null } | null>(null);
   let radice = $state<HTMLElement>();
 
-  /** Riuscito, la Vista nuova ha alleati nuovi: la bozza riparte. La conferma sparisce con la riga, il fuoco lo porto io. */
+  /** Riuscito, la Vista nuova ha alleati nuovi: la bozza riparte. La conferma sparisce con la sua riga: qui il fuoco passa al riquadro degli alleati. */
   async function manda(ids: string[]) {
     if (partita.occupato) return;
     rifiuto = null;
@@ -83,9 +83,9 @@
   <h4 class="sez-l" id="ali-t">{t("trattativa.gli_alleati")}</h4>
   {#each alleati as a (a.id)}
     <div class="all" style:--pc={coloreDi(a.id) ?? undefined} class:nato={coloreDi(a.id) === null}>
-      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.id} misura={34} /></span>
+      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} misura={34} /></span>
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
-      <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), n: numero(a.offerta) })}</span>
+      <span class="sec">{t("trattativa.chiede_offri", { n: Number(a.richiesta.toFixed(1)), x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
     </div>
   {/each}
@@ -94,15 +94,17 @@
 
 <section class="blocco" aria-labelledby="mio-t">
   <h4 class="sez-l" id="mio-t">{t("trattativa.il_tuo_partito")}</h4>
-  <p class="sec">
-    <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
-    {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
-  </p>
   {#if Object.keys(bozza).length}
+    <p class="sec">
+      <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
+      {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
+    </p>
     <div class="az">
-      <Pulsante forma="piccolo" {spento} onclick={() => sessione.svuota()}>{t("trattativa.torna_default")}</Pulsante>
+      <Pulsante forma="piccolo" {spento} onclick={() => sessione.svuota()}>{t("trattativa.svuota")}</Pulsante>
     </div>
-    <p class="min muto">{t("trattativa.torna_default_nota")}</p>
+    <p class="min muto">{t("trattativa.svuota_nota")}</p>
+  {:else}
+    <p class="min muto">{t("trattativa.nota")}</p>
   {/if}
 </section>
 

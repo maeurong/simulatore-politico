@@ -1,6 +1,6 @@
 <script lang="ts">
   // La spartizione, forma A · Righe (27-trattativa.prototype.html): un dicastero per riga, a chi in bottoni; a bozza completa parte il comando.
-  import { t, numero } from "$lib/testi/t";
+  import { t } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { coloreDi, nomeDi, testoSu } from "$lib/partiti";
   import type { Vista } from "$lib/tipi/Vista";
@@ -47,14 +47,6 @@
     {/each}
   </tbody>
 </table>
-{#if vista.richieste.length}
-<div class="tot">
-  <span class="min muto">{t("trattativa.punti_alleati")}</span>
-  {#each vista.richieste as r (r.partito)}
-    <span><i class="sw" style:background={coloreDi(r.partito) ?? undefined} class:nato={coloreDi(r.partito) === null}></i>{nomeDi(vista, r.partito)} <b>{numero(r.offerta)}</b> <span class="min muto">{t("trattativa.chiede", { x: numero(r.richiesta, 1) })}</span></span>
-  {/each}
-</div>
-{/if}
 <p class="min muto">{t("trattativa.nota")}</p>
 <Segnaposto sezione={t("trattativa.ph_default")} fetta="11g" />
 
@@ -74,8 +66,4 @@
   :global(:root.grave) .op:not(.tec, .nato)[aria-pressed="true"] { color: var(--carta) }
   .op.tec[aria-pressed="true"] { background: var(--retino), var(--carta); color: var(--ink); border: 3px double var(--ink); padding: 0 6px }
   .op.nato[aria-pressed="true"] { background: var(--retino), var(--carta); color: var(--ink); border-color: var(--ink) }
-  .tot { display: flex; gap: 6px 16px; font-size: var(--c-sec); flex-wrap: wrap; align-items: baseline }
-  .tot b { font-size: var(--c-num) }
-  .sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--ink); margin-right: 5px; vertical-align: -1px }
-  .sw.nato { background: var(--retino), var(--carta) }
 </style>

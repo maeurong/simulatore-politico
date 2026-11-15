@@ -27,7 +27,7 @@
 </script>
 
 <div class="gui">
-  <p class="occ">{t(guida ? "ribaltone.occhiello" : "ribaltone.occhiello_altri")}</p>
+  {#if guida}<p class="occ">{t("ribaltone.occhiello")}</p>{/if}
   <p class="grande">{t(guida ? "ribaltone.titolo" : "ribaltone.titolo_altri")}</p>
   <p>{t(guida ? "ribaltone.testo" : "ribaltone.testo_altri")}</p>
   <Risultato {vista} />
@@ -37,6 +37,7 @@
       <Conferma etichetta={t("ribaltone.resta_fuori")} conferma={t("ribaltone.conferma_fuori")} {spento}
         spiegazione={t("ribaltone.spiega_fuori")} onconferma={() => invia("rifiuta_ribaltone")} />
     </div>
+    <p class="min muto">{t("ribaltone.spiega_chiedi")}</p>
     {#if rifiuto && rifiuto.vista === partita.vista}<Rifiuto testo={rifiuto.testo} />{/if}
   {/if}
 </div>
@@ -46,4 +47,6 @@
   .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--grigio) }
   .grande { font-family: var(--tit); font-variation-settings: var(--wonk); font-size: var(--c-pag); font-weight: 700; line-height: 1.1; text-wrap: balance }
   .az { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+  .min { font-size: var(--c-min) }
+  .muto { color: var(--grigio) }
 </style>

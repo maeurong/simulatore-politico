@@ -65,7 +65,7 @@ const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
   turno_zero: null, trattativa: "11b", governo: "11c", crisi: "11c", opposizione: "11e", finita: "11e",
 };
 
-/** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita e la pagina monta la schermata (oggi il cruscotto del turno zero, la campagna, il paese, i partiti e la trattativa). */
+/** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita. */
 export function fettaDi(s: Sezione | "trattativa" | "eredita" | "schema", stato: StatoGiocatore): string | null {
   return s === "cruscotto" ? CRUSCOTTO[stato] : s === "campagna" || s === "paese" || s === "partiti" || s === "trattativa" ? null : FETTA[s];
 }

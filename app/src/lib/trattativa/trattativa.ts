@@ -80,8 +80,9 @@ export type EsitoManda = "ok" | "occupato" | "guasto" | { rifiuto: string };
 export const passaggio = { fuoco: false };
 
 /**
- * Un comando del ribaltone. Chi lo consuma lo azzera (l'onMount di Trattativa). Il fuoco passa alla testa solo mentre il comando è in volo e fino a che la pagina nuova ha
- * montato (`dopo`): riuscito senza rimontaggio, o guasto, o rifiuto, il flag torna spento e nessun montaggio futuro lo trova.
+ * Un comando del ribaltone. Il fuoco passa alla testa solo mentre il comando è in volo e fino a che la pagina nuova ha montato
+ * (`dopo`); chi lo consuma (l'onMount di Trattativa) lo azzera. Riuscito senza rimontaggio, o guasto, o rifiuto, il flag torna
+ * spento e nessun montaggio futuro lo trova.
  */
 export async function mandaRibaltone(tipo: "chiedi_guida" | "rifiuta_ribaltone", manda: (c: Comando) => Promise<EsitoManda>, occupato: () => boolean, dopo: () => Promise<void>): Promise<EsitoManda> {
   if (occupato()) return "occupato";
@@ -107,7 +108,9 @@ export type StatoSpartizione = {
 /**
  * La bozza della spartizione: ogni scelta a bozza completa manda il comando. La bozza resta l'ultima che il core ha
  * accettato: un rifiuto o un guasto riportano il dicastero cliccato alla scelta accettata. Un clic con un comando in volo
- * (`manda` dà «occupato») resta pendente e `riprova()`, da chiamare quando la partita si libera, lo manda una volta sola.
+ * (`manda` dà «occupato») resta pendente: lo rimanda la risposta dell'invio in volo della sessione, se ce n'è uno, o
+ * `riprova()`, da chiamare quando la partita si libera; parte una volta sola. Il rifiuto resta finché il giocatore non
+ * riclicca quella riga o un comando riesce.
  */
 export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => Promise<EsitoManda>, mostra: (s: StatoSpartizione) => void) {
   let bozza: Bozza = {};
@@ -118,6 +121,10 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
   let ultimo = "";
   // svuota() lo fa avanzare: la risposta di un invio partito prima appartiene a una bozza che non c'è più e si scarta
   let giro = 0;
+  // gli invii della sessione in attesa di risposta: finché ce n'è uno, riprova() aspetta la sua risposta
+  let volo = 0;
+  // aChi della Vista precedente: un id nuovo è un alleato entrato
+  let chi = new Set(aChi(vista()));
   const dai = () => mostra({ bozza, rifiuto, esito: pendente ? "pendente" : esito });
   // le scelte che non stanno più in aChi (un alleato è uscito) non valgono
   const pulisci = (b: Bozza): Bozza => {
@@ -142,45 +149,58 @@ export function sessioneSpartizione(vista: () => Vista, manda: (c: Comando) => P
     }
     esito = "pendente";
     dai();
+    volo++;
     const r = await manda(comando);
-    if (mio !== giro) return;
-    if (r === "occupato") pendente = true;
-    else if (r === "ok") {
-      accettata = pulisci(inviata);
-      esito = bozza === inviata ? "partita" : pendente ? "pendente" : null;
-    } else {
-      indietro(inviata, dicastero);
-      if (typeof r === "object") rifiuto = { dicastero, testo: r.rifiuto };
-      esito = null;
+    volo--;
+    if (mio === giro) {
+      if (r === "occupato") pendente = true;
+      else if (r === "ok") {
+        accettata = pulisci(inviata);
+        rifiuto = null;
+        esito = bozza === inviata ? "partita" : null;
+      } else {
+        indietro(inviata, dicastero);
+        if (typeof r === "object") rifiuto = { dicastero, testo: r.rifiuto };
+        esito = null;
+      }
+      dai();
     }
+    // il clic arrivato mentre questo invio era in volo parte adesso, sulla bozza già corretta da questa risposta
+    if (r !== "occupato" && pendente && !volo) return invia();
+  }
+
+  function svuota() {
+    giro++;
+    bozza = {};
+    accettata = {};
+    rifiuto = null;
+    esito = null;
+    pendente = false;
     dai();
   }
 
   return {
     scegli(dicastero: string, a: string | null) {
       if (bozza[dicastero] === a) return;
-      rifiuto = null;
+      if (rifiuto?.dicastero === dicastero) rifiuto = null;
       ultimo = dicastero;
       bozza = { ...bozza, [dicastero]: a };
       return invia();
     },
     riprova() {
-      if (!pendente) return;
-      rifiuto = null;
+      if (!pendente || volo) return;
       return invia();
     },
-    /** «Torna alla spartizione di default»: la bozza riparte da zero; la proposta già fatta resta nel core finché non ne parte un'altra. */
-    svuota() {
-      giro++;
-      bozza = {};
-      accettata = {};
-      rifiuto = null;
-      esito = null;
-      pendente = false;
-      dai();
-    },
-    /** La Vista è cambiata: le scelte che non stanno più in aChi (un alleato è uscito) si scartano, senza mandare niente. */
+    /** «Svuota la bozza»: la bozza riparte da zero; la proposta già fatta resta nel core finché non ne parte un'altra. */
+    svuota,
+    /**
+     * La Vista è cambiata, senza mandare niente. Un alleato entrato svuota la sessione come `svuota()`: all'allargamento il
+     * core azzera la proposta (crates/sim-core/src/partita.rs:3316). Un alleato uscito: le sue scelte si scartano.
+     */
     aggiorna() {
+      const prima = chi;
+      chi = new Set(aChi(vista()));
+      if ([...chi].some((x) => !prima.has(x))) return svuota();
       const nuova = pulisci(bozza);
       accettata = pulisci(accettata);
       if (Object.keys(nuova).length === Object.keys(bozza).filter((k) => bozza[k] !== undefined).length) return;

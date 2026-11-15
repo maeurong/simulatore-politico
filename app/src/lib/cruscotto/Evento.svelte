@@ -68,7 +68,8 @@
   .opz { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
   .opz :global(.btn small), .chip small { font-weight: 400; font-size: var(--c-min); margin-left: 5px }
   .opz :global(.btn.scelto small), .opz :global(.btn:hover small) { color: inherit }
-  .chip { border: 1.5px solid var(--ink); padding: 0 6px; font-size: var(--c-sec); line-height: 1.5 }
+  /* in sola lettura: niente bordo pieno, non si confonde coi bottoni */
+  .chip { border: 1px dashed var(--grigio); padding: 0 6px; font-size: var(--c-sec); line-height: 1.5; cursor: default }
   .chip.scelto { background: var(--giallo) }
   :global(:root.grave) .chip.scelto { background: var(--ink); color: var(--carta) }
 </style>

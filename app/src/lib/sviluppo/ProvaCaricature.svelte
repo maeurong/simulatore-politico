@@ -10,10 +10,10 @@
   type Pers = { ruolo: Ruolo; partito: string; nome: string };
   const MISURE = [34, 46, 62, 84] as const;
   const FONDI = ["carta", "giallo", "rosso"] as const;
-  const leader: Pers[] = v01.partiti.filter((p) => p.leader).map((p) => ({ ruolo: "leader" as const, partito: p.id, nome: p.leader }));
-  const ministri: Pers[] = v03.ministeri.map((m) => ({ ruolo: "ministro" as const, partito: m.ministro.partito, nome: m.ministro.nome }));
+  const leader: Pers[] = v01.partiti.filter((p) => p.leader).map((p) => ({ ruolo: "leader" as const, partito: p.nome, nome: p.leader }));
+  const ministri: Pers[] = v03.ministeri.map((m) => ({ ruolo: "ministro" as const, partito: v03.partiti.find((p) => p.id === m.ministro.partito)?.nome ?? m.ministro.partito, nome: m.ministro.nome }));
   // nessuna Vista ha un tecnico: tre inventati, per vedere il cartellino
-  const tecnici: Pers[] = [["destra", "Elena Marino"], ["giocatore", "Fabio Greco"], ["destra", "Francesca Bruno"]].map(([partito, nome]) => ({ ruolo: "tecnico" as const, partito, nome }));
+  const tecnici: Pers[] = [["Destra", "Elena Marino"], ["Partito del giocatore", "Fabio Greco"], ["Destra", "Francesca Bruno"]].map(([partito, nome]) => ({ ruolo: "tecnico" as const, partito, nome }));
   const campione = [...leader, ...ministri, ...tecnici];
   const numero = (p: Pers) => campione.indexOf(p) + 1;
   // tre nomi che con l'hash puro hanno la stessa faccia: la rosa li separa
@@ -53,13 +53,13 @@
 
   <section>
     <h3>Fondi della soddisfazione</h3>
-    <div class="riga">{#each FONDI as f}<Caricatura ruolo="ministro" partito="destra" nome="" leve={leveDi("ministro", "destra", "Simone Gallo")} misura={84} fondo={f} />{/each}</div>
+    <div class="riga">{#each FONDI as f}<Caricatura ruolo="ministro" partito="Destra" nome="" leve={leveDi("ministro", "Destra", "Simone Gallo")} misura={84} fondo={f} />{/each}</div>
   </section>
 
   <section>
     <h3>Tono grave</h3>
     <label class="muto"><input type="checkbox" bind:checked={grave} /> tono grave: iniziali nel cerchio, stesso riquadro</label>
-    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" partito="estrema_sinistra" misura={m} />{/each}</div>
+    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" partito="Estrema sinistra" misura={m} />{/each}</div>
   </section>
 
   <details>

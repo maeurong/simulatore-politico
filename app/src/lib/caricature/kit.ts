@@ -43,7 +43,7 @@ export function profilo(l: Leve) {
   return {
     /** la figura, da campire di carta e da usare come ritaglio per le ombre */
     sagoma: `M20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26${davanti.slice(6).replace(/L37 57$/, "")}L37 61L23 61L21 47Z`,
-    /** il filo di centro, 1,4 di spessore: tiene vive le code assottigliate del pennino */
+    /** il filo di centro: tiene vive le code assottigliate del pennino */
     filo: dietro + davanti + SPALLE.d + ORECCHIO.d,
     /** il pennino: un solo poligono per tutte le pennellate, in decimi */
     pennino: u.pen + f.pen + n.pen + m.pen + SPALLE.pen + ORECCHIO.pen,
