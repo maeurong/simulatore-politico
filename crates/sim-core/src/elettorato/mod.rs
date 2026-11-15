@@ -69,9 +69,19 @@ impl fmt::Display for Condizione {
     }
 }
 
+/// Il genere di un nome del bacino, e dei personaggi che lo portano.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum Genere {
+    Donna,
+    Uomo,
+}
+
 /// Fascia di reddito.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
 pub enum Fascia {
     Bassa,
     Media,
@@ -168,6 +178,8 @@ pub struct DatiElettorato {
     #[serde(rename = "istituto")]
     pub istituti: Vec<Istituto>,
     pub nomi: Vec<String>,
+    /// Uno per nome, nello stesso ordine.
+    pub generi: Vec<Genere>,
     pub cognomi: Vec<String>,
 }
 
@@ -226,6 +238,13 @@ impl DatiElettorato {
         }
         if self.nomi.is_empty() || self.cognomi.is_empty() {
             return Err(ko("nomi e cognomi non possono essere vuoti".into()));
+        }
+        if self.generi.len() != self.nomi.len() {
+            return Err(ko(format!(
+                "generi: {} per {} nomi, ne serve uno per nome",
+                self.generi.len(),
+                self.nomi.len()
+            )));
         }
         Ok(())
     }
@@ -382,6 +401,11 @@ pub struct Elettorato {
     pub ultima_disoccupazione: Vec<f64>,
     /// Aliquota media IRPEF al turno zero, con gli scaglioni dello scenario.
     pub aliquota_irpef_0: f64,
+    /// Reddito, crescita e attesa per fascia dell'ultima chiusura, come li rende `giudizio`
+    /// (crescita ripulita, mai la grezza); tre voci nell'ordine di `Fascia::TUTTE`. Al turno
+    /// zero il reddito della partenza, crescita e attesa a zero. L'attesa non si rifà dallo stato
+    /// a finestra piena: si conserva.
+    pub redditi_fasce: Vec<RedditoFascia>,
 }
 
 impl Elettorato {
@@ -395,6 +419,7 @@ impl Elettorato {
         let mut el = Elettorato {
             base: Indici::da(e, dati, &neutre.leve),
             aliquota_irpef_0: 0.0,
+            redditi_fasce: Vec::new(),
             ultima_disoccupazione: e.regioni.iter().map(|r| r.disoccupazione).collect(),
             gruppi: dati
                 .elettorato()
@@ -417,6 +442,14 @@ impl Elettorato {
         el.aggiorna_redditi(dati, e, &neutre, 0);
         el.aggiorna_redditi(dati, e, &neutre, 0);
         el.aliquota_irpef_0 = el.aliquota_media_irpef(dati, &dati.scenario().aliquote.irpef);
+        el.redditi_fasce = (Fascia::TUTTE.into_iter().zip(el.redditi_reali(dati)))
+            .map(|(fascia, reddito)| RedditoFascia {
+                fascia,
+                reddito,
+                crescita: 0.0,
+                attesa: 0.0,
+            })
+            .collect();
         el
     }
 
@@ -517,6 +550,15 @@ impl Elettorato {
             return ko(format!(
                 "elettorato.ultima_disoccupazione: servono {regioni} valori finiti"
             ));
+        }
+        let fasce_ok = (self.redditi_fasce.iter().map(|r| r.fascia)).eq(Fascia::TUTTE)
+            && (self.redditi_fasce.iter()).all(|r| {
+                [r.reddito, r.crescita, r.attesa]
+                    .iter()
+                    .all(|x| x.is_finite())
+            });
+        if !fasce_ok {
+            return ko("elettorato.redditi_fasce: servono tre voci finite, una per fascia".into());
         }
         if !self.base.e_finito() {
             return ko("elettorato.base non finita".into());

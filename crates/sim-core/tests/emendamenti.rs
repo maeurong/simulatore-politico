@@ -39,6 +39,7 @@ fn alleato_lontano_chiede_un_emendamento_a_meta_strada() {
             StatoEmendamento::Aperto
         )
     );
+    assert!(e[0].dicasteri.is_empty());
     assert!(
         e[0].motivo.ends_with("punti dalla sua posizione"),
         "{}",

@@ -28,8 +28,8 @@ pub use spartizione::{Assegnazione, VoceRichiesta};
 pub(crate) use spartizione::{
     maggioranza, maggioranza_contigua, primo_per_seggi, richiesta, spartizione_di_default,
 };
-pub use voto::{EsitoElezioni, Incarico, VotiPartito};
-pub(crate) use voto::{incarico, voti_per_regione};
+pub use voto::{EsitoElezioni, Incarico, VotiPartito, VotoRegione};
+pub(crate) use voto::{incarico, primo_partito, voti_per_regione};
 
 /// `Sciolta`: Camere sciolte, campagna, voto nella chiusura. `Trattativa`: il turno dopo il voto.
 /// `Ordinaria`: governo in carica.

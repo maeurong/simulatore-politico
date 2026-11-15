@@ -19,13 +19,14 @@ pub struct Assegnazione {
 }
 
 /// Un alleato (id) in trattativa: la sua richiesta e l'offerta della spartizione proposta, in
-/// punti di peso dei dicasteri.
+/// punti di peso dei dicasteri, e l'intesa da cui ripartirebbe alla formazione del governo.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceRichiesta {
     pub partito: String,
     pub richiesta: f64,
     pub offerta: f64,
+    pub intesa_partenza: f64,
 }
 
 /// La richiesta di un partito con `seggi_j` seggi (Camera più Senato) in una maggioranza di
@@ -167,6 +168,7 @@ mod tests {
                 valence_base: 0.0,
                 vocazione: Vocazione::Mista,
                 leader: String::new(),
+                genere_leader: None,
                 regola: Regola::Sticker,
                 sciolto: false,
                 cassa: 0,

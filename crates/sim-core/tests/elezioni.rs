@@ -1,12 +1,14 @@
 mod comune;
 
-use comune::{dati_base, file_base, sostituisci};
+use comune::{dati_base, edita, file_base, fondata, imposta, sostituisci};
+use sim_core::Partita;
 use sim_core::dati::{DatiGioco, FileDati};
 use sim_core::elezioni::{
     Esito, Formula, LeggeElettorale, Premio, QuoteTetto, Ramo, SeggiCircoscrizione, SeggiLista,
     Soggetto, Voti, riparto, seggi_da_quota, seggi_per_circoscrizione,
 };
 use sim_core::errore::Errore;
+use sim_core::legislatura::{EsitoElezioni, Fondazione};
 use sim_core::struttura::Macroarea;
 use std::collections::BTreeMap;
 
@@ -1030,4 +1032,135 @@ fn coalizione_di_una_lista_vale_lista_sola() {
     let senza = esito(&legge_180(), &uniformi(&millesimi, vec![]));
     assert_eq!(con, senza);
     assert_eq!(con.premio, Some(Soggetto::Lista(0)));
+}
+
+/// Una partita al primo voto vero, con l'esito più recente.
+fn dopo_il_voto() -> (Partita, EsitoElezioni) {
+    let mut p = fondata(3.5);
+    for _ in 0..60 {
+        if !p.legislatura().elezioni.is_empty() {
+            break;
+        }
+        p.chiudi_turno();
+    }
+    let e = p.legislatura().elezioni[0].clone();
+    (p, e)
+}
+
+#[test]
+fn i_voti_per_regione_sommano_al_nazionale() {
+    let (p, e) = dopo_il_voto();
+    assert!(!e.regioni.is_empty());
+    assert!((e.regioni.iter().map(|r| &r.regione)).eq(p.vista().regioni.iter().map(|r| &r.id)));
+    for (j, v) in e.voti.iter().enumerate() {
+        let somma: f64 = e.regioni.iter().map(|r| r.voti[j]).sum();
+        assert!(
+            (somma - v.quota).abs() < 1e-9,
+            "{}: {somma} contro {}",
+            v.partito,
+            v.quota
+        );
+    }
+}
+
+/// Proporzionale puro: nessun premio, quindi i seggi del Senato sono proporzionali, speciali ed
+/// estero, e tutti fuori dall'estero stanno nelle regioni. L'oracolo del riparto stesso
+/// (`Σ senato_per_regione = proporzionali + speciali`) è `senato_per_regione_somma_ai_seggi`.
+#[test]
+fn i_seggi_del_senato_per_regione() {
+    let f = imposta(
+        file_base(),
+        "scenario",
+        "legge_elettorale = \"",
+        "proporzionale_puro\"",
+    );
+    let mut p = Partita::fonda(
+        DatiGioco::da_testi(&f).unwrap(),
+        7,
+        &Fondazione {
+            nome: "Partito nuovo".into(),
+            posizione: 3.5,
+        },
+    )
+    .unwrap();
+    while p.legislatura().elezioni.is_empty() {
+        p.chiudi_turno();
+    }
+    let e = &p.legislatura().elezioni[0];
+    assert_eq!(e.premio, None);
+    assert!(!e.regioni.is_empty());
+    let estero = dati_base().elezioni().senato.estero;
+    let mut dall_estero = 0;
+    for (j, v) in e.voti.iter().enumerate() {
+        let nelle_regioni: u32 = e.regioni.iter().map(|r| r.seggi_senato[j]).sum();
+        let fuori = v.senato.checked_sub(nelle_regioni);
+        dall_estero +=
+            fuori.unwrap_or_else(|| panic!("{}: {nelle_regioni} > {}", v.partito, v.senato));
+    }
+    assert_eq!(dall_estero, estero);
+}
+
+#[test]
+fn il_primo_partito_ha_piu_voti() {
+    let (p, e) = dopo_il_voto();
+    for r in &e.regioni {
+        let j = p.partiti().iter().position(|x| x.id == r.primo).unwrap();
+        assert!(r.voti.iter().all(|&v| v <= r.voti[j]), "{}", r.regione);
+        // A parità vince il primo nell'ordine dei partiti.
+        assert!(r.voti[..j].iter().all(|&v| v < r.voti[j]), "{}", r.regione);
+    }
+}
+
+#[test]
+fn l_albo_non_porta_le_regioni() {
+    let (mut p, _) = dopo_il_voto();
+    p.chiudi_turno();
+    p.abbandona().unwrap();
+    let v = serde_json::to_value(p.voce_albo().unwrap()).unwrap();
+    let elezioni = v["elezioni"].as_array().unwrap();
+    assert!(!elezioni.is_empty());
+    assert!(elezioni.iter().all(|e| e.get("regioni").is_none()));
+}
+
+#[test]
+fn le_regioni_manomesse_dell_esito_sono_rifiutate() {
+    let (p, _) = dopo_il_voto();
+    let primo = edita(&p, |j| {
+        j["legislatura"]["elezioni"][0]["regioni"][0]["primo"] = "atlantide".into();
+    })
+    .unwrap_err();
+    assert!(primo.to_string().contains("primo partito"), "{primo}");
+    let doppia = edita(&p, |j| {
+        let r = j["legislatura"]["elezioni"][0]["regioni"][0]["regione"].clone();
+        j["legislatura"]["elezioni"][0]["regioni"][1]["regione"] = r;
+    })
+    .unwrap_err();
+    assert!(doppia.to_string().contains("ripetuta"), "{doppia}");
+}
+
+#[test]
+fn le_regioni_dell_esito_con_misure_sbagliate_sono_rifiutate() {
+    let (p, _) = dopo_il_voto();
+    type Guasto = fn(&mut serde_json::Value);
+    let guasti: [(&str, Guasto); 3] = [
+        ("voti", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["voti"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("seggi_senato", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["seggi_senato"]
+                .as_array_mut()
+                .unwrap()
+                .pop();
+        }),
+        ("regione", |j| {
+            j["legislatura"]["elezioni"][0]["regioni"][0]["regione"] = "atlantide".into();
+        }),
+    ];
+    for (nome, guasto) in guasti {
+        let e = edita(&p, guasto).expect_err(nome);
+        assert!(e.to_string().contains("regione"), "{nome}: {e}");
+    }
 }
