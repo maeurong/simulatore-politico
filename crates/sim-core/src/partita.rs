@@ -41,10 +41,11 @@ use crate::su_misura::ETICHETTA_GOVERNO_USCENTE;
 use crate::vista::{
     Anteprima, AnteprimaRiposizionamento, AnteprimaSfiducia, FasciaIntesa, IndiciPericolosita,
     PrezzoAcquisto, SeggiPartito, Vista, VistaAcquisti, VistaBilancio, VistaCampagna, VistaDebito,
-    VistaMes, VistaPosti, VistaReferendum, VistaRegoleUe, VistaRistrutturazione, VistaStatistica,
-    VoceAlleato, VoceBudget, VoceCostoPromessa, VoceDicastero, VoceEvento, VoceFascia,
-    VoceGrandezza, VoceIncarico, VoceMenu, VoceMinistero, VoceOpera, VoceOpzione, VocePartito,
-    VoceProgramma, VocePromessa, VoceRegione, VoceSfiducia, VoceSituazione, VoceVincolo,
+    VistaMes, VistaPosti, VistaReferendum, VistaRegoleUe, VistaRibaltone, VistaRistrutturazione,
+    VistaSoglie, VistaStatistica, VoceAlleato, VoceBudget, VoceCostoPromessa, VoceDicastero,
+    VoceEvento, VoceFascia, VoceGrandezza, VoceIncarico, VoceMenu, VoceMinistero, VoceOpera,
+    VoceOpzione, VocePartito, VoceProgramma, VocePromessa, VoceRegione, VoceSfiducia,
+    VoceSituazione, VoceSpartizione, VoceVincolo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1809,13 +1810,27 @@ impl Partita {
     /// tecnico, l'alleato perde `costo_dimissioni_chieste`.
     pub(crate) fn dimissioni_chieste(&mut self, id: &str) {
         let i = self.dati.dicasteri().iter().position(|d| d.id == id);
-        let ministro = i.and_then(|i| self.ministri.dicasteri.get(i)?.ministro.as_ref());
-        let Some(m) = ministro.filter(|m| !m.tecnico && voto::alleato(&self.governo, m.partito))
-        else {
+        let Some((j, costo)) = i.and_then(|i| self.chi_paga_le_dimissioni(i)) else {
             return;
         };
-        let (j, delta) = (m.partito, -self.dati.manopola("costo_dimissioni_chieste"));
-        (self.intesa).varia(j, CausaIntesa::DimissioniChieste, delta, self.turno);
+        (self.intesa).varia(j, CausaIntesa::DimissioniChieste, -costo, self.turno);
+    }
+
+    /// Chi paga `ChiediDimissioni` sul dicastero `i`, e quanto prima del limite a 0-100: l'alleato
+    /// del ministro e `costo_dimissioni_chieste`; `None` col ministro del giocatore, col tecnico e
+    /// in interim.
+    fn chi_paga_le_dimissioni(&self, i: usize) -> Option<(usize, f64)> {
+        let m = self.ministri.dicasteri.get(i)?.ministro.as_ref()?;
+        (!m.tecnico && voto::alleato(&self.governo, m.partito))
+            .then(|| (m.partito, self.dati.manopola("costo_dimissioni_chieste")))
+    }
+
+    /// L'intesa che l'alleato perderebbe con `ChiediDimissioni` sul dicastero `i`; 0 se non paga.
+    fn prezzo_dimissioni(&self, i: usize) -> f64 {
+        self.chi_paga_le_dimissioni(i).map_or(0.0, |(j, costo)| {
+            let x = self.intesa.valori.get(j).copied().unwrap_or(0.0);
+            x - Intesa::dopo(x, -costo)
+        })
     }
 
     /// Pressioni di fine turno sull'intesa di ogni alleato del governo in carica: ministri
@@ -3721,32 +3736,63 @@ impl Partita {
 
     /// La spartizione del giocatore: la sua proposta o, senza, quella di default.
     fn assegnati_dal_giocatore(&self) -> Vec<Option<usize>> {
-        self.legislatura.proposta.clone().unwrap_or_else(|| {
-            let c = self.coalizione_del_giocatore();
-            let seggi = self.seggi_per_partito();
-            let nessuno = vec![None; self.dati.dicasteri().len()];
-            let v = legislatura::spartizione_di_default(
-                &self.dati,
-                &c,
-                self.giocatore,
-                &seggi,
-                &nessuno,
-            );
-            v.into_iter().map(Some).collect()
-        })
+        (self.legislatura.proposta.clone())
+            .unwrap_or_else(|| (self.default_del_giocatore().into_iter().map(Some)).collect())
+    }
+
+    /// La spartizione di default della coalizione del giocatore, lui alla guida.
+    fn default_del_giocatore(&self) -> Vec<usize> {
+        let c = self.coalizione_del_giocatore();
+        let seggi = self.seggi_per_partito();
+        let nessuno = vec![None; self.dati.dicasteri().len()];
+        legislatura::spartizione_di_default(&self.dati, &c, self.giocatore, &seggi, &nessuno)
+    }
+
+    /// Da dove riparte l'intesa di un alleato al governo del giocatore: `intesa_base`, poi la
+    /// variazione `intesa_per_punto · (offerta − richiesta)`.
+    fn partenza_e_spartizione(&self, richiesta: f64, offerta: f64) -> (f64, f64) {
+        let d = |nome| self.dati.manopola(nome);
+        (
+            d("intesa_base"),
+            d("intesa_per_punto") * (offerta - richiesta),
+        )
     }
 
     /// In trattativa con l'incarico al giocatore, una voce per alleato: richiesta e offerta della
-    /// proposta in corso o, senza, di quella di default che la chiusura applicherà; vuota altrove.
+    /// proposta in corso o, senza, di quella di default che la chiusura applicherà, e l'intesa da
+    /// cui l'alleato ripartirebbe; vuota altrove.
     pub fn richieste(&self) -> Vec<VoceRichiesta> {
         if !self.con_incarico() {
             return Vec::new();
         }
         (self.quote(&self.assegnati_dal_giocatore()).into_iter())
-            .map(|(j, richiesta, offerta)| VoceRichiesta {
-                partito: self.partiti[j].id.clone(),
-                richiesta,
-                offerta,
+            .map(|(j, richiesta, offerta)| {
+                let (base, delta) = self.partenza_e_spartizione(richiesta, offerta);
+                VoceRichiesta {
+                    partito: self.partiti[j].id.clone(),
+                    richiesta,
+                    offerta,
+                    intesa_partenza: Intesa::dopo(base, delta),
+                }
+            })
+            .collect()
+    }
+
+    /// In trattativa con l'incarico al giocatore, la spartizione in corso, dicastero per
+    /// dicastero, accanto a quella di default; vuota altrove.
+    fn spartizione_in_corso(&self) -> Vec<VoceSpartizione> {
+        if !self.con_incarico() {
+            return Vec::new();
+        }
+        let id = |j: usize| self.partiti.get(j).map(|p| p.id.clone());
+        (self.dati.dicasteri().iter())
+            .zip(self.assegnati_dal_giocatore())
+            .zip(self.default_del_giocatore())
+            .map(|((d, partito), di_default)| VoceSpartizione {
+                dicastero: d.id.clone(),
+                peso: d.peso_spartizione,
+                partito: partito.and_then(id),
+                di_default: id(di_default).unwrap_or_default(),
             })
             .collect()
     }
@@ -3837,13 +3883,9 @@ impl Partita {
         };
         self.voce_formato(presidente, &coalizione, &assegnati, perche);
         if presidente == self.giocatore {
-            let (base, per_punto) = (
-                self.dati.manopola("intesa_base"),
-                self.dati.manopola("intesa_per_punto"),
-            );
             for (j, richiesta, offerta) in self.quote(&assegnati) {
+                let (base, delta) = self.partenza_e_spartizione(richiesta, offerta);
                 self.intesa.riparti(j, base);
-                let delta = per_punto * (offerta - richiesta);
                 (self.intesa).varia(j, CausaIntesa::Spartizione, delta, self.turno);
             }
         } else {
@@ -4499,6 +4541,7 @@ impl Partita {
                 al_governo: self.governo.al_governo(j),
                 vocazione: p.vocazione,
                 leader: p.leader.clone(),
+                genere_leader: p.genere_leader,
                 regola: p.regola,
                 sciolto: p.sciolto,
                 cassa: p.cassa,
@@ -4551,6 +4594,7 @@ impl Partita {
                 .map(|d| VoceDicastero {
                     id: d.id.clone(),
                     nome: d.nome.clone(),
+                    indicatore: d.indicatore_servizio.clone(),
                 })
                 .collect(),
             grandezze: (self.dati.grandezze().iter().zip(&self.grandezze.prima))
@@ -4562,12 +4606,15 @@ impl Partita {
                 })
                 .collect(),
             partiti: self.voci_partiti(),
-            ministeri: (self.ministri.voci(&self.contesto()).into_iter())
-                .map(|m| VoceMinistero {
-                    agenda: m.agenda.filter(|_| self.governa()),
-                    ..m
-                })
-                .collect(),
+            ministeri: (self
+                .ministri
+                .voci(&self.contesto(), |i| self.prezzo_dimissioni(i)))
+            .into_iter()
+            .map(|m| VoceMinistero {
+                agenda: m.agenda.filter(|_| self.governa()),
+                ..m
+            })
+            .collect(),
             sondaggio: self.informazione.sondaggio.clone(),
             proiezione,
             statistica: VistaStatistica {
@@ -4653,6 +4700,14 @@ impl Partita {
                 Vec::new()
             },
             richieste: self.richieste(),
+            spartizione: self.spartizione_in_corso(),
+            ribaltone: self.guida_aperta().ok().map(|c| {
+                let id = |j: usize| self.partiti.get(j).map(|p| p.id.clone());
+                VistaRibaltone {
+                    coalizione: c.iter().filter_map(|&j| id(j)).collect(),
+                    primo: self.primo_per_seggi(&c).and_then(id),
+                }
+            }),
             elezioni: l.elezioni.clone(),
             incarico: match (l.fase, &l.incarico) {
                 (Fase::Trattativa, Some(Incarico::Giocatore)) => Some(VoceIncarico::Giocatore),
@@ -4719,6 +4774,16 @@ impl Partita {
                     ordinari_occupati: ordinari_occupati as u32,
                     costituzionali: costituzionali as u32,
                     costituzionali_occupati: costituzionali_occupati as u32,
+                }
+            },
+            soglie: {
+                let d = |nome| self.dati.manopola(nome);
+                VistaSoglie {
+                    minaccia: d("soglia_minaccia"),
+                    dimissioni: d("soglia_dimissioni"),
+                    ultimatum: d("soglia_ultimatum"),
+                    uscita: d("soglia_uscita"),
+                    crisi_debito_pb: d("soglia_crisi_debito"),
                 }
             },
         }
@@ -5499,13 +5564,17 @@ impl Partita {
             )?;
             if p.id == ID_GIOCATORE {
                 ok(
-                    p.leader.is_empty(),
+                    p.leader.is_empty() && p.genere_leader.is_none(),
                     &format!("partito {}: il giocatore non ha un leader", p.id),
                 )?;
             } else {
                 ok(
                     !p.leader.trim().is_empty(),
                     &format!("partito {}: leader vuoto", p.id),
+                )?;
+                ok(
+                    p.genere_leader.is_some(),
+                    &format!("partito {}: leader senza genere_leader", p.id),
                 )?;
             }
             ok(

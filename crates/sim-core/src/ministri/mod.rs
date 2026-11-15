@@ -6,6 +6,7 @@ use crate::comando::Comando;
 use crate::dati::DatiGioco;
 use crate::disposizioni::Disposizioni;
 use crate::economia::Economia;
+use crate::elettorato::Genere;
 use crate::errore::Errore;
 use crate::eventi::Eventi;
 use crate::grandezze::Grandezze;
@@ -109,6 +110,8 @@ pub struct Variazione {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ministro {
     pub nome: String,
+    /// Il genere del nome nel bacino.
+    pub genere: Genere,
     pub partito: usize,
     pub capacita: u8,
     pub posizione: f64,
@@ -231,11 +234,11 @@ impl Ministri {
                 .flat_map(|s| s.ministro.iter().chain(&s.rosa))
                 .any(|x| x.nome == nome)
         };
-        let mut nome = String::new();
+        let (mut nome, mut k) = (String::new(), 0);
         for _ in 0..100 {
-            let n = &el.nomi[indice(caso.uniforme(Flusso::Governo), el.nomi.len())];
+            k = indice(caso.uniforme(Flusso::Governo), el.nomi.len());
             let c = &el.cognomi[indice(caso.uniforme(Flusso::Governo), el.cognomi.len())];
-            nome = format!("{n} {c}");
+            nome = format!("{} {c}", el.nomi[k]);
             if !preso(&nome) {
                 break;
             }
@@ -256,6 +259,7 @@ impl Ministri {
         });
         Ministro {
             nome,
+            genere: el.generi[k],
             partito,
             capacita,
             posizione,
@@ -559,12 +563,17 @@ impl Ministri {
         uscito
     }
 
-    /// Le voci per la `Vista`, nell'ordine dei dicasteri.
-    pub(crate) fn voci(&self, cx: &Contesto) -> Vec<VoceMinistero> {
+    /// Le voci per la `Vista`, nell'ordine dei dicasteri; `prezzo_dimissioni` per dicastero.
+    pub(crate) fn voci(
+        &self,
+        cx: &Contesto,
+        prezzo_dimissioni: impl Fn(usize) -> f64,
+    ) -> Vec<VoceMinistero> {
         let (dati, partiti) = (cx.dati, cx.partiti);
         let soglia = dati.manopola("soglia_minaccia");
         let voce = |x: &Ministro, variazioni: &[Variazione]| VoceMinistro {
             nome: x.nome.clone(),
+            genere: x.genere,
             partito: partiti[x.partito].id.clone(),
             capacita: x.capacita,
             posizione: x.posizione,
@@ -586,6 +595,7 @@ impl Ministri {
                     ministro: st.ministro.as_ref().map(|x| voce(x, &st.variazioni)),
                     rosa: st.rosa.iter().map(|x| voce(x, &[])).collect(),
                     dimissioni_chieste: st.dimissioni_chieste,
+                    prezzo_dimissioni: prezzo_dimissioni(i),
                     scelta: st.scelta,
                     causa_dimissioni: st.causa_dimissioni,
                     agenda: g.agenda,

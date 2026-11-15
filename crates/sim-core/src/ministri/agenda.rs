@@ -12,7 +12,7 @@ use crate::esito::TipoVoce;
 use crate::grandezze::EffettoAttivo;
 use crate::legislatura::campagna::migliaia;
 use crate::partita::LIMITE_EURO;
-use crate::vista::{VoceAgenda, VoceAtto, VoceCantiere, VoceEffetto};
+use crate::vista::{MotivoEvidenza, VoceAgenda, VoceAtto, VoceCantiere, VoceEffetto};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
@@ -651,6 +651,19 @@ impl Ministri {
                 .ministro
                 .as_ref()
                 .is_some_and(|m| m.soddisfazione < dati.manopola("soglia_minaccia"));
+            let distanza =
+                (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza");
+            let evento = (cx.eventi.nel_dicastero(dati, &dati.dicasteri()[i].id))
+                .next()
+                .is_some();
+            let evidenza: Vec<MotivoEvidenza> = [
+                (minaccia, MotivoEvidenza::Minaccia),
+                (distanza, MotivoEvidenza::Distanza),
+                (evento, MotivoEvidenza::Evento),
+            ]
+            .into_iter()
+            .filter_map(|(vale, motivo)| vale.then_some(motivo))
+            .collect();
             VoceAgenda {
                 atto: atto.id.clone(),
                 nome: atto.nome.clone(),
@@ -659,13 +672,8 @@ impl Ministri {
                 motivo: ag.motivo.clone(),
                 stato: ag.stato,
                 costo_ferma: costo_ferma(dati, i, ag),
-                in_evidenza: minaccia
-                    || (atto.posizione - presidente).abs() >= dati.manopola("distanza_evidenza")
-                    || cx
-                        .eventi
-                        .nel_dicastero(dati, &dati.dicasteri()[i].id)
-                        .next()
-                        .is_some(),
+                in_evidenza: !evidenza.is_empty(),
+                evidenza,
             }
         });
         let provvisorio = cx.economia.esercizio_provvisorio(cx.data);

@@ -69,6 +69,15 @@ impl fmt::Display for Condizione {
     }
 }
 
+/// Il genere di un nome del bacino, e dei personaggi che lo portano.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum Genere {
+    Donna,
+    Uomo,
+}
+
 /// Fascia di reddito.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -169,6 +178,8 @@ pub struct DatiElettorato {
     #[serde(rename = "istituto")]
     pub istituti: Vec<Istituto>,
     pub nomi: Vec<String>,
+    /// Uno per nome, nello stesso ordine.
+    pub generi: Vec<Genere>,
     pub cognomi: Vec<String>,
 }
 
@@ -227,6 +238,13 @@ impl DatiElettorato {
         }
         if self.nomi.is_empty() || self.cognomi.is_empty() {
             return Err(ko("nomi e cognomi non possono essere vuoti".into()));
+        }
+        if self.generi.len() != self.nomi.len() {
+            return Err(ko(format!(
+                "generi: {} per {} nomi, ne serve uno per nome",
+                self.generi.len(),
+                self.nomi.len()
+            )));
         }
         Ok(())
     }

@@ -1,7 +1,62 @@
 mod comune;
 
-use comune::{al_governo, all_opposizione, dati_base, edita, file_base, sostituisci};
-use sim_core::{DatiGioco, Errore, Partita, VERSIONE_SCHEMA};
+use comune::{al_governo, all_opposizione, dati_base, edita, file_base, file_vero, sostituisci};
+use sim_core::elettorato::Genere;
+use sim_core::legislatura::{Assegnazione, Fondazione};
+use sim_core::vista::{Vista, VoceIncarico};
+use sim_core::{Comando, DatiGioco, Errore, Partita, VERSIONE_SCHEMA};
+
+/// «Seme N a X» dei ticket: i dati veri, la fondazione a `posizione`.
+fn del_ticket(seme: u64, posizione: f64) -> Partita {
+    let f = Fondazione {
+        nome: "Partito del giocatore".into(),
+        posizione,
+    };
+    Partita::fonda(DatiGioco::da_testi(&file_vero()).unwrap(), seme, &f).unwrap()
+}
+
+/// La 02 delle Viste: seme 4 a 4,5, coalizione coi disponibili fra destra, centrodestra ed
+/// estrema destra, chiuso il turno zero; trattativa con l'incarico al giocatore.
+fn trattativa_02() -> Partita {
+    let mut p = del_ticket(4, 4.5);
+    let partiti = (p.disponibilita().into_iter())
+        .filter(|v| {
+            v.disponibile
+                && ["destra", "centrodestra", "estrema_destra"].contains(&v.partito.as_str())
+        })
+        .map(|v| v.partito)
+        .collect();
+    p.comanda(Comando::DichiaraCoalizione {
+        partiti,
+        cessioni: vec![],
+    })
+    .unwrap();
+    p.chiudi_turno();
+    assert_eq!(p.vista().incarico, Some(VoceIncarico::Giocatore));
+    p
+}
+
+/// Il 03 delle Viste: la 02 chiusa, al turno 2; il giocatore governa.
+fn governo_03() -> Partita {
+    let mut p = trattativa_02();
+    p.chiudi_turno();
+    assert!(p.governa() && p.vista().turno == 2);
+    p
+}
+
+/// `ProponiSpartizione` sulla spartizione in corso, con un tecnico su `sanita`.
+fn col_tecnico_su_sanita(p: &Partita) -> Partita {
+    let mut q = p.clone();
+    let dicasteri = (q.vista().spartizione.iter())
+        .map(|s| Assegnazione {
+            dicastero: s.dicastero.clone(),
+            partito: s.partito.clone().filter(|_| s.dicastero != "sanita"),
+        })
+        .collect();
+    q.comanda(Comando::ProponiSpartizione { dicasteri })
+        .unwrap();
+    q
+}
 
 /// Media pesata sulle forze di lavoro, nell'ordine dei dati.
 fn media_forze_lavoro(valori: impl Iterator<Item = f64>) -> f64 {
@@ -201,5 +256,259 @@ fn vista_completa_al_turno_zero() {
         })
         .unwrap();
         assert_eq!(senza.vista().regole_ue.proiezione, None, "{nome}");
+    }
+}
+
+#[test]
+fn l_indicatore_e_una_grandezza_della_vista() {
+    let v = Partita::nuova(dati_base(), 7).vista();
+    assert_eq!(v.dicasteri.len(), 10);
+    for d in &v.dicasteri {
+        assert!(
+            v.grandezze.iter().any(|g| g.id == d.indicatore),
+            "{}: {}",
+            d.id,
+            d.indicatore
+        );
+    }
+    let economia = v.dicasteri.iter().find(|d| d.id == "economia_finanze");
+    assert_eq!(
+        economia.map(|d| d.indicatore.as_str()),
+        Some("efficienza_riscossione")
+    );
+}
+
+#[test]
+fn il_prezzo_delle_dimissioni_e_quello_del_comando() {
+    let mut chiusa = col_tecnico_su_sanita(&trattativa_02());
+    chiusa.chiudi_turno();
+    let somma = |v: &Vista| v.alleati.iter().map(|a| a.intesa).sum::<f64>();
+    for (nome, p) in [("03", governo_03()), ("02 col tecnico, chiusa", chiusa)] {
+        let v = p.vista();
+        assert!(p.governa(), "{nome}");
+        let (mut alleati, mut gratis) = (0, 0);
+        for m in &v.ministeri {
+            let x = m.ministro.as_ref().unwrap();
+            let mut q = p.clone();
+            (q.comanda(Comando::ChiediDimissioni {
+                dicastero: m.dicastero.clone(),
+            }))
+            .unwrap();
+            let perso = somma(&v) - somma(&q.vista());
+            let atteso = if x.tecnico || x.partito == v.giocatore {
+                gratis += 1;
+                0.0
+            } else {
+                alleati += 1;
+                10.0
+            };
+            assert!(
+                (m.prezzo_dimissioni - perso).abs() < 1e-9 && (perso - atteso).abs() < 1e-9,
+                "{nome}, {}: prezzo {}, perso {perso}, atteso {atteso}",
+                m.dicastero,
+                m.prezzo_dimissioni
+            );
+        }
+        assert!(alleati > 0 && gratis > 0, "{nome}: {alleati} {gratis}");
+        let sanita = v
+            .ministeri
+            .iter()
+            .find(|m| m.dicastero == "sanita")
+            .unwrap();
+        let tecnico = sanita.ministro.as_ref().unwrap().tecnico;
+        assert_eq!(tecnico, nome != "03", "{nome}");
+    }
+}
+
+#[test]
+fn le_soglie_sono_le_manopole() {
+    let s = Partita::nuova(dati_base(), 7).vista().soglie;
+    assert_eq!(
+        (
+            s.minaccia,
+            s.dimissioni,
+            s.ultimatum,
+            s.uscita,
+            s.crisi_debito_pb
+        ),
+        (40.0, 25.0, 40.0, 25.0, 550.0)
+    );
+    let f = sostituisci(
+        file_base(),
+        "manopole",
+        "[soglia_crisi_debito]\nvalore = 550.0",
+        "[soglia_crisi_debito]\nvalore = 400.0",
+    );
+    let f = sostituisci(
+        f,
+        "manopole",
+        "[soglia_ultimatum]\nvalore = 40.0",
+        "[soglia_ultimatum]\nvalore = 35.0",
+    );
+    let s = Partita::nuova(DatiGioco::da_testi(&f).unwrap(), 7)
+        .vista()
+        .soglie;
+    assert_eq!((s.ultimatum, s.crisi_debito_pb), (35.0, 400.0));
+    assert_eq!((s.minaccia, s.uscita), (40.0, 25.0));
+}
+
+#[test]
+fn la_spartizione_in_corso() {
+    let dati = DatiGioco::da_testi(&file_vero()).unwrap();
+    let p = trattativa_02();
+    let v = p.vista();
+    assert_eq!(v.spartizione.len(), 10);
+    for (s, d) in v.spartizione.iter().zip(dati.dicasteri()) {
+        assert_eq!((&s.dicastero, s.peso), (&d.id, d.peso_spartizione));
+        assert_eq!(s.partito.as_deref(), Some(s.di_default.as_str()), "{s:?}");
+    }
+    let tecnico = col_tecnico_su_sanita(&p).vista().spartizione;
+    for (a, b) in tecnico.iter().zip(&v.spartizione) {
+        if a.dicastero == "sanita" {
+            assert_eq!((&a.partito, &a.di_default), (&None, &b.di_default));
+        } else {
+            assert_eq!(a, b);
+        }
+    }
+    assert!(governo_03().vista().spartizione.is_empty());
+    assert!(all_opposizione().vista().spartizione.is_empty());
+}
+
+#[test]
+fn l_intesa_di_partenza_e_quella_della_chiusura() {
+    let p = trattativa_02();
+    for (nome, q, destra) in [
+        ("default", p.clone(), 62.1),
+        ("tecnico su sanita", col_tecnico_su_sanita(&p), 52.1),
+    ] {
+        let richieste = q.vista().richieste;
+        let mut chiusa = q.clone();
+        chiusa.chiudi_turno();
+        let alleati = chiusa.vista().alleati;
+        assert_eq!(richieste.len(), alleati.len(), "{nome}");
+        for r in &richieste {
+            let a = alleati.iter().find(|a| a.partito == r.partito).unwrap();
+            assert!(
+                (r.intesa_partenza - a.intesa).abs() < 1e-9,
+                "{nome}, {}: {} contro {}",
+                r.partito,
+                r.intesa_partenza,
+                a.intesa
+            );
+        }
+        let d = richieste.iter().find(|r| r.partito == "destra").unwrap();
+        assert!(
+            (d.intesa_partenza - destra).abs() < 0.05,
+            "{nome}: {}",
+            d.intesa_partenza
+        );
+    }
+}
+
+#[test]
+fn il_ribaltone_nella_vista() {
+    let mut p = del_ticket(2, 1.5);
+    for _ in 0..5 {
+        assert_eq!(p.vista().ribaltone, None, "turno {}", p.vista().turno);
+        p.chiudi_turno();
+    }
+    let v = p.vista();
+    assert_eq!((v.turno, v.incarico), (5, Some(VoceIncarico::Guida)));
+    let r = v.ribaltone.unwrap();
+    let mut coalizione = r.coalizione.clone();
+    coalizione.sort();
+    assert_eq!(
+        coalizione,
+        ["centro", "centrosinistra", "giocatore", "sinistra"]
+    );
+    assert_eq!(r.primo.as_deref(), Some("sinistra"));
+    let mut accolta = p.clone();
+    accolta.comanda(Comando::ChiediGuida).unwrap();
+    assert_eq!(accolta.vista().ribaltone, None);
+    assert_eq!(trattativa_02().vista().ribaltone, None);
+    assert_eq!(governo_03().vista().ribaltone, None);
+}
+
+#[test]
+fn generi_lunghi_quanto_i_nomi() {
+    let corti = sostituisci(
+        file_base(),
+        "elettorato",
+        "generi = [\"donna\", ",
+        "generi = [",
+    );
+    let Err(e) = DatiGioco::da_testi(&corti) else {
+        panic!("un genere in meno accettato");
+    };
+    assert!(e.to_string().contains("generi"), "{e}");
+    let senza = sostituisci(file_base(), "scenario", "genere_leader = \"donna\"\n", "");
+    let Err(e) = DatiGioco::da_testi(&senza) else {
+        panic!("un partito senza genere_leader accettato");
+    };
+    assert!(e.to_string().contains("genere_leader"), "{e}");
+}
+
+#[test]
+fn il_genere_non_cambia_i_nomi() {
+    let dati = dati_base();
+    let el = dati.elettorato();
+    // Il genere del nome nel bacino; `None` per un nome che non ci sta.
+    let del_bacino = |nome: &str| {
+        let n = nome.split(' ').next()?;
+        let k = el.nomi.iter().position(|x| x == n)?;
+        el.generi.get(k).copied()
+    };
+    let v = governo_03().vista();
+    let nomi: Vec<&str> = (v.ministeri.iter())
+        .map(|m| m.ministro.as_ref().unwrap().nome.as_str())
+        .collect();
+    assert_eq!(
+        nomi,
+        [
+            "Simone Gallo",
+            "Marco Bianchi",
+            "Simone Ricci",
+            "Sara Ferraro",
+            "Chiara Caruso",
+            "Filippo Ricci",
+            "Luca Romano",
+            "Filippo Barbieri",
+            "Simone Bianchi",
+            "Giulia Rossi",
+        ]
+    );
+    let mut donne = 0;
+    for x in v
+        .ministeri
+        .iter()
+        .flat_map(|m| m.ministro.iter().chain(&m.rosa))
+    {
+        assert_eq!(Some(x.genere), del_bacino(&x.nome), "{}", x.nome);
+        donne += usize::from(x.genere == Genere::Donna);
+    }
+    assert!(donne > 0);
+    let leader = |v: &Vista, id: &str| {
+        let p = v.partiti.iter().find(|p| p.id == id).unwrap();
+        (p.leader.clone(), p.genere_leader)
+    };
+    assert_eq!(
+        leader(&v, "centrodestra"),
+        ("Silvia Moretti".into(), Some(Genere::Donna))
+    );
+    assert_eq!(leader(&v, "giocatore"), (String::new(), None));
+    // Il leader nuovo della Destra, estratto in partita, prende il genere col nome.
+    let mut p = del_ticket(2, 1.5);
+    for _ in 0..5 {
+        p.chiudi_turno();
+    }
+    let v = p.vista();
+    assert_eq!(
+        leader(&v, "destra"),
+        ("Anna Barbieri".into(), Some(Genere::Donna))
+    );
+    for x in v.partiti.iter().filter(|x| !x.leader.is_empty()) {
+        if let Some(g) = del_bacino(&x.leader) {
+            assert_eq!(x.genere_leader, Some(g), "{}", x.leader);
+        }
     }
 }

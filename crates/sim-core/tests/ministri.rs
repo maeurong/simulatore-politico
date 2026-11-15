@@ -8,7 +8,7 @@ use comune::{dati_base, edita, file_base, imposta, indice, voci};
 use sim_core::dati::DatiGioco;
 use sim_core::esito::{Criticita, TipoVoce};
 use sim_core::ministri::Causa;
-use sim_core::vista::{Vista, VoceMinistero};
+use sim_core::vista::{MotivoEvidenza, Vista, VoceMinistero};
 use sim_core::{Comando, Errore, Partita};
 
 fn ministero<'a>(v: &'a Vista, id: &str) -> &'a VoceMinistero {
@@ -353,6 +353,40 @@ fn evento_nel_dicastero_mette_in_evidenza() {
                 evidenza(&con_evento_aperto(&p, altro), dicastero),
                 Some(false)
             );
+            provate += 1;
+        }
+    }
+    assert!(provate > 0);
+}
+
+#[test]
+fn il_perche_dell_evidenza() {
+    let mut provate = 0;
+    for seme in 1..=20 {
+        let p = Partita::nuova(dati_base(), seme);
+        let v = p.vista();
+        for a in v.ministeri.iter().filter_map(|m| m.agenda.as_ref()) {
+            assert_eq!(a.evidenza.is_empty(), !a.in_evidenza, "seme {seme}: {a:?}");
+        }
+        // Le coppie di `evento_nel_dicastero_mette_in_evidenza`.
+        for (evento, dicastero) in [
+            ("criminalita", "interno"),
+            ("liste_attesa", "sanita"),
+            ("carceri", "giustizia"),
+            ("crisi_energetica", "ambiente_energia"),
+        ] {
+            let agenda = ministero(&v, dicastero).agenda.as_ref();
+            if !agenda.is_some_and(|a| a.evidenza.is_empty()) {
+                continue;
+            }
+            let v = con_evento_aperto(&p, evento).vista();
+            let a = ministero(&v, dicastero).agenda.as_ref().unwrap();
+            assert_eq!(
+                a.evidenza,
+                [MotivoEvidenza::Evento],
+                "seme {seme}, {dicastero}"
+            );
+            assert!(a.in_evidenza);
             provate += 1;
         }
     }

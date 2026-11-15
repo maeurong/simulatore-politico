@@ -15,6 +15,8 @@ import type { VistaDebito } from "./VistaDebito";
 import type { VistaPosti } from "./VistaPosti";
 import type { VistaReferendum } from "./VistaReferendum";
 import type { VistaRegoleUe } from "./VistaRegoleUe";
+import type { VistaRibaltone } from "./VistaRibaltone";
+import type { VistaSoglie } from "./VistaSoglie";
 import type { VistaStatistica } from "./VistaStatistica";
 import type { VoceAlleato } from "./VoceAlleato";
 import type { VoceDicastero } from "./VoceDicastero";
@@ -34,6 +36,7 @@ import type { VoceRegione } from "./VoceRegione";
 import type { VoceRichiesta } from "./VoceRichiesta";
 import type { VoceSfiducia } from "./VoceSfiducia";
 import type { VoceSituazione } from "./VoceSituazione";
+import type { VoceSpartizione } from "./VoceSpartizione";
 
 /**
  * Ciò che la UI può leggere della partita.
@@ -133,6 +136,15 @@ coalizione: Array<string>,
  */
 richieste: Array<VoceRichiesta>, 
 /**
+ * In trattativa con l'incarico al giocatore, una voce per dicastero nell'ordine dei dati: la
+ * spartizione proposta o, senza proposta, quella di default; vuota altrove.
+ */
+spartizione: Array<VoceSpartizione>, 
+/**
+ * In trattativa con `Guida`, la coalizione del ribaltone e il primo per seggi; `None` altrove.
+ */
+ribaltone: VistaRibaltone | null, 
+/**
  * Gli esiti dei voti, il più recente per primo.
  */
 elezioni: Array<EsitoElezioni>, 
@@ -186,4 +198,4 @@ regioni: Array<VoceRegione>,
 /**
  * Le opere finite dall'ultimo voto: atti regionali eseguiti e cantieri finiti.
  */
-opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, };
+opere: Array<VoceOpera>, regole_ue: VistaRegoleUe, debito: VistaDebito, posti: VistaPosti, soglie: VistaSoglie, };

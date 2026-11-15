@@ -96,7 +96,8 @@ impl Partita {
             return;
         };
         let mut p = partito_nuovo(&self.dati, &nome, (k + 1) as f64);
-        p.leader = self.leader_nuovo();
+        let (leader, genere) = self.leader_nuovo();
+        (p.leader, p.genere_leader) = (leader, Some(genere));
         p.vocazione = Vocazione::Identitaria;
         p.regola = Regola::Hunter;
         let j = self.aggiungi_partito(p);
@@ -188,7 +189,7 @@ impl Partita {
         let Some(nome) = self.nome_nuovo() else {
             return Err("non resta un nome libero per la frangia");
         };
-        let leader = self.leader_nuovo();
+        let (leader, genere) = self.leader_nuovo();
         let luna = self.dati.manopola("luna_di_miele_leader");
         let Some(o) = self.partiti.get_mut(j) else {
             return Err("il partito non c'è");
@@ -203,6 +204,7 @@ impl Partita {
         let mut f = o.clone();
         f.nome.clone_from(&nome);
         f.leader = leader;
+        f.genere_leader = Some(genere);
         f.posizione_dichiarata = x;
         f.posizione_percepita = x;
         f.valence = f.valence_base + luna;

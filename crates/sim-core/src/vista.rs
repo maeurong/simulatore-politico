@@ -1,6 +1,6 @@
 use crate::disposizioni::{Norma, TipoDisposizione};
 use crate::economia::{Aliquote, Bilancio};
-use crate::elettorato::Condizione;
+use crate::elettorato::{Condizione, Genere};
 use crate::esito::VoceEsito;
 use crate::eventi::{Famiglia, Tono};
 use crate::grandezze::Verso;
@@ -85,6 +85,11 @@ pub struct Vista {
     /// l'offerta della spartizione proposta o, senza proposta, di quella di default; vuota
     /// altrove.
     pub richieste: Vec<VoceRichiesta>,
+    /// In trattativa con l'incarico al giocatore, una voce per dicastero nell'ordine dei dati: la
+    /// spartizione proposta o, senza proposta, quella di default; vuota altrove.
+    pub spartizione: Vec<VoceSpartizione>,
+    /// In trattativa con `Guida`, la coalizione del ribaltone e il primo per seggi; `None` altrove.
+    pub ribaltone: Option<VistaRibaltone>,
     /// Gli esiti dei voti, il più recente per primo.
     pub elezioni: Vec<EsitoElezioni>,
     /// In trattativa a chi va l'incarico; `None` altrove.
@@ -117,6 +122,39 @@ pub struct Vista {
     pub regole_ue: VistaRegoleUe,
     pub debito: VistaDebito,
     pub posti: VistaPosti,
+    pub soglie: VistaSoglie,
+}
+
+/// Le soglie che le regole leggono dalle manopole: soddisfazione del ministro (`minaccia`,
+/// `dimissioni`), intesa dell'alleato (`ultimatum`, `uscita`) e spread della crisi del debito, in
+/// punti base.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaSoglie {
+    pub minaccia: f64,
+    pub dimissioni: f64,
+    pub ultimatum: f64,
+    pub uscita: f64,
+    pub crisi_debito_pb: f64,
+}
+
+/// Un dicastero (id) nella spartizione in corso: `peso` è `peso_spartizione`, `partito` l'id di chi
+/// lo prende (`None` = un tecnico), `di_default` quello della spartizione di default.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VoceSpartizione {
+    pub dicastero: String,
+    pub peso: u8,
+    pub partito: Option<String>,
+    pub di_default: String,
+}
+
+/// Il ribaltone: la coalizione (id) e il primo per seggi, che cede o no la guida.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub struct VistaRibaltone {
+    pub coalizione: Vec<String>,
+    pub primo: Option<String>,
 }
 
 /// I posti del calendario e quanti ne sono occupati, contati come li conta `PresentaLegge`: i
@@ -674,6 +712,8 @@ pub struct VocePartito {
     pub vocazione: Vocazione,
     /// Vuoto per il partito del giocatore.
     pub leader: String,
+    /// `None` per il partito del giocatore, che non ha leader.
+    pub genere_leader: Option<Genere>,
     pub regola: Regola,
     pub sciolto: bool,
     /// Euro: pubblica.
@@ -709,6 +749,8 @@ pub struct VistaStatistica {
 pub struct VoceDicastero {
     pub id: String,
     pub nome: String,
+    /// L'indicatore di servizio: l'id di una voce di `Vista.grandezze`.
+    pub indicatore: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -760,6 +802,9 @@ pub struct VoceMinistero {
     pub rosa: Vec<VoceMinistro>,
     /// Il ministro uscirà a fine turno: nessun comando sul dicastero fino al successore.
     pub dimissioni_chieste: bool,
+    /// L'intesa che l'alleato perderebbe con `ChiediDimissioni`; 0 col ministro del giocatore,
+    /// col tecnico e in interim.
+    pub prezzo_dimissioni: f64,
     /// Indice nella rosa del successore scelto; `None` = il primo.
     pub scelta: Option<u8>,
     /// Perché il ministro è uscito; `Some` solo in interim.
@@ -805,7 +850,21 @@ pub struct VoceAgenda {
     /// La variazione di soddisfazione del ministro con `Ferma`, prima del limite a 0-100:
     /// negativa se tiene all'atto.
     pub costo_ferma: f64,
+    /// Perché l'atto è in evidenza, nell'ordine della regola; vuota = non lo è.
+    pub evidenza: Vec<MotivoEvidenza>,
+    /// `!evidenza.is_empty()`.
     pub in_evidenza: bool,
+}
+
+/// Una ragione dell'evidenza di un atto: il ministro in minaccia, l'atto a `distanza_evidenza` o
+/// più dalla posizione del Presidente del Consiglio, un evento aperto nel dicastero.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(TS), ts(export))]
+pub enum MotivoEvidenza {
+    Minaccia,
+    Distanza,
+    Evento,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -851,6 +910,7 @@ pub struct VoceCantiere {
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct VoceMinistro {
     pub nome: String,
+    pub genere: Genere,
     /// Id del partito.
     pub partito: String,
     pub capacita: u8,
