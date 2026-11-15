@@ -909,6 +909,7 @@
   "anteprima.linea_no": "Votano no: {nomi}.",
   "anteprima.nota_decreto": "Vale da subito; a fine turno il Parlamento lo converte, o decade e i suoi effetti cessano.",
   "anteprima.nota_elettorale": "Seggi attesi sul sondaggio pubblico, con la legge nuova.",
+  "anteprima.nota_riforma_voto": "Legge ordinaria: {quando}.",
   "anteprima.nota_riforma": "Legge ordinaria: si vota alla fine del turno dopo la presentazione.",
   "aula.presenta_riforma": "Presenta la legge di riforma",
   "aula.presenta_elettorale": "Presenta la legge elettorale",

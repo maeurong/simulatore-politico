@@ -1,5 +1,6 @@
 // L'anteprima di una misura: ciò che il cartellino legge dalla Vista (storie 113-117). Le cifre e le fasce sono del core.
 import { elenco, numero, t, type Chiave } from "$lib/testi/t";
+import { quando as quandoSiVota } from "$lib/aula/aula";
 import { euro } from "$lib/governo/governo";
 import { inOrdine } from "$lib/partiti/schieramento";
 import type { EffettoStimato as Effetto } from "$lib/tipi/EffettoStimato";
@@ -70,3 +71,7 @@ export function votano(v: Vista, linee: VoceLinea[], si: boolean): string {
 export function forbice([da, a]: [number, number]): string {
   return da === a ? numero(da) : `${numero(da)}–${numero(a)}`;
 }
+
+/** La riga sulla forma della riforma: la data del voto se la misura è già in calendario, altrimenti la regola (voto il turno dopo la presentazione). */
+export const notaRiforma = (v: Vista, m: Misurabile): string =>
+  "voto" in m ? t("anteprima.nota_riforma_voto", { quando: quandoSiVota(v, m.voto) }) : t("anteprima.nota_riforma");

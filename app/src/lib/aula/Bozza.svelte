@@ -16,7 +16,7 @@
   import { forbice, rigaEffetto, spesa, votano } from "$lib/anteprima/anteprima";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { riportaFuoco } from "./aula";
-  import { comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, type Bozza } from "./bozza";
+  import { comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, numeraRichieste, type Bozza } from "./bozza";
 
   let { vista, bozza, scheda, manda, rifiuto, ontoglie, onsvuota, onapri }: {
     vista: Vista; bozza: Bozza; scheda: "disposizioni" | "elettorale"; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
@@ -38,14 +38,16 @@
   let anteDi = $state.raw<Bozza>([]);
   let errore = $state<string | null>(null);
   let inCalcolo = $state(false);
-  let ultima = "";
+  const richieste = numeraRichieste();
   const nominataAnte = $derived(errore ? misuraNominata(vista, errore) : null);
   const chiedi = ultimoVince(
-    (b: Bozza) => (vista.governa ? guscio.anteprima(b) : guscio.anteprimaProposta(b)),
-    async (r, b) => {
-      if (JSON.stringify(b) !== ultima) return;
+    ({ b }: { b: Bozza; n: number }) => (vista.governa ? guscio.anteprima(b) : guscio.anteprimaProposta(b)),
+    async (r, { b, n }) => {
+      if (!richieste.vale(n)) return;
       inCalcolo = false;
-      ({ ante, errore } = leggiAnteprima(r));
+      const letta = leggiAnteprima(r);
+      ({ ante, errore } = letta);
+      if (letta.guasto) partita.guasto = letta.guasto;
       anteDi = b;
       // un rifiuto chiude il cartellino e lo azzera: la correzione dopo non lo riapre; il fuoco, se stava lì, passa al dettaglio
       if (!ante && apertoCartellino) {
@@ -60,7 +62,7 @@
   $effect(() => {
     const b = bozza;
     void vista; // una Vista nuova (un comando riuscito) cambia ciò che il core risponde, anche a bozza ferma
-    ultima = JSON.stringify(b);
+    const n = richieste.nuova();
     untrack(() => {
       if (!b.length) {
         ante = null;
@@ -69,7 +71,7 @@
         return;
       }
       inCalcolo = true;
-      chiedi(b);
+      chiedi({ b, n });
     });
   });
 
@@ -128,7 +130,7 @@
         </dl>
         {#if ante.forbice.in_bilico}<span class="chip rosso">{t("aula.in_bilico")}</span>{/if}
         <div bind:this={piede}><Pulsante forma="link" onclick={(e) => scambia(e, true)}>{t("aula.anteprima")}</Pulsante></div>
-      {:else}
+      {:else if inCalcolo}
         <p class="sec muto">{t("aula.ante_in_calcolo")}</p>
       {/if}
     </div>

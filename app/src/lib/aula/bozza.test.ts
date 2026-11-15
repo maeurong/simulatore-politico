@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
+import { ultimoVince } from "$lib/editor/editor.svelte";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
-import { bozzaDelComando, bozzaInvariata, cambia, comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, perDicastero, rifiutoDellaBozza, statoGradino } from "./bozza";
+import { bozzaDelComando, bozzaInvariata, cambia, comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, numeraRichieste, perDicastero, rifiutoDellaBozza, statoGradino } from "./bozza";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const v03 = ((ordinario as unknown as { vista?: Vista }).vista ?? ordinario) as unknown as Vista;
@@ -126,14 +127,31 @@ describe("bozzaInvariata", () => {
 describe("leggiAnteprima", () => {
   const ok = { nome: "x" } as unknown as import("$lib/tipi/Anteprima").Anteprima;
   it("un'anteprima riuscita: nessun errore", () => {
-    expect(leggiAnteprima(ok)).toEqual({ ante: ok, errore: null });
+    expect(leggiAnteprima(ok)).toEqual({ ante: ok, errore: null, guasto: null });
   });
   it("un rifiuto toglie l'anteprima e porta il testo del core senza il prefisso", () => {
-    expect(leggiAnteprima({ specie: "rifiuto", testo: "comando non ammesso: calendario pieno" })).toEqual({ ante: null, errore: "calendario pieno" });
-    expect(leggiAnteprima({ specie: "guasto", testo: "motore spento" })).toEqual({ ante: null, errore: "motore spento" });
+    expect(leggiAnteprima({ specie: "rifiuto", testo: "comando non ammesso: calendario pieno" })).toEqual({ ante: null, errore: "calendario pieno", guasto: null });
+  });
+  it("un guasto non è un rifiuto della scelta: va alla cornice, nessun testo accanto alla bozza", () => {
+    expect(leggiAnteprima({ specie: "guasto", testo: "motore spento" })).toEqual({ ante: null, errore: null, guasto: "motore spento" });
   });
   it("il rifiuto «è già in esame» dell'anteprima nomina la misura in esame", () => {
     const { errore } = leggiAnteprima({ specie: "rifiuto", testo: "comando non ammesso: Salario minimo legale è già in esame" });
     expect(misuraNominata(stati.piena.vista, errore!)?.id).toBe(3);
+  });
+});
+
+describe("numeraRichieste", () => {
+  it("vale solo la risposta dell'ultima richiesta, anche con la stessa bozza di una più vecchia", async () => {
+    const n = numeraRichieste();
+    const accettate: number[] = [];
+    const chiedi = ultimoVince(
+      (_: { n: number }) => new Promise<number>((r) => setTimeout(() => r(1), 5)),
+      (_r, a) => { if (n.vale(a.n)) accettate.push(a.n); },
+    );
+    chiedi({ n: n.nuova() });
+    chiedi({ n: n.nuova() });
+    await new Promise((r) => setTimeout(r, 40));
+    expect(accettate).toEqual([2]);
   });
 });

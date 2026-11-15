@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
-import { cosaCambia, forbice, perimetro, quando, spesa, stimatore, verso, type Misurabile } from "./anteprima";
+import { cosaCambia, forbice, notaRiforma, perimetro, quando, spesa, stimatore, verso, type Misurabile } from "./anteprima";
 import { ampiezzaPer, oscilla } from "./oscilla";
 
 const v03 = ordinario as unknown as Vista;
@@ -111,5 +111,17 @@ describe("formati comuni a bozza e cartellino", () => {
   it("forbice a un valore se è un punto", () => {
     expect(forbice([205, 205])).toBe("205");
     expect(forbice([220, 235])).toBe("220–235");
+  });
+});
+
+describe("notaRiforma", () => {
+  it("un'anteprima non ha ancora data: si vota il turno dopo la presentazione", () => {
+    expect(notaRiforma(piena, { nome: "x", forma: "riforma" } as unknown as Misurabile)).toBe("Legge ordinaria: si vota alla fine del turno dopo la presentazione.");
+  });
+  it("una misura in calendario dice la sua data", () => {
+    const m = piena.calendario.find((x) => x.forma === "riforma")!;
+    const nota = notaRiforma(piena, m);
+    expect(nota).toContain("Legge ordinaria: si vota a fine");
+    expect(nota).not.toContain("presentazione");
   });
 });

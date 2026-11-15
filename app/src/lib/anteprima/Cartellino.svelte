@@ -18,7 +18,7 @@
   import Emiciclo from "$lib/componenti/Emiciclo.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { cosaCambia, nomeGrandezza, perimetro, quando, spesa as spesaDi, stimatore, verso, votano as votanoDi, type Misurabile } from "./anteprima";
+  import { cosaCambia, notaRiforma, nomeGrandezza, perimetro, quando, spesa as spesaDi, stimatore, verso, votano as votanoDi, type Misurabile } from "./anteprima";
   import { oscilla } from "./oscilla";
 
   let { vista, misura, valori, indietro, ontorna, manda, rifiuto, fuoco = false, inCalcolo = false }: {
@@ -41,7 +41,7 @@
   const senato = $derived(vista.seggi.reduce((s, x) => s + x.senato, 0));
   const partiti = $derived(inOrdine(vista));
   const votano = (si: boolean) => votanoDi(vista, misura.linee, si);
-  const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? t("anteprima.nota_riforma") : "");
+  const nota = $derived(misura.forma === "costituzionale" ? t("aula.regola_costituzionale") : misura.forma === "conversione" ? t("anteprima.nota_decreto") : misura.forma === "elettorale" ? t("anteprima.nota_elettorale") : misura.forma === "riforma" ? notaRiforma(vista, misura) : "");
   const vuoto = $derived(t(misura.forma === "elettorale" ? "anteprima.nessun_effetto_elettorale" : misura.forma === "costituzionale" ? "anteprima.nessun_effetto_costituzionale" : "anteprima.nessun_effetto"));
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : inCalcolo ? t("aula.ante_in_calcolo") : undefined);
 

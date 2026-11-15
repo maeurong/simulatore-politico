@@ -74,6 +74,16 @@ export const bozzaDelComando = (c: Comando): string | null =>
 /** Il comando di «Presenta» ha mandato proprio la bozza di adesso: solo allora si svuota (cambiata in volo, resta). */
 export const bozzaInvariata = (c: Comando, b: Bozza): boolean => "valori" in c && JSON.stringify(c.valori) === JSON.stringify(b);
 
-/** La risposta dell'anteprima: o l'anteprima, o il testo del rifiuto (che può nominare la misura in esame: `misuraNominata`). */
-export const leggiAnteprima = (r: Anteprima | ErroreGuscio): { ante: Anteprima | null; errore: string | null } =>
-  "specie" in r ? { ante: null, errore: testoRifiuto(r) } : { ante: r, errore: null };
+/** La risposta dell'anteprima: l'anteprima; il testo di un rifiuto (accanto alla scelta, può nominare la misura in esame: `misuraNominata`);
+ *  o il testo di un guasto, che va alla cornice (`partita.guasto`) e non è una risposta alla scelta. */
+export const leggiAnteprima = (r: Anteprima | ErroreGuscio): { ante: Anteprima | null; errore: string | null; guasto: string | null } =>
+  !("specie" in r) ? { ante: r, errore: null, guasto: null }
+  : r.specie === "rifiuto" ? { ante: null, errore: testoRifiuto(r), guasto: null }
+  : { ante: null, errore: null, guasto: r.testo };
+
+/** Le richieste dell'anteprima hanno un numero: vale la risposta dell'ultima chiesta, anche se porta la stessa bozza di una più vecchia
+ *  (una Vista nuova la rifà) e la più vecchia è ancora in volo. */
+export function numeraRichieste(): { nuova: () => number; vale: (k: number) => boolean } {
+  let n = 0;
+  return { nuova: () => ++n, vale: (k) => k === n };
+}

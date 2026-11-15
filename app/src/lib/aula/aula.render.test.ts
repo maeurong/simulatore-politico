@@ -91,3 +91,11 @@ describe("Emiciclo, forbice degenere", () => {
     expect(fig([190, 215])).toContain("Camera · 190–215 sì");
   });
 });
+
+describe("InAula, nome accessibile della forbice", () => {
+  it("nessun segnaposto rimasto: la forbice si legge con i suoi valori", () => {
+    const { body } = render(Aula, { props: { vista: stati.piena.vista } });
+    expect(body).not.toContain("{si}");
+    expect(body).toMatch(/aria-label="Camera · [\d.]+(–[\d.]+)? sì · ne servono/);
+  });
+});

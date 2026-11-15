@@ -41,6 +41,22 @@ describe("calendario", () => {
   });
 });
 
+describe("calendario, più misure che posti", () => {
+  it("due ordinarie su un posto: tutte e due compaiono, il posto in più non è libero", () => {
+    const v = { ...piena, posti: { ...piena.posti, ordinari: 1, ordinari_occupati: 1 } };
+    const o = calendario(v).filter((p) => p.tipo === "ordinaria");
+    expect(o.map((p) => p.misura?.id ?? null)).toEqual([1, 3]);
+  });
+  it("costituzionali: una per posto, la seconda non sparisce; posti in più liberi", () => {
+    const cost = piena.calendario.find((m) => m.id === 2)!;
+    const due = { ...piena, calendario: [...piena.calendario, { ...cost, id: 9, nome: "Altra costituzionale" }] };
+    const un = { ...due, posti: { ...due.posti, costituzionali: 1, costituzionali_occupati: 1 } };
+    expect(calendario(un).filter((p) => p.tipo === "costituzionale").map((p) => p.misura?.id ?? null)).toEqual([2, 9]);
+    const tre = { ...piena, posti: { ...piena.posti, costituzionali: 3, costituzionali_occupati: 0 } };
+    expect(calendario(tre).filter((p) => p.tipo === "costituzionale").map((p) => p.misura?.id ?? null)).toEqual([2, null, null]);
+  });
+});
+
 describe("votaOra", () => {
   it("vero sulla costituzionale di piena (prima deliberazione, 2027T2), falso sulle altre", () => {
     expect(piena.data).toMatchObject({ anno: 2027, trimestre: 2 });
