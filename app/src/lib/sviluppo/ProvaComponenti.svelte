@@ -212,6 +212,8 @@
     </div></div>
   <div class="stato"><b class="sec">Faccia · iniziali</b>
     <div class="fila"><Faccia nome="Luca Benedetti" misura={34} /><Faccia nome="Luca Benedetti" misura={46} /><Faccia nome="Luca Benedetti" misura={62} /><Faccia nome="Luca Benedetti" misura={84} /><Faccia nome="" misura={34} /></div></div>
+  <div class="stato"><b class="sec">Faccia · caricatura di un leader (col tono grave: iniziali)</b>
+    <div class="fila"><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={34} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={46} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={62} /><Faccia nome="Luca Benedetti" ruolo="leader" partito="Sinistra" misura={84} /></div></div>
 </section>
 
 <section class="mappe">

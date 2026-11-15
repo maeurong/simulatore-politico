@@ -7,6 +7,7 @@
   import Campagna from "$lib/campagna/Campagna.svelte";
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
+  import Trattativa from "$lib/trattativa/Trattativa.svelte";
   import Evento from "$lib/cruscotto/Evento.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
   import Cornice from "$lib/cornice/Cornice.svelte";
@@ -45,6 +46,9 @@
             <Paese vista={partita.vista} />
           {:else if aperta === "partiti" && fetta === null}
             <Partiti vista={partita.vista} />
+          {:else if aperta === "trattativa" && fetta === null}
+            <!-- la bozza è dell'incarico: al cambio (giocatore, guida) si rimonta -->
+            {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
           {:else}
             <!-- governo, crisi, opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (lettura 1) -->
             {#if aperta === "cruscotto"}
