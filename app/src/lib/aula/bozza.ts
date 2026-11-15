@@ -54,5 +54,12 @@ export function perDicastero(v: Vista): { dicastero: string | null; nome: string
   ].filter((g) => g.voci.length);
 }
 
-/** La misura in calendario che il testo del rifiuto nomina, se c'è. */
-export const misuraNominata = (v: Vista, testo: string): VoceMisura | null => v.calendario.find((m) => testo.includes(m.nome)) ?? null;
+/** Il core nomina la disposizione («{nome} è già in esame», parlamento/mod.rs:778): la misura in calendario che la contiene. */
+export function misuraNominata(v: Vista, testo: string): VoceMisura | null {
+  const d = v.disposizioni.find((x) => testo.startsWith(`${x.nome} è già in esame`));
+  return (d && v.calendario.find((m) => m.valori.some((x) => x.disposizione === d.id))) || null;
+}
+
+/** Il rifiuto vale per la Vista e per la bozza in cui è nato (`bozza` è il suo JSON): cambiata la bozza non resta sotto un'altra legge. */
+export const rifiutoDellaBozza = <R extends { vista: Vista | null; misura: number | null; bozza?: string | null }>(r: R | null, v: Vista, b: Bozza): R | null =>
+  r && r.vista === v && r.misura === null && r.bozza === JSON.stringify(b) ? r : null;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import ordinario from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
-import { cambia, comandoBozza, etichettaBozza, forma, misuraNominata, perDicastero, statoGradino } from "./bozza";
+import { cambia, comandoBozza, etichettaBozza, forma, misuraNominata, perDicastero, rifiutoDellaBozza, statoGradino } from "./bozza";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const v03 = ((ordinario as unknown as { vista?: Vista }).vista ?? ordinario) as unknown as Vista;
@@ -75,9 +75,24 @@ describe("perDicastero", () => {
 });
 
 describe("misuraNominata", () => {
-  it("la misura in calendario il cui nome sta nel testo del rifiuto; altrimenti null", () => {
-    const m = stati.piena.vista.calendario[3];
-    expect(misuraNominata(stati.piena.vista, `già in esame: ${m.nome}`)?.id).toBe(m.id);
-    expect(misuraNominata(stati.piena.vista, "calendario pieno")).toBeNull();
+  it("dal testo vero del core («{disposizione} è già in esame») alla misura che la contiene", () => {
+    const v = stati.piena.vista;
+    expect(misuraNominata(v, "Salario minimo legale è già in esame")?.id).toBe(3);
+    expect(misuraNominata(v, "Numero dei parlamentari è già in esame")?.id).toBe(2);
+  });
+  it("altri testi, o una disposizione non in calendario: null", () => {
+    const v = stati.piena.vista;
+    expect(misuraNominata(v, "calendario pieno")).toBeNull();
+    expect(misuraNominata(v, "Ticket sanitario è già in esame")).toBeNull();
+  });
+});
+
+describe("rifiutoDellaBozza", () => {
+  const r = { testo: "calendario pieno", tipo: "presenta_legge" as const, misura: null, vista: v03, bozza: JSON.stringify([salario]) };
+  it("vale per la bozza in cui è nato, non per un'altra", () => {
+    expect(rifiutoDellaBozza(r, v03, [salario])).toBe(r);
+    expect(rifiutoDellaBozza(r, v03, [])).toBeNull();
+    expect(rifiutoDellaBozza(r, v03, [{ disposizione: "regime_pensioni", gradino: "retributivo" }])).toBeNull();
+    expect(rifiutoDellaBozza(r, stati.piena.vista, [salario])).toBeNull();
   });
 });

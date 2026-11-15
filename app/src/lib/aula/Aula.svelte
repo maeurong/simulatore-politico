@@ -9,7 +9,7 @@
   import type { Vista } from "$lib/tipi/Vista";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { riportaFuoco, rifiutoPer } from "./aula";
-  import { cambia, type Bozza as TipoBozza } from "./bozza";
+  import { cambia, rifiutoDellaBozza, type Bozza as TipoBozza } from "./bozza";
   import Bozza from "./Bozza.svelte";
   import Disposizioni from "./Disposizioni.svelte";
   import Calendario from "./Calendario.svelte";
@@ -44,7 +44,7 @@
   });
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
-  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null } | null>(null);
+  let rifiutato = $state.raw<{ testo: string; tipo: Comando["tipo"]; misura: number | null; vista: Vista | null; bozza: string | null } | null>(null);
   const rifiuto = $derived(rifiutoPer(rifiutato, vista, corrente?.id ?? null));
   let lato: HTMLElement;
   // `misura`: quella a cui il rifiuto si lega; la bozza non ne ha (null)
@@ -59,7 +59,7 @@
       if (ok) riportaFuoco(lato, da);
       return ok;
     } catch (e) {
-      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista };
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), tipo: c.tipo, misura, vista: partita.vista, bozza: "valori" in c ? JSON.stringify(c.valori) : null };
       return false;
     }
   }
@@ -108,7 +108,7 @@
   <aside class="lato" bind:this={lato} tabindex="-1" aria-label={t("aula.dettaglio")}>
     {#if scheda === "disposizioni"}
       <Bozza
-        {vista} {bozza} manda={presenta} rifiuto={rifiutoPer(rifiutato, vista, null)}
+        {vista} {bozza} manda={presenta} rifiuto={rifiutoDellaBozza(rifiutato, vista, bozza)}
         ontoglie={(d, g) => nellaBozza(() => (bozza = cambia(vista, bozza, d, g)))} onsvuota={() => nellaBozza(() => (bozza = []))}
         onapri={(id) => { scelta = id; scheda = "in_aula"; }} />
     {:else if corrente}

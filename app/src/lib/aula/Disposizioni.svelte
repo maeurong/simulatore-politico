@@ -1,6 +1,7 @@
 <script lang="ts">
   // Le disposizioni in vigore (storia 107), righe chiuse per dicastero; i gradini si aprono solo sulla riga scelta o con un valore già in bozza:
   // in vigore a fondo pieno, in bozza in giallo, in arrivo a tratteggio blu, bloccato a retino.
+  import { tick } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VoceDisposizione } from "$lib/tipi/VoceDisposizione";
@@ -14,10 +15,18 @@
   const gruppi = $derived(perDicastero(vista));
   const nomeGradino = (d: VoceDisposizione, id: string) => d.gradini.find((g) => g.id === id)?.nome ?? id;
   const periodo = (d: { anno: number; trimestre: number }) => t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }).toLowerCase();
+  let radice: HTMLElement;
+  // la riga «forzata» si richiude col gradino tolto: se il fuoco stava sul gradino smontato passa al «Cambia ›» della stessa riga
+  async function scegli(d: VoceDisposizione, gradino: string) {
+    const da = document.activeElement;
+    oncambia(d.id, gradino);
+    await tick();
+    if (da && !da.isConnected) radice.querySelector<HTMLElement>(`[data-riga="${CSS.escape(d.id)}"]`)?.focus();
+  }
   const inEsame = (d: VoceDisposizione) => vista.calendario.some((m) => m.valori.some((x) => x.disposizione === d.id));
 </script>
 
-<div class="disp" role="group" aria-label={t("aula.disposizioni")}>
+<div class="disp" bind:this={radice} role="group" aria-label={t("aula.disposizioni")}>
   {#each gruppi as g (g.nome)}
     <div class="cg"><span>{g.nome}</span></div>
     {#each g.voci as d (d.id)}
@@ -36,7 +45,7 @@
                 aria-disabled={s === "bloccato" ? "true" : undefined}
                 aria-label={t("aula.gradino_stato", { nome: gr.nome, stato: t(`aula.gradino_${s}` as Chiave) })}
                 title={t(`aula.gradino_${s}` as Chiave)}
-                onclick={() => s !== "bloccato" && oncambia(d.id, gr.id)}>{gr.nome}</button>
+                onclick={() => s !== "bloccato" && scegli(d, gr.id)}>{gr.nome}</button>
             {/each}
           </span>
         {:else}
@@ -44,7 +53,7 @@
         {/if}
         <span class="x">
           {#if inEsame(d)}<span class="chip">{t("aula.in_esame")}</span>{/if}
-          {#if !forzata}<Pulsante forma="link" onclick={() => onapri(aperto ? null : d.id)}>{aperto ? t("aula.chiudi_riga") : t(vista.governa ? "aula.cambia" : "aula.proponi")}</Pulsante>{/if}
+          {#if !forzata}<Pulsante forma="link" data-riga={d.id} aria-label={t(aperto ? "aula.chiudi_di" : vista.governa ? "aula.cambia_di" : "aula.proponi_di", { nome: d.nome })} onclick={() => onapri(aperto ? null : d.id)}>{aperto ? t("aula.chiudi_riga") : t(vista.governa ? "aula.cambia" : "aula.proponi")}</Pulsante>{/if}
         </span>
       </div>
     {/each}
