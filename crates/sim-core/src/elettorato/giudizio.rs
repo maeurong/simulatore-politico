@@ -20,7 +20,8 @@ use ts_rs::TS;
 #[cfg_attr(test, derive(TS), ts(export))]
 pub struct RedditoFascia {
     pub fascia: Fascia,
-    /// Euro annui reali per elettore, ai prezzi del paniere della fascia.
+    /// Euro annui reali per elettore: media dei redditi reali dei gruppi della fascia, ognuno ai
+    /// prezzi del suo paniere.
     pub reddito: f64,
     /// Variazione % del reddito reale sul trimestre prima.
     pub crescita: f64,

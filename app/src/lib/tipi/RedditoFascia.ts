@@ -7,7 +7,8 @@ import type { Fascia } from "./Fascia";
  */
 export type RedditoFascia = { fascia: Fascia, 
 /**
- * Euro annui reali per elettore, ai prezzi del paniere della fascia.
+ * Euro annui reali per elettore: media dei redditi reali dei gruppi della fascia, ognuno ai
+ * prezzi del suo paniere.
  */
 reddito: number, 
 /**
