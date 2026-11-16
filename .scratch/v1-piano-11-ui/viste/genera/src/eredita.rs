@@ -65,20 +65,20 @@ fn con_leggi(
                 comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
                 mosse.push(format!("turno {t}: PresentaBilancio con la bozza"));
             }
-            if leggi < MAX_LEGGI {
-                if let Some(w) = gradino_che_passa(&p, posizione) {
-                    match p.comanda(Comando::PresentaLegge {
-                        valori: vec![w.clone()],
-                    }) {
-                        Ok(()) => mosse.push(format!(
-                            "turno {t}: PresentaLegge {}={}",
-                            w.disposizione, w.gradino
-                        )),
-                        Err(e) => mosse.push(format!(
-                            "RIFIUTO turno {t}: {}={}: {e}",
-                            w.disposizione, w.gradino
-                        )),
-                    }
+            if leggi < MAX_LEGGI
+                && let Some(w) = gradino_che_passa(&p, posizione)
+            {
+                match p.comanda(Comando::PresentaLegge {
+                    valori: vec![w.clone()],
+                }) {
+                    Ok(()) => mosse.push(format!(
+                        "turno {t}: PresentaLegge {}={}",
+                        w.disposizione, w.gradino
+                    )),
+                    Err(e) => mosse.push(format!(
+                        "RIFIUTO turno {t}: {}={}: {e}",
+                        w.disposizione, w.gradino
+                    )),
                 }
             }
         }

@@ -142,7 +142,6 @@ fn senza_maggioranza(base: &DatiGioco) -> Esito<Value> {
         }
     }
     for (legge, d) in &scenari {
-    let d = d;
     for seme in 1..=30 {
         for pos in [4.5, 3.5, 5.5, 2.5] {
             for destra in [false, true] {
@@ -156,7 +155,7 @@ fn senza_maggioranza(base: &DatiGioco) -> Esito<Value> {
                     continue;
                 }
                 let q = &p;
-                let default_base = serde_json::json!(applicata(&q).iter().map(|(d, p)| serde_json::json!({"dicastero": d, "partito": p})).collect::<Vec<_>>());
+                let default_base = serde_json::json!(applicata(q).iter().map(|(d, p)| serde_json::json!({"dicastero": d, "partito": p})).collect::<Vec<_>>());
                 let disp = p.vista().disponibilita;
                 let mut allarga = Vec::new();
                 for v in &disp {
@@ -211,7 +210,7 @@ fn guida(d: &DatiGioco) -> Esito<Value> {
                     let chiedi = prova(&mut a, Comando::ChiediGuida);
                     let dopo_chiedi = js!(&a.vista());
                     let q = &a;
-                    let default_chiedi = serde_json::json!(applicata(&q).iter().map(|(d, p)| serde_json::json!({"dicastero": d, "partito": p})).collect::<Vec<_>>());
+                    let default_chiedi = serde_json::json!(applicata(q).iter().map(|(d, p)| serde_json::json!({"dicastero": d, "partito": p})).collect::<Vec<_>>());
                     let mut b = p.clone();
                     let rifiuta = prova(&mut b, Comando::RifiutaRibaltone);
                     let dopo_rifiuta = js!(&b.vista());

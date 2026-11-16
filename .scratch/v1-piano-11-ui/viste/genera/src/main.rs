@@ -208,10 +208,11 @@ fn giocata(
         con_la_destra(&mut p)?;
     }
     while p.vista().turno < fino && !p.finita() {
-        if p.governa() && !p.vista().crisi {
-            if let Some(bilancio) = p.bozza_bilancio() {
-                comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
-            }
+        if p.governa()
+            && !p.vista().crisi
+            && let Some(bilancio) = p.bozza_bilancio()
+        {
+            comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
         }
         p.chiudi_turno();
     }
@@ -1377,11 +1378,12 @@ fn registro(d: &DatiGioco) -> Esito<Uscita> {
         if turno == 0 {
             mosse.push("DichiaraCoalizione con la destra disponibile");
         }
-        if p.governa() && !p.vista().crisi {
-            if let Some(bilancio) = p.bozza_bilancio() {
-                comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
-                mosse.push("PresentaBilancio con la bozza");
-            }
+        if p.governa()
+            && !p.vista().crisi
+            && let Some(bilancio) = p.bozza_bilancio()
+        {
+            comanda(&mut p, Comando::PresentaBilancio { bilancio })?;
+            mosse.push("PresentaBilancio con la bozza");
         }
         let prima = serde_json::to_value(p.vista()).map_err(|e| e.to_string())?;
         p.chiudi_turno();
@@ -1739,10 +1741,11 @@ fn campagna(d: &DatiGioco) -> Esito<Uscita> {
     con_la_destra(&mut g)?;
     g.chiudi_turno();
     while !g.finita() && !(g.vista().campagna.attiva && g.governa()) {
-        if g.governa() && !g.vista().crisi {
-            if let Some(bilancio) = g.bozza_bilancio() {
-                comanda(&mut g, Comando::PresentaBilancio { bilancio })?;
-            }
+        if g.governa()
+            && !g.vista().crisi
+            && let Some(bilancio) = g.bozza_bilancio()
+        {
+            comanda(&mut g, Comando::PresentaBilancio { bilancio })?;
         }
         g.chiudi_turno();
     }
