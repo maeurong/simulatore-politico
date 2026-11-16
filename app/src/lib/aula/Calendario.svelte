@@ -3,7 +3,7 @@
   // I posti vengono da Vista.posti (calendario()); nel turno del bilancio la fila è un posto solo.
   import { t } from "$lib/testi/t";
   import type { Vista } from "$lib/tipi/Vista";
-  import { calendario, quando, type Posto } from "./aula";
+  import { calendario, quandoMisura, type Posto } from "./aula";
 
   let { vista, scelta, onscelta }: { vista: Vista; scelta: number | null; onscelta: (id: number) => void } = $props();
 
@@ -26,7 +26,7 @@
         aria-pressed={scelta === p.misura.id} onclick={() => onscelta(p.misura!.id)}>
         <span class="k">{etichetta(p)}</span>
         <b>{p.misura.nome}</b>
-        <span class="s">{quando(vista, p.misura.voto, true)}</span>
+        <span class="s">{quandoMisura(vista, p.misura, true)}</span>
       </button>
     {:else}
       <div class="posto libero" class:mio={p.tipo === "opposizione" && vista.posto_riservato}>

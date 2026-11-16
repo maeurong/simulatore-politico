@@ -26,8 +26,8 @@
   // Dirotta apre a lato al posto della carta; il comando va diretto. partita.occupato fa passare un solo clic per volta.
   let dirotta = $state<string | null>(null);
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista in cui è nato
-  let rifiutato = $state.raw<{ testo: string; vista: Vista | null } | null>(null);
-  const rifiuto = $derived(rifiutato?.vista === vista ? rifiutato.testo : null);
+  let rifiutato = $state.raw<{ testo: string; vista: Vista | null; dicastero: string } | null>(null);
+  const rifiuto = $derived(rifiutato?.vista === vista && rifiutato.dicastero === corrente.dicastero ? rifiutato.testo : null);
   async function manda(c: Comando): Promise<boolean> {
     if (partita.occupato) return false;
     rifiutato = null;
@@ -47,7 +47,7 @@
       }
       return ok;
     } catch (e) {
-      rifiutato = { testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
+      rifiutato = { testo: testoRifiuto(comeErrore(e)), vista: partita.vista, dicastero: ("dicastero" in c && c.dicastero) || corrente.dicastero };
       return false;
     }
   }
@@ -55,8 +55,9 @@
   let volte = $state<Record<string, boolean>>({});
   let gira = $state<string | null>(null);
   // Al turno nuovo Dirotta aperta e le carte rigirate non valgono più: l'agenda è un'altra e le carte tornano a leggere agenda.stato.
+  const turno = $derived(vista.turno);
   $effect.pre(() => {
-    void vista.turno;
+    void turno;
     untrack(() => { dirotta = null; volte = {}; });
   });
   const sceglie = (d: string) => { scelta = d; dirotta = null; };

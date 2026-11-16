@@ -65,7 +65,7 @@
   {#if vista.incarico === "giocatore"}
     <div class="pag">
       {#if vista.eventi.length}<p class="evt">{t("trattativa.nessuno_risponde")}</p>{/if}
-      {#each vista.eventi as evento, i (i)}<Evento {evento} indice={i} puoRispondere={false} />{/each}
+      {#each vista.eventi as evento, i (i)}<Evento {vista} {evento} indice={i} puoRispondere={false} />{/each}
       <Risultato {vista} />
       <Spartizione {vista} {stato} {sessione} />
     </div>

@@ -16,6 +16,7 @@
   import { forbice, rigaEffetto, spesa, votano } from "$lib/anteprima/anteprima";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { riportaFuoco } from "./aula";
+  import { motivoCrisi } from "$lib/cruscotto/cruscotto";
   import { comandoBozza, etichettaBozza, forma, leggiAnteprima, misuraNominata, numeraRichieste, type Bozza } from "./bozza";
 
   let { vista, bozza, scheda, manda, rifiuto, ontoglie, onsvuota, onapri }: {
@@ -29,7 +30,7 @@
     const d = vista.disposizioni.find((y) => y.id === x.disposizione);
     return d ? [{ d, nuovo: d.gradini.find((g) => g.id === x.gradino)?.nome ?? x.gradino, ora: d.gradini.find((g) => g.id === d.in_vigore)?.nome ?? d.in_vigore }] : [];
   }));
-  const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
+  const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : motivoCrisi(vista));
   const nominata = $derived(rifiuto && (rifiuto.tipo === "presenta_legge" || rifiuto.tipo === "presenta_proposta") ? misuraNominata(vista, rifiuto.testo) : null);
 
   // una anteprima in volo per volta: chi cambia gradino in fretta lascia l'ultima, e una risposta vecchia non copre la nuova
@@ -67,6 +68,14 @@
       if (!b.length) {
         ante = null;
         errore = null;
+        inCalcolo = false;
+        return;
+      }
+      // in crisi il core rifiuta l'anteprima di una legge: non si chiede, il motivo sta dove starebbe il rifiuto
+      const crisi = vista.governa ? motivoCrisi(vista) : undefined;
+      if (crisi) {
+        ante = null;
+        errore = crisi;
         inCalcolo = false;
         return;
       }

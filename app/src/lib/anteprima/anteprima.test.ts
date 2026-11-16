@@ -116,7 +116,7 @@ describe("formati comuni a bozza e cartellino", () => {
 
 describe("notaRiforma", () => {
   it("un'anteprima non ha ancora data: si vota il turno dopo la presentazione", () => {
-    expect(notaRiforma(piena, { nome: "x", forma: "riforma" } as unknown as Misurabile)).toBe("Legge ordinaria: si vota alla fine del turno dopo la presentazione.");
+    expect(notaRiforma(piena, { nome: "x", forma: "riforma" } as unknown as Misurabile)).toBe("Legge ordinaria: si vota alla fine del turno dopo la presentazione; nel turno del bilancio o di crisi slitta di un turno.");
   });
   it("una misura in calendario dice la sua data", () => {
     const m = piena.calendario.find((x) => x.forma === "riforma")!;

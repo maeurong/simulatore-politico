@@ -7,7 +7,7 @@
   import type { Vista } from "$lib/tipi/Vista";
   import type { VoceLinea } from "$lib/tipi/VoceLinea";
   import { forbice } from "$lib/anteprima/anteprima";
-  import { chiLaPorta, formaDi, quando, ultimiVoti } from "./aula";
+  import { chiLaPorta, formaDi, quandoMisura, ultimiVoti } from "./aula";
 
   let { vista, scelta, onscelta }: { vista: Vista; scelta: number | null; onscelta: (id: number) => void } = $props();
 
@@ -43,7 +43,7 @@
         {#if n}<span class="chip">{t("aula.emendamenti_aperti", { n })}</span>{/if}
         {#if m.fiducia}<span class="chip pieno">{t("aula.fiducia")}</span>{/if}
       </span>
-      <span class="s">{chiLaPorta(vista, m, nome)} · {quando(vista, m.voto)}</span>
+      <span class="s">{chiLaPorta(vista, m, nome)} · {quandoMisura(vista, m)}</span>
     </button>
   {:else}
     <p class="sec muto">{t("aula.niente_in_esame")}</p>

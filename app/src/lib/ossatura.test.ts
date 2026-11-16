@@ -6,6 +6,7 @@ import trattativaJson from "../../../.scratch/v1-piano-11-ui/viste/02-trattativa
 import governoJson from "../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import opposizioneJson from "../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
+import cruscottoJson from "../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 
 const vista = (x: unknown) => x as Vista;
@@ -15,6 +16,20 @@ const governo = vista(governoJson);
 const crisi = vista(crisiJson);
 const opposizione = vista(opposizioneJson);
 const finita = vista(finitaJson);
+
+const provvisorio = (cruscottoJson as unknown as { esercizio_provvisorio: { vista: Vista } }).esercizio_provvisorio.vista;
+
+describe("bilancio in esercizio provvisorio", () => {
+  it("il bilancio presentabile fuori dal quarto trimestre apre la sezione", () => {
+    expect(provvisorio.data.trimestre).not.toBe(4);
+    expect(provvisorio.bilancio.presentabile).toBe(true);
+    expect(barrata("bilancio", provvisorio)).toBeNull();
+    expect(apribile("bilancio", provvisorio)).toBe(true);
+  });
+  it("non presentabile e fuori dal quarto trimestre resta barrata", () => {
+    expect(barrata("bilancio", { ...provvisorio, bilancio: { ...provvisorio.bilancio, presentabile: false } })).toBe("barrata.bilancio");
+  });
+});
 
 const barrate = (v: Vista) => SEZIONI.filter((s) => barrata(s, v) !== null);
 
@@ -83,8 +98,8 @@ describe("fettaDi", () => {
   it("il cruscotto cambia fetta con lo stato", () => {
     expect(fettaDi("cruscotto", "turno_zero")).toBeNull();
     expect(fettaDi("cruscotto", "trattativa")).toBe("11b");
-    expect(fettaDi("cruscotto", "governo")).toBe("11c");
-    expect(fettaDi("cruscotto", "crisi")).toBe("11c");
+    expect(fettaDi("cruscotto", "governo")).toBeNull();
+    expect(fettaDi("cruscotto", "crisi")).toBeNull();
     expect(fettaDi("cruscotto", "opposizione")).toBe("11e");
   });
   it("le altre sezioni hanno una fetta sola", () => {
@@ -143,7 +158,7 @@ function barrateAttese(v: Vista): Sezione[] {
   if (zero) attese.push("prima-pagina");
   if (!v.governa) attese.push("governo");
   if (v.finita || v.fase === "sciolta" || v.fase === "trattativa") attese.push("aula");
-  if (v.finita || !v.governa || v.data.trimestre !== 4) attese.push("bilancio");
+  if (v.finita || !v.governa || (v.data.trimestre !== 4 && !v.bilancio.presentabile)) attese.push("bilancio");
   if (v.finita || v.turni_al_voto !== 0) attese.push("campagna");
   if (v.finita ? !v.eredita?.bozza : zero) attese.push("registro");
   return SEZIONI.filter((s) => attese.includes(s));

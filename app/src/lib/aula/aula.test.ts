@@ -4,7 +4,7 @@ import type { VoceMisura } from "$lib/tipi/VoceMisura";
 import aula from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import crisi from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
-import { calendario, fiduciaPonibile, rifiutoPer, riportaFuoco, lineaScelta, ultimiVoti, votaOra } from "./aula";
+import { calendario, fiduciaInCrisi, fiduciaPonibile, quandoMisura, rifiutoPer, riportaFuoco, lineaScelta, slitta, ultimiVoti, votaOra } from "./aula";
 
 const stati = aula as unknown as Record<string, { vista: Vista }>;
 const piena = stati.piena.vista;
@@ -147,5 +147,36 @@ describe("riportaFuoco", () => {
     const c: unknown[] = [];
     expect(prova(null, { focus: () => c.push(1) }).chiamate).toEqual([]);
     expect(c).toEqual([]);
+  });
+});
+
+describe("slitta", () => {
+  const b = bilancio as unknown as Vista, c = crisi as unknown as Vista;
+  it("04, turno del bilancio: la riforma col voto adesso slitta, quella col voto dopo e il bilancio no", () => {
+    expect(b.calendario.map((m) => [m.id, slitta(b, m)])).toEqual([[1, true], [2, false], [3, false]]);
+  });
+  it("05, crisi: la riforma col voto adesso slitta, quella col voto dopo no", () => {
+    expect(c.calendario.map((m) => [m.id, slitta(c, m)])).toEqual([[74, true], [76, false]]);
+  });
+  it("un turno ordinario non fa slittare niente", () => {
+    expect(piena.calendario.some((m) => slitta(piena, m))).toBe(false);
+  });
+  it("quandoMisura: la legge che slitta dice il periodo del turno dopo, le altre il loro voto", () => {
+    expect(quandoMisura(b, per(b, 1))).toBe("slitta a fine gennaio–marzo 2028");
+    expect(quandoMisura(c, per(c, 74))).toBe("slitta a fine luglio–settembre 2035");
+    expect(quandoMisura(b, per(b, 2))).toBe("si vota a fine gennaio–marzo 2028");
+    expect(quandoMisura(piena, per(piena, 2))).toBe("si vota a fine turno");
+  });
+});
+
+describe("fiduciaInCrisi", () => {
+  it("in crisi la fiducia sul salario minimo c'è ma non si può porre; fuori dalla crisi non è un caso", () => {
+    const c = { ...(crisi as unknown as Vista), calendario: piena.calendario.filter((m) => m.id === 3) };
+    expect(c.calendario.map((m) => [fiduciaInCrisi(c, m), fiduciaPonibile(c, m)])).toEqual([[true, false]]);
+    expect(fiduciaInCrisi(piena, per(piena, 3))).toBe(false);
+  });
+  it("le proposte dell'opposizione non hanno fiducia nemmeno spenta", () => {
+    const c = crisi as unknown as Vista;
+    expect(c.calendario.some((m) => fiduciaInCrisi(c, m))).toBe(false);
   });
 });

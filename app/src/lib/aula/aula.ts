@@ -31,13 +31,24 @@ export function calendario(v: Vista): Posto[] {
 /** Si vota alla chiusura di questo turno. */
 export const votaOra = (v: Vista, m: VoceMisura): boolean => m.voto.anno === v.data.anno && m.voto.trimestre === v.data.trimestre;
 
-/** La fiducia si pone solo sulle misure del governo, fuori dalla crisi, non due volte; non sulla costituzionale né sul bilancio, e
+/** Nel turno del bilancio o di crisi la legge col voto adesso slitta al turno dopo: il core la sposta, rimborsa la fiducia e lascia aperti i suoi emendamenti
+ *  (parlamento/mod.rs:245-251 `slitta`, partita.rs:937-943 `aula`, parlamento/emendamenti.rs:194 `respingi_aperti`). */
+export const slitta = (v: Vista, m: VoceMisura): boolean =>
+  (m.forma === "riforma" || m.forma === "elettorale" || m.forma === "costituzionale") && votaOra(v, m) && (v.crisi || v.calendario.some((x) => x.forma === "bilancio"));
+
+/** La fiducia del governo, crisi a parte: solo sulle sue misure, non due volte; non sulla costituzionale né sul bilancio, e
  *  nel turno del bilancio solo sulle conversioni (parlamento/emendamenti.rs:247-277). */
-export const fiduciaPonibile = (v: Vista, m: VoceMisura): boolean => {
-  if (!v.governa || v.crisi || m.promotore !== null || m.fiducia) return false;
+const fiduciaDelGoverno = (v: Vista, m: VoceMisura): boolean => {
+  if (!v.governa || m.promotore !== null || m.fiducia) return false;
   if (m.forma === "conversione") return true;
   return (m.forma === "riforma" || m.forma === "elettorale") && !v.calendario.some((x) => x.forma === "bilancio");
 };
+
+/** La fiducia si può porre: fuori dalla crisi. */
+export const fiduciaPonibile = (v: Vista, m: VoceMisura): boolean => !v.crisi && fiduciaDelGoverno(v, m);
+
+/** La fiducia che in crisi si mostra spenta, col motivo: il core la rifiuta. */
+export const fiduciaInCrisi = (v: Vista, m: VoceMisura): boolean => v.crisi && fiduciaDelGoverno(v, m);
 
 /** La linea del giocatore si sceglie all'opposizione su ogni misura, al governo sulle proposte dell'opposizione. */
 export const lineaScelta = (v: Vista, m: VoceMisura): boolean => !v.governa || (m.promotore !== null && m.promotore !== "giocatore");
@@ -46,11 +57,20 @@ export const lineaScelta = (v: Vista, m: VoceMisura): boolean => !v.governa || (
 export const ultimiVoti = (v: Vista): EsitoVoto[] =>
   v.esiti.map((e, i) => ({ e, i })).sort((a, b) => b.e.data.anno - a.e.data.anno || b.e.data.trimestre - a.e.data.trimestre || a.i - b.i).map((x) => x.e);
 
+const periodoDi = (v: Vista, d: { anno: number; trimestre: number }): string => t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }).toLowerCase();
+
 /** «si vota a fine turno» o «si vota a fine luglio–settembre 2027»; con `breve` senza «si vota a». */
 export function quando(v: Vista, d: { anno: number; trimestre: number }, breve = false): string {
   const adesso = d.anno === v.data.anno && d.trimestre === v.data.trimestre;
-  const periodo = t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }).toLowerCase();
+  const periodo = periodoDi(v, d);
   return t(adesso ? (breve ? "aula.fine_turno" : "cornice.si_vota_a_fine_turno") : breve ? "aula.fine_periodo" : "aula.si_vota_a", { periodo });
+}
+
+/** Come `quando` per una misura: la legge che slitta dice «slitta a fine» e il periodo del turno dopo. */
+export function quandoMisura(v: Vista, m: VoceMisura, breve = false): string {
+  if (!slitta(v, m)) return quando(v, m.voto, breve);
+  const { anno, trimestre } = v.data;
+  return t("aula.slitta_a", { periodo: periodoDi(v, trimestre === 4 ? { anno: anno + 1, trimestre: 1 } : { anno, trimestre: trimestre + 1 }) });
 }
 
 /** Chi porta la misura: il posto riservato, il ministro del dicastero, il governo, o il giocatore. */
