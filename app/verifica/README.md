@@ -8,6 +8,7 @@ I comandi si lanciano da `app/`.
 |---|---|---|
 | `npm run verifica:chrome` | Chrome headless | tagli, forma stretta, errori di console, movimento, tastiera, screenshot |
 | `npm run verifica:webkit` | WebKit di sistema, in una WKWebView fuori schermo | tagli, forma stretta, fotografia |
+| `npm run verifica:cartellino` | Chrome headless | le oscillazioni del cartellino dell'Anteprima: apertura 1, test comprato 1, rifiuto 0, spento e grave 0, 2× dura la metà, la scelta resta dopo una Vista nuova |
 | `npm run verifica:giro` | l'app vera, col guscio vero | quello che gli chiedi, un passo alla volta |
 
 L'app gira su WebKit, quindi Chrome da solo non basta: nella 11a la batteria in WebKit ha trovato tre difetti che Chrome non mostrava. Uno per tutti: sotto `zoom`, WebKit confronta una `@container` in px con la larghezza ingrandita.

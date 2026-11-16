@@ -20,7 +20,8 @@
   }
 </script>
 
-{#snippet pulsante()}
+<!-- il <button> è sempre lo stesso nodo: col motivo che compare o sparisce il fuoco non cade; senza motivo il wrapper non genera box -->
+<span class={spento ? "spento" : "nudo"}>
   <button
     {...resto}
     type="button"
@@ -29,13 +30,8 @@
     aria-disabled={spento ? "true" : resto["aria-disabled"]}
     aria-describedby={spento ? `${id}-motivo` : resto["aria-describedby"]}
     onclick={clic}>{@render children()}</button>
-{/snippet}
-
-{#if spento}
-  <span class="spento">{@render pulsante()}<span id="{id}-motivo" class="motivo">{spento}</span></span>
-{:else}
-  {@render pulsante()}
-{/if}
+  {#if spento}<span id="{id}-motivo" class="motivo">{spento}</span>{/if}
+</span>
 
 <style>
   .btn {
@@ -59,6 +55,7 @@
   .link.via { color: var(--rosso) }
   .link[aria-disabled="true"] { color: var(--grigio); text-decoration-style: dashed; cursor: default }
 
+  .nudo { display: contents }
   .spento { display: inline-flex; align-items: center; gap: 6px }
   .motivo { font-size: var(--c-min); color: var(--grigio) }
 </style>
