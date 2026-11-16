@@ -132,12 +132,12 @@ governo, fuori dal bilancio, con un evento aperto e almeno una `ministeri[].prop
 - 22: aggiunta dal ticket «Bilancio». La perdita reale è uguale per tutti i dicasteri (1,0% nel 2027T4). Spostare
   il margine dal funzionamento lascia il riepilogo identico alla bozza. Ripresentando indicizzato per tutto dopo aver
   respinto la Destra, la sua intesa persa resta. Nell'esercizio provvisorio del seme 1 la bozza sta sul tetto (+1,49%
-  contro 1,5%). La Vista non porta le cifre del bilancio presentato né i dicasteri di un emendamento: rimandi al core.
+  contro 1,5%). Allo schema 19 la Vista porta il bilancio presentato (`bilancio.in_aula`) e i dicasteri di ogni emendamento (`VoceEmendamento.dicasteri`).
 
 - 21: aggiunta dal ticket «Conti». La recessione è spenta con la crescita a −4,2% (seme 1, turno 13): è il primo trimestre
   sotto il −1% e ne servono due; la Vista non porta il conto. La perdita reale è uguale per tutti i dicasteri e cresce anche
-  presentando la bozza a ogni bilancio (4,1% al seme 4, turno 15). Il debito sul PIL la Vista non lo porta: lo dice solo la
-  previsione del centro studi (137% nel 03). Nel 06, all'opposizione, la perdita reale è negativa (deflazione).
+  presentando la bozza a ogni bilancio (4,1% al seme 4, turno 15). Allo schema 19 il debito sul PIL sta nella Vista (`debito.debito_pil`);
+  la previsione del centro studi lo proietta (137% nel 03). Nel 06, all'opposizione, la perdita reale è negativa (deflazione).
   Gli stati in disavanzo (`pde`, `energia`, `mes`, `ristrutturazione`): fonda a 4,5, la destra, due turni, al più 40 turni, semi 1-60; a ogni
   bilancio la bozza con tutte le aliquote abbassate di cinque punti (`taglio` 0,05, l'unico che li raggiunge tutti), `clausola` agli shock
   dopo il 2028, alle Aste scoperte `mes` sui semi pari e `ristrutturazione` sui dispari. Col programma del MES la bozza è rifiutata e il

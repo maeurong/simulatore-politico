@@ -1258,6 +1258,8 @@
   "bilancio.presenta_non_ammessa": "Il core non ammette questa bozza: correggila prima.",
   "bilancio.se_cade": "Si vota a fine turno. Se cade: esercizio provvisorio da gennaio, con le cifre del {anno} e nessuna misura con costo.",
   "bilancio.se_cade_dimissioni": "Si vota a fine turno. Se cade anche questa, il governo si dimette.",
+  "bilancio.costi_bozza": "· costi sulla bozza",
+  "bilancio.costo_bozza": "{c} sulla bozza",
   "bilancio.sulla_bozza": "{parti} sulla bozza",
   "bilancio.peggiora": "{servizio} peggiora con ritardo",
   "bilancio.torna": "‹ Torna al conto",

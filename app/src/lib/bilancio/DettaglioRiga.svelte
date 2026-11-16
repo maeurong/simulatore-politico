@@ -11,7 +11,7 @@
   import type { Bilancio } from "$lib/tipi/Bilancio";
   import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
   import type { Vista } from "$lib/tipi/Vista";
-  import { euroSegnato, passoMargine } from "./bilancio";
+  import { daIndicizzare, euroSegnato, passoMargine } from "./bilancio";
   import { bozza, type Via } from "./bozza.svelte";
 
   // ferma: la presentata, il dettaglio si legge e basta (niente Indicizza né margine)
@@ -59,15 +59,15 @@
     <dt>{t("bilancio.resto")}</dt><dd>{euro(d.spesa - d.salari - d.acquisti - d.margine)}</dd>
     <dt>{t("bilancio.reale")}</dt><dd>{@render realeDi(p)} {t("bilancio.dal_bilancio", { anno: vecchio })}</dd>
   </dl>
-  {#if p !== undefined && p > 0.05}
+  {#if p !== undefined && daIndicizzare(p)}
     <p class="sec"><Forte testo={t("conti.dic_reale", { anno: vecchio })} vals={[t("conti.dic_perdita", { nome, perdita: reale(p).testo })]} /></p>
   {/if}
   {#if !ferma && bozza.indicizzato(voce)}
     <span class="riga"><span class="min bene">{t("bilancio.indicizzato")}</span>{#if bozza.accolto(id)}<span class="min muto">{t("bilancio.accolto_riapplica")}</span>{:else}<button type="button" class="link" onclick={() => eTorna(() => bozza.annulla(voce))}>{t("bilancio.annulla")}</button>{/if}</span>
-  {:else if !ferma && p !== undefined && p >= 0.05}
+  {:else if !ferma && p !== undefined && daIndicizzare(p)}
     {@const c = bozza.costi[id]}
     <span class="riga"><button type="button" class="link" onclick={() => eTorna(() => bozza.indicizza(voce))}>{t("bilancio.indicizza")}</button>
-      <span class="min muto">{#if typeof c === "object"}{euroSegnato(c.costo_spesa)}{:else if c}{c}{/if}</span></span>
+      <span class="min muto">{#if typeof c === "object"}{t("bilancio.costo_bozza", { c: euroSegnato(c.costo_spesa) })}{:else if c}{c}{/if}</span></span>
   {/if}
   {#if rif && !ferma}<Rifiuto testo={rif} />{/if}
 
@@ -99,7 +99,7 @@
     <dt>{t("bilancio.soglia")}</dt><dd>{s.fino_a === null ? t("bilancio.soglia_ultimo") : t("bilancio.soglia_euro", { n: numero(s.fino_a) })}</dd>
     {#if s.fino_a !== null}<dt>{t("bilancio.soglia_reale")}</dt><dd>{@render realeDi(p)} {t("bilancio.dal_anno", { anno: vecchio })}</dd>{/if}
   </dl>
-  {#if s.fino_a !== null && p !== undefined && p > 0.05}<p class="sec">{t("bilancio.soglia_ferma", { n: numero(s.fino_a) })}</p>{/if}
+  {#if s.fino_a !== null && p !== undefined && daIndicizzare(p)}<p class="sec">{t("bilancio.soglia_ferma", { n: numero(s.fino_a) })}</p>{/if}
 {:else if scelta === "fondo"}
   <h4 class="tit">{t("bilancio.fondo")}</h4>
   <dl class="dati">

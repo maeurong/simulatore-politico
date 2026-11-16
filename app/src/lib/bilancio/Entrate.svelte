@@ -2,7 +2,7 @@
   // Le entrate a sinistra (storia 125): aliquote grandi con − e +, la soglia reale degli scaglioni con «indicizza le soglie», il fondo di riserva;
   // sotto, il riquadro del MES se in corso e il posto del piano strutturale riveduto.
   import { euro } from "$lib/governo/governo";
-  import { reale } from "$lib/conti/conti";
+  import { reale, trimestrePrima } from "$lib/conti/conti";
   import { numero, percentuale, t } from "$lib/testi/t";
   import type { Bilancio } from "$lib/tipi/Bilancio";
   import Forte from "$lib/conti/Forte.svelte";
@@ -58,7 +58,7 @@
             <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "scaglioni" })}>{t("bilancio.annulla")}</button>
           {:else if az === "indicizza"}
             · <button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "scaglioni" })}>{t("bilancio.indicizza_soglie")}</button>
-            {#if typeof costoSoglie === "object"}{euroSegnato(-costoSoglie.costo_entrate)}{:else if costoSoglie}<span class="muto">{costoSoglie}</span>{/if}
+            {#if typeof costoSoglie === "object"}{t("bilancio.costo_bozza", { c: euroSegnato(-costoSoglie.costo_entrate) })}{:else if costoSoglie}<span class="muto">{costoSoglie}</span>{/if}
           {/if}
         </span>
         {#if i === 0 && !ferma && bozza.rifiutoDi({ tipo: "scaglioni" })}<span class="d"><Rifiuto testo={bozza.rifiutoDi({ tipo: "scaglioni" })!} /></span>{/if}
@@ -72,7 +72,7 @@
 
   {#if mes}
     <div class="mes">
-      <p><Forte testo={t("bilancio.mes", { periodo: periodo(mes.fine) })} vals={[t("bilancio.mes_titolo")]} /></p>
+      <p><Forte testo={t("bilancio.mes", { periodo: periodo(trimestrePrima(mes.fine)) })} vals={[t("bilancio.mes_titolo")]} /></p>
       {#each mes.vincoli as v, i (i)}<div class="vinc"><span>{v.disposizione}</span><b>{v.gradino}</b></div>{/each}
     </div>
   {/if}

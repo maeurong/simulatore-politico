@@ -182,6 +182,7 @@ class Bozza {
     return this.#rifiutiVoce[chiave(voce)];
   }
 
+  // shortcut: dopo una ripresa (Cmd+Q, Riprendi) i passi già presentati non si contano e il − resta spento; annulla della voce rimette la base. Upgrade: annulla quando il dicastero differisce dalla base.
   /** Un passo del margine in più o in meno; a zero passi il − non fa niente. */
   allarga(dicastero: string, via: Via, verso: 1 | -1) {
     const da = this.corrente ?? this.base, n = this.passi[dicastero] ?? { funzionamento: 0, disavanzo: 0 };
@@ -198,8 +199,12 @@ class Bozza {
     const tiene = (id: string) => voce.tipo === "tutto" && this.riaperta && this.accolti.includes(id);
     let b = annullata(da, base, voce);
     b = { ...b, dicasteri: b.dicasteri.map((d, i) => (tiene(d.id) ? da.dicasteri[i] : d)) };
-    if (voce.tipo !== "scaglioni")
-      for (const [id, n] of Object.entries(this.passi)) if (voce.tipo === "tutto" ? !tiene(id) : id === voce.id) for (const via of VIE) b = allarga(b, base, id, via, n[via]);
+    if (voce.tipo !== "scaglioni") {
+      for (const [id, n] of Object.entries(this.passi)) {
+        if (voce.tipo === "tutto" ? tiene(id) : id !== voce.id) continue;
+        for (const via of VIE) b = allarga(b, base, id, via, n[via]);
+      }
+    }
     this.cambia(b);
   }
 

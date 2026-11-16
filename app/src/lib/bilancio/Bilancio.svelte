@@ -24,12 +24,16 @@
   const ferma = $derived(presentata(vista, bozza.riaperta));
   const bilancio = $derived(ferma ? vista.bilancio.in_aula : (bozza.corrente ?? bozza.base));
   const misura = $derived(misuraBilancio(vista));
+  // riaperta: gli accolti si leggono dalla Vista corrente, non dalla copia fatta alla riapertura
+  $effect(() => {
+    if (bozza.riaperta) bozza.accolti = misura?.emendamenti.filter((e) => e.stato === "accolto").flatMap((e) => e.dicasteri) ?? [];
+  });
 
   // il riepilogo del presentato lo dice il core; una Vista nuova (un emendamento deciso) lo richiede
   let presentato = $state.raw<{ vista: Vista; r: RiepilogoBilancio | string | null } | null>(null);
   $effect(() => {
     const v = vista;
-    if (v.bilancio.presentato) void riepilogoPresentato().then((r) => (presentato = { vista: v, r }));
+    if (v.bilancio.presentato) void riepilogoPresentato().then((r) => { if (v === vista) presentato = { vista: v, r }; });
   });
   const rp = $derived(presentato?.vista === vista ? presentato.r : null);
   const riepilogo = $derived(ferma ? (typeof rp === "object" ? rp : null) : bozza.riepilogo);

@@ -56,7 +56,8 @@
   const delGoverno = $derived(m.forma === "bilancio" && !vista.governa ? vista.bilancio.in_aula : null);
   let conto = $state.raw<RiepilogoBilancio | string | null>(null);
   $effect(() => {
-    if (delGoverno) void riepilogoPresentato().then((r) => (conto = r));
+    const v = vista;
+    if (delGoverno) void riepilogoPresentato().then((r) => { if (v === vista) conto = r; });
   });
 </script>
 

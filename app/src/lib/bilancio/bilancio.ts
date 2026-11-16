@@ -106,11 +106,14 @@ export function rigaTagliato(x: { salari: number; acquisti: number }, indicatore
 /** `?dicastero=<id>` dal link «Indicizzalo» dei Conti: la riga da aprire nel lato, se il dicastero c'è. */
 export const daUrl = (id: string | null, v: Vista): string | null => (id && v.dicasteri.some((d) => d.id === id) ? `dic:${id}` : null);
 
+/** «Indicizza» solo con una perdita da recuperare di almeno 0,05 (prototipo 22:427). */
+export const daIndicizzare = (p: number): boolean => p >= 0.05;
+
 /** Sulla riga delle soglie: con «tutto» niente (l'annulla è in testata, 22:526), poi l'annulla, poi «indicizza» con una perdita sopra 0,05 (22:537). */
 export function comandoSoglie(tutto: boolean, soglie: boolean, perdita: number | undefined): "annulla" | "indicizza" | null {
   if (tutto) return null;
   if (soglie) return "annulla";
-  return perdita !== undefined && perdita > 0.05 ? "indicizza" : null;
+  return perdita !== undefined && daIndicizzare(perdita) ? "indicizza" : null;
 }
 
 /** La misura del bilancio in calendario, se c'è. */

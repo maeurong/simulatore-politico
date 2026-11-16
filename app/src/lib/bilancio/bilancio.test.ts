@@ -4,7 +4,7 @@ import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import bilancioJson from "../../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEmendamento } from "$lib/tipi/VoceEmendamento";
-import { allarga, colArticolo, comandoSoglie, daUrl, distanzaTetto, euroSegnato, indicizzata, misuraBilancio, passoMargine, presentata, rigaTagliato, ritocca, seAccogli, seCade, tagliato } from "./bilancio";
+import { allarga, colArticolo, comandoSoglie, daIndicizzare, daUrl, distanzaTetto, euroSegnato, indicizzata, misuraBilancio, passoMargine, presentata, rigaTagliato, ritocca, seAccogli, seCade, tagliato } from "./bilancio";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const b04: any = (bilancioJson as any).bozza_04;
@@ -127,7 +127,8 @@ describe("comandoSoglie", () => {
   it("soglie indicizzate da sole: annulla", () => expect(comandoSoglie(false, true, 0)).toBe("annulla"));
   it("perdita da recuperare: indicizza; sotto 0,05 niente", () => {
     expect(comandoSoglie(false, false, 2.8)).toBe("indicizza");
-    expect(comandoSoglie(false, false, 0.05)).toBeNull();
+    expect(comandoSoglie(false, false, 0.05)).toBe("indicizza");
+    expect(comandoSoglie(false, false, 0.049)).toBeNull();
     expect(comandoSoglie(false, false, undefined)).toBeNull();
   });
 });
@@ -187,4 +188,11 @@ describe("presentata", () => {
   it("presentata e non riaperta: la forma della presentata, senza «Presenta»", () => expect(presentata(v, false)).toBe(true));
   it("dopo «Modifica e ripresenta»: la forma della bozza, con «Presenta»", () => expect(presentata(v, true)).toBe(false));
   it("non ancora presentata: la bozza", () => expect(presentata(b04.vista, false)).toBe(false));
+});
+
+describe("daIndicizzare", () => {
+  it("la soglia è 0,05: sotto no, a 0,05 sì", () => {
+    expect(daIndicizzare(0.049)).toBe(false);
+    expect(daIndicizzare(0.05)).toBe(true);
+  });
 });

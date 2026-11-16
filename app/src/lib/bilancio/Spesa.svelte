@@ -10,7 +10,7 @@
   import type { VoceEmendamento } from "$lib/tipi/VoceEmendamento";
   import { nomeDi } from "$lib/partiti";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { euroSegnato, rigaTagliato, tagliato } from "./bilancio";
+  import { daIndicizzare, euroSegnato, rigaTagliato, tagliato } from "./bilancio";
   import { bozza } from "./bozza.svelte";
 
   let { vista, bilancio, riepilogo, ferma, emendamenti, emenda, rifiutoEm, scelta = $bindable() }: {
@@ -29,22 +29,22 @@
 </script>
 
 <!-- il costo in cifra sta accanto al comando; un rifiuto del core va su una riga sua, nella cella non ci sta -->
-{#snippet costo(c: RiepilogoBilancio | string | undefined)}
-  {#if typeof c === "object"}{euroSegnato(c.costo_spesa)}{/if}
+{#snippet costo(c: RiepilogoBilancio | string | undefined, sulla = false)}
+  {#if typeof c === "object"}{sulla ? t("bilancio.costo_bozza", { c: euroSegnato(c.costo_spesa) }) : euroSegnato(c.costo_spesa)}{/if}
 {/snippet}
 
 <section>
   <div class="grp">
     <span>{t("bilancio.spesa_dicasteri")}</span>
     {#if !ferma && bozza.indicizzato({ tipo: "tutto" })}<span class="tutto"><span class="bene">{t("bilancio.indicizzato_tutto")}</span> · <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "tutto" })}>{t("bilancio.annulla")}</button></span>
-    {:else if !ferma}<span class="tutto"><button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "tutto" })}>{t("bilancio.indicizza_tutto")}</button> {@render costo(tutto)}</span>{/if}
+    {:else if !ferma}<span class="tutto"><button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "tutto" })}>{t("bilancio.indicizza_tutto")}</button> {@render costo(tutto, true)}</span>{/if}
   </div>
   {#if !ferma && !bozza.indicizzato({ tipo: "tutto" }) && typeof tutto === "string"}<span class="min muto">{tutto}</span>{/if}
   {#if !ferma && bozza.rifiutoDi({ tipo: "tutto" })}<Rifiuto testo={bozza.rifiutoDi({ tipo: "tutto" })!} />{/if}
   <div class="leg">
     <span><i style:background="var(--ink)"></i>{t("bilancio.salari")}</span><span><i style:background="var(--grigio)"></i>{t("bilancio.acquisti")}</span>
     <span><i style:background="var(--biro)"></i>{t("bilancio.margine")}</span><span><i class="ret"></i>{t("bilancio.resto")}</span>
-    <span>{t("bilancio.reale_dal", { anno: vista.bilancio.anno })}</span>
+    <span>{t("bilancio.reale_dal", { anno: vista.bilancio.anno })}</span><span>{t("bilancio.costi_bozza")}</span>
   </div>
   {#each bilancio.dicasteri as d (d.id)}
     {@const resto = d.spesa - d.salari - d.acquisti - d.margine}
@@ -74,9 +74,9 @@
         <!-- accolto nella bozza riaperta: niente annulla, il core lo riapplica; la colonna non regge anche «indicizzato» -->
         {#if !ferma && bozza.accolto(d.id) && bozza.indicizzato(voce)}<span class="min bene">{t("bilancio.accolto_riapplica")}</span>
         {:else if !ferma && bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
-        {:else if !ferma && p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(c)}</span></span>{/if}
+        {:else if !ferma && p !== undefined && daIndicizzare(p)}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(c)}</span></span>{/if}
       </span>
-      {#if !ferma && !bozza.indicizzato(voce) && p !== undefined && p >= 0.05 && typeof c === "string"}<span class="sotto min muto">{c}</span>{/if}
+      {#if !ferma && !bozza.indicizzato(voce) && p !== undefined && daIndicizzare(p) && typeof c === "string"}<span class="sotto min muto">{c}</span>{/if}
       {#if rif && !ferma}<span class="sotto"><Rifiuto testo={rif} /></span>{/if}
       {#if em}
         {@const chi = nomeDi(vista, em.partito)}
@@ -89,7 +89,7 @@
             </span>
           {/if}
         </span>
-        {#if rifiutoEm(em.partito)}<span class="sotto"><Rifiuto testo={rifiutoEm(em.partito)!} /></span>{/if}
+        {#if em.dicasteri[0] === d.id && rifiutoEm(em.partito)}<span class="sotto"><Rifiuto testo={rifiutoEm(em.partito)!} /></span>{/if}
       {/if}
       {#if taglio}<span class="sotto slip">{rigaTagliato(taglio, indicatore(d.id))}</span>{/if}
     </div>
