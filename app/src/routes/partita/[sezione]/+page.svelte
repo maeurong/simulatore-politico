@@ -6,6 +6,7 @@
   import Cruscotto from "$lib/cruscotto/Cruscotto.svelte";
   import Governo from "$lib/governo/Governo.svelte";
   import Aula from "$lib/aula/Aula.svelte";
+  import Conti from "$lib/conti/Conti.svelte";
   import Campagna from "$lib/campagna/Campagna.svelte";
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
@@ -46,6 +47,8 @@
             <Governo vista={partita.vista} />
           {:else if aperta === "aula" && fetta === null}
             <Aula vista={partita.vista} />
+          {:else if aperta === "conti" && fetta === null}
+            <Conti vista={partita.vista} />
           {:else if aperta === "campagna" && fetta === null}
             <Campagna vista={partita.vista} />
           {:else if aperta === "paese" && fetta === null}
