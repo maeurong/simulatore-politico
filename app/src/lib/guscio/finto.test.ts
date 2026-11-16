@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import { rispondi, trovaFile, vistaDi } from "./finto";
 import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
@@ -329,5 +330,14 @@ describe("il 21 dei Conti", () => {
   });
   it("serie dà quella dello stato", () => {
     expect(rispondi("serie", {}, cc)).toEqual(s.serie);
+  });
+  it("installaFinto: il secondo compra è rifiutato senza passare la Vista", async () => {
+    vi.stubGlobal("window", globalThis);
+    const { installaFinto } = await import("./finto");
+    await installaFinto(new URL("http://localhost/?vista=21-conti.json&stato=studi_03"));
+    const compra = () => invoke<any>("comanda", { comando: { tipo: "compra", acquisto: "centro_studi" } });
+    expect((await compra()).acquisti.centro_studi).not.toBeNull();
+    await expect(compra()).rejects.toMatchObject({ testo: "comando non ammesso: già comprato questo turno: centro studi" });
+    vi.unstubAllGlobals();
   });
 });

@@ -28,7 +28,7 @@ export function distanza(s: VoceSituazione): string {
 export function procedura(u: VistaRegoleUe): { testo: string; male: boolean } {
   return {
     testo: t(`conti.procedura_${u.procedura}`),
-    male: u.procedura === "inadempiente" || u.procedura === "intimata" || u.procedura === "sanzionata",
+    male: u.procedura !== "nessuna" && u.procedura !== "sospesa",
   };
 }
 

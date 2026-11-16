@@ -28,6 +28,9 @@ describe("procedura e percorso", () => {
     expect(procedura(conti.studi_03.vista.regole_ue).male).toBe(false);
     expect(procedura(conti.pde.vista.regole_ue).male).toBe(true);
     expect(procedura(conti.energia.vista.regole_ue).male).toBe(true);
+    const u = conti.studi_03.vista.regole_ue;
+    expect(procedura({ ...u, procedura: "aperta" }).male).toBe(true);
+    expect(procedura({ ...u, procedura: "nessuna" }).male).toBe(false);
   });
   it("percorso", () => {
     expect(percorso(-0.27)).toBe("0,27 punti sotto il percorso");

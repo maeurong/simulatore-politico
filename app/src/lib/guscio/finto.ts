@@ -10,6 +10,8 @@ type Campioni = {
   cruscotto?: any; governo?: any; aula?: any; anteprime?: any;
   /** 21-: i Conti; ?stato= ne sceglie uno, servito come `.prima` */
   conti?: any;
+  /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
+  servita?: any;
   /** ?stato= dell'URL: sceglie la prova del 26 e lo stato del 23 */
   stato: string | null;
 };
@@ -129,8 +131,8 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       if (cmd.acquisto === "centro_studi") {
         const voce = c.conti?.[stato ?? ""];
         if (!voce) return undefined;
-        if (v?.acquisti.centro_studi) throw rifiuto(voce.rifiuto_ripetuto);
-        return voce.vista;
+        if ((c.servita ?? v)?.acquisti.centro_studi) throw rifiuto(voce.rifiuto_ripetuto);
+        return (c.servita = voce.vista);
       }
       if (cmd.acquisto !== "sondaggio_privato") return undefined;
       const prova = campagna.prove?.[stato ?? ""]?.privato;
