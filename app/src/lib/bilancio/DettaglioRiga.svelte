@@ -63,7 +63,7 @@
     <p class="sec"><Forte testo={t("conti.dic_reale", { anno: vecchio })} vals={[t("conti.dic_perdita", { nome, perdita: reale(p).testo })]} /></p>
   {/if}
   {#if !ferma && bozza.indicizzato(voce)}
-    <span class="riga"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => eTorna(() => bozza.annulla(voce))}>{t("bilancio.annulla")}</button></span>
+    <span class="riga"><span class="min bene">{t("bilancio.indicizzato")}</span>{#if bozza.accolto(id)}<span class="min muto">{t("bilancio.accolto_riapplica")}</span>{:else}<button type="button" class="link" onclick={() => eTorna(() => bozza.annulla(voce))}>{t("bilancio.annulla")}</button>{/if}</span>
   {:else if !ferma && p !== undefined && p >= 0.05}
     {@const c = bozza.costi[id]}
     <span class="riga"><button type="button" class="link" onclick={() => eTorna(() => bozza.indicizza(voce))}>{t("bilancio.indicizza")}</button>

@@ -292,7 +292,7 @@ describe("la presentazione", () => {
 
   it("riapri: il bilancio in aula torna in memoria e la pagina alla bozza; presentato, la riapertura si chiude", async () => {
     await apriCon();
-    bozza.riapri(inAula);
+    bozza.riapri(inAula, []);
     expect(bozza.riaperta).toBe(true);
     expect(bozza.corrente).toBe(inAula);
     const comanda = vi.fn().mockResolvedValue({});
@@ -303,7 +303,7 @@ describe("la presentazione", () => {
 
   it("un comando che non parte (guasto, occupato) lascia la riapertura", async () => {
     await apriCon();
-    bozza.riapri(inAula);
+    bozza.riapri(inAula, []);
     await bozza.presenta(vi.fn().mockResolvedValue(null));
     expect(bozza.riaperta).toBe(true);
   });
@@ -317,9 +317,25 @@ describe("la presentazione", () => {
     expect(bozza.rifiutoPresenta).toBeNull();
   });
 
+  it("riaperta: annulla tutto lascia indicizzati i dicasteri degli emendamenti accolti, che il core riapplica", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    bozza.riapri(indicizzataTutta, ["sanita"]);
+    expect(bozza.accolti).toEqual(["sanita"]);
+    bozza.allarga("sanita", "disavanzo", 1);
+    bozza.annulla({ tipo: "tutto" });
+    const [sanita, interno] = bozza.corrente!.dicasteri;
+    expect(sanita).toEqual(allarga(indicizzataTutta, piena, "sanita", "disavanzo", 1).dicasteri[0]);
+    expect(interno).toEqual(piena.dicasteri[1]);
+    expect(bozza.corrente!.aliquote.irpef).toEqual(piena.aliquote.irpef);
+  });
+
   it("chiudi toglie riapertura e rifiuto", async () => {
     await apriCon();
-    bozza.riapri(inAula);
+    bozza.riapri(inAula, []);
     await bozza.presenta(vi.fn().mockRejectedValue({ specie: "rifiuto", testo: "no" }));
     bozza.chiudi();
     expect(bozza.riaperta).toBe(false);

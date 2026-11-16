@@ -68,7 +68,9 @@
       <span class="az">
         {#if r}<span class={r.tono}>{r.testo}</span>{:else}<span class="muto">—</span>{/if}
         <!-- «Indicizza» solo con una perdita da recuperare: senza riepilogo o sotto 0,05 niente (prototipo 22:427) -->
-        {#if !ferma && bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
+        <!-- accolto nella bozza riaperta: niente annulla, il core lo riapplica; la colonna non regge anche «indicizzato» -->
+        {#if !ferma && bozza.accolto(d.id) && bozza.indicizzato(voce)}<span class="min bene">{t("bilancio.accolto_riapplica")}</span>
+        {:else if !ferma && bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
         {:else if !ferma && p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(bozza.costi[d.id])}</span></span>{/if}
       </span>
       {#if rif && !ferma}<span class="sotto"><Rifiuto testo={rif} /></span>{/if}

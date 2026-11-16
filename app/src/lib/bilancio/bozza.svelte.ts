@@ -22,6 +22,8 @@ class Bozza {
   guasto = $state(false);
   /** «Modifica e ripresenta»: la pagina torna alla bozza fino alla nuova presentazione. */
   riaperta = $state(false);
+  /** Nella bozza riaperta, i dicasteri degli emendamenti accolti: il core li riapplica alla presentazione, annulla non li tocca. */
+  accolti = $state.raw<string[]>([]);
   // raw: il rifiuto di «Presenta» vale per il bilancio che l'ha avuto, confrontato per identità
   #presentaRifiutata = $state.raw<{ testo: string; bilancio: Bilancio } | null>(null);
   /** I passi del margine aggiunti, per dicastero e per via: il − toglie solo questi (lettura 2). */
@@ -73,6 +75,7 @@ class Bozza {
     this.base = this.corrente = this.riepilogo = this.#chiesto = null;
     this.rifiuto = null;
     this.guasto = this.riaperta = false;
+    this.accolti = [];
     this.#presentaRifiutata = null;
     this.#volo = 0;
     this.#aspetta = false;
@@ -128,8 +131,9 @@ class Bozza {
   }
 
   /** «Modifica e ripresenta ›»: il bilancio in aula, emendamenti accolti compresi, torna in memoria (lettura 4). */
-  riapri(inAula: Bilancio) {
+  riapri(inAula: Bilancio, accolti: string[]) {
     this.riaperta = true;
+    this.accolti = accolti;
     this.cambia(inAula);
   }
 
@@ -190,10 +194,18 @@ class Bozza {
   annulla(voce: Voce) {
     const da = this.corrente ?? this.base, base = this.base;
     if (!da || !base) return;
+    // riaperta: i dicasteri accolti restano come sono, passi compresi (partita.rs:1959-1962 li riapplica comunque)
+    const tiene = (id: string) => voce.tipo === "tutto" && this.riaperta && this.accolti.includes(id);
     let b = annullata(da, base, voce);
+    b = { ...b, dicasteri: b.dicasteri.map((d, i) => (tiene(d.id) ? da.dicasteri[i] : d)) };
     if (voce.tipo !== "scaglioni")
-      for (const [id, n] of Object.entries(this.passi)) if (voce.tipo === "tutto" || id === voce.id) for (const via of VIE) b = allarga(b, base, id, via, n[via]);
+      for (const [id, n] of Object.entries(this.passi)) if (voce.tipo === "tutto" ? !tiene(id) : id === voce.id) for (const via of VIE) b = allarga(b, base, id, via, n[via]);
     this.cambia(b);
+  }
+
+  /** Il dicastero è di un emendamento accolto e la bozza è riaperta: al posto di «annulla», «accolto: si riapplica». */
+  accolto(id: string): boolean {
+    return this.riaperta && this.accolti.includes(id);
   }
 
   /** La voce è già indicizzata nel bilancio in memoria: al posto del costo si legge «indicizzato». */

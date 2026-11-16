@@ -24,7 +24,7 @@
   let box = $state<HTMLElement>();
 
   async function ripresenta() {
-    bozza.riapri(bilancio);
+    bozza.riapri(bilancio, misura?.emendamenti.filter((e) => e.stato === "accolto").flatMap((e) => e.dicasteri) ?? []);
     await tick();
     box?.querySelector("button")?.focus();
   }
@@ -45,6 +45,7 @@
   {:else}
     <Pulsante forma="chiude" {spento} onclick={() => bozza.presenta((b) => partita.comanda({ tipo: "presenta_bilancio", bilancio: b }))}>{t("bilancio.presenta")}</Pulsante>
     <p class="min muto">{seCade(vista)}</p>
+    {#if bozza.riaperta}<p class="min muto">{t("bilancio.ripresenta_nota")}</p>{/if}
     {#if bozza.rifiutoPresenta}<Rifiuto testo={bozza.rifiutoPresenta} />{/if}
   {/if}
 </div>
