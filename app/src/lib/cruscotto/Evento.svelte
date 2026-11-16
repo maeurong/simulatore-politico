@@ -1,6 +1,7 @@
 <script lang="ts">
   // Evento aperto (17-cruscotto.prototype.html, forma A): costa al giocatore, quindi sta in testa e pesa (docs/ricerca/estetica/interfacce-di-giochi-gestionali.md:47).
-  import { t, numero } from "$lib/testi/t";
+  import { t } from "$lib/testi/t";
+  import { euro } from "$lib/governo/governo";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
@@ -43,9 +44,11 @@
 
 <section class="evento" aria-label={t("evento.aperto")}>
   <div class="occ">{occhiello}</div>
-  <h2 class="tit">{evento.nome}{evento.costo ? `: ${numero(evento.costo)}\u00A0€` : ""}</h2>
-  <div class="sec muto"><i>{t("componenti.perche")}</i> {evento.causa}
-    {#if fondo} · <span class:male={!fondoBasta(vista, evento)}>{t("cruscotto.fondo", { euro: `${numero(vista.bilancio.fondo_residuo)}\u00A0€` })}</span>{/if}</div>
+  <div class="capo">
+    <h2 class="tit">{evento.nome}{evento.costo ? `: ${euro(evento.costo)}` : ""}</h2>
+    {#if fondo}<span class="min muto" class:male={!fondoBasta(vista, evento)}>{t("cruscotto.fondo", { euro: euro(vista.bilancio.fondo_residuo) })}</span>{/if}
+  </div>
+  <div class="sec muto"><i>{t("componenti.perche")}</i> {evento.causa}</div>
   {#if puoRispondere && onnorma && norme.length}
     <div class="norme sec muto">{t("cruscotto.norme")}
       {#each norme as n (n.id)}<Pulsante forma="piccolo" scelto={norma === n.id} aria-disabled={crisi ? "true" : undefined} aria-describedby={crisi ? `${id}-crisi` : undefined} onclick={() => !crisi && onnorma(n.id)}>{n.nome}</Pulsante>{/each}
@@ -72,6 +75,7 @@
 <style>
   .evento { border: var(--forte); padding: 10px 14px; display: grid; gap: 6px }
   :global(:root.grave) .evento { border: var(--doppio) }
+  .capo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px }
   .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso) }
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-sez) }
   :global(:root.grave) .tit { font-weight: 600 }

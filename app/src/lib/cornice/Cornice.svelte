@@ -79,7 +79,7 @@
   </div>
   <Sommario {vista} {sezione} {impostazioni} {onimpostazioni} />
 </header>
-{#if stato === "crisi"}<div class="banda">{t("cornice.banda_crisi")}</div>{/if}
+{#if stato === "crisi"}<div class="banda">{t(vista.bilancio.esercizio_provvisorio ? "cornice.banda_crisi_provvisorio" : "cornice.banda_crisi")}</div>{/if}
 {#if partita.guasto}<p class="guasto" role="alert">{partita.guasto}</p>{/if}
 
 <style>

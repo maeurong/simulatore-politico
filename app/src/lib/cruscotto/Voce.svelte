@@ -17,6 +17,9 @@
   type Props = { voce: VoceOdg; vista: Vista; riporta: (da: Element | null) => void; scelta: boolean; onscegli: () => void };
   let { voce, vista, riporta, scelta, onscegli }: Props = $props();
 
+  // il voto e l'ultimatum non hanno scelte da spuntare: niente quadratino; lo stato, dove c'è il segno, entra nel nome
+  const conSegno = $derived(voce.gruppo !== "si_vota" && voce.gruppo !== "occhio");
+  const stato = $derived(!conSegno ? "" : voce.fatta ? t("cruscotto.seg_fatta") : voce.urgente ? t("cruscotto.seg_urgente") : "");
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
   const ministero = $derived(vista.ministeri.find((m) => m.dicastero === voce.dicastero));
   const rinviata = $derived(ministero?.proposta?.rinviata ?? false);
@@ -42,8 +45,8 @@
 </script>
 
 <li class="r" class:sel={scelta}>
-  <span class="seg" class:fatto={voce.fatta} class:urg={voce.urgente && !voce.fatta} aria-hidden="true"></span>
-  <button type="button" class="t" aria-pressed={scelta} onclick={onscegli}>{voce.titolo}</button>
+  {#if conSegno}<span class="seg" class:fatto={voce.fatta} class:urg={voce.urgente && !voce.fatta} aria-hidden="true"></span>{:else}<span></span>{/if}
+  <button type="button" class="t" aria-pressed={scelta} onclick={onscegli}>{voce.titolo}{#if stato}<span class="nascosto">, {stato}</span>{/if}</button>
   <span class="a" role="group" aria-label={voce.titolo}>
     {#if voce.azioni === "proposta" && voce.dicastero}
       {@const dicastero = voce.dicastero}

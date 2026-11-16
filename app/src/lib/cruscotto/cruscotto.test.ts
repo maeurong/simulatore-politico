@@ -44,7 +44,7 @@ describe("ordineDelGiorno", () => {
   it("la 03: tre proposte nell'ordine dei dicasteri, ciascuna col suo default", () => {
     const p = ordineDelGiorno(governo).filter((x) => x.gruppo === "proposte");
     expect(p.map((x) => x.dicastero)).toEqual(["infrastrutture_trasporti", "ambiente_energia", "esteri_difesa"]);
-    expect(p.every((x) => x.default === "senza scelta resta in sospeso al più un turno, poi vale respinta" && x.alDefault && !x.fatta)).toBe(true);
+    expect(p.every((x) => x.default === "in sospeso al più un turno, poi respinta" && x.alDefault && !x.fatta)).toBe(true);
   });
   it("una proposta rinviata non è al default e ha la sua riga", () => {
     const r = ordineDelGiorno(sceltaFatta).find((x) => x.dicastero === "ambiente_energia");
