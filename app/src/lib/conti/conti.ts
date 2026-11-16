@@ -10,6 +10,9 @@ import type { VoceSituazione } from "$lib/tipi/VoceSituazione";
 /** «aprile–giugno 2032» con l'anno legato al mese, per le righe strette del MES e della ristrutturazione: a capo l'anno non resta solo. */
 export const periodoLegato = (d: Trimestre) => periodo(d).replace(/ (\d+)$/, "\u00a0$1");
 
+/** Il core tiene la fine esclusiva (il primo trimestre senza vincoli): il testo dice «fino al trimestre», si mostra l'ultimo che vale. */
+export const trimestrePrima = (d: Trimestre): Trimestre => (d.trimestre > 1 ? { anno: d.anno, trimestre: d.trimestre - 1 } : { anno: d.anno - 1, trimestre: 4 });
+
 const soglia = (x: number) => numero(x, Number.isInteger(x) ? 0 : 1);
 export const quanti = ["", "un", "due", "tre", "quattro"];
 const ordinali = ["", "primo", "secondo", "terzo", "quarto"];
