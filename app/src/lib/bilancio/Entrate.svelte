@@ -35,10 +35,13 @@
         {@const r = p === undefined ? null : reale(p)}
         <span class="d">
           {t("bilancio.soglia")} {#if r}<span class={r.tono}>{r.testo}</span>{:else}<span class="muto">—</span>{/if} {t("bilancio.reale")}
-          {#if i === 0}
-            · {#if bozza.indicizzato({ tipo: "scaglioni" })}<span class="bene">{t("bilancio.soglie_indicizzate")}</span>
-            {:else}<button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "scaglioni" })}>{t("bilancio.indicizza_soglie")}</button>
-              {#if typeof costoSoglie === "object"}{euroSegnato(-costoSoglie.costo_entrate)}{:else if costoSoglie}<span class="muto">{costoSoglie}</span>{/if}{/if}
+          <!-- le soglie si indicizzano solo con una perdita da recuperare (prototipo 22:537) -->
+          {#if i === 0 && bozza.indicizzato({ tipo: "scaglioni" })}
+            · <span class="bene">{t("bilancio.soglie_indicizzate")}</span>
+            <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "scaglioni" })}>{t("bilancio.annulla")}</button>
+          {:else if i === 0 && p !== undefined && p > 0.05}
+            · <button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "scaglioni" })}>{t("bilancio.indicizza_soglie")}</button>
+            {#if typeof costoSoglie === "object"}{euroSegnato(-costoSoglie.costo_entrate)}{:else if costoSoglie}<span class="muto">{costoSoglie}</span>{/if}
           {/if}
         </span>
       {/if}

@@ -4,7 +4,7 @@ import { comeErrore, guscio, testoRifiuto, type ErroreGuscio } from "$lib/guscio
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import type { Voce } from "$lib/tipi/Voce";
-import { indicizzata } from "./bilancio";
+import { annullata, indicizzata } from "./bilancio";
 
 const chiave = (v: Voce) => (v.tipo === "dicastero" ? v.id : v.tipo);
 const voci = (b: Bilancio): Voce[] => [{ tipo: "tutto" }, { tipo: "scaglioni" }, ...b.dicasteri.map((d) => ({ tipo: "dicastero" as const, id: d.id }))];
@@ -21,6 +21,8 @@ class Bozza {
   costi = $state.raw<Record<string, RiepilogoBilancio | string>>({});
   #indicizzati = $state.raw<Record<string, Bilancio>>({});
   #turno: number | null = null;
+  // avanza a ogni apri e chiudi: una risposta di un giro vecchio si scarta, anche se il turno torna uguale
+  #giro = 0;
   /** Il bilancio dell'ultimo riepilogo chiesto: solo il suo esito si mostra. */
   #chiesto: Bilancio | null = null;
 
@@ -45,23 +47,36 @@ class Bozza {
     this.#chiedi(b);
   }
 
+  #svuota(turno: number | null) {
+    this.#turno = turno;
+    this.#giro++;
+    this.base = this.corrente = this.riepilogo = this.#chiesto = null;
+    this.rifiuto = null;
+    this.inVolo = false;
+    this.costi = this.#indicizzati = {};
+  }
+
+  /** Fuori dalla partita: la prossima apre la sua bozza anche allo stesso turno. */
+  chiudi() {
+    this.#svuota(null);
+  }
+
   /** Nuovo turno = bozza nuova; lo stesso turno tiene il bilancio in memoria. */
   async apri(turno: number) {
     if (turno === this.#turno) return;
-    this.#turno = turno;
-    this.base = this.corrente = this.riepilogo = this.#chiesto = null;
-    this.rifiuto = null;
+    this.#svuota(turno);
+    const giro = this.#giro;
     // in volo anche la bozza: finché non arriva la pagina non dice che manca
     this.inVolo = true;
-    this.costi = this.#indicizzati = {};
     let base: Bilancio | null;
     try {
       base = await guscio.bozzaBilancio();
     } catch (e) {
-      if (turno === this.#turno) [this.rifiuto, this.inVolo] = [testo(e), false];
+      // il turno torna null: il prossimo apri ritenta
+      if (giro === this.#giro) [this.rifiuto, this.inVolo, this.#turno] = [testo(e), false, null];
       return;
     }
-    if (turno !== this.#turno) return;
+    if (giro !== this.#giro) return;
     if (!base) return void (this.inVolo = false);
     this.base = base;
     this.#riepiloga(base);
@@ -75,7 +90,7 @@ class Bozza {
         }
       }),
     );
-    if (turno !== this.#turno) return;
+    if (giro !== this.#giro) return;
     this.costi = Object.fromEntries(esiti.map(([k, , r]) => [k, r]));
     this.#indicizzati = Object.fromEntries(esiti.flatMap(([k, b]) => (b ? [[k, b]] : [])));
   }
@@ -88,7 +103,7 @@ class Bozza {
 
   /** Indicizza la voce sul bilancio in memoria; se intanto è cambiato, riparte da quello nuovo. */
   async indicizza(voce: Voce) {
-    const turno = this.#turno;
+    const giro = this.#giro;
     for (;;) {
       const da = this.corrente ?? this.base;
       if (!da) return;
@@ -97,15 +112,21 @@ class Bozza {
       try {
         b = await guscio.indicizza(da, voce);
       } catch (e) {
-        if (turno !== this.#turno) return;
+        if (giro !== this.#giro) return;
         this.inVolo = false;
         this.rifiuto = testo(e);
         this.riepilogo = null;
         return;
       }
-      if (turno !== this.#turno) return;
+      if (giro !== this.#giro) return;
       if ((this.corrente ?? this.base) === da) return this.cambia(b);
     }
+  }
+
+  /** Riporta la voce alle cifre della bozza; le aliquote restano quelle ritoccate. */
+  annulla(voce: Voce) {
+    const da = this.corrente ?? this.base;
+    if (da && this.base) this.cambia(annullata(da, this.base, voce));
   }
 
   /** La voce è già indicizzata nel bilancio in memoria: al posto del costo si legge «indicizzato». */

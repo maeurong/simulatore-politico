@@ -18,6 +18,19 @@ function comandata<T>() {
 const svuota = () => new Promise((r) => setTimeout(r, 0));
 
 const base = { anno: 2028, dicasteri: [], aliquote: { irpef: [], iva: 0.22, ires: 0.24, contributi: 0.33 }, fondo_riserva: 0 } as Bilancio;
+// con un dicastero e due soglie: per annulla
+const dic = (id: string, spesa: number, livello: number) => ({ id, spesa, salari: spesa / 4, acquisti: spesa / 4, margine: spesa / 100, livello_prezzi: livello });
+const sca = (fino_a: number | null, aliquota: number, livello: number) => ({ fino_a, aliquota, livello_prezzi: livello });
+const piena = {
+  anno: 2028, fondo_riserva: 0,
+  dicasteri: [dic("sanita", 1000, 1), dic("interno", 400, 1)],
+  aliquote: { irpef: [sca(28000, 0.23, 1), sca(null, 0.43, 1)], iva: 0.22, ires: 0.24, contributi: 0.33 },
+} as Bilancio;
+const indicizzataTutta = {
+  ...piena,
+  dicasteri: [dic("sanita", 1030, 1.03), dic("interno", 412, 1.03)],
+  aliquote: { ...piena.aliquote, irpef: [sca(28840, 0.23, 1.03), sca(null, 0.43, 1.03)] },
+} as Bilancio;
 const conIva = (iva: number) => ({ ...base, aliquote: { ...base.aliquote, iva } });
 const riep = (crescita: number) => ({ costo_spesa: 0, costo_entrate: 0, crescita_spesa_netta: crescita, tetto: 1.7, perdita_reale: [] }) as RiepilogoBilancio;
 
@@ -116,5 +129,70 @@ describe("bozza", () => {
     await due;
     expect(guscio.indicizza).toHaveBeenLastCalledWith(conIva(0.3), { tipo: "tutto" });
     expect(bozza.corrente).toBe(c);
+  });
+
+  it("annulla la Sanità indicizzata: corrente torna uguale alla base", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    guscio.indicizza.mockResolvedValueOnce({ ...piena, dicasteri: [indicizzataTutta.dicasteri[0], piena.dicasteri[1]] });
+    await bozza.indicizza({ tipo: "dicastero", id: "sanita" });
+    expect(bozza.corrente).not.toEqual(piena);
+    bozza.annulla({ tipo: "dicastero", id: "sanita" });
+    expect(bozza.corrente).toEqual(piena);
+    // la richiesta dell'indicizza è in volo: quella dell'annulla parte quando torna (ultimoVince)
+    await svuota();
+    expect(guscio.riepilogoBilancio).toHaveBeenLastCalledWith(piena);
+  });
+
+  it("annulla tutto riporta dicasteri e soglie; un'aliquota ritoccata prima resta", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    const ritoccata = { ...indicizzataTutta, aliquote: { ...indicizzataTutta.aliquote, iva: 0.23, irpef: [{ ...indicizzataTutta.aliquote.irpef[0], aliquota: 0.24 }, indicizzataTutta.aliquote.irpef[1]] } };
+    bozza.cambia(ritoccata);
+    bozza.annulla({ tipo: "tutto" });
+    expect(bozza.corrente!.dicasteri).toEqual(piena.dicasteri);
+    expect(bozza.corrente!.aliquote.iva).toBe(0.23);
+    expect(bozza.corrente!.aliquote.irpef).toEqual([{ ...piena.aliquote.irpef[0], aliquota: 0.24 }, piena.aliquote.irpef[1]]);
+  });
+
+  it("annulla le soglie lascia i dicasteri indicizzati", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    bozza.cambia(indicizzataTutta);
+    bozza.annulla({ tipo: "scaglioni" });
+    expect(bozza.corrente!.dicasteri).toEqual(indicizzataTutta.dicasteri);
+    expect(bozza.corrente!.aliquote.irpef).toEqual(piena.aliquote.irpef);
+  });
+
+  it("chiudi: lo stesso turno di un'altra partita richiede la bozza", async () => {
+    await apriCon();
+    bozza.cambia(conIva(0.23));
+    bozza.chiudi();
+    expect(bozza.base).toBeNull();
+    expect(bozza.corrente).toBeNull();
+    await bozza.apri(turno);
+    expect(guscio.bozzaBilancio).toHaveBeenCalledTimes(2);
+    expect(bozza.corrente).toBeNull();
+  });
+
+  it("un guasto della bozza: il prossimo apri dello stesso turno ritenta", async () => {
+    guscio.bozzaBilancio.mockRejectedValueOnce({ specie: "guasto", testo: "disco pieno" });
+    await bozza.apri(++turno);
+    expect(bozza.rifiuto).toBe("disco pieno");
+    guscio.bozzaBilancio.mockResolvedValue(base);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    await bozza.apri(turno);
+    expect(guscio.bozzaBilancio).toHaveBeenCalledTimes(2);
+    expect(bozza.base).toBe(base);
+    expect(bozza.rifiuto).toBeNull();
   });
 });

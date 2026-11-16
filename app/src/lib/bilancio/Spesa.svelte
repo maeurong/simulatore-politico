@@ -24,7 +24,7 @@
 <section>
   <div class="grp">
     <span>{t("bilancio.spesa_dicasteri")}</span>
-    {#if bozza.indicizzato({ tipo: "tutto" })}<span class="bene">{t("bilancio.indicizzato_tutto")}</span>
+    {#if bozza.indicizzato({ tipo: "tutto" })}<span class="tutto"><span class="bene">{t("bilancio.indicizzato_tutto")}</span> · <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "tutto" })}>{t("bilancio.annulla")}</button></span>
     {:else}<span class="tutto"><button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "tutto" })}>{t("bilancio.indicizza_tutto")}</button> {@render costo(tutto)}</span>{/if}
   </div>
   <div class="leg">
@@ -47,8 +47,9 @@
       <span class="x">{t("conti.miliardi", { n: numero(d.spesa / 1e9, 1) })}</span>
       <span class="az">
         {#if r}<span class={r.tono}>{r.testo}</span>{:else}<span class="muto">—</span>{/if}
-        {#if bozza.indicizzato(voce)}<span class="min bene">{t("bilancio.indicizzato")}</span>
-        {:else}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(bozza.costi[d.id])}</span></span>{/if}
+        <!-- «Indicizza» solo con una perdita da recuperare: senza riepilogo o sotto 0,05 niente (prototipo 22:427) -->
+        {#if bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
+        {:else if p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(bozza.costi[d.id])}</span></span>{/if}
       </span>
     </div>
   {/each}

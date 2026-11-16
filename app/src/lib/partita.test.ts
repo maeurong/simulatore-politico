@@ -11,6 +11,7 @@ vi.mock("$app/navigation", () => ({ goto }));
 vi.mock("$lib/guscio/chiamate", async (originale) => ({ ...(await originale<object>()), guscio }));
 
 import { partita } from "./partita.svelte";
+import { bozza } from "./bilancio/bozza.svelte";
 
 const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true } as Vista;
 const dopo = { ...prima, turno: 4, fase: "trattativa" } as Vista;
@@ -78,6 +79,13 @@ describe("partita", () => {
     expect(partita.vista).toBeNull();
     expect(partita.serie).toEqual([]);
     expect(partita.guasto).toBeNull();
+  });
+
+  it("esci chiude anche la bozza del bilancio: un'altra partita allo stesso turno non la ritrova", () => {
+    const chiudi = vi.spyOn(bozza, "chiudi");
+    partita.esci();
+    expect(chiudi).toHaveBeenCalledOnce();
+    chiudi.mockRestore();
   });
 
   it("comando riuscito e serie guasta: la Vista nuova resta, la serie è quella di prima", async () => {

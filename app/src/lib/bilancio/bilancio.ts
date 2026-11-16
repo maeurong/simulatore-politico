@@ -58,6 +58,16 @@ export function indicizzata(b: Bilancio, indicizzato: Bilancio, voce: Voce): boo
   );
 }
 
+/** La voce riportata alle cifre della bozza: i dicasteri interi, delle soglie solo `fino_a` e livello (l'aliquota resta). */
+export function annullata(b: Bilancio, bozza: Bilancio, voce: Voce): Bilancio {
+  const dicasteri = voce.tipo === "scaglioni" ? b.dicasteri : b.dicasteri.map((d) => (voce.tipo === "tutto" || d.id === voce.id ? (bozza.dicasteri.find((z) => z.id === d.id) ?? d) : d));
+  const irpef = voce.tipo === "dicastero" ? b.aliquote.irpef : b.aliquote.irpef.map((s, i) => {
+    const z = bozza.aliquote.irpef[i];
+    return z ? { ...s, fino_a: z.fino_a, livello_prezzi: z.livello_prezzi } : s;
+  });
+  return { ...b, dicasteri, aliquote: { ...b.aliquote, irpef } };
+}
+
 /** «+6,2 mld €», «−13,3 mld €», «±0 €» (prototipo 22). */
 export function euroSegnato(c: number): string {
   const s = euro(Math.abs(c));
