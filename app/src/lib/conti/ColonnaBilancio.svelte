@@ -17,7 +17,9 @@
 
 {#snippet perdita(p: number)}
   {@const r = reale(p)}
-  <span class={r.tono}>{r.testo}</span>{#if r.tono !== "neutro"}<i class="pb {r.tono}" style:width="{(Math.abs(p) / scala) * 22}px"></i>{/if}
+  {@const w = (Math.abs(p) / scala) * 22}
+  <!-- sotto 2 px la barretta sembra un difetto di disegno: resta la cifra colorata -->
+  <span class={r.tono}>{r.testo}</span>{#if r.tono !== "neutro" && w >= 2}<i class="pb {r.tono}" style:width="{w}px"></i>{/if}
 {/snippet}
 
 <section>

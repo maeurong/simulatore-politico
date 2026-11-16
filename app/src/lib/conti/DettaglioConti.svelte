@@ -11,6 +11,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import DettaglioSoglie from "./DettaglioSoglie.svelte";
   import Spread from "./Spread.svelte";
+  import Forte from "./Forte.svelte";
   import Ventaglio from "./Ventaglio.svelte";
   import { percorso, procedura, reale } from "./conti";
 
@@ -31,17 +32,15 @@
   const cifra = (s: Stima, c: keyof Stima) => `${c === "crescita_pil" ? segnato(s[c], 1) : numero(s[c], 1)}%`;
 </script>
 
-{#snippet forte(testo: string, vals: string[])}{#each testo.split("{b}") as pezzo, i (i)}{pezzo}{#if i < vals.length}<b>{vals[i]}</b>{/if}{/each}{/snippet}
-
 <div class="capo-lato" bind:this={capo}><Pulsante forma="link" onclick={torna}>{t("conti.torna")}</Pulsante></div>
 
 {#if tipo === "dic"}
   {@const d = b.dicasteri.find((x) => x.id === id)!}
   {@const nome = vista.dicasteri.find((x) => x.id === id)?.nome ?? id}
   <h4 class="tit">{nome}</h4>
-  <p class="sec">{@render forte(t("conti.dic_reale", { anno: b.anno }), [t("conti.dic_perdita", { nome, perdita: reale(d.perdita_reale).testo })])}</p>
+  <p class="sec"><Forte testo={t("conti.dic_reale", { anno: b.anno })} vals={[t("conti.dic_perdita", { nome, perdita: reale(d.perdita_reale).testo })]} /></p>
   <dl class="dati">
-    <dt>{t("conti.d_spesa")}</dt><dd>{@render forte(t("conti.all_anno"), [euro(d.spesa)])}</dd>
+    <dt>{t("conti.d_spesa")}</dt><dd><Forte testo={t("conti.all_anno")} vals={[euro(d.spesa)]} /></dd>
     <dt>{t("conti.d_salari")}</dt><dd>{euro(d.salari)}</dd>
     <dt>{t("conti.d_acquisti")}</dt><dd>{euro(d.acquisti)}</dd>
     <dt>{t("conti.d_margine")}</dt><dd>{euro(d.margine)}</dd>
@@ -55,10 +54,10 @@
   {@const s = b.aliquote.irpef[+id]}
   {@const p = b.perdita_reale_scaglioni[+id]}
   <h4 class="tit">{s.fino_a === null ? t("conti.irpef_oltre") : t("conti.irpef_fino", { n: numero(s.fino_a) })}</h4>
-  <p class="sec">{#if p === undefined}{t("conti.irpef_ultimo")}{:else}{@render forte(t("conti.irpef_erosa"), [`${numero(p, 1)}%`])}{/if}</p>
+  <p class="sec">{#if p === undefined}{t("conti.irpef_ultimo")}{:else}<Forte testo={t("conti.irpef_erosa")} vals={[`${numero(p, 1)}%`]} />{/if}</p>
 {:else if k === "fondo"}
   <h4 class="tit">{t("conti.fondo_titolo", { anno: b.anno })}</h4>
-  <p class="sec">{@render forte(t("conti.fondo_restano", { totale: euro(b.fondo_riserva) }), [euro(b.fondo_residuo)])}</p>
+  <p class="sec"><Forte testo={t("conti.fondo_restano", { totale: euro(b.fondo_riserva) })} vals={[euro(b.fondo_residuo)]} /></p>
   {#if vista.eventi.length}
     <h5 class="grp"><span>{t("conti.eventi_aperti")}</span></h5>
     {#each vista.eventi as e, i (i)}<div class="r fermo"><span class="n">{e.nome}</span><span class="x">{euro(e.costo)}</span></div>{/each}
@@ -84,7 +83,7 @@
     <h5 class="grp"><span>{t("conti.debito_studi")}</span></h5>
     <Ventaglio previsione={cs.previsione} k="debito" W={360} H={80} />
     {@const f = cs.previsione.at(-1)}
-    {#if f}<p class="sec">{@render forte(t("conti.prev_fine", { periodo: t(`conti.trim_${f.data.trimestre}` as Chiave, { anno: f.data.anno }), sigma: numero(f.debito.sigma, 1) }), [`${numero(f.debito.centro, 1)}%`])}</p>{/if}
+    {#if f}<p class="sec"><Forte testo={t("conti.prev_fine", { periodo: t(`conti.trim_${f.data.trimestre}` as Chiave, { anno: f.data.anno }), sigma: numero(f.debito.sigma, 1) })} vals={[`${numero(f.debito.centro, 1)}%`]} /></p>{/if}
   {:else}
     <p class="sec muto">{t("conti.debito_senza")}</p>
   {/if}
@@ -119,7 +118,7 @@
   {@const r = vista.redditi.find((x) => x.fascia === id)!}
   <h4 class="tit">{t(`conti.fascia_${r.fascia}`)}</h4>
   <dl class="dati">
-    <dt>{t("conti.red_reddito")}</dt><dd>{@render forte(t("conti.red_euro"), [`${numero(r.reddito)} €`])}</dd>
+    <dt>{t("conti.red_reddito")}</dt><dd><Forte testo={t("conti.red_euro")} vals={[`${numero(r.reddito)} €`]} /></dd>
     <dt>{t("conti.red_trimestre")}</dt><dd>{segnato(r.crescita, 1)}%</dd>
     <dt>{t("conti.red_attese")}</dt><dd>{segnato(r.attesa, 1)}%</dd>
   </dl>

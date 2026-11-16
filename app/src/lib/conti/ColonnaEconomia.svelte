@@ -6,7 +6,7 @@
   import type { Stima } from "$lib/tipi/Stima";
   import type { Vista } from "$lib/tipi/Vista";
   import Spread from "./Spread.svelte";
-  import { percorso, procedura, sottoAttese } from "./conti";
+  import { percorso, periodoLegato, procedura, sottoAttese } from "./conti";
 
   let { vista, scelta = $bindable() }: { vista: Vista; scelta: string | null } = $props();
 
@@ -57,13 +57,13 @@
   </button>
   {#if d.mes}
     <button type="button" class="r due" class:sel={scelta === "mes"} aria-pressed={scelta === "mes"} onclick={scegli("mes")}>
-      <span class="n"><span class="chip pieno">{t("conti.mes")}</span> {t("conti.fino_a_periodo", { periodo: periodo(d.mes.fine) })}</span>
+      <span class="n"><span class="chip pieno">{t("conti.mes")}</span> {t("conti.fino_a_periodo", { periodo: periodoLegato(d.mes.fine) })}</span>
       <span class="x">{t("conti.vincoli", { n: d.mes.vincoli.length })}</span>
     </button>
   {/if}
   {#if d.ristrutturazione}
     <button type="button" class="r due" class:sel={scelta === "ristr"} aria-pressed={scelta === "ristr"} onclick={scegli("ristr")}>
-      <span class="n"><span class="chip rosso">{t("conti.ristrutturato")}</span> {periodo(d.ristrutturazione.taglio)}</span>
+      <span class="n"><span class="chip rosso">{t("conti.ristrutturato")}</span> {periodoLegato(d.ristrutturazione.taglio)}</span>
       <span class="x">{t("conti.premio", { n: numero(d.ristrutturazione.premio_pb) })}</span>
     </button>
   {/if}

@@ -12,7 +12,7 @@ type Campioni = {
   conti?: any;
   /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
   servita?: any;
-  /** ?stato= dell'URL: sceglie la prova del 26 e lo stato del 23 */
+  /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
   stato: string | null;
 };
 

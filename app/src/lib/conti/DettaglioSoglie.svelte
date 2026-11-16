@@ -3,6 +3,7 @@
   import { numero, segnato, t, type Chiave } from "$lib/testi/t";
   import type { VoceGrandezza } from "$lib/tipi/VoceGrandezza";
   import type { Vista } from "$lib/tipi/Vista";
+  import Forte from "./Forte.svelte";
   import Righello from "./Righello.svelte";
   import { distanza, grandezza, quanti } from "./conti";
 
@@ -19,8 +20,6 @@
   const indice = (g: VoceGrandezza) => !/ \(.*\)$/.test(g.nome);
   const unita = (misura: string) => (misura === "crescita_pil" ? "%" : "");
 </script>
-
-{#snippet forte(testo: string, vals: string[])}{#each testo.split("{b}") as pezzo, i (i)}{pezzo}{#if i < vals.length}<b>{vals[i]}</b>{/if}{/each}{/snippet}
 
 {#snippet situazione(i: number)}
   {@const s = vista.situazioni[i]}
@@ -77,7 +76,7 @@
   {#if "valore" in v}
     <p class="sec"><b>{numero(v.valore, 1)}</b> · {u}. {t(g.verso === "sale" ? "conti.gr_sale" : "conti.gr_scende")}</p>
   {:else}
-    <p class="sec">{@render forte(t("conti.gr_regioni"), [numero(v.da, 1), numero(v.a, 1)])}</p>
+    <p class="sec"><Forte testo={t("conti.gr_regioni")} vals={[numero(v.da, 1), numero(v.a, 1)]} /></p>
     <a class="link" href="/partita/paese">{t("conti.gr_paese")}</a>
   {/if}
   <p class="min muto">{t("conti.gr_ritardo")}</p>

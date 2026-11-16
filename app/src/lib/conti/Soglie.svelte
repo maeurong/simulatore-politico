@@ -36,4 +36,6 @@
   :global(:root.stretta) .sit .n { grid-column: 1 / -1 }
   .riga { grid-column: 1 / -1; display: block }
   .r { margin-top: 6px }
+  /* la nota del ritardo di un turno va letta intera: a capo, non in ellissi */
+  .r .n { white-space: normal }
 </style>

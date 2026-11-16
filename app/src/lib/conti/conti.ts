@@ -1,9 +1,14 @@
 import { numero, segnato, t } from "$lib/testi/t";
+import { periodo } from "$lib/edicola/edicola";
+import type { Trimestre } from "$lib/tipi/Trimestre";
 import type { Vista } from "$lib/tipi/Vista";
 import type { RedditoFascia } from "$lib/tipi/RedditoFascia";
 import type { VistaRegoleUe } from "$lib/tipi/VistaRegoleUe";
 import type { VoceGrandezza } from "$lib/tipi/VoceGrandezza";
 import type { VoceSituazione } from "$lib/tipi/VoceSituazione";
+
+/** «aprile–giugno 2032» con l'anno legato al mese, per le righe strette del MES e della ristrutturazione: a capo l'anno non resta solo. */
+export const periodoLegato = (d: Trimestre) => periodo(d).replace(/ (\d+)$/, "\u00a0$1");
 
 const soglia = (x: number) => numero(x, Number.isInteger(x) ? 0 : 1);
 export const quanti = ["", "un", "due", "tre", "quattro"];
@@ -26,7 +31,7 @@ export function distanza(s: VoceSituazione): string {
     return t("conti.accesa", mancano(sale ? "sotto" : "sopra", s.spegnimento));
   }
   if (s.oltre > 0) return oltreDa("si accende");
-  if (sale ? s.valore >= s.accensione : s.valore <= s.accensione) return t("conti.oltre_soglia");
+  if (sale ? s.valore > s.accensione : s.valore < s.accensione) return t("conti.oltre_soglia");
   return t("conti.spenta", mancano(sale ? "sopra" : "sotto", s.accensione));
 }
 

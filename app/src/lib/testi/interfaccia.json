@@ -1125,7 +1125,7 @@
   "conti.cs_compra": "Compra · {euro}",
   "conti.cs_cassa": "cassa {euro}",
   "conti.cs_comprato": "comprato · {euro}",
-  "conti.cs_stima": "Stima di {periodo}: PIL {b} (prima stima {pil}), inflazione {b} ({inflazione}), disoccupazione {b} ({disoccupazione}).",
+  "conti.cs_stima": "Stima di {periodo} (tra parentesi la prima stima): PIL {b} ({pil}%), inflazione {b} ({inflazione}%), disoccupazione {b} ({disoccupazione}%).",
   "conti.cs_ricompra": "Compralo ancora",
   "conti.cs_fasce": "Fascia scura: due volte su tre. Chiara: diciannove volte su venti.",
   "conti.prev_pil": "PIL",

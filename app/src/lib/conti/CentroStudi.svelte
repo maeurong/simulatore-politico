@@ -9,6 +9,7 @@
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
+  import Forte from "./Forte.svelte";
   import Ventaglio from "./Ventaglio.svelte";
 
   let { vista }: { vista: Vista } = $props();
@@ -29,16 +30,11 @@
   }
 </script>
 
-{#snippet forte(testo: string, vals: string[])}{#each testo.split("{b}") as pezzo, i (i)}{pezzo}{#if i < vals.length}<b>{vals[i]}</b>{/if}{/each}{/snippet}
-
 <div class="studi" bind:this={box}>
   {#if cs}
     <div class="capo"><h4 class="tit">{t("conti.cs_titolo")}</h4><span class="sec muto">{t("conti.cs_comprato", { euro: euro(prezzo ?? 0) })}</span></div>
     <p class="sec">
-      {@render forte(
-        t("conti.cs_stima", { periodo: periodo(vista.statistica.trimestre), pil: segnato(prima.crescita_pil, 1), inflazione: numero(prima.inflazione_annua, 1), disoccupazione: numero(prima.disoccupazione, 1) }),
-        [`${segnato(cs.stima.crescita_pil, 1)}%`, `${numero(cs.stima.inflazione_annua, 1)}%`, `${numero(cs.stima.disoccupazione, 1)}%`],
-      )}
+      <Forte testo={t("conti.cs_stima", { periodo: periodo(vista.statistica.trimestre), pil: segnato(prima.crescita_pil, 1), inflazione: numero(prima.inflazione_annua, 1), disoccupazione: numero(prima.disoccupazione, 1) })} vals={[`${segnato(cs.stima.crescita_pil, 1)}%`, `${numero(cs.stima.inflazione_annua, 1)}%`, `${numero(cs.stima.disoccupazione, 1)}%`]} />
     </p>
     <div class="fan">
       {#each PREV as k (k)}
@@ -49,7 +45,7 @@
           <Ventaglio previsione={cs.previsione} {k} />
           {#if f}
             {@const fine = cs.previsione[cs.previsione.length - 1].data}
-            <p class="min">{@render forte(t("conti.prev_fine", { periodo: t(`conti.trim_${fine.trimestre}` as Chiave, { anno: fine.anno }), sigma: numero(f.sigma, 1) }), [`${numero(f.centro, 1)}%`])}</p>
+            <p class="min"><Forte testo={t("conti.prev_fine", { periodo: t(`conti.trim_${fine.trimestre}` as Chiave, { anno: fine.anno }), sigma: numero(f.sigma, 1) })} vals={[`${numero(f.centro, 1)}%`]} /></p>
           {/if}
         </div>
       {/each}
@@ -75,5 +71,7 @@
   .capo { margin: 0 }
   .prezzo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
   .fan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px }
+  /* intestazione, ventaglio e cifra su righe comuni alla coppia: un'intestazione a capo non sfalsa la mini-carta accanto */
+  .fan > div { display: grid; grid-template-rows: subgrid; grid-row: span 3; row-gap: 0 }
   .ink { color: var(--ink) }
 </style>

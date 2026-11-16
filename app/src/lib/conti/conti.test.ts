@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { distanza, esiste, grandezza, percorso, procedura, reale, sottoAttese } from "./conti";
+import { distanza, esiste, grandezza, percorso, periodoLegato, procedura, reale, sottoAttese } from "./conti";
 import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 
 const conti = contiJson as unknown as Record<string, { vista: Vista }>;
@@ -33,6 +33,9 @@ describe("distanza", () => {
     expect(distanza({ ...base, valore: 70 })).toBe("oltre la soglia");
     expect(distanza({ ...base, accesa: false, valore: 80 })).toBe("si accende sopra 85: mancano 5,0");
     expect(distanza({ ...base, accesa: false, valore: 90 })).toBe("oltre la soglia");
+    // il core accende solo oltre in senso stretto (situazioni.rs, `> 0.0`)
+    expect(distanza({ ...base, accesa: false, valore: 85 })).toBe("si accende sopra 85: mancano 0,0");
+    expect(distanza({ ...base, accensione: -1, spegnimento: 0, accesa: false, valore: -1 })).toBe("si accende sotto −1: mancano 0,0");
   });
   it("si accende scendendo, accesa e già sopra lo spegnimento: oltre la soglia", () => {
     const base = { nome: "x", misura: "x", valore: 0, accensione: -1, spegnimento: 0, accesa: true, trimestri: 2, oltre: 0 };
@@ -91,5 +94,11 @@ describe("esiste", () => {
   it("MES e ristrutturazione solo finché ci sono", () => {
     expect(esiste(conti.mes.vista, "mes")).toBe(true);
     expect(esiste(conti.ristrutturazione.vista, "ristr")).toBe(true);
+  });
+});
+
+describe("periodoLegato", () => {
+  it("l'anno non resta solo a capo: spazio non separabile prima dell'anno", () => {
+    expect(periodoLegato({ anno: 2032, trimestre: 2 })).toBe("aprile–giugno\u00a02032");
   });
 });
