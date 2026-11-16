@@ -245,7 +245,7 @@ fn edicola(d: &DatiGioco) -> Esito<Uscita> {
         "unione-dei-pendolari",
         ore - 9 * 86_400,
     );
-    // Forzata: lo schema 16 di un salvataggio di prima delle #51-#52 (archivio.rs:98-103).
+    // Forzata: uno schema sotto quello di main, come un salvataggio vecchio (archivio.rs:98-103).
     vecchia.indice.testata.versione_schema = VERSIONE_SCHEMA - 1;
     vecchia.apribile = false;
     vecchia.motivo = Some(

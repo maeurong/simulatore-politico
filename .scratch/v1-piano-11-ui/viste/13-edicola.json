@@ -990,7 +990,7 @@
           "nome": "Patto Civico",
           "scenario": "Italia di oggi",
           "turno": 6,
-          "versione_schema": 18
+          "versione_schema": 19
         },
         "ultimo_salvataggio": 1794000000
       },
@@ -1011,7 +1011,7 @@
           "nome": "Lista del Faro",
           "scenario": "Italia di oggi",
           "turno": 1,
-          "versione_schema": 18
+          "versione_schema": 19
         },
         "ultimo_salvataggio": 1793913600
       },
@@ -1032,7 +1032,7 @@
           "nome": "Nuova Concordia",
           "scenario": "Italia di oggi",
           "turno": 34,
-          "versione_schema": 18
+          "versione_schema": 19
         },
         "ultimo_salvataggio": 1793823600
       },
@@ -1053,7 +1053,7 @@
           "nome": "Fronte dei Comuni",
           "scenario": "Italia di oggi",
           "turno": 5,
-          "versione_schema": 18
+          "versione_schema": 19
         },
         "ultimo_salvataggio": 1793568000
       },
@@ -1074,11 +1074,11 @@
           "nome": "Unione dei Pendolari",
           "scenario": "Italia di oggi",
           "turno": 3,
-          "versione_schema": 17
+          "versione_schema": 18
         },
         "ultimo_salvataggio": 1793222400
       },
-      "motivo": "salvataggio di una versione diversa del gioco: schema 17, atteso 18"
+      "motivo": "salvataggio di una versione diversa del gioco: schema 18, atteso 19"
     }
   ]
 }
