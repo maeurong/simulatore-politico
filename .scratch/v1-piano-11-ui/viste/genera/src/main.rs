@@ -1175,6 +1175,7 @@ fn bilancio(d: &DatiGioco) -> Esito<Uscita> {
         let b = p.indicizza(&bozza, &Voce::Dicastero { id: x.id.clone() }).map_err(|e| e.to_string())?;
         let mut r = riep(&p, &b);
         r["id"] = x.id.clone().into();
+        r["bilancio"] = serde_json::to_value(&b).map_err(|e| e.to_string())?;
         r["dicastero"] = serde_json::to_value(b.dicasteri.iter().find(|y| y.id == x.id)).map_err(|e| e.to_string())?;
         per_dicastero.push(r);
     }
@@ -1198,6 +1199,44 @@ fn bilancio(d: &DatiGioco) -> Esito<Uscita> {
     s.margine += m;
     s.spesa += m;
     varianti.insert("margine_sanita_in_disavanzo".into(), riep(&p, &b));
+    // Il passo di mezzo punto della spesa (`round(0,005 · spesa)`), dagli acquisti e in disavanzo.
+    let con_bilancio = |b: &sim_core::economia::Bilancio| -> Esito<serde_json::Value> {
+        let mut r = riep(&p, b);
+        r["bilancio"] = serde_json::to_value(b).map_err(|e| e.to_string())?;
+        Ok(r)
+    };
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    let passo = (0.005 * s.spesa as f64).round() as i64;
+    s.margine += passo;
+    s.acquisti -= passo;
+    let funzionamento = con_bilancio(&b)?;
+    let mut b = bozza.clone();
+    let s = b.dicasteri.iter_mut().find(|x| x.id == "sanita").ok_or("sanita")?;
+    s.margine += passo;
+    s.spesa += passo;
+    varianti.insert("margine_passo".into(), serde_json::json!({ "funzionamento": funzionamento, "disavanzo": con_bilancio(&b)? }));
+    note.push(format!("margine_passo sanita: {passo} euro"));
+    // Un punto d'aliquota in meno e in più, imposta per imposta (ogni scaglione Irpef).
+    let mut passi = serde_json::Map::new();
+    let n_irpef = bozza.aliquote.irpef.len();
+    let imposte = (0..n_irpef).map(|i| format!("irpef_{i}")).chain(["iva", "ires", "contributi"].map(String::from));
+    for nome in imposte {
+        let mut coppia = serde_json::Map::new();
+        for (verso, delta) in [("meno", -1.0_f64), ("piu", 1.0)] {
+            let mut b = bozza.clone();
+            let a = match nome.as_str() {
+                "iva" => &mut b.aliquote.iva,
+                "ires" => &mut b.aliquote.ires,
+                "contributi" => &mut b.aliquote.contributi,
+                i => &mut b.aliquote.irpef[i[6..].parse::<usize>().map_err(|e| e.to_string())?].aliquota,
+            };
+            *a = ((*a * 100.0).round() + delta) / 100.0;
+            coppia.insert(verso.into(), con_bilancio(&b)?);
+        }
+        passi.insert(nome, coppia.into());
+    }
+    varianti.insert("aliquote_passo".into(), passi.into());
     let mut b = bozza.clone();
     b.aliquote.iva = 0.95;
     varianti.insert("rifiuto_aliquota".into(), riep(&p, &b));
@@ -1223,6 +1262,35 @@ fn bilancio(d: &DatiGioco) -> Esito<Uscita> {
         se_accogli.insert(a.clone(), serde_json::to_value(r.riepilogo_presentato()).map_err(|e| e.to_string())?);
     }
     out.get_mut("presentato").ok_or("presentato")?["se_accogli"] = se_accogli.into();
+    // Cosa servirà alla UI: il bilancio in aula indicizzato sui dicasteri dell'emendamento, un
+    // dicastero alla volta come fa `indicizza`; il costo deve coincidere con `se_accogli`.
+    let in_aula = p.vista().bilancio.in_aula.ok_or("in_aula")?;
+    let mut ui = serde_json::Map::new();
+    let mut scarti = Vec::new();
+    for e in p.vista().calendario.iter().filter(|m| m.id == id).flat_map(|m| &m.emendamenti) {
+        let (mut b, mut passi) = (in_aula.clone(), Vec::new());
+        for d in &e.dicasteri {
+            b = p.indicizza(&b, &Voce::Dicastero { id: d.clone() }).map_err(|x| x.to_string())?;
+            passi.push(serde_json::to_value(&b).map_err(|x| x.to_string())?);
+        }
+        let (mio, core) = (p.riepilogo_bilancio(&b).ok(), {
+            let mut r = p.clone();
+            comanda(&mut r, Comando::Emendamento { misura: id, partito: e.partito.clone(), accogli: true })?;
+            r.riepilogo_presentato()
+        });
+        let uguali = matches!((&mio, &core), (Some(m), Some(c)) if m.costo_spesa == c.costo_spesa && (m.crescita_spesa_netta - c.crescita_spesa_netta).abs() <= 1e-9);
+        if !uguali {
+            eprintln!("SCARTO {}", e.partito);
+            scarti.push(e.partito.clone());
+        }
+        let mut r = riep(&p, &b);
+        r["passi"] = passi.into();
+        ui.insert(e.partito.clone(), r);
+    }
+    if !scarti.is_empty() {
+        return Err(format!("SCARTO {}", scarti.join(", ")));
+    }
+    out.get_mut("presentato").ok_or("presentato")?["se_accogli_ui"] = ui.into();
     let mut q = p.clone();
     if let Some(a) = alleati.first() {
         comanda(&mut q, Comando::Emendamento { misura: id, partito: a.clone(), accogli: true })?;
