@@ -28,8 +28,9 @@
   };
 </script>
 
+<!-- il costo in cifra sta accanto al comando; un rifiuto del core va su una riga sua, nella cella non ci sta -->
 {#snippet costo(c: RiepilogoBilancio | string | undefined)}
-  {#if typeof c === "object"}{euroSegnato(c.costo_spesa)}{:else if c}<span class="muto">{c}</span>{/if}
+  {#if typeof c === "object"}{euroSegnato(c.costo_spesa)}{/if}
 {/snippet}
 
 <section>
@@ -38,6 +39,7 @@
     {#if !ferma && bozza.indicizzato({ tipo: "tutto" })}<span class="tutto"><span class="bene">{t("bilancio.indicizzato_tutto")}</span> · <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "tutto" })}>{t("bilancio.annulla")}</button></span>
     {:else if !ferma}<span class="tutto"><button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "tutto" })}>{t("bilancio.indicizza_tutto")}</button> {@render costo(tutto)}</span>{/if}
   </div>
+  {#if !ferma && !bozza.indicizzato({ tipo: "tutto" }) && typeof tutto === "string"}<span class="min muto">{tutto}</span>{/if}
   {#if !ferma && bozza.rifiutoDi({ tipo: "tutto" })}<Rifiuto testo={bozza.rifiutoDi({ tipo: "tutto" })!} />{/if}
   <div class="leg">
     <span><i style:background="var(--ink)"></i>{t("bilancio.salari")}</span><span><i style:background="var(--grigio)"></i>{t("bilancio.acquisti")}</span>
@@ -53,6 +55,7 @@
     {@const z = bozza.base?.dicasteri.find((x) => x.id === d.id)}
     {@const taglio = z ? tagliato(d, z) : null}
     {@const rif = bozza.rifiutoDi(voce)}
+    {@const c = bozza.costi[d.id]}
     {@const em = emendamenti.find((e) => e.dicasteri.includes(d.id))}
     <div class="barD" class:sel={scelta === k}>
       <!-- nome, barra e cifra sono il bottone che apre il dettaglio; «Indicizza» resta fuori, accanto -->
@@ -71,8 +74,9 @@
         <!-- accolto nella bozza riaperta: niente annulla, il core lo riapplica; la colonna non regge anche «indicizzato» -->
         {#if !ferma && bozza.accolto(d.id) && bozza.indicizzato(voce)}<span class="min bene">{t("bilancio.accolto_riapplica")}</span>
         {:else if !ferma && bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
-        {:else if !ferma && p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(bozza.costi[d.id])}</span></span>{/if}
+        {:else if !ferma && p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(c)}</span></span>{/if}
       </span>
+      {#if !ferma && !bozza.indicizzato(voce) && p !== undefined && p >= 0.05 && typeof c === "string"}<span class="sotto min muto">{c}</span>{/if}
       {#if rif && !ferma}<span class="sotto"><Rifiuto testo={rif} /></span>{/if}
       {#if em}
         {@const chi = nomeDi(vista, em.partito)}
@@ -97,6 +101,9 @@
   .leg i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px }
   .ret { background: var(--retino); outline: 1px solid var(--grigio); outline-offset: -1px }
   .barD { display: grid; grid-template-columns: 150px minmax(0, 1fr) 64px 184px; gap: 2px 8px; align-items: center; padding: 3px 2px; border-bottom: var(--filo); font-size: var(--c-sec) }
+  /* forma stretta: la colonna della perdita e di «Indicizza» va sotto la barra, la spesa a fronte non ci sta su una riga */
+  :global(:root.stretta) .barD { grid-template-columns: 150px minmax(0, 1fr) 64px }
+  :global(:root.stretta) .az { grid-column: 2 / -1 }
   .apre { grid-column: 1 / 4; display: grid; grid-template-columns: subgrid; align-items: center; text-align: left }
   .apre:hover .n { text-decoration: underline; text-underline-offset: 2px }
   .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
