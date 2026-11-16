@@ -26,6 +26,19 @@ describe("distanza", () => {
     expect(distanza(base)).toBe("oltre la soglia da due trimestri: si accende al terzo di fila");
     expect(distanza({ ...base, oltre: 0 })).toBe("oltre la soglia");
   });
+  it("si accende salendo (accensione > spegnimento): i quattro lati", () => {
+    const base = { nome: "x", misura: "x", valore: 0, accensione: 85, spegnimento: 70, accesa: true, trimestri: 2, oltre: 0 };
+    expect(distanza({ ...base, valore: 80 })).toBe("accesa · si spegne sotto 70: mancano 10,0");
+    expect(distanza({ ...base, valore: 60 })).toBe("oltre la soglia");
+    expect(distanza({ ...base, valore: 70 })).toBe("oltre la soglia");
+    expect(distanza({ ...base, accesa: false, valore: 80 })).toBe("si accende sopra 85: mancano 5,0");
+    expect(distanza({ ...base, accesa: false, valore: 90 })).toBe("oltre la soglia");
+  });
+  it("si accende scendendo, accesa e già sopra lo spegnimento: oltre la soglia", () => {
+    const base = { nome: "x", misura: "x", valore: 0, accensione: -1, spegnimento: 0, accesa: true, trimestri: 2, oltre: 0 };
+    expect(distanza({ ...base, valore: 0.5 })).toBe("oltre la soglia");
+    expect(distanza({ ...base, valore: -3 })).toBe("accesa · si spegne sopra 0: mancano 3,0");
+  });
 });
 
 describe("procedura e percorso", () => {
@@ -43,6 +56,11 @@ describe("procedura e percorso", () => {
     expect(percorso(-0.27)).toBe("0,27 punti sotto il percorso");
     expect(percorso(0)).toBe("sul percorso");
     expect(percorso(0.6)).toBe("0,60 punti sopra il percorso");
+  });
+  it("percorso: sotto il mezzo centesimo è «sul percorso», col segno che sia", () => {
+    expect(percorso(0.004)).toBe("sul percorso");
+    expect(percorso(-0.004)).toBe("sul percorso");
+    expect(percorso(-0.01)).toBe("0,01 punti sotto il percorso");
   });
 });
 
