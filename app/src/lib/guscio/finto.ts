@@ -35,7 +35,7 @@ export function vistaDi(campione: any): Vista | null {
   // "giocatore", non "turno": le voci del registro hanno un turno loro e la Vista in .prima
   if (campione && typeof campione === "object" && "giocatore" in campione) return campione;
   // lo stato del 21 ha prima e vista: la Vista di partenza è la prima
-  if (campione && typeof campione === "object" && "cassa_prima" in campione) return campione.prima;
+  if (campione && typeof campione === "object" && "cassa_prima" in campione && campione.prima) return campione.prima;
   return campione?.vista ?? campione?.prima ?? null;
 }
 

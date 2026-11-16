@@ -41,6 +41,14 @@ describe("vistaDi", () => {
   });
 });
 
+describe("vistaDi del 23", () => {
+  it("gli stati governo e opposizione hanno cassa_prima ma non prima: valgono la loro vista", () => {
+    const p: any = paese;
+    expect(vistaDi(p.governo)).toBe(p.governo.vista);
+    expect(vistaDi(p.opposizione)).toBe(p.opposizione.vista);
+  });
+});
+
 describe("rispondi", () => {
   it("chiudi_turno dà .dopo", () => {
     expect((rispondi("chiudi_turno", {}, c) as { turno: number }).turno).toBe(1);
