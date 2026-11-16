@@ -275,3 +275,14 @@ describe("motivoAccogli", () => {
     expect(motivoAccogli(governo)).toBeUndefined();
   });
 });
+
+describe("costo della proposta", () => {
+  it("in mln come nel resto dell'app, non il numero intero", () => {
+    const v = con(governo, (c) => {
+      c.ministeri.find((m) => m.proposta)!.proposta!.importo = 182539410;
+    });
+    const voce = ordineDelGiorno(v).find((x) => x.gruppo === "proposte")!;
+    expect(voce.sotto).toContain("183 mln €");
+    expect(voce.sotto).not.toContain("182.539.410");
+  });
+});

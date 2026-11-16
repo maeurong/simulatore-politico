@@ -3,6 +3,7 @@ import { nomeDi } from "$lib/partiti";
 import { CAUSE } from "$lib/partiti/schieramento";
 import { statoDi, type Sezione } from "$lib/ossatura";
 import { t, numero, type Chiave } from "$lib/testi/t";
+import { euro } from "$lib/governo/governo";
 import { votaOra } from "$lib/aula/aula";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEvento } from "$lib/tipi/VoceEvento";
@@ -55,10 +56,10 @@ export function ordineDelGiorno(v: Vista): VoceOdg[] {
   for (const m of v.ministeri) {
     const p = m.proposta;
     if (!p) continue;
-    const euro = p.importo ? ` · ${numero(p.importo)}\u00A0€` : "";
+    const costo = p.importo ? ` · ${euro(p.importo)}` : "";
     voci.push({
       chiave: `pro:${m.dicastero}`, gruppo: "proposte", titolo: p.nome,
-      sotto: `${dicastero(m.dicastero)} · ${m.ministro?.nome ?? t("governo.senza_ministro")}${euro}`,
+      sotto: `${dicastero(m.dicastero)} · ${m.ministro?.nome ?? t("governo.senza_ministro")}${costo}`,
       default: t(p.rinviata ? "cruscotto.proposta_default_rinviata" : "cruscotto.proposta_default"),
       alDefault: !p.rinviata, urgente: false, fatta: p.rinviata, azioni: "proposta", dicastero: m.dicastero,
     });
