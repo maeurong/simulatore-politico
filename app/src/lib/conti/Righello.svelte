@@ -2,9 +2,8 @@
   // Il righello di una situazione (prototipo 21): accensione rossa, spegnimento tratteggiato, isteresi a retino, il valore come pallino.
   import type { VoceSituazione } from "$lib/tipi/VoceSituazione";
 
-  let { s }: { s: VoceSituazione } = $props();
+  let { s, W = 240, H = 22 }: { s: VoceSituazione; W?: number; H?: number } = $props();
   const id = $props.id();
-  const W = 240, H = 22;
 
   const scala = $derived.by(() => {
     const vs = [s.valore, s.accensione, s.spegnimento];

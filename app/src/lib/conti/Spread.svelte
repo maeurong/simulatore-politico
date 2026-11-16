@@ -4,8 +4,7 @@
   import { numero, t } from "$lib/testi/t";
   import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 
-  let { serie, soglia }: { serie: PuntoSerie[]; soglia: number } = $props();
-  const W = 260, H = 56;
+  let { serie, soglia, W = 260, H = 56 }: { serie: PuntoSerie[]; soglia: number; W?: number; H?: number } = $props();
 
   const sr = $derived(serie.map((p) => p.spread_pb));
   // la soglia resta dentro il grafico anche con lo spread basso, con un po' d'aria sopra

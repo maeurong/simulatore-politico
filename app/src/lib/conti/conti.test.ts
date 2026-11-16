@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { distanza, grandezza, percorso, procedura, reale, sottoAttese } from "./conti";
+import { distanza, esiste, grandezza, percorso, procedura, reale, sottoAttese } from "./conti";
 import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 
 const conti = contiJson as unknown as Record<string, { vista: Vista }>;
@@ -56,5 +56,17 @@ describe("reale, grandezza, sottoAttese", () => {
   it("sotto le attese", () => {
     expect(sottoAttese({ fascia: "bassa", reddito: 1, crescita: 0.1, attesa: 0.3 } as never)).toBe(true);
     expect(sottoAttese({ fascia: "bassa", reddito: 1, crescita: 0.3, attesa: 0.3 } as never)).toBe(false);
+  });
+});
+
+describe("esiste", () => {
+  const v = conti.studi_03.vista;
+  it("le righe della Vista ci sono, le altre no", () => {
+    for (const k of ["dic:sanita", "irpef:0", "fondo", "stat:disavanzo", "spread", "sit:0", "grandezze", "gr:corruzione", "debito", "ue", "red:bassa"]) expect(esiste(v, k), k).toBe(true);
+    for (const k of ["dic:luna", "irpef:9", "sit:6", "gr:luna", "stat:luna", "red:luna", "mes", "ristr", "boh"]) expect(esiste(v, k), k).toBe(false);
+  });
+  it("MES e ristrutturazione solo finché ci sono", () => {
+    expect(esiste(conti.mes.vista, "mes")).toBe(true);
+    expect(esiste(conti.ristrutturazione.vista, "ristr")).toBe(true);
   });
 });

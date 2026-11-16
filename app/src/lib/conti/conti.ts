@@ -1,11 +1,12 @@
 import { numero, segnato, t } from "$lib/testi/t";
+import type { Vista } from "$lib/tipi/Vista";
 import type { RedditoFascia } from "$lib/tipi/RedditoFascia";
 import type { VistaRegoleUe } from "$lib/tipi/VistaRegoleUe";
 import type { VoceGrandezza } from "$lib/tipi/VoceGrandezza";
 import type { VoceSituazione } from "$lib/tipi/VoceSituazione";
 
 const soglia = (x: number) => numero(x, Number.isInteger(x) ? 0 : 1);
-const quanti = ["", "un", "due", "tre", "quattro"];
+export const quanti = ["", "un", "due", "tre", "quattro"];
 const ordinali = ["", "primo", "secondo", "terzo", "quarto"];
 
 /** La frase della distanza (ticket 21; decisione 1 per `oltre`). */
@@ -53,3 +54,19 @@ export function reale(p: number): { testo: string; tono: "male" | "bene" | "neut
 
 /** Sotto le attese: la crescita del trimestre minore delle attese. */
 export const sottoAttese = (r: RedditoFascia): boolean => r.crescita < r.attesa;
+
+/** La riga scelta c'è ancora nella Vista: una Vista nuova (MES finito, situazione sparita) riporta il lato al centro studi. */
+export function esiste(v: Vista, k: string): boolean {
+  const [tipo, id] = k.split(":");
+  switch (tipo) {
+    case "dic": return v.bilancio.dicasteri.some((d) => d.id === id);
+    case "irpef": return +id < v.bilancio.aliquote.irpef.length;
+    case "sit": return +id < v.situazioni.length;
+    case "gr": return v.grandezze.some((g) => g.id === id);
+    case "stat": return id in v.statistica.prima_stima;
+    case "red": return v.redditi.some((r) => r.fascia === id);
+    case "mes": return v.debito.mes !== null;
+    case "ristr": return v.debito.ristrutturazione !== null;
+    default: return ["fondo", "spread", "grandezze", "debito", "ue"].includes(k);
+  }
+}
