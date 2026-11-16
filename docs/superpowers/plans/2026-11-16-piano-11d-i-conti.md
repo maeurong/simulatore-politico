@@ -43,7 +43,7 @@ Valgono tutti i vincoli globali del piano 11c (`docs/superpowers/plans/2026-11-1
 
 Prese sui prototipi `36-scelte-11d-conti` e `36-scelte-11d-bilancio`, in una sola domanda.
 
-1. **La 11d usa lo schema 19, tutti i posti.** Conti: debito sul PIL, regole UE (procedura, conto di controllo, prossimo controllo, coesione, margine per l'energia), MES, ristrutturazione, redditi per fascia, trimestri oltre la soglia, soglia delle Aste scoperte sul grafico dello spread. Bilancio: cifre della legge in aula (`VistaBilancio.in_aula`), costo «se accogli» di un emendamento (`VoceEmendamento.dicasteri`), stato del MES. MES, ristrutturazione, procedura aperta e margine per l'energia non stanno in nessuna Vista campione: il generatore li cerca giocando (Task 1); quelli che non trova si provano su una Vista copiata e ritoccata nel test, dichiarata come tale.
+1. **La 11d usa lo schema 19, tutti i posti.** Conti: debito sul PIL, regole UE (procedura, conto di controllo, prossimo controllo, coesione, margine per l'energia), MES, ristrutturazione, redditi per fascia, trimestri oltre la soglia, soglia delle Aste scoperte sul grafico dello spread. Bilancio: cifre della legge in aula (`VistaBilancio.in_aula`), costo «se accogli» di un emendamento (`VoceEmendamento.dicasteri`), stato del MES. MES, ristrutturazione, procedura aperta e margine per l'energia non stanno in nessuna Vista campione: il generatore li cerca giocando con un bilancio in disavanzo (Task 1). Una sonda del 16/11 sulla base della 11c li ha raggiunti tutti e quattro (Task 1, «Cosa ha trovato la sonda»).
 2. **Forma dei posti riempiti: come nel prototipo 36-conti.** Nella colonna «L'economia», sotto lo spread: «Debito» (debito sul PIL, poi le righe del MES e della ristrutturazione quando ci sono), «Regole UE» (procedura con da quanti turni, conto di controllo, prossimo controllo, coesione sospesa e margine per l'energia solo quando valgono), «Redditi reali per fascia» (reddito, crescita del trimestre, attese). Il dettaglio a lato al clic.
 3. **Passo del margine: mezzo punto della spesa del dicastero**, con − e + per ciascuna delle due vie (dal funzionamento, in disavanzo); mai sotto il margine della bozza.
 
@@ -66,7 +66,7 @@ Le ho decise scrivendo il piano. Mario le conferma col sì all'esecuzione, o le 
 I casi che la spec implica e che più facilmente rompono il gioco. Ognuno ha il suo test nel task indicato.
 
 1. **Corsa dei riepiloghi.** Chi preme + tre volte in fretta fa partire tre `riepilogo_bilancio`: ne resta in volo uno per volta, l'ultimo vince, una risposta vecchia non copre la nuova; «Presenta» resta spento mentre un riepilogo è in volo. Task 8.
-2. **Cifre negative.** `euro(-32882130)` oggi scrive «-32.882.130 €» (`governo.ts:66-70` guarda solo `c >= 1e6`): il costo sulla bozza va sotto zero quando la legge spende meno (opposizione nel 22: −32,9 mln). Serve il segno meno tipografico e le stesse unità del positivo. Task 2.
+2. **Cifre negative.** `euro(-32882130)` oggi scrive «−32.882.130 €»: il meno tipografico lo mette già `numero` (`app/src/lib/testi/t.ts:15-26`), ma le soglie di `governo.ts:66-70` guardano `c >= 1e9` e `c >= 1e6`, e un negativo cade sempre negli euro interi. Il costo sulla bozza va sotto zero quando la legge spende meno (opposizione nel 22: −32,9 mln). Le soglie vanno confrontate con `Math.abs(c)`. Nella 11c nessuna Vista campione dà un negativo ai campi che passano da `euro` (costi, margini, fondo; cercato il 16/11), quindi la correzione resta qui. Task 2.
 3. **Il secondo acquisto del centro studi** è un rifiuto sul posto col testo del core; due clic veloci fanno una chiamata sola. Task 4.
 4. **Deflazione.** Una perdita reale negativa (nel 06, +1,0%) va in verde col più, nei Conti e nel Bilancio. Task 2 e Task 8.
 5. **Esercizio provvisorio.** La bozza è dell'anno in corso, l'avviso è in testa, e la riga «se cade» dice le dimissioni, non un altro esercizio provvisorio. Task 9, sulla Vista `provvisorio` del 22 e su `senza_bilancio` del 21.
@@ -156,13 +156,23 @@ Chi orchestra copia nel brief di ogni task le sue righe «Skill-gate» e «Ricer
 - Produces, in `21-conti.json`:
   - ogni stato guadagna `prima`: la Vista prima di `Compra { CentroStudi }` (il finto la serve all'apertura, Task 2);
   - `pde`: al governo con `regole_ue.procedura` in `aperta`, `inadempiente`, `intimata` o `sanzionata`;
-  - `energia`: al governo con `regole_ue.margine_energia` non nullo, raggiunto rispondendo «clausola» a «Caro energia» dopo il 2028;
+  - `energia`: al governo con `regole_ue.margine_energia` non nullo, raggiunto rispondendo `clausola` allo shock «Rincaro improvviso dell'energia» (`shock_energia`, `dati/base/eventi.toml:557-587`) dopo il 2028. La situazione «Caro energia» apre un altro evento («Rincari dell'energia»), che la clausola non l'ha;
   - `mes` e `ristrutturazione`: al governo dopo «Aste scoperte», rispondendo con l'opzione `mes` o `ristrutturazione`; nello stato `mes` anche `rifiuto_presenta`, il rifiuto (o l'esito) di `PresentaBilancio` con la bozza indicizzata per tutto, se il turno è di bilancio.
   Ogni stato con `come`, `cassa_prima`, `cassa_dopo`, `rifiuto`, `rifiuto_ripetuto`, `serie`, `prima` e `vista`, come gli altri.
 
+**Cosa ha trovato la sonda.** Il 16/11, su `feat/11c-cruscotto` a `da4fbfd`, una sonda usa e getta ha giocato i semi 1-60 come `cerca_al_governo` (fonda a 4,5, la destra, due turni, 40 turni), presentando a ogni bilancio la bozza con tutte le aliquote abbassate di `taglio` (frazione), rispondendo `clausola` dove l'evento la offre dopo il 2028 e alle Aste scoperte `mes` sui semi pari, `ristrutturazione` sui dispari. Primo turno in cui la Vista mostra lo stato:
+
+| `taglio` | procedura rossa | MES | ristrutturazione | margine energia | semi con lo spread al tetto (1000) |
+|---|---|---|---|---|---|
+| 0 (bozza intatta) | 49/60, solo `aperta` | 0/60 | 0/60 | 0/60 | 0 (massimo 440) |
+| 0,02 | 59/60 | 34/60 | 5/60 | 0/60 | 26 |
+| 0,05 | 59/60 (seme 4: `inadempiente`, t11 2029T3) | 36/60 (seme 4: t15 2030T3) | 13/60 (seme 7: t15 2030T3) | 3/60 (semi 7, 19, 21: t35-t38) | 47 |
+
+Il MES arriva anche coi governi dell'IA, che rispondono col default. Il margine per l'energia chiede che lo shock esca mentre il giocatore governa dopo il 2028: succede solo coi governi lunghi del taglio 0,05. Lo spread al tetto è il massimo sull'intera partita, non quello del turno in cui il generatore prende la Vista.
+
 - [ ] **Step 1: aggiungi `prima`** a `compra` (la Vista presa prima del primo `Compra`).
-- [ ] **Step 2: aggiungi la strategia in disavanzo.** Una variante di `cerca_al_governo` che a ogni bilancio presenta la bozza con tutte le aliquote abbassate di cinque punti e risponde a ogni evento con l'opzione indicata (o il default), semi 1-60, al più 40 turni. Le quattro cerche dell'interfaccia la usano; la nota del README dice la strategia per ciascuno stato.
-- [ ] **Step 3: uno stato che non si raggiunge** stampa `NON RAGGIUNTO: <stato>` su stderr e manca dal file: il Task 2 lo prova con una Vista ritoccata e dichiarata. Non si forza nessun salvataggio.
+- [ ] **Step 2: aggiungi la strategia in disavanzo.** Una variante di `cerca_al_governo` che a ogni bilancio presenta la bozza con tutte le aliquote abbassate di cinque punti (`taglio` 0,05, l'unico che raggiunge tutti e quattro gli stati) e risponde a ogni evento con l'opzione indicata (o il default), semi 1-60, al più 40 turni. Le quattro cerche dell'interfaccia la usano; la nota del README dice la strategia e lo spread della Vista presa per ciascuno stato.
+- [ ] **Step 3: uno stato che non si raggiunge** stampa `NON RAGGIUNTO: <stato>` su stderr e fa uscire il generatore con errore. Il task si ferma e torna a Mario: la sonda li ha raggiunti tutti, quindi uno che manca vuol dire che il core è cambiato. Non si forza nessun salvataggio e non si ritocca nessuna Vista.
 - [ ] **Step 4: esegui e rigenera.** Run, uno per chiamata:
   - `CARGO_TARGET_DIR=<wt>/target cargo run --release --manifest-path <wt>/.scratch/v1-piano-11-ui/viste/genera/Cargo.toml`, due volte, con `shasum` dei file dopo ciascuna
   - `cargo clippy --manifest-path <wt>/.scratch/v1-piano-11-ui/viste/genera/Cargo.toml --all-targets -- -D warnings`
@@ -177,7 +187,7 @@ Chi orchestra copia nel brief di ogni task le sue righe «Skill-gate» e «Ricer
 
 **Subagente:** `frontend-engineer`.
 
-**Sequenza:** in parallelo col Task 1: lavora in `app/src/lib/conti/`, `acquisto.svelte.ts`, `governo/governo.ts` e `guscio/finto.ts`. Le prove sugli stati nuovi del 21 si aggiungono quando il commit del Task 1 c'è; fino ad allora girano sulle Viste ritoccate.
+**Sequenza:** in parallelo col Task 1: lavora in `app/src/lib/conti/`, `acquisto.svelte.ts`, `governo/governo.ts` e `guscio/finto.ts`. Le prove sugli stati nuovi del 21 (`pde`, `mes`, `ristrutturazione`, `energia`) si aggiungono quando il commit del Task 1 c'è.
 
 **Skill-gate:** nessuna skill del ruolo ha il trigger su moduli puri e guscio finto senza interfaccia: il salto si dichiara nel report. `skill-gate`; `caveman`; `ponytail`.
 
@@ -193,7 +203,7 @@ Chi orchestra copia nel brief di ogni task le sue righe «Skill-gate» e «Ricer
 - Produces:
 
 ```ts
-// governo.ts: sostituisce euro; il negativo col segno meno tipografico e le stesse unità del positivo
+// governo.ts: euro con le soglie su Math.abs(c); il meno tipografico lo dà già numero
 export function euro(c: number): string;          // euro(-32882130) === "−33 mln €", come euro(32882130) === "33 mln €"
 // acquisto.svelte.ts: sostituisce acquistoSondaggio
 export function acquisto(tipo: "sondaggio_privato" | "centro_studi"): { readonly rifiuto: string | null; compra(): Promise<void> };
@@ -224,8 +234,6 @@ La frase della distanza, con le cifre della spec e del prototipo 36:
 |---|---|
 | `comanda` con `compra` `centro_studi` | `<s>.vista`; se la Vista servita ha già `acquisti.centro_studi`, il rifiuto `<s>.rifiuto_ripetuto` |
 | `serie` | `<s>.serie` |
-
-Gli stati che il Task 1 non raggiunge si provano in `conti.test.ts` su una copia di `studi_03` ritoccata nel test (`procedura: "inadempiente"`, `mes` con due vincoli, `ristrutturazione`, `margine_energia`), con un commento che lo dichiara.
 
 - [ ] **Step 1: scrivi i test che falliscono.**
   - `governo.test.ts`: `euro(-32882130)` uguale a `"−" + euro(32882130)`; `euro(-6197708677)` è «−6,2 mld €»; `euro(0)` è «0 €»;
@@ -320,7 +328,7 @@ Gli stati che il Task 1 non raggiunge si provano in `conti.test.ts` su una copia
 - [ ] **Step 2: tastiera, a mano**: le righe delle tre colonne, «Compra», il dettaglio e il ritorno.
 - [ ] **Step 3: test e tipi.** Run: `npm --prefix <wt>/app test`, `npm --prefix <wt>/app run check`, `npm --prefix <wt>/app run build`. Expected: verdi, pulito.
 - [ ] **Step 4: screenshot** in `docs/superpowers/verifiche/11d/`: Conti nei suoi stati alle due finestre; il centro studi comprato; un dettaglio per tipo di posto nuovo; il tono grave.
-- [ ] **Step 5: corpo della PR**: cosa cambia, decisioni prese in esecuzione, «Per Mario», testi nuovi, verifiche, stati del Task 1 non raggiunti e come sono provati.
+- [ ] **Step 5: corpo della PR**: cosa cambia, decisioni prese in esecuzione, «Per Mario», testi nuovi, verifiche, seme e turno dei quattro stati del Task 1.
 
 **Fine della PR 1.**
 
