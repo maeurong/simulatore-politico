@@ -555,8 +555,10 @@ fn cerca_in_disavanzo(
                         None
                     };
                     if let Some(opzione) = scelta {
-                        // Un rifiuto (evento gia' chiuso, programma del MES) non ferma la partita.
-                        comanda(&mut p, Comando::RispondiEvento { evento: i, opzione: opzione.into() }).ok();
+                        // Rifiuta solo a partita finita, non al governo, indice assente o opzione sconosciuta: lo scrive su stderr e la partita va avanti.
+                        if let Err(e) = comanda(&mut p, Comando::RispondiEvento { evento: i, opzione: opzione.into() }) {
+                            eprintln!("cerca_in_disavanzo: seme {seme}, evento {i} «{opzione}» rifiutato: {e}");
+                        }
                     }
                 }
                 if let Some(mut b) = p.bozza_bilancio().filter(|_| !v.crisi) {
@@ -567,7 +569,11 @@ fn cerca_in_disavanzo(
                     b.aliquote.ires = giu(b.aliquote.ires);
                     b.aliquote.contributi = giu(b.aliquote.contributi);
                     // Col programma del MES la spesa netta ha un tetto: la bozza in disavanzo e' rifiutata.
-                    comanda(&mut p, Comando::PresentaBilancio { bilancio: b }).ok();
+                    if let Err(e) = comanda(&mut p, Comando::PresentaBilancio { bilancio: b })
+                        && v.debito.mes.is_none()
+                    {
+                        eprintln!("cerca_in_disavanzo: seme {seme}, bilancio rifiutato: {e}");
+                    }
                 }
             }
             p.chiudi_turno();
