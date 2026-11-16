@@ -31,7 +31,9 @@
   .sit.sel { background: var(--velo); box-shadow: inset 0 0 0 1.5px var(--ink) }
   .n { font-weight: 700; font-size: var(--c-sec) }
   .on .n { color: var(--rosso) }
-  .v { white-space: nowrap }
+  .v { grid-column: 2; white-space: nowrap }
+  /* forma stretta: il nome ha la riga intera, bollo e valore vanno sotto a destra */
+  :global(:root.stretta) .sit .n { grid-column: 1 / -1 }
   .riga { grid-column: 1 / -1; display: block }
   .r { margin-top: 6px }
 </style>

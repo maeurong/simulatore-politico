@@ -101,7 +101,9 @@
 
 <style>
   .num4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px }
-  .c { display: grid; align-content: start; border-top: var(--bordo); padding-top: 3px }
+  .c { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; border-top: var(--bordo); padding-top: 3px }
+  /* forma stretta: una casella per riga, i numeri grandi non entrano in mezza colonna */
+  :global(:root.stretta) .num4 { grid-template-columns: minmax(0, 1fr) }
   .c:hover { background: var(--velo) }
   .c.sel { background: var(--velo); box-shadow: inset 0 0 0 1.5px var(--ink) }
   .c .k { font-size: var(--c-min); color: var(--grigio); line-height: 1.2 }
