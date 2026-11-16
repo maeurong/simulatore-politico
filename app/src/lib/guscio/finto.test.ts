@@ -369,6 +369,26 @@ describe("il 22 del Bilancio", () => {
     expect(rispondi("indicizza", { bilancio: b04.bozza, voce: { tipo: "dicastero", id: "sanita" } }, cc("bozza_04"))).toEqual(sanita.bilancio);
     expect(() => rispondi("indicizza", { bilancio: b04.bozza, voce: { tipo: "dicastero", id: "nessuno" } }, cc("bozza_04"))).toThrow(rifiuta("non nel campione: indicizza"));
   });
+  it("indicizza risponde solo sul bilancio da cui la variante parte: Iva + e poi Indicizza Sanità non è nel campione", () => {
+    const conIva = { ...b04.bozza, aliquote: { ...b04.bozza.aliquote, iva: 0.23 } };
+    expect(() => rispondi("indicizza", { bilancio: conIva, voce: { tipo: "dicastero", id: "sanita" } }, cc("bozza_04"))).toThrow(rifiuta("non nel campione: indicizza"));
+  });
+  it("indicizza sul bilancio in aula: i passi di se_accogli_ui in ordine; il riepilogo all'ultimo passo", () => {
+    const ui = bil.presentato.se_accogli_ui.destra, inAula = bil.presentato.vista.bilancio.in_aula;
+    const ids = ["economia_finanze", "sanita", "ambiente_energia", "esteri_difesa"];
+    let b = inAula;
+    ids.forEach((id, i) => {
+      b = rispondi("indicizza", { bilancio: b, voce: { tipo: "dicastero", id } }, cc("presentato"));
+      expect(b).toEqual(ui.passi[i]);
+    });
+    expect(rispondi("riepilogo_bilancio", { bilancio: b }, cc("presentato"))).toEqual(ui.riepilogo);
+    // un passo fuori ordine: il passo dopo l'economia non è l'ambiente
+    expect(() => rispondi("indicizza", { bilancio: ui.passi[0], voce: { tipo: "dicastero", id: "ambiente_energia" } }, cc("presentato"))).toThrow(rifiuta("non nel campione: indicizza"));
+  });
+  it("riepilogo_bilancio del bilancio in aula: il riepilogo del presentato dello stato", () => {
+    const d = bil.emendamenti_decisi;
+    expect(rispondi("riepilogo_bilancio", { bilancio: d.vista.bilancio.in_aula }, cc("emendamenti_decisi"))).toEqual(d.riepilogo_presentato);
+  });
   it("riepilogo_bilancio: il riepilogo della variante col bilancio uguale, altrimenti non nel campione", () => {
     const r = (bilancio: unknown, stato = "bozza_04") => rispondi("riepilogo_bilancio", { bilancio }, cc(stato));
     expect(r(b04.bozza)).toEqual(b04.riepilogo_bozza.riepilogo);

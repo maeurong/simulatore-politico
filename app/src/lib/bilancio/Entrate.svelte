@@ -8,14 +8,18 @@
   import Forte from "$lib/conti/Forte.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import { periodo } from "$lib/edicola/edicola";
+  import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
   import type { Vista } from "$lib/tipi/Vista";
   import { comandoSoglie, euroSegnato, ritocca, type Imposta } from "./bilancio";
   import { bozza } from "./bozza.svelte";
 
-  let { vista, bilancio, scelta = $bindable() }: { vista: Vista; bilancio: Bilancio; scelta: string | null } = $props();
+  // ferma: la presentata, aliquote senza − e + e soglie senza comandi
+  let { vista, bilancio, riepilogo, ferma, scelta = $bindable() }: {
+    vista: Vista; bilancio: Bilancio; riepilogo: RiepilogoBilancio | null; ferma: boolean; scelta: string | null;
+  } = $props();
   const mes = $derived(vista.debito.mes);
 
-  const perdita = (voce: string) => bozza.riepilogo?.perdita_reale.find((p) => p.voce === voce)?.perdita;
+  const perdita = (voce: string) => riepilogo?.perdita_reale.find((p) => p.voce === voce)?.perdita;
   const costoSoglie = $derived(bozza.costi.scaglioni);
   const passo = (imposta: Imposta, verso: 1 | -1) => bozza.cambia(ritocca(bilancio, imposta, verso));
   const altre = ["iva", "ires", "contributi"] as const;
@@ -26,11 +30,13 @@
 {/snippet}
 
 {#snippet stepper(imposta: Imposta, nome: string, aliquota: number)}
+  {#if ferma}{percentuale(aliquota, 0)}{:else}
   <span class="step">
     <button type="button" aria-label={t("bilancio.meno_punto", { imposta: nome })} onclick={() => passo(imposta, -1)}>−</button>
     <span>{percentuale(aliquota, 0)}</span>
     <button type="button" aria-label={t("bilancio.piu_punto", { imposta: nome })} onclick={() => passo(imposta, 1)}>+</button>
   </span>
+  {/if}
 {/snippet}
 
 <section>
@@ -44,7 +50,7 @@
       {#if s.fino_a !== null}
         {@const p = perdita(`scaglione ${i + 1}`)}
         {@const r = p === undefined ? null : reale(p)}
-        {@const az = i === 0 ? comandoSoglie(bozza.indicizzato({ tipo: "tutto" }), bozza.indicizzato({ tipo: "scaglioni" }), p) : null}
+        {@const az = i === 0 && !ferma ? comandoSoglie(bozza.indicizzato({ tipo: "tutto" }), bozza.indicizzato({ tipo: "scaglioni" }), p) : null}
         <span class="d">
           {t("bilancio.soglia")} {#if r}<span class={r.tono}>{r.testo}</span>{:else}<span class="muto">—</span>{/if} {t("bilancio.reale")}
           {#if az === "annulla"}
@@ -55,7 +61,7 @@
             {#if typeof costoSoglie === "object"}{euroSegnato(-costoSoglie.costo_entrate)}{:else if costoSoglie}<span class="muto">{costoSoglie}</span>{/if}
           {/if}
         </span>
-        {#if i === 0 && bozza.rifiutoDi({ tipo: "scaglioni" })}<span class="d"><Rifiuto testo={bozza.rifiutoDi({ tipo: "scaglioni" })!} /></span>{/if}
+        {#if i === 0 && !ferma && bozza.rifiutoDi({ tipo: "scaglioni" })}<span class="d"><Rifiuto testo={bozza.rifiutoDi({ tipo: "scaglioni" })!} /></span>{/if}
       {/if}
     </div>
   {/each}

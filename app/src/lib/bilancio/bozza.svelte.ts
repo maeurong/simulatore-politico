@@ -18,6 +18,12 @@ class Bozza {
   corrente = $state.raw<Bilancio | null>(null);
   riepilogo = $state.raw<RiepilogoBilancio | null>(null);
   rifiuto = $state<string | null>(null);
+  /** Il rifiuto è un guasto (il core non ha risposto), non un no del core: «Presenta» lo dice diverso. */
+  guasto = $state(false);
+  /** «Modifica e ripresenta»: la pagina torna alla bozza fino alla nuova presentazione. */
+  riaperta = $state(false);
+  // raw: il rifiuto di «Presenta» vale per il bilancio che l'ha avuto, confrontato per identità
+  #presentaRifiutata = $state.raw<{ testo: string; bilancio: Bilancio } | null>(null);
   /** I passi del margine aggiunti, per dicastero e per via: il − toglie solo questi (lettura 2). */
   passi = $state.raw<Record<string, Record<Via, number>>>({});
   /** Il rifiuto di «Indicizza», per voce: sta accanto alla voce, non copre il giogo. */
@@ -45,9 +51,11 @@ class Bozza {
       this.#aspetta = false;
       if ("specie" in r) {
         this.rifiuto = testoRifiuto(r);
+        this.guasto = r.specie === "guasto";
         this.riepilogo = null;
       } else {
         this.rifiuto = null;
+        this.guasto = false;
         this.riepilogo = r;
       }
     },
@@ -64,6 +72,8 @@ class Bozza {
     this.#giro++;
     this.base = this.corrente = this.riepilogo = this.#chiesto = null;
     this.rifiuto = null;
+    this.guasto = this.riaperta = false;
+    this.#presentaRifiutata = null;
     this.#volo = 0;
     this.#aspetta = false;
     this.costi = this.#indicizzati = this.#rifiutiVoce = {};
@@ -87,7 +97,7 @@ class Bozza {
       base = await guscio.bozzaBilancio();
     } catch (e) {
       // il turno torna null: il prossimo apri ritenta
-      if (giro === this.#giro) [this.rifiuto, this.#turno] = [testo(e), null];
+      if (giro === this.#giro) [this.rifiuto, this.guasto, this.#turno] = [testo(e), comeErrore(e).specie === "guasto", null];
       return;
     } finally {
       if (giro === this.#giro) this.#volo--;
@@ -115,6 +125,31 @@ class Bozza {
     this.corrente = b;
     this.#rifiutiVoce = {};
     this.#riepiloga(b);
+  }
+
+  /** «Modifica e ripresenta ›»: il bilancio in aula, emendamenti accolti compresi, torna in memoria (lettura 4). */
+  riapri(inAula: Bilancio) {
+    this.riaperta = true;
+    this.cambia(inAula);
+  }
+
+  /** Il rifiuto dell'ultimo «Presenta», finché il bilancio in memoria è quello presentato. */
+  get rifiutoPresenta(): string | null {
+    const r = this.#presentaRifiutata;
+    return r && r.bilancio === (this.corrente ?? this.base) ? r.testo : null;
+  }
+
+  /** Presenta il bilancio in memoria con `comanda` (partita.comanda): riuscito chiude la riapertura, rifiutato tiene il testo. */
+  async presenta(comanda: (b: Bilancio) => Promise<unknown>) {
+    const b = this.corrente ?? this.base, giro = this.#giro;
+    if (!b) return;
+    this.#presentaRifiutata = null;
+    try {
+      // null: guasto o comando già in corso, la presentazione non è avvenuta
+      if ((await comanda(b)) !== null && giro === this.#giro) this.riaperta = false;
+    } catch (e) {
+      if (giro === this.#giro) this.#presentaRifiutata = { testo: testo(e), bilancio: b };
+    }
   }
 
   /** Indicizza la voce sul bilancio in memoria; se intanto è cambiato, riparte da quello nuovo. */

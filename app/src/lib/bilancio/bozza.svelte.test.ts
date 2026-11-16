@@ -275,3 +275,54 @@ describe("bozza", () => {
   });
 });
 
+describe("la presentazione", () => {
+  const inAula = conIva(0.21);
+  it("guasto o rifiuto: la specie dell'errore del riepilogo resta accanto al testo", async () => {
+    await apriCon();
+    guscio.riepilogoBilancio.mockRejectedValueOnce({ specie: "guasto", testo: "non nel campione: riepilogo_bilancio" });
+    bozza.cambia(conIva(0.23));
+    await svuota();
+    expect(bozza.rifiuto).toBe("non nel campione: riepilogo_bilancio");
+    expect(bozza.guasto).toBe(true);
+    guscio.riepilogoBilancio.mockRejectedValueOnce({ specie: "rifiuto", testo: "iva: aliquota fuori da 0-0,9" });
+    bozza.cambia(conIva(0.95));
+    await svuota();
+    expect(bozza.guasto).toBe(false);
+  });
+
+  it("riapri: il bilancio in aula torna in memoria e la pagina alla bozza; presentato, la riapertura si chiude", async () => {
+    await apriCon();
+    bozza.riapri(inAula);
+    expect(bozza.riaperta).toBe(true);
+    expect(bozza.corrente).toBe(inAula);
+    const comanda = vi.fn().mockResolvedValue({});
+    await bozza.presenta(comanda);
+    expect(comanda).toHaveBeenCalledWith(inAula);
+    expect(bozza.riaperta).toBe(false);
+  });
+
+  it("un comando che non parte (guasto, occupato) lascia la riapertura", async () => {
+    await apriCon();
+    bozza.riapri(inAula);
+    await bozza.presenta(vi.fn().mockResolvedValue(null));
+    expect(bozza.riaperta).toBe(true);
+  });
+
+  it("il rifiuto di Presenta resta in bozza, legato al bilancio presentato: un cambio lo toglie", async () => {
+    await apriCon();
+    bozza.cambia(conIva(0.3));
+    await bozza.presenta(vi.fn().mockRejectedValue({ specie: "rifiuto", testo: "comando non ammesso: spesa netta oltre il tetto del MES" }));
+    expect(bozza.rifiutoPresenta).toBe("spesa netta oltre il tetto del MES");
+    bozza.cambia(conIva(0.31));
+    expect(bozza.rifiutoPresenta).toBeNull();
+  });
+
+  it("chiudi toglie riapertura e rifiuto", async () => {
+    await apriCon();
+    bozza.riapri(inAula);
+    await bozza.presenta(vi.fn().mockRejectedValue({ specie: "rifiuto", testo: "no" }));
+    bozza.chiudi();
+    expect(bozza.riaperta).toBe(false);
+    expect(bozza.rifiutoPresenta).toBeNull();
+  });
+});

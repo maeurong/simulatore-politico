@@ -1287,5 +1287,20 @@
   "bilancio.mes_titolo": "Programma del MES",
   "bilancio.piano_strutturale": "{b} · nel primo anno di un governo nuovo (storia 51). Lo porta il piano di core strutturale: la prima fetta dopo di quello lo riempie.",
   "bilancio.piano_titolo": "Piano strutturale riveduto",
-  "bilancio.presentata": "Presentata: si vota a fine turno."
+  "bilancio.presentata": "Presentata · si vota a fine turno",
+  "bilancio.presenta_guasto": "Il conto di questa bozza non è arrivato dal core: senza conto non si presenta.",
+  "bilancio.titolo_presentata": "Legge di bilancio {anno} · presentata",
+  "bilancio.sotto_presentata": "Le cifre presentate; il voto è a fine turno.",
+  "bilancio.forbice_camera": "Camera {da}–{a} sì · ne servono {n}",
+  "bilancio.forbice_senato": "Senato {da}–{a} sì · ne servono {n}",
+  "bilancio.ripresenta_nota": "Si può ripresentare nel turno: la nuova sostituisce questa, e gli emendamenti accolti si riapplicano.",
+  "bilancio.ripresenta": "Modifica e ripresenta ›",
+  "bilancio.aperti": { "one": "{n} aperto", "other": "{n} aperti" },
+  "bilancio.se_accogli": "se accogli: {costo} · spesa netta {n}%",
+  "bilancio.se_accogli_testo": "se accogli: {testo}",
+  "bilancio.senza_scelta": "Senza scelta: resta aperto, si vota il testo com’è.",
+  "bilancio.nessun_emendamento": "Nessun alleato chiede emendamenti: nessun suo dicastero perde potere d’acquisto oltre la soglia.",
+  "bilancio.intesa": "intesa di {nome} {n}",
+  "bilancio.chiede": "{nome} chiede l’indicizzazione",
+  "bilancio.conto_governo": "Il conto del governo"
 }

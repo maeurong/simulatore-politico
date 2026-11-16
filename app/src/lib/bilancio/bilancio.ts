@@ -1,11 +1,14 @@
 // Il Bilancio: le modifiche che la UI scrive sul bilancio in memoria; costi, tetto e perdita reale li dice il core.
 import { euro } from "$lib/governo/governo";
+import { comeErrore, guscio, testoRifiuto } from "$lib/guscio/chiamate";
 import { numero, t } from "$lib/testi/t";
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { BudgetDicastero } from "$lib/tipi/BudgetDicastero";
 import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Voce } from "$lib/tipi/Voce";
+import type { VoceEmendamento } from "$lib/tipi/VoceEmendamento";
+import type { VoceMisura } from "$lib/tipi/VoceMisura";
 
 export type Imposta = { tipo: "irpef"; indice: number } | { tipo: "iva" | "ires" | "contributi" };
 
@@ -108,4 +111,28 @@ export function comandoSoglie(tutto: boolean, soglie: boolean, perdita: number |
   if (tutto) return null;
   if (soglie) return "annulla";
   return perdita !== undefined && perdita > 0.05 ? "indicizza" : null;
+}
+
+/** La misura del bilancio in calendario, se c'è. */
+export const misuraBilancio = (v: Vista): VoceMisura | undefined => v.calendario.find((m) => m.forma === "bilancio");
+
+/** Il riepilogo del bilancio in aula (storia 129), o il testo dell'errore. */
+export const riepilogoPresentato = (): Promise<RiepilogoBilancio | string | null> => guscio.riepilogoPresentato().catch((e) => testoRifiuto(comeErrore(e)));
+
+/** La forma della presentata: c'è un bilancio in aula e non lo si sta modificando per ripresentarlo; lì «Presenta» non c'è. */
+export const presentata = (v: Vista, riaperta: boolean): boolean => v.bilancio.presentato && v.bilancio.in_aula !== null && !riaperta;
+
+/** Il costo «se accogli»: in_aula indicizzato in sequenza sui dicasteri dell'emendamento, poi il riepilogo (lettura 5); un rifiuto resta testo. */
+export async function seAccogli(
+  chiedi: { indicizza: typeof guscio.indicizza; riepilogo: typeof guscio.riepilogoBilancio },
+  inAula: Bilancio,
+  e: VoceEmendamento,
+): Promise<RiepilogoBilancio | string> {
+  try {
+    let b = inAula;
+    for (const id of e.dicasteri) b = await chiedi.indicizza(b, { tipo: "dicastero", id });
+    return await chiedi.riepilogo(b);
+  } catch (x) {
+    return testoRifiuto(comeErrore(x));
+  }
 }

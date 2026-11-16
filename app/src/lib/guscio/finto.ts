@@ -119,6 +119,8 @@ function variantiBilancio(bil: any): any[] {
     va.tutto, va.scaglioni, ...va.per_dicastero,
     ...Object.values(va.margine_passo ?? {}),
     ...Object.values(va.aliquote_passo ?? {}).flatMap((x: any) => [x.meno, x.piu]),
+    // «se accogli»: il riepilogo dopo l'ultimo passo
+    ...Object.values(bil.presentato?.se_accogli_ui ?? {}).map((x: any) => ({ bilancio: x.passi.at(-1), riepilogo: x.riepilogo })),
   ].filter((x) => x?.bilancio);
 }
 
@@ -126,10 +128,19 @@ function riepilogoBilancio(bilancio: unknown, c: Campioni): unknown {
   const v = vistaDi(c.campione), bil = c.bilancio;
   if (v && !v.governa) return esito(bil?.opposizione?.rifiuto_riepilogo, "riepilogo_bilancio");
   if (v && v.data.trimestre !== 4 && !v.bilancio.presentabile) return esito(bil?.fuori_stagione, "riepilogo_bilancio");
+  // il bilancio in aula, riaperto con «Modifica e ripresenta»: il suo riepilogo è quello del presentato
+  if (v?.bilancio.in_aula && uguali(bilancio, v.bilancio.in_aula) && c.campione?.riepilogo_presentato) return c.campione.riepilogo_presentato;
   return esito(variantiBilancio(bil).find((x) => uguali(x.bilancio, bilancio)), "riepilogo_bilancio", "riepilogo");
 }
 
-function indicizzaBilancio(voce: any, bil: any): unknown {
+/** La variante parte da un bilancio: la bozza, o il passo prima di «se accogli» (in_aula per il primo); su un altro non è nel campione. */
+function indicizzaBilancio(bilancio: unknown, voce: any, bil: any): unknown {
+  const p = bil?.presentato, inAula = p?.vista.bilancio.in_aula;
+  for (const e of p?.vista.calendario.find((m: any) => m.forma === "bilancio")?.emendamenti ?? []) {
+    const passi = p.se_accogli_ui?.[e.partito]?.passi ?? [], i = voce?.tipo === "dicastero" ? e.dicasteri.indexOf(voce.id) : -1;
+    if (i >= 0 && passi[i] && uguali(bilancio, i ? passi[i - 1] : inAula)) return passi[i];
+  }
+  if (!uguali(bilancio, bil?.bozza_04?.bozza)) throw rifiuto("non nel campione: indicizza");
   const va = bil?.bozza_04?.varianti;
   const x = voce?.tipo === "dicastero" ? va?.per_dicastero.find((p: any) => p.id === voce.id) : va?.[voce?.tipo];
   return esito(x, "indicizza", "bilancio");
@@ -268,7 +279,7 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
       const bil = c.bilancio;
       return bil?.[c.stato ?? ""]?.bozza ?? bil?.bozza_04?.bozza ?? null;
     }
-    case "indicizza": return indicizzaBilancio(args.voce, c.bilancio);
+    case "indicizza": return indicizzaBilancio(args.bilancio, args.voce, c.bilancio);
     case "riepilogo_bilancio": return riepilogoBilancio(args.bilancio, c);
     case "riepilogo_presentato": return c.bilancio?.[c.stato ?? ""]?.riepilogo_presentato ?? null;
     case "riprendi": return presente(vistaDi(campione), comando);

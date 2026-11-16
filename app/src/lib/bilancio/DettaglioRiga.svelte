@@ -9,15 +9,19 @@
   import { nomeDi } from "$lib/partiti";
   import { numero, percentuale, t } from "$lib/testi/t";
   import type { Bilancio } from "$lib/tipi/Bilancio";
+  import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
   import type { Vista } from "$lib/tipi/Vista";
   import { euroSegnato, passoMargine } from "./bilancio";
   import { bozza, type Via } from "./bozza.svelte";
 
-  let { vista, bilancio, scelta, torna }: { vista: Vista; bilancio: Bilancio; scelta: string; torna: () => void } = $props();
+  // ferma: la presentata, il dettaglio si legge e basta (niente Indicizza né margine)
+  let { vista, bilancio, riepilogo, ferma, scelta, torna }: {
+    vista: Vista; bilancio: Bilancio; riepilogo: RiepilogoBilancio | null; ferma: boolean; scelta: string; torna: () => void;
+  } = $props();
 
   const [tipo, id] = $derived(scelta.split(":"));
   const vecchio = $derived(vista.bilancio.anno);
-  const perdita = (voce: string) => bozza.riepilogo?.perdita_reale.find((p) => p.voce === voce)?.perdita;
+  const perdita = (voce: string) => riepilogo?.perdita_reale.find((p) => p.voce === voce)?.perdita;
   let capo = $state<HTMLElement>();
   // «Indicizza» e «annulla» si scambiano il posto: se il fuoco cade col bottone premuto, va a «Torna»
   async function eTorna(f: () => unknown) {
@@ -58,16 +62,16 @@
   {#if p !== undefined && p > 0.05}
     <p class="sec"><Forte testo={t("conti.dic_reale", { anno: vecchio })} vals={[t("conti.dic_perdita", { nome, perdita: reale(p).testo })]} /></p>
   {/if}
-  {#if bozza.indicizzato(voce)}
+  {#if !ferma && bozza.indicizzato(voce)}
     <span class="riga"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => eTorna(() => bozza.annulla(voce))}>{t("bilancio.annulla")}</button></span>
-  {:else if p !== undefined && p >= 0.05}
+  {:else if !ferma && p !== undefined && p >= 0.05}
     {@const c = bozza.costi[id]}
     <span class="riga"><button type="button" class="link" onclick={() => eTorna(() => bozza.indicizza(voce))}>{t("bilancio.indicizza")}</button>
       <span class="min muto">{#if typeof c === "object"}{euroSegnato(c.costo_spesa)}{:else if c}{c}{/if}</span></span>
   {/if}
-  {#if rif}<Rifiuto testo={rif} />{/if}
+  {#if rif && !ferma}<Rifiuto testo={rif} />{/if}
 
-  {#if z}
+  {#if z && !ferma}
     {@const passo = passoMargine(z)}
     {@const n = bozza.passi[id] ?? { funzionamento: 0, disavanzo: 0 }}
     <div class="grp"><span>{t("bilancio.allarga")}</span><span class="tondo">{t("bilancio.passo", { euro: euro(passo) })}</span></div>

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import bilancioJson from "../../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
 import type { Vista } from "$lib/tipi/Vista";
-import { allarga, colArticolo, comandoSoglie, daUrl, distanzaTetto, euroSegnato, indicizzata, passoMargine, rigaTagliato, ritocca, seCade, tagliato } from "./bilancio";
+import type { VoceEmendamento } from "$lib/tipi/VoceEmendamento";
+import { allarga, colArticolo, comandoSoglie, daUrl, distanzaTetto, euroSegnato, indicizzata, misuraBilancio, passoMargine, presentata, rigaTagliato, ritocca, seAccogli, seCade, tagliato } from "./bilancio";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const b04: any = (bilancioJson as any).bozza_04;
@@ -129,4 +130,61 @@ describe("comandoSoglie", () => {
     expect(comandoSoglie(false, false, 0.05)).toBeNull();
     expect(comandoSoglie(false, false, undefined)).toBeNull();
   });
+});
+
+describe("seAccogli", () => {
+  const p = (bilancioJson as any).presentato;
+  const inAula: Bilancio = p.vista.bilancio.in_aula;
+  const em = (partito: string): VoceEmendamento => misuraBilancio(p.vista)!.emendamenti.find((e) => e.partito === partito)!;
+  /** Risponde dai passi del campione, e solo sul bilancio del passo prima; conta le chiamate in volo insieme. */
+  function chiedi(partito: string) {
+    const { passi, riepilogo } = p.se_accogli_ui[partito], dicasteri = em(partito).dicasteri;
+    let volo = 0, picco = 0;
+    const indicizza = vi.fn(async (b: Bilancio, v: { tipo: string; id?: string }) => {
+      picco = Math.max(picco, ++volo);
+      await new Promise((r) => setTimeout(r, 0));
+      volo--;
+      const i = dicasteri.indexOf(v.id!);
+      if (i < 0 || b !== (i ? passi[i - 1] : inAula)) throw { specie: "rifiuto", testo: "non nel campione: indicizza" };
+      return passi[i];
+    });
+    const riep = vi.fn(async (b: Bilancio) => {
+      if (b !== passi.at(-1)) throw { specie: "rifiuto", testo: "non nel campione: riepilogo_bilancio" };
+      return riepilogo;
+    });
+    return { chiedi: { indicizza, riepilogo: riep } as any, picco: () => picco };
+  }
+
+  it("Centrodestra: costo_spesa 981.850.113 e la crescita di se_accogli", async () => {
+    const r = await seAccogli(chiedi("centrodestra").chiedi, inAula, em("centrodestra"));
+    expect(r).toMatchObject({ costo_spesa: 981_850_113, crescita_spesa_netta: p.se_accogli.centrodestra.crescita_spesa_netta });
+  });
+  it("Destra: quattro indicizza in sequenza, ognuno sul bilancio del precedente, mai due in volo", async () => {
+    const f = chiedi("destra");
+    const r = await seAccogli(f.chiedi, inAula, em("destra"));
+    expect(r).toEqual(p.se_accogli.destra);
+    expect(f.chiedi.indicizza.mock.calls.map((c: any) => c[1])).toEqual(em("destra").dicasteri.map((id) => ({ tipo: "dicastero", id })));
+    expect(f.picco()).toBe(1);
+  });
+  it("un indicizza che rifiuta il secondo dicastero: il testo del rifiuto, niente riepilogo", async () => {
+    const f = chiedi("centrodestra");
+    f.chiedi.indicizza.mockImplementationOnce(async () => p.se_accogli_ui.centrodestra.passi[0]);
+    f.chiedi.indicizza.mockImplementationOnce(async () => {
+      throw { specie: "rifiuto", testo: "comando non ammesso: dicastero ignoto" };
+    });
+    expect(await seAccogli(f.chiedi, inAula, em("centrodestra"))).toBe("dicastero ignoto");
+    expect(f.chiedi.riepilogo).not.toHaveBeenCalled();
+  });
+});
+
+describe("misuraBilancio", () => {
+  it("sul presentato la misura 3", () => expect(misuraBilancio((bilancioJson as any).presentato.vista)?.id).toBe(3));
+  it("sulla bozza non c'è", () => expect(misuraBilancio(b04.vista)).toBeUndefined());
+});
+
+describe("presentata", () => {
+  const v: Vista = (bilancioJson as any).presentato.vista;
+  it("presentata e non riaperta: la forma della presentata, senza «Presenta»", () => expect(presentata(v, false)).toBe(true));
+  it("dopo «Modifica e ripresenta»: la forma della bozza, con «Presenta»", () => expect(presentata(v, true)).toBe(false));
+  it("non ancora presentata: la bozza", () => expect(presentata(b04.vista, false)).toBe(false));
 });

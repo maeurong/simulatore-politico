@@ -1,8 +1,12 @@
 <script lang="ts">
   // Bilancio, forma B · Bilancia (22-bilancio.prototype.html): il giogo in testa, entrate e spesa a fronte; a lato la presentazione o il dettaglio della riga.
+  // Presentata (storia 129): le cifre in aula e il riepilogo del presentato, a lato gli emendamenti degli alleati e «Modifica e ripresenta».
   import { tick, untrack } from "svelte";
   import { page } from "$app/state";
   import Forte from "$lib/conti/Forte.svelte";
+  import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
+  import { partita } from "$lib/partita.svelte";
+  import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
   import { t } from "$lib/testi/t";
   import type { Vista } from "$lib/tipi/Vista";
   import Giogo from "./Giogo.svelte";
@@ -10,13 +14,42 @@
   import Spesa from "./Spesa.svelte";
   import DettaglioRiga from "./DettaglioRiga.svelte";
   import Presenta from "./Presenta.svelte";
-  import { daUrl } from "./bilancio";
+  import Emendamenti from "./Emendamenti.svelte";
+  import { daUrl, misuraBilancio, presentata, riepilogoPresentato } from "./bilancio";
   import { bozza } from "./bozza.svelte";
 
   let { vista }: { vista: Vista } = $props();
 
   $effect(() => void bozza.apri(vista.turno));
-  const bilancio = $derived(bozza.corrente ?? bozza.base);
+  const ferma = $derived(presentata(vista, bozza.riaperta));
+  const bilancio = $derived(ferma ? vista.bilancio.in_aula : (bozza.corrente ?? bozza.base));
+  const misura = $derived(misuraBilancio(vista));
+
+  // il riepilogo del presentato lo dice il core; una Vista nuova (un emendamento deciso) lo richiede
+  let presentato = $state.raw<{ vista: Vista; r: RiepilogoBilancio | string | null } | null>(null);
+  $effect(() => {
+    const v = vista;
+    if (v.bilancio.presentato) void riepilogoPresentato().then((r) => (presentato = { vista: v, r }));
+  });
+  const rp = $derived(presentato?.vista === vista ? presentato.r : null);
+  const riepilogo = $derived(ferma ? (typeof rp === "object" ? rp : null) : bozza.riepilogo);
+
+  // Accogli · Respingi, diretti; il rifiuto vale per la Vista in cui è nato, accanto all'emendamento
+  let rifiutato = $state.raw<{ partito: string; testo: string; vista: Vista } | null>(null);
+  const rifiutoEm = (p: string) => (rifiutato?.vista === vista && rifiutato.partito === p ? rifiutato.testo : null);
+  async function emenda(partito: string, accogli: boolean) {
+    if (!misura || partita.occupato) return;
+    const da = document.activeElement;
+    rifiutato = null;
+    try {
+      await partita.comanda({ tipo: "emendamento", misura: misura.id, partito, accogli });
+      await tick();
+      // il bottone premuto (nel lato o sul foglietto) sparisce con l'emendamento deciso: il fuoco va al lato
+      if (da && da !== document.body && !da.isConnected) lato?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    } catch (e) {
+      rifiutato = { partito, testo: testoRifiuto(comeErrore(e)), vista };
+    }
+  }
   const provvisorio = $derived(vista.bilancio.esercizio_provvisorio);
 
   /** La riga scelta: `dic:<id>`, `irpef:<i>`, `fondo`; dal link «Indicizzalo» dei Conti arriva `?dicastero=<id>`. */
@@ -40,16 +73,20 @@
   <div class="foglio">
     {#if bilancio}
       <div class="capo">
-        <h3 class="tit">{t(provvisorio ? "bilancio.titolo_provvisorio" : "bilancio.titolo_bozza", { anno: bilancio.anno })}</h3>
-        <span class="sec muto">{t("bilancio.sotto_bozza", { anno: vista.bilancio.anno })}</span>
+        <h3 class="tit">{t(ferma ? "bilancio.titolo_presentata" : provvisorio ? "bilancio.titolo_provvisorio" : "bilancio.titolo_bozza", { anno: bilancio.anno })}</h3>
+        <span class="sec muto">{ferma ? t("bilancio.sotto_presentata") : t("bilancio.sotto_bozza", { anno: vista.bilancio.anno })}</span>
       </div>
-      {#if provvisorio}
+      {#if provvisorio && !ferma}
         <p class="avviso"><Forte testo={t("bilancio.avviso_provvisorio", { anno: bilancio.anno, vecchio: vista.bilancio.anno })} vals={[t("bilancio.esercizio_provvisorio")]} /></p>
       {/if}
-      <Giogo riepilogo={bozza.riepilogo} rifiuto={bozza.rifiuto} inVolo={bozza.inVolo} />
+      {#if ferma}
+        <Giogo {riepilogo} rifiuto={typeof rp === "string" ? rp : null} inVolo={false} />
+      {:else}
+        <Giogo {riepilogo} rifiuto={bozza.rifiuto} inVolo={bozza.inVolo} />
+      {/if}
       <div class="fronte" bind:this={fronte}>
-        <Entrate {vista} {bilancio} bind:scelta />
-        <Spesa {vista} {bilancio} bind:scelta />
+        <Entrate {vista} {bilancio} {riepilogo} {ferma} bind:scelta />
+        <Spesa {vista} {bilancio} {riepilogo} {ferma} emendamenti={ferma ? (misura?.emendamenti ?? []) : []} {emenda} {rifiutoEm} bind:scelta />
       </div>
     {:else if bozza.rifiuto}
       <Giogo riepilogo={null} rifiuto={bozza.rifiuto} inVolo={false} />
@@ -59,10 +96,12 @@
   </div>
   <aside class="lato" bind:this={lato}>
     {#if bilancio && scelta && esiste(scelta, bilancio)}
-      <DettaglioRiga {vista} {bilancio} {scelta} {torna} />
+      <DettaglioRiga {vista} {bilancio} {riepilogo} {ferma} {scelta} {torna} />
     {:else if bilancio}
-      <Presenta {vista} {bilancio} />
-      <p class="min muto">{t("bilancio.nota_giogo")}</p>
+      <!-- un solo Presenta per le due forme: dopo «Modifica e ripresenta» il fuoco passa al suo bottone -->
+      {#if ferma}<Emendamenti {vista} misura={misura ?? null} inAula={bilancio} {emenda} {rifiutoEm} />{/if}
+      <Presenta {vista} {bilancio} {misura} {ferma} />
+      {#if !ferma}<p class="min muto">{t("bilancio.nota_giogo")}</p>{/if}
     {/if}
   </aside>
 </div>
