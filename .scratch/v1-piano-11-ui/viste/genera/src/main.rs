@@ -523,6 +523,58 @@ fn cerca_al_governo(
     Ok(None)
 }
 
+/// Come `cerca_al_governo`, ma ogni bilancio presenta la bozza con tutte le aliquote abbassate di
+/// cinque punti (disavanzo) e ogni evento riceve la risposta indicata: `clausola` dove c'e' dopo il
+/// 2028, alle Aste scoperte `mes` sui semi pari e `ristrutturazione` sui dispari.
+fn cerca_in_disavanzo(
+    d: &DatiGioco,
+    cerca: impl Fn(&sim_core::Vista) -> bool,
+) -> Esito<Option<(u64, Partita)>> {
+    let giu = |a: f64| (a - 0.05).max(0.0);
+    for seme in SEMI {
+        let mut p = fonda(d, seme, 4.5)?;
+        con_la_destra(&mut p)?;
+        p.chiudi_turno();
+        p.chiudi_turno();
+        for _ in 0..TURNI {
+            if p.finita() {
+                break;
+            }
+            if p.governa() {
+                let v = p.vista();
+                if cerca(&v) {
+                    return Ok(Some((seme, p)));
+                }
+                for (i, e) in v.eventi.iter().enumerate() {
+                    let scelta = if e.nome == "Aste scoperte" {
+                        Some(if seme % 2 == 0 { "mes" } else { "ristrutturazione" })
+                    } else if e.opzioni.iter().any(|o| o.id == "clausola") && v.data.anno > 2028 {
+                        Some("clausola")
+                    } else {
+                        None
+                    };
+                    if let Some(opzione) = scelta {
+                        // Un rifiuto (evento gia' chiuso, programma del MES) non ferma la partita.
+                        comanda(&mut p, Comando::RispondiEvento { evento: i, opzione: opzione.into() }).ok();
+                    }
+                }
+                if let Some(mut b) = p.bozza_bilancio().filter(|_| !v.crisi) {
+                    for s in &mut b.aliquote.irpef {
+                        s.aliquota = giu(s.aliquota);
+                    }
+                    b.aliquote.iva = giu(b.aliquote.iva);
+                    b.aliquote.ires = giu(b.aliquote.ires);
+                    b.aliquote.contributi = giu(b.aliquote.contributi);
+                    // Col programma del MES la spesa netta ha un tetto: la bozza in disavanzo e' rifiutata.
+                    comanda(&mut p, Comando::PresentaBilancio { bilancio: b }).ok();
+                }
+            }
+            p.chiudi_turno();
+        }
+    }
+    Ok(None)
+}
+
 /// Gli stati del cruscotto al governo che le Viste 01-08 non hanno: ultimatum, esercizio
 /// provvisorio (anche in crisi), dimissioni annunciate, proposta rinviata, e l'anteprima di
 /// `Accogli` sulla proposta di fondi del 03.
@@ -999,15 +1051,17 @@ fn anteprima_misura(d: &DatiGioco) -> Esito<Uscita> {
 fn conti(d: &DatiGioco) -> Esito<Uscita> {
     let mut out = serde_json::Map::new();
     let mut note = Vec::new();
+    let mut mes_extra = None;
     let cassa = |p: &Partita| (p.vista().partiti.iter()).find(|x| x.id == p.vista().giocatore).map(|x| x.cassa);
     let mut compra = |k: &str, mut p: Partita, come: &str, note: &mut Vec<String>| -> Esito<()> {
         let prima = cassa(&p);
+        let vista_prima = p.vista();
         let rifiuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
         let ripetuto = p.comanda(Comando::Compra { acquisto: Acquisto::CentroStudi }).err().map(|e| e.to_string());
         let v = p.vista();
         note.push(format!("{k}: {come}, turno {}", v.turno));
         let j = serde_json::json!({"come": come, "cassa_prima": prima, "cassa_dopo": cassa(&p),
-            "rifiuto": rifiuto, "rifiuto_ripetuto": ripetuto, "serie": p.serie(), "vista": v});
+            "rifiuto": rifiuto, "rifiuto_ripetuto": ripetuto, "serie": p.serie(), "prima": vista_prima, "vista": v});
         out.insert(k.into(), j);
         Ok(())
     };
@@ -1040,6 +1094,43 @@ fn conti(d: &DatiGioco) -> Esito<Uscita> {
     match cerca_al_governo(d, true, |v| v.situazioni.iter().any(|s| vicina(s) && s.misura != "energia"))? {
         Some((s, p)) => compra("vicina", p, &format!("seme {s}, come il 05, la bozza a ogni bilancio"), &mut note)?,
         None => note.push("vicina: NON RAGGIUNTO".into()),
+    }
+    // Le quattro cerche in disavanzo; un seme senza lo stato ferma il generatore.
+    type CercaD = fn(&sim_core::Vista) -> bool;
+    let in_disavanzo: [(&str, CercaD); 4] = [
+        ("pde", |v| {
+            use sim_core::scenario::StatoPde::{Aperta, Inadempiente, Intimata, Sanzionata};
+            matches!(v.regole_ue.procedura, Aperta | Inadempiente | Intimata | Sanzionata)
+        }),
+        ("energia", |v| v.regole_ue.margine_energia.is_some()),
+        ("mes", |v| v.debito.mes.is_some()),
+        ("ristrutturazione", |v| v.debito.ristrutturazione.is_some()),
+    ];
+    for (k, cerca) in in_disavanzo {
+        let Some((s, p)) = cerca_in_disavanzo(d, cerca)? else {
+            eprintln!("NON RAGGIUNTO: {k}");
+            return Err(format!("stato dei Conti non raggiunto: {k}"));
+        };
+        let come = format!("seme {s}, come il 05, bozza con aliquote -5 punti a ogni bilancio, clausola e Aste scoperte (mes pari, ristrutturazione dispari), spread {} pb", p.vista().spread_pb);
+        if k == "mes" {
+            use sim_core::economia::Voce;
+            let mut q = p.clone();
+            let rifiuto_presenta = match (p.bozza_bilancio().filter(|_| p.turno_del_bilancio())).map(|b| {
+                let b = p.indicizza(&b, &Voce::Tutto)?;
+                q.comanda(Comando::PresentaBilancio { bilancio: b })
+            }) {
+                Some(Err(e)) => serde_json::json!(e.to_string()),
+                Some(Ok(())) => serde_json::json!("accolto"),
+                None => serde_json::Value::Null,
+            };
+            let mut extra = serde_json::Map::new();
+            extra.insert("rifiuto_presenta".into(), rifiuto_presenta);
+            mes_extra = Some(extra);
+        }
+        compra(k, p, &come, &mut note)?;
+    }
+    if let (Some(extra), Some(serde_json::Value::Object(m))) = (mes_extra, out.get_mut("mes")) {
+        m.extend(extra);
     }
     Ok(Uscita {
         nome: "21-conti.json",
