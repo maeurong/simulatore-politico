@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { VARIANTI, type Leve } from "./caricatura";
-import { COLLETTI, profilo } from "./kit";
+import { render } from "svelte/server";
+import Caricatura from "./Caricatura.svelte";
+import { FANTASIE, OGGETTI, profilo } from "./kit";
 import fonte from "./kit.ts?raw";
+import stile from "./Caricatura.svelte?raw";
 
 const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
 
 describe("kit", () => {
-  it("ha un colletto per leva e il file sta sotto i 60 KB", () => {
-    expect(COLLETTI).toHaveLength(VARIANTI.colletto);
+  it("ha una fantasia per leva colletto e il file sta sotto i 60 KB", () => {
+    expect(FANTASIE).toHaveLength(6);
+    expect(FANTASIE).toHaveLength(VARIANTI.colletto);
     expect(fonte.length).toBeLessThan(60 * 1024);
   });
 
@@ -55,5 +59,39 @@ describe("kit", () => {
     const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0 };
     expect(profilo({ ...base, naso: 1 }).pennino).not.toBe(profilo(base).pennino);
     expect(profilo({ ...base, mento: 2 }).filo).not.toBe(profilo(base).filo);
+  });
+
+  it("il colletto riempie con la fantasia della leva, quello del tecnico col grigio", () => {
+    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0 };
+    const colletto = (ruolo: "ministro" | "tecnico", c: number) =>
+      render(Caricatura, { props: { ruolo, partito: "Centro", nome: "", leve: { ...base, colletto: c }, misura: 62 } }).body.match(/<path class="coll[^"]*"[^>]*>/)![0];
+    FANTASIE.forEach((f, c) => expect(colletto("ministro", c)).toContain(`url(#fantasia-${f})`));
+    expect(colletto("tecnico", 2)).toContain("grigio");
+    expect(colletto("tecnico", 2)).not.toContain("url(#fantasia");
+  });
+
+  it("l'oggetto del dicastero c'è solo con un id noto, e mai sul leader", () => {
+    const corpo = (props: Record<string, unknown>) => render(Caricatura, { props: { ruolo: "ministro", partito: "Centro", nome: "", misura: 62, ...props } as never }).body;
+    expect(corpo({ dicastero: "sanita" })).toContain('class="ogg"');
+    expect(corpo({})).not.toContain("ogg");
+    expect(corpo({ dicastero: "inesistente" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "toString" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "sanita", ruolo: "leader" })).not.toContain("ogg");
+    expect(corpo({ dicastero: "sanita", fondo: "rosso" })).toMatch(/class="car[^"]* rosso/);
+  });
+
+  it("ogni dicastero ha il suo oggetto", () => {
+    expect(Object.keys(OGGETTI)).toHaveLength(10);
+  });
+
+  it("gli spessori del prototipo valgono: la croce della sanità 3,2, il default 1,5 solo ereditato dal gruppo", () => {
+    const corpo = (dicastero: string) => render(Caricatura, { props: { ruolo: "ministro", partito: "Centro", nome: "", misura: 62, dicastero } as never }).body;
+    expect(corpo("sanita")).toContain('d="M8 3.4v9.2M3.4 8h9.2" stroke-width="3.2"');
+    expect(corpo("lavoro_welfare")).toContain('stroke-width="3.6"');
+    expect(corpo("giustizia")).toContain('stroke-width="2.8"');
+    // senza attributo sullo stesso elemento, lo spessore è quello ereditato: nessuna regola sf/sd lo impone sopra gli attributi
+    expect(OGGETTI.sviluppo_economico).toContain('<path class="sd" d="M1.6 9.8h12.8"/>');
+    expect(stile).toMatch(/\.ogg\) \{[^}]*stroke-width: 1\.5/);
+    expect(stile).not.toMatch(/:global\(\.s[fd]\)[^{]*\{[^}]*stroke-width/);
   });
 });

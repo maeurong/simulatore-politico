@@ -1,5 +1,6 @@
 <script lang="ts">
   import "$lib/stile/fondamenta.css";
+  import Fantasie from "$lib/caricature/Fantasie.svelte";
   import { avvisoScala, scorciatoia } from "$lib/impostazioni.svelte";
 
   let { children } = $props();
@@ -7,6 +8,7 @@
 
 <svelte:window onkeydown={scorciatoia} />
 
+<Fantasie />
 {@render children()}
 
 <!-- l'avviso breve delle scorciatoie della scala (prototipo 33, .toast) -->

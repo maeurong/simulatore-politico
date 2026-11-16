@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { render } from "svelte/server";
 import Caricatura from "./Caricatura.svelte";
+import { OGGETTI } from "./kit";
 import { VARIANTI, type Leve, type Ruolo } from "./caricatura";
 
-const html = (ruolo: Ruolo, leve: Leve, fondo?: "giallo" | "rosso") =>
-  render(Caricatura, { props: { ruolo, partito: "Centro", nome: "Giorgio Valli", leve, misura: 84, fondo } }).body;
+const html = (ruolo: Ruolo, leve: Leve, fondo?: "giallo" | "rosso", dicastero?: string) =>
+  render(Caricatura, { props: { ruolo, partito: "Centro", nome: "Giorgio Valli", leve, misura: 84, fondo, dicastero } }).body;
+
+const pesante = Object.keys(OGGETTI).sort((a, b) => OGGETTI[b].length - OGGETTI[a].length)[0];
 
 describe("Caricatura renderizzata", () => {
   it("una faccia pesa meno di 3 KB su ogni combinazione di naso, mento, fronte, nuca, occhio e colletto, per ogni ruolo e fondo", () => {
@@ -15,8 +18,8 @@ describe("Caricatura renderizzata", () => {
           for (let nuca = 0; nuca < VARIANTI.nuca; nuca++)
             for (let occhio = 0; occhio < VARIANTI.occhio; occhio++)
               for (let colletto = 0; colletto < VARIANTI.colletto; colletto++)
-                for (const ruolo of ["leader", "tecnico"] as const) {
-                  max = Math.max(max, html(ruolo, { naso, mento, fronte, nuca, occhio, colletto }, "rosso").length);
+                for (const ruolo of ["leader", "tecnico", "ministro"] as const) {
+                  max = Math.max(max, html(ruolo, { naso, mento, fronte, nuca, occhio, colletto }, "rosso", pesante).length);
                 }
     expect(max).toBeLessThan(3 * 1024);
   });

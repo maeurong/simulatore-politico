@@ -32,8 +32,8 @@ const NUCHE = [
 const SPALLE = { d: "M2.4 64C3.4 56.4 10 53.4 21 53.2M38 53.2C50 53.2 57.6 57 60.6 64", pen: "M18 617l1-5 8-11 14-16 45-32 18-11 33-11 42-8 12 0 11 5 12 1-8 6-16 2-30 8-50 8-20 6-20 7-9 11-23 36-9 17-1 7-8 6 1-7zM376 535l8-6 16-1 39-6 21 2 27 5 28 7 19 7 19 10 18 11 16 13 10 10 4 5 5 31 4 14-8 6-3-6-5-6-27-15-14-15-16-13-18-11-19-10-20-7-27-7-48-7-17-10z" };
 const ORECCHIO = { d: "M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36", pen: "M231 329l1-14 2-6 6-13 4-5 32-23 13 2-6 4-7 0-13 5-8 15-2 13 1 14 4 13 4 6 10 9 6 8 7 1-6 4-17 1-10 0-7-4-8-10-3-6z" };
 
-/** I sei colletti: quattro inchiostri e due sovrapposti (arancio, oliva). Il tecnico lo ha sempre grigio. */
-export const COLLETTI = ["rosso", "verde", "biro", "giallo", "arancio", "oliva"] as const;
+/** Le sei fantasie del colletto, in inchiostro su carta (`Fantasie.svelte`): l'indice è la leva colletto. Il tecnico lo ha sempre grigio. */
+export const FANTASIE = ["pieno", "vuoto", "righe", "pois", "quadretti", "tratteggio"] as const;
 
 /** Le parti disegnate dalle sei leve: tracciati e poligoni da stendere nella tela 64 × 64. */
 export function profilo(l: Leve) {
@@ -51,3 +51,19 @@ export function profilo(l: Leve) {
     ombre: `M28 37.5L39 45L38 58L21 58ZM45 31L${n.tip[0]} ${n.tip[1]}L44 35.4Z${ORECCHIO.d}Z`,
   };
 }
+
+/**
+ * L'oggetto del dicastero, in alto a destra della faccia (prototipo 18-governo, riquadro 16 × 16, solo la stampa piena): senza classe riempie con l'inchiostro, `od` col fondo; `sf`/`sd` tracciano senza riempire; lo spessore è quello del prototipo, 1,5 (ereditato dal `<g>`) dove non lo dicono. Chiavi: id di `Vista.dicasteri`.
+ */
+export const OGGETTI: Record<string, string> = {
+  economia_finanze: '<circle cx="8" cy="8" r="7"/><path class="sd" d="M11.2 5A4 4 0 1 0 11.2 11M3.4 7h5.8M3.4 9.4h5.8" stroke-width="1.7"/>',
+  sviluppo_economico: '<path class="sf" d="M5 6V2.6h6V6" stroke-width="2"/><path d="M1 5.5h14v9.5H1z"/><path class="sd" d="M1.6 9.8h12.8"/>',
+  lavoro_welfare: '<path class="sf" d="M2.6 13.4L9.6 6.4" stroke-width="3.6"/><circle class="sf" cx="11.4" cy="4.6" r="3.3" stroke-width="2.6"/>',
+  sanita: '<path d="M1 1h14v14H1z"/><path class="sd" d="M8 3.4v9.2M3.4 8h9.2" stroke-width="3.2"/>',
+  istruzione_ricerca: '<path d="M1.5 14.5L3 9.4L11.6 .8L15.2 4.4L6.6 13Z"/><path class="od" d="M1.5 14.5L3 9.4L6.6 13Z"/>',
+  infrastrutture_trasporti: '<path d="M4.4 13L7 1.4h2L11.6 13Z"/><path class="od" d="M5.7 7.4h4.6l.6 2.8H5.1Z"/><path d="M1.2 12.6h13.6v2.8H1.2z"/>',
+  ambiente_energia: '<path d="M1.5 14.5C1.5 6 7 1.5 14.5 1.5C14.5 10 9 14.5 1.5 14.5Z"/><path class="sd" d="M3.2 12.8L10.8 5.2" stroke-width="1.6"/>',
+  interno: '<path d="M8 .6l2.2 4.7 5.1.5-3.9 3.5 1.2 5L8 11.8l-4.6 2.5 1.2-5L.7 5.8l5.1-.5Z"/>',
+  giustizia: '<path d="M1.4 5.6L6 1l5 5-4.6 4.6Z"/><path class="sf" d="M8.4 8.4l5.4 5.4" stroke-width="2.8"/><path d="M.6 13.2h8.4v2.4H.6z"/>',
+  esteri_difesa: '<circle cx="8" cy="8" r="7"/><ellipse class="sd s14" cx="8" cy="8" rx="3" ry="6.4"/><path class="sd s14" d="M1.6 8h12.8"/>',
+};

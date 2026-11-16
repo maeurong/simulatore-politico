@@ -62,6 +62,55 @@ fn costi(p: &Partita) -> Value {
     Value::Object(out)
 }
 
+/// Il costo di Dirotta dal core, per ogni atto (senza regione) e ogni regione (senza atto) di ogni
+/// ministro, o il rifiuto; dove `costi` ha la misura, i due devono coincidere: numeri entro 1e-9,
+/// rifiuti con lo stesso testo. Uno scarto, o nessun costo numerico, è un errore.
+fn costo_dirotta(p: &Partita) -> Esito<Value> {
+    let v = p.vista();
+    let misurati = costi(p);
+    let dal_core = |d: &str, atto: Option<&str>, regione: Option<&str>| match p.costo_dirotta(d, atto, regione) {
+        Ok(x) => serde_json::json!(x),
+        Err(e) => serde_json::json!({ "rifiuto": e.to_string() }),
+    };
+    let mut scarti = Vec::new();
+    let mut numerici = 0;
+    let mut controlla = |d: &str, gruppo: &str, k: &str, core: &Value| {
+        numerici += usize::from(core.is_number());
+        let Some(m) = misurati[d][gruppo].get(k) else { return };
+        let uguali = match (core.as_f64(), m.as_f64()) {
+            (Some(a), Some(b)) => (a - b).abs() <= 1e-9,
+            (None, None) => core["rifiuto"] == m["rifiuto"],
+            _ => false,
+        };
+        if !uguali {
+            scarti.push(format!("costo_dirotta {d} {k}: core {core}, misurato {m}"));
+        }
+    };
+    let mut out = serde_json::Map::new();
+    for m in &v.ministeri {
+        let d = m.dicastero.as_str();
+        let atti: serde_json::Map<String, Value> = (m.atti.iter())
+            .map(|a| {
+                let x = dal_core(d, Some(&a.id), None);
+                controlla(d, "dirotta_atti", &a.id, &x);
+                (a.id.clone(), x)
+            })
+            .collect();
+        let regioni: serde_json::Map<String, Value> = (v.sondaggio.regioni.iter())
+            .map(|r| {
+                let x = dal_core(d, None, Some(&r.id));
+                controlla(d, "dirotta_regioni", &r.id, &x);
+                (r.id.clone(), x)
+            })
+            .collect();
+        out.insert(d.into(), serde_json::json!({ "atti": atti, "regioni": regioni }));
+    }
+    if numerici == 0 {
+        scarti.push("costo_dirotta: nessun costo numerico, ogni Dirotta è rifiutata".into());
+    }
+    if scarti.is_empty() { Ok(Value::Object(out)) } else { Err(format!("SCARTO {}", scarti.join("; "))) }
+}
+
 fn intese(p: &Partita) -> Value {
     p.vista().alleati.iter().map(|a| (a.partito.clone(), serde_json::json!(a.intesa))).collect::<serde_json::Map<_, _>>().into()
 }
@@ -71,6 +120,7 @@ pub fn governo(d: &DatiGioco) -> Esito<Uscita> {
     let mut note = Vec::new();
     let p03 = governo_03(d)?;
     out.insert("costi_03".into(), costi(&p03));
+    out.insert("costo_dirotta_03".into(), costo_dirotta(&p03)?);
     out.insert("intese_03".into(), intese(&p03));
 
     // Le quattro mosse sul borsino, una per ministro.

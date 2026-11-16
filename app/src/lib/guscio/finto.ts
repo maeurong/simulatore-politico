@@ -6,6 +6,8 @@ import type { Vista } from "$lib/tipi/Vista";
 type Campioni = {
   campione: any; turnoZero?: any; edicola: any; editor: any; fondazione: any;
   paese: any; campagna: any; trattativa: any;
+  /** 17-, 18-, 19-, 20-: i campioni della fetta 11c */
+  cruscotto?: any; governo?: any; aula?: any; anteprime?: any;
   /** ?stato= dell'URL: sceglie la prova del 26 e lo stato del 23 */
   stato: string | null;
 };
@@ -59,10 +61,10 @@ function riepilogo(scenario: any, editor: any): unknown {
 }
 
 /** {ok} → ok, {rifiuto} → il rifiuto del core, niente → non nel campione. */
-function esito(voce: any, comando: string): any {
+function esito(voce: any, comando: string, campo = "ok"): any {
   presente(voce, comando);
   if (voce.rifiuto != null) throw rifiuto(voce.rifiuto);
-  return voce.ok;
+  return voce[campo];
 }
 
 const forma = (s: any) => JSON.stringify({ bersaglio: s.bersaglio, leva: s.leva, euro: s.euro });
@@ -80,6 +82,24 @@ function anteprimaCampagna(spese: any[], campagna: any): unknown {
   });
 }
 
+const sorgente = (s: unknown) => (s == null ? "None" : `Some(${JSON.stringify(s)})`);
+
+/** La mossa nella forma Debug di Rust con cui il campione 18 elenca le sue `mosse`. */
+function mossa(cmd: any): string | undefined {
+  const d = JSON.stringify(cmd.dicastero);
+  switch (cmd.tipo) {
+    case "ferma": return `Ferma { dicastero: ${d} }`;
+    case "chiedi_dimissioni": return `ChiediDimissioni { dicastero: ${d} }`;
+    case "dirotta": return `Dirotta { dicastero: ${d}, atto: ${sorgente(cmd.atto)}, regione: ${sorgente(cmd.regione)} }`;
+  }
+}
+
+/** Le anteprime del 20 (voci con `valori` e `anteprima` o `rifiuto`) che hanno questi valori. */
+function vociAnteprima(valori: unknown, c: Campioni): any {
+  const a = c.anteprime;
+  return [...Object.values(a?.anteprime ?? {}), ...(a?.gradini ?? [])].find((v: any) => uguali(v.valori, valori));
+}
+
 /** La Vista dopo un comando della fetta, dal campione; undefined se il campione non l'ha giocato. */
 function dopoComando(cmd: any, c: Campioni): unknown {
   const { campione, campagna, paese, stato } = c;
@@ -94,6 +114,14 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       return { ...v, coalizione: cmd.partiti, disponibilita };
     }
     case "compra": {
+      const test = cmd.acquisto?.test_misura;
+      if (test) {
+        const chiave = Object.keys(c.anteprime?.anteprime ?? {}).find((k) => uguali(c.anteprime.anteprime[k].valori, test.valori));
+        const voce = chiave && c.anteprime.test?.[chiave];
+        if (!voce) return undefined;
+        if (v?.acquisti.test_misura) throw rifiuto(voce.rifiuto_ripetuto);
+        return { ...v, acquisti: { ...v?.acquisti, test_misura: voce.acquisti.test_misura } };
+      }
       if (cmd.acquisto !== "sondaggio_privato") return undefined;
       const prova = campagna.prove?.[stato ?? ""]?.privato;
       const sondaggio = prova ? esito(prova, "comanda") : paese[stato ?? ""]?.vista?.acquisti?.sondaggio_privato;
@@ -127,6 +155,24 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       esito(voce.esito, "comanda");
       return tutti ? voce.vista : voce.dopo;
     }
+    case "ferma": case "dirotta": case "chiedi_dimissioni": {
+      const scelte = c.governo?.scelte;
+      return scelte?.mosse.some((m: any) => m.mossa === mossa(cmd)) ? scelte.vista : undefined;
+    }
+    case "scegli_successore": return c.governo?.successore_scelto && esito(c.governo.successore_scelto, "comanda", "vista");
+    case "dimettiti": return c.cruscotto?.dimissioni?.vista;
+    case "rinvia": return cmd.dicastero === "ambiente_energia" ? c.cruscotto?.scelte_fatte?.vista : undefined;
+    case "rispondi_evento": return cmd.opzione === "debito" ? c.cruscotto?.scelte_fatte?.vista : undefined;
+    case "presenta_legge": {
+      const piena = c.aula?.piena?.vista;
+      const misura = piena?.calendario.find((m: any) => [1, 2, 3].includes(m.id) && uguali(m.valori, cmd.valori));
+      if (!misura) return undefined;
+      if (misura.forma === "costituzionale" && v?.calendario?.some((m: any) => m.forma === "costituzionale")) {
+        throw rifiuto(c.aula.rifiuto_calendario_costituzionale);
+      }
+      return piena;
+    }
+    case "presenta_proposta": case "linea": return c.aula?.opposizione_proposta?.vista;
     case "chiedi_guida": return di27("dopo_chiedi")?.dopo_chiedi;
     case "rifiuta_ribaltone": return di27("dopo_rifiuta")?.dopo_rifiuta;
     default: return undefined;
@@ -143,6 +189,32 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
       // il campione del 23 porta il suo stato; fuori dal 23 vale quello del governo
       const gruppi = campione?.campione ?? c.paese.governo.campione;
       return presente(gruppi[`${args.regione}|${args.condizione}|${args.fascia}`], comando);
+    }
+    case "anteprima": return esito(presente(vociAnteprima(args.valori, c), comando), comando, "anteprima");
+    case "anteprima_accogli": {
+      const voce: any = [{ dicastero: "infrastrutture_trasporti", anteprima: c.cruscotto?.anteprima_accogli_03 }, c.anteprime?.anteprime.accogli]
+        .find((e) => e?.dicastero === args.dicastero && e.anteprima);
+      return (presente(voce, comando) as any).anteprima;
+    }
+    case "anteprima_decreto": {
+      const d = args.decreto as any;
+      const voci: any[] = [c.anteprime?.decreto, c.anteprime?.decreto_grave].filter((x) => d?.tipo === "disposizioni" && x && uguali(x.valori, d.valori));
+      return (presente(voci.find((x) => uguali(x.vista, vistaDi(campione))) ?? voci[0], comando) as any).anteprima;
+    }
+    case "anteprima_proposta": {
+      const voce = c.aula?.anteprima_proposta;
+      return esito(voce && uguali(voce.valori, args.valori) ? voce : null, comando);
+    }
+    case "menu_elettorale": {
+      const { menu_03, menu_proporzionale, piena } = c.aula ?? {};
+      if (uguali(args.valori, [])) return presente(menu_03, comando);
+      return presente(uguali(args.valori, piena?.vista.calendario[1]?.valori) ? menu_proporzionale : null, comando);
+    }
+    case "costo_dirotta": {
+      const d = c.governo?.costo_dirotta_03?.[args.dicastero as string];
+      const costo = args.atto != null ? d?.atti[args.atto as string] : args.regione != null ? d?.regioni[args.regione as string] : null;
+      if (typeof costo === "number") return costo;
+      return esito(costo ?? null, comando);
     }
     case "serie": return campione?.serie ?? [];
     case "riprendi": return presente(vistaDi(campione), comando);
@@ -194,6 +266,10 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     paese: await carica("23-"),
     campagna: await carica("26-"),
     trattativa: await carica("27-"),
+    cruscotto: await carica("17-"),
+    governo: await carica("18-"),
+    aula: await carica("19-"),
+    anteprime: await carica("20-"),
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");

@@ -6,7 +6,7 @@
   import { REGIONI } from "./regioni";
 
   let {
-    valori, scelta = $bindable(null), azione, legenda, formato = (x) => percentuale(x, 1), onconferma, onannulla,
+    valori, scelta = $bindable(null), azione, legenda, spento, formato = (x) => percentuale(x, 1), senzaAzioni = false, onconferma, onannulla,
   }: {
     valori: Record<string, number | null>;
     scelta: string | null;
@@ -14,14 +14,18 @@
     azione: string;
     /** cosa dice la tinta, sotto la mappa */
     legenda?: string;
-    formato?: (x: number) => string;
+    /** il motivo per cui l'azione è spenta, oltre alla scelta mancante */
+    spento?: string;
+    formato?: (x: number, id: string) => string;
+    /** chi lo usa tiene altrove i due pulsanti (una barra fissa in fondo al pannello) */
+    senzaAzioni?: boolean;
     onconferma: () => void;
     onannulla: () => void;
   } = $props();
 
   const ordine = REGIONI.map((r) => r.id);
   const dato = (id: string) => valori[id] ?? null;
-  const val = (id: string) => (dato(id) === null ? "—" : formato(dato(id)!));
+  const val = (id: string) => (dato(id) === null ? "—" : formato(dato(id)!, id));
 </script>
 
 <div class="sel">
@@ -35,10 +39,10 @@
     {/each}
   </div>
   {#if scelta}<p class="sec"><b>{REGIONI.find((r) => r.id === scelta)?.nome}</b>: {val(scelta)}</p>{/if}
-  <div class="az">
-    <Pulsante forma="bordo" spento={scelta ? undefined : t("mappa.scegli")} onclick={onconferma}>{azione}</Pulsante>
+  {#if !senzaAzioni}<div class="az">
+    <Pulsante forma="bordo" spento={scelta ? spento : t("mappa.scegli")} onclick={onconferma}>{azione}</Pulsante>
     <Pulsante forma="link" onclick={onannulla}>{t("componenti.annulla")}</Pulsante>
-  </div>
+  </div>{/if}
 </div>
 
 <style>

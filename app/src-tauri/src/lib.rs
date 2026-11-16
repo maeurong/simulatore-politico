@@ -19,7 +19,7 @@ use sim_core::legislatura::{
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
 use sim_core::salvataggi::{PuntoSerie, VoceAlbo, VocePartita};
-use sim_core::vista::Anteprima;
+use sim_core::vista::{Anteprima, VoceMenu};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
 
@@ -508,6 +508,55 @@ async fn anteprima_accogli(
     sulla_partita(&stato, |p| p.anteprima_accogli(&dicastero))
 }
 
+fn costo_del_dirotta(
+    stato: &Stato,
+    dicastero: &str,
+    atto: Option<&str>,
+    regione: Option<&str>,
+) -> Result<f64, ErroreGuscio> {
+    sulla_partita(stato, |p| p.costo_dirotta(dicastero, atto, regione))
+}
+
+fn menu_del_governo(
+    stato: &Stato,
+    valori: &[ValoreProposto],
+) -> Result<Vec<VoceMenu>, ErroreGuscio> {
+    sulla_partita(stato, |p| Ok(p.menu_elettorale(valori)))
+}
+
+fn anteprima_della_proposta(
+    stato: &Stato,
+    valori: &[ValoreProposto],
+) -> Result<Anteprima, ErroreGuscio> {
+    sulla_partita(stato, |p| p.anteprima_proposta(valori))
+}
+
+#[tauri::command]
+async fn costo_dirotta(
+    dicastero: String,
+    atto: Option<String>,
+    regione: Option<String>,
+    stato: State<'_, Stato>,
+) -> Result<f64, ErroreGuscio> {
+    costo_del_dirotta(&stato, &dicastero, atto.as_deref(), regione.as_deref())
+}
+
+#[tauri::command]
+async fn menu_elettorale(
+    valori: Vec<ValoreProposto>,
+    stato: State<'_, Stato>,
+) -> Result<Vec<VoceMenu>, ErroreGuscio> {
+    menu_del_governo(&stato, &valori)
+}
+
+#[tauri::command]
+async fn anteprima_proposta(
+    valori: Vec<ValoreProposto>,
+    stato: State<'_, Stato>,
+) -> Result<Anteprima, ErroreGuscio> {
+    anteprima_della_proposta(&stato, &valori)
+}
+
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(Stato::default())
@@ -541,6 +590,9 @@ pub fn run() -> tauri::Result<()> {
             anteprima_decreto,
             anteprima_accogli,
             anteprima_campagna,
+            costo_dirotta,
+            menu_elettorale,
+            anteprima_proposta,
             elettori_campione,
             serie,
             anteprima_fondazione,
@@ -1097,6 +1149,188 @@ mod tests {
             leva: Leva::Mobilitare,
             euro: 300_000,
         }
+    }
+
+    fn bozza_cittadinanza() -> Vec<ValoreProposto> {
+        vec![ValoreProposto {
+            disposizione: "cittadinanza".into(),
+            gradino: "ius_soli_temperato".into(),
+        }]
+    }
+
+    #[test]
+    fn costo_dirotta_senza_partita_e_un_guasto() {
+        let r = costo_del_dirotta(&Stato::default(), "sanita", None, None);
+        assert_eq!(r, Err(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn menu_senza_partita_e_un_guasto() {
+        let r = menu_del_governo(&Stato::default(), &[]);
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn anteprima_proposta_senza_partita_e_un_guasto() {
+        let r = anteprima_della_proposta(&Stato::default(), &bozza_cittadinanza());
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn costo_dirotta_al_turno_zero_e_un_rifiuto() -> Result<(), String> {
+        let c = cartella("lib-costo-dirotta");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .costo_dirotta("sanita", None, None)
+            .err()
+            .ok_or("Dirotta accettata al turno zero")?
+            .to_string();
+        let e = costo_del_dirotta(&stato, "sanita", None, None)
+            .err()
+            .ok_or("costo dato al turno zero")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso);
+        Ok(())
+    }
+
+    /// Una partita fondata a `posizione`, con chi vuole in coalizione, chiusa due volte (voto,
+    /// trattativa): al governo se `destra`, altrimenti all'opposizione.
+    fn dopo_il_voto(seme: u64, posizione: f64, destra: bool) -> Result<Stato, String> {
+        let f = Fondazione {
+            nome: "Partito di prova".into(),
+            posizione,
+        };
+        let mut p = Partita::fonda(dati(), seme, &f).map_err(|e| e.to_string())?;
+        if destra {
+            let partiti = (p.disponibilita().into_iter())
+                .filter(|v| {
+                    v.disponibile
+                        && ["destra", "centrodestra", "estrema_destra"]
+                            .contains(&v.partito.as_str())
+                })
+                .map(|v| v.partito)
+                .collect();
+            p.comanda(Comando::DichiaraCoalizione {
+                partiti,
+                cessioni: vec![],
+            })
+            .map_err(|e| e.to_string())?;
+        }
+        p.chiudi_turno();
+        p.chiudi_turno();
+        assert_eq!(p.governa(), destra, "governo non come voluto");
+        let stato = Stato::default();
+        *blocca_comunque(&stato) = Some(InCorso {
+            id: "prova".into(),
+            partita: p,
+        });
+        Ok(stato)
+    }
+
+    #[test]
+    fn costo_dirotta_al_governo_e_quello_del_core() -> Result<(), String> {
+        let stato = dopo_il_voto(4, 4.5, true)?;
+        let (p, v) = {
+            let g = blocca_comunque(&stato);
+            let p = g.as_ref().ok_or(NESSUNA)?.partita.clone();
+            let v = p.vista();
+            (p, v)
+        };
+        let (d, atto) = (v.ministeri.iter())
+            .flat_map(|m| {
+                m.atti
+                    .iter()
+                    .map(move |a| (m.dicastero.as_str(), a.id.as_str()))
+            })
+            .find(|&(d, a)| p.costo_dirotta(d, Some(a), None).is_ok())
+            .ok_or("nessun atto dirottabile")?;
+        let (dr, regione) = (v.ministeri.iter())
+            .flat_map(|m| {
+                v.sondaggio
+                    .regioni
+                    .iter()
+                    .map(move |r| (m.dicastero.as_str(), r.id.as_str()))
+            })
+            .find(|&(d, r)| p.costo_dirotta(d, None, Some(r)).is_ok())
+            .ok_or("nessuna regione dirottabile")?;
+        for (d, a, r) in [(d, Some(atto), None), (dr, None, Some(regione))] {
+            let atteso = p.costo_dirotta(d, a, r).map_err(|e| e.to_string())?;
+            let letto = costo_del_dirotta(&stato, d, a, r).map_err(|e| e.testo)?;
+            assert!(
+                (atteso - letto).abs() < 1e-12,
+                "{a:?} {r:?}: core {atteso}, guscio {letto}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn il_menu_con_valori_e_quello_del_core() -> Result<(), String> {
+        let c = cartella("lib-menu-valori");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        // Senza coalizioni, il premio alla coalizione non è più ammesso.
+        let valori = vec![ValoreProposto {
+            disposizione: "coalizioni".into(),
+            gradino: "no".into(),
+        }];
+        let (atteso, vuoto) = {
+            let g = blocca_comunque(&stato);
+            let p = &g.as_ref().ok_or(NESSUNA)?.partita;
+            (p.menu_elettorale(&valori), p.menu_elettorale(&[]))
+        };
+        assert_ne!(atteso, vuoto);
+        assert_eq!(menu_del_governo(&stato, &valori), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn l_anteprima_della_proposta_all_opposizione_e_quella_del_core() -> Result<(), String> {
+        let stato = dopo_il_voto(7, 1.5, false)?;
+        let valori = bozza_cittadinanza();
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_proposta(&valori)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(anteprima_della_proposta(&stato, &valori), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn il_menu_e_quello_del_core() -> Result<(), String> {
+        let c = cartella("lib-menu");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .menu_elettorale(&[]);
+        assert!(!atteso.is_empty());
+        assert_eq!(menu_del_governo(&stato, &[]), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn l_anteprima_della_proposta_al_turno_zero_e_un_rifiuto() -> Result<(), String> {
+        let c = cartella("lib-anteprima-proposta");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_proposta(&bozza_cittadinanza())
+            .err()
+            .ok_or("proposta ammessa al turno zero")?;
+        let e = anteprima_della_proposta(&stato, &bozza_cittadinanza())
+            .err()
+            .ok_or("anteprima data al turno zero")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso.to_string());
+        Ok(())
     }
 
     #[test]

@@ -768,7 +768,13 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
         let come = format!("seme {seme}, fonda a 1,5, nessuna coalizione, chiudi ×2");
         metti(&mut out, "opposizione_libero", &p, come.clone());
         let proposta = gradino_lontano(&v, 7.0).ok_or("nessuna proposta")?;
-        let ant = p.anteprima(std::slice::from_ref(&proposta));
+        let cittadinanza = valori(&[("cittadinanza", "ius_soli_temperato")]);
+        let mut ant = serde_json::json!({ "valori": cittadinanza });
+        match p.anteprima_proposta(&cittadinanza) {
+            Ok(a) => ant["ok"] = serde_json::to_value(&a).map_err(|e| e.to_string())?,
+            Err(e) => ant["rifiuto"] = e.to_string().into(),
+        }
+        out.insert("anteprima_proposta".into(), ant);
         comanda(
             &mut p,
             Comando::PresentaProposta {
@@ -789,14 +795,10 @@ fn aula(d: &DatiGioco) -> Esito<Uscita> {
             proposta.disposizione, proposta.gradino
         );
         metti(&mut out, "opposizione_proposta", &p, come);
-        match ant {
-            Ok(a) => out.insert(
-                "anteprima_proposta".into(),
-                serde_json::to_value(&a).map_err(|e| e.to_string())?,
-            ),
-            Err(e) => out.insert("anteprima_proposta_rifiuto".into(), e.to_string().into()),
-        };
         break;
+    }
+    for (chiave, menu) in [("menu_03", p03.menu_elettorale(&[])), ("menu_proporzionale", p03.menu_elettorale(&elettorale))] {
+        out.insert(chiave.into(), serde_json::to_value(menu).map_err(|e| e.to_string())?);
     }
     for (chiave, a) in [
         ("anteprima_elettorale", &ant_el),
