@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Anteprima } from "$lib/tipi/Anteprima";
+import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
 import type { Comando } from "$lib/tipi/Comando";
@@ -10,11 +11,13 @@ import type { Eredita } from "$lib/tipi/Eredita";
 import type { Fascia } from "$lib/tipi/Fascia";
 import type { Fondazione } from "$lib/tipi/Fondazione";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
+import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import type { RiepilogoScenario } from "$lib/tipi/RiepilogoScenario";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { SuMisura } from "$lib/tipi/SuMisura";
 import type { ValoreProposto } from "$lib/tipi/ValoreProposto";
 import type { Vista } from "$lib/tipi/Vista";
+import type { Voce } from "$lib/tipi/Voce";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
@@ -77,4 +80,8 @@ export const guscio = {
   anteprimaCampagna: (spese: Spesa[]) => chiama<VoceAnteprimaCampagna[]>("anteprima_campagna", { spese }),
   elettoriCampione: (regione: string, condizione: Condizione, fascia: Fascia) =>
     chiama<ElettoreCampione[]>("elettori_campione", { regione, condizione, fascia }),
+  bozzaBilancio: () => chiama<Bilancio | null>("bozza_bilancio"),
+  indicizza: (bilancio: Bilancio, voce: Voce) => chiama<Bilancio>("indicizza", { bilancio, voce }),
+  riepilogoBilancio: (bilancio: Bilancio) => chiama<RiepilogoBilancio>("riepilogo_bilancio", { bilancio }),
+  riepilogoPresentato: () => chiama<RiepilogoBilancio | null>("riepilogo_presentato"),
 };

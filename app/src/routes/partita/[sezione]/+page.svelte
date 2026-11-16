@@ -7,6 +7,7 @@
   import Governo from "$lib/governo/Governo.svelte";
   import Aula from "$lib/aula/Aula.svelte";
   import Conti from "$lib/conti/Conti.svelte";
+  import Bilancio from "$lib/bilancio/Bilancio.svelte";
   import Campagna from "$lib/campagna/Campagna.svelte";
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
@@ -49,6 +50,8 @@
             <Aula vista={partita.vista} />
           {:else if aperta === "conti" && fetta === null}
             <Conti vista={partita.vista} />
+          {:else if aperta === "bilancio" && fetta === null}
+            <Bilancio vista={partita.vista} />
           {:else if aperta === "campagna" && fetta === null}
             <Campagna vista={partita.vista} />
           {:else if aperta === "paese" && fetta === null}

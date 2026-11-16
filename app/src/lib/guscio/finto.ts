@@ -10,6 +10,8 @@ type Campioni = {
   cruscotto?: any; governo?: any; aula?: any; anteprime?: any;
   /** 21-: i Conti; ?stato= ne sceglie uno, servito come `.prima` */
   conti?: any;
+  /** 22-: il Bilancio, caricato sempre; varianti nel bozza_04 */
+  bilancio?: any;
   /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
   servita?: any;
   /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
@@ -106,6 +108,33 @@ function vociAnteprima(valori: unknown, c: Campioni): any {
   return [...Object.values(a?.anteprime ?? {}), ...(a?.gradini ?? [])].find((v: any) => uguali(v.valori, valori));
 }
 
+/** Le varianti del 22 con bilancio e riepilogo (o rifiuto), più le due bozze col loro riepilogo. */
+function variantiBilancio(bil: any): any[] {
+  const b04 = bil?.bozza_04;
+  if (!b04) return [];
+  const va = b04.varianti;
+  return [
+    { bilancio: b04.bozza, ...b04.riepilogo_bozza },
+    { bilancio: bil.provvisorio?.bozza, ...bil.provvisorio?.riepilogo_bozza },
+    va.tutto, va.scaglioni, ...va.per_dicastero,
+    ...Object.values(va.margine_passo ?? {}),
+    ...Object.values(va.aliquote_passo ?? {}).flatMap((x: any) => [x.meno, x.piu]),
+  ].filter((x) => x?.bilancio);
+}
+
+function riepilogoBilancio(bilancio: unknown, c: Campioni): unknown {
+  const v = vistaDi(c.campione), bil = c.bilancio;
+  if (v && !v.governa) return esito(bil?.opposizione?.rifiuto_riepilogo, "riepilogo_bilancio");
+  if (v && v.data.trimestre !== 4 && !v.bilancio.presentabile) return esito(bil?.fuori_stagione, "riepilogo_bilancio");
+  return esito(variantiBilancio(bil).find((x) => uguali(x.bilancio, bilancio)), "riepilogo_bilancio", "riepilogo");
+}
+
+function indicizzaBilancio(voce: any, bil: any): unknown {
+  const va = bil?.bozza_04?.varianti;
+  const x = voce?.tipo === "dicastero" ? va?.per_dicastero.find((p: any) => p.id === voce.id) : va?.[voce?.tipo];
+  return esito(x, "indicizza", "bilancio");
+}
+
 /** La Vista dopo un comando della fetta, dal campione; undefined se il campione non l'ha giocato. */
 function dopoComando(cmd: any, c: Campioni): unknown {
   const { campione, campagna, paese, stato } = c;
@@ -185,6 +214,12 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       return piena;
     }
     case "presenta_proposta": case "linea": return c.aula?.opposizione_proposta?.vista;
+    case "presenta_bilancio": return uguali(cmd.bilancio, c.bilancio?.bozza_04?.bozza) ? c.bilancio.presentato.vista : undefined;
+    case "emendamento": {
+      const giocate = [["centrodestra", true], ["destra", false]];
+      const giocata = cmd.misura === c.bilancio?.presentato?.misura && giocate.some(([p, a]) => p === cmd.partito && a === cmd.accogli);
+      return giocata ? c.bilancio.emendamenti_decisi.vista : undefined;
+    }
     case "chiedi_guida": return di27("dopo_chiedi")?.dopo_chiedi;
     case "rifiuta_ribaltone": return di27("dopo_rifiuta")?.dopo_rifiuta;
     default: return undefined;
@@ -229,6 +264,13 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
       return esito(costo ?? null, comando);
     }
     case "serie": return campione?.serie ?? [];
+    case "bozza_bilancio": {
+      const bil = c.bilancio;
+      return bil?.[c.stato ?? ""]?.bozza ?? bil?.bozza_04?.bozza ?? null;
+    }
+    case "indicizza": return indicizzaBilancio(args.voce, c.bilancio);
+    case "riepilogo_bilancio": return riepilogoBilancio(args.bilancio, c);
+    case "riepilogo_presentato": return c.bilancio?.[c.stato ?? ""]?.riepilogo_presentato ?? null;
     case "riprendi": return presente(vistaDi(campione), comando);
     case "partite": return edicola.partite;
     case "albo": return edicola.albo;
@@ -283,6 +325,7 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     aula: await carica("19-"),
     anteprime: await carica("20-"),
     conti: await carica("21-"),
+    bilancio: await carica("22-"),
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");
