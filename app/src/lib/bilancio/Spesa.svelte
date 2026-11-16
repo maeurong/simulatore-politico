@@ -1,20 +1,25 @@
 <script lang="ts">
-  // La spesa a destra (storia 125): i dieci dicasteri come barre (salari, acquisti, margine, resto), la spesa, la perdita reale e «Indicizza» col costo.
+  // La spesa a destra (storia 125): i dieci dicasteri come barre (salari, acquisti, margine, resto), la spesa, la perdita reale e «Indicizza» col costo; sotto la barra il funzionamento tagliato.
   import { euro } from "$lib/governo/governo";
   import { reale } from "$lib/conti/conti";
   import { numero, t } from "$lib/testi/t";
   import type { Bilancio } from "$lib/tipi/Bilancio";
   import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
   import type { Vista } from "$lib/tipi/Vista";
-  import { euroSegnato } from "./bilancio";
+  import Rifiuto from "$lib/componenti/Rifiuto.svelte";
+  import { euroSegnato, rigaTagliato, tagliato } from "./bilancio";
   import { bozza } from "./bozza.svelte";
 
-  let { vista, bilancio }: { vista: Vista; bilancio: Bilancio } = $props();
+  let { vista, bilancio, scelta = $bindable() }: { vista: Vista; bilancio: Bilancio; scelta: string | null } = $props();
 
   const nome = (id: string) => vista.dicasteri.find((d) => d.id === id)?.nome ?? id;
   const mx = $derived(Math.max(...bilancio.dicasteri.map((d) => d.spesa)));
   const w = (x: number) => `${(x / mx) * 100}%`;
   const tutto = $derived(bozza.costi.tutto);
+  const indicatore = (id: string) => {
+    const g = vista.dicasteri.find((d) => d.id === id)?.indicatore;
+    return vista.grandezze.find((x) => x.id === g)?.nome ?? id;
+  };
 </script>
 
 {#snippet costo(c: RiepilogoBilancio | string | undefined)}
@@ -27,6 +32,7 @@
     {#if bozza.indicizzato({ tipo: "tutto" })}<span class="tutto"><span class="bene">{t("bilancio.indicizzato_tutto")}</span> · <button type="button" class="link" onclick={() => bozza.annulla({ tipo: "tutto" })}>{t("bilancio.annulla")}</button></span>
     {:else}<span class="tutto"><button type="button" class="link" onclick={() => bozza.indicizza({ tipo: "tutto" })}>{t("bilancio.indicizza_tutto")}</button> {@render costo(tutto)}</span>{/if}
   </div>
+  {#if bozza.rifiutoDi({ tipo: "tutto" })}<Rifiuto testo={bozza.rifiutoDi({ tipo: "tutto" })!} />{/if}
   <div class="leg">
     <span><i style:background="var(--ink)"></i>{t("bilancio.salari")}</span><span><i style:background="var(--grigio)"></i>{t("bilancio.acquisti")}</span>
     <span><i style:background="var(--biro)"></i>{t("bilancio.margine")}</span><span><i class="ret"></i>{t("bilancio.resto")}</span>
@@ -37,20 +43,29 @@
     {@const p = bozza.riepilogo?.perdita_reale.find((x) => x.voce === d.id)?.perdita}
     {@const r = p === undefined ? null : reale(p)}
     {@const voce = { tipo: "dicastero" as const, id: d.id }}
-    <div class="barD">
-      <span class="n">{nome(d.id)}</span>
-      <!-- il margine ha un minimo visibile: anche piccolo resta il pezzo che si allarga -->
-      <span class="sp" title={t("bilancio.barra", { salari: euro(d.salari), acquisti: euro(d.acquisti), margine: euro(d.margine), resto: euro(resto) })}>
-        <i style:width={w(d.salari)} style:background="var(--ink)"></i><i style:width={w(d.acquisti)} style:background="var(--grigio)"></i><i
-          style:width={w(Math.max(d.margine, mx * 0.004))} style:background="var(--biro)"></i><i class="ret" style:width={w(Math.max(resto, 0))}></i>
-      </span>
-      <span class="x">{t("conti.miliardi", { n: numero(d.spesa / 1e9, 1) })}</span>
+    {@const k = `dic:${d.id}`}
+    {@const z = bozza.base?.dicasteri.find((x) => x.id === d.id)}
+    {@const taglio = z ? tagliato(d, z) : null}
+    {@const rif = bozza.rifiutoDi(voce)}
+    <div class="barD" class:sel={scelta === k}>
+      <!-- nome, barra e cifra sono il bottone che apre il dettaglio; «Indicizza» resta fuori, accanto -->
+      <button type="button" class="apre" aria-pressed={scelta === k} onclick={() => (scelta = k)}>
+        <span class="n">{nome(d.id)}</span>
+        <!-- il margine ha un minimo visibile: anche piccolo resta il pezzo che si allarga -->
+        <span class="sp" title={t("bilancio.barra", { salari: euro(d.salari), acquisti: euro(d.acquisti), margine: euro(d.margine), resto: euro(resto) })}>
+          <i style:width={w(d.salari)} style:background="var(--ink)"></i><i style:width={w(d.acquisti)} style:background="var(--grigio)"></i><i
+            style:width={w(Math.max(d.margine, mx * 0.004))} style:background="var(--biro)"></i><i class="ret" style:width={w(Math.max(resto, 0))}></i>
+        </span>
+        <span class="x">{t("conti.miliardi", { n: numero(d.spesa / 1e9, 1) })}</span>
+      </button>
       <span class="az">
         {#if r}<span class={r.tono}>{r.testo}</span>{:else}<span class="muto">—</span>{/if}
         <!-- «Indicizza» solo con una perdita da recuperare: senza riepilogo o sotto 0,05 niente (prototipo 22:427) -->
         {#if bozza.indicizzato(voce)}<span class="ind"><span class="min bene">{t("bilancio.indicizzato")}</span><button type="button" class="link" onclick={() => bozza.annulla(voce)}>{t("bilancio.annulla")}</button></span>
         {:else if p !== undefined && p >= 0.05}<span class="ind"><button type="button" class="link" onclick={() => bozza.indicizza(voce)}>{t("bilancio.indicizza")}</button> <span class="min muto">{@render costo(bozza.costi[d.id])}</span></span>{/if}
       </span>
+      {#if rif}<span class="sotto"><Rifiuto testo={rif} /></span>{/if}
+      {#if taglio}<span class="sotto slip">{rigaTagliato(taglio, indicatore(d.id))}</span>{/if}
     </div>
   {/each}
 </section>
@@ -60,7 +75,12 @@
   .leg i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px }
   .ret { background: var(--retino); outline: 1px solid var(--grigio); outline-offset: -1px }
   .barD { display: grid; grid-template-columns: 150px minmax(0, 1fr) 64px 184px; gap: 2px 8px; align-items: center; padding: 3px 2px; border-bottom: var(--filo); font-size: var(--c-sec) }
+  .apre { grid-column: 1 / 4; display: grid; grid-template-columns: subgrid; align-items: center; text-align: left }
+  .apre:hover .n { text-decoration: underline; text-underline-offset: 2px }
   .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .sotto { grid-column: 1 / -1; margin-left: 158px }
+  /* il foglietto del funzionamento tagliato (prototipo 22: funz) */
+  .slip { border: 1.5px solid var(--ink); padding: 1px 6px; font-size: var(--c-min); justify-self: start }
   .sp { height: 12px; display: flex }
   .sp i { height: 100%; border-right: 1px solid var(--carta) }
   .x { text-align: right; font-weight: 700; white-space: nowrap }

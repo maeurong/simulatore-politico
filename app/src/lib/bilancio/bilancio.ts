@@ -4,6 +4,7 @@ import { numero, t } from "$lib/testi/t";
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { BudgetDicastero } from "$lib/tipi/BudgetDicastero";
 import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
+import type { Vista } from "$lib/tipi/Vista";
 import type { Voce } from "$lib/tipi/Voce";
 
 export type Imposta = { tipo: "irpef"; indice: number } | { tipo: "iva" | "ires" | "contributi" };
@@ -22,7 +23,10 @@ export function ritocca(b: Bilancio, imposta: Imposta, verso: 1 | -1): Bilancio 
 /** Il passo del margine: mezzo punto della spesa della bozza (decisione 3). */
 export const passoMargine = (bozza: BudgetDicastero): number => Math.round(bozza.spesa * 0.005);
 
-/** Applica n passi dalla via data, partendo dalla bozza: dagli acquisti (lettura 2) o in disavanzo (sulla spesa). n < 0 toglie passi. */
+/**
+ * Aggiunge n passi dalla via data al bilancio `b`: dagli acquisti (lettura 2) o in disavanzo (sulla spesa); n < 0 li toglie.
+ * Lavora a scarti su `b`: della bozza prende solo il passo. Quanti passi sono già dentro lo conta `bozza.passi`.
+ */
 export function allarga(b: Bilancio, bozza: Bilancio, dicastero: string, via: "funzionamento" | "disavanzo", passi: number): Bilancio {
   const z = bozza.dicasteri.find((d) => d.id === dicastero);
   if (!z || passi === 0) return b;
@@ -72,4 +76,36 @@ export function annullata(b: Bilancio, bozza: Bilancio, voce: Voce): Bilancio {
 export function euroSegnato(c: number): string {
   const s = euro(Math.abs(c));
   return /[1-9]/.test(s) ? `${c > 0 ? "+" : "−"}${s}` : `±${s}`;
+}
+
+/** La riga «se cade»: esercizio provvisorio da gennaio, o le dimissioni se si è già in esercizio provvisorio (storia 128). */
+export function seCade(v: Vista): string {
+  return v.bilancio.esercizio_provvisorio ? t("bilancio.se_cade_dimissioni") : t("bilancio.se_cade", { anno: v.bilancio.anno });
+}
+
+/**
+ * «la qualità del servizio sanitario», «l’efficienza della riscossione», «il sostegno alle imprese».
+ * shortcut: l'articolo dalla prima parola, giusto per i dieci indicatori dei dicasteri; un indicatore nuovo va provato qui.
+ */
+export function colArticolo(nome: string): string {
+  const n = nome.charAt(0).toLowerCase() + nome.slice(1);
+  if (/^[aeiouàèéìòù]/.test(n)) return `l’${n}`;
+  return `${/^\S*o\b/.test(n) ? "il" : "la"} ${n}`;
+}
+
+/** Sotto la barra: «acquisti −777 mln € sulla bozza · la qualità del servizio sanitario peggiora con ritardo» (spec:395). */
+export function rigaTagliato(x: { salari: number; acquisti: number }, indicatore: string): string {
+  const parti = [x.salari ? `${t("bilancio.salari")} ${euroSegnato(x.salari)}` : "", x.acquisti ? `${t("bilancio.acquisti")} ${euroSegnato(x.acquisti)}` : ""];
+  const riga = t("bilancio.sulla_bozza", { parti: parti.filter(Boolean).join(" · ") });
+  return x.salari < 0 || x.acquisti < 0 ? `${riga} · ${t("bilancio.peggiora", { servizio: colArticolo(indicatore) })}` : riga;
+}
+
+/** `?dicastero=<id>` dal link «Indicizzalo» dei Conti: la riga da aprire nel lato, se il dicastero c'è. */
+export const daUrl = (id: string | null, v: Vista): string | null => (id && v.dicasteri.some((d) => d.id === id) ? `dic:${id}` : null);
+
+/** Sulla riga delle soglie: con «tutto» niente (l'annulla è in testata, 22:526), poi l'annulla, poi «indicizza» con una perdita sopra 0,05 (22:537). */
+export function comandoSoglie(tutto: boolean, soglie: boolean, perdita: number | undefined): "annulla" | "indicizza" | null {
+  if (tutto) return null;
+  if (soglie) return "annulla";
+  return perdita !== undefined && perdita > 0.05 ? "indicizza" : null;
 }

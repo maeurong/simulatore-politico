@@ -7,6 +7,7 @@ const { guscio } = vi.hoisted(() => ({
 }));
 vi.mock("$lib/guscio/chiamate", async (originale) => ({ ...(await originale<object>()), guscio }));
 
+import { allarga } from "./bilancio";
 import { bozza } from "./bozza.svelte";
 
 /** Una promessa che il test risolve o rifiuta quando vuole. */
@@ -195,4 +196,82 @@ describe("bozza", () => {
     expect(bozza.base).toBe(base);
     expect(bozza.rifiuto).toBeNull();
   });
+  it("allarga conta i passi per dicastero e per via; il − a zero non toglie niente", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    bozza.allarga("sanita", "funzionamento", 1);
+    expect(bozza.passi.sanita).toEqual({ funzionamento: 1, disavanzo: 0 });
+    expect(bozza.corrente).toEqual(allarga(piena, piena, "sanita", "funzionamento", 1));
+    bozza.allarga("sanita", "funzionamento", -1);
+    expect(bozza.passi.sanita.funzionamento).toBe(0);
+    expect(bozza.corrente).toEqual(piena);
+    const prima = bozza.corrente;
+    bozza.allarga("sanita", "funzionamento", -1);
+    bozza.allarga("sanita", "disavanzo", -1);
+    expect(bozza.passi.sanita).toEqual({ funzionamento: 0, disavanzo: 0 });
+    expect(bozza.corrente).toBe(prima);
+  });
+
+  it("annulla un dicastero indicizzato: torna alla bozza e riapplica i suoi passi", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    guscio.indicizza.mockResolvedValueOnce({ ...piena, dicasteri: [indicizzataTutta.dicasteri[0], piena.dicasteri[1]] });
+    await bozza.indicizza({ tipo: "dicastero", id: "sanita" });
+    bozza.allarga("sanita", "disavanzo", 1);
+    bozza.allarga("interno", "funzionamento", 1);
+    bozza.annulla({ tipo: "dicastero", id: "sanita" });
+    const atteso = allarga(allarga(piena, piena, "interno", "funzionamento", 1), piena, "sanita", "disavanzo", 1);
+    expect(bozza.corrente).toEqual(atteso);
+  });
+
+  it("annulla tutto riapplica i passi di tutti i dicasteri", async () => {
+    guscio.bozzaBilancio.mockResolvedValue(piena);
+    guscio.riepilogoBilancio.mockResolvedValue(riep(0.7));
+    guscio.indicizza.mockResolvedValue(piena);
+    await bozza.apri(++turno);
+    await svuota();
+    bozza.allarga("sanita", "disavanzo", 1);
+    bozza.allarga("interno", "funzionamento", 1);
+    bozza.allarga("interno", "funzionamento", 1);
+    bozza.cambia({ ...indicizzataTutta, dicasteri: bozza.corrente!.dicasteri.map((d) => ({ ...d, livello_prezzi: 1.03 })) });
+    bozza.annulla({ tipo: "tutto" });
+    const atteso = allarga(allarga(piena, piena, "sanita", "disavanzo", 1), piena, "interno", "funzionamento", 2);
+    expect(bozza.corrente).toEqual(atteso);
+  });
+
+  it("un rifiuto di indicizza resta sulla voce: non tocca rifiuto né riepilogo", async () => {
+    await apriCon(riep(0.7));
+    guscio.indicizza.mockRejectedValueOnce({ specie: "rifiuto", testo: "voce ignota" });
+    await bozza.indicizza({ tipo: "dicastero", id: "sanita" });
+    expect(bozza.rifiutoDi({ tipo: "dicastero", id: "sanita" })).toBe("voce ignota");
+    expect(bozza.rifiutoDi({ tipo: "tutto" })).toBeUndefined();
+    expect(bozza.rifiuto).toBeNull();
+    expect(bozza.riepilogo?.crescita_spesa_netta).toBe(0.7);
+    expect(bozza.inVolo).toBe(false);
+    // un bilancio nuovo toglie il rifiuto vecchio
+    bozza.cambia(conIva(0.23));
+    expect(bozza.rifiutoDi({ tipo: "dicastero", id: "sanita" })).toBeUndefined();
+  });
+
+  it("inVolo resta vero finché indicizza non torna, anche se un riepilogo torna prima", async () => {
+    await apriCon();
+    const ind = comandata<Bilancio>();
+    guscio.indicizza.mockReturnValueOnce(ind.p);
+    const fatto = bozza.indicizza({ tipo: "tutto" });
+    bozza.cambia(conIva(0.23));
+    await svuota();
+    expect(bozza.riepilogo).not.toBeNull();
+    expect(bozza.inVolo).toBe(true);
+    ind.risolvi(conIva(0.3));
+    await fatto;
+    await svuota();
+    expect(bozza.inVolo).toBe(false);
+  });
 });
+

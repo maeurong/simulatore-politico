@@ -4,11 +4,13 @@ import { comeErrore, guscio, testoRifiuto, type ErroreGuscio } from "$lib/guscio
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 import type { Voce } from "$lib/tipi/Voce";
-import { annullata, indicizzata } from "./bilancio";
+import { allarga, annullata, indicizzata } from "./bilancio";
 
 const chiave = (v: Voce) => (v.tipo === "dicastero" ? v.id : v.tipo);
 const voci = (b: Bilancio): Voce[] => [{ tipo: "tutto" }, { tipo: "scaglioni" }, ...b.dicasteri.map((d) => ({ tipo: "dicastero" as const, id: d.id }))];
 const testo = (e: unknown) => testoRifiuto(comeErrore(e));
+const VIE = ["funzionamento", "disavanzo"] as const;
+export type Via = (typeof VIE)[number];
 
 class Bozza {
   // raw: i bilanci si sostituiscono interi e si confrontano per identità
@@ -16,7 +18,17 @@ class Bozza {
   corrente = $state.raw<Bilancio | null>(null);
   riepilogo = $state.raw<RiepilogoBilancio | null>(null);
   rifiuto = $state<string | null>(null);
-  inVolo = $state(false);
+  /** I passi del margine aggiunti, per dicastero e per via: il − toglie solo questi (lettura 2). */
+  passi = $state.raw<Record<string, Record<Via, number>>>({});
+  /** Il rifiuto di «Indicizza», per voce: sta accanto alla voce, non copre il giogo. */
+  #rifiutiVoce = $state.raw<Record<string, string>>({});
+  // la bozza o un «Indicizza» in volo; il riepilogo a parte, perché ultimoVince ne lascia tornare solo l'ultimo
+  #volo = $state(0);
+  #aspetta = $state(false);
+  /** Qualcosa che cambia il conto è ancora in volo: «Presenta» aspetta. */
+  get inVolo() {
+    return this.#volo > 0 || this.#aspetta;
+  }
   /** «tutto», «scaglioni», id del dicastero: il riepilogo della bozza indicizzata su quella voce, o il rifiuto del core (lettura 1). */
   costi = $state.raw<Record<string, RiepilogoBilancio | string>>({});
   #indicizzati = $state.raw<Record<string, Bilancio>>({});
@@ -30,7 +42,7 @@ class Bozza {
     (b: Bilancio) => guscio.riepilogoBilancio(b),
     (r: RiepilogoBilancio | ErroreGuscio, b: Bilancio) => {
       if (b !== this.#chiesto) return;
-      this.inVolo = false;
+      this.#aspetta = false;
       if ("specie" in r) {
         this.rifiuto = testoRifiuto(r);
         this.riepilogo = null;
@@ -43,7 +55,7 @@ class Bozza {
 
   #riepiloga(b: Bilancio) {
     this.#chiesto = b;
-    this.inVolo = true;
+    this.#aspetta = true;
     this.#chiedi(b);
   }
 
@@ -52,8 +64,10 @@ class Bozza {
     this.#giro++;
     this.base = this.corrente = this.riepilogo = this.#chiesto = null;
     this.rifiuto = null;
-    this.inVolo = false;
-    this.costi = this.#indicizzati = {};
+    this.#volo = 0;
+    this.#aspetta = false;
+    this.costi = this.#indicizzati = this.#rifiutiVoce = {};
+    this.passi = {};
   }
 
   /** Fuori dalla partita: la prossima apre la sua bozza anche allo stesso turno. */
@@ -67,17 +81,18 @@ class Bozza {
     this.#svuota(turno);
     const giro = this.#giro;
     // in volo anche la bozza: finché non arriva la pagina non dice che manca
-    this.inVolo = true;
+    this.#volo++;
     let base: Bilancio | null;
     try {
       base = await guscio.bozzaBilancio();
     } catch (e) {
       // il turno torna null: il prossimo apri ritenta
-      if (giro === this.#giro) [this.rifiuto, this.inVolo, this.#turno] = [testo(e), false, null];
+      if (giro === this.#giro) [this.rifiuto, this.#turno] = [testo(e), null];
       return;
+    } finally {
+      if (giro === this.#giro) this.#volo--;
     }
-    if (giro !== this.#giro) return;
-    if (!base) return void (this.inVolo = false);
+    if (giro !== this.#giro || !base) return;
     this.base = base;
     this.#riepiloga(base);
     const esiti = await Promise.all(
@@ -98,6 +113,7 @@ class Bozza {
   /** Il bilancio in memoria cambia; il riepilogo lo chiede `ultimoVince`. */
   cambia(b: Bilancio) {
     this.corrente = b;
+    this.#rifiutiVoce = {};
     this.#riepiloga(b);
   }
 
@@ -107,26 +123,42 @@ class Bozza {
     for (;;) {
       const da = this.corrente ?? this.base;
       if (!da) return;
-      this.inVolo = true;
+      this.#volo++;
       let b: Bilancio;
       try {
         b = await guscio.indicizza(da, voce);
       } catch (e) {
-        if (giro !== this.#giro) return;
-        this.inVolo = false;
-        this.rifiuto = testo(e);
-        this.riepilogo = null;
+        if (giro === this.#giro) this.#rifiutiVoce = { ...this.#rifiutiVoce, [chiave(voce)]: testo(e) };
         return;
+      } finally {
+        if (giro === this.#giro) this.#volo--;
       }
       if (giro !== this.#giro) return;
       if ((this.corrente ?? this.base) === da) return this.cambia(b);
     }
   }
 
-  /** Riporta la voce alle cifre della bozza; le aliquote restano quelle ritoccate. */
+  /** Il rifiuto dell'ultimo «Indicizza» su questa voce, finché il bilancio non cambia. */
+  rifiutoDi(voce: Voce): string | undefined {
+    return this.#rifiutiVoce[chiave(voce)];
+  }
+
+  /** Un passo del margine in più o in meno; a zero passi il − non fa niente. */
+  allarga(dicastero: string, via: Via, verso: 1 | -1) {
+    const da = this.corrente ?? this.base, n = this.passi[dicastero] ?? { funzionamento: 0, disavanzo: 0 };
+    if (!da || !this.base || n[via] + verso < 0) return;
+    this.passi = { ...this.passi, [dicastero]: { ...n, [via]: n[via] + verso } };
+    this.cambia(allarga(da, this.base, dicastero, via, verso));
+  }
+
+  /** Riporta la voce alle cifre della bozza; le aliquote restano quelle ritoccate, i passi del margine contati si riapplicano. */
   annulla(voce: Voce) {
-    const da = this.corrente ?? this.base;
-    if (da && this.base) this.cambia(annullata(da, this.base, voce));
+    const da = this.corrente ?? this.base, base = this.base;
+    if (!da || !base) return;
+    let b = annullata(da, base, voce);
+    if (voce.tipo !== "scaglioni")
+      for (const [id, n] of Object.entries(this.passi)) if (voce.tipo === "tutto" || id === voce.id) for (const via of VIE) b = allarga(b, base, id, via, n[via]);
+    this.cambia(b);
   }
 
   /** La voce è già indicizzata nel bilancio in memoria: al posto del costo si legge «indicizzato». */
