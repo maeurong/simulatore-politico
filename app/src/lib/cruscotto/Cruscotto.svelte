@@ -60,7 +60,7 @@
 {#if governo}
   <div class="cr">
     <div class="odg" bind:this={corpo} tabindex="-1">
-      {#if riquadro}<Crisi {vista} tipo={riquadro} />{/if}
+      {#if riquadro}<Crisi {vista} tipo={riquadro} {riporta} />{/if}
       {#each vista.eventi as evento, i (i)}
         <Evento {vista} {evento} indice={i} puoRispondere={governo} norma={normaViva} onnorma={(id) => { norma = id; }} />
       {/each}

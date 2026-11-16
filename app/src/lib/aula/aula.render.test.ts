@@ -54,7 +54,7 @@ describe("Misura, emendamenti", () => {
     const nomi = [...aperti.matchAll(/aria-label="(Accogli|Respingi): emendamento di ([^"]+)"/g)].map((x) => x[0]);
     expect(nomi).toHaveLength(4);
     expect(new Set(nomi).size).toBe(4);
-    expect(aperti).toContain("Senza scelta: resta aperto");
+    expect(aperti).toContain("Senza scelta: a fine turno vale respinto");
     const accolti = render(Aula, { props: { vista: conStato("accolto") } }).body;
     expect(accolti).not.toContain("Accogli");
     expect(accolti).toContain("accolto");

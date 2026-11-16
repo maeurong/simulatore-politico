@@ -21,7 +21,7 @@
   import Faccia from "$lib/componenti/Faccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { motivoCrisi, type VoceOdg } from "./cruscotto";
+  import { motivoAccogli, motivoCrisi, type VoceOdg } from "./cruscotto";
 
   let { vista, voce, norma, riporta }: { vista: Vista; voce: VoceOdg | null; norma: string | null; riporta: (da: Element | null) => void } = $props();
 
@@ -69,6 +69,8 @@
   const richiesta = $derived.by((): (() => Promise<Anteprima | ErroreGuscio>) | null => {
     // in crisi il core rifiuta ogni anteprima (decreto, accogli, legge): non si chiedono, al loro posto sta il motivo
     if (crisi) return null;
+    // la proposta di fondi accolta in esercizio provvisorio il core la rifiuta, anche in anteprima; l'anteprima di una riforma no
+    if (fondi && motivoAccogli(vista)) return null;
     if (norma) return bozza.length ? () => guscio.anteprimaDecreto({ tipo: "disposizioni", valori: bozza }) : null;
     if (!proposta || !voce?.dicastero) return null;
     const dicastero = voce.dicastero;
@@ -149,14 +151,14 @@
   </div>
   <p class="sec"><i class="muto">{t("componenti.perche")}</i> {proposta.motivo}</p>
   <div class="az" role="group" aria-label={dettaglio(voce.titolo)}>
-    <Pulsante forma="piccolo" spento={motivoCrisi(vista) ?? occupato} aria-label={dettaglio(t("cruscotto.accogli_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
+    <Pulsante forma="piccolo" spento={motivoAccogli(vista) ?? occupato} aria-label={dettaglio(t("cruscotto.accogli_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
     <Pulsante forma="piccolo" spento={proposta.rinviata ? t("cruscotto.gia_rinviata") : occupato} aria-label={dettaglio(t("cruscotto.rinvia_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "rinvia", dicastero })}>{t("cruscotto.rinvia")}</Pulsante>
     <Pulsante forma="piccolo" spento={occupato} aria-label={dettaglio(t("cruscotto.respingi_di", { nome: voce.titolo }))} onclick={() => manda({ tipo: "respingi", dicastero })}>{t("aula.respingi")}</Pulsante>
   </div>
   <p class="min muto">{t("cruscotto.se_ignori", { default: voce.default })}</p>
   {#if rifiuto && rifiuto.tipo !== "compra"}<Rifiuto testo={rifiuto.testo} />{/if}
-  {#if crisi}
-    <p class="sec muto">{crisi}</p>
+  {#if crisi || (fondi && motivoAccogli(vista))}
+    <p class="sec muto">{motivoAccogli(vista)}</p>
   {:else if fondi}
     {@render cartellino([])}
   {:else if aperto}

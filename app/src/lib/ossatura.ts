@@ -49,7 +49,8 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
       if (v.fase === "sciolta") return "barrata.aula_sciolta";
       return v.fase === "trattativa" ? "barrata.aula_trattativa" : null;
     case "governo": return v.governa ? null : "barrata.governo";
-    case "bilancio": return !v.finita && v.governa && v.data.trimestre === 4 ? null : "barrata.bilancio";
+    // aperta nel quarto trimestre e ogni volta che la Vista dice che il bilancio si può presentare (anche in esercizio provvisorio)
+    case "bilancio": return !v.finita && v.governa && (v.data.trimestre === 4 || v.bilancio.presentabile) ? null : "barrata.bilancio";
     case "campagna": return !v.finita && v.turni_al_voto === 0 ? null : "barrata.campagna";
     default: return null;
   }

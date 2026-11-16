@@ -2,7 +2,7 @@
   // Il riquadro di testa del governo che cade (17-cruscotto.prototype.html, `crisi`): prima dell'evento. La conseguenza si legge prima della conferma
   // (docs/ricerca/estetica/interfacce-di-giochi-gestionali.md:48); perdere il governo porta all'opposizione, non alla fine (docs/ricerca/estetica/tabellone-e-carta-ritagliata.md:113).
   // L'allargamento riusa `fuori` e `allarga` della trattativa. La banda nera la mette già la cornice.
-  import { tick, untrack } from "svelte";
+  import { untrack } from "svelte";
   import { t, elenco } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
@@ -13,7 +13,7 @@
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import type { testa } from "./cruscotto";
 
-  let { vista, tipo }: { vista: Vista; tipo: NonNullable<ReturnType<typeof testa>> } = $props();
+  let { vista, tipo, riporta }: { vista: Vista; tipo: NonNullable<ReturnType<typeof testa>>; riporta: (da: Element | null) => void } = $props();
 
   const disponibilita = $derived(fuori(vista));
   let spuntati = $state<string[]>([]);
@@ -40,16 +40,14 @@
     } catch (e) {
       rifiuto = { testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
     }
-    // il fuoco passa al riquadro solo se il bottone su cui stava sparisce; mai a un'altra azione, dove un secondo Invio farebbe un altro comando
-    await tick();
-    if (da && !da.isConnected) radice?.focus({ preventScroll: true });
+    // a comando riuscito la crisi può chiudersi e smontare il riquadro: il fuoco lo riporta il cruscotto, al corpo
+    riporta(da);
   }
   const chi = $derived(elenco(nomi, ", "));
   const id = $props.id();
-  let radice = $state<HTMLElement>();
 </script>
 
-<section class="crisi" aria-labelledby="{id}-t" tabindex="-1" bind:this={radice}>
+<section class="crisi" aria-labelledby="{id}-t">
   {#if tipo === "dimissioni"}
     <div class="occ">{t("cruscotto.dimissioni_occ")}</div>
     <h2 class="tit" id="{id}-t">{t("cruscotto.dimissioni_tit")}</h2>
@@ -93,7 +91,6 @@
 </section>
 
 <style>
-  .crisi:focus { outline: none }
   .crisi { border: 3px solid var(--rosso); padding: 10px 14px; display: grid; gap: 6px }
   :global(:root.grave) .crisi { border: var(--doppio) }
   .occ { font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--rosso) }

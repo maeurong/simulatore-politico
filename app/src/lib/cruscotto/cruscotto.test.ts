@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { fuori } from "$lib/trattativa/trattativa";
-import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, motivoCrisi, scelteAlDefault, testa } from "./cruscotto";
+import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, motivoAccogli, motivoCrisi, scelteAlDefault, testa } from "./cruscotto";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
@@ -53,7 +53,7 @@ describe("ordineDelGiorno", () => {
   it("dopo il voto: due emendamenti aperti, il testo si vota com'è", () => {
     const e = ordineDelGiorno(dopoVoto).filter((x) => x.gruppo === "emendamenti");
     expect(e).toHaveLength(2);
-    expect(e.map((x) => x.default)).toEqual(Array(2).fill("resta aperto, si vota il testo com’è"));
+    expect(e.map((x) => x.default)).toEqual(Array(2).fill("a fine turno vale respinto"));
   });
   it("l'ultimatum della Sinistra sta in «Da tenere d'occhio»", () => {
     const o = ordineDelGiorno(stati.ultimatum.vista).filter((x) => x.gruppo === "occhio");
@@ -177,5 +177,101 @@ describe("motivoCrisi", () => {
     expect(motivoCrisi(governo)).toBeUndefined();
     expect(motivoCrisi(stati.esercizio_provvisorio.vista)).toBeUndefined();
     expect(motivoCrisi(opposizione)).toBeUndefined();
+  });
+});
+
+// clone con un campo cambiato: le Viste campione non si toccano
+const con = (v: Vista, f: (c: Vista) => void): Vista => {
+  const c = structuredClone(v);
+  f(c);
+  return c;
+};
+
+describe("le voci decise escono dal conto", () => {
+  it("un emendamento deciso non è più nell'ordine del giorno né nel conto", () => {
+    const deciso = con(dopoVoto, (c) => {
+      const e = c.calendario.flatMap((m) => m.emendamenti).find((x) => x.stato === "aperto")!;
+      e.stato = "accolto";
+    });
+    expect(ordineDelGiorno(deciso).filter((x) => x.gruppo === "emendamenti").length).toBe(ordineDelGiorno(dopoVoto).filter((x) => x.gruppo === "emendamenti").length - 1);
+    expect(scelteAlDefault(deciso)).toBe(scelteAlDefault(dopoVoto) - 1);
+  });
+  it("un successore scelto è una voce fatta, fuori dal conto", () => {
+    const scelto = con(crisi, (c) => {
+      c.ministeri.find((m) => m.ministro === null && m.rosa.length)!.scelta = 0;
+    });
+    const voce = ordineDelGiorno(scelto).find((x) => x.chiave.startsWith("suc:") && x.fatta)!;
+    expect(voce).toMatchObject({ fatta: true, alDefault: false, default: "" });
+    expect(scelteAlDefault(scelto)).toBe(scelteAlDefault(crisi) - 1);
+  });
+  it("un interim con la rosa vuota non ha voce né conta", () => {
+    const vuoto = con(crisi, (c) => {
+      c.ministeri.find((m) => m.ministro === null && m.rosa.length)!.rosa = [];
+    });
+    expect(ordineDelGiorno(vuoto).filter((x) => x.chiave.startsWith("suc:")).length).toBe(5);
+    expect(scelteAlDefault(vuoto)).toBe(scelteAlDefault(crisi) - 1);
+  });
+  it("il bilancio presentato non ha voce e il conto scende", () => {
+    const v = stati.esercizio_provvisorio.vista;
+    const presentato = con(v, (c) => {
+      c.bilancio.presentato = true;
+    });
+    expect(ordineDelGiorno(presentato).some((x) => x.chiave === "bilancio")).toBe(false);
+    expect(scelteAlDefault(presentato)).toBe(scelteAlDefault(v) - 1);
+  });
+  it("un evento senza opzioni conta come scelta pendente (nessuna opzione unica)", () => {
+    const senza = con(governo, (c) => {
+      c.eventi[0].opzioni = [];
+    });
+    expect(opzioneUnica(senza.eventi[0])).toBe(false);
+    expect(scelteAlDefault(senza)).toBe(scelteAlDefault(governo));
+  });
+});
+
+describe("gli eventi contano anche per chi non governa (lettura 1 del piano)", () => {
+  it("opposizione e trattativa: solo gli eventi con scelta aperta, nessuna voce dell'ordine del giorno", () => {
+    for (const v of [opposizione, trattativa]) {
+      expect(ordineDelGiorno(v)).toEqual([]);
+      expect(scelteAlDefault(v)).toBe(v.eventi.filter((e) => !opzioneUnica(e) && e.scelta === null).length);
+    }
+    expect(scelteAlDefault(opposizione)).toBe(1);
+  });
+});
+
+describe("motivoCrisi con le dimissioni date", () => {
+  it("resta: il core rifiuta finché la crisi dura", () => {
+    expect(motivoCrisi({ ...crisi, dimissioni: true } as Vista)).toBeDefined();
+  });
+});
+
+describe("inEvidenza sulla crisi", () => {
+  it("non lancia e non include gli interim", () => {
+    const e = inEvidenza(crisi);
+    expect(e.every((x) => x.ministro !== null)).toBe(true);
+    const attesi = crisi.ministeri.filter((m) => m.ministro && (m.agenda?.in_evidenza || m.ministro.minaccia)).map((m) => m.dicastero);
+    expect(e.map((x) => x.dicastero)).toEqual(attesi);
+  });
+});
+
+describe("fondoBasta al confine", () => {
+  it("il fondo uguale al costo basta", () => {
+    const e = { ...governo.eventi[0], costo: 5 };
+    expect(fondoBasta(con(governo, (c) => { c.bilancio.fondo_residuo = 5; }), e)).toBe(true);
+    expect(fondoBasta(con(governo, (c) => { c.bilancio.fondo_residuo = 4; }), e)).toBe(false);
+  });
+});
+
+describe("motivoAccogli", () => {
+  it("in esercizio provvisorio il core rifiuta Accogli (anche per le riforme): motivo suo", () => {
+    const m = motivoAccogli(stati.esercizio_provvisorio.vista);
+    expect(m).toBeDefined();
+    expect(m).not.toBe(motivoCrisi(crisi));
+  });
+  it("in crisi vale il motivo della crisi, anche in esercizio provvisorio", () => {
+    expect(motivoAccogli(crisi)).toBe(motivoCrisi(crisi));
+    expect(motivoAccogli(stati.crisi_provvisorio.vista)).toBe(motivoCrisi(crisi));
+  });
+  it("al governo ordinario niente", () => {
+    expect(motivoAccogli(governo)).toBeUndefined();
   });
 });

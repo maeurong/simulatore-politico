@@ -134,3 +134,7 @@ export function testa(v: Vista): "crisi" | "crisi_provvisorio" | "dimissioni" | 
 
 /** Il motivo per cui in crisi restano spenti Accogli, il decreto d'evento e la presentazione di una legge: il core li rifiuta (comando.rs, `applica`). */
 export const motivoCrisi = (v: Vista): string | undefined => (v.governa && v.crisi ? t("cruscotto.in_crisi") : undefined);
+
+/** Il motivo per cui Accogli resta spento: la crisi, o l'esercizio provvisorio, dove il core lo rifiuta per ogni proposta, di fondi o di riforma (ministri/mod.rs, `ammesso`). */
+export const motivoAccogli = (v: Vista): string | undefined =>
+  motivoCrisi(v) ?? (v.governa && v.bilancio.esercizio_provvisorio ? t("cruscotto.in_provvisorio") : undefined);
