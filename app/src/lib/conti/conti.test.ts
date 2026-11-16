@@ -16,6 +16,11 @@ describe("distanza", () => {
   it("spenta: quanto manca ad accenderla", () => {
     expect(distanza(situazione("studi_03", "Criminalità"))).toBe("si accende sotto 85: mancano 14,7");
   });
+  it("accesa già oltre lo spegnimento: oltre da un trimestre, o solo oltre la soglia", () => {
+    const r = situazione("energia", "Recessione");
+    expect(distanza(r)).toBe("oltre la soglia da un trimestre: si spegne al secondo di fila");
+    expect(distanza({ ...r, oltre: 0 })).toBe("oltre la soglia");
+  });
   it("oltre 2 e trimestri 3; oltre la soglia senza oltre", () => {
     const base = { nome: "x", misura: "x", valore: -4, accensione: -1, spegnimento: 0, accesa: false, trimestri: 3, oltre: 2 };
     expect(distanza(base)).toBe("oltre la soglia da due trimestri: si accende al terzo di fila");

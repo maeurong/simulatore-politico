@@ -14,13 +14,18 @@ export function distanza(s: VoceSituazione): string {
   // accensione sopra lo spegnimento: la situazione si accende salendo
   const sale = s.accensione > s.spegnimento;
   const mancano = (verso: string, limite: number) => ({ verso, soglia: soglia(limite), n: numero(Math.abs(s.valore - limite), 1) });
-  if (s.accesa) return t("conti.accesa", mancano(sale ? "sotto" : "sopra", s.spegnimento));
-  if (s.oltre > 0) {
-    return t("conti.oltre_da", {
+  const oltreDa = (verbo: string) =>
+    t("conti.oltre_da", {
+      verbo,
       da: `${quanti[s.oltre] ?? s.oltre} ${s.oltre === 1 ? "trimestre" : "trimestri"}`,
       al: ordinali[s.trimestri] ?? `${s.trimestri}º`,
     });
+  if (s.accesa) {
+    if (s.oltre > 0) return oltreDa("si spegne");
+    if (sale ? s.valore <= s.spegnimento : s.valore >= s.spegnimento) return t("conti.oltre_soglia");
+    return t("conti.accesa", mancano(sale ? "sotto" : "sopra", s.spegnimento));
   }
+  if (s.oltre > 0) return oltreDa("si accende");
   if (sale ? s.valore >= s.accensione : s.valore <= s.accensione) return t("conti.oltre_soglia");
   return t("conti.spenta", mancano(sale ? "sopra" : "sotto", s.accensione));
 }

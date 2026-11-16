@@ -1046,7 +1046,7 @@
   "conti.accesa": "accesa · si spegne {verso} {soglia}: mancano {n}",
   "conti.spenta": "si accende {verso} {soglia}: mancano {n}",
   "conti.oltre_soglia": "oltre la soglia",
-  "conti.oltre_da": "oltre la soglia da {da}: si accende al {al} di fila",
+  "conti.oltre_da": "oltre la soglia da {da}: {verbo} al {al} di fila",
   "conti.procedura_nessuna": "nessuna",
   "conti.procedura_aperta": "aperta",
   "conti.procedura_sospesa": "sospesa: i conti rientrano",
