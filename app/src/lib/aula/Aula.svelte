@@ -92,7 +92,7 @@
     <span class="sec muto">{t(vista.governa ? "aula.testata_governo" : "aula.testata_opposizione")}</span>
   </div>
   <div class="corpo">
-    <Calendario {vista} scelta={corrente?.id ?? null} onscelta={(id) => (scelta = id)} />
+    <Calendario {vista} scelta={corrente?.id ?? null} onscelta={(id) => { scelta = id; scheda = "in_aula"; }} />
     <div class="schede" role="group" aria-label={t("aula.schede")}>
       {#each SCHEDE as s (s)}
         <button type="button" class:qui={scheda === s} aria-pressed={scheda === s} aria-label={numeri[s] !== null ? `${t(`aula.scheda_${s}`)}, ${numeri[s]}` : undefined} onclick={() => (scheda = s)}>

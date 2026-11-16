@@ -6,13 +6,13 @@
   import { nomeDi } from "$lib/partiti";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
-  import { fiduciaPonibile } from "$lib/aula/aula";
+  import { fiduciaInCrisi, fiduciaPonibile } from "$lib/aula/aula";
   import type { Comando } from "$lib/tipi/Comando";
   import type { Vista } from "$lib/tipi/Vista";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import { motivoAccogli, motivoCrisi, type VoceOdg } from "./cruscotto";
+  import { motivoAccogli, motivoCrisi, motivoDimissioni, type VoceOdg } from "./cruscotto";
 
   type Props = { voce: VoceOdg; vista: Vista; riporta: (da: Element | null) => void; scelta: boolean; onscegli: () => void };
   let { voce, vista, riporta, scelta, onscegli }: Props = $props();
@@ -22,6 +22,7 @@
   const stato = $derived(!conSegno ? "" : voce.fatta ? t("cruscotto.seg_fatta") : voce.urgente ? t("cruscotto.seg_urgente") : "");
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
   const ministero = $derived(vista.ministeri.find((m) => m.dicastero === voce.dicastero));
+  const dimesso = $derived(motivoDimissioni(ministero));
   const rinviata = $derived(ministero?.proposta?.rinviata ?? false);
   const misura = $derived(vista.calendario.find((m) => m.id === voce.misura));
   const alleato = $derived(voce.partito ? nomeDi(vista, voce.partito) : "");
@@ -50,9 +51,9 @@
   <span class="a" role="group" aria-label={voce.titolo}>
     {#if voce.azioni === "proposta" && voce.dicastero}
       {@const dicastero = voce.dicastero}
-      <Pulsante forma="piccolo" spento={motivoAccogli(vista) ?? occupato} aria-label={t("cruscotto.accogli_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
-      <Pulsante forma="piccolo" spento={rinviata ? t("cruscotto.gia_rinviata") : occupato} aria-label={t("cruscotto.rinvia_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "rinvia", dicastero })}>{t("cruscotto.rinvia")}</Pulsante>
-      <Pulsante forma="piccolo" spento={occupato} aria-label={t("cruscotto.respingi_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "respingi", dicastero })}>{t("aula.respingi")}</Pulsante>
+      <Pulsante forma="piccolo" spento={motivoAccogli(vista) ?? dimesso ?? occupato} aria-label={t("cruscotto.accogli_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "accogli", dicastero })}>{t("aula.accogli")}</Pulsante>
+      <Pulsante forma="piccolo" spento={dimesso ?? (rinviata ? t("cruscotto.gia_rinviata") : occupato)} aria-label={t("cruscotto.rinvia_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "rinvia", dicastero })}>{t("cruscotto.rinvia")}</Pulsante>
+      <Pulsante forma="piccolo" spento={dimesso ?? occupato} aria-label={t("cruscotto.respingi_di", { nome: voce.titolo })} onclick={() => manda({ tipo: "respingi", dicastero })}>{t("aula.respingi")}</Pulsante>
     {:else if voce.azioni === "emendamento" && voce.misura !== undefined && voce.partito}
       {@const { misura: id, partito } = voce}
       <Pulsante forma="piccolo" spento={occupato} aria-label={t("aula.accogli_di", { nome: alleato })} onclick={() => manda({ tipo: "emendamento", misura: id, partito, accogli: true })}>{t("aula.accogli")}</Pulsante>
@@ -68,8 +69,8 @@
       {#if voce.urgente}<span class="chip rosso">{t("aula.in_bilico")}</span>{/if}
       {#if misura.fiducia}
         <span class="chip pieno">{t("aula.fiducia_posta")}</span>
-      {:else if fiduciaPonibile(vista, misura)}
-        <Conferma etichetta={t("aula.poni_fiducia")} conferma={t("aula.poni_fiducia_conferma")} spiegazione={contro} spento={occupato}
+      {:else if fiduciaPonibile(vista, misura) || fiduciaInCrisi(vista, misura)}
+        <Conferma etichetta={t("aula.poni_fiducia")} conferma={t("aula.poni_fiducia_conferma")} spiegazione={contro} spento={motivoCrisi(vista) ?? occupato}
           onconferma={() => manda({ tipo: "poni_fiducia", misura: misura.id })} />
       {/if}
     {:else if typeof voce.azioni === "object" && apribile(voce.azioni.rimando, vista)}

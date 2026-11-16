@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { fuori } from "$lib/trattativa/trattativa";
-import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, motivoAccogli, motivoCrisi, scelteAlDefault, testa } from "./cruscotto";
+import { defaultDi, fondoBasta, inEvidenza, opzioneUnica, ordineDelGiorno, righeDelVoto, risponde, motivoAccogli, motivoCrisi, motivoDimissioni, scelteAlDefault, testa } from "./cruscotto";
+import bilancioJson from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
@@ -20,6 +21,7 @@ const opposizione = opposizioneJson as unknown as Vista;
 const sceltaFatta = (cruscottoJson as unknown as { scelte_fatte: { vista: Vista } }).scelte_fatte.vista;
 const stati = cruscottoJson as unknown as Record<"ultimatum" | "esercizio_provvisorio" | "crisi_provvisorio", { vista: Vista }>;
 const dopoVoto = (aulaJson as unknown as { dopo_voto: { vista: Vista } }).dopo_voto.vista;
+const bilancio = bilancioJson as unknown as Vista;
 const dichiarata = (campagnaJson as unknown as { dichiarata: Vista }).dichiarata;
 
 describe("scelteAlDefault", () => {
@@ -284,5 +286,36 @@ describe("costo della proposta", () => {
     const voce = ordineDelGiorno(v).find((x) => x.gruppo === "proposte")!;
     expect(voce.sotto).toContain("183 mln €");
     expect(voce.sotto).not.toContain("182.539.410");
+  });
+});
+
+describe("la legge che slitta", () => {
+  const conEmendamento = (v: Vista): Vista => ({
+    ...v,
+    calendario: v.calendario.map((m) => ({ ...m, emendamenti: [{ partito: "sinistra", testo: "x", motivo: "y", stato: "aperto" } as (typeof m.emendamenti)[number]] })),
+  });
+  it("04: «Si vota a fine turno» ha solo il bilancio, non la riforma che slitta", () => {
+    expect(ordineDelGiorno(bilancio).filter((x) => x.gruppo === "si_vota").map((x) => x.misura)).toEqual([3]);
+  });
+  it("05: la riforma che slitta non è fra i voti", () => {
+    expect(ordineDelGiorno(crisi).filter((x) => x.gruppo === "si_vota").map((x) => x.misura)).toEqual([]);
+  });
+  it("il default dell'emendamento di una legge che slitta non dice «vale respinto»", () => {
+    const e = ordineDelGiorno(conEmendamento(bilancio)).filter((x) => x.gruppo === "emendamenti");
+    const per = (id: number) => e.find((x) => x.misura === id)!;
+    expect(per(1).default).toBe("resta aperto: la legge slitta al turno dopo");
+    expect(per(1).alDefault).toBe(false);
+    expect(per(2).default).toBe("a fine turno vale respinto");
+    expect(per(2).alDefault).toBe(true);
+  });
+});
+
+describe("motivoDimissioni", () => {
+  const scelte = (governoSchedaJson as unknown as { scelte: { vista: Vista } }).scelte.vista;
+  it("il ministero con dimissioni chieste ha il motivo, gli altri no", () => {
+    const m = scelte.ministeri.find((x) => x.proposta)!;
+    expect(motivoDimissioni(m)).toBeUndefined();
+    expect(motivoDimissioni({ ...m, dimissioni_chieste: true })).toBe("dimissioni chieste");
+    expect(motivoDimissioni(undefined)).toBeUndefined();
   });
 });

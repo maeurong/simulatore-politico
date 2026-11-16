@@ -4,10 +4,11 @@ import { CAUSE } from "$lib/partiti/schieramento";
 import { statoDi, type Sezione } from "$lib/ossatura";
 import { t, numero, type Chiave } from "$lib/testi/t";
 import { euro } from "$lib/governo/governo";
-import { votaOra } from "$lib/aula/aula";
+import { slitta, votaOra } from "$lib/aula/aula";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEvento } from "$lib/tipi/VoceEvento";
 import type { VoceAgenda } from "$lib/tipi/VoceAgenda";
+import type { VoceMinistero } from "$lib/tipi/VoceMinistero";
 import type { VoceMinistro } from "$lib/tipi/VoceMinistro";
 import type { VoceOpzione } from "$lib/tipi/VoceOpzione";
 
@@ -68,12 +69,12 @@ export function ordineDelGiorno(v: Vista): VoceOdg[] {
     for (const e of m.emendamenti.filter((x) => x.stato === "aperto")) {
       voci.push({
         chiave: `em:${m.id}:${e.partito}`, gruppo: "emendamenti", titolo: t("cruscotto.emendamento_su", { partito: nomeDi(v, e.partito), misura: m.nome }),
-        sotto: e.testo, default: t("cruscotto.emendamento_default"), alDefault: true, urgente: false, fatta: false,
+        sotto: e.testo, default: t(slitta(v, m) ? "cruscotto.emendamento_slitta" : "cruscotto.emendamento_default"), alDefault: !slitta(v, m), urgente: false, fatta: false,
         azioni: "emendamento", misura: m.id, partito: e.partito,
       });
     }
   }
-  for (const m of v.calendario.filter((x) => votaOra(v, x))) {
+  for (const m of v.calendario.filter((x) => votaOra(v, x) && !slitta(v, x))) {
     const f = m.forbice;
     voci.push({
       chiave: `voto:${m.id}`, gruppo: "si_vota", titolo: m.nome,
@@ -139,3 +140,6 @@ export const motivoCrisi = (v: Vista): string | undefined => (v.governa && v.cri
 /** Il motivo per cui Accogli resta spento: la crisi, o l'esercizio provvisorio, dove il core lo rifiuta per ogni proposta, di fondi o di riforma (ministri/mod.rs, `ammesso`). */
 export const motivoAccogli = (v: Vista): string | undefined =>
   motivoCrisi(v) ?? (v.governa && v.bilancio.esercizio_provvisorio ? t("cruscotto.in_provvisorio") : undefined);
+
+/** Il motivo per cui su un dicastero con le dimissioni chieste restano spenti Accogli, Rinvia e Respingi: il core li rifiuta (ministri/mod.rs, `ammesso`). */
+export const motivoDimissioni = (m: VoceMinistero | undefined): string | undefined => (m?.dimissioni_chieste ? t("governo.stato_dimissioni_chieste") : undefined);

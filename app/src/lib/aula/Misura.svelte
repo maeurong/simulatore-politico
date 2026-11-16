@@ -15,7 +15,8 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Cartellino from "$lib/anteprima/Cartellino.svelte";
-  import { chiLaPorta, fiduciaPonibile, formaDi, lineaScelta, quando } from "./aula";
+  import { chiLaPorta, fiduciaInCrisi, fiduciaPonibile, formaDi, lineaScelta, quandoMisura, slitta } from "./aula";
+  import { motivoCrisi } from "$lib/cruscotto/cruscotto";
 
   let { vista, m, manda, rifiuto }: {
     vista: Vista; m: VoceMisura; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
@@ -54,7 +55,7 @@
 {:else}
 <span class="occ">{formaDi(m)}</span>
 <h4 class="tit">{m.nome}</h4>
-<p class="sec muto">{chiLaPorta(vista, m, nome)} · {quando(vista, m.voto)}</p>
+<p class="sec muto">{chiLaPorta(vista, m, nome)} · {quandoMisura(vista, m)}</p>
 
 <div class="emicicli">
   <Emiciclo ramo="Camera" totale={camera} si={m.forbice.camera} maggioranza={m.forbice.maggioranza_camera} />
@@ -102,17 +103,17 @@
         <small>{e.motivo}</small>
       </div>
     {/each}
-    {#if aperti.length && vista.governa}<p class="min muto">{t("aula.emendamento_default")}</p>{/if}
+    {#if aperti.length && vista.governa}<p class="min muto">{t(slitta(vista, m) ? "aula.emendamento_slitta" : "aula.emendamento_default")}</p>{/if}
     {#if rifiuto?.tipo === "emendamento"}<Rifiuto testo={rifiuto.testo} />{/if}
   </div>
 {/if}
 
 {#if m.fiducia}
   <div class="blocco"><span class="chip pieno">{t("aula.fiducia_posta")}</span></div>
-{:else if fiduciaPonibile(vista, m)}
+{:else if fiduciaPonibile(vista, m) || fiduciaInCrisi(vista, m)}
   <div class="blocco">
     <div class="conf">
-      <Conferma bind:aperta={fiduciaAperta} etichetta={t("aula.poni_fiducia")} conferma={t("aula.poni_fiducia_conferma")} spiegazione={contro} spento={occupato}
+      <Conferma bind:aperta={fiduciaAperta} etichetta={t("aula.poni_fiducia")} conferma={t("aula.poni_fiducia_conferma")} spiegazione={contro} spento={motivoCrisi(vista) ?? occupato}
         onconferma={() => manda({ tipo: "poni_fiducia", misura: m.id })} />
       {#if !fiduciaAperta}<span class="sec" class:male={m.alleati_contro_fiducia.length > 0}><b>{contro}</b></span>{/if}
     </div>

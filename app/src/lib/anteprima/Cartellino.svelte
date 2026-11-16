@@ -38,6 +38,8 @@
   const cassa = $derived(vista.partiti.find((p) => p.id === vista.giocatore)?.cassa ?? 0);
   const euroEsatti = (c: number) => `${numero(c)} €`;
   const test = $derived(vista.acquisti.test_misura?.misura === misura.nome ? vista.acquisti.test_misura : null);
+  // un test per turno: il comprato di un'altra misura spegne il bottone invece di farlo rifiutare dal core
+  const testAltro = $derived(vista.acquisti.test_misura && !test ? t("anteprima.test_gia_comprato") : undefined);
   const camera = $derived(vista.seggi.reduce((s, x) => s + x.camera, 0));
   const senato = $derived(vista.seggi.reduce((s, x) => s + x.senato, 0));
   const partiti = $derived(inOrdine(vista));
@@ -120,9 +122,9 @@
       <span class="occ nero">{t("anteprima.gruppi")}</span>
       <div>{#each misura.gruppi as g (g)}<span class="chip">{t(`condizione.${g}` as Chiave)}</span>{:else}<span class="sec muto">{t("anteprima.gruppi_nessuno")}</span>{/each}</div>
       <p class="min muto">{t("anteprima.gruppi_nota")}</p>
-      {#if prezzo !== undefined}
+      {#if prezzo !== undefined && valori.length}
       <div class="conf">
-        <Pulsante forma="piccolo" spento={occupato} onclick={() => manda({ tipo: "compra", acquisto: { test_misura: { valori } } })}>{t("anteprima.compra_test", { prezzo: euroEsatti(prezzo) })}</Pulsante>
+        <Pulsante forma="piccolo" spento={testAltro ?? occupato} onclick={() => manda({ tipo: "compra", acquisto: { test_misura: { valori } } })}>{t("anteprima.compra_test", { prezzo: euroEsatti(prezzo) })}</Pulsante>
         <span class="min muto">{t("anteprima.cassa_test", { cassa: euroEsatti(cassa) })}</span>
       </div>
       {/if}
