@@ -13,7 +13,7 @@
   import Spread from "./Spread.svelte";
   import Forte from "./Forte.svelte";
   import Ventaglio from "./Ventaglio.svelte";
-  import { percorso, procedura, reale } from "./conti";
+  import { percorso, procedura, reale, trimestrePrima } from "./conti";
 
   let { vista, scelta = $bindable(), torna }: { vista: Vista; scelta: string | null; torna: () => void } = $props();
 
@@ -104,7 +104,7 @@
 {:else if k === "mes" && vista.debito.mes}
   {@const m = vista.debito.mes}
   <h4 class="tit">{t("conti.mes_titolo")}</h4>
-  <p class="sec">{t("conti.mes_spiega", { periodo: periodo(m.fine) })}</p>
+  <p class="sec">{t("conti.mes_spiega", { periodo: periodo(trimestrePrima(m.fine)) })}</p>
   {#each m.vincoli as v, i (i)}<div class="r fermo"><span class="n">{v.disposizione}</span><span class="x">{v.gradino}</span></div>{/each}
 {:else if k === "ristr" && vista.debito.ristrutturazione}
   {@const r = vista.debito.ristrutturazione}
@@ -112,7 +112,7 @@
   <dl class="dati">
     <dt>{t("conti.ristr_taglio")}</dt><dd>{periodo(r.taglio)}</dd>
     <dt>{t("conti.ristr_premio")}</dt><dd>{t("conti.ristr_premio_pb", { n: numero(r.premio_pb) })}</dd>
-    <dt>{t("conti.ristr_redditi")}</dt><dd>{r.fine_perdita ? t("conti.ristr_calano", { periodo: periodo(r.fine_perdita) }) : t("conti.ristr_finita")}</dd>
+    <dt>{t("conti.ristr_redditi")}</dt><dd>{r.fine_perdita ? t("conti.ristr_calano", { periodo: periodo(trimestrePrima(r.fine_perdita)) }) : t("conti.ristr_finita")}</dd>
   </dl>
 {:else if tipo === "red"}
   {@const r = vista.redditi.find((x) => x.fascia === id)!}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { distanza, esiste, grandezza, percorso, periodoLegato, procedura, reale, sottoAttese } from "./conti";
+import { distanza, esiste, grandezza, percorso, periodoLegato, procedura, reale, sottoAttese, trimestrePrima } from "./conti";
 import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 
 const conti = contiJson as unknown as Record<string, { vista: Vista }>;
@@ -101,4 +101,9 @@ describe("periodoLegato", () => {
   it("l'anno non resta solo a capo: spazio non separabile prima dell'anno", () => {
     expect(periodoLegato({ anno: 2032, trimestre: 2 })).toBe("aprile–giugno\u00a02032");
   });
+});
+
+describe("trimestrePrima", () => {
+  it("a metà anno", () => expect(trimestrePrima({ anno: 2032, trimestre: 3 })).toEqual({ anno: 2032, trimestre: 2 }));
+  it("il primo dell'anno torna al quarto dell'anno prima", () => expect(trimestrePrima({ anno: 2032, trimestre: 1 })).toEqual({ anno: 2031, trimestre: 4 }));
 });
