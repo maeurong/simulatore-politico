@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import { salti, leveDi, chiaveDi } from "$lib/caricature/caricatura";
-import { sulRetro, attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, type Figurina, molla, obiettivo, posizioni, prezzoDimissioni, ruota, statoPrincipale, totaleDirotta } from "./governo";
+import { euro, sulRetro, attiDirotta, conRegione, costiDirotta, etichettaFerma, figurine, type Figurina, molla, obiettivo, posizioni, prezzoDimissioni, ruota, statoPrincipale, totaleDirotta } from "./governo";
 import ordinarioJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
@@ -232,5 +232,13 @@ describe("ruota", () => {
     expect(ruota(e, 1, { muove: false, k: 1 })).toBeUndefined();
     expect(ruota(e, 1, { muove: true, k: 0 })).toBeUndefined();
     expect(e.animate).not.toHaveBeenCalled();
+  });
+});
+
+describe("euro", () => {
+  it("i negativi hanno le stesse soglie dei positivi, col meno tipografico", () => {
+    expect(euro(-32882130)).toBe("−" + euro(32882130));
+    expect(euro(-6197708677)).toBe("−6,2 mld €");
+    expect(euro(0)).toBe("0 €");
   });
 });

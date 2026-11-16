@@ -2,7 +2,7 @@
   // Il sondaggio nel dettaglio a lato (23-paese.prototype.html, forma A): la media degli istituti, il privato, i seggi, gli incroci.
   import { t, numero, percentuale, type Chiave } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
-  import { acquistoSondaggio } from "$lib/acquisto.svelte";
+  import { acquisto } from "$lib/acquisto.svelte";
   import { coalizioneDi, coloreDi, quotaIncrocio } from "$lib/partiti";
   import type { Vista } from "$lib/tipi/Vista";
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
@@ -22,7 +22,7 @@
   const massimo = $derived(Math.max(0.01, ...pubblica.partiti.map((p) => p.quota)));
   const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "sondaggio_privato")?.euro);
   const cassa = $derived(vista.partiti.find((p) => p.id === vista.giocatore)?.cassa ?? 0);
-  const acquisto = acquistoSondaggio();
+  const compra = acquisto("sondaggio_privato");
 
   const coalizione = $derived(coalizioneDi(vista));
   const rami = $derived(
@@ -75,18 +75,18 @@
     {#if letto.privato}
       <div class="capo"><b>{t("paese.privato_titolo")}</b><span class="sec muto">{t("paese.privato_comprato", { euro: numero(prezzo ?? 0) })}</span></div>
       <p class="sec">{t("paese.privato_corpo", { n: numero(letto.sondaggio.istituti[0]?.campione ?? 0) })}</p>
-      <Pulsante forma="link" aria-disabled={partita.occupato ? "true" : undefined} onclick={acquisto.compra}>{t("paese.ricompra")}</Pulsante>
+      <Pulsante forma="link" aria-disabled={partita.occupato ? "true" : undefined} onclick={compra.compra}>{t("paese.ricompra")}</Pulsante>
     {:else}
       <b>{t("paese.privato_titolo")}</b>
       <p class="sec">{t("paese.privato_spiega")}</p>
       {#if prezzo !== undefined}
         <div class="prezzo">
-          <Pulsante forma="bordo" aria-disabled={partita.occupato ? "true" : undefined} onclick={acquisto.compra}>{t("paese.compra", { euro: numero(prezzo) })}</Pulsante>
+          <Pulsante forma="bordo" aria-disabled={partita.occupato ? "true" : undefined} onclick={compra.compra}>{t("paese.compra", { euro: numero(prezzo) })}</Pulsante>
           <span class="sec muto">{t("paese.cassa", { euro: numero(cassa) })}</span>
         </div>
       {/if}
     {/if}
-    {#if acquisto.rifiuto}<Rifiuto testo={acquisto.rifiuto} />{/if}
+    {#if compra.rifiuto}<Rifiuto testo={compra.rifiuto} />{/if}
   </div>
 
   <h5 class="grp"><span>{t("paese.seggi")}</span></h5>

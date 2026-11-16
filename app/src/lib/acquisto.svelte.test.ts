@@ -9,7 +9,7 @@ vi.mock("$app/navigation", () => ({ goto }));
 vi.mock("$lib/guscio/chiamate", async (originale) => ({ ...(await originale<object>()), guscio }));
 
 import { partita } from "./partita.svelte";
-import { acquistoSondaggio } from "./acquisto.svelte";
+import { acquisto } from "./acquisto.svelte";
 
 const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true } as Vista;
 const dopo = { ...prima, turno: 4 } as Vista;
@@ -23,24 +23,24 @@ beforeEach(() => {
   guscio.serie.mockResolvedValue([]);
 });
 
-describe("acquistoSondaggio", () => {
+describe("acquisto", () => {
   it("compra manda il comando compra/sondaggio_privato", async () => {
     guscio.comanda.mockResolvedValue(dopo);
-    await acquistoSondaggio().compra();
+    await acquisto("sondaggio_privato").compra();
     expect(guscio.comanda).toHaveBeenCalledWith({ tipo: "compra", acquisto: "sondaggio_privato" });
     expect(partita.vista).toBe(dopo);
   });
 
   it("il rifiuto del core si legge senza il prefisso", async () => {
     guscio.comanda.mockRejectedValue(rifiuto);
-    const a = acquistoSondaggio();
+    const a = acquisto("sondaggio_privato");
     await a.compra();
     expect(a.rifiuto).toBe("già comprato");
   });
 
   it("il rifiuto vale per la Vista in cui è nato: con una Vista nuova scompare", async () => {
     guscio.comanda.mockRejectedValue(rifiuto);
-    const a = acquistoSondaggio();
+    const a = acquisto("sondaggio_privato");
     await a.compra();
     partita.vista = dopo;
     expect(a.rifiuto).toBeNull();
@@ -48,7 +48,7 @@ describe("acquistoSondaggio", () => {
 
   it("occupato: il clic non fa niente, nemmeno cancella il rifiuto che si sta leggendo", async () => {
     guscio.comanda.mockRejectedValueOnce(rifiuto);
-    const a = acquistoSondaggio();
+    const a = acquisto("sondaggio_privato");
     await a.compra();
     partita.occupato = true;
     await a.compra();
@@ -58,11 +58,19 @@ describe("acquistoSondaggio", () => {
 
   it("un nuovo compra azzera il rifiuto di prima", async () => {
     guscio.comanda.mockRejectedValueOnce(rifiuto);
-    const a = acquistoSondaggio();
+    const a = acquisto("sondaggio_privato");
     await a.compra();
     expect(a.rifiuto).toBe("già comprato");
     guscio.comanda.mockResolvedValueOnce(dopo);
     await a.compra();
     expect(a.rifiuto).toBeNull();
+  });
+
+  it("centro_studi: manda il comando compra/centro_studi; due compra di fila ne mandano uno solo", async () => {
+    guscio.comanda.mockResolvedValue(dopo);
+    const a = acquisto("centro_studi");
+    await Promise.all([a.compra(), a.compra()]);
+    expect(guscio.comanda).toHaveBeenCalledTimes(1);
+    expect(guscio.comanda).toHaveBeenCalledWith({ tipo: "compra", acquisto: "centro_studi" });
   });
 });

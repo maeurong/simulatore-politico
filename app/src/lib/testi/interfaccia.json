@@ -1042,5 +1042,18 @@
   "aula.svuota": "svuota",
   "aula.ante_forbice": "{si} sì · ne servono {n}",
   "aula.ante_in_calcolo": "Anteprima in calcolo…",
-  "aula.apri_misura": "Apri «{nome}» ›"
+  "aula.apri_misura": "Apri «{nome}» ›",
+  "conti.accesa": "accesa · si spegne {verso} {soglia}: mancano {n}",
+  "conti.spenta": "si accende {verso} {soglia}: mancano {n}",
+  "conti.oltre_soglia": "oltre la soglia",
+  "conti.oltre_da": "oltre la soglia da {da}: si accende al {al} di fila",
+  "conti.procedura_nessuna": "nessuna procedura",
+  "conti.procedura_aperta": "procedura aperta",
+  "conti.procedura_sospesa": "procedura sospesa",
+  "conti.procedura_inadempiente": "procedura inadempiente",
+  "conti.procedura_intimata": "procedura intimata",
+  "conti.procedura_sanzionata": "procedura con sanzione",
+  "conti.sul_percorso": "sul percorso",
+  "conti.sotto_percorso": "{n} punti sotto il percorso",
+  "conti.sopra_percorso": "{n} punti sopra il percorso"
 }

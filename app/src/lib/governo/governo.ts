@@ -64,8 +64,8 @@ export function posizioni(v: Vista, m: VoceMinistro): { ministro: number; tua: n
 
 /** «2,5 mld €», «12 mln €», «850.000 €». */
 export function euro(c: number): string {
-  if (c >= 1e9) return `${numero(c / 1e9, 1)} mld €`;
-  if (c >= 1e6) return `${numero(c / 1e6)} mln €`;
+  if (Math.abs(c) >= 1e9) return `${numero(c / 1e9, 1)} mld €`;
+  if (Math.abs(c) >= 1e6) return `${numero(c / 1e6)} mln €`;
   return `${numero(c)} €`;
 }
 
