@@ -1092,7 +1092,7 @@
   "conti.debito": "Debito",
   "conti.debito_pil": "Debito sul PIL",
   "conti.mes": "MES",
-  "conti.fino_a_periodo": "fino a {periodo}",
+  "conti.fino_a_periodo": "fino al trimestre {periodo}",
   "conti.vincoli": { "one": "{n} vincolo ›", "other": "{n} vincoli ›" },
   "conti.ristrutturato": "ristrutturato",
   "conti.premio": "+{n} pb ›",

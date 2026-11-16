@@ -58,7 +58,7 @@
   .conti :global(:where(.r .x)) { white-space: nowrap; font-weight: 700; text-align: right }
   .conti :global(:where(.r .x small)), .conti :global(:where(.r .n small)) { font-size: inherit; font-weight: 400; color: var(--grigio) }
   .conti :global(:where(.r.due)) { grid-template-columns: minmax(0, 1fr) }
-  .conti :global(:where(.r.due .x)) { text-align: left; white-space: normal }
+  .conti :global(:where(.r.due .x)), .conti :global(:where(.r.due .n)) { text-align: left; white-space: normal }
   .conti :global(:where(.sec)) { font-size: var(--c-sec) }
   .conti :global(:where(.min)) { font-size: var(--c-min) }
   .conti :global(:where(.muto)) { color: var(--grigio) }
