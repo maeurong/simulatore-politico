@@ -299,3 +299,12 @@ describe("tracciatiRivelati all'opposizione, sulla sfiducia del 28", () => {
     expect([secondo.era, secondo.scatta]).toEqual([null, false]);
   });
 });
+
+describe("spread alla soglia della Vista", () => {
+  const conSpread = (pb: number) => tracciatiDi({ ...governo, spread_pb: pb }, [])[2];
+  it("esattamente allo stacco la regola è scattata: 3 caselle; un punto base sotto, 4", () => {
+    const soglia = governo.soglie.crisi_debito_pb;
+    expect(caselle(conSpread(soglia).valore!, conSpread(soglia).scala!).piene).toBe(3);
+    expect(caselle(conSpread(soglia - 1).valore!, conSpread(soglia - 1).scala!).piene).toBe(4);
+  });
+});

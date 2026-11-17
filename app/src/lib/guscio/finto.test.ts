@@ -537,3 +537,18 @@ describe("rispondi: anteprime della campagna", () => {
     expect(rispondi("anteprima_promesse", { promesse: [["cuneo_fiscale", "3"]] }, cz)).toEqual([]);
   });
 });
+
+describe("rispondi: anteprime della campagna, casi limite", () => {
+  const g = { ...c, stato: "governo_fine" };
+  it("promesse in ordine diverso dalla chiave del campione: non nel campione", () => {
+    const ordine = [["eta_pensionabile", "64"], ["reddito_minimo", "universale"]];
+    expect(() => rispondi("anteprima_promesse", { promesse: ordine }, g)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+  it("promesse senza scelte: non nel campione", () => {
+    expect(() => rispondi("anteprima_promesse", { promesse: [] }, g)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+  it("stato senza anteprime (opposizione_fine per le promesse): non nel campione", () => {
+    const o = { ...c, stato: "opposizione_fine" };
+    expect(() => rispondi("anteprima_promesse", { promesse: [["cuneo_fiscale", "3"]] }, o)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+});

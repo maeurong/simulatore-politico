@@ -315,3 +315,19 @@ describe("distanzaDi e sogliaDi", () => {
     expect(distanzaDi(v).toFixed(2)).toBe("0.61");
   });
 });
+
+describe("distanzaDi e sogliaDi: casi limite", () => {
+  const c = { minaccia_scissione: 0.5, soglia_scissione: 1 } as Vista["campagna"];
+  const con = (dichiarata: number, percepita: number) =>
+    ({ giocatore: "g", partiti: [{ id: "g", posizione_dichiarata: dichiarata, posizione_percepita: percepita }] }) as unknown as Vista;
+  it("appena sotto la soglia di scissione è ancora minaccia", () => {
+    expect(sogliaDi(0.999, c)).toBe("minaccia");
+    expect(sogliaDi(0, c)).toBe("sotto");
+  });
+  it("la distanza è in valore assoluto: percepita a sinistra della dichiarata", () => {
+    expect(distanzaDi(con(4, 3.5))).toBe(0.5);
+  });
+  it("senza il giocatore fra i partiti la distanza è zero", () => {
+    expect(distanzaDi({ giocatore: "x", partiti: [] } as unknown as Vista)).toBe(0);
+  });
+});

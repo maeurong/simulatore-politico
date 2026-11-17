@@ -258,3 +258,17 @@ describe("fraseDistanza", () => {
     expect(a(0.2, true)).toBe("partiti.s_minaccia_accesa");
   });
 });
+
+describe("fraseDistanza: precedenze", () => {
+  const c = crisi.campagna;
+  const a = (d: number, minaccia: boolean) => fraseDistanza({ ...crisi.partiti[0], posizione_dichiarata: 3, posizione_percepita: 3 + d, minaccia }, c);
+  it("oltre la soglia vince sulla minaccia già accesa", () => {
+    expect(a(c.soglia_scissione + 0.1, true)).toBe("partiti.s_scissione");
+  });
+  it("a minaccia esatta vince sulla minaccia accesa", () => {
+    expect(a(c.minaccia_scissione, true)).toBe("partiti.s_minaccia");
+  });
+  it("appena sotto la minaccia, senza minaccia scattata: la soglia futura", () => {
+    expect(a(c.minaccia_scissione - 0.01, false)).toBe("partiti.s_sotto_minaccia");
+  });
+});
