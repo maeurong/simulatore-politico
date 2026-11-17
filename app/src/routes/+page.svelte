@@ -14,7 +14,7 @@
   import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
-  import { anniAlGoverno, esitoTesto, inOrdine, periodo, voceNuova } from "$lib/edicola/edicola";
+  import { anniAlGoverno, esitoTesto, inOrdine, periodo, voceConfermata, voceNuova } from "$lib/edicola/edicola";
   import RigaPartita from "$lib/edicola/RigaPartita.svelte";
   import DettaglioPartita from "$lib/edicola/DettaglioPartita.svelte";
   import DettaglioAlbo from "$lib/edicola/DettaglioAlbo.svelte";
@@ -63,9 +63,9 @@
     partita.esci();
     const e = await carica();
     if (e) guasto = `${e.testo} ${t("edicola.elenchi_non_caricati")}`;
-    // dopo «Conferma l'eredità»: la voce nuova dell'albo, scelta come dopo l'abbandono (senza l'albo di prima, voceNuova ricade sul nome)
+    // dopo «Conferma l'eredità»: la voce nuova dell'albo, riconosciuta da nome, fine e turni della bozza
     else if (page.url.searchParams.get("albo") === "nuova") {
-      const nuova = voceNuova([], albo ?? [], page.url.searchParams.get("nome") ?? "");
+      const nuova = voceConfermata(albo ?? [], page.url.searchParams);
       if (nuova) scelta = { k: "a", voce: nuova };
     }
   });
