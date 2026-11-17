@@ -227,6 +227,12 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       return piena;
     }
     case "sfiducia": return c.opposizione?.sfiducia?.dopo_comando;
+    case "promuovi_referendum": {
+      const r = c.opposizione?.referendum;
+      const no = [r?.rifiuto_non_referendabile, r?.rifiuto_secondo].find((x) => x?.disposizione === cmd.disposizione);
+      if (no) throw rifiuto(no.rifiuto);
+      return r?.dopo_comando;
+    }
     case "presenta_proposta": case "linea": return c.aula?.opposizione_proposta?.vista;
     case "presenta_bilancio": return uguali(cmd.bilancio, c.bilancio?.bozza_04?.bozza) ? c.bilancio.presentato.vista : undefined;
     case "emendamento": {

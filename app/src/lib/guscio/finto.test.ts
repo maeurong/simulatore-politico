@@ -435,6 +435,12 @@ describe("rispondi: opposizione ed eredità", () => {
   it("comanda Sfiducia dà la Vista dopo il comando dello stato", () => {
     expect(rispondi("comanda", { comando: { tipo: "sfiducia", dicastero: null } }, co)).toEqual(op.sfiducia.dopo_comando);
   });
+  it("comanda PromuoviReferendum: la Vista dopo il comando, o il rifiuto del 28 sulla disposizione che lo dà", () => {
+    const promuovi = (disposizione: string) => rispondi("comanda", { comando: { tipo: "promuovi_referendum", disposizione } }, co);
+    expect(promuovi("tetto_contante")).toEqual(op.referendum.dopo_comando);
+    expect(() => promuovi("forfettario")).toThrow(expect.objectContaining({ specie: "rifiuto", testo: op.referendum.rifiuto_non_referendabile.rifiuto }));
+    expect(() => promuovi("regime_pensioni")).toThrow(expect.objectContaining({ specie: "rifiuto", testo: op.referendum.rifiuto_secondo.rifiuto }));
+  });
   it("abbandona dà l'eredità, riavvolgi la Vista del 30, conferma_eredita nulla", () => {
     const ce = { ...c, campione: ered, opposizione: op, eredita: ered };
     expect(rispondi("abbandona", {}, ce)).toEqual(ered.eredita);

@@ -9,7 +9,8 @@
   import { leve, type Leva } from "./opposizione";
   import type { Scelta } from "./scelta";
 
-  let { vista, scelta, onscegli }: { vista: Vista; scelta: Scelta | null; onscegli: (s: Scelta) => void } = $props();
+  // passano: su quanti ministri la sfiducia passerebbe, quando le anteprime sono arrivate tutte
+  let { vista, scelta, onscegli, passano = null }: { vista: Vista; scelta: Scelta | null; onscegli: (s: Scelta) => void; passano?: { n: number; m: number } | null } = $props();
 
   const TITOLO = {
     sfiducia_governo: "opposizione.leva_sfiducia_governo", sfiducia_ministro: "opposizione.leva_sfiducia_ministro",
@@ -26,14 +27,16 @@
     abrogativo: { tipo: "referendum", id: "abrogativo" }, confermativo: { tipo: "referendum", id: "confermativo" },
   };
   const scelta_di = (l: Leva) => (l.tipo === "posto" ? null : SCELTA[l.tipo]);
-  const uguale = (s: Scelta | null) => !!s && scelta?.tipo === s.tipo && scelta.id === s.id;
+  // la riga del ministro resta scelta anche col dicastero aperto nel dettaglio
+  const uguale = (s: Scelta | null) => !!s && scelta?.tipo === s.tipo && (s.tipo === "ministro" || scelta.id === s.id);
 
   function sotto(l: Leva): string {
     if (l.stato === "spenta") return l.motivo ? t(l.motivo) : t("opposizione.posto_nessuno");
     switch (l.tipo) {
       case "sfiducia_governo":
       case "sfiducia_ministro":
-        return l.stato === "altrui" ? t("opposizione.sfiducia_altrui", { partito: nome(l.chi) }) : t("opposizione.sfiducia_sotto");
+        if (l.stato === "altrui") return t("opposizione.sfiducia_altrui", { partito: nome(l.chi) });
+        return l.tipo === "sfiducia_ministro" && passano ? `${t("opposizione.sfiducia_sotto")} ${t("opposizione.ministri_passano", passano)}` : t("opposizione.sfiducia_sotto");
       case "posto": {
         const mia = vista.calendario.find((m) => m.promotore === vista.giocatore);
         if (l.stato === "libera") return t("opposizione.posto_libero");
