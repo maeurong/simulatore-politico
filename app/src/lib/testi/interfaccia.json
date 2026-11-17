@@ -34,8 +34,6 @@
   "tracciato.per_farlo_cadere": "Per farlo cadere",
   "tracciato.conti": "Conti · spread",
   "tracciato.pb": "pb",
-  "tracciato.arriva": "arriva con la fetta {fetta}",
-  "tracciato.stacco_arriva": "Lo stacco arriva con la fetta {fetta}.",
 
   "sommario.etichetta": "Sommario",
   "sommario.prima_pagina": "Prima pagina",
@@ -816,6 +814,7 @@
   "partiti.s_mosse": "mosse di questo turno",
   "partiti.s_sotto_minaccia": "La minaccia scatta a {m} punti.",
   "partiti.s_minaccia": "Oltre {m} punti: minaccia la scissione; a {s} di distanza una frangia esce coi suoi seggi e una parte della cassa.",
+  "partiti.s_minaccia_accesa": "La minaccia di scissione resta accesa finché la distanza non torna sotto {m} punti.",
   "partiti.s_scissione": "Oltre {s} di distanza: alla chiusura si scinde.",
   "partiti.s_filo_soglie": "Filo a {u}: ultimatum. Filo a {e}: esce dal governo.",
   "partiti.minacciano": "{n} in minaccia di scissione",

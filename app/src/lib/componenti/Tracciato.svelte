@@ -8,7 +8,6 @@
   let { tracciato: tr }: { tracciato: Tracciato } = $props();
 
   const pos = $derived(tr.valore !== null && tr.scala ? caselle(tr.valore, tr.scala) : null);
-  const rimando = $derived(tr.rimando ? t(tr.valore === null ? "tracciato.arriva" : "tracciato.stacco_arriva", { fetta: tr.rimando }) : undefined);
   const decimali = $derived(tr.nome.startsWith("tracciato.consenso") ? 1 : 0);
   // durante la rivelazione le caselle fra il valore di prima e il nuovo lampeggiano; senza il valore di prima, tutte quelle accese
   const lampo = $derived.by(() => {
@@ -20,11 +19,12 @@
   const accanto = $derived(tr.ramo ?? (tr.nome === "tracciato.conti" ? t("tracciato.pb") : null));
 </script>
 
-<div class="trk" title={rimando}>
+<div class="trk">
   <span class="k">{t(tr.nome)}</span>
   {#if pos && tr.valore !== null}
     <span class="cas" class:inp={tr.rosso} class:fermo={tr.grigio} aria-hidden="true">
       <b class="oltre" class:su={!tr.rosso}>{pos.sotto ? "◂" : ""}</b>
+      <!-- le tacche dello stacco stanno su ogni scala (anche lo stacco 0 del margine) -->
       {#each { length: 10 }, i (i)}
         <i data-tagli-ignora class:per={i < 3 && !tr.grigio} class:sog={i === 2} class:on={i < pos.piene} class:lampo={i >= lampo[0] && i < lampo[1]} style:--i={i}></i>
       {/each}
@@ -37,11 +37,11 @@
         formato={() => tr.testo}
         formatoVariazione={(x) => numero(x, decimali)}
         male={tr.scala?.rovesciata ? "sale" : "scende"} />
-      {#if accanto}<small>{accanto}</small>{/if}{#if tr.scatta && tr.era}<small class="era">{t("tracciato.era", { x: tr.era })}</small>{/if}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}
+      {#if accanto}<small>{accanto}</small>{/if}{#if tr.scatta && tr.era}<small class="era">{t("tracciato.era", { x: tr.era })}</small>{/if}
     </span>
   {:else}
     <span class="cas vuoto" aria-hidden="true"><b class="oltre"></b>{#each { length: 10 }, i (i)}<i data-tagli-ignora></i>{/each}<b class="oltre"></b></span>
-    <span class="v fermo">{tr.testo}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}</span>
+    <span class="v fermo">{tr.testo}</span>
   {/if}
 </div>
 

@@ -83,8 +83,8 @@
     {@const nato = coloreDi(p.id) === null}
     {#snippet segno()}
       {#if campagna && p.minaccia && !p.sciolto}
-        {#each [[campagna.minaccia_scissione, true], [campagna.soglia_scissione, false]] as [d, tratteggio] (d)}
-          {@const xf = X(p.posizione_dichiarata + (Math.sign(p.posizione_percepita - p.posizione_dichiarata) || 1) * Number(d))}
+        {#each [{ d: campagna.minaccia_scissione, tratteggio: true }, { d: campagna.soglia_scissione, tratteggio: false }] as { d, tratteggio }, i (i)}
+          {@const xf = X(p.posizione_dichiarata + (Math.sign(p.posizione_percepita - p.posizione_dichiarata) || 1) * d)}
           <line x1={xf} y1={yq - 9} x2={xf} y2={yq + 3} class="filo" stroke-width={tratteggio ? 1 : 2} stroke-dasharray={tratteggio ? "2 2" : undefined} />
         {/each}
       {/if}

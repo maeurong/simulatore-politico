@@ -61,7 +61,7 @@
 
   const dalleViste: [string, unknown][] = [["Turno zero · 01", v01], ["Al governo · 03", v03], ["Crisi · 05", v05], ["All’opposizione · 06", v06], ["Partita finita · 07", v07]];
   const SPREAD = { stacco: 550, passo: 75, rovesciata: true };
-  const prova = (x: Partial<T>): T => ({ nome: "tracciato.conti", valore: 0, testo: "", ramo: null, scala: SPREAD, rosso: false, grigio: false, rimando: null, prima: null, era: null, scatta: false, ...x });
+  const prova = (x: Partial<T>): T => ({ nome: "tracciato.conti", valore: 0, testo: "", ramo: null, scala: SPREAD, rosso: false, grigio: false, prima: null, era: null, scatta: false, ...x });
   const diProva: [string, T[]][] = [
     ["Con la variazione", [
       prova({ nome: "tracciato.consenso_coalizione", valore: 56.68, testo: "56,7%", scala: { stacco: 42, passo: 4, rovesciata: false }, prima: 53.1 }),

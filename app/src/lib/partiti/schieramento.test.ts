@@ -251,10 +251,10 @@ describe("CAUSE", () => {
 describe("fraseDistanza", () => {
   const c = crisi.campagna;
   const a = (d: number, minaccia = false) => fraseDistanza({ ...crisi.partiti[0], posizione_dichiarata: 3, posizione_percepita: 3 + d, minaccia }, c);
-  it("sotto la minaccia, a minaccia, a scissione; la minaccia già scattata resta anche sotto soglia", () => {
+  it("sotto la minaccia, a minaccia, a scissione; la minaccia già scattata, sotto soglia, ha la sua frase", () => {
     expect(a(0.2)).toBe("partiti.s_sotto_minaccia");
     expect(a(-c.minaccia_scissione)).toBe("partiti.s_minaccia");
     expect(a(c.soglia_scissione)).toBe("partiti.s_scissione");
-    expect(a(0.2, true)).toBe("partiti.s_minaccia");
+    expect(a(0.2, true)).toBe("partiti.s_minaccia_accesa");
   });
 });

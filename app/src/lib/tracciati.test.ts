@@ -121,7 +121,6 @@ describe("tracciatiDi", () => {
   it("lo spread ha il valore e lo stacco della soglia della crisi del debito", () => {
     const conti = tracciatiDi(governo, [])[2];
     expect(conti.valore).toBe(86);
-    expect(conti.rimando).toBeNull();
     expect(conti.scala!.stacco).toBe(governo.soglie.crisi_debito_pb);
     expect(caselle(conti.valore!, conti.scala!).piene).toBe(10);
   });
@@ -144,10 +143,9 @@ describe("tracciatiDi", () => {
     expect(conIncarico.prima).toBe(50);
   });
 
-  it("all'opposizione senza anteprima: «per farlo cadere» vuoto, senza rimando a una fetta", () => {
+  it("all'opposizione senza anteprima: «per farlo cadere» vuoto", () => {
     const secondo = tracciatiDi(opposizione, [])[1];
     expect(secondo.valore).toBeNull();
-    expect(secondo.rimando).toBeNull();
   });
 
   it("con l'anteprima della sfiducia: i sì che mancano, in caselle da 15 seggi, mai rosso", () => {
@@ -159,20 +157,17 @@ describe("tracciatiDi", () => {
     expect(secondo.testo).toBe(String(siMancanti(v, a)));
     expect(secondo.scala).toEqual({ stacco: 105, passo: 15, rovesciata: true });
     expect(secondo.rosso).toBe(false);
-    expect(secondo.rimando).toBeNull();
     expect(caselle(0, secondo.scala!).piene).toBe(10);
     expect(caselle(150, secondo.scala!).piene).toBe(0);
   });
   it("senza anteprima o con null: com'è oggi", () => {
     const v = (opposizione28 as any).sfiducia.prima as Vista;
     expect(tracciatiDi(v, [], null)[1]).toEqual(tracciatiDi(v, [])[1]);
-    expect(tracciatiDi(v, [])[1].rimando).toBeNull();
   });
 
   it("la variazione viene dal punto della serie del turno prima", () => {
     expect(tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2].prima).toBe(196);
     const terzo = tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2];
-    expect(terzo.rimando).toBeNull();
     expect(terzo.scala!.stacco).toBe(spreadAlto.vista.soglie.crisi_debito_pb);
     expect(tracciatiDi(governo, [])[2].prima).toBeNull();
   });
@@ -195,17 +190,15 @@ describe("tracciatiDi", () => {
     expect(caselle(consenso.valore!, consenso.scala!).piene).toBe(5);
   });
 
-  it("senza istituti il consenso manca: tratteggiato, senza rimando", () => {
+  it("senza istituti il consenso manca: tratteggiato", () => {
     const consenso = tracciatiDi({ ...governo, sondaggio: { ...governo.sondaggio, istituti: [] } }, [])[0];
     expect(consenso.valore).toBeNull();
-    expect(consenso.rimando).toBeNull();
     expect(consenso.rosso).toBe(false);
   });
 
   it("col partito fuori dal sondaggio il consenso manca", () => {
     const consenso = tracciatiDi({ ...opposizione, partiti: opposizione.partiti.filter((p) => p.id !== opposizione.giocatore) }, [])[0];
     expect(consenso.valore).toBeNull();
-    expect(consenso.rimando).toBeNull();
     expect(consenso.rosso).toBe(false);
   });
 });

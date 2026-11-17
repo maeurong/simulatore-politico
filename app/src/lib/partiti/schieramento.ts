@@ -82,7 +82,7 @@ export function distanza(p: VocePartito): { verso: "sinistra" | "destra" | "ferm
 /** La frase sulla minaccia, dalla distanza e dalle soglie della campagna; la minaccia già scattata resta finché la distanza non è tornata sotto. */
 export function fraseDistanza(p: VocePartito, c: VistaCampagna): Chiave {
   const d = Math.abs(p.posizione_percepita - p.posizione_dichiarata);
-  return d >= c.soglia_scissione ? "partiti.s_scissione" : d >= c.minaccia_scissione || p.minaccia ? "partiti.s_minaccia" : "partiti.s_sotto_minaccia";
+  return d >= c.soglia_scissione ? "partiti.s_scissione" : d >= c.minaccia_scissione ? "partiti.s_minaccia" : p.minaccia ? "partiti.s_minaccia_accesa" : "partiti.s_sotto_minaccia";
 }
 
 /** L'intesa con il giocatore: in cifre se è un alleato, in fascia se è un alleato del governo avversario, null altrimenti. */
