@@ -139,10 +139,10 @@ export function tracciatiRivelati(v: Vista, serie: PuntoSerie[], r: typeof rivel
     const i = scattaDopo(v.esito, tr);
     return i !== null && r.passo >= Math.max(1, evidenza.filter((k) => k <= i).length);
   };
-  // una grandezza diversa (turno zero → governo, governo ↔ opposizione) non si confronta: niente «era», niente lampo
+  // una grandezza diversa (turno zero → governo, governo ↔ opposizione) o senza valore di prima non si confronta: niente «era», niente lampo
   return nuovi.map((n, i) =>
     !passato(MOSSI[i]) ? vecchi[i]
-    : vecchi[i].nome !== n.nome ? n
+    : vecchi[i].nome !== n.nome || vecchi[i].valore === null ? n
     : { ...n, era: vecchi[i].testo, scatta: n.testo !== vecchi[i].testo },
   ) as [Tracciato, Tracciato, Tracciato];
 }

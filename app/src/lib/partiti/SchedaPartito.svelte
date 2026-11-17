@@ -1,5 +1,6 @@
 <script lang="ts">
   // La scheda del partito nel lato (24-partiti.prototype.html, forma A): chi è, dove sta, che indole ha, che intesa ha con te, i seggi, il carisma, la cassa.
+  import { untrack } from "svelte";
   import { t, numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
   import { coloreDi, quotaVotanti } from "$lib/partiti";
   import { saltiDeiLeader } from "$lib/caricature/caricatura";
@@ -9,6 +10,8 @@
   import Faccia from "$lib/componenti/Faccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
+  import { registroCache } from "$lib/registro/cache.svelte";
+  import { origineDi } from "$lib/registro/registro";
   import Avvisi from "./Avvisi.svelte";
   import AsseDeiPartiti from "./AsseDeiPartiti.svelte";
   import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, staPerSciogliersi, ultimoVoto } from "./schieramento";
@@ -27,6 +30,11 @@
   const mosse = $derived(mosseDi(vista, p.id));
   const sond = $derived(quotaVotanti(vista.sondaggio, vista.partiti.indexOf(p)));
   const coppia = (s: { camera: number; senato: number } | null) => (s ? `${s.camera} · ${s.senato}` : "—");
+  // il registro si legge a richiesta, una volta: la scheda lo aspetta e si compone quando arriva
+  $effect(() => {
+    if (colore === null) untrack(() => registroCache.carica(vista));
+  });
+  const origine = $derived(origineDi(registroCache.turni, p.id));
   const causa = (c: keyof typeof CAUSE) => t(CAUSE[c]);
 </script>
 
@@ -40,7 +48,12 @@
   </div>
 </div>
 {#if p.sciolto}<p class="sec"><b>{t("partiti.s_sciolto")}</b> {t("partiti.s_sciolto_motivo")}</p>{/if}
-{#if colore === null}<Segnaposto sezione={t("partiti.ph_origine")} fetta="11f" />{/if}
+{#if colore === null && (origine.nato || origine.leader !== null)}
+  <p class="sec">
+    {#if origine.nato}<b>{t("partiti.s_origine", { n: origine.nato.turno })}</b> {origine.nato.fatto}{/if}
+    {#if origine.leader !== null}{t("partiti.s_leader_nuovo", { n: origine.leader })}{/if}
+  </p>
+{/if}
 
 <h5 class="grp"><span>{t("partiti.s_posizione")}</span><span>{[t("partiti.s_dichiarata", { x: numero(p.posizione_dichiarata, 1) }), ...(!tu && mio ? [t("partiti.s_tu_a", { x: numero(mio.posizione_dichiarata, 1) })] : [])].join(" · ")}</span></h5>
 <AsseDeiPartiti partiti={tu || !mio ? [p] : [p, mio]} giocatore={vista.giocatore} larghezza={300} />

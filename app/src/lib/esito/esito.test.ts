@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
-import { eventoAperto, grave, ordineRivelazione, pagina, scattaDopo, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
+import { eventoAperto, fraseFermata, grave, ordineRivelazione, pagina, scattaDopo, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
 import titoliJson from "../testi/pungolo.json";
 import { titoloDi } from "../testi/pungolo";
+import { t } from "../testi/t";
+import type { Fermata } from "$lib/tipi/Fermata";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import primaPaginaJson from "../../../../.scratch/v1-piano-11-ui/viste/16-prima-pagina.json";
 import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
@@ -145,5 +147,27 @@ describe("eventoAperto", () => {
   });
   it("solo l'evento nato: l'evento risolto non rimanda a un evento aperto", () => {
     expect(eventoAperto(v, { ...nato, tipo: "evento_risolto" })).toBe(false);
+  });
+});
+
+describe("fraseFermata", () => {
+  const v = (primaPaginaJson as any).fermata_4.prima as Vista;
+  const TIPI: Fermata[] = [
+    { tipo: "governo" }, { tipo: "fine" }, { tipo: "voto", misura: 3 }, { tipo: "ultimatum", partito: "sinistra" }, { tipo: "crisi" },
+    { tipo: "referendum" }, { tipo: "campagna" }, { tipo: "incarico" }, { tipo: "posto_riservato" },
+  ];
+  it("una frase per ogni tipo, tutte diverse e non vuote", () => {
+    const frasi = TIPI.map((f) => fraseFermata(f, v));
+    expect(frasi.every((x) => x.length > 0 && !x.includes("{"))).toBe(true);
+    expect(new Set(frasi).size).toBe(TIPI.length);
+  });
+  it("il voto porta il nome della misura dal calendario, l'ultimatum quello del partito", () => {
+    expect(fraseFermata({ tipo: "voto", misura: 3 }, v)).toContain("Ingressi per lavoro: bassi");
+    expect(fraseFermata({ tipo: "ultimatum", partito: "sinistra" }, v)).toContain("Sinistra");
+  });
+  it("il referendum non promette finestre: dice solo che in questo turno si può chiedere", () => {
+    expect(fraseFermata({ tipo: "referendum" }, v)).toBe(t("prima.ferma_referendum"));
+    expect(t("prima.ferma_referendum")).toBe("in questo turno puoi chiedere un referendum");
+    expect(t("prima.ferma_referendum")).not.toMatch(/trimestre|quest’anno/);
   });
 });

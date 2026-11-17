@@ -16,6 +16,8 @@ type Campioni = {
   opposizione?: any; eredita?: any;
   /** 25-: la catena delle chiusure, servita da `registro` */
   catena?: any[];
+  /** ?corsa=: le Viste che chiudi_turno serve una dopo l'altra, in ordine */
+  corsa?: any[];
   /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
   servita?: any;
   /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
@@ -48,6 +50,19 @@ export function vistaDi(campione: any): Vista | null {
 /** ?vista=25-&chiusura=N: la Vista è il dopo della chiusura N, chiudi_turno dà il dopo della N+1. */
 export function dallaChiusura(catena: any[], n: number) {
   return { ...catena[n], prima: catena[n].dopo, dopo: catena[n + 1]?.dopo };
+}
+
+/**
+ * ?vista=16-&corsa=fermata_19: la corsa di «avanti» della chiave, dalla catena `corse` del 16. Si parte dal turno `da`,
+ * le chiusure intermedie sono copie di `prima` senza fermate (nessuna Vista del 16 le ha vuote), l'ultima è `vista`.
+ */
+export function corsaDi(campione: any, chiave: string) {
+  const corsa = campione.corse?.find((x: any) => x.chiave === chiave);
+  if (!corsa) throw rifiuto(`non nel campione: corsa ${chiave}`);
+  const { prima, vista } = campione[chiave];
+  const copia = (turno: number) => ({ ...prima, turno, fermate: [] });
+  const intermedie = Array.from({ length: corsa.a - corsa.da - 1 }, (_, i) => copia(corsa.da + 1 + i));
+  return { inizio: copia(corsa.da), chiusure: [...intermedie, vista] };
 }
 
 /** ?stato=sfiducia&da=dopo_comando: si parte dalla Vista chiave `da` dello stato, e chiudi_turno dà la sua Vista (il turno chiuso). */
@@ -266,7 +281,7 @@ function dopoComando(cmd: any, c: Campioni): unknown {
 export function rispondi(comando: string, args: Record<string, unknown>, c: Campioni): unknown {
   const { campione, edicola, editor, fondazione, stato } = c;
   switch (comando) {
-    case "chiudi_turno": return presente(campione?.dopo, comando);
+    case "chiudi_turno": return c.corsa?.length ? c.corsa.shift() : presente(campione?.dopo, comando);
     case "comanda": return dopoComando(args.comando ?? {}, c) ?? presente(campione?.dopo_comando, comando);
     case "anteprima_sfiducia": {
       const a = (c.opposizione?.[stato ?? ""]?.anteprime ?? c.opposizione?.sfiducia?.anteprime) ?? null;
@@ -274,7 +289,11 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
     }
     case "abbandona": return presente(c.eredita?.eredita, comando);
     case "conferma_eredita": return null;
-    case "riavvolgi": return presente(c.eredita?.vista, comando);
+    // con la catena del 25 l'apertura del turno è la Vista prima della sua chiusura; altrimenti vale la Vista del 30
+    case "riavvolgi": {
+      const dallaCatena = c.catena?.some((x) => x.dopo === vistaDi(campione));
+      return presente(dallaCatena ? c.catena?.[args.turno as number]?.prima : c.eredita?.vista, comando);
+    }
     case "anteprima_campagna": return anteprimaCampagna(args.spese as any[], c.campagna);
     case "elettori_campione": {
       // il campione del 23 porta il suo stato; fuori dal 23 vale quello del governo
@@ -361,8 +380,12 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
   if (Array.isArray(campione) && chiusura !== null) campione = dallaChiusura(campione, Number(chiusura));
   const da = url.searchParams.get("da");
   if (campione && !Array.isArray(campione) && da !== null && campione[da]) campione = daUnaChiave(campione, da);
+  const chiaveCorsa = url.searchParams.get("corsa");
+  let corsa: any[] | undefined;
+  if (campione && !Array.isArray(campione) && chiaveCorsa !== null) ({ inizio: campione, chiusure: corsa } = corsaDi(campione, chiaveCorsa));
   const c: Campioni = {
     campione,
+    corsa,
     turnoZero: await carica("01-"),
     // ?edicola=vuota: il primo avvio, nessuna partita e albo vuoto
     edicola: url.searchParams.get("edicola") === "vuota" ? { partite: [], albo: [] } : await carica("13-"),

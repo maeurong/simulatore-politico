@@ -53,10 +53,10 @@
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per Vista e sezione in cui è nato, altrove sparisce
   let rifiuto = $state.raw<{ testo: string; vista: Vista; sezione: string } | null>(null);
-  async function chiudi() {
+  async function chiudi(avanti = false) {
     rifiuto = null;
     try {
-      await partita.chiudiTurno();
+      await (avanti ? partita.avanti() : partita.chiudiTurno());
     } catch (e) {
       rifiuto = { testo: comeErrore(e).testo, vista, sezione };
     }
@@ -79,7 +79,8 @@
       {#if vista.finita}
         <span class="nessuno">{t("cornice.nessun_turno")}</span>
       {:else}
-        <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={chiudi}>{t("cornice.chiudi_il_turno")}</Pulsante>
+        {#if stato === "opposizione"}<Pulsante forma="bordo" aria-busy={partita.occupato} onclick={() => chiudi(true)}>{t("cornice.avanti_fino_a_novita")}</Pulsante>{/if}
+        <Pulsante forma="chiude" aria-busy={partita.occupato} onclick={() => chiudi()}>{t("cornice.chiudi_il_turno")}</Pulsante>
         {#if rifiuto?.vista === vista && rifiuto.sezione === sezione}<Rifiuto testo={rifiuto.testo} />{/if}
         <!-- in trattativa la riga dice cosa vale senza scelta; all'opposizione non c'è niente a cui rispondere (spec:400) -->
         {#if stato === "trattativa"}

@@ -50,8 +50,10 @@
 <style>
   .trk { display: grid; grid-template-columns: auto auto; gap: 0 8px; align-items: center; padding: 0 12px; border-left: var(--filo) }
   .trk:last-child { border-right: var(--filo) }
-  /* forma stretta: «era X» allarga il consenso di una decina di pixel, e a 1024 utili non entrerebbe */
+  /* forma stretta: «era X» allarga ogni tracciato, e un turno li muove tutti e tre: a 1024 utili non entrerebbero */
   :global(:root.stretta) .trk { column-gap: 4px }
+  :global(:root.stretta) .cas { gap: 1px }
+  :global(:root.stretta) .oltre { width: 6px }
   .k { grid-column: 1 / -1; font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; color: var(--grigio); white-space: nowrap }
   .v { display: flex; align-items: first baseline; font-size: var(--c-num); font-weight: 700; line-height: 1.1; white-space: nowrap }
   /* la variazione sotto il numero */

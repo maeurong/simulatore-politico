@@ -14,6 +14,8 @@ import { partita } from "./partita.svelte";
 import { rivelazione } from "./esito/rivelazione.svelte";
 import { impostazioni } from "./impostazioni.svelte";
 import { bozza } from "./bilancio/bozza.svelte";
+import { registroCache } from "./registro/cache.svelte";
+import type { Fondazione } from "$lib/tipi/Fondazione";
 
 const voce = (in_evidenza: boolean) => ({ in_evidenza }) as Vista["esito"][number];
 const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true, esito: [] } as unknown as Vista;
@@ -104,6 +106,85 @@ describe("partita", () => {
     expect(goto).not.toHaveBeenCalled();
     expect(rivelazione.prima).toBeNull();
     expect(partita.occupato).toBe(false);
+  });
+
+  describe("avanti", () => {
+    const aperta = (turno: number) => ({ ...prima, turno, fermate: [] }) as unknown as Vista;
+    const ferma = { ...prima, turno: 6, fermate: [{ tipo: "posto_riservato" }], esito: [voce(true)] } as unknown as Vista;
+
+    it("chiude finché la Vista nuova ha fermate vuote: si ferma alla prima non vuota e conta le chiusure", async () => {
+      guscio.chiudiTurno.mockResolvedValueOnce(aperta(4)).mockResolvedValueOnce(aperta(5)).mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      expect(guscio.chiudiTurno).toHaveBeenCalledTimes(3);
+      expect(partita.vista).toBe(ferma);
+      expect(rivelazione.corsa).toEqual({ chiusure: 3, da: 3, fermate: ferma.fermate });
+      expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
+      expect(partita.occupato).toBe(false);
+    });
+
+    it("la serie si chiede una volta sola, e la rivelazione parte dalla Vista prima dell'ultima chiusura con la serie di fine corsa", async () => {
+      const penultima = aperta(5);
+      const fine = [{ turno: 3 }, { turno: 4 }, { turno: 5 }] as PuntoSerie[];
+      guscio.serie.mockResolvedValue(fine);
+      guscio.chiudiTurno.mockResolvedValueOnce(aperta(4)).mockResolvedValueOnce(penultima).mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      expect(guscio.serie).toHaveBeenCalledTimes(1);
+      expect(rivelazione.prima).toBe(penultima);
+      expect(rivelazione.serie_prima).toBe(fine);
+      expect(rivelazione.serie_prima.some((x) => x.turno === penultima.turno - 1)).toBe(true);
+      expect(rivelazione.fine).toBe(1);
+      expect(partita.serie).toBe(fine);
+    });
+
+    it("una sola chiusura: corsa di uno, la rivelazione parte dalla Vista di prima", async () => {
+      guscio.chiudiTurno.mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      expect(rivelazione.corsa).toEqual({ chiusure: 1, da: 3, fermate: ferma.fermate });
+      expect(rivelazione.prima).toBe(prima);
+    });
+
+    it("un guasto alla seconda chiusura lascia la Vista della prima, corsa di uno e il guasto detto", async () => {
+      const prima_chiusura = aperta(4);
+      guscio.chiudiTurno.mockResolvedValueOnce(prima_chiusura).mockRejectedValueOnce({ specie: "guasto", testo: "disco pieno" });
+      await partita.avanti();
+      expect(partita.vista).toBe(prima_chiusura);
+      expect(rivelazione.corsa).toEqual({ chiusure: 1, da: 3, fermate: [] });
+      expect(partita.guasto).toBe(`disco pieno ${t("cornice.corsa_interrotta", { n: 1 })}`);
+      expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
+      expect(partita.occupato).toBe(false);
+    });
+
+    it("un guasto alla prima chiusura lascia tutto com'era e non apre niente", async () => {
+      guscio.chiudiTurno.mockRejectedValueOnce({ specie: "guasto", testo: "disco pieno" });
+      await partita.avanti();
+      expect(partita.vista).toBe(prima);
+      expect(rivelazione.corsa).toBeNull();
+      expect(goto).not.toHaveBeenCalled();
+    });
+
+    it("uscire all'edicola a metà corsa ferma le chiusure: la partita lasciata non si salva più e la vista resta null", async () => {
+      guscio.chiudiTurno
+        .mockImplementationOnce(async () => {
+          partita.esci();
+          return aperta(4);
+        })
+        .mockResolvedValueOnce(aperta(5))
+        .mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      expect(guscio.chiudiTurno).toHaveBeenCalledTimes(1);
+      expect(partita.vista).toBeNull();
+      expect(partita.occupato).toBe(false);
+      expect(rivelazione.corsa).toBeNull();
+      expect(partita.guasto).toBeNull();
+    });
+
+    it("una chiusura normale dopo la corsa la cancella", async () => {
+      guscio.chiudiTurno.mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      guscio.chiudiTurno.mockResolvedValueOnce(dopo);
+      await partita.chiudiTurno();
+      expect(rivelazione.corsa).toBeNull();
+    });
   });
 
   it("esci: via Vista, serie e guasto, per l'edicola", () => {
@@ -254,6 +335,12 @@ describe("partita", () => {
       partita.esci();
       partita.vista = bozzaVista;
     });
+    // la cache com'è quando #esegui chiede la serie: la Vista nuova è già assegnata, e l'effect del Registro l'ha già vista
+    const turniAllaSerie = () => {
+      const visti: unknown[] = [];
+      guscio.serie.mockImplementation(async () => (visti.push(registroCache.turni), serieNuova));
+      return visti;
+    };
 
     it("riavvolgi: la Vista del turno e la serie nuova", async () => {
       guscio.riavvolgi.mockResolvedValue(dopo);
@@ -282,6 +369,82 @@ describe("partita", () => {
       guscio.partite.mockResolvedValue([indice("a", "Noi", 5), indice("b", "Noi", 9)]);
       await partita.riavvolgi(20);
       expect(guscio.riprendi).toHaveBeenLastCalledWith("a");
+    });
+
+    it("riavvolgi due volte di fila, anche nella finestra dopo il guasto: parte una volta sola", async () => {
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "no" });
+      let sblocca!: (v: unknown[]) => void;
+      guscio.partite.mockReturnValue(new Promise((r) => (sblocca = r)));
+      const prima = partita.riavvolgi(20);
+      await vi.waitFor(() => expect(guscio.partite).toHaveBeenCalled());
+      expect(await partita.riavvolgi(20)).toBeNull();
+      sblocca([]);
+      await prima;
+      expect(guscio.riavvolgi).toHaveBeenCalledTimes(1);
+      expect(await partita.riavvolgi(20)).toBeNull();
+      expect(guscio.riavvolgi).toHaveBeenCalledTimes(2);
+    });
+
+    it("riavvolgi e riprendi falliscono insieme: il guasto mostrato è quello di riavvolgi", async () => {
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockRejectedValue({ specie: "guasto", testo: "file illeggibile" });
+      expect(await partita.riavvolgi(20)).toBeNull();
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(partita.guasto).toBe(`disco pieno ${t("cornice.rimasta_com_era")}`);
+    });
+
+    it("fonda, riprendi, riavvolgi riuscito ed esci svuotano la cache del registro", async () => {
+      const svuota = vi.spyOn(registroCache, "svuota");
+      guscio.fondaPartita.mockResolvedValue(dopo);
+      await partita.fonda(null, {} as Fondazione);
+      guscio.riprendi.mockResolvedValue(dopo);
+      await partita.riprendi("a");
+      guscio.riavvolgi.mockResolvedValue(dopo);
+      await partita.riavvolgi(2);
+      partita.esci();
+      expect(svuota).toHaveBeenCalledTimes(4);
+      svuota.mockRestore();
+    });
+
+    it("riavvolgi che fallisce col riallineamento riuscito: il registro letto resta in cache", async () => {
+      const letti = [{ turno: 0, guasto: "x" }];
+      registroCache.turni = letti;
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockResolvedValue(bozzaVista);
+      const allaSerie = turniAllaSerie();
+      await partita.riavvolgi(3);
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(allaSerie).toEqual([letti]);
+      expect(registroCache.turni).toBe(letti);
+    });
+
+    it("riavvolgi che fallisce a metà e il disco riapre a un turno più vecchio: la cache del registro si svuota", async () => {
+      registroCache.turni = [{ turno: 0, guasto: "x" }];
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockResolvedValue({ ...bozzaVista, turno: bozzaVista.turno - 2 } as Vista);
+      const allaSerie = turniAllaSerie();
+      await partita.riavvolgi(3);
+      // già vuota quando la Vista nuova è in vista: l'effect del Registro che ricarica la riempie, e niente la azzera dopo
+      expect(allaSerie).toEqual([[]]);
+      expect(registroCache.turni).toEqual([]);
+    });
+
+    it("riprendi, fonda e riavvolgi riuscito svuotano il registro prima che la Vista nuova sia in vista", async () => {
+      const allaSerie = turniAllaSerie();
+      const riempi = () => (registroCache.turni = [{ turno: 0, guasto: "x" }]);
+      guscio.riprendi.mockResolvedValue(dopo);
+      riempi();
+      await partita.riprendi("a");
+      guscio.fondaPartita.mockResolvedValue(dopo);
+      riempi();
+      await partita.fonda(null, {} as Fondazione);
+      guscio.riavvolgi.mockResolvedValue(dopo);
+      riempi();
+      await partita.riavvolgi(2);
+      expect(allaSerie).toEqual([[], [], []]);
     });
 
     it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {

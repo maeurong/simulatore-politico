@@ -14,6 +14,7 @@
   import Partiti from "$lib/partiti/Partiti.svelte";
   import Pagina from "$lib/eredita/Pagina.svelte";
   import PrimaPagina from "$lib/esito/PrimaPagina.svelte";
+  import Registro from "$lib/registro/Registro.svelte";
   import Schema from "$lib/schema/Schema.svelte";
   import Trattativa from "$lib/trattativa/Trattativa.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
@@ -41,7 +42,7 @@
 {#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
-    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || aperta === "eredita" || aperta === "schema" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
+    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || aperta === "eredita" || aperta === "schema" || aperta === "registro" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
       <div class="pagina">
         {#if aperta}
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
@@ -49,6 +50,8 @@
             <Opposizione vista={partita.vista} />
           {:else if aperta === "prima-pagina" && fetta === null}
             <PrimaPagina vista={partita.vista} />
+          {:else if aperta === "registro" && fetta === null}
+            <Registro vista={partita.vista} />
           {:else if aperta === "cruscotto" && fetta === null}
             <Cruscotto vista={partita.vista} />
           {:else if aperta === "governo" && fetta === null}

@@ -47,6 +47,7 @@
   <Conferma etichetta={t("eredita.torna", { n: turno })} conferma={t("eredita.torna_si", { n: turno })} neutro
     spiegazione={t("eredita.torna_cancella", { n: turno, voto })}
     bind:aperta={() => aperta === "torna", (v) => (aperta = v ? "torna" : aperta === "torna" ? null : aperta)} onconferma={torna} />
+  <a class="link" href="/partita/registro">{t("eredita.altro_turno")}</a>
   <Conferma etichetta={t("eredita.conferma")} conferma={t("eredita.conferma_si")}
     spiegazione={t("eredita.conferma_cancella")}
     bind:aperta={() => aperta === "conferma", (v) => (aperta = v ? "conferma" : aperta === "conferma" ? null : aperta)} onconferma={conferma} />
@@ -58,4 +59,6 @@
   .tit { font-family: var(--tit); font-variation-settings: var(--wonk); font-weight: 700; line-height: 1.1; text-wrap: balance; font-size: var(--c-sez) }
   .sec { font-size: var(--c-sec) }
   .az { display: grid; gap: 10px; justify-items: start }
+  .link { font-size: var(--c-sec); text-decoration: underline; text-underline-offset: 2px; color: inherit; white-space: nowrap }
+  .link:hover { text-decoration-thickness: 2px }
 </style>

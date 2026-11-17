@@ -59,8 +59,8 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
   }
 }
 
-const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string | null> = {
-  "prima-pagina": null, registro: "11f",
+const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio" | "registro"> | "eredita" | "schema", string | null> = {
+  "prima-pagina": null,
   eredita: null, schema: null,
 };
 const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
@@ -69,5 +69,5 @@ const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
 
 /** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita. */
 export function fettaDi(s: Sezione | "trattativa" | "eredita" | "schema", stato: StatoGiocatore): string | null {
-  return s === "cruscotto" ? CRUSCOTTO[stato] : s === "campagna" || s === "paese" || s === "partiti" || s === "governo" || s === "aula" || s === "conti" || s === "bilancio" || s === "trattativa" ? null : FETTA[s];
+  return s === "cruscotto" ? CRUSCOTTO[stato] : s === "campagna" || s === "registro" || s === "paese" || s === "partiti" || s === "governo" || s === "aula" || s === "conti" || s === "bilancio" || s === "trattativa" ? null : FETTA[s];
 }

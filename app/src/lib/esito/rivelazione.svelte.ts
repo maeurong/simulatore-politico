@@ -13,9 +13,11 @@ class Rivelazione {
   ferma = $state(true);
   /** Quante voci in evidenza ha la pagina: la rivelazione finisce qui. Prima di inizia() è infinito: chiudi() senza inizia lascia passo infinito. */
   fine = $state(Infinity);
+  /** La corsa di «avanti» che ha aperto la pagina; ogni inizia() e ogni chiudi() la cancellano, e chi la scrive lo fa dopo. */
   corsa = $state.raw<{ chiusure: number; da: number; fermate: Fermata[] } | null>(null);
 
   inizia(prima: Vista, serie: PuntoSerie[], fine: number) {
+    this.corsa = null;
     this.prima = prima;
     this.serie_prima = serie;
     this.fine = fine;
@@ -42,6 +44,7 @@ class Rivelazione {
 
   /** Tutto al valore nuovo: i tracciati tornano a leggere la Vista corrente. */
   chiudi() {
+    this.corsa = null;
     this.salta();
     this.prima = null;
     this.serie_prima = [];
