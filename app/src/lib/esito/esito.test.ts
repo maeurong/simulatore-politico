@@ -165,8 +165,9 @@ describe("fraseFermata", () => {
     expect(fraseFermata({ tipo: "voto", misura: 3 }, v)).toContain("Ingressi per lavoro: bassi");
     expect(fraseFermata({ tipo: "ultimatum", partito: "sinistra" }, v)).toContain("Sinistra");
   });
-  it("il referendum dice solo l'ultimo trimestre per chiederlo quest'anno", () => {
+  it("il referendum non promette finestre: dice solo che in questo turno si può chiedere", () => {
     expect(fraseFermata({ tipo: "referendum" }, v)).toBe(t("prima.ferma_referendum"));
-    expect(t("prima.ferma_referendum")).toContain("ultimo trimestre per chiedere un referendum quest’anno");
+    expect(t("prima.ferma_referendum")).toBe("in questo turno puoi chiedere un referendum");
+    expect(t("prima.ferma_referendum")).not.toMatch(/trimestre|quest’anno/);
   });
 });

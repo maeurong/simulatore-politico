@@ -148,6 +148,8 @@ class Partita {
       },
     );
     if (!vista) return;
+    // `tracciatiDi(prima)` cerca il punto del turno prima della sua Vista: lo ha la serie di fine corsa, non quella d'inizio
+    if (k > 0) rivelazione.serie_prima = this.serie;
     if (guastoDellaCorsa) this.guasto = `${guastoDellaCorsa} ${t("cornice.corsa_interrotta", { n: chiusure })}`;
     await this.#apriPrimaPagina();
   };

@@ -122,15 +122,18 @@ describe("partita", () => {
       expect(partita.occupato).toBe(false);
     });
 
-    it("la serie si chiede una volta sola, e la rivelazione parte dalla Vista prima dell'ultima chiusura", async () => {
+    it("la serie si chiede una volta sola, e la rivelazione parte dalla Vista prima dell'ultima chiusura con la serie di fine corsa", async () => {
       const penultima = aperta(5);
+      const fine = [{ turno: 3 }, { turno: 4 }, { turno: 5 }] as PuntoSerie[];
+      guscio.serie.mockResolvedValue(fine);
       guscio.chiudiTurno.mockResolvedValueOnce(aperta(4)).mockResolvedValueOnce(penultima).mockResolvedValueOnce(ferma);
       await partita.avanti();
       expect(guscio.serie).toHaveBeenCalledTimes(1);
       expect(rivelazione.prima).toBe(penultima);
-      expect(rivelazione.serie_prima).toBe(serieVecchia);
+      expect(rivelazione.serie_prima).toBe(fine);
+      expect(rivelazione.serie_prima.some((x) => x.turno === penultima.turno - 1)).toBe(true);
       expect(rivelazione.fine).toBe(1);
-      expect(partita.serie).toBe(serieNuova);
+      expect(partita.serie).toBe(fine);
     });
 
     it("una sola chiusura: corsa di uno, la rivelazione parte dalla Vista di prima", async () => {
