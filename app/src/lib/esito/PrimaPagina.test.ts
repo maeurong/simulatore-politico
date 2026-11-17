@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { render } from "svelte/server";
 import type { Vista } from "$lib/tipi/Vista";
 import { t } from "$lib/testi/t";
+import { didascaliaDi } from "$lib/testi/pungolo";
 import { tracciatiDi, tracciatiRivelati } from "$lib/tracciati";
 import { ordineRivelazione, pagina } from "./esito";
 import { rivelazione } from "./rivelazione.svelte";
@@ -51,6 +52,21 @@ describe("PrimaPagina", () => {
     expect(html(v8)).toMatch(/<article class="voce testa[^"]*\battesa\b/);
     for (let j = 0; j < ordine.indexOf(testa!); j++) rivelazione.avanza();
     expect(html(v8)).toMatch(/<article class="voce testa(?![^"]*\battesa\b)/);
+  });
+
+  it("tono ordinario con una scena: la vignetta a lato della testa, muta ai lettori di schermo, con la didascalia del tipo; in attesa con la testa", () => {
+    const v8 = chiusura(8);
+    const ordine = ordineRivelazione(v8.esito);
+    const { testa } = pagina(v8.esito);
+    const h = html(v8);
+    expect(h).toMatch(/<figure class="vignetta[^"]*"><div class="disegno[^"]*" aria-hidden="true">(<!--[^>]*-->)*<svg/);
+    expect(h.match(/<figcaption[^>]*>([^<]*)<\/figcaption>/)?.[1]).toBe(didascaliaDi(v8.esito[testa!]));
+    expect(h).not.toMatch(/class="apertura sola/);
+    rivelazione.inizia(chiusura(7), [], ordine.length);
+    rivelazione.avanza();
+    expect(html(v8)).toMatch(/<div class="lato[^"]*\battesa\b/);
+    for (let j = 0; j < ordine.indexOf(testa!); j++) rivelazione.avanza();
+    expect(html(v8)).toMatch(/<div class="lato(?![^"]*\battesa\b)/);
   });
 
   it("l'evento nato aperto dice dove si decide: sul cruscotto al governo, al governo se sei all'opposizione", () => {

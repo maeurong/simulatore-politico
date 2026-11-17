@@ -177,6 +177,15 @@ describe("tondi dello schema (25, chiusura 3, dopo)", () => {
     expect(e.posto).toBe("ev:Emergenza idrogeologica");
     expect(T.fili.get("ev:Emergenza idrogeologica")).toEqual([e.n]);
   });
+  it("due eventi omonimi: la voce va sul filo del suo, col suffisso", () => {
+    const e0 = v.eventi.find((e) => e.nome === "Emergenza idrogeologica")!;
+    const altra = v.regioni.find((r) => r.nome !== e0.regione)!;
+    const w = cambia({ ...v, eventi: [...v.eventi, { ...e0, regione: altra.nome }] } as Vista, "evento_nato", { regione: altra.id });
+    const T = tondi(w), e = voce(T, "evento_nato");
+    expect(e.posto).toBe("ev:Emergenza idrogeologica#1");
+    expect(T.fili.get("ev:Emergenza idrogeologica#1")).toEqual([e.n]);
+    expect(T.fili.has("ev:Emergenza idrogeologica")).toBe(false);
+  });
   it("una voce senza posto sta nell'elenco con posto null e senza tondo", () => {
     const T = tondi(v), e = voce(T, "proposta_respinta");
     expect(e.posto).toBeNull();

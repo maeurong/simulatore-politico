@@ -40,6 +40,8 @@
   --classe-0: #e6d4c2; --classe-1: #c8a798; --classe-2: #ab7a70; --classe-3: #8c504a; --classe-4: #6c2527;
   --velo: rgb(31 26 23 / .06);
   --retino: repeating-linear-gradient(45deg, transparent 0 3px, rgb(31 26 23 / .3) 3px 4px);
+  /* il retino della vignetta (prototipo 16, riga 479): righe a un ottavo d'inchiostro, più rade */
+  --retino-vignetta: repeating-linear-gradient(45deg, transparent 0 4.8px, rgb(31 26 23 / .12) 4.8px 6px);
   /* caratteri */
   --tit: 'Fraunces', Georgia, 'Times New Roman', serif;
   --txt: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;

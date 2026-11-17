@@ -41,7 +41,8 @@
   // solo all'apertura: dopo, il turno lo sceglie il giocatore (il link della banda di «avanti» porta `?turno=N`)
   let scelto = $state<number | undefined>(untrack(() => turnoDaUrl(page.url.searchParams.get("turno"))));
   let scelta = $state<{ turno: number; i: number } | null>(null);
-  const corrente = $derived(righe.find((r) => r.turno.turno === scelto)?.turno ?? righe[0]?.turno);
+  // senza scelta il turno più recente; mentre si legge la cache sale dal turno 0, e il ripiego su righe[0] farebbe scorrere la pagina
+  const corrente = $derived(righe.find((r) => r.turno.turno === (scelto ?? vista.turno - 1))?.turno ?? (caricando ? undefined : righe[0]?.turno));
 
   const sezioni = $derived(SEZIONI.filter((s) => letti.some((x) => x.voci.some((v) => SEZIONE_DI[v.tipo] === s))));
   const elencoSoggetti = $derived(soggetti(letti, vista));
@@ -122,7 +123,7 @@
             {#if passa(v, filtro)}
               {@const sel = scelta?.turno === c.turno && scelta.i === i}
               <li class={["vc", v.criticita, { sel }]}>
-                <button type="button" aria-pressed={sel} onclick={() => (scelta = { turno: c.turno, i })}>
+                <button type="button" aria-pressed={sel} onclick={() => { scelto = c.turno; scelta = { turno: c.turno, i }; }}>
                   <i class="mk" aria-hidden="true"></i>
                   <span class="fa">{#if v.criticita === "critica"}<span class="nascosto">{t("registro.c_critica")}: </span>{/if}{v.fatto}</span>
                   <span class="ca"><i>{t("componenti.perche")}</i> {v.causa}</span>

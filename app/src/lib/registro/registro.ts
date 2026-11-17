@@ -151,7 +151,7 @@ export function testoConferma(n: number, vista: Vista, turni: (Turno | Guasto)[]
     t("registro.conferma_apertura", { n, periodo: nel(periodoDel(n, vista)) }),
     t(chiusure === 1 ? "registro.conferma_una" : "registro.conferma_piu", { n, k: chiusure, al: al(ultimo), ultimo, fine: nel(periodoDel(ultimo, vista)) }),
     vista.finita ? t("registro.conferma_eredita") : t("registro.conferma_in_corso", { n: vista.turno }),
-    mezzo.length ? t("registro.conferma_in_mezzo", { n: mezzo.length, elenco: elenco(mezzo, ", ") }) : t("registro.conferma_niente_in_mezzo"),
+    mezzo.length ? t("registro.conferma_in_mezzo", { n: mezzo.length, elenco: elenco(mezzo, "; ") }) : t("registro.conferma_niente_in_mezzo"),
     ...(nonLetti > 0 ? [t("registro.conferma_non_letti", { n: nonLetti })] : []),
     riavvolgimenti === null ? t("registro.conferma_si_conta") : t("registro.conferma_si_conta_n", { n: ordinale(riavvolgimenti + 1) }),
     t("registro.conferma_stesso_esito"),
