@@ -268,6 +268,16 @@ describe("tracciatiRivelati, sulla chiusura 3 del 25", () => {
     expect(spread.era).not.toBeNull();
   });
 
+  it("senza valore nel tracciato di prima non c'è era (il «—» non dice niente)", () => {
+    const senza = { ...prima, seggi: [] } as Vista;
+    expect(tracciatiDi(senza, [])[1].testo).toBe("—");
+    rivelazione.inizia(senza, [], 7);
+    rivelazione.salta();
+    const [, margine] = tracciatiRivelati(dopo, [], rivelazione);
+    expect(margine.nome).toBe(tracciatiDi(senza, [])[1].nome);
+    expect(margine.era).toBeNull();
+  });
+
   it("una voce non in evidenza prima di ogni voce in evidenza scatta a passo 1, non a 0", () => {
     const es = [{ ...dopo.esito[nSpread], in_evidenza: false }, ...dopo.esito.filter((x) => x.tipo !== "spread" && x.in_evidenza)];
     const v = { ...dopo, esito: es } as Vista;
