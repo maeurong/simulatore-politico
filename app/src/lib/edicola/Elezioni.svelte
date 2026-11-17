@@ -11,7 +11,7 @@
   {@const tot = e.voti.reduce((s, v) => s + v[1], 0) || 1}
   {@const mio = e.voti.find((v) => v[0] === nome)}
   {@const [primaQuota, dopoQuota] = t("edicola.esito_giocatore", { nome, camera: e.seggi_giocatore[0], senato: e.seggi_giocatore[1] }).split("{quota}")}
-  <div class="el">
+  <div class="el" class:primo={k === 0}>
     <p class="sec"><b>{t("edicola.voto_di", { periodo: periodo(e.data) })}</b> <span class="muto">{t("edicola.affluenza", { quota: percentuale(e.affluenza) })}</span></p>
     <div class="barra" role="img" aria-label={e.voti.map(([n, q]) => `${n} ${percentuale(q)}`).join(", ")}>
       {#each e.voti as [n, q], j (j)}<i class:mio={n === nome} style:flex={q / tot} title="{n} {percentuale(q)}"></i>{/each}
@@ -27,6 +27,8 @@
   .sec { font-size: var(--c-sec) }
   .muto { color: var(--grigio) }
   .el { display: grid; gap: 4px; padding-top: 6px; border-top: var(--filo) }
+  /* il primo filo: l'albo lo tiene, le colonne dell'eredità no (il titolo di sezione ha già il suo) */
+  .el.primo { border-top: var(--el-primo-filo, var(--filo)); padding-top: var(--el-primo-pad, 6px) }
   .barra { display: flex; gap: 2px; height: 16px }
   .barra i { background: var(--grigio); min-width: 0 }
   .barra i:nth-child(even) { background: var(--ink) }

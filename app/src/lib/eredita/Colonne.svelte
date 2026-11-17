@@ -35,7 +35,7 @@
 </div>
 
 <style>
-  .col3 { --pad-ind: 8px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, .9fr); gap: 0 var(--canale) }
+  .col3 { --pad-ind: 8px; --el-primo-filo: 0; --el-primo-pad: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, .9fr); gap: 0 var(--canale) }
   .col3 > section { border-left: var(--filo); padding-left: var(--canale); min-width: 0 }
   .col3 > section:first-child { border-left: 0; padding-left: 0 }
   .titsez { display: flex; align-items: baseline; gap: 12px; border-bottom: var(--forte); padding-bottom: 4px; margin-bottom: 6px }
