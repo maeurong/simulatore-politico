@@ -10,7 +10,7 @@
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
     import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
   import BarreQuote from "./BarreQuote.svelte";
-  import { margineMedio, margineTesto, media, quoteDi, sondaggioLetto } from "./paese";
+  import { margineIstituti, margineTesto, media, quoteDi, sondaggioLetto } from "./paese";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -57,7 +57,7 @@
   <h4 class="tit">{t("paese.sondaggio")}</h4>
   <div class="barre media" class:con-privato={privata}>
     <span class="n"></span><span></span>
-    <span class="h">{t("paese.col_media")}<small>{margineTesto(margineMedio(vista.sondaggio))}</small></span>{#if privata}<span class="h priv">{t("paese.col_privato")}<small>{margineTesto(margineMedio(letto.sondaggio))}</small></span>{/if}
+    <span class="h">{t("paese.col_media")}<small>{margineIstituti(vista.sondaggio)}</small></span>{#if privata}<span class="h priv">{t("paese.col_privato")}<small>{margineIstituti(letto.sondaggio)}</small></span>{/if}
     {#each pubblica.partiti as p (p.id)}
       <span class="n" class:tu={p.id === vista.giocatore}>{p.nome}</span>
       {@render barra(p.id, p.quota, massimo)}

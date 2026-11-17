@@ -77,8 +77,12 @@ export function affluenzaPerRegione(v: Vista): Record<string, number | null> {
 /** «± 2,8 punti»: il margine dichiarato (una frazione) in punti percentuali. */
 export const margineTesto = (m: number): string => t("paese.margine_punti", { m: numero(m * 100, 1) });
 
-/** Il margine della media degli istituti: la media dei loro margini dichiarati. */
-export const margineMedio = (s: Sondaggio): number => (s.istituti.length ? s.istituti.reduce((a, r) => a + r.margine, 0) / s.istituti.length : 0);
+/** I margini dichiarati degli istituti: «±m punti» se uno solo o tutti uguali, altrimenti l'intervallo (la media non è un numero del core). */
+export function margineIstituti(s: Sondaggio): string {
+  const m = s.istituti.map((r) => numero(r.margine * 100, 1));
+  const [min, max] = [Math.min(...s.istituti.map((r) => r.margine)), Math.max(...s.istituti.map((r) => r.margine))];
+  return m.length && new Set(m).size > 1 ? t("paese.margine_istituti", { min: numero(min * 100, 1), max: numero(max * 100, 1) }) : margineTesto(min);
+}
 
 const senzaAccento = (n: string) => n.replace("’", "'");
 

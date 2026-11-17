@@ -639,6 +639,7 @@
   "paese.fmt_disoccupazione": "{x}%",
   "paese.fmt_reddito": "{x} mila €",
   "paese.margine_punti": "± {m} punti",
+  "paese.margine_istituti": "margine degli istituti da ±{min} a ±{max} punti",
   "paese.ordine": "Ordine della lista",
   "paese.col_regione": "Regione",
   "paese.col_segni": "segni",

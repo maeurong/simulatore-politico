@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, classi, lista, livelloManca, margineTesto, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, valoriDi, votoPerRegione, type EsitoElettori } from "./paese";
+import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, classi, lista, livelloManca, margineIstituti, margineTesto, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, valoriDi, votoPerRegione, type EsitoElettori } from "./paese";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import { coalizioneDi } from "$lib/partiti";
 import { REGIONI } from "$lib/mappa/regioni";
@@ -72,6 +72,13 @@ describe("livelli del territorio", () => {
 
 it("margineTesto: in punti, con la virgola", () => {
   expect(margineTesto(0.0447)).toBe("± 4,5 punti");
+});
+
+it("margineIstituti: intervallo se diversi, un valore se uguali", () => {
+  const con = (...m: number[]) => ({ istituti: m.map((margine) => ({ margine })) }) as never;
+  expect(margineIstituti(con(0.03, 0.05))).toBe("margine degli istituti da ±3,0 a ±5,0 punti");
+  expect(margineIstituti(con(0.044, 0.044))).toBe("± 4,4 punti");
+  expect(margineIstituti(con(0.044))).toBe("± 4,4 punti");
 });
 
 describe("consensoPerRegione", () => {
