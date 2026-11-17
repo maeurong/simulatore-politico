@@ -1,0 +1,336 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — vignette della Prima pagina del «Pungolo», fetta 11f, Task 11 (17/11/2026).
+  Domanda: per ciascuna delle cinque scene (Aula, Giuramento, Emergenza, Lettera, Cassa) quale delle tre varianti
+  A/B/C va rifinita nel Task 12? Mario sceglie una variante per scena.
+  Riquadro: quello della testa del prototipo 16 (figure.vignetta: bordo 2 px, 6×8 di margine, svg 300×150 al più
+  150 px d'altezza, didascalia 13 px in grassetto), larghezza della colonna della testa a 1280 px (30%, 370 px).
+  Metodo: il kit delle caricature dell'app (app/src/lib/caricature/kit.ts, poligoni del pennino già calcolati),
+  profilo verso destra, figura campita di carta; le linee della scena col pennino a punta piatta del prototipo 32
+  (punta lunga L, inclinata di 35°). Solo --ink e --carta; il retino è quello del 16, sullo sfondo e basta.
+  Lista nera (spec:343): niente capelli, occhiali, barbe, baffi, collane, fiocchi. Bersaglio il palazzo: nessuna
+  vittima disegnata, nell'Emergenza nessuna persona.
+  Didascalie: dal file dei testi di Mario (docs/superpowers/plans/2026-11-17-piano-11f-testi.md), tali e quali.
+  Font: Atkinson Hyperlegible Next e Fraunces dell'app (app/static/fonts, OFL), in locale; nei disegni nessun testo.
+  ?prova = le 15 vignette nude a 300×150 e a 150×75, col controllo dei margini (getBBox, almeno 4 unità dal bordo).
+  Non è codice di produzione. Buttare dopo il verdetto.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Vignette 11f · cinque scene, tre varianti</title>
+<style>
+@font-face{font-family:'Atkinson Hyperlegible Next';src:url('../../../app/static/fonts/atkinson/AtkinsonHyperlegibleNext-Variable.ttf') format('truetype');font-weight:200 800}
+@font-face{font-family:'Fraunces';src:url('../../../app/static/fonts/fraunces/Fraunces-Variable.ttf') format('truetype');font-weight:100 900}
+*{box-sizing:border-box;margin:0;padding:0}
+svg{display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:root{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --tit:'Fraunces',Georgia,serif; --txt:'Atkinson Hyperlegible Next',sans-serif;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --forte:2px solid var(--ink); --filo:1px solid var(--grigio);
+}
+body{background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);padding:24px 32px 40px}
+h1{font:800 30px/1.1 var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1}
+.nota{color:var(--grigio);font-size:var(--c-sec);max-width:120ch;margin:6px 0 18px}
+.scena{border-top:3px double var(--ink);padding:10px 0 16px}
+.scena h2{font:700 23px/1.1 var(--tit);font-variation-settings:"SOFT" 100,"WONK" 1;display:flex;gap:12px;align-items:baseline}
+.scena h2 small{font:400 var(--c-min)/1.3 var(--txt);color:var(--grigio)}
+.tre{display:grid;grid-template-columns:repeat(3,370px);gap:28px;margin-top:8px}
+.var h3{font-size:var(--c-sec);font-weight:700;margin-bottom:2px}
+.var p{font-size:var(--c-min);color:var(--grigio);min-height:2.6em;margin-bottom:6px}
+/* il riquadro della testa, dal prototipo 16 (righe 218-220) */
+.vignetta{border:var(--forte);padding:6px 8px;display:grid;gap:4px;align-content:start}
+.vignetta svg{width:100%;height:auto;max-height:150px}
+.vignetta figcaption{font-size:var(--c-sec);text-align:center;font-weight:700}
+.tipi{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tipi button{font-size:11px;border:1px solid var(--grigio);padding:0 5px;color:var(--grigio)}
+.tipi button.qui{border-color:var(--ink);background:var(--ink);color:var(--carta)}
+/* dentro i disegni */
+.v .i{fill:var(--ink)} .v .c{fill:var(--carta)}
+.v .filo,.v .fine{fill:none;stroke:var(--ink);stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.v .fine{stroke-width:1.5}
+.v .bordo{fill:var(--carta);stroke:var(--ink);stroke-width:1.5;stroke-linejoin:round}
+.v .coll{stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round}
+/* ?prova */
+.prova{display:grid;grid-template-columns:repeat(5,auto);gap:14px 18px;justify-content:start;margin:8px 0 20px}
+.prova figure{display:grid;gap:3px;font-size:11px;color:var(--grigio)}
+.prova svg{outline:1px solid var(--ink)}
+.esito{font:12px/1.4 ui-monospace,monospace;white-space:pre;background:var(--ink);color:var(--carta);padding:8px 10px;display:inline-block}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" class="v"><defs>
+  <pattern id="fantasia-pieno" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" class="i"/></pattern>
+  <pattern id="fantasia-vuoto" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" class="c"/></pattern>
+  <pattern id="fantasia-righe" width="2.6" height="2.6" patternUnits="userSpaceOnUse"><rect width="2.6" height="2.6" class="c"/><rect width="2.6" height="1.2" class="i"/></pattern>
+  <pattern id="fantasia-pois" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" class="c"/><circle cx="1.5" cy="1.5" r=".8" class="i"/></pattern>
+  <pattern id="fantasia-quadretti" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><rect width="3.4" height="3.4" class="i"/><rect width="1.7" height="1.7" class="c"/><rect x="1.7" y="1.7" width="1.7" height="1.7" class="c"/></pattern>
+  <pattern id="fantasia-tratteggio" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.4" height="2.4" class="c"/><rect width=".9" height="2.4" class="i"/></pattern>
+  <pattern id="ret" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.2" height="6" fill="#1F1A17" opacity=".35"/></pattern>
+</defs></svg>
+<main id="app"></main>
+<script>
+// ======================= il kit: copiato da app/src/lib/caricature/kit.ts (17/11/2026) =======================
+const NASI = [
+  { d: "L61 34", pen: "M412 365l37-27 5-1 86-5-43-19-56-39-26-11 10-6 26 10 84 20 92 40-38 26-151 9-23 16z" },
+  { d: "Q56 20 60 30Q61 38 53 36.5", pen: "M411 363l38-26 117 17 13 0 2-8 1-14 0-14-2-7-2-6-7-12-8-12-10-10-11-8-12-6-14-4-18-4-17-1-18 1-16 3-32 11 10-6 12-6 37-13 32-9 24-3 17 0 7 1 20 7 17 11 14 16 13 24 2 14 0 14-3 13-7 13-10 9-38 26-6 3-14 3-21 0-91-14-15 11z" },
+  { d: "L46 25.5C59 21 63 40 50 38.5", pen: "M411 363l38-26 69 34 6 1 14 1 15-3 3-6 4-13 0-21-5-20-11-18-15-15-12-7-18-8-11-3-18-2-55 6 10-6 36-6 32-9 16-3 16-2 17 2 13 5 17 11 10 11 10 17 6 21 1 13-3 14-5 13-4 6-10 9-37 27-12 7-20 5-14 1-14-1-56-28-9 7z" },
+  { d: "Q50 35 61 23L54 35.5", pen: "M411 364l38-26 6-1 82 4 45-82-56 39-19 8-17 3-12-1-11-3-11-6-11-8-30-28 10-6 20 19 21 9 15 3 16 2 23-3 16-4 26-11 28-27 37-26-68 123-38 26-87-4-19 14z" },
+  { d: "Q55 23 62 41L50 37.5", pen: "M412 363l38-26 72 26 60 17-17-29-20-28-15-16-35-30-17-9-23-8-12-1-28 4 10-6 13-3 38-3 24 1 23 5 22 7 13 8 15 14 18 21 16 23 16 31 14 32-1 3-38 26-114-33-59-21-11 8z" },
+  { d: "L52 22.5L61 33L49 36.5", pen: "M411 364l38-27 60 15 72-21-80-93-59 16-27 9 10-6 26-9 85-35 6 3 86 100-37 27-6 2-113 33-44-11-13 10z" },
+];
+const MENTI = [
+  { d: "Q43 42 40 45", pen: "M334 494l2-4 35-25 18-11 19-24 13-25-1-7-8-33 37-27 5-1 7-1-10 8 7 28 0 7-5 12-11 18-22 27-53 36 4 29-1 38 5 28-10 6-5-27-12-30z" },
+  { d: "L45 41L44 46", pen: "M335 492l37-25 53-13 5-26 0-7-9-19-9-34 1-5 37-26 14-1-13 9 8 31 9 19 0 6-8 42-4 4-38 27-50 11 2 15 0 39 5 28-10 6-4-27-12-30z" },
+  { d: "L44.6 41Q48.5 42.6 45 45.2Q48 47.4 43.6 49", pen: "M336 492l29-20 5-2 24 0 47 5-10-10 11-9 4-6 2-6-2-7-4-5-12-8-4-5-14-53 41-29 7-1-10 7 14 50 4 5 11 7 5 6 1 6-2 7-4 5-10 10 10 9 2 7-2 6-4 6-38 26-18 10-50-5 1 41 5 28-10 6-6-33-9-25z" },
+];
+const FRONTI = [
+  { d: "Q38 6 41 11L43 23", pen: "M266 86l37-27 21-3 21-1 21 2 20 5 19 9 15 14 9 11 2 14 3 113 0 7-9 27-10 6 9-26 1-7-30-87-4-20-8-11-10-10-12-8-13-6-13-4-14-2-21 0z" },
+  { d: "Q35 5 38 9L44 23", pen: "M266 86l38-27 40-9 14 1 14 3 12 7 10 10 5 5 19 45 25 100 1 7-19 29-10 6 20-29-51-80-23-51-5-6-16-13-12-5-7-2-21 1-20 5z" },
+];
+const NUCHE = [
+  { b: 13, pen: "M137 295l1-21 3-27 9-42 7-19 9-19 10-18 9-12 14-15 10-9 55-39 13-6 20-7 13-3 21-2-38 26-27 4-14 3-16 7-18 21-18 30-10 25-9 35-4 27-2 28 0 28 4 34 7 35 9 27 9 18 14 24 6 37 4 67 7 35-10 6-7-34-21-56-15-30-9-10-7-12-12-26-8-27-5-27-3-28z" },
+  { b: 18, pen: "M171 350l3-63 7-55 6-28 8-26 7-20 10-19 11-17 14-16 48-35 19-10 13-4 14-1-38 26-14 1-12 4-7 8-14 24-11 25-9 27-7 34-5 35-4 34-1 36 1 41 4 49 10 57 4 75 7 35-10 6-7-34-21-55-16-30-4-21-3-27z" },
+];
+const SPALLE = { d: "M2.4 64C3.4 56.4 10 53.4 21 53.2M38 53.2C50 53.2 57.6 57 60.6 64", pen: "M18 617l1-5 8-11 14-16 45-32 18-11 33-11 42-8 12 0 11 5 12 1-8 6-16 2-30 8-50 8-20 6-20 7-9 11-23 36-9 17-1 7-8 6 1-7zM376 535l8-6 16-1 39-6 21 2 27 5 28 7 19 7 19 10 18 11 16 13 10 10 4 5 5 31 4 14-8 6-3-6-5-6-27-15-14-15-16-13-18-11-19-10-20-7-27-7-48-7-17-10z" };
+const ORECCHIO = { d: "M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36", pen: "M231 329l1-14 2-6 6-13 4-5 32-23 13 2-6 4-7 0-13 5-8 15-2 13 1 14 4 13 4 6 10 9 6 8 7 1-6 4-17 1-10 0-7-4-8-10-3-6z" };
+
+// sei facce di tipo, leve fissate a mano perché in una vignetta non si ripetano naso e colletto
+const F = {
+  a:{n:0,m:1,f:0,u:1,o:0,c:'righe'},  b:{n:2,m:2,f:1,u:0,o:1,c:'pois'},     c:{n:1,m:0,f:0,u:0,o:0,c:'pieno'},
+  d:{n:3,m:1,f:1,u:1,o:1,c:'quadretti'}, e:{n:4,m:0,f:1,u:1,o:0,c:'tratteggio'}, g:{n:5,m:2,f:0,u:0,o:1,c:'vuoto'},
+};
+// una figura del kit a mezzo busto, nella tela 64×64 portata a (x,y) e scalata di s; rot ruota la testa sul collo
+// (negativo = guarda in alto), come la posa del prototipo 32; `dietro` sta sotto la figura, nelle coordinate del kit
+function fig(x,y,s,l,{rot=0,dietro=''}={}){
+  const n=NASI[l.n], m=MENTI[l.m], f=FRONTI[l.f], u=NUCHE[l.u];
+  const sag=`M20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26${n.d}L43 35L44 39${m.d}L35 48L36 51L37 61L23 61L21 47Z`;
+  const filo=`M23 57L21 47L20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26M42 26${n.d}L43 35L44 39${m.d}L35 48L36 51L37 57${ORECCHIO.d}`;
+  const occhio = l.o ? `<path class="bordo" d="M35.2 22.8Q38.4 19.4 41.2 21.3Q40.6 24.6 35.2 22.8Z"/><circle class="i" cx="39.3" cy="22.2" r="1.45"/>`
+                     : `<circle class="bordo" style="stroke-width:1.4" cx="38.2" cy="22.6" r="2.7"/><circle class="i" cx="39.4" cy="22.6" r="1.45"/>`;
+  return `<g class="figura" transform="translate(${x} ${y}) scale(${s})">${dietro}
+    <path class="c" d="M2 64C3 56 10 53 20 53L42 53C52 53 58 57 61 64Z"/>
+    <g transform="rotate(${rot} 30 46)"><path class="c" d="${sag}"/>
+      <path class="i" transform="scale(.1)" d="${u.pen+f.pen+n.pen+m.pen+ORECCHIO.pen}"/>
+      <path class="filo" style="stroke-width:1.4" d="${filo}"/><path class="fine" d="M27 30.2Q25.4 32 27.2 33.6"/>
+      ${occhio}<path class="fine" style="stroke-width:1.9" d="M44 39.4L40.3 39.8"/></g>
+    <path class="i" transform="scale(.1)" d="${SPALLE.pen}"/><path class="filo" style="stroke-width:1.4" d="${SPALLE.d}"/>
+    <path class="coll" fill="url(#fantasia-${l.c})" d="M21 51L38 49L40.5 55.5L22 57Z"/></g>`;
+}
+
+// ======================= il pennino della scena: dal prototipo 32 (pennello), una sottotraccia alla volta =======================
+let PEN;
+const CACHE = new Map();
+function punta(d,L,a,coda,passo=.6){
+  if(!PEN){ const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('style','position:absolute;width:0;height:0;visibility:hidden'); PEN=document.createElementNS(s.namespaceURI,'path'); s.appendChild(PEN); document.body.appendChild(s); }
+  PEN.setAttribute('d',d);
+  const tot=PEN.getTotalLength(), n=Math.max(8,Math.ceil(tot/passo)), nx=Math.cos(a*Math.PI/180)*L/2, ny=-Math.sin(a*Math.PI/180)*L/2;
+  const pt=Array.from({length:n+1},(_,i)=>{ const t=i/n, q=PEN.getPointAtLength(t*tot), s=Math.max(.3,Math.min(1,t/coda,(1-t)/coda)); return [q.x,q.y,nx*s,ny*s]; });
+  const r=v=>+v.toFixed(1); let out='';
+  for(let i=0;i<n;i++){
+    const [x0,y0,a0,b0]=pt[i], [x1,y1,a1,b1]=pt[i+1];
+    let q=[[x0-a0,y0-b0],[x0+a0,y0+b0],[x1+a1,y1+b1],[x1-a1,y1-b1]];
+    if(q.reduce((s,[x,y],j)=>{ const [X,Y]=q[(j+1)%4]; return s+x*Y-X*y; },0)<0) q.reverse();
+    out+='M'+q.map(([x,y])=>`${r(x)} ${r(y)}`).join('L')+'Z';
+  }
+  return out;
+}
+// pen: tratto a pennino (poligono + filo di centro); campo: forma campita di carta col suo contorno a pennino
+function pen(d,L=4,coda=.14,a=35){
+  const k=`${d}|${L}|${coda}|${a}`;
+  if(!CACHE.has(k)) CACHE.set(k, d.trim().split(/(?=M)/).map(s=>punta(s,L,a,/Z\s*$/i.test(s)?.04:coda)).join(''));
+  return `<path class="i" d="${CACHE.get(k)}"/><path class="filo" d="${d}"/>`;
+}
+const campo = (d,L=4) => `<path class="c" d="${d}"/>${pen(d,L)}`;
+const fine = (d,w=1.5,extra='') => `<path class="fine" style="stroke-width:${w}" ${extra} d="${d}"/>`;
+const R = (x,y,w,h) => `M${x} ${y}L${x+w} ${y}L${x+w} ${y+h}L${x} ${y+h}Z`;
+const C = (cx,cy,r) => `M${cx-r} ${cy}A${r} ${r} 0 1 0 ${cx+r} ${cy}A${r} ${r} 0 1 0 ${cx-r} ${cy}Z`;
+const suolo = (a=12,b=288,y=132) => pen(`M${a} ${y}L${b} ${y}`,3.2);
+const banco = (x,y,w,h) => campo(R(x,y,w,h),4.2)+fine(`M${x+6} ${y+7}L${x+w-6} ${y+7}`,1.2);
+
+// ======================= le scene =======================
+// AULA
+function aulaA(){ // l'emiciclo dei cartellini, il ministro al banco col pallottoliere
+  const cx=210, by=128, arco=r=>`M${cx-r} ${by}A${r} ${r} 0 0 1 ${cx+r} ${by}`;
+  const cart=(r,deg)=>{ const t=deg*Math.PI/180, x=+(cx-r*Math.cos(t)).toFixed(1), y=+(by-r*Math.sin(t)).toFixed(1);
+    return fine(`M${x} ${y}L${x} ${y-9}`,1.4)+`<path class="bordo" style="stroke-width:1.3" d="${R(x-3.5,y-15,7,6)}"/>`; };
+  const pal = campo(R(96,80,28,26),3)+[87,94,101].map(y=>fine(`M97 ${y}L123 ${y}`,1.1)).join('')
+    +[[101,87],[105,87],[118,87],[100,94],[111,94],[115,94],[119,94],[104,101],[108,101],[119,101]].map(([x,y])=>`<circle class="bordo" style="stroke-width:1.2" cx="${x}" cy="${y}" r="2.1"/>`).join('');
+  return pen(arco(76)+arco(56)+arco(36),3.6)+pen(`M130 ${by}L290 ${by}`,3)+pen(`M198 ${by}L198 116L222 116L222 ${by}`,2.6)
+    +[[76,24],[76,48],[76,79],[76,118],[76,146],[56,38],[56,97],[56,141],[36,62],[36,120]].map(([r,d])=>cart(r,d)).join('')
+    +fig(22,46,1,F.a)+pal+banco(10,106,116,26);
+}
+function aulaB(){ // il tabellone dei voti, mezzo pieno e mezzo vuoto
+  let dots='';
+  for(let j=0;j<6;j++) for(let i=0;i<13;i++){ const x=136+i*11.5, y=26+j*13.5, pieno=((i*7+j*11+(i*j)%3)%10)<5;
+    dots+= pieno ? `<circle class="i" cx="${x}" cy="${y}" r="3.3"/>` : `<circle class="bordo" style="stroke-width:1.2" cx="${x}" cy="${y}" r="2.9"/>`; }
+  return suolo(112,288,132)+pen('M152 106L152 132M256 106L256 132',3.4)+campo(R(124,14,160,92),4.4)+dots
+    +fig(14,46,1.05,F.b,{rot:-10})+banco(8,108,100,24);
+}
+function aulaC(){ // la legge: una pila di testo più alta di chi l'ha votata, con la scala per arrivarci
+  const dx=[0,3,-2,4,-1,2,-4,1,3]; let pila='';
+  dx.forEach((d,i)=>{ const y=128-11*(i+1), x=136+d; pila+=campo(R(x,y,86,11),2.6)+fine(`M${x+5} ${y+5.5}L${x+81} ${y+5.5}`,1,'stroke-dasharray="7 3"'); });
+  const scala = pen('M248 128L226 34M262 128L240 34',3)+[0,1,2,3,4,5,6,7].map(k=>{ const t=(k+.6)/8.4, y=128-94*t; return fine(`M${(248-22*t).toFixed(1)} ${y.toFixed(1)}L${(262-22*t).toFixed(1)} ${y.toFixed(1)}`,2); }).join('');
+  return suolo(12,288,128)+pila+scala+fig(16,42,1.05,F.c,{rot:-12})+banco(8,104,98,28);
+}
+// GIURAMENTO
+function giurA(){ // la mano alzata davanti al libro, sotto il festone
+  const mano = campo('M3 58L13 55L9 26L0 27Z',3) + campo('M-1 27L-2 12Q-2 6 3 6L6 6Q10 6 10 12L10 17L12 14.5Q13.8 13.4 13.6 16.4L10.5 25L10 27Z',2.4)
+    + fine('M1.5 7.2L1.5 12M4.5 6.6L4.5 12M7.5 7.2L7.5 12',1.2);
+  const libro = campo('M168 88L246 80L248 86L170 94Z',3)+pen('M207 89L207 130M189 130L227 130',3.4)
+    +campo('M176 86Q190 74 207 82L207 86Q192 80 178 90Z',2)+campo('M207 82Q222 70 240 76L241 80Q224 76 207 86Z',2);
+  return suolo()+pen('M12 12Q58 34 104 12Q150 34 196 12Q242 34 288 12',3.4)+fine('M104 13L104 24M196 13L196 24',2)
+    +libro+fig(60,44,1.15,F.d,{rot:-4,dietro:mano})+banco(40,106,112,26);
+}
+function giurB(){ // la formula: un rotolo che scende dal leggio e attraversa la sala
+  const carta='M136 84L146 80Q164 100 160 124L262 124L262 132L148 132Q152 102 136 84Z';
+  return suolo(12,288,132)+campo('M92 84L138 78L140 84L94 90Z',3)+pen('M116 88L116 132M100 132L132 132',3.4)
+    +campo(carta,2.6)+campo(C(141,79,5),2.2)+fine('M168 128L254 128',1.2,'stroke-dasharray="5 3"')+fine('M150 96L156 95M152 104L159 103M154 112L160 112',1.2)
+    +campo(C(269,122,10),2.6)+fine('M269 122m-5 0a5 5 0 1 1 5 5a2.6 2.6 0 1 1 -2.6 -2.6',1.3)
+    +fig(12,40,1.1,F.e,{rot:6})+banco(8,104,78,28);
+}
+function giurC(){ // la foto di rito: tre ministri in fila, girati verso il fotografo
+  const cam = pen('M240 84L214 132M240 84L240 132M240 84L266 132',2.6)+campo(R(222,56,40,28),3.4)+campo('M222 60L204 64L204 76L222 80Z',2.6)
+    +campo(R(197,66,7,8),2)+pen('M252 56L252 42',2.4)+campo('M240 42L264 42L261 37L243 37Z',2)
+    +fine('M252 32L252 26M242 33L238 28M262 33L266 28',1.6);
+  return suolo()+cam+fig(8,50,.85,F.g)+fig(64,46,.85,F.a,{rot:-3})+fig(118,54,.85,F.b,{rot:2})+banco(8,96,172,36);
+}
+// EMERGENZA (nessuna persona in pericolo: il bersaglio è il palazzo)
+function emeA(){ // gli stivali nuovi sotto la campana di vetro, sulla scrivania
+  const stivale=x=>campo(`M${x} 52L${x+14} 52L${x+14} 84L${x+26} 87Q${x+30} 89 ${x+30} 98L${x} 98Z`,2.8)+fine(`M${x+1} 59L${x+13} 59`,1.4);
+  return fig(20,46,1,F.g,{rot:-4})+banco(10,108,280,24)+campo(R(140,98,100,10),3)+stivale(158)+stivale(192)
+    +pen('M146 98L146 52Q146 26 190 26Q234 26 234 52L234 98',2.8)+campo(C(190,22,3),1.6)+fine('M156 56Q157 40 170 34',1.6)
+    +fine('M178 40L178 46M175 43L181 43M222 60L222 66M219 63L225 63',1.3);
+}
+function emeB(){ // il palazzo sotto la sua nuvola, con l'ombrello aperto sul frontone
+  const pioggia=[122,134,146,158,170,182].map((x,k)=>fine(`M${x} ${37+(k%2)*2}L${x-3} ${44+(k%2)*2}`,1.5)).join('');
+  const colonne=[100,133,167,200].map(x=>campo(R(x-5,100,10,22),2.6)).join('');
+  return suolo()+`<g transform="translate(0 3)">${campo('M112 30Q106 18 120 16Q126 6 140 10Q150 2 162 10Q176 6 180 18Q192 20 186 30Z',3)}</g>`+pioggia
+    +campo('M84 92L150 76L216 92Z',3.4)+campo(R(84,92,132,8),3)+colonne+campo(R(80,122,140,5),2.6)+campo(R(74,127,152,5),2.6)
+    +pen('M150 64L150 78',2.4)+campo('M112 64Q112 50 150 48Q188 50 188 64Q178 58 169 64Q160 58 150 64Q140 58 131 64Q122 58 112 64Z',3)
+    +pen('M150 48L150 43',2.2)+fine('M109 71Q107 74 109 76Q111 74 109 71Z',1.2)+fine('M191 71Q189 74 191 76Q193 74 191 71Z',1.2);
+}
+function emeC(){ // l'argine fatto di faldoni, col timbro in cima e la barchetta di carta
+  let muro=''; const righe=[[30,8],[41,7],[52,6],[63,5]];
+  righe.forEach(([x0,k],j)=>{ const y=118-14*j; for(let i=0;i<k;i++){ const x=x0+22*i; muro+=campo(R(x,y,22,14),2.2)+`<circle class="bordo" style="stroke-width:1.2" cx="${x+15}" cy="${y+7}" r="2.2"/>`+fine(`M${x+4} ${y+4}L${x+9} ${y+4}L${x+9} ${y+10}L${x+4} ${y+10}Z`,1); } });
+  const timbro=campo(R(108,68,20,8),2.4)+campo(R(114,59,8,9),2)+campo(C(118,54,6),2.4);
+  const acqua=pen('M212 122Q222 118 232 122Q242 126 252 122Q262 118 272 122Q280 125 286 122',2.6)+pen('M220 130Q230 126 240 130Q250 134 260 130Q270 126 280 130',2.2);
+  return suolo(12,206,132)+muro+timbro+acqua+campo('M236 114L272 114L264 121L242 121Z',2.2)+campo('M248 114L254 96L263 114Z',2);
+}
+// LETTERA
+function letA(){ // la busta grande come la scrivania, accanto al telefono che non squilla
+  const busta=`<g transform="rotate(-4 171 80)">${campo('M116 52L171 26L226 52Z',2.6)}${campo(R(128,32,86,36),2.4)}${fine('M138 39L204 39M138 46L196 46',1.2)}
+    ${campo(R(116,52,110,56),3.4)}${fine('M116 108L171 78L226 108',1.4)}<circle class="i" cx="171" cy="80" r="6"/><circle class="c" cx="171" cy="80" r="2.4"/></g>`;
+  const tel=campo('M244 110L248 97L280 97L284 110Z',2.6)+campo('M244 93Q247 85 253 89L275 89Q281 85 284 93L281 97L247 97Z',2.4)+`<circle class="bordo" style="stroke-width:1.3" cx="264" cy="104" r="3.6"/>`;
+  return fig(20,48,1,F.b,{rot:6})+banco(10,110,280,22)+busta+tel;
+}
+function letB(){ // la firma a matita, con la gomma già pronta
+  const T=[146,108], u=[.85,-.53], p=[.53*6,.85*6], at=t=>[T[0]+u[0]*t,T[1]+u[1]*t], P=(t,k)=>{ const q=at(t); return `${(q[0]+p[0]*k).toFixed(1)} ${(q[1]+p[1]*k).toFixed(1)}`; };
+  const matita = campo(`M${P(14,1)}L${P(14,-1)}L${P(122,-1)}L${P(122,1)}Z`,2.4)+campo(`M${T.join(' ')}L${P(14,1)}L${P(14,-1)}Z`,2)
+    +`<path class="i" d="M${T.join(' ')}L${P(5,.36)}L${P(5,-.36)}Z"/>`+campo(`M${P(122,1)}L${P(122,-1)}L${P(130,-1)}L${P(130,1)}Z`,2)
+    +campo(`M${P(130,1)}L${P(130,-1)}L${P(138,-1)}L${P(138,1)}Z`,2.4)+fine(`M${P(14,0)}L${P(122,0)}`,1);
+  const foglio=`<g transform="rotate(-5 128 74)">${campo(R(70,18,116,112),3)}${[34,43,52,61,70,79].map((y,k)=>fine(`M82 ${y}L${[172,166,170,150,168,128][k]} ${y}`,1.3)).join('')}
+    ${fine('M88 116L160 116',1.2,'stroke-dasharray="4 3"')}${pen('M94 110Q100 96 104 108Q108 118 114 104Q118 96 122 108Q126 116 132 104L146 108',2.2)}</g>`;
+  const gomma=`<g transform="rotate(8 238 118)">${campo(R(216,108,44,20),2.6)}${fine('M226 108L226 128',1.2)}</g>`+fine('M266 124L266 124.5M272 120L272 120.5M270 128L270 128.5',2.4);
+  return foglio+gomma+matita;
+}
+function letC(){ // la porta socchiusa: targa svitata, chiavi alla maniglia, scatolone sulla soglia
+  const porta = `<path class="i" d="${R(158,20,24,112)}"/>`+campo(R(100,20,58,112),3)+fine(R(108,28,42,40),1.3)+fine(R(108,96,42,28),1.3)
+    +`<circle class="bordo" cx="151" cy="78" r="3.4"/>`+pen('M96 132L96 16L186 16L186 132',4.2);
+  const chiave=`<g transform="translate(204 40) rotate(8)"><circle class="bordo" style="fill:none;stroke-width:1.6" cx="0" cy="4" r="3.8"/>${pen('M0 7.8L0 23',2.2)}${fine('M0 19L3.6 19M0 22L3.6 22',1.5)}</g><circle class="i" cx="204" cy="40.6" r="1.5"/>`;
+  const targa=`<g transform="rotate(18 44 61)">${campo(R(40,58,40,14),2.4)}${fine('M48 65L72 65',1.2)}</g><circle class="i" cx="44" cy="61" r="1.8"/><circle class="bordo" style="stroke-width:1.2" cx="78" cy="61" r="1.8"/>`;
+  const cacciavite=campo(R(30,123,20,7),2)+pen('M50 126.5L72 126.5',2);
+  const scatola=pen('M226 98L232 76L250 70',2.4)+campo('M246 64L262 70L254 80Z',2.2)+campo(R(256,84,14,16),2)
+    +campo(R(206,98,70,34),3.4)+pen('M206 98L196 88M276 98L286 88',2.6)+fine('M212 112L232 112',1.2);
+  return suolo()+porta+chiave+targa+cacciavite+scatola;
+}
+// CASSA
+function casA(){ // lo scontrino che non finisce più: esce dal registratore, scende dal bancone, si arriccia per terra
+  let tasti=''; for(let j=0;j<3;j++) for(let i=0;i<6;i++) tasti+=`<path class="bordo" style="stroke-width:1.1" d="${R(166+i*10-j*1.5,72+j*8,6,4)}"/>`;
+  const strada='M214 64L214 56Q214 50 220 50L236 50Q244 50 244 58L244 118C244 134 266 134 266 122C266 112 252 114 254 124C256 134 282 134 282 120';
+  const scontrino=`<path d="${strada}" fill="none" stroke="var(--ink)" stroke-width="11" stroke-linejoin="round"/><path d="${strada}" fill="none" stroke="var(--carta)" stroke-width="7.6" stroke-linejoin="round"/>`
+    +fine('M241.5 66L246.5 66M241.5 76L246.5 76M241.5 86L246.5 86M241.5 96L246.5 96M241.5 106L246.5 106',1.1);
+  return fig(18,46,1,F.d,{rot:4})+suolo(232,288,132)+banco(10,108,226,24)+campo(R(160,48,24,16),2.4)+fine('M165 54L179 54M165 59L175 59',1.2)
+    +campo('M150 108L157 64L224 64L230 108Z',3.4)+tasti+fine('M153 98L227 98',1.3)+`<circle class="i" cx="190" cy="103" r="1.8"/>`
+    +campo(R(206,61,16,4),1.6)+scontrino;
+}
+function casB(){ // la ripresa timida: una gobbetta sul grafico, e la lente per vederla
+  const linea='M162 78L190 80L214 77L236 79L245 78L250 74L255 78L268 78';
+  return suolo(112,288,132)+pen('M170 102L160 132M260 102L270 132M215 102L215 132',3)+campo(R(150,18,130,84),4.2)
+    +fine('M162 30L162 90L268 90',1.3)+pen(linea,2.4)
+    +pen('M258.5 81.5L270 94',4.2)+`<clipPath id="lente-b"><circle cx="250" cy="73" r="11"/></clipPath>`
+    +`<circle class="c" cx="250" cy="73" r="11"/><g clip-path="url(#lente-b)"><g transform="translate(250 76) scale(2.4) translate(-250 -76)">${fine(linea,1.4)}</g></g>`
+    +pen(C(250,73,12),3)+fig(14,44,1,F.e,{rot:-4})+banco(8,106,100,26);
+}
+function casC(){ // la cassaforte aperta: una moneta sul cuscino, e la ragnatela
+  return suolo()+campo(R(70,26,100,106),4.6)+fine(R(80,36,80,86),1.4)+fine(R(92,46,56,66),1.3)
+    +fine('M80 36L92 46M160 36L148 46M80 122L92 112M160 122L148 112',1.3)
+    +fine('M80 52Q86 44 96 36M80 45Q84 41 88 36M80 36L91 47',1)
+    +campo('M106 112Q104 104 120 104Q136 104 134 112Z',2)+campo(C(120,97,6),2)+fine('M120 97m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0',1)
+    +campo('M170 26L214 34L214 124L170 132Z',4)+campo(C(194,62,9),2.4)+fine('M194 53L194 57M203 62L199 62M194 71L194 67M185 62L189 62',1.3)
+    +pen('M194 84L194 100',3)+`<circle class="i" cx="194" cy="84" r="2.6"/>`;
+}
+
+// ======================= le schede =======================
+const DID = { // didascalie dal file dei testi di Mario, tali e quali
+  sfiducia_approvata:'«Ma non avevamo contato?»', bilancio_approvato:'«Torna tutto. Basta non fare la somma»',
+  legge_respinta:'«Bellissima legge. Peccato per il voto»', sfiducia_presentata:'«Una mozione? Niente pausa caffè, oggi»',
+  legge_approvata:'«Passata. Adesso qualcuno la legga»', governo_formato:'«Lo giuro. Per i dettagli, c’è il gabinetto»',
+  'evento_risolto|emergenza':'«Gli stivali li restituisco lunedì»', 'evento_nato|emergenza':'«Qualcuno ha visto il fondo di riserva?»',
+  ultimatum_posto:'«Ci scrivono gli alleati. Di solito telefonano»', minaccia_di_dimissioni:'«Firmo, ma a matita»',
+  minaccia_di_scissione:'«Ce ne andiamo. Appena troviamo il nome»', ministro_esce:'«Le chiavi le lascio. L’auto blu la riporto domani»',
+  'evento_risolto|situazione':'«Problema risolto. Lo dice la ricevuta»', reddito_deluso:'«La ripresa c’è. È solo timida»',
+};
+const SCENE = [
+  { nome:'Aula', tipi:['sfiducia_approvata','bilancio_approvato','legge_respinta','sfiducia_presentata','legge_approvata'], v:[
+    ['A','Emiciclo','La sala larga: i banchi coi cartellini alzati, il ministro al banco del governo col pallottoliere.',aulaA,'sfiducia_approvata'],
+    ['B','Tabellone','I numeri come disegno: il tabellone dei voti mezzo pieno e mezzo vuoto, il ministro che alza la testa.',aulaB,'bilancio_approvato'],
+    ['C','La pila','L’oggetto: il testo della legge in una pila più alta di chi l’ha votata, con la scala per leggerla.',aulaC,'legge_approvata']]},
+  { nome:'Giuramento', tipi:['governo_formato'], v:[
+    ['A','Mano alzata','Il rito: un ministro solo, mano alzata davanti al libro, sotto il festone.',giurA,'governo_formato'],
+    ['B','Il rotolo','La formula: un rotolo che scende dal leggio e attraversa la sala.',giurB,'governo_formato'],
+    ['C','Foto di rito','La squadra: tre ministri in fila, girati verso il fotografo col lampo.',giurC,'governo_formato']]},
+  { nome:'Emergenza', tipi:['evento_risolto|emergenza','evento_nato|emergenza'], v:[
+    ['A','Stivali in vetrina','Il ministro e gli stivali nuovi, mai usati, sotto la campana di vetro.',emeA,'evento_risolto|emergenza'],
+    ['B','Ombrello sul palazzo','Il palazzo sotto la sua nuvola, con l’ombrello aperto sul frontone. Nessuna figura.',emeB,'evento_nato|emergenza'],
+    ['C','Argine di faldoni','Un argine di faldoni col timbro in cima; di là l’acqua e la barchetta di carta. Nessuna figura.',emeC,'evento_nato|emergenza']]},
+  { nome:'Lettera', tipi:['ultimatum_posto','minaccia_di_dimissioni','minaccia_di_scissione','ministro_esce'], v:[
+    ['A','La busta','Il ministro davanti alla busta grande come la scrivania; accanto, il telefono muto.',letA,'ultimatum_posto'],
+    ['B','A matita','Il foglio, la firma, la matita gigante e la gomma già pronta. Nessuna figura.',letB,'minaccia_di_dimissioni'],
+    ['C','La porta','La porta socchiusa: targa svitata, chiave al chiodo, scatolone sulla soglia. Nessuna figura.',letC,'ministro_esce']]},
+  { nome:'Cassa', tipi:['evento_risolto|situazione','reddito_deluso'], v:[
+    ['A','Lo scontrino','Il registratore di cassa e uno scontrino che non finisce più, giù dal bancone.',casA,'evento_risolto|situazione'],
+    ['B','La lente','Il grafico piatto con una gobbetta in fondo, e la lente che la ingrandisce.',casB,'reddito_deluso'],
+    ['C','La cassaforte','La cassaforte aperta: una moneta sul cuscino e la ragnatela. Nessuna figura.',casC,'evento_risolto|situazione']]},
+];
+const tela = (fn,w,h) => `<svg class="v" viewBox="0 0 300 150" ${w?`width="${w}" height="${h}"`:''} aria-hidden="true"><rect width="300" height="150" fill="url(#ret)" opacity=".35"/><g class="disegno">${fn()}</g></svg>`;
+const scelta = {};
+function schede(){
+  return `<h1>Vignette della 11f · cinque scene, tre varianti</h1>
+  <p class="nota">Ogni vignetta sta nel riquadro della testa del prototipo 16, alla larghezza della colonna a 1280 px. Sotto, i tipi di voce che la scena serve: cliccali per provare le altre didascalie. Si sceglie una variante per scena; il Task 12 rifinisce quella. Le prove di resa a 300×150 e a metà: <a href="?prova">?prova</a>.</p>
+  ${SCENE.map((s,i)=>`<section class="scena"><h2>${s.nome}<small>${s.tipi.map(t=>t.replace('|',' · ')).join(', ')}</small></h2><div class="tre">${s.v.map(([k,n,desc,fn,t0],j)=>{ const t=scelta[`${i}${j}`]||t0;
+    return `<div class="var"><h3>${k} · ${n}</h3><p>${desc}</p><figure class="vignetta">${tela(fn)}<figcaption>${DID[t]}</figcaption></figure>
+      <div class="tipi">${s.tipi.map(x=>`<button class="${x===t?'qui':''}" data-k="${i}${j}" data-t="${x}">${x.replace('|',' · ')}</button>`).join('')}</div></div>`; }).join('')}</div></section>`).join('')}`;
+}
+function prova(){
+  const tutte = SCENE.flatMap(s=>s.v.map(([k,n,,fn])=>[`${s.nome} ${k} · ${n}`,fn]));
+  return `<h1>Prove di resa · 300×150 e 150×75</h1><p class="nota">Il filo nero attorno a ogni tela è il bordo del riquadro. Sotto, il controllo: riquadro di ingombro del disegno (getBBox, più mezzo tratto) contro un margine di 4 unità.</p>
+  <h2 style="font:700 18px var(--tit);margin-top:10px">300×150</h2><div class="prova">${tutte.map(([n,fn])=>`<figure>${tela(fn,300,150)}<figcaption>${n}</figcaption></figure>`).join('')}</div>
+  <h2 style="font:700 18px var(--tit)">150×75</h2><div class="prova">${tutte.map(([n,fn])=>`<figure>${tela(fn,150,75)}<figcaption>${n}</figcaption></figure>`).join('')}</div>
+  <div class="esito" id="esito"></div>`;
+}
+function controlla(){
+  const nomi = SCENE.flatMap(s=>s.v.map(([k,n])=>`${s.nome} ${k}`));
+  const g=[...document.querySelectorAll('.prova svg[width="300"] .disegno')];
+  const righe=g.map((el,i)=>{ const b=el.getBBox(), m=+Math.min(b.x, b.y, 300-b.x-b.width, 150-b.y-b.height).toFixed(1)-1;
+    return `${(m>=4?'ok  ':'NO  ')}${nomi[i].padEnd(14)} x ${b.x.toFixed(1)}–${(b.x+b.width).toFixed(1)}  y ${b.y.toFixed(1)}–${(b.y+b.height).toFixed(1)}  margine min ${m.toFixed(1)}`; });
+  document.getElementById('esito').textContent = righe.join('\n') + `\n${righe.filter(r=>r.startsWith('ok')).length}/${righe.length} dentro il margine`;
+}
+const app=document.getElementById('app');
+function render(){ app.innerHTML = location.search.includes('prova') ? prova() : schede(); if(location.search.includes('prova')) controlla(); }
+app.addEventListener('click',e=>{ const b=e.target.closest('[data-t]'); if(!b) return; scelta[b.dataset.k]=b.dataset.t; render(); });
+render();
+</script>
+</body>
+</html>
