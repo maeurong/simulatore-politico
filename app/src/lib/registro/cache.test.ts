@@ -70,4 +70,18 @@ describe("registroCache", () => {
     expect((registroCache.turni[0] as { voci: VoceEsito[] }).voci[0].fatto).toBe("t100");
     expect(guscio.registro).toHaveBeenCalledTimes(2);
   });
+
+  it("un turno che si chiude mentre il volo gira entra nel giro in corso", async () => {
+    let sblocca!: () => void;
+    guscio.registro.mockImplementation(async (t: number) => {
+      if (t === 0) await new Promise<void>((r) => (sblocca = r));
+      return voci(t);
+    });
+    const volo = registroCache.carica(vista(2));
+    await Promise.resolve();
+    registroCache.carica(vista(3));
+    sblocca();
+    await volo;
+    expect(registroCache.turni.map((t) => t.turno)).toEqual([0, 1, 2]);
+  });
 });

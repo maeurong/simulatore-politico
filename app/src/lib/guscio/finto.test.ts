@@ -472,6 +472,13 @@ describe("la catena del 25", () => {
   it("chiudi_turno oltre la fine della catena è un rifiuto", () => {
     expect(() => rispondi("chiudi_turno", {}, dalla(8))).toThrow();
   });
+  it("riavvolgi({turno}) dà l'apertura del turno, cioè la Vista prima della sua chiusura", () => {
+    expect(rispondi("riavvolgi", { turno: 5 }, dalla(8))).toBe(catena[5].prima);
+    expect((rispondi("riavvolgi", { turno: 0 }, dalla(8)) as any).turno).toBe(0);
+  });
+  it("riavvolgi a un turno che la catena non ha è un rifiuto", () => {
+    expect(() => rispondi("riavvolgi", { turno: 9 }, dalla(8))).toThrow();
+  });
 });
 
 describe("la fermata del 16", () => {

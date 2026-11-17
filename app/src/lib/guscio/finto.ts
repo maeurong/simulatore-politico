@@ -274,7 +274,11 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
     }
     case "abbandona": return presente(c.eredita?.eredita, comando);
     case "conferma_eredita": return null;
-    case "riavvolgi": return presente(c.eredita?.vista, comando);
+    // con la catena del 25 l'apertura del turno è la Vista prima della sua chiusura; altrimenti vale la Vista del 30
+    case "riavvolgi": {
+      const dallaCatena = c.catena?.some((x) => x.dopo === vistaDi(campione));
+      return presente(dallaCatena ? c.catena?.[args.turno as number]?.prima : c.eredita?.vista, comando);
+    }
     case "anteprima_campagna": return anteprimaCampagna(args.spese as any[], c.campagna);
     case "elettori_campione": {
       // il campione del 23 porta il suo stato; fuori dal 23 vale quello del governo

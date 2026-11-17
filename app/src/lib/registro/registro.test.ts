@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
-import { cancella, collegate, corregge, passa, soggetti, turnoDa, type Filtro } from "./registro";
+import { t } from "$lib/testi/t";
+import { cancella, collegate, corregge, passa, periodoDel, riveduta, soggetti, testoConferma, tocca, turnoDa, type Filtro } from "./registro";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const catena = registroJson as any[];
@@ -96,5 +97,79 @@ describe("cancella", () => {
     const t = [turnoDa(2, [{ tipo: "risultato_del_voto", tono: "neutro", criticita: "critica" } as unknown as VoceEsito]), turnoDa(3, [{ tipo: "governo_formato", criticita: "notevole" } as unknown as VoceEsito]), turnoDa(4, [])];
     expect(cancella(3, 4, t)).toEqual({ chiusure: 2, voti: [], governi: [3] });
     expect(cancella(2, 4, t)).toEqual({ chiusure: 3, voti: [2], governi: [3] });
+  });
+});
+
+describe("periodoDel", () => {
+  it("il turno 0 è ottobre–dicembre 2026, il 4 lo stesso trimestre dell'anno dopo, e conta all'indietro dalla Vista", () => {
+    expect(periodoDel(0, vista)).toEqual({ anno: 2026, trimestre: 4 });
+    expect(periodoDel(4, vista)).toEqual({ anno: 2027, trimestre: 4 });
+    expect(periodoDel(8, vista)).toEqual({ anno: 2028, trimestre: 4 });
+    expect(periodoDel(1, vista)).toEqual({ anno: 2027, trimestre: 1 });
+  });
+});
+
+describe("riveduta", () => {
+  it("la prima stima del 3 è riveduta dalla revisione del 4; un'altra voce, o l'ultimo turno, no", () => {
+    expect(riveduta(voce("prima_stima", 3), 3, turni)).toBe(voce("revisione", 4));
+    expect(riveduta(voce("revisione", 4), 4, turni)).toBeNull();
+    expect(riveduta(voce("prima_stima", 8), 8, turni)).toBeNull();
+  });
+});
+
+describe("tocca", () => {
+  it("vale anche per una riga di dettaglio", () => {
+    const fusa = voce("emendamento_respinto", 4);
+    expect(fusa.dettagli.some((d) => tocca(d, { tipo: "partito", id: "centrodestra" }))).toBe(true);
+  });
+});
+
+describe("testoConferma", () => {
+  const voto = (n: number) => turnoDa(n, [{ tipo: "risultato_del_voto", tono: "neutro", criticita: "critica", dettagli: [], disposizioni: [] } as unknown as VoceEsito]);
+  const gov = (n: number) => turnoDa(n, [{ tipo: "governo_formato", tono: "neutro", criticita: "notevole", dettagli: [], disposizioni: [] } as unknown as VoceEsito]);
+  const v9 = { ...vista, turno: 9, finita: false } as Vista;
+  const vuoto = (n: number) => turnoDa(n, []);
+  const nonLetti = (n: number) => t("registro.conferma_non_letti", { n });
+
+  it("una chiusura sola: dice la chiusura, il trimestre e il turno in corso", () => {
+    const x = testoConferma(8, v9, turni, 0);
+    expect(x).toContain("apertura del turno 8");
+    expect(x).toContain("la chiusura del turno 8");
+    expect(x).toContain("turno 9 in corso");
+    expect(x).toContain("nessun voto e nessun governo");
+  });
+  it("più chiusure: il conto e l'elisione davanti a 8 e 11", () => {
+    expect(testoConferma(5, v9, turni, 0)).toContain("4 chiusure, dal turno 5 all’8");
+    expect(testoConferma(3, v9, turni, 0)).toContain("6 chiusure, dal turno 3 all’8");
+    const v12 = { ...v9, turno: 12 } as Vista;
+    const t11 = Array.from({ length: 11 }, (_, i) => vuoto(i));
+    expect(testoConferma(9, v12, t11, 0)).toContain("3 chiusure, dal turno 9 all’11");
+  });
+  it("il voto e il governo in mezzo si nominano, col trimestre", () => {
+    const ts = [vuoto(0), vuoto(1), voto(2), gov(3), vuoto(4)];
+    const x = testoConferma(2, { ...v9, turno: 5 } as Vista, ts, 0);
+    expect(x).toContain("il voto di");
+    expect(x).toContain("la nascita del governo");
+    expect(x).not.toContain("nessun voto");
+  });
+  it("il numero del riavvolgimento è l'indice più uno; senza indice la frase cade e il resto resta", () => {
+    expect(testoConferma(8, v9, turni, 0)).toContain("il primo");
+    expect(testoConferma(8, v9, turni, 2)).toContain("il terzo");
+    expect(testoConferma(8, v9, turni, 6)).toContain("il 7°");
+    const senza = testoConferma(8, v9, turni, null);
+    expect(senza).not.toContain("sarà il");
+    expect(senza).toContain("Con le stesse scelte");
+  });
+  it("a partita finita dice l'eredità in bozza, non il turno in corso", () => {
+    const x = testoConferma(8, { ...v9, finita: true } as Vista, turni, 0);
+    expect(x).toContain("l’eredità in bozza");
+    expect(x).not.toContain("in corso");
+  });
+  it("un turno che non si legge fra N e l'ultimo lo dice, invece di sottostimare in silenzio", () => {
+    const ts = turni.map((x) => (x.turno === 6 ? { turno: 6, guasto: "disco" } : x));
+    expect(testoConferma(5, v9, ts, 0)).toContain(nonLetti(1));
+    expect(testoConferma(7, v9, ts, 0)).not.toContain(nonLetti(1));
+    // non ancora letti contano come non letti
+    expect(testoConferma(5, v9, turni.slice(0, 7), 0)).toContain(nonLetti(2));
   });
 });
