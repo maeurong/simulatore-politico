@@ -12,8 +12,8 @@
   import Campagna from "$lib/campagna/Campagna.svelte";
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
+  import Pagina from "$lib/eredita/Pagina.svelte";
   import Trattativa from "$lib/trattativa/Trattativa.svelte";
-  import Evento from "$lib/cruscotto/Evento.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
   import Cornice from "$lib/cornice/Cornice.svelte";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
@@ -39,7 +39,7 @@
 {#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
-    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
+    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || aperta === "eredita" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
       <div class="pagina">
         {#if aperta}
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
@@ -64,12 +64,10 @@
           {:else if aperta === "trattativa" && fetta === null}
             <!-- la bozza è dell'incarico: al cambio (giocatore, guida) si rimonta -->
             {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
-          {:else}
-            <!-- partita finita: l'evento in testa, il resto del cruscotto arriva con la sua fetta (11e) -->
-            {#if aperta === "cruscotto"}
-              {#each partita.vista.eventi as evento, i (i)}<Evento vista={partita.vista} {evento} indice={i} puoRispondere={risponde(partita.vista)} />{/each}
-            {/if}
-            {#if fetta}<Segnaposto sezione={etichetta(aperta)} {fetta} />{/if}
+          {:else if aperta === "eredita" && fetta === null}
+            <Pagina vista={partita.vista} />
+          {:else if fetta}
+            <Segnaposto sezione={etichetta(aperta)} {fetta} />
           {/if}
         {/if}
       </div>

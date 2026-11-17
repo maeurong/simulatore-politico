@@ -66,7 +66,7 @@
       {#if testatina}<span class="nomino">{t("cornice.nomino")}</span>{/if}
       <span class="chi">
         <b>{t(nome)}</b><br />{t("cornice.periodo_turno", { periodo, turno: vista.turno })}
-        {#if !vista.finita}<br /><b>{vista.turni_al_voto === 0 ? t("cornice.si_vota_a_fine_turno") : t("cornice.turni_al_voto", { n: vista.turni_al_voto })}</b>{/if}
+        {#if !vista.finita}<br /><b>{vista.turni_al_voto === 0 ? t("cornice.si_vota_a_fine_turno") : t("cornice.turni_al_voto", { n: vista.turni_al_voto })}</b>{:else if vista.eredita}<br /><b>{t(vista.eredita.fine === "abbandono" ? "edicola.esito_abbandono" : "edicola.esito_senza_seggi")}</b>{/if}
       </span>
     </div>
     <div class="trks">

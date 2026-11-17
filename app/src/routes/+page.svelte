@@ -3,6 +3,7 @@
   // senza cornice. In corso sopra, albo sotto, il dettaglio della riga scelta a lato.
   import { onMount, tick } from "svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { comeErrore, guscio, type ErroreGuscio } from "$lib/guscio/chiamate";
   import { partita } from "$lib/partita.svelte";
   import { editor } from "$lib/editor/editor.svelte";
@@ -13,10 +14,12 @@
   import Dettaglio from "$lib/componenti/Dettaglio.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Impostazioni from "$lib/cornice/Impostazioni.svelte";
-  import { anniAlGoverno, esitoTesto, inOrdine, periodo, voceNuova } from "$lib/edicola/edicola";
+  import { anniAlGoverno, esitoTesto, inOrdine, periodo, voceConfermata, voceNuova } from "$lib/edicola/edicola";
   import RigaPartita from "$lib/edicola/RigaPartita.svelte";
   import DettaglioPartita from "$lib/edicola/DettaglioPartita.svelte";
   import DettaglioAlbo from "$lib/edicola/DettaglioAlbo.svelte";
+  import Eredita from "$lib/eredita/Eredita.svelte";
+  import { daAlbo } from "$lib/eredita/eredita";
 
   const ora = new Date();
   // null finché gli elenchi non arrivano: un guasto al caricamento non si spaccia per un'edicola vuota
@@ -30,6 +33,8 @@
   /** l'id della partita il cui abbandono è in volo */
   let inVolo = $state<string | null>(null);
   let impostazioni = $state(false);
+  /** la voce d'albo di cui si legge l'eredità: la pagina prende il posto del banco, la scelta resta */
+  let eredita = $state.raw<VoceAlbo | null>(null);
   /** da «Riprendi ›» alla fine della navigazione: partita.occupato torna falso prima che goto finisca */
   let apertura = $state(false);
 
@@ -58,6 +63,11 @@
     partita.esci();
     const e = await carica();
     if (e) guasto = `${e.testo} ${t("edicola.elenchi_non_caricati")}`;
+    // dopo «Conferma l'eredità»: la voce nuova dell'albo, riconosciuta da nome, fine e turni della bozza
+    else if (page.url.searchParams.get("albo") === "nuova") {
+      const nuova = voceConfermata(albo ?? [], page.url.searchParams);
+      if (nuova) scelta = { k: "a", voce: nuova };
+    }
   });
 
   function azzera(id: string) {
@@ -131,6 +141,12 @@
     conferma = aperta ? id : null;
   }
 
+  async function tornaAlBanco() {
+    eredita = null;
+    await tick();
+    document.querySelector<HTMLElement>('.edicola [aria-current="true"]')?.focus();
+  }
+
   function chiudiImpostazioni() {
     impostazioni = false;
     document.getElementById("apri-impostazioni")?.focus();
@@ -145,8 +161,9 @@
 
 <div class="edicola">
   <header class="testa">
+    {#if eredita}<Pulsante forma="link" onclick={tornaAlBanco}>{t("editor.torna_edicola")}</Pulsante>{/if}
     <span class="nomino">{t("cornice.nomino")}</span>
-    <h1 class="dove">{t("edicola.dove")}</h1>
+    <h1 class="dove">{eredita ? t("eredita.dove_albo", { nome: eredita.nome }) : t("edicola.dove")}</h1>
     <span class="fuori">
       <Pulsante forma="link" id="apri-impostazioni" aria-expanded={impostazioni}
         onclick={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))}>{t("sommario.impostazioni")}</Pulsante>
@@ -155,6 +172,9 @@
   <p class="nascosto" role="status" data-tagli-ignora>{partita.occupato || apertura ? t("edicola.apertura_in_corso") : ""}</p>
   {#if partita.guasto ?? guasto}<p class="guasto" role="alert">{partita.guasto ?? guasto}</p>{/if}
 
+  {#if eredita}
+  <main class="corpo"><Eredita edizione={daAlbo(eredita)} azioni={false} /></main>
+  {:else}
   <main class="corpo">
     <div class="elenchi">
       <section aria-labelledby="titolo-in-corso">
@@ -207,7 +227,7 @@
             onriprendi={() => riprendi(dettaglio.voce.indice.id)}
             onabbandona={() => abbandona(dettaglio.voce)} />
         {:else if dettaglio?.k === "a"}
-          {#key dettaglio.voce}<DettaglioAlbo voce={dettaglio.voce} />{/key}
+          {#key dettaglio.voce}<DettaglioAlbo voce={dettaglio.voce} onleggi={() => (eredita = dettaglio.voce)} />{/key}
         {:else if partite && albo}
           <div class="tagliando">
             <p class="occ">{t("edicola.primo_numero")}</p>
@@ -219,6 +239,7 @@
       </Dettaglio>
     {/if}
   </main>
+  {/if}
 </div>
 
 <style>
@@ -230,6 +251,7 @@
   .corpo { display: flex; align-items: start; gap: var(--canale); overflow: hidden auto }
   /* il dettaglio alto quanto il contenuto, come nella fondazione; oltre l'altezza del corpo scorre */
   .corpo > :global(.dettaglio) { max-height: 100% }
+  .corpo > :global(.cr) { flex: 1; align-self: stretch; min-width: 0 }
   .elenchi { flex: 1; min-width: 0; display: grid; gap: 18px; align-content: start }
   .lato { flex: none; width: var(--lato); min-width: 0 }
 

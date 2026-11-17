@@ -51,19 +51,20 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
     case "governo": return v.governa ? null : "barrata.governo";
     // aperta nel quarto trimestre e ogni volta che la Vista dice che il bilancio si può presentare (anche in esercizio provvisorio)
     case "bilancio":
+      if (v.finita) return "barrata.bilancio_finita";
       if (!v.governa) return "barrata.bilancio_opposizione";
-      return !v.finita && (v.data.trimestre === 4 || v.bilancio.presentabile) ? null : "barrata.bilancio_stagione";
+      return v.data.trimestre === 4 || v.bilancio.presentabile ? null : "barrata.bilancio_stagione";
     case "campagna": return !v.finita && v.turni_al_voto === 0 ? null : "barrata.campagna";
     default: return null;
   }
 }
 
-const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string> = {
+const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string | null> = {
   "prima-pagina": "11f", registro: "11f",
-  eredita: "11e", schema: "11e",
+  eredita: null, schema: "11e",
 };
 const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
-  turno_zero: null, trattativa: "11b", governo: null, crisi: null, opposizione: null, finita: "11e",
+  turno_zero: null, trattativa: "11b", governo: null, crisi: null, opposizione: null, finita: null,
 };
 
 /** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita. */

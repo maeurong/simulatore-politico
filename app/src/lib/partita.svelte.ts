@@ -6,6 +6,7 @@ import { bozza } from "$lib/bilancio/bozza.svelte";
 import { t } from "$lib/testi/t";
 import type { Comando } from "$lib/tipi/Comando";
 import type { Fondazione } from "$lib/tipi/Fondazione";
+import type { IndicePartita } from "$lib/tipi/IndicePartita";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SuMisura } from "$lib/tipi/SuMisura";
 import type { Vista } from "$lib/tipi/Vista";
@@ -18,6 +19,8 @@ class Partita {
   occupato = $state(false);
   // esci() lo fa avanzare: una risposta arrivata dopo l'uscita appartiene alla partita lasciata e si scarta
   #giro = 0;
+  // l'id lo sa solo chi ha ripreso la partita; chi l'ha fondata la ritrova da indice()
+  #id: string | null = null;
 
   /**
    * La Vista nuova, o null davanti a un guasto del comando (la partita resta com'era). Riuscito il comando la Vista
@@ -57,8 +60,16 @@ class Partita {
     }
   }
 
-  fonda = (scenario: SuMisura | null, fondazione: Fondazione) => this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
-  riprendi = (id: string) => this.#esegui(() => guscio.riprendi(id));
+  fonda = async (scenario: SuMisura | null, fondazione: Fondazione) => {
+    const vista = await this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
+    if (vista) this.#id = null;
+    return vista;
+  };
+  riprendi = async (id: string) => {
+    const vista = await this.#esegui(() => guscio.riprendi(id));
+    if (vista) this.#id = id;
+    return vista;
+  };
   /** Come fonda e riprendi: Vista nuova, o null davanti a un guasto; il rifiuto si rilancia al chiamante. */
   comanda = (comando: Comando) => this.#esegui(() => guscio.comanda(comando));
 
@@ -68,9 +79,62 @@ class Partita {
     if (vista) await goto(`/partita/${casa(vista)}`, { keepFocus: true });
   };
 
+  /** L'indice della partita in corso: per id se è stata ripresa, altrimenti la più recente col nome del giocatore. */
+  async indice(): Promise<IndicePartita | null> {
+    const v = this.vista;
+    if (!v) return null;
+    const nome = v.partiti.find((p) => p.id === v.giocatore)?.nome;
+    const mie = (await guscio.partite()).map((x) => x.indice).filter((i) => (this.#id ? i.id === this.#id : i.testata.nome === nome));
+    return mie.sort((a, b) => b.ultimo_salvataggio - a.ultimo_salvataggio)[0] ?? null;
+  }
+
+  /**
+   * Un riavvolgimento che non riesce lascia la memoria del guscio com'è sul disco: la Vista di qui si riallinea con
+   * riprendi, e il guasto resta scritto. Il rifiuto si rilancia dopo il riallineamento.
+   */
+  riavvolgi = async (turno: number): Promise<Vista | null> => {
+    if (this.occupato) return null;
+    const giro = this.#giro;
+    let rifiuto: unknown = null;
+    let vista: Vista | null = null;
+    try {
+      vista = await this.#esegui(() => guscio.riavvolgi(turno));
+    } catch (e) {
+      rifiuto = e;
+    }
+    if (vista || giro !== this.#giro) return vista;
+    const guasto = this.guasto;
+    const id = (await this.indice().catch(() => null))?.id;
+    if (id) {
+      await this.riprendi(id).catch(() => null);
+      if (guasto && !this.guasto) this.guasto = guasto;
+    }
+    if (rifiuto) throw rifiuto;
+    return null;
+  };
+
+  /** Vero a conferma scritta: la partita esce dalle in corso e l'albo ha la voce. Il guasto la lascia in bozza; il rifiuto si rilancia. */
+  confermaEredita = async (): Promise<boolean> => {
+    if (this.occupato) return false;
+    this.occupato = true;
+    try {
+      await guscio.confermaEredita();
+      this.guasto = null;
+      return true;
+    } catch (e) {
+      const errore = comeErrore(e);
+      if (errore.specie === "rifiuto") throw errore;
+      this.guasto = `${errore.testo} ${t("cornice.rimasta_com_era")}`;
+      return false;
+    } finally {
+      this.occupato = false;
+    }
+  };
+
   /** Verso l'edicola: il guscio non ha niente da fare. */
   esci = () => {
     this.#giro++;
+    this.#id = null;
     this.vista = null;
     this.serie = [];
     this.guasto = null;

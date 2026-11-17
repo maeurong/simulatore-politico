@@ -9,6 +9,7 @@ import opposizioneJson from "../../../.scratch/v1-piano-11-ui/viste/06-opposizio
 import cruscottoJson from "../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 import bilancioJson from "../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
+import ereditaJson from "../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 const vista = (x: unknown) => x as Vista;
 const turnoZero = vista(turnoZeroJson);
@@ -73,6 +74,11 @@ describe("barrata", () => {
     expect(barrata("governo", trattativa)).toBe("barrata.governo");
   });
 
+  it("a partita finita il Bilancio è barrato «Partita finita», prima di ogni altro motivo", () => {
+    expect(barrata("bilancio", finita)).toBe("barrata.bilancio_finita");
+    expect(barrata("bilancio", vista(ereditaJson.vista))).toBe("barrata.bilancio_finita");
+  });
+
   it("a partita finita: Governo, Aula, Bilancio e Campagna; Registro senza bozza", () => {
     expect(barrate(finita)).toEqual<Sezione[]>(["governo", "aula", "bilancio", "campagna", "registro"]);
     expect(barrata("aula", finita)).toBe("barrata.aula_finita");
@@ -103,7 +109,7 @@ describe("fettaDi", () => {
     expect(fettaDi("cruscotto", "governo")).toBeNull();
     expect(fettaDi("cruscotto", "crisi")).toBeNull();
     expect(fettaDi("cruscotto", "opposizione")).toBeNull();
-    expect(fettaDi("cruscotto", "finita")).toBe("11e");
+    expect(fettaDi("cruscotto", "finita")).toBeNull();
   });
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
@@ -116,7 +122,7 @@ describe("fettaDi", () => {
     expect(fettaDi("trattativa", "trattativa")).toBeNull();
     expect(fettaDi("partiti", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "turno_zero")).toBeNull();
-    expect(fettaDi("eredita", "finita")).toBe("11e");
+    expect(fettaDi("eredita", "finita")).toBeNull();
     expect(fettaDi("schema", "governo")).toBe("11e");
   });
   it("i conti sono costruiti in ogni stato", () => {
