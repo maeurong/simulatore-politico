@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { rispondi, trovaFile, vistaDi } from "./finto";
+import { dallaChiusura, daUnaChiave, rispondi, trovaFile, vistaDi } from "./finto";
 import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
@@ -17,6 +17,7 @@ import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import bilancioJson from "../../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import primaPagina from "../../../../.scratch/v1-piano-11-ui/viste/16-prima-pagina.json";
 import ereditaJson from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -446,5 +447,47 @@ describe("rispondi: opposizione ed eredità", () => {
     expect(rispondi("abbandona", {}, ce)).toEqual(ered.eredita);
     expect(rispondi("riavvolgi", { turno: 3 }, ce)).toEqual(ered.vista);
     expect(rispondi("conferma_eredita", {}, ce)).toBeNull();
+  });
+});
+
+describe("la catena del 25", () => {
+  const catena = registro as any[];
+  const dalla = (n: number) => ({ ...c, campione: dallaChiusura(catena, n), catena });
+
+  it("la Vista di ?chiusura=N è il dopo della chiusura N", () => {
+    expect(vistaDi(dallaChiusura(catena, 3))).toBe(catena[3].dopo);
+  });
+  it("chiudi_turno dà la chiusura successiva", () => {
+    expect(rispondi("chiudi_turno", {}, dalla(3))).toBe(catena[4].dopo);
+  });
+  it("riprendi dà la Vista della chiusura scelta", () => {
+    expect(rispondi("riprendi", {}, dalla(3))).toBe(catena[3].dopo);
+  });
+  it("registro({turno}) dà l'esito della chiusura turno", () => {
+    expect(rispondi("registro", { turno: 3 }, dalla(8))).toBe(catena[3].dopo.esito);
+  });
+  it("registro di una chiusura che la catena non ha è un rifiuto", () => {
+    expect(() => rispondi("registro", { turno: 9 }, dalla(3))).toThrow();
+  });
+  it("chiudi_turno oltre la fine della catena è un rifiuto", () => {
+    expect(() => rispondi("chiudi_turno", {}, dalla(8))).toThrow();
+  });
+});
+
+describe("la fermata del 16", () => {
+  it("la Vista è vista, e prima resta disponibile per la corsa", () => {
+    const f = (primaPagina as any).fermata_19;
+    expect(vistaDi(f)).toBe(f.vista);
+    expect(f.prima.turno).toBe(f.vista.turno - 1);
+  });
+});
+
+describe("daUnaChiave", () => {
+  const sfiducia = (opposizioneJson as any).sfiducia;
+  const partenza = daUnaChiave(sfiducia, "dopo_comando");
+  it("parte dalla Vista della chiave e chiudi_turno dà quella dello stato (la sfiducia respinta della lettura 16)", () => {
+    expect(vistaDi(partenza)).toBe(sfiducia.dopo_comando);
+    expect(rispondi("chiudi_turno", {}, { ...c, campione: partenza } as any)).toBe(sfiducia.vista);
+    expect(sfiducia.vista.esito.some((x: any) => x.tipo === "sfiducia_respinta" && x.in_evidenza)).toBe(true);
   });
 });

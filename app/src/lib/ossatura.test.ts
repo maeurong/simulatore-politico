@@ -113,6 +113,7 @@ describe("fettaDi", () => {
   });
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
+    expect(fettaDi("prima-pagina", "governo")).toBeNull();
     expect(fettaDi("bilancio", "governo")).toBeNull();
     expect(fettaDi("campagna", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "governo")).toBeNull();

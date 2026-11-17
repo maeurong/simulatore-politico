@@ -7,7 +7,7 @@
   import { comeErrore, guscio, type ErroreGuscio } from "$lib/guscio/chiamate";
   import { partita } from "$lib/partita.svelte";
   import { editor } from "$lib/editor/editor.svelte";
-  import { casa } from "$lib/ossatura";
+  import { barrata, casa } from "$lib/ossatura";
   import { t } from "$lib/testi/t";
   import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
   import type { VocePartita } from "$lib/tipi/VocePartita";
@@ -93,7 +93,8 @@
       // un errore della navigazione è un guasto, non un rifiuto
       if (vista)
         try {
-          await goto(`/partita/${casa(vista)}`);
+          // la prima pagina si apre ferma e composta (lettura 4); al turno zero non c'è, e si apre la casa
+          await goto(`/partita/${barrata("prima-pagina", vista) ? casa(vista) : "prima-pagina"}`);
         } catch (e) {
           guasto = `${comeErrore(e).testo} ${t("edicola.guasto_apertura")}`;
         }

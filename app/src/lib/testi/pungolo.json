@@ -78,5 +78,400 @@
     "Prossima fermata: i libri di storia",
     "Gli elettori votano compatti: altrove",
     "Fine delle trasmissioni"
-  ]
+  ],
+  "titoli": {
+    "emergenza_lieve": [],
+    "evento_risolto|situazione": [
+      "Caso chiuso. Il comunicato era pronto da giorni",
+      "Scelta fatta. Ora si cerca chi l’ha fatta"
+    ],
+    "evento_risolto|emergenza": [
+      "Emergenza archiviata. Gli stivali tornano nell’armadio",
+      "Il palazzo decide. Il territorio prende nota",
+      "Pratica d’urgenza evasa. Con calma, s’intende",
+      "Fine dell’emergenza. Comincia quella dei comunicati"
+    ],
+    "evento_risolto|scandalo": [
+      "Lo scandalo si chiude. L’armadio, per prudenza, no",
+      "Si volta pagina. Senza leggerla, se possibile"
+    ],
+    "evento_risolto|shock": [
+      "Lo shock passa. Il governo giura di averlo previsto",
+      "Risposta allo shock. Con calma, e per iscritto"
+    ],
+    "evento_risolto|debito": [
+      "Il debito ha una risposta. I mercati, una domanda nuova",
+      "Decisione sul debito. Il palazzo trattiene il fiato"
+    ],
+    "mes_avviato": [
+      "I conti hanno un tutore. Il governo, un alibi",
+      "Firmato il memorandum. Il governo ha un correttore"
+    ],
+    "ristrutturazione": [
+      "Il debito si accorcia. La credibilità, pure",
+      "Taglio netto al debito. I mercati si segnano la data"
+    ],
+    "margine_energia": [],
+    "proposta_respinta": [
+      "Proposte respinte. Il cestino ringrazia",
+      "Il ministro propone. Il cassetto dispone"
+    ],
+    "proposta_decaduta": [],
+    "emendamento_respinto": [
+      "Emendamenti respinti. Il testo si sente perfetto",
+      "Bocciate le modifiche. I proponenti fingono sorpresa"
+    ],
+    "atto_eseguito": [],
+    "atto_saltato": [
+      "Annunciato, poi saltato. L’agenda era a matita",
+      "L’atto salta. L’annuncio, invece, resta agli atti"
+    ],
+    "cantiere_avviato": [],
+    "cantiere_fermo": [
+      "Cantieri fermi. Le gru si godono il panorama",
+      "Lavori sospesi. Il nastro tagliato resta per terra",
+      "Il cantiere si ferma. Il cartello dei lavori resiste",
+      "Ruspe ferme. Avanzano a pieno ritmo le scuse"
+    ],
+    "cantiere_finito": [
+      "Cantiere finito. Si cerca un ministro per la foto",
+      "Lavori conclusi. Lo stupore è generale"
+    ],
+    "leggi_slittate": [],
+    "legge_approvata": [
+      "La legge passa. Ora tocca scoprire cosa dice",
+      "Votata e approvata. Per applicarla, ripassare",
+      "Il Parlamento dice sì. Qualcuno, a voce bassa",
+      "Nuova legge approvata. Vecchie abitudini in ufficio"
+    ],
+    "legge_respinta": [
+      "La legge non passa. Qualcuno festeggia, qualcuno conta",
+      "Bocciata in aula. Il testo torna da dove è venuto",
+      "Respinta. Gli autori la trovavano bellissima",
+      "L’aula dice no. Il comunicato era scritto per il sì"
+    ],
+    "decreto_convertito": [],
+    "decreto_decaduto": [
+      "Il decreto decade. Era urgente, ma senza fretta",
+      "Decreto scaduto. Andava consumato entro la data"
+    ],
+    "bilancio_approvato": [
+      "Il bilancio passa. I conti, sulla parola",
+      "Bilancio approvato. Le tabelle restano un mistero",
+      "I conti quadrano. A guardarli da lontano",
+      "Sì alla manovra. Ogni ministro giura di aver vinto"
+    ],
+    "bilancio_ricondotto": [
+      "Bilancio ricondotto al tetto. Il tetto non si discute",
+      "La manovra cala di taglia. Il sarto è il MES"
+    ],
+    "bilancio_respinto": [
+      "Bocciato il bilancio. Si ricomincia dalla prima riga",
+      "La manovra non passa. I conti restano senza padrone"
+    ],
+    "fiducia_respinta": [
+      "Fiducia negata. Il governo prende atto, e il cappotto",
+      "Il governo chiede fiducia. L’aula chiede il conto"
+    ],
+    "sfiducia_approvata": [
+      "Passa la sfiducia. Si libera qualche poltrona",
+      "L’aula ha deciso. Il trasloco può cominciare",
+      "Voto di sfiducia. Gli scatoloni erano già pronti",
+      "La fiducia è finita. Restano i ringraziamenti di rito"
+    ],
+    "sfiducia_respinta": [
+      "Respinta la sfiducia. Il governo sopravvive a sé stesso",
+      "La sfiducia non passa. Gli scatoloni tornano in cantina"
+    ],
+    "sfiducia_scartata": [],
+    "valore_rinviato": [],
+    "valore_non_applicato": [
+      "Legge approvata, valore fermo. Decide il memorandum",
+      "Votata, non applicata. Il calendario lo tiene il MES"
+    ],
+    "misura_decaduta": [
+      "Misure decadute. Gli uffici archiviano senza lutto",
+      "Cade la misura. Nessuno se ne ricorda il nome"
+    ],
+    "confermativo_in_attesa": [
+      "Riforma votata. L’ultima parola agli elettori",
+      "Costituzione ritoccata. In attesa del collaudo"
+    ],
+    "confermativo_senza_voto": [],
+    "referendum_votato": [
+      "Il quesito è sciolto. Le dichiarazioni no",
+      "Il quesito ha la sua risposta. I partiti, le loro scuse"
+    ],
+    "referendum_decaduto": [],
+    "referendum_chiesto": [
+      "Chiesto il referendum. Il palazzo scopre gli elettori",
+      "Referendum in vista. I partiti ripassano il quesito"
+    ],
+    "firme_raccolte": [
+      "Firme depositate. Il palazzo conta le penne",
+      "Le firme ci sono. Il palazzo comincia a leggerle"
+    ],
+    "scissione": [
+      "Nasce un partito nuovo. Lo stesso, ma in due",
+      "Scissione. Ognuno porta via le sue sedie"
+    ],
+    "minaccia_di_scissione": [
+      "Aria di scissione. Si contano i fedeli",
+      "Il partito litiga. Per ora a porte chiuse"
+    ],
+    "minaccia_rientrata": [
+      "Scissione rientrata. Si torna a litigare in famiglia",
+      "Pace fatta nel partito. Fino al prossimo congresso"
+    ],
+    "promessa_verificata": [
+      "Promesse alla verifica. Qualcuno ha la memoria lunga",
+      "Si controllano le promesse. Gli archivi non perdonano"
+    ],
+    "promesse_scadute": [
+      "Promesse scadute. Nessuno ricorda di averle fatte",
+      "Le promesse scadono. I manifesti restano attaccati"
+    ],
+    "promessa_fatta": [
+      "Nuove promesse. La carta, intanto, regge tutto",
+      "Promessa fatta. Il calendario si fa serio"
+    ],
+    "spesa_di_campagna": [
+      "Si spende per la campagna. I manifesti sorridono",
+      "Spese di campagna. Ogni sorriso ha il suo preventivo"
+    ],
+    "campagna_tagliata": [
+      "Campagna ridimensionata. Il sorriso del manifesto, pure",
+      "Si taglia la campagna. I volantini a mezzo servizio"
+    ],
+    "mes_finito": [
+      "Finisce il programma. Il governo ritrova le chiavi",
+      "Via il memorandum. Ora le colpe sono tutte di casa"
+    ],
+    "spread": [],
+    "controllo_ue": [
+      "L’Europa fa i conti. Il governo, gli scongiuri",
+      "Arriva la pagella europea. Si legge in silenzio"
+    ],
+    "procedura_ue": [
+      "Procedura europea in movimento. Si rilegge la lettera",
+      "L’Europa aggiorna la pratica. Il governo, il comunicato"
+    ],
+    "ammenda_ue": [
+      "Arriva la multa europea. La colpa è di chi c’era prima",
+      "Ammenda pagata. Lo sconto non era previsto"
+    ],
+    "ristrutturazione_finita": [
+      "Finita la cura del debito. Il paziente chiede il conto",
+      "Lavori finiti sul debito. Si smonta l’impalcatura"
+    ],
+    "reddito_deluso": [
+      "Redditi delusi. Il governo parla di ripresa percepita",
+      "Il portafoglio protesta. Il palazzo cambia grafico",
+      "Attese tradite. Il ministero prepara una slide",
+      "Promessa la crescita. Consegnata la spiegazione"
+    ],
+    "sondaggio": [],
+    "prima_stima": [],
+    "revisione": [],
+    "situazione_accesa": [
+      "Si accende la spia. Il palazzo cerca l’interruttore",
+      "Allarme acceso. Prima riunione: chi l’ha acceso"
+    ],
+    "situazione_spenta": [
+      "Spia spenta. Il merito trova molti padri",
+      "Si spegne l’allarme. Il palazzo si riprende la scena"
+    ],
+    "crisi_del_debito": [
+      "Lo spread bussa. Il palazzo finge di non essere in casa",
+      "Mercati in fuga. Il governo cerca l’uscita di sicurezza"
+    ],
+    "entrate_di_cassa": [],
+    "risultato_del_voto": [
+      "Gli elettori hanno parlato. I partiti traducono",
+      "Spoglio finito. Comincia quello dei leader"
+    ],
+    "incarico": [
+      "Arriva l’incarico. Cominciano le telefonate",
+      "Incarico conferito. Il totoministri apre le scommesse",
+      "C’è l’incaricato. Ora servono gli amici",
+      "Incarico in tasca. La squadra ancora no"
+    ],
+    "fine_della_partita": [
+      "Il partito esce di scena. Il guardaroba resta aperto",
+      "Seggi azzerati. Il partito si dà alla memorialistica"
+    ],
+    "partito_sciolto": [
+      "Il partito chiude. Le bandiere vanno in soffitta",
+      "Si scioglie il partito. Restano gli ex, numerosi"
+    ],
+    "soddisfazione_variata": [],
+    "minaccia_di_dimissioni": [
+      "Dimissioni pronte. In bella copia, per ora",
+      "Ministri sul piede di partenza. Il piede resta fermo"
+    ],
+    "ministro_esce": [
+      "Si svuotano scrivanie. Le targhe sulle porte si svitano",
+      "Si esce dal governo. Le auto blu restano in cortile"
+    ],
+    "intesa_variata": [],
+    "ultimatum_posto": [
+      "Ultimatum al governo. La pazienza ha una scadenza",
+      "L’alleato alza la voce. Il governo abbassa la sua",
+      "Ultimatum sul tavolo. Il tavolo traballa",
+      "L’alleato mette le condizioni. Per iscritto, in rosso"
+    ],
+    "ultimatum_ritirato": [
+      "Ritirato l’ultimatum. L’offesa resta in archivio",
+      "L’alleato torna a sorridere. A denti stretti"
+    ],
+    "cambio_di_leader": [
+      "Cambia la guida. In sede si sostituiscono i ritratti",
+      "Il partito cambia faccia. Lo specchio è lo stesso"
+    ],
+    "frangia_esce": [
+      "Esce una frangia. La maggioranza si accorcia",
+      "Esce un pezzo di maggioranza. Il resto finge di niente"
+    ],
+    "alleato_esce": [
+      "L’alleato se ne va. Lascia le chiavi e le colpe",
+      "Fuori un alleato. Il governo ricalcola il percorso"
+    ],
+    "rimpasto": [
+      "Rimpasto. Stesso governo, scrivanie diverse",
+      "Si rimescolano le carte. Il mazzo è sempre quello"
+    ],
+    "crisi_aperta": [
+      "Crisi di governo. Il corridoio diventa la sala grande",
+      "Crisi aperta. Comincia la stagione dei caffè lunghi"
+    ],
+    "coalizione_allargata": [
+      "La coalizione si allarga. Si aggiungono sedie al tavolo",
+      "Nuovi alleati a bordo. Il programma si stringe"
+    ],
+    "governo_caduto": [
+      "Cade il governo. Il portone resta aperto al prossimo",
+      "Il governo cade. Restano in piedi gli uscieri"
+    ],
+    "camere_sciolte": [
+      "Camere sciolte. I parlamentari riscoprono il collegio",
+      "Si torna al voto. Le promesse tornano in vetrina"
+    ],
+    "guida_rifiutata": [
+      "Ribaltone in sospeso. Nessuno cede il volante",
+      "Si cambia governo, forse. Il capotavola non si tocca"
+    ],
+    "governo_formato": [
+      "Nasce il governo. Il giuramento regge fino a sera",
+      "Governo nuovo. Le auto blu sono state lavate",
+      "Ministri nominati. Ognuno cerca il suo ufficio",
+      "La squadra è fatta. Resta da trovare il campo"
+    ],
+    "programma_dichiarato": [
+      "Ecco il programma. Le scadenze, a parte",
+      "Il governo dice cosa farà. Il quando, a voce"
+    ],
+    "rottura_dell_impegno": [
+      "Impegno rotto. La colla era elettorale",
+      "Patti traditi. Il palazzo parla di aggiustamenti"
+    ],
+    "evento_nato|situazione": [
+      "Nuovo problema sul tavolo. Il tavolo si allunga",
+      "Il paese segnala un guasto. Il governo cerca il manuale"
+    ],
+    "evento_nato|emergenza": [
+      "Emergenza sul territorio. A palazzo, l’unità di crisi",
+      "Arriva l’emergenza. Il conto arriva subito dopo",
+      "Il territorio chiede aiuto. Il governo, un preventivo",
+      "Emergenza in corso. Si sceglie la giacca a vento"
+    ],
+    "evento_nato|scandalo": [
+      "Scoppia lo scandalo. Torna di moda il garantismo",
+      "Un caso imbarazzante. Le smentite si scrivono a matita"
+    ],
+    "evento_nato|shock": [
+      "Arriva lo shock. Il governo lo chiama congiunturale",
+      "Colpo all’economia. Si cerca un colpevole lontano"
+    ],
+    "evento_nato|debito": [
+      "Le aste vanno deserte. Il governo rifà il listino",
+      "Titoli senza compratori. Il palazzo abbassa la voce"
+    ],
+    "shock_assorbito": [
+      "Lo shock passa di lato. Nessuno lo annuncia",
+      "Uno shock in meno in pagina. I conti lo sentono uguale"
+    ],
+    "valore_in_vigore": [
+      "Entra in vigore. Qualcuno se n’era dimenticato",
+      "La norma diventa vera. Sorpresa negli uffici"
+    ],
+    "arrivo_scartato": [],
+    "posizione_spostata": [
+      "Il partito si sposta. Di poco, per non farsi vedere",
+      "Cambio di posizione. La coerenza resta a casa"
+    ],
+    "partito_di_protesta": [
+      "Nasce un partito di protesta. Gli altri protestano",
+      "Protesta con simbolo. Il palazzo chiude le finestre"
+    ],
+    "coalizione_ia": [
+      "Fidanzamento politico. Le nozze si vedranno alle urne",
+      "Patto fra rivali. Si giurano fedeltà fino al voto"
+    ],
+    "emendamento_chiesto": [
+      "Chiesti emendamenti. Ogni virgola ha il suo padrino",
+      "Il testo non piace a tutti. Arrivano i ritocchi"
+    ],
+    "misura_presentata": [
+      "Nuovo testo in aula. La relazione illustra poco",
+      "Il testo arriva in aula. I banchi fanno finta di niente",
+      "Depositato il testo. La tipografia ringrazia",
+      "Una misura in calendario. Il calendario sospira"
+    ],
+    "proposta_accolta": [],
+    "emendamento_deciso": [],
+    "fiducia_posta": [
+      "Questione di fiducia. Gli emendamenti restano fuori",
+      "Fiducia sul testo. Chi dissente, voti sì lo stesso"
+    ],
+    "sfiducia_presentata": [
+      "Mozione di sfiducia. L’aula si scalda",
+      "Sfiducia depositata. Il destinatario conta gli amici"
+    ],
+    "governo_dimissionario": [
+      "Governo dimissionario. Gli affari correnti corrono",
+      "Il governo getta la spugna. Il ring resta occupato"
+    ]
+  },
+  "didascalie": {
+    "sfiducia_approvata": "«Ma non avevamo contato?»",
+    "bilancio_approvato": "«Torna tutto. Basta non fare la somma»",
+    "legge_respinta": "«Bellissima legge. Peccato per il voto»",
+    "sfiducia_presentata": "«Una mozione? Niente pausa caffè, oggi»",
+    "legge_approvata": "«Passata. Adesso qualcuno la legga»",
+    "governo_formato": "«Lo giuro. Per i dettagli, c’è il gabinetto»",
+    "evento_risolto|emergenza": "«Gli stivali li restituisco lunedì»",
+    "evento_nato|emergenza": "«Qualcuno ha visto il fondo di riserva?»",
+    "ultimatum_posto": "«Ci scrivono gli alleati. Di solito telefonano»",
+    "minaccia_di_dimissioni": "«Firmo, ma a matita»",
+    "minaccia_di_scissione": "«Ce ne andiamo. Appena troviamo il nome»",
+    "ministro_esce": "«Le chiavi le lascio. L’auto blu la riporto domani»",
+    "evento_risolto|situazione": "«Problema risolto. Lo dice la ricevuta»",
+    "reddito_deluso": "«La ripresa c’è. È solo timida»"
+  },
+  "battute": {
+    "maggioranza": "la maggioranza si conta, poi si spera",
+    "agenda": "promesso in agenda, a matita",
+    "cantiere": "la gru c’è, il cantiere si vedrà",
+    "proposta": "sale in ufficio, scende in cassetto",
+    "minaccia": "la porta è socchiusa, apposta",
+    "dimissioni": "chieste con garbo, attese con ansia",
+    "intesa": "l’amicizia si misura in sondaggi",
+    "misura": "in fila per l’aula, col numerino",
+    "legge": "la navetta non ha orari",
+    "posto": "posto riservato, cartellino in vista",
+    "sfiducia": "qualcuno affila la penna",
+    "evento": "il paese bussa alla porta",
+    "situazione": "la spia è accesa, il palazzo guarda altrove",
+    "spread": "i mercati non votano, ma contano"
+  }
 }

@@ -7,6 +7,8 @@ import { siMancanti } from "$lib/opposizione/opposizione";
 import { numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
 import { statoDi } from "$lib/ossatura";
 import { coalizioneDi, quotaVotanti } from "$lib/partiti";
+import { ordineRivelazione, scattaDopo } from "$lib/esito/esito";
+import type { rivelazione } from "$lib/esito/rivelazione.svelte";
 
 export type Scala = { stacco: number; passo: number; rovesciata: boolean };
 
@@ -28,7 +30,10 @@ export type Tracciato = {
   grigio: boolean; // partita finita
   rimando: string | null; // la fetta che riempie il posto vuoto: senza valore il tracciato, col valore lo stacco
   prima: number | null; // il valore al turno prima, dalla serie: la variazione sotto il numero
+  era: string | null; // durante la rivelazione, dopo lo scatto: il testo del valore di prima
+  scatta: boolean; // durante la rivelazione: il valore è appena cambiato
 };
+type Base = Omit<Tracciato, "era" | "scatta">;
 
 export const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
 // «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
@@ -47,7 +52,7 @@ function quota(v: Vista, partito: string): number {
 }
 
 /** Il consenso: senza dato nel sondaggio, caselle tratteggiate e nessun rimando (manca il dato, non una fetta). */
-function consenso(nome: Chiave, q: number, scala: Scala, rosso: boolean, prima: PuntoSerie | undefined): Tracciato {
+function consenso(nome: Chiave, q: number, scala: Scala, rosso: boolean, prima: PuntoSerie | undefined): Base {
   const c = { nome, ramo: null, scala, grigio: false, rimando: null, prima: prima ? prima.consenso * 100 : null };
   return Number.isFinite(q) ? { ...c, valore: q * 100, testo: percentuale(q), rosso } : { ...c, valore: null, testo: "—", rosso: false };
 }
@@ -64,7 +69,7 @@ export function margini(righe: SeggiPartito[], coalizione: string[]) {
 
 export const sottoLoStacco = (v: number, s: Scala) => caselle(v, s).piene <= 3;
 
-function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], prima: PuntoSerie | undefined): Tracciato {
+function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], prima: PuntoSerie | undefined): Base {
   const { camera, senato } = margini(righe, coalizione);
   if (camera === null || senato === null) {
     return { nome, valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
@@ -87,7 +92,7 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
 
   // la serie è della coalizione: senza incarico, in trattativa, la coalizione qui è il solo giocatore e non si confronta
   const primaCoalizione = stato === "trattativa" && v.richieste.length === 0 ? undefined : prima;
-  let primo: Tracciato;
+  let primo: Base;
   if (alGoverno) {
     const stacco = disposizione(v, "premio") === "nessuno" ? 50 : punti(v, "soglia_premio");
     const p = v.proiezione && margini(v.proiezione, coalizione);
@@ -100,7 +105,7 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
     primo = consenso("tracciato.consenso_partito", q, scala, sottoLoStacco(q * 100, scala), undefined);
   }
 
-  const secondo: Tracciato = turnoZero
+  const secondo: Base = turnoZero
     ? maggioranza("tracciato.seggi_attesi", v.proiezione ?? [], coalizione, prima)
     : alGoverno
       ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, primaCoalizione)
@@ -108,11 +113,36 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
         ? { nome: "tracciato.per_farlo_cadere", valore: siMancanti(v, sfiducia), testo: numero(siMancanti(v, sfiducia)), ramo: null, scala: MANCANTI, rosso: false, grigio: false, rimando: null, prima: null }
         : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
 
-  const terzo: Tracciato = {
+  const terzo: Base = {
     nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
     rosso: false, grigio: false, rimando: "11g", prima: prima ? prima.spread_pb : null,
   };
 
-  const tre: [Tracciato, Tracciato, Tracciato] = [primo, secondo, terzo];
+  const tre = [primo, secondo, terzo].map((x) => ({ ...x, era: null, scatta: false })) as [Tracciato, Tracciato, Tracciato];
   return v.finita ? (tre.map((x) => ({ ...x, rosso: false, grigio: true, prima: null })) as typeof tre) : tre;
+}
+
+const MOSSI = ["consenso", "margine", "spread"] as const;
+
+/**
+ * I tre tracciati durante la rivelazione (piano 11f, lettura 6): ciascuno resta quello di `prima` finché la voce
+ * che lo muove non è passata, poi è quello di `v` con `era`. Quello che nessuna voce muove scatta alla fine.
+ */
+export function tracciatiRivelati(v: Vista, serie: PuntoSerie[], r: typeof rivelazione, sfiducia?: AnteprimaSfiducia | null): [Tracciato, Tracciato, Tracciato] {
+  const nuovi = tracciatiDi(v, serie, sfiducia);
+  if (!r.prima) return nuovi;
+  // l'anteprima della sfiducia è della Vista nuova: sulla Vista di prima il tracciato resta senza dato
+  const vecchi = tracciatiDi(r.prima, r.serie_prima);
+  const evidenza = ordineRivelazione(v.esito);
+  const passato = (tr: (typeof MOSSI)[number]) => {
+    if (r.ferma) return true;
+    const i = scattaDopo(v.esito, tr);
+    return i !== null && r.passo >= Math.max(1, evidenza.filter((k) => k <= i).length);
+  };
+  // una grandezza diversa (turno zero → governo, governo ↔ opposizione) non si confronta: niente «era», niente lampo
+  return nuovi.map((n, i) =>
+    !passato(MOSSI[i]) ? vecchi[i]
+    : vecchi[i].nome !== n.nome ? n
+    : { ...n, era: vecchi[i].testo, scatta: n.testo !== vecchi[i].testo },
+  ) as [Tracciato, Tracciato, Tracciato];
 }

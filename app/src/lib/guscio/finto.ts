@@ -14,6 +14,8 @@ type Campioni = {
   bilancio?: any;
   /** 28-: l'opposizione, 30-: l'eredità; ?stato= sceglie lo stato del 28 che porta le anteprime della sfiducia */
   opposizione?: any; eredita?: any;
+  /** 25-: la catena delle chiusure, servita da `registro` */
+  catena?: any[];
   /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
   servita?: any;
   /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
@@ -41,6 +43,16 @@ export function vistaDi(campione: any): Vista | null {
   // lo stato del 21 ha prima e vista: la Vista di partenza è la prima
   if (campione && typeof campione === "object" && "cassa_prima" in campione && campione.prima) return campione.prima;
   return campione?.vista ?? campione?.prima ?? null;
+}
+
+/** ?vista=25-&chiusura=N: la Vista è il dopo della chiusura N, chiudi_turno dà il dopo della N+1. */
+export function dallaChiusura(catena: any[], n: number) {
+  return { ...catena[n], prima: catena[n].dopo, dopo: catena[n + 1]?.dopo };
+}
+
+/** ?stato=sfiducia&da=dopo_comando: si parte dalla Vista chiave `da` dello stato, e chiudi_turno dà la sua Vista (il turno chiuso). */
+export function daUnaChiave(campione: any, da: string) {
+  return { ...campione, vista: campione[da], dopo: campione.vista };
 }
 
 function partitaDi(c: any) {
@@ -295,6 +307,7 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
       if (typeof costo === "number") return costo;
       return esito(costo ?? null, comando);
     }
+    case "registro": return presente(c.catena?.[args.turno as number]?.dopo.esito, comando);
     case "serie": return campione?.serie ?? [];
     case "bozza_bilancio": {
       const bil = c.bilancio;
@@ -343,6 +356,11 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
   const stato = url.searchParams.get("stato");
   let campione: any = nome ? await carica(nome) : null;
   if (campione && stato !== null) campione = campione[stato];
+  const catena = ((await carica("25-")) as any[] | null) ?? undefined;
+  const chiusura = url.searchParams.get("chiusura");
+  if (Array.isArray(campione) && chiusura !== null) campione = dallaChiusura(campione, Number(chiusura));
+  const da = url.searchParams.get("da");
+  if (campione && !Array.isArray(campione) && da !== null && campione[da]) campione = daUnaChiave(campione, da);
   const c: Campioni = {
     campione,
     turnoZero: await carica("01-"),
@@ -361,6 +379,7 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     bilancio: await carica("22-"),
     opposizione: await carica("28-"),
     eredita: await carica("30-"),
+    catena,
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");

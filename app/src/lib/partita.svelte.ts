@@ -1,7 +1,9 @@
 // La partita in corso, condivisa fra cornice e sezioni.
 import { goto } from "$app/navigation";
 import { comeErrore, guscio } from "$lib/guscio/chiamate";
-import { casa } from "$lib/ossatura";
+import { ordineRivelazione } from "$lib/esito/esito";
+import { rivelazione } from "$lib/esito/rivelazione.svelte";
+import { fattori, impostazioni, sistema } from "$lib/impostazioni.svelte";
 import { bozza } from "$lib/bilancio/bozza.svelte";
 import { t } from "$lib/testi/t";
 import type { Comando } from "$lib/tipi/Comando";
@@ -27,7 +29,7 @@ class Partita {
    * nuova vale comunque: se poi la serie si guasta resta quella di prima e il guasto lo dice. Il rifiuto si rilancia.
    * Se nel frattempo si è usciti all'edicola torna null e non tocca niente.
    */
-  async #esegui(chiamata: () => Promise<Vista>): Promise<Vista | null> {
+  async #esegui(chiamata: () => Promise<Vista>, prima_di_sostituire?: (nuova: Vista) => void): Promise<Vista | null> {
     if (this.occupato) return null;
     this.occupato = true;
     const giro = this.#giro;
@@ -44,6 +46,8 @@ class Partita {
         return null;
       }
       if (scartato()) return null;
+      // prima di sostituire la Vista, nello stesso giro: la pagina che la mostra non si compone, per un istante, già rivelata
+      prima_di_sostituire?.(vista);
       this.vista = vista;
       this.guasto = null;
       try {
@@ -62,21 +66,44 @@ class Partita {
 
   fonda = async (scenario: SuMisura | null, fondazione: Fondazione) => {
     const vista = await this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
-    if (vista) this.#id = null;
+    if (vista) {
+      this.#id = null;
+      rivelazione.chiudi();
+    }
     return vista;
   };
   riprendi = async (id: string) => {
     const vista = await this.#esegui(() => guscio.riprendi(id));
-    if (vista) this.#id = id;
+    if (vista) {
+      this.#id = id;
+      rivelazione.chiudi();
+    }
     return vista;
   };
   /** Come fonda e riprendi: Vista nuova, o null davanti a un guasto; il rifiuto si rilancia al chiamante. */
   comanda = (comando: Comando) => this.#esegui(() => guscio.comanda(comando));
 
-  /** Fino a 11f il turno nuovo si apre sulla sua casa (spec:290). keepFocus: il pulsante resta nella cornice, e il fuoco con lui. */
+  /**
+   * Il turno nuovo si apre sulla prima pagina, anche se la partita è finita (lettura 2); la rivelazione parte dalla Vista e dalla serie
+   * di prima, e a velocità istantanea non parte. keepFocus: il pulsante resta nella cornice, e il fuoco con lui.
+   */
   chiudiTurno = async () => {
-    const vista = await this.#esegui(guscio.chiudiTurno);
-    if (vista) await goto(`/partita/${casa(vista)}`, { keepFocus: true });
+    const [prima, serie] = [this.vista, this.serie];
+    const k = fattori(impostazioni, sistema.riduce).k;
+    const vista = await this.#esegui(guscio.chiudiTurno, (nuova) => {
+      // a velocità istantanea la pagina è già composta (spec:407): una Vista di prima di una chiusura precedente non deve restare
+      if (prima && k > 0) rivelazione.inizia(prima, serie, ordineRivelazione(nuova.esito).length);
+      else rivelazione.chiudi();
+    });
+    if (!vista) return;
+    try {
+      await goto("/partita/prima-pagina", { keepFocus: true });
+    } catch (e) {
+      rivelazione.chiudi();
+      throw e;
+    }
+    // goto annullato: PrimaPagina non si monta e nessuno chiuderebbe la rivelazione
+    if (typeof location !== "undefined" && !location.pathname.endsWith("/prima-pagina")) rivelazione.chiudi();
   };
 
   /** L'indice della partita in corso: per id se è stata ripresa, altrimenti la più recente col nome del giocatore. */
@@ -102,6 +129,7 @@ class Partita {
     } catch (e) {
       rifiuto = e;
     }
+    if (vista) rivelazione.chiudi();
     if (vista || giro !== this.#giro) return vista;
     const guasto = this.guasto;
     const id = (await this.indice().catch(() => null))?.id;
@@ -134,6 +162,7 @@ class Partita {
   /** Verso l'edicola: il guscio non ha niente da fare. */
   esci = () => {
     this.#giro++;
+    rivelazione.chiudi();
     this.#id = null;
     this.vista = null;
     this.serie = [];
