@@ -335,6 +335,12 @@ describe("partita", () => {
       partita.esci();
       partita.vista = bozzaVista;
     });
+    // la cache com'è quando #esegui chiede la serie: la Vista nuova è già assegnata, e l'effect del Registro l'ha già vista
+    const turniAllaSerie = () => {
+      const visti: unknown[] = [];
+      guscio.serie.mockImplementation(async () => (visti.push(registroCache.turni), serieNuova));
+      return visti;
+    };
 
     it("riavvolgi: la Vista del turno e la serie nuova", async () => {
       guscio.riavvolgi.mockResolvedValue(dopo);
@@ -407,8 +413,10 @@ describe("partita", () => {
       guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
       guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
       guscio.riprendi.mockResolvedValue(bozzaVista);
+      const allaSerie = turniAllaSerie();
       await partita.riavvolgi(3);
       expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(allaSerie).toEqual([letti]);
       expect(registroCache.turni).toBe(letti);
     });
 
@@ -417,8 +425,26 @@ describe("partita", () => {
       guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
       guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
       guscio.riprendi.mockResolvedValue({ ...bozzaVista, turno: bozzaVista.turno - 2 } as Vista);
+      const allaSerie = turniAllaSerie();
       await partita.riavvolgi(3);
+      // già vuota quando la Vista nuova è in vista: l'effect del Registro che ricarica la riempie, e niente la azzera dopo
+      expect(allaSerie).toEqual([[]]);
       expect(registroCache.turni).toEqual([]);
+    });
+
+    it("riprendi, fonda e riavvolgi riuscito svuotano il registro prima che la Vista nuova sia in vista", async () => {
+      const allaSerie = turniAllaSerie();
+      const riempi = () => (registroCache.turni = [{ turno: 0, guasto: "x" }]);
+      guscio.riprendi.mockResolvedValue(dopo);
+      riempi();
+      await partita.riprendi("a");
+      guscio.fondaPartita.mockResolvedValue(dopo);
+      riempi();
+      await partita.fonda(null, {} as Fondazione);
+      guscio.riavvolgi.mockResolvedValue(dopo);
+      riempi();
+      await partita.riavvolgi(2);
+      expect(allaSerie).toEqual([[], [], []]);
     });
 
     it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {

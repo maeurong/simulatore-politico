@@ -14,6 +14,9 @@ import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SuMisura } from "$lib/tipi/SuMisura";
 import type { Vista } from "$lib/tipi/Vista";
 
+// come `prima_di_sostituire`: l'effect del Registro che vede il turno nuovo deve ricaricare su una cache già vuota, non essere azzerato dopo
+const svuotaRegistro = () => registroCache.svuota();
+
 class Partita {
   // raw: la Vista si sostituisce intera, mai si modifica sul posto
   vista = $state.raw<Vista | null>(null);
@@ -68,23 +71,19 @@ class Partita {
   }
 
   fonda = async (scenario: SuMisura | null, fondazione: Fondazione) => {
-    const vista = await this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
+    const vista = await this.#esegui(() => guscio.fondaPartita(scenario, fondazione), svuotaRegistro);
     if (vista) {
       this.#id = null;
       rivelazione.chiudi();
-      registroCache.svuota();
     }
     return vista;
   };
-  riprendi = async (id: string) => {
-    const vista = await this.#riprendi(id);
-    if (vista) registroCache.svuota();
-    return vista;
-  };
-  // senza svuotare il registro: lo decide il riallineamento di riavvolgi. Allo stesso turno i turni letti valgono ancora e il Registro
-  // resta montato col rifiuto; a un turno diverso (cancellazioni interrotte a metà) si svuota, e il Registro ricarica da sé su vista.turno
-  async #riprendi(id: string) {
-    const vista = await this.#esegui(() => guscio.riprendi(id));
+  riprendi = (id: string) => this.#riprendi(id, svuotaRegistro);
+  // il registro lo svuota `prima_di_sostituire`; il riallineamento di riavvolgi lo svuota solo se il turno è cambiato. Allo stesso turno
+  // i turni letti valgono ancora e il Registro resta montato col rifiuto; a un turno diverso (cancellazioni interrotte a metà) si svuota,
+  // e il Registro ricarica da sé su vista.turno
+  async #riprendi(id: string, prima_di_sostituire: (nuova: Vista) => void) {
+    const vista = await this.#esegui(() => guscio.riprendi(id), prima_di_sostituire);
     if (vista) {
       this.#id = id;
       rivelazione.chiudi();
@@ -183,20 +182,18 @@ class Partita {
       let rifiuto: unknown = null;
       let vista: Vista | null = null;
       try {
-        vista = await this.#esegui(() => guscio.riavvolgi(turno));
+        vista = await this.#esegui(() => guscio.riavvolgi(turno), svuotaRegistro);
       } catch (e) {
         rifiuto = e;
       }
-      if (vista) {
-        rivelazione.chiudi();
-        registroCache.svuota();
-      }
+      if (vista) rivelazione.chiudi();
       if (vista || giro !== this.#giro) return vista;
       const guasto = this.guasto;
       const id = (await this.indice().catch(() => null))?.id;
       if (id) {
-        const riaperta = await this.#riprendi(id).catch(() => null);
-        if (riaperta && riaperta.turno !== turnoPrima) registroCache.svuota();
+        await this.#riprendi(id, (nuova) => {
+          if (nuova.turno !== turnoPrima) registroCache.svuota();
+        }).catch(() => null);
         // il guasto di riavvolgi vale più di quello (o del silenzio) del riallineamento, salvo che nel frattempo si sia usciti
         if (guasto && giro === this.#giro) this.guasto = guasto;
       }
