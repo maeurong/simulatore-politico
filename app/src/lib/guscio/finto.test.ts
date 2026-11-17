@@ -16,6 +16,8 @@ import anteprimeJson from "../../../../.scratch/v1-piano-11-ui/viste/20-anteprim
 import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import bilancioJson from "../../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
+import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import ereditaJson from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const editor: any = editorJson;
@@ -71,7 +73,7 @@ describe("rispondi", () => {
     expect(r).toEqual(editor.griglia.debito_pil[0].riepilogo);
   });
   it("comando ignoto è rifiuto", () => {
-    expect(() => rispondi("anteprima_sfiducia", {}, c)).toThrow(
+    expect(() => rispondi("comando_che_non_c_e", {}, c)).toThrow(
       expect.objectContaining({ specie: "rifiuto", testo: expect.stringContaining("non nel campione") }),
     );
   });
@@ -414,5 +416,29 @@ describe("il 22 del Bilancio", () => {
     expect(comanda({ tipo: "emendamento", misura: m, partito: "centrodestra", accogli: true })).toEqual(bil.emendamenti_decisi.vista);
     expect(comanda({ tipo: "emendamento", misura: m, partito: "destra", accogli: false })).toEqual(bil.emendamenti_decisi.vista);
     expect(() => comanda({ tipo: "emendamento", misura: m, partito: "destra", accogli: true })).toThrow(rifiuta("non nel campione: comanda"));
+  });
+});
+
+describe("rispondi: opposizione ed eredità", () => {
+  const op: any = opposizioneJson;
+  const ered: any = ereditaJson;
+  const co = { ...c, campione: op.sfiducia, opposizione: op, eredita: ered, stato: "sfiducia" };
+  it("anteprima_sfiducia: il governo per dicastero null, il ministro per id", () => {
+    expect(rispondi("anteprima_sfiducia", { dicastero: null }, co)).toEqual(op.sfiducia.anteprime.governo.ok);
+    expect(rispondi("anteprima_sfiducia", { dicastero: "giustizia" }, co)).toEqual(op.sfiducia.anteprime.ministri.giustizia.ok);
+  });
+  it("anteprima_sfiducia senza voce nel campione è rifiuto", () => {
+    expect(() => rispondi("anteprima_sfiducia", { dicastero: "nessuno" }, co)).toThrow(
+      expect.objectContaining({ specie: "rifiuto", testo: expect.stringContaining("non nel campione") }),
+    );
+  });
+  it("comanda Sfiducia dà la Vista dopo il comando dello stato", () => {
+    expect(rispondi("comanda", { comando: { tipo: "sfiducia", dicastero: null } }, co)).toEqual(op.sfiducia.dopo_comando);
+  });
+  it("abbandona dà l'eredità, riavvolgi la Vista del 30, conferma_eredita nulla", () => {
+    const ce = { ...c, campione: ered, opposizione: op, eredita: ered };
+    expect(rispondi("abbandona", {}, ce)).toEqual(ered.eredita);
+    expect(rispondi("riavvolgi", { turno: 3 }, ce)).toEqual(ered.vista);
+    expect(rispondi("conferma_eredita", {}, ce)).toBeNull();
   });
 });

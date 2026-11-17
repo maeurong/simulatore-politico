@@ -12,6 +12,8 @@ type Campioni = {
   conti?: any;
   /** 22-: il Bilancio, caricato sempre; varianti nel bozza_04 */
   bilancio?: any;
+  /** 28-: l'opposizione, 30-: l'eredità; ?stato= sceglie lo stato del 28 che porta le anteprime della sfiducia */
+  opposizione?: any; eredita?: any;
   /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
   servita?: any;
   /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
@@ -224,6 +226,7 @@ function dopoComando(cmd: any, c: Campioni): unknown {
       }
       return piena;
     }
+    case "sfiducia": return c.opposizione?.sfiducia?.dopo_comando;
     case "presenta_proposta": case "linea": return c.aula?.opposizione_proposta?.vista;
     case "presenta_bilancio": return uguali(cmd.bilancio, c.bilancio?.bozza_04?.bozza) ? c.bilancio.presentato.vista : undefined;
     case "emendamento": {
@@ -238,10 +241,17 @@ function dopoComando(cmd: any, c: Campioni): unknown {
 }
 
 export function rispondi(comando: string, args: Record<string, unknown>, c: Campioni): unknown {
-  const { campione, edicola, editor, fondazione } = c;
+  const { campione, edicola, editor, fondazione, stato } = c;
   switch (comando) {
     case "chiudi_turno": return presente(campione?.dopo, comando);
     case "comanda": return dopoComando(args.comando ?? {}, c) ?? presente(campione?.dopo_comando, comando);
+    case "anteprima_sfiducia": {
+      const a = (c.opposizione?.[stato ?? ""]?.anteprime ?? c.opposizione?.sfiducia?.anteprime) ?? null;
+      return esito(args.dicastero == null ? a?.governo : a?.ministri?.[args.dicastero as string], comando);
+    }
+    case "abbandona": return presente(c.eredita?.eredita, comando);
+    case "conferma_eredita": return null;
+    case "riavvolgi": return presente(c.eredita?.vista, comando);
     case "anteprima_campagna": return anteprimaCampagna(args.spese as any[], c.campagna);
     case "elettori_campione": {
       // il campione del 23 porta il suo stato; fuori dal 23 vale quello del governo
@@ -337,6 +347,8 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     anteprime: await carica("20-"),
     conti: await carica("21-"),
     bilancio: await carica("22-"),
+    opposizione: await carica("28-"),
+    eredita: await carica("30-"),
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");

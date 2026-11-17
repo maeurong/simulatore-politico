@@ -2,6 +2,8 @@
 import type { Vista } from "$lib/tipi/Vista";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
+import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
+import { siMancanti } from "$lib/opposizione/opposizione";
 import { numero, percentuale, segnato, type Chiave } from "$lib/testi/t";
 import { statoDi } from "$lib/ossatura";
 import { coalizioneDi, quotaVotanti } from "$lib/partiti";
@@ -31,6 +33,8 @@ export type Tracciato = {
 const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
 // ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
 // il tracciato porta rimando "11g"
+// «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
+const MANCANTI: Scala = { stacco: 105, passo: 15, rovesciata: true };
 const SPREAD: Scala = { stacco: 550, passo: 75, rovesciata: true };
 
 const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id === id)?.in_vigore;
@@ -73,7 +77,7 @@ function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], 
   };
 }
 
-export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciato, Tracciato] {
+export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaSfiducia | null): [Tracciato, Tracciato, Tracciato] {
   const prima = serie.find((p) => p.turno === v.turno - 1);
   // a partita finita valgono le regole dell'ultimo stato, che si legge dagli alleati: governa è sempre falso
   const stato = v.finita ? (v.alleati.length ? "governo" : "opposizione") : statoDi(v);
@@ -100,7 +104,9 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[]): [Tracciato, Tracciat
     ? maggioranza("tracciato.seggi_attesi", v.proiezione ?? [], coalizione, prima)
     : alGoverno
       ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, primaCoalizione)
-      : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: "11e", prima: null };
+      : sfiducia
+        ? { nome: "tracciato.per_farlo_cadere", valore: siMancanti(v, sfiducia), testo: numero(siMancanti(v, sfiducia)), ramo: null, scala: MANCANTI, rosso: false, grigio: false, rimando: null, prima: null }
+        : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: "11e", prima: null };
 
   const terzo: Tracciato = {
     nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
