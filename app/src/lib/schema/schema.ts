@@ -10,7 +10,7 @@ import { euro } from "$lib/governo/governo";
 import { CAUSE } from "$lib/partiti/schieramento";
 import { coalizioneDi, nomeDi } from "$lib/partiti";
 import { margini, MARGINE, sottoLoStacco } from "$lib/tracciati";
-import { periodoDi, votaOra } from "$lib/aula/aula";
+import { periodoDi, quandoMisura, slitta, votaOra } from "$lib/aula/aula";
 import { pagina } from "$lib/esito/esito";
 import { statoDi, type Sezione } from "$lib/ossatura";
 import { elenco, numero, segnato, t, type Chiave } from "$lib/testi/t";
@@ -195,11 +195,12 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
   // aula
   for (const c of v.calendario) {
     const da = c.promotore ? partito(c.promotore) : c.proponente ? `d:${c.proponente}` : c.forma === "bilancio" ? "d:economia_finanze" : PDC;
-    const ora = votaOra(v, c), f = c.forbice;
+    // nel turno del bilancio o di crisi la legge col voto adesso slitta: lo decide aula.ts, come in Aula
+    const sl = slitta(v, c), ora = votaOra(v, c) && !sl, f = c.forbice;
     const origine = c.promotore ? t("schema.origine_posto", { partito: nomeDi(v, c.promotore) }) : c.proponente ? t("schema.origine_dicastero", { dicastero: nodi.get(`d:${c.proponente}`)?.nome as string ?? c.proponente }) : "";
     filo({ id: `cal:${c.id}`, da, a: "camera", tipo: "misura", sezione: "aula", fonte: "calendario",
-      etichetta: ora ? t("schema.et_al_voto") : t("schema.et_in_aula", { periodo: t(`schema.tr_${c.voto.trimestre}` as Chiave) }),
-      frase: t("schema.frase_misura", { nome: c.nome, origine, quando: ora ? t("schema.quando_fine_turno") : t("schema.quando_in", { periodo: periodoDi(v, c.voto) }),
+      etichetta: sl ? t("schema.et_slitta") : ora ? t("schema.et_al_voto") : t("schema.et_in_aula", { periodo: t(`schema.tr_${c.voto.trimestre}` as Chiave) }),
+      frase: t("schema.frase_misura", { nome: c.nome, origine, quando: sl ? quandoMisura(v, c, true) : ora ? t("schema.quando_fine_turno") : t("schema.quando_in", { periodo: periodoDi(v, c.voto) }),
         c0: f.camera[0], c1: f.camera[1], cm: f.maggioranza_camera, s0: f.senato[0], s1: f.senato[1], sm: f.maggioranza_senato, bilico: f.in_bilico ? t("schema.in_bilico") : "" }),
       contrario: f.in_bilico, ritardo: !ora });
   }

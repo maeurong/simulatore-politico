@@ -55,6 +55,9 @@ describe("Schema, render", () => {
       expect(body.match(/<li>/g)).toHaveLength(v.esito.filter((e) => e.in_evidenza).length);
       expect(body).toContain(t("schema.senza_posto"));
       expect(body).toContain(t("schema.solo_prima"));
+      // la legenda viene dopo l'elenco: la notizia sta sopra
+      expect(body.indexOf(t("schema.notizie"))).toBeLessThan(body.indexOf(t("schema.leg_tondo")));
+      expect(t("schema.leg_tondo")).toMatch(/qui sopra/);
     });
     it("il filo col tondo porta la battuta del suo tipo, a biro", () => {
       const body = dettaglio(v, ev);

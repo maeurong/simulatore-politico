@@ -8,6 +8,7 @@ import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizion
 import registro from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import { tracciatiDi } from "$lib/tracciati";
 import { pagina } from "$lib/esito/esito";
+import { quandoMisura } from "$lib/aula/aula";
 import { schema, soloInPrimaPagina, tondiDi } from "./schema";
 
 const zero = turnoZero as unknown as Vista;
@@ -141,6 +142,20 @@ describe("schema, dimissioni, posto ed esiti (04)", () => {
   });
 });
 
+describe("schema, la misura che slitta (04, turno del bilancio)", () => {
+  it("la riforma col voto adesso slitta come in Aula: in ritardo, «slitta», e la frase dice dove", () => {
+    const c = ordinario.calendario.find((m) => m.id === 1)!;
+    const f = tipi(ordinario, "misura").find((x) => x.id === "cal:1")!;
+    expect([f.etichetta, f.ritardo]).toEqual([t("schema.et_slitta"), true]);
+    expect(f.frase).toContain(quandoMisura(ordinario, c, true));
+  });
+  it("il bilancio non slitta: al voto a fine turno", () => {
+    const f = tipi(ordinario, "misura").find((x) => x.id === "cal:3")!;
+    expect([f.etichetta, f.ritardo]).toEqual([t("schema.et_al_voto"), false]);
+    expect(f.frase).toContain(t("schema.quando_fine_turno"));
+  });
+});
+
 describe("tondi dello schema (25, chiusura 3, dopo)", () => {
   const v = (registro as unknown as { dopo: Vista }[])[3].dopo;
   const tondi = (w: Vista) => tondiDi(w, schema(w));
@@ -175,14 +190,12 @@ describe("tondi dello schema (25, chiusura 3, dopo)", () => {
     expect(T.nodi.get(`d:${d}`)).toEqual([e.n]);
   });
   it("i numeri seguono l'ordine della pagina, testa al numero 1", () => {
-    const T = tondi(v), p = pagina(v.esito);
-    expect(T.elenco.map((e) => e.n)).toEqual(T.elenco.map((_, i) => i + 1));
-    expect(T.elenco.map((e) => e.voce)).toEqual([p.testa!, ...p.colonne].map((i) => v.esito[i]));
-    expect(T.elenco[0].voce.tipo).toBe("evento_risolto");
-    // una testa che nella chiusura viene dopo prende comunque il numero 1
+    const ordine = ["evento_risolto", "proposta_respinta", "cantiere_fermo", "legge_approvata", "reddito_deluso", "shock_assorbito", "evento_nato"];
+    const T = tondi(v);
+    expect(T.elenco.map((e) => [e.n, e.voce.tipo])).toEqual(ordine.map((x, i) => [i + 1, x]));
+    // una testa che nella chiusura viene dopo prende il numero 1, le altre restano nell'ordine della chiusura
     const w = tondi(cambia(v, "shock_assorbito", { criticita: "critica", precedenza: 9 }));
-    expect(w.elenco[0].voce.tipo).toBe("shock_assorbito");
-    expect(w.elenco.filter((e) => e.voce.in_evidenza)).toHaveLength(T.elenco.length);
+    expect(w.elenco.map((e) => e.voce.tipo)).toEqual(["shock_assorbito", ...ordine.filter((x) => x !== "shock_assorbito")]);
   });
   it("le voci fuori dalla prima pagina non hanno numero", () => {
     expect(tondi(v).elenco).toHaveLength(v.esito.filter((e) => e.in_evidenza).length);
@@ -197,6 +210,35 @@ describe("tondi dello schema (25, chiusura 3, dopo)", () => {
     const T = tondi(zero);
     expect(T.elenco).toEqual([]);
     expect(T.fili.size + T.nodi.size).toBe(0);
+  });
+});
+
+describe("tondi dello schema, i posti della lettura 8 e il loro ordine", () => {
+  const ev = ordinario.eventi[0];
+  const TUTTI = ["spread", "sfiducia", "cal:1", "es:1", "min:sanita", "prop:sanita", "dim:sanita", "al:destra", `ev:${ev.nome}`, "d:sanita", "p:destra"];
+  const base = { tipo: "sondaggio", criticita: "notevole", precedenza: 0, in_evidenza: true, tono: "ordinario", fatto: "f", causa: "",
+    partito: null, dicastero: null, regione: null, misura: null, disposizioni: [], famiglia: null, dettagli: [] };
+  // i posti che esistono: i fili e le righe sono gli id della lista, meno quelli tolti
+  const posto = (voce: object, tolti: string[] = []) => {
+    const ids = TUTTI.filter((x) => !tolti.includes(x));
+    const S = { fili: ids.filter((x) => !/^[dp]:/.test(x)).map((id) => ({ id })), nodi: ids.filter((x) => /^[dp]:/.test(x)).map((id) => ({ id })) } as unknown as Parameters<typeof tondiDi>[1];
+    return tondiDi({ ...ordinario, esito: [{ ...base, ...voce }] } as Vista, S).elenco[0].posto;
+  };
+  it.each([
+    ["spread", { tipo: "spread" }, [], "spread"],
+    ["sfiducia, anche col partito", { tipo: "sfiducia_presentata", partito: "destra" }, [], "sfiducia"],
+    ["misura e partito: cal:, non al:", { tipo: "legge_approvata", misura: 1, partito: "destra" }, [], "cal:1"],
+    ["misura fuori calendario: es:", { tipo: "legge_respinta", misura: 1 }, ["cal:1"], "es:1"],
+    ["minaccia: min:", { tipo: "minaccia_di_dimissioni", dicastero: "sanita" }, [], "min:sanita"],
+    ["proposta: prop:", { tipo: "proposta_respinta", dicastero: "sanita" }, [], "prop:sanita"],
+    ["ministro che esce: dim:", { tipo: "ministro_esce", dicastero: "sanita" }, [], "dim:sanita"],
+    ["dicastero senza filo del tipo: la riga d:", { tipo: "cantiere_fermo", dicastero: "sanita" }, [], "d:sanita"],
+    ["partito: al:", { tipo: "intesa_variata", partito: "destra" }, [], "al:destra"],
+    ["partito senza filo d'intesa: la riga p:", { tipo: "scissione", partito: "destra" }, ["al:destra"], "p:destra"],
+    ["evento: stessa famiglia e regione", { tipo: "evento_nato", famiglia: ev.famiglia, regione: "emilia_romagna" }, [], `ev:${ev.nome}`],
+    ["evento in un'altra regione: nessun posto", { tipo: "evento_nato", famiglia: ev.famiglia, regione: "lazio" }, [], null],
+  ] as const)("%s", (_, voce, tolti, atteso) => {
+    expect(posto(voce, [...tolti])).toBe(atteso);
   });
 });
 

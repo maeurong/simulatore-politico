@@ -18,6 +18,11 @@
   const T = $derived(tondiDi(vista, tutto));
   const filtra = $derived(T.fili.size + T.nodi.size > 0);
   let solo = $state(false);
+  // lo schema si apre su tutti i fili (ticket 29): a turno nuovo il filtro si spegne
+  $effect(() => {
+    void vista.turno;
+    solo = false;
+  });
   const S = $derived(solo && filtra ? soloInPrimaPagina(tutto, T) : tutto);
   let scelta = $state<Scelta>(null);
   // una scelta che la Vista nuova (o il filtro) non ha più si lascia cadere
