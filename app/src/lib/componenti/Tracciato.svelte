@@ -70,10 +70,10 @@
     transition: opacity calc(var(--t-casella) * var(--k)) steps(1, jump-end) calc((9 - var(--i)) * var(--t-casella) * var(--k));
   }
   .cas i.on::after { opacity: 1; transition-delay: calc(var(--i) * var(--t-casella) * var(--k)) }
-  /* il lampo è una dissolvenza di opacità: col movimento spento resta ammesso (spec, storia 55); nel tono grave il giallo è trasparente */
+  /* il lampo scatta (steps, come le caselle): acceso e spento a ogni fotogramma chiave, senza sfumare; è opacità, e col movimento spento resta ammesso (spec, storia 55); nel tono grave il giallo è trasparente */
   .cas i.lampo::before {
     content: ""; position: absolute; inset: -1.5px; z-index: 1; background: var(--giallo);
-    animation: lampo calc(1600ms * var(--k)) linear both;
+    animation: lampo calc(1600ms * var(--k)) steps(1, jump-end) both;
   }
   @keyframes lampo { 0%, 20% { opacity: 1 } 35% { opacity: 0 } 50%, 65% { opacity: 1 } 100% { opacity: 0 } }
   :global(:root[data-movimento="spento"]) .cas i::after { transition-duration: 0s; transition-delay: 0s }
