@@ -46,6 +46,28 @@ describe("livelli del territorio", () => {
     expect(u.soglie).toEqual([]);
     expect(u.classe(5)).toBe(0);
   });
+  it("classi: sulle soglie 0,2 0,4 0,6 0,8 il valore passa alla classe sopra", () => {
+    const p = classi([0, 1], "pericolosita");
+    expect([0.1999, 0.2, 0.4, 0.6, 0.8, 0.9999].map(p.classe)).toEqual([0, 1, 2, 3, 4, 4]);
+  });
+  it("classi: pericolosità con valori tutti uguali tiene i passi fissi, non una classe sola", () => {
+    const p = classi([0.5, 0.5], "pericolosita");
+    expect(p.soglie).toEqual([0.2, 0.4, 0.6, 0.8]);
+    expect(p.classe(0.5)).toBe(2);
+  });
+  it("classi: senza valori non ci sono soglie e ogni valore è nella classe 0", () => {
+    const u = classi([], "reddito");
+    expect([u.soglie, u.classe(7)]).toEqual([[], 0]);
+  });
+  it("valoriDi: la pericolosità senza tipo è il totale", () => {
+    expect(valoriDi(governo, "pericolosita").lombardia).toBe(lombardia.pericolosita.totale);
+  });
+  it("votoPerRegione: una regione assente dall'ultima elezione non ha voce", () => {
+    const e = governo.elezioni.at(-1)!;
+    const v = { ...governo, elezioni: [{ ...e, regioni: e.regioni.filter((r) => r.regione !== "lombardia") }] } as Vista;
+    expect(votoPerRegione(v)!.lombardia).toBeUndefined();
+    expect(votoPerRegione(v)!.toscana).toBeDefined();
+  });
   it("votoPerRegione: l'ultima elezione, null senza", () => {
     expect(votoPerRegione(zero)).toBeNull();
     expect(votoPerRegione(governo)!.lombardia.primo).toBe(governo.elezioni.at(-1)!.regioni.find((r) => r.regione === "lombardia")!.primo);
