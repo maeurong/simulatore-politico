@@ -81,7 +81,8 @@ class Partita {
     if (vista) registroCache.svuota();
     return vista;
   };
-  // senza svuotare il registro: il riallineamento di riavvolgi torna alla partita del disco, e i turni letti valgono ancora
+  // senza svuotare il registro: lo decide il riallineamento di riavvolgi. Allo stesso turno i turni letti valgono ancora e il Registro
+  // resta montato col rifiuto; a un turno diverso (cancellazioni interrotte a metà) si svuota, e il Registro ricarica da sé su vista.turno
   async #riprendi(id: string) {
     const vista = await this.#esegui(() => guscio.riprendi(id));
     if (vista) {
@@ -178,6 +179,7 @@ class Partita {
     this.#riavvolgendo = true;
     try {
       const giro = this.#giro;
+      const turnoPrima = this.vista?.turno;
       let rifiuto: unknown = null;
       let vista: Vista | null = null;
       try {
@@ -193,7 +195,8 @@ class Partita {
       const guasto = this.guasto;
       const id = (await this.indice().catch(() => null))?.id;
       if (id) {
-        await this.#riprendi(id).catch(() => null);
+        const riaperta = await this.#riprendi(id).catch(() => null);
+        if (riaperta && riaperta.turno !== turnoPrima) registroCache.svuota();
         // il guasto di riavvolgi vale più di quello (o del silenzio) del riallineamento, salvo che nel frattempo si sia usciti
         if (guasto && giro === this.#giro) this.guasto = guasto;
       }

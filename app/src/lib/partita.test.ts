@@ -412,6 +412,15 @@ describe("partita", () => {
       expect(registroCache.turni).toBe(letti);
     });
 
+    it("riavvolgi che fallisce a metà e il disco riapre a un turno più vecchio: la cache del registro si svuota", async () => {
+      registroCache.turni = [{ turno: 0, guasto: "x" }];
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockResolvedValue({ ...bozzaVista, turno: bozzaVista.turno - 2 } as Vista);
+      await partita.riavvolgi(3);
+      expect(registroCache.turni).toEqual([]);
+    });
+
     it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {
       const rifiuto = { specie: "rifiuto", testo: "turno non riavvolgibile" };
       guscio.riavvolgi.mockRejectedValue(rifiuto);
