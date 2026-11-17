@@ -35,10 +35,14 @@ export function classi(valori: number[], l: Livello): { soglie: number[]; classe
   return { soglie, classe: (x) => soglie.filter((s) => x >= s).length as 0 | 1 | 2 | 3 | 4 };
 }
 
+/** Il tono grave spegne i colori dei partiti. */
+export const tonoGrave = (v: Vista): boolean => v.eventi.some((e) => e.tono === "grave");
+
 /** Il voto dell'ultima elezione per id di regione; null senza elezioni. */
-export function votoPerRegione(v: Vista): Record<string, { primo: string; voti: number[]; senato: number[] }> | null {
+export function votoPerRegione(v: Vista): Record<string, { primo: string; voti: number[]; senato: { partito: string; seggi: number }[] }> | null {
   const e = v.elezioni.at(-1);
-  return e ? Object.fromEntries(e.regioni.map((r) => [r.regione, { primo: r.primo, voti: r.voti, senato: r.seggi_senato }])) : null;
+  // voti e seggi_senato seguono l'ordine di `e.voti`, non quello di `v.partiti`: un partito nato o sciolto dopo il voto sposta gli indici
+  return e ? Object.fromEntries(e.regioni.map((r) => [r.regione, { primo: r.primo, voti: r.voti, senato: e.voti.map((x, i) => ({ partito: x.partito, seggi: r.seggi_senato[i] ?? 0 })) }])) : null;
 }
 
 const terzo = (x: number): Fascia => (x < 1 / 3 ? "bassa" : x < 2 / 3 ? "media" : "alta");
@@ -74,10 +78,10 @@ export function affluenzaPerRegione(v: Vista): Record<string, number | null> {
   return Object.fromEntries(v.sondaggio.regioni.map((r) => [r.id, r.quote.length ? 1 - r.quote[r.quote.length - 1] : null]));
 }
 
-/** «± 2,8 punti»: il margine dichiarato (una frazione) in punti percentuali. */
+/** «±2,8 punti»: il margine dichiarato (una frazione) in punti percentuali. */
 export const margineTesto = (m: number): string => t("paese.margine_punti", { m: numero(m * 100, 1) });
 
-/** I margini dichiarati degli istituti: «±m punti» se uno solo o tutti uguali, altrimenti l'intervallo (la media non è un numero del core). */
+/** I margini dichiarati degli istituti: «±m punti» se uno solo o tutti uguali, altrimenti «da ±a a ±b punti» (la media non è un numero del core). */
 export function margineIstituti(s: Sondaggio): string {
   if (!s.istituti.length) return "";
   const m = s.istituti.map((r) => numero(r.margine * 100, 1));

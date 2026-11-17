@@ -14,7 +14,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import BarreQuote from "./BarreQuote.svelte";
-  import { CONDIZIONI, FASCE, disposizioniDi, margineTesto, segniDi, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, votoPerRegione, type EsitoElettori } from "./paese";
+  import { CONDIZIONI, FASCE, disposizioniDi, margineTesto, segniDi, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, tonoGrave, votoPerRegione, type EsitoElettori } from "./paese";
 
   let { vista, regione, indietro }: { vista: Vista; regione: string; indietro: () => void } = $props();
 
@@ -26,6 +26,7 @@
   const territorio = $derived(territorioDi(vista, regione));
   const gruppi = $derived(vista.regioni.find((r) => r.id === regione)?.gruppi);
   const voto = $derived(votoPerRegione(vista)?.[regione]);
+  const grave = $derived(tonoGrave(vista));
   const dispo = $derived(disposizioniDi(vista, regione));
   const aulaAperta = $derived(barrata("aula", vista) === null);
 
@@ -102,7 +103,7 @@
 <h5 class="grp"><span>{t("paese.senato")}</span><span>{voto ? t("paese.senato_voto", { periodo: periodoDi(vista, vista.elezioni.at(-1)!.data) }) : t("paese.senato_nessuno")}</span></h5>
 {#if voto}
   <div class="legenda">
-    {#each vista.partiti as p, i (p.id)}{#if voto.senato[i]}<span class="sg"><i class="sw" style:background={coloreDi(p.id) ?? "var(--retino), var(--carta)"}></i>{p.nome} <b>{voto.senato[i]}</b></span>{/if}{/each}
+    {#each voto.senato.filter((x) => x.seggi) as x (x.partito)}<span class="sg">{#if !grave}<i class="sw" style:background={coloreDi(x.partito) ?? "var(--retino), var(--carta)"}></i>{/if}{nomeDi(vista, x.partito)} <b>{x.seggi}</b></span>{/each}
   </div>
   <p class="min muto">{t("paese.primo_partito", { nome: nomeDi(vista, voto.primo) })}</p>
 {:else}

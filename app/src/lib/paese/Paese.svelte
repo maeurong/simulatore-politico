@@ -11,7 +11,7 @@
   import type { Segno } from "$lib/mappa/Mappa.svelte";
   import SchedaRegione from "./SchedaRegione.svelte";
   import Sondaggio from "./Sondaggio.svelte";
-  import { LIVELLI, affluenzaPerRegione, classi, consensoPerRegione, lista, livelloManca, segniPerRegione, valoriDi, votoPerRegione, type Livello, type Pericolo } from "./paese";
+  import { LIVELLI, affluenzaPerRegione, classi, consensoPerRegione, lista, livelloManca, segniPerRegione, tonoGrave, valoriDi, votoPerRegione, type Livello, type Pericolo } from "./paese";
 
   let { vista }: { vista: Vista } = $props();
   const pre = $props.id();
@@ -45,7 +45,7 @@
   const presenti = $derived(righe.map((r) => r.valore).filter((x): x is number => x !== null));
   const scala = $derived(classi(presenti, livello));
   const classe = $derived(Object.fromEntries(righe.map((r) => [r.id, r.valore === null ? null : scala.classe(r.valore)])));
-  const grave = $derived(vista.eventi.some((e) => e.tono === "grave"));
+  const grave = $derived(tonoGrave(vista));
   // nel tono grave i partiti sono tutti grigi: il retino, e il nome in lista
   const colore = (id: string) => (grave ? null : coloreDi(id));
   const tinta = $derived(voto ? Object.fromEntries(Object.entries(voto).map(([id, r]) => [id, colore(r.primo)])) : undefined);
@@ -128,8 +128,9 @@
 
     <div class="legenda">
       {#if voto}
-        {#each primi as id (id)}<span class="sg"><i class="sw" style:background={colore(id) ?? RETINO}></i>{nomeDi(vista, id)}</span>{/each}
         <span>{t("paese.voto_legenda", { periodo: periodoDi(vista, vista.elezioni.at(-1)!.data) })}</span>
+        {#if grave}<span>{t("paese.voto_grave")}</span>
+        {:else}{#each primi as id (id)}<span class="sg"><i class="sw" style:background={coloreDi(id) ?? RETINO}></i>{nomeDi(vista, id)}</span>{/each}{/if}
       {:else if estremi && scala.soglie.length}
         <span class="cl">{#each [0, 1, 2, 3, 4] as c (c)}<i style:background="var(--classe-{c})"></i>{/each}</span>
         <span>{formato(estremi.min)} · {t("paese.fino_a", { x: formato(estremi.max) })}</span>

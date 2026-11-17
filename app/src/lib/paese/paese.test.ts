@@ -68,6 +68,13 @@ describe("livelli del territorio", () => {
     expect(votoPerRegione(v)!.lombardia).toBeUndefined();
     expect(votoPerRegione(v)!.toscana).toBeDefined();
   });
+  it("votoPerRegione: i seggi del Senato seguono i partiti dell'elezione, non quelli della Vista", () => {
+    const e = governo.elezioni.at(-1)!;
+    const v = { ...governo, partiti: [{ ...governo.partiti[0], id: "nato" }, ...governo.partiti] } as Vista;
+    const r = e.regioni.find((x) => x.regione === "toscana")!;
+    expect(votoPerRegione(v)!.toscana.senato).toEqual(e.voti.map((x, i) => ({ partito: x.partito, seggi: r.seggi_senato[i] })));
+    expect(votoPerRegione(v)!.toscana.senato.find((x) => x.seggi)!.partito).toBe(e.voti[r.seggi_senato.findIndex((n) => n)].partito);
+  });
   it("votoPerRegione: l'ultima elezione, null senza", () => {
     expect(votoPerRegione(zero)).toBeNull();
     expect(votoPerRegione(governo)!.lombardia.primo).toBe(governo.elezioni.at(-1)!.regioni.find((r) => r.regione === "lombardia")!.primo);
@@ -93,14 +100,14 @@ describe("livelli del territorio", () => {
 });
 
 it("margineTesto: in punti, con la virgola", () => {
-  expect(margineTesto(0.0447)).toBe("± 4,5 punti");
+  expect(margineTesto(0.0447)).toBe("±4,5 punti");
 });
 
 it("margineIstituti: intervallo se diversi, un valore se uguali", () => {
   const con = (...m: number[]) => ({ istituti: m.map((margine) => ({ margine })) }) as never;
-  expect(margineIstituti(con(0.03, 0.05))).toBe("margine degli istituti da ±3,0 a ±5,0 punti");
-  expect(margineIstituti(con(0.044, 0.044))).toBe("± 4,4 punti");
-  expect(margineIstituti(con(0.044))).toBe("± 4,4 punti");
+  expect(margineIstituti(con(0.03, 0.05))).toBe("da ±3,0 a ±5,0 punti");
+  expect(margineIstituti(con(0.044, 0.044))).toBe("±4,4 punti");
+  expect(margineIstituti(con(0.044))).toBe("±4,4 punti");
   expect(margineIstituti(con())).toBe("");
 });
 
