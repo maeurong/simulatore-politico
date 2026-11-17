@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use archivio::Archivio;
 use errore::{ErroreGuscio, guasto, rifiuto};
+use sim_core::economia::{Bilancio, RiepilogoBilancio, Voce};
 use sim_core::elettorato::{Condizione, Fascia};
 use sim_core::esito::VoceEsito;
 use sim_core::informazione::ElettoreCampione;
@@ -531,6 +532,58 @@ fn anteprima_della_proposta(
     sulla_partita(stato, |p| p.anteprima_proposta(valori))
 }
 
+fn bozza_del_bilancio(stato: &Stato) -> Result<Option<Bilancio>, ErroreGuscio> {
+    sulla_partita(stato, |p| Ok(p.bozza_bilancio()))
+}
+
+fn indicizza_il_bilancio(
+    stato: &Stato,
+    bilancio: &Bilancio,
+    voce: &Voce,
+) -> Result<Bilancio, ErroreGuscio> {
+    sulla_partita(stato, |p| p.indicizza(bilancio, voce))
+}
+
+fn riepilogo_del_bilancio(
+    stato: &Stato,
+    bilancio: &Bilancio,
+) -> Result<RiepilogoBilancio, ErroreGuscio> {
+    sulla_partita(stato, |p| p.riepilogo_bilancio(bilancio))
+}
+
+fn riepilogo_del_presentato(stato: &Stato) -> Result<Option<RiepilogoBilancio>, ErroreGuscio> {
+    sulla_partita(stato, |p| Ok(p.riepilogo_presentato()))
+}
+
+#[tauri::command]
+async fn bozza_bilancio(stato: State<'_, Stato>) -> Result<Option<Bilancio>, ErroreGuscio> {
+    bozza_del_bilancio(&stato)
+}
+
+#[tauri::command]
+async fn indicizza(
+    bilancio: Bilancio,
+    voce: Voce,
+    stato: State<'_, Stato>,
+) -> Result<Bilancio, ErroreGuscio> {
+    indicizza_il_bilancio(&stato, &bilancio, &voce)
+}
+
+#[tauri::command]
+async fn riepilogo_bilancio(
+    bilancio: Bilancio,
+    stato: State<'_, Stato>,
+) -> Result<RiepilogoBilancio, ErroreGuscio> {
+    riepilogo_del_bilancio(&stato, &bilancio)
+}
+
+#[tauri::command]
+async fn riepilogo_presentato(
+    stato: State<'_, Stato>,
+) -> Result<Option<RiepilogoBilancio>, ErroreGuscio> {
+    riepilogo_del_presentato(&stato)
+}
+
 #[tauri::command]
 async fn costo_dirotta(
     dicastero: String,
@@ -591,6 +644,10 @@ pub fn run() -> tauri::Result<()> {
             anteprima_accogli,
             anteprima_campagna,
             costo_dirotta,
+            bozza_bilancio,
+            indicizza,
+            riepilogo_bilancio,
+            riepilogo_presentato,
             menu_elettorale,
             anteprima_proposta,
             elettori_campione,
@@ -1156,6 +1213,90 @@ mod tests {
             disposizione: "cittadinanza".into(),
             gradino: "ius_soli_temperato".into(),
         }]
+    }
+
+    /// Una partita avviata e portata al turno in cui la bozza del bilancio c'è.
+    fn con_bozza() -> Result<(Stato, Bilancio), String> {
+        let stato = Stato::default();
+        avvia(&stato, dati(), 1)?;
+        let mut bozza = None;
+        for _ in 0..8 {
+            nella_partita(&stato, |p| {
+                p.chiudi_turno();
+                bozza = p.bozza_bilancio();
+            })?;
+            if bozza.is_some() {
+                break;
+            }
+        }
+        Ok((stato, bozza.ok_or("nessuna bozza in otto turni")?))
+    }
+
+    #[test]
+    fn i_quattro_del_bilancio_senza_partita_sono_un_guasto() -> Result<(), String> {
+        let (_, b) = con_bozza()?;
+        let s = Stato::default();
+        assert_eq!(bozza_del_bilancio(&s), Err(guasto(NESSUNA)));
+        assert_eq!(
+            indicizza_il_bilancio(&s, &b, &Voce::Tutto),
+            Err(guasto(NESSUNA))
+        );
+        assert_eq!(riepilogo_del_bilancio(&s, &b), Err(guasto(NESSUNA)));
+        assert_eq!(riepilogo_del_presentato(&s), Err(guasto(NESSUNA)));
+        Ok(())
+    }
+
+    #[test]
+    fn la_bozza_e_quella_del_core() -> Result<(), String> {
+        let (stato, b) = con_bozza()?;
+        assert_eq!(bozza_del_bilancio(&stato), Ok(Some(b)));
+        Ok(())
+    }
+
+    #[test]
+    fn il_presentato_e_quello_del_core() -> Result<(), String> {
+        let (stato, _) = con_bozza()?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .riepilogo_presentato();
+        assert_eq!(riepilogo_del_presentato(&stato), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn indicizza_tutto_e_quello_del_core() -> Result<(), String> {
+        let (stato, b) = con_bozza()?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .indicizza(&b, &Voce::Tutto)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(indicizza_il_bilancio(&stato, &b, &Voce::Tutto), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn riepilogo_fuori_stagione_e_un_rifiuto() -> Result<(), String> {
+        let (_, b) = con_bozza()?;
+        let stato = Stato::default();
+        avvia(&stato, dati(), 1)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .riepilogo_bilancio(&b)
+            .err()
+            .ok_or("riepilogo al turno zero")?
+            .to_string();
+        let e = riepilogo_del_bilancio(&stato, &b)
+            .err()
+            .ok_or("riepilogo dato al turno zero")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso);
+        Ok(())
     }
 
     #[test]

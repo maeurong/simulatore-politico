@@ -2,6 +2,7 @@
 import { goto } from "$app/navigation";
 import { comeErrore, guscio } from "$lib/guscio/chiamate";
 import { casa } from "$lib/ossatura";
+import { bozza } from "$lib/bilancio/bozza.svelte";
 import { t } from "$lib/testi/t";
 import type { Comando } from "$lib/tipi/Comando";
 import type { Fondazione } from "$lib/tipi/Fondazione";
@@ -73,6 +74,7 @@ class Partita {
     this.vista = null;
     this.serie = [];
     this.guasto = null;
+    bozza.chiudi();
   };
 }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   // Il dettaglio a lato di una misura (storia 106): i due emicicli, la linea di ogni partito, i seggi di una legge elettorale, la regola
   // delle due deliberazioni, gli emendamenti degli alleati (Accogli · Respingi, diretti), la fiducia (conferma sul posto) e la linea del giocatore.
+  // La legge di bilancio all'opposizione (ticket 22): le cifre in aula per dicastero e il riepilogo del presentato, perché il Bilancio è barrato.
   import { tick } from "svelte";
   import { t, numero, segnato, elenco } from "$lib/testi/t";
   import { nomeDi } from "$lib/partiti";
@@ -17,6 +18,9 @@
   import Cartellino from "$lib/anteprima/Cartellino.svelte";
   import { chiLaPorta, fiduciaInCrisi, fiduciaPonibile, formaDi, lineaScelta, quandoMisura, slitta } from "./aula";
   import { motivoCrisi } from "$lib/cruscotto/cruscotto";
+  import { reale } from "$lib/conti/conti";
+  import { distanzaTetto, euroSegnato, riepilogoPresentato } from "$lib/bilancio/bilancio";
+  import type { RiepilogoBilancio } from "$lib/tipi/RiepilogoBilancio";
 
   let { vista, m, manda, rifiuto }: {
     vista: Vista; m: VoceMisura; manda: (c: Comando) => Promise<boolean>; rifiuto: { testo: string; tipo: Comando["tipo"] } | null;
@@ -48,6 +52,13 @@
   const sceltaLinea = $derived(m.linea_giocatore);
   const costo = (c: CostoLinea) => t("aula.costo_linea", { p: numero(c.percepita, 1), c: numero(c.franchi_camera, 1), s: numero(c.franchi_senato, 1) });
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
+
+  const delGoverno = $derived(m.forma === "bilancio" && !vista.governa ? vista.bilancio.in_aula : null);
+  let conto = $state.raw<RiepilogoBilancio | string | null>(null);
+  $effect(() => {
+    const v = vista;
+    if (delGoverno) void riepilogoPresentato().then((r) => { if (v === vista) conto = r; });
+  });
 </script>
 
 {#if anteprima}
@@ -79,6 +90,31 @@
         <span>{p.nome}</span>
         <span class="n {(x?.camera ?? 0) > 0 ? 'bene' : (x?.camera ?? 0) < 0 ? 'male' : 'muto'}">{segnato(x?.camera ?? 0)}</span>
         <span class="n {(x?.senato ?? 0) > 0 ? 'bene' : (x?.senato ?? 0) < 0 ? 'male' : 'muto'}">{segnato(x?.senato ?? 0)}</span>
+      {/each}
+    </div>
+  </div>
+{/if}
+
+{#if delGoverno}
+  {@const b = delGoverno}
+  <div class="blocco">
+    <span class="occ nero">{t("bilancio.conto_governo")}</span>
+    {#if conto && typeof conto === "object"}
+      <p class="sec">{t("bilancio.giogo_spesa", { n: segnato(conto.crescita_spesa_netta, 1) })} · <span class="male">{t("bilancio.giogo_tetto", { n: numero(conto.tetto, 1) })}</span></p>
+      <p class="sec">{distanzaTetto(conto)}</p>
+      <dl class="dati">
+        <dt>{t("bilancio.spesa_in_piu")}</dt><dd><b>{euroSegnato(conto.costo_spesa)}</b></dd>
+        <dt>{t("bilancio.gettito_perso")}</dt><dd><b>{euroSegnato(conto.costo_entrate)}</b></dd>
+      </dl>
+    {:else if conto}<Rifiuto testo={conto} />{/if}
+    <div class="bil">
+      <span class="h">{t("bilancio.spesa_dicasteri")}</span><span class="h n">{b.anno}</span><span class="h n">{t("bilancio.reale")}</span>
+      {#each b.dicasteri as d (d.id)}
+        {@const p = conto && typeof conto === "object" ? conto.perdita_reale.find((x) => x.voce === d.id)?.perdita : undefined}
+        {@const r = p === undefined ? null : reale(p)}
+        <span>{vista.dicasteri.find((x) => x.id === d.id)?.nome ?? d.id}</span>
+        <span class="n">{t("conti.miliardi", { n: numero(d.spesa / 1e9, 1) })}</span>
+        <span class="n {r?.tono ?? 'muto'}">{r?.testo ?? "—"}</span>
       {/each}
     </div>
   </div>
@@ -165,4 +201,7 @@
   .sg { display: grid; grid-template-columns: minmax(0, 1fr) 60px 60px; gap: 2px 8px; font-size: var(--c-sec); align-items: center }
   .sg .h { font-size: var(--c-min); color: var(--grigio); text-transform: uppercase; letter-spacing: .06em }
   .sg .n { text-align: right; font-weight: 700 }
+  .bil { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 2px 12px; font-size: var(--c-sec); align-items: baseline }
+  .bil .h { font-size: var(--c-min); color: var(--grigio); text-transform: uppercase; letter-spacing: .06em }
+  .bil .n { text-align: right; white-space: nowrap }
 </style>

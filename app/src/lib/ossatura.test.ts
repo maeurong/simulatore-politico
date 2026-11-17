@@ -8,6 +8,7 @@ import crisiJson from "../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import opposizioneJson from "../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
 import cruscottoJson from "../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
+import bilancioJson from "../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
 
 const vista = (x: unknown) => x as Vista;
 const turnoZero = vista(turnoZeroJson);
@@ -27,7 +28,7 @@ describe("bilancio in esercizio provvisorio", () => {
     expect(apribile("bilancio", provvisorio)).toBe(true);
   });
   it("non presentabile e fuori dal quarto trimestre resta barrata", () => {
-    expect(barrata("bilancio", { ...provvisorio, bilancio: { ...provvisorio.bilancio, presentabile: false } })).toBe("barrata.bilancio");
+    expect(barrata("bilancio", { ...provvisorio, bilancio: { ...provvisorio.bilancio, presentabile: false } })).toBe("barrata.bilancio_stagione");
   });
 });
 
@@ -57,13 +58,14 @@ describe("barrata", () => {
 
   it("all'opposizione: Governo, e Bilancio anche fuori stagione", () => {
     expect(barrata("governo", opposizione)).toBe("barrata.governo");
-    expect(barrata("bilancio", opposizione)).toBe("barrata.bilancio");
-    expect(barrata("bilancio", { ...opposizione, data: { anno: 2027, trimestre: 4 } })).toBe("barrata.bilancio");
+    expect(barrata("bilancio", opposizione)).toBe("barrata.bilancio_opposizione");
+    expect(barrata("bilancio", { ...opposizione, data: { anno: 2027, trimestre: 4 } })).toBe("barrata.bilancio_opposizione");
   });
 
   it("al governo il Bilancio si accende in ottobre-dicembre", () => {
-    expect(barrata("bilancio", governo)).toBe("barrata.bilancio");
+    expect(barrata("bilancio", governo)).toBe("barrata.bilancio_stagione");
     expect(barrata("bilancio", { ...governo, data: { anno: 2027, trimestre: 4 } })).toBeNull();
+    expect(barrata("bilancio", (bilancioJson as unknown as { bozza_04: { vista: Vista } }).bozza_04.vista)).toBeNull();
   });
 
   it("in trattativa: Aula e Governo barrati", () => {
@@ -104,7 +106,7 @@ describe("fettaDi", () => {
   });
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
-    expect(fettaDi("bilancio", "governo")).toBe("11d");
+    expect(fettaDi("bilancio", "governo")).toBeNull();
     expect(fettaDi("campagna", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "governo")).toBeNull();
     expect(fettaDi("partiti", "governo")).toBeNull();
