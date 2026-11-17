@@ -20,7 +20,7 @@ use sim_core::legislatura::{
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
 use sim_core::salvataggi::{PuntoSerie, VoceAlbo, VocePartita};
-use sim_core::vista::{Anteprima, VoceMenu};
+use sim_core::vista::{Anteprima, AnteprimaSfiducia, VoceMenu};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
 
@@ -532,6 +532,13 @@ fn anteprima_della_proposta(
     sulla_partita(stato, |p| p.anteprima_proposta(valori))
 }
 
+fn anteprima_della_sfiducia(
+    stato: &Stato,
+    dicastero: Option<&str>,
+) -> Result<AnteprimaSfiducia, ErroreGuscio> {
+    sulla_partita(stato, |p| p.anteprima_sfiducia(dicastero))
+}
+
 fn bozza_del_bilancio(stato: &Stato) -> Result<Option<Bilancio>, ErroreGuscio> {
     sulla_partita(stato, |p| Ok(p.bozza_bilancio()))
 }
@@ -603,6 +610,14 @@ async fn menu_elettorale(
 }
 
 #[tauri::command]
+async fn anteprima_sfiducia(
+    dicastero: Option<String>,
+    stato: State<'_, Stato>,
+) -> Result<AnteprimaSfiducia, ErroreGuscio> {
+    anteprima_della_sfiducia(&stato, dicastero.as_deref())
+}
+
+#[tauri::command]
 async fn anteprima_proposta(
     valori: Vec<ValoreProposto>,
     stato: State<'_, Stato>,
@@ -642,6 +657,7 @@ pub fn run() -> tauri::Result<()> {
             anteprima,
             anteprima_decreto,
             anteprima_accogli,
+            anteprima_sfiducia,
             anteprima_campagna,
             costo_dirotta,
             bozza_bilancio,
@@ -1424,6 +1440,44 @@ mod tests {
         };
         assert_ne!(atteso, vuoto);
         assert_eq!(menu_del_governo(&stato, &valori), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn anteprima_sfiducia_senza_partita_e_un_guasto() {
+        let r = anteprima_della_sfiducia(&Stato::default(), None);
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn anteprima_sfiducia_e_quella_del_core() -> Result<(), String> {
+        let stato = dopo_il_voto(7, 1.5, false)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_sfiducia(None)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(anteprima_della_sfiducia(&stato, None), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn anteprima_sfiducia_al_governo_e_un_rifiuto() -> Result<(), String> {
+        let stato = dopo_il_voto(4, 4.5, true)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_sfiducia(None)
+            .err()
+            .ok_or("sfiducia ammessa al governo")?
+            .to_string();
+        let e = anteprima_della_sfiducia(&stato, None)
+            .err()
+            .ok_or("anteprima data al governo")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso);
         Ok(())
     }
 
