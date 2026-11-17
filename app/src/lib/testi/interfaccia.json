@@ -1604,6 +1604,7 @@
   "prima.altre_una_critica": {"one": "Un’altra notizia nel registro, una critica ›", "other": "Altre {n} notizie nel registro, una critica ›"},
   "prima.salta": "Salta la rivelazione ››",
   "prima.banda": {"one": "Avanti fino a novità: una chiusura, dal turno {da}. Ti ferma qui: {fermate}.", "other": "Avanti fino a novità: {n} chiusure di fila dal turno {da}. Ti ferma qui: {fermate}."},
+  "prima.banda_senza_fermata": {"one": "Avanti fino a novità: una chiusura, dal turno {da}.", "other": "Avanti fino a novità: {n} chiusure di fila dal turno {da}."},
   "prima.banda_registro": "Le pagine saltate sono nel registro:",
   "prima.banda_turno": "turno {n} ›",
   "prima.ferma_governo": "il governo è tuo, e ogni turno chiede le tue scelte",

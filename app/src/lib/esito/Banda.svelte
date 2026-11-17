@@ -9,7 +9,12 @@
 </script>
 
 <div class="banda" role="status">
-  {t("prima.banda", { n: corsa.chiusure, da: corsa.da, fermate: corsa.fermate.map((f) => fraseFermata(f, vista)).join("; ") })}
+  <!-- senza fermate (corsa interrotta da un guasto, partita finita) la banda dice solo le chiusure fatte; il guasto sta nella cornice -->
+  {#if corsa.fermate.length}
+    {t("prima.banda", { n: corsa.chiusure, da: corsa.da, fermate: corsa.fermate.map((f) => fraseFermata(f, vista)).join("; ") })}
+  {:else}
+    {t("prima.banda_senza_fermata", { n: corsa.chiusure, da: corsa.da })}
+  {/if}
   <!-- il più vecchio dei saltati è il turno da cui si è partiti; con una sola chiusura non c'è niente di saltato -->
   {#if corsa.chiusure > 1}{t("prima.banda_registro")} <a href="/partita/registro?turno={corsa.da}">{t("prima.banda_turno", { n: corsa.da })}</a>{/if}
 </div>
