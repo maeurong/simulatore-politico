@@ -8,10 +8,9 @@
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
+    import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
   import BarreQuote from "./BarreQuote.svelte";
-  import { media, quoteDi, sondaggioLetto } from "./paese";
+  import { margineMedio, margineTesto, media, quoteDi, sondaggioLetto } from "./paese";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -44,8 +43,7 @@
 {#if incrocio}
   <Pulsante forma="link" onclick={() => (scelto = null)}>‹ {t("paese.indietro")}</Pulsante>
   <h4 class="tit nome">{t(`condizione.${incrocio.id}` as Chiave)}</h4>
-  <p class="sec">{t("paese.incrocio_campione", { n: numero(incrocio.campione) })}{letto.privato ? ` · ${t("paese.dal_privato")}` : ""}</p>
-  <Segnaposto sezione={t("paese.margine")} fetta="11g" />
+  <p class="sec">{t("paese.incrocio_campione", { n: numero(incrocio.campione) })} · {margineTesto(incrocio.margine)}{letto.privato ? ` · ${t("paese.dal_privato")}` : ""}</p>
   <BarreQuote righe={quoteIncrocio} giocatore={vista.giocatore} />
   <p class="sec">{t("paese.approvazione")} <b>{numero(incrocio.approvazione, 2)}</b> <span class="muto">{t("paese.approvazione_nota")}</span></p>
   <h5 class="grp"><span>{t("paese.collocazione")}</span><span>{t("paese.collocazione_asse")}</span></h5>
@@ -59,7 +57,7 @@
   <h4 class="tit">{t("paese.sondaggio")}</h4>
   <div class="barre media" class:con-privato={privata}>
     <span class="n"></span><span></span>
-    <span class="h">{t("paese.col_media")}</span>{#if privata}<span class="h priv">{t("paese.col_privato")}</span>{/if}
+    <span class="h">{t("paese.col_media")}<small>{margineTesto(margineMedio(vista.sondaggio))}</small></span>{#if privata}<span class="h priv">{t("paese.col_privato")}<small>{margineTesto(margineMedio(letto.sondaggio))}</small></span>{/if}
     {#each pubblica.partiti as p (p.id)}
       <span class="n" class:tu={p.id === vista.giocatore}>{p.nome}</span>
       {@render barra(p.id, p.quota, massimo)}
@@ -130,6 +128,7 @@
   .b i { position: absolute; inset: 0 auto 0 0; border: 1px solid var(--ink) }
   .q { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums }
   .h { font-size: var(--c-min); font-weight: 700; color: var(--grigio); text-align: right }
+  .h small { display: block; font-weight: 400 }
   .tu { font-weight: 700 }
   .priv { font-weight: 700; color: var(--biro); box-shadow: inset 1.5px 0 0 var(--biro); padding-left: 6px }
   .priv-box { border: var(--forte); padding: 8px 10px; display: grid; gap: 6px; justify-items: start }

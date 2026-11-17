@@ -1,10 +1,11 @@
 // La sezione Paese: letture della Vista per la mappa, la lista e il sondaggio (la UI legge, il core decide).
+import { periodoDi } from "$lib/aula/aula";
 import { ultimoVince } from "$lib/editor/editor.svelte";
 import { testoRifiuto, type ErroreGuscio } from "$lib/guscio/chiamate";
 import type { Segno } from "$lib/mappa/Mappa.svelte";
 import { REGIONI } from "$lib/mappa/regioni";
 import { quotaIncrocio, quotaVotanti } from "$lib/partiti";
-import { t, type Chiave } from "$lib/testi/t";
+import { numero, t, type Chiave } from "$lib/testi/t";
 import type { Condizione } from "$lib/tipi/Condizione";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import type { Fascia } from "$lib/tipi/Fascia";
@@ -73,6 +74,12 @@ export function affluenzaPerRegione(v: Vista): Record<string, number | null> {
   return Object.fromEntries(v.sondaggio.regioni.map((r) => [r.id, r.quote.length ? 1 - r.quote[r.quote.length - 1] : null]));
 }
 
+/** «± 2,8 punti»: il margine dichiarato (una frazione) in punti percentuali. */
+export const margineTesto = (m: number): string => t("paese.margine_punti", { m: numero(m * 100, 1) });
+
+/** Il margine della media degli istituti: la media dei loro margini dichiarati. */
+export const margineMedio = (s: Sondaggio): number => (s.istituti.length ? s.istituti.reduce((a, r) => a + r.margine, 0) / s.istituti.length : 0);
+
 const senzaAccento = (n: string) => n.replace("’", "'");
 
 /** Cantieri, atti in agenda ed emergenze aperte e opere finite, per regione, col testo per esteso. */
@@ -93,7 +100,7 @@ function vociSegni(v: Vista): { regione: string; segno: Segno; testo: string }[]
 /** Il trimestre di un turno passato: il turno corrente è `v.data`, un turno è un trimestre. */
 function trimestreDelTurno(v: Vista, turno: number): string {
   const n = v.data.anno * 4 + v.data.trimestre - 1 - (v.turno - turno);
-  return t(`cornice.trimestre_${(n % 4) + 1}` as Chiave, { anno: Math.floor(n / 4) }).toLowerCase();
+  return periodoDi(v, { anno: Math.floor(n / 4), trimestre: (n % 4) + 1 });
 }
 
 /** Cantieri, atti in agenda ed emergenze aperte, per id di regione. */

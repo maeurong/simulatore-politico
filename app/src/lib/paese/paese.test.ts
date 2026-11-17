@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, classi, lista, livelloManca, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, valoriDi, votoPerRegione, type EsitoElettori } from "./paese";
+import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, classi, lista, livelloManca, margineTesto, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, valoriDi, votoPerRegione, type EsitoElettori } from "./paese";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import { coalizioneDi } from "$lib/partiti";
 import { REGIONI } from "$lib/mappa/regioni";
@@ -63,6 +63,15 @@ describe("livelli del territorio", () => {
     expect(s.testo).toContain(o.atto);
     expect(s.testo).toMatch(/\d{4}$/);
   });
+  it("il trimestre dell'opera: un turno è un trimestre, anche a cavallo d'anno", () => {
+    const o = governo.opere[0];
+    const v = { ...governo, turno: 10, data: { anno: 2030, trimestre: 1 }, opere: [10, 9, 6, 5].map((turno) => ({ ...o, turno })) };
+    expect(segniDi(v, o.regione).map((x) => x.testo.split(" · ")[1])).toEqual(["gennaio–marzo 2030", "ottobre–dicembre 2029", "gennaio–marzo 2029", "ottobre–dicembre 2028"]);
+  });
+});
+
+it("margineTesto: in punti, con la virgola", () => {
+  expect(margineTesto(0.0447)).toBe("± 4,5 punti");
 });
 
 describe("consensoPerRegione", () => {

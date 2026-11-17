@@ -11,7 +11,7 @@
   import FormaSegno from "./FormaSegno.svelte";
 
   let {
-    valori, segni = {}, scelta, ordine, nome, piccola = false, solaLettura = false, formato = (x) => numero(x, 1), onscelta,
+    valori, segni = {}, scelta, ordine, nome, piccola = false, solaLettura = false, formato = (x) => numero(x, 1), classe: classeFuori, tinta, etichetta, onscelta,
   }: {
     valori: Record<string, number | null>;
     segni?: Record<string, Segno[]>;
@@ -21,11 +21,17 @@
     piccola?: boolean;
     solaLettura?: boolean;
     formato?: (x: number, id: string) => string;
+    /** Le classi già decise (pericolosità a passi fissi); senza, passi uguali fra il minimo e il massimo dei valori. */
+    classe?: Record<string, 0 | 1 | 2 | 3 | 4 | null>;
+    /** Un colore per regione che vince sulla classe (il voto); null = retino. */
+    tinta?: Record<string, string | null>;
+    /** Il valore a parole di una regione, al posto di «valore, classe n di 5». */
+    etichetta?: (id: string) => string;
     onscelta: (id: string) => void;
   } = $props();
 
   const pre = $props.id();
-  const classe = $derived(Object.fromEntries(ordine.map((id, i) => [id, classi(ordine.map((x) => valori[x] ?? null))[i]])));
+  const classe = $derived(classeFuori ?? Object.fromEntries(ordine.map((id, i) => [id, classi(ordine.map((x) => valori[x] ?? null))[i]])));
   // mobile: la fermata di Tab sta sul fuoco, o sulla scelta, o sulla prima
   let fuoco = $state<string | null>(null);
   let daTastiera = $state(false);
@@ -34,7 +40,7 @@
 
   const nomeAccessibile = (id: string, nomeReg: string) => {
     const x = valori[id] ?? null, c = classe[id];
-    const dove = x === null || c === null ? t("mappa.senza_dato") : `${formato(x, id)}, ${t("mappa.classe", { n: c + 1 })}`;
+    const dove = etichetta ? etichetta(id) : x === null || c === null ? t("mappa.senza_dato") : `${formato(x, id)}, ${t("mappa.classe", { n: c + 1 })}`;
     return [nomeReg, dove, ...(segni[id] ?? []).map((s) => t(`mappa.segno_${s}`))].join(", ");
   };
 
@@ -63,7 +69,7 @@
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <path
         id="{pre}-{r.id}" class="reg" class:sola={solaLettura} d={r.d} data-reg={r.id}
-        style:--riempi={c === null || c === undefined ? `url(#${pre}-tr)` : `var(--classe-${c})`}
+        style:--riempi={tinta ? (tinta[r.id] ?? `url(#${pre}-tr)`) : c === null || c === undefined ? `url(#${pre}-tr)` : `var(--classe-${c})`}
         role="radio" aria-checked={scelta === r.id} aria-label={nomeAccessibile(r.id, r.nome)}
         tabindex={fermata === r.id ? 0 : -1}
         onkeydown={(e) => tasto(e, r.id)}
