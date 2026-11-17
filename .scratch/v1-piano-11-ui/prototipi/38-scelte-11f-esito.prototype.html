@@ -1,0 +1,366 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — scelte della fetta 11f «L'esito», piano 11 UI (17/11/2026).
+  Quattro decisioni di Mario, una scheda ciascuna, con gli interruttori A/B/C:
+    1  Vignette    — quanti disegni e per quali tipi di voce di testa (spec:409)
+    2  Battute     — dove sta la battuta a biro nella tavola per poteri (spec:415, forma B scelta il 12/11)
+    3  Testi       — quando Mario taglia titoli, didascalie e battute (spec:416, 495; ticket 09)
+    4  Viste       — se lo schema 19 basta a Prima pagina e Registro, e cosa aggiungere alle Viste campione
+  Numeri della scheda 1: contati il 17/11/2026 su main 36db656 con un programma usa e getta (scratchpad, non nel repo)
+  che fonda 40 partite a 4,5 con la destra e 40 a 1,5 senza coalizione (semi 1-40), presenta la bozza a ogni bilancio,
+  chiude fino a 40 turni e prende la voce di testa con la regola di spec:406 (criticità, poi precedenza, a parità la
+  prima della chiusura). 3.124 prime pagine: 634 gravi (niente vignetta), 2.490 ordinarie.
+  I disegni qui sono segnaposto a tratto, non la resa finale: la resa la fa la fetta col metodo del kit delle caricature.
+  Didascalie e battute: BOZZA del prototipo, con le regole dei Testi del Pungolo.
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A). Non è codice di produzione. Buttare dopo il verdetto.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Scelte 11f · L'esito</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F;
+  --velo:rgb(31 26 23 / .06);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-riq:18px; --c-sez:23px; --c-pag:30px; --c-apre:40px;
+  --filo:1px solid var(--grigio); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+}
+html,body{background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.4 var(--txt);font-variant-numeric:tabular-nums lining-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+:focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+h1,h2,h3{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;line-height:1.08}
+.barra{position:sticky;top:0;z-index:2;background:var(--carta);border-bottom:var(--doppio);padding:10px 24px 8px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.barra h1{font-size:var(--c-sez);color:var(--rosso)}
+.schede{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1.5px solid var(--ink);padding:5px 10px;font-weight:700;font-size:var(--c-sec)}
+.btn.scelto{background:var(--giallo)}
+.btn.pieno{background:var(--ink);color:var(--carta)}
+main{padding:16px 24px 40px;max-width:1440px}
+.dom{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+.dom > .lato{border-left:var(--filo);padding-left:20px;display:grid;gap:12px}
+@media (max-width:1100px){.dom{grid-template-columns:1fr}.dom > .lato{border-left:0;padding-left:0}.tav{grid-template-columns:1fr}.tav .dl{border-left:0;border-top:var(--filo)}}
+.q{font-size:var(--c-lead);max-width:70ch;margin-bottom:10px}
+.q b{font-weight:700}
+.int{display:grid;gap:6px;margin:8px 0 14px}
+.int button{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 8px;border:1.5px solid var(--ink);padding:8px 10px;text-align:left}
+.int button .l{font-family:var(--tit);font-weight:800;font-size:var(--c-riq);grid-row:span 2}
+.int button .d{color:var(--grigio);font-size:var(--c-sec)}
+.int button.scelto{background:var(--giallo)}
+.int button.scelto .d{color:var(--ink)}
+.rac{font-size:var(--c-min);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--rosso)}
+.nota{font-size:var(--c-sec);color:var(--grigio);max-width:72ch}
+.nota b{color:var(--ink)}
+.h5{font-size:var(--c-min);text-transform:uppercase;letter-spacing:.08em;color:var(--grigio);font-weight:700;border-bottom:var(--filo);padding-bottom:2px;margin-top:4px}
+table{border-collapse:collapse;width:100%;font-size:var(--c-sec)}
+th,td{text-align:left;padding:4px 6px;border-bottom:var(--filo);vertical-align:top}
+th{font-size:var(--c-min);text-transform:uppercase;letter-spacing:.06em;color:var(--grigio)}
+td.n{text-align:right;white-space:nowrap}
+tr.sel td{background:var(--velo)}
+tr[data-tipo]{cursor:pointer}
+.tag{display:inline-block;font-size:var(--c-min);border:1px solid var(--grigio);padding:0 5px;color:var(--grigio);white-space:nowrap}
+.tag.si{border-color:var(--ink);color:var(--ink);font-weight:700}
+.tag.bar{border-color:var(--rosso);color:var(--rosso)}
+.cop{display:flex;height:16px;border:1.5px solid var(--ink);margin:6px 0 4px}
+.cop i{display:block;height:100%}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--c-min);color:var(--grigio)}
+.leg span::before{content:"";display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+
+/* la testa della prima pagina */
+.pag{border:var(--forte);padding:10px 16px 14px;background:var(--carta)}
+.testata{display:flex;justify-content:space-between;align-items:end;border-bottom:var(--doppio);padding-bottom:4px;margin-bottom:10px}
+.testata .nome{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;font-size:44px;color:var(--rosso);line-height:1}
+.testata .o{font-size:var(--c-min);color:var(--grigio)}
+.apertura{display:grid;grid-template-columns:minmax(0,1fr) 34%;gap:22px}
+.apertura.sola{grid-template-columns:1fr}
+.occh{font-size:var(--c-lead);font-weight:700}
+.occh.crit::before{content:"";display:inline-block;width:9px;height:9px;background:var(--rosso);margin-right:6px}
+.apertura h2{font-size:var(--c-apre);margin:4px 0 6px}
+.causa{font-size:var(--c-sec);color:var(--grigio)}
+.causa::before{content:"perché: "}
+.rim{font-size:var(--c-sec);font-weight:700;margin-top:8px}
+figure{border:var(--forte);padding:6px 8px;display:grid;gap:4px;align-content:start}
+figure svg{width:100%;height:auto;max-height:160px;color:var(--ink)}
+figcaption{font-size:var(--c-sec);text-align:center;font-weight:700}
+.ris{display:grid;gap:3px;font-size:var(--c-min)}
+.ris .r{display:grid;grid-template-columns:96px minmax(0,1fr) 44px 52px;gap:6px;align-items:center}
+.ris .bar{height:9px;background:var(--velo);position:relative}
+.ris .bar i{position:absolute;inset:0 auto 0 0;background:var(--grigio)}
+.ris .coal .bar i{background:var(--ink)} .ris .tu .bar i{background:var(--rosso)}
+.ris .q{text-align:right;font-weight:700} .ris .s{text-align:right;color:var(--grigio)}
+
+/* la tavola per poteri, ridotta */
+.tav{border:var(--forte);display:grid;grid-template-columns:minmax(0,1fr) 300px}
+.tav svg{width:100%;height:auto;display:block}
+.tav .dl{border-left:var(--filo);padding:10px 12px;display:grid;gap:6px;align-content:start}
+.tav .dl .t{font-weight:700}
+.biro{font-style:italic;color:var(--biro)}
+.g .biro{display:none}
+.mut{color:var(--grigio)}
+
+/* tabella dei testi */
+.taglio td.k{font-family:ui-monospace,Menlo,monospace;font-size:var(--c-min);color:var(--grigio)}
+.taglio .tt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;align-items:baseline}
+.taglio .tt label{font-size:var(--c-min);color:var(--grigio);white-space:nowrap}
+.taglio .tt span{font-family:var(--tit);font-weight:700;font-size:var(--c-lead)}
+.taglio .tt span.via{text-decoration:line-through;color:var(--grigio)}
+.st{font-size:var(--c-min);font-weight:700}
+.st.ok{color:var(--verde)} .st.no{color:var(--rosso)}
+.flusso{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:8px 0}
+.flusso div{border:1.5px solid var(--grigio);padding:6px 8px;font-size:var(--c-sec);min-height:70px}
+.flusso div.qui{border:2px solid var(--ink);background:var(--giallo)}
+.flusso div b{display:block;font-size:var(--c-min);text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<header class="barra">
+  <h1>Scelte della 11f · L'esito</h1>
+  <nav class="schede" id="schede"></nav>
+  <span class="nota">Gli interruttori A / B / C sono le risposte; le domande arrivano dopo, una sola volta.</span>
+</header>
+<main id="main"></main>
+<script>
+// ======================= dati: conteggi veri e occhielli veri (Viste campione) =======================
+// tipo, prime pagine in testa su 2.490 ordinarie, occhiello d'esempio (dal core, Viste campione), criticità
+const TESTA = [
+ ['sfiducia_approvata',425,'Approvata la sfiducia individuale a Fabio Rossi (Sviluppo economico); Camera 208 sì e 192 no; Senato 100 sì e 100 no; il dicastero va in interim','C','per il sì Estrema sinistra, Sinistra, Centrosinistra, Centro, Centrodestra, Estrema destra; per il no Destra, Partito del giocatore','Aula'],
+ ['governo_formato',345,'Nasce il governo di Partito del giocatore dopo il voto, con Centrodestra e Destra; dicasteri: 4 a Partito del giocatore, 2 a Centrodestra, 4 a Destra','C','la tua coalizione ha la maggioranza in entrambe le Camere','Governo'],
+ ['evento_risolto|emergenza',342,'Emergenza idrogeologica in Emilia-Romagna, «Attingere al fondo di riserva» per default; 305.700.000 euro dal fondo di riserva (6% del costo)','N','rischio alto','Conti'],
+ ['ultimatum_posto',192,'Sinistra pone l’ultimatum al governo','C','l’intesa è scesa sotto la soglia d’ultimatum di 40,0; la causa peggiore è «calo nei sondaggi al governo»','Partiti'],
+ ['risultato_del_voto',142,'Elezioni politiche: affluenza del 71,4%; Partito del giocatore al 16,4% con 76 seggi alla Camera e 38 al Senato; premio di maggioranza a Partito del giocatore, Centrodestra e Destra','C','elezioni politiche','Paese'],
+ ['bilancio_approvato',134,'Approvata la legge di bilancio; Camera 243 sì e 157 no, 22 franchi tiratori; Senato 130 sì e 70 no, 11 franchi tiratori','N','per il sì Sinistra, Centrosinistra, Centro, Partito del giocatore','Bilancio'],
+ ['evento_risolto|situazione',127,'Recessione, «Non intervenire» per default','N','crescita del PIL: −2,9% annuo (soglia −1,0%)','Conti'],
+ ['legge_respinta',116,'Respinta «Concorrenza nei servizi: mercato libero»; Camera 133 sì e 267 no, 9 franchi tiratori; Senato 69 sì e 131 no','N','per il sì Estrema sinistra, Sinistra, Centrosinistra; per il no Centro, Centrodestra, Destra','Aula'],
+ ['sfiducia_presentata',101,'Presenta la sfiducia a Filippo Barbieri, Interno','C','Centrodestra in ultimatum la voterebbe','Aula'],
+ ['legge_approvata',87,'Approvata «Sgravio contributivo nel Mezzogiorno: 15%»; Camera 232 sì e 168 no, 6 franchi tiratori','N','per il sì Centro, Centrodestra, Destra, Partito del giocatore','Aula'],
+ ['minaccia_di_dimissioni',69,'3 ministri minacciano le dimissioni','C','la soddisfazione è scesa sotto la soglia di minaccia di 40,0','Governo'],
+ ['evento_risolto|scandalo',64,'Scandalo agli appalti, «Difenderlo» per default','N','(occhiello inventato: nessuna Vista campione lo porta)','Cruscotto'],
+ ['reddito_deluso',53,'3 fasce di reddito deluse','N','nessun trimestre passato da ricordare, l’attesa parte da zero','Paese'],
+ ['minaccia_di_scissione',50,'Minaccia di scissione in Partito del giocatore, a 0,5 punti dalla posizione dichiarata','C','la posizione percepita dista 0,5 punti dalla dichiarata, la soglia di minaccia è 0,5','Partiti'],
+ ['evento_nato|emergenza',42,'Emergenza idrogeologica in Emilia-Romagna, costo dell’intervento 5.000.000.000 euro','N','rischio alto','Cruscotto'],
+ ['ministro_esce',37,'6 ministri escono','C','l’uscita dal governo di Sinistra','Governo'],
+];
+const ORDINARIE = 2490, GRAVI = 634, ALTRE = ORDINARIE - TESTA.reduce((a,x)=>a+x[1],0);
+const VOTO = 'risultato_del_voto';
+
+// Titoli: BOZZA del prototipo, solo per la resa della testa.
+const TIT = {
+ sfiducia_approvata:'La fiducia era a tempo. Il tempo è scaduto',
+ governo_formato:'Giurano tutti. Qualcuno anche sul serio',
+ 'evento_risolto|emergenza':'Il fondo c’era. Il fondo del cassetto',
+ ultimatum_posto:'L’alleato posa la penna. E la punta verso il governo',
+ risultato_del_voto:'Hanno vinto tutti. I seggi la pensano diversamente',
+ bilancio_approvato:'I conti tornano in aula. Escono un po’ più corti',
+ 'evento_risolto|situazione':'Il governo osserva la crisi. Da lontano, con il binocolo',
+ legge_respinta:'Pari e patta in aula. La legge torna nel cassetto',
+ sfiducia_presentata:'Pronta la mozione. Le firme, più leste dei motivi',
+ legge_approvata:'La legge passa. Il merito, alla prossima lettura',
+ minaccia_di_dimissioni:'Dimissioni pronte. In bella copia, per ora',
+ 'evento_risolto|scandalo':'Lo scandalo si chiude. Il cassetto, a fatica',
+ reddito_deluso:'Le buste paga aspettano. La ripresa, pure',
+ minaccia_di_scissione:'Il partito si guarda allo specchio. Vede due facce',
+ 'evento_nato|emergenza':'Il cielo presenta il conto. Il governo cerca gli stivali',
+ ministro_esce:'Si svuotano le poltrone. Le targhe restano',
+};
+
+// Disegni segnaposto, a tratto (la resa vera la fa la fetta col metodo del kit delle caricature).
+const R='stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+const DIS = {
+ aula:['Aula',`<path d="M60 128a90 90 0 0 1 180 0M84 128a66 66 0 0 1 132 0M108 128a42 42 0 0 1 84 0" ${R}/><path d="M138 128v-14h24v14" ${R}/>`],
+ poltrona:['Poltrona rovesciata',`<path d="M100 120l40-50h50l-14 50M110 108h70M196 70l20-6M150 120l-6 14M190 120l6 14" ${R}/><path d="M120 60c6-16 30-22 40-8" ${R} stroke-dasharray="4 6"/>`],
+ giuramento:['Mano sul libro',`<rect x="96" y="92" width="110" height="34" ${R}/><path d="M151 92v34M120 92c0-22 6-52 16-58s14 10 12 26l26-6c10-2 14 10 4 14" ${R}/>`],
+ stivali:['Stivali nell’acqua',`<path d="M110 50v58h-18v18h44V50M170 50v58h-18v18h44V50" ${R}/><path d="M60 110c20-8 40 8 60 0s40 8 60 0 40 8 60 0" ${R}/>`],
+ busta:['Busta con ceralacca',`<rect x="80" y="44" width="140" height="84" ${R}/><path d="M80 44l70 46 70-46" ${R}/><circle cx="150" cy="96" r="12" ${R}/>`],
+ cassa:['Cassa vuota',`<rect x="70" y="40" width="160" height="80" rx="6" ${R}/><path d="M70 62h160M150 40v-14M118 26h64" ${R}/><path d="M120 92h60M128 104h44" ${R} stroke-dasharray="4 6"/>`],
+ bilancia:['Bilancia',`<path d="M150 30v96M110 126h80M90 52h120M90 52l-20 40h40zM210 52l-20 40h40z" ${R}/>`],
+ binocolo:['Binocolo',`<circle cx="120" cy="90" r="26" ${R}/><circle cx="182" cy="90" r="26" ${R}/><path d="M146 84h10M110 64l6-24h20l6 24M172 64l6-24h20l6 24" ${R}/>`],
+ lente:['Lente sul giornale',`<rect x="70" y="40" width="120" height="84" ${R}/><path d="M84 58h92M84 72h70M84 86h80" ${R}/><circle cx="196" cy="96" r="24" ${R}/><path d="M213 113l20 20" ${R}/>`],
+ specchio:['Specchio incrinato',`<ellipse cx="150" cy="80" rx="44" ry="54" ${R}/><path d="M150 26l-8 30 14 18-10 30 6 30" ${R}/>`],
+ porta:['Porta che si chiude',`<path d="M110 130V30h80v100M110 30l50 14v86" ${R}/><circle cx="152" cy="84" r="3" ${R}/>`],
+ portafoglio:['Portafoglio vuoto',`<rect x="84" y="50" width="132" height="76" ${R}/><path d="M84 70h132M190 90h26v20h-26z" ${R}/>`],
+ penna:['Penna puntata',`<path d="M70 110l120-50 14 14-120 50zM190 60l20-8 4 22-10 0" ${R}/>`],
+};
+// tipo → disegno, per ciascuna risposta. null = a tutta larghezza; VOTO = barre del risultato.
+const OPZ = {
+ A:{n:6, nome:'Sei disegni, uno per tipo', d:'La spec com’è: un disegno per ciascuno dei sei tipi che più spesso vanno in testa (il voto ha già le barre). Sei didascalie.',
+    m:{sfiducia_approvata:'poltrona',governo_formato:'giuramento','evento_risolto|emergenza':'stivali',ultimatum_posto:'penna',bilancio_approvato:'bilancia','evento_risolto|situazione':'binocolo'}},
+ B:{n:5, nome:'Cinque scene, didascalia per tipo', d:'Una scena serve più tipi vicini (Aula, Giuramento, Emergenza, Lettera, Cassa); ogni tipo ha la sua didascalia. Spec da correggere: «un disegno per scena».',
+    m:{sfiducia_approvata:'aula',bilancio_approvato:'aula',legge_respinta:'aula',sfiducia_presentata:'aula',legge_approvata:'aula',governo_formato:'giuramento','evento_risolto|emergenza':'stivali','evento_nato|emergenza':'stivali',ultimatum_posto:'busta',minaccia_di_dimissioni:'busta',minaccia_di_scissione:'busta',ministro_esce:'busta','evento_risolto|situazione':'cassa',reddito_deluso:'cassa'}},
+ C:{n:10, nome:'Dieci disegni, uno per tipo', d:'Un disegno per ciascuno dei dieci tipi più frequenti in testa, voto escluso. Dieci didascalie.',
+    m:{sfiducia_approvata:'poltrona',governo_formato:'giuramento','evento_risolto|emergenza':'stivali',ultimatum_posto:'penna',bilancio_approvato:'bilancia','evento_risolto|situazione':'binocolo',legge_respinta:'aula',sfiducia_presentata:'busta',legge_approvata:'lente',minaccia_di_dimissioni:'porta'}},
+};
+// Didascalie: BOZZA, con le regole dei titoli (niente nomi né cifre, terza persona, il palazzo come bersaglio).
+const DID = {
+ sfiducia_approvata:'«Chi ha spostato la sedia?»', governo_formato:'«Il programma? Lo leggiamo dopo il giuramento.»',
+ 'evento_risolto|emergenza':'«Il fondo c’era. Era il fondo del cassetto.»', 'evento_nato|emergenza':'«Mettiamolo a bilancio. Quale bilancio?»',
+ ultimatum_posto:'«Firmato: l’alleato. In stampatello.»', bilancio_approvato:'«Pesa giusto. Basta non guardare il piatto.»',
+ 'evento_risolto|situazione':'«Da qui sembra piccola.»', legge_respinta:'«Pari e patta. Si torna a casa.»',
+ sfiducia_presentata:'«Raccomandata con ricevuta di ritorno.»', legge_approvata:'«Passata. Qualcuno l’ha anche letta.»',
+ minaccia_di_dimissioni:'«La lettera è pronta, manca la data.»', minaccia_di_scissione:'«Uno di noi è di troppo.»',
+ ministro_esce:'«L’ultimo spenga la luce.»', reddito_deluso:'«La ripresa è nel prossimo trimestre. Come sempre.»',
+};
+
+// ======================= stato =======================
+const DEF = {s:'vignette', vign:'A', tipo:'sfiducia_approvata', bat:'A', grave:'0', filo:'ult', testi:'A', viste:'B'};
+const st = {...DEF};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF) st[k]=v; }); }catch(e){}
+const salva = () => { try{ history.replaceState(null,'','?'+new URLSearchParams(st)); }catch(e){} };
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pc = (n,d=ORDINARIE) => Math.round(n/d*100)+'%';
+const SCHEDE = [['vignette','1 · Vignette'],['battute','2 · Battute a biro'],['testi','3 · Taglio dei testi'],['viste','4 · Viste campione']];
+const interr = (k, opz) => `<div class="int">${Object.entries(opz).map(([v,o])=>`<button class="${st[k]===v?'scelto':''}" data-k="${k}" data-v="${v}" aria-pressed="${st[k]===v}"><span class="l">${v}</span><span><b>${esc(o.nome)}</b>${o.rac?' <span class="rac">· la mia</span>':''}</span><span class="d">${o.d}</span></button>`).join('')}</div>`;
+const svg = k => `<svg viewBox="0 0 300 150" aria-hidden="true">${DIS[k][1]}</svg>`;
+
+// ======================= 1 · Vignette =======================
+function testa(tipo){
+  const x = TESTA.find(r=>r[0]===tipo), o = OPZ[st.vign], d = o.m[tipo];
+  const ris = tipo===VOTO;
+  const fig = ris ? `<figure><div class="ris"><div class="r tu"><span>Partito del giocatore</span><span class="bar"><i style="width:49%"></i></span><span class="q">16,4%</span><span class="s">76 · 38</span></div>
+      <div class="r"><span>Sinistra</span><span class="bar"><i style="width:100%"></i></span><span class="q">33,3%</span><span class="s">132 · 66</span></div>
+      <div class="r coal"><span>Centrodestra</span><span class="bar"><i style="width:44%"></i></span><span class="q">14,6%</span><span class="s">82 · 41</span></div>
+      <div class="r coal"><span>Destra</span><span class="bar"><i style="width:40%"></i></span><span class="q">13,2%</span><span class="s">72 · 36</span></div>
+      <div class="causa" style="margin-top:4px">affluenza 71,4% · in nero la coalizione col premio</div></div></figure>`
+    : d ? `<figure>${svg(d)}<figcaption>${esc(DID[tipo]||'«didascalia del tipo»')}</figcaption></figure>` : '';
+  return `<div class="pag"><div class="testata"><span class="o">Esito del trimestre<br><b>Luglio–settembre 2027</b></span><span class="nome">Il Pungolo</span><span class="o" style="text-align:right">7 notizie in pagina<br>12 nel registro</span></div>
+    <div class="apertura ${fig?'':'sola'}"><div><div class="occh ${x[3]==='C'?'crit':''}">${esc(x[2])}</div><h2>${esc(TIT[tipo])}</h2><div class="causa">${esc(x[4])}</div><div class="rim">${esc(x[5])} ›</div></div>${fig}</div>
+    <div class="nota" style="margin-top:10px;border-top:1px solid var(--ink);padding-top:6px">… sotto, le altre sei notizie in tre colonne (come 16-prima-pagina, forma A).</div></div>`;
+}
+function copertura(){
+  const o=OPZ[st.vign];
+  const con = TESTA.filter(r=>o.m[r[0]]).reduce((a,r)=>a+r[1],0), voto=TESTA.find(r=>r[0]===VOTO)[1], senza=ORDINARIE-con-voto;
+  const tot=ORDINARIE+GRAVI;
+  return `<div class="h5">Su ${tot.toLocaleString('it-IT')} prime pagine automatiche</div>
+    <div class="cop"><i style="width:${con/tot*100}%;background:var(--ink)"></i><i style="width:${voto/tot*100}%;background:var(--rosso)"></i><i style="width:${senza/tot*100}%;background:#cfc5ad"></i><i style="width:${GRAVI/tot*100}%;background:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23/.35) 3px 4px)"></i></div>
+    <div class="leg"><span style="--c:var(--ink)">vignetta ${pc(con,tot)}</span><span style="--c:var(--rosso)">voto a barre ${pc(voto,tot)}</span><span style="--c:#cfc5ad">a tutta larghezza ${pc(senza,tot)}</span><span style="--c:#9b9285">tono grave ${pc(GRAVI,tot)}</span></div>
+    <p class="nota">Fra le sole pagine ordinarie: vignetta <b>${pc(con)}</b>, barre ${pc(voto)}, a tutta larghezza ${pc(senza)}. <b>${o.n} disegni</b>, ${Object.keys(o.m).length} didascalie.</p>`;
+}
+function vignette(){
+  const o=OPZ[st.vign];
+  const righe = TESTA.map(r=>{ const d=o.m[r[0]]; const cell = r[0]===VOTO?'<span class="tag bar">barre</span>':d?`<span class="tag si">${esc(DIS[d][0])}</span>`:'<span class="tag">tutta larghezza</span>';
+    return `<tr data-tipo="${r[0]}" class="${st.tipo===r[0]?'sel':''}" tabindex="0"><td>${esc(r[0].replace('|',' · '))}</td><td class="n">${pc(r[1])}</td><td>${cell}</td></tr>`; }).join('');
+  return `<div class="dom"><div>
+    <p class="q"><b>Quanti disegni entrano nella 11f, e per quali tipi di voce di testa?</b> La spec dice «un disegno per ciascuno dei tipi che più spesso vanno in testa» senza un numero. Contate le teste su 80 partite automatiche: cinque tipi fanno metà delle prime pagine ordinarie. Clic su una riga a destra per vedere la testa di quel tipo.</p>
+    ${interr('vign',{A:{...OPZ.A},B:{...OPZ.B,rac:1},C:{...OPZ.C}})}
+    ${testa(st.tipo)}
+    <p class="nota" style="margin-top:8px">Tipo senza disegno: la testa va a tutta larghezza (spec:409). Nel tono grave niente vignetta, in nessuna risposta. Il voto ha sempre le barre al posto della vignetta (spec:408). I disegni qui sono segnaposto: la resa col metodo delle caricature la fa la fetta, con le varianti mostrate a te prima di cablarle.</p>
+  </div><aside class="lato">${copertura()}<div class="h5">I sedici tipi più spesso in testa · quota delle pagine ordinarie</div><table><thead><tr><th>Tipo</th><th>In testa</th><th>Testa</th></tr></thead><tbody>${righe}</tbody></table>
+    <p class="nota">Gli altri tipi in testa fanno insieme ${pc(ALTRE)}. Nelle partite a 4,5 con la destra e in quelle a 1,5 senza coalizione le prime quattro coincidono.</p></aside></div>`;
+}
+
+// ======================= 2 · Battute a biro =======================
+const FILI = {
+ ult:{da:'Centrodestra', a:'Presidente del Consiglio', et:'ultimatum', tondo:2, frase:'Centrodestra pone l’ultimatum al governo: l’intesa è sotto 40.', bat:'l’alleato sorride; il broncio è a verbale'},
+ min:{da:'Sanità', a:'Presidente del Consiglio', et:'minaccia', tondo:4, frase:'La ministra della Sanità minaccia le dimissioni.', bat:'la lettera è pronta, manca la data'},
+ spr:{da:'Mercati', a:'Economia', et:'spread', tondo:6, frase:'Lo spread sale a 171 punti base.', bat:'i mercati prendono appunti'},
+};
+function tavola(){
+  const B=st.bat, f0=FILI[st.filo], g=st.grave==='1';
+  const riga = (x,y,nome,sotto,id,dx) => { const f=FILI[id]; const on=st.filo===id;
+    const et = f ? `<text x="${x+176}" y="${y+18}" font-size="12" text-anchor="end" fill="var(--biro)" font-style="italic">${f.et}</text>` : '';
+    const bt = f && B==='B' && !g ? `<text x="${x+6}" y="${y+46}" font-size="12" fill="var(--biro)" font-style="italic">«${esc(f.bat)}»</text>` : '';
+    return `<g data-filo="${id||''}" style="cursor:${f?'pointer':'default'}"><rect x="${x}" y="${y}" width="180" height="${B==='B'&&f&&!g?54:38}" fill="${on?'rgb(31 26 23 / .08)':'var(--carta)'}" stroke="var(--ink)" stroke-width="${on?2:1}"/>
+      <text x="${x+6}" y="${y+17}" font-size="13" font-weight="700">${esc(nome)}</text><text x="${x+6}" y="${y+31}" font-size="11.5" fill="var(--grigio)">${esc(sotto)}</text>${et}${bt}</g>`; };
+  const filo = (x1,y1,x2,y2,id) => { const f=FILI[id]; const mx=(x1+x2)/2, my=(y1+y2)/2;
+    const bt = B==='C' && !g ? `<text x="${mx+14}" y="${my-12}" font-size="12" fill="var(--biro)" font-style="italic" paint-order="stroke" stroke="var(--carta)" stroke-width="4">«${esc(f.bat)}»</text>` : '';
+    return `<path d="M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}" fill="none" stroke="var(--biro)" stroke-width="${st.filo===id?3:1.6}" marker-end="url(#pu)"/>
+      <g><circle cx="${mx}" cy="${my}" r="9" fill="var(--carta)" stroke="var(--biro)" stroke-width="1.5"/><text x="${mx}" y="${my+4}" font-size="11" font-weight="700" fill="var(--biro)" text-anchor="middle">${f.tondo}</text></g>${bt}`; };
+  const hb = B==='B'&&!g?16:0;
+  const s = `<svg viewBox="0 0 860 ${250+hb*2}" role="img" aria-label="Tavola per poteri ridotta">
+    <defs><marker id="pu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="var(--biro)"/></marker></defs>
+    ${['Partiti','Parlamento','Governo','Paese e mercati'].map((c,i)=>`<text x="${20+i*210}" y="18" font-size="11" letter-spacing="1" fill="var(--grigio)" font-weight="700">${c.toUpperCase()}</text>`).join('')}
+    ${riga(20,34,'Centrodestra','alleato · intesa 38','ult')}
+    ${riga(20,104+hb,'Destra','alleato · intesa 61',null)}
+    ${riga(230,34,'Camera','maggioranza +14',null)}
+    ${riga(440,34,'Presidente del Consiglio','Partito del giocatore',null)}
+    ${riga(440,104+hb,'Sanità','soddisfazione 31,6','min')}
+    ${riga(440,174+hb*2,'Economia','soddisfazione 52',null)}
+    ${riga(650,104+hb,'Mercati','spread 171 pb','spr')}
+    ${filo(200,52,440,52,'ult')}${filo(530,104+hb,530,72,'min')}${filo(650,122+hb,620,192+hb*2,'spr')}
+  </svg>`;
+  const dl = `<div class="dl"><div class="h5">Filo scelto · tondo ${f0.tondo}</div><div class="t">${esc(f0.da)} → ${esc(f0.a)}</div><div>${esc(f0.frase)}</div>
+    <div class="causa">rimanda alla notizia ${f0.tondo} della prima pagina</div>${B==='A'&&!g?`<div class="biro">«${esc(f0.bat)}»</div>`:''}
+    <div class="nota">${g?'Tono grave: le battute tacciono.':B==='A'?'La battuta sta solo qui, come nel 37.':B==='B'?'La battuta sta nella riga di chi muove, sotto l’etichetta.':'La battuta sta sul filo, accanto al tondo.'}</div></div>`;
+  return `<div class="tav ${g?'g':''}">${s}${dl}</div>`;
+}
+function battute(){
+  return `<div class="dom"><div>
+    <p class="q"><b>Dove sta la battuta a biro nella tavola per poteri?</b> Il 12/11 hai scelto «battute a biro sì» guardando la forma A (rete), dove la battuta corre sul filo. In B, con riga · pettine · punta, il 37 la metteva solo nel dettaglio a lato. Una battuta per tipo di filo, solo sui fili che hanno un tondo, una sola per tondo; tacciono nel tono grave (spec:415).</p>
+    ${interr('bat',{A:{nome:'Solo nel dettaglio a lato',d:'Come il 37: la tavola resta pulita, la battuta si legge aprendo il filo.',rac:1},B:{nome:'Nella riga di chi muove',d:'Sotto l’etichetta corta del filo, a biro: le righe coi tondi si alzano di 16 px, e una battuta più lunga della riga esce sul filo vicino (qui si vede): battute sotto i trenta caratteri.'},C:{nome:'Sul filo, accanto al tondo',d:'Come la forma A: si vede subito, ma in B i fili corrono fitti e la battuta copre i vicini.'}})}
+    ${tavola()}
+  </div><aside class="lato"><div class="h5">Prova</div>
+    <div class="int"><button class="${st.grave==='0'?'scelto':''}" data-k="grave" data-v="0"><span class="l">·</span><span><b>Tono ordinario</b></span><span class="d">le battute si vedono</span></button>
+    <button class="${st.grave==='1'?'scelto':''}" data-k="grave" data-v="1"><span class="l">·</span><span><b>Tono grave</b></span><span class="d">le battute tacciono</span></button></div>
+    <div class="h5">Filo aperto</div><div class="int">${Object.entries(FILI).map(([k,f])=>`<button class="${st.filo===k?'scelto':''}" data-k="filo" data-v="${k}"><span class="l">${f.tondo}</span><span><b>${esc(f.da)} → ${esc(f.a)}</b></span><span class="d">${esc(f.et)}</span></button>`).join('')}</div>
+    <p class="nota">Tavola ridotta a sette righe per mostrare il posto della battuta; la tavola vera è quella della 11e (37-scelte-11e-schema).</p></aside></div>`;
+}
+
+// ======================= 3 · Taglio dei testi =======================
+const ESEMPI = [
+ ['sfiducia_approvata', TESTA[0][2], ['La fiducia era a tempo. Il tempo è scaduto','Il governo cade in piedi. Ma cade','Si conta in aula. Il conto non torna','Applausi a scena aperta. La scena si svuota'], [1,1,0,1]],
+ ['ultimatum_posto', TESTA[3][2], ['L’alleato posa la penna. E la punta verso il governo','Un alleato alza il dito. Non per salutare','Patti chiari, amicizia breve','L’intesa scricchiola. Il palazzo mette il tappeto'], [1,0,1,1]],
+ ['reddito_deluso', TESTA[12][2], ['Le buste paga aspettano. La ripresa, pure'], [1]],
+];
+function testi(){
+  const T = st.testi;
+  const quando = {A:2, B:3, C:4}[T];
+  const passi = ['Piano scritto','PR del piano','Task dei testi','PR dell’esecuzione','Merge'];
+  const dove = {A:'qui: leggi la tabella nella PR del piano, prima di dare il via',B:'qui: l’esecuzione si ferma dopo il task dei testi e aspetta i tuoi tagli',C:'qui: la tabella sta nel corpo della PR di codice; ciò che tagli si toglie prima del merge'}[T];
+  const tab = ESEMPI.map(([k,o,ts,ok])=>`<tr><td class="k">${k}</td><td>${esc(o)}</td><td><div class="tt">${ts.map((x,i)=>`<label>${i+1}</label><span class="${ok[i]?'':'via'}">${esc(x)}</span>`).join('')}</div></td><td>${ok.map((v,i)=>`<div class="st ${v?'ok':'no'}">${i+1} ${v?'tieni':'taglia'}</div>`).join('')}</td></tr>`).join('');
+  return `<div class="dom"><div>
+    <p class="q"><b>Quando tagli i testi del Pungolo?</b> Un agente scrive circa 180 titoli (79 chiavi: quattro varianti per la dozzina di tipi frequenti, due per gli altri), le didascalie delle vignette (una per tipo disegnato) e le battute a biro (una per tipo di filo, una dozzina), e le passa da <code>scrittura-italiana</code>. Tu leggi una tabella (tipo, occhiello d’esempio dalle Viste, varianti) e tagli o riscrivi; ciò che tagli resta senza titolo e l’occhiello sale a titolo (ticket 09).</p>
+    ${interr('testi',{A:{nome:'Nel piano, prima del via',d:'Li scrivo in questa sessione, in un file accanto al piano (<code>…-testi-11f.md</code>); tagli nella PR del piano. L’esecuzione li copia in <code>pungolo.json</code> e non scrive prosa.',rac:1},B:{nome:'Fermata dopo il task dei testi',d:'Il primo task dell’esecuzione li scrive; l’esecuzione si ferma finché non tagli. Il piano esce prima, i testi dopo.'},C:{nome:'Nella PR dell’esecuzione',d:'Li scrive un task; li leggi nel corpo della PR, coi titoli già nella pagina negli screenshot. Si fonde solo dopo i tagli.'}})}
+    <div class="flusso">${passi.map((p,i)=>`<div class="${i===quando-1?'qui':''}"><b>${i+1}</b>${p}${i===quando-1?`<br><span class="nota" style="color:var(--ink)">${dove}</span>`:''}</div>`).join('')}</div>
+    <div class="h5">La tabella che leggi, in tutte e tre le risposte</div>
+    <table class="taglio"><thead><tr><th>Tipo</th><th>Occhiello d’esempio (dal core)</th><th>Varianti</th><th>Tu</th></tr></thead><tbody>${tab}</tbody></table>
+    <p class="nota" style="margin-top:6px">Titoli d’esempio: BOZZA del prototipo. Nella tabella vera ogni riga ha la casella «tieni / taglia / riscrivi» che spunti tu; la riscrittura la scrivi a fianco.</p>
+  </div><aside class="lato"><div class="h5">Cosa c’è da leggere</div>
+    <table><tbody><tr><td>Titoli</td><td class="n">≈ 180</td></tr><tr><td>Didascalie</td><td class="n">5 a 14, secondo la scheda 1</td></tr><tr><td>Battute a biro</td><td class="n">≈ 12</td></tr><tr><td>Testi delle fermate e della banda</td><td class="n">neutri, non del Pungolo</td></tr></tbody></table>
+    <p class="nota">I tipi frequenti si contano sulle partite automatiche (spec:318): li ho contati per la scheda 1, sulle voci in evidenza, e la dozzina entra nel piano.</p></aside></div>`;
+}
+
+// ======================= 4 · Viste campione =======================
+const COPRE = [
+ ['Prima pagina ordinaria, con la Vista di prima','25-registro (prima/dopo di nove chiusure), 16 t3','sì'],
+ ['Pagina del voto, al governo e all’opposizione','16 voto_9, voto_opp','sì'],
+ ['Prima pagina grave','08-tono-grave (evento nato in tono grave)','sì'],
+ ['Avanti fino a novità, banda della fermata','16 corse: dodici fermate, una corsa di tre chiusure','sì'],
+ ['«Riprendi»: pagina ferma, senza Vista di prima','qualunque Vista dopo il turno zero','sì'],
+ ['Registro: turni, filtri, collegate, revisione e prima stima','25-registro: dopo.esito di ogni chiusura serve registro(t)','sì'],
+ ['Registro a partita finita, eredità in bozza','30-eredita (partita giocata fino alla fine)','sì'],
+ ['Avviso della campagna tagliata','26 tagliata_dopo','sì'],
+ ['Avviso del bilancio ricondotto al tetto del MES','nessuna: <code>bilancio_ricondotto</code> non esce in 80 partite automatiche né nelle Viste','no'],
+];
+function viste(){
+  const righe = COPRE.map(([a,b,c])=>`<tr><td>${a}</td><td>${b}</td><td><span class="tag ${c==='sì'?'si':'bar'}">${c==='sì'?'c’è':'manca'}</span></td></tr>`).join('');
+  return `<div class="dom"><div>
+    <p class="q"><b>Lo schema 19 basta a Prima pagina e Registro? E alle Viste campione cosa si aggiunge?</b> Nella Vista non serve nessun campo nuovo: l’esito ha già fatto, causa, soggetti, famiglia, tono, criticità e precedenza; <code>registro(t)</code> è nel guscio; i partiti sciolti restano nella Vista col segno <code>sciolto</code>; il nome di una misura passata non c’è, ma le leggi lo ricavano dalle disposizioni che toccano, e il bilancio si chiama «legge di bilancio» col suo turno (lettura mia). Alle Viste campione manca un solo stato.</p>
+    ${interr('viste',{A:{nome:'Il generatore lo cerca; se non lo trova si ferma',d:'Come la 11d: una Vista campione mancata ferma il primo task, finché non la si trova giocando (bozza in disavanzo sotto il MES).'},B:{nome:'Il generatore lo cerca; se non lo trova, voce scritta a mano nei soli test',d:'L’avviso del MES si prova in Vitest con una voce scritta a mano e dichiarata; la batteria nel browser resta sulle Viste giocate.',rac:1},C:{nome:'Nessuno stato nuovo',d:'L’avviso del MES si prova solo in Vitest con una voce scritta a mano; il generatore non cambia.'}})}
+    <table><thead><tr><th>Stato che la fetta prova</th><th>Da dove</th><th></th></tr></thead><tbody>${righe}</tbody></table>
+  </div><aside class="lato"><div class="h5">Cosa cambia nel modulo di sviluppo</div>
+    <p class="nota">Il modulo <code>mockIPC</code> oggi serve una Vista e la Vista «dopo». La 11f gli aggiunge <code>registro(t)</code> letto dalla catena di 25-registro, e «chiudi il turno» che risponde con la chiusura successiva della catena: così la rivelazione parte da una Vista di prima vera. Nessun file di Vista cambia forma.</p>
+    <div class="h5">Debiti che la fetta chiude senza dati nuovi</div>
+    <p class="nota">L’esito della sfiducia (PR #79) si legge in prima pagina: <code>sfiducia_approvata</code> e <code>sfiducia_respinta</code> sono voci dell’esito. Nati, sciolti e leader nuovi nelle schede dei Partiti (segnaposto «11f») vengono dal registro.</p></aside></div>`;
+}
+
+// ======================= disegno e clic =======================
+function disegna(){
+  document.getElementById('schede').innerHTML = SCHEDE.map(([k,l])=>`<button class="btn ${st.s===k?'scelto':''}" data-k="s" data-v="${k}">${l}</button>`).join('');
+  document.getElementById('main').innerHTML = {vignette, battute, testi, viste}[st.s]();
+  salva();
+}
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-k]'); if(b){ st[b.dataset.k]=b.dataset.v; disegna(); return; }
+  const r=e.target.closest('tr[data-tipo]'); if(r){ st.tipo=r.dataset.tipo; disegna(); return; }
+  const f=e.target.closest('g[data-filo]'); if(f && f.dataset.filo){ st.filo=f.dataset.filo; disegna(); }
+});
+document.addEventListener('keydown', e=>{ const r=e.target.closest?.('tr[data-tipo]'); if(r && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); st.tipo=r.dataset.tipo; disegna(); } });
+disegna();
+</script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+[
+ {
+  "chiave": "evento_risolto|situazione",
+  "varianti": 2,
+  "in_evidenza_su_3124": 378,
+  "occhiello": "Recessione, «Non intervenire» per default",
+  "causa": "crescita del PIL: -2,9% annuo (soglia -1,0%)"
+ },
+ {
+  "chiave": "evento_risolto|emergenza",
+  "varianti": 4,
+  "in_evidenza_su_3124": 1351,
+  "occhiello": "Emergenza idrogeologica in Emilia-Romagna, «Attingere al fondo di riserva» per default; 305.700.000 euro dal fondo di riserva (6% del costo); valence 0,00 a Destra",
+  "causa": "rischio alto"
+ },
+ {
+  "chiave": "evento_risolto|scandalo",
+  "varianti": 2,
+  "in_evidenza_su_3124": 189,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "evento_risolto|shock",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Rincaro improvviso dell'energia, «Chiedere il margine UE per l'energia per quest'anno, conta dal 2029»",
+  "causa": "prezzi dell'energia: shock di 3,0 sigma (soglia 2,5 sigma)"
+ },
+ {
+  "chiave": "evento_risolto|debito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Aste scoperte, «Chiedere il programma del MES»",
+  "causa": "spread a 630 pb (soglia 550 pb)"
+ },
+ {
+  "chiave": "mes_avviato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Programma del MES di 8 trimestri, finisce a aprile 2032; vincolati Età pensionabile: 70 anni; Indicizzazione delle pensioni: bloccata sopra soglia; ogni alleato perde 10,0 punti d'intesa",
+  "causa": "la scelta nelle «Aste scoperte», spread a 630 pb (soglia 550 pb)"
+ },
+ {
+  "chiave": "ristrutturazione",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Debito tagliato del 50%, 1.983.575.523.475 euro; premio di 300 pb sullo spread; redditi primari delle fasce media e alta giù del 5% per 8 turni",
+  "causa": "la scelta nelle «Aste scoperte»"
+ },
+ {
+  "chiave": "proposta_respinta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 414,
+  "occhiello": "3 proposte respinte",
+  "causa": "in sospeso da 2 turni senza risposta"
+ },
+ {
+  "chiave": "emendamento_respinto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 134,
+  "occhiello": "3 emendamenti respinti",
+  "causa": "senza risposta prima del voto"
+ },
+ {
+  "chiave": "atto_saltato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Il dicastero Ambiente ed Energia non esegue «Riempimento accelerato delle riserve di gas», annunciato in agenda",
+  "causa": "dimissioni chieste"
+ },
+ {
+  "chiave": "cantiere_fermo",
+  "varianti": 4,
+  "in_evidenza_su_3124": 419,
+  "occhiello": "6 cantieri fermi",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "cantiere_finito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 255,
+  "occhiello": "2 cantieri finiti",
+  "causa": "la fine dei lavori dopo 4 turni"
+ },
+ {
+  "chiave": "legge_approvata",
+  "varianti": 4,
+  "in_evidenza_su_3124": 2037,
+  "occhiello": "Approvata «Sgravio contributivo nel Mezzogiorno: 15%»; Camera 232 sì e 168 no, 6 franchi tiratori; Senato 113 sì e 87 no, 6 franchi tiratori",
+  "causa": "per il sì Centro, Centrodestra, Destra, Partito del giocatore; per il no Estrema sinistra, Sinistra, Centrosinistra, Estrema destra"
+ },
+ {
+  "chiave": "legge_respinta",
+  "varianti": 4,
+  "in_evidenza_su_3124": 1572,
+  "occhiello": "Respinta «Concorrenza nei servizi: mercato libero»; Camera 133 sì e 267 no, 9 franchi tiratori; Senato 69 sì e 131 no, 6 franchi tiratori; disposizioni bloccate per 2 turni",
+  "causa": "per il sì Estrema sinistra, Sinistra, Centrosinistra; per il no Centro, Centrodestra, Destra, Estrema destra, Partito del giocatore"
+ },
+ {
+  "chiave": "decreto_decaduto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 286,
+  "occhiello": "Decade «Decreto: fondi a Economia e Finanze per Incrocio delle banche dati fiscali»; Camera 206 sì e 194 no, 9 franchi tiratori; Senato 100 sì e 100 no, 6 franchi tiratori; valence -0,05 a Sinistra",
+  "causa": "per il sì Sinistra, Centrosinistra, Centro, Centrodestra; per il no Estrema sinistra, Destra, Estrema destra, Partito del giocatore"
+ },
+ {
+  "chiave": "bilancio_approvato",
+  "varianti": 4,
+  "in_evidenza_su_3124": 518,
+  "occhiello": "Approvata la legge di bilancio; Camera 243 sì e 157 no, 22 franchi tiratori; Senato 130 sì e 70 no, 11 franchi tiratori; budget tagliato in termini reali a Economia e Finanze (-7,8%), Sviluppo economico (-1,7%), Lavoro e Welfare (-7,8%), Sanità (-7,8%), Istruzione e Ricerca (-1,7%), Infrastrutture e Trasporti (-7,8%), Ambiente ed Energia (-7,8%), Interno (-7,8%), Giustizia (-7,8%), Esteri e Difesa (-7,8%)",
+  "causa": "per il sì Sinistra, Centrosinistra, Centro, Partito del giocatore; per il no Estrema sinistra, Centrodestra, Destra, Estrema destra"
+ },
+ {
+  "chiave": "bilancio_ricondotto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "bilancio_respinto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 63,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "fiducia_respinta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "sfiducia_approvata",
+  "varianti": 4,
+  "in_evidenza_su_3124": 538,
+  "occhiello": "Approvata la sfiducia individuale a Fabio Rossi (Sviluppo economico); Camera 208 sì e 192 no; Senato 100 sì e 100 no; il dicastero va in interim",
+  "causa": "per il sì Estrema sinistra, Sinistra, Centrosinistra, Centro, Centrodestra, Estrema destra; per il no Destra, Partito del giocatore; in ultimatum votano sì Centrodestra"
+ },
+ {
+  "chiave": "sfiducia_respinta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Respinta la sfiducia al governo; Camera 60 sì e 340 no; Senato 28 sì e 172 no; valence -0,10 a Partito del giocatore",
+  "causa": "per il sì Estrema sinistra, Estrema destra, Partito del giocatore; per il no Sinistra, Centrosinistra, Centro, Centrodestra, Destra"
+ },
+ {
+  "chiave": "valore_non_applicato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "misura_decaduta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "3 misure decadute",
+  "causa": "la caduta del governo"
+ },
+ {
+  "chiave": "confermativo_in_attesa",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "referendum_votato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 118,
+  "occhiello": "Referendum abrogativo su «Tetto al contante: 5.000 €» fallito senza quorum; 5.087.856 sì e 7.343.720 no, affluenza del 26,8%; valence -0,05 a Partito del giocatore",
+  "causa": "affluenza del 26,8% contro il quorum del 50%"
+ },
+ {
+  "chiave": "referendum_chiesto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Chiede il referendum su Età pensionabile, si vota a aprile 2031",
+  "causa": "secondo il sondaggio il sì vincerebbe col 59,3% dei voti e il quorum sarebbe raggiunto"
+ },
+ {
+  "chiave": "firme_raccolte",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Indetto il referendum abrogativo su Età pensionabile, si vota a aprile 2031",
+  "causa": "firme depositate nei termini"
+ },
+ {
+  "chiave": "scissione",
+  "varianti": 2,
+  "in_evidenza_su_3124": 132,
+  "occhiello": "Scissione in Partito del giocatore: nasce Lista dei Territori, sulla posizione 2,5, con 4 deputati, 2 senatori e 279.899 euro di cassa",
+  "causa": "la posizione percepita dista 1,0 punti dalla dichiarata, la soglia di scissione è 1,0"
+ },
+ {
+  "chiave": "minaccia_di_scissione",
+  "varianti": 2,
+  "in_evidenza_su_3124": 141,
+  "occhiello": "Minaccia di scissione in Partito del giocatore, a 0,5 punti dalla posizione dichiarata",
+  "causa": "la posizione percepita dista 0,5 punti dalla dichiarata, la soglia di minaccia è 0,5"
+ },
+ {
+  "chiave": "minaccia_rientrata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "promessa_verificata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "2 promesse verificate",
+  "causa": "la disposizione non sta al gradino promesso"
+ },
+ {
+  "chiave": "promesse_scadute",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "6 promesse scadute",
+  "causa": "ha presieduto il governo meno di 4 turni nella legislatura"
+ },
+ {
+  "chiave": "promessa_fatta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "7 promesse fatte",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "spesa_di_campagna",
+  "varianti": 2,
+  "in_evidenza_su_3124": 141,
+  "occhiello": "7 spese di campagna",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "campagna_tagliata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Campagna tagliata: chiesti 1.000.000 euro, spesi 985.000",
+  "causa": "la cassa è scesa dopo la decisione; nel turno gli acquisti d'informazione sono costati 15.000 euro"
+ },
+ {
+  "chiave": "mes_finito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "controllo_ue",
+  "varianti": 2,
+  "in_evidenza_su_3124": 189,
+  "occhiello": "Controllo UE sul 2027: spesa netta sotto il percorso di 0,5 punti di PIL, al netto della clausola di 0,6 punti; conto di controllo a 0,0 punti di PIL",
+  "causa": "la spesa netta del 2027 cresce del 2,2% contro il tetto del 1,9%"
+ },
+ {
+  "chiave": "procedura_ue",
+  "varianti": 2,
+  "in_evidenza_su_3124": 210,
+  "occhiello": "Chiusa la procedura per disavanzo eccessivo, che era sospesa",
+  "causa": "deviazione non rilevante della spesa netta, disavanzo del 2027 al 2,8% del PIL"
+ },
+ {
+  "chiave": "ammenda_ue",
+  "varianti": 2,
+  "in_evidenza_su_3124": 124,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "ristrutturazione_finita",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "reddito_deluso",
+  "varianti": 4,
+  "in_evidenza_su_3124": 1270,
+  "occhiello": "3 fasce di reddito deluse",
+  "causa": "nessun trimestre passato da ricordare, l'attesa parte da zero"
+ },
+ {
+  "chiave": "situazione_accesa",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "situazione_spenta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 34,
+  "occhiello": "Si spegne la situazione «Caro energia»: scarto dei prezzi dell'energia a 3,9",
+  "causa": "raggiunta la soglia di spegnimento di 5,0"
+ },
+ {
+  "chiave": "crisi_del_debito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "risultato_del_voto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 160,
+  "occhiello": "Elezioni politiche: affluenza del 71,4%; Partito del giocatore al 16,4% con 76 seggi alla Camera e 38 al Senato; primo partito Sinistra al 33,3%; premio di maggioranza a Partito del giocatore, Centrodestra e Destra",
+  "causa": "elezioni politiche"
+ },
+ {
+  "chiave": "incarico",
+  "varianti": 4,
+  "in_evidenza_su_3124": 446,
+  "occhiello": "Incarico di formare il governo a Partito del giocatore",
+  "causa": "la tua coalizione ha la maggioranza in entrambe le Camere, con 224 seggi su 400 alla Camera e 115 su 200 al Senato"
+ },
+ {
+  "chiave": "fine_della_partita",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Partito del giocatore resta senza seggi alla Camera e al Senato: la partita finisce",
+  "causa": "al voto il 2,4% fra i votanti, nessun seggio"
+ },
+ {
+  "chiave": "partito_sciolto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Si scioglie",
+  "causa": "2 elezioni di fila senza seggi"
+ },
+ {
+  "chiave": "minaccia_di_dimissioni",
+  "varianti": 2,
+  "in_evidenza_su_3124": 387,
+  "occhiello": "3 ministri minacciano le dimissioni",
+  "causa": "la soddisfazione è scesa sotto la soglia di minaccia di 40,0; la causa peggiore è «spesa del dicastero tagliata in termini reali»"
+ },
+ {
+  "chiave": "ministro_esce",
+  "varianti": 2,
+  "in_evidenza_su_3124": 309,
+  "occhiello": "6 ministri escono",
+  "causa": "l'uscita dal governo di Sinistra"
+ },
+ {
+  "chiave": "ultimatum_posto",
+  "varianti": 4,
+  "in_evidenza_su_3124": 612,
+  "occhiello": "Sinistra pone l'ultimatum al governo",
+  "causa": "l'intesa è scesa sotto la soglia d'ultimatum di 40,0; la causa peggiore è «calo nei sondaggi al governo»"
+ },
+ {
+  "chiave": "ultimatum_ritirato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 177,
+  "occhiello": "Centrodestra ritira l'ultimatum al governo",
+  "causa": "l'intesa è tornata alla soglia d'ultimatum di 40,0 o sopra"
+ },
+ {
+  "chiave": "cambio_di_leader",
+  "varianti": 2,
+  "in_evidenza_su_3124": 52,
+  "occhiello": "Nuovo leader: Anna Barbieri",
+  "causa": "la perdita del governo"
+ },
+ {
+  "chiave": "frangia_esce",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "alleato_esce",
+  "varianti": 2,
+  "in_evidenza_su_3124": 44,
+  "occhiello": "Sinistra lascia il governo; dicasteri in interim: Economia e Finanze, Sviluppo economico, Istruzione e Ricerca, Interno",
+  "causa": "l'intesa è scesa sotto la soglia d'uscita di 25,0, dopo l'ultimatum per calo nei sondaggi al governo"
+ },
+ {
+  "chiave": "rimpasto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "crisi_aperta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 31,
+  "occhiello": "Crisi di governo: senza Sinistra la coalizione non ha la maggioranza",
+  "causa": "la coalizione ha 104 seggi su 400 alla Camera e 55 su 200 al Senato"
+ },
+ {
+  "chiave": "coalizione_allargata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "governo_caduto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 290,
+  "occhiello": "Cade il governo di Sinistra",
+  "causa": "la mozione di sfiducia approvata"
+ },
+ {
+  "chiave": "camere_sciolte",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "guida_rifiutata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "governo_formato",
+  "varianti": 4,
+  "in_evidenza_su_3124": 428,
+  "occhiello": "Nasce il governo di Partito del giocatore dopo il voto, con Centrodestra e Destra; dicasteri: 4 a Partito del giocatore, 2 a Centrodestra, 4 a Destra",
+  "causa": "la tua coalizione ha la maggioranza in entrambe le Camere"
+ },
+ {
+  "chiave": "programma_dichiarato",
+  "varianti": 2,
+  "in_evidenza_su_3124": 213,
+  "occhiello": "Programma di governo: 1 disposizione, Sgravio contributivo nel Mezzogiorno",
+  "causa": "la nascita del governo avversario"
+ },
+ {
+  "chiave": "rottura_dell_impegno",
+  "varianti": 2,
+  "in_evidenza_su_3124": 303,
+  "occhiello": "5 rotture dell'impegno",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "evento_nato|situazione",
+  "varianti": 2,
+  "in_evidenza_su_3124": 326,
+  "occhiello": "Recessione",
+  "causa": "crescita del PIL: -2,9% annuo (soglia -1,0%)"
+ },
+ {
+  "chiave": "evento_nato|emergenza",
+  "varianti": 4,
+  "in_evidenza_su_3124": 1136,
+  "occhiello": "Emergenza idrogeologica in Emilia-Romagna, costo dell'intervento 5.000.000.000 euro",
+  "causa": "rischio alto"
+ },
+ {
+  "chiave": "evento_nato|scandalo",
+  "varianti": 2,
+  "in_evidenza_su_3124": 139,
+  "occhiello": "Scandalo su un leader (Bruno Castellani, Estrema destra)",
+  "causa": "rischio medio"
+ },
+ {
+  "chiave": "evento_nato|shock",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "evento_nato|debito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "shock_assorbito",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "Crollo della domanda estera non diventa un evento: ne nasce uno solo a turno. La serie si muove comunque, come con «Non intervenire»",
+  "causa": "serie «domanda estera», shock di 2,7 sigma oltre la soglia di 2,5 sigma"
+ },
+ {
+  "chiave": "valore_in_vigore",
+  "varianti": 2,
+  "in_evidenza_su_3124": 111,
+  "occhiello": "Credito d'imposta nella ZES unica passa a 1 miliardo: entra in vigore il valore in arrivo",
+  "causa": "valore fissato da «DL 124/2023, art. 16»"
+ },
+ {
+  "chiave": "posizione_spostata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "4 posizioni spostate",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "partito_di_protesta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ },
+ {
+  "chiave": "coalizione_ia",
+  "varianti": 2,
+  "in_evidenza_su_3124": 42,
+  "occhiello": "2 coalizioni fra partiti IA",
+  "causa": "nel valore atteso ci guadagna"
+ },
+ {
+  "chiave": "emendamento_chiesto",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": "2 emendamenti chiesti",
+  "causa": "più cause"
+ },
+ {
+  "chiave": "misura_presentata",
+  "varianti": 4,
+  "in_evidenza_su_3124": 1531,
+  "occhiello": "Porta nel posto riservato Sgravio contributivo nel Mezzogiorno: 15%",
+  "causa": "225 seggi fra Camera e Senato dei partiti alleati la voterebbero"
+ },
+ {
+  "chiave": "fiducia_posta",
+  "varianti": 2,
+  "in_evidenza_su_3124": 233,
+  "occhiello": "Pone la questione di fiducia su Decreto: fondi a Infrastrutture e Trasporti per Manutenzione straordinaria delle strade locali",
+  "causa": "la forbice include la sconfitta"
+ },
+ {
+  "chiave": "sfiducia_presentata",
+  "varianti": 2,
+  "in_evidenza_su_3124": 324,
+  "occhiello": "Presenta la sfiducia a Filippo Barbieri, Interno",
+  "causa": "Centrodestra in ultimatum la voterebbe"
+ },
+ {
+  "chiave": "governo_dimissionario",
+  "varianti": 2,
+  "in_evidenza_su_3124": 0,
+  "occhiello": null,
+  "causa": null
+ }
+]
