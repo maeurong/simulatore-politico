@@ -10,15 +10,18 @@
   import type { Filo, Nodo, tondiDi } from "./schema";
   import { nomeNodo, type Scelta } from "./tavola";
 
-  let { vista, nodi, fili, tondi, scelta, id, onapri, onchiudi }: {
-    vista: Vista; nodi: Nodo[]; fili: Filo[]; tondi: ReturnType<typeof tondiDi>; scelta: Scelta; id: string; onapri: (s: Scelta) => void; onchiudi: () => void;
+  /** `tutti`: i fili del trimestre, filtro o no: i conteggi dicono il trimestre. `onapri` riceve chi ha aperto, per rendergli il fuoco. */
+  let { vista, nodi, fili, tutti, tondi, scelta, id, onapri, onchiudi }: {
+    vista: Vista; nodi: Nodo[]; fili: Filo[]; tutti: Filo[]; tondi: ReturnType<typeof tondiDi>; scelta: Scelta; id: string;
+    onapri: (s: Scelta, da?: HTMLElement) => void; onchiudi: () => void;
   } = $props();
 
   const nodo = (x: string) => nodi.find((n) => n.id === x)!;
+  const tocca = (f: Filo, id: string) => f.da === id || f.a === id;
   const filo = $derived(scelta?.tipo === "filo" ? fili.find((f) => f.id === scelta.id) : undefined);
   const riga = $derived(scelta?.tipo === "riga" ? nodi.find((n) => n.id === scelta.id) : undefined);
-  const suoi = $derived(riga ? fili.filter((f) => f.da === riga.id || f.a === riga.id) : []);
-  const numeri = $derived(filo ? (tondi.fili.get(filo.id) ?? []) : []);
+  const suoi = $derived(riga ? fili.filter((f) => tocca(f, riga.id)) : []);
+  const numeri = $derived(filo ? (tondi.fili.get(filo.id) ?? []) : riga ? (tondi.nodi.get(riga.id) ?? []) : []);
   const battuta = $derived(filo && numeri.length && !grave(vista) ? battutaDi(filo.tipo) : null);
   const haTondi = $derived(tondi.fili.size + tondi.nodi.size > 0);
 </script>
@@ -40,6 +43,9 @@
   <section class="det" {id} tabindex="-1" aria-label={nomeNodo(riga)}>
     <div class="occ">{riga.sotto}</div>
     <h4 class="tit">{nomeNodo(riga)}</h4>
+    {#if numeri.length}
+      <p class="sec">{t("schema.in_prima_pagina")} {#each numeri as k (k)}<span class="tn">{k}</span> {/each}</p>
+    {/if}
     {#if suoi.length}
       <ul class="fl">
         {#each suoi as f (f.id)}
@@ -49,7 +55,7 @@
           </button></li>
         {/each}
       </ul>
-    {:else}
+    {:else if !tutti.some((f) => tocca(f, riga.id))}
       <p class="sec muto">{t("schema.nessun_filo")}</p>
     {/if}
     <div class="az"><Pulsante forma="link" onclick={onchiudi}>{t("schema.chiudi")}</Pulsante></div>
@@ -64,11 +70,11 @@
         {#if posto}
           {@const f = fili.find((x) => x.id === posto)}
           <!-- il tondo ha il colore del suo filo, come sulla tavola -->
-          <button type="button" onclick={() => onapri({ tipo: f ? "filo" : "riga", id: posto })}>
-            <span class={["tn", { m: f?.contrario }]}>{n}</span><span>{voce.fatto}</span>
+          <button type="button" onclick={(e) => onapri({ tipo: f ? "filo" : "riga", id: posto }, e.currentTarget)}>
+            <span class={["tn", { m: f?.contrario }]}>{n}</span> <span>{voce.fatto}</span>
           </button>
         {:else}
-          <span class="no"><span class="tn">{n}</span><span>{voce.fatto} <span class="muto">· {t("schema.senza_posto")}</span></span></span>
+          <span class="no"><span class="tn">{n}</span> <span>{voce.fatto} <span class="muto">· {t("schema.senza_posto")}</span></span></span>
         {/if}
       </li>
     {/each}
@@ -76,7 +82,7 @@
 {/if}
 
 <h4 class="tit">{t("schema.come_si_legge")}</h4>
-<p class="sec">{t("schema.n_fili", { n: fili.length })}</p>
+<p class="sec">{t("schema.n_fili", { n: tutti.length })}</p>
 <div class="leg" aria-hidden="true">
   <svg viewBox="0 0 34 14"><path class="fi" d="M2 7 H32" /></svg><span>{t("schema.leg_filo")}</span>
   <svg viewBox="0 0 34 14"><path class="fi m" d="M2 7 H32" /></svg><span>{t("schema.leg_contrario")}</span>
@@ -117,5 +123,6 @@
   .voci { list-style: none; display: grid; gap: 4px; font-size: var(--c-sec) }
   .voci button, .voci .no { display: grid; grid-template-columns: 20px 1fr; gap: 6px; align-items: start; width: 100%; text-align: left }
   .voci button:hover { background: var(--velo) }
+  .voci .muto { white-space: nowrap }
   .voci .no .tn { border-style: dashed; border-color: var(--grigio); color: var(--grigio) }
 </style>

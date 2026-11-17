@@ -7,7 +7,6 @@ import grave from "../../../../.scratch/v1-piano-11-ui/viste/08-tono-grave.json"
 import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
 import registro from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import { tracciatiDi } from "$lib/tracciati";
-import { pagina } from "$lib/esito/esito";
 import { quandoMisura } from "$lib/aula/aula";
 import { schema, soloInPrimaPagina, tondiDi } from "./schema";
 

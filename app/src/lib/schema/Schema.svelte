@@ -32,14 +32,19 @@
     if (!aperta) scelta = null;
   });
 
+  // chi ha aperto il dettaglio dall'elenco delle notizie: Esc gli rende il fuoco; dalla tavola il fuoco torna alla riga o al filo
+  let apritore: HTMLElement | null = null;
   async function chiudi() {
-    const s = aperta;
+    const s = aperta, da = apritore;
     scelta = null;
+    apritore = null;
     await tick();
-    if (s) document.getElementById(`${pre}-${s.tipo === "filo" ? "f" : "n"}-${s.id}`)?.focus();
+    if (da?.isConnected) da.focus();
+    else if (s) document.getElementById(`${pre}-${s.tipo === "filo" ? "f" : "n"}-${s.id}`)?.focus();
   }
-  async function dalDettaglio(s: Scelta) {
+  async function dalDettaglio(s: Scelta, da?: HTMLElement) {
     scelta = s;
+    apritore = da ?? null;
     await tick();
     document.getElementById(`${pre}-det`)?.focus();
   }
@@ -57,13 +62,13 @@
     {#if filtra}
       <div class="filtro">
         <Pulsante forma="piccolo" scelto={!solo} onclick={() => (solo = false)}>{t("schema.tutti_i_fili", { n: tutto.fili.length })}</Pulsante>
-        <Pulsante forma="piccolo" scelto={solo} onclick={() => (solo = true)}>{t("schema.solo_prima")}</Pulsante>
+        <Pulsante forma="piccolo" scelto={solo} onclick={() => (solo = true)}>{t("schema.solo_prima", { n: T.fili.size })}</Pulsante>
       </div>
     {/if}
   </div>
-  <Tavola nodi={S.nodi} fili={S.fili} tondi={T} scelta={aperta} {pre} onscegli={(s) => (scelta = s)} />
+  <Tavola nodi={S.nodi} fili={S.fili} tutti={tutto.fili} tondi={T} scelta={aperta} {pre} onscegli={(s) => ((scelta = s), (apritore = null))} />
   <aside class="lato">
-    <DettaglioSchema {vista} nodi={S.nodi} fili={S.fili} tondi={T} scelta={aperta} id="{pre}-det" onapri={dalDettaglio} onchiudi={chiudi} />
+    <DettaglioSchema {vista} nodi={S.nodi} fili={S.fili} tutti={tutto.fili} tondi={T} scelta={aperta} id="{pre}-det" onapri={dalDettaglio} onchiudi={chiudi} />
   </aside>
 </div>
 

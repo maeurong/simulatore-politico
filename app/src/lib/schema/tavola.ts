@@ -64,7 +64,8 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
       s.usata = true; s.punta ||= f.a === PDC; s.su = Math.min(s.su, Y); s.giu = Math.max(s.giu, Y);
       const xo = altro.c === 2 ? X(2) : altro.c < 2 ? X(altro.c) + cw : X(altro.c);
       d = f.a === PDC ? `M${r1(xo)},${r1(Y)} L${r1(sx)},${r1(Y)}` : `M${r1(sx)},${r1(Y)} L${r1(xo)},${r1(Y)}`;
-      mx = (xo + sx) / 2; my = Y;
+      // dai Partiti il pettine scavalca il Parlamento: il tondo sta nel primo canale, non sopra una riga
+      mx = altro.c === 0 ? xo + gap / 2 : (xo + sx) / 2; my = Y;
     } else if (A.c === B.c) {
       // stessa colonna (Camera → Senato): un'ansa nel canale a sinistra
       const x = A.x - 2, ansa = 14 + Math.abs(B.y - A.y) * 0.08;
@@ -73,7 +74,8 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
     } else {
       const xa = A.c < B.c ? A.x + cw : A.x, xb = A.c < B.c ? B.x : B.x + cw, k = (xb - xa) * 0.5;
       d = `M${r1(xa)},${r1(A.y)} C${r1(xa + k)},${r1(A.y)} ${r1(xb - k)},${r1(B.y)} ${r1(xb)},${r1(B.y)}`;
-      mx = (xa + xb) / 2; my = (A.y + B.y) / 2;
+      // scavalcando una colonna, il tondo nel primo canale (lì la curva è ancora all'altezza di chi muove)
+      [mx, my] = Math.abs(B.c - A.c) > 1 ? [xa + (A.c < B.c ? gap : -gap) / 2, A.y] : [(xa + xb) / 2, (A.y + B.y) / 2];
     }
     const tr = { filo: f, d, x: r1(mx), y: r1(my) };
     tratti.push(tr);
@@ -97,3 +99,24 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
 
   return { altezza, colonne: [0, 1, 2, 3].map(X), cw, righe, tratti, sbarre };
 }
+
+/** Un tondo su un filo: il numero, il centro, rosso se il filo è contrario. */
+export type Tondo = { n: number; x: number; y: number; m: boolean; filo: string };
+/** I tondi dei fili, raggruppati per punto: fili con la stessa geometria (le leggi Camera → Senato) accodano i numeri invece di coprirsi. */
+export function tondiSuiFili(tratti: Tratto[], numeri: Map<string, number[]>): Tondo[] {
+  const punti = new Map<string, { x: number; y: number; voci: { n: number; m: boolean; filo: string }[] }>();
+  for (const { filo: f, x, y } of tratti) {
+    for (const n of numeri.get(f.id) ?? []) {
+      const k = `${x},${y}`;
+      if (!punti.has(k)) punti.set(k, { x, y, voci: [] });
+      punti.get(k)!.voci.push({ n, m: f.contrario, filo: f.id });
+    }
+  }
+  return [...punti.values()].flatMap((p) => p.voci.sort((a, b) => a.n - b.n).map((v, i) => ({ ...v, x: p.x - ((p.voci.length - 1) * 19) / 2 + i * 19, y: p.y })));
+}
+
+const inPrima = (numeri: number[]) => (numeri.length ? t("schema.prima_aria", { n: numeri.join(", ") }) : "");
+/** Il nome accessibile della riga: i fili si contano su tutto il trimestre, anche a filtro acceso. */
+export const nomeRiga = (n: Nodo, tutti: Filo[], numeri: number[]) =>
+  t("schema.nome_riga", { nome: nomeNodo(n), sotto: n.sotto, fili: t("schema.n_fili", { n: tutti.filter((f) => f.da === n.id || f.a === n.id).length }) }) + inPrima(numeri);
+export const nomeFilo = (f: Filo, numeri: number[]) => f.frase + inPrima(numeri);

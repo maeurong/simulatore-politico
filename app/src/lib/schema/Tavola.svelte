@@ -4,10 +4,11 @@
   // I tondi (piano 11f, lettura 8) stanno in cima, a metà del filo e sull'angolo della riga: si leggono, non si cliccano.
   import { t, type Chiave } from "$lib/testi/t";
   import type { Filo, Nodo } from "./schema";
-  import { nomeNodo, stima, tavola, type Misura, type Scelta } from "./tavola";
+  import { nomeFilo, nomeRiga, stima, tavola, tondiSuiFili, type Misura, type Scelta } from "./tavola";
 
-  let { nodi, fili, tondi, scelta, pre, onscegli }: {
-    nodi: Nodo[]; fili: Filo[]; tondi: { fili: Map<string, number[]>; nodi: Map<string, number[]> }; scelta: Scelta; pre: string; onscegli: (s: Scelta) => void;
+  /** `tutti`: i fili del trimestre, filtro o no, per i conteggi. */
+  let { nodi, fili, tutti, tondi, scelta, pre, onscegli }: {
+    nodi: Nodo[]; fili: Filo[]; tutti: Filo[]; tondi: { fili: Map<string, number[]>; nodi: Map<string, number[]> }; scelta: Scelta; pre: string; onscegli: (s: Scelta) => void;
   } = $props();
 
   let W = $state(0), H = $state(0);
@@ -22,7 +23,6 @@
   });
   // ponytail: sotto i 200 px la tavola non si disegna; la pagina ha sempre più spazio (1280×800 a scala massima)
   const T = $derived(W > 200 && H > 200 ? tavola(nodi, fili, W, H, misura) : null);
-  const nFili = (id: string) => fili.filter((f) => f.da === id || f.a === id).length;
 
   // in fuoco: il filo scelto coi suoi capi, o la riga scelta coi suoi fili e i loro capi
   const fuoco = $derived.by(() => {
@@ -63,7 +63,7 @@
         {@const n = r.nodo}
         <g id="{pre}-n-{n.id}" class={["nd", n.tipo, { gov: n.alGoverno, tuo: n.tuo, spento: n.spento, scura: r.scura, on: fuoco?.has(n.id) }]}
           role="button" tabindex="0" aria-expanded={scelto("riga", n.id)} aria-controls="{pre}-det"
-          aria-label={t("schema.nome_riga", { nome: nomeNodo(n), sotto: n.sotto, fili: t("schema.n_fili", { n: nFili(n.id) }) })}
+          aria-label={nomeRiga(n, tutti, tondi.nodi.get(n.id) ?? [])}
           onclick={() => onscegli({ tipo: "riga", id: n.id })} onkeydown={tasto({ tipo: "riga", id: n.id })}>
           <rect class="anello" x={r.x - 3} y={r.y - r.h / 2 - 3} width={r.w + 6} height={r.h + 6} rx={n.tipo === "presidente" ? r.h / 2 + 3 : n.tipo === "paese" || n.tipo === "situazione" ? 11 : 0} />
           <rect class="b" x={r.x} y={r.y - r.h / 2} width={r.w} height={r.h} rx={n.tipo === "presidente" ? r.h / 2 : n.tipo === "paese" || n.tipo === "situazione" ? 8 : 0} />
@@ -74,16 +74,13 @@
           {/if}
         </g>
         {#each r.uscenti as { filo: f, d } (f.id)}
-          <path id="{pre}-f-{f.id}" class="fi-hit" {d} role="button" tabindex="0" aria-expanded={scelto("filo", f.id)} aria-controls="{pre}-det" aria-label={f.frase}
+          <path id="{pre}-f-{f.id}" class="fi-hit" {d} role="button" tabindex="0" aria-expanded={scelto("filo", f.id)} aria-controls="{pre}-det" aria-label={nomeFilo(f, tondi.fili.get(f.id) ?? [])}
             onclick={() => onscegli({ tipo: "filo", id: f.id })} onkeydown={tasto({ tipo: "filo", id: f.id })} />
         {/each}
       {/each}
       <g class="tondi" aria-hidden="true">
-        {#each T.tratti as { filo: f, x, y } (f.id)}
-          {#each tondi.fili.get(f.id) ?? [] as k, i (k)}
-            {@const cx = x - ((tondi.fili.get(f.id)!.length - 1) * 19) / 2 + i * 19}
-            <g class={["tnd", { m: f.contrario, on: fuoco?.has(f.id) }]}><circle {cx} cy={y} r="9" /><text x={cx} y={y + 4}>{k}</text></g>
-          {/each}
+        {#each tondiSuiFili(T.tratti, tondi.fili) as k (k.n)}
+          <g class={["tnd", { m: k.m, on: fuoco?.has(k.filo) }]}><circle cx={k.x} cy={k.y} r="9" /><text x={k.x} y={k.y + 4}>{k.n}</text></g>
         {/each}
         {#each T.righe as r (r.nodo.id)}
           {#each tondi.nodi.get(r.nodo.id) ?? [] as k, i (k)}

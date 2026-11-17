@@ -3,7 +3,8 @@ import type { Vista } from "$lib/tipi/Vista";
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
 import { schema, type Filo, type Nodo } from "./schema";
-import { RIGA_MIN, TESTA, tavola } from "./tavola";
+import { t } from "$lib/testi/t";
+import { nomeFilo, nomeRiga, RIGA_MIN, TESTA, tavola, tondiSuiFili } from "./tavola";
 
 const ordinario = bilancio as unknown as Vista;
 const fine = (opposizione as unknown as Record<string, Record<string, Vista>>).fine.vista;
@@ -95,6 +96,14 @@ describe("tavola, geometria", () => {
     expect(T.righe.find((r) => r.nodo.id === "camera")!.uscenti).toEqual([]);
   });
 
+  it("un filo che scavalca una colonna ha il tondo nel primo canale, non sopra le righe che attraversa", () => {
+    const T = tavola(nodi, [filo("int", "p:b", "pdc"), filo("sf", "p:a", "d:x")], W, 600);
+    const y = (id: string) => T.righe.find((r) => r.nodo.id === id)!.y;
+    const tr = (id: string) => T.tratti.find((x) => x.filo.id === id)!;
+    expect(tr("int")).toMatchObject({ x: expect.closeTo(cw + gap / 2, 0), y: expect.closeTo(y("p:b"), 0) });
+    expect(tr("sf")).toMatchObject({ x: expect.closeTo(cw + gap / 2, 0), y: expect.closeTo(y("p:a"), 0) });
+  });
+
   it("gli altri fili da bordo a bordo: verso destra dal lato destro di chi muove, nella stessa colonna un'ansa a sinistra", () => {
     const T = tavola(nodi, [filo("a", "p:a", "camera"), filo("b", "mer", "d:x"), filo("c", "camera", "camera")], W, 600);
     const tratto = (id: string) => capi(T.tratti.find((x) => x.filo.id === id)!.d);
@@ -113,4 +122,25 @@ describe("tavola sulle Viste campione", () => {
       expect(T.tratti.every((x) => !x.d.includes("NaN"))).toBe(true);
     });
   }
+});
+
+describe("tondi sui fili e nomi accessibili", () => {
+  const nodi = [nodo("camera", 1, "camera"), nodo("senato", 1, "camera"), nodo("pdc", 2, "presidente")];
+  it("fili con la stessa geometria accodano i tondi sullo stesso punto, ognuno col suo colore, senza coprirsi", () => {
+    const fili = [filo("es:0", "camera", "senato"), filo("es:1", "camera", "senato", "x", true), filo("es:3", "camera", "senato")];
+    const T = tavola(nodi, fili, 1000, 600);
+    const tn = tondiSuiFili(T.tratti, new Map([["es:0", [2]], ["es:1", [4, 5]]]));
+    expect(tn.map((x) => [x.n, x.m, x.filo])).toEqual([[2, false, "es:0"], [4, true, "es:1"], [5, true, "es:1"]]);
+    const { x, y } = T.tratti[0];
+    expect(tn.map((k) => k.y)).toEqual([y, y, y]);
+    expect(tn.map((k) => k.x)).toEqual([x - 19, x, x + 19]);
+  });
+  it("la riga conta tutti i fili del trimestre e dice i suoi numeri", () => {
+    const tutti = [filo("a", "camera", "senato"), filo("b", "pdc", "camera")];
+    const n = nodi[0];
+    expect(nomeRiga(n, tutti, [])).toBe(t("schema.nome_riga", { nome: "camera", sotto: "sotto", fili: t("schema.n_fili", { n: 2 }) }));
+    expect(nomeRiga(n, tutti, [1, 3])).toBe(nomeRiga(n, tutti, []) + t("schema.prima_aria", { n: "1, 3" }));
+    expect(nomeFilo(tutti[0], [])).toBe("a");
+    expect(nomeFilo(tutti[0], [2])).toBe("a" + t("schema.prima_aria", { n: "2" }));
+  });
 });
