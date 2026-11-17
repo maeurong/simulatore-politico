@@ -22,12 +22,12 @@
   let rifiuto = $state.raw<{ testo: string; vista: Vista | null } | null>(null);
 
   // l'anteprima del passo scelto: una in volo, vince l'ultima; vale solo se è ancora il passo scelto
-  let anteprima = $state.raw<{ posizione: number; esito: AnteprimaRiposizionamento | { rifiuto: string } } | null>(null);
+  let anteprima = $state.raw<{ posizione: number; vista: Vista | null; esito: AnteprimaRiposizionamento | { rifiuto: string } } | null>(null);
   const chiedi = ultimoVince(
-    (p: number) => guscio.anteprimaRiposizionamento(p),
-    (r, posizione) => (anteprima = { posizione, esito: "distanza" in r ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
+    (a: { posizione: number; vista: Vista | null }) => guscio.anteprimaRiposizionamento(a.posizione),
+    (r, { posizione, vista }) => (anteprima = { posizione, vista, esito: "distanza" in r ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
   );
-  const corrente = $derived(anteprima && anteprima.posizione === scelta ? anteprima.esito : null);
+  const corrente = $derived(anteprima && anteprima.posizione === scelta && anteprima.vista === partita.vista ? anteprima.esito : null);
   const nuova = $derived(corrente && "distanza" in corrente ? corrente : null);
   const rifiutata = $derived(corrente && "rifiuto" in corrente ? corrente.rifiuto : null);
   const d = $derived(distanzaDi(vista));
@@ -47,7 +47,7 @@
   function scegli(p: number) {
     scelta = p;
     rifiuto = null;
-    chiedi(p);
+    chiedi({ posizione: p, vista: partita.vista });
   }
 
   async function sposta() {

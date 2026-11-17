@@ -306,6 +306,7 @@ describe("distanzaDi e sogliaDi", () => {
   const c = { minaccia_scissione: 0.5, soglia_scissione: 1 } as Vista["campagna"];
   it("sotto, minaccia, scissione ai fili", () => {
     expect(sogliaDi(0.49, c)).toBe("sotto");
+    expect(sogliaDi(0.5, c)).toBe("minaccia");
     expect(sogliaDi(0.6, c)).toBe("minaccia");
     expect(sogliaDi(1, c)).toBe("scissione");
   });
