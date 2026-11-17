@@ -116,6 +116,9 @@ describe("fettaDi", () => {
     expect(fettaDi("eredita", "finita")).toBe("11e");
     expect(fettaDi("schema", "governo")).toBe("11e");
   });
+  it("i conti sono costruiti in ogni stato", () => {
+    for (const s of ["turno_zero", "trattativa", "governo", "crisi", "opposizione", "finita"] as const) expect(fettaDi("conti", s)).toBeNull();
+  });
 });
 
 describe("etichetta", () => {

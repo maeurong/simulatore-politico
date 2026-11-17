@@ -3,7 +3,7 @@
   import { t, elenco, numero } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
   import { coloreDi } from "$lib/partiti";
-  import { acquistoSondaggio } from "$lib/acquisto.svelte";
+  import { acquisto } from "$lib/acquisto.svelte";
   import type { Spesa } from "$lib/tipi/Spesa";
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
@@ -26,7 +26,7 @@
   const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "sondaggio_privato")?.euro);
   const privato = $derived(vista.acquisti.sondaggio_privato);
 
-  const acquisto = acquistoSondaggio();
+  const compra = acquisto("sondaggio_privato");
 </script>
 
 <dl class="conto">
@@ -52,9 +52,9 @@
   <p class="sec">{t("campagna.sondaggio_spiega")}</p>
 {/if}
 {#if prezzo !== undefined}
-  <Pulsante forma="bordo" style="white-space: normal; text-align: left" aria-disabled={partita.occupato ? "true" : undefined} onclick={acquisto.compra}>{t("campagna.compra_sondaggio", { euro: numero(prezzo) })}</Pulsante>
+  <Pulsante forma="bordo" style="white-space: normal; text-align: left" aria-disabled={partita.occupato ? "true" : undefined} onclick={compra.compra}>{t("campagna.compra_sondaggio", { euro: numero(prezzo) })}</Pulsante>
 {/if}
-{#if acquisto.rifiuto}<div class="rif"><Rifiuto testo={acquisto.rifiuto} /></div>{/if}
+{#if compra.rifiuto}<div class="rif"><Rifiuto testo={compra.rifiuto} /></div>{/if}
 
 <h4 class="h5">{t("campagna.rivali")}</h4>
 <div class="riv">

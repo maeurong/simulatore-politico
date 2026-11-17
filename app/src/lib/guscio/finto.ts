@@ -8,7 +8,11 @@ type Campioni = {
   paese: any; campagna: any; trattativa: any;
   /** 17-, 18-, 19-, 20-: i campioni della fetta 11c */
   cruscotto?: any; governo?: any; aula?: any; anteprime?: any;
-  /** ?stato= dell'URL: sceglie la prova del 26 e lo stato del 23 */
+  /** 21-: i Conti; ?stato= ne sceglie uno, servito come `.prima` */
+  conti?: any;
+  /** la Vista del 21 dopo un compra riuscito: da lì il secondo compra è un rifiuto */
+  servita?: any;
+  /** ?stato= dell'URL: sceglie la prova del 26, lo stato del 23 e quello del 21 */
   stato: string | null;
 };
 
@@ -30,6 +34,8 @@ export function trovaFile(nomi: string[], vista: string): string | undefined {
 export function vistaDi(campione: any): Vista | null {
   // "giocatore", non "turno": le voci del registro hanno un turno loro e la Vista in .prima
   if (campione && typeof campione === "object" && "giocatore" in campione) return campione;
+  // lo stato del 21 ha prima e vista: la Vista di partenza è la prima
+  if (campione && typeof campione === "object" && "cassa_prima" in campione && campione.prima) return campione.prima;
   return campione?.vista ?? campione?.prima ?? null;
 }
 
@@ -121,6 +127,12 @@ function dopoComando(cmd: any, c: Campioni): unknown {
         if (!voce) return undefined;
         if (v?.acquisti.test_misura) throw rifiuto(voce.rifiuto_ripetuto);
         return { ...v, acquisti: { ...v?.acquisti, test_misura: voce.acquisti.test_misura } };
+      }
+      if (cmd.acquisto === "centro_studi") {
+        const voce = c.conti?.[stato ?? ""];
+        if (!voce) return undefined;
+        if ((c.servita ?? v)?.acquisti.centro_studi) throw rifiuto(voce.rifiuto_ripetuto);
+        return (c.servita = voce.vista);
       }
       if (cmd.acquisto !== "sondaggio_privato") return undefined;
       const prova = campagna.prove?.[stato ?? ""]?.privato;
@@ -270,6 +282,7 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
     governo: await carica("18-"),
     aula: await carica("19-"),
     anteprime: await carica("20-"),
+    conti: await carica("21-"),
     stato,
   };
   const { mockIPC } = await import("@tauri-apps/api/mocks");

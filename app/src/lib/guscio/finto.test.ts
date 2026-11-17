@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import { rispondi, trovaFile, vistaDi } from "./finto";
 import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
@@ -12,6 +13,7 @@ import trattativa from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativa.
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/18-governo.json";
 import aulaJson from "../../../../.scratch/v1-piano-11-ui/viste/19-aula.json";
 import anteprimeJson from "../../../../.scratch/v1-piano-11-ui/viste/20-anteprima.json";
+import contiJson from "../../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -36,6 +38,14 @@ describe("vistaDi", () => {
   it("voce del registro: ha un turno suo ma la Vista è in .prima", () => {
     const voce = (registroJson as unknown as { prima: { giocatore: string } }[])[0];
     expect(vistaDi(voce)).toBe(voce.prima);
+  });
+});
+
+describe("vistaDi del 23", () => {
+  it("gli stati governo e opposizione hanno cassa_prima ma non prima: valgono la loro vista", () => {
+    const p: any = paese;
+    expect(vistaDi(p.governo)).toBe(p.governo.vista);
+    expect(vistaDi(p.opposizione)).toBe(p.opposizione.vista);
   });
 });
 
@@ -309,5 +319,33 @@ describe("rispondi: la fetta 11c", () => {
     expect(v.acquisti.test_misura).toEqual(ante.test.riforma.acquisti.test_misura);
     expect(() => comanda({ tipo: "compra", acquisto: { test_misura: { valori } } }, v)).toThrow(rifiuta(ante.test.riforma.rifiuto_ripetuto));
     expect(() => comanda({ tipo: "compra", acquisto: { test_misura: { valori: [] } } })).toThrow(rifiuta("non nel campione: comanda"));
+  });
+});
+
+describe("il 21 dei Conti", () => {
+  const conti: any = contiJson;
+  const s = conti.studi_03;
+  const cc = { ...c, campione: s, conti, stato: "studi_03" };
+  it("lo stato si serve come prima: senza centro studi", () => {
+    expect((vistaDi(s) as any).acquisti.centro_studi).toBeNull();
+  });
+  it("compra centro_studi dà la vista col centro studi; il secondo compra è rifiutato", () => {
+    const v: any = rispondi("comanda", { comando: { tipo: "compra", acquisto: "centro_studi" } }, cc);
+    expect(v.acquisti.centro_studi).not.toBeNull();
+    expect(() => rispondi("comanda", { comando: { tipo: "compra", acquisto: "centro_studi" } }, { ...cc, campione: v })).toThrow(
+      expect.objectContaining({ specie: "rifiuto", testo: "comando non ammesso: già comprato questo turno: centro studi" }),
+    );
+  });
+  it("serie dà quella dello stato", () => {
+    expect(rispondi("serie", {}, cc)).toEqual(s.serie);
+  });
+  it("installaFinto: il secondo compra è rifiutato senza passare la Vista", async () => {
+    vi.stubGlobal("window", globalThis);
+    const { installaFinto } = await import("./finto");
+    await installaFinto(new URL("http://localhost/?vista=21-conti.json&stato=studi_03"));
+    const compra = () => invoke<any>("comanda", { comando: { tipo: "compra", acquisto: "centro_studi" } });
+    expect((await compra()).acquisti.centro_studi).not.toBeNull();
+    await expect(compra()).rejects.toMatchObject({ testo: "comando non ammesso: già comprato questo turno: centro studi" });
+    vi.unstubAllGlobals();
   });
 });
