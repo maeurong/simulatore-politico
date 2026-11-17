@@ -1,0 +1,783 @@
+<!doctype html>
+<!--
+  PROTOTIPO USA E GETTA — scelte della fetta 11g «Vista completa», piano 11 UI (17/11/2026).
+  Due decisioni di Mario, una scheda ciascuna; gli interruttori stanno nella barra in basso.
+
+  1  Le donne nelle facce
+     Domanda: come si disegna una donna nel kit di produzione, e nessuna faccia ricorda una politica vera?
+     La spec (spec:342) dice «ciglia, naso all'85%, labbra rosse; orecchino e cappello secondo l'hash».
+     tratti   A  come la spec: a tutte ciglia + naso all'85% + labbra; orecchino e cappello ciascuno sì/no dall'hash
+                 (quattro combinazioni)
+              B  a tutte ciglia + naso all'85%, poi UNO fra labbra, orecchino e cappello, dall'hash
+              C  a tutte ciglia + labbra, naso intero, niente orecchino né cappello
+     cappello f  a fantasia del colletto della stessa faccia (il tecnico: grigio come il suo abito)
+              i  pieno d'inchiostro col nastro di carta
+              c  carta col nastro d'inchiostro
+     misura   come nella UI (album 62, rose 46, leader 46, prova 84) oppure tutte a 34 · 46 · 62 · 84
+     fondo    carta · giallo · rosso (i fondi sotto le soglie 40 e 25), forzato su tutte le facce
+     Contenuti: «Rosa e governo» (album di dieci figurine e tre rose da tre), «Leader» (schede dei partiti con la
+     coccarda), «Prova di riconoscimento» (tutte le donne delle Viste campione, numerate, senza nomi; «nomi» li mostra).
+     Facce: escono dal codice vero. Un entry TS nello scratchpad importa app/src/lib/caricature/kit.ts (profilo,
+     FANTASIE, OGGETTI) e caricatura.ts (leveDi, salti, saltiDeiLeader), rifà in stringa il markup di
+     Caricatura.svelte, e rolldown lo imbottiglia in un IIFE (`Car`) incollato qui sotto. CSS di Caricatura.svelte e
+     pattern di Fantasie.svelte copiati dai file allo stesso giro. esbuild non c'è in app/node_modules: rolldown sì.
+     Inventato qui, ed è la proposta per la produzione:
+       - i tratti femminili, presi dal 32 (variante 5, :515-530): ciglia, labbra rosse col filo di carta, orecchino
+         giallo, cappello a tesa col nastro; il cappello nel 32 prendeva il colore del colletto, qui segue «cappello»;
+       - il naso all'85%: il pennino di produzione è un poligono solo, fatto di sette pezzi (nuca, fronte, naso, mento,
+         due spalle, orecchio, uno per «M»). Il terzo pezzo, il naso (NASI[i].pen), si toglie e si ridisegna a parte con
+         transform="translate(6.3 3.9) scale(.085)", cioè scale(.1) con la scala dell'85% intorno alla radice (420,260)
+         in decimi. Sagoma, filo e punta dell'ombra scalano le coordinate del tracciato del naso come profilo5 del 32;
+         il filo da 1,4 tiene unita la base del naso al labbro, che resta dov'è;
+       - orecchino e cappello dall'hash: i bit che restano dopo le sei leve di leveDi (floor(h / 864), poi % 2 e
+         floor(/ 2) % 2 in A, % 3 in B). djb2 e mescola sono copiati da caricatura.ts:11-23 perché non sono esportati;
+         l'autoverifica del bundle controlla su 600 chiavi che la copia dia le stesse leve.
+     Non cambiato: la regola della rosa (salti) è quella di produzione, chiave naso:colletto senza il genere; il 32
+     metteva il genere nella chiave (:586). Nessun tono grave qui.
+     Dati: le Viste in viste/*.json (ogni oggetto con giocatore, fase e regioni: 123 Viste). Album: i dieci ministri di
+     27-trattativa · guida (sei donne). Rose: 05-crisi (Economia), 30-eredita (Ambiente), 17-cruscotto ·
+     crisi_provvisorio (Sanità). Leader: la Vista con più leader donne. Prova: ogni donna fra ministre e rosa (chiave
+     nome + partito + ruolo, salto della prima comparsa: 0 da ministra, quello della rosa da candidata) e ogni leader
+     donna (salto di saltiDeiLeader della sua Vista). Conti nella pagina.
+
+  2  La spartizione in corso
+     Domanda: con lo schema 19 la Vista porta la spartizione in corso del core (Vista.spartizione: dicastero, peso,
+     partito o null = tecnico, di_default) e l'intesa di partenza vera per alleato: la pagina parte da lì, o resta
+     la bozza vuota di oggi (trattativa.ts:24-34, Spartizione.svelte)?
+     sp  A  la pagina si apre con le righe già compilate dalla spartizione in corso (all'inizio, il default); ogni clic
+            manda subito la spartizione intera; pallino blu dove partito ≠ di_default; «Torna alla spartizione di default»
+         B  come oggi: bozza vuota, il comando parte solo a bozza completa; la spartizione in corso del core in una
+            colonna a destra, in grigio
+     Nel lato, in tutte e due: gli alleati con richiesta, offerta e intesa di partenza a dieci caselle coi fili di
+     soglie.ultimatum (40) e soglie.uscita (25), «entra in ultimatum» sotto 40, «può uscire» sotto 25 (storia 86).
+     Sottoscheda «Ribaltone», senza varianti: la pagina del ribaltone col lato «Il ribaltone» (27-trattativa:607), i
+     partiti nell'ordine del core, seggi Camera · Senato dall'ultima Vista.elezioni, il primo segnato.
+     Dati: viste/27-trattativa.json. Stato «premio»: vista (la 02) per dicasteri, spartizione, richieste, soglie; le
+     cinque «proposte» con la loro spartizione e le intese di partenza vere dopo il comando. Una combinazione che è una
+     delle cinque mostra le sue intese; le altre dicono «non nel campione» (offerta e intesa non si rifanno qui).
+     Stato «guida»: vista.ribaltone (coalizione, primo) e vista.elezioni.at(-1).voti.
+     Inventato: nulla nei numeri; i testi della pagina sono quelli di interfaccia.json dove esistono (trattativa.*,
+     ribaltone.*), il resto è del prototipo. I bottoni del ribaltone non fanno nulla. Il risultato del voto in testa
+     (storia 84) è omesso: non cambia fra A e B.
+
+  Stile e token: prototipi/08-fondamenta.prototype.html (forma A), via 38 (testa e schede) e 27 (barra in basso,
+  righe, lato). Finestra 1280×800 o 1440×900 dalla barra. Script di costruzione nello scratchpad, non nel repo.
+  Non è codice di produzione. Buttare dopo il verdetto.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Scelte 11g · Donne e spartizione</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --carta:#F4ECD8; --ink:#1F1A17; --grigio:#5E5750;
+  --rosso:#B3122B; --verde:#2E6B45; --biro:#1D4E89; --giallo:#FFD23F; --terra:#EFC084;
+  --bianco:#FFFFFF; --nero:#000000;
+  --velo:rgb(31 26 23 / .06);
+  --retino:repeating-linear-gradient(45deg,transparent 0 3px,rgb(31 26 23 / .3) 3px 4px);
+  --tit:'Fraunces',Georgia,'Times New Roman',serif;
+  --txt:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',system-ui,sans-serif;
+  --wonk:"SOFT" 100,"WONK" 1;
+  --c-min:12px; --c-sec:13px; --c-corpo:14px; --c-lead:16px; --c-num:19px; --c-riq:18px; --c-sez:23px; --c-pag:30px;
+  --marg:24px; --canale:20px; --lato:clamp(300px,30%,400px);
+  --filo:1px solid var(--grigio); --bordo:1.5px solid var(--ink); --forte:2px solid var(--ink); --doppio:3px double var(--ink);
+}
+html,body{height:100%;overflow:hidden;background:#6f6a64}
+body{display:flex;flex-direction:column}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screen{flex:none;position:relative;overflow:hidden;transform-origin:center;background:var(--carta)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+.vS{background:var(--carta);color:var(--ink);font:400 var(--c-corpo)/1.35 var(--txt);font-variant-numeric:tabular-nums lining-nums;
+  display:grid;grid-template-rows:auto minmax(0,1fr);height:100%;overflow:hidden;accent-color:var(--ink)}
+.vS ::selection{background:var(--giallo);color:var(--ink)}
+.vS :focus-visible{outline:2px solid var(--biro);outline-offset:2px}
+h1,h2,h3,h4,.tit{font-family:var(--tit);font-variation-settings:var(--wonk);font-weight:800;line-height:1.08;text-wrap:balance}
+.muto{color:var(--grigio)} .sec{font-size:var(--c-sec)} .min{font-size:var(--c-min)} .male{color:var(--rosso)}
+
+/* testa e schede (38) */
+.barra{background:var(--carta);border-bottom:var(--doppio);padding:10px var(--marg) 8px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.barra h1{font-size:var(--c-sez);color:var(--rosso)}
+.schede{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1.5px solid var(--ink);padding:5px 10px;font-weight:700;font-size:var(--c-sec);white-space:nowrap;background:var(--carta)}
+.btn:hover{background:var(--velo)}
+.btn.scelto{background:var(--giallo)}
+.btn.p{padding:1px 7px;font-size:var(--c-min)}
+.link{text-decoration:underline;text-underline-offset:2px;font-size:var(--c-sec);white-space:nowrap}
+.link:hover{text-decoration-thickness:2px}
+.dom{display:grid;grid-template-columns:minmax(0,1fr) var(--lato);min-height:0;overflow:hidden}
+.dom>.pag{min-height:0;overflow:hidden auto;padding:12px var(--marg) 20px;display:grid;gap:12px;align-content:start}
+.dom>.lato{min-height:0;overflow:hidden auto;border-left:var(--forte);padding:12px var(--marg) 20px var(--canale);display:grid;gap:8px;align-content:start}
+.q{font-size:var(--c-lead);max-width:70ch}
+.q b{font-weight:700}
+.nota{font-size:var(--c-sec);color:var(--grigio);max-width:72ch}
+.nota b{color:var(--ink)}
+.sez-l{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--grigio);border-bottom:1.5px solid var(--ink);padding-bottom:2px;margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+.sez-l span{letter-spacing:0;text-transform:none;font-weight:400}
+.var{display:grid;grid-template-columns:22px minmax(0,1fr);gap:1px 8px;padding:5px 8px;border:1.5px solid var(--grigio);font-size:var(--c-sec)}
+.var .l{font-family:var(--tit);font-weight:800;font-size:var(--c-riq);grid-row:span 2;line-height:1.1}
+.var .d{color:var(--grigio);font-size:var(--c-min)}
+.var.qui{border-color:var(--ink);background:var(--giallo)}
+.var.qui .d{color:var(--ink)}
+.sw{display:inline-block;width:10px;height:10px;border:1px solid var(--ink);vertical-align:-1px;margin-right:5px;flex:none}
+.chip{display:inline-block;border:1.5px solid var(--ink);padding:0 6px;font-size:var(--c-min);font-weight:700;white-space:nowrap;line-height:1.4}
+.chip.rosso{border-color:var(--rosso);color:var(--rosso)}
+.chip.tr{border-style:dashed;border-color:var(--grigio);color:var(--grigio)}
+
+/* facce (Caricatura.svelte, copiato dal file) */
+.car { display: block; flex: none }
+  .car .carta { fill: var(--carta) } .car .terra { fill: var(--terra) } .car .ink { fill: var(--ink) }
+  .car .rosso { fill: var(--rosso) } .car .verde { fill: var(--verde) } .car .biro { fill: var(--biro) } .car .giallo { fill: var(--giallo) }
+  .car .grigio { fill: var(--grigio) }
+  .car .ink-l { stroke: var(--ink); stroke-linejoin: round; stroke-width: 1.5 }
+  .car .filo, .car .sottile { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round }
+  .car .sottile { stroke-width: 1.9 }
+  .car .sottile.fine { stroke-width: 1.5 }
+  .car.giallo { --d: var(--giallo) } .car.rosso { --f: var(--carta); --d: var(--rosso) }
+  .car { --f: var(--ink); --d: var(--carta) } .car .ogg { fill: var(--f); stroke-width: 1.5 } .car .od { fill: var(--d) }
+  .car .sf, .car .sd { fill: none; stroke-linecap: round } .car .s14 { stroke-width: 1.4 } .car .sf { stroke: var(--f) } .car .sd { stroke: var(--d) }
+  .car .coll { stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round }
+.fz{display:inline-flex;flex:none}
+.album{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.fig{border:var(--bordo);padding:6px 8px 7px;display:grid;gap:2px;align-content:start;justify-items:start;min-width:0}
+.fig .fz{margin-bottom:4px}
+.fig b{font-size:var(--c-sec)}
+.fig span{font-size:var(--c-min)}
+.rose{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rosa{border:var(--bordo);padding:6px 8px;display:grid;gap:6px;align-content:start;min-width:0}
+.rosa h4{font-size:var(--c-riq)}
+.cand{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;align-items:center;font-size:var(--c-sec)}
+.cand small{display:block;font-size:var(--c-min);color:var(--grigio)}
+.par{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.scheda{border:var(--bordo);border-top:5px solid var(--pc,var(--ink));padding:6px 8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:center}
+.scheda b{font-size:var(--c-sec)}
+.scheda small{display:block;font-size:var(--c-min);color:var(--grigio)}
+.prova{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cella),1fr));gap:10px 8px}
+.prova figure{display:grid;justify-items:center;gap:2px;font-size:var(--c-min)}
+.prova figcaption{color:var(--grigio);text-align:center;line-height:1.2}
+.prova figcaption b{color:var(--ink)}
+.conti{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:var(--c-sec)}
+.conti b{text-align:right}
+
+/* trattativa (27 · forma A) */
+.rig{width:100%;border-collapse:collapse;font-size:var(--c-sec)}
+.rig th{font-size:var(--c-min);letter-spacing:.08em;text-transform:uppercase;color:var(--grigio);text-align:left;font-weight:700;border-bottom:1.5px solid var(--ink);padding:2px 6px;white-space:nowrap}
+.rig td{border-bottom:var(--filo);padding:4px 6px;vertical-align:middle;white-space:nowrap}
+.rig td.d{font-weight:700}
+.rig tr.mod td.d::after{content:" •";color:var(--biro)}
+.rig td.ora{color:var(--grigio);font-size:var(--c-min);border-left:var(--filo)}
+.rig td.ora.vuo{font-style:italic}
+.pesi{display:inline-flex;gap:2px;vertical-align:middle}
+.pesi i{width:7px;height:7px;border-radius:50%;background:var(--ink)}
+.chi2{display:inline-flex;gap:3px}
+.op{border:1.5px solid var(--ink);padding:1px 8px;font-size:var(--c-min);font-weight:700;background:var(--carta);white-space:nowrap}
+.op:hover{background:var(--velo)}
+.op[aria-pressed=true]{color:var(--tx,var(--carta));background:var(--pc,var(--ink));border-color:var(--pc,var(--ink))}
+.op.tec[aria-pressed=true]{background:var(--retino),var(--carta);color:var(--ink);border:3px double var(--ink);padding:0 6px}
+.riga{font-size:var(--c-sec);display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline}
+.cmd{border:var(--filo);padding:6px 8px;font-size:var(--c-sec);display:grid;gap:2px}
+.cmd code{font-size:var(--c-min)}
+.all{border:var(--bordo);border-top:5px solid var(--pc,var(--ink));padding:6px 8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 8px}
+.all>:not(.fz,.largo){grid-column:2}
+.all .fz{grid-row:1/span 2}
+.all .largo{grid-column:1/-1}
+.ib{position:relative;width:158px;margin:2px 0 17px}
+.cas{display:flex;gap:2px}
+.cas i{width:14px;height:12px;border:1.5px solid var(--ink);flex:none}
+.cas i.on{background:var(--ink)}
+.cas i.rs{border-color:var(--rosso)} .cas i.rs.on{background:var(--rosso)}
+.cas.vuoto i{border-style:dashed;border-color:var(--grigio)}
+.ib b{position:absolute;top:-4px;height:20px;width:2px;background:var(--rosso)}
+.ib em{position:absolute;top:17px;font-size:10px;font-style:normal;color:var(--rosso);transform:translateX(-50%);white-space:nowrap}
+.ints{font-size:var(--c-min);color:var(--grigio);display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.gui{display:grid;gap:10px;max-width:760px}
+.occ{font-size:var(--c-min);letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--grigio)}
+.grande{font-family:var(--tit);font-variation-settings:var(--wonk);font-size:var(--c-pag);font-weight:700;line-height:1.1;text-wrap:balance}
+.az{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.btn.pieno{background:var(--ink);color:var(--carta);border-width:2px}
+.prom{display:grid;grid-template-columns:minmax(0,1fr) auto;font-size:var(--c-sec);gap:2px 8px;align-items:baseline;padding:3px 0;border-bottom:var(--filo)}
+.prom.primo{font-weight:700}
+.num{font-weight:700;white-space:nowrap}
+
+/* barra del prototipo (27) */
+#proto{flex:none;background:#1b1b1b;color:#eee;font:12px/1.2 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;justify-content:center;padding:8px 14px}
+#proto .cap{color:#aaa;margin-right:-8px}
+#proto button{padding:3px 8px;border-radius:999px;background:#333;color:#eee}
+#proto button.on{background:#FFD23F;color:#111;font-weight:700}
+#proto .seg{display:inline-flex;gap:2px;flex-wrap:wrap}
+#proto #avv{color:#ff8ad8;font-weight:700}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="fantasia-pieno" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" style="fill:var(--ink)" /></pattern>
+    <pattern id="fantasia-vuoto" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" style="fill:var(--carta)" /></pattern>
+    <pattern id="fantasia-righe" width="2.6" height="2.6" patternUnits="userSpaceOnUse"><rect width="2.6" height="2.6" style="fill:var(--carta)" /><rect width="2.6" height="1.2" style="fill:var(--ink)" /></pattern>
+    <pattern id="fantasia-pois" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="3" height="3" style="fill:var(--carta)" /><circle cx="1.5" cy="1.5" r=".8" style="fill:var(--ink)" /></pattern>
+    <pattern id="fantasia-quadretti" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><rect width="3.4" height="3.4" style="fill:var(--ink)" /><rect width="1.7" height="1.7" style="fill:var(--carta)" /><rect x="1.7" y="1.7" width="1.7" height="1.7" style="fill:var(--carta)" /></pattern>
+    <pattern id="fantasia-tratteggio" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.4" height="2.4" style="fill:var(--carta)" /><rect width=".9" height="2.4" style="fill:var(--ink)" /></pattern>
+  </defs>
+</svg>
+<div id="stage"><div id="screen"></div></div>
+<div id="proto"></div>
+<script>
+var Car = (function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// app/src/lib/caricature/kit.ts
+	const NASI = [
+		{
+			d: "L61 34",
+			tip: [61, 34],
+			pen: "M412 365l37-27 5-1 86-5-43-19-56-39-26-11 10-6 26 10 84 20 92 40-38 26-151 9-23 16z"
+		},
+		{
+			d: "Q56 20 60 30Q61 38 53 36.5",
+			tip: [60, 32],
+			pen: "M411 363l38-26 117 17 13 0 2-8 1-14 0-14-2-7-2-6-7-12-8-12-10-10-11-8-12-6-14-4-18-4-17-1-18 1-16 3-32 11 10-6 12-6 37-13 32-9 24-3 17 0 7 1 20 7 17 11 14 16 13 24 2 14 0 14-3 13-7 13-10 9-38 26-6 3-14 3-21 0-91-14-15 11z"
+		},
+		{
+			d: "L46 25.5C59 21 63 40 50 38.5",
+			tip: [59, 33],
+			pen: "M411 363l38-26 69 34 6 1 14 1 15-3 3-6 4-13 0-21-5-20-11-18-15-15-12-7-18-8-11-3-18-2-55 6 10-6 36-6 32-9 16-3 16-2 17 2 13 5 17 11 10 11 10 17 6 21 1 13-3 14-5 13-4 6-10 9-37 27-12 7-20 5-14 1-14-1-56-28-9 7z"
+		},
+		{
+			d: "Q50 35 61 23L54 35.5",
+			tip: [61, 23],
+			pen: "M411 364l38-26 6-1 82 4 45-82-56 39-19 8-17 3-12-1-11-3-11-6-11-8-30-28 10-6 20 19 21 9 15 3 16 2 23-3 16-4 26-11 28-27 37-26-68 123-38 26-87-4-19 14z"
+		},
+		{
+			d: "Q55 23 62 41L50 37.5",
+			tip: [62, 41],
+			pen: "M412 363l38-26 72 26 60 17-17-29-20-28-15-16-35-30-17-9-23-8-12-1-28 4 10-6 13-3 38-3 24 1 23 5 22 7 13 8 15 14 18 21 16 23 16 31 14 32-1 3-38 26-114-33-59-21-11 8z"
+		},
+		{
+			d: "L52 22.5L61 33L49 36.5",
+			tip: [61, 33],
+			pen: "M411 364l38-27 60 15 72-21-80-93-59 16-27 9 10-6 26-9 85-35 6 3 86 100-37 27-6 2-113 33-44-11-13 10z"
+		}
+	];
+	const MENTI = [
+		{
+			d: "Q43 42 40 45",
+			pen: "M334 494l2-4 35-25 18-11 19-24 13-25-1-7-8-33 37-27 5-1 7-1-10 8 7 28 0 7-5 12-11 18-22 27-53 36 4 29-1 38 5 28-10 6-5-27-12-30z"
+		},
+		{
+			d: "L45 41L44 46",
+			pen: "M335 492l37-25 53-13 5-26 0-7-9-19-9-34 1-5 37-26 14-1-13 9 8 31 9 19 0 6-8 42-4 4-38 27-50 11 2 15 0 39 5 28-10 6-4-27-12-30z"
+		},
+		{
+			d: "L44.6 41Q48.5 42.6 45 45.2Q48 47.4 43.6 49",
+			pen: "M336 492l29-20 5-2 24 0 47 5-10-10 11-9 4-6 2-6-2-7-4-5-12-8-4-5-14-53 41-29 7-1-10 7 14 50 4 5 11 7 5 6 1 6-2 7-4 5-10 10 10 9 2 7-2 6-4 6-38 26-18 10-50-5 1 41 5 28-10 6-6-33-9-25z"
+		}
+	];
+	const FRONTI = [{
+		d: "Q38 6 41 11L43 23",
+		pen: "M266 86l37-27 21-3 21-1 21 2 20 5 19 9 15 14 9 11 2 14 3 113 0 7-9 27-10 6 9-26 1-7-30-87-4-20-8-11-10-10-12-8-13-6-13-4-14-2-21 0z"
+	}, {
+		d: "Q35 5 38 9L44 23",
+		pen: "M266 86l38-27 40-9 14 1 14 3 12 7 10 10 5 5 19 45 25 100 1 7-19 29-10 6 20-29-51-80-23-51-5-6-16-13-12-5-7-2-21 1-20 5z"
+	}];
+	const NUCHE = [{
+		b: 13,
+		pen: "M137 295l1-21 3-27 9-42 7-19 9-19 10-18 9-12 14-15 10-9 55-39 13-6 20-7 13-3 21-2-38 26-27 4-14 3-16 7-18 21-18 30-10 25-9 35-4 27-2 28 0 28 4 34 7 35 9 27 9 18 14 24 6 37 4 67 7 35-10 6-7-34-21-56-15-30-9-10-7-12-12-26-8-27-5-27-3-28z"
+	}, {
+		b: 18,
+		pen: "M171 350l3-63 7-55 6-28 8-26 7-20 10-19 11-17 14-16 48-35 19-10 13-4 14-1-38 26-14 1-12 4-7 8-14 24-11 25-9 27-7 34-5 35-4 34-1 36 1 41 4 49 10 57 4 75 7 35-10 6-7-34-21-55-16-30-4-21-3-27z"
+	}];
+	const SPALLE = {
+		d: "M2.4 64C3.4 56.4 10 53.4 21 53.2M38 53.2C50 53.2 57.6 57 60.6 64",
+		pen: "M18 617l1-5 8-11 14-16 45-32 18-11 33-11 42-8 12 0 11 5 12 1-8 6-16 2-30 8-50 8-20 6-20 7-9 11-23 36-9 17-1 7-8 6 1-7zM376 535l8-6 16-1 39-6 21 2 27 5 28 7 19 7 19 10 18 11 16 13 10 10 4 5 5 31 4 14-8 6-3-6-5-6-27-15-14-15-16-13-18-11-19-10-20-7-27-7-48-7-17-10z"
+	};
+	const ORECCHIO = {
+		d: "M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36",
+		pen: "M231 329l1-14 2-6 6-13 4-5 32-23 13 2-6 4-7 0-13 5-8 15-2 13 1 14 4 13 4 6 10 9 6 8 7 1-6 4-17 1-10 0-7-4-8-10-3-6z"
+	};
+	/** Le sei fantasie del colletto, in inchiostro su carta (`Fantasie.svelte`): l'indice è la leva colletto. Il tecnico lo ha sempre grigio. */
+	const FANTASIE = [
+		"pieno",
+		"vuoto",
+		"righe",
+		"pois",
+		"quadretti",
+		"tratteggio"
+	];
+	/** Le parti disegnate dalle sei leve: tracciati e poligoni da stendere nella tela 64 × 64. */
+	function profilo(l) {
+		const n = NASI[l.naso], m = MENTI[l.mento], f = FRONTI[l.fronte], u = NUCHE[l.nuca];
+		const dietro = `M23 57L21 47L20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26`;
+		const davanti = `M42 26${n.d}L43 35L44 39${m.d}L35 48L36 51L37 57`;
+		return {
+			/** la figura, da campire di carta e da usare come ritaglio per le ombre */
+			sagoma: `M20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26${davanti.slice(6).replace(/L37 57$/, "")}L37 61L23 61L21 47Z`,
+			/** il filo di centro: tiene vive le code assottigliate del pennino */
+			filo: dietro + davanti + SPALLE.d + ORECCHIO.d,
+			/** il pennino: un solo poligono per tutte le pennellate, in decimi */
+			pennino: u.pen + f.pen + n.pen + m.pen + SPALLE.pen + ORECCHIO.pen,
+			/** le ombre in terra chiara, da ritagliare sulla sagoma: sotto la mascella, sotto il naso, l'orecchio */
+			ombre: `M28 37.5L39 45L38 58L21 58ZM45 31L${n.tip[0]} ${n.tip[1]}L44 35.4Z${ORECCHIO.d}Z`
+		};
+	}
+	/**
+	* L'oggetto del dicastero, in alto a destra della faccia (prototipo 18-governo, riquadro 16 × 16, solo la stampa piena): senza classe riempie con l'inchiostro, `od` col fondo; `sf`/`sd` tracciano senza riempire; lo spessore è quello del prototipo, 1,5 (ereditato dal `<g>`) dove non lo dicono. Chiavi: id di `Vista.dicasteri`.
+	*/
+	const OGGETTI = {
+		economia_finanze: "<circle cx=\"8\" cy=\"8\" r=\"7\"/><path class=\"sd\" d=\"M11.2 5A4 4 0 1 0 11.2 11M3.4 7h5.8M3.4 9.4h5.8\" stroke-width=\"1.7\"/>",
+		sviluppo_economico: "<path class=\"sf\" d=\"M5 6V2.6h6V6\" stroke-width=\"2\"/><path d=\"M1 5.5h14v9.5H1z\"/><path class=\"sd\" d=\"M1.6 9.8h12.8\"/>",
+		lavoro_welfare: "<path class=\"sf\" d=\"M2.6 13.4L9.6 6.4\" stroke-width=\"3.6\"/><circle class=\"sf\" cx=\"11.4\" cy=\"4.6\" r=\"3.3\" stroke-width=\"2.6\"/>",
+		sanita: "<path d=\"M1 1h14v14H1z\"/><path class=\"sd\" d=\"M8 3.4v9.2M3.4 8h9.2\" stroke-width=\"3.2\"/>",
+		istruzione_ricerca: "<path d=\"M1.5 14.5L3 9.4L11.6 .8L15.2 4.4L6.6 13Z\"/><path class=\"od\" d=\"M1.5 14.5L3 9.4L6.6 13Z\"/>",
+		infrastrutture_trasporti: "<path d=\"M4.4 13L7 1.4h2L11.6 13Z\"/><path class=\"od\" d=\"M5.7 7.4h4.6l.6 2.8H5.1Z\"/><path d=\"M1.2 12.6h13.6v2.8H1.2z\"/>",
+		ambiente_energia: "<path d=\"M1.5 14.5C1.5 6 7 1.5 14.5 1.5C14.5 10 9 14.5 1.5 14.5Z\"/><path class=\"sd\" d=\"M3.2 12.8L10.8 5.2\" stroke-width=\"1.6\"/>",
+		interno: "<path d=\"M8 .6l2.2 4.7 5.1.5-3.9 3.5 1.2 5L8 11.8l-4.6 2.5 1.2-5L.7 5.8l5.1-.5Z\"/>",
+		giustizia: "<path d=\"M1.4 5.6L6 1l5 5-4.6 4.6Z\"/><path class=\"sf\" d=\"M8.4 8.4l5.4 5.4\" stroke-width=\"2.8\"/><path d=\"M.6 13.2h8.4v2.4H.6z\"/>",
+		esteri_difesa: "<circle cx=\"8\" cy=\"8\" r=\"7\"/><ellipse class=\"sd s14\" cx=\"8\" cy=\"8\" rx=\"3\" ry=\"6.4\"/><path class=\"sd s14\" d=\"M1.6 8h12.8\"/>"
+	};
+	new Intl.PluralRules("it");
+	Object.fromEntries([
+		"estrema_sinistra",
+		"sinistra",
+		"centrosinistra",
+		"centro",
+		"centrodestra",
+		"destra",
+		"estrema_destra",
+		"giocatore"
+	].map((id) => [id, `var(--p-${id})`]));
+	// app/src/lib/caricature/caricatura.ts
+	const VARIANTI = {
+		naso: 6,
+		mento: 3,
+		fronte: 2,
+		nuca: 2,
+		occhio: 2,
+		colletto: 6
+	};
+	function djb2$1(s) {
+		let h = 5381;
+		for (let i = 0; i < s.length; i++) h = (h << 5) + h + s.charCodeAt(i) >>> 0;
+		return h;
+	}
+	function mescola$1(h) {
+		h ^= h >>> 16;
+		h = Math.imul(h, 2246822507) >>> 0;
+		h ^= h >>> 13;
+		h = Math.imul(h, 3266489909) >>> 0;
+		return (h ^ h >>> 16) >>> 0;
+	}
+	/** Le leve dall'hash di `ruolo:partito:nome`; `salto` passa alla combinazione successiva. */
+	function leveDi(ruolo, partito, nome, salto = 0) {
+		let h = mescola$1(djb2$1(`${ruolo}:${partito}:${nome}`)) + salto;
+		const leva = (b) => {
+			const v = h % b;
+			h = Math.floor(h / b);
+			return v;
+		};
+		const { naso: n, mento: m, fronte: f, nuca: u, occhio: o, colletto: c } = VARIANTI;
+		return {
+			naso: leva(n),
+			mento: leva(m),
+			fronte: leva(f),
+			nuca: leva(u),
+			occhio: leva(o),
+			colletto: leva(c)
+		};
+	}
+	/** I salti della rosa: chi ripete naso e colletto di uno già dentro passa alla combinazione successiva, finché è libera. */
+	function salti(ruolo, candidati) {
+		const visti = /* @__PURE__ */ new Set();
+		const coppie = VARIANTI.naso * VARIANTI.colletto;
+		return candidati.map((c, i) => {
+			const r = Array.isArray(ruolo) ? ruolo[i] : ruolo;
+			let salto = 0;
+			let l = leveDi(r, c.partito, c.nome);
+			while (visti.size < coppie && visti.has(`${l.naso}:${l.colletto}`)) l = leveDi(r, c.partito, c.nome, ++salto);
+			visti.add(`${l.naso}:${l.colletto}`);
+			return salto;
+		});
+	}
+	/**
+	* Il salto di ogni leader, dalla lista dei partiti della Vista nell'ordine della Vista (gli sciolti restano in lista, i nati si
+	* accodano: i salti già dati non cambiano). Se un leader cambia (successione), la sua coppia può spostare la faccia di chi viene dopo nell'ordine. Il partito del giocatore non si disegna e non entra nel conto: rinominarlo non muove nessuno.
+	*/
+	function saltiDeiLeader(v) {
+		const ps = v.partiti.filter((p) => p.id !== v.giocatore && p.leader);
+		const s = salti("leader", ps.map((p) => ({
+			partito: p.nome,
+			nome: p.leader
+		})));
+		return Object.fromEntries(ps.map((p, i) => [p.id, s[i]]));
+	}
+	// ../../../../../../../private/tmp/claude-501/-Users-mario-GitHub-simulatore-politico--claude-worktrees-piano-11g-vista-completa-c35b34/9465c9eb-816d-4ed6-bffb-9c7d4a7dc303/scratchpad/facce.ts
+	function djb2(s) {
+		let h = 5381;
+		for (let i = 0; i < s.length; i++) h = (h << 5) + h + s.charCodeAt(i) >>> 0;
+		return h;
+	}
+	function mescola(h) {
+		h ^= h >>> 16;
+		h = Math.imul(h, 2246822507) >>> 0;
+		h ^= h >>> 13;
+		h = Math.imul(h, 3266489909) >>> 0;
+		return (h ^ h >>> 16) >>> 0;
+	}
+	const BASI = [
+		VARIANTI.naso,
+		VARIANTI.mento,
+		VARIANTI.fronte,
+		VARIANTI.nuca,
+		VARIANTI.occhio,
+		VARIANTI.colletto
+	];
+	const TUTTE = BASI.reduce((a, b) => a * b, 1);
+	const hDi = (r, p, n, salto) => mescola(djb2(`${r}:${p}:${n}`)) + salto;
+	/** ciò che resta dell'hash dopo le sei leve di leveDi: la stessa estrazione, continuata */
+	const resto = (r, p, n, salto) => Math.floor(hDi(r, p, n, salto) / TUTTE);
+	function segni(t, r) {
+		if (t === "A") return {
+			ciglia: true,
+			naso85: true,
+			labbra: true,
+			orecchino: r % 2 === 1,
+			cappello: Math.floor(r / 2) % 2 === 1
+		};
+		if (t === "B") {
+			const u = r % 3;
+			return {
+				ciglia: true,
+				naso85: true,
+				labbra: u === 0,
+				orecchino: u === 1,
+				cappello: u === 2
+			};
+		}
+		return {
+			ciglia: true,
+			naso85: false,
+			labbra: true,
+			orecchino: false,
+			cappello: false
+		};
+	}
+	const K = .85;
+	const sc = (s) => s.replace(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(42 + (x - 42) * K).toFixed(2)} ${+(26 + (y - 26) * K).toFixed(2)}`);
+	const NASO_T = `translate(${63.00000000000001 / 10} ${39.00000000000001 / 10}) scale(${K / 10})`;
+	function naso85(p) {
+		const nd = /M42 26(.*?)L43 35/.exec(p.filo)[1];
+		const pezzi = p.pennino.split(/(?=M)/);
+		if (pezzi.length !== 7) throw new Error("pennino: attesi 7 pezzi, " + pezzi.length);
+		const [naso] = pezzi.splice(2, 1);
+		const tip = /M45 31L(\S+ \S+)L44 35\.4Z/.exec(p.ombre);
+		const via = (s) => {
+			const t = s.replace(`42 26${nd}L43 35`, `42 26${sc(nd)}L43 35`);
+			if (t === s) throw new Error("naso non trovato");
+			return t;
+		};
+		return {
+			sagoma: via(p.sagoma),
+			filo: via(p.filo),
+			pennino: pezzi.join(""),
+			naso,
+			ombre: p.ombre.replace(tip[0], `M45 31L${sc(tip[1])}L44 35.4Z`)
+		};
+	}
+	const esc = (s) => s.replace(/[&<>"]/g, (c) => ({
+		"&": "&amp;",
+		"<": "&lt;",
+		">": "&gt;",
+		"\"": "&quot;"
+	})[c]);
+	const LABBRA = "M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z";
+	const CAPPELLO = ["M3.6 19.6Q2.6 16.6 8 14.6Q26 8.6 43.4 5.4Q46.4 5.2 45 7.4Q28 13.2 7.4 20.8Q4.6 21.6 3.6 19.6Z", "M16.6 13.2Q15.6 3 27.4 1.4Q38.6 0 40.2 7.8Q28 9.6 16.6 13.2Z"];
+	const NASTRO = "M17.4 11.2Q28 7.8 39.6 6.2";
+	let n = 0;
+	/** Caricatura.svelte in stringa, con i segni femminili dove `donna`. */
+	function faccia(o) {
+		const salto = o.salto ?? 0, fondo = o.fondo ?? "carta";
+		const l = leveDi(o.ruolo, o.partito, o.nome, salto);
+		const s = o.donna ? segni(o.tratti ?? "A", resto(o.ruolo, o.partito, o.nome, salto)) : null;
+		let p = profilo(l), nasoPen = "";
+		if (s?.naso85) {
+			const q = naso85(p);
+			nasoPen = q.naso;
+			p = {
+				...p,
+				...q
+			};
+		}
+		const fantasia = FANTASIE[l.colletto];
+		const id = `cr${++n}`;
+		const lab = o.etichetta !== false && o.nome;
+		const pieno = o.ruolo === "tecnico" ? "class=\"coll grigio\"" : `class="coll" fill="url(#fantasia-${fantasia})"`;
+		let x = `<svg class="car${fondo !== "carta" ? " " + fondo : ""}" width="${o.misura}" height="${o.misura}" viewBox="0 0 64 64" ${lab ? `role="img" aria-label="${esc(o.nome)}"` : "aria-hidden=\"true\""}>`;
+		if (fondo !== "carta") x += `<rect width="64" height="64" class="${fondo}"/>`;
+		x += `<path class="carta" d="M2 64C3 56 10 53 20 53L42 53C52 53 58 57 61 64Z"/>`;
+		x += `<path class="carta" id="${id}-s" d="${p.sagoma}"/><clipPath id="${id}-c"><use href="#${id}-s"/></clipPath>`;
+		x += `<path class="terra" clip-path="url(#${id}-c)" d="${p.ombre}"/>`;
+		x += `<path class="ink" transform="scale(.1)" d="${p.pennino}"/>`;
+		if (nasoPen) x += `<path class="ink" transform="${NASO_T}" d="${nasoPen}"/>`;
+		x += `<path class="filo" d="${p.filo}"/><path class="sottile fine" d="M27 30.2Q25.4 32 27.2 33.6"/>`;
+		x += l.occhio ? `<path class="carta ink-l" d="M35.2 22.8Q38.4 19.4 41.2 21.3Q40.6 24.6 35.2 22.8Z"/><circle class="ink" cx="39.3" cy="22.2" r="1.45"/>` : `<circle class="carta ink-l" cx="38.2" cy="22.6" r="2.7" style="stroke-width:1.4"/><circle class="ink" cx="39.4" cy="22.6" r="1.45"/>`;
+		if (s?.ciglia) x += `<path class="sottile" style="stroke-width:1.4" d="${l.occhio ? "M36.2 21.4L34.4 18.9M38 20.4L37 17.6M39.8 20.6L39.6 17.8" : "M36.3 20.6L34.6 18.2M38 19.9L37.2 17.1M39.7 20.2L39.6 17.4"}"/>`;
+		x += s?.labbra ? `<path class="rosso" style="stroke:var(--carta);stroke-width:2.6;stroke-linejoin:round" d="${LABBRA}"/><path class="rosso" style="stroke:var(--ink);stroke-width:.9;stroke-linejoin:round" d="${LABBRA}"/><path class="sottile" style="stroke-width:1.1" d="M46 40.5L41.2 40.8"/>` : `<path class="sottile" d="M44 39.4L40.3 39.8"/>`;
+		if (s?.orecchino) x += `<path class="sottile fine" d="M27.4 35.8L27.4 37.6"/><path class="giallo ink-l" d="M27.4 37.2L31.2 42.2L27.4 47.2L23.6 42.2Z"/>`;
+		x += `<path ${pieno} d="M21 51L38 49L40.5 55.5L22 57Z"/>`;
+		if (s?.cappello) {
+			const c = o.cappello ?? "f";
+			const riemp = c === "i" ? "class=\"ink ink-l\"" : c === "c" ? "class=\"carta ink-l\"" : o.ruolo === "tecnico" ? "class=\"grigio ink-l\"" : `class="ink-l" fill="url(#fantasia-${fantasia})"`;
+			x += CAPPELLO.map((d) => `<path style="fill:none;stroke:var(--carta);stroke-width:3.6;stroke-linejoin:round" d="${d}"/>`).join("");
+			x += CAPPELLO.map((d) => `<path ${riemp} d="${d}"/>`).join("");
+			x += `<path class="sottile" style="stroke-width:2.2${c === "i" ? ";stroke:var(--carta)" : ""}" d="${NASTRO}"/>`;
+		}
+		if (o.ruolo === "leader") x += `<g transform="translate(55 55.5) scale(.95)"><circle r="8.4" class="carta"/><circle r="7.2" class="verde"/><circle r="4.6" class="carta"/><circle r="2.4" class="rosso"/></g>`;
+		else if (o.ruolo === "tecnico") x += `<g transform="translate(5 54.5)"><rect width="9.4" height="6.6" class="carta ink-l" style="stroke-width:1.2"/><rect x="1.8" y="1.8" width="5.8" height="1.8" class="biro"/><rect x="1.8" y="4.2" width="3.8" height="1.1" class="ink"/></g>`;
+		if (o.ruolo !== "leader" && o.dicastero && Object.hasOwn(OGGETTI, o.dicastero)) x += `<g class="ogg" transform="translate(47.5 1.5) scale(.92)">${OGGETTI[o.dicastero]}</g>`;
+		return x + "</svg>";
+	}
+	/** Autoverifica, lanciata dallo script di costruzione in node: la copia dell'hash dà le stesse leve di leveDi, e il naso si stacca su tutte le combinazioni. */
+	function verifica() {
+		const ruoli = [
+			"ministro",
+			"tecnico",
+			"leader"
+		];
+		for (let i = 0; i < 600; i++) {
+			const r = ruoli[i % 3], p = "P" + i % 7, nm = "Nome " + i, sl = i % 4;
+			let h = hDi(r, p, nm, sl);
+			const mie = BASI.map((b) => {
+				const v = h % b;
+				h = Math.floor(h / b);
+				return v;
+			});
+			const l = leveDi(r, p, nm, sl);
+			const vere = [
+				l.naso,
+				l.mento,
+				l.fronte,
+				l.nuca,
+				l.occhio,
+				l.colletto
+			];
+			if (mie.join() !== vere.join()) throw new Error("hash copiato diverso da leveDi: " + nm);
+			if (h !== resto(r, p, nm, sl)) throw new Error("resto");
+		}
+		let k = 0;
+		for (let naso = 0; naso < 6; naso++) for (let mento = 0; mento < 3; mento++) for (let fronte = 0; fronte < 2; fronte++) for (let nuca = 0; nuca < 2; nuca++) {
+			naso85(profilo({
+				naso,
+				mento,
+				fronte,
+				nuca,
+				occhio: 0,
+				colletto: 0
+			}));
+			k++;
+		}
+		return `ok: 600 hash, ${k} profili col naso all'85%`;
+	}
+	exports.faccia = faccia;
+	exports.naso85 = naso85;
+	exports.salti = salti;
+	exports.saltiDeiLeader = saltiDeiLeader;
+	exports.segni = segni;
+	exports.verifica = verifica;
+	return exports;
+})({});
+const D = {"album":{"da":"27-trattativa.json · guida","voci":[{"nome":"Filippo Barbieri","donna":false,"ruolo":"ministro","chiave":"Sinistra","partito":"Sinistra","pid":"sinistra","dic":"economia_finanze","sodd":52.596298182151415},{"nome":"Davide Barbieri","donna":false,"ruolo":"ministro","chiave":"Sinistra","partito":"Sinistra","pid":"sinistra","dic":"sviluppo_economico","sodd":56.84878436536886},{"nome":"Sara Greco","donna":true,"ruolo":"ministro","chiave":"Centrosinistra","partito":"Centrosinistra","pid":"centrosinistra","dic":"lavoro_welfare","sodd":64.65999167933126},{"nome":"Filippo Rossi","donna":false,"ruolo":"ministro","chiave":"Centro","partito":"Centro","pid":"centro","dic":"sanita","sodd":57.66501482724939},{"nome":"Sara Romano","donna":true,"ruolo":"ministro","chiave":"Sinistra","partito":"Sinistra","pid":"sinistra","dic":"istruzione_ricerca","sodd":46.460371040318385},{"nome":"Giulia Rossi","donna":true,"ruolo":"ministro","chiave":"Centrosinistra","partito":"Centrosinistra","pid":"centrosinistra","dic":"infrastrutture_trasporti","sodd":67.28999999999999},{"nome":"Giulia Ricci","donna":true,"ruolo":"ministro","chiave":"Centro","partito":"Centro","pid":"centro","dic":"ambiente_energia","sodd":52.33259664150708},{"nome":"Luca Barbieri","donna":false,"ruolo":"ministro","chiave":"Sinistra","partito":"Sinistra","pid":"sinistra","dic":"interno","sodd":42.50225363409858},{"nome":"Anna Bianchi","donna":true,"ruolo":"ministro","chiave":"Centrodestra","partito":"Centrodestra","pid":"centrodestra","dic":"giustizia","sodd":75.39},{"nome":"Anna Greco","donna":true,"ruolo":"ministro","chiave":"Centrodestra","partito":"Centrodestra","pid":"centrodestra","dic":"esteri_difesa","sodd":46.38567461460758}]},"rose":[{"da":"05-crisi.json · vista","dic":"economia_finanze","voci":[{"nome":"Giulia Gallo","donna":true,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0},{"nome":"Davide Barbieri","donna":false,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0},{"nome":"Sara Rossi","donna":true,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0}]},{"da":"30-eredita.json · vista","dic":"ambiente_energia","voci":[{"nome":"Chiara Marino","donna":true,"ruolo":"ministro","chiave":"Orizzonte Comune","partito":"Orizzonte Comune","pid":"nuovo_8","salto":0},{"nome":"Elena Romano","donna":true,"ruolo":"ministro","chiave":"Orizzonte Comune","partito":"Orizzonte Comune","pid":"nuovo_8","salto":0},{"nome":"Chiara Greco","donna":true,"ruolo":"ministro","chiave":"Orizzonte Comune","partito":"Orizzonte Comune","pid":"nuovo_8","salto":0}]},{"da":"17-cruscotto.json · crisi_provvisorio/vista","dic":"sanita","voci":[{"nome":"Davide Caruso","donna":false,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0},{"nome":"Francesca Ferraro","donna":true,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0},{"nome":"Anna Romano","donna":true,"ruolo":"ministro","chiave":"giocatore","partito":"Partito del giocatore","pid":"giocatore","salto":0}]}],"leader":{"da":"17-cruscotto.json · crisi_provvisorio/vista","voci":[{"nome":"Anna Ferrucci","donna":true,"ruolo":"leader","chiave":"Estrema sinistra","partito":"Estrema sinistra","pid":"estrema_sinistra","salto":0,"sciolto":false},{"nome":"Anna Romano","donna":true,"ruolo":"leader","chiave":"Sinistra","partito":"Sinistra","pid":"sinistra","salto":0,"sciolto":false},{"nome":"Chiara Lombardo","donna":true,"ruolo":"leader","chiave":"Centrosinistra","partito":"Centrosinistra","pid":"centrosinistra","salto":0,"sciolto":false},{"nome":"Giorgio Valli","donna":false,"ruolo":"leader","chiave":"Centro","partito":"Centro","pid":"centro","salto":1,"sciolto":false},{"nome":"Silvia Moretti","donna":true,"ruolo":"leader","chiave":"Centrodestra","partito":"Centrodestra","pid":"centrodestra","salto":0,"sciolto":false},{"nome":"Anna Gallo","donna":true,"ruolo":"leader","chiave":"Destra","partito":"Destra","pid":"destra","salto":0,"sciolto":false},{"nome":"Bruno Castellani","donna":false,"ruolo":"leader","chiave":"Estrema destra","partito":"Estrema destra","pid":"estrema_destra","salto":1,"sciolto":false},{"nome":"Davide Ferraro","donna":false,"ruolo":"leader","chiave":"Prospettiva","partito":"Prospettiva","pid":"nuovo_8","salto":0,"sciolto":false},{"nome":"Elena Esposito","donna":true,"ruolo":"leader","chiave":"La Bussola","partito":"La Bussola","pid":"nuovo_9","salto":1,"sciolto":false}]},"prova":[{"nome":"Anna Bianchi","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Ricci","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Esposito","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Elena Bruno","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Anna Esposito","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Ricci","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Anna Ferrucci","ruolo":"leader","chiave":"Estrema sinistra","salto":0},{"nome":"Chiara Lombardo","ruolo":"leader","chiave":"Centrosinistra","salto":0},{"nome":"Silvia Moretti","ruolo":"leader","chiave":"Centrodestra","salto":0},{"nome":"Sara Ferraro","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Chiara Caruso","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Rossi","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Gallo","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Rossi","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Esposito","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Marino","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Rossi","ruolo":"ministro","chiave":"Centrosinistra","salto":0},{"nome":"Chiara Ricci","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Elena Gallo","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Ferraro","ruolo":"ministro","chiave":"Centro","salto":0},{"nome":"Anna Barbieri","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Gallo","ruolo":"leader","chiave":"Destra","salto":0},{"nome":"Chiara Romano","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Elena Gallo","ruolo":"ministro","chiave":"Centrosinistra","salto":0},{"nome":"Francesca Gallo","ruolo":"ministro","chiave":"Centro","salto":0},{"nome":"Anna Caruso","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Francesca Bianchi","ruolo":"ministro","chiave":"Sinistra","salto":0},{"nome":"Sara Gallo","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Chiara Ricci","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Bruno","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Barbieri","ruolo":"ministro","chiave":"Centrosinistra","salto":0},{"nome":"Francesca Gallo","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Francesca Ricci","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Caruso","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Giulia Romano","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Ricci","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Marino","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Francesca Ricci","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Sara Bruno","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Romano","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Ricci","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Francesca Ferraro","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Romano","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Marino","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Gallo","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Francesca Greco","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Francesca Romano","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Rossi","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Barbieri","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Romano","ruolo":"leader","chiave":"Sinistra","salto":0},{"nome":"Anna Gallo","ruolo":"leader","chiave":"Destra","salto":0},{"nome":"Elena Esposito","ruolo":"leader","chiave":"La Bussola","salto":1},{"nome":"Chiara Marino","ruolo":"ministro","chiave":"Sinistra","salto":0},{"nome":"Giulia Rossi","ruolo":"ministro","chiave":"Centrosinistra","salto":0},{"nome":"Anna Marino","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Sara Greco","ruolo":"ministro","chiave":"Centrosinistra","salto":0},{"nome":"Sara Romano","ruolo":"ministro","chiave":"Sinistra","salto":0},{"nome":"Giulia Ricci","ruolo":"ministro","chiave":"Centro","salto":0},{"nome":"Anna Bianchi","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Anna Greco","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Anna Barbieri","ruolo":"leader","chiave":"Destra","salto":0},{"nome":"Anna Gallo","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Francesca Rossi","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Giulia Rossi","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Ferraro","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Caruso","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Francesca Caruso","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Greco","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Elena Greco","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Elena Ferraro","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Francesca Barbieri","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Ricci","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Barbieri","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Anna Bruno","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Marino","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Elena Gallo","ruolo":"leader","chiave":"Destra","salto":0},{"nome":"Giulia Bianchi","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Barbieri","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Francesca Romano","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Sara Romano","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Sara Marino","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Giulia Caruso","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Francesca Ricci","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Chiara Ferraro","ruolo":"leader","chiave":"Sinistra","salto":0},{"nome":"Anna Romano","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Ferraro","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Bianchi","ruolo":"leader","chiave":"Sinistra","salto":0},{"nome":"Anna Marino","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Giulia Esposito","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Elena Barbieri","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Sara Bruno","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Giulia Ferraro","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Elena Romano","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Gallo","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Sara Rossi","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Elena Gallo","ruolo":"ministro","chiave":"Destra","salto":0},{"nome":"Anna Greco","ruolo":"ministro","chiave":"giocatore","salto":0},{"nome":"Francesca Bruno","ruolo":"ministro","chiave":"Orizzonte Comune","salto":0},{"nome":"Elena Marino","ruolo":"ministro","chiave":"Centrodestra","salto":0},{"nome":"Chiara Marino","ruolo":"ministro","chiave":"Orizzonte Comune","salto":0},{"nome":"Elena Romano","ruolo":"ministro","chiave":"Orizzonte Comune","salto":0},{"nome":"Chiara Greco","ruolo":"ministro","chiave":"Orizzonte Comune","salto":0}],"SP":{"come":"seme 4, fonda a 4,5, coalizione con la destra, chiudi (voto): la 02","dicasteri":[{"id":"economia_finanze","nome":"Economia e Finanze"},{"id":"sviluppo_economico","nome":"Sviluppo economico"},{"id":"lavoro_welfare","nome":"Lavoro e Welfare"},{"id":"sanita","nome":"Sanità"},{"id":"istruzione_ricerca","nome":"Istruzione e Ricerca"},{"id":"infrastrutture_trasporti","nome":"Infrastrutture e Trasporti"},{"id":"ambiente_energia","nome":"Ambiente ed Energia"},{"id":"interno","nome":"Interno"},{"id":"giustizia","nome":"Giustizia"},{"id":"esteri_difesa","nome":"Esteri e Difesa"}],"spartizione":[{"di_default":"destra","dicastero":"economia_finanze","partito":"destra","peso":3},{"di_default":"giocatore","dicastero":"sviluppo_economico","partito":"giocatore","peso":1},{"di_default":"centrodestra","dicastero":"lavoro_welfare","partito":"centrodestra","peso":1},{"di_default":"destra","dicastero":"sanita","partito":"destra","peso":1},{"di_default":"giocatore","dicastero":"istruzione_ricerca","partito":"giocatore","peso":1},{"di_default":"centrodestra","dicastero":"infrastrutture_trasporti","partito":"centrodestra","peso":1},{"di_default":"destra","dicastero":"ambiente_energia","partito":"destra","peso":1},{"di_default":"giocatore","dicastero":"interno","partito":"giocatore","peso":2},{"di_default":"giocatore","dicastero":"giustizia","partito":"giocatore","peso":1},{"di_default":"destra","dicastero":"esteri_difesa","partito":"destra","peso":2}],"richieste":[{"intesa_partenza":54.86607669616519,"offerta":2,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":62.126843657817105,"offerta":7,"partito":"destra","richiesta":6.78731563421829}],"soglie":{"crisi_debito_pb":550,"dimissioni":25,"minaccia":40,"ultimatum":40,"uscita":25},"partiti":{"estrema_sinistra":{"nome":"Estrema sinistra","leader":"Anna Ferrucci","donna":true},"sinistra":{"nome":"Sinistra","leader":"Luca Benedetti","donna":false},"centrosinistra":{"nome":"Centrosinistra","leader":"Chiara Lombardo","donna":true},"centro":{"nome":"Centro","leader":"Giorgio Valli","donna":false},"centrodestra":{"nome":"Centrodestra","leader":"Silvia Moretti","donna":true},"destra":{"nome":"Destra","leader":"Davide Ranieri","donna":false},"estrema_destra":{"nome":"Estrema destra","leader":"Bruno Castellani","donna":false},"giocatore":{"nome":"Partito del giocatore","leader":"","donna":false}},"salti":{"estrema_sinistra":0,"sinistra":0,"centrosinistra":0,"centro":1,"centrodestra":0,"destra":1,"estrema_destra":2},"proposte":[{"nome":"default","sp":{"economia_finanze":"destra","sviluppo_economico":"giocatore","lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"},"richieste":[{"intesa_partenza":54.86607669616519,"offerta":2,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":62.126843657817105,"offerta":7,"partito":"destra","richiesta":6.78731563421829}]},{"nome":"generosa_centrodestra","sp":{"economia_finanze":"destra","sviluppo_economico":"centrodestra","lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"},"richieste":[{"intesa_partenza":64.8660766961652,"offerta":3,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":62.126843657817105,"offerta":7,"partito":"destra","richiesta":6.78731563421829}]},{"nome":"avara_destra","sp":{"economia_finanze":"giocatore","sviluppo_economico":"giocatore","lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"},"richieste":[{"intesa_partenza":54.86607669616519,"offerta":2,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":32.126843657817105,"offerta":4,"partito":"destra","richiesta":6.78731563421829}]},{"nome":"tecnico_mio","sp":{"economia_finanze":"destra","sviluppo_economico":null,"lavoro_welfare":"centrodestra","sanita":"destra","istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"},"richieste":[{"intesa_partenza":54.86607669616519,"offerta":2,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":62.126843657817105,"offerta":7,"partito":"destra","richiesta":6.78731563421829}]},{"nome":"tecnico_della_destra","sp":{"economia_finanze":"destra","sviluppo_economico":"giocatore","lavoro_welfare":"centrodestra","sanita":null,"istruzione_ricerca":"giocatore","infrastrutture_trasporti":"centrodestra","ambiente_energia":"destra","interno":"giocatore","giustizia":"giocatore","esteri_difesa":"destra"},"richieste":[{"intesa_partenza":54.86607669616519,"offerta":2,"partito":"centrodestra","richiesta":2.513392330383481},{"intesa_partenza":52.126843657817105,"offerta":6,"partito":"destra","richiesta":6.78731563421829}]}],"rifiuto":"comando non ammesso: Economia e Finanze senza assegnazione: servono tutti i dicasteri"},"RIB":{"come":"seme 2, fonda a 1.5, nessuna coalizione, turni chiusi senza comandi fino alla guida","coalizione":["giocatore","sinistra","centrosinistra","centro"],"primo":"sinistra","partiti":{"estrema_sinistra":{"nome":"Estrema sinistra","leader":"Anna Ferrucci","donna":true},"sinistra":{"nome":"Sinistra","leader":"Luca Benedetti","donna":false},"centrosinistra":{"nome":"Centrosinistra","leader":"Chiara Lombardo","donna":true},"centro":{"nome":"Centro","leader":"Giorgio Valli","donna":false},"centrodestra":{"nome":"Centrodestra","leader":"Silvia Moretti","donna":true},"destra":{"nome":"Destra","leader":"Anna Barbieri","donna":true},"estrema_destra":{"nome":"Estrema destra","leader":"Bruno Castellani","donna":false},"giocatore":{"nome":"Partito del giocatore","leader":"","donna":false}},"incarico":"guida","voti":{"estrema_sinistra":[0,0,0.023588432407377694],"sinistra":[134,71,0.32386610435637486],"centrosinistra":[23,10,0.05929369602514872],"centro":[17,8,0.043365341315356194],"centrodestra":[31,13,0.07587176002094581],"destra":[135,69,0.32494775664836034],"estrema_destra":[26,11,0.06613326915906075],"giocatore":[34,18,0.08293364006737562]},"data":{"anno":2026,"trimestre":4},"affluenza":0.7032286807434702},"pcol":{"estrema_sinistra":"#A3242F","sinistra":"#E36B4F","centrosinistra":"#B8478A","centro":"#C99A1E","centrodestra":"#3E8FD6","destra":"#2D55A6","estrema_destra":"#9A5A1C","giocatore":"#1F8A70"},"conti":{"nMin":91,"nLea":11,"nomiDistinti":56,"dueFacce":0}};
+
+// ======================= stato =======================
+const OPZ = {
+  s: {facce:'1 · Le donne nelle facce', sp:'2 · La spartizione in corso'},
+  vedi: {rosa:'Rosa e governo', leader:'Leader', prova:'Prova di riconoscimento'},
+  tratti: {A:'A · come la spec', B:'B · uno dall’hash', C:'C · ciglia e labbra'},
+  cappello: {f:'f · fantasia', i:'i · inchiostro', c:'c · carta'},
+  misura: {ui:'come nella UI', 34:'34', 46:'46', 62:'62', 84:'84'},
+  fondo: {carta:'carta', giallo:'giallo', rosso:'rosso'},
+  nomi: {no:'nascosti', si:'mostrati'},
+  pag: {sp:'Spartizione', rib:'Ribaltone'},
+  sp: {A:'A · in corso dal core', B:'B · bozza come oggi'},
+  fin: {1280:'1280×800', 1440:'1440×900'},
+};
+const DEF = {s:'facce', vedi:'rosa', tratti:'A', cappello:'f', misura:'ui', fondo:'carta', nomi:'no', pag:'sp', sp:'A', fin:'1280'};
+const st = {...DEF};
+try{ new URLSearchParams(location.search).forEach((v,k)=>{ if(k in DEF && v in OPZ[k]) st[k]=v; }); }catch(e){}
+const salva = () => { try{ const p=new URLSearchParams(); for(const k in DEF) if(st[k]!==DEF[k]) p.set(k,st[k]); history.replaceState(null,'',location.pathname+(p.size?'?'+p:'')); }catch(e){} };
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (x,d=1) => x.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const DIC = Object.fromEntries(D.SP.dicasteri.map(d=>[d.id,d.nome]));
+const col = id => D.pcol[id] || '#8A837B';
+const TESTO_SU = {sinistra:'var(--ink)', centro:'var(--ink)', centrodestra:'var(--ink)', centrosinistra:'var(--bianco)', giocatore:'var(--nero)'};
+const testoSu = id => TESTO_SU[id] || 'var(--carta)';
+const misura = def => st.misura==='ui' ? def : +st.misura;
+const faccia = (x, px, o={}) => `<span class="fz" aria-hidden="true">${Car.faccia({ruolo:x.ruolo, partito:x.chiave, nome:x.nome, salto:x.salto||0, misura:px,
+  fondo:st.fondo, dicastero:o.dic, donna:!!x.donna, tratti:st.tratti, cappello:st.cappello, etichetta:false})}</span>`;
+// la misura col «come nella UI» in testa: le chiavi numeriche di un oggetto vengono sempre prima
+const voci = k => k==='misura' ? [['ui',OPZ.misura.ui], ...Object.entries(OPZ.misura).filter(([v])=>v!=='ui')] : Object.entries(OPZ[k]);
+const lato = h => `<aside class="lato">${h}</aside>`;
+
+// ======================= 1 · Le donne nelle facce =======================
+const TRATTI = {
+  A:['Come la spec','Ciglia, naso all’85% e labbra a tutte; orecchino e cappello ciascuno sì o no dall’hash: quattro combinazioni.'],
+  B:['Uno dall’hash','Ciglia e naso all’85% a tutte, poi uno solo fra labbra, orecchino e cappello.'],
+  C:['Ciglia e labbra','Naso intero, niente orecchino né cappello: la donna si legge solo dall’occhio e dalla bocca.'],
+};
+const CAPP = {f:['A fantasia','La stessa fantasia del colletto della faccia; il tecnico grigio.'], i:['Inchiostro','Pieno d’inchiostro, nastro di carta.'], c:['Carta','Carta col nastro d’inchiostro.']};
+const varianti = (k,T) => Object.entries(T).map(([v,[n,d]])=>`<div class="var ${st[k]===v?'qui':''}"><span class="l">${v}</span><b>${esc(n)}</b><span class="d">${esc(d)}</span></div>`).join('');
+const partitoRiga = x => `<span><i class="sw" style="background:${col(x.pid)}"></i>${esc(x.partito)}</span>`;
+
+function rosaGoverno(){
+  const a = D.album, px=misura(62), pr=misura(46);
+  const figurine = a.voci.map(x=>`<div class="fig">${faccia(x,px,{dic:x.dic})}<b>${esc(x.nome)}</b>${partitoRiga(x)}<span class="muto">${esc(DIC[x.dic])}</span></div>`).join('');
+  const rose = D.rose.map(r=>`<section class="rosa"><h4>${esc(DIC[r.dic])}</h4>${r.voci.map(x=>`<div class="cand">${faccia(x,pr)}<span><b>${esc(x.nome)}</b><small>${esc(x.partito)}${x.ruolo==='tecnico'?' · tecnico':''}${x.salto?` · salto ${x.salto}`:''}</small></span></div>`).join('')}<span class="min muto">${esc(r.da)}</span></section>`).join('');
+  return `<div class="sez-l">Il governo<span>${esc(a.da)} · ${a.voci.filter(x=>x.donna).length} donne su ${a.voci.length}</span></div><div class="album">${figurine}</div>
+    <div class="sez-l">Tre rose da tre<span>la regola della rosa di produzione: naso e colletto, senza il genere</span></div><div class="rose">${rose}</div>`;
+}
+function leader(){
+  const l=D.leader, px=misura(46);
+  const schede = l.voci.map(x=>`<div class="scheda" style="--pc:${col(x.pid)}">${faccia(x,px)}<span><b>${esc(x.partito)}</b><small>${esc(x.nome)}</small></span></div>`).join('');
+  return `<div class="sez-l">Le schede dei partiti<span>${esc(l.da)} · ${l.voci.filter(x=>x.donna).length} leader donne su ${l.voci.length}</span></div><div class="par">${schede}</div>
+    <p class="nota">Il partito del giocatore non si disegna. I salti sono quelli di <code>saltiDeiLeader</code> sulla Vista.</p>`;
+}
+function prova(){
+  const px=misura(84), mostra=st.nomi==='si';
+  const celle = D.prova.map((x,i)=>`<figure>${faccia({...x,donna:true},px)}<figcaption><b>${i+1}</b>${mostra?`<br>${esc(x.nome)}<br>${esc(x.chiave)}${x.ruolo==='leader'?' · leader':''}`:''}</figcaption></figure>`).join('');
+  return `<div class="sez-l">Tutte le donne delle Viste campione<span>${D.prova.length} facce, ${mostra?'coi nomi':'senza nomi'}</span></div>
+    <div class="prova" style="--cella:${Math.max(px, mostra?110:px)+8}px">${celle}</div>`;
+}
+function facce(){
+  const c=D.conti, corpo = {rosa:rosaGoverno, leader, prova}[st.vedi]();
+  const capp = st.tratti==='C' ? '<p class="nota">In C nessuna ha il cappello: l’interruttore non cambia nulla.</p>' : varianti('cappello',CAPP);
+  return `<div class="dom"><div class="pag">${corpo}</div>${lato(`
+    <p class="q"><b>Come si disegna una donna?</b> La spec dice «ciglia, naso all’85%, labbra rosse; orecchino e cappello secondo l’hash» (spec:342). Le facce sono quelle del kit di produzione; i segni femminili vengono dal 32.</p>
+    <div class="sez-l">tratti</div>${varianti('tratti',TRATTI)}
+    <div class="sez-l">cappello<span>dove c’è</span></div>${capp}
+    <div class="sez-l">nella prova</div>
+    <div class="conti"><span>ministre e candidate in rosa (nome, partito, ruolo)</span><b>${c.nMin}</b><span>di cui nomi distinti</span><b>${c.nomiDistinti}</b><span>leader donne</span><b>${c.nLea}</b><span>con due facce in due Viste (salto diverso)</span><b>${c.dueFacce}</b></div>
+    <p class="nota"><b>Prova:</b> nessuna ricorda una politica vera? Le facce sono numerate; «nomi» nella barra le scopre. La faccia di una ministra è quella della figurina (salto 0); da candidata in rosa può saltare alla combinazione successiva.</p>`)}</div>`;
+}
+
+// ======================= 2 · La spartizione in corso =======================
+const SP = D.SP, SO = SP.soglie;
+const DEF_SP = Object.fromEntries(SP.spartizione.map(x=>[x.dicastero,x.di_default]));
+const PESO = Object.fromEntries(SP.spartizione.map(x=>[x.dicastero,x.peso]));
+const CHI = ['giocatore', null, ...SP.richieste.map(r=>r.partito)];
+const chiave = s => SP.dicasteri.map(d=>s[d.id]===null?'tecnico':s[d.id]).join(',');
+const PROP = new Map(SP.proposte.map((p,i)=>[chiave(p.sp),i]));
+const nomeB = o => o==='giocatore' ? 'Tu' : o===null ? 'Tecnico' : SP.partiti[o].nome;
+let core, cur, bozza, mandati;
+function azzera(){
+  core = {sp:Object.fromEntries(SP.spartizione.map(x=>[x.dicastero,x.partito])), i:0, richieste:SP.richieste};
+  cur = {...core.sp}; bozza = {}; mandati = 0;
+}
+function manda(s){ const i=PROP.get(chiave(s)); core = {sp:{...s}, i:i??null, richieste:i==null?null:SP.proposte[i].richieste}; mandati++; }
+azzera();
+
+const pesi = n => `<span class="pesi" title="${n} punt${n>1?'i':'o'}">${'<i></i>'.repeat(n)}</span>`;
+const bott = (d,sel) => `<span class="chi2">${CHI.map(o=>`<button class="op ${o===null?'tec':''}" aria-pressed="${sel===o}" style="${o===null?'':`--pc:${col(o)};--tx:${testoSu(o)}`}" data-as="${d}|${o}">${esc(nomeB(o))}</button>`).join('')}</span>`;
+const fx = v => v/10*16-1;
+function intesa(it){
+  const n = it==null ? 0 : Math.round(it/10), rs = it!=null && it<SO.ultimatum;
+  return `<div class="ib"><span class="cas ${it==null?'vuoto':''}">${Array.from({length:10},(_,i)=>`<i class="${i<n?'on':''} ${rs?'rs':''}"></i>`).join('')}</span>
+    <b style="left:${fx(SO.ultimatum)}px"></b><em style="left:${fx(SO.ultimatum)+1}px">${SO.ultimatum}</em><b style="left:${fx(SO.uscita)}px"></b><em style="left:${fx(SO.uscita)+1}px">${SO.uscita}</em></div>`;
+}
+function alleati(){
+  return SP.richieste.map(r0=>{
+    const p=SP.partiti[r0.partito], r=core.richieste?.find(x=>x.partito===r0.partito);
+    const x={ruolo:'leader', chiave:p.nome, nome:p.leader, salto:SP.salti[r0.partito], donna:p.donna};
+    const it = r ? r.intesa_partenza : null;
+    const avv = it==null ? '' : it<SO.uscita ? '<span class="chip rosso">può uscire</span>' : it<SO.ultimatum ? '<span class="chip rosso">entra in ultimatum</span>' : '';
+    return `<div class="all" style="--pc:${col(r0.partito)}">${faccia(x,34)}
+      <span><b>${esc(p.nome)}</b> <span class="min muto">${esc(p.leader)}</span></span>
+      <span class="sec">${r ? `chiede <b>${num(r.richiesta)}</b> punti, ne offri <b>${r.offerta}</b>` : `chiede <b>${num(r0.richiesta)}</b> punti; offerta: non nel campione`}</span>
+      <div class="largo">${intesa(it)}<span class="ints"><b class="${it!=null&&it<SO.ultimatum?'male':''}">${it==null?'intesa di partenza: non nel campione':`parte da ${num(it,0)}`}</b>${avv}</span></div></div>`;
+  }).join('');
+}
+function comando(){
+  const B=st.sp==='B', fatto = mandati>0;
+  if(B && !fatto) return `<div class="cmd"><b>Nessun comando</b><span class="min muto">La Vista resta quella del turno: la spartizione in corso è il default.</span></div>`;
+  if(!fatto) return `<div class="cmd"><b>Spartizione in corso del core</b><span class="min muto">Nel campione: «${esc(SP.proposte[0].nome)}». Nessun comando ancora mandato.</span></div>`;
+  return `<div class="cmd"><b>Mandato <code>proponi_spartizione</code>, dieci dicasteri</b><span class="min ${core.i==null?'male':'muto'}">${core.i==null?'Non nel campione: le intese vere non ci sono.':`Nel campione: «${esc(SP.proposte[core.i].nome)}», le intese sono quelle dopo il comando.`}</span><span class="min muto">comandi mandati: ${mandati}</span></div>`;
+}
+function spartizione(){
+  const A = st.sp==='A', s = A ? cur : bozza, n = SP.dicasteri.filter(d=>bozza[d.id]!==undefined).length;
+  const cambiata = A && SP.dicasteri.some(d=>cur[d.id]!==DEF_SP[d.id]);
+  const righe = SP.dicasteri.map(d=>`<tr class="${A && cur[d.id]!==DEF_SP[d.id]?'mod':''}"><td class="d">${esc(d.nome)}</td><td>${pesi(PESO[d.id])}</td><td>${bott(d.id,s[d.id])}</td>${A?'':`<td class="ora">${esc(nomeB(core.sp[d.id]))}</td>`}</tr>`).join('');
+  const riga = A
+    ? `La pagina si apre sulla spartizione in corso del core: all’inizio il default. Ogni clic manda la spartizione intera.`
+    : n<SP.dicasteri.length ? `Assegnati ${n} su ${SP.dicasteri.length}. La proposta parte quando sono tutti assegnati; da lì ogni clic la sostituisce.` : 'Tutti assegnati: la proposta è partita, ogni clic la sostituisce.';
+  const pie = A
+    ? `<p class="min muto">• cambiato rispetto alla spartizione di default.</p>${cambiata?`<div class="az"><button class="link" data-act="reset">Torna alla spartizione di default</button></div>`:''}`
+    : `<p class="min muto">Senza proposta, a fine turno vale la spartizione di default. La colonna grigia è la spartizione in corso del core.</p>${n?`<div class="az"><button class="btn p" data-act="svuota">Svuota la bozza</button></div>`:''}`;
+  return `<div class="dom"><div class="pag">
+    <p class="q"><b>Da dove parte la pagina della spartizione?</b> Con lo schema 19 la Vista porta la spartizione in corso del core e l’intesa di partenza vera di ogni alleato. ${A?'<b>A</b>: righe già compilate, ogni clic manda tutto.':'<b>B</b>: la bozza vuota di oggi, il comando solo a bozza completa.'}</p>
+    <div class="riga"><h3 class="tit" style="font-size:var(--c-sez)">La trattativa</h3><span class="sec muto">${esc(SP.come)}</span></div>
+    <p class="min muto" aria-live="polite">${riga}</p>
+    <table class="rig"><thead><tr><th>Dicastero</th><th>Peso</th><th>A chi</th>${A?'':'<th>In corso</th>'}</tr></thead><tbody>${righe}</tbody></table>${pie}
+    <p class="nota">Nel campione ci sono cinque proposte: ${SP.proposte.map(p=>`«${esc(p.nome)}»`).join(', ')}. Ogni altra combinazione dice «non nel campione». Nessuna delle cinque porta un’intesa sotto ${SO.uscita}: «può uscire» qui non si vede.</p>
+  </div>${lato(`${comando()}<div class="sez-l">gli alleati<span>soglie: ultimatum ${SO.ultimatum}, uscita ${SO.uscita}</span></div>${alleati()}`)}</div>`;
+}
+function ribaltone(){
+  const R=D.RIB, sum=i=>R.coalizione.reduce((a,id)=>a+R.voti[id][i],0), P=R.partiti[R.primo];
+  const righe = R.coalizione.map(id=>`<div class="prom ${id===R.primo?'primo':''}"><span><i class="sw" style="background:${col(id)}"></i>${esc(R.partiti[id].nome)}${id===R.primo?' <span class="chip">primo per seggi: la guida</span>':''}</span><span class="num">${R.voti[id][0]} · ${R.voti[id][1]}</span></div>`).join('');
+  return `<div class="dom"><div class="pag"><div class="gui">
+    <p class="occ">Il ribaltone</p><p class="grande">Il governo è caduto, e tu stai nella nuova maggioranza.</p>
+    <p>Il primo per seggi del ribaltone ha la guida: puoi chiederla a lui, o restare fuori.</p>
+    <div class="az"><button class="btn pieno">Chiedi la guida ›</button><button class="btn">Resta fuori</button></div>
+    <p class="min muto">Se il primo per seggi te la cede, l’incarico passa a te; se no, ti dice perché e puoi ancora restare fuori.</p>
+    <p class="nota">Nel prototipo i bottoni non fanno nulla. ${esc(R.come)}. Il primo è ${esc(P.nome)}, leader ${esc(P.leader)}.</p></div></div>
+    ${lato(`<h4 class="tit" style="font-size:var(--c-sez)">Il ribaltone</h4>${righe}<div class="prom"><span class="muto">insieme</span><span class="num">${sum(0)} · ${sum(1)}</span></div>
+    <p class="min muto">Nell’ordine del core (<code>vista.ribaltone.coalizione</code>). Seggi Camera · Senato dal voto di ${R.data.trimestre}° trimestre ${R.data.anno} (<code>elezioni.at(-1)</code>).</p>`)}</div>`;
+}
+
+// ======================= barra, disegno, clic =======================
+function barra(){
+  const segs = [['s','scheda']];
+  if(st.s==='facce') segs.push(['vedi','contenuto'],['tratti','tratti'],['cappello','cappello'],['misura','misura'],['fondo','fondo'], ...(st.vedi==='prova'?[['nomi','nomi']]:[]));
+  else segs.push(['pag','pagina'], ...(st.pag==='sp'?[['sp','sp']]:[]));
+  segs.push(['fin','finestra']);
+  document.getElementById('proto').innerHTML = segs.map(([k,cap])=>`<span class="cap">${cap}</span><span class="seg" data-k="${k}">${voci(k).map(([v,l])=>`<button data-v="${v}" class="${st[k]===v?'on':''}" aria-pressed="${st[k]===v}">${esc(l)}</button>`).join('')}</span>`).join('')+'<span id="avv"></span>';
+}
+const scr = document.getElementById('screen');
+function render(){
+  const W=+st.fin, H=W===1440?900:800;
+  const pag = st.s==='facce' ? facce() : st.pag==='rib' ? ribaltone() : spartizione();
+  scr.style.width=W+'px'; scr.style.height=H+'px';
+  scr.innerHTML = `<div class="vS"><header class="barra"><h1>Scelte della 11g</h1><nav class="schede">${Object.entries(OPZ.s).map(([k,l])=>`<button class="btn ${st.s===k?'scelto':''}" data-k="s" data-v="${k}">${l}</button>`).join('')}</nav>
+    <span class="nota">Gli interruttori stanno nella barra in basso.</span></header>${pag}</div>`;
+  barra();
+  const stage=document.getElementById('stage'); scr.style.transform=`scale(${Math.min(1,stage.clientWidth/W,stage.clientHeight/H)})`;
+  salva(); tagli();
+}
+// testi che escono dal loro riquadro (come nel 27): oltre il bordo destro dello schermo o della propria colonna, o più larghi del proprio box
+function tagli(){
+  const r=scr.firstElementChild, R=r.getBoundingClientRect(); let n=0; const chi=[];
+  r.querySelectorAll('*').forEach(el=>{ if(el.closest('svg')) return; const b=el.getBoundingClientRect(), cs=getComputedStyle(el);
+    const col = el.parentElement?.closest('.pag,.lato,.barra'), C = col?.getBoundingClientRect();
+    const fuori = b.width && (b.right>R.right+1 || (C && (b.right>C.right+1 || b.left<C.left-1)));
+    const stretto = el.clientWidth && el.scrollWidth>el.clientWidth+1 && cs.display!=='inline' && !/auto|scroll/.test(cs.overflowY);
+    if(fuori||stretto){ n++; chi.push(el); } });
+  window.__tagli = chi;
+  document.getElementById('avv').textContent = n ? `tagli: ${n}` : '';
+}
+document.getElementById('proto').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b) return; const k=b.parentElement.dataset.k;
+  st[k]=b.dataset.v; if(k==='sp') azzera(); render();
+});
+scr.addEventListener('click',ev=>{
+  const x=ev.target.closest('[data-k],[data-as],[data-act]'); if(!x) return;
+  if(x.dataset.k){ st[x.dataset.k]=x.dataset.v; render(); return; }
+  if(x.dataset.as){
+    const [d,o0]=x.dataset.as.split('|'), o=o0==='null'?null:o0;
+    if(st.sp==='A'){ if(cur[d]===o) return; cur[d]=o; manda(cur); }
+    else { if(bozza[d]===o) return; bozza[d]=o; if(SP.dicasteri.every(x=>bozza[x.id]!==undefined)) manda(bozza); }
+  } else if(x.dataset.act==='reset'){ cur={...DEF_SP}; manda(cur); }
+  else if(x.dataset.act==='svuota'){ bozza={}; }
+  render();
+});
+addEventListener('resize',render);
+render(); if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>
