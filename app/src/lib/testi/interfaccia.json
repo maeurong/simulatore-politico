@@ -56,6 +56,7 @@
 
   "barrata.governo": "Non governi: nessun ministro tuo",
   "barrata.campagna": "Si fa campagna solo nel turno prima del voto",
+  "barrata.bilancio_finita": "Partita finita",
   "barrata.bilancio_opposizione": "Non governi: il bilancio lo presenta il governo",
   "barrata.bilancio_stagione": "Fuori stagione: si presenta in ottobre-dicembre o nell’esercizio provvisorio",
   "barrata.prima_pagina": "Turno zero: non c’è un turno prima",
@@ -119,6 +120,9 @@
   "impostazioni.prova_esito_2": "Lo spread scende a 79",
   "impostazioni.prova_esito_3": "La Destra chiede l’Interno",
 
+  "eredita.occhiello_senza_seggi": "Voto di {voto} · {quota}, nessun seggio",
+  "eredita.occhiello_abbandono": "Partita lasciata · {fine}",
+  "eredita.titolo_abbandono": "{nome} lascia la partita",
   "edicola.dove": "Edicola",
   "edicola.in_corso": "In corso",
   "edicola.albo": "Albo",

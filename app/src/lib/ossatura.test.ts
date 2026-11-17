@@ -9,6 +9,7 @@ import opposizioneJson from "../../../.scratch/v1-piano-11-ui/viste/06-opposizio
 import cruscottoJson from "../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 import bilancioJson from "../../../.scratch/v1-piano-11-ui/viste/22-bilancio.json";
+import ereditaJson from "../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
 const vista = (x: unknown) => x as Vista;
 const turnoZero = vista(turnoZeroJson);
@@ -71,6 +72,11 @@ describe("barrata", () => {
   it("in trattativa: Aula e Governo barrati", () => {
     expect(barrata("aula", trattativa)).toBe("barrata.aula_trattativa");
     expect(barrata("governo", trattativa)).toBe("barrata.governo");
+  });
+
+  it("a partita finita il Bilancio è barrato «Partita finita», prima di ogni altro motivo", () => {
+    expect(barrata("bilancio", finita)).toBe("barrata.bilancio_finita");
+    expect(barrata("bilancio", vista(ereditaJson.vista))).toBe("barrata.bilancio_finita");
   });
 
   it("a partita finita: Governo, Aula, Bilancio e Campagna; Registro senza bozza", () => {

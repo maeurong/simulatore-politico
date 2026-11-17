@@ -51,8 +51,9 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
     case "governo": return v.governa ? null : "barrata.governo";
     // aperta nel quarto trimestre e ogni volta che la Vista dice che il bilancio si può presentare (anche in esercizio provvisorio)
     case "bilancio":
+      if (v.finita) return "barrata.bilancio_finita";
       if (!v.governa) return "barrata.bilancio_opposizione";
-      return !v.finita && (v.data.trimestre === 4 || v.bilancio.presentabile) ? null : "barrata.bilancio_stagione";
+      return v.data.trimestre === 4 || v.bilancio.presentabile ? null : "barrata.bilancio_stagione";
     case "campagna": return !v.finita && v.turni_al_voto === 0 ? null : "barrata.campagna";
     default: return null;
   }
