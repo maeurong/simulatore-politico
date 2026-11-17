@@ -123,7 +123,7 @@ describe("fettaDi", () => {
     expect(fettaDi("partiti", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "turno_zero")).toBeNull();
     expect(fettaDi("eredita", "finita")).toBeNull();
-    expect(fettaDi("schema", "governo")).toBe("11e");
+    expect(fettaDi("schema", "governo")).toBeNull();
   });
   it("i conti sono costruiti in ogni stato", () => {
     for (const s of ["turno_zero", "trattativa", "governo", "crisi", "opposizione", "finita"] as const) expect(fettaDi("conti", s)).toBeNull();
