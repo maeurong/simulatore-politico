@@ -3,7 +3,7 @@ import { t } from "$lib/testi/t";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
-import { LEVE, MASSIMO_PROMESSE, MASSIMO_SPESE, PASSI, PASSO_CESSIONE, cedi, conto, dichiara, nomeBersaglio, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio, posizioniVicine, promesseFatte, prometti } from "./campagna";
+import { LEVE, MASSIMO_PROMESSE, MASSIMO_SPESE, PASSI, PASSO_CESSIONE, cedi, conto, dichiara, nomeBersaglio, quotaNelBersaglio, rivali, righeCoalizione, aggiungiSpesa, seggiAttesi, sessioneSpese, taglio, posizioniVicine, promesseFatte, prometti, distanzaDi, sogliaDi } from "./campagna";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import campagnaJson from "../../../../.scratch/v1-piano-11-ui/viste/26-campagna.json";
 
@@ -299,5 +299,18 @@ describe("posizione e promesse", () => {
   it("prometti: le coppie (disposizione, gradino) nel comando; il massimo è due", () => {
     expect(prometti([{ disposizione: "a", gradino: "b" }])).toEqual({ tipo: "prometti", promesse: [["a", "b"]] });
     expect(MASSIMO_PROMESSE).toBe(2);
+  });
+});
+
+describe("distanzaDi e sogliaDi", () => {
+  const c = { minaccia_scissione: 0.5, soglia_scissione: 1 } as Vista["campagna"];
+  it("sotto, minaccia, scissione ai fili", () => {
+    expect(sogliaDi(0.49, c)).toBe("sotto");
+    expect(sogliaDi(0.6, c)).toBe("minaccia");
+    expect(sogliaDi(1, c)).toBe("scissione");
+  });
+  it("la distanza dell'opposizione a fine campagna: 0,61", () => {
+    const v = (campagnaJson as unknown as { opposizione_fine: Vista }).opposizione_fine;
+    expect(distanzaDi(v).toFixed(2)).toBe("0.61");
   });
 });

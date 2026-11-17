@@ -1,14 +1,16 @@
 <script lang="ts">
-  // Promesse (26-campagna.prototype.html, forma A): fino a due, scelte su tutto il catalogo, la conferma sul posto. L'intesa che si perde: 11g.
-  import { t, elenco } from "$lib/testi/t";
+  // Promesse (26-campagna.prototype.html, forma A): fino a due, scelte su tutto il catalogo, la conferma sul posto. L'intesa che si perde, dall'anteprima del core.
+  import { t, elenco, numero } from "$lib/testi/t";
   import { partita } from "$lib/partita.svelte";
-  import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
+  import { guscio, comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
+  import { ultimoVince } from "$lib/editor/editor.svelte";
+  import { nomeDi } from "$lib/partiti";
+  import type { VoceCostoPromessa } from "$lib/tipi/VoceCostoPromessa";
   import type { Vista } from "$lib/tipi/Vista";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { MASSIMO_PROMESSE, prometti, promesseFatte } from "./campagna";
+  import { MASSIMO_PROMESSE, coppie, prometti, promesseFatte } from "./campagna";
 
   let { vista }: { vista: Vista } = $props();
   const fatte = $derived(promesseFatte(vista));
@@ -25,16 +27,30 @@
   const libere = $derived(vista.disposizioni.filter((d) => !scelte.some((s) => s.disposizione === d.id)));
   const aperta_su = $derived(disp(disposizione));
 
+  // l'anteprima delle scelte di ora: una in volo, vince l'ultima; vale solo se la chiave è ancora quella delle scelte
+  const chiave = (c: [string, string][]) => c.map(([d, g]) => `${d}=${g}`).join("|");
+  let anteprima = $state.raw<{ chiave: string; esito: VoceCostoPromessa[] | { rifiuto: string } } | null>(null);
+  const chiedi = ultimoVince(
+    (c: [string, string][]) => guscio.anteprimaPromesse(c),
+    (r, c) => (anteprima = { chiave: chiave(c), esito: Array.isArray(r) ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
+  );
+  const corrente = $derived(anteprima && anteprima.chiave === chiave(coppie(scelte)) ? anteprima.esito : null);
+  const perdite = $derived(corrente && Array.isArray(corrente) ? corrente.filter((v) => v.intesa < 0) : null);
+  const rifiutata = $derived(corrente && !Array.isArray(corrente) ? corrente.rifiuto : null);
+  const chiediOra = () => scelte.length && chiedi(coppie(scelte));
+
   function aggiungi(gradino: string) {
     scelte = [...scelte, { disposizione, gradino }];
     disposizione = "";
     aperta = false;
     rifiuto = null;
+    chiediOra();
   }
   function togli(i: number) {
     scelte = scelte.filter((_, k) => k !== i);
     aperta = false;
     rifiuto = null;
+    chiediOra();
   }
   async function manda() {
     if (partita.occupato) return;
@@ -76,9 +92,18 @@
         </div>
       {/if}
     {/if}
+    {#if rifiutata}<div class="rif"><Rifiuto testo={rifiutata.replace("comando non ammesso: ", "")} /></div>{/if}
     {#if vista.governa}
-      <div class="avv"><span><b>{t("campagna.costa_intesa")}</b> {t("campagna.costa_intesa_corpo")}</span></div>
-      <Segnaposto sezione={t("campagna.intesa_vuoto")} fetta="11g" />
+      <div class="avv">
+        <span><b>{t("campagna.costa_intesa")}</b> {t("campagna.costa_intesa_corpo")}</span>
+        {#if perdite?.length}
+          {#each perdite as v (v.partito)}
+            <span>{t("campagna.intesa_perde", { nome: nomeDi(vista, v.partito), n: numero(-v.intesa, 0), su: elenco(v.disposizioni.map((id) => disp(id)?.nome ?? id), ", ") })}</span>
+          {/each}
+        {:else if perdite}
+          <span>{t("campagna.intesa_nessuna")}</span>
+        {/if}
+      </div>
     {/if}
     {#if scelte.length}
       <div class="az">
@@ -102,7 +127,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px }
   .fatto { border: 1.5px solid var(--verde); color: var(--verde); padding: 4px 8px; font-size: var(--c-sec); font-weight: 700; margin-top: 4px }
   :global(:root.grave) .fatto { border-color: var(--ink); color: var(--ink) }
-  .avv { border: 1.5px solid var(--rosso); padding: 7px 10px; font-size: var(--c-sec); margin: 6px 0 }
+  .avv { border: 1.5px solid var(--rosso); padding: 7px 10px; font-size: var(--c-sec); margin: 6px 0; display: grid; gap: 2px }
   .avv b { color: var(--rosso) }
   .rif { border: 1.5px solid var(--rosso); padding: 4px 8px; margin: 4px 0 }
   .az { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 }

@@ -295,6 +295,11 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
       return presente(dallaCatena ? c.catena?.[args.turno as number]?.prima : c.eredita?.vista, comando);
     }
     case "anteprima_campagna": return anteprimaCampagna(args.spese as any[], c.campagna);
+    case "anteprima_riposizionamento": return esito(c.campagna?.anteprime_riposizionamento?.[stato ?? ""]?.[String(args.posizione)], comando);
+    case "anteprima_promesse": {
+      const chiave = (args.promesse as [string, string][]).map(([d, g]) => `${d}=${g}`).join("|");
+      return esito(c.campagna?.anteprime_promesse?.[stato ?? ""]?.[chiave], comando);
+    }
     case "elettori_campione": {
       // il campione del 23 porta il suo stato; fuori dal 23 vale quello del governo
       const gruppi = campione?.campione ?? c.paese.governo.campione;
