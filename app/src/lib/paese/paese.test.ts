@@ -69,11 +69,11 @@ describe("livelli del territorio", () => {
     expect(votoPerRegione(v)!.toscana).toBeDefined();
   });
   it("votoPerRegione: i seggi del Senato seguono i partiti dell'elezione, non quelli della Vista", () => {
-    const e = governo.elezioni.at(-1)!;
-    const v = { ...governo, partiti: [{ ...governo.partiti[0], id: "nato" }, ...governo.partiti] } as Vista;
-    const r = e.regioni.find((x) => x.regione === "toscana")!;
-    expect(votoPerRegione(v)!.toscana.senato).toEqual(e.voti.map((x, i) => ({ partito: x.partito, seggi: r.seggi_senato[i] })));
-    expect(votoPerRegione(v)!.toscana.senato.find((x) => x.seggi)!.partito).toBe(e.voti[r.seggi_senato.findIndex((n) => n)].partito);
+    const v = {
+      partiti: [{ id: "a" }, { id: "b" }],
+      elezioni: [{ voti: [{ partito: "b" }, { partito: "a" }], regioni: [{ regione: "toscana", primo: "b", voti: [0.6, 0.4], seggi_senato: [7, 0] }] }],
+    } as unknown as Vista;
+    expect(votoPerRegione(v)!.toscana.senato).toEqual([{ partito: "b", seggi: 7 }, { partito: "a", seggi: 0 }]);
   });
   it("votoPerRegione: l'ultima elezione, null senza", () => {
     expect(votoPerRegione(zero)).toBeNull();

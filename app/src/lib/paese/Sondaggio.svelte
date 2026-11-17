@@ -17,6 +17,7 @@
   const letto = $derived(sondaggioLetto(vista));
   const pubblica = $derived(media(vista, vista.sondaggio));
   const privata = $derived(letto.privato ? media(vista, letto.sondaggio) : null);
+  const margPriv = $derived(letto.privato ? margineIstituti(letto.sondaggio) : "");
   const privataDi = $derived(new Map(privata?.partiti.map((p) => [p.id, p.quota])));
   const massimo = $derived(Math.max(0.01, ...pubblica.partiti.map((p) => p.quota)));
   const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "sondaggio_privato")?.euro);
@@ -68,7 +69,7 @@
     <span class="q muto">{pc(pubblica.astensione)}</span>{#if privata}<span class="q priv muto">{pc(privata.astensione)}</span>{/if}
   </div>
   {#if margineIstituti(vista.sondaggio)}
-    <p class="min muto">{t(privata ? "paese.margine_riga_priv" : "paese.margine_riga", { a: margineIstituti(vista.sondaggio), b: privata ? margineIstituti(letto.sondaggio) : "" })}</p>
+    <p class="min muto">{t(margPriv ? "paese.margine_riga_priv" : "paese.margine_riga", { a: margineIstituti(vista.sondaggio), b: margPriv })}</p>
   {/if}
   <p class="min muto">{t("paese.nota_quote")}</p>
 
