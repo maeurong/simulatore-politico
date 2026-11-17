@@ -8,8 +8,6 @@
   let { tracciato: tr }: { tracciato: Tracciato } = $props();
 
   const pos = $derived(tr.valore !== null && tr.scala ? caselle(tr.valore, tr.scala) : null);
-  // col valore il rimando è dello stacco (lo spread fino a 11g): caselle piene, senza tacche dello stacco
-  const stacco = $derived(!tr.rimando);
   const rimando = $derived(tr.rimando ? t(tr.valore === null ? "tracciato.arriva" : "tracciato.stacco_arriva", { fetta: tr.rimando }) : undefined);
   const decimali = $derived(tr.nome.startsWith("tracciato.consenso") ? 1 : 0);
   // durante la rivelazione le caselle fra il valore di prima e il nuovo lampeggiano; senza il valore di prima, tutte quelle accese
@@ -28,7 +26,7 @@
     <span class="cas" class:inp={tr.rosso} class:fermo={tr.grigio} aria-hidden="true">
       <b class="oltre" class:su={!tr.rosso}>{pos.sotto ? "◂" : ""}</b>
       {#each { length: 10 }, i (i)}
-        <i data-tagli-ignora class:per={stacco && i < 3 && !tr.grigio} class:sog={stacco && i === 2} class:on={i < pos.piene} class:lampo={i >= lampo[0] && i < lampo[1]} style:--i={i}></i>
+        <i data-tagli-ignora class:per={i < 3 && !tr.grigio} class:sog={i === 2} class:on={i < pos.piene} class:lampo={i >= lampo[0] && i < lampo[1]} style:--i={i}></i>
       {/each}
       <b class="oltre su">{pos.sopra ? "▸" : ""}</b>
     </span>

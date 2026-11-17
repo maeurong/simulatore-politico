@@ -118,10 +118,11 @@ describe("tracciatiDi", () => {
     expect(secondo.grigio).toBe(true);
   });
 
-  it("lo spread ha il valore e rimanda all'11g per lo stacco", () => {
+  it("lo spread ha il valore e lo stacco della soglia della crisi del debito", () => {
     const conti = tracciatiDi(governo, [])[2];
     expect(conti.valore).toBe(86);
-    expect(conti.rimando).toBe("11g");
+    expect(conti.rimando).toBeNull();
+    expect(conti.scala!.stacco).toBe(governo.soglie.crisi_debito_pb);
     expect(caselle(conti.valore!, conti.scala!).piene).toBe(10);
   });
 
@@ -170,6 +171,9 @@ describe("tracciatiDi", () => {
 
   it("la variazione viene dal punto della serie del turno prima", () => {
     expect(tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2].prima).toBe(196);
+    const terzo = tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2];
+    expect(terzo.rimando).toBeNull();
+    expect(terzo.scala!.stacco).toBe(spreadAlto.vista.soglie.crisi_debito_pb);
     expect(tracciatiDi(governo, [])[2].prima).toBeNull();
   });
 

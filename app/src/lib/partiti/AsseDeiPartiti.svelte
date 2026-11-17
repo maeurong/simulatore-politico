@@ -1,12 +1,13 @@
 <script lang="ts">
   // L'asse da 1 a 7 (24-partiti.prototype.html, forma A): quadrato sulla dichiarata, anello sulla percepita, la freccia fra i due.
-  // Il rosso e i fili di minaccia e scissione arrivano con la 11g (vista-per-schermata.md:160). Il colore non basta mai: il nome sta sopra.
+  // Chi minaccia la scissione ha la freccia rossa e i fili a mezzo punto e a un punto (le soglie di `campagna`), dal lato dove scivola la percepita; nel tono grave il rosso tace. Il colore non basta mai: il nome sta sopra.
   import { t, numero } from "$lib/testi/t";
   import { coloreDi } from "$lib/partiti";
+  import type { VistaCampagna } from "$lib/tipi/VistaCampagna";
   import type { VocePartito } from "$lib/tipi/VocePartito";
 
   // `onscelta`: i partiti si scelgono (clic, Invio, spazio) e ognuno ha il suo nome accessibile; senza, l'asse è un'immagine sola.
-  let { partiti, giocatore, larghezza = 820, scelto = null, onscelta }: { partiti: VocePartito[]; giocatore: string; larghezza?: number; scelto?: string | null; onscelta?: (id: string) => void } = $props();
+  let { partiti, giocatore, larghezza = 820, scelto = null, onscelta, campagna }: { partiti: VocePartito[]; giocatore: string; larghezza?: number; scelto?: string | null; onscelta?: (id: string) => void; campagna?: VistaCampagna } = $props();
   const pre = $props.id();
 
   const W = $derived(larghezza), L = 18, PASSO = 16;
@@ -58,6 +59,7 @@
 <svg class="ax" width="100%" height={H} viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid meet" role={onscelta ? "group" : "img"} aria-label={t("partiti.asse_aria")}>
   <defs>
     <marker id="{pre}-pt" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6Z" class="punta" /></marker>
+    <marker id="{pre}-pr" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L6 3L0 6Z" class="punta min" /></marker>
     <pattern id="{pre}-ret" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" class="carta" /><line x1="0" y1="0" x2="0" y2="4" class="tratto" /></pattern>
   </defs>
   <line x1={L} y1={y0} x2={R} y2={y0} class="base" />
@@ -80,8 +82,14 @@
     {@const c = colore(p)}
     {@const nato = coloreDi(p.id) === null}
     {#snippet segno()}
+      {#if campagna && p.minaccia && !p.sciolto}
+        {#each [[campagna.minaccia_scissione, true], [campagna.soglia_scissione, false]] as [d, tratteggio] (d)}
+          {@const xf = X(p.posizione_dichiarata + (Math.sign(p.posizione_percepita - p.posizione_dichiarata) || 1) * Number(d))}
+          <line x1={xf} y1={yq - 9} x2={xf} y2={yq + 3} class="filo" stroke-width={tratteggio ? 1 : 2} stroke-dasharray={tratteggio ? "2 2" : undefined} />
+        {/each}
+      {/if}
       {#if Math.abs(xp - xd) > 2}
-        <line x1={xd} y1={yq} x2={xp - Math.sign(xp - xd) * 4} y2={yq} class="freccia" marker-end="url(#{pre}-pt)" />
+        <line x1={xd} y1={yq} x2={xp - Math.sign(xp - xd) * 4} y2={yq} class="freccia" class:min={p.minaccia && !p.sciolto} marker-end="url(#{pre}-{p.minaccia && !p.sciolto ? "pr" : "pt"})" />
       {/if}
       <circle cx={xp} cy={yq} r="4.5" class="anello" style:stroke={c} />
       <text class="nm" class:sc={p.sciolto} x={xd + (ancora(p) === "start" ? -6 : ancora(p) === "end" ? 6 : 0)} y={yl} text-anchor={ancora(p)}>{nome(p)}</text>
@@ -108,6 +116,11 @@
   .quad { stroke: var(--ink); stroke-width: 1 }
   .freccia { stroke: var(--grigio); stroke-width: 1.5 }
   .punta { fill: var(--grigio) }
+  .freccia.min { stroke: var(--rosso) }
+  .punta.min { fill: var(--rosso) }
+  :global(:root.grave) .freccia.min { stroke: var(--grigio) }
+  :global(:root.grave) .punta.min { fill: var(--grigio) }
+  .filo { stroke: var(--rosso) }
   .carta { fill: var(--carta) }
   .tratto { stroke: var(--grigio); stroke-width: 1.2 }
 </style>

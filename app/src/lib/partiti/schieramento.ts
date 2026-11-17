@@ -7,6 +7,7 @@ import type { SeggiPartito } from "$lib/tipi/SeggiPartito";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceAlleato } from "$lib/tipi/VoceAlleato";
 import type { VoceFascia } from "$lib/tipi/VoceFascia";
+import type { VistaCampagna } from "$lib/tipi/VistaCampagna";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import type { VotiPartito } from "$lib/tipi/VotiPartito";
 
@@ -28,7 +29,7 @@ export function staPerSciogliersi(v: Vista, p: VocePartito): boolean {
   return !p.sciolto && p.id !== v.giocatore && !!voto && voto.camera + voto.senato === 0;
 }
 
-/** Gli avvisi di una scheda, nell'ordine: ultimatum, sciolto, senza seggi all'ultimo voto, governo uscente o al governo (non il giocatore né i suoi alleati: per loro c'è l'intesa), nato in partita. Chi guida un governo IA non è nella Vista: arriva con la 11g. */
+/** Gli avvisi di una scheda, nell'ordine: ultimatum, sciolto, senza seggi all'ultimo voto, governo uscente o al governo (non il giocatore né i suoi alleati: per loro c'è l'intesa), minaccia di scissione, nato in partita. Chi guida un governo IA non è nella Vista: il core non lo dice ancora. */
 export function avvisi(v: Vista, p: VocePartito): Chiave[] {
   const a: Chiave[] = [];
   if (v.alleati.some((x) => x.partito === p.id && x.ultimatum)) a.push("avviso.ultimatum");
@@ -37,6 +38,7 @@ export function avvisi(v: Vista, p: VocePartito): Chiave[] {
   if (staPerSciogliersi(v, p)) a.push("avviso.senza_seggi");
   if (p.al_governo && v.fase === "sciolta") a.push("avviso.governo_uscente");
   else if (p.al_governo && p.id !== v.giocatore && !v.alleati.some((x) => x.partito === p.id)) a.push("avviso.al_governo");
+  if (p.minaccia && !p.sciolto) a.push("avviso.minaccia_scissione");
   if (coloreDi(p.id) === null) a.push("avviso.nato");
   return a;
 }
@@ -75,6 +77,12 @@ export function distanza(p: VocePartito): { verso: "sinistra" | "destra" | "ferm
   const d = p.posizione_percepita - p.posizione_dichiarata;
   // sotto mezzo centesimo il testo direbbe «0,00 punti»: è ferma
   return Math.abs(d) < 0.005 ? { verso: "ferma", punti: 0 } : { verso: d > 0 ? "destra" : "sinistra", punti: Math.abs(d) };
+}
+
+/** La frase sulla minaccia, dalla distanza e dalle soglie della campagna; la minaccia già scattata resta finché la distanza non è tornata sotto. */
+export function fraseDistanza(p: VocePartito, c: VistaCampagna): Chiave {
+  const d = Math.abs(p.posizione_percepita - p.posizione_dichiarata);
+  return d >= c.soglia_scissione ? "partiti.s_scissione" : d >= c.minaccia_scissione || p.minaccia ? "partiti.s_minaccia" : "partiti.s_sotto_minaccia";
 }
 
 /** L'intesa con il giocatore: in cifre se è un alleato, in fascia se è un alleato del governo avversario, null altrimenti. */

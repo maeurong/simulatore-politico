@@ -28,7 +28,7 @@ export type Tracciato = {
   scala: Scala | null; // null → nessuna casella da riempire
   rosso: boolean;
   grigio: boolean; // partita finita
-  rimando: string | null; // la fetta che riempie il posto vuoto: senza valore il tracciato, col valore lo stacco
+  rimando: string | null; // la fetta che riempie il posto vuoto: nessun tracciato ne ha più una
   prima: number | null; // il valore al turno prima, dalla serie: la variazione sotto il numero
   era: string | null; // durante la rivelazione, dopo lo scatto: il testo del valore di prima
   scatta: boolean; // durante la rivelazione: il valore è appena cambiato
@@ -38,9 +38,8 @@ type Base = Omit<Tracciato, "era" | "scatta">;
 export const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
 // «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
 const MANCANTI: Scala = { stacco: 105, passo: 15, rovesciata: true };
-// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
-// il tracciato porta rimando "11g"
-const SPREAD: Scala = { stacco: 550, passo: 75, rovesciata: true };
+// lo stacco dello spread è la soglia della crisi del debito, letta dalla Vista
+const spread = (v: Vista): Scala => ({ stacco: v.soglie.crisi_debito_pb, passo: 75, rovesciata: true });
 
 const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id === id)?.in_vigore;
 /** In centesimi di punto: "4200" → 42. */
@@ -114,8 +113,8 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
         : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
 
   const terzo: Base = {
-    nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
-    rosso: false, grigio: false, rimando: "11g", prima: prima ? prima.spread_pb : null,
+    nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: spread(v),
+    rosso: false, grigio: false, rimando: null, prima: prima ? prima.spread_pb : null,
   };
 
   const tre = [primo, secondo, terzo].map((x) => ({ ...x, era: null, scatta: false })) as [Tracciato, Tracciato, Tracciato];
