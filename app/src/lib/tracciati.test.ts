@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
-import { caselle, tracciatiDi, type Scala } from "./tracciati";
+import { caselle, tracciatiDi, tracciatiRivelati, type Scala } from "./tracciati";
+import { rivelazione } from "./esito/rivelazione.svelte";
 import turnoZeroJson from "../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import governoJson from "../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import crisiJson from "../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
@@ -202,5 +203,57 @@ describe("tracciatiDi", () => {
     expect(consenso.valore).toBeNull();
     expect(consenso.rimando).toBeNull();
     expect(consenso.rosso).toBe(false);
+  });
+});
+
+describe("tracciatiRivelati, sulla chiusura 3 del 25", () => {
+  const { prima, dopo } = (registroJson as any)[3] as { prima: Vista; dopo: Vista };
+  const nSpread = dopo.esito.findIndex((x) => x.tipo === "spread");
+  const prima_di_spread = dopo.esito.slice(0, nSpread).filter((x) => x.in_evidenza).length;
+  beforeEach(() => rivelazione.chiudi());
+
+  it("senza prima è uguale a tracciatiDi, con era null e niente che scatta", () => {
+    const x = tracciatiRivelati(dopo, [], rivelazione);
+    expect(x).toEqual(tracciatiDi(dopo, []));
+    expect(x.every((t) => t.era === null && !t.scatta)).toBe(true);
+  });
+
+  it("a passo 0 lo spread è quello di prima", () => {
+    rivelazione.inizia(prima, [], 7);
+    const [, , spread] = tracciatiRivelati(dopo, [], rivelazione);
+    expect(spread.testo).toBe(tracciatiDi(prima, [])[2].testo);
+    expect(spread.testo).not.toBe(tracciatiDi(dopo, [])[2].testo);
+    expect(spread.scatta).toBe(false);
+  });
+
+  it("passata la voce spread è quello di dopo, con era uguale al testo di prima", () => {
+    rivelazione.inizia(prima, [], 7);
+    for (let i = 0; i < prima_di_spread - 1; i++) rivelazione.avanza();
+    expect(tracciatiRivelati(dopo, [], rivelazione)[2].testo).toBe(tracciatiDi(prima, [])[2].testo);
+    rivelazione.avanza();
+    const [, , spread] = tracciatiRivelati(dopo, [], rivelazione);
+    expect(spread.testo).toBe(tracciatiDi(dopo, [])[2].testo);
+    expect(spread.era).toBe(tracciatiDi(prima, [])[2].testo);
+    expect(spread.scatta).toBe(true);
+  });
+
+  it("il tracciato che nessuna voce muove scatta alla fine, con salta anche tutti insieme", () => {
+    rivelazione.inizia(prima, [], 7);
+    const margine = () => tracciatiRivelati(dopo, [], rivelazione)[1];
+    for (let i = 0; i < 6; i++) rivelazione.avanza();
+    expect(margine().era).toBeNull();
+    rivelazione.avanza();
+    expect(margine().testo).toBe(tracciatiDi(dopo, [])[1].testo);
+    rivelazione.inizia(prima, [], 7);
+    rivelazione.salta();
+    expect(tracciatiRivelati(dopo, [], rivelazione).map((t) => t.testo)).toEqual(tracciatiDi(dopo, []).map((t) => t.testo));
+  });
+
+  it("scatta solo se il valore cambia", () => {
+    rivelazione.inizia(prima, [], 7);
+    rivelazione.salta();
+    const tre = tracciatiRivelati(dopo, [], rivelazione);
+    const prime = tracciatiDi(prima, []);
+    expect(tre.map((t) => t.scatta)).toEqual(tre.map((t, i) => t.testo !== prime[i].testo));
   });
 });
