@@ -142,10 +142,10 @@ describe("tracciatiDi", () => {
     expect(conIncarico.prima).toBe(50);
   });
 
-  it("all'opposizione: «per farlo cadere» rimanda all'11e", () => {
+  it("all'opposizione senza anteprima: «per farlo cadere» vuoto, senza rimando a una fetta", () => {
     const secondo = tracciatiDi(opposizione, [])[1];
     expect(secondo.valore).toBeNull();
-    expect(secondo.rimando).toBe("11e");
+    expect(secondo.rimando).toBeNull();
   });
 
   it("con l'anteprima della sfiducia: i sì che mancano, in caselle da 15 seggi, mai rosso", () => {
@@ -164,7 +164,7 @@ describe("tracciatiDi", () => {
   it("senza anteprima o con null: com'è oggi", () => {
     const v = (opposizione28 as any).sfiducia.prima as Vista;
     expect(tracciatiDi(v, [], null)[1]).toEqual(tracciatiDi(v, [])[1]);
-    expect(tracciatiDi(v, [])[1].rimando).toBe("11e");
+    expect(tracciatiDi(v, [])[1].rimando).toBeNull();
   });
 
   it("la variazione viene dal punto della serie del turno prima", () => {
