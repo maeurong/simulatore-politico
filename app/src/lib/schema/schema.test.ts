@@ -135,4 +135,35 @@ describe("schema, maggioranza come la cornice", () => {
     const fili = tipi(trattativa, "maggioranza").map((f) => Number(f.etichetta.replace("maggioranza ", "").replace("−", "-")));
     expect(Math.min(...fili)).toBe(tr[1].valore);
   });
+  it("all'opposizione (28 fine) il margine è del governo vero, non dei seggi del giocatore", () => {
+    const fili = tipi(fine, "maggioranza");
+    expect(fili.map((f) => f.etichetta)).toEqual(["maggioranza +139", "maggioranza +71"]);
+    expect(fili.some((f) => f.contrario)).toBe(false);
+  });
+  it("a partita finita il margine è del governo vero", () => {
+    const finita = { ...fine, finita: true } as Vista;
+    expect(tipi(finita, "maggioranza").map((f) => f.etichetta)).toEqual(["maggioranza +139", "maggioranza +71"]);
+  });
+});
+
+describe("schema, id dei fili unici (sono le chiavi della tavola)", () => {
+  const unici = (v: Vista) => {
+    const ids = schema(v).fili.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  };
+  it("su 04, 08, 01 e 28 fine", () => {
+    for (const v of [ordinario, tono, zero, fine]) unici(v);
+  });
+  it("due eventi omonimi e due esiti della stessa misura restano due fili ciascuno", () => {
+    expect(tono.eventi.length).toBeGreaterThan(0);
+    const v = { ...tono, eventi: [...tono.eventi, tono.eventi[0]] } as Vista;
+    unici(v);
+    expect(tipi(v, "evento")).toHaveLength(tono.eventi.length + 1);
+    const prima = v.data.trimestre === 1 ? { anno: v.data.anno - 1, trimestre: 4 } : { anno: v.data.anno, trimestre: v.data.trimestre - 1 };
+    const esito = { ...(ordinario.esiti[0] ?? {}), misura: 999, nome: "M", data: prima, decaduta: null, approvata: true,
+      camera: { si: 1, no: 0 }, senato: { si: 1, no: 0 } };
+    const w = { ...v, esiti: [esito, esito] } as Vista;
+    unici(w);
+    expect(tipi(w, "legge")).toHaveLength(2);
+  });
 });

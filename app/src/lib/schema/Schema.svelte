@@ -17,6 +17,10 @@
   let scelta = $state<Scelta>(null);
   // una scelta che la Vista nuova non ha più si lascia cadere
   const aperta = $derived(scelta && (scelta.tipo === "filo" ? S.fili : S.nodi).some((x) => x.id === scelta!.id) ? scelta : null);
+  // e si azzera: se il filo ricompare un turno dopo, il dettaglio non si riapre da solo
+  $effect(() => {
+    if (!aperta) scelta = null;
+  });
 
   async function chiudi() {
     const s = aperta;

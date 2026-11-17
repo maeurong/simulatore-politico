@@ -9,7 +9,7 @@ import { CAUSE } from "$lib/partiti/schieramento";
 import { coalizioneDi, nomeDi } from "$lib/partiti";
 import { margini, MARGINE, sottoLoStacco } from "$lib/tracciati";
 import { periodoDi } from "$lib/aula/aula";
-import type { Sezione } from "$lib/ossatura";
+import { statoDi, type Sezione } from "$lib/ossatura";
 import { elenco, numero, segnato, t, type Chiave } from "$lib/testi/t";
 
 export type Colonna = 0 | 1 | 2 | 3;
@@ -94,20 +94,28 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
   };
 
   const fili: Filo[] = [];
+  // l'id è la chiave della tavola: un doppione (due eventi omonimi, due esiti della stessa misura) prende un suffisso
+  const visti = new Map<string, number>();
   const filo = (f: Partial<Filo> & Pick<Filo, "id" | "da" | "a" | "tipo" | "etichetta" | "frase" | "sezione" | "fonte">) => {
-    fili.push({ contrario: false, ritardo: false, cantiere: false, ...f });
+    const n = visti.get(f.id) ?? 0;
+    visti.set(f.id, n + 1);
+    fili.push({ contrario: false, ritardo: false, cantiere: false, ...f, id: n ? `${f.id}#${n}` : f.id });
   };
   const partito = (id: string) => `p:${id}`;
 
   // maggioranza
   if (!sciolta) {
-    // lo stesso conto della cornice: coalizione di coalizioneDi, metà più uno del ramo
-    const m = margini(v.seggi, coalizioneDi(v));
+    // metà più uno del ramo, come la cornice; all'opposizione e a partita finita coalizioneDi è il solo giocatore: conta il governo vero
+    const stato = statoDi(v);
+    const altrui = stato === "opposizione" || stato === "finita";
+    const coalizione = altrui ? v.partiti.filter((p) => p.al_governo).map((p) => p.id) : coalizioneDi(v);
+    const fonte = altrui ? "seggi, partiti[].al_governo" : stato === "turno_zero" ? "seggi, coalizione" : stato === "trattativa" ? "seggi, coalizione, richieste" : "seggi, alleati";
+    const m = margini(v.seggi, coalizione);
     for (const r of ["camera", "senato"] as const) {
       const margine = m[r];
       if (margine === null) continue;
-      const sg = v.seggi.filter((x) => coalizioneDi(v).includes(x.partito)).reduce((a, x) => a + x[r], 0);
-      filo({ id: `magg:${r}`, da: PDC, a: r, tipo: "maggioranza", etichetta: t("schema.et_maggioranza", { margine: segnato(margine) }), sezione: "aula", fonte: "seggi, partiti[].al_governo",
+      const sg = v.seggi.filter((x) => coalizione.includes(x.partito)).reduce((a, x) => a + x[r], 0);
+      filo({ id: `magg:${r}`, da: PDC, a: r, tipo: "maggioranza", etichetta: t("schema.et_maggioranza", { margine: segnato(margine) }), sezione: "aula", fonte,
         frase: t("schema.frase_maggioranza", { seggi: sg, tot: totale(r), dove: t(r === "camera" ? "schema.alla_camera" : "schema.al_senato"), margine: segnato(margine) }),
         contrario: sottoLoStacco(margine, MARGINE) });
     }
