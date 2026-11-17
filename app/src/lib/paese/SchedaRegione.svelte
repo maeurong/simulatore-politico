@@ -14,7 +14,7 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import BarreQuote from "./BarreQuote.svelte";
-  import { CONDIZIONI, FASCE, disposizioniDi, margineIstituti, segniDi, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, votoPerRegione, type EsitoElettori } from "./paese";
+  import { CONDIZIONI, FASCE, disposizioniDi, margineTesto, segniDi, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, votoPerRegione, type EsitoElettori } from "./paese";
 
   let { vista, regione, indietro }: { vista: Vista; regione: string; indietro: () => void } = $props();
 
@@ -25,7 +25,6 @@
   const riga = $derived(letto.sondaggio.regioni.find((r) => r.id === regione));
   const territorio = $derived(territorioDi(vista, regione));
   const gruppi = $derived(vista.regioni.find((r) => r.id === regione)?.gruppi);
-  const margine = $derived(margineIstituti(letto.sondaggio));
   const voto = $derived(votoPerRegione(vista)?.[regione]);
   const dispo = $derived(disposizioniDi(vista, regione));
   const aulaAperta = $derived(barrata("aula", vista) === null);
@@ -68,7 +67,7 @@
   </dl>
 {/if}
 
-<h5 class="grp"><span>{letto.privato ? t("paese.privato_titolo") : t("paese.scheda_sondaggio")}</span>{#if riga}<span>{t("paese.incrocio_campione", { n: numero(riga.campione) })}{margine ? ` · ${margine}` : ""}</span>{/if}</h5>
+<h5 class="grp"><span>{letto.privato ? t("paese.privato_titolo") : t("paese.scheda_sondaggio")}</span>{#if riga}<span>{t("paese.incrocio_campione", { n: numero(riga.campione) })} · {margineTesto(riga.margine)}</span>{/if}</h5>
 {#if riga}<BarreQuote righe={quote} giocatore={vista.giocatore} />{:else}<p class="min muto">{t("mappa.senza_dato")}</p>{/if}
 
 <h5 class="grp"><span>{t("paese.gruppi")}</span><span>{t("paese.gruppi_quota")}</span></h5>
@@ -103,7 +102,7 @@
 <h5 class="grp"><span>{t("paese.senato")}</span><span>{voto ? t("paese.senato_voto", { periodo: periodoDi(vista, vista.elezioni.at(-1)!.data) }) : t("paese.senato_nessuno")}</span></h5>
 {#if voto}
   <div class="legenda">
-    {#each vista.partiti as p, i (p.id)}{#if voto.senato[i]}<span class="sg"><i class="sw" style:background={coloreDi(p.id) ?? "var(--retino)"}></i>{p.nome} <b>{voto.senato[i]}</b></span>{/if}{/each}
+    {#each vista.partiti as p, i (p.id)}{#if voto.senato[i]}<span class="sg"><i class="sw" style:background={coloreDi(p.id) ?? "var(--retino), var(--carta)"}></i>{p.nome} <b>{voto.senato[i]}</b></span>{/if}{/each}
   </div>
   <p class="min muto">{t("paese.primo_partito", { nome: nomeDi(vista, voto.primo) })}</p>
 {:else}
