@@ -8,16 +8,16 @@
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
   import BarreQuote from "./BarreQuote.svelte";
-  import { media, quoteDi, sondaggioLetto } from "./paese";
+  import { margineIstituti, margineTesto, media, quoteDi, sondaggioLetto } from "./paese";
 
   let { vista }: { vista: Vista } = $props();
 
   const letto = $derived(sondaggioLetto(vista));
   const pubblica = $derived(media(vista, vista.sondaggio));
   const privata = $derived(letto.privato ? media(vista, letto.sondaggio) : null);
+  const margPriv = $derived(letto.privato ? margineIstituti(letto.sondaggio) : "");
   const privataDi = $derived(new Map(privata?.partiti.map((p) => [p.id, p.quota])));
   const massimo = $derived(Math.max(0.01, ...pubblica.partiti.map((p) => p.quota)));
   const prezzo = $derived(vista.acquisti.prezzi.find((p) => p.acquisto === "sondaggio_privato")?.euro);
@@ -44,8 +44,7 @@
 {#if incrocio}
   <Pulsante forma="link" onclick={() => (scelto = null)}>‹ {t("paese.indietro")}</Pulsante>
   <h4 class="tit nome">{t(`condizione.${incrocio.id}` as Chiave)}</h4>
-  <p class="sec">{t("paese.incrocio_campione", { n: numero(incrocio.campione) })}{letto.privato ? ` · ${t("paese.dal_privato")}` : ""}</p>
-  <Segnaposto sezione={t("paese.margine")} fetta="11g" />
+  <p class="sec">{t("paese.incrocio_campione", { n: numero(incrocio.campione) })} · {margineTesto(incrocio.margine)}{letto.privato ? ` · ${t("paese.dal_privato")}` : ""}</p>
   <BarreQuote righe={quoteIncrocio} giocatore={vista.giocatore} />
   <p class="sec">{t("paese.approvazione")} <b>{numero(incrocio.approvazione, 2)}</b> <span class="muto">{t("paese.approvazione_nota")}</span></p>
   <h5 class="grp"><span>{t("paese.collocazione")}</span><span>{t("paese.collocazione_asse")}</span></h5>
@@ -69,6 +68,9 @@
     <span class="n muto">{t("paese.astensione")}</span><span></span>
     <span class="q muto">{pc(pubblica.astensione)}</span>{#if privata}<span class="q priv muto">{pc(privata.astensione)}</span>{/if}
   </div>
+  {#if margineIstituti(vista.sondaggio)}
+    <p class="min muto">{t(margPriv ? "paese.margine_riga_priv" : "paese.margine_riga", { a: margineIstituti(vista.sondaggio), b: margPriv })}</p>
+  {/if}
   <p class="min muto">{t("paese.nota_quote")}</p>
 
   <div class="priv-box">
