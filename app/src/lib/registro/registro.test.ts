@@ -66,20 +66,24 @@ describe("corregge", () => {
 });
 
 describe("collegate", () => {
-  it("la legge respinta su autonomia_differenziata trova la stessa disposizione negli altri turni", () => {
-    const v = voce("legge_respinta", 5, (x) => x.disposizioni.includes("autonomia_differenziata"));
-    const c = collegate(v, 5, turni);
-    expect(c.stesse.length).toBeGreaterThan(0);
-    for (const [t, y] of c.stesse) {
-      expect(t).not.toBe(5);
-      expect(y.disposizioni.includes("autonomia_differenziata") || y.partito === v.partito).toBe(true);
-    }
+  it("la regione compare in due turni: l'evento nato del 2 e quello risolto del 3 si collegano, e nient'altro", () => {
+    const nato = voce("evento_nato", 2, (x) => x.regione === "calabria");
+    const risolto = voce("evento_risolto", 3, (x) => x.regione === "calabria");
+    const c = collegate(nato, 2, turni);
+    expect(c.stesse).toEqual([[3, risolto]]);
+    expect(c.nelleRighe).toEqual([]);
+    expect(collegate(risolto, 3, turni).stesse).toEqual([[2, nato]]);
   });
-  it("le voci fuse che hanno il soggetto solo in una riga vanno in nelleRighe", () => {
-    const v = voce("intesa_variata", 4);
-    const c = collegate(v, 4, turni);
-    expect(c.nelleRighe.every(([t, y]) => t !== 4 && !c.stesse.some(([, z]) => z === y))).toBe(true);
-    expect(c.stesse.length + c.nelleRighe.length).toBeGreaterThan(0);
+  it("a mano: stesse per campo, nelleRighe solo per una riga di una voce fusa, mai due volte, mai lo stesso turno", () => {
+    const base = { tipo: "atto_eseguito", partito: null, dicastero: null, regione: null, misura: null, disposizioni: [], dettagli: [] };
+    const riga = (r: string | null, d: string[] = []) => ({ testo: "", partito: null, dicastero: null, regione: r, misura: null, disposizioni: d });
+    const mia = { ...base, tipo: "legge_approvata", disposizioni: ["cuneo"] } as unknown as VoceEsito;
+    const stessa = { ...base, tipo: "legge_respinta", disposizioni: ["cuneo", "altra"] } as unknown as VoceEsito;
+    const fusa = { ...base, dettagli: [riga("umbria"), riga(null, ["cuneo"])] } as unknown as VoceEsito;
+    const estranea = { ...base, partito: "sinistra", disposizioni: ["altra"], dettagli: [riga("umbria")] } as unknown as VoceEsito;
+    const stessoTurno = { ...base, disposizioni: ["cuneo"] } as unknown as VoceEsito;
+    const t = [turnoDa(1, [mia, stessoTurno]), turnoDa(2, [stessa, estranea]), turnoDa(3, [fusa])];
+    expect(collegate(mia, 1, t)).toEqual({ stesse: [[2, stessa]], nelleRighe: [[3, fusa]] });
   });
 });
 
