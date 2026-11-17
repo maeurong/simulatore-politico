@@ -3,6 +3,7 @@
   // senza cornice. In corso sopra, albo sotto, il dettaglio della riga scelta a lato.
   import { onMount, tick } from "svelte";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { comeErrore, guscio, type ErroreGuscio } from "$lib/guscio/chiamate";
   import { partita } from "$lib/partita.svelte";
   import { editor } from "$lib/editor/editor.svelte";
@@ -58,6 +59,11 @@
     partita.esci();
     const e = await carica();
     if (e) guasto = `${e.testo} ${t("edicola.elenchi_non_caricati")}`;
+    // dopo «Conferma l'eredità»: la voce nuova dell'albo, scelta come dopo l'abbandono (senza l'albo di prima, voceNuova ricade sul nome)
+    else if (page.url.searchParams.get("albo") === "nuova") {
+      const nuova = voceNuova([], albo ?? [], page.url.searchParams.get("nome") ?? "");
+      if (nuova) scelta = { k: "a", voce: nuova };
+    }
   });
 
   function azzera(id: string) {

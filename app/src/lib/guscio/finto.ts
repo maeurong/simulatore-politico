@@ -43,6 +43,11 @@ export function vistaDi(campione: any): Vista | null {
   return campione?.vista ?? campione?.prima ?? null;
 }
 
+function partitaDi(c: any) {
+  const testata = { nome: c.voce_albo.nome, scenario: c.voce_albo.scenario, turno: c.vista.turno, data: c.vista.data, versione_schema: 19, finita: true };
+  return { apribile: true, motivo: null, indice: { formato_indice: 1, id: "finto", ultimo_salvataggio: 9e9, riavvolgimenti: 0, testata } };
+}
+
 function riepilogo(scenario: any, editor: any): unknown {
   const base = editor.riepiloghi[0];
   if (scenario == null) return base.riepilogo;
@@ -299,7 +304,8 @@ export function rispondi(comando: string, args: Record<string, unknown>, c: Camp
     case "riepilogo_bilancio": return riepilogoBilancio(args.bilancio, c);
     case "riepilogo_presentato": return c.bilancio?.[c.stato ?? ""]?.riepilogo_presentato ?? null;
     case "riprendi": return presente(vistaDi(campione), comando);
-    case "partite": return edicola.partite;
+    // il campione dell'eredità porta la sua partita: l'indice dà lo scenario che la Vista non ha
+    case "partite": return [...edicola.partite, ...(campione?.voce_albo ? [partitaDi(campione)] : [])];
     case "albo": return edicola.albo;
     case "scenari": return editor.scenari_salvati;
     case "carica_scenario": {

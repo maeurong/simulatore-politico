@@ -4,7 +4,7 @@ import type { PuntoSerie } from "$lib/tipi/PuntoSerie";
 import { t } from "$lib/testi/t";
 
 const { guscio, goto } = vi.hoisted(() => ({
-  guscio: { chiudiTurno: vi.fn(), riprendi: vi.fn(), fondaPartita: vi.fn(), comanda: vi.fn(), serie: vi.fn() },
+  guscio: { chiudiTurno: vi.fn(), riprendi: vi.fn(), fondaPartita: vi.fn(), comanda: vi.fn(), serie: vi.fn(), riavvolgi: vi.fn(), partite: vi.fn(), confermaEredita: vi.fn() },
   goto: vi.fn(),
 }));
 vi.mock("$app/navigation", () => ({ goto }));
@@ -169,5 +169,62 @@ describe("partita", () => {
     expect(partita.serie).toEqual([]);
     expect(goto).not.toHaveBeenCalled();
     expect(partita.occupato).toBe(false);
+  });
+
+  describe("eredità", () => {
+    const giocatore = { id: "mio", nome: "Noi" };
+    const bozzaVista = { ...prima, finita: true, giocatore: "mio", partiti: [giocatore] } as unknown as Vista;
+    const indice = (id: string, nome: string, ultimo: number) => ({ indice: { id, ultimo_salvataggio: ultimo, testata: { nome } } });
+    beforeEach(() => {
+      partita.esci();
+      partita.vista = bozzaVista;
+    });
+
+    it("riavvolgi: la Vista del turno e la serie nuova", async () => {
+      guscio.riavvolgi.mockResolvedValue(dopo);
+      expect(await partita.riavvolgi(20)).toBe(dopo);
+      expect(guscio.riavvolgi).toHaveBeenCalledWith(20);
+      expect(partita.vista).toBe(dopo);
+      expect(guscio.riprendi).not.toHaveBeenCalled();
+    });
+
+    it("riavvolgi con un guasto: riprende dal disco la partita più recente del giocatore e il guasto resta scritto", async () => {
+      const disco = { ...bozzaVista, turno: 21 } as Vista;
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("a", "Noi", 5), indice("b", "Noi", 9), indice("c", "Altri", 99)]);
+      guscio.riprendi.mockResolvedValue(disco);
+      expect(await partita.riavvolgi(20)).toBeNull();
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(partita.vista).toBe(disco);
+      expect(partita.guasto).toBe(`disco pieno ${t("cornice.rimasta_com_era")}`);
+      expect(partita.occupato).toBe(false);
+    });
+
+    it("riavvolgi con un guasto: la partita ripresa con riprendi si ritrova per id, non per nome", async () => {
+      guscio.riprendi.mockResolvedValue(bozzaVista);
+      await partita.riprendi("a");
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "no" });
+      guscio.partite.mockResolvedValue([indice("a", "Noi", 5), indice("b", "Noi", 9)]);
+      await partita.riavvolgi(20);
+      expect(guscio.riprendi).toHaveBeenLastCalledWith("a");
+    });
+
+    it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {
+      const rifiuto = { specie: "rifiuto", testo: "turno non riavvolgibile" };
+      guscio.riavvolgi.mockRejectedValue(rifiuto);
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockResolvedValue(bozzaVista);
+      await expect(partita.riavvolgi(3)).rejects.toEqual(rifiuto);
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+    });
+
+    it("confermaEredita: vero a conferma riuscita; un guasto la lascia in bozza e lo dice", async () => {
+      guscio.confermaEredita.mockResolvedValueOnce(null);
+      expect(await partita.confermaEredita()).toBe(true);
+      guscio.confermaEredita.mockRejectedValueOnce({ specie: "guasto", testo: "scrittura fallita" });
+      expect(await partita.confermaEredita()).toBe(false);
+      expect(partita.guasto).toBe(`scrittura fallita ${t("cornice.rimasta_com_era")}`);
+      expect(partita.occupato).toBe(false);
+    });
   });
 });

@@ -109,7 +109,7 @@ describe("fettaDi", () => {
     expect(fettaDi("cruscotto", "governo")).toBeNull();
     expect(fettaDi("cruscotto", "crisi")).toBeNull();
     expect(fettaDi("cruscotto", "opposizione")).toBeNull();
-    expect(fettaDi("cruscotto", "finita")).toBe("11e");
+    expect(fettaDi("cruscotto", "finita")).toBeNull();
   });
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");
@@ -122,7 +122,7 @@ describe("fettaDi", () => {
     expect(fettaDi("trattativa", "trattativa")).toBeNull();
     expect(fettaDi("partiti", "turno_zero")).toBeNull();
     expect(fettaDi("paese", "turno_zero")).toBeNull();
-    expect(fettaDi("eredita", "finita")).toBe("11e");
+    expect(fettaDi("eredita", "finita")).toBeNull();
     expect(fettaDi("schema", "governo")).toBe("11e");
   });
   it("i conti sono costruiti in ogni stato", () => {

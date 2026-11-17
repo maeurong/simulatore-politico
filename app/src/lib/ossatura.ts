@@ -59,12 +59,12 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
   }
 }
 
-const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string> = {
+const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string | null> = {
   "prima-pagina": "11f", registro: "11f",
-  eredita: "11e", schema: "11e",
+  eredita: null, schema: "11e",
 };
 const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
-  turno_zero: null, trattativa: "11b", governo: null, crisi: null, opposizione: null, finita: "11e",
+  turno_zero: null, trattativa: "11b", governo: null, crisi: null, opposizione: null, finita: null,
 };
 
 /** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita. */
