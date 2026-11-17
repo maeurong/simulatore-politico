@@ -131,7 +131,7 @@ const MOSSI = ["consenso", "margine", "spread"] as const;
 export function tracciatiRivelati(v: Vista, serie: PuntoSerie[], r: typeof rivelazione, sfiducia?: AnteprimaSfiducia | null): [Tracciato, Tracciato, Tracciato] {
   const nuovi = tracciatiDi(v, serie, sfiducia);
   if (!r.prima) return nuovi;
-  // l'anteprima della sfiducia è della Vista nuova: sulla Vista di prima il tracciato resta senza dato
+  // l'anteprima della sfiducia è della Vista nuova: sulla Vista di prima il tracciato è senza dato, e si mostra subito quello nuovo
   const vecchi = tracciatiDi(r.prima, r.serie_prima);
   const evidenza = ordineRivelazione(v.esito);
   const passato = (tr: (typeof MOSSI)[number]) => {
@@ -141,7 +141,7 @@ export function tracciatiRivelati(v: Vista, serie: PuntoSerie[], r: typeof rivel
   };
   // una grandezza diversa (turno zero → governo, governo ↔ opposizione) o senza valore di prima non si confronta: niente «era», niente lampo
   return nuovi.map((n, i) =>
-    !passato(MOSSI[i]) ? vecchi[i]
+    !passato(MOSSI[i]) && vecchi[i].valore !== null ? vecchi[i]
     : vecchi[i].nome !== n.nome || vecchi[i].valore === null ? n
     : { ...n, era: vecchi[i].testo, scatta: n.testo !== vecchi[i].testo },
   ) as [Tracciato, Tracciato, Tracciato];

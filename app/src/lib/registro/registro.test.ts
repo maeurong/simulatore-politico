@@ -157,6 +157,11 @@ describe("testoConferma", () => {
     for (const ts of [[vuoto(0), vuoto(1), voto(2), vuoto(3), vuoto(4)], [vuoto(0), vuoto(1), gov(2), vuoto(3), vuoto(4)]])
       expect(testoConferma(2, v5, ts, 0)).toContain(": si cancella anche questo passaggio.");
   });
+  it("più passaggi in mezzo: separati da «; », perché il periodo del governo ha già la virgola, e «questi passaggi»", () => {
+    const x = testoConferma(1, { ...v9, turno: 5 } as Vista, [vuoto(0), gov(1), gov(2), voto(3), vuoto(4)], 0);
+    expect(x).toMatch(/il voto di [^;]+; la nascita del governo, [^;]+ e la nascita del governo, /);
+    expect(x).toContain(": si cancellano anche questi passaggi.");
+  });
   it("il numero del riavvolgimento è l'indice più uno; senza indice la frase cade e il resto resta", () => {
     expect(testoConferma(8, v9, turni, 0)).toContain("il primo");
     expect(testoConferma(8, v9, turni, 2)).toContain("il terzo");

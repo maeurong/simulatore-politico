@@ -4,6 +4,7 @@ import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { TipoVoce } from "$lib/tipi/TipoVoce";
 import type { Sezione } from "$lib/ossatura";
 import type { Fermata } from "$lib/tipi/Fermata";
+import type { VoceEvento } from "$lib/tipi/VoceEvento";
 import { t } from "$lib/testi/t";
 import { chiaveDi, didascaliaDi, type ChiaveTitolo } from "$lib/testi/pungolo";
 
@@ -52,12 +53,14 @@ export const SCENA_DI: Partial<Record<ChiaveTitolo, Scena>> = {
 export const scenaDi = (v: Vista, voce: VoceEsito): Scena | null =>
   grave(v) || !didascaliaDi(voce) ? null : (SCENA_DI[chiaveDi(voce)] ?? null);
 
-/** L'evento nato ha in `Vista.eventi` un evento aperto con la stessa famiglia e la stessa regione (la voce porta l'id, l'evento il nome). */
-export function eventoAperto(v: Vista, voce: VoceEsito): boolean {
-  if (voce.tipo !== "evento_nato") return false;
+/** L'evento aperto in `Vista.eventi` con la famiglia e la regione della voce (la voce porta l'id della regione, l'evento il nome). */
+export function eventoDi(v: Vista, voce: VoceEsito): VoceEvento | undefined {
   const regione = voce.regione === null ? null : (v.regioni.find((r) => r.id === voce.regione)?.nome ?? voce.regione);
-  return v.eventi.some((e) => e.famiglia === voce.famiglia && e.regione === regione);
+  return v.eventi.find((e) => e.famiglia === voce.famiglia && e.regione === regione);
 }
+
+/** L'evento nato ha in `Vista.eventi` il suo evento aperto. */
+export const eventoAperto = (v: Vista, voce: VoceEsito): boolean => voce.tipo === "evento_nato" && eventoDi(v, voce) !== undefined;
 
 /**
  * La sezione che decide o legge il soggetto della voce (piano 11f, lettura 7). Base: la tabella RIGA del prototipo 25,

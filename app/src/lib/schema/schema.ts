@@ -11,7 +11,7 @@ import { CAUSE } from "$lib/partiti/schieramento";
 import { coalizioneDi, nomeDi } from "$lib/partiti";
 import { margini, MARGINE, sottoLoStacco } from "$lib/tracciati";
 import { periodoDi, quandoMisura, slitta, votaOra } from "$lib/aula/aula";
-import { pagina } from "$lib/esito/esito";
+import { eventoDi, pagina } from "$lib/esito/esito";
 import { statoDi, type Sezione } from "$lib/ossatura";
 import { elenco, numero, segnato, t, type Chiave } from "$lib/testi/t";
 
@@ -265,10 +265,12 @@ function postiDi(v: Vista, x: VoceEsito): string[] {
   if (x.dicastero && FILO_DEL_MINISTRO[x.tipo]) p.push(`${FILO_DEL_MINISTRO[x.tipo]}:${x.dicastero}`);
   if (x.partito) p.push(`al:${x.partito}`);
   if (x.famiglia) {
-    // la voce porta l'id della regione, l'evento il nome
-    const regione = x.regione === null ? null : (v.regioni.find((r) => r.id === x.regione)?.nome ?? x.regione);
-    const e = v.eventi.find((e) => e.famiglia === x.famiglia && e.regione === regione);
-    if (e) p.push(`ev:${e.nome}`);
+    // gli omonimi hanno il suffisso di schema(): #n è la posizione fra gli eventi con lo stesso nome
+    const e = eventoDi(v, x);
+    if (e) {
+      const n = v.eventi.filter((y) => y.nome === e.nome).indexOf(e);
+      p.push(n ? `ev:${e.nome}#${n}` : `ev:${e.nome}`);
+    }
   }
   if (x.dicastero) p.push(`d:${x.dicastero}`);
   if (x.partito) p.push(`p:${x.partito}`);

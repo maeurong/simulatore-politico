@@ -287,3 +287,18 @@ describe("tracciatiRivelati, sulla chiusura 3 del 25", () => {
     expect(tracciatiRivelati(v, [], rivelazione)[2].testo).toBe(tracciatiDi(dopo, [])[2].testo);
   });
 });
+
+describe("tracciatiRivelati all'opposizione, sulla sfiducia del 28", () => {
+  const st = (opposizione28 as any).sfiducia;
+  const prima = st.prima as Vista, dopo = st.vista as Vista, a = st.anteprime.governo.ok as AnteprimaSfiducia;
+  beforeEach(() => rivelazione.chiudi());
+
+  it("durante la rivelazione «per farlo cadere» non dice «—»: la Vista di prima non ha l'anteprima", () => {
+    expect(tracciatiDi(prima, [])[1].testo).toBe("—");
+    rivelazione.inizia(prima, [], 7);
+    const secondo = tracciatiRivelati(dopo, [], rivelazione, a)[1];
+    expect(secondo.testo).toBe(tracciatiDi(dopo, [], a)[1].testo);
+    expect(secondo.testo).not.toBe("—");
+    expect([secondo.era, secondo.scatta]).toEqual([null, false]);
+  });
+});

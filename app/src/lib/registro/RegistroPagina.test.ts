@@ -45,6 +45,14 @@ describe("Registro", () => {
     expect(html()).toContain(t("registro.carico"));
   });
 
+  it("a metà lettura la pagina aspetta il turno più recente, non mostra l'ultimo letto", () => {
+    registroCache.turni = catena.slice(0, 4).map((c, i) => turnoDa(i, c.dopo.esito as VoceEsito[]));
+    const h = html();
+    expect(h).not.toContain(t("registro.torna", { n: 3 }));
+    expect(h).not.toContain(esc(catena[3].dopo.esito[0].fatto));
+    expect(h).not.toContain(t("registro.nessuna_voce"));
+  });
+
   it("?turno=N apre quel turno: la sua pagina è in vista, non la più recente", () => {
     registroCache.turni = catena.map((c, i) => turnoDa(i, c.dopo.esito as VoceEsito[]));
     pagina.url = new URL("http://localhost/partita/registro?turno=3");
