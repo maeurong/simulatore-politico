@@ -139,6 +139,7 @@
   "eredita.conferma": "Conferma l’eredità",
   "eredita.conferma_si": "Conferma: manda nell’albo",
   "eredita.conferma_cancella": "Confermata, l’eredità va nell’albo e non si torna più a nessun turno: la partita esce da quelle in corso.",
+  "eredita.dove_albo": "Albo · {nome}",
   "eredita.albo_nota": "Eredità confermata: la partita non si riapre. L’albo la conserva anche quando una versione nuova non aprirà più i salvataggi.",
   "edicola.dove": "Edicola",
   "edicola.in_corso": "In corso",
