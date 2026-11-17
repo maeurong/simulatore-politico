@@ -13,6 +13,7 @@
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
   import Pagina from "$lib/eredita/Pagina.svelte";
+  import PrimaPagina from "$lib/esito/PrimaPagina.svelte";
   import Schema from "$lib/schema/Schema.svelte";
   import Trattativa from "$lib/trattativa/Trattativa.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
@@ -46,6 +47,8 @@
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
           {#if aperta === "cruscotto" && fetta === null && statoDi(partita.vista) === "opposizione"}
             <Opposizione vista={partita.vista} />
+          {:else if aperta === "prima-pagina" && fetta === null}
+            <PrimaPagina vista={partita.vista} />
           {:else if aperta === "cruscotto" && fetta === null}
             <Cruscotto vista={partita.vista} />
           {:else if aperta === "governo" && fetta === null}

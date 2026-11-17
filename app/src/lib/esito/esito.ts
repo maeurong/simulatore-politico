@@ -34,6 +34,13 @@ export function pagina(es: VoceEsito[]) {
 /** Tono grave della pagina (spec:413): una voce grave nell'esito, o un evento grave ancora aperto. */
 export const grave = (v: Vista): boolean => v.esito.some((x) => x.tono === "grave") || v.eventi.some((e) => e.tono === "grave");
 
+/** L'evento nato ha in `Vista.eventi` un evento aperto con la stessa famiglia e la stessa regione (la voce porta l'id, l'evento il nome). */
+export function eventoAperto(v: Vista, voce: VoceEsito): boolean {
+  if (voce.tipo !== "evento_nato") return false;
+  const regione = voce.regione === null ? null : (v.regioni.find((r) => r.id === voce.regione)?.nome ?? voce.regione);
+  return v.eventi.some((e) => e.famiglia === voce.famiglia && e.regione === regione);
+}
+
 /**
  * La sezione che decide o legge il soggetto della voce (piano 11f, lettura 7). Base: la tabella RIGA del prototipo 25,
  * con il rimando di evento_risolto e emergenza_lieve ai Conti; gli altri tipi vanno dove si decide il loro soggetto.

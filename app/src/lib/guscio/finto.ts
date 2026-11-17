@@ -50,6 +50,11 @@ export function dallaChiusura(catena: any[], n: number) {
   return { ...catena[n], prima: catena[n].dopo, dopo: catena[n + 1]?.dopo };
 }
 
+/** ?stato=sfiducia&da=dopo_comando: si parte dalla Vista chiave `da` dello stato, e chiudi_turno dà la sua Vista (il turno chiuso). */
+export function daUnaChiave(campione: any, da: string) {
+  return { ...campione, vista: campione[da], dopo: campione.vista };
+}
+
 function partitaDi(c: any) {
   const testata = { nome: c.voce_albo.nome, scenario: c.voce_albo.scenario, turno: c.vista.turno, data: c.vista.data, versione_schema: 19, finita: true };
   return { apribile: true, motivo: null, indice: { formato_indice: 1, id: "finto", ultimo_salvataggio: 9e9, riavvolgimenti: 0, testata } };
@@ -354,6 +359,8 @@ export async function installaFinto(url: URL): Promise<Vista | null> {
   const catena = ((await carica("25-")) as any[] | null) ?? undefined;
   const chiusura = url.searchParams.get("chiusura");
   if (Array.isArray(campione) && chiusura !== null) campione = dallaChiusura(campione, Number(chiusura));
+  const da = url.searchParams.get("da");
+  if (campione && !Array.isArray(campione) && da !== null && campione[da]) campione = daUnaChiave(campione, da);
   const c: Campioni = {
     campione,
     turnoZero: await carica("01-"),

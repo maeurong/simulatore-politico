@@ -11,10 +11,13 @@ vi.mock("$app/navigation", () => ({ goto }));
 vi.mock("$lib/guscio/chiamate", async (originale) => ({ ...(await originale<object>()), guscio }));
 
 import { partita } from "./partita.svelte";
+import { rivelazione } from "./esito/rivelazione.svelte";
+import { impostazioni } from "./impostazioni.svelte";
 import { bozza } from "./bilancio/bozza.svelte";
 
-const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true } as Vista;
-const dopo = { ...prima, turno: 4, fase: "trattativa" } as Vista;
+const voce = (in_evidenza: boolean) => ({ in_evidenza }) as Vista["esito"][number];
+const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true, esito: [] } as unknown as Vista;
+const dopo = { ...prima, turno: 4, fase: "trattativa", esito: [voce(true), voce(false), voce(true)] } as Vista;
 const serieVecchia = [{ turno: 2 }] as PuntoSerie[];
 const serieNuova = [{ turno: 3 }] as PuntoSerie[];
 
@@ -23,17 +26,38 @@ beforeEach(() => {
   partita.vista = prima;
   partita.serie = serieVecchia;
   partita.guasto = null;
+  rivelazione.chiudi();
+  impostazioni.velocita = "1";
   guscio.serie.mockResolvedValue(serieNuova);
 });
 
 describe("partita", () => {
-  it("chiudiTurno: Vista e serie nuove, poi la casa del turno nuovo", async () => {
+  it("chiudiTurno: Vista e serie nuove, la rivelazione parte da quelle di prima, poi la prima pagina", async () => {
     guscio.chiudiTurno.mockResolvedValue(dopo);
     await partita.chiudiTurno();
     expect(partita.vista).toBe(dopo);
     expect(partita.serie).toBe(serieNuova);
-    expect(goto).toHaveBeenCalledWith("/partita/trattativa", { keepFocus: true });
+    expect(rivelazione.prima).toBe(prima);
+    expect(rivelazione.serie_prima).toBe(serieVecchia);
+    expect(rivelazione.fine).toBe(2);
+    expect(rivelazione.ferma).toBe(false);
+    expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
     expect(partita.occupato).toBe(false);
+  });
+
+  it("chiudiTurno a velocità istantanea: la pagina è già composta, nessuna rivelazione aperta", async () => {
+    impostazioni.velocita = "istantaneo";
+    guscio.chiudiTurno.mockResolvedValue(dopo);
+    await partita.chiudiTurno();
+    expect(rivelazione.prima).toBeNull();
+    expect(rivelazione.ferma).toBe(true);
+    expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
+  });
+
+  it("chiudiTurno con la partita che finisce apre comunque la prima pagina (lettura 2)", async () => {
+    guscio.chiudiTurno.mockResolvedValue({ ...dopo, finita: true } as Vista);
+    await partita.chiudiTurno();
+    expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
   });
 
   it("fonda passa scenario e fondazione al guscio e prende la Vista", async () => {
@@ -70,6 +94,7 @@ describe("partita", () => {
     expect(partita.vista).toBe(prima);
     expect(partita.guasto).toBe(`disco pieno ${t("cornice.rimasta_com_era")}`);
     expect(goto).not.toHaveBeenCalled();
+    expect(rivelazione.prima).toBeNull();
     expect(partita.occupato).toBe(false);
   });
 
@@ -95,7 +120,7 @@ describe("partita", () => {
     expect(partita.vista).toBe(dopo);
     expect(partita.serie).toBe(serieVecchia);
     expect(partita.guasto).toBe(`serie illeggibile ${t("cornice.grafici_non_aggiornati")}`);
-    expect(goto).toHaveBeenCalledWith("/partita/trattativa", { keepFocus: true });
+    expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
     expect(partita.occupato).toBe(false);
   });
 

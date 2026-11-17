@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { dallaChiusura, rispondi, trovaFile, vistaDi } from "./finto";
+import { dallaChiusura, daUnaChiave, rispondi, trovaFile, vistaDi } from "./finto";
 import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
@@ -479,5 +479,15 @@ describe("la fermata del 16", () => {
     const f = (primaPagina as any).fermata_19;
     expect(vistaDi(f)).toBe(f.vista);
     expect(f.prima.turno).toBe(f.vista.turno - 1);
+  });
+});
+
+describe("daUnaChiave", () => {
+  const sfiducia = (opposizioneJson as any).sfiducia;
+  const partenza = daUnaChiave(sfiducia, "dopo_comando");
+  it("parte dalla Vista della chiave e chiudi_turno dà quella dello stato (la sfiducia respinta della lettura 16)", () => {
+    expect(vistaDi(partenza)).toBe(sfiducia.dopo_comando);
+    expect(rispondi("chiudi_turno", {}, { ...c, campione: partenza } as any)).toBe(sfiducia.vista);
+    expect(sfiducia.vista.esito.some((x: any) => x.tipo === "sfiducia_respinta" && x.in_evidenza)).toBe(true);
   });
 });

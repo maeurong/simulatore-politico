@@ -60,7 +60,7 @@ export function barrata(s: Sezione, v: Vista): Chiave | null {
 }
 
 const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "partiti" | "governo" | "aula" | "conti" | "bilancio"> | "eredita" | "schema", string | null> = {
-  "prima-pagina": "11f", registro: "11f",
+  "prima-pagina": null, registro: "11f",
   eredita: null, schema: null,
 };
 const CRUSCOTTO: Record<StatoGiocatore, string | null> = {

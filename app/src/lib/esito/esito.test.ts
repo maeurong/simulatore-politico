@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
-import { grave, ordineRivelazione, pagina, scattaDopo, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
+import { eventoAperto, grave, ordineRivelazione, pagina, scattaDopo, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
 import titoliJson from "../testi/pungolo.json";
 import { titoloDi } from "../testi/pungolo";
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
@@ -128,5 +128,22 @@ describe("i testi coprono i tipi", () => {
       if (t === "evento_nato" || t === "evento_risolto") expect(chiavi.filter((k) => k.startsWith(`${t}|`))).toHaveLength(5);
       else expect(chiavi).toContain(t);
     }
+  });
+});
+
+describe("eventoAperto", () => {
+  const v = chiusura(3);
+  const nato = v.esito.find((x) => x.tipo === "evento_nato")!;
+  it("l'evento nato con la stessa famiglia e la stessa regione (id nella voce, nome nell'evento) è aperto", () => {
+    expect(nato.regione).toBe("emilia_romagna");
+    expect(eventoAperto(v, nato)).toBe(true);
+  });
+  it("un'altra regione, un'altra famiglia o nessun evento aperto: no", () => {
+    expect(eventoAperto(v, { ...nato, regione: "calabria" })).toBe(false);
+    expect(eventoAperto(v, { ...nato, famiglia: "situazione" })).toBe(false);
+    expect(eventoAperto({ ...v, eventi: [] }, nato)).toBe(false);
+  });
+  it("solo l'evento nato: l'evento risolto non rimanda a un evento aperto", () => {
+    expect(eventoAperto(v, { ...nato, tipo: "evento_risolto" })).toBe(false);
   });
 });

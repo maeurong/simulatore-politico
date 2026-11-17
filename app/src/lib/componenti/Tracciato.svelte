@@ -12,6 +12,13 @@
   const stacco = $derived(!tr.rimando);
   const rimando = $derived(tr.rimando ? t(tr.valore === null ? "tracciato.arriva" : "tracciato.stacco_arriva", { fetta: tr.rimando }) : undefined);
   const decimali = $derived(tr.nome.startsWith("tracciato.consenso") ? 1 : 0);
+  // durante la rivelazione le caselle fra il valore di prima e il nuovo lampeggiano; senza il valore di prima, tutte quelle accese
+  const lampo = $derived.by(() => {
+    if (!tr.scatta || !pos || !tr.scala) return [0, 0];
+    if (tr.prima === null) return [0, pos.piene];
+    const prima = caselle(tr.prima, tr.scala).piene;
+    return [Math.min(prima, pos.piene), Math.max(prima, pos.piene)];
+  });
   const accanto = $derived(tr.ramo ?? (tr.nome === "tracciato.conti" ? t("tracciato.pb") : null));
 </script>
 
@@ -21,7 +28,7 @@
     <span class="cas" class:inp={tr.rosso} class:fermo={tr.grigio} aria-hidden="true">
       <b class="oltre" class:su={!tr.rosso}>{pos.sotto ? "◂" : ""}</b>
       {#each { length: 10 }, i (i)}
-        <i data-tagli-ignora class:per={stacco && i < 3 && !tr.grigio} class:sog={stacco && i === 2} class:on={i < pos.piene} style:--i={i}></i>
+        <i data-tagli-ignora class:per={stacco && i < 3 && !tr.grigio} class:sog={stacco && i === 2} class:on={i < pos.piene} class:lampo={i >= lampo[0] && i < lampo[1]} style:--i={i}></i>
       {/each}
       <b class="oltre su">{pos.sopra ? "▸" : ""}</b>
     </span>
@@ -32,7 +39,7 @@
         formato={() => tr.testo}
         formatoVariazione={(x) => numero(x, decimali)}
         male={tr.scala?.rovesciata ? "sale" : "scende"} />
-      {#if accanto}<small>{accanto}</small>{/if}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}
+      {#if accanto}<small>{accanto}</small>{/if}{#if tr.scatta && tr.era}<small class="era">{t("tracciato.era", { x: tr.era })}</small>{/if}{#if rimando}<span class="nascosto" data-tagli-ignora>{rimando}</span>{/if}
     </span>
   {:else}
     <span class="cas vuoto" aria-hidden="true"><b class="oltre"></b>{#each { length: 10 }, i (i)}<i data-tagli-ignora></i>{/each}<b class="oltre"></b></span>
@@ -43,6 +50,8 @@
 <style>
   .trk { display: grid; grid-template-columns: auto auto; gap: 0 8px; align-items: center; padding: 0 12px; border-left: var(--filo) }
   .trk:last-child { border-right: var(--filo) }
+  /* forma stretta: «era X» allarga il consenso di una decina di pixel, e a 1024 utili non entrerebbe */
+  :global(:root.stretta) .trk { column-gap: 4px }
   .k { grid-column: 1 / -1; font-size: var(--c-min); letter-spacing: .1em; text-transform: uppercase; color: var(--grigio); white-space: nowrap }
   .v { display: flex; align-items: first baseline; font-size: var(--c-num); font-weight: 700; line-height: 1.1; white-space: nowrap }
   /* la variazione sotto il numero */
@@ -61,6 +70,12 @@
     transition: opacity calc(var(--t-casella) * var(--k)) steps(1, jump-end) calc((9 - var(--i)) * var(--t-casella) * var(--k));
   }
   .cas i.on::after { opacity: 1; transition-delay: calc(var(--i) * var(--t-casella) * var(--k)) }
+  /* il lampo è una dissolvenza di opacità: col movimento spento resta ammesso (spec, storia 55); nel tono grave il giallo è trasparente */
+  .cas i.lampo::before {
+    content: ""; position: absolute; inset: -1.5px; z-index: 1; background: var(--giallo);
+    animation: lampo calc(1600ms * var(--k)) linear both;
+  }
+  @keyframes lampo { 0%, 20% { opacity: 1 } 35% { opacity: 0 } 50%, 65% { opacity: 1 } 100% { opacity: 0 } }
   :global(:root[data-movimento="spento"]) .cas i::after { transition-duration: 0s; transition-delay: 0s }
   .cas.inp { color: var(--rosso) }
   .cas.fermo { color: var(--grigio) }

@@ -11,11 +11,11 @@ class Rivelazione {
   passo = $state(0);
   /** Senza `prima` la pagina è ferma (Riprendi). */
   ferma = $state(true);
-  /** Quante voci in evidenza ha la pagina: la rivelazione finisce qui. Sconosciuto = infinito, salta() lascia passo infinito. */
+  /** Quante voci in evidenza ha la pagina: la rivelazione finisce qui. Prima di inizia() è infinito: chiudi() senza inizia lascia passo infinito. */
   fine = $state(Infinity);
   corsa = $state.raw<{ chiusure: number; da: number; fermate: Fermata[] } | null>(null);
 
-  inizia(prima: Vista, serie: PuntoSerie[], fine = Infinity) {
+  inizia(prima: Vista, serie: PuntoSerie[], fine: number) {
     this.prima = prima;
     this.serie_prima = serie;
     this.fine = fine;

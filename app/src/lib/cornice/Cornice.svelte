@@ -3,7 +3,9 @@
   import { t, type Chiave } from "$lib/testi/t";
   import { statoDi, type StatoGiocatore } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
-  import { tracciatiDi } from "$lib/tracciati";
+  import { tracciatiRivelati } from "$lib/tracciati";
+  import { rivelazione } from "$lib/esito/rivelazione.svelte";
+  import { grave as graveEsito } from "$lib/esito/esito";
   import { comeErrore, guscio } from "$lib/guscio/chiamate";
   import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
   import type { Vista } from "$lib/tipi/Vista";
@@ -36,9 +38,10 @@
     if (statoDi(v) !== "opposizione") return;
     void anteprimaPer(v, () => guscio.anteprimaSfiducia(null), () => vista).then((r) => { if (r !== undefined) sfiducia = r; });
   });
-  const tre = $derived(tracciatiDi(vista, partita.serie, sfiducia));
-  // finché un evento grave è aperto tutto il turno è grave (storia 169): tacciono colori e testatina
-  const grave = $derived(vista.eventi.some((e) => e.tono === "grave"));
+  const tre = $derived(tracciatiRivelati(vista, partita.serie, rivelazione, sfiducia));
+  // finché un evento grave è aperto tutto il turno è grave (storia 169): tacciono colori e testatina;
+  // sulla prima pagina lo è anche per una voce grave dell'esito, a evento chiuso (spec:413)
+  const grave = $derived(sezione === "prima-pagina" ? graveEsito(vista) : vista.eventi.some((e) => e.tono === "grave"));
   $effect(() => {
     document.documentElement.classList.toggle("grave", grave);
     return () => document.documentElement.classList.remove("grave");
