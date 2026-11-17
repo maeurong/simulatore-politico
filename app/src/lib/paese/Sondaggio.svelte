@@ -68,7 +68,7 @@
     <span class="q muto">{pc(pubblica.astensione)}</span>{#if privata}<span class="q priv muto">{pc(privata.astensione)}</span>{/if}
   </div>
   {#if margineIstituti(vista.sondaggio)}
-    <p class="min muto">{t("paese.col_media")}: {margineIstituti(vista.sondaggio)}{privata ? ` · ${t("paese.col_privato")}: ${margineIstituti(letto.sondaggio)}` : ""}</p>
+    <p class="min muto">{t("paese.col_media")}: {margineIstituti(vista.sondaggio)}{privata && margineIstituti(letto.sondaggio) ? ` · ${t("paese.col_privato")}: ${margineIstituti(letto.sondaggio)}` : ""}</p>
   {/if}
   <p class="min muto">{t("paese.nota_quote")}</p>
 
