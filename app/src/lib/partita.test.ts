@@ -162,6 +162,20 @@ describe("partita", () => {
       expect(goto).not.toHaveBeenCalled();
     });
 
+    it("uscire all'edicola a metà corsa ferma le chiusure: la partita lasciata non si salva più e la vista resta null", async () => {
+      guscio.chiudiTurno
+        .mockImplementationOnce(async () => {
+          partita.esci();
+          return aperta(4);
+        })
+        .mockResolvedValueOnce(aperta(5))
+        .mockResolvedValueOnce(ferma);
+      await partita.avanti();
+      expect(guscio.chiudiTurno).toHaveBeenCalledTimes(1);
+      expect(partita.vista).toBeNull();
+      expect(partita.occupato).toBe(false);
+    });
+
     it("una chiusura normale dopo la corsa la cancella", async () => {
       guscio.chiudiTurno.mockResolvedValueOnce(ferma);
       await partita.avanti();

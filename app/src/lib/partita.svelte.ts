@@ -125,11 +125,12 @@ class Partita {
     let precedente = prima;
     let chiusure = 0;
     let guastoDellaCorsa: string | null = null;
+    const giro = this.#giro;
     const vista = await this.#esegui(
       async () => {
         let v = await guscio.chiudiTurno();
         chiusure = 1;
-        while (!v.fermate.length && !v.finita) {
+        while (!v.fermate.length && !v.finita && giro === this.#giro) {
           try {
             const n = await guscio.chiudiTurno();
             [precedente, v] = [v, n];
