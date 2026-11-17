@@ -174,6 +174,8 @@ describe("partita", () => {
       expect(guscio.chiudiTurno).toHaveBeenCalledTimes(1);
       expect(partita.vista).toBeNull();
       expect(partita.occupato).toBe(false);
+      expect(rivelazione.corsa).toBeNull();
+      expect(partita.guasto).toBeNull();
     });
 
     it("una chiusura normale dopo la corsa la cancella", async () => {
