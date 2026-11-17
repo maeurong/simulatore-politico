@@ -52,6 +52,7 @@ fn proposta(p: &Partita, nome: &str, s: &[(String, Option<String>)]) -> Value {
             dicasteri: assegnazioni(s),
         },
     );
+    let vista = js!(&q.vista());
     let richieste = js!(&q.vista().richieste);
     q.chiudi_turno();
     let v = q.vista();
@@ -60,6 +61,7 @@ fn proposta(p: &Partita, nome: &str, s: &[(String, Option<String>)]) -> Value {
         "spartizione": s.iter().map(|(d, p)| serde_json::json!({"dicastero": d, "partito": p})).collect::<Vec<_>>(),
         "esito": esito,
         "richieste": richieste,
+        "vista": vista,
         "dopo_chiusura": {"alleati": js!(&v.alleati), "ministeri": js!(&v.ministeri), "fase": js!(&v.fase)},
     })
 }

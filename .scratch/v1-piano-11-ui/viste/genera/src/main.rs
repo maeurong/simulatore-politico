@@ -1921,6 +1921,36 @@ fn campagna(d: &DatiGioco) -> Esito<Uscita> {
     }
     out.insert("prove".into(), serde_json::Value::Object(prove));
 
+    // Le anteprime della Campagna: il riposizionamento nei tre stati (le quattro posizioni vicine,
+    // chiavi come `riposiziona`) e il costo delle promesse in `zero` e `governo_fine`.
+    let mut anteprime = serde_json::Map::new();
+    for (k, q0) in [("zero", &zero), ("governo_fine", &g), ("opposizione_fine", &o)] {
+        let x = q0.vista().partiti.iter().find(|x| x.id == "giocatore").map_or(0.0, |x| x.posizione_dichiarata);
+        let mut pos = serde_json::Map::new();
+        for dx in [-0.5, -0.25, 0.25, 0.5] {
+            pos.insert(format!("{}", x + dx), esito!(q0.anteprima_riposizionamento(x + dx)));
+        }
+        anteprime.insert(k.into(), serde_json::Value::Object(pos));
+    }
+    out.insert("anteprime_riposizionamento".into(), serde_json::Value::Object(anteprime));
+    let mut anteprime = serde_json::Map::new();
+    for (k, q0) in [("zero", &zero), ("governo_fine", &g)] {
+        let mut pr = serde_json::Map::new();
+        for c in [
+            coppie(&[("reddito_minimo", "universale")]),
+            coppie(&[("eta_pensionabile", "64")]),
+            coppie(&[("cuneo_fiscale", "7")]),
+            coppie(&[("cuneo_fiscale", "3")]),
+            coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64")]),
+            coppie(&[("reddito_minimo", "universale"), ("eta_pensionabile", "64"), ("cuneo_fiscale", "3")]),
+        ] {
+            let chiave = c.iter().map(|(a, b)| format!("{a}={b}")).collect::<Vec<_>>().join("|");
+            pr.insert(chiave, esito!(q0.anteprima_promesse(&c)));
+        }
+        anteprime.insert(k.into(), serde_json::Value::Object(pr));
+    }
+    out.insert("anteprime_promesse".into(), serde_json::Value::Object(anteprime));
+
     let nota = format!(
         "seme 4 a 4,5 turno zero; governo_fine turno {}; opposizione_fine (seme 1 a 1,5) turno {}",
         g.vista().turno,
