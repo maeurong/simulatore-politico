@@ -13,6 +13,7 @@
   import Paese from "$lib/paese/Paese.svelte";
   import Partiti from "$lib/partiti/Partiti.svelte";
   import Pagina from "$lib/eredita/Pagina.svelte";
+  import Schema from "$lib/schema/Schema.svelte";
   import Trattativa from "$lib/trattativa/Trattativa.svelte";
   import { risponde } from "$lib/cruscotto/cruscotto";
   import Cornice from "$lib/cornice/Cornice.svelte";
@@ -39,7 +40,7 @@
 {#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
-    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || aperta === "eredita" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
+    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || aperta === "eredita" || aperta === "schema" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
       <div class="pagina">
         {#if aperta}
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
@@ -66,6 +67,8 @@
             {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
           {:else if aperta === "eredita" && fetta === null}
             <Pagina vista={partita.vista} />
+          {:else if aperta === "schema" && fetta === null}
+            <Schema vista={partita.vista} />
           {:else if fetta}
             <Segnaposto sezione={etichetta(aperta)} {fetta} />
           {/if}

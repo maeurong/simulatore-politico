@@ -30,7 +30,7 @@ export type Tracciato = {
   prima: number | null; // il valore al turno prima, dalla serie: la variazione sotto il numero
 };
 
-const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
+export const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
 // «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
 const MANCANTI: Scala = { stacco: 105, passo: 15, rovesciata: true };
 // ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
@@ -53,7 +53,7 @@ function consenso(nome: Chiave, q: number, scala: Scala, rosso: boolean, prima: 
 }
 
 /** Seggi della coalizione meno la metà più uno del ramo (voto.rs:106); null se il ramo non ha seggi. */
-function margini(righe: SeggiPartito[], coalizione: string[]) {
+export function margini(righe: SeggiPartito[], coalizione: string[]) {
   const ramo = (r: "camera" | "senato") => {
     const totale = righe.reduce((s, x) => s + x[r], 0);
     const nostri = righe.filter((x) => coalizione.includes(x.partito)).reduce((s, x) => s + x[r], 0);
@@ -62,7 +62,7 @@ function margini(righe: SeggiPartito[], coalizione: string[]) {
   return { camera: ramo("camera"), senato: ramo("senato") };
 }
 
-const sottoLoStacco = (v: number, s: Scala) => caselle(v, s).piene <= 3;
+export const sottoLoStacco = (v: number, s: Scala) => caselle(v, s).piene <= 3;
 
 function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], prima: PuntoSerie | undefined): Tracciato {
   const { camera, senato } = margini(righe, coalizione);
