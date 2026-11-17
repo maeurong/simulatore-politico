@@ -5,7 +5,6 @@
   import { partita } from "$lib/partita.svelte";
   import { tracciatiDi } from "$lib/tracciati";
   import { comeErrore, guscio } from "$lib/guscio/chiamate";
-  import { ultimoVince } from "$lib/editor/editor.svelte";
   import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
@@ -14,6 +13,7 @@
   import { scelteAlDefault } from "$lib/cruscotto/cruscotto";
   import { defaultDellaChiusura } from "$lib/trattativa/trattativa";
   import Sommario from "./Sommario.svelte";
+  import { anteprimaPer } from "./sfiducia";
 
   type Props = { vista: Vista; sezione: string; impostazioni: boolean; onimpostazioni: () => void };
   let { vista, sezione, impostazioni, onimpostazioni }: Props = $props();
@@ -27,12 +27,14 @@
     stato !== "governo" ? STATO[stato] : vista.turni_al_voto === 0 ? "stato.voto" : vista.data.trimestre === 4 ? "stato.bilancio" : "stato.governo",
   );
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
-  // all'opposizione «per farlo cadere» legge l'anteprima della sfiducia al governo, una richiesta per volta; se manca, il tracciato resta vuoto
+  // all'opposizione «per farlo cadere» legge l'anteprima della sfiducia al governo, legata alla Vista che l'ha chiesta:
+  // a ogni Vista nuova il tracciato torna vuoto finché la sua risposta non arriva, e una risposta superata non scrive
   let sfiducia = $state.raw<AnteprimaSfiducia | null>(null);
-  const chiediSfiducia = ultimoVince(() => guscio.anteprimaSfiducia(null), (r) => { sfiducia = "linee" in r ? r : null; });
   $effect(() => {
-    if (statoDi(vista) === "opposizione") chiediSfiducia(undefined);
-    else sfiducia = null;
+    const v = vista;
+    sfiducia = null;
+    if (statoDi(v) !== "opposizione") return;
+    void anteprimaPer(v, () => guscio.anteprimaSfiducia(null), () => vista).then((r) => { if (r !== undefined) sfiducia = r; });
   });
   const tre = $derived(tracciatiDi(vista, partita.serie, sfiducia));
   // finché un evento grave è aperto tutto il turno è grave (storia 169): tacciono colori e testatina

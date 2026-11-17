@@ -7,15 +7,20 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import { costoDellaLinea } from "./linea";
 
-  let { vista, misura, onlinea, occupato, children }: {
-    vista: Vista; misura: VoceMisura; onlinea: (si: boolean | null) => void; occupato?: string; children?: Snippet;
+  // `compatta`: solo i tre bottoni, per la riga del cruscotto; il costo sta nella riga sotto il titolo e nel dettaglio
+  let { vista, misura, onlinea, occupato, compatta = false, children }: {
+    vista: Vista; misura: VoceMisura; onlinea: (si: boolean | null) => void; occupato?: string; compatta?: boolean; children?: Snippet;
   } = $props();
 
   const scelta = $derived(misura.linea_giocatore);
   const mia = $derived(misura.linee.find((l) => l.partito === vista.giocatore)?.si ?? false);
 </script>
 
-{#if misura.costo_linea}
+{#if misura.costo_linea && compatta}
+  <Pulsante forma="piccolo" scelto={scelta === true} spento={occupato} onclick={() => onlinea(true)}>{t("aula.si_maiuscolo")}</Pulsante>
+  <Pulsante forma="piccolo" scelto={scelta === false} spento={occupato} onclick={() => onlinea(false)}>{t("aula.no_maiuscolo")}</Pulsante>
+  <Pulsante forma="piccolo" scelto={scelta === null} spento={occupato} onclick={() => onlinea(null)}>{scelta === null ? t("aula.come_da_posizione", { linea: t(mia ? "aula.si" : "aula.no") }) : t("aula.come_da_posizione_nuda")}</Pulsante>
+{:else if misura.costo_linea}
   {@const c = misura.costo_linea}
   <div class="blocco">
     <span class="occ">{t("aula.tua_linea")}</span>

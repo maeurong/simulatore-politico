@@ -3,6 +3,7 @@
   // le misure con la tua linea sulla riga, il programma e la maggioranza avversaria. A lato il dettaglio della riga scelta.
   import { untrack } from "svelte";
   import { t, numero } from "$lib/testi/t";
+  import { costoDellaLinea } from "$lib/aula/linea";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import { chiLaPorta, quandoMisura, votaOra } from "$lib/aula/aula";
@@ -38,8 +39,17 @@
     c0: numero(m.forbice.camera[0]), c1: numero(m.forbice.camera[1]), mc: numero(m.forbice.maggioranza_camera),
     s0: numero(m.forbice.senato[0]), s1: numero(m.forbice.senato[1]), ms: numero(m.forbice.maggioranza_senato),
   });
-  const sotto = (m: VoceMisura, conQuando: boolean) =>
-    [chiLaPorta(vista, m, (id) => nomeDi(vista, id)), forbice(m), conQuando ? quandoMisura(vista, m) : ""].filter(Boolean).join(" · ");
+  // la riga dice anche il default e quanto costa la linea oggi scelta (28-opposizione.prototype.html:704)
+  function sotto(m: VoceMisura, conQuando: boolean): string {
+    const c = m.costo_linea;
+    const mia = m.linee.find((l) => l.partito === vista.giocatore)?.si ?? false;
+    const oggi = c && (m.linea_giocatore === true ? c.si : m.linea_giocatore === false ? c.no : c.default);
+    return [
+      chiLaPorta(vista, m, (id) => nomeDi(vista, id)), forbice(m), conQuando ? quandoMisura(vista, m) : "",
+      c ? `${t("cruscotto.default")} ${t("aula.come_da_posizione", { linea: t(mia ? "aula.si" : "aula.no") }).toLowerCase()}` : "",
+      oggi ? costoDellaLinea(vista, oggi) : "",
+    ].filter(Boolean).join(" · ");
+  }
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
 
   // raw: la Vista dentro si confronta per identità; il rifiuto vale per la Vista e la misura in cui è nato
@@ -67,9 +77,8 @@
           {#each g.voci as m (m.id)}
             <RigaOdg titolo={m.nome} sotto={sotto(m, g.quando)} segno={m.linea_giocatore !== null ? "fatto" : m.forbice.in_bilico ? "urg" : ""}
               scelta={scelta?.tipo === "misura" && scelta.id === String(m.id)} onscegli={() => { scelta = { tipo: "misura", id: String(m.id) }; }}>
-              <Linea {vista} misura={m} {occupato} onlinea={(si) => linea(m, si)}>
-                {#if rifiuto?.vista === vista && rifiuto.misura === m.id}<Rifiuto testo={rifiuto.testo} />{/if}
-              </Linea>
+              {#snippet azioni()}<Linea {vista} misura={m} {occupato} compatta onlinea={(si) => linea(m, si)} />{/snippet}
+              {#if rifiuto?.vista === vista && rifiuto.misura === m.id}<Rifiuto testo={rifiuto.testo} />{/if}
             </RigaOdg>
           {/each}
         </ul>
