@@ -6,12 +6,16 @@ import type { Filo, Nodo } from "./schema";
 export type Riga = {
   nodo: Nodo; nome: string; sotto: string; x: number; y: number; w: number; h: number; scura: boolean;
   etichetta: { testo: string; contrario: boolean } | null;
+  /** I tratti dei fili che la riga muove. */
+  uscenti: Tratto[];
 };
-export type Tratto = { filo: Filo; d: string };
+/** `x`, `y`: la metà del tratto, dove sta il tondo. */
+export type Tratto = { filo: Filo; d: string; x: number; y: number };
 export type Sbarra = { d: string; punta: boolean };
 /** Il filo o la riga aperti nel dettaglio a lato. */
 export type Scelta = { tipo: "filo" | "riga"; id: string } | null;
-export type Tavola = { altezza: number; colonne: number[]; cw: number; righe: Riga[]; tratti: Tratto[]; sbarre: Sbarra[] };
+/** `gap`: il canale fra due colonne. */
+export type Tavola = { altezza: number; colonne: number[]; cw: number; gap: number; righe: Riga[]; tratti: Tratto[]; sbarre: Sbarra[] };
 
 /** Sopra le righe: i titoli delle colonne. */
 export const TESTA = 26;
@@ -50,27 +54,33 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
   const sbX = [X(2) - gap * 0.4, X(2) + cw + gap * 0.4];
   const sbarra = [0, 1].map(() => ({ usata: false, punta: false, su: p?.y ?? 0, giu: p?.y ?? 0 }));
   const tratti: Tratto[] = [];
-  const uscenti = new Map<string, Filo[]>();
+  const uscenti = new Map<string, Tratto[]>();
   for (const f of fili) {
     const A = pos.get(f.da), B = pos.get(f.a);
     if (!A || !B) continue;
-    uscenti.set(f.da, [...(uscenti.get(f.da) ?? []), f]);
-    let d: string;
+    let d: string, mx: number, my: number;
     if (p && (f.a === PDC || (f.da === PDC && B.c === 2))) {
       // pettine: dritto sulla sbarra del suo lato, all'altezza della riga dell'altro capo
       const altro = f.a === PDC ? A : B, lato = altro.c <= 2 ? 0 : 1, sx = sbX[lato], Y = altro.y, s = sbarra[lato];
       s.usata = true; s.punta ||= f.a === PDC; s.su = Math.min(s.su, Y); s.giu = Math.max(s.giu, Y);
       const xo = altro.c === 2 ? X(2) : altro.c < 2 ? X(altro.c) + cw : X(altro.c);
       d = f.a === PDC ? `M${r1(xo)},${r1(Y)} L${r1(sx)},${r1(Y)}` : `M${r1(sx)},${r1(Y)} L${r1(xo)},${r1(Y)}`;
+      // dai Partiti il pettine scavalca il Parlamento: il tondo sta nel canale prima della sbarra, non sopra una riga né accanto all'ansa
+      mx = altro.c === 0 ? (X(1) + cw + sx) / 2 : (xo + sx) / 2; my = Y;
     } else if (A.c === B.c) {
       // stessa colonna (Camera → Senato): un'ansa nel canale a sinistra
       const x = A.x - 2, ansa = 14 + Math.abs(B.y - A.y) * 0.08;
       d = `M${r1(x)},${r1(A.y)} C${r1(x - ansa)},${r1(A.y)} ${r1(x - ansa)},${r1(B.y)} ${r1(x)},${r1(B.y)}`;
+      mx = x - ansa * 0.75; my = (A.y + B.y) / 2;
     } else {
       const xa = A.c < B.c ? A.x + cw : A.x, xb = A.c < B.c ? B.x : B.x + cw, k = (xb - xa) * 0.5;
       d = `M${r1(xa)},${r1(A.y)} C${r1(xa + k)},${r1(A.y)} ${r1(xb - k)},${r1(B.y)} ${r1(xb)},${r1(B.y)}`;
+      // scavalcando una colonna, il tondo nel canale prima dell'arrivo (lì la curva è già all'altezza di chi riceve)
+      [mx, my] = Math.abs(B.c - A.c) > 1 ? [xb - (A.c < B.c ? gap : -gap) / 2, B.y] : [(xa + xb) / 2, (A.y + B.y) / 2];
     }
-    tratti.push({ filo: f, d });
+    const tr = { filo: f, d, x: r1(mx), y: r1(my) };
+    tratti.push(tr);
+    uscenti.set(f.da, [...(uscenti.get(f.da) ?? []), tr]);
   }
 
   const sbarre: Sbarra[] = [];
@@ -83,10 +93,46 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
   const righe: Riga[] = nodi.map((n) => {
     const { x, y, h } = pos.get(n.id)!;
     const U = uscenti.get(n.id) ?? [];
-    const etichetta = U.length ? { testo: corto(U[0].etichetta, 12, cw * 0.55, true, misura) + (U.length > 1 ? ` +${U.length - 1}` : ""), contrario: U[0].contrario } : null;
+    const etichetta = U.length ? { testo: corto(U[0].filo.etichetta, 12, cw * 0.55, true, misura) + (U.length > 1 ? ` +${U.length - 1}` : ""), contrario: U[0].filo.contrario } : null;
     const spazio = etichetta ? misura(etichetta.testo, 12, true) + 10 : 0;
-    return { nodo: n, nome: corto(nomeNodo(n), 13, cw - 18, true, misura), sotto: corto(n.sotto, 12, cw - 18 - spazio, false, misura), x, y, w: cw, h, scura: SCURI.includes(n.tipo), etichetta };
+    return { nodo: n, nome: corto(nomeNodo(n), 13, cw - 18, true, misura), sotto: corto(n.sotto, 12, cw - 18 - spazio, false, misura), x, y, w: cw, h, scura: SCURI.includes(n.tipo), etichetta, uscenti: U };
   });
 
-  return { altezza, colonne: [0, 1, 2, 3].map(X), cw, righe, tratti, sbarre };
+  return { altezza, colonne: [0, 1, 2, 3].map(X), cw, gap, righe, tratti, sbarre };
 }
+
+/** Raggio del tondo e passo fra due tondi accostati (37). */
+export const R_TONDO = 9;
+export const PASSO_TONDO = 19;
+/** Un tondo su un filo: il numero, il centro, rosso se il filo è contrario. */
+export type Tondo = { n: number; x: number; y: number; m: boolean; filo: string };
+/** I tondi dei fili, raggruppati per punto: fili con la stessa geometria (le leggi Camera → Senato) accodano i numeri invece di coprirsi, in fila o in colonna dentro il canale `gap`. */
+export function tondiSuiFili(tratti: Tratto[], numeri: Map<string, number[]>, gap: number): Tondo[] {
+  const punti = new Map<string, { x: number; y: number; voci: { n: number; m: boolean; filo: string }[] }>();
+  for (const { filo: f, x, y } of tratti) {
+    for (const n of numeri.get(f.id) ?? []) {
+      const k = `${x},${y}`;
+      if (!punti.has(k)) punti.set(k, { x, y, voci: [] });
+      punti.get(k)!.voci.push({ n, m: f.contrario, filo: f.id });
+    }
+  }
+  const posati: Tondo[] = [];
+  for (const p of punti.values()) {
+    const mezzo = ((p.voci.length - 1) * PASSO_TONDO) / 2;
+    // la fila che esce dal canale coprirebbe le righe accanto: allora i tondi si impilano
+    const fila = mezzo + R_TONDO <= gap / 2;
+    p.voci.sort((a, b) => a.n - b.n).forEach((v, i) => {
+      const k = { ...v, x: fila ? p.x - mezzo + i * PASSO_TONDO : p.x, y: fila ? p.y : p.y - mezzo + i * PASSO_TONDO };
+      // un altro gruppo nello stesso canale (il pettine dai Partiti accanto all'ansa Camera → Senato): chi arriva dopo scende
+      while (posati.some((q) => Math.hypot(q.x - k.x, q.y - k.y) < 2 * R_TONDO)) k.y += PASSO_TONDO;
+      posati.push(k);
+    });
+  }
+  return posati;
+}
+
+const inPrima = (numeri: number[]) => (numeri.length ? t("schema.prima_aria", { n: numeri.join(", ") }) : "");
+/** Il nome accessibile della riga: i fili si contano su tutto il trimestre, anche a filtro acceso. */
+export const nomeRiga = (n: Nodo, tutti: Filo[], numeri: number[]) =>
+  t("schema.nome_riga", { nome: nomeNodo(n), sotto: n.sotto, fili: t("schema.n_fili", { n: tutti.filter((f) => f.da === n.id || f.a === n.id).length }) }) + inPrima(numeri);
+export const nomeFilo = (f: Filo, numeri: number[]) => f.frase + inPrima(numeri);

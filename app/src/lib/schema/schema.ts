@@ -4,11 +4,14 @@ import type { Vista } from "$lib/tipi/Vista";
 import type { VoceMinistero } from "$lib/tipi/VoceMinistero";
 import type { VoceEffetto } from "$lib/tipi/VoceEffetto";
 import type { CausaIntesa } from "$lib/tipi/CausaIntesa";
+import type { VoceEsito } from "$lib/tipi/VoceEsito";
+import type { TipoVoce } from "$lib/tipi/TipoVoce";
 import { euro } from "$lib/governo/governo";
 import { CAUSE } from "$lib/partiti/schieramento";
 import { coalizioneDi, nomeDi } from "$lib/partiti";
 import { margini, MARGINE, sottoLoStacco } from "$lib/tracciati";
-import { periodoDi } from "$lib/aula/aula";
+import { periodoDi, quandoMisura, slitta, votaOra } from "$lib/aula/aula";
+import { pagina } from "$lib/esito/esito";
 import { statoDi, type Sezione } from "$lib/ossatura";
 import { elenco, numero, segnato, t, type Chiave } from "$lib/testi/t";
 
@@ -32,7 +35,6 @@ const minuscolo = (s: string) => s.toLowerCase();
 const turni = (n: number) => t("schema.turni_mancanti", { n });
 const quando = (e: VoceEffetto) => (e.ritardo > 0 ? t("schema.fra_turni", { n: e.ritardo }) : t("schema.subito"));
 const verbo = (e: VoceEffetto) => t(e.migliora ? "schema.migliora" : "schema.peggiora");
-const fraTrimestri = (voto: { anno: number; trimestre: number }, oggi: { anno: number; trimestre: number }) => (voto.anno - oggi.anno) * 4 + voto.trimestre - oggi.trimestre;
 const causaMinistro = (c: string) => t(`governo.causa_${c}` as Chiave);
 
 /** La guida non è un campo della Vista: fuori dal governo è il partito di governo senza fascia d'intesa, al turno zero quello con più ministri. */
@@ -193,13 +195,14 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
   // aula
   for (const c of v.calendario) {
     const da = c.promotore ? partito(c.promotore) : c.proponente ? `d:${c.proponente}` : c.forma === "bilancio" ? "d:economia_finanze" : PDC;
-    const fra = fraTrimestri(c.voto, v.data), f = c.forbice;
+    // nel turno del bilancio o di crisi la legge col voto adesso slitta: lo decide aula.ts, come in Aula
+    const sl = slitta(v, c), ora = votaOra(v, c) && !sl, f = c.forbice;
     const origine = c.promotore ? t("schema.origine_posto", { partito: nomeDi(v, c.promotore) }) : c.proponente ? t("schema.origine_dicastero", { dicastero: nodi.get(`d:${c.proponente}`)?.nome as string ?? c.proponente }) : "";
     filo({ id: `cal:${c.id}`, da, a: "camera", tipo: "misura", sezione: "aula", fonte: "calendario",
-      etichetta: fra <= 0 ? t("schema.et_al_voto") : t("schema.et_in_aula", { periodo: t(`schema.tr_${c.voto.trimestre}` as Chiave) }),
-      frase: t("schema.frase_misura", { nome: c.nome, origine, quando: fra <= 0 ? t("schema.quando_fine_turno") : t("schema.quando_in", { periodo: periodoDi(v, c.voto) }),
+      etichetta: sl ? t("schema.et_slitta") : ora ? t("schema.et_al_voto") : t("schema.et_in_aula", { periodo: t(`schema.tr_${c.voto.trimestre}` as Chiave) }),
+      frase: t("schema.frase_misura", { nome: c.nome, origine, quando: sl ? quandoMisura(v, c, true) : ora ? t("schema.quando_fine_turno") : t("schema.quando_in", { periodo: periodoDi(v, c.voto) }),
         c0: f.camera[0], c1: f.camera[1], cm: f.maggioranza_camera, s0: f.senato[0], s1: f.senato[1], sm: f.maggioranza_senato, bilico: f.in_bilico ? t("schema.in_bilico") : "" }),
-      contrario: f.in_bilico, ritardo: fra > 0 });
+      contrario: f.in_bilico, ritardo: !ora });
   }
   // gli esiti del trimestre appena chiuso; una misura decaduta non ha avuto un voto
   const prima = v.data.trimestre === 1 ? { anno: v.data.anno - 1, trimestre: 4 } : { anno: v.data.anno, trimestre: v.data.trimestre - 1 };
@@ -246,4 +249,52 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
     nodi: [...nodi.values()].sort((a, b) => a.colonna - b.colonna || ORDINE[a.tipo] - ORDINE[b.tipo]),
     fili: fili.filter((f) => nodi.has(f.da) && nodi.has(f.a)),
   };
+}
+
+/** Il filo del ministro che una voce col dicastero cerca, secondo il tipo. */
+const FILO_DEL_MINISTRO: Partial<Record<TipoVoce, string>> = {
+  minaccia_di_dimissioni: "min", proposta_respinta: "prop", proposta_decaduta: "prop", proposta_accolta: "prop", ministro_esce: "dim",
+};
+
+/** I posti che la voce cerca, in quest'ordine (piano 11f, lettura 8); vale il primo che c'è. */
+function postiDi(v: Vista, x: VoceEsito): string[] {
+  const p: string[] = [];
+  if (x.tipo === "spread") p.push("spread");
+  if (x.tipo === "sfiducia_presentata") p.push("sfiducia");
+  if (x.misura !== null) p.push(`cal:${x.misura}`, `es:${x.misura}`);
+  if (x.dicastero && FILO_DEL_MINISTRO[x.tipo]) p.push(`${FILO_DEL_MINISTRO[x.tipo]}:${x.dicastero}`);
+  if (x.partito) p.push(`al:${x.partito}`);
+  if (x.famiglia) {
+    // la voce porta l'id della regione, l'evento il nome
+    const regione = x.regione === null ? null : (v.regioni.find((r) => r.id === x.regione)?.nome ?? x.regione);
+    const e = v.eventi.find((e) => e.famiglia === x.famiglia && e.regione === regione);
+    if (e) p.push(`ev:${e.nome}`);
+  }
+  if (x.dicastero) p.push(`d:${x.dicastero}`);
+  if (x.partito) p.push(`p:${x.partito}`);
+  return p;
+}
+
+/** I tondi: il numero è la posizione della voce fra quelle in evidenza, nell'ordine della pagina, testa al numero 1; senza posto la voce sta solo nell'elenco. */
+export function tondiDi(v: Vista, S: { nodi: Nodo[]; fili: Filo[] }) {
+  const fili = new Map<string, number[]>(), nodi = new Map<string, number[]>();
+  const idFili = new Set(S.fili.map((f) => f.id)), idNodi = new Set(S.nodi.map((n) => n.id));
+  const p = pagina(v.esito);
+  const elenco = (p.testa === null ? [] : [p.testa, ...p.colonne]).map((i, k) => {
+    const voce = v.esito[i], n = k + 1;
+    const posto = postiDi(v, voce).find((id) => idFili.has(id) || idNodi.has(id)) ?? null;
+    if (posto) {
+      const M = idFili.has(posto) ? fili : nodi;
+      M.set(posto, [...(M.get(posto) ?? []), n]);
+    }
+    return { n, voce, posto };
+  });
+  return { fili, nodi, elenco };
+}
+
+/** Il filtro «Solo quelli in prima pagina»: i fili col tondo coi loro capi, e le righe col tondo. */
+export function soloInPrimaPagina(S: { nodi: Nodo[]; fili: Filo[] }, T: ReturnType<typeof tondiDi>) {
+  const fili = S.fili.filter((f) => T.fili.has(f.id));
+  const capi = new Set(fili.flatMap((f) => [f.da, f.a]));
+  return { nodi: S.nodi.filter((n) => T.nodi.has(n.id) || capi.has(n.id)), fili };
 }

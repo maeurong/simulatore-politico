@@ -1,11 +1,15 @@
 <script lang="ts">
   // La tavola per poteri (37-scelte-11e-schema.prototype.html, svgB con riga · pettine · punta): la geometria sta in tavola.ts.
   // Ordine del Tab: ogni riga, poi i fili che muove. I tratti visibili stanno sotto i riquadri; sopra, una fascia trasparente per filo che prende clic e fuoco.
+  // I tondi (piano 11f, lettura 8) stanno in cima, a metà del filo e sull'angolo della riga: si leggono, non si cliccano.
   import { t, type Chiave } from "$lib/testi/t";
   import type { Filo, Nodo } from "./schema";
-  import { nomeNodo, stima, tavola, type Misura, type Scelta, type Tratto } from "./tavola";
+  import { nomeFilo, nomeRiga, PASSO_TONDO, R_TONDO, stima, tavola, tondiSuiFili, type Misura, type Scelta } from "./tavola";
 
-  let { nodi, fili, scelta, pre, onscegli }: { nodi: Nodo[]; fili: Filo[]; scelta: Scelta; pre: string; onscegli: (s: Scelta) => void } = $props();
+  /** `tutti`: i fili del trimestre, filtro o no, per i conteggi. */
+  let { nodi, fili, tutti, tondi, scelta, pre, onscegli }: {
+    nodi: Nodo[]; fili: Filo[]; tutti: Filo[]; tondi: { fili: Map<string, number[]>; nodi: Map<string, number[]> }; scelta: Scelta; pre: string; onscegli: (s: Scelta) => void;
+  } = $props();
 
   let W = $state(0), H = $state(0);
   // i nomi si accorciano sulla larghezza vera del testo; a caratteri caricati la tavola si ridisegna
@@ -19,8 +23,6 @@
   });
   // ponytail: sotto i 200 px la tavola non si disegna; la pagina ha sempre più spazio (1280×800 a scala massima)
   const T = $derived(W > 200 && H > 200 ? tavola(nodi, fili, W, H, misura) : null);
-  const uscenti = $derived((T?.tratti ?? []).reduce((m, x) => m.set(x.filo.da, [...(m.get(x.filo.da) ?? []), x]), new Map<string, Tratto[]>()));
-  const nFili = (id: string) => fili.filter((f) => f.da === id || f.a === id).length;
 
   // in fuoco: il filo scelto coi suoi capi, o la riga scelta coi suoi fili e i loro capi
   const fuoco = $derived.by(() => {
@@ -60,8 +62,8 @@
       {#each T.righe as r (r.nodo.id)}
         {@const n = r.nodo}
         <g id="{pre}-n-{n.id}" class={["nd", n.tipo, { gov: n.alGoverno, tuo: n.tuo, spento: n.spento, scura: r.scura, on: fuoco?.has(n.id) }]}
-          role="button" tabindex="0" aria-pressed={scelto("riga", n.id)}
-          aria-label={t("schema.nome_riga", { nome: nomeNodo(n), sotto: n.sotto, fili: t("schema.n_fili", { n: nFili(n.id) }) })}
+          role="button" tabindex="0" aria-expanded={scelto("riga", n.id)} aria-controls="{pre}-det"
+          aria-label={nomeRiga(n, tutti, tondi.nodi.get(n.id) ?? [])}
           onclick={() => onscegli({ tipo: "riga", id: n.id })} onkeydown={tasto({ tipo: "riga", id: n.id })}>
           <rect class="anello" x={r.x - 3} y={r.y - r.h / 2 - 3} width={r.w + 6} height={r.h + 6} rx={n.tipo === "presidente" ? r.h / 2 + 3 : n.tipo === "paese" || n.tipo === "situazione" ? 11 : 0} />
           <rect class="b" x={r.x} y={r.y - r.h / 2} width={r.w} height={r.h} rx={n.tipo === "presidente" ? r.h / 2 : n.tipo === "paese" || n.tipo === "situazione" ? 8 : 0} />
@@ -71,11 +73,22 @@
             <text class={["et", { m: r.etichetta.contrario, scura: r.scura }]} x={r.x + r.w - 7} y={r.y + 12} text-anchor="end">{r.etichetta.testo}</text>
           {/if}
         </g>
-        {#each uscenti.get(n.id) ?? [] as { filo: f, d } (f.id)}
-          <path id="{pre}-f-{f.id}" class="fi-hit" {d} role="button" tabindex="0" aria-pressed={scelto("filo", f.id)} aria-label={f.frase}
+        {#each r.uscenti as { filo: f, d } (f.id)}
+          <path id="{pre}-f-{f.id}" class="fi-hit" {d} role="button" tabindex="0" aria-expanded={scelto("filo", f.id)} aria-controls="{pre}-det" aria-label={nomeFilo(f, tondi.fili.get(f.id) ?? [])}
             onclick={() => onscegli({ tipo: "filo", id: f.id })} onkeydown={tasto({ tipo: "filo", id: f.id })} />
         {/each}
       {/each}
+      <g class="tondi" aria-hidden="true">
+        {#each tondiSuiFili(T.tratti, tondi.fili, T.gap) as k (k.n)}
+          <g class={["tnd", { m: k.m, on: fuoco?.has(k.filo) }]}><circle cx={k.x} cy={k.y} r={R_TONDO} /><text x={k.x} y={k.y + 4}>{k.n}</text></g>
+        {/each}
+        {#each T.righe as r (r.nodo.id)}
+          {#each tondi.nodi.get(r.nodo.id) ?? [] as k, i (k)}
+            {@const cx = r.x + r.w - 2 - i * PASSO_TONDO}
+            <g class={["tnd", { on: fuoco?.has(r.nodo.id) }]}><circle {cx} cy={r.y - r.h / 2} r={R_TONDO} /><text x={cx} y={r.y - r.h / 2 + 4}>{k}</text></g>
+          {/each}
+        {/each}
+      </g>
     </svg>
   {/if}
 </div>
@@ -119,7 +132,14 @@
   .et.scura { fill: var(--giallo); stroke: none }
   :global(:root.grave) .et.scura { fill: var(--carta) }
 
-  .fuoco .nd, .fuoco .fi { opacity: .16 }
+  .tondi { pointer-events: none }
+  .tnd circle { fill: var(--carta); stroke: var(--biro); stroke-width: 1.5 }
+  .tnd text { font-family: var(--txt); font-size: 11px; font-weight: 700; fill: var(--biro); text-anchor: middle }
+  .tnd.m circle { stroke: var(--rosso) }
+  .tnd.m text { fill: var(--rosso) }
+
+  .fuoco .nd, .fuoco .fi, .fuoco .tnd { opacity: .16 }
+  .fuoco .fi.sbarra { opacity: .4 }
   .fuoco .on { opacity: 1 }
   .fuoco .fi.on { stroke-width: 3.5 }
 </style>
