@@ -3,6 +3,7 @@ import { goto } from "$app/navigation";
 import { comeErrore, guscio } from "$lib/guscio/chiamate";
 import { ordineRivelazione } from "$lib/esito/esito";
 import { rivelazione } from "$lib/esito/rivelazione.svelte";
+import { registroCache } from "$lib/registro/cache.svelte";
 import { fattori, impostazioni, sistema } from "$lib/impostazioni.svelte";
 import { bozza } from "$lib/bilancio/bozza.svelte";
 import { t } from "$lib/testi/t";
@@ -23,6 +24,8 @@ class Partita {
   #giro = 0;
   // l'id lo sa solo chi ha ripreso la partita; chi l'ha fondata la ritrova da indice()
   #id: string | null = null;
+  // copre anche la finestra fra il guasto di guscio.riavvolgi e il riallineamento, in cui `occupato` è spento
+  #riavvolgendo = false;
 
   /**
    * La Vista nuova, o null davanti a un guasto del comando (la partita resta com'era). Riuscito il comando la Vista
@@ -69,6 +72,7 @@ class Partita {
     if (vista) {
       this.#id = null;
       rivelazione.chiudi();
+      registroCache.svuota();
     }
     return vista;
   };
@@ -77,6 +81,7 @@ class Partita {
     if (vista) {
       this.#id = id;
       rivelazione.chiudi();
+      registroCache.svuota();
     }
     return vista;
   };
@@ -120,25 +125,34 @@ class Partita {
    * riprendi, e il guasto resta scritto. Il rifiuto si rilancia dopo il riallineamento.
    */
   riavvolgi = async (turno: number): Promise<Vista | null> => {
-    if (this.occupato) return null;
-    const giro = this.#giro;
-    let rifiuto: unknown = null;
-    let vista: Vista | null = null;
+    if (this.occupato || this.#riavvolgendo) return null;
+    this.#riavvolgendo = true;
     try {
-      vista = await this.#esegui(() => guscio.riavvolgi(turno));
-    } catch (e) {
-      rifiuto = e;
+      const giro = this.#giro;
+      let rifiuto: unknown = null;
+      let vista: Vista | null = null;
+      try {
+        vista = await this.#esegui(() => guscio.riavvolgi(turno));
+      } catch (e) {
+        rifiuto = e;
+      }
+      if (vista) {
+        rivelazione.chiudi();
+        registroCache.svuota();
+      }
+      if (vista || giro !== this.#giro) return vista;
+      const guasto = this.guasto;
+      const id = (await this.indice().catch(() => null))?.id;
+      if (id) {
+        await this.riprendi(id).catch(() => null);
+        // il guasto di riavvolgi vale più di quello (o del silenzio) del riallineamento, salvo che nel frattempo si sia usciti
+        if (guasto && giro === this.#giro) this.guasto = guasto;
+      }
+      if (rifiuto) throw rifiuto;
+      return null;
+    } finally {
+      this.#riavvolgendo = false;
     }
-    if (vista) rivelazione.chiudi();
-    if (vista || giro !== this.#giro) return vista;
-    const guasto = this.guasto;
-    const id = (await this.indice().catch(() => null))?.id;
-    if (id) {
-      await this.riprendi(id).catch(() => null);
-      if (guasto && !this.guasto) this.guasto = guasto;
-    }
-    if (rifiuto) throw rifiuto;
-    return null;
   };
 
   /** Vero a conferma scritta: la partita esce dalle in corso e l'albo ha la voce. Il guasto la lascia in bozza; il rifiuto si rilancia. */
@@ -163,6 +177,7 @@ class Partita {
   esci = () => {
     this.#giro++;
     rivelazione.chiudi();
+    registroCache.svuota();
     this.#id = null;
     this.vista = null;
     this.serie = [];

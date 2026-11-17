@@ -14,6 +14,8 @@ import { partita } from "./partita.svelte";
 import { rivelazione } from "./esito/rivelazione.svelte";
 import { impostazioni } from "./impostazioni.svelte";
 import { bozza } from "./bilancio/bozza.svelte";
+import { registroCache } from "./registro/cache.svelte";
+import type { Fondazione } from "$lib/tipi/Fondazione";
 
 const voce = (in_evidenza: boolean) => ({ in_evidenza }) as Vista["esito"][number];
 const prima = { turno: 3, finita: false, fase: "ordinaria", crisi: false, governa: true, esito: [] } as unknown as Vista;
@@ -282,6 +284,42 @@ describe("partita", () => {
       guscio.partite.mockResolvedValue([indice("a", "Noi", 5), indice("b", "Noi", 9)]);
       await partita.riavvolgi(20);
       expect(guscio.riprendi).toHaveBeenLastCalledWith("a");
+    });
+
+    it("riavvolgi due volte di fila, anche nella finestra dopo il guasto: parte una volta sola", async () => {
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "no" });
+      let sblocca!: (v: unknown[]) => void;
+      guscio.partite.mockReturnValue(new Promise((r) => (sblocca = r)));
+      const prima = partita.riavvolgi(20);
+      await vi.waitFor(() => expect(guscio.partite).toHaveBeenCalled());
+      expect(await partita.riavvolgi(20)).toBeNull();
+      sblocca([]);
+      await prima;
+      expect(guscio.riavvolgi).toHaveBeenCalledTimes(1);
+      expect(await partita.riavvolgi(20)).toBeNull();
+      expect(guscio.riavvolgi).toHaveBeenCalledTimes(2);
+    });
+
+    it("riavvolgi e riprendi falliscono insieme: il guasto mostrato è quello di riavvolgi", async () => {
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockRejectedValue({ specie: "guasto", testo: "file illeggibile" });
+      expect(await partita.riavvolgi(20)).toBeNull();
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(partita.guasto).toBe(`disco pieno ${t("cornice.rimasta_com_era")}`);
+    });
+
+    it("fonda, riprendi, riavvolgi riuscito ed esci svuotano la cache del registro", async () => {
+      const svuota = vi.spyOn(registroCache, "svuota");
+      guscio.fondaPartita.mockResolvedValue(dopo);
+      await partita.fonda(null, {} as Fondazione);
+      guscio.riprendi.mockResolvedValue(dopo);
+      await partita.riprendi("a");
+      guscio.riavvolgi.mockResolvedValue(dopo);
+      await partita.riavvolgi(2);
+      partita.esci();
+      expect(svuota).toHaveBeenCalledTimes(4);
+      svuota.mockRestore();
     });
 
     it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {
