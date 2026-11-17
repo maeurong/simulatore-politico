@@ -5,6 +5,7 @@ import type { TipoVoce } from "$lib/tipi/TipoVoce";
 import type { Sezione } from "$lib/ossatura";
 import type { Fermata } from "$lib/tipi/Fermata";
 import { t } from "$lib/testi/t";
+import { chiaveDi, didascaliaDi, type ChiaveTitolo } from "$lib/testi/pungolo";
 
 const RANGO = { critica: 2, notevole: 1, ordinaria: 0 } as const;
 
@@ -35,6 +36,21 @@ export function pagina(es: VoceEsito[]) {
 
 /** Tono grave della pagina (spec:413): una voce grave nell'esito, o un evento grave ancora aperto. */
 export const grave = (v: Vista): boolean => v.esito.some((x) => x.tono === "grave") || v.eventi.some((e) => e.tono === "grave");
+
+export type Scena = "aula" | "giuramento" | "emergenza" | "lettera" | "cassa";
+
+/** Le cinque scene delle vignette e i quattordici tipi che servono (piano 11f, decisione 1); un altro tipo va in testa a tutta larghezza. */
+export const SCENA_DI: Partial<Record<ChiaveTitolo, Scena>> = {
+  sfiducia_approvata: "aula", bilancio_approvato: "aula", legge_respinta: "aula", sfiducia_presentata: "aula", legge_approvata: "aula",
+  governo_formato: "giuramento",
+  "evento_risolto|emergenza": "emergenza", "evento_nato|emergenza": "emergenza",
+  ultimatum_posto: "lettera", minaccia_di_dimissioni: "lettera", minaccia_di_scissione: "lettera", ministro_esce: "lettera",
+  "evento_risolto|situazione": "cassa", reddito_deluso: "cassa",
+};
+
+/** La scena della vignetta di testa, o null: nel tono grave niente vignetta (ricerca:198), né una scena muta senza didascalia; il voto non ha scena, ha le barre. */
+export const scenaDi = (v: Vista, voce: VoceEsito): Scena | null =>
+  grave(v) || !didascaliaDi(voce) ? null : (SCENA_DI[chiaveDi(voce)] ?? null);
 
 /** L'evento nato ha in `Vista.eventi` un evento aperto con la stessa famiglia e la stessa regione (la voce porta l'id, l'evento il nome). */
 export function eventoAperto(v: Vista, voce: VoceEsito): boolean {

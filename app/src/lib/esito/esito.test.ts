@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
-import { eventoAperto, fraseFermata, grave, ordineRivelazione, pagina, scattaDopo, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
+import { eventoAperto, fraseFermata, grave, ordineRivelazione, pagina, SCENA_DI, scattaDopo, scenaDi, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
 import titoliJson from "../testi/pungolo.json";
 import { titoloDi } from "../testi/pungolo";
 import { t } from "../testi/t";
@@ -169,5 +169,40 @@ describe("fraseFermata", () => {
     expect(fraseFermata({ tipo: "referendum" }, v)).toBe(t("prima.ferma_referendum"));
     expect(t("prima.ferma_referendum")).toBe("in questo turno puoi chiedere un referendum");
     expect(t("prima.ferma_referendum")).not.toMatch(/trimestre|quest’anno/);
+  });
+});
+
+describe("vignette (piano 11f, decisione 1)", () => {
+  it("SCENA_DI ha esattamente i quattordici tipi", () => {
+    expect(Object.keys(SCENA_DI).sort()).toEqual([
+      "bilancio_approvato", "evento_nato|emergenza", "evento_risolto|emergenza", "evento_risolto|situazione", "governo_formato",
+      "legge_approvata", "legge_respinta", "minaccia_di_dimissioni", "minaccia_di_scissione", "ministro_esce", "reddito_deluso",
+      "sfiducia_approvata", "sfiducia_presentata", "ultimatum_posto",
+    ]);
+  });
+  it("le due voci dell'emergenza danno l'emergenza; lo scandalo risolto non ha scena", () => {
+    expect(SCENA_DI["evento_risolto|emergenza"]).toBe("emergenza");
+    expect(SCENA_DI["evento_nato|emergenza"]).toBe("emergenza");
+    expect(SCENA_DI["evento_risolto|scandalo"]).toBeUndefined();
+  });
+  it("ogni scena ha la sua didascalia", () => {
+    for (const k of Object.keys(SCENA_DI)) expect((titoliJson.didascalie as Record<string, string>)[k]).toBeTruthy();
+  });
+  it("scenaDi: la scena della testa nel tono ordinario (chiusura 3: emergenza, chiusura 8: aula)", () => {
+    expect(scenaDi(chiusura(3), c3[testa(c3)!])).toBe("emergenza");
+    expect(scenaDi(chiusura(8), c8[testa(c8)!])).toBe("aula");
+  });
+  it("scenaDi: niente nel tono grave, senza scena, né per il voto (il lato è del Risultato)", () => {
+    const x = v08 as unknown as Vista;
+    expect(scenaDi(x, voce({ tipo: "legge_approvata" }))).toBeNull();
+    expect(scenaDi(chiusura(3), voce({ tipo: "evento_risolto", famiglia: "scandalo" }))).toBeNull();
+    expect(scenaDi(voto9, voto9.esito[testa(voto9.esito)!])).toBeNull();
+  });
+  it("scenaDi: niente vignetta se la chiave con scena non ha didascalia (nessuna scena muta)", async () => {
+    vi.resetModules();
+    vi.doMock("../testi/pungolo", async (orig) => ({ ...(await orig<object>()), didascaliaDi: () => null }));
+    const { scenaDi: senza } = await import("./esito");
+    expect(senza(chiusura(3), c3[testa(c3)!])).toBeNull();
+    vi.doUnmock("../testi/pungolo");
   });
 });
