@@ -6,7 +6,8 @@ import type { VoceEffetto } from "$lib/tipi/VoceEffetto";
 import type { CausaIntesa } from "$lib/tipi/CausaIntesa";
 import { euro } from "$lib/governo/governo";
 import { CAUSE } from "$lib/partiti/schieramento";
-import { nomeDi } from "$lib/partiti";
+import { coalizioneDi, nomeDi } from "$lib/partiti";
+import { margini, MARGINE, sottoLoStacco } from "$lib/tracciati";
 import { periodoDi } from "$lib/aula/aula";
 import type { Sezione } from "$lib/ossatura";
 import { elenco, numero, segnato, t, type Chiave } from "$lib/testi/t";
@@ -48,7 +49,6 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
   const sciolta = v.fase === "sciolta";
   const seggi = (id: string, r: "camera" | "senato") => v.seggi.find((s) => s.partito === id)?.[r] ?? 0;
   const totale = (r: "camera" | "senato") => v.seggi.reduce((a, s) => a + s[r], 0);
-  const governo = v.partiti.filter((p) => p.al_governo).map((p) => p.id);
   const guida = guidaDi(v);
   const nomeGuida = guida ? nomeDi(v, guida) : "";
   const nomeGrandezza = (id: string) => v.grandezze.find((g) => g.id === id)?.nome ?? id.replaceAll("_", " ");
@@ -101,12 +101,15 @@ export function schema(v: Vista): { nodi: Nodo[]; fili: Filo[] } {
 
   // maggioranza
   if (!sciolta) {
+    // lo stesso conto della cornice: coalizione di coalizioneDi, metà più uno del ramo
+    const m = margini(v.seggi, coalizioneDi(v));
     for (const r of ["camera", "senato"] as const) {
-      const sg = governo.reduce((a, id) => a + seggi(id, r), 0);
-      const margine = segnato(Math.round(sg - totale(r) / 2));
-      filo({ id: `magg:${r}`, da: PDC, a: r, tipo: "maggioranza", etichetta: t("schema.et_maggioranza", { margine }), sezione: "aula", fonte: "seggi, partiti[].al_governo",
-        frase: t("schema.frase_maggioranza", { seggi: sg, tot: totale(r), dove: t(r === "camera" ? "schema.alla_camera" : "schema.al_senato"), margine }),
-        contrario: sg - totale(r) / 2 < 3 });
+      const margine = m[r];
+      if (margine === null) continue;
+      const sg = v.seggi.filter((x) => coalizioneDi(v).includes(x.partito)).reduce((a, x) => a + x[r], 0);
+      filo({ id: `magg:${r}`, da: PDC, a: r, tipo: "maggioranza", etichetta: t("schema.et_maggioranza", { margine: segnato(margine) }), sezione: "aula", fonte: "seggi, partiti[].al_governo",
+        frase: t("schema.frase_maggioranza", { seggi: sg, tot: totale(r), dove: t(r === "camera" ? "schema.alla_camera" : "schema.al_senato"), margine: segnato(margine) }),
+        contrario: sottoLoStacco(margine, MARGINE) });
     }
   } else {
     filo({ id: "sciolte", da: PDC, a: "camera", tipo: "maggioranza", etichetta: t("schema.et_si_vota"), frase: t("schema.frase_si_vota"), sezione: "campagna", fonte: "fase" });

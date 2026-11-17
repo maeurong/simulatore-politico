@@ -5,6 +5,7 @@ import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.j
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import grave from "../../../../.scratch/v1-piano-11-ui/viste/08-tono-grave.json";
 import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import { tracciatiDi } from "$lib/tracciati";
 import { schema } from "./schema";
 
 const zero = turnoZero as unknown as Vista;
@@ -111,5 +112,27 @@ describe("schema, sfiducia e posto riservato (28)", () => {
     const v = { ...stati.sfiducia.prima, posto_riservato_di: null } as Vista;
     expect(tipi(v, "sfiducia")).toHaveLength(0);
     expect(tipi(v, "posto")).toHaveLength(0);
+  });
+});
+
+describe("schema, maggioranza come la cornice", () => {
+  it("il margine del filo è quello del tracciato, e il rosso segue lo stesso stacco", () => {
+    for (const v of [ordinario, tono]) {
+      const tr = tracciatiDi(v, []);
+      const fili = tipi(v, "maggioranza");
+      const margini = fili.map((f) => Number(f.etichetta.replace("maggioranza ", "").replace("−", "-")));
+      expect(Math.min(...margini)).toBe(tr[1].valore);
+      expect(fili.some((f) => f.contrario)).toBe(tr[1].rosso);
+    }
+  });
+  it("04: +23 / +14 come la cornice", () => {
+    expect(tipi(ordinario, "maggioranza").map((f) => f.etichetta)).toEqual(["maggioranza +23", "maggioranza +14"]);
+  });
+  it("in trattativa la coalizione è quella della cornice", () => {
+    const trattativa = (JSON.parse(JSON.stringify(ordinario)) as Vista);
+    Object.assign(trattativa, { fase: "trattativa", governa: false, turno: 5, coalizione: ["destra"], richieste: [] });
+    const tr = tracciatiDi(trattativa, []);
+    const fili = tipi(trattativa, "maggioranza").map((f) => Number(f.etichetta.replace("maggioranza ", "").replace("−", "-")));
+    expect(Math.min(...fili)).toBe(tr[1].valore);
   });
 });
