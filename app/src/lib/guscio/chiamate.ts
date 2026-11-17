@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Anteprima } from "$lib/tipi/Anteprima";
+import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
 import type { CatalogoScenario } from "$lib/tipi/CatalogoScenario";
@@ -69,6 +70,8 @@ export const guscio = {
   anteprima: (valori: ValoreProposto[]) => chiama<Anteprima>("anteprima", { valori }),
   anteprimaDecreto: (decreto: Decreto) => chiama<Anteprima>("anteprima_decreto", { decreto }),
   anteprimaAccogli: (dicastero: string) => chiama<Anteprima>("anteprima_accogli", { dicastero }),
+  anteprimaSfiducia: (dicastero: string | null) =>
+    chiama<AnteprimaSfiducia>("anteprima_sfiducia", { dicastero }),
   costoDirotta: (dicastero: string, atto: string | null, regione: string | null) =>
     chiama<number>("costo_dirotta", { dicastero, atto, regione }),
   menuElettorale: (valori: ValoreProposto[]) => chiama<VoceMenu[]>("menu_elettorale", { valori }),

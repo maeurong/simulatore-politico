@@ -8,12 +8,12 @@
   import { inOrdine } from "$lib/partiti/schieramento";
   import { partita } from "$lib/partita.svelte";
   import type { Comando } from "$lib/tipi/Comando";
-  import type { CostoLinea } from "$lib/tipi/CostoLinea";
   import type { Vista } from "$lib/tipi/Vista";
   import type { VoceMisura } from "$lib/tipi/VoceMisura";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Emiciclo from "$lib/componenti/Emiciclo.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
+  import Linea from "./Linea.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Cartellino from "$lib/anteprima/Cartellino.svelte";
   import { chiLaPorta, fiduciaInCrisi, fiduciaPonibile, formaDi, lineaScelta, quandoMisura, slitta } from "./aula";
@@ -49,8 +49,6 @@
   const aperti = $derived(m.emendamenti.filter((e) => e.stato === "aperto"));
   const contro = $derived(m.alleati_contro_fiducia.length ? t("aula.fiducia_no", { nomi: elenco(m.alleati_contro_fiducia.map(nome), ", ") }) : t("aula.fiducia_nessuno_no"));
   let fiduciaAperta = $state(false);
-  const sceltaLinea = $derived(m.linea_giocatore);
-  const costo = (c: CostoLinea) => t("aula.costo_linea", { p: numero(c.percepita, 1), c: numero(c.franchi_camera, 1), s: numero(c.franchi_senato, 1) });
   const occupato = $derived(partita.occupato ? t("campagna.comando_in_corso") : undefined);
 
   const delGoverno = $derived(m.forma === "bilancio" && !vista.governa ? vista.bilancio.in_aula : null);
@@ -159,19 +157,9 @@
 {/if}
 
 {#if lineaScelta(vista, m) && m.costo_linea}
-  {@const c = m.costo_linea}
-  <div class="blocco">
-    <span class="occ nero">{t("aula.tua_linea")}</span>
-    <div class="linee">
-      <Pulsante forma="piccolo" scelto={sceltaLinea === true} onclick={() => manda({ tipo: "linea", misura: m.id, si: true })}>{t("aula.si_maiuscolo")}</Pulsante>
-      <span class="min muto">{costo(c.si)}</span>
-      <Pulsante forma="piccolo" scelto={sceltaLinea === false} onclick={() => manda({ tipo: "linea", misura: m.id, si: false })}>{t("aula.no_maiuscolo")}</Pulsante>
-      <span class="min muto">{costo(c.no)}</span>
-      <Pulsante forma="piccolo" scelto={sceltaLinea === null} onclick={() => manda({ tipo: "linea", misura: m.id, si: null })}>{sceltaLinea === null ? t("aula.come_da_posizione", { linea: t(linea("giocatore") ? "aula.si" : "aula.no") }) : t("aula.come_da_posizione_nuda")}</Pulsante>
-      <span class="min muto">{costo(c.default)}</span>
-    </div>
+  <Linea {vista} misura={m} {occupato} onlinea={(si) => manda({ tipo: "linea", misura: m.id, si })}>
     {#if rifiuto?.tipo === "linea"}<Rifiuto testo={rifiuto.testo} />{/if}
-  </div>
+  </Linea>
 {/if}
 
 <div bind:this={piede}><Pulsante forma="link" onclick={(e) => scambia(e, true)}>{t("aula.anteprima")}</Pulsante></div>
@@ -197,7 +185,6 @@
   .voce { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; font-size: var(--c-sec) }
   .voce small { grid-column: 1 / -1; color: var(--grigio); font-size: var(--c-min) }
   .az { display: flex; gap: 6px }
-  .linee { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; align-items: center }
   .sg { display: grid; grid-template-columns: minmax(0, 1fr) 60px 60px; gap: 2px 8px; font-size: var(--c-sec); align-items: center }
   .sg .h { font-size: var(--c-min); color: var(--grigio); text-transform: uppercase; letter-spacing: .06em }
   .sg .n { text-align: right; font-weight: 700 }

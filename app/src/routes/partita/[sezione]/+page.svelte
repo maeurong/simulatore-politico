@@ -4,6 +4,7 @@
   import { apribile, casa, etichetta, fettaDi, statoDi } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
   import Cruscotto from "$lib/cruscotto/Cruscotto.svelte";
+  import Opposizione from "$lib/opposizione/Opposizione.svelte";
   import Governo from "$lib/governo/Governo.svelte";
   import Aula from "$lib/aula/Aula.svelte";
   import Conti from "$lib/conti/Conti.svelte";
@@ -38,11 +39,13 @@
 {#if partita.vista}
   <div class="partita">
     <Cornice vista={partita.vista} {sezione} {impostazioni} onimpostazioni={() => (impostazioni ? chiudiImpostazioni() : (impostazioni = true))} />
-    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || (aperta === "cruscotto" && risponde(partita.vista))}>
+    <main class="corpo" class:due={impostazioni} class:fisso={aperta === "governo" || aperta === "aula" || (aperta === "cruscotto" && (risponde(partita.vista) || statoDi(partita.vista) === "opposizione"))}>
       <div class="pagina">
         {#if aperta}
           {@const fetta = fettaDi(aperta, statoDi(partita.vista))}
-          {#if aperta === "cruscotto" && fetta === null}
+          {#if aperta === "cruscotto" && fetta === null && statoDi(partita.vista) === "opposizione"}
+            <Opposizione vista={partita.vista} />
+          {:else if aperta === "cruscotto" && fetta === null}
             <Cruscotto vista={partita.vista} />
           {:else if aperta === "governo" && fetta === null}
             <Governo vista={partita.vista} />
@@ -62,7 +65,7 @@
             <!-- la bozza è dell'incarico: al cambio (giocatore, guida) si rimonta -->
             {#key partita.vista.incarico}<Trattativa vista={partita.vista} />{/key}
           {:else}
-            <!-- opposizione: l'evento in testa, il resto del cruscotto arriva con la sua fetta (11e) -->
+            <!-- partita finita: l'evento in testa, il resto del cruscotto arriva con la sua fetta (11e) -->
             {#if aperta === "cruscotto"}
               {#each partita.vista.eventi as evento, i (i)}<Evento vista={partita.vista} {evento} indice={i} puoRispondere={risponde(partita.vista)} />{/each}
             {/if}

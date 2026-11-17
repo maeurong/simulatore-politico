@@ -10,6 +10,9 @@ import trattativaJson from "../../../.scratch/v1-piano-11-ui/viste/02-trattativa
 import finitaJson from "../../../.scratch/v1-piano-11-ui/viste/07-partita-finita-eredita.json";
 import registroJson from "../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import contiJson from "../../../.scratch/v1-piano-11-ui/viste/21-conti.json";
+import opposizione28 from "../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import { siMancanti } from "./opposizione/opposizione";
+import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const vista = (x: unknown) => x as Vista;
@@ -139,10 +142,29 @@ describe("tracciatiDi", () => {
     expect(conIncarico.prima).toBe(50);
   });
 
-  it("all'opposizione: «per farlo cadere» rimanda all'11e", () => {
+  it("all'opposizione senza anteprima: «per farlo cadere» vuoto, senza rimando a una fetta", () => {
     const secondo = tracciatiDi(opposizione, [])[1];
     expect(secondo.valore).toBeNull();
-    expect(secondo.rimando).toBe("11e");
+    expect(secondo.rimando).toBeNull();
+  });
+
+  it("con l'anteprima della sfiducia: i sì che mancano, in caselle da 15 seggi, mai rosso", () => {
+    const st = (opposizione28 as any).sfiducia;
+    const v = st.prima as Vista, a = st.anteprime.governo.ok as AnteprimaSfiducia;
+    const secondo = tracciatiDi(v, [], a)[1];
+    expect(secondo.nome).toBe("tracciato.per_farlo_cadere");
+    expect(secondo.valore).toBe(siMancanti(v, a));
+    expect(secondo.testo).toBe(String(siMancanti(v, a)));
+    expect(secondo.scala).toEqual({ stacco: 105, passo: 15, rovesciata: true });
+    expect(secondo.rosso).toBe(false);
+    expect(secondo.rimando).toBeNull();
+    expect(caselle(0, secondo.scala!).piene).toBe(10);
+    expect(caselle(150, secondo.scala!).piene).toBe(0);
+  });
+  it("senza anteprima o con null: com'è oggi", () => {
+    const v = (opposizione28 as any).sfiducia.prima as Vista;
+    expect(tracciatiDi(v, [], null)[1]).toEqual(tracciatiDi(v, [])[1]);
+    expect(tracciatiDi(v, [])[1].rimando).toBeNull();
   });
 
   it("la variazione viene dal punto della serie del turno prima", () => {

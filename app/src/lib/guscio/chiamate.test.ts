@@ -77,6 +77,7 @@ const tabella: [string, () => Promise<unknown>, Record<string, unknown>][] = [
   ["anteprima", () => guscio.anteprima([]), { valori: [] }],
   ["anteprima_decreto", () => guscio.anteprimaDecreto({ id: "d" } as never), { decreto: { id: "d" } }],
   ["anteprima_accogli", () => guscio.anteprimaAccogli("tesoro"), { dicastero: "tesoro" }],
+  ["anteprima_sfiducia", () => guscio.anteprimaSfiducia("sanita"), { dicastero: "sanita" }],
   ["serie", () => guscio.serie(), {}],
   ["anteprima_fondazione", () => guscio.anteprimaFondazione(null), { scenario: null }],
   ["catalogo_scenario", () => guscio.catalogoScenario(), {}],
@@ -93,7 +94,7 @@ const tabella: [string, () => Promise<unknown>, Record<string, unknown>][] = [
 
 describe("guscio: un comando Rust per funzione", () => {
   it("la tabella copre tutti i comandi registrati in lib.rs", () => {
-    expect(nomiRust).toHaveLength(29);
+    expect(nomiRust).toHaveLength(30);
     expect(tabella.map(([nome]) => nome).sort()).toEqual([...nomiRust].sort());
   });
   it.each(tabella)("%s: nome e argomenti", async (nome, chiama, args) => {
