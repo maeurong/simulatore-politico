@@ -31,10 +31,10 @@ export type Tracciato = {
 };
 
 const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
-// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
-// il tracciato porta rimando "11g"
 // «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
 const MANCANTI: Scala = { stacco: 105, passo: 15, rovesciata: true };
+// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
+// il tracciato porta rimando "11g"
 const SPREAD: Scala = { stacco: 550, passo: 75, rovesciata: true };
 
 const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id === id)?.in_vigore;
@@ -106,7 +106,7 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
       ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, primaCoalizione)
       : sfiducia
         ? { nome: "tracciato.per_farlo_cadere", valore: siMancanti(v, sfiducia), testo: numero(siMancanti(v, sfiducia)), ramo: null, scala: MANCANTI, rosso: false, grigio: false, rimando: null, prima: null }
-        : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: "11e", prima: null };
+        : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
 
   const terzo: Tracciato = {
     nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
