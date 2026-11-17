@@ -1139,11 +1139,60 @@ fn conti(d: &DatiGioco) -> Esito<Uscita> {
     if let (Some(extra), Some(serde_json::Value::Object(m))) = (mes_extra, out.get_mut("mes")) {
         m.extend(extra);
     }
+    match ricondotto(d)? {
+        Some((s, come, prima, vista)) => {
+            note.push(format!("ricondotto: {come}, seme {s}, turno {}", vista.turno));
+            out.insert("ricondotto".into(), serde_json::json!({ "come": come, "prima": prima, "vista": vista }));
+        }
+        None => {
+            eprintln!("NON RAGGIUNTO: ricondotto");
+            note.push("ricondotto: NON RAGGIUNTO".into());
+        }
+    }
     Ok(Uscita {
         nome: "21-conti.json",
         json: serde_json::to_string(&out).map_err(|e| e.to_string())?,
         nota: note.join("; "),
     })
+}
+
+/// Il bilancio ricondotto al tetto del MES: nel primo turno di bilancio, fuori dalla crisi, con le
+/// Aste scoperte ancora aperte (la partita di `cerca_in_disavanzo`), presenta la bozza con la spesa
+/// di ogni dicastero alzata a passi (+1%, +3%, +5%) e lascia la risposta al default (il MES, prima
+/// dell'aula). Il tetto vale solo dal programma: un bilancio presentato dentro il MES e' rifiutato.
+fn ricondotto(d: &DatiGioco) -> Esito<Option<(u64, String, sim_core::Vista, sim_core::Vista)>> {
+    let Some((seme, p)) = cerca_in_disavanzo(d, |v| {
+        !v.crisi
+            && v.bilancio.presentabile
+            && v.debito.mes.is_none()
+            && v.eventi.iter().any(|e| e.nome == "Aste scoperte")
+    })?
+    else {
+        return Ok(None);
+    };
+    for passo in [0.01, 0.03, 0.05] {
+        let Some(mut b) = p.bozza_bilancio() else { continue };
+        for x in &mut b.dicasteri {
+            let piu = (x.spesa as f64 * passo).round() as i64;
+            x.spesa += piu;
+            x.acquisti += piu;
+        }
+        let mut q = p.clone();
+        if comanda(&mut q, Comando::PresentaBilancio { bilancio: b }).is_err() {
+            continue;
+        }
+        let prima = q.vista();
+        q.chiudi_turno();
+        let vista = q.vista();
+        if vista.esito.iter().any(|x| matches!(x.tipo, sim_core::esito::TipoVoce::BilancioRicondotto)) {
+            let come = format!(
+                "seme {seme}, come il 05, bozza con aliquote -5 punti fin qui, poi Aste scoperte aperte e la bozza con la spesa +{:.0}%, chiusa senza rispondere (default: MES)",
+                passo * 100.0
+            );
+            return Ok(Some((seme, come, prima, vista)));
+        }
+    }
+    Ok(None)
 }
 
 /// Gli stati del Bilancio (ticket 22): la bozza del 04 prima di presentarla, coi riepiloghi
