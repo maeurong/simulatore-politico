@@ -102,7 +102,8 @@ describe("fettaDi", () => {
     expect(fettaDi("cruscotto", "trattativa")).toBe("11b");
     expect(fettaDi("cruscotto", "governo")).toBeNull();
     expect(fettaDi("cruscotto", "crisi")).toBeNull();
-    expect(fettaDi("cruscotto", "opposizione")).toBe("11e");
+    expect(fettaDi("cruscotto", "opposizione")).toBeNull();
+    expect(fettaDi("cruscotto", "finita")).toBe("11e");
   });
   it("le altre sezioni hanno una fetta sola", () => {
     expect(fettaDi("registro", "governo")).toBe("11f");

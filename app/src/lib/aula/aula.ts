@@ -57,7 +57,7 @@ export const lineaScelta = (v: Vista, m: VoceMisura): boolean => !v.governa || (
 export const ultimiVoti = (v: Vista): EsitoVoto[] =>
   v.esiti.map((e, i) => ({ e, i })).sort((a, b) => b.e.data.anno - a.e.data.anno || b.e.data.trimestre - a.e.data.trimestre || a.i - b.i).map((x) => x.e);
 
-const periodoDi = (v: Vista, d: { anno: number; trimestre: number }): string => t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }).toLowerCase();
+export const periodoDi = (v: Vista, d: { anno: number; trimestre: number }): string => t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }).toLowerCase();
 
 /** «si vota a fine turno» o «si vota a fine luglio–settembre 2027»; con `breve` senza «si vota a». */
 export function quando(v: Vista, d: { anno: number; trimestre: number }, breve = false): string {

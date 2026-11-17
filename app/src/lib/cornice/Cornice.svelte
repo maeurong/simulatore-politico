@@ -4,7 +4,9 @@
   import { statoDi, type StatoGiocatore } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
   import { tracciatiDi } from "$lib/tracciati";
-  import { comeErrore } from "$lib/guscio/chiamate";
+  import { comeErrore, guscio } from "$lib/guscio/chiamate";
+  import { ultimoVince } from "$lib/editor/editor.svelte";
+  import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
   import type { Vista } from "$lib/tipi/Vista";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
@@ -25,7 +27,14 @@
     stato !== "governo" ? STATO[stato] : vista.turni_al_voto === 0 ? "stato.voto" : vista.data.trimestre === 4 ? "stato.bilancio" : "stato.governo",
   );
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
-  const tre = $derived(tracciatiDi(vista, partita.serie));
+  // all'opposizione «per farlo cadere» legge l'anteprima della sfiducia al governo, una richiesta per volta; se manca, il tracciato resta vuoto
+  let sfiducia = $state.raw<AnteprimaSfiducia | null>(null);
+  const chiediSfiducia = ultimoVince(() => guscio.anteprimaSfiducia(null), (r) => { sfiducia = "linee" in r ? r : null; });
+  $effect(() => {
+    if (statoDi(vista) === "opposizione") chiediSfiducia(undefined);
+    else sfiducia = null;
+  });
+  const tre = $derived(tracciatiDi(vista, partita.serie, sfiducia));
   // finché un evento grave è aperto tutto il turno è grave (storia 169): tacciono colori e testatina
   const grave = $derived(vista.eventi.some((e) => e.tono === "grave"));
   $effect(() => {

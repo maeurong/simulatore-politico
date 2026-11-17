@@ -29,13 +29,20 @@ function posto(v: Vista): Leva {
   return v.posto_riservato_di ? leva("posto", "altrui", v.posto_riservato_di) : leva("posto", "spenta");
 }
 
+/** Un referendum alla volta: quello in corso, se è di un altro, occupa la leva. */
+function abrogativo(v: Vista): Leva {
+  const r = v.referendum.find((x) => x.tipo === "abrogativo");
+  if (!r) return leva("abrogativo", "libera");
+  return r.promotore === v.giocatore ? leva("abrogativo", "presentata") : leva("abrogativo", "altrui", r.promotore);
+}
+
 export function leve(v: Vista): Leva[] {
   const conf = v.referendum.find((r) => r.tipo === "confermativo" && (r.richiesto || r.scelta));
   return [
     sfiducia(v, "sfiducia_governo"),
     sfiducia(v, "sfiducia_ministro"),
     posto(v),
-    leva("abrogativo", v.referendum.some((r) => r.tipo === "abrogativo" && r.promotore === v.giocatore) ? "presentata" : "libera"),
+    abrogativo(v),
     ...(conf ? [leva("confermativo", conf.scelta ? "libera" : "presentata")] : []),
   ];
 }

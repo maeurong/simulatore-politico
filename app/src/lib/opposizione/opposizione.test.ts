@@ -41,6 +41,13 @@ describe("leve", () => {
     expect(di(prima, "abrogativo").stato).toBe("libera");
     expect(di(vista(stati.referendum.dopo_comando), "abrogativo").stato).toBe("presentata");
   });
+  it("referendum abrogativo di un altro promotore: altrui, con chi (il core ne ammette uno alla volta)", () => {
+    const r = { tipo: "abrogativo", nome: "x", promotore: "sinistra", firme: false, invito_astensione: false, richiesto: false, scelta: false, voto: prima.voto };
+    expect(di({ ...prima, referendum: [r] } as unknown as Vista, "abrogativo")).toMatchObject({ stato: "altrui", chi: "sinistra" });
+  });
+  it("posto: senza posti riservati la leva è spenta e senza motivo", () => {
+    expect(di({ ...prima, posto_riservato: false, posto_riservato_di: null, calendario: [] } as unknown as Vista, "posto")).toMatchObject({ stato: "spenta", motivo: null });
+  });
   it("confermativo: solo se richiesto o richiedibile", () => {
     expect(leve(prima).some((l) => l.tipo === "confermativo")).toBe(false);
     const r = (x: object) => ({ ...prima, referendum: [{ tipo: "confermativo", nome: "x", promotore: null, firme: true, invito_astensione: false, richiesto: false, scelta: false, voto: prima.voto, ...x }] }) as unknown as Vista;
