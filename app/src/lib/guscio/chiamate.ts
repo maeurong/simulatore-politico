@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Anteprima } from "$lib/tipi/Anteprima";
+import type { AnteprimaRiposizionamento } from "$lib/tipi/AnteprimaRiposizionamento";
 import type { AnteprimaSfiducia } from "$lib/tipi/AnteprimaSfiducia";
 import type { Bilancio } from "$lib/tipi/Bilancio";
 import type { AnteprimaFondazione } from "$lib/tipi/AnteprimaFondazione";
@@ -20,6 +21,7 @@ import type { ValoreProposto } from "$lib/tipi/ValoreProposto";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Voce } from "$lib/tipi/Voce";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
+import type { VoceCostoPromessa } from "$lib/tipi/VoceCostoPromessa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VoceMenu } from "$lib/tipi/VoceMenu";
@@ -76,6 +78,10 @@ export const guscio = {
     chiama<number>("costo_dirotta", { dicastero, atto, regione }),
   menuElettorale: (valori: ValoreProposto[]) => chiama<VoceMenu[]>("menu_elettorale", { valori }),
   anteprimaProposta: (valori: ValoreProposto[]) => chiama<Anteprima>("anteprima_proposta", { valori }),
+  anteprimaRiposizionamento: (posizione: number) =>
+    chiama<AnteprimaRiposizionamento>("anteprima_riposizionamento", { posizione }),
+  anteprimaPromesse: (promesse: [string, string][]) =>
+    chiama<VoceCostoPromessa[]>("anteprima_promesse", { promesse }),
   serie: () => chiama<PuntoSerie[]>("serie"),
   anteprimaFondazione: (scenario: SuMisura | null) =>
     chiama<AnteprimaFondazione>("anteprima_fondazione", { scenario }),
