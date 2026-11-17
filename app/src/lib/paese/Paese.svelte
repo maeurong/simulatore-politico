@@ -44,11 +44,11 @@
   <div class="col">
     <div class="livelli" role="group" aria-label={t("paese.livelli")}>
       {#each LIVELLI as l (l)}
-        {@const manca = livelloManca(l)}
+        {@const manca = livelloManca(l, vista)}
         {#if manca}
           <span class="barrata">
-            <button type="button" class="chiusa" aria-disabled="true" title={t("paese.livello_manca", { fetta: manca })} aria-describedby="{pre}-{l}">{nomeLivello(l)}</button>
-            <span id="{pre}-{l}" class="perche nascosto">{t("paese.livello_manca", { fetta: manca })}</span>
+            <button type="button" class="chiusa" aria-disabled="true" title={t(manca)} aria-describedby="{pre}-{l}">{nomeLivello(l)}</button>
+            <span id="{pre}-{l}" class="perche nascosto">{t(manca)}</span>
           </span>
         {:else}
           <button type="button" class:qui={livello === l} aria-pressed={livello === l} onclick={() => (livello = l)}>{nomeLivello(l)}</button>

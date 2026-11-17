@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, lista, livelloManca, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, type EsitoElettori } from "./paese";
+import { LIVELLI, affluenzaPerRegione, consensoPerRegione, disposizioniDi, classi, lista, livelloManca, media, segniDi, segniPerRegione, sessioneElettori, sondaggioDi, sondaggioLetto, territorioDi, valoriDi, votoPerRegione, type EsitoElettori } from "./paese";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import { coalizioneDi } from "$lib/partiti";
 import { REGIONI } from "$lib/mappa/regioni";
@@ -21,14 +21,47 @@ const quotaGrezza = (v: Vista, j: number) => v.sondaggio.istituti.reduce((a, r) 
 const somma = (l: { quota: number }[]) => l.reduce((a, x) => a + x.quota, 0);
 
 describe("livelloManca", () => {
-  it("consenso e affluenza hanno i dati", () => {
-    expect(livelloManca("consenso")).toBeNull();
-    expect(livelloManca("affluenza")).toBeNull();
+  it("senza elezioni il voto manca, con le elezioni no, gli altri livelli hanno i dati", () => {
+    expect(livelloManca("voto", zero)).toBe("paese.voto_nessuno");
+    expect(livelloManca("voto", governo)).toBeNull();
+    for (const l of LIVELLI.filter((l) => l !== "voto")) expect(livelloManca(l, zero)).toBeNull();
   });
-  it("gli altri quattro arrivano con la 11g", () => {
-    const altri = LIVELLI.filter((l) => l !== "consenso" && l !== "affluenza");
-    expect(altri).toHaveLength(4);
-    for (const l of altri) expect(livelloManca(l)).toBe("11g");
+});
+
+describe("livelli del territorio", () => {
+  const lombardia = governo.regioni.find((r) => r.id === "lombardia")!;
+  it("valoriDi: venti regioni, i valori della Vista", () => {
+    const d = valoriDi(governo, "disoccupazione");
+    expect(Object.keys(d)).toHaveLength(20);
+    expect(d.lombardia).toBe(lombardia.disoccupazione);
+    expect(valoriDi(governo, "reddito").lombardia).toBe(lombardia.reddito);
+    expect(valoriDi(governo, "pericolosita", "sisma").lombardia).toBe(lombardia.pericolosita.sisma);
+  });
+  it("classi: pericolosità a passi di 0,2; altrimenti uguali fra min e max; valori uguali una classe", () => {
+    const p = classi([0.1, 0.5, 0.9], "pericolosita");
+    expect([p.classe(0.5), p.classe(1), p.classe(0)]).toEqual([2, 4, 0]);
+    const d = classi([0, 10], "reddito");
+    expect([d.classe(0), d.classe(5), d.classe(10)]).toEqual([0, 2, 4]);
+    const u = classi([5, 5, 5], "disoccupazione");
+    expect(u.soglie).toEqual([]);
+    expect(u.classe(5)).toBe(0);
+  });
+  it("votoPerRegione: l'ultima elezione, null senza", () => {
+    expect(votoPerRegione(zero)).toBeNull();
+    expect(votoPerRegione(governo)!.lombardia.primo).toBe(governo.elezioni.at(-1)!.regioni.find((r) => r.regione === "lombardia")!.primo);
+  });
+  it("territorioDi: terzi e regione ignota", () => {
+    const x = territorioDi(governo, "lombardia")!;
+    expect(x.macroarea).toBe(lombardia.macroarea);
+    expect(x.pericolosita.sisma).toBe(lombardia.pericolosita.sisma < 1 / 3 ? "bassa" : lombardia.pericolosita.sisma < 2 / 3 ? "media" : "alta");
+    expect(territorioDi(governo, "atlantide")).toBeNull();
+  });
+  it("le opere finite sono segni, col trimestre del turno", () => {
+    const v = governo;
+    const o = v.opere[0];
+    const s = segniDi(v, o.regione).find((x) => x.segno === "opera")!;
+    expect(s.testo).toContain(o.atto);
+    expect(s.testo).toMatch(/\d{4}$/);
   });
 });
 
@@ -135,11 +168,11 @@ describe("segniPerRegione", () => {
     const altri = (["situazione", "scandalo", "shock", "debito"] as const).map((famiglia) => ({ ...grave.eventi[0], famiglia, regione: "Toscana" }));
     const v = { ...grave, eventi: [...grave.eventi, ...altri] };
     const segni = segniPerRegione(v);
-    expect(segni.toscana).toBeUndefined();
+    expect(segni.toscana).not.toContain("emergenza");
     expect(segni.lazio).toEqual(["emergenza"]);
   });
   it("sulla 23 governo: un atto in Sicilia, un cantiere in Umbria, un'emergenza nelle Marche", () => {
-    expect(segniPerRegione(governo)).toEqual({ sicilia: ["atto"], umbria: ["cantiere"], marche: ["emergenza"] });
+    expect(segniPerRegione(governo)).toEqual({ sicilia: ["atto"], toscana: ["opera", "opera"], umbria: ["cantiere"], marche: ["emergenza"] });
   });
   it("ogni regione che il core nomina in un'emergenza trova il suo id, con l'apostrofo dritto o curvo", () => {
     for (const r of REGIONI) {

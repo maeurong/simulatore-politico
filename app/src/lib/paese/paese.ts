@@ -4,7 +4,7 @@ import { testoRifiuto, type ErroreGuscio } from "$lib/guscio/chiamate";
 import type { Segno } from "$lib/mappa/Mappa.svelte";
 import { REGIONI } from "$lib/mappa/regioni";
 import { quotaIncrocio, quotaVotanti } from "$lib/partiti";
-import { t } from "$lib/testi/t";
+import { t, type Chiave } from "$lib/testi/t";
 import type { Condizione } from "$lib/tipi/Condizione";
 import type { ElettoreCampione } from "$lib/tipi/ElettoreCampione";
 import type { Fascia } from "$lib/tipi/Fascia";
@@ -16,8 +16,39 @@ import type { VoceDisposizione } from "$lib/tipi/VoceDisposizione";
 export const LIVELLI = ["consenso", "disoccupazione", "reddito", "affluenza", "pericolosita", "voto"] as const;
 export type Livello = (typeof LIVELLI)[number];
 
-/** null = il livello ha i dati; altrimenti la fetta che li porta («11g»). In 11b: consenso e affluenza. */
-export const livelloManca = (l: Livello): string | null => (l === "consenso" || l === "affluenza" ? null : "11g");
+/** null = il livello ha i dati; altrimenti la chiave del perché manca (solo il voto, prima del primo voto). */
+export const livelloManca = (l: Livello, v: Vista): Chiave | null => (l === "voto" && !v.elezioni.length ? "paese.voto_nessuno" : null);
+
+export type Pericolo = "totale" | "sisma" | "idro" | "incendi";
+
+/** Il valore di un livello per id di regione. */
+export function valoriDi(v: Vista, l: "disoccupazione" | "reddito" | "pericolosita", tipo: Pericolo = "totale"): Record<string, number> {
+  return Object.fromEntries(v.regioni.map((r) => [r.id, l === "pericolosita" ? r.pericolosita[tipo] : r[l]]));
+}
+
+/** Cinque classi: la pericolosità a passi fissi di 0,2, gli altri livelli a passi uguali fra minimo e massimo (minimo = massimo: una classe sola). */
+export function classi(valori: number[], l: Livello): { soglie: number[]; classe: (x: number) => 0 | 1 | 2 | 3 | 4 } {
+  const min = Math.min(...valori);
+  const max = Math.max(...valori);
+  const soglie = l === "pericolosita" ? [0.2, 0.4, 0.6, 0.8] : max > min ? [1, 2, 3, 4].map((k) => min + ((max - min) * k) / 5) : [];
+  return { soglie, classe: (x) => soglie.filter((s) => x >= s).length as 0 | 1 | 2 | 3 | 4 };
+}
+
+/** Il voto dell'ultima elezione per id di regione; null senza elezioni. */
+export function votoPerRegione(v: Vista): Record<string, { primo: string; voti: number[]; senato: number[] }> | null {
+  const e = v.elezioni.at(-1);
+  return e ? Object.fromEntries(e.regioni.map((r) => [r.regione, { primo: r.primo, voti: r.voti, senato: r.seggi_senato }])) : null;
+}
+
+const terzo = (x: number): Fascia => (x < 1 / 3 ? "bassa" : x < 2 / 3 ? "media" : "alta");
+
+/** La scheda del territorio: macroarea, disoccupazione, reddito e la pericolosità per tipo in terzi. */
+export function territorioDi(v: Vista, regione: string) {
+  const r = v.regioni.find((x) => x.id === regione);
+  if (!r) return null;
+  const { sisma, idro, incendi, totale } = r.pericolosita;
+  return { macroarea: r.macroarea, disoccupazione: r.disoccupazione, reddito: r.reddito, pericolosita: { totale: terzo(totale), sisma: terzo(sisma), idro: terzo(idro), incendi: terzo(incendi) } as Record<Pericolo, Fascia> };
+}
 
 /** Il sondaggio che la pagina legge: il privato se comprato, altrimenti il pubblico. */
 export function sondaggioLetto(v: Vista): { sondaggio: Sondaggio; privato: boolean } {
@@ -44,7 +75,7 @@ export function affluenzaPerRegione(v: Vista): Record<string, number | null> {
 
 const senzaAccento = (n: string) => n.replace("’", "'");
 
-/** Cantieri, atti in agenda ed emergenze aperte, per regione, col testo per esteso. Le opere finite arrivano in 11g. */
+/** Cantieri, atti in agenda ed emergenze aperte e opere finite, per regione, col testo per esteso. */
 function vociSegni(v: Vista): { regione: string; segno: Segno; testo: string }[] {
   const fuori: { regione: string; segno: Segno; testo: string }[] = [];
   const aggiungi = (regione: string | null | undefined, segno: Segno, testo: string) => regione && fuori.push({ regione, segno, testo: `${t(`mappa.segno_${segno}`)}: ${testo}` });
@@ -55,7 +86,14 @@ function vociSegni(v: Vista): { regione: string; segno: Segno; testo: string }[]
   for (const e of v.eventi.filter((e) => e.famiglia === "emergenza")) {
     aggiungi(REGIONI.find((r) => e.regione && senzaAccento(r.nome) === senzaAccento(e.regione))?.id, "emergenza", `${e.nome} · ${e.causa}`);
   }
+  for (const o of v.opere) aggiungi(o.regione, "opera", `${o.atto} · ${trimestreDelTurno(v, o.turno)}`);
   return fuori;
+}
+
+/** Il trimestre di un turno passato: il turno corrente è `v.data`, un turno è un trimestre. */
+function trimestreDelTurno(v: Vista, turno: number): string {
+  const n = v.data.anno * 4 + v.data.trimestre - 1 - (v.turno - turno);
+  return t(`cornice.trimestre_${(n % 4) + 1}` as Chiave, { anno: Math.floor(n / 4) }).toLowerCase();
 }
 
 /** Cantieri, atti in agenda ed emergenze aperte, per id di regione. */

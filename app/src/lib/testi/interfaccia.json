@@ -621,6 +621,7 @@
   "paese.livello_pericolosita": "Pericolosità",
   "paese.livello_voto": "Risultato del voto",
   "paese.livello_manca": "arriva con la fetta {fetta}",
+  "paese.voto_nessuno": "Nessun voto ancora: il livello arriva col primo voto",
   "paese.di": "di",
   "paese.coalizione": "la tua coalizione",
   "paese.nota_consenso": "stima centrale del sondaggio",
