@@ -62,7 +62,7 @@
     {#if filtra}
       <div class="filtro">
         <Pulsante forma="piccolo" scelto={!solo} onclick={() => (solo = false)}>{t("schema.tutti_i_fili", { n: tutto.fili.length })}</Pulsante>
-        <Pulsante forma="piccolo" scelto={solo} onclick={() => (solo = true)}>{t("schema.solo_prima", { n: T.fili.size })}</Pulsante>
+        <Pulsante forma="piccolo" scelto={solo} onclick={() => (solo = true)}>{t("schema.solo_prima", { n: T.fili.size + T.nodi.size })}</Pulsante>
       </div>
     {/if}
   </div>

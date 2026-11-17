@@ -4,7 +4,7 @@
   // I tondi (piano 11f, lettura 8) stanno in cima, a metà del filo e sull'angolo della riga: si leggono, non si cliccano.
   import { t, type Chiave } from "$lib/testi/t";
   import type { Filo, Nodo } from "./schema";
-  import { nomeFilo, nomeRiga, stima, tavola, tondiSuiFili, type Misura, type Scelta } from "./tavola";
+  import { nomeFilo, nomeRiga, PASSO_TONDO, R_TONDO, stima, tavola, tondiSuiFili, type Misura, type Scelta } from "./tavola";
 
   /** `tutti`: i fili del trimestre, filtro o no, per i conteggi. */
   let { nodi, fili, tutti, tondi, scelta, pre, onscegli }: {
@@ -79,13 +79,13 @@
         {/each}
       {/each}
       <g class="tondi" aria-hidden="true">
-        {#each tondiSuiFili(T.tratti, tondi.fili) as k (k.n)}
-          <g class={["tnd", { m: k.m, on: fuoco?.has(k.filo) }]}><circle cx={k.x} cy={k.y} r="9" /><text x={k.x} y={k.y + 4}>{k.n}</text></g>
+        {#each tondiSuiFili(T.tratti, tondi.fili, T.gap) as k (k.n)}
+          <g class={["tnd", { m: k.m, on: fuoco?.has(k.filo) }]}><circle cx={k.x} cy={k.y} r={R_TONDO} /><text x={k.x} y={k.y + 4}>{k.n}</text></g>
         {/each}
         {#each T.righe as r (r.nodo.id)}
           {#each tondi.nodi.get(r.nodo.id) ?? [] as k, i (k)}
-            {@const cx = r.x + r.w - 2 - i * 19}
-            <g class={["tnd", { on: fuoco?.has(r.nodo.id) }]}><circle {cx} cy={r.y - r.h / 2} r="9" /><text x={cx} y={r.y - r.h / 2 + 4}>{k}</text></g>
+            {@const cx = r.x + r.w - 2 - i * PASSO_TONDO}
+            <g class={["tnd", { on: fuoco?.has(r.nodo.id) }]}><circle {cx} cy={r.y - r.h / 2} r={R_TONDO} /><text x={cx} y={r.y - r.h / 2 + 4}>{k}</text></g>
           {/each}
         {/each}
       </g>

@@ -87,6 +87,13 @@ describe("Schema, render", () => {
       expect(S.fili.some((f) => f.da === `d:${d}` || f.a === `d:${d}`)).toBe(true);
       expect(body).not.toContain(t("schema.nessun_filo"));
     });
+    it("il filtro conta anche le righe col tondo: un tondo solo su una riga fa «· 1»", () => {
+      const d = v.ministeri[0].dicastero;
+      const w = { ...v, esito: v.esito.map((e) => (e.tipo === "cantiere_fermo" ? { ...e, dicastero: d } : { ...e, in_evidenza: false })) } as Vista;
+      const T = tondiDi(w, schema(w));
+      expect([T.fili.size, T.nodi.size]).toEqual([0, 1]);
+      expect(render(Schema, { props: { vista: w } }).body).toContain(t("schema.solo_prima", { n: 1 }));
+    });
     it("anche la riga dice i suoi numeri in prima pagina", () => {
       const d = v.ministeri[0].dicastero;
       const w = { ...v, esito: v.esito.map((e) => (e.tipo === "cantiere_fermo" ? { ...e, dicastero: d } : e)) } as Vista;
