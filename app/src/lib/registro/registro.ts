@@ -15,6 +15,9 @@ export type Filtro = { criticita: "tutte" | "notevoli" | "critiche"; sezione: Se
 
 type Campi = Pick<VoceEsito, "partito" | "dicastero" | "regione" | "misura" | "disposizioni">;
 
+/** Il `?turno=N` del link della banda di «avanti»; qualunque altra cosa non sceglie niente. */
+export const turnoDaUrl = (s: string | null): number | undefined => (s !== null && /^\d+$/.test(s) ? Number(s) : undefined);
+
 export const turnoDa = (turno: number, voci: VoceEsito[]): Turno => ({
   turno,
   voci,
@@ -50,6 +53,23 @@ const soggettiDi = (o: Campi): Soggetto[] => [
   ...o.disposizioni.map((id) => ({ tipo: "disposizione", id }) as const),
   ...(o.misura !== null && o.disposizioni.length === 0 ? [{ tipo: "bilancio", id: String(o.misura) } as const] : []),
 ];
+
+/** L'origine di un partito nato in partita dal registro letto (piano 11f, lettura 12): la voce che lo nomina e l'ultimo cambio di leader. */
+export function origineDi(turni: (Turno | Guasto)[], id: string): { nato: { turno: number; fatto: string } | null; leader: number | null } {
+  let nato: { turno: number; fatto: string } | null = null;
+  let leader: number | null = null;
+  for (const x of turni) {
+    if (!("voci" in x)) continue;
+    for (const v of x.voci) {
+      const proprio = v.partito === id;
+      const dettaglio = v.dettagli.find((d) => d.partito === id);
+      if (!proprio && !dettaglio) continue;
+      if (!nato && (v.tipo === "scissione" || v.tipo === "partito_di_protesta")) nato = { turno: x.turno, fatto: proprio ? v.fatto : dettaglio!.testo };
+      if (v.tipo === "cambio_di_leader") leader = x.turno;
+    }
+  }
+  return { nato, leader };
+}
 
 const ORDINE = ["partito", "dicastero", "regione", "disposizione", "bilancio"] as const;
 

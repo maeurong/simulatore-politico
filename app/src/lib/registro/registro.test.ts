@@ -3,7 +3,7 @@ import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import { t } from "$lib/testi/t";
-import { cancella, collegate, corregge, passa, periodoDel, riveduta, soggetti, testoConferma, tocca, turnoDa, type Filtro } from "./registro";
+import { cancella, collegate, corregge, passa, periodoDel, riveduta, soggetti, testoConferma, tocca, origineDi, turnoDa, turnoDaUrl, type Filtro } from "./registro";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const catena = registroJson as any[];
@@ -171,5 +171,38 @@ describe("testoConferma", () => {
     expect(testoConferma(7, v9, ts, 0)).not.toContain(nonLetti(1));
     // non ancora letti contano come non letti
     expect(testoConferma(5, v9, turni.slice(0, 7), 0)).toContain(nonLetti(2));
+  });
+});
+
+describe("turnoDaUrl", () => {
+  it("un numero intero apre quel turno", () => expect(turnoDaUrl("16")).toBe(16));
+  it("assente, vuoto o non intero non apre niente", () => {
+    for (const x of [null, "", "x", "-1", "1.5", "16a"]) expect(turnoDaUrl(x)).toBeUndefined();
+  });
+});
+
+describe("origineDi", () => {
+  const voce = (o: Partial<VoceEsito>): VoceEsito => ({
+    tipo: "spread", criticita: "ordinaria", precedenza: 0, in_evidenza: false, tono: "ordinario", fatto: "", causa: "",
+    partito: null, dicastero: null, regione: null, misura: null, disposizioni: [], famiglia: null, dettagli: [], ...o,
+  });
+  const registro = [
+    turnoDa(5, [voce({ tipo: "scissione", partito: "nuovo_1", fatto: "Dal Centro esce una lista." })]),
+    turnoDa(6, [voce({ tipo: "spread" })]),
+    { turno: 7, guasto: "disco" },
+    turnoDa(9, [voce({ tipo: "cambio_di_leader", partito: "nuovo_1" })]),
+    turnoDa(11, [voce({ tipo: "cambio_di_leader", partito: "nuovo_1" }), voce({ tipo: "cambio_di_leader", partito: "centro" })]),
+  ];
+  it("il turno e il fatto della scissione che lo nomina, il leader nuovo dall'ultimo cambio", () => {
+    expect(origineDi(registro, "nuovo_1")).toEqual({ nato: { turno: 5, fatto: "Dal Centro esce una lista." }, leader: 11 });
+  });
+  it("il partito di protesta nomina il suo partito; senza voce non c'è origine, senza cambio non c'è leader", () => {
+    const r = [turnoDa(4, [voce({ tipo: "partito_di_protesta", partito: "p", fatto: "Nasce la protesta." })])];
+    expect(origineDi(r, "p")).toEqual({ nato: { turno: 4, fatto: "Nasce la protesta." }, leader: null });
+    expect(origineDi(r, "altro")).toEqual({ nato: null, leader: null });
+  });
+  it("cerca anche nei dettagli di una voce fusa, col testo del dettaglio", () => {
+    const d = { testo: "Nasce la lista X.", partito: "x", dicastero: null, regione: null, misura: null, disposizioni: [] };
+    expect(origineDi([turnoDa(2, [voce({ tipo: "scissione", partito: "y", fatto: "Due liste.", dettagli: [d] })])], "x").nato).toEqual({ turno: 2, fatto: "Nasce la lista X." });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { dallaChiusura, daUnaChiave, rispondi, trovaFile, vistaDi } from "./finto";
+import { corsaDi, dallaChiusura, daUnaChiave, rispondi, trovaFile, vistaDi } from "./finto";
 import governo from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
@@ -496,5 +496,25 @@ describe("daUnaChiave", () => {
     expect(vistaDi(partenza)).toBe(sfiducia.dopo_comando);
     expect(rispondi("chiudi_turno", {}, { ...c, campione: partenza } as any)).toBe(sfiducia.vista);
     expect(sfiducia.vista.esito.some((x: any) => x.tipo === "sfiducia_respinta" && x.in_evidenza)).toBe(true);
+  });
+});
+
+describe("corsaDi", () => {
+  const p: any = primaPagina;
+  it("la catena del 16: parte dal turno da, due copie di prima senza fermate, poi la Vista del campione", () => {
+    const { inizio, chiusure } = corsaDi(p, "fermata_19");
+    expect(inizio.turno).toBe(16);
+    expect(chiusure.map((x: any) => x.turno)).toEqual([17, 18, 19]);
+    expect(chiusure.slice(0, 2).every((x: any) => x.fermate.length === 0 && x.giocatore === p.fermata_19.prima.giocatore)).toBe(true);
+    expect(chiusure[2]).toBe(p.fermata_19.vista);
+  });
+  it("chiudi_turno serve le chiusure una dopo l'altra, poi non c'è altro", () => {
+    const { chiusure } = corsaDi(p, "fermata_19");
+    const cc = { ...c, corsa: [...chiusure] };
+    expect([1, 2, 3].map(() => (rispondi("chiudi_turno", {}, cc) as any).turno)).toEqual([17, 18, 19]);
+    expect(() => rispondi("chiudi_turno", {}, { ...cc, campione: undefined })).toThrow();
+  });
+  it("una chiave che la corsa non ha è un errore", () => {
+    expect(() => corsaDi(p, "fermata_999")).toThrow();
   });
 });

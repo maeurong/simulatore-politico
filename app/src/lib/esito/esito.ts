@@ -3,6 +3,8 @@ import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { TipoVoce } from "$lib/tipi/TipoVoce";
 import type { Sezione } from "$lib/ossatura";
+import type { Fermata } from "$lib/tipi/Fermata";
+import { t } from "$lib/testi/t";
 
 const RANGO = { critica: 2, notevole: 1, ordinaria: 0 } as const;
 
@@ -87,4 +89,13 @@ export const TRACCIATO_DI: Record<TracciatoMosso, TipoVoce[]> = {
 export function scattaDopo(es: VoceEsito[], tr: TracciatoMosso): number | null {
   const i = es.findIndex((v) => TRACCIATO_DI[tr].includes(v.tipo));
   return i < 0 ? null : i;
+}
+
+/** Una frase per fermata (piano 11f, banda di «avanti»); il nome della misura viene dal calendario, quello del partito dai partiti. */
+export function fraseFermata(f: Fermata, v: Vista): string {
+  switch (f.tipo) {
+    case "voto": return t("prima.ferma_voto", { misura: v.calendario.find((m) => m.id === f.misura)?.nome ?? t("prima.ferma_misura_senza_nome") });
+    case "ultimatum": return t("prima.ferma_ultimatum", { partito: v.partiti.find((p) => p.id === f.partito)?.nome ?? f.partito });
+    default: return t(`prima.ferma_${f.tipo}`);
+  }
 }

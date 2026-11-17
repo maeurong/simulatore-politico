@@ -100,7 +100,10 @@ class Partita {
       if (prima && k > 0) rivelazione.inizia(prima, serie, ordineRivelazione(nuova.esito).length);
       else rivelazione.chiudi();
     });
-    if (!vista) return;
+    if (vista) await this.#apriPrimaPagina();
+  };
+
+  async #apriPrimaPagina() {
     try {
       await goto("/partita/prima-pagina", { keepFocus: true });
     } catch (e) {
@@ -109,6 +112,44 @@ class Partita {
     }
     // goto annullato: PrimaPagina non si monta e nessuno chiuderebbe la rivelazione
     if (typeof location !== "undefined" && !location.pathname.endsWith("/prima-pagina")) rivelazione.chiudi();
+  }
+
+  /**
+   * Chiude il turno finché la Vista nuova non ha una fermata; la serie si chiede una volta, alla fine. Un guasto dopo la prima chiusura
+   * ferma la corsa: vale la Vista dell'ultima chiusura riuscita, e il guasto lo dice.
+   */
+  avanti = async () => {
+    const [prima, serie] = [this.vista, this.serie];
+    if (!prima) return;
+    const k = fattori(impostazioni, sistema.riduce).k;
+    let precedente = prima;
+    let chiusure = 0;
+    let guastoDellaCorsa: string | null = null;
+    const vista = await this.#esegui(
+      async () => {
+        let v = await guscio.chiudiTurno();
+        chiusure = 1;
+        while (!v.fermate.length && !v.finita) {
+          try {
+            const n = await guscio.chiudiTurno();
+            [precedente, v] = [v, n];
+            chiusure++;
+          } catch (e) {
+            guastoDellaCorsa = comeErrore(e).testo;
+            break;
+          }
+        }
+        return v;
+      },
+      (nuova) => {
+        if (k > 0) rivelazione.inizia(precedente, serie, ordineRivelazione(nuova.esito).length);
+        else rivelazione.chiudi();
+        rivelazione.corsa = { chiusure, da: prima.turno, fermate: nuova.fermate };
+      },
+    );
+    if (!vista) return;
+    if (guastoDellaCorsa) this.guasto = `${guastoDellaCorsa} ${t("cornice.corsa_interrotta", { n: chiusure })}`;
+    await this.#apriPrimaPagina();
   };
 
   /** L'indice della partita in corso: per id se è stata ripresa, altrimenti la più recente col nome del giocatore. */

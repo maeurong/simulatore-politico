@@ -1,6 +1,7 @@
 <script lang="ts">
   // Il Registro, forma D · Indice col filo (25-registro.prototype.html): filtri sopra, colonna dei turni, voci del turno scelto, dettaglio a lato.
   import { untrack } from "svelte";
+  import { page } from "$app/state";
   import { periodo } from "$lib/edicola/edicola";
   import { SEZIONE_DI } from "$lib/esito/esito";
   import { etichetta, SEZIONI, type Sezione } from "$lib/ossatura";
@@ -11,7 +12,7 @@
   import DettaglioVoce from "./DettaglioVoce.svelte";
   import Riavvolgi from "./Riavvolgi.svelte";
   import Turni, { type Riga } from "./Turni.svelte";
-  import { passa, periodoDel, soggetti, tocca, type Filtro, type Soggetto, type Turno } from "./registro";
+  import { passa, periodoDel, soggetti, tocca, turnoDaUrl, type Filtro, type Soggetto, type Turno } from "./registro";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -37,7 +38,8 @@
       .reverse(),
   );
 
-  let scelto = $state<number | undefined>(undefined);
+  // solo all'apertura: dopo, il turno lo sceglie il giocatore (il link della banda di «avanti» porta `?turno=N`)
+  let scelto = $state<number | undefined>(untrack(() => turnoDaUrl(page.url.searchParams.get("turno"))));
   let scelta = $state<{ turno: number; i: number } | null>(null);
   const corrente = $derived(righe.find((r) => r.turno.turno === scelto)?.turno ?? righe[0]?.turno);
 

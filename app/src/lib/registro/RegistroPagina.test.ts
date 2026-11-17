@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
+
+const { pagina } = vi.hoisted(() => ({ pagina: { url: new URL("http://localhost/partita/registro") } }));
+vi.mock("$app/state", () => ({ page: pagina }));
 import registroJson from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import { t } from "$lib/testi/t";
 import type { Vista } from "$lib/tipi/Vista";
@@ -14,7 +17,10 @@ const vista = catena[8].dopo as Vista;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const html = () => render(Registro, { props: { vista } }).body;
 
-beforeEach(() => registroCache.svuota());
+beforeEach(() => {
+  registroCache.svuota();
+  pagina.url = new URL("http://localhost/partita/registro");
+});
 
 describe("Registro", () => {
   it("con tutti i turni letti: il più recente in pagina, «Torna al turno N», il turno zero in colonna, nessun caricamento", () => {
@@ -37,5 +43,13 @@ describe("Registro", () => {
   it("a metà lettura la colonna dice che legge", () => {
     registroCache.turni = catena.slice(0, 4).map((c, i) => turnoDa(i, c.dopo.esito as VoceEsito[]));
     expect(html()).toContain(t("registro.carico"));
+  });
+
+  it("?turno=N apre quel turno: la sua pagina è in vista, non la più recente", () => {
+    registroCache.turni = catena.map((c, i) => turnoDa(i, c.dopo.esito as VoceEsito[]));
+    pagina.url = new URL("http://localhost/partita/registro?turno=3");
+    const h = html();
+    expect(h).toContain(t("registro.torna", { n: 3 }));
+    expect(h).toContain(esc(catena[3].dopo.esito[0].fatto));
   });
 });

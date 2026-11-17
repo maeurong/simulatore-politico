@@ -9,6 +9,7 @@
   import { t, type Chiave } from "$lib/testi/t";
   import type { Vista } from "$lib/tipi/Vista";
   import { grave, ordineRivelazione, pagina } from "./esito";
+  import Banda from "./Banda.svelte";
   import { rivelazione } from "./rivelazione.svelte";
   import Testa from "./Testa.svelte";
   import Voce from "./Voce.svelte";
@@ -65,6 +66,7 @@
     <!-- il clic che salta ha la sua via da tastiera: il pulsante «Salta la rivelazione» -->
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="giornale" onclick={() => rivelazione.ferma || rivelazione.salta()}>
+      {#if rivelazione.corsa}<Banda {vista} corsa={rivelazione.corsa} />{/if}
       <header class="testata">
         <div class="orecchio">
           {t("prima.esito")}<br /><b>{periodo(chiuso as Vista["data"])}</b><br />{t("prima.conteggio", { n: ordine.length, fuori })}
