@@ -79,6 +79,7 @@ it("margineIstituti: intervallo se diversi, un valore se uguali", () => {
   expect(margineIstituti(con(0.03, 0.05))).toBe("margine degli istituti da ±3,0 a ±5,0 punti");
   expect(margineIstituti(con(0.044, 0.044))).toBe("± 4,4 punti");
   expect(margineIstituti(con(0.044))).toBe("± 4,4 punti");
+  expect(margineIstituti(con())).toBe("");
 });
 
 describe("consensoPerRegione", () => {

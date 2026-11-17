@@ -79,9 +79,10 @@ export const margineTesto = (m: number): string => t("paese.margine_punti", { m:
 
 /** I margini dichiarati degli istituti: «±m punti» se uno solo o tutti uguali, altrimenti l'intervallo (la media non è un numero del core). */
 export function margineIstituti(s: Sondaggio): string {
+  if (!s.istituti.length) return "";
   const m = s.istituti.map((r) => numero(r.margine * 100, 1));
   const [min, max] = [Math.min(...s.istituti.map((r) => r.margine)), Math.max(...s.istituti.map((r) => r.margine))];
-  return m.length && new Set(m).size > 1 ? t("paese.margine_istituti", { min: numero(min * 100, 1), max: numero(max * 100, 1) }) : margineTesto(min);
+  return new Set(m).size > 1 ? t("paese.margine_istituti", { min: numero(min * 100, 1), max: numero(max * 100, 1) }) : margineTesto(min);
 }
 
 const senzaAccento = (n: string) => n.replace("’", "'");

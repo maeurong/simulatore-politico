@@ -52,7 +52,7 @@
   const primoNome = (id: string) => (voto?.[id] ? nomeDi(vista, voto[id].primo) : null);
   const primi = $derived(voto ? [...new Set(Object.values(voto).map((r) => r.primo))] : []);
   const RETINO = "var(--retino), var(--carta)";
-  const campo = (id: string) => (voto ? (voto[id] ? (tinta?.[id] ?? RETINO) : "var(--carta)") : classe[id] === null ? "var(--carta)" : `var(--classe-${classe[id]})`);
+  const campo = (id: string) => (voto ? (tinta?.[id] ?? RETINO) : classe[id] === null ? "var(--carta)" : `var(--classe-${classe[id]})`);
   const etichetta = (id: string) => { const n = primoNome(id); return n ? t("paese.voto_primo", { nome: n }) : t("mappa.senza_dato"); };
   // ogni tipo una volta col numero: otto opere nella stessa regione non entrano nella colonna
   const conta = (id: string) => [...(segni[id] ?? []).reduce((m, s) => m.set(s, (m.get(s) ?? 0) + 1), new Map<Segno, number>())];
@@ -101,11 +101,11 @@
       </span>
     </div>
 
-    <div class="carta">
+    <div class="carta" class:voto={!!voto}>
       <div class="mappa">
         <Mappa {valori} {segni} {scelta} {classe} {tinta} etichetta={voto ? etichetta : undefined} ordine={righe.map((r) => r.id)} nome={t("mappa.regioni")} {formato} onscelta={(id) => (scelta = id)} />
       </div>
-      <div class="lista" role="group" aria-label={t("mappa.regioni")}>
+      <div class="lista" class:voto={!!voto} role="group" aria-label={t("mappa.regioni")}>
         <div class="h">
           <button type="button" class:on={ordine === "nome"} aria-pressed={ordine === "nome"} onclick={() => (ordine = "nome")}>{t("paese.col_regione")}</button>
           {#if voto}<span class="dx">{nomeLivello(livello)}</span>
@@ -115,7 +115,7 @@
         {#each righe as r (r.id)}
           <button type="button" id="{pre}-r-{r.id}" class="r" class:sel={scelta === r.id} aria-pressed={scelta === r.id} onclick={() => (scelta = r.id)}>
             <span class="n"><i style:background={campo(r.id)}></i>{r.nome}</span>
-            <span class="x">{voto ? (primoNome(r.id)?.split(" ")[0] ?? "—") : r.valore === null ? "—" : formato(r.valore)}</span>
+            <span class="x" class:nome={voto} title={voto ? (primoNome(r.id) ?? undefined) : undefined}>{voto ? (primoNome(r.id) ?? "—") : r.valore === null ? "—" : formato(r.valore)}</span>
             <span class="s">
               {#each conta(r.id) as [s, n] (s)}
                 <svg width="12" height="12" viewBox="-7 -7 14 14" aria-label={t(`mappa.segno_${s}`)} role="img"><FormaSegno {s} /></svg>{#if n > 1}<small>×{n}</small>{/if}
@@ -179,6 +179,9 @@
   .r .n { display: flex; gap: 6px; align-items: center; min-width: 0; overflow-wrap: normal }
   .r .n i { width: 10px; height: 10px; border: 1px solid var(--ink); flex: none }
   .x { text-align: right; font-weight: 700; white-space: nowrap }
+  .x.nome { white-space: normal; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical }
+  .carta.voto { grid-template-columns: minmax(0, 1fr) minmax(250px, 340px) }
+  .lista.voto .h, .lista.voto .r { grid-template-columns: minmax(0, 1fr) 104px 70px }
   .s { display: flex; gap: 2px; justify-content: flex-end; align-items: center; white-space: nowrap }
   .s small { font-size: var(--c-min); margin-right: 2px }
 

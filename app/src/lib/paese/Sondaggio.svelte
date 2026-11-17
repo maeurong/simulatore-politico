@@ -8,7 +8,7 @@
   import BarraSeggi from "$lib/componenti/BarraSeggi.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-    import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
+  import { barreSeggi, maggioranza } from "$lib/componenti/seggi";
   import BarreQuote from "./BarreQuote.svelte";
   import { margineIstituti, margineTesto, media, quoteDi, sondaggioLetto } from "./paese";
 
@@ -57,7 +57,7 @@
   <h4 class="tit">{t("paese.sondaggio")}</h4>
   <div class="barre media" class:con-privato={privata}>
     <span class="n"></span><span></span>
-    <span class="h">{t("paese.col_media")}<small>{margineIstituti(vista.sondaggio)}</small></span>{#if privata}<span class="h priv">{t("paese.col_privato")}<small>{margineIstituti(letto.sondaggio)}</small></span>{/if}
+    <span class="h">{t("paese.col_media")}</span>{#if privata}<span class="h priv">{t("paese.col_privato")}</span>{/if}
     {#each pubblica.partiti as p (p.id)}
       <span class="n" class:tu={p.id === vista.giocatore}>{p.nome}</span>
       {@render barra(p.id, p.quota, massimo)}
@@ -67,6 +67,9 @@
     <span class="n muto">{t("paese.astensione")}</span><span></span>
     <span class="q muto">{pc(pubblica.astensione)}</span>{#if privata}<span class="q priv muto">{pc(privata.astensione)}</span>{/if}
   </div>
+  {#if margineIstituti(vista.sondaggio)}
+    <p class="min muto">{t("paese.col_media")}: {margineIstituti(vista.sondaggio)}{privata ? ` · ${t("paese.col_privato")}: ${margineIstituti(letto.sondaggio)}` : ""}</p>
+  {/if}
   <p class="min muto">{t("paese.nota_quote")}</p>
 
   <div class="priv-box">
@@ -128,7 +131,6 @@
   .b i { position: absolute; inset: 0 auto 0 0; border: 1px solid var(--ink) }
   .q { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums }
   .h { font-size: var(--c-min); font-weight: 700; color: var(--grigio); text-align: right }
-  .h small { display: block; font-weight: 400 }
   .tu { font-weight: 700 }
   .priv { font-weight: 700; color: var(--biro); box-shadow: inset 1.5px 0 0 var(--biro); padding-left: 6px }
   .priv-box { border: var(--forte); padding: 8px 10px; display: grid; gap: 6px; justify-items: start }
