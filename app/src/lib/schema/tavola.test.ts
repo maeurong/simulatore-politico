@@ -85,6 +85,16 @@ describe("tavola, geometria", () => {
     expect(tavola(nodi, [filo("dim", "pdc", "d:x")], W, 600).sbarre.map((s) => s.punta)).toEqual([false]);
   });
 
+  it("il tondo del filo sta a metà del tratto; la riga porta i tratti che muove", () => {
+    const T = tavola(nodi, [filo("prop", "d:y", "pdc"), filo("a", "p:a", "camera"), filo("b", "p:a", "mer")], W, 600);
+    const y = (id: string) => T.righe.find((r) => r.nodo.id === id)!.y;
+    const tr = (id: string) => T.tratti.find((x) => x.filo.id === id)!;
+    expect(tr("prop")).toMatchObject({ x: expect.closeTo(T.colonne[2] - gap * 0.2, 0), y: expect.closeTo(y("d:y"), 0) });
+    expect(tr("a")).toMatchObject({ x: expect.closeTo((cw + T.colonne[1]) / 2, 0), y: expect.closeTo((y("p:a") + y("camera")) / 2, 0) });
+    expect(T.righe.find((r) => r.nodo.id === "p:a")!.uscenti.map((x) => x.filo.id)).toEqual(["a", "b"]);
+    expect(T.righe.find((r) => r.nodo.id === "camera")!.uscenti).toEqual([]);
+  });
+
   it("gli altri fili da bordo a bordo: verso destra dal lato destro di chi muove, nella stessa colonna un'ansa a sinistra", () => {
     const T = tavola(nodi, [filo("a", "p:a", "camera"), filo("b", "mer", "d:x"), filo("c", "camera", "camera")], W, 600);
     const tratto = (id: string) => capi(T.tratti.find((x) => x.filo.id === id)!.d);

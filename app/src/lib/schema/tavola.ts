@@ -6,8 +6,11 @@ import type { Filo, Nodo } from "./schema";
 export type Riga = {
   nodo: Nodo; nome: string; sotto: string; x: number; y: number; w: number; h: number; scura: boolean;
   etichetta: { testo: string; contrario: boolean } | null;
+  /** I tratti dei fili che la riga muove. */
+  uscenti: Tratto[];
 };
-export type Tratto = { filo: Filo; d: string };
+/** `x`, `y`: la metà del tratto, dove sta il tondo. */
+export type Tratto = { filo: Filo; d: string; x: number; y: number };
 export type Sbarra = { d: string; punta: boolean };
 /** Il filo o la riga aperti nel dettaglio a lato. */
 export type Scelta = { tipo: "filo" | "riga"; id: string } | null;
@@ -50,27 +53,31 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
   const sbX = [X(2) - gap * 0.4, X(2) + cw + gap * 0.4];
   const sbarra = [0, 1].map(() => ({ usata: false, punta: false, su: p?.y ?? 0, giu: p?.y ?? 0 }));
   const tratti: Tratto[] = [];
-  const uscenti = new Map<string, Filo[]>();
+  const uscenti = new Map<string, Tratto[]>();
   for (const f of fili) {
     const A = pos.get(f.da), B = pos.get(f.a);
     if (!A || !B) continue;
-    uscenti.set(f.da, [...(uscenti.get(f.da) ?? []), f]);
-    let d: string;
+    let d: string, mx: number, my: number;
     if (p && (f.a === PDC || (f.da === PDC && B.c === 2))) {
       // pettine: dritto sulla sbarra del suo lato, all'altezza della riga dell'altro capo
       const altro = f.a === PDC ? A : B, lato = altro.c <= 2 ? 0 : 1, sx = sbX[lato], Y = altro.y, s = sbarra[lato];
       s.usata = true; s.punta ||= f.a === PDC; s.su = Math.min(s.su, Y); s.giu = Math.max(s.giu, Y);
       const xo = altro.c === 2 ? X(2) : altro.c < 2 ? X(altro.c) + cw : X(altro.c);
       d = f.a === PDC ? `M${r1(xo)},${r1(Y)} L${r1(sx)},${r1(Y)}` : `M${r1(sx)},${r1(Y)} L${r1(xo)},${r1(Y)}`;
+      mx = (xo + sx) / 2; my = Y;
     } else if (A.c === B.c) {
       // stessa colonna (Camera → Senato): un'ansa nel canale a sinistra
       const x = A.x - 2, ansa = 14 + Math.abs(B.y - A.y) * 0.08;
       d = `M${r1(x)},${r1(A.y)} C${r1(x - ansa)},${r1(A.y)} ${r1(x - ansa)},${r1(B.y)} ${r1(x)},${r1(B.y)}`;
+      mx = x - ansa * 0.75; my = (A.y + B.y) / 2;
     } else {
       const xa = A.c < B.c ? A.x + cw : A.x, xb = A.c < B.c ? B.x : B.x + cw, k = (xb - xa) * 0.5;
       d = `M${r1(xa)},${r1(A.y)} C${r1(xa + k)},${r1(A.y)} ${r1(xb - k)},${r1(B.y)} ${r1(xb)},${r1(B.y)}`;
+      mx = (xa + xb) / 2; my = (A.y + B.y) / 2;
     }
-    tratti.push({ filo: f, d });
+    const tr = { filo: f, d, x: r1(mx), y: r1(my) };
+    tratti.push(tr);
+    uscenti.set(f.da, [...(uscenti.get(f.da) ?? []), tr]);
   }
 
   const sbarre: Sbarra[] = [];
@@ -83,9 +90,9 @@ export function tavola(nodi: Nodo[], fili: Filo[], W: number, H: number, misura:
   const righe: Riga[] = nodi.map((n) => {
     const { x, y, h } = pos.get(n.id)!;
     const U = uscenti.get(n.id) ?? [];
-    const etichetta = U.length ? { testo: corto(U[0].etichetta, 12, cw * 0.55, true, misura) + (U.length > 1 ? ` +${U.length - 1}` : ""), contrario: U[0].contrario } : null;
+    const etichetta = U.length ? { testo: corto(U[0].filo.etichetta, 12, cw * 0.55, true, misura) + (U.length > 1 ? ` +${U.length - 1}` : ""), contrario: U[0].filo.contrario } : null;
     const spazio = etichetta ? misura(etichetta.testo, 12, true) + 10 : 0;
-    return { nodo: n, nome: corto(nomeNodo(n), 13, cw - 18, true, misura), sotto: corto(n.sotto, 12, cw - 18 - spazio, false, misura), x, y, w: cw, h, scura: SCURI.includes(n.tipo), etichetta };
+    return { nodo: n, nome: corto(nomeNodo(n), 13, cw - 18, true, misura), sotto: corto(n.sotto, 12, cw - 18 - spazio, false, misura), x, y, w: cw, h, scura: SCURI.includes(n.tipo), etichetta, uscenti: U };
   });
 
   return { altezza, colonne: [0, 1, 2, 3].map(X), cw, righe, tratti, sbarre };

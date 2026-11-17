@@ -3,9 +3,13 @@ import { render } from "svelte/server";
 import type { Vista } from "$lib/tipi/Vista";
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import registro from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
+import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
+import { t } from "$lib/testi/t";
+import { battutaDi } from "$lib/testi/pungolo";
 import Schema from "./Schema.svelte";
 import DettaglioSchema from "./DettaglioSchema.svelte";
-import { schema } from "./schema";
+import { schema, tondiDi } from "./schema";
 
 const ordinario = bilancio as unknown as Vista;
 const fine = (opposizione as unknown as Record<string, Record<string, Vista>>).fine.vista;
@@ -21,7 +25,7 @@ describe("Schema, render", () => {
 
   it("il filo scelto: da chi a chi, la frase intera e il rimando alla sezione; la fonte tecnica no", () => {
     const S = schema(ordinario), f = S.fili.find((x) => x.tipo === "proposta")!;
-    const { body } = render(DettaglioSchema, { props: { vista: ordinario, nodi: S.nodi, fili: S.fili, scelta: { tipo: "filo", id: f.id }, id: "d", onfilo: nulla, onchiudi: nulla } });
+    const { body } = render(DettaglioSchema, { props: { vista: ordinario, nodi: S.nodi, fili: S.fili, tondi: tondiDi(ordinario, S), scelta: { tipo: "filo", id: f.id }, id: "d", onapri: nulla, onchiudi: nulla } });
     expect(body).toContain("→ Presidente del Consiglio");
     expect(body).toContain(f.frase.split("«")[0]);
     expect(body).toContain('href="/partita/cruscotto"');
@@ -30,11 +34,43 @@ describe("Schema, render", () => {
 
   it("la riga scelta: i suoi fili col verso", () => {
     const S = schema(ordinario);
-    const { body } = render(DettaglioSchema, { props: { vista: ordinario, nodi: S.nodi, fili: S.fili, scelta: { tipo: "riga", id: "pdc" }, id: "d", onfilo: nulla, onchiudi: nulla } });
+    const { body } = render(DettaglioSchema, { props: { vista: ordinario, nodi: S.nodi, fili: S.fili, tondi: tondiDi(ordinario, S), scelta: { tipo: "riga", id: "pdc" }, id: "d", onapri: nulla, onchiudi: nulla } });
     const suoi = S.fili.filter((f) => f.da === "pdc" || f.a === "pdc");
     expect(body.match(/class="ver/g)).toHaveLength(suoi.length);
     expect(body).toContain("→ Camera");
     const verso = suoi.find((f) => f.a === "pdc")!;
     expect(body).toContain(`← ${S.nodi.find((n) => n.id === verso.da)!.nome}`);
+  });
+
+  describe("tondi, notizie e battuta (25, chiusura 3)", () => {
+    const v = (registro as unknown as { dopo: Vista }[])[3].dopo;
+    const ev = "ev:Emergenza idrogeologica";
+    const dettaglio = (w: Vista, id: string) => {
+      const S = schema(w);
+      return render(DettaglioSchema, { props: { vista: w, nodi: S.nodi, fili: S.fili, tondi: tondiDi(w, S), scelta: { tipo: "filo", id }, id: "d", onapri: nulla, onchiudi: nulla } }).body;
+    };
+    it("l'elenco delle notizie c'è senza scelta, con una riga per voce in evidenza", () => {
+      const { body } = render(Schema, { props: { vista: v } });
+      expect(body).toContain(t("schema.notizie"));
+      expect(body.match(/<li>/g)).toHaveLength(v.esito.filter((e) => e.in_evidenza).length);
+      expect(body).toContain(t("schema.senza_posto"));
+      expect(body).toContain(t("schema.solo_prima"));
+    });
+    it("il filo col tondo porta la battuta del suo tipo, a biro", () => {
+      const body = dettaglio(v, ev);
+      expect(body).toContain(t("schema.battuta", { battuta: battutaDi("evento")! }));
+    });
+    it("nel tono grave la battuta tace", () => {
+      const w = { ...v, esito: v.esito.map((e, i) => (i === 0 ? { ...e, tono: "grave" } : e)) } as Vista;
+      expect(dettaglio(w, ev)).not.toContain(battutaDi("evento")!);
+    });
+    it("un filo senza tondo non ha battuta", () => {
+      expect(dettaglio(v, "spread")).not.toContain(battutaDi("spread")!);
+    });
+    it("al turno zero niente notizie e niente filtro", () => {
+      const { body } = render(Schema, { props: { vista: turnoZero as unknown as Vista } });
+      expect(body).not.toContain(t("schema.notizie"));
+      expect(body).not.toContain(t("schema.solo_prima"));
+    });
   });
 });

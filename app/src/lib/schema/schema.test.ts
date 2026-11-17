@@ -5,8 +5,10 @@ import turnoZero from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.j
 import bilancio from "../../../../.scratch/v1-piano-11-ui/viste/04-governo-bilancio.json";
 import grave from "../../../../.scratch/v1-piano-11-ui/viste/08-tono-grave.json";
 import opposizione from "../../../../.scratch/v1-piano-11-ui/viste/28-opposizione.json";
+import registro from "../../../../.scratch/v1-piano-11-ui/viste/25-registro.json";
 import { tracciatiDi } from "$lib/tracciati";
-import { schema } from "./schema";
+import { pagina } from "$lib/esito/esito";
+import { schema, soloInPrimaPagina, tondiDi } from "./schema";
 
 const zero = turnoZero as unknown as Vista;
 const ordinario = bilancio as unknown as Vista;
@@ -82,6 +84,9 @@ describe("schema, turno zero (01)", () => {
   it("il Presidente è «uscente · chi guida»", () => {
     expect(s.nodi.find((n) => n.tipo === "presidente")!.sotto).toMatch(/^uscente · /);
   });
+  it("chi guida il governo uscente è il partito con più ministri: Destra, 8 su 10", () => {
+    expect(s.nodi.find((n) => n.tipo === "presidente")!.sotto).toBe(t("schema.sotto_uscente", { nome: "Destra" }));
+  });
 });
 
 describe("schema, all'opposizione (28 fine)", () => {
@@ -112,6 +117,86 @@ describe("schema, sfiducia e posto riservato (28)", () => {
     const v = { ...stati.sfiducia.prima, posto_riservato_di: null } as Vista;
     expect(tipi(v, "sfiducia")).toHaveLength(0);
     expect(tipi(v, "posto")).toHaveLength(0);
+  });
+});
+
+describe("schema, dimissioni, posto ed esiti (04)", () => {
+  it("le dimissioni chieste sono un filo rosso dal Presidente al ministero", () => {
+    const d = ordinario.ministeri[0].dicastero;
+    const v = { ...ordinario, ministeri: ordinario.ministeri.map((m, i) => (i === 0 ? { ...m, dimissioni_chieste: true } : m)) } as Vista;
+    expect(tipi(v, "dimissioni").map((f) => [f.id, f.da, f.a, f.contrario])).toEqual([[`dim:${d}`, "pdc", `d:${d}`, true]]);
+    expect(tipi(ordinario, "dimissioni")).toHaveLength(0);
+  });
+  it("il posto altrui ha sempre il filo; il tuo solo se libero, in ritardo", () => {
+    expect(ordinario.posto_riservato_di).toBe("sinistra");
+    expect(tipi(ordinario, "posto").map((f) => [f.da, f.etichetta, f.ritardo])).toEqual([["p:sinistra", t("schema.et_posto"), false]]);
+    const libero = { ...ordinario, posto_riservato_di: "giocatore", posto_riservato: true } as Vista;
+    expect(tipi(libero, "posto").map((f) => [f.da, f.etichetta, f.ritardo])).toEqual([["p:giocatore", t("schema.et_posto_tuo"), true]]);
+    expect(tipi({ ...libero, posto_riservato: false } as Vista, "posto")).toHaveLength(0);
+  });
+  it("una misura decaduta nel trimestre chiuso non ha il filo della legge", () => {
+    expect(tipi(ordinario, "legge").map((f) => f.id)).toEqual(["es:0"]);
+    const v = { ...ordinario, esiti: ordinario.esiti.map((e) => ({ ...e, decaduta: "senza voto" })) } as Vista;
+    expect(tipi(v, "legge")).toHaveLength(0);
+  });
+});
+
+describe("tondi dello schema (25, chiusura 3, dopo)", () => {
+  const v = (registro as unknown as { dopo: Vista }[])[3].dopo;
+  const tondi = (w: Vista) => tondiDi(w, schema(w));
+  const cambia = (w: Vista, tipo: string, x: object) => ({ ...w, esito: w.esito.map((e) => (e.tipo === tipo ? { ...e, ...x } : e)) }) as Vista;
+  const voce = (T: ReturnType<typeof tondiDi>, tipo: string) => T.elenco.find((e) => e.voce.tipo === tipo)!;
+
+  it("la voce spread ha il tondo sul filo spread", () => {
+    const T = tondi(cambia(v, "spread", { in_evidenza: true })), e = voce(T, "spread");
+    expect(e.posto).toBe("spread");
+    expect(T.fili.get("spread")).toEqual([e.n]);
+  });
+  it("una legge respinta ha il tondo su es:<misura>", () => {
+    const w = { ...cambia(v, "legge_approvata", { tipo: "legge_respinta" }), esiti: v.esiti.map((x) => ({ ...x, approvata: false })) } as Vista;
+    const T = tondi(w), e = voce(T, "legge_respinta");
+    expect(e.posto).toBe("es:0");
+    expect(T.fili.get("es:0")).toEqual([e.n]);
+  });
+  it("l'evento nato ha il tondo sul filo dell'evento con la stessa famiglia e regione", () => {
+    const T = tondi(v), e = voce(T, "evento_nato");
+    expect(e.posto).toBe("ev:Emergenza idrogeologica");
+    expect(T.fili.get("ev:Emergenza idrogeologica")).toEqual([e.n]);
+  });
+  it("una voce senza posto sta nell'elenco con posto null e senza tondo", () => {
+    const T = tondi(v), e = voce(T, "proposta_respinta");
+    expect(e.posto).toBeNull();
+    expect([...T.fili.values(), ...T.nodi.values()].flat()).not.toContain(e.n);
+  });
+  it("senza filo del suo tipo la voce col dicastero va sulla riga del ministero", () => {
+    const d = v.ministeri[0].dicastero;
+    const T = tondi(cambia(v, "cantiere_fermo", { dicastero: d })), e = voce(T, "cantiere_fermo");
+    expect(e.posto).toBe(`d:${d}`);
+    expect(T.nodi.get(`d:${d}`)).toEqual([e.n]);
+  });
+  it("i numeri seguono l'ordine della pagina, testa al numero 1", () => {
+    const T = tondi(v), p = pagina(v.esito);
+    expect(T.elenco.map((e) => e.n)).toEqual(T.elenco.map((_, i) => i + 1));
+    expect(T.elenco.map((e) => e.voce)).toEqual([p.testa!, ...p.colonne].map((i) => v.esito[i]));
+    expect(T.elenco[0].voce.tipo).toBe("evento_risolto");
+    // una testa che nella chiusura viene dopo prende comunque il numero 1
+    const w = tondi(cambia(v, "shock_assorbito", { criticita: "critica", precedenza: 9 }));
+    expect(w.elenco[0].voce.tipo).toBe("shock_assorbito");
+    expect(w.elenco.filter((e) => e.voce.in_evidenza)).toHaveLength(T.elenco.length);
+  });
+  it("le voci fuori dalla prima pagina non hanno numero", () => {
+    expect(tondi(v).elenco).toHaveLength(v.esito.filter((e) => e.in_evidenza).length);
+  });
+  it("«Solo quelli in prima pagina»: i fili col tondo coi loro capi, e le righe col tondo", () => {
+    const d = v.ministeri[0].dicastero, w = cambia(v, "cantiere_fermo", { dicastero: d });
+    const S = schema(w), F = soloInPrimaPagina(S, tondiDi(w, S));
+    expect(F.fili.map((f) => f.id)).toEqual(["es:0", "ev:Emergenza idrogeologica"]);
+    expect(F.nodi.map((n) => n.id).sort()).toEqual(["camera", "senato", "pdc", "r:emilia_romagna", `d:${d}`].sort());
+  });
+  it("al turno zero nessun tondo", () => {
+    const T = tondi(zero);
+    expect(T.elenco).toEqual([]);
+    expect(T.fili.size + T.nodi.size).toBe(0);
   });
 });
 
