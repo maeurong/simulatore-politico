@@ -115,11 +115,13 @@
   .pt.d { background: var(--ink) }
   .pt.nuovo { border-color: var(--biro); opacity: .8 }
   .pt.nuovo.d { background: var(--biro) }
-  .metro { position: relative; height: 14px; border: 1.5px solid var(--ink); margin: 4px 0 16px }
+  .metro { position: relative; height: 14px; border: 1.5px solid var(--ink); margin: 4px 0 36px }
   .metro i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ink) }
   .metro i.nuovo { background: var(--biro); opacity: .55 }
   .metro b { position: absolute; top: -3px; bottom: -3px; border-left: 2px solid var(--rosso) }
-  .metro b span { position: absolute; top: 16px; left: -14px; font-size: var(--c-min); color: var(--rosso); white-space: nowrap; font-weight: 400 }
+  .metro b span { position: absolute; top: 16px; left: -3px; font-size: var(--c-min); color: var(--rosso); white-space: nowrap; font-weight: 400 }
+  /* l'ultimo filo sta a destra su una seconda riga: la sua etichetta cresce verso sinistra, non esce dalla colonna e non copre la prima */
+  .metro b:last-of-type span { left: auto; right: -1px; top: 32px }
   .no { color: var(--rosso); font-weight: 700; font-size: var(--c-min) }
   .alt { position: absolute; top: 19px; width: 8px; height: 8px; margin-left: -4px; background: var(--grigio) }
   .dist { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: var(--c-sec); margin: 4px 0 }
