@@ -401,6 +401,17 @@ describe("partita", () => {
       svuota.mockRestore();
     });
 
+    it("riavvolgi che fallisce col riallineamento riuscito: il registro letto resta in cache", async () => {
+      const letti = [{ turno: 0, guasto: "x" }];
+      registroCache.turni = letti;
+      guscio.riavvolgi.mockRejectedValue({ specie: "guasto", testo: "disco pieno" });
+      guscio.partite.mockResolvedValue([indice("b", "Noi", 9)]);
+      guscio.riprendi.mockResolvedValue(bozzaVista);
+      await partita.riavvolgi(3);
+      expect(guscio.riprendi).toHaveBeenCalledWith("b");
+      expect(registroCache.turni).toBe(letti);
+    });
+
     it("riavvolgi rifiutato: riprende comunque dal disco e rilancia il rifiuto", async () => {
       const rifiuto = { specie: "rifiuto", testo: "turno non riavvolgibile" };
       guscio.riavvolgi.mockRejectedValue(rifiuto);

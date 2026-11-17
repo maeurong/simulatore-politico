@@ -71,6 +71,15 @@ describe("registroCache", () => {
     expect(guscio.registro).toHaveBeenCalledTimes(2);
   });
 
+  it("una carica a cache piena non blocca le cariche dopo", async () => {
+    guscio.registro.mockImplementation(async (t: number) => voci(t));
+    await registroCache.carica(vista(2));
+    await registroCache.carica(vista(2));
+    guscio.registro.mockClear();
+    await registroCache.carica(vista(3));
+    expect(guscio.registro.mock.calls.map((c) => c[0])).toEqual([2]);
+  });
+
   it("un turno che si chiude mentre il volo gira entra nel giro in corso", async () => {
     let sblocca!: () => void;
     guscio.registro.mockImplementation(async (t: number) => {

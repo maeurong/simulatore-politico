@@ -202,7 +202,7 @@
   "registro.conferma_eredita": "e l’eredità in bozza.",
   "registro.conferma_voto": "il voto di {periodo}",
   "registro.conferma_governo": "la nascita del governo, {periodo}",
-  "registro.conferma_in_mezzo": {"one": "In mezzo c’è {elenco}: si cancella anche quello.", "other": "In mezzo ci sono {elenco}: si cancellano anche quelli."},
+  "registro.conferma_in_mezzo": {"one": "In mezzo c’è {elenco}: si cancella anche questo passaggio.", "other": "In mezzo ci sono {elenco}: si cancellano anche quelli."},
   "registro.conferma_niente_in_mezzo": "In mezzo nessun voto e nessun governo nuovo.",
   "registro.conferma_non_letti": {"one": "Di un turno in mezzo il registro non è letto: se ha un voto o un governo, non è contato.", "other": "Di {n} turni in mezzo il registro non è letto: se hanno un voto o un governo, non sono contati."},
   "registro.conferma_si_conta": "Il riavvolgimento si conta, e l’albo lo riporta.",

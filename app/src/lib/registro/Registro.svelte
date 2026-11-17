@@ -109,7 +109,7 @@
       {@const c = corrente}
       <div class="capo">
         <h3 class="tit">{t("registro.turno_periodo", { n: c.turno, periodo: periodo(periodoDel(c.turno, vista)) })}</h3>
-        <Riavvolgi turno={c.turno} {vista} {turni} />
+        {#key c.turno}<Riavvolgi turno={c.turno} {vista} {turni} />{/key}
       </div>
       {#if "voci" in c}
         {@const passanti = c.voci.filter((v) => passa(v, filtro))}

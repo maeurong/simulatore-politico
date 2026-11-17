@@ -77,14 +77,19 @@ class Partita {
     return vista;
   };
   riprendi = async (id: string) => {
+    const vista = await this.#riprendi(id);
+    if (vista) registroCache.svuota();
+    return vista;
+  };
+  // senza svuotare il registro: il riallineamento di riavvolgi torna alla partita del disco, e i turni letti valgono ancora
+  async #riprendi(id: string) {
     const vista = await this.#esegui(() => guscio.riprendi(id));
     if (vista) {
       this.#id = id;
       rivelazione.chiudi();
-      registroCache.svuota();
     }
     return vista;
-  };
+  }
   /** Come fonda e riprendi: Vista nuova, o null davanti a un guasto; il rifiuto si rilancia al chiamante. */
   comanda = (comando: Comando) => this.#esegui(() => guscio.comanda(comando));
 
@@ -188,7 +193,7 @@ class Partita {
       const guasto = this.guasto;
       const id = (await this.indice().catch(() => null))?.id;
       if (id) {
-        await this.riprendi(id).catch(() => null);
+        await this.#riprendi(id).catch(() => null);
         // il guasto di riavvolgi vale più di quello (o del silenzio) del riallineamento, salvo che nel frattempo si sia usciti
         if (guasto && giro === this.#giro) this.guasto = guasto;
       }

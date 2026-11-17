@@ -15,27 +15,28 @@ class RegistroCache {
   /** Un turno alla volta, dal più vecchio; i turni già letti non si richiedono, quelli guasti sì. Una chiamata in volo si riusa. */
   carica(vista: Vista): Promise<void> {
     this.#fino = Math.max(this.#fino, vista.turno);
-    return (this.#volo ??= this.#leggi());
+    if (this.#volo) return this.#volo;
+    // il volo si libera solo se è ancora lui: #leggi può finire senza await, e svuota() ne avvia un altro
+    const volo: Promise<void> = this.#leggi().finally(() => {
+      if (this.#volo === volo) this.#volo = null;
+    });
+    return (this.#volo = volo);
   }
 
   async #leggi() {
     const giro = this.#giro;
-    try {
-      for (let t = 0; t < this.#fino; t++) {
-        if ("voci" in (this.turni[t] ?? {})) continue;
-        let voce: Turno | Guasto;
-        try {
-          voce = turnoDa(t, await guscio.registro(t));
-        } catch (e) {
-          voce = { turno: t, guasto: comeErrore(e).testo };
-        }
-        if (giro !== this.#giro) return;
-        const nuovi = [...this.turni];
-        nuovi[t] = voce;
-        this.turni = nuovi;
+    for (let t = 0; t < this.#fino; t++) {
+      if ("voci" in (this.turni[t] ?? {})) continue;
+      let voce: Turno | Guasto;
+      try {
+        voce = turnoDa(t, await guscio.registro(t));
+      } catch (e) {
+        voce = { turno: t, guasto: comeErrore(e).testo };
       }
-    } finally {
-      if (giro === this.#giro) this.#volo = null;
+      if (giro !== this.#giro) return;
+      const nuovi = [...this.turni];
+      nuovi[t] = voce;
+      this.turni = nuovi;
     }
   }
 

@@ -9,7 +9,7 @@
 </script>
 
 <div class="banda" role="status">
-  <!-- senza fermate (corsa interrotta da un guasto, partita finita) la banda dice solo le chiusure fatte; il guasto sta nella cornice -->
+  <!-- a partita finita la fermata è "fine" e la frase la dice; senza fermate (corsa interrotta da un guasto) la banda dice solo le chiusure fatte, il guasto sta nella cornice -->
   {#if corsa.fermate.length}
     {t("prima.banda", { n: corsa.chiusure, da: corsa.da, fermate: corsa.fermate.map((f) => fraseFermata(f, vista)).join("; ") })}
   {:else}

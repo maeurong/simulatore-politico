@@ -60,10 +60,10 @@
   {#if dopo}<h4 class="h5">{t("registro.riveduta_da")}</h4>{@render rif(turno.turno + 1, dopo, t("registro.revisione"))}{/if}
   {#if altre && gruppi.length}
     <h4 class="h5">{t("registro.collegate", { n: altre.stesse.length })}</h4>
-    {#each altre.stesse as [n, y] (`${n}:${y.tipo}:${y.fatto}`)}{@render rif(n, y, etichetta(SEZIONE_DI[y.tipo]))}{:else}<p class="sec muto">{t("registro.nessuna")}</p>{/each}
+    {#each altre.stesse as [n, y] (`${n}:${dove(n, y).i}`)}{@render rif(n, y, etichetta(SEZIONE_DI[y.tipo]))}{:else}<p class="sec muto">{t("registro.nessuna")}</p>{/each}
     {#if altre.nelleRighe.length}
       <h4 class="h5">{t("registro.nelle_righe", { n: altre.nelleRighe.length })}</h4>
-      {#each altre.nelleRighe as [n, y] (`${n}:${y.tipo}:${y.fatto}`)}{@render rif(n, y, t("registro.voce_fusa"))}{/each}
+      {#each altre.nelleRighe as [n, y] (`${n}:${dove(n, y).i}`)}{@render rif(n, y, t("registro.voce_fusa"))}{/each}
     {/if}
   {/if}
   {#if senzaSoggetto}<p class="sec muto">{t("registro.senza_soggetto")}</p>{/if}

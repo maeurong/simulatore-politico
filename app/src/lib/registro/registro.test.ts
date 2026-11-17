@@ -152,6 +152,11 @@ describe("testoConferma", () => {
     expect(x).toContain("la nascita del governo");
     expect(x).not.toContain("nessun voto");
   });
+  it("un solo voto o un solo governo in mezzo: la frase regge con l'uno e con l'altro", () => {
+    const v5 = { ...v9, turno: 5 } as Vista;
+    for (const ts of [[vuoto(0), vuoto(1), voto(2), vuoto(3), vuoto(4)], [vuoto(0), vuoto(1), gov(2), vuoto(3), vuoto(4)]])
+      expect(testoConferma(2, v5, ts, 0)).toContain(": si cancella anche questo passaggio.");
+  });
   it("il numero del riavvolgimento è l'indice più uno; senza indice la frase cade e il resto resta", () => {
     expect(testoConferma(8, v9, turni, 0)).toContain("il primo");
     expect(testoConferma(8, v9, turni, 2)).toContain("il terzo");
