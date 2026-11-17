@@ -34,6 +34,12 @@ class Rivelazione {
     this.ferma = true;
   }
 
+  /** Una voce ogni 1100 ms × k; il valore di ritorno ferma il timer. */
+  ritmo(k: number): () => void {
+    const timer = setInterval(() => this.avanza(), 1100 * k);
+    return () => clearInterval(timer);
+  }
+
   /** Tutto al valore nuovo: i tracciati tornano a leggere la Vista corrente. */
   chiudi() {
     this.salta();

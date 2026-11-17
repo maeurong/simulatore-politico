@@ -37,11 +37,11 @@
     return titoloDi(id, vista.esito[i], vista.turno, posto);
   };
   const k = $derived(fattori(impostazioni, sistema.riduce).k);
+  // parte con la pagina resa: senza id (partita.indice() non ha risposto) le prime voci passerebbero al buio
   $effect(() => {
-    if (rivelazione.ferma) return;
+    if (rivelazione.ferma || id === null) return;
     if (k === 0) return rivelazione.salta();
-    const timer = setInterval(() => rivelazione.avanza(), 1100 * k);
-    return () => clearInterval(timer);
+    return rivelazione.ritmo(k);
   });
   // uscire a metà chiude la rivelazione: i tracciati vanno al valore nuovo, e tornando la pagina è ferma
   $effect(() => () => rivelazione.chiudi());
@@ -87,7 +87,7 @@
 
       <footer class="piede">
         <span class="sx">
-          <a class="link" href="/partita/registro">{t(pag.critFuori ? "prima.altre_critiche" : "prima.altre", { n: fuori, k: pag.critFuori })}</a>
+          <a class="link" href="/partita/registro">{t(!pag.critFuori ? "prima.altre" : pag.critFuori === 1 ? "prima.altre_una_critica" : "prima.altre_critiche", { n: fuori, k: pag.critFuori })}</a>
           {#if !rivelazione.ferma}<button class="salta" type="button" onclick={() => rivelazione.salta()}>{t("prima.salta")}</button>{/if}
         </span>
         <a class="btn pieno" href="/partita/{destinazione}">{t(vai)}</a>
@@ -113,7 +113,7 @@
   .colonne > :global(.voce:nth-child(3n + 1)) { padding-left: 0 }
   .colonne > :global(.voce:nth-child(3n)) { border-right: 0; padding-right: 0 }
   .vuota { color: var(--grigio); font-size: var(--c-sec); padding: 14px 0 }
-  .piede { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: var(--doppio); padding: 7px 0 4px; margin-top: 12px; position: sticky; bottom: 0; background: var(--carta); box-shadow: 0 var(--s4) 0 var(--carta) }
+  .piede { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: var(--doppio); padding: 7px 0 4px; margin-top: 12px; position: sticky; bottom: 0; z-index: 1; background: var(--carta); box-shadow: 0 var(--s4) 0 var(--carta) }
   .sx { display: flex; gap: 14px; align-items: center }
   .salta { font-size: var(--c-min); color: var(--grigio); text-decoration: underline; text-underline-offset: 2px }
   a { color: inherit }

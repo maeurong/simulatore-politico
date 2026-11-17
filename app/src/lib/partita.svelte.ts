@@ -66,12 +66,18 @@ class Partita {
 
   fonda = async (scenario: SuMisura | null, fondazione: Fondazione) => {
     const vista = await this.#esegui(() => guscio.fondaPartita(scenario, fondazione));
-    if (vista) this.#id = null;
+    if (vista) {
+      this.#id = null;
+      rivelazione.chiudi();
+    }
     return vista;
   };
   riprendi = async (id: string) => {
     const vista = await this.#esegui(() => guscio.riprendi(id));
-    if (vista) this.#id = id;
+    if (vista) {
+      this.#id = id;
+      rivelazione.chiudi();
+    }
     return vista;
   };
   /** Come fonda e riprendi: Vista nuova, o null davanti a un guasto; il rifiuto si rilancia al chiamante. */
@@ -85,9 +91,19 @@ class Partita {
     const [prima, serie] = [this.vista, this.serie];
     const k = fattori(impostazioni, sistema.riduce).k;
     const vista = await this.#esegui(guscio.chiudiTurno, (nuova) => {
+      // a velocità istantanea la pagina è già composta (spec:407): una Vista di prima di una chiusura precedente non deve restare
       if (prima && k > 0) rivelazione.inizia(prima, serie, ordineRivelazione(nuova.esito).length);
+      else rivelazione.chiudi();
     });
-    if (vista) await goto("/partita/prima-pagina", { keepFocus: true });
+    if (!vista) return;
+    try {
+      await goto("/partita/prima-pagina", { keepFocus: true });
+    } catch (e) {
+      rivelazione.chiudi();
+      throw e;
+    }
+    // goto annullato: PrimaPagina non si monta e nessuno chiuderebbe la rivelazione
+    if (typeof location !== "undefined" && !location.pathname.endsWith("/prima-pagina")) rivelazione.chiudi();
   };
 
   /** L'indice della partita in corso: per id se è stata ripresa, altrimenti la più recente col nome del giocatore. */
@@ -113,6 +129,7 @@ class Partita {
     } catch (e) {
       rifiuto = e;
     }
+    if (vista) rivelazione.chiudi();
     if (vista || giro !== this.#giro) return vista;
     const guasto = this.guasto;
     const id = (await this.indice().catch(() => null))?.id;
@@ -145,6 +162,7 @@ class Partita {
   /** Verso l'edicola: il guscio non ha niente da fare. */
   esci = () => {
     this.#giro++;
+    rivelazione.chiudi();
     this.#id = null;
     this.vista = null;
     this.serie = [];

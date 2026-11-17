@@ -7,7 +7,7 @@
   let { vista }: { vista: Vista } = $props();
   const voto = $derived(vista.elezioni.at(-1));
   const coalizione = $derived(voto?.premio?.split("+") ?? []);
-  const righe = $derived(voto ? voto.voti.filter((r) => r.quota > 0.005).toSorted((a, b) => b.quota - a.quota) : []);
+  const righe = $derived(voto ? voto.voti.filter((r) => r.quota > 0 || r.camera > 0 || r.senato > 0).toSorted((a, b) => b.quota - a.quota) : []);
   const massimo = $derived(righe[0]?.quota ?? 1);
 </script>
 
@@ -22,7 +22,7 @@
         <span class="sg">{r.camera} · {r.senato}</span>
       </div>
     {/each}
-    <div class="cap fine"><span>{t("prima.coalizione_nera")}</span></div>
+    {#if coalizione.length}<div class="cap fine"><span>{t("prima.coalizione_nera")}</span></div>{/if}
   </figure>
 {/if}
 

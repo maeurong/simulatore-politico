@@ -256,4 +256,24 @@ describe("tracciatiRivelati, sulla chiusura 3 del 25", () => {
     const prime = tracciatiDi(prima, []);
     expect(tre.map((t) => t.scatta)).toEqual(tre.map((t, i) => t.testo !== prime[i].testo));
   });
+
+  it("un tracciato che cambia grandezza fra prima e dopo non porta era né lampo (dal turno zero, governo/opposizione)", () => {
+    const altro = { ...prima, governa: false, alleati: [] } as Vista;
+    expect(tracciatiDi(altro, [])[0].nome).not.toBe(tracciatiDi(dopo, [])[0].nome);
+    rivelazione.inizia(altro, [], 7);
+    rivelazione.salta();
+    const [primo, , spread] = tracciatiRivelati(dopo, [], rivelazione);
+    expect([primo.era, primo.scatta]).toEqual([null, false]);
+    expect(primo.testo).toBe(tracciatiDi(dopo, [])[0].testo);
+    expect(spread.era).not.toBeNull();
+  });
+
+  it("una voce non in evidenza prima di ogni voce in evidenza scatta a passo 1, non a 0", () => {
+    const es = [{ ...dopo.esito[nSpread], in_evidenza: false }, ...dopo.esito.filter((x) => x.tipo !== "spread" && x.in_evidenza)];
+    const v = { ...dopo, esito: es } as Vista;
+    rivelazione.inizia(prima, [], es.length - 1);
+    expect(tracciatiRivelati(v, [], rivelazione)[2].testo).toBe(tracciatiDi(prima, [])[2].testo);
+    rivelazione.avanza();
+    expect(tracciatiRivelati(v, [], rivelazione)[2].testo).toBe(tracciatiDi(dopo, [])[2].testo);
+  });
 });

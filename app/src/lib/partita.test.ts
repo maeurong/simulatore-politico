@@ -54,6 +54,14 @@ describe("partita", () => {
     expect(goto).toHaveBeenCalledWith("/partita/prima-pagina", { keepFocus: true });
   });
 
+  it("a velocità istantanea una Vista di prima rimasta da una chiusura precedente si chiude", async () => {
+    rivelazione.inizia({ turno: 1 } as Vista, [], 4);
+    impostazioni.velocita = "istantaneo";
+    guscio.chiudiTurno.mockResolvedValue(dopo);
+    await partita.chiudiTurno();
+    expect(rivelazione.prima).toBeNull();
+  });
+
   it("chiudiTurno con la partita che finisce apre comunque la prima pagina (lettura 2)", async () => {
     guscio.chiudiTurno.mockResolvedValue({ ...dopo, finita: true } as Vista);
     await partita.chiudiTurno();
@@ -193,7 +201,49 @@ describe("partita", () => {
     expect(partita.vista).toBeNull();
     expect(partita.serie).toEqual([]);
     expect(goto).not.toHaveBeenCalled();
+    expect(rivelazione.prima).toBeNull();
     expect(partita.occupato).toBe(false);
+  });
+
+  it("esci chiude la rivelazione aperta", () => {
+    rivelazione.inizia(prima, serieVecchia, 3);
+    partita.esci();
+    expect(rivelazione.prima).toBeNull();
+    expect(rivelazione.ferma).toBe(true);
+  });
+
+  it("riprendi, fonda e riavvolgi riusciti chiudono la rivelazione aperta", async () => {
+    guscio.riprendi.mockResolvedValue(dopo);
+    rivelazione.inizia(prima, serieVecchia, 3);
+    await partita.riprendi("x");
+    expect(rivelazione.prima).toBeNull();
+    guscio.fondaPartita.mockResolvedValue(dopo);
+    rivelazione.inizia(prima, serieVecchia, 3);
+    await partita.fonda(null, {} as never);
+    expect(rivelazione.prima).toBeNull();
+    guscio.riavvolgi.mockResolvedValue(dopo);
+    rivelazione.inizia(prima, serieVecchia, 3);
+    await partita.riavvolgi(2);
+    expect(rivelazione.prima).toBeNull();
+  });
+
+  it("goto che fallisce: la rivelazione si chiude e l'errore risale", async () => {
+    guscio.chiudiTurno.mockResolvedValue(dopo);
+    goto.mockRejectedValueOnce(new Error("rotta"));
+    await expect(partita.chiudiTurno()).rejects.toThrow("rotta");
+    expect(rivelazione.prima).toBeNull();
+    expect(rivelazione.ferma).toBe(true);
+  });
+
+  it("goto annullato (non si approda sulla prima pagina): la rivelazione si chiude", async () => {
+    vi.stubGlobal("location", { pathname: "/partita/cruscotto" });
+    guscio.chiudiTurno.mockResolvedValue(dopo);
+    await partita.chiudiTurno();
+    expect(rivelazione.prima).toBeNull();
+    vi.stubGlobal("location", { pathname: "/partita/prima-pagina" });
+    await partita.chiudiTurno();
+    expect(rivelazione.prima).toBe(dopo);
+    vi.unstubAllGlobals();
   });
 
   describe("eredità", () => {

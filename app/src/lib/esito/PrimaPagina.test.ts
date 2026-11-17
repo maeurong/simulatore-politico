@@ -12,6 +12,7 @@ import primaPaginaJson from "../../../../.scratch/v1-piano-11-ui/viste/16-prima-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const chiusura = (n: number) => (registroJson as any)[n].dopo as Vista;
 const voto9 = (primaPaginaJson as any).voto_9.vista as Vista;
+const votoOpp = (primaPaginaJson as any).voto_opp.vista as Vista;
 const html = (vista: Vista) => render(PrimaPagina, { props: { vista, id: "partita-di-prova" } }).body;
 const conta = (h: string, ago: string | RegExp) => h.match(new RegExp(ago, "g"))?.length ?? 0;
 
@@ -63,7 +64,7 @@ describe("PrimaPagina", () => {
     const h = html({ ...v, esito: v.esito.map((x) => ({ ...x, in_evidenza: false })) } as Vista);
     expect(h).toContain(t("prima.nessuna_notizia"));
     const critiche = v.esito.filter((x) => x.criticita === "critica").length;
-    expect(h).toContain(t("prima.altre_critiche", { n: v.esito.length, k: critiche }));
+    expect(h).toContain(t(critiche === 1 ? "prima.altre_una_critica" : "prima.altre_critiche", { n: v.esito.length, k: critiche }));
     expect(h).toContain(t("prima.esito"));
   });
 
@@ -90,6 +91,47 @@ describe("PrimaPagina", () => {
     const h = html(voto9);
     expect(h).toContain(t("prima.coalizione_nera"));
     expect(h).toMatch(/<figure class="ris/);
+  });
+});
+
+describe("piede e voci senza titolo", () => {
+  const v = chiusura(3);
+  const base = { ...v.esito[0], in_evidenza: false, criticita: "ordinaria" } as Vista["esito"][number];
+  const con = (esito: Vista["esito"]) => html({ ...v, esito } as Vista);
+
+  it("il rimando al registro dice le critiche fuori pagina, al singolare e al plurale", () => {
+    const crit = { ...base, criticita: "critica" } as Vista["esito"][number];
+    const una = con([crit, base]);
+    expect(una).toContain("Altre 2 notizie nel registro, una critica ›");
+    expect(una).toContain('href="/partita/registro"');
+    expect(con([crit, crit, base])).toContain("Altre 3 notizie nel registro, 2 critiche ›");
+    expect(con([crit])).toContain("Un’altra notizia nel registro, una critica ›");
+    expect(con([base])).toContain("Un’altra notizia nel registro ›");
+    expect(con([base, base])).toContain("Altre 2 notizie nel registro ›");
+  });
+
+  it("una voce senza titolo (sondaggio ordinario) mostra il solo occhiello, che sale a titolo", () => {
+    const h = con([{ ...base, tipo: "sondaggio", in_evidenza: true, fatto: "Il consenso cala", famiglia: null } as Vista["esito"][number]]);
+    expect(h).toMatch(/<h2 class="tit[^"]*">(<!--[^>]*-->)*Il consenso cala<\/h2>/);
+    expect(h).not.toContain('class="occh');
+  });
+
+  it("la rivelazione non parte prima che la pagina sia resa: il timer lo guida PrimaPagina solo con l'id (SSR: senza id niente corpo)", () => {
+    expect(render(PrimaPagina, { props: { vista: v } }).body).not.toContain("giornale");
+  });
+});
+
+describe("Risultato", () => {
+  it("la didascalia della coalizione col premio c'è solo se c'è un premio", () => {
+    expect(html(voto9)).toContain(t("prima.coalizione_nera"));
+    expect(votoOpp.elezioni.at(-1)!.premio).toBeNull();
+    expect(html(votoOpp)).not.toContain(t("prima.coalizione_nera"));
+  });
+  it("ogni partito con voti o seggi, senza soglia", () => {
+    const e = voto9.elezioni.at(-1)!;
+    const piccolo = { partito: e.voti[0].partito, quota: 0.001, camera: 0, senato: 0 };
+    const h = html({ ...voto9, elezioni: [{ ...e, voti: [...e.voti, { ...piccolo, partito: "estrema_sinistra" }, { ...piccolo, quota: 0, camera: 1, partito: "centro" }].filter((x, i, a) => a.findIndex((y) => y.partito === x.partito) === i || i >= e.voti.length) }] } as Vista);
+    expect(conta(h, 'class="r[ "]')).toBeGreaterThanOrEqual(e.voti.length);
   });
 });
 
