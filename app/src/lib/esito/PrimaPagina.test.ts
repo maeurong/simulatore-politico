@@ -116,7 +116,7 @@ describe("piede e voci senza titolo", () => {
     expect(h).not.toContain('class="occh');
   });
 
-  it("la rivelazione non parte prima che la pagina sia resa: il timer lo guida PrimaPagina solo con l'id (SSR: senza id niente corpo)", () => {
+  it("senza id (partita.indice() non ha ancora risposto) il corpo della pagina non è reso; il guard del timer (id !== null) non è coperto: gli effetti non girano in SSR", () => {
     expect(render(PrimaPagina, { props: { vista: v } }).body).not.toContain("giornale");
   });
 });
@@ -127,11 +127,18 @@ describe("Risultato", () => {
     expect(votoOpp.elezioni.at(-1)!.premio).toBeNull();
     expect(html(votoOpp)).not.toContain(t("prima.coalizione_nera"));
   });
-  it("ogni partito con voti o seggi, senza soglia", () => {
+  it("ogni partito con voti o seggi, senza soglia; nessuno a zero su tutto", () => {
     const e = voto9.elezioni.at(-1)!;
-    const piccolo = { partito: e.voti[0].partito, quota: 0.001, camera: 0, senato: 0 };
-    const h = html({ ...voto9, elezioni: [{ ...e, voti: [...e.voti, { ...piccolo, partito: "estrema_sinistra" }, { ...piccolo, quota: 0, camera: 1, partito: "centro" }].filter((x, i, a) => a.findIndex((y) => y.partito === x.partito) === i || i >= e.voti.length) }] } as Vista);
-    expect(conta(h, 'class="r[ "]')).toBeGreaterThanOrEqual(e.voti.length);
+    const nuovi = [
+      { partito: "zz_quota_minima", quota: 0.002, camera: 0, senato: 0 },
+      { partito: "zz_solo_seggi", quota: 0, camera: 1, senato: 0 },
+      { partito: "zz_vuoto", quota: 0, camera: 0, senato: 0 },
+    ];
+    const h = html({ ...voto9, elezioni: [{ ...e, voti: [...e.voti, ...nuovi] }] } as Vista);
+    expect(conta(h, 'class="r[ "]')).toBe(e.voti.length + 2);
+    expect(h).toContain("zz_quota_minima");
+    expect(h).toContain("zz_solo_seggi");
+    expect(h).not.toContain("zz_vuoto");
   });
 });
 
