@@ -58,6 +58,16 @@ export function voceNuova(prima: VoceAlbo[], dopo: VoceAlbo[], nome: string): Vo
   return dopo.filter((a) => a.nome === nome).reduce<VoceAlbo | null>((m, a) => (m && quando(m.fine) >= quando(a.fine) ? m : a), null);
 }
 
+/** Dopo «Conferma l'eredità» l'indirizzo porta nome, fine e turni della bozza: la voce che combacia. Senza quei campi,
+ *  o se nessuna combacia, ricade su voceNuova senza l'albo di prima. */
+export function voceConfermata(albo: VoceAlbo[], q: URLSearchParams): VoceAlbo | null {
+  const nome = q.get("nome") ?? "";
+  const [anno, trimestre, turni] = ["anno", "trimestre", "turni"].map((k) => Number(q.get(k) ?? NaN));
+  // shortcut: due omonime finite nello stesso trimestre allo stesso turno non si distinguono, prende la prima; basta un id nella VoceAlbo
+  return albo.find((a) => a.nome === nome && a.fine.anno === anno && a.fine.trimestre === trimestre && a.turni === turni)
+    ?? voceNuova([], albo, nome);
+}
+
 /** Le coordinate in [0, larghezza] × [0, altezza], il massimo in alto; con zero lo zero entra nell'intervallo.
  *  Senza punti o con un punto solo niente NaN: un intervallo nullo vale 1, un punto solo sta a sinistra. */
 export function tracce(linee: number[][], larghezza: number, altezza: number, zero = false) {

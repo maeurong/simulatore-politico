@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anniAlGoverno, azioneDi, esitoTesto, inOrdine, maleSe, periodo, tracce, voceNuova } from "./edicola";
+import { anniAlGoverno, azioneDi, esitoTesto, inOrdine, maleSe, periodo, tracce, voceConfermata, voceNuova } from "./edicola";
 import edicola from "../../../../.scratch/v1-piano-11-ui/viste/13-edicola.json";
 import type { VoceAlbo } from "$lib/tipi/VoceAlbo";
 import type { VocePartita } from "$lib/tipi/VocePartita";
@@ -158,5 +158,23 @@ describe("voceNuova", () => {
   });
   it("nessuna voce con quel nome: null", () => {
     expect(voceNuova(albo, albo, "Patto Civico")).toBeNull();
+  });
+});
+
+describe("voceConfermata", () => {
+  const voce = (anno: number, trimestre: number, turni: number) =>
+    ({ ...albo[0], nome: "Patto Civico", fine: { anno, trimestre }, turni }) as VoceAlbo;
+  const q = (s: string) => new URLSearchParams(s);
+  it("fra due omonime sceglie quella con la fine e i turni della bozza, anche se l'altra finisce dopo", () => {
+    const nuova = voce(2028, 2, 6), vecchia = voce(2035, 2, 34);
+    expect(voceConfermata([vecchia, nuova], q("albo=nuova&nome=Patto+Civico&anno=2028&trimestre=2&turni=6"))).toBe(nuova);
+  });
+  it("senza fine e turni nell'indirizzo: la fine più recente col nome", () => {
+    const nuova = voce(2028, 2, 6), vecchia = voce(2035, 2, 34);
+    expect(voceConfermata([vecchia, nuova], q("albo=nuova&nome=Patto+Civico"))).toBe(vecchia);
+  });
+  it("nessuna combacia: la fine più recente col nome", () => {
+    const a = voce(2028, 2, 6), b = voce(2035, 2, 34);
+    expect(voceConfermata([a, b], q("albo=nuova&nome=Patto+Civico&anno=2028&trimestre=2&turni=7"))).toBe(b);
   });
 });

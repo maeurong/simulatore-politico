@@ -25,11 +25,13 @@
     }
   }
 
-  // il nome va nell'indirizzo: l'edicola sceglie la voce nuova dell'albo come dopo l'abbandono
+  // nome, fine e turni vanno nell'indirizzo: l'edicola riconosce la voce nuova dell'albo anche fra omonime
   async function conferma() {
     rifiuto = null;
+    const { nome, fine, turni } = edizione;
+    const q = new URLSearchParams({ albo: "nuova", nome, anno: String(fine.anno), trimestre: String(fine.trimestre), turni: String(turni) });
     try {
-      if (await partita.confermaEredita()) await goto(`/?albo=nuova&nome=${encodeURIComponent(edizione.nome)}`);
+      if (await partita.confermaEredita()) await goto(`/?${q}`);
     } catch (e) {
       rifiuto = comeErrore(e).testo;
     }
