@@ -17,7 +17,7 @@
   <Voce {vista} {voce} {titolo} {rivelata} {nuova} testa />
   {#if risultato || scena}
     <div class={["lato", { attesa: !rivelata, nuova: rivelata && nuova }]}>
-      {#if scena}<Vignetta {scena} {voce} />{:else}<Risultato {vista} />{/if}
+      {#if risultato}<Risultato {vista} />{:else if scena}<Vignetta {scena} {voce} />{/if}
     </div>
   {/if}
 </div>

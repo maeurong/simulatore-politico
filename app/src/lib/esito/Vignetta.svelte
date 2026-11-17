@@ -21,8 +21,8 @@
 
 <style>
   .vignetta { border: var(--forte); padding: 6px 8px; display: grid; gap: 4px; align-content: start; color: var(--ink) }
-  /* il retino del 16 (riga 479): righe a 45° a un ottavo d'inchiostro, solo sotto il disegno */
-  .disegno { background: repeating-linear-gradient(45deg, transparent 0 4.8px, rgb(31 26 23 / .12) 4.8px 6px) }
-  .disegno :global(svg) { display: block; width: 100%; height: auto; max-height: 150px }
+  /* il retino solo sotto il disegno, come nel 16: il riquadro del disegno si ferma ai 300 px della tela */
+  .disegno { width: 100%; max-width: 300px; justify-self: center; background: var(--retino-vignetta) }
+  .disegno :global(svg) { display: block; width: 100%; height: auto }
   figcaption { font-size: var(--c-sec); text-align: center; font-weight: 700 }
 </style>

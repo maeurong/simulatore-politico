@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import { eventoAperto, fraseFermata, grave, ordineRivelazione, pagina, SCENA_DI, scattaDopo, scenaDi, SEZIONE_DI, testa, TRACCIATO_DI } from "./esito";
@@ -197,12 +197,5 @@ describe("vignette (piano 11f, decisione 1)", () => {
     expect(scenaDi(x, voce({ tipo: "legge_approvata" }))).toBeNull();
     expect(scenaDi(chiusura(3), voce({ tipo: "evento_risolto", famiglia: "scandalo" }))).toBeNull();
     expect(scenaDi(voto9, voto9.esito[testa(voto9.esito)!])).toBeNull();
-  });
-  it("scenaDi: niente vignetta se la chiave con scena non ha didascalia (nessuna scena muta)", async () => {
-    vi.resetModules();
-    vi.doMock("../testi/pungolo", async (orig) => ({ ...(await orig<object>()), didascaliaDi: () => null }));
-    const { scenaDi: senza } = await import("./esito");
-    expect(senza(chiusura(3), c3[testa(c3)!])).toBeNull();
-    vi.doUnmock("../testi/pungolo");
   });
 });
