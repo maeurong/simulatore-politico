@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # macOS: Tauri compila senza librerie di sistema da installare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: npm ci
+        working-directory: app
+
+      - name: test della UI
+        run: npm test
+        working-directory: app
+
+      - name: tipi della UI
+        run: npm run check
+        working-directory: app
+
+      # la build serve anche a cargo: il guscio Tauri include app/build
+      - name: build della UI
+        run: npm run build
+        working-directory: app
+
+      - name: test del core e del guscio
+        run: cargo test --workspace --no-fail-fast
+
+      # cargo test riesporta i tipi ts-rs: se cambiano, quelli committati sono vecchi
+      - name: tipi ts-rs aggiornati
+        run: git diff --exit-code app/src/lib/tipi
