@@ -35,20 +35,39 @@ const ORECCHIO = { d: "M28.6 27.2C23.2 26.6 22.4 36.2 28.2 36", pen: "M231 329l1
 /** Le sei fantasie del colletto, in inchiostro su carta (`Fantasie.svelte`): l'indice è la leva colletto. Il tecnico lo ha sempre grigio. */
 export const FANTASIE = ["pieno", "vuoto", "righe", "pois", "quadretti", "tratteggio"] as const;
 
-/** Le parti disegnate dalle sei leve: tracciati e poligoni da stendere nella tela 64 × 64. */
-export function profilo(l: Leve) {
+// naso all'85% verso la radice (42,26) nelle donne (prototipo 40, scheda 1): le coordinate si scalano a mano, il poligono del naso si disegna a parte con `NASO_T`
+const K = 0.85;
+const scala = (s: string) => s.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${+(42 + (x - 42) * K).toFixed(2)} ${+(26 + (y - 26) * K).toFixed(2)}`);
+
+/** I tratti delle donne (prototipo 40, tratti A, cappello «i»): ciglia (una per forma d'occhio), labbra, orecchino, cappello e nastro. */
+export const TRATTI = {
+  ciglia: ["M36.2 21.4L34.4 18.9M38 20.4L37 17.6M39.8 20.6L39.6 17.8", "M36.3 20.6L34.6 18.2M38 19.9L37.2 17.1M39.7 20.2L39.6 17.4"],
+  labbra: "M41.8 39Q45.4 37.8 46.9 39.3Q45.5 40.5 46.7 41.5Q45.6 43.3 42 42.7Z",
+  bocca: "M46 40.5L41.2 40.8",
+  orecchino: { filo: "M27.4 35.8L27.4 37.6", gemma: "M27.4 37.2L31.2 42.2L27.4 47.2L23.6 42.2Z" },
+  cappello: ["M3.6 19.6Q2.6 16.6 8 14.6Q26 8.6 43.4 5.4Q46.4 5.2 45 7.4Q28 13.2 7.4 20.8Q4.6 21.6 3.6 19.6Z", "M16.6 13.2Q15.6 3 27.4 1.4Q38.6 0 40.2 7.8Q28 9.6 16.6 13.2Z"],
+  nastro: "M17.4 11.2Q28 7.8 39.6 6.2",
+  naso: "translate(6.3 3.9) scale(.085)",
+};
+
+/** Le parti disegnate dalle leve: tracciati e poligoni da stendere nella tela 64 × 64. Con `donna` il naso è all'85% e il suo poligono sta a parte in `naso`. */
+export function profilo(l: Leve, donna = false) {
   const n = NASI[l.naso], m = MENTI[l.mento], f = FRONTI[l.fronte], u = NUCHE[l.nuca];
+  const nd = donna ? scala(n.d) : n.d;
+  const tip = donna ? scala(`${n.tip[0]} ${n.tip[1]}`) : `${n.tip[0]} ${n.tip[1]}`;
   const dietro = `M23 57L21 47L20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26`;
-  const davanti = `M42 26${n.d}L43 35L44 39${m.d}L35 48L36 51L37 57`;
+  const davanti = `M42 26${nd}L43 35L44 39${m.d}L35 48L36 51L37 57`;
   return {
     /** la figura, da campire di carta e da usare come ritaglio per le ombre */
     sagoma: `M20 44C${u.b} 36 ${u.b} 9 30 7${f.d}L42 26${davanti.slice(6).replace(/L37 57$/, "")}L37 61L23 61L21 47Z`,
     /** il filo di centro: tiene vive le code assottigliate del pennino */
     filo: dietro + davanti + SPALLE.d + ORECCHIO.d,
     /** il pennino: un solo poligono per tutte le pennellate, in decimi */
-    pennino: u.pen + f.pen + n.pen + m.pen + SPALLE.pen + ORECCHIO.pen,
+    pennino: u.pen + f.pen + (donna ? "" : n.pen) + m.pen + SPALLE.pen + ORECCHIO.pen,
+    /** il poligono del naso, solo nelle donne: stesso inchiostro, con la trasformazione `TRATTI.naso` */
+    naso: donna ? n.pen : "",
     /** le ombre in terra chiara, da ritagliare sulla sagoma: sotto la mascella, sotto il naso, l'orecchio */
-    ombre: `M28 37.5L39 45L38 58L21 58ZM45 31L${n.tip[0]} ${n.tip[1]}L44 35.4Z${ORECCHIO.d}Z`,
+    ombre: `M28 37.5L39 45L38 58L21 58ZM45 31L${tip}L44 35.4Z${ORECCHIO.d}Z`,
   };
 }
 

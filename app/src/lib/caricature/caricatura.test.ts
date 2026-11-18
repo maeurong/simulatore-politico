@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
-import { chiaveDi, fondoDi, leveDi, rosa, saltiDeiLeader, VARIANTI, type Leve } from "./caricatura";
+import { chiaveDi, fondoDi, leveDi, rosa, salti, saltiDeiLeader, VARIANTI, type Leve } from "./caricatura";
 import v01 from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import v03 from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import v30j from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 import v17 from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 
-const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
+const chiavi = Object.keys(VARIANTI) as (keyof typeof VARIANTI)[];
 const coppia = (l: Leve) => `${l.naso}:${l.colletto}`;
 const ROSA_UGUALE = ["Luca Bianchi", "Marco Marino", "Simone Bruno"].map((nome) => ({ partito: "Partito del giocatore", nome }));
 
@@ -32,9 +32,24 @@ describe("leveDi", () => {
   });
 
   it("coincide con l'algoritmo del prototipo 32 (righe 393-406, calcolato eseguendolo con node)", () => {
-    expect(leveDi("leader", "Centro", "Giorgio Valli")).toEqual({ naso: 4, mento: 1, fronte: 0, nuca: 0, occhio: 0, colletto: 0 });
-    expect(leveDi("ministro", "Destra", "Niccolò Sarà")).toEqual({ naso: 2, mento: 2, fronte: 0, nuca: 0, occhio: 0, colletto: 2 });
-    expect(leveDi("tecnico", "Sinistra", "Chiara Lombardo")).toEqual({ naso: 3, mento: 2, fronte: 1, nuca: 0, occhio: 0, colletto: 4 });
+    expect(leveDi("leader", "Centro", "Giorgio Valli")).toMatchObject({ naso: 4, mento: 1, fronte: 0, nuca: 0, occhio: 0, colletto: 0 });
+    expect(leveDi("ministro", "Destra", "Niccolò Sarà")).toMatchObject({ naso: 2, mento: 2, fronte: 0, nuca: 0, occhio: 0, colletto: 2 });
+    expect(leveDi("tecnico", "Sinistra", "Chiara Lombardo")).toMatchObject({ naso: 3, mento: 2, fronte: 1, nuca: 0, occhio: 0, colletto: 4 });
+  });
+
+  const chiave = (i: number) => ["ministro", "tecnico", "leader"][i % 3] as "ministro" | "tecnico" | "leader";
+  const seiLeve = (l: Leve) => `${l.naso}${l.mento}${l.fronte}${l.nuca}${l.occhio}${l.colletto}`;
+
+  it("le sei leve su 600 chiavi sono quelle di prima dei segni (FNV-1a dell'istantanea presa dal codice prima della modifica)", () => {
+    const tutte = Array.from({ length: 600 }, (_, i) => seiLeve(leveDi(chiave(i), "P" + (i % 7), "Nome " + i, i % 4)));
+    let f = 2166136261;
+    for (const c of tutte.join(",")) f = Math.imul(f ^ c.charCodeAt(0), 16777619) >>> 0;
+    expect(f).toBe(4241386166);
+  });
+
+  it("orecchino e cappello danno tutte e quattro le combinazioni su 600 chiavi", () => {
+    const c = new Set(Array.from({ length: 600 }, (_, i) => { const l = leveDi(chiave(i), "P" + (i % 7), "Nome " + i); return `${l.orecchino}:${l.cappello}`; }));
+    expect(c.size).toBe(4);
   });
 
   it("su cento nomi escono almeno cinque nasi e cinque colletti diversi", () => {
@@ -80,19 +95,31 @@ describe("rosa", () => {
   });
 });
 
+describe("salti col genere", () => {
+  const stessa = (genere?: "donna" | "uomo") => ROSA_UGUALE.slice(0, 2).map((c) => ({ ...c, genere }));
+  it("stesso naso e colletto, genere diverso: nessuno salta", () => {
+    const [a, b] = ROSA_UGUALE;
+    expect(salti("ministro", [{ ...a, genere: "uomo" }, { ...b, genere: "donna" }])).toEqual([0, 0]);
+  });
+  it("due donne uguali: la seconda salta; senza genere vale uomo", () => {
+    expect(salti("ministro", stessa("donna"))[1]).toBeGreaterThan(0);
+    expect(salti("ministro", stessa())).toEqual(salti("ministro", stessa("uomo")));
+  });
+});
+
 describe("saltiDeiLeader", () => {
   const s03 = saltiDeiLeader(v03);
-  const leader = (v: { partiti: { id: string; nome: string; leader: string }[] }, s: Record<string, number>) =>
-    v.partiti.filter((p) => p.leader).map((p) => ({ id: p.id, l: leveDi("leader", p.nome, p.leader, s[p.id]) }));
+  const leader = (v: { partiti: { id: string; nome: string; leader: string; genere_leader?: string | null }[] }, s: Record<string, number>) =>
+    v.partiti.filter((p) => p.leader).map((p) => ({ id: p.id, g: p.genere_leader, l: leveDi("leader", p.nome, p.leader, s[p.id]) }));
 
-  it("sui sette leader della Vista 03 nessuna coppia ha lo stesso naso e lo stesso colletto", () => {
+  it("sui sette leader della Vista 03 nessuna coppia ha lo stesso naso, colletto e genere", () => {
     const l = leader(v03, s03);
     expect(l).toHaveLength(7);
-    expect(new Set(l.map((x) => coppia(x.l))).size).toBe(7);
+    expect(new Set(l.map((x) => `${coppia(x.l)}:${x.g}`)).size).toBe(7);
   });
 
-  it("salti fissi: chi non collide tiene la faccia del prototipo, gli altri passano oltre", () => {
-    expect(s03).toEqual({ estrema_sinistra: 0, sinistra: 0, centrosinistra: 0, centro: 1, centrodestra: 0, destra: 1, estrema_destra: 2 });
+  it("salti fissi: chi non collide (a pari genere) tiene la faccia del prototipo, gli altri passano oltre", () => {
+    expect(s03).toEqual({ estrema_sinistra: 0, sinistra: 0, centrosinistra: 0, centro: 0, centrodestra: 0, destra: 0, estrema_destra: 1 });
     const l = Object.fromEntries(leader(v03, s03).map((x) => [x.id, coppia(x.l)]));
     expect(l).toMatchObject({ estrema_sinistra: "4:0", sinistra: "5:5", centrosinistra: "1:5", centrodestra: "4:1" });
   });
@@ -144,5 +171,34 @@ describe("chiaveDi", () => {
   it("segue v.giocatore, non la parola", () => {
     const v = { ...v03, giocatore: "destra" } as unknown as Vista;
     expect(chiaveDi(v, "destra")).toBe("giocatore");
+  });
+});
+
+describe("casi limite delle leve e dei salti", () => {
+  it("leveDi con salto > 0: leve in range, bit di orecchino e cappello booleani e fermi sui salti piccoli (il salto muove la cifra bassa, il naso)", () => {
+    const c = new Set<string>();
+    for (let s = 0; s < 60; s++) {
+      const l = leveDi("ministro", "Centro", "Mario Rossi", s);
+      for (const k of chiavi) {
+        expect(Number.isInteger(l[k])).toBe(true);
+        expect(l[k]).toBeLessThan(VARIANTI[k]);
+      }
+      expect([typeof l.orecchino, typeof l.cappello]).toEqual(["boolean", "boolean"]);
+      c.add(`${l.orecchino}:${l.cappello}`);
+    }
+    expect(c.size).toBe(1);
+  });
+  it("salti con 40 candidati dello stesso genere: 40 salti finiti, le prime 36 facce distinte", () => {
+    const c = Array.from({ length: 40 }, (_, i) => ({ partito: "P", nome: `N${i}`, genere: "donna" as const }));
+    const s = salti("ministro", c);
+    expect(s).toHaveLength(40);
+    expect(s.every((x) => Number.isInteger(x) && x >= 0)).toBe(true);
+    const coppie = new Set(c.slice(0, 36).map((x, i) => coppia(leveDi("ministro", x.partito, x.nome, s[i]))));
+    expect(coppie.size).toBe(36);
+  });
+  it("oltre le 36 coppie di un genere, l'altro genere ha ancora le sue libere", () => {
+    const donne = Array.from({ length: 40 }, (_, i) => ({ partito: "P", nome: `N${i}`, genere: "donna" as const }));
+    const uomo = { partito: "P", nome: "Luca", genere: "uomo" as const };
+    expect(salti("ministro", [...donne, uomo])[40]).toBe(0);
   });
 });

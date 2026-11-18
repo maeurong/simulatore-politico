@@ -105,7 +105,7 @@ describe("casa", () => {
 describe("fettaDi", () => {
   it("il cruscotto cambia fetta con lo stato", () => {
     expect(fettaDi("cruscotto", "turno_zero")).toBeNull();
-    expect(fettaDi("cruscotto", "trattativa")).toBe("11b");
+    expect(fettaDi("cruscotto", "trattativa")).toBeNull();
     expect(fettaDi("cruscotto", "governo")).toBeNull();
     expect(fettaDi("cruscotto", "crisi")).toBeNull();
     expect(fettaDi("cruscotto", "opposizione")).toBeNull();

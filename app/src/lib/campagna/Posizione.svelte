@@ -79,7 +79,7 @@
       <dt>{t("campagna.distanza")}</dt>
       <dd>
         <b>{numero(d, 2)}</b>{#if nuova}{" "}→ <b>{numero(nuova.distanza, 2)}</b>{/if}
-        {#if sogliaDi(d, vista.campagna) !== "sotto"}<span class="no">{t("campagna.minaccia_accesa")}</span>{/if}
+        {#if io.minaccia}<span class="no">{t("campagna.minaccia_accesa")}</span>{/if}
       </dd>
     </dl>
     <div class="metro" role="img" aria-label={t("campagna.metro_etichetta")}>
@@ -93,7 +93,7 @@
       <Pulsante forma="bordo" scelto={scelta === p} onclick={() => scegli(p)}>{segnato(PASSI[i], 2)}</Pulsante>
     {/each}
   </div>
-  {#if rifiutata}<div class="rif"><Rifiuto testo={rifiutata.replace("comando non ammesso: ", "")} /></div>{/if}
+  {#if rifiutata}<div class="rif"><Rifiuto testo={rifiutata} /></div>{/if}
   {#if scelta !== null && nuova}
     <div class="az">
       <Conferma etichetta={t("campagna.sposta_a", { posizione: numero(scelta, 2) })} conferma={t("campagna.conferma_spostamento")}
@@ -113,11 +113,11 @@
   .tk span { position: absolute; top: 12px; left: -4px; font-size: var(--c-min); color: var(--grigio) }
   .pt { position: absolute; top: 15px; width: 14px; height: 14px; margin-left: -7px; border: 2px solid var(--ink); border-radius: 50%; background: var(--carta) }
   .pt.d { background: var(--ink) }
-  .pt.nuovo { border-color: var(--biro); opacity: .8 }
+  .pt.nuovo { border-color: var(--biro); outline: 1.5px dashed var(--ink); outline-offset: 2px }
   .pt.nuovo.d { background: var(--biro) }
   .metro { position: relative; height: 14px; border: 1.5px solid var(--ink); margin: 4px 0 36px }
   .metro i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ink) }
-  .metro i.nuovo { background: var(--biro); opacity: .55 }
+  .metro i.nuovo { top: 50%; background: repeating-linear-gradient(90deg, var(--carta) 0 2px, var(--biro) 2px 4px) }
   .metro b { position: absolute; top: -3px; bottom: -3px; border-left: 2px solid var(--rosso) }
   .metro b span { position: absolute; top: 16px; left: -3px; font-size: var(--c-min); color: var(--rosso); white-space: nowrap; font-weight: 400 }
   /* l'ultimo filo sta a destra su una seconda riga: la sua etichetta cresce verso sinistra, non esce dalla colonna e non copre la prima */

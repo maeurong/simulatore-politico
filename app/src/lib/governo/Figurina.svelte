@@ -46,7 +46,7 @@
     {:else}<span class="voto vano" aria-hidden="true">0</span>{/if}
   </div>
   <div class="fz">
-    {#if m}<Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
+    {#if m}<Faccia nome={m.nome} genere={m.genere} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
     {:else}<span class="vuoto" aria-hidden="true">—</span>{/if}
   </div>
   <h4 class="nm"><button type="button" id={girata ? undefined : id} aria-pressed={scelta} onclick={onscelta}>{m ? m.nome : t("governo.senza_ministro")}</button></h4>
@@ -76,7 +76,7 @@
 {#snippet retro()}
   {#if m && f.agenda}
     <div class="rt" class:sel={scelta}>
-      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={46} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
+      <Faccia nome={m.nome} genere={m.genere} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={46} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
       <button type="button" class="nome" id={girata ? id : undefined} aria-pressed={scelta} onclick={onscelta}>{m.nome}</button>
       <span class="bollo" class:biro={f.agenda.stato === "dirottata"}>{t(f.agenda.stato === "fermata" ? "governo.atto_fermato" : "governo.atto_dirottato")}</span>
       <span class="min"><b>{f.agenda.nome}</b>{regione ? ` · ${regione}` : ""}</span>

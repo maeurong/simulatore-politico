@@ -9,21 +9,20 @@
   import Caselle from "$lib/componenti/Caselle.svelte";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
-  import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { allarga, fuori, haLaMaggioranza, pesoDi, quota, richiesteDi, type Bozza, type Sessione } from "./trattativa";
+  import { allarga, fuori, haLaMaggioranza, quota, richiesteDi } from "./trattativa";
 
-  let { vista, bozza, fatta, sessione }: { vista: Vista; bozza: Bozza; fatta: boolean; sessione: Sessione } = $props();
+  let { vista }: { vista: Vista } = $props();
 
   const maggioranza = $derived(haLaMaggioranza(vista));
   const fuoriCoalizione = $derived(fuori(vista));
   const disponibili = $derived(fuoriCoalizione.filter((x) => x.disponibile));
   const alleati = $derived(richiesteDi(vista));
-  const totale = $derived(vista.dicasteri.reduce((s, d) => s + pesoDi(d.id), 0));
-  const mio = $derived(quota(vista, bozza, "giocatore"));
-  const tecnici = $derived(quota(vista, bozza, null));
+  const totale = $derived(vista.spartizione.reduce((s, d) => s + d.peso, 0));
+  const mio = $derived(quota(vista, "giocatore"));
+  const tecnici = $derived(quota(vista, null));
   const salti = $derived(saltiDeiLeader(vista));
+  const genereDi = (id: string) => vista.partiti.find((p) => p.id === id)?.genere_leader;
   const leader = (id: string) => vista.partiti.find((p) => p.id === id)?.leader ?? "";
   const spento = $derived(partita.occupato ? t("trattativa.comando_in_corso") : undefined);
 
@@ -31,15 +30,12 @@
   let rifiuto = $state.raw<{ chi: string; testo: string; vista: Vista | null } | null>(null);
   let radice = $state<HTMLElement>();
 
-  /** Riuscito, la Vista nuova ha alleati nuovi: la bozza riparte. La conferma sparisce con la sua riga: qui il fuoco passa al riquadro degli alleati. */
+  /** La conferma sparisce con la sua riga: qui il fuoco passa al riquadro degli alleati. */
   async function manda(ids: string[]) {
     if (partita.occupato) return;
     rifiuto = null;
     try {
-      if (await partita.comanda(allarga(ids))) {
-        sessione.svuota();
-        radice?.focus();
-      }
+      if (await partita.comanda(allarga(ids))) radice?.focus();
     } catch (e) {
       rifiuto = { chi: ids.join("+"), testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
     }
@@ -85,27 +81,27 @@
   <h4 class="sez-l" id="ali-t">{t("trattativa.gli_alleati")}</h4>
   {#each alleati as a (a.id)}
     <div class="all" style:--pc={coloreDi(a.id) ?? undefined} class:nato={coloreDi(a.id) === null}>
-      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} salto={salti[a.id]} misura={34} /></span>
+      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" genere={genereDi(a.id)} partito={a.nome} salto={salti[a.id]} misura={34} /></span>
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
+      <div class="largo" role="img" aria-label={t("trattativa.intesa_barra", { n: numero(a.intesa, 0), ultimatum: numero(vista.soglie.ultimatum, 0), uscita: numero(vista.soglie.uscita, 0) })}>
+        <Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita / 10, vista.soglie.ultimatum / 10]} rosso={a.stato !== "ok"} nome="" />
+        <span class="ip" class:male={a.stato !== "ok"}>{t("trattativa.intesa_parte", { n: numero(a.intesa, 0) })}</span>
+        {#if a.stato !== "ok"}<span class="chip">{t(a.stato === "uscita" ? "trattativa.puo_uscire" : "trattativa.entra_ultimatum")}</span>{/if}
+        <span class="soglie min muto" aria-hidden="true">{t("trattativa.fili", { u: numero(vista.soglie.uscita, 0), l: numero(vista.soglie.ultimatum, 0) })}</span>
+      </div>
     </div>
   {/each}
-  <Segnaposto sezione={t("trattativa.ph_intesa")} fetta="11g" />
 </section>
 
 <section class="blocco" aria-labelledby="mio-t">
   <h4 class="sez-l" id="mio-t">{t("trattativa.il_tuo_partito")}</h4>
-  {#if Object.keys(bozza).length}
-    <p class="sec">
-      <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
-      {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
-    </p>
-    <div class="az">
-      <Pulsante forma="piccolo" {spento} onclick={() => sessione.svuota()}>{t("trattativa.svuota")}</Pulsante>
-    </div>
-  {/if}
-  <p class="min muto">{t(fatta ? "trattativa.svuota_nota" : "trattativa.nota")}</p>
+  <p class="sec">
+    <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
+    {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
+  </p>
+  <p class="min muto">{t("trattativa.nota")}</p>
 </section>
 
 <style>
@@ -127,4 +123,8 @@
   .all > :not(.fz, .largo) { grid-column: 2 }
   .all .fz { grid-row: 1 / span 2; display: inline-flex }
   .all .largo { grid-column: 1 / -1 }
+  .ip { display: block; font-size: var(--c-sec); margin-top: 2px }
+  .ip.male { color: var(--rosso); font-weight: 700 }
+  .soglie { display: block; margin-top: 2px; color: var(--rosso) }
+  .chip { margin-left: 8px; display: inline-block; border: 1.5px solid var(--rosso); color: var(--rosso); padding: 0 6px; font-size: var(--c-min); font-weight: 700; white-space: nowrap; line-height: 1.4 }
 </style>

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { VARIANTI, type Leve } from "./caricatura";
+import { VARIANTI } from "./caricatura";
 import { render } from "svelte/server";
 import Caricatura from "./Caricatura.svelte";
 import { FANTASIE, OGGETTI, profilo } from "./kit";
 import fonte from "./kit.ts?raw";
 import stile from "./Caricatura.svelte?raw";
 
-const chiavi = Object.keys(VARIANTI) as (keyof Leve)[];
+const chiavi = Object.keys(VARIANTI) as (keyof typeof VARIANTI)[];
 
 describe("kit", () => {
   it("ha una fantasia per leva colletto e il file sta sotto i 60 KB", () => {
@@ -21,7 +21,7 @@ describe("kit", () => {
       for (let mento = 0; mento < VARIANTI.mento; mento++)
         for (let fronte = 0; fronte < VARIANTI.fronte; fronte++)
           for (let nuca = 0; nuca < VARIANTI.nuca; nuca++) {
-            const p = profilo({ naso, mento, fronte, nuca, occhio: 0, colletto: 0 });
+            const p = profilo({ naso, mento, fronte, nuca, occhio: 0, colletto: 0, orecchino: false, cappello: false });
             expect(p.sagoma).toMatch(/^M20 44C.*Z$/);
             expect(p.pennino).toMatch(/^M\d+ \d+l/);
             expect(p.pennino).not.toMatch(/NaN|undefined/);
@@ -35,7 +35,7 @@ describe("kit", () => {
       for (let mento = 0; mento < VARIANTI.mento; mento++)
         for (let fronte = 0; fronte < VARIANTI.fronte; fronte++)
           for (let nuca = 0; nuca < VARIANTI.nuca; nuca++) {
-            const p = profilo({ naso, mento, fronte, nuca, occhio: 0, colletto: 0 });
+            const p = profilo({ naso, mento, fronte, nuca, occhio: 0, colletto: 0, orecchino: false, cappello: false });
             // sagoma: solo comandi assoluti, ogni numero è una coordinata della tela
             const nums = p.sagoma.match(/-?\d+(\.\d+)?/g)!.map(Number);
             expect(nums.every((n) => n >= 0 && n <= 64)).toBe(true);
@@ -56,13 +56,24 @@ describe("kit", () => {
   });
 
   it("naso e mento cambiano il filo e il pennino", () => {
-    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0 };
+    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0, orecchino: false, cappello: false };
     expect(profilo({ ...base, naso: 1 }).pennino).not.toBe(profilo(base).pennino);
     expect(profilo({ ...base, mento: 2 }).filo).not.toBe(profilo(base).filo);
   });
 
+  it("con donna il naso esce dal pennino e va a parte; senza, il profilo è quello di sempre", () => {
+    const l = { naso: 2, mento: 1, fronte: 1, nuca: 0, occhio: 0, colletto: 0, orecchino: false, cappello: false };
+    const u = profilo(l), d = profilo(l, true);
+    expect(u.naso).toBe("");
+    expect(d.naso).toMatch(/^M\d+ \d+l/);
+    expect(u.pennino.length - d.pennino.length).toBe(d.naso.length);
+    expect(d.sagoma).not.toBe(u.sagoma);
+    expect(d.sagoma).not.toMatch(/NaN|undefined/);
+    expect(profilo(l, false)).toEqual(u);
+  });
+
   it("il colletto riempie con la fantasia della leva, quello del tecnico col grigio", () => {
-    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0 };
+    const base = { naso: 0, mento: 0, fronte: 0, nuca: 0, occhio: 0, orecchino: false, cappello: false };
     const colletto = (ruolo: "ministro" | "tecnico", c: number) =>
       render(Caricatura, { props: { ruolo, partito: "Centro", nome: "", leve: { ...base, colletto: c }, misura: 62 } }).body.match(/<path class="coll[^"]*"[^>]*>/)![0];
     FANTASIE.forEach((f, c) => expect(colletto("ministro", c)).toContain(`url(#fantasia-${f})`));
@@ -93,5 +104,22 @@ describe("kit", () => {
     expect(OGGETTI.sviluppo_economico).toContain('<path class="sd" d="M1.6 9.8h12.8"/>');
     expect(stile).toMatch(/\.ogg\) \{[^}]*stroke-width: 1\.5/);
     expect(stile).not.toMatch(/:global\(\.s[fd]\)[^{]*\{[^}]*stroke-width/);
+  });
+});
+
+describe("profilo delle donne per ogni naso", () => {
+  it("sei nasi: il naso a parte c'è, la punta scalata e la sagoma restano nella tela 64 × 64", () => {
+    for (let naso = 0; naso < VARIANTI.naso; naso++) {
+      const l = { naso, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0, orecchino: false, cappello: false };
+      const d = profilo(l, true), u = profilo(l);
+      expect(d.naso).toMatch(/^M\d+ \d+l[-\d ]+z$/);
+      expect(d.naso).not.toBe(u.sagoma);
+      for (const t of [d.sagoma, d.filo, d.ombre]) {
+        expect(t).not.toMatch(/NaN|undefined/);
+        expect(t.match(/-?\d+(\.\d+)?/g)!.map(Number).every((n) => n >= 0 && n <= 64)).toBe(true);
+      }
+      expect(d.sagoma).not.toBe(u.sagoma);
+      expect(d.ombre).not.toBe(u.ombre);
+    }
   });
 });

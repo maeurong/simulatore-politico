@@ -64,7 +64,7 @@ const FETTA: Record<Exclude<Sezione, "cruscotto" | "campagna" | "paese" | "parti
   eredita: null, schema: null,
 };
 const CRUSCOTTO: Record<StatoGiocatore, string | null> = {
-  turno_zero: null, trattativa: "11b", governo: null, crisi: null, opposizione: null, finita: null,
+  turno_zero: null, trattativa: null, governo: null, crisi: null, opposizione: null, finita: null,
 };
 
 /** La fetta che costruisce la sezione in questo stato; null = la sezione è già costruita. */

@@ -1,23 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Vista } from "$lib/tipi/Vista";
 import type { Comando } from "$lib/tipi/Comando";
-import { aChi, allarga, completa, defaultDellaChiusura, fuori, haLaMaggioranza, mandaRibaltone, passaggio, pesoDi, proponi, quota, richiesteDi, risultato, sessioneSpartizione, type Bozza, type EsitoManda, type StatoSpartizione } from "./trattativa";
+import { aChi, allarga, cambiata, defaultDellaChiusura, fuori, haLaMaggioranza, mandaRibaltone, passaggio, predefinita, proponi, quota, ribaltoneDi, richiesteDi, risultato, type EsitoManda } from "./trattativa";
 import turnoZeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
 import campioneJson from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativa.json";
 
 const turnoZero = turnoZeroJson as unknown as Vista;
 const v02 = trattativaJson as unknown as Vista;
-const campione = campioneJson as unknown as { premio: { pesi: number[] }; senza_maggioranza: { vista: Vista }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
-const ids = v02.dicasteri.map((d) => d.id);
-const piena = (b: Bozza = {}): Bozza => Object.fromEntries(ids.map((id) => [id, id in b ? b[id] : "giocatore"]));
+const campione = campioneJson as unknown as { premio: { vista: Vista; proposte: { nome: string; vista: Vista }[] }; senza_maggioranza: { vista: Vista; allarga_tutti: { vista: Vista } }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
+const proposta = (nome: string) => campione.premio.proposte.find((p) => p.nome === nome)!.vista;
+type Voci = { dicastero: string; partito: string | null }[];
 
-describe("pesoDi", () => {
-  it("sui dieci dicasteri della 02 dà i pesi del campione", () => {
-    expect(ids.map(pesoDi)).toEqual(campione.premio.pesi);
-    expect(ids.map(pesoDi)).toEqual([3, 1, 1, 1, 1, 1, 1, 2, 1, 2]);
-  });
-});
 
 describe("aChi", () => {
   it("il giocatore, il tecnico, poi gli alleati delle richieste", () => {
@@ -25,34 +19,65 @@ describe("aChi", () => {
   });
 });
 
-describe("completa e proponi", () => {
-  const nove = Object.fromEntries(ids.slice(1).map((id) => [id, "giocatore"]));
-  it("nove dicasteri assegnati non bastano, dieci sì (anche col tecnico)", () => {
-    expect(completa(v02, {})).toBe(false);
-    expect(completa(v02, nove)).toBe(false);
-    expect(completa(v02, { ...nove, [ids[0]]: null })).toBe(true);
+describe("spartizione in corso", () => {
+  const v = campione.premio.vista;
+  it("quota: dicasteri e punti dai peso della Vista", () => {
+    const mio = v.spartizione.filter((d) => d.partito === "giocatore");
+    expect(quota(v, "giocatore")).toEqual({ n: mio.length, punti: mio.reduce((s, d) => s + d.peso, 0) });
+    expect(quota(v, "nessuno")).toEqual({ n: 0, punti: 0 });
   });
-  it("proponi è null a bozza incompleta", () => {
-    expect(proponi(v02, nove)).toBeNull();
+  it("cambiata: falso sul default, vero dove una riga se ne discosta", () => {
+    expect(cambiata(v)).toBe(false);
+    expect(cambiata(proposta("avara_destra"))).toBe(true);
   });
-  it("a bozza completa ha dieci assegnazioni nell'ordine della Vista, e il tecnico è partito null", () => {
-    const c = proponi(v02, piena({ [ids[1]]: null, [ids[0]]: "destra" }));
-    expect(c).toMatchObject({ tipo: "proponi_spartizione" });
-    const d = (c as { dicasteri: { dicastero: string; partito: string | null }[] }).dicasteri;
-    expect(d.map((x) => x.dicastero)).toEqual(ids);
-    expect(d).toHaveLength(10);
-    expect(d[0].partito).toBe("destra");
-    expect(d[1].partito).toBeNull();
+  it("proponi: dieci voci nell'ordine della Vista, cambiato solo quel dicastero (anche al tecnico)", () => {
+    const c = proponi(v, "economia_finanze", "giocatore") as { dicasteri: Voci };
+    expect(c.dicasteri).toHaveLength(10);
+    expect(c.dicasteri.map((d) => d.dicastero)).toEqual(v.spartizione.map((d) => d.dicastero));
+    const diverse = c.dicasteri.filter((d, i) => d.partito !== v.spartizione[i].partito);
+    expect(diverse).toEqual([{ dicastero: "economia_finanze", partito: "giocatore" }]);
+    expect((proponi(v, "economia_finanze", null) as { dicasteri: Voci }).dicasteri[0].partito).toBeNull();
+  });
+  it("predefinita: ogni riga al suo di_default, e dalla spartizione di default non cambia niente", () => {
+    const c = predefinita(proposta("avara_destra")) as { tipo: string; dicasteri: Voci };
+    expect(c.tipo).toBe("proponi_spartizione");
+    expect(c.dicasteri.map((d) => d.partito)).toEqual(v.spartizione.map((d) => d.di_default));
   });
 });
 
-describe("quota", () => {
-  it("dicasteri e punti per titolare; i non assegnati non contano", () => {
-    const b = piena({ [ids[0]]: null, [ids[1]]: "destra" });
-    expect(quota(v02, b, "giocatore")).toEqual({ n: 8, punti: 10 });
-    expect(quota(v02, b, null)).toEqual({ n: 1, punti: 3 });
-    expect(quota(v02, b, "destra")).toEqual({ n: 1, punti: 1 });
-    expect(quota(v02, {}, "giocatore")).toEqual({ n: 0, punti: 0 });
+describe("richiesteDi", () => {
+  it("02: richiesta, offerta e scarto per alleato, a due decimali", () => {
+    const [cd, d] = richiesteDi(v02);
+    expect([cd.id, cd.offerta]).toEqual(["centrodestra", 2]);
+    expect(cd.richiesta).toBeCloseTo(2.51, 2);
+    expect(cd.scarto).toBeCloseTo(-0.51, 2);
+    expect([d.id, d.offerta]).toEqual(["destra", 7]);
+    expect(d.richiesta).toBeCloseTo(6.79, 2);
+    expect(d.scarto).toBeCloseTo(0.21, 2);
+    expect(cd.nome).toBe("Centrodestra");
+  });
+  it("intesa e stato: la Destra a 32,1 è sotto l'ultimatum (40), non sotto l'uscita (25)", () => {
+    const d = richiesteDi(proposta("avara_destra")).find((x) => x.id === "destra")!;
+    expect(d.intesa).toBeCloseTo(32.1, 1);
+    expect(d.stato).toBe("ultimatum");
+    expect(richiesteDi(campione.premio.vista).map((x) => x.stato)).toEqual(["ok", "ok"]);
+  });
+  it("le soglie sono strette: a 40 giusti è ok, a 25 giusti è ultimatum, sotto 25 uscita", () => {
+    const con = (intesa: number) => richiesteDi({ ...v02, richieste: [{ ...v02.richieste[0], intesa_partenza: intesa }], soglie: { ...v02.soglie, ultimatum: 40, uscita: 25 } })[0].stato;
+    expect([con(40), con(39.9), con(25), con(24.9)]).toEqual(["ok", "ultimatum", "ultimatum", "uscita"]);
+  });
+});
+
+describe("ribaltoneDi", () => {
+  it("guida: Tu, Sinistra, Centrosinistra, Centro nell'ordine del core, la Sinistra primo", () => {
+    const r = ribaltoneDi(campione.guida.vista)!;
+    expect(r.map((x) => x.id)).toEqual(["giocatore", "sinistra", "centrosinistra", "centro"]);
+    expect(r.map((x) => x.nome)).toEqual(["Tu", "Sinistra", "Centrosinistra", "Centro"]);
+    expect(r.filter((x) => x.primo).map((x) => x.id)).toEqual(["sinistra"]);
+    expect(r[1]).toMatchObject({ camera: 134, senato: 71 });
+  });
+  it("fuori dal ribaltone è null", () => {
+    expect(ribaltoneDi(v02)).toBeNull();
   });
 });
 
@@ -71,19 +96,6 @@ describe("risultato", () => {
   });
   it("senza voto letto è null", () => {
     expect(risultato(turnoZero)).toBeNull();
-  });
-});
-
-describe("richiesteDi", () => {
-  it("02: richiesta, offerta e scarto per alleato, a due decimali", () => {
-    const [cd, d] = richiesteDi(v02);
-    expect([cd.id, cd.offerta]).toEqual(["centrodestra", 2]);
-    expect(cd.richiesta).toBeCloseTo(2.51, 2);
-    expect(cd.scarto).toBeCloseTo(-0.51, 2);
-    expect([d.id, d.offerta]).toEqual(["destra", 7]);
-    expect(d.richiesta).toBeCloseTo(6.79, 2);
-    expect(d.scarto).toBeCloseTo(0.21, 2);
-    expect(cd.nome).toBe("Centrodestra");
   });
 });
 
@@ -107,6 +119,14 @@ describe("haLaMaggioranza e fuori", () => {
   });
 });
 
+describe("cambiata dopo l'allargamento", () => {
+  it("con tutti dentro la spartizione è quella di default: nessuna riga cambiata", () => {
+    const v = campione.senza_maggioranza.allarga_tutti.vista;
+    expect(cambiata(v)).toBe(false);
+    expect(v.spartizione.every((d) => d.partito === d.di_default)).toBe(true);
+  });
+});
+
 describe("allarga", () => {
   it("è il comando del core", () => expect(allarga(["centro"])).toEqual({ tipo: "allarga", partiti: ["centro"] }));
 });
@@ -118,326 +138,6 @@ describe("defaultDellaChiusura", () => {
     expect(defaultDellaChiusura(campione.capo_dello_stato.vista)).toBeNull();
   });
 });
-
-describe("sessioneSpartizione", () => {
-  // come partita.occupato: finché un comando è in volo, un altro non parte
-  function prova(inizio: Vista = v02) {
-    const mandati: Comando[] = [];
-    const attese: ((e: EsitoManda) => void)[] = [];
-    let aperti = 0;
-    let stato!: StatoSpartizione;
-    let corrente = inizio;
-    const s = sessioneSpartizione(
-      () => corrente,
-      (c) => {
-        if (aperti) return Promise.resolve<EsitoManda>("occupato");
-        aperti++;
-        mandati.push(c);
-        return new Promise<EsitoManda>((r) => attese.push((e) => { aperti--; r(e); }));
-      },
-      (x) => (stato = x),
-    );
-    const risolvi = async (e: EsitoManda) => {
-      attese.shift()!(e);
-      await new Promise((r) => setTimeout(r));
-    };
-    // l'ordine di Svelte: la partita si libera e l'effetto chiama riprova() prima che la risposta arrivi a chi l'aspetta
-    const risolviERiprova = async (e: EsitoManda) => {
-      // prima i clic arrivano alla sessione («occupato» li lascia pendenti), poi risponde il core
-      await new Promise((r) => setTimeout(r));
-      attese.shift()!(e);
-      s.riprova();
-      await new Promise((r) => setTimeout(r));
-    };
-    return { s, mandati, risolvi, risolviERiprova, vista: (x: Vista) => (corrente = x), get stato() { return stato; } };
-  }
-  const nove = (p: ReturnType<typeof prova>) => ids.slice(0, 9).forEach((id) => p.s.scegli(id, "giocatore"));
-
-  it("a bozza incompleta non parte niente; alla decima parte un comando, riuscito dice «partita»", async () => {
-    const p = prova();
-    nove(p);
-    expect(p.mandati).toHaveLength(0);
-    expect(p.stato.esito).toBeNull();
-    p.s.scegli(ids[9], null);
-    expect(p.mandati).toHaveLength(1);
-    expect(p.stato.esito).toBe("pendente");
-    await p.risolvi("ok");
-    expect(p.stato.esito).toBe("partita");
-    expect(p.stato.rifiuto).toBeNull();
-  });
-
-  it("il rifiuto della decima riporta la bozza a incompleta, senza «partita»", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "destra");
-    await p.risolvi({ rifiuto: "Centro non è nella coalizione" });
-    expect(p.stato.bozza[ids[9]]).toBeUndefined();
-    expect(completa(v02, p.stato.bozza)).toBe(false);
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[9], testo: "Centro non è nella coalizione" });
-    expect(p.stato.esito).toBeNull();
-  });
-
-  it("il rifiuto di una modifica riporta quel dicastero alla scelta accettata", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[2], "destra");
-    expect(p.stato.bozza[ids[2]]).toBe("destra");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.stato.bozza[ids[2]]).toBe("giocatore");
-    expect(p.stato.rifiuto?.dicastero).toBe(ids[2]);
-    expect(p.stato.esito).toBeNull();
-    // la scelta rifiutata ricliccata riparte (non è più la scelta della bozza)
-    p.s.scegli(ids[2], "destra");
-    expect(p.mandati).toHaveLength(3);
-  });
-
-  it("la stessa scelta ricliccata non manda niente", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[9], "giocatore");
-    expect(p.mandati).toHaveLength(1);
-    expect(p.stato.esito).toBe("partita");
-  });
-
-  it("clic in volo: pendente, riparte una volta sola con l'ultima bozza", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    p.s.scegli(ids[1], "destra");
-    p.s.scegli(ids[2], "centrodestra");
-    expect(p.mandati).toHaveLength(1);
-    expect(p.stato.esito).toBe("pendente");
-    await p.risolvi("ok");
-    expect(p.stato.esito).toBe("pendente");
-    p.s.riprova();
-    p.s.riprova();
-    expect(p.mandati).toHaveLength(2);
-    const d = (p.mandati[1] as { dicasteri: { dicastero: string; partito: string | null }[] }).dicasteri;
-    expect(d[1].partito).toBe("destra");
-    expect(d[2].partito).toBe("centrodestra");
-    await p.risolvi("ok");
-    expect(p.stato.esito).toBe("partita");
-  });
-
-  it("il rifiuto resta mentre riparte il pendente e dopo il suo ok; lo azzera il clic successivo", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[2], "destra");
-    p.s.scegli(ids[1], "destra");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.mandati).toHaveLength(3);
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
-    p.s.riprova();
-    expect(p.mandati).toHaveLength(3);
-    await p.risolvi("ok");
-    // l'ok del rinvio automatico non azzera il rifiuto: il giocatore non l'ha ancora letto
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
-    expect(p.stato.esito).toBe("partita");
-    p.s.scegli(ids[3], "destra");
-    expect(p.stato.rifiuto).toBeNull();
-  });
-
-  it("due clic pendenti dietro il rifiuto di A: se il core rifiuta il rinvio, tornano indietro tutti e due, col testo sotto l'ultimo", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[2], "destra");
-    p.s.scegli(ids[1], "destra");
-    p.s.scegli(ids[3], "centrodestra");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.mandati).toHaveLength(3);
-    const d = (p.mandati[2] as { dicasteri: { partito: string | null }[] }).dicasteri;
-    expect([d[1].partito, d[2].partito, d[3].partito]).toEqual(["destra", "giocatore", "centrodestra"]);
-    await p.risolvi({ rifiuto: "neanche" });
-    expect([p.stato.bozza[ids[1]], p.stato.bozza[ids[2]], p.stato.bozza[ids[3]]]).toEqual(["giocatore", "giocatore", "giocatore"]);
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[3], testo: "neanche" });
-  });
-
-  it("chiudi() con un invio in volo e un clic pendente: la risposta non manda niente, non legge la Vista, non scrive stato", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    p.s.scegli(ids[1], "destra");
-    await new Promise((r) => setTimeout(r));
-    const prima = p.stato;
-    p.s.chiudi();
-    // dopo l'uscita all'edicola la Vista non c'è più: qui si conta chi la legge
-    let letta = false;
-    p.vista({ ...v02, get richieste() { letta = true; return v02.richieste; } } as Vista);
-    await p.risolvi("ok");
-    p.s.riprova();
-    expect(letta).toBe(false);
-    expect(p.mandati).toHaveLength(1);
-    expect(p.stato).toBe(prima);
-  });
-
-  it("riprova() prima della risposta (l'ordine di Svelte): rifiuto di A con B pendente, B riparte senza A e il rifiuto resta sotto A", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[2], "destra");
-    p.s.scegli(ids[1], "destra");
-    await p.risolviERiprova({ rifiuto: "no" });
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
-    expect(p.mandati).toHaveLength(3);
-    const d = (p.mandati[2] as { dicasteri: { dicastero: string; partito: string | null }[] }).dicasteri;
-    expect(d[2].partito).toBe("giocatore");
-    expect(d[1].partito).toBe("destra");
-    // il secondo rifiuto è di B: riporta indietro B, non A, e si legge sotto B
-    await p.risolvi({ rifiuto: "neanche" });
-    expect(p.stato.bozza[ids[1]]).toBe("giocatore");
-    expect(p.stato.bozza[ids[2]]).toBe("giocatore");
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[1], testo: "neanche" });
-  });
-
-  it("riprova() prima della risposta (l'ordine di Svelte): ok con un clic pendente, riparte una volta sola con l'ultima bozza", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    p.s.scegli(ids[1], "destra");
-    await p.risolviERiprova("ok");
-    expect(p.mandati).toHaveLength(2);
-    expect((p.mandati[1] as { dicasteri: { partito: string | null }[] }).dicasteri[1].partito).toBe("destra");
-    await p.risolvi("ok");
-    expect(p.stato.esito).toBe("partita");
-  });
-
-  it("una Vista in cui un alleato è entrato svuota la sessione come svuota(), anche con un clic pendente, e non manda niente", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    // l'invio di ids[2] fa da comando in volo (nell'app è l'allargamento): il clic su ids[1] resta pendente
-    p.s.scegli(ids[2], "destra");
-    p.s.scegli(ids[1], "destra");
-    expect(p.stato.esito).toBe("pendente");
-    p.vista({ ...v02, richieste: [...v02.richieste, { ...v02.richieste[0], partito: "centro" }] });
-    p.s.aggiorna();
-    expect(p.stato).toEqual({ bozza: {}, rifiuto: null, esito: null, fatta: false });
-    await p.risolviERiprova("ok");
-    p.s.riprova();
-    expect(p.mandati).toHaveLength(2);
-    expect(p.stato).toEqual({ bozza: {}, rifiuto: null, esito: null, fatta: false });
-    // anche accettata è vuota: un rifiuto dopo non riporta ids[9] alla scelta accettata prima dell'allargamento
-    nove(p);
-    p.s.scegli(ids[9], "destra");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.stato.bozza[ids[9]]).toBeUndefined();
-  });
-
-  it("un guasto riporta la scelta indietro e non dice «partita»", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("guasto");
-    expect(p.stato.bozza[ids[9]]).toBeUndefined();
-    expect(p.stato.esito).toBeNull();
-    expect(p.stato.rifiuto).toBeNull();
-  });
-
-  it("una Vista in cui un alleato è uscito scarta le scelte che non esistono più, e non manda niente", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "destra");
-    await p.risolvi("ok");
-    p.vista({ ...v02, richieste: v02.richieste.filter((r) => r.partito !== "destra") });
-    p.s.aggiorna();
-    expect(Object.values(p.stato.bozza)).not.toContain("destra");
-    expect(completa(p.vista({ ...v02, richieste: v02.richieste.filter((r) => r.partito !== "destra") }), p.stato.bozza)).toBe(false);
-    expect(p.stato.esito).toBeNull();
-    expect(p.mandati).toHaveLength(1);
-  });
-
-  it("la Vista cambia con il comando in volo: l'alleato uscito non rientra e «sta partendo» non resta per sempre", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "destra");
-    p.vista({ ...v02, richieste: v02.richieste.filter((r) => r.partito !== "destra") });
-    p.s.aggiorna();
-    await p.risolvi("ok");
-    expect(p.stato.esito).toBeNull();
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.stato.bozza[ids[9]]).toBeUndefined();
-  });
-
-  it("svuota: bozza vuota, niente rifiuto né esito, la proposta fatta resta detta, e una bozza nuova riparte", async () => {
-    const p = prova();
-    nove(p);
-    expect(p.stato.fatta).toBe(false);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    expect(p.stato.fatta).toBe(true);
-    p.s.svuota();
-    expect(p.stato.fatta).toBe(true);
-    expect(p.stato.bozza).toEqual({});
-    expect(p.stato.esito).toBeNull();
-    expect(p.stato.rifiuto).toBeNull();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    expect(p.mandati).toHaveLength(2);
-  });
-
-  it("svuota con un invio in volo: la risposta tardiva, ok o rifiuto, non tocca la sessione", async () => {
-    for (const e of ["ok", { rifiuto: "no" }] as EsitoManda[]) {
-      const p = prova();
-      nove(p);
-      p.s.scegli(ids[9], "giocatore");
-      p.s.svuota();
-      await p.risolvi(e);
-      expect(p.stato.bozza).toEqual({});
-      expect(p.stato.rifiuto).toBeNull();
-      expect(p.stato.esito).toBeNull();
-      // accettata è vuota: un rifiuto successivo non riporta niente alla scelta dell'invio scartato
-      nove(p);
-      p.s.scegli(ids[9], "destra");
-      await p.risolvi({ rifiuto: "no" });
-      expect(p.stato.bozza[ids[9]]).toBeUndefined();
-      expect(p.stato.bozza[ids[0]]).toBe("giocatore");
-    }
-  });
-
-  it("svuota con un invio che sta per riprovare: «occupato» tardivo non lascia pendente", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    p.s.scegli(ids[1], "destra");
-    p.s.svuota();
-    await p.risolvi("ok");
-    // senza la guardia `giro` l'«occupato» tardivo qui rimette «pendente»
-    expect(p.stato.esito).toBeNull();
-    p.s.riprova();
-    expect(p.mandati).toHaveLength(1);
-    expect(p.stato.esito).toBeNull();
-  });
-
-  it("rifiuto di A con B pendente: A torna alla scelta accettata, B riparte da sé e il rifiuto di A resta fino al clic successivo", async () => {
-    const p = prova();
-    nove(p);
-    p.s.scegli(ids[9], "giocatore");
-    await p.risolvi("ok");
-    p.s.scegli(ids[2], "destra");
-    p.s.scegli(ids[1], "destra");
-    await p.risolvi({ rifiuto: "no" });
-    expect(p.stato.rifiuto).toEqual({ dicastero: ids[2], testo: "no" });
-    expect(p.stato.esito).toBe("pendente");
-    expect(p.stato.bozza[ids[2]]).toBe("giocatore");
-    expect(p.stato.bozza[ids[1]]).toBe("destra");
-    expect(p.mandati).toHaveLength(3);
-    // ogni clic, anche su un'altra riga, è un gesto dopo aver letto: il rifiuto di A sparisce
-    p.s.scegli(ids[3], "destra");
-    expect(p.stato.rifiuto).toBeNull();
-  });
-});
-
 describe("mandaRibaltone", () => {
   beforeEach(() => { passaggio.fuoco = false; });
   const pausa = () => Promise.resolve();
@@ -516,5 +216,30 @@ describe("mandaRibaltone", () => {
     await primo;
     expect(p.mandati).toHaveLength(1);
     expect(passaggio.fuoco).toBe(false);
+  });
+});
+
+describe("casi limite della trattativa", () => {
+  const v = campione.premio.vista;
+  it("proponi: una riga già al tecnico (null) resta null, e riassegnarla cambia solo quella", () => {
+    const col = { ...v, spartizione: v.spartizione.map((d, i) => (i === 0 ? { ...d, partito: null } : d)) };
+    const c = proponi(col, col.spartizione[1].dicastero, "giocatore") as { dicasteri: Voci };
+    expect(c.dicasteri[0].partito).toBeNull();
+    expect(c.dicasteri[1].partito).toBe("giocatore");
+    expect(c.dicasteri.filter((d, i) => d.partito !== col.spartizione[i].partito)).toHaveLength(col.spartizione[1].partito === "giocatore" ? 0 : 1);
+  });
+  it("ribaltoneDi: coalizione vuota dà lista vuota, senza primo", () => {
+    const r = ribaltoneDi({ ...campione.guida.vista, ribaltone: { ...campione.guida.vista.ribaltone!, coalizione: [], primo: null } } as Vista);
+    expect(r).toEqual([]);
+  });
+  it("ribaltoneDi: primo null non segna nessuno", () => {
+    const g = campione.guida.vista;
+    const r = ribaltoneDi({ ...g, ribaltone: { ...g.ribaltone!, primo: null } } as Vista)!;
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.some((x) => x.primo)).toBe(false);
+  });
+  it("ribaltoneDi: senza elezioni i seggi sono 0, non un crash", () => {
+    const r = ribaltoneDi({ ...campione.guida.vista, elezioni: [] })!;
+    expect(r.every((x) => x.camera === 0 && x.senato === 0)).toBe(true);
   });
 });

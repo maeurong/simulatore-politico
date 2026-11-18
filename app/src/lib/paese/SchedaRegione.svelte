@@ -105,7 +105,7 @@
   <div class="legenda">
     {#each voto.senato.filter((x) => x.seggi) as x (x.partito)}<span class="sg">{#if !grave}<i class="sw" style:background={coloreDi(x.partito) ?? "var(--retino), var(--carta)"}></i>{/if}{nomeDi(vista, x.partito)} <b>{x.seggi}</b></span>{/each}
   </div>
-  <p class="min muto">{t("paese.primo_partito", { nome: nomeDi(vista, voto.primo) })}</p>
+  <p class="min muto">{t("paese.senato_nota")} {t("paese.primo_partito", { nome: nomeDi(vista, voto.primo) })}</p>
 {:else}
   <p class="min muto">{vista.elezioni.length ? t("mappa.senza_dato") : t("paese.senato_dopo")}</p>
 {/if}

@@ -61,7 +61,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <section class="carta" bind:this={radice} tabindex="-1" aria-label={t("governo.dirotta_titolo", { dicastero: f.nomeDicastero })} onkeydown={tasto}>
   <div class="su">
-    <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
+    <Faccia nome={m.nome} genere={m.genere} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, vista.soglie)} dicastero={f.dicastero} />
     <div>
       <div class="occ">{t("governo.dirotta_titolo", { dicastero: f.nomeDicastero })}</div>
       <h4 class="tit">{m.nome}</h4>
