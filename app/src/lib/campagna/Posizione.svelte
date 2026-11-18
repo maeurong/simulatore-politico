@@ -38,7 +38,7 @@
     nuova
       ? [
           t(nuova.distanza > d ? "campagna.dist_sale" : nuova.distanza < d ? "campagna.dist_scende" : "campagna.dist_resta", { d: numero(nuova.distanza, 2) }),
-          dNuova === "scissione" ? t("campagna.dist_scissione") : dNuova === "minaccia" ? t("campagna.dist_minaccia") : "",
+          dNuova === "scissione" ? t("campagna.dist_scissione", { s: numero(vista.campagna.soglia_scissione, 1) }) : dNuova === "minaccia" ? t("campagna.dist_minaccia") : "",
           t("campagna.una_volta"),
         ].filter(Boolean).join(" ")
       : "",
@@ -71,7 +71,7 @@
     {/if}
     {#if nuova}<i class="pt nuovo" style:left={x(nuova.percepita)}></i><i class="pt nuovo d" style:left={x(nuova.dichiarata)}></i>{/if}
   </div>
-  <div class="min muto">{t("campagna.pos_legenda")}</div>
+  <div class="min muto">{t(nuova ? "campagna.pos_legenda_nuova" : "campagna.pos_legenda")}</div>
   {#if io}
     <dl class="dist">
       <dt>{t("campagna.dichiarata")}</dt><dd>{numero(io.posizione_dichiarata, 2)}{#if nuova}{" "}→ <b>{numero(nuova.dichiarata, 2)}</b>{/if}</dd>

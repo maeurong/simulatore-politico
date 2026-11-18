@@ -113,7 +113,7 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
 
   const terzo: Base = {
     nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: spread(v),
-    rosso: false, grigio: false, prima: prima ? prima.spread_pb : null,
+    rosso: sottoLoStacco(v.spread_pb, spread(v)), grigio: false, prima: prima ? prima.spread_pb : null,
   };
 
   const tre = [primo, secondo, terzo].map((x) => ({ ...x, era: null, scatta: false })) as [Tracciato, Tracciato, Tracciato];

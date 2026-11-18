@@ -165,6 +165,12 @@ describe("tracciatiDi", () => {
     expect(tracciatiDi(v, [], null)[1]).toEqual(tracciatiDi(v, [])[1]);
   });
 
+  it("lo spread diventa rosso allo stacco e oltre, sotto no", () => {
+    const stacco = spreadAlto.vista.soglie.crisi_debito_pb;
+    const rosso = (pb: number) => tracciatiDi({ ...spreadAlto.vista, spread_pb: pb }, spreadAlto.serie)[2].rosso;
+    expect([rosso(stacco - 1), rosso(stacco), rosso(stacco + 300)]).toEqual([false, true, true]);
+  });
+
   it("la variazione viene dal punto della serie del turno prima", () => {
     expect(tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2].prima).toBe(196);
     const terzo = tracciatiDi(spreadAlto.vista, spreadAlto.serie)[2];

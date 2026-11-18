@@ -35,7 +35,7 @@
     (r, c) => (anteprima = { chiave: chiave(c), esito: Array.isArray(r) ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
   );
   const corrente = $derived(anteprima && anteprima.chiave === chiave(coppie(scelte)) ? anteprima.esito : null);
-  const perdite = $derived(corrente && Array.isArray(corrente) ? corrente.filter((v) => v.intesa < 0) : null);
+  const perdite = $derived(corrente && Array.isArray(corrente) ? corrente.filter((v) => v.disposizioni.length > 0) : null);
   const rifiutata = $derived(corrente && !Array.isArray(corrente) ? corrente.rifiuto : null);
   const chiediOra = () => scelte.length && chiedi(coppie(scelte));
 
@@ -98,7 +98,8 @@
         <span><b>{t("campagna.costa_intesa")}</b> {t("campagna.costa_intesa_corpo")}</span>
         {#if perdite?.length}
           {#each perdite as v (v.partito)}
-            <span>{t("campagna.intesa_perde", { nome: nomeDi(vista, v.partito), n: numero(-v.intesa, 0), su: elenco(v.disposizioni.map((id) => disp(id)?.nome ?? id), ", ") })}</span>
+            {@const su = elenco(v.disposizioni.map((id) => disp(id)?.nome ?? id), ", ")}
+            <span>{v.intesa < 0 ? t("campagna.intesa_perde", { nome: nomeDi(vista, v.partito), n: numero(-v.intesa, 0), su }) : t("campagna.intesa_zero", { nome: nomeDi(vista, v.partito), su })}</span>
           {/each}
         {:else if perdite}
           <span>{t("campagna.intesa_nessuna")}</span>
