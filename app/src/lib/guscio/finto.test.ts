@@ -221,18 +221,16 @@ describe("rispondi: la fetta 11b", () => {
       rifiuta("comando non ammesso: Estrema sinistra non entra: posizione troppo lontana dalla tua"),
     );
   });
-  it("proponi_spartizione: la spartizione giocata dà le richieste dopo il comando", () => {
-    const prima = (t27["premio"]["proposte"] as { spartizione: unknown; richieste: unknown }[])[1];
-    const v = comanda({ tipo: "proponi_spartizione", dicasteri: prima.spartizione }, t27["premio"]) as { richieste: unknown };
-    expect(v.richieste).toEqual(prima.richieste);
+  it("proponi_spartizione: la spartizione giocata dà la Vista della proposta", () => {
+    const prima = (t27["premio"]["proposte"] as { nome: string; spartizione: unknown; vista: unknown }[]).find((p) => p.nome === "generosa_centrodestra")!;
+    expect(comanda({ tipo: "proponi_spartizione", dicasteri: prima.spartizione }, t27["premio"])).toEqual(prima.vista);
   });
 
   it("da una Vista non-27 il ripiego è il 27: la Vista dopo che porta", () => {
     expect(comanda({ tipo: "allarga", partiti: ["a", "b"] }, governo)).toEqual((t27["senza_maggioranza"]["allarga_tutti"] as { vista: unknown }).vista);
     expect(comanda({ tipo: "chiedi_guida" }, governo)).toEqual(t27["guida"]["dopo_chiedi"]);
-    const giocata = (t27["premio"]["proposte"] as { spartizione: unknown; richieste: unknown }[])[1];
-    const v = comanda({ tipo: "proponi_spartizione", dicasteri: giocata.spartizione }, governo) as { richieste: unknown };
-    expect(v.richieste).toEqual(giocata.richieste);
+    const giocata = (t27["premio"]["proposte"] as { spartizione: unknown; vista: unknown }[])[1];
+    expect(comanda({ tipo: "proponi_spartizione", dicasteri: giocata.spartizione }, governo)).toEqual(giocata.vista);
   });
   it("da una Vista non-27 un comando che il 27 non ha giocato resta rifiuto", () => {
     expect(() => comanda({ tipo: "allarga", partiti: ["inventato"] }, governo)).toThrow(rifiuta("non nel campione: comanda"));

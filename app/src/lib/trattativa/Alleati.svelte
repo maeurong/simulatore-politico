@@ -12,17 +12,17 @@
   import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
   import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { allarga, fuori, haLaMaggioranza, pesoDi, quota, richiesteDi, type Bozza, type Sessione } from "./trattativa";
+  import { allarga, cambiata, fuori, haLaMaggioranza, predefinita, quota, richiesteDi } from "./trattativa";
 
-  let { vista, bozza, fatta, sessione }: { vista: Vista; bozza: Bozza; fatta: boolean; sessione: Sessione } = $props();
+  let { vista }: { vista: Vista } = $props();
 
   const maggioranza = $derived(haLaMaggioranza(vista));
   const fuoriCoalizione = $derived(fuori(vista));
   const disponibili = $derived(fuoriCoalizione.filter((x) => x.disponibile));
   const alleati = $derived(richiesteDi(vista));
-  const totale = $derived(vista.dicasteri.reduce((s, d) => s + pesoDi(d.id), 0));
-  const mio = $derived(quota(vista, bozza, "giocatore"));
-  const tecnici = $derived(quota(vista, bozza, null));
+  const totale = $derived(vista.spartizione.reduce((s, d) => s + d.peso, 0));
+  const mio = $derived(quota(vista, "giocatore"));
+  const tecnici = $derived(quota(vista, null));
   const salti = $derived(saltiDeiLeader(vista));
   const leader = (id: string) => vista.partiti.find((p) => p.id === id)?.leader ?? "";
   const spento = $derived(partita.occupato ? t("trattativa.comando_in_corso") : undefined);
@@ -31,15 +31,12 @@
   let rifiuto = $state.raw<{ chi: string; testo: string; vista: Vista | null } | null>(null);
   let radice = $state<HTMLElement>();
 
-  /** Riuscito, la Vista nuova ha alleati nuovi: la bozza riparte. La conferma sparisce con la sua riga: qui il fuoco passa al riquadro degli alleati. */
+  /** La conferma sparisce con la sua riga: qui il fuoco passa al riquadro degli alleati. */
   async function manda(ids: string[]) {
     if (partita.occupato) return;
     rifiuto = null;
     try {
-      if (await partita.comanda(allarga(ids))) {
-        sessione.svuota();
-        radice?.focus();
-      }
+      if (await partita.comanda(allarga(ids))) radice?.focus();
     } catch (e) {
       rifiuto = { chi: ids.join("+"), testo: testoRifiuto(comeErrore(e)), vista: partita.vista };
     }
@@ -96,16 +93,16 @@
 
 <section class="blocco" aria-labelledby="mio-t">
   <h4 class="sez-l" id="mio-t">{t("trattativa.il_tuo_partito")}</h4>
-  {#if Object.keys(bozza).length}
+  {#if cambiata(vista)}
     <p class="sec">
       <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
       {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
     </p>
     <div class="az">
-      <Pulsante forma="piccolo" {spento} onclick={() => sessione.svuota()}>{t("trattativa.svuota")}</Pulsante>
+      <Pulsante forma="piccolo" {spento} onclick={() => partita.comanda(predefinita(vista)).catch(() => {})}>{t("trattativa.svuota")}</Pulsante>
     </div>
   {/if}
-  <p class="min muto">{t(fatta ? "trattativa.svuota_nota" : "trattativa.nota")}</p>
+  <p class="min muto">{t(cambiata(vista) ? "trattativa.svuota_nota" : "trattativa.nota")}</p>
 </section>
 
 <style>

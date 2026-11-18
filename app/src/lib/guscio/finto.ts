@@ -231,7 +231,7 @@ function dopoComando(cmd: any, c: Campioni): unknown {
     case "proponi_spartizione": {
       const t = di27("proposte");
       const proposta = t?.proposte.find((p: any) => uguali(p.spartizione, cmd.dicasteri));
-      return proposta ? { ...vistaDi(t), richieste: (esito(proposta.esito, "comanda"), proposta.richieste) } : undefined;
+      return proposta ? (esito(proposta.esito, "comanda"), proposta.vista) : undefined;
     }
     case "allarga": {
       const tutti = cmd.partiti.length > 1;

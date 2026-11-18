@@ -1,6 +1,6 @@
 <script lang="ts">
   // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato sono le pagine di Ribaltone.
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
   import { etichetta } from "$lib/ossatura";
   import { partita } from "$lib/partita.svelte";
@@ -13,14 +13,11 @@
   import Ribaltone from "./Ribaltone.svelte";
   import Risultato from "./Risultato.svelte";
   import Spartizione from "./Spartizione.svelte";
-  import { passaggio, sessioneSpartizione, type EsitoManda, type Stato } from "./trattativa";
+  import { passaggio, type EsitoManda } from "./trattativa";
 
   let { vista }: { vista: Vista } = $props();
 
-  // la bozza vive in memoria: al rientro vale ciò che dice la Vista (spec:250). raw: il rifiuto vale per la Vista in cui è nato.
-  let stato = $state.raw<Stato>({ s: { bozza: {}, rifiuto: null, esito: null, fatta: false }, vista: null });
-
-  /** «occupato»: la sessione tiene la bozza pendente e la rimanda quando la partita si libera. */
+  /** «occupato»: un clic con un comando in volo non parte. */
   async function manda(comando: Parameters<typeof partita.comanda>[0]): Promise<EsitoManda> {
     if (partita.occupato) return "occupato";
     try {
@@ -29,20 +26,6 @@
       return { rifiuto: testoRifiuto(comeErrore(e)) };
     }
   }
-  const sessione = sessioneSpartizione(() => vista, manda, (s) => (stato = { s, vista: partita.vista }));
-  $effect(() => {
-    vista.richieste;
-    sessione.aggiorna();
-  });
-  $effect(() => {
-    if (partita.occupato) return;
-    // shortcut: dopo le continuazioni del comando appena finito; se cambia il guscio, il riprovo passa alla sessione
-    const attesa = setTimeout(() => sessione.riprova());
-    return () => clearTimeout(attesa);
-  });
-  // la pagina smontata con un invio in volo: la sua risposta non fa partire altro
-  onDestroy(sessione.chiudi);
-
   // la pagina si rimonta quando l'incarico cambia: se è stato un comando di Ribaltone, il fuoco riparte dalla testa
   let testa = $state<HTMLElement>();
   onMount(() => {
@@ -67,10 +50,10 @@
       {#if vista.eventi.length}<p class="evt">{t("trattativa.nessuno_risponde")}</p>{/if}
       {#each vista.eventi as evento, i (i)}<Evento {vista} {evento} indice={i} puoRispondere={false} />{/each}
       <Risultato {vista} />
-      <Spartizione {vista} {stato} {sessione} />
+      <Spartizione {vista} {manda} />
     </div>
     <aside class="lato">
-      <Alleati {vista} bozza={stato.s.bozza} fatta={stato.s.fatta} {sessione} />
+      <Alleati {vista} />
     </aside>
   {:else}
     <div class="pag"><Ribaltone {vista} {manda} /></div>
