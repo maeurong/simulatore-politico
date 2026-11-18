@@ -106,3 +106,20 @@ describe("kit", () => {
     expect(stile).not.toMatch(/:global\(\.s[fd]\)[^{]*\{[^}]*stroke-width/);
   });
 });
+
+describe("profilo delle donne per ogni naso", () => {
+  it("sei nasi: il naso a parte c'è, la punta scalata e la sagoma restano nella tela 64 × 64", () => {
+    for (let naso = 0; naso < VARIANTI.naso; naso++) {
+      const l = { naso, mento: 0, fronte: 0, nuca: 0, occhio: 0, colletto: 0, orecchino: false, cappello: false };
+      const d = profilo(l, true), u = profilo(l);
+      expect(d.naso).toMatch(/^M\d+ \d+l[-\d ]+z$/);
+      expect(d.naso).not.toBe(u.sagoma);
+      for (const t of [d.sagoma, d.filo, d.ombre]) {
+        expect(t).not.toMatch(/NaN|undefined/);
+        expect(t.match(/-?\d+(\.\d+)?/g)!.map(Number).every((n) => n >= 0 && n <= 64)).toBe(true);
+      }
+      expect(d.sagoma).not.toBe(u.sagoma);
+      expect(d.ombre).not.toBe(u.ombre);
+    }
+  });
+});

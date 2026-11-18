@@ -173,3 +173,32 @@ describe("chiaveDi", () => {
     expect(chiaveDi(v, "destra")).toBe("giocatore");
   });
 });
+
+describe("casi limite delle leve e dei salti", () => {
+  it("leveDi con salto > 0: leve in range, bit di orecchino e cappello booleani e fermi sui salti piccoli (il salto muove la cifra bassa, il naso)", () => {
+    const c = new Set<string>();
+    for (let s = 0; s < 60; s++) {
+      const l = leveDi("ministro", "Centro", "Mario Rossi", s);
+      for (const k of chiavi) {
+        expect(Number.isInteger(l[k])).toBe(true);
+        expect(l[k]).toBeLessThan(VARIANTI[k]);
+      }
+      expect([typeof l.orecchino, typeof l.cappello]).toEqual(["boolean", "boolean"]);
+      c.add(`${l.orecchino}:${l.cappello}`);
+    }
+    expect(c.size).toBe(1);
+  });
+  it("salti con 40 candidati dello stesso genere: 40 salti finiti, le prime 36 facce distinte", () => {
+    const c = Array.from({ length: 40 }, (_, i) => ({ partito: "P", nome: `N${i}`, genere: "donna" as const }));
+    const s = salti("ministro", c);
+    expect(s).toHaveLength(40);
+    expect(s.every((x) => Number.isInteger(x) && x >= 0)).toBe(true);
+    const coppie = new Set(c.slice(0, 36).map((x, i) => coppia(leveDi("ministro", x.partito, x.nome, s[i]))));
+    expect(coppie.size).toBe(36);
+  });
+  it("oltre le 36 coppie di un genere, l'altro genere ha ancora le sue libere", () => {
+    const donne = Array.from({ length: 40 }, (_, i) => ({ partito: "P", nome: `N${i}`, genere: "donna" as const }));
+    const uomo = { partito: "P", nome: "Luca", genere: "uomo" as const };
+    expect(salti("ministro", [...donne, uomo])[40]).toBe(0);
+  });
+});

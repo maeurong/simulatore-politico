@@ -218,3 +218,28 @@ describe("mandaRibaltone", () => {
     expect(passaggio.fuoco).toBe(false);
   });
 });
+
+describe("casi limite della trattativa", () => {
+  const v = campione.premio.vista;
+  it("proponi: una riga già al tecnico (null) resta null, e riassegnarla cambia solo quella", () => {
+    const col = { ...v, spartizione: v.spartizione.map((d, i) => (i === 0 ? { ...d, partito: null } : d)) };
+    const c = proponi(col, col.spartizione[1].dicastero, "giocatore") as { dicasteri: Voci };
+    expect(c.dicasteri[0].partito).toBeNull();
+    expect(c.dicasteri[1].partito).toBe("giocatore");
+    expect(c.dicasteri.filter((d, i) => d.partito !== col.spartizione[i].partito)).toHaveLength(col.spartizione[1].partito === "giocatore" ? 0 : 1);
+  });
+  it("ribaltoneDi: coalizione vuota dà lista vuota, senza primo", () => {
+    const r = ribaltoneDi({ ...campione.guida.vista, ribaltone: { ...campione.guida.vista.ribaltone!, coalizione: [], primo: null } } as Vista);
+    expect(r).toEqual([]);
+  });
+  it("ribaltoneDi: primo null non segna nessuno", () => {
+    const g = campione.guida.vista;
+    const r = ribaltoneDi({ ...g, ribaltone: { ...g.ribaltone!, primo: null } } as Vista)!;
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.some((x) => x.primo)).toBe(false);
+  });
+  it("ribaltoneDi: senza elezioni i seggi sono 0, non un crash", () => {
+    const r = ribaltoneDi({ ...campione.guida.vista, elezioni: [] })!;
+    expect(r.every((x) => x.camera === 0 && x.senato === 0)).toBe(true);
+  });
+});
