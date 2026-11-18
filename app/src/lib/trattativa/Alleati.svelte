@@ -9,10 +9,8 @@
   import Caselle from "$lib/componenti/Caselle.svelte";
   import Conferma from "$lib/componenti/Conferma.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
-  import Pulsante from "$lib/componenti/Pulsante.svelte";
   import Rifiuto from "$lib/componenti/Rifiuto.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
-  import { allarga, cambiata, fuori, haLaMaggioranza, predefinita, quota, richiesteDi } from "./trattativa";
+  import { allarga, fuori, haLaMaggioranza, quota, richiesteDi } from "./trattativa";
 
   let { vista }: { vista: Vista } = $props();
 
@@ -86,23 +84,24 @@
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
+      <div class="largo">
+        <div class="ib" role="img" aria-label={t("trattativa.intesa_barra", { n: numero(a.intesa, 0), ultimatum: vista.soglie.ultimatum, uscita: vista.soglie.uscita })}>
+          <span class="cas" class:rs={a.stato !== "ok"} aria-hidden="true">{#each { length: 10 }, i (i)}<i data-tagli-ignora class:on={i < Math.round(a.intesa / 10)}></i>{/each}</span>
+          {#each [vista.soglie.ultimatum, vista.soglie.uscita] as soglia (soglia)}<b style:left="{(soglia / 10) * 16 - 1}px" aria-hidden="true"></b><em style:left="{(soglia / 10) * 16}px" aria-hidden="true">{soglia}</em>{/each}
+        </div>
+        <span class="ints"><b class:male={a.stato !== "ok"}>{t("trattativa.intesa_parte", { n: numero(a.intesa, 0) })}</b>{#if a.stato !== "ok"}<span class="chip">{t(a.stato === "uscita" ? "trattativa.puo_uscire" : "trattativa.entra_ultimatum")}</span>{/if}</span>
+      </div>
     </div>
   {/each}
-  <Segnaposto sezione={t("trattativa.ph_intesa")} fetta="11g" />
 </section>
 
 <section class="blocco" aria-labelledby="mio-t">
   <h4 class="sez-l" id="mio-t">{t("trattativa.il_tuo_partito")}</h4>
-  {#if cambiata(vista)}
-    <p class="sec">
-      <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
-      {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
-    </p>
-    <div class="az">
-      <Pulsante forma="piccolo" {spento} onclick={() => partita.comanda(predefinita(vista)).catch(() => {})}>{t("trattativa.svuota")}</Pulsante>
-    </div>
-  {/if}
-  <p class="min muto">{t(cambiata(vista) ? "trattativa.svuota_nota" : "trattativa.nota")}</p>
+  <p class="sec">
+    <b>{t("trattativa.tuoi_dicasteri", { n: mio.n })}</b> · {t("trattativa.tuoi_punti", { n: mio.punti, tot: totale })}
+    {#if tecnici.n}<br /><span class="min muto">{t("trattativa.dicasteri_tecnici", { n: tecnici.n })}</span>{/if}
+  </p>
+  <p class="min muto">{t("trattativa.nota")}</p>
 </section>
 
 <style>
@@ -124,4 +123,15 @@
   .all > :not(.fz, .largo) { grid-column: 2 }
   .all .fz { grid-row: 1 / span 2; display: inline-flex }
   .all .largo { grid-column: 1 / -1 }
+  .ib { position: relative; width: 158px; margin: 2px 0 17px }
+  .ib .cas { display: flex; gap: 2px }
+  .ib .cas i { width: 14px; height: 12px; border: 1.5px solid var(--ink); flex: none }
+  .ib .cas i.on { background: var(--ink) }
+  .ib .cas.rs i { border-color: var(--rosso) }
+  .ib .cas.rs i.on { background: var(--rosso) }
+  .ib b { position: absolute; top: -4px; height: 20px; width: 2px; background: var(--rosso) }
+  .ib em { position: absolute; top: 17px; font-size: 10px; font-style: normal; color: var(--rosso); transform: translateX(-50%); white-space: nowrap }
+  .ints { font-size: var(--c-min); color: var(--grigio); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap }
+  .ints .male { color: var(--rosso) }
+  .chip { display: inline-block; border: 1.5px solid var(--rosso); color: var(--rosso); padding: 0 6px; font-size: var(--c-min); font-weight: 700; white-space: nowrap; line-height: 1.4 }
 </style>
