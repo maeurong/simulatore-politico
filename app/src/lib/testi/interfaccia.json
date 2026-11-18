@@ -615,7 +615,7 @@
   "campagna.costa_intesa": "Al governo costa intesa:",
   "campagna.costa_intesa_corpo": "ogni alleato contrario a una promessa ne perde.",
   "campagna.intesa_perde": "{nome} perde {n} di intesa: contrario a {su}",
-  "campagna.intesa_zero": "{nome}: contrario a {su}, l'intesa è già a zero",
+  "campagna.intesa_zero": "{nome}: contrario a {su}, l’intesa è già a zero",
   "campagna.intesa_nessuna": "Nessun alleato perde intesa con queste promesse.",
   "campagna.prometti": "Prometti ›",
   "campagna.conferma_promessa": "Conferma la promessa",
