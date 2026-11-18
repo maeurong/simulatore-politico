@@ -64,7 +64,7 @@
   .min { font-size: var(--c-min) }
   .muto { color: var(--grigio) }
   .az { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
-  .rig tr.mod th.d::after { content: " •"; color: var(--biro) }
+  .rig tr.mod th.d::after { content: " •" / ""; color: var(--biro) }
   .op[aria-disabled="true"] { opacity: .55; cursor: default }
   .rig { width: 100%; border-collapse: collapse; font-size: var(--c-sec) }
   .rig th { font-size: var(--c-min); letter-spacing: .08em; text-transform: uppercase; color: var(--grigio); text-align: left; font-weight: 700; border-bottom: 1.5px solid var(--ink); padding: 2px 6px; white-space: nowrap }

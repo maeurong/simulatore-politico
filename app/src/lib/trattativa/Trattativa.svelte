@@ -40,7 +40,9 @@
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
 </script>
 
-{#if vista.incarico !== null}
+{#if vista.incarico === null}
+<p class="sec muto">{t("trattativa.nessun_incarico")}</p>
+{:else}
 <div class="trt">
   <div class="capo">
     <h3 class="tit" tabindex="-1" bind:this={testa}>{t("trattativa.titolo")}</h3>
