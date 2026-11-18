@@ -13,7 +13,7 @@
   const W = $derived(larghezza), L = 18, PASSO = 16;
   const R = $derived(W - 18);
   const X = (x: number) => L + ((x - 1) / 6) * (R - L);
-  const aria = (p: VocePartito) => t("partiti.s_asse_aria", { nome: nome(p), d: numero(p.posizione_dichiarata, 2), p: numero(p.posizione_percepita, 2) });
+  const aria = (p: VocePartito) => t("partiti.s_asse_aria", { nome: nome(p), d: numero(p.posizione_dichiarata, 2), p: numero(p.posizione_percepita, 2) }) + (p.minaccia && !p.sciolto ? `, ${t("partiti.s_asse_minaccia")}` : "");
   const nome = (p: VocePartito) => (p.id === giocatore ? t("partiti.tu") : p.nome);
   const colore = (p: VocePartito) => coloreDi(p.id) ?? "var(--grigio)";
 
@@ -84,7 +84,7 @@
     {#snippet segno()}
       {#if campagna && p.minaccia && !p.sciolto}
         {#each [{ d: campagna.minaccia_scissione, tratteggio: true }, { d: campagna.soglia_scissione, tratteggio: false }] as { d, tratteggio }, i (i)}
-          {@const xf = X(p.posizione_dichiarata + (Math.sign(p.posizione_percepita - p.posizione_dichiarata) || 1) * d)}
+          {@const xf = X(Math.min(7, Math.max(1, p.posizione_dichiarata + (Math.sign(p.posizione_percepita - p.posizione_dichiarata) || 1) * d)))}
           <line x1={xf} y1={yq - 9} x2={xf} y2={yq + 3} class="filo" stroke-width={tratteggio ? 1 : 2} stroke-dasharray={tratteggio ? "2 2" : undefined} />
         {/each}
       {/if}

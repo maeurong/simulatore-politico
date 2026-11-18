@@ -86,9 +86,9 @@
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
       <div class="largo">
-        <div class="ib" role="img" aria-label={t("trattativa.intesa_barra", { n: numero(a.intesa, 0), ultimatum: vista.soglie.ultimatum, uscita: vista.soglie.uscita })}>
+        <div class="ib" role="img" aria-label={t("trattativa.intesa_barra", { n: numero(a.intesa, 0), ultimatum: numero(vista.soglie.ultimatum, 0), uscita: numero(vista.soglie.uscita, 0) })}>
           <span class="cas" class:rs={a.stato !== "ok"} aria-hidden="true">{#each { length: 10 }, i (i)}<i data-tagli-ignora class:on={i < Math.round(a.intesa / 10)}></i>{/each}</span>
-          {#each [vista.soglie.ultimatum, vista.soglie.uscita] as soglia (soglia)}<b style:left="{(soglia / 10) * 16 - 1}px" aria-hidden="true"></b><em style:left="{(soglia / 10) * 16}px" aria-hidden="true">{soglia}</em>{/each}
+          {#each [vista.soglie.ultimatum, vista.soglie.uscita] as soglia, i (i)}<b style:left="{(soglia / 10) * 16 - 1}px" aria-hidden="true"></b><em style:left="{(soglia / 10) * 16}px" aria-hidden="true">{numero(soglia, 0)}</em>{/each}
         </div>
         <span class="ints"><b class:male={a.stato !== "ok"}>{t("trattativa.intesa_parte", { n: numero(a.intesa, 0) })}</b>{#if a.stato !== "ok"}<span class="chip">{t(a.stato === "uscita" ? "trattativa.puo_uscire" : "trattativa.entra_ultimatum")}</span>{/if}</span>
       </div>

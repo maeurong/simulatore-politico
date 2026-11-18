@@ -36,7 +36,7 @@
       {@const peso = d.peso}
       {@const nomeD = vista.dicasteri.find((x) => x.id === d.dicastero)?.nome ?? d.dicastero}
       <tr class:mod={d.partito !== d.di_default}>
-        <th scope="row" class="d">{nomeD}</th>
+        <th scope="row" class="d">{nomeD}{#if d.partito !== d.di_default}<span class="nascosto"> ({t("trattativa.cambiata")})</span>{/if}</th>
         <td><span class="pesi" role="img" aria-label={t("trattativa.peso", { n: peso })} title={t("trattativa.peso", { n: peso })}>{#each { length: peso } as _, i (i)}<i></i>{/each}</span></td>
         <td>
           <span class="chi2" role="group" aria-label="{nomeD}: {t('trattativa.col_a_chi')}">

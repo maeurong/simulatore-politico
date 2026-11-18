@@ -66,7 +66,7 @@
 {#if intesa && "alleato" in intesa}
   {@const a = intesa.alleato}
   <h5 class="grp"><span>{t("partiti.s_intesa")}</span><span>{t("partiti.s_intesa_su", { n: numero(a.intesa, 1) })}</span></h5>
-  <span class="ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita, vista.soglie.ultimatum].map((x) => Math.round(x / 10))} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
+  <span class="ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita / 10, vista.soglie.ultimatum / 10]} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
   <p class="min muto">{t("partiti.s_filo_soglie", { u: numero(vista.soglie.ultimatum, 0), e: numero(vista.soglie.uscita, 0) })}</p>
   {#if a.ultimatum}
     <p class="sec"><b>{a.causa_ultimatum ? t("partiti.s_ultimatum_per", { causa: causa(a.causa_ultimatum) }) : `${t("partiti.s_ultimatum")}.`}</b> <a class="vai" href="/partita/cruscotto">{t("partiti.s_rispondi")}</a></p>

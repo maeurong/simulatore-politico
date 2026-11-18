@@ -93,7 +93,7 @@
   <section>
     <h3>Tono grave</h3>
     <label class="muto"><input type="checkbox" bind:checked={grave} /> tono grave: iniziali nel cerchio, stesso riquadro</label>
-    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" partito="Estrema sinistra" salto={saltiL.estrema_sinistra} misura={m} />{/each}</div>
+    <div class="riga">{#each MISURE as m}<Faccia nome="Anna Ferrucci" ruolo="leader" genere="donna" partito="Estrema sinistra" salto={saltiL.estrema_sinistra} misura={m} />{/each}</div>
   </section>
 
   <details>

@@ -8,7 +8,7 @@ import campioneJson from "../../../../.scratch/v1-piano-11-ui/viste/27-trattativ
 
 const turnoZero = turnoZeroJson as unknown as Vista;
 const v02 = trattativaJson as unknown as Vista;
-const campione = campioneJson as unknown as { premio: { vista: Vista; proposte: { nome: string; vista: Vista }[] }; senza_maggioranza: { vista: Vista }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
+const campione = campioneJson as unknown as { premio: { vista: Vista; proposte: { nome: string; vista: Vista }[] }; senza_maggioranza: { vista: Vista; allarga_tutti: { vista: Vista } }; guida: { vista: Vista }; capo_dello_stato: { vista: Vista } };
 const proposta = (nome: string) => campione.premio.proposte.find((p) => p.nome === nome)!.vista;
 type Voci = { dicastero: string; partito: string | null }[];
 
@@ -116,6 +116,14 @@ describe("haLaMaggioranza e fuori", () => {
     const f = fuori({ ...senza, elezioni: [] });
     expect(f.map((x) => x.id)).toEqual(fuori(senza).map((x) => x.id));
     expect(f.every((x) => x.camera === 0 && x.senato === 0)).toBe(true);
+  });
+});
+
+describe("cambiata dopo l'allargamento", () => {
+  it("con tutti dentro la spartizione è quella di default: nessuna riga cambiata", () => {
+    const v = campione.senza_maggioranza.allarga_tutti.vista;
+    expect(cambiata(v)).toBe(false);
+    expect(v.spartizione.every((d) => d.partito === d.di_default)).toBe(true);
   });
 });
 

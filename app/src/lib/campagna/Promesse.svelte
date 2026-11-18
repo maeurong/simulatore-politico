@@ -29,12 +29,12 @@
 
   // l'anteprima delle scelte di ora: una in volo, vince l'ultima; vale solo se la chiave è ancora quella delle scelte
   const chiave = (c: [string, string][]) => c.map(([d, g]) => `${d}=${g}`).join("|");
-  let anteprima = $state.raw<{ chiave: string; esito: VoceCostoPromessa[] | { rifiuto: string } } | null>(null);
+  let anteprima = $state.raw<{ chiave: string; vista: Vista | null; esito: VoceCostoPromessa[] | { rifiuto: string } } | null>(null);
   const chiedi = ultimoVince(
     (c: [string, string][]) => guscio.anteprimaPromesse(c),
-    (r, c) => (anteprima = { chiave: chiave(c), esito: Array.isArray(r) ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
+    (r, c) => (anteprima = { chiave: chiave(c), vista: partita.vista, esito: Array.isArray(r) ? r : { rifiuto: testoRifiuto(comeErrore(r)) } }),
   );
-  const corrente = $derived(anteprima && anteprima.chiave === chiave(coppie(scelte)) ? anteprima.esito : null);
+  const corrente = $derived(anteprima && anteprima.chiave === chiave(coppie(scelte)) && anteprima.vista === partita.vista ? anteprima.esito : null);
   const perdite = $derived(corrente && Array.isArray(corrente) ? corrente.filter((v) => v.disposizioni.length > 0) : null);
   const rifiutata = $derived(corrente && !Array.isArray(corrente) ? corrente.rifiuto : null);
   const chiediOra = () => scelte.length && chiedi(coppie(scelte));
@@ -92,7 +92,7 @@
         </div>
       {/if}
     {/if}
-    {#if rifiutata}<div class="rif"><Rifiuto testo={rifiutata.replace("comando non ammesso: ", "")} /></div>{/if}
+    {#if rifiutata}<div class="rif"><Rifiuto testo={rifiutata} /></div>{/if}
     {#if vista.governa}
       <div class="avv">
         <span><b>{t("campagna.costa_intesa")}</b> {t("campagna.costa_intesa_corpo")}</span>

@@ -43,7 +43,7 @@
     <path class="coll" fill="url(#fantasia-{fantasia})" d="M21 51L38 49L40.5 55.5L22 57Z" />
   {/if}
   {#if donna && l.cappello}
-    <g id="{id}-h">{#each TRATTI.cappello as d}<path {d} />{/each}</g>
+    <defs><g id="{id}-h">{#each TRATTI.cappello as d}<path {d} />{/each}</g></defs>
     <use href="#{id}-h" class="ha" /><use href="#{id}-h" class="ink ink-l" />
     <path class="sottile na" d={TRATTI.nastro} />
   {/if}

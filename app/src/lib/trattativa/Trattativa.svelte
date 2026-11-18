@@ -2,12 +2,11 @@
   // La casa del turno in trattativa (ticket 27). Incarico al giocatore: risultato, spartizione e lato; guida e Capo dello Stato sono le pagine di Ribaltone.
   import { onMount } from "svelte";
   import { t, type Chiave } from "$lib/testi/t";
-  import { etichetta } from "$lib/ossatura";
+  import { periodoDi } from "$lib/aula/aula";
   import { partita } from "$lib/partita.svelte";
   import { comeErrore, testoRifiuto } from "$lib/guscio/chiamate";
   import type { Vista } from "$lib/tipi/Vista";
   import Evento from "$lib/cruscotto/Evento.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { coloreDi } from "$lib/partiti";
   import Camere from "$lib/partiti/Camere.svelte";
   import Alleati from "./Alleati.svelte";
@@ -37,13 +36,11 @@
 
   const coalizione = $derived(ribaltoneDi(vista));
   const insieme = $derived([0, 1].map((i) => (coalizione ?? []).reduce((a, x) => a + (i ? x.senato : x.camera), 0)));
-  const periodoVoto = $derived.by(() => { const d = vista.elezioni.at(-1)?.data; return d ? t(`cornice.trimestre_${d.trimestre}` as Chiave, { anno: d.anno }) : ""; });
+  const periodoVoto = $derived.by(() => { const d = vista.elezioni.at(-1)?.data; return d ? periodoDi(vista, d) : ""; });
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
 </script>
 
-{#if vista.incarico === null}
-  <Segnaposto sezione={etichetta("trattativa")} fetta="11b" />
-{:else}
+{#if vista.incarico !== null}
 <div class="trt">
   <div class="capo">
     <h3 class="tit" tabindex="-1" bind:this={testa}>{t("trattativa.titolo")}</h3>
