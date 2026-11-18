@@ -28,7 +28,6 @@ export type Tracciato = {
   scala: Scala | null; // null → nessuna casella da riempire
   rosso: boolean;
   grigio: boolean; // partita finita
-  rimando: string | null; // la fetta che riempie il posto vuoto: senza valore il tracciato, col valore lo stacco
   prima: number | null; // il valore al turno prima, dalla serie: la variazione sotto il numero
   era: string | null; // durante la rivelazione, dopo lo scatto: il testo del valore di prima
   scatta: boolean; // durante la rivelazione: il valore è appena cambiato
@@ -38,9 +37,8 @@ type Base = Omit<Tracciato, "era" | "scatta">;
 export const MARGINE: Scala = { stacco: 0, passo: 3, rovesciata: false };
 // «per farlo cadere»: meno sì mancano, più caselle; 15 seggi a casella, vuota da 150 in su
 const MANCANTI: Scala = { stacco: 105, passo: 15, rovesciata: true };
-// ponytail: lo stacco dello spread non ha dato fino a 11g (ticket 31, rimando al core): 550 serve solo alle caselle,
-// il tracciato porta rimando "11g"
-const SPREAD: Scala = { stacco: 550, passo: 75, rovesciata: true };
+// lo stacco dello spread è la soglia della crisi del debito, letta dalla Vista
+const spread = (v: Vista): Scala => ({ stacco: v.soglie.crisi_debito_pb, passo: 75, rovesciata: true });
 
 const disposizione = (v: Vista, id: string) => v.disposizioni.find((d) => d.id === id)?.in_vigore;
 /** In centesimi di punto: "4200" → 42. */
@@ -51,9 +49,9 @@ function quota(v: Vista, partito: string): number {
   return quotaVotanti(v.sondaggio, v.partiti.findIndex((p) => p.id === partito)) ?? NaN;
 }
 
-/** Il consenso: senza dato nel sondaggio, caselle tratteggiate e nessun rimando (manca il dato, non una fetta). */
+/** Il consenso: senza dato nel sondaggio, caselle tratteggiate. */
 function consenso(nome: Chiave, q: number, scala: Scala, rosso: boolean, prima: PuntoSerie | undefined): Base {
-  const c = { nome, ramo: null, scala, grigio: false, rimando: null, prima: prima ? prima.consenso * 100 : null };
+  const c = { nome, ramo: null, scala, grigio: false, prima: prima ? prima.consenso * 100 : null };
   return Number.isFinite(q) ? { ...c, valore: q * 100, testo: percentuale(q), rosso } : { ...c, valore: null, testo: "—", rosso: false };
 }
 
@@ -72,12 +70,12 @@ export const sottoLoStacco = (v: number, s: Scala) => caselle(v, s).piene <= 3;
 function maggioranza(nome: Chiave, righe: SeggiPartito[], coalizione: string[], prima: PuntoSerie | undefined): Base {
   const { camera, senato } = margini(righe, coalizione);
   if (camera === null || senato === null) {
-    return { nome, valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
+    return { nome, valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, prima: null };
   }
   const ramo = camera <= senato ? "Camera" : "Senato";
   const valore = Math.min(camera, senato);
   return {
-    nome, valore, testo: segnato(valore), ramo, scala: MARGINE, rosso: sottoLoStacco(valore, MARGINE), grigio: false, rimando: null,
+    nome, valore, testo: segnato(valore), ramo, scala: MARGINE, rosso: sottoLoStacco(valore, MARGINE), grigio: false,
     prima: prima ? (ramo === "Camera" ? prima.margine_camera : prima.margine_senato) : null,
   };
 }
@@ -110,12 +108,12 @@ export function tracciatiDi(v: Vista, serie: PuntoSerie[], sfiducia?: AnteprimaS
     : alGoverno
       ? maggioranza("tracciato.maggioranza", v.seggi, coalizione, primaCoalizione)
       : sfiducia
-        ? { nome: "tracciato.per_farlo_cadere", valore: siMancanti(v, sfiducia), testo: numero(siMancanti(v, sfiducia)), ramo: null, scala: MANCANTI, rosso: false, grigio: false, rimando: null, prima: null }
-        : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, rimando: null, prima: null };
+        ? { nome: "tracciato.per_farlo_cadere", valore: siMancanti(v, sfiducia), testo: numero(siMancanti(v, sfiducia)), ramo: null, scala: MANCANTI, rosso: false, grigio: false, prima: null }
+        : { nome: "tracciato.per_farlo_cadere", valore: null, testo: "—", ramo: null, scala: null, rosso: false, grigio: false, prima: null };
 
   const terzo: Base = {
-    nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: SPREAD,
-    rosso: false, grigio: false, rimando: "11g", prima: prima ? prima.spread_pb : null,
+    nome: "tracciato.conti", valore: v.spread_pb, testo: numero(v.spread_pb), ramo: null, scala: spread(v),
+    rosso: sottoLoStacco(v.spread_pb, spread(v)), grigio: false, prima: prima ? prima.spread_pb : null,
   };
 
   const tre = [primo, secondo, terzo].map((x) => ({ ...x, era: null, scatta: false })) as [Tracciato, Tracciato, Tracciato];

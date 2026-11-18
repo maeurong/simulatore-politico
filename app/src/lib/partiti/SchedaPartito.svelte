@@ -9,12 +9,11 @@
   import Caselle from "$lib/componenti/Caselle.svelte";
   import Faccia from "$lib/componenti/Faccia.svelte";
   import Pulsante from "$lib/componenti/Pulsante.svelte";
-  import Segnaposto from "$lib/componenti/Segnaposto.svelte";
   import { registroCache } from "$lib/registro/cache.svelte";
   import { origineDi } from "$lib/registro/registro";
   import Avvisi from "./Avvisi.svelte";
   import AsseDeiPartiti from "./AsseDeiPartiti.svelte";
-  import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, intesaDi, mosseDi, seggiDi, staPerSciogliersi, ultimoVoto } from "./schieramento";
+  import { CAUSE, avvisi, caselleFascia, cassaBreve, distanza, fraseDistanza, intesaDi, mosseDi, seggiDi, staPerSciogliersi, ultimoVoto } from "./schieramento";
 
   let { vista, partito: p, indietro }: { vista: Vista; partito: VocePartito; indietro: () => void } = $props();
 
@@ -56,9 +55,8 @@
 {/if}
 
 <h5 class="grp"><span>{t("partiti.s_posizione")}</span><span>{[t("partiti.s_dichiarata", { x: numero(p.posizione_dichiarata, 1) }), ...(!tu && mio ? [t("partiti.s_tu_a", { x: numero(mio.posizione_dichiarata, 1) })] : [])].join(" · ")}</span></h5>
-<AsseDeiPartiti partiti={tu || !mio ? [p] : [p, mio]} giocatore={vista.giocatore} larghezza={300} />
-<p class="sec">{dist.verso === "ferma" ? t("partiti.s_distanza_ferma") : t("partiti.s_distanza", { x: numero(p.posizione_percepita, 2), verso: t(`partiti.verso_${dist.verso}` as Chiave), n: numero(dist.punti, 2) })}</p>
-<Segnaposto sezione={t("partiti.ph_scissione")} fetta="11g" />
+<AsseDeiPartiti partiti={tu || !mio ? [p] : [p, mio]} giocatore={vista.giocatore} larghezza={300} campagna={vista.campagna} />
+<p class="sec">{#if dist.verso === "ferma"}{t("partiti.s_distanza_ferma")}{:else}{t("partiti.s_distanza", { x: numero(p.posizione_percepita, 2), verso: t(`partiti.verso_${dist.verso}` as Chiave), n: numero(dist.punti, 2) })}{#if !p.sciolto}{" "}{t(fraseDistanza(p, vista.campagna), { m: numero(vista.campagna.minaccia_scissione, 1), s: numero(vista.campagna.soglia_scissione, 1) })}{/if}{/if}</p>
 
 {#if !tu}
   <h5 class="grp"><span>{t("partiti.s_indole")}</span></h5>
@@ -68,8 +66,8 @@
 {#if intesa && "alleato" in intesa}
   {@const a = intesa.alleato}
   <h5 class="grp"><span>{t("partiti.s_intesa")}</span><span>{t("partiti.s_intesa_su", { n: numero(a.intesa, 1) })}</span></h5>
-  <span class="ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
-  <Segnaposto sezione={t("partiti.ph_soglie")} fetta="11g" />
+  <span class="ints"><Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita, vista.soglie.ultimatum].map((x) => Math.round(x / 10))} rosso={a.ultimatum} nome={t("partiti.intesa", { n: Math.round(a.intesa) })} /></span>
+  <p class="min muto">{t("partiti.s_filo_soglie", { u: numero(vista.soglie.ultimatum, 0), e: numero(vista.soglie.uscita, 0) })}</p>
   {#if a.ultimatum}
     <p class="sec"><b>{a.causa_ultimatum ? t("partiti.s_ultimatum_per", { causa: causa(a.causa_ultimatum) }) : `${t("partiti.s_ultimatum")}.`}</b> <a class="vai" href="/partita/cruscotto">{t("partiti.s_rispondi")}</a></p>
   {/if}

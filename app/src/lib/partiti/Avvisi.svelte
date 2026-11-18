@@ -1,12 +1,12 @@
 <script lang="ts">
-  // Gli avvisi di un partito, uguali nella scheda e nel dettaglio a lato: l'ultimatum è rosso, sciolto e senza seggi sono tratteggiati.
+  // Gli avvisi di un partito, uguali nella scheda e nel dettaglio a lato: l'ultimatum e la minaccia di scissione sono rossi, sciolto e senza seggi sono tratteggiati.
   import { t, type Chiave } from "$lib/testi/t";
 
   let { lista }: { lista: Chiave[] } = $props();
 </script>
 
 {#if lista.length}
-  <span class="avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k === "avviso.ultimatum" || k === "avviso.ultimatum_governo"} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</span>
+  <span class="avvisi">{#each lista as k (k)}<span class="chip" class:rosso={k === "avviso.ultimatum" || k === "avviso.ultimatum_governo" || k === "avviso.minaccia_scissione"} class:tr={k === "avviso.sciolto" || k === "avviso.senza_seggi"}>{t(k)}</span>{/each}</span>
 {/if}
 
 <style>

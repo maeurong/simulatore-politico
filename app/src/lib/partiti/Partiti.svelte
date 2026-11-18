@@ -31,6 +31,7 @@
   const ordine = $derived(inOrdine(vista));
   const salti = $derived(saltiDeiLeader(vista));
   const vivi = $derived(vista.partiti.filter((p) => !p.sciolto).length);
+  const minacciano = $derived(vista.partiti.filter((p) => p.minaccia && !p.sciolto).length);
   const periodo = $derived(t(`cornice.trimestre_${vista.data.trimestre}` as Chiave, { anno: vista.data.anno }));
   const sondaggio = (p: VocePartito) => {
     const q = quotaVotanti(vista.sondaggio, vista.partiti.indexOf(p));
@@ -48,10 +49,10 @@
   <div class="col">
     <div class="capo">
       <h3 class="tit">{t("partiti.titolo")}</h3>
-      <span class="sec muto">{t("partiti.testata", { periodo, n: vivi, tetto: TETTO_PARTITI })}</span>
+      <span class="sec muto">{t("partiti.testata", { periodo, n: vivi, tetto: TETTO_PARTITI })}{minacciano ? ` · ${t("partiti.minacciano", { n: minacciano })}` : ""}</span>
     </div>
     <div class="asse">
-      <AsseDeiPartiti partiti={ordine} giocatore={vista.giocatore} scelto={scelta} onscelta={(id) => (scelta = id)} />
+      <AsseDeiPartiti partiti={ordine} giocatore={vista.giocatore} scelto={scelta} onscelta={(id) => (scelta = id)} campagna={vista.campagna} />
       <p class="min muto">{t("partiti.asse_nota")}</p>
     </div>
     <div class="schede" style:--nc={perFila(ordine.length)}>

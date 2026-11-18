@@ -518,3 +518,37 @@ describe("corsaDi", () => {
     expect(() => corsaDi(p, "fermata_999")).toThrow();
   });
 });
+
+describe("rispondi: anteprime della campagna", () => {
+  const cz = { ...c, stato: "zero" };
+  it("riposizionamento: il passo del campione", () => {
+    expect(rispondi("anteprima_riposizionamento", { posizione: 4.75 }, cz)).toEqual({ dichiarata: 4.75, percepita: 4.625, distanza: 0.125 });
+  });
+  it("riposizionamento: un rifiuto del core si rilancia", () => {
+    expect(() => rispondi("anteprima_riposizionamento", { posizione: 5 }, cz)).toThrow(expect.objectContaining({ specie: "rifiuto" }));
+  });
+  it("riposizionamento: posizione assente è «non nel campione»", () => {
+    expect(() => rispondi("anteprima_riposizionamento", { posizione: 6.5 }, cz)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+  it("promesse: la chiave disp=grad|disp=grad", () => {
+    const g = { ...c, stato: "governo_fine" };
+    const r = rispondi("anteprima_promesse", { promesse: [["reddito_minimo", "universale"], ["eta_pensionabile", "64"]] }, g) as { intesa: number }[];
+    expect(r.map((x) => x.intesa)).toEqual([-10, -10]);
+    expect(rispondi("anteprima_promesse", { promesse: [["cuneo_fiscale", "3"]] }, cz)).toEqual([]);
+  });
+});
+
+describe("rispondi: anteprime della campagna, casi limite", () => {
+  const g = { ...c, stato: "governo_fine" };
+  it("promesse in ordine diverso dalla chiave del campione: non nel campione", () => {
+    const ordine = [["eta_pensionabile", "64"], ["reddito_minimo", "universale"]];
+    expect(() => rispondi("anteprima_promesse", { promesse: ordine }, g)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+  it("promesse senza scelte: non nel campione", () => {
+    expect(() => rispondi("anteprima_promesse", { promesse: [] }, g)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+  it("stato senza anteprime (opposizione_fine per le promesse): non nel campione", () => {
+    const o = { ...c, stato: "opposizione_fine" };
+    expect(() => rispondi("anteprima_promesse", { promesse: [["cuneo_fiscale", "3"]] }, o)).toThrow(expect.objectContaining({ testo: expect.stringContaining("non nel campione") }));
+  });
+});

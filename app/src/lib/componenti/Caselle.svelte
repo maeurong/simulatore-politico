@@ -1,12 +1,12 @@
 <script lang="ts">
   // Fascia: poche classi con un nome (prototipo 08, «fascia»). Le caselle sono decorazione: il nome accanto è il testo.
-  /** `piene` su `su` caselle; `filo`: il filo rosso dopo la `filo`-esima casella (la soglia); `rosso`: sotto la soglia. */
-  let { piene, su, filo, rosso = false, nome }: { piene: number; su: number; filo?: number; rosso?: boolean; nome: string } = $props();
+  /** `piene` su `su` caselle; `filo`: il filo rosso dopo la `filo`-esima casella (la soglia), o dopo ognuna di quelle elencate; `rosso`: sotto la soglia. */
+  let { piene, su, filo, rosso = false, nome }: { piene: number; su: number; filo?: number | number[]; rosso?: boolean; nome: string } = $props();
 </script>
 
 <span class="fascia">
   <span class="cas" class:inp={rosso} aria-hidden="true">
-    {#each { length: su }, i (i)}<i data-tagli-ignora class:on={i < piene} class:sg={i + 1 === filo}></i>{/each}
+    {#each { length: su }, i (i)}<i data-tagli-ignora class:on={i < piene} class:sg={[filo].flat().includes(i + 1)}></i>{/each}
   </span>
   {nome}
 </span>

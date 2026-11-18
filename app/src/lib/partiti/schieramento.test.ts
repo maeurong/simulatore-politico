@@ -5,14 +5,16 @@ import type { VoceEsito } from "$lib/tipi/VoceEsito";
 import type { VocePartito } from "$lib/tipi/VocePartito";
 import { coloreDi } from "$lib/partiti";
 import { t } from "$lib/testi/t";
-import { CAUSE, TETTO_PARTITI, avvisi, staPerSciogliersi, caselleFascia, cassaBreve, distanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
+import { CAUSE, TETTO_PARTITI, avvisi, staPerSciogliersi, caselleFascia, cassaBreve, distanza, fraseDistanza, indoleBreve, inOrdine, intesaDi, mosseDi, perFila, seggiDi, ultimoVoto } from "./schieramento";
 import zeroJson from "../../../../.scratch/v1-piano-11-ui/viste/01-turno-zero.json";
 import governoJson from "../../../../.scratch/v1-piano-11-ui/viste/03-governo-ordinario.json";
 import opposizioneJson from "../../../../.scratch/v1-piano-11-ui/viste/06-opposizione-governo-ia.json";
 import trattativaJson from "../../../../.scratch/v1-piano-11-ui/viste/02-trattativa-incarico.json";
+import crisiJson from "../../../../.scratch/v1-piano-11-ui/viste/05-crisi.json";
 import cruscottoJson from "../../../../.scratch/v1-piano-11-ui/viste/17-cruscotto.json";
 import ereditaJson from "../../../../.scratch/v1-piano-11-ui/viste/30-eredita.json";
 
+const crisi = crisiJson as unknown as Vista;
 const zero = zeroJson as unknown as Vista;
 const trattativa = trattativaJson as unknown as Vista;
 const governo = governoJson as unknown as Vista;
@@ -65,6 +67,13 @@ describe("avvisi", () => {
     const v = { ...opposizione, alleati_avversari: [{ partito: "sinistra", fascia: "ultimatum", causa_ultimatum: null }] } as Vista;
     expect(di(v, "sinistra")).toEqual(["avviso.ultimatum_governo", "avviso.al_governo"]);
     expect(di(v, "centro")).toEqual(["avviso.al_governo"]);
+  });
+  it("sulla 05 l'Estrema sinistra in minaccia ha l'avviso, il Centro no; sciolta non lo ha", () => {
+    expect(crisi.partiti.find((p) => p.id === "estrema_sinistra")!.minaccia).toBe(true);
+    expect(di(crisi, "estrema_sinistra")).toContain("avviso.minaccia_scissione");
+    expect(di(crisi, "centro")).not.toContain("avviso.minaccia_scissione");
+    const v = { ...crisi, partiti: crisi.partiti.map((p) => (p.id === "estrema_sinistra" ? { ...p, sciolto: true } : p)) } as Vista;
+    expect(di(v, "estrema_sinistra")).not.toContain("avviso.minaccia_scissione");
   });
   it("sulla 30 l'Estrema sinistra è sciolta", () => {
     expect(di(eredita, "estrema_sinistra")).toContain("avviso.sciolto");
@@ -236,5 +245,30 @@ describe("CAUSE", () => {
   it("ogni causa d'intesa ha la sua chiave di testo, e il testo si legge", () => {
     expect(Object.keys(CAUSE)).toHaveLength(13);
     for (const chiave of Object.values(CAUSE)) expect(typeof t(chiave)).toBe("string");
+  });
+});
+
+describe("fraseDistanza", () => {
+  const c = crisi.campagna;
+  const a = (d: number, minaccia = false) => fraseDistanza({ ...crisi.partiti[0], posizione_dichiarata: 3, posizione_percepita: 3 + d, minaccia }, c);
+  it("sotto la minaccia, a minaccia, a scissione; la minaccia già scattata, sotto soglia, ha la sua frase", () => {
+    expect(a(0.2)).toBe("partiti.s_sotto_minaccia");
+    expect(a(-c.minaccia_scissione)).toBe("partiti.s_minaccia");
+    expect(a(c.soglia_scissione)).toBe("partiti.s_scissione");
+    expect(a(0.2, true)).toBe("partiti.s_minaccia_accesa");
+  });
+});
+
+describe("fraseDistanza: precedenze", () => {
+  const c = crisi.campagna;
+  const a = (d: number, minaccia: boolean) => fraseDistanza({ ...crisi.partiti[0], posizione_dichiarata: 3, posizione_percepita: 3 + d, minaccia }, c);
+  it("oltre la soglia vince sulla minaccia già accesa", () => {
+    expect(a(c.soglia_scissione + 0.1, true)).toBe("partiti.s_scissione");
+  });
+  it("a minaccia esatta vince sulla minaccia accesa", () => {
+    expect(a(c.minaccia_scissione, true)).toBe("partiti.s_minaccia");
+  });
+  it("appena sotto la minaccia, senza minaccia scattata: la soglia futura", () => {
+    expect(a(c.minaccia_scissione - 0.01, false)).toBe("partiti.s_sotto_minaccia");
   });
 });

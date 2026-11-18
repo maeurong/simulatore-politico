@@ -20,7 +20,9 @@ use sim_core::legislatura::{
 use sim_core::parlamento::{Decreto, ValoreProposto};
 use sim_core::riepilogo::{CatalogoScenario, RiepilogoScenario, catalogo, riepilogo};
 use sim_core::salvataggi::{PuntoSerie, VoceAlbo, VocePartita};
-use sim_core::vista::{Anteprima, AnteprimaSfiducia, VoceMenu};
+use sim_core::vista::{
+    Anteprima, AnteprimaRiposizionamento, AnteprimaSfiducia, VoceCostoPromessa, VoceMenu,
+};
 use sim_core::{Comando, DatiGioco, FileDati, Partita, SuMisura, Vista};
 use tauri::{Manager, RunEvent, State};
 
@@ -532,6 +534,20 @@ fn anteprima_della_proposta(
     sulla_partita(stato, |p| p.anteprima_proposta(valori))
 }
 
+fn anteprima_del_riposizionamento(
+    stato: &Stato,
+    posizione: f64,
+) -> Result<AnteprimaRiposizionamento, ErroreGuscio> {
+    sulla_partita(stato, |p| p.anteprima_riposizionamento(posizione))
+}
+
+fn anteprima_delle_promesse(
+    stato: &Stato,
+    promesse: &[(String, String)],
+) -> Result<Vec<VoceCostoPromessa>, ErroreGuscio> {
+    sulla_partita(stato, |p| p.anteprima_promesse(promesse))
+}
+
 fn anteprima_della_sfiducia(
     stato: &Stato,
     dicastero: Option<&str>,
@@ -625,6 +641,22 @@ async fn anteprima_proposta(
     anteprima_della_proposta(&stato, &valori)
 }
 
+#[tauri::command]
+async fn anteprima_riposizionamento(
+    posizione: f64,
+    stato: State<'_, Stato>,
+) -> Result<AnteprimaRiposizionamento, ErroreGuscio> {
+    anteprima_del_riposizionamento(&stato, posizione)
+}
+
+#[tauri::command]
+async fn anteprima_promesse(
+    promesse: Vec<(String, String)>,
+    stato: State<'_, Stato>,
+) -> Result<Vec<VoceCostoPromessa>, ErroreGuscio> {
+    anteprima_delle_promesse(&stato, &promesse)
+}
+
 pub fn run() -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(Stato::default())
@@ -666,6 +698,8 @@ pub fn run() -> tauri::Result<()> {
             riepilogo_presentato,
             menu_elettorale,
             anteprima_proposta,
+            anteprima_riposizionamento,
+            anteprima_promesse,
             elettori_campione,
             serie,
             anteprima_fondazione,
@@ -1331,6 +1365,60 @@ mod tests {
     fn anteprima_proposta_senza_partita_e_un_guasto() {
         let r = anteprima_della_proposta(&Stato::default(), &bozza_cittadinanza());
         assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn anteprima_riposizionamento_senza_partita_e_un_guasto() {
+        let r = anteprima_del_riposizionamento(&Stato::default(), 0.5);
+        assert_eq!(r.err(), Some(guasto(NESSUNA)));
+    }
+
+    #[test]
+    fn anteprima_riposizionamento_e_quella_del_core() -> Result<(), String> {
+        let c = cartella("lib-anteprima-riposizionamento");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_riposizionamento(3.0)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(anteprima_del_riposizionamento(&stato, 3.0), Ok(atteso));
+        Ok(())
+    }
+
+    #[test]
+    fn anteprima_promesse_fuori_campagna_e_un_rifiuto() -> Result<(), String> {
+        let c = cartella("lib-anteprima-promesse-rifiuto");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let promesse = [("x".to_string(), "y".to_string())];
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_promesse(&promesse)
+            .err()
+            .ok_or("promesse ammesse fuori campagna")?;
+        let e = anteprima_delle_promesse(&stato, &promesse)
+            .err()
+            .ok_or("anteprima data fuori campagna")?;
+        assert_eq!(e.specie, Specie::Rifiuto);
+        assert_eq!(e.testo, atteso.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn anteprima_promesse_e_quella_del_core() -> Result<(), String> {
+        let c = cartella("lib-anteprima-promesse");
+        let (stato, _archivio) = con_partita(&c.0)?;
+        let atteso = blocca_comunque(&stato)
+            .as_ref()
+            .ok_or(NESSUNA)?
+            .partita
+            .anteprima_promesse(&[])
+            .map_err(|e| e.to_string())?;
+        assert_eq!(anteprima_delle_promesse(&stato, &[]), Ok(atteso));
+        Ok(())
     }
 
     #[test]

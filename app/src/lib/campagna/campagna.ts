@@ -11,6 +11,7 @@ import type { Comando } from "$lib/tipi/Comando";
 import type { Leva } from "$lib/tipi/Leva";
 import type { Spesa } from "$lib/tipi/Spesa";
 import type { Vista } from "$lib/tipi/Vista";
+import type { VistaCampagna } from "$lib/tipi/VistaCampagna";
 import type { VocePromessa } from "$lib/tipi/VocePromessa";
 import type { VoceAnteprimaCampagna } from "$lib/tipi/VoceAnteprimaCampagna";
 
@@ -163,5 +164,17 @@ export const promesseFatte = (v: Vista): VocePromessa[] => v.partiti.find((p) =>
 /** Il comando con le coppie (id della disposizione, id del gradino). */
 export const prometti = (scelte: { disposizione: string; gradino: string }[]): Comando => ({
   tipo: "prometti",
-  promesse: scelte.map((s) => [s.disposizione, s.gradino]),
+  promesse: coppie(scelte),
 });
+
+/** La distanza fra percepita e dichiarata del giocatore: quella che le soglie di scissione misurano. */
+export const distanzaDi = (v: Vista): number => {
+  const io = v.partiti.find((p) => p.id === v.giocatore);
+  return io ? Math.abs(io.posizione_percepita - io.posizione_dichiarata) : 0;
+};
+
+export const sogliaDi = (d: number, c: VistaCampagna): "sotto" | "minaccia" | "scissione" =>
+  d >= c.soglia_scissione ? "scissione" : d >= c.minaccia_scissione ? "minaccia" : "sotto";
+
+/** Le coppie (disposizione, gradino) come le chiede `anteprimaPromesse`. */
+export const coppie = (scelte: { disposizione: string; gradino: string }[]): [string, string][] => scelte.map((s) => [s.disposizione, s.gradino]);
