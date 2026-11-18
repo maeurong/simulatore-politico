@@ -22,6 +22,7 @@
   const mio = $derived(quota(vista, "giocatore"));
   const tecnici = $derived(quota(vista, null));
   const salti = $derived(saltiDeiLeader(vista));
+  const genereDi = (id: string) => vista.partiti.find((p) => p.id === id)?.genere_leader;
   const leader = (id: string) => vista.partiti.find((p) => p.id === id)?.leader ?? "";
   const spento = $derived(partita.occupato ? t("trattativa.comando_in_corso") : undefined);
 
@@ -80,7 +81,7 @@
   <h4 class="sez-l" id="ali-t">{t("trattativa.gli_alleati")}</h4>
   {#each alleati as a (a.id)}
     <div class="all" style:--pc={coloreDi(a.id) ?? undefined} class:nato={coloreDi(a.id) === null}>
-      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" partito={a.nome} salto={salti[a.id]} misura={34} /></span>
+      <span class="fz"><Faccia nome={leader(a.id)} ruolo="leader" genere={genereDi(a.id)} partito={a.nome} salto={salti[a.id]} misura={34} /></span>
       <span><b>{a.nome}</b> <span class="min muto">{leader(a.id)}</span></span>
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>

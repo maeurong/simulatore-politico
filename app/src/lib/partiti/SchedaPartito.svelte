@@ -39,7 +39,7 @@
 
 <Pulsante forma="link" onclick={indietro}>‹ {t("partiti.camere")}</Pulsante>
 <div class="testa">
-  <Faccia nome={tu ? t("partiti.tu") : p.leader} ruolo={tu ? undefined : "leader"} partito={p.nome} salto={salti[p.id]} misura={84} />
+  <Faccia nome={tu ? t("partiti.tu") : p.leader} ruolo={tu ? undefined : "leader"} genere={p.genere_leader} partito={p.nome} salto={salti[p.id]} misura={84} />
   <div class="chi">
     <h4 class="tit" class:sciolto={p.sciolto}><i class="sw" class:nato={colore === null} style:background={colore ?? undefined}></i>{tu ? t("partiti.tuo") : p.nome}</h4>
     <p class="ld">{#if tu}{t("partiti.s_leader_tu")}{:else}{t("partiti.s_leader")} <b>{p.leader}</b>{/if}</p>

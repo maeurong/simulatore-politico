@@ -1,16 +1,18 @@
 <script lang="ts">
   // Profilo verso destra al tratto, figura campita di carta (prototipo 32, variante 5). Il tono grave lo gestisce Faccia, che
-  // al posto del disegno mette le iniziali. Genere: fino alla 11g tutte senza segni femminili. Dicastero: l'oggetto in alto a destra, solo se `dicastero` è un id noto (i leader hanno la coccarda).
+  // al posto del disegno mette le iniziali. Genere: le donne hanno ciglia, labbra, naso all'85% e, dai bit dell'hash, orecchino e cappello; assente = uomo. Dicastero: l'oggetto in alto a destra, solo se `dicastero` è un id noto (i leader hanno la coccarda).
   import { leveDi, type Leve, type Ruolo } from "./caricatura";
-  import { FANTASIE, OGGETTI, profilo } from "./kit";
+  import type { Genere } from "$lib/tipi/Genere";
+  import { FANTASIE, OGGETTI, TRATTI, profilo } from "./kit";
 
-  let { ruolo, partito, nome, leve, misura, fondo = "carta", dicastero }: {
-    ruolo: Ruolo; partito: string; nome: string; leve?: Leve; misura: 34 | 46 | 62 | 84; fondo?: "carta" | "giallo" | "rosso"; dicastero?: string;
+  let { ruolo, partito, nome, genere, leve, misura, fondo = "carta", dicastero }: {
+    ruolo: Ruolo; partito: string; nome: string; genere?: Genere; leve?: Leve; misura: 34 | 46 | 62 | 84; fondo?: "carta" | "giallo" | "rosso"; dicastero?: string;
   } = $props();
 
   const id = $props.id();
   const l = $derived(leve ?? leveDi(ruolo, partito, nome));
-  const p = $derived(profilo(l));
+  const donna = $derived(genere === "donna");
+  const p = $derived(profilo(l, donna));
   const fantasia = $derived(FANTASIE[l.colletto]);
 </script>
 
@@ -21,17 +23,29 @@
   <clipPath id="{id}-c"><use href="#{id}-s" /></clipPath>
   <path class="terra" clip-path="url(#{id}-c)" d={p.ombre} />
   <path class="ink" transform="scale(.1)" d={p.pennino} />
+  {#if donna}<path class="ink" transform={TRATTI.naso} d={p.naso} />{/if}
   <path class="filo" d={p.filo} /><path class="sottile fine" d="M27 30.2Q25.4 32 27.2 33.6" />
   {#if l.occhio}
     <path class="carta ink-l" d="M35.2 22.8Q38.4 19.4 41.2 21.3Q40.6 24.6 35.2 22.8Z" /><circle class="ink" cx="39.3" cy="22.2" r="1.45" />
   {:else}
     <circle class="carta ink-l" cx="38.2" cy="22.6" r="2.7" style:stroke-width="1.4" /><circle class="ink" cx="39.4" cy="22.6" r="1.45" />
   {/if}
-  <path class="sottile" d="M44 39.4L40.3 39.8" />
+  {#if donna}
+    <path class="sottile ci" d={TRATTI.ciglia[l.occhio]} />
+    <path class="rosso lc" d={TRATTI.labbra} /><path class="rosso li" d={TRATTI.labbra} /><path class="sottile bo" d={TRATTI.bocca} />
+    {#if l.orecchino}<path class="sottile fine" d={TRATTI.orecchino.filo} /><path class="giallo ink-l" d={TRATTI.orecchino.gemma} />{/if}
+  {:else}
+    <path class="sottile" d="M44 39.4L40.3 39.8" />
+  {/if}
   {#if ruolo === "tecnico"}
     <path class="coll grigio" d="M21 51L38 49L40.5 55.5L22 57Z" />
   {:else}
     <path class="coll" fill="url(#fantasia-{fantasia})" d="M21 51L38 49L40.5 55.5L22 57Z" />
+  {/if}
+  {#if donna && l.cappello}
+    <g id="{id}-h">{#each TRATTI.cappello as d}<path {d} />{/each}</g>
+    <use href="#{id}-h" class="ha" /><use href="#{id}-h" class="ink ink-l" />
+    <path class="sottile na" d={TRATTI.nastro} />
   {/if}
   {#if ruolo === "leader"}
     <g transform="translate(55 55.5) scale(.95)"><circle r="8.4" class="carta" /><circle r="7.2" class="verde" /><circle r="4.6" class="carta" /><circle r="2.4" class="rosso" /></g>
@@ -51,6 +65,9 @@
   .car :global(.filo), .car :global(.sottile) { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round }
   .car :global(.sottile) { stroke-width: 1.9 }
   .car :global(.sottile.fine) { stroke-width: 1.5 }
+  .car :global(.sottile.ci) { stroke-width: 1.4 } .car :global(.sottile.bo) { stroke-width: 1.1 } .car :global(.sottile.na) { stroke: var(--carta); stroke-width: 2.2 }
+  .car :global(.lc) { stroke: var(--carta); stroke-width: 2.6; stroke-linejoin: round } .car :global(.li) { stroke: var(--ink); stroke-width: .9; stroke-linejoin: round }
+  .car :global(.ha) { fill: none; stroke: var(--carta); stroke-width: 3.6; stroke-linejoin: round }
   .car.giallo { --d: var(--giallo) } .car.rosso { --f: var(--carta); --d: var(--rosso) }
   .car { --f: var(--ink); --d: var(--carta) } .car :global(.ogg) { fill: var(--f); stroke-width: 1.5 } .car :global(.od) { fill: var(--d) }
   .car :global(.sf), .car :global(.sd) { fill: none; stroke-linecap: round } .car :global(.s14) { stroke-width: 1.4 } .car :global(.sf) { stroke: var(--f) } .car :global(.sd) { stroke: var(--d) }

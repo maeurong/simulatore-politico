@@ -78,7 +78,7 @@
           <ul class="minis">
             {#each evidenza as m (m.dicastero)}
               <li>
-                <Faccia nome={m.ministro.nome} ruolo={m.ministro.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.ministro.partito)} dicastero={m.dicastero} misura={34} />
+                <Faccia nome={m.ministro.nome} genere={m.ministro.genere} ruolo={m.ministro.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.ministro.partito)} dicastero={m.dicastero} misura={34} />
                 <span><b>{dicastero(m.dicastero)}</b> · {m.ministro.nome}<br />
                   <span class="muto">{#if m.preavviso}<span class="male">{t("cruscotto.preavviso", { n: numero(Math.round(m.ministro.soddisfazione)) })}</span>{#if m.agenda}{" · "}{/if}{/if}{m.agenda?.nome ?? ""}</span></span>
               </li>

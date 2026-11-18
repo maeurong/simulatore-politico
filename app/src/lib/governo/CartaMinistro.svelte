@@ -63,7 +63,7 @@
   {#snippet fronte()}
   <div class="carta">
     <div class="su">
-      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
+      <Faccia nome={m.nome} genere={m.genere} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={84} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <div>
         <div class="occ">{f.nomeDicastero}</div>
         <h4 class="tit">{m.nome}</h4>
@@ -139,7 +139,7 @@
   {/snippet}
   {#snippet retro()}
     <div class="carta retro">
-      <Faccia nome={m.nome} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
+      <Faccia nome={m.nome} genere={m.genere} ruolo={m.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, m.partito)} misura={62} fondo={fondoDi(m.soddisfazione, s)} dicastero={f.dicastero} />
       <span class="bollo" class:biro={stato === "dirottata"}>{t(stato === "fermata" ? "governo.atto_fermato" : "governo.atto_dirottato")}</span>
       <b>{f.agenda?.nome}{#if f.agenda?.regione} · {regione(f.agenda.regione)}{/if}</b>
       <span class="sec">{t("governo.retro_voto", { n: numero(m.soddisfazione) })}</span>

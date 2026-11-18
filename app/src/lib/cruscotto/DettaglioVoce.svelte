@@ -146,7 +146,7 @@
   <span class="occ">{t(fondi ? "cruscotto.proposta_fondi" : "cruscotto.proposta_riforma")}</span>
   <h3 class="tit">{voce.titolo}</h3>
   <div class="chi">
-    {#if ministro}<Faccia nome={ministro.nome} ruolo={ministro.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, ministro.partito)} dicastero={dicastero} misura={46} />{/if}
+    {#if ministro}<Faccia nome={ministro.nome} genere={ministro.genere} ruolo={ministro.tecnico ? "tecnico" : "ministro"} partito={chiaveDi(vista, ministro.partito)} dicastero={dicastero} misura={46} />{/if}
     <span><b>{ministro?.nome ?? t("governo.senza_ministro")}</b>
       {#if ministro}<br /><span class="min muto">{t("cruscotto.ministro_soddisfazione", { partito: nome(ministro.partito), n: numero(Math.round(ministro.soddisfazione)) })}</span>{/if}</span>
   </div>

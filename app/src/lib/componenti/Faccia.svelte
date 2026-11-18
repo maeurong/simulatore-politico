@@ -2,15 +2,16 @@
   // Con `ruolo` e un nome disegna la caricatura; senza, o nel tono grave (:root.grave), le iniziali nel cerchio d'inchiostro,
   // nello stesso riquadro. Il tono grave si legge dalla classe sulla radice, come il resto del CSS: nessun movimento, nessun accento.
   // Il nome sta sempre scritto accanto: la faccia è nascosta ai lettori di schermo. `partito` è la chiave dell'hash (`chiaveDi`): `giocatore` per il partito
-  // del giocatore, il nome visualizzato per gli altri (prototipo 32, 32-caricature.prototype.html:588), non l'id. `salto` viene dalla rosa (saltiDeiLeader).
+  // del giocatore, il nome visualizzato per gli altri (prototipo 32, 32-caricature.prototype.html:588), non l'id. `salto` viene dalla rosa (saltiDeiLeader); `genere` assente o null = uomo.
   import { iniziali } from "$lib/partiti";
   import Caricatura from "$lib/caricature/Caricatura.svelte";
   import { leveDi, type Ruolo } from "$lib/caricature/caricatura";
-  let { nome, misura, ruolo, partito = "", salto = 0, fondo = "carta", dicastero }: { nome: string; misura: 34 | 46 | 62 | 84; ruolo?: Ruolo; partito?: string; salto?: number; fondo?: "carta" | "giallo" | "rosso"; dicastero?: string } = $props();
+  import type { Genere } from "$lib/tipi/Genere";
+  let { nome, misura, ruolo, genere, partito = "", salto = 0, fondo = "carta", dicastero }: { nome: string; misura: 34 | 46 | 62 | 84; ruolo?: Ruolo; genere?: Genere | null; partito?: string; salto?: number; fondo?: "carta" | "giallo" | "rosso"; dicastero?: string } = $props();
   const disegna = $derived(ruolo !== undefined && nome !== "");
 </script>
 
-{#if disegna}<span class="disegno" aria-hidden="true"><Caricatura ruolo={ruolo!} {partito} {nome} {misura} {fondo} {dicastero} leve={leveDi(ruolo!, partito, nome, salto)} /></span>{/if}
+{#if disegna}<span class="disegno" aria-hidden="true"><Caricatura ruolo={ruolo!} {partito} {nome} genere={genere ?? undefined} {misura} {fondo} {dicastero} leve={leveDi(ruolo!, partito, nome, salto)} /></span>{/if}
 <span class="iniz" class:solo={!disegna} style:width="{misura}px" style:height="{misura}px" style:font-size="{Math.max(12, Math.round(misura * 0.36))}px" aria-hidden="true">{iniziali(nome)}</span>
 
 <style>
