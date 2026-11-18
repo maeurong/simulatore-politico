@@ -86,12 +86,10 @@
       <span class="sec">{t("trattativa.chiede_offri", { x: numero(a.richiesta, 1), o: numero(a.offerta) })}</span>
       <span class="largo"><Caselle piene={a.offerta} su={totale} filo={Math.ceil(a.richiesta)} rosso={a.scarto < 0} nome="" /></span>
       <div class="largo" role="img" aria-label={t("trattativa.intesa_barra", { n: numero(a.intesa, 0), ultimatum: numero(vista.soglie.ultimatum, 0), uscita: numero(vista.soglie.uscita, 0) })}>
-        <Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita / 10, vista.soglie.ultimatum / 10]} rosso={a.stato !== "ok"} nome={t("trattativa.intesa_parte", { n: numero(a.intesa, 0) })} />
+        <Caselle piene={Math.round(a.intesa / 10)} su={10} filo={[vista.soglie.uscita / 10, vista.soglie.ultimatum / 10]} rosso={a.stato !== "ok"} nome="" />
+        <span class="ip" class:male={a.stato !== "ok"}>{t("trattativa.intesa_parte", { n: numero(a.intesa, 0) })}</span>
         {#if a.stato !== "ok"}<span class="chip">{t(a.stato === "uscita" ? "trattativa.puo_uscire" : "trattativa.entra_ultimatum")}</span>{/if}
-        <span class="soglie min muto" aria-hidden="true">
-          <span style:--x="{vista.soglie.uscita / 10 * 14}px" class="u">{t("trattativa.soglia_uscita", { n: numero(vista.soglie.uscita, 0) })}</span>
-          <span style:--x="{vista.soglie.ultimatum / 10 * 14}px" class="l">{t("trattativa.soglia_ultimatum", { n: numero(vista.soglie.ultimatum, 0) })}</span>
-        </span>
+        <span class="soglie min muto" aria-hidden="true">{t("trattativa.fili", { u: numero(vista.soglie.uscita, 0), l: numero(vista.soglie.ultimatum, 0) })}</span>
       </div>
     </div>
   {/each}
@@ -125,8 +123,8 @@
   .all > :not(.fz, .largo) { grid-column: 2 }
   .all .fz { grid-row: 1 / span 2; display: inline-flex }
   .all .largo { grid-column: 1 / -1 }
-  .soglie { display: block; position: relative; height: 2.7em; margin-top: 2px }
-  .soglie span { position: absolute; left: var(--x); white-space: nowrap; top: 0; color: var(--rosso) }
-  .soglie .l { top: 1.35em }
+  .ip { display: block; font-size: var(--c-sec); margin-top: 2px }
+  .ip.male { color: var(--rosso); font-weight: 700 }
+  .soglie { display: block; margin-top: 2px; color: var(--rosso) }
   .chip { margin-left: 8px; display: inline-block; border: 1.5px solid var(--rosso); color: var(--rosso); padding: 0 6px; font-size: var(--c-min); font-weight: 700; white-space: nowrap; line-height: 1.4 }
 </style>

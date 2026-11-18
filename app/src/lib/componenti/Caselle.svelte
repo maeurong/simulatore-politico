@@ -7,7 +7,7 @@
 <span class="fascia">
   <span class="cas" class:inp={rosso} aria-hidden="true">
     {#each { length: su }, i (i)}<i data-tagli-ignora class:on={i < piene}></i>{/each}
-    {#each [filo ?? []].flat() as f (f)}<b data-tagli-ignora style:left="{f * 14 - 1}px"></b>{/each}
+    {#each [filo ?? []].flat() as f, j (j)}<b data-tagli-ignora style:left="{f * 14 - 1}px"></b>{/each}
   </span>
   {nome}
 </span>
