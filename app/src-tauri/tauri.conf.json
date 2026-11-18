@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
   "bundle": {
@@ -33,6 +33,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": { "../../dati/base/": "dati/base/" }
+    "resources": { "../../dati/base/": "dati/base/" },
+    "macOS": { "signingIdentity": "-" }
   }
 }
